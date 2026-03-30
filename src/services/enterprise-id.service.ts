@@ -127,6 +127,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   EFKA_PAYMENT: 'efka',
   IMPORT_BATCH: 'batch',
   MATCH_GROUP: 'mgrp',
+  MATCHING_RULE: 'mrule',
   EXPENSE_DOC: 'exdoc',
   APY_CERTIFICATE: 'apy',
   CUSTOM_CATEGORY: 'custcat',
@@ -921,6 +922,14 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 📚 Generate Matching Rule ID (Phase 2b — Rule Learning)
+   * Format: mrule_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateMatchingRuleId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.MATCHING_RULE).id;
+  }
+
+  /**
    * 📄 Generate Expense Document ID
    * Format: exdoc_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1532,6 +1541,7 @@ export const generateDepreciationId = () => enterpriseIdService.generateDeprecia
 export const generateEfkaPaymentId = () => enterpriseIdService.generateEfkaPaymentId();
 export const generateImportBatchId = () => enterpriseIdService.generateImportBatchId();
 export const generateMatchGroupId = () => enterpriseIdService.generateMatchGroupId();
+export const generateMatchingRuleId = () => enterpriseIdService.generateMatchingRuleId();
 export const generateExpenseDocId = () => enterpriseIdService.generateExpenseDocId();
 export const generateApyCertificateId = () => enterpriseIdService.generateApyCertificateId();
 export const generateCustomCategoryId = () => enterpriseIdService.generateCustomCategoryId();

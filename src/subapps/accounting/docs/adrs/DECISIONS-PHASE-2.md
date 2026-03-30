@@ -1,6 +1,6 @@
 # DECISIONS-PHASE-2: Wire Up Dead Code — MatchingEngine + Reports
 
-> **Status**: ΥΠΟΦΑΣΗ 2a ΥΛΟΠΟΙΗΜΕΝΗ ✅ | 2b-2e PENDING
+> **Status**: ΥΠΟΦΑΣΗ 2a ✅ + 2b ✅ | 2c-2e PENDING
 > **Date**: 2026-03-30
 > **Scope**: Φάση 2 του accounting roadmap
 > **Depends on**: Phase 1a ✅, Phase 1b ✅, Phase 1c ✅
@@ -542,7 +542,7 @@ Email scheduling (αυτόματη μηνιαία αποστολή) → μελλ
 | Υποφάση | Αποφάσεις | Νέα αρχεία | Τροποποιήσεις | Effort |
 |---|---|---|---|---|
 | **2a** MatchingEngine Core ✅ | Q1, Q3, Q4 | 5 NEW | 6 EDIT | DONE |
-| **2b** Rule Learning | Q5 | ~3 | ~3 | ~4 ώρες |
+| **2b** Rule Learning ✅ | Q5 | 3 NEW | 5 EDIT | DONE |
 | **2c** Reports Engine | Q6, Q7, Q9, Q10 | ~12 | ~0 | ~8 ώρες |
 | **2d** Reconciliation UI | Q2, Q11 | ~8 | ~0 | ~7 ώρες |
 | **2e** Reports Dashboard UI | Q8, Q12 | ~12 | ~0 | ~8 ώρες |

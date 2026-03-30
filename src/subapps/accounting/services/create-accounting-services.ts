@@ -18,6 +18,7 @@ import { VATEngine } from './engines/vat-engine';
 import { TaxEngine } from './engines/tax-engine';
 import { DepreciationEngine } from './engines/depreciation-engine';
 import { MatchingEngine } from './engines/matching-engine';
+import { RuleLearningEngine } from './engines/rule-learning-engine';
 import { CSVImportService } from './external/csv-import-service';
 
 /**
@@ -41,7 +42,8 @@ export function createAccountingServices() {
   const vatEngine = new VATEngine(repository);
   const taxEngine = new TaxEngine(repository);
   const depreciationEngine = new DepreciationEngine(repository);
-  const matchingEngine = new MatchingEngine(repository);
+  const ruleLearningEngine = new RuleLearningEngine();
+  const matchingEngine = new MatchingEngine(repository, ruleLearningEngine);
   const csvImportService = new CSVImportService(repository);
   const service = new AccountingService(repository, vatEngine, taxEngine, depreciationEngine);
 
@@ -52,6 +54,7 @@ export function createAccountingServices() {
     taxEngine,
     depreciationEngine,
     matchingEngine,
+    ruleLearningEngine,
     csvImportService,
   };
 }

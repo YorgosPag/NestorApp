@@ -93,6 +93,10 @@
 
 > **📍 Location**: `src/subapps/accounting/` — Portable subapp with independent ADR numbering (ACC-xxx)
 
+### 📊 **REPORTS & ANALYTICS**
+- **[📊 Dynamic Report Builder (ADR-268)](reference/adrs/ADR-268-dynamic-report-builder/ADR-268.md)** - Cross-entity tabular reports, 25 domains, filters, grouping, charts, PDF/Excel export
+- **[📈 Gantt & Construction Reports (ADR-266)](reference/adrs/ADR-266-gantt-construction-reports.md)** - Gantt chart, S-Curve, EVM Dashboard, Resource Histogram, Critical Path
+
 ### 🤖 **AI ARCHITECTURE**
 - **[📋 AI Suite Overview](ai/README.md)** - Enterprise AI automation platform (ADR-169)
 - **[🔄 Universal Pipeline](ai/pipeline.md)** - 7-step pipeline + cross-cutting patterns

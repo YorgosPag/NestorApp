@@ -183,6 +183,15 @@ export type {
 } from './matching-config';
 export { DEFAULT_MATCHING_CONFIG } from './matching-config';
 
+// ── Matching Rules Types (Phase 2b — Rule Learning) ─────────────────────────
+export type {
+  RuleStatus,
+  RulePattern,
+  RuleTarget,
+  LearnedRule,
+  CreateLearnedRuleInput,
+} from './matching-rules';
+
 // ── AI Document Processing Types (ADR-ACC-005) ─────────────────────────────
 export type {
   DocumentType,

@@ -3,8 +3,8 @@
  * @description Enterprise bank reconciliation engine with weighted scoring algorithm
  * @author Claude Code (Anthropic AI) + Giorgos Pagonis
  * @created 2026-02-09
- * @version 2.0.0
- * @see DECISIONS-PHASE-2.md Q1 (weighted scoring), Q2 (thresholds), Q3 (N:M)
+ * @version 2.1.0
+ * @see DECISIONS-PHASE-2.md Q1 (weighted scoring), Q2 (thresholds), Q3 (N:M), Q5 (rule learning)
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
@@ -19,16 +19,19 @@ import type {
 } from '../../types/bank';
 import type { MatchingConfig } from '../../types/matching-config';
 import { DEFAULT_MATCHING_CONFIG } from '../../types/matching-config';
-import type { Invoice } from '../../types/invoice';
-import type { JournalEntry } from '../../types/journal';
-import type { EFKAPayment } from '../../types/efka';
-import type { TaxInstallment } from '../../types/tax';
 import {
   calculateMatchScore,
   classifyTier,
-  type ScoringCandidateInput,
-  type ScoringTransactionInput,
 } from './matching-scoring';
+import {
+  type RawCandidate,
+  transactionToScoringInput,
+  invoiceToRawCandidate,
+  journalToRawCandidate,
+  efkaToRawCandidate,
+  taxToRawCandidate,
+  emptyMatchResult,
+} from './matching-adapters';
 import {
   findMatchingCombinations,
   preFilterCandidates,
@@ -36,6 +39,7 @@ import {
 } from './matching-combination';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { generateMatchGroupId } from '@/services/enterprise-id.service';
+import type { RuleLearningEngine } from './rule-learning-engine';
 
 // ============================================================================
 // FIRESTORE CONFIG LOADER
@@ -63,7 +67,10 @@ async function loadMatchingConfig(): Promise<MatchingConfig | null> {
 export class MatchingEngine implements IMatchingEngine {
   private configCache: MatchingConfig | null = null;
 
-  constructor(private readonly repository: IAccountingRepository) {}
+  constructor(
+    private readonly repository: IAccountingRepository,
+    private readonly ruleLearning?: RuleLearningEngine
+  ) {}
 
   // ── Config ────────────────────────────────────────────────────────────────
 
@@ -85,7 +92,21 @@ export class MatchingEngine implements IMatchingEngine {
 
     for (const raw of rawCandidates) {
       const result = calculateMatchScore(txnInput, raw.scoring, config);
-      if (result.tier === 'no_match') continue;
+
+      // Apply learned rule bonus (Phase 2b)
+      let finalScore = result.totalScore;
+      const reasons = [...result.reasons];
+
+      if (this.ruleLearning) {
+        const bonus = await this.ruleLearning.getRuleBonus(transaction, raw.entityType);
+        if (bonus > 0) {
+          finalScore = Math.min(finalScore + bonus, 100);
+          reasons.push(`Μαθημένος κανόνας (+${bonus})`);
+        }
+      }
+
+      const tier = classifyTier(finalScore, config.thresholds);
+      if (tier === 'no_match') continue;
 
       candidates.push({
         entityId: raw.entityId,
@@ -93,9 +114,9 @@ export class MatchingEngine implements IMatchingEngine {
         displayLabel: raw.displayLabel,
         amount: raw.scoring.amount,
         date: raw.scoring.date,
-        confidence: result.totalScore,
-        matchReasons: result.reasons,
-        tier: result.tier,
+        confidence: finalScore,
+        matchReasons: reasons,
+        tier,
       });
     }
 
@@ -221,6 +242,13 @@ export class MatchingEngine implements IMatchingEngine {
       matchedEntityType: entityType,
       matchConfidence: confidence,
     });
+
+    // Record learned rule from manual matches (Phase 2b)
+    if (this.ruleLearning && entityType) {
+      await this.ruleLearning.recordMatch(transaction, entityId, entityType).catch(() => {
+        // Rule recording is non-critical — don't block the match
+      });
+    }
 
     return {
       transactionId,
@@ -381,98 +409,3 @@ export class MatchingEngine implements IMatchingEngine {
   }
 }
 
-// ============================================================================
-// RAW CANDIDATE TYPE & ADAPTERS
-// ============================================================================
-
-interface RawCandidate {
-  entityId: string;
-  entityType: MatchableEntityType;
-  displayLabel: string;
-  scoring: ScoringCandidateInput;
-}
-
-function transactionToScoringInput(txn: BankTransaction): ScoringTransactionInput {
-  return {
-    amount: txn.amount,
-    currency: txn.currency,
-    bankDescription: txn.bankDescription,
-    counterparty: txn.counterparty,
-    paymentReference: txn.paymentReference,
-    transactionDate: txn.transactionDate,
-  };
-}
-
-function invoiceToRawCandidate(inv: Invoice): RawCandidate {
-  return {
-    entityId: inv.invoiceId,
-    entityType: 'invoice',
-    displayLabel: `Τιμολόγιο ${inv.series}-${inv.number} — ${inv.customer.name}`,
-    scoring: {
-      amount: inv.balanceDue > 0 ? inv.balanceDue : inv.totalGrossAmount,
-      currency: inv.currency,
-      description: `${inv.series}-${inv.number} ${inv.customer.name}`,
-      date: inv.issueDate,
-      counterpartyName: inv.customer.name,
-      reference: `${inv.series}-${inv.number}`,
-    },
-  };
-}
-
-function journalToRawCandidate(je: JournalEntry): RawCandidate {
-  return {
-    entityId: je.entryId,
-    entityType: 'journal_entry',
-    displayLabel: `Εγγραφή ${je.entryId.substring(0, 8)} — ${je.description}`,
-    scoring: {
-      amount: je.grossAmount,
-      currency: 'EUR',
-      description: je.description,
-      date: je.date,
-      counterpartyName: je.contactName,
-      reference: je.invoiceId,
-    },
-  };
-}
-
-function efkaToRawCandidate(efka: EFKAPayment): RawCandidate {
-  return {
-    entityId: efka.paymentId,
-    entityType: 'efka_payment',
-    displayLabel: `ΕΦΚΑ ${efka.month}/${efka.year}`,
-    scoring: {
-      amount: efka.amount,
-      currency: 'EUR',
-      description: `ΕΦΚΑ ασφαλιστικές εισφορές ${efka.month}/${efka.year}`,
-      date: efka.dueDate,
-      counterpartyName: 'ΕΦΚΑ',
-      reference: null,
-    },
-  };
-}
-
-function taxToRawCandidate(tax: TaxInstallment): RawCandidate {
-  return {
-    entityId: `tax_${tax.installmentNumber}`,
-    entityType: 'tax_payment',
-    displayLabel: `Φόρος δόση ${tax.installmentNumber}`,
-    scoring: {
-      amount: tax.amount,
-      currency: 'EUR',
-      description: `Φόρος εισοδήματος δόση ${tax.installmentNumber}`,
-      date: tax.dueDate,
-      counterpartyName: 'ΑΑΔΕ',
-      reference: null,
-    },
-  };
-}
-
-function emptyMatchResult(transactionId: string): MatchResult {
-  return {
-    transactionId,
-    status: 'unmatched',
-    matchedEntityId: null,
-    matchedEntityType: null,
-    confidence: null,
-  };
-}
