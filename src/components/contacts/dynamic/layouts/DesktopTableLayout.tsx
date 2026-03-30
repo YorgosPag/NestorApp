@@ -122,6 +122,7 @@ interface DesktopTableHeaderProps {
 }
 
 function DesktopTableHeader({ type, title, t }: DesktopTableHeaderProps): JSX.Element {
+  const colors = useSemanticColors();
   const DESKTOP_TABLE_HEADERS = getDesktopTableHeaders(t);
   const headerConfig = DESKTOP_TABLE_HEADERS[type];
 
@@ -263,7 +264,7 @@ export function DesktopTableLayout({
   setPrimary
 }: DesktopTableLayoutProps): JSX.Element | null {
   const { quick } = useBorderTokens();
-  const _colors = useSemanticColors();
+  // useSemanticColors moved to DesktopTableHeader sub-component
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
 
