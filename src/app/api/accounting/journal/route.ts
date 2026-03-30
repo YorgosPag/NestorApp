@@ -21,6 +21,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import { validatePostingAllowed } from '@/subapps/accounting/services';
 import type {
   JournalEntryFilters,
   EntryType,
@@ -129,6 +130,15 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         const parsed = safeParseBody(CreateJournalEntrySchema, await req.json());
         if (parsed.error) return parsed.error;
         const body = parsed.data;
+
+        // ── Hook 4: Validate posting allowed (Q4 — fiscal period check) ───
+        const postingCheck = await validatePostingAllowed(repository, body.date);
+        if (!postingCheck.allowed) {
+          return NextResponse.json(
+            { success: false, error: postingCheck.reason },
+            { status: 422 }
+          );
+        }
 
         const { id } = await repository.createJournalEntry(body as unknown as CreateJournalEntryInput);
 

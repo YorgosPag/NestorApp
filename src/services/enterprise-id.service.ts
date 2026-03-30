@@ -131,6 +131,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   CUSTOM_CATEGORY: 'custcat',
   CUSTOMER_BALANCE: 'cbal',
   FISCAL_PERIOD: 'fp',
+  ACCOUNTING_AUDIT_LOG: 'alog',
 
   // ==========================================================================
   // FILE & MEDIA OPERATIONS
@@ -871,6 +872,14 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 📋 Generate Accounting Audit Log ID
+   * Format: alog_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAccountingAuditLogId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ACCOUNTING_AUDIT_LOG).id;
+  }
+
+  /**
    * 🏭 Generate Fixed Asset ID
    * Format: fxa_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -1518,6 +1527,7 @@ export const generateApyCertificateId = () => enterpriseIdService.generateApyCer
 export const generateCustomCategoryId = () => enterpriseIdService.generateCustomCategoryId();
 export const generateCustomerBalanceId = () => enterpriseIdService.generateCustomerBalanceId();
 export const generateFiscalPeriodId = () => enterpriseIdService.generateFiscalPeriodId();
+export const generateAccountingAuditLogId = () => enterpriseIdService.generateAccountingAuditLogId();
 
 // =============================================================================
 // AI PIPELINE & AUDIT

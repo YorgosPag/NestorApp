@@ -19,21 +19,21 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
 
-// =============================================================================
-// TYPES
-// =============================================================================
+// ── Zod Schema (Q5 — SAP BAPI / Stripe pattern) ──────────────────────────
 
-interface MatchRequestBody {
-  transactionId: string;
-  journalEntryId: string;
-}
+const MatchBankTransactionSchema = z.object({
+  transactionId: z.string().min(1).max(128),
+  journalEntryId: z.string().min(1).max(128),
+}).passthrough();
 
 // =============================================================================
 // POST — Match Bank Transaction
@@ -44,14 +44,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
-        const body = (await req.json()) as MatchRequestBody;
-
-        if (!body.transactionId || !body.journalEntryId) {
-          return NextResponse.json(
-            { success: false, error: 'transactionId and journalEntryId are required' },
-            { status: 400 }
-          );
-        }
+        const parsed = safeParseBody(MatchBankTransactionSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
         // Verify bank transaction exists
         const transaction = await repository.getBankTransaction(body.transactionId);

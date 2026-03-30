@@ -82,6 +82,7 @@ import type {
 } from './custom-category';
 import type { CustomerBalance } from './customer-balance';
 import type { FiscalPeriod } from './fiscal-period';
+import type { AccountingAuditEntry, AuditEntryFilters } from './accounting-audit';
 
 // ============================================================================
 // ACCOUNTING REPOSITORY — CRUD Operations
@@ -189,6 +190,10 @@ export interface IAccountingRepository {
   listFiscalPeriods(fiscalYear: number): Promise<FiscalPeriod[]>;
   updateFiscalPeriod(periodId: string, updates: Partial<FiscalPeriod>): Promise<void>;
   createFiscalPeriods(periods: FiscalPeriod[]): Promise<void>;
+
+  // ── Audit Log (Phase 1c — Q1-Q3, immutable: create + list ONLY) ────────
+  createAuditEntry(entry: AccountingAuditEntry): Promise<void>;
+  listAuditEntries(filters: AuditEntryFilters, limit?: number): Promise<AccountingAuditEntry[]>;
 }
 
 // ============================================================================

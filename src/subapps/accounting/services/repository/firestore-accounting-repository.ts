@@ -25,6 +25,7 @@ import * as financial from './accounting-repo-financial';
 import * as entities from './accounting-repo-entities';
 import * as operations from './accounting-repo-operations';
 import * as balances from './accounting-repo-balances';
+import * as audit from './accounting-repo-audit';
 
 // ============================================================================
 // FIRESTORE ACCOUNTING REPOSITORY IMPLEMENTATION
@@ -162,4 +163,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   listFiscalPeriods = balances.listFiscalPeriods;
   updateFiscalPeriod = balances.updateFiscalPeriod;
   createFiscalPeriods = balances.createFiscalPeriods;
+
+  // ── Audit Log (Phase 1c — immutable: create + list ONLY) ──────────────
+  createAuditEntry = audit.createAuditEntry;
+  listAuditEntries = audit.listAuditEntries;
 }

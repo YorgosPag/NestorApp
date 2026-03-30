@@ -15,6 +15,7 @@
 
 import 'server-only';
 
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -27,6 +28,21 @@ import type {
   MatchStatus,
 } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeParseBody } from '@/lib/validation/shared-schemas';
+
+// ── Zod Schema (Q5 — SAP BAPI / Stripe pattern) ──────────────────────────
+
+const CreateBankTransactionSchema = z.object({
+  accountId: z.string().min(1).max(128),
+  valueDate: z.string().min(10).max(30),
+  direction: z.enum(['credit', 'debit']),
+  amount: z.number().positive().max(999_999_999),
+  currency: z.string().length(3).default('EUR'),
+  bankDescription: z.string().max(500).optional(),
+  counterparty: z.string().max(200).nullable().optional(),
+  paymentReference: z.string().max(100).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+}).passthrough();
 
 // =============================================================================
 // GET — List Bank Transactions
@@ -87,26 +103,13 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { repository } = createAccountingServices();
-        const body = (await req.json()) as Omit<
-          BankTransaction,
-          'transactionId' | 'createdAt' | 'updatedAt'
-        >;
+        const parsed = safeParseBody(CreateBankTransactionSchema, await req.json());
+        if (parsed.error) return parsed.error;
+        const body = parsed.data;
 
-        if (!body.accountId || !body.valueDate || !body.direction) {
-          return NextResponse.json(
-            { success: false, error: 'accountId, valueDate, and direction are required' },
-            { status: 400 }
-          );
-        }
-
-        if (typeof body.amount !== 'number' || body.amount <= 0) {
-          return NextResponse.json(
-            { success: false, error: 'amount must be a positive number' },
-            { status: 400 }
-          );
-        }
-
-        const { id } = await repository.createBankTransaction(body);
+        const { id } = await repository.createBankTransaction(
+          body as unknown as Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>
+        );
 
         return NextResponse.json(
           { success: true, data: { transactionId: id } },

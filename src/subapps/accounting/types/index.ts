@@ -220,6 +220,14 @@ export type {
   PostingValidationResult,
 } from './fiscal-period';
 
+// ── Audit Trail Types (Phase 1c — Q1-Q3) ────────────────────────────────────
+export type {
+  AccountingAuditEventType,
+  AuditEntityType,
+  AccountingAuditEntry,
+  AuditEntryFilters,
+} from './accounting-audit';
+
 // ── Abstraction Interfaces (ADR-ACC-010) ────────────────────────────────────
 export type {
   IAccountingRepository,

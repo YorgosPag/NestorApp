@@ -59,6 +59,12 @@ export {
   getYearEndChecklist,
 } from './fiscal-period-service';
 
+// ── Audit Service (Phase 1c — standalone functions, no TDZ risk) ────────
+export { logAccountingEvent } from './accounting-audit-service';
+
+// ── Audited Repository Wrapper (Phase 1c — Q7 automatic audit) ─────────
+export { createAuditedRepository } from './audited-repository-wrapper';
+
 // ── Types (type-only re-exports — erased at runtime, no TDZ risk) ─────────
 export type {
   IAccountingRepository,

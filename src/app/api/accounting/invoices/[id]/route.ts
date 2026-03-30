@@ -17,7 +17,6 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { withAuth, logAuditEvent, logFinancialTransition } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -26,21 +25,18 @@ import {
   reverseJournalEntryForCancelledInvoice,
   createCreditNoteForInvoice,
 } from '@/subapps/accounting/services/reversal-service';
+import { updateCustomerBalance } from '@/subapps/accounting/services';
+import { getFiscalYearFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
 import type { MyDataDocumentStatus, UpdateInvoiceInput, CancellationReasonCode } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody, safeJsonBody } from '@/lib/validation/shared-schemas';
-
-const UpdateInvoiceSchema = z.object({
-  type: z.string().max(50).optional(),
-  issueDate: z.string().max(30).optional(),
-  dueDate: z.string().max(30).nullable().optional(),
-  contactId: z.string().max(128).nullable().optional(),
-  contactName: z.string().max(200).nullable().optional(),
-  lineItems: z.array(z.record(z.unknown())).optional(),
-  payments: z.array(z.record(z.unknown())).optional(),
-  notes: z.string().max(5000).nullable().optional(),
-  mydata: z.record(z.unknown()).optional(),
-}).passthrough();
+import {
+  UpdateInvoiceSchema,
+  CancelInvoiceSchema,
+  IMMUTABLE_STATUSES,
+  VOIDABLE_STATUSES,
+  CREDIT_NOTE_STATUSES,
+} from '../invoice-schemas';
 
 // =============================================================================
 // GET — Single Invoice
@@ -116,10 +112,6 @@ async function handlePatch(
         }
 
         // 🛡️ ADR-249 P0-1: Invoice immutability guard
-        // Accepted/sent/cancelled invoices are IMMUTABLE (fiscal law + ΑΑΔΕ submission)
-        const IMMUTABLE_STATUSES: ReadonlySet<MyDataDocumentStatus> = new Set([
-          'accepted', 'cancelled', 'sent',
-        ]);
         const currentStatus = existing.mydata?.status as MyDataDocumentStatus | undefined;
         if (currentStatus && IMMUTABLE_STATUSES.has(currentStatus)) {
           return NextResponse.json(
@@ -129,6 +121,14 @@ async function handlePatch(
         }
 
         await repository.updateInvoice(id, body as UpdateInvoiceInput);
+
+        // ── Hook 3: Update balance if payments/amounts changed (Q4 — sync) ─
+        const affectsBalance = !!(body.payments || body.lineItems);
+        const contactId = existing.customer?.contactId;
+        if (affectsBalance && contactId) {
+          const fiscalYear = getFiscalYearFromDate(existing.issueDate);
+          await updateCustomerBalance(repository, contactId, fiscalYear);
+        }
 
         await logAuditEvent(ctx, 'data_updated', id, 'invoice', {
           metadata: { reason: 'Invoice fields updated' },
@@ -164,29 +164,7 @@ export const PATCH = withStandardRateLimit(handlePatch);
  * - Draft/Rejected → VOID: soft-delete + journal reversal
  * - Sent/Accepted  → CREDIT NOTE: new credit_invoice + journal reversal
  * - Cancelled       → 409 Conflict
- *
- * Request body (mandatory):
- * - reasonCode: CancellationReasonCode (6 values)
- * - notes: string (mandatory when reasonCode = 'OTHER')
  */
-
-const CANCELLATION_REASON_CODES: readonly CancellationReasonCode[] = [
-  'BILLING_ERROR', 'DUPLICATE', 'ORDER_CANCELLED',
-  'TERMS_CHANGED', 'GOODS_RETURNED', 'OTHER',
-];
-
-const CancelInvoiceSchema = z.object({
-  reasonCode: z.enum(CANCELLATION_REASON_CODES as unknown as [string, ...string[]]),
-  notes: z.string().max(2000).optional().default(''),
-}).refine(
-  (data) => data.reasonCode !== 'OTHER' || (data.notes.trim().length > 0),
-  { message: 'Notes are mandatory when reason is OTHER', path: ['notes'] }
-);
-
-/** Draft or rejected → can be voided */
-const VOIDABLE_STATUSES: ReadonlySet<string> = new Set(['draft', 'rejected']);
-/** Issued → requires credit note */
-const CREDIT_NOTE_STATUSES: ReadonlySet<string> = new Set(['sent', 'accepted']);
 
 async function handleDelete(
   request: NextRequest,
@@ -234,6 +212,13 @@ async function handleDelete(
             repository, id, ctx.uid, reasonCode as CancellationReasonCode, reasonNotes
           );
 
+          // ── Hook 2: Update balance after void (Q4 — synchronous) ────────
+          const voidContactId = existing.customer?.contactId;
+          if (voidContactId) {
+            const fiscalYear = getFiscalYearFromDate(existing.issueDate);
+            await updateCustomerBalance(repository, voidContactId, fiscalYear);
+          }
+
           await logFinancialTransition(ctx, 'invoice', id, currentStatus, 'cancelled').catch(() => {/* non-blocking */});
 
           return NextResponse.json({
@@ -252,6 +237,13 @@ async function handleDelete(
           const result = await createCreditNoteForInvoice(
             repository, existing, ctx.uid, reasonCode as CancellationReasonCode, reasonNotes
           );
+
+          // ── Hook 2: Update balance after credit note (Q4 — synchronous) ─
+          const cnContactId = existing.customer?.contactId;
+          if (cnContactId) {
+            const fiscalYear = getFiscalYearFromDate(existing.issueDate);
+            await updateCustomerBalance(repository, cnContactId, fiscalYear);
+          }
 
           await logFinancialTransition(ctx, 'invoice', id, currentStatus, 'credit_note_issued').catch(() => {/* non-blocking */});
 

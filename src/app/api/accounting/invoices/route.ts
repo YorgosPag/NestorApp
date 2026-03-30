@@ -21,6 +21,12 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import {
+  validatePostingAllowed,
+  checkCreditLimit,
+  updateCustomerBalance,
+} from '@/subapps/accounting/services';
+import { getFiscalYearFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
 import type { InvoiceFilters, InvoiceType, CreateInvoiceInput } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -119,11 +125,48 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
+        // ── Hook 1a: Validate posting allowed (Q4 — fiscal period check) ──
+        const postingCheck = await validatePostingAllowed(repository, body.issueDate);
+        if (!postingCheck.allowed) {
+          return NextResponse.json(
+            { success: false, error: postingCheck.reason },
+            { status: 422 }
+          );
+        }
+
+        // ── Hook 1b: Credit limit check (Q4 — SAP KNKK pattern) ──────────
+        const contactId = body.contactId;
+        let creditWarning: string | null = null;
+        if (contactId) {
+          const balance = await repository.getCustomerBalance(contactId);
+          if (balance) {
+            const grossAmount = body.lineItems?.reduce(
+              (sum: number, li: Record<string, unknown>) =>
+                sum + (typeof li.grossAmount === 'number' ? li.grossAmount : 0),
+              0
+            ) ?? 0;
+            const creditCheck = checkCreditLimit(balance, grossAmount);
+            if (!creditCheck.allowed) {
+              return NextResponse.json(
+                { success: false, error: creditCheck.warning },
+                { status: 422 }
+              );
+            }
+            creditWarning = creditCheck.warning;
+          }
+        }
+
         // Create the invoice
         const { id, number } = await repository.createInvoice(body as unknown as CreateInvoiceInput);
 
         // Auto-generate journal entry from the new invoice
         const journalEntry = await service.createJournalEntryFromInvoice(id);
+
+        // ── Hook 1c: Update customer balance (Q4 — synchronous, Q6) ───────
+        if (contactId) {
+          const fiscalYear = getFiscalYearFromDate(body.issueDate);
+          await updateCustomerBalance(repository, contactId, fiscalYear);
+        }
 
         return NextResponse.json(
           {
@@ -132,6 +175,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
               invoiceId: id,
               number,
               journalEntryId: journalEntry?.entryId ?? null,
+              creditWarning,
             },
           },
           { status: 201 }
