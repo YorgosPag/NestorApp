@@ -34,7 +34,7 @@
     "validate:all": "npm run lint:strict && bash scripts/validate-project-rules.sh",
     "strict-mode": "node scripts/simple-strict-check.js",
     "clear-cache": "node scripts/clear-cache.js",
-    "postinstall": "patch-package",
+    "postinstall": "patch-package && node scripts/patch-radix-react19.js",
     "seed:opportunities": "tsx --require dotenv/config src/data/seed/seed-opportunities.ts",
     "seed:firestore": "tsx --require dotenv/config src/data/seed/seed-firestore.ts",
     "seed:communications": "tsx --require dotenv/config src/data/seed/seed-communications.ts",
