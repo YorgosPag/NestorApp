@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Invoice } from '@/subapps/accounting/types';
 import { formatCurrency, formatDate } from '../../utils/format';
+import { cn } from '@/lib/utils';
 
 interface InvoiceRowProps {
   invoice: Invoice;
@@ -36,9 +37,11 @@ export function InvoiceRow({ invoice }: InvoiceRowProps) {
     router.push(`/accounting/invoices?view=${invoice.invoiceId}`);
   };
 
+  const isCancelled = invoice.mydata.status === 'cancelled';
+
   return (
     <TableRow
-      className="cursor-pointer hover:bg-muted/50"
+      className={cn('cursor-pointer hover:bg-muted/50', isCancelled && 'opacity-50')}
       onClick={handleClick}
       role="link"
       tabIndex={0}

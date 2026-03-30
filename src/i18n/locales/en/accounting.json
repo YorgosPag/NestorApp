@@ -783,6 +783,39 @@
       "manualReview": "Manual Review",
       "noMatch": "No Match"
     }
+  },
+  "cancelDialog": {
+    "menuVoid": "Cancel",
+    "menuCreditNote": "Issue Credit Note",
+    "titleVoid": "Cancel Draft Invoice",
+    "titleCreditNote": "Issue Credit Note",
+    "warningVoid": "This action is irreversible. The invoice will be cancelled and the journal entry reversed.",
+    "warningCreditNote": "A credit note will be created per Greek legislation (Law 4308/2014). This action is irreversible.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Select a reason...",
+    "reasons": {
+      "BILLING_ERROR": "Billing error / wrong amount",
+      "DUPLICATE": "Duplicate document",
+      "ORDER_CANCELLED": "Order cancelled",
+      "TERMS_CHANGED": "Terms changed",
+      "GOODS_RETURNED": "Goods returned",
+      "OTHER": "Other"
+    },
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Add notes (required if 'Other' is selected)...",
+    "notesRequiredHint": "Notes are required when the reason is 'Other'.",
+    "backButton": "Back",
+    "processing": "Processing...",
+    "confirmVoid": "Cancel Invoice",
+    "confirmCreditNote": "Issue Credit Note",
+    "successVoid": "Invoice cancelled successfully.",
+    "successCreditNote": "Credit note issued successfully.",
+    "errorGeneric": "An error occurred. Please try again.",
+    "cancelledBanner": "This invoice has been cancelled.",
+    "creditNoteLink": "A credit note has been issued for this document.",
+    "viewCreditNote": "View Credit Note",
+    "originalInvoiceLink": "This is a credit note — linked to the original document.",
+    "viewOriginal": "View Original"
   }
 }
 

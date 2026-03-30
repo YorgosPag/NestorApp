@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
-import { ArrowLeft, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, Ban, FileX2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +14,8 @@ import { useCompanySetup } from '@/subapps/accounting/hooks/useCompanySetup';
 import { InvoiceSummaryCard } from './InvoiceSummaryCard';
 import { InvoiceActionsMenu } from './InvoiceActionsMenu';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
+import { CancelInvoiceDialog } from './CancelInvoiceDialog';
+import { Badge } from '@/components/ui/badge';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -34,6 +36,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const fetchInvoice = useCallback(async () => {
     if (!user) {
@@ -101,8 +104,60 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
           companyProfile={companyProfile}
           onSendEmail={() => setEmailDialogOpen(true)}
           onEdit={() => router.push(`/accounting/invoices/${invoiceId}/edit`)}
+          onCancel={() => setCancelDialogOpen(true)}
         />
       </header>
+
+      {/* Cancelled banner — SAP/NetSuite enterprise pattern */}
+      {invoice.mydata.status === 'cancelled' && (
+        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800 dark:bg-red-950">
+          <Ban className="h-5 w-5 text-red-600 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">
+              {t('cancelDialog.cancelledBanner')}
+            </p>
+            {invoice.cancellationReason && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                {t(`cancelDialog.reasons.${invoice.cancellationReason}`)}
+                {invoice.cancellationNotes ? ` — ${invoice.cancellationNotes}` : ''}
+              </p>
+            )}
+          </div>
+          <Badge variant="destructive">{t('invoices.mydataStatuses.cancelled')}</Badge>
+        </div>
+      )}
+
+      {/* Credit note link — bidirectional (ADR A-1) */}
+      {invoice.creditNoteInvoiceId && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <FileX2 className="h-4 w-4 text-blue-600 shrink-0" />
+          <p className="text-sm text-blue-800 flex-1">
+            {t('cancelDialog.creditNoteLink')}
+          </p>
+          <Link
+            href={`/accounting/invoices?view=${invoice.creditNoteInvoiceId}`}
+            className="text-sm font-medium text-blue-700 underline whitespace-nowrap hover:text-blue-900"
+          >
+            {t('cancelDialog.viewCreditNote')} →
+          </Link>
+        </div>
+      )}
+
+      {/* Related invoice link (for credit notes pointing back to original) */}
+      {invoice.type === 'credit_invoice' && invoice.relatedInvoiceId && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <FileX2 className="h-4 w-4 text-blue-600 shrink-0" />
+          <p className="text-sm text-blue-800 flex-1">
+            {t('cancelDialog.originalInvoiceLink')}
+          </p>
+          <Link
+            href={`/accounting/invoices?view=${invoice.relatedInvoiceId}`}
+            className="text-sm font-medium text-blue-700 underline whitespace-nowrap hover:text-blue-900"
+          >
+            {t('cancelDialog.viewOriginal')} →
+          </Link>
+        </div>
+      )}
 
       <InvoiceSummaryCard invoice={invoice} />
 
@@ -110,6 +165,13 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
         invoice={invoice}
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
+        onSuccess={fetchInvoice}
+      />
+
+      <CancelInvoiceDialog
+        invoice={invoice}
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
         onSuccess={fetchInvoice}
       />
 

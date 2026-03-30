@@ -18,9 +18,10 @@ interface InvoiceSummaryCardProps {
 export function InvoiceSummaryCard({ invoice }: InvoiceSummaryCardProps) {
   const { t } = useTranslation('accounting');
   const colors = useSemanticColors();
+  const isCancelled = invoice.mydata.status === 'cancelled';
 
   return (
-    <Card>
+    <Card className={cn(isCancelled && 'opacity-60')}>
       <CardContent className="pt-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left: Customer */}

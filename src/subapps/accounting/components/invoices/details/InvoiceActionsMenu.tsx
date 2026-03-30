@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MoreHorizontal, Printer, Download, Mail, Loader2, Pencil } from 'lucide-react';
+import { MoreHorizontal, Printer, Download, Mail, Loader2, Pencil, Ban, FileX2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Invoice, CompanyProfile } from '@/subapps/accounting/types';
@@ -24,6 +25,7 @@ interface InvoiceActionsMenuProps {
   companyProfile: CompanyProfile | null;
   onSendEmail: () => void;
   onEdit?: () => void;
+  onCancel?: () => void;
 }
 
 /**
@@ -41,7 +43,7 @@ function buildPDFSettings(profile: CompanyProfile | null): InvoicePDFSettings {
   return settings;
 }
 
-export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendEmail, onEdit }: InvoiceActionsMenuProps) {
+export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendEmail, onEdit, onCancel }: InvoiceActionsMenuProps) {
   const { t } = useTranslation('accounting');
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -72,6 +74,10 @@ export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendE
 
   const isLoading = downloading || printing;
   const isEditable = invoice.mydata?.status === 'draft' || invoice.mydata?.status === 'rejected';
+  const isCancelled = invoice.mydata?.status === 'cancelled';
+  const isVoidable = isEditable; // draft/rejected → void
+  const isCreditNoteable = invoice.mydata?.status === 'sent' || invoice.mydata?.status === 'accepted';
+  const showCancelAction = !isCancelled && (isVoidable || isCreditNoteable);
 
   return (
     <DropdownMenu>
@@ -103,6 +109,27 @@ export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendE
           <Mail className="mr-2 h-4 w-4" />
           {t('forms.sendEmail')}
         </DropdownMenuItem>
+        {showCancelAction && onCancel && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={onCancel}
+              className="text-destructive focus:text-destructive"
+            >
+              {isVoidable ? (
+                <>
+                  <Ban className="mr-2 h-4 w-4" />
+                  {t('cancelDialog.menuVoid')}
+                </>
+              ) : (
+                <>
+                  <FileX2 className="mr-2 h-4 w-4" />
+                  {t('cancelDialog.menuCreditNote')}
+                </>
+              )}
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
