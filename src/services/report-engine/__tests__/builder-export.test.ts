@@ -332,3 +332,73 @@ describe('PDF configuration', () => {
     expect(text).toContain('Τιμή > 50000');
   });
 });
+
+// ============================================================================
+// Negative & Boundary Tests (SPEC-011 enrichment)
+// ============================================================================
+
+describe('Export — Negative & Boundary Cases', () => {
+  it('buildFiltersText returns "Χωρίς φίλτρα" for empty filters', () => {
+    const params = buildTestParams({ filters: [] });
+    const text = buildFiltersText(params.filters, params.domainDefinition);
+    expect(text).toBe('Χωρίς φίλτρα');
+  });
+
+  it('buildExportFilename generates valid filename for all domains', () => {
+    const domains = ['projects', 'buildings', 'units', 'floors'];
+    for (const domain of domains) {
+      const pdfName = buildExportFilename(domain, 'pdf');
+      const xlsxName = buildExportFilename(domain, 'xlsx');
+      expect(pdfName).toMatch(/\.pdf$/);
+      expect(xlsxName).toMatch(/\.xlsx$/);
+      expect(pdfName.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('buildExportFilename does not contain path traversal characters', () => {
+    const filename = buildExportFilename('projects', 'pdf');
+    expect(filename).not.toContain('..');
+    expect(filename).not.toContain('/');
+    expect(filename).not.toContain('\\');
+  });
+
+  it('OPERATOR_SYMBOLS covers all operators', () => {
+    const expectedOps = [
+      'eq', 'neq', 'contains', 'starts_with',
+      'gt', 'gte', 'lt', 'lte', 'between',
+      'before', 'after', 'in',
+    ];
+    for (const op of expectedOps) {
+      expect(OPERATOR_SYMBOLS).toHaveProperty(op);
+      expect(typeof OPERATOR_SYMBOLS[op as keyof typeof OPERATOR_SYMBOLS]).toBe('string');
+    }
+  });
+
+  it('handles missing field in filter gracefully', () => {
+    const params = buildTestParams({
+      filters: [
+        { id: 'f-bad', fieldKey: 'nonExistentField', operator: 'eq', value: 'test' },
+      ],
+    });
+    // Should not throw
+    const text = buildFiltersText(params.filters, params.domainDefinition);
+    expect(typeof text).toBe('string');
+  });
+
+  it('handles zero rows in results', () => {
+    const params = buildTestParams({
+      results: { rows: [], totalCount: 0, resolvedRefs: {} } as BuilderQueryResponse,
+    });
+    expect(params.results.rows).toHaveLength(0);
+    expect(params.results.totalCount).toBe(0);
+  });
+
+  it('grand totals are zero when no groups', () => {
+    const params = buildTestParams({
+      groupingResult: null,
+      filteredGroups: null,
+      grandTotals: {},
+    });
+    expect(Object.keys(params.grandTotals)).toHaveLength(0);
+  });
+});

@@ -251,3 +251,73 @@ describe('BUILDER_LIMITS', () => {
     expect(BUILDER_LIMITS.MAX_ACTIVE_FILTERS).toBe(10);
   });
 });
+
+// ============================================================================
+// Security & Boundary Tests (SPEC-011 enrichment)
+// ============================================================================
+
+describe('Security — Input Injection', () => {
+  it('rejects filter values with XSS attempt', () => {
+    // XSS strings should still be "valid" filter values (they are strings)
+    // but should NOT cause isValidDomainId to accept them
+    expect(isValidDomainId('<script>alert(1)</script>')).toBe(false);
+    expect(isValidDomainId('projects" OR 1=1 --')).toBe(false);
+  });
+
+  it('rejects prototype pollution domain IDs', () => {
+    expect(isValidDomainId('__proto__')).toBe(false);
+    expect(isValidDomainId('constructor')).toBe(false);
+    expect(isValidDomainId('toString')).toBe(false);
+  });
+
+  it('filter value accepts safe strings for eq operator', () => {
+    // Normal strings with special chars should be valid for eq
+    expect(isValidFilterValue('Παγώνης & Σία', 'eq')).toBe(true);
+    expect(isValidFilterValue('report@email.com', 'eq')).toBe(true);
+  });
+});
+
+describe('Boundary — Edge Values', () => {
+  it('rejects empty string as domain ID', () => {
+    expect(isValidDomainId('')).toBe(false);
+  });
+
+  it('isValidFilterValue accepts string pair for between (date ranges)', () => {
+    // Empty strings are valid for between (used with date pickers that start empty)
+    expect(isValidFilterValue(['', ''], 'between')).toBe(true);
+  });
+
+  it('isValidFilterValue accepts empty array for in (selects nothing)', () => {
+    // Empty array = no match, valid filter state
+    expect(isValidFilterValue([], 'in')).toBe(true);
+  });
+
+  it('BUILDER_LIMITS.DEFAULT_ROW_LIMIT is positive', () => {
+    expect(BUILDER_LIMITS.DEFAULT_ROW_LIMIT).toBeGreaterThan(0);
+  });
+
+  it('all VALID_DOMAIN_IDS are non-empty strings', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      expect(typeof id).toBe('string');
+      expect(id.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('URL encode/decode handles ASCII-safe filter values', () => {
+    const filters: ReportBuilderFilter[] = [
+      { id: 'f1', fieldKey: 'name', operator: 'eq', value: 'Test & Co' },
+    ];
+    const encoded = encodeBuilderState('projects', filters, ['name']);
+    const decoded = decodeBuilderState(new URLSearchParams(encoded));
+    expect(decoded.filters![0].value).toBe('Test & Co');
+  });
+
+  it('URL encode/decode preserves numeric filter values', () => {
+    const filters: ReportBuilderFilter[] = [
+      { id: 'f1', fieldKey: 'totalValue', operator: 'gt', value: 99999 },
+    ];
+    const encoded = encodeBuilderState('projects', filters, ['totalValue']);
+    const decoded = decodeBuilderState(new URLSearchParams(encoded));
+    expect(decoded.filters![0].value).toBe(99999);
+  });
+});

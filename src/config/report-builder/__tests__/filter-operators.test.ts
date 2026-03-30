@@ -108,3 +108,41 @@ describe('Filter Operators — Invalid Combinations', () => {
     },
   );
 });
+
+// ============================================================================
+// Edge Cases & Boundary Tests (SPEC-011 enrichment)
+// ============================================================================
+
+describe('Filter Operators — Edge Cases', () => {
+  it('every type has at least "eq" operator', () => {
+    for (const [type, ops] of Object.entries(OPERATORS_BY_TYPE)) {
+      expect(ops).toContain('eq');
+    }
+  });
+
+  it('numeric types share identical operator sets', () => {
+    const numOps = [...OPERATORS_BY_TYPE.number].sort();
+    const curOps = [...OPERATORS_BY_TYPE.currency].sort();
+    const pctOps = [...OPERATORS_BY_TYPE.percentage].sort();
+    expect(curOps).toEqual(numOps);
+    expect(pctOps).toEqual(numOps);
+  });
+
+  it('no operator type has duplicate entries', () => {
+    for (const [type, ops] of Object.entries(OPERATORS_BY_TYPE)) {
+      const unique = new Set(ops);
+      expect(unique.size).toBe(ops.length);
+    }
+  });
+
+  it('all filterable domain fields have operator coverage', () => {
+    for (const [domainId, def] of Object.entries(DOMAIN_DEFINITIONS)) {
+      for (const field of def.fields) {
+        if (!field.filterable) continue;
+        const ops = OPERATORS_BY_TYPE[field.type];
+        expect(ops).toBeDefined();
+        expect(ops.length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
