@@ -43,6 +43,14 @@ import {
   BUILDING_MILESTONES_DEFINITION,
   CONSTRUCTION_BASELINES_DEFINITION,
 } from './domain-defs-construction-ext';
+import {
+  OPPORTUNITIES_DEFINITION,
+  CRM_TASKS_DEFINITION,
+} from './domain-defs-crm';
+import {
+  COMMUNICATIONS_DEFINITION,
+  APPOINTMENTS_DEFINITION,
+} from './domain-defs-crm-ext';
 
 // ============================================================================
 // Enum Value Constants (SSoT — match actual Firestore data)
@@ -250,6 +258,12 @@ export const DOMAIN_DEFINITIONS: Record<BuilderDomainId, DomainDefinition> = {
   boqItems: BOQ_ITEMS_DEFINITION,
   buildingMilestones: BUILDING_MILESTONES_DEFINITION,
   constructionBaselines: CONSTRUCTION_BASELINES_DEFINITION,
+  // Phase 6c — CRM domains
+  opportunities: OPPORTUNITIES_DEFINITION,
+  crmTasks: CRM_TASKS_DEFINITION,
+  // Phase 6d — CRM extended domains
+  communications: COMMUNICATIONS_DEFINITION,
+  appointments: APPOINTMENTS_DEFINITION,
 };
 
 // ============================================================================

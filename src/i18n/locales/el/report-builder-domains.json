@@ -2,6 +2,7 @@
   "groups": {
     "realestate": "Ακίνητα",
     "construction": "Κατασκευή",
+    "crm": "CRM & Πωλήσεις",
     "financial": "Οικονομικά",
     "people": "Πρόσωπα",
     "specialists": "Ειδικότητες"
@@ -1098,6 +1099,219 @@
         "createdAt": "Δημιουργία"
       },
       "enums": {}
+    },
+    "opportunities": {
+      "label": "Ευκαιρίες",
+      "description": "Pipeline πωλήσεων — deals, leads, prospects με σταθμισμένες αξίες και ταχύτητα",
+      "fields": {
+        "title": "Τίτλος",
+        "stage": "Στάδιο",
+        "status": "Κατάσταση",
+        "estimatedValue": "Εκτιμώμενη Αξία",
+        "probability": "Πιθανότητα",
+        "source": "Πηγή",
+        "campaign": "Καμπάνια",
+        "propertyType": "Τύπος Ακινήτου",
+        "budgetMin": "Προϋπολογισμός Ελάχ.",
+        "budgetMax": "Προϋπολογισμός Μέγ.",
+        "areaMin": "Εμβαδόν Ελάχ. (τ.μ.)",
+        "areaMax": "Εμβαδόν Μέγ. (τ.μ.)",
+        "nextAction": "Επόμενη Ενέργεια",
+        "nextActionDate": "Ημ. Επόμενης Ενέργειας",
+        "expectedCloseDate": "Αναμ. Κλείσιμο",
+        "wonDate": "Ημ. Κερδισμένης",
+        "lastActivity": "Τελευταία Δραστηριότητα",
+        "createdAt": "Δημιουργία",
+        "contact": "Επαφή",
+        "referredBy": "Σύσταση από",
+        "weightedValue": "Σταθμισμένη Αξία",
+        "ageDays": "Ηλικία (μέρες)",
+        "daysSinceLastActivity": "Μέρες Αδράνειας",
+        "daysInCurrentStage": "Μέρες στο Στάδιο",
+        "pushCount": "Αναβολές Κλεισίματος",
+        "dealVelocityScore": "Ταχύτητα (\u20ac/μέρα)"
+      },
+      "enums": {
+        "stage": {
+          "initial_contact": "Αρχική Επαφή",
+          "qualification": "Αξιολόγηση",
+          "viewing": "Επίσκεψη",
+          "proposal": "Πρόταση",
+          "negotiation": "Διαπραγμάτευση",
+          "contract": "Συμβόλαιο",
+          "closed_won": "Κλείσιμο — Επιτυχία",
+          "closed_lost": "Κλείσιμο — Αποτυχία"
+        },
+        "status": {
+          "active": "Ενεργή",
+          "on_hold": "Σε Αναμονή",
+          "lost": "Χαμένη",
+          "won": "Κερδισμένη"
+        },
+        "source": {
+          "website": "Ιστοσελίδα",
+          "referral": "Σύσταση",
+          "agent": "Μεσίτης",
+          "social": "Social Media",
+          "phone": "Τηλέφωνο",
+          "walkin": "Walk-in"
+        },
+        "propertyType": {
+          "apartment": "Διαμέρισμα",
+          "maisonette": "Μεζονέτα",
+          "store": "Κατάστημα",
+          "office": "Γραφείο",
+          "parking": "Πάρκινγκ",
+          "storage": "Αποθήκη"
+        }
+      }
+    },
+    "crmTasks": {
+      "label": "Εργασίες CRM",
+      "description": "Εργασίες πωλήσεων & follow-up — παρακολούθηση εκπρόθεσμων, κατηγορίες ηλικίας",
+      "fields": {
+        "title": "Τίτλος",
+        "type": "Τύπος",
+        "status": "Κατάσταση",
+        "priority": "Προτεραιότητα",
+        "assignedTo": "Υπεύθυνος",
+        "assignedBy": "Ανατέθηκε από",
+        "description": "Περιγραφή",
+        "dueDate": "Ημ. Λήξης",
+        "completedAt": "Ημ. Ολοκλήρωσης",
+        "reminderDate": "Υπενθύμιση",
+        "createdAt": "Δημιουργία",
+        "contact": "Επαφή",
+        "opportunity": "Ευκαιρία",
+        "project": "Έργο",
+        "unit": "Μονάδα",
+        "isOverdue": "Εκπρόθεσμη",
+        "daysUntilDue": "Μέρες ως Λήξη",
+        "daysOpen": "Μέρες Ανοιχτή",
+        "agingBucket": "Κατηγορία Ηλικίας",
+        "completedOnTime": "Εντός Χρόνου"
+      },
+      "enums": {
+        "type": {
+          "call": "Τηλέφωνο",
+          "email": "Email",
+          "meeting": "Συνάντηση",
+          "viewing": "Επίσκεψη",
+          "document": "Έγγραφο",
+          "follow_up": "Follow-up",
+          "complaint": "Παράπονο",
+          "other": "Άλλο"
+        },
+        "status": {
+          "pending": "Εκκρεμεί",
+          "in_progress": "Σε Εξέλιξη",
+          "completed": "Ολοκληρωμένη",
+          "cancelled": "Ακυρωμένη"
+        },
+        "priority": {
+          "low": "Χαμηλή",
+          "medium": "Μεσαία",
+          "high": "Υψηλή",
+          "urgent": "Επείγουσα"
+        },
+        "agingBucket": {
+          "today": "Σήμερα",
+          "days7": "1-7 Μέρες",
+          "weeks2": "1-2 Εβδομάδες",
+          "weeks4": "2-4 Εβδομάδες",
+          "over30": "30+ Μέρες"
+        }
+      }
+    },
+    "communications": {
+      "label": "Επικοινωνίες",
+      "description": "Όλες οι αλληλεπιδράσεις — emails, κλήσεις, συναντήσεις με ανίχνευση κρύων επαφών",
+      "fields": {
+        "subject": "Θέμα",
+        "type": "Τύπος",
+        "direction": "Κατεύθυνση",
+        "status": "Κατάσταση",
+        "from": "Από",
+        "to": "Προς",
+        "duration": "Διάρκεια (δευτ.)",
+        "location": "Τοποθεσία",
+        "requiresFollowUp": "Απαιτεί Follow-up",
+        "followUpDate": "Ημ. Follow-up",
+        "triageStatus": "Triage",
+        "createdAt": "Δημιουργία",
+        "contact": "Επαφή",
+        "project": "Έργο",
+        "unit": "Μονάδα",
+        "opportunity": "Ευκαιρία",
+        "daysSinceContact": "Μέρες από Επικοινωνία",
+        "isGoingCold": "Κρυώνει"
+      },
+      "enums": {
+        "type": {
+          "email": "Email",
+          "phone": "Τηλέφωνο",
+          "sms": "SMS",
+          "whatsapp": "WhatsApp",
+          "telegram": "Telegram",
+          "meeting": "Συνάντηση",
+          "note": "Σημείωση"
+        },
+        "direction": {
+          "inbound": "Εισερχόμενη",
+          "outbound": "Εξερχόμενη"
+        },
+        "status": {
+          "completed": "Ολοκληρωμένη",
+          "scheduled": "Προγραμματισμένη",
+          "cancelled": "Ακυρωμένη",
+          "pending": "Εκκρεμεί",
+          "sent": "Αποσταλμένη",
+          "delivered": "Παραδόθηκε",
+          "failed": "Απέτυχε"
+        },
+        "triageStatus": {
+          "pending": "Εκκρεμεί",
+          "reviewed": "Αξιολογήθηκε",
+          "approved": "Εγκρίθηκε",
+          "rejected": "Απορρίφθηκε"
+        }
+      }
+    },
+    "appointments": {
+      "label": "Ραντεβού",
+      "description": "Αιτήματα συνάντησης — παρακολούθηση έγκρισης, ξεχασμένα, αναβολές",
+      "fields": {
+        "description": "Περιγραφή",
+        "status": "Κατάσταση",
+        "channel": "Κανάλι",
+        "requesterName": "Αιτών",
+        "requesterEmail": "Email Αιτούντα",
+        "isKnownContact": "Γνωστή Επαφή",
+        "requestedDate": "Ζητούμενη Ημ/νία",
+        "requestedTime": "Ζητούμενη Ώρα",
+        "confirmedDate": "Επιβεβαιωμένη Ημ/νία",
+        "confirmedTime": "Επιβεβαιωμένη Ώρα",
+        "assignedRole": "Ρόλος",
+        "assignedTo": "Υπεύθυνος",
+        "approvedBy": "Εγκρίθηκε από",
+        "approvedAt": "Ημ. Έγκρισης",
+        "notes": "Σημειώσεις",
+        "createdAt": "Δημιουργία",
+        "contact": "Επαφή",
+        "isStale": "Ξεχασμένο",
+        "waitingDays": "Αναμονή (μέρες)",
+        "rescheduleCount": "Αναβολές",
+        "daysToApproval": "Μέρες ως Έγκριση"
+      },
+      "enums": {
+        "status": {
+          "pending_approval": "Αναμένει Έγκριση",
+          "approved": "Εγκρίθηκε",
+          "rejected": "Απορρίφθηκε",
+          "cancelled": "Ακυρώθηκε",
+          "completed": "Ολοκληρώθηκε"
+        }
+      }
     }
   }
 }

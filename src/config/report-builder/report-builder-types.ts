@@ -85,7 +85,7 @@ export interface ReportBuilderFilter {
 // Field & Domain Definitions
 // ============================================================================
 
-/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) + Phase 5 (8) + Phase 6a (3) + Phase 6b (3) */
+/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) + Phase 5 (8) + Phase 6a (3) + Phase 6b (3) + Phase 6c (2) + Phase 6d (2) */
 export type BuilderDomainId =
   | 'projects' | 'buildings' | 'floors' | 'units'
   | 'parking' | 'storage' | 'individuals' | 'companies'
@@ -93,15 +93,18 @@ export type BuilderDomainId =
   | 'paymentPlans' | 'cheques' | 'legalContracts' | 'purchaseOrders'
   | 'brokerageAgreements' | 'commissionRecords' | 'ownershipSummary' | 'ownershipDetail'
   | 'constructionPhases' | 'constructionTasks' | 'resourceAssignments'
-  | 'boqItems' | 'buildingMilestones' | 'constructionBaselines';
+  | 'boqItems' | 'buildingMilestones' | 'constructionBaselines'
+  | 'opportunities' | 'crmTasks'
+  | 'communications' | 'appointments';
 
 /** Domain groups for UI categorization (Q87) */
-export type DomainGroup = 'realestate' | 'financial' | 'people' | 'specialists' | 'construction';
+export type DomainGroup = 'realestate' | 'financial' | 'people' | 'specialists' | 'construction' | 'crm';
 
 /** Ordered groups for DomainSelector rendering */
 export const DOMAIN_GROUP_ORDER: readonly DomainGroup[] = [
   'realestate',
   'construction',
+  'crm',
   'financial',
   'people',
   'specialists',
@@ -325,7 +328,7 @@ export const BUILDER_LIMITS = {
   MAX_AGGREGATIONS: 8,
 } as const;
 
-/** All valid domain IDs (Phase 1 + Phase 4a + Phase 4b + Phase 5 + Phase 6a) */
+/** All valid domain IDs (Phase 1 + Phase 4a + Phase 4b + Phase 5 + Phase 6a-6d) */
 export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'projects',
   'buildings',
@@ -355,6 +358,10 @@ export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'boqItems',
   'buildingMilestones',
   'constructionBaselines',
+  'opportunities',
+  'crmTasks',
+  'communications',
+  'appointments',
 ] as const;
 
 // ============================================================================

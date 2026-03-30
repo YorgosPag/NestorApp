@@ -2,6 +2,7 @@
   "groups": {
     "realestate": "Real Estate",
     "construction": "Construction",
+    "crm": "CRM & Sales",
     "financial": "Financial",
     "people": "People",
     "specialists": "Specialists"
@@ -1098,6 +1099,219 @@
         "createdAt": "Created"
       },
       "enums": {}
+    },
+    "opportunities": {
+      "label": "Opportunities",
+      "description": "Sales pipeline — deals, leads, prospects with weighted values and velocity scoring",
+      "fields": {
+        "title": "Title",
+        "stage": "Stage",
+        "status": "Status",
+        "estimatedValue": "Estimated Value",
+        "probability": "Probability",
+        "source": "Source",
+        "campaign": "Campaign",
+        "propertyType": "Property Type",
+        "budgetMin": "Budget Min",
+        "budgetMax": "Budget Max",
+        "areaMin": "Area Min (m\u00b2)",
+        "areaMax": "Area Max (m\u00b2)",
+        "nextAction": "Next Action",
+        "nextActionDate": "Next Action Date",
+        "expectedCloseDate": "Expected Close",
+        "wonDate": "Won Date",
+        "lastActivity": "Last Activity",
+        "createdAt": "Created",
+        "contact": "Contact",
+        "referredBy": "Referred By",
+        "weightedValue": "Weighted Value",
+        "ageDays": "Age (days)",
+        "daysSinceLastActivity": "Days Inactive",
+        "daysInCurrentStage": "Days in Stage",
+        "pushCount": "Close Date Pushes",
+        "dealVelocityScore": "Velocity (\u20ac/day)"
+      },
+      "enums": {
+        "stage": {
+          "initial_contact": "Initial Contact",
+          "qualification": "Qualification",
+          "viewing": "Viewing",
+          "proposal": "Proposal",
+          "negotiation": "Negotiation",
+          "contract": "Contract",
+          "closed_won": "Closed Won",
+          "closed_lost": "Closed Lost"
+        },
+        "status": {
+          "active": "Active",
+          "on_hold": "On Hold",
+          "lost": "Lost",
+          "won": "Won"
+        },
+        "source": {
+          "website": "Website",
+          "referral": "Referral",
+          "agent": "Agent",
+          "social": "Social Media",
+          "phone": "Phone",
+          "walkin": "Walk-in"
+        },
+        "propertyType": {
+          "apartment": "Apartment",
+          "maisonette": "Maisonette",
+          "store": "Store",
+          "office": "Office",
+          "parking": "Parking",
+          "storage": "Storage"
+        }
+      }
+    },
+    "crmTasks": {
+      "label": "CRM Tasks",
+      "description": "Sales & follow-up tasks — overdue tracking, aging buckets, on-time completion",
+      "fields": {
+        "title": "Title",
+        "type": "Type",
+        "status": "Status",
+        "priority": "Priority",
+        "assignedTo": "Assigned To",
+        "assignedBy": "Assigned By",
+        "description": "Description",
+        "dueDate": "Due Date",
+        "completedAt": "Completed At",
+        "reminderDate": "Reminder",
+        "createdAt": "Created",
+        "contact": "Contact",
+        "opportunity": "Opportunity",
+        "project": "Project",
+        "unit": "Unit",
+        "isOverdue": "Overdue",
+        "daysUntilDue": "Days Until Due",
+        "daysOpen": "Days Open",
+        "agingBucket": "Age Category",
+        "completedOnTime": "On Time"
+      },
+      "enums": {
+        "type": {
+          "call": "Call",
+          "email": "Email",
+          "meeting": "Meeting",
+          "viewing": "Viewing",
+          "document": "Document",
+          "follow_up": "Follow-up",
+          "complaint": "Complaint",
+          "other": "Other"
+        },
+        "status": {
+          "pending": "Pending",
+          "in_progress": "In Progress",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        },
+        "priority": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "agingBucket": {
+          "today": "Today",
+          "days7": "1-7 Days",
+          "weeks2": "1-2 Weeks",
+          "weeks4": "2-4 Weeks",
+          "over30": "30+ Days"
+        }
+      }
+    },
+    "communications": {
+      "label": "Communications",
+      "description": "All contact interactions — emails, calls, meetings with cold-contact detection",
+      "fields": {
+        "subject": "Subject",
+        "type": "Type",
+        "direction": "Direction",
+        "status": "Status",
+        "from": "From",
+        "to": "To",
+        "duration": "Duration (sec)",
+        "location": "Location",
+        "requiresFollowUp": "Follow-up Required",
+        "followUpDate": "Follow-up Date",
+        "triageStatus": "Triage",
+        "createdAt": "Created",
+        "contact": "Contact",
+        "project": "Project",
+        "unit": "Unit",
+        "opportunity": "Opportunity",
+        "daysSinceContact": "Days Since Contact",
+        "isGoingCold": "Going Cold"
+      },
+      "enums": {
+        "type": {
+          "email": "Email",
+          "phone": "Phone",
+          "sms": "SMS",
+          "whatsapp": "WhatsApp",
+          "telegram": "Telegram",
+          "meeting": "Meeting",
+          "note": "Note"
+        },
+        "direction": {
+          "inbound": "Inbound",
+          "outbound": "Outbound"
+        },
+        "status": {
+          "completed": "Completed",
+          "scheduled": "Scheduled",
+          "cancelled": "Cancelled",
+          "pending": "Pending",
+          "sent": "Sent",
+          "delivered": "Delivered",
+          "failed": "Failed"
+        },
+        "triageStatus": {
+          "pending": "Pending",
+          "reviewed": "Reviewed",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
+      }
+    },
+    "appointments": {
+      "label": "Appointments",
+      "description": "Meeting requests — approval tracking, no-show detection, reschedule count",
+      "fields": {
+        "description": "Description",
+        "status": "Status",
+        "channel": "Channel",
+        "requesterName": "Requester",
+        "requesterEmail": "Requester Email",
+        "isKnownContact": "Known Contact",
+        "requestedDate": "Requested Date",
+        "requestedTime": "Requested Time",
+        "confirmedDate": "Confirmed Date",
+        "confirmedTime": "Confirmed Time",
+        "assignedRole": "Assigned Role",
+        "assignedTo": "Assigned To",
+        "approvedBy": "Approved By",
+        "approvedAt": "Approved At",
+        "notes": "Notes",
+        "createdAt": "Created",
+        "contact": "Contact",
+        "isStale": "Forgotten",
+        "waitingDays": "Waiting (days)",
+        "rescheduleCount": "Reschedules",
+        "daysToApproval": "Days to Approval"
+      },
+      "enums": {
+        "status": {
+          "pending_approval": "Pending Approval",
+          "approved": "Approved",
+          "rejected": "Rejected",
+          "cancelled": "Cancelled",
+          "completed": "Completed"
+        }
+      }
     }
   }
 }

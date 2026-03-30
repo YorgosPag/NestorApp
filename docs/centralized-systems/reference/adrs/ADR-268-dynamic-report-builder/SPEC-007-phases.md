@@ -211,7 +211,47 @@ src/i18n/locales/el/report-builder-domains.json                    ← EDIT: +3 
 
 **Total construction domains**: 6 (D1-D6), 28 domains total in Report Builder
 
-### Phase 6c-6f: CRM + Accounting — PENDING
+### Phase 6c: CRM Core (E1-E2) ✅ IMPLEMENTED (2026-03-30)
+
+**Web Research**: Salesforce, HubSpot, Pipedrive, Zoho CRM, Microsoft Dynamics 365
+**Gap Analysis**: 17 gaps identified (G1-G17), all approved by Γιώργος
+
+**New files:**
+- `src/config/report-builder/domain-defs-crm.ts` — E1 Opportunities + E2 CRM Tasks
+
+**E1 Opportunities** (25 fields: 19 flat + 6 computed):
+- G1: `weightedValue` = estimatedValue × probability / 100 (all platforms)
+- G2: `ageDays` = days since creation (all platforms)
+- G3: `daysSinceLastActivity` = deal rotting (Pipedrive, Salesforce Einstein)
+- G9: `daysInCurrentStage` = bottleneck detection (all platforms)
+- G10: `pushCount` = close date postponements (Salesforce, HubSpot, Dynamics)
+- G11: `dealVelocityScore` = (value × prob) / age — per-deal velocity (Salesforce, HubSpot)
+
+**E2 CRM Tasks** (20 fields: 15 flat + 5 computed):
+- G4: `isOverdue` = past due date + not completed (all platforms)
+- G5: `daysUntilDue` = countdown to deadline (Salesforce, HubSpot)
+- G12: `daysOpen` = task aging (all platforms)
+- G13: `agingBucket` = Today/1-7d/1-2w/2-4w/30+ (Salesforce pattern)
+- G14: `completedOnTime` = completed ≤ due date (Salesforce, Zoho)
+
+### Phase 6d: CRM Extended (E3-E4) ✅ IMPLEMENTED (2026-03-30)
+
+**New files:**
+- `src/config/report-builder/domain-defs-crm-ext.ts` — E3 Communications + E4 Appointments
+
+**E3 Communications** (18 fields: 16 flat + 2 computed):
+- G6: `daysSinceContact` = days since communication (all platforms)
+- G15: `isGoingCold` = contact going cold > 30 days (Pipedrive "rotting", Salesforce Einstein)
+
+**E4 Appointments** (21 fields: 17 flat + 4 computed):
+- G7: `isStale` = approved + date passed + not completed (Salesforce, HubSpot)
+- G8: `waitingDays` = days waiting for action (Pipedrive, Zoho)
+- G16: `rescheduleCount` = appointment postponements — **COMPETITIVE ADVANTAGE** (no CRM native!)
+- G17: `daysToApproval` = response time (Dynamics 365 SLA, Salesforce)
+
+**Running totals after Phase 6d**: 32 domains, 84 fields (17 computed CRM)
+
+### Phase 6e-6f: Accounting — PENDING
 
 **Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
 ```
