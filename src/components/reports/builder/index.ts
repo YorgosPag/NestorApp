@@ -10,3 +10,6 @@ export { FilterPanel } from './FilterPanel';
 export { FilterRow } from './FilterRow';
 export { ReportResults } from './ReportResults';
 export { AIQueryInput } from './AIQueryInput';
+export { SaveReportDialog } from './SaveReportDialog';
+export { SavedReportsList } from './SavedReportsList';
+export { SavedReportsTableRow } from './SavedReportsTableRow';

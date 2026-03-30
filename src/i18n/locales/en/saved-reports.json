@@ -26,19 +26,6 @@
     "system": "System"
   },
 
-  "actions": {
-    "save": "Save Report",
-    "saveAs": "Save As New",
-    "load": "Load",
-    "delete": "Delete",
-    "rename": "Rename",
-    "duplicate": "Duplicate",
-    "toggleFavorite": "Toggle Favorite",
-    "changeCategory": "Change Category",
-    "makeShared": "Share with Team",
-    "makePersonal": "Make Personal"
-  },
-
   "dialog": {
     "saveTitle": "Save Report",
     "saveAsTitle": "Save As New Report",
@@ -85,12 +72,37 @@
     "year_to_date": "Year to Date"
   },
 
+  "actions": {
+    "save": "Save Report",
+    "saveAs": "Save As New",
+    "load": "Load",
+    "delete": "Delete",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "toggleFavorite": "Toggle Favorite",
+    "changeCategory": "Change Category",
+    "makeShared": "Share with Team",
+    "makePersonal": "Make Personal",
+    "newReport": "New Report",
+    "savedReports": "Saved Reports"
+  },
+
   "messages": {
     "saved": "Report saved successfully",
     "updated": "Report updated",
     "deleted": "Report deleted",
     "loaded": "Report loaded",
     "favorited": "Added to favorites",
-    "unfavorited": "Removed from favorites"
+    "unfavorited": "Removed from favorites",
+    "unsavedChanges": "Unsaved changes to \"{name}\"",
+    "confirmLoad": "You have unsaved changes. Load anyway?",
+    "confirmLoadTitle": "Unsaved Changes",
+    "errorFetch": "Failed to load saved reports",
+    "errorSave": "Failed to save report",
+    "errorDelete": "Failed to delete report",
+    "errorFavorite": "Failed to update favorite",
+    "neverRun": "Never",
+    "recentRun": "Just now",
+    "duplicateSuffix": " (Copy)"
   }
 }

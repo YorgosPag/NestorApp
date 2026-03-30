@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -28,6 +28,7 @@ import {
   type ReportBuilderFilter,
   type DomainDefinition,
 } from '@/config/report-builder/report-builder-types';
+import type { SavedReport, SavedReportConfig } from '@/types/reports/saved-report';
 import { useReportGrouping, type UseReportGroupingReturn } from './useReportGrouping';
 
 // ============================================================================
@@ -61,6 +62,12 @@ export interface UseReportBuilderReturn extends UseReportGroupingReturn {
   aiResult: AITranslatedQuery | null;
   submitAIQuery: (query: string) => Promise<void>;
   shareUrl: string;
+  activeSavedReport: SavedReport | null;
+  hasUnsavedChanges: boolean;
+  loadSavedReport: (report: SavedReport) => void;
+  clearSavedReport: () => void;
+  getCurrentConfig: () => SavedReportConfig;
+  setActiveSavedReport: Dispatch<SetStateAction<SavedReport | null>>;
 }
 
 // ============================================================================
@@ -102,6 +109,11 @@ export function useReportBuilder(): UseReportBuilderReturn {
   const [aiResult, setAiResult] = useState<AITranslatedQuery | null>(null);
 
   const cacheRef = useRef<CachedResult | null>(null);
+
+  // Saved report tracking
+  const [activeSavedReport, setActiveSavedReport] = useState<SavedReport | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const configSnapshotRef = useRef<string | null>(null);
 
   const domainDefinition = useMemo(
     () => (domain ? getDomainDefinition(domain) : null),
@@ -262,6 +274,55 @@ export function useReportBuilder(): UseReportBuilderReturn {
   }, []);
 
   // ========================================================================
+  // Saved Report Integration
+  // ========================================================================
+
+  const getCurrentConfig = useCallback((): SavedReportConfig => ({
+    domain: domain!,
+    columns,
+    filters,
+    sortField,
+    sortDirection,
+    limit,
+    groupByConfig: grouping.groupByConfig,
+    dateRange: null,
+  }), [domain, columns, filters, sortField, sortDirection, limit, grouping.groupByConfig]);
+
+  const loadSavedReport = useCallback((report: SavedReport) => {
+    const { config } = report;
+    setDomainState(config.domain);
+    setColumnsState(config.columns);
+    setFilters(config.filters);
+    setSortField(config.sortField);
+    setSortDirection(config.sortDirection);
+    setLimitState(config.limit);
+    if (config.groupByConfig) {
+      grouping.setGroupByConfig(config.groupByConfig);
+    } else {
+      grouping.resetGrouping();
+    }
+    setResults(null);
+    setError(null);
+    setAiResult(null);
+    setActiveSavedReport(report);
+    configSnapshotRef.current = JSON.stringify(config);
+    setHasUnsavedChanges(false);
+  }, [grouping]);
+
+  const clearSavedReport = useCallback(() => {
+    setActiveSavedReport(null);
+    configSnapshotRef.current = null;
+    setHasUnsavedChanges(false);
+  }, []);
+
+  // Detect unsaved changes
+  useEffect(() => {
+    if (!activeSavedReport || !configSnapshotRef.current || !domain) return;
+    const currentSerialized = JSON.stringify(getCurrentConfig());
+    setHasUnsavedChanges(currentSerialized !== configSnapshotRef.current);
+  }, [domain, columns, filters, sortField, sortDirection, limit, grouping.groupByConfig, activeSavedReport, getCurrentConfig]);
+
+  // ========================================================================
   // URL State Sync
   // ========================================================================
 
@@ -296,6 +357,9 @@ export function useReportBuilder(): UseReportBuilderReturn {
     executeQuery, refetch,
     aiLoading, aiResult, submitAIQuery,
     shareUrl,
+    activeSavedReport, setActiveSavedReport,
+    hasUnsavedChanges,
+    loadSavedReport, clearSavedReport, getCurrentConfig,
     ...grouping,
   };
 }

@@ -317,7 +317,7 @@ src/services/report-engine/__tests__/tier3-card-renderer.test.ts      ← Card P
 
 ---
 
-## Phase 7: Saved Reports — ✅ BACKEND DONE / ⬜ FRONTEND PENDING (2026-03-30)
+## Phase 7: Saved Reports — ✅ COMPLETE (2026-03-30)
 
 **Research**: Salesforce, HubSpot, QuickBooks, Xero, Power BI, Google Analytics
 **Decisions by Γιώργος** (5 ερωτήσεις, 5 αποφάσεις):
@@ -347,18 +347,24 @@ src/services/enterprise-id.service.ts                ← +srpt_ generator
 **Service methods**: create, get, list, update, delete, toggleFavorite, trackRun
 **API endpoints**: 5 (GET/POST list+create, GET/PUT/DELETE/POST per-report)
 
-### Phase 7b: Frontend — ⬜ PENDING
+### Phase 7b: Frontend — ✅ DONE (2026-03-30)
 
-**Αρχεία planned:**
+**Αρχεία delivered:**
 ```
-src/hooks/reports/useSavedReports.ts                 ← React hook (CRUD + filtering + tabs)
-src/hooks/reports/useReportBuilder.ts                ← +loadSavedReport() + getCurrentConfig()
-src/components/reports/builder/SaveReportDialog.tsx   ← Save modal (Radix Dialog)
-src/components/reports/builder/SavedReportsList.tsx   ← List table + tabs + search
-src/components/reports/builder/ReportBuilder.tsx      ← +Save/Load buttons + unsaved indicator
+src/hooks/reports/useSavedReports.ts                       ← NEW: React hook (CRUD + optimistic favorites + tab/search filtering)
+src/hooks/reports/useReportBuilder.ts                      ← MODIFIED: +loadSavedReport, getCurrentConfig, unsaved changes detection
+src/components/reports/builder/SaveReportDialog.tsx         ← NEW: Save/save-as modal (AlertDialog, category+visibility)
+src/components/reports/builder/SavedReportsTableRow.tsx     ← NEW: Row component (star, badges, dropdown actions)
+src/components/reports/builder/SavedReportsList.tsx         ← NEW: Tabbed table (All/Favorites/Recent/Shared) + search + confirm delete
+src/components/reports/builder/ReportBuilder.tsx            ← MODIFIED: Save/Load buttons, HubSpot yellow unsaved-changes bar, panel
+src/components/reports/builder/index.ts                    ← MODIFIED: +3 exports
+src/i18n/locales/en/saved-reports.json                     ← MODIFIED: +messages (unsavedChanges, confirmLoad, errors, etc.)
+src/i18n/locales/el/saved-reports.json                     ← MODIFIED: +messages (ελληνικά)
 ```
 
-**Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
+**Patterns used**: Salesforce saved views, QuickBooks memorized reports, HubSpot unsaved-changes bar, optimistic UI for favorites
+
+**Test αρχεία (DEFERRED — θα γίνουν ξεχωριστά):**
 ```
 src/services/report-engine/__tests__/saved-reports-service.test.ts    ← CRUD: save, load, update, delete, list
 src/components/reports/builder/__tests__/SavedReportManager.test.tsx   ← UI: save dialog, load list, delete confirm

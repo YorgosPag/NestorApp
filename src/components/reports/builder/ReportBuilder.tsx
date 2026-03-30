@@ -11,11 +11,15 @@
 import '@/lib/design-system';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Database } from 'lucide-react';
+import { Database, Save, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { toPng } from 'html-to-image';
 import { useReportBuilder } from '@/hooks/reports/useReportBuilder';
+import { useSavedReports } from '@/hooks/reports/useSavedReports';
 import { DomainSelector } from './DomainSelector';
+import { SaveReportDialog } from './SaveReportDialog';
+import { SavedReportsList } from './SavedReportsList';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterPanel } from './FilterPanel';
 import { ReportResults } from './ReportResults';
@@ -39,9 +43,13 @@ export function ReportBuilder() {
   const { t } = useTranslation('report-builder');
   const colors = useSemanticColors();
   const builder = useReportBuilder();
+  const savedReports = useSavedReports();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveDialogMode, setSaveDialogMode] = useState<'save' | 'saveAs'>('save');
+  const [showSavedList, setShowSavedList] = useState(false);
 
   const handleExportBarClick = useCallback((format: BarExportFormat) => {
     if (format === 'csv') return; // CSV deferred to Phase 4
@@ -116,6 +124,52 @@ export function ReportBuilder() {
     }
   }, [builder, t]);
 
+  // Saved Reports handlers
+  const handleSaveClick = useCallback(() => {
+    if (builder.activeSavedReport) {
+      // Quick save — update existing
+      void savedReports.updateReport(builder.activeSavedReport.id, {
+        config: builder.getCurrentConfig(),
+      }).then(updated => {
+        builder.setActiveSavedReport(updated);
+      });
+    } else {
+      setSaveDialogMode('save');
+      setSaveDialogOpen(true);
+    }
+  }, [builder, savedReports]);
+
+  const handleSaveAs = useCallback(() => {
+    setSaveDialogMode('saveAs');
+    setSaveDialogOpen(true);
+  }, []);
+
+  const handleSaveComplete = useCallback(async (input: Parameters<typeof savedReports.createReport>[0]) => {
+    const created = await savedReports.createReport(input);
+    builder.setActiveSavedReport(created);
+    return created;
+  }, [savedReports, builder]);
+
+  const handleUpdateComplete = useCallback(async (id: string, input: Parameters<typeof savedReports.updateReport>[1]) => {
+    const updated = await savedReports.updateReport(id, input);
+    builder.setActiveSavedReport(updated);
+    return updated;
+  }, [savedReports, builder]);
+
+  const handleLoadReport = useCallback((report: Parameters<typeof builder.loadSavedReport>[0]) => {
+    builder.loadSavedReport(report);
+    void savedReports.trackRun(report.id);
+    setShowSavedList(false);
+    toast.success(t('messages.loaded', { ns: 'saved-reports' }));
+  }, [builder, savedReports, t]);
+
+  const handleDuplicate = useCallback((report: Parameters<typeof builder.loadSavedReport>[0]) => {
+    builder.loadSavedReport(report);
+    builder.clearSavedReport();
+    setSaveDialogMode('saveAs');
+    setSaveDialogOpen(true);
+  }, [builder]);
+
   return (
     <section className="space-y-6 p-6" aria-label={t('title')}>
       {/* Header */}
@@ -126,6 +180,48 @@ export function ReportBuilder() {
           <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
       </header>
+
+      {/* Unsaved Changes Bar (HubSpot pattern) */}
+      {builder.hasUnsavedChanges && builder.activeSavedReport && (
+        <aside
+          className={cn(
+            'flex items-center justify-between rounded-md border px-4 py-2',
+            colors.getStatusColor('warning', 'border'),
+            colors.bg.warning,
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          <p className={cn('text-sm font-medium', colors.text.warning)}>
+            {t('messages.unsavedChanges', { ns: 'saved-reports', name: builder.activeSavedReport.name })}
+          </p>
+          <nav className="flex gap-2">
+            <Button size="sm" onClick={handleSaveClick}>
+              {t('actions.save', { ns: 'saved-reports' })}
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleSaveAs}>
+              {t('actions.saveAs', { ns: 'saved-reports' })}
+            </Button>
+          </nav>
+        </aside>
+      )}
+
+      {/* Saved Reports List Panel */}
+      {showSavedList && (
+        <SavedReportsList
+          reports={savedReports.reports}
+          loading={savedReports.loading}
+          activeTab={savedReports.activeTab}
+          onTabChange={savedReports.setActiveTab}
+          searchQuery={savedReports.searchQuery}
+          onSearchChange={savedReports.setSearchQuery}
+          filteredReports={savedReports.filteredReports}
+          onLoad={handleLoadReport}
+          onDelete={savedReports.deleteReport}
+          onToggleFavorite={savedReports.toggleFavorite}
+          onDuplicate={handleDuplicate}
+        />
+      )}
 
       {/* AI Query Input */}
       <AIQueryInput
@@ -167,8 +263,8 @@ export function ReportBuilder() {
               hasGroups={!!builder.groupingResult && builder.groupingResult.groups.length > 0}
             />
 
-            {/* Execute + Export buttons */}
-            <div className="flex items-center gap-3">
+            {/* Execute + Save/Load + Export buttons */}
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 onClick={builder.executeQuery}
                 disabled={builder.loading || builder.columns.length === 0}
@@ -180,6 +276,18 @@ export function ReportBuilder() {
                   {t('refresh')}
                 </Button>
               )}
+              <Button variant="outline" onClick={() => setShowSavedList(prev => !prev)}>
+                <FolderOpen className="mr-2 h-4 w-4" />
+                {t('actions.load', { ns: 'saved-reports' })}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSaveClick}
+                disabled={!builder.domain}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {t('actions.save', { ns: 'saved-reports' })}
+              </Button>
               {builder.results && (
                 <ReportExportBar
                   onExport={handleExportBarClick}
@@ -240,6 +348,17 @@ export function ReportBuilder() {
           </aside>
         </div>
       )}
+
+      {/* Save Report Dialog */}
+      <SaveReportDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        mode={saveDialogMode}
+        existingReport={builder.activeSavedReport}
+        currentConfig={builder.getCurrentConfig()}
+        onSave={handleSaveComplete}
+        onUpdate={handleUpdateComplete}
+      />
 
       {/* Export Dialog (cross-filter scope choice) */}
       <ExportDialog
