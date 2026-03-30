@@ -275,6 +275,7 @@ function QuickFilters({
   onChange: (v: AuditAction | 'all') => void;
   stats: Stats;
 }) {
+  const colors = useSemanticColors();
   return (
     <nav className="flex flex-wrap gap-1.5" aria-label="Φίλτρα ιστορικού">
       {FILTER_OPTIONS.map(({ value, label }) => {
@@ -311,6 +312,7 @@ function QuickFilters({
 // ============================================================================
 
 function DayGroup({ dateLabel, children }: { dateLabel: string; children: React.ReactNode }) {
+  const colors = useSemanticColors();
   return (
     <section>
       {/* Day header */}
@@ -333,6 +335,7 @@ function DayGroup({ dateLabel, children }: { dateLabel: string; children: React.
 // ============================================================================
 
 function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
+  const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
   const Icon = config.icon;
 

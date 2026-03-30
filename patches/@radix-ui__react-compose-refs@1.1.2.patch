@@ -1,0 +1,49 @@
+diff --git a/dist/index.js b/dist/index.js
+index 5ba7a95bc7a29605f32aa010a14224ad87bf6589..fca88eedbb0b5a766bd2f0693d10896614baf1a0 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -69,6 +69,18 @@ function composeRefs(...refs) {
+   };
+ }
+ function useComposedRefs(...refs) {
+-  return React.useCallback(composeRefs(...refs), refs);
++  const refsRef = React.useRef(refs);
++  React.useEffect(() => {
++    refsRef.current = refs;
++  });
++  return React.useCallback((node) => {
++    refsRef.current.forEach((ref) => {
++      if (typeof ref === "function") {
++        ref(node);
++      } else if (ref !== null && ref !== void 0) {
++        ref.current = node;
++      }
++    });
++  }, []);
+ }
+ //# sourceMappingURL=index.js.map
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 7dd9172a7228d70a25f708d0fd577cfc69ea15a8..913ad90085e10e86278e36d4cd335d5a5fc7facf 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -32,7 +32,19 @@ function composeRefs(...refs) {
+   };
+ }
+ function useComposedRefs(...refs) {
+-  return React.useCallback(composeRefs(...refs), refs);
++  const refsRef = React.useRef(refs);
++  React.useEffect(() => {
++    refsRef.current = refs;
++  });
++  return React.useCallback((node) => {
++    refsRef.current.forEach((ref) => {
++      if (typeof ref === "function") {
++        ref(node);
++      } else if (ref !== null && ref !== void 0) {
++        ref.current = node;
++      }
++    });
++  }, []);
+ }
+ export {
+   composeRefs,
