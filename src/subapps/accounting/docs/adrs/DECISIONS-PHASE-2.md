@@ -1,6 +1,6 @@
 # DECISIONS-PHASE-2: Wire Up Dead Code — MatchingEngine + Reports
 
-> **Status**: ΥΠΟΦΑΣΗ 2a ✅ + 2b ✅ + 2c ✅ + 2d ✅ | 2e PENDING
+> **Status**: ΥΠΟΦΑΣΗ 2a ✅ + 2b ✅ + 2c ✅ + 2d ✅ + 2e ✅
 > **Date**: 2026-03-30
 > **Scope**: Φάση 2 του accounting roadmap
 > **Depends on**: Phase 1a ✅, Phase 1b ✅, Phase 1c ✅
@@ -545,7 +545,7 @@ Email scheduling (αυτόματη μηνιαία αποστολή) → μελλ
 | **2b** Rule Learning ✅ | Q5 | 3 NEW | 5 EDIT | DONE |
 | **2c** Reports Engine ✅ | Q6, Q7, Q9, Q10 | 13 NEW | 1 EDIT | DONE |
 | **2d** Reconciliation UI ✅ | Q2, Q11 | 12 NEW | 6 EDIT | DONE |
-| **2e** Reports Dashboard UI | Q8, Q12 | ~12 | ~0 | ~8 ώρες |
+| **2e** Reports Dashboard UI ✅ | Q8, Q12 | 13 NEW | 5 EDIT | DONE |
 | **ΣΥΝΟΛΟ** | **12 αποφάσεις** | **~40 αρχεία** | **~8 τροποποιήσεις** | **~35 ώρες** |
 
 ---
@@ -575,4 +575,20 @@ Email scheduling (αυτόματη μηνιαία αποστολή) → μελλ
 - `components/reconciliation/ReconciliationPageContent.tsx` — Main orchestrator
 - `app/accounting/reconciliation/page.tsx` — Page route
 - Updated: lazyRoutes, navigation, i18n (en+el), domain-constants
+
+### 2026-03-30 — Phase 2e: Reports Dashboard UI (13 νέα αρχεία)
+- `services/export/report-table-adapter.ts` — Shared flatten logic for table + exporters
+- `hooks/useReport.ts` — Single report fetch hook with AbortController
+- `hooks/useReportsDashboard.ts` — 8 parallel fetches via Promise.allSettled
+- `components/reports/ReportDateFilterBar.tsx` — Radix Select preset picker + custom dates
+- `components/reports/FinancialReportCard.tsx` — Dashboard card with key metric + trend
+- `components/reports/FinancialReportsDashboard.tsx` — 8-card grid with date filter
+- `components/reports/ReportTable.tsx` — Generic comparative table with sorting
+- `components/reports/ExportBar.tsx` — PDF/Excel/CSV export buttons
+- `components/reports/ReportDetailView.tsx` — Full detail page with filter + export + table
+- `services/export/csv-exporter.ts` — UTF-8 BOM CSV export
+- `services/export/excel-exporter.ts` — ExcelJS styled export
+- `services/export/pdf-exporter.ts` — jsPDF + autoTable with Greek font support
+- `app/accounting/reports/[type]/page.tsx` — Detail page route
+- Modified: ReportsPageContent (added Tabs), hooks/index.ts, lazyRoutes, i18n (en+el)
 

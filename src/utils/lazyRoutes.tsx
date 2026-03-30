@@ -273,6 +273,11 @@ export const LazyRoutes = {
     { loadingType: 'dashboard', ssr: false }
   ),
 
+  AccountingReportDetail: createLazyRoute(
+    () => import('@/subapps/accounting/components/reports/ReportDetailView').then(mod => ({ default: mod.ReportDetailView })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
   // 🏢 ENTERPRISE: Accounting Subapp (Phase 5B — AI Document Processing)
   AccountingDocuments: createLazyRoute(
     () => import('@/subapps/accounting/components/documents/DocumentsPageContent').then(mod => ({ default: mod.DocumentsPageContent })),

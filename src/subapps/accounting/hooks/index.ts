@@ -46,3 +46,7 @@ export { useAPYCertificates } from './useAPYCertificates';
 
 // ── Custom Category Hooks (ADR-ACC-021) ───────────────────────────────────────
 export { useCustomCategories } from './useCustomCategories';
+
+// ── Financial Reports Hooks (Phase 2e — Reports Dashboard) ──────────────────
+export { useReport } from './useReport';
+export { useReportsDashboard } from './useReportsDashboard';

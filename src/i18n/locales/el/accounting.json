@@ -249,7 +249,60 @@
       "overdue": "Ληξιπρόθεσμη"
     },
     "noVATData": "Δεν υπάρχουν δεδομένα ΦΠΑ για αυτή την περίοδο",
-    "noTaxData": "Δεν υπάρχουν φορολογικά δεδομένα για αυτή την περίοδο"
+    "noTaxData": "Δεν υπάρχουν φορολογικά δεδομένα για αυτή την περίοδο",
+    "loading": "Φόρτωση αναφορών...",
+    "tabs": {
+      "taxVat": "Φόρος & ΦΠΑ",
+      "financialReports": "Οικονομικές Αναφορές"
+    },
+    "datePresets": {
+      "this_month": "Τρέχων Μήνας",
+      "last_month": "Προηγούμενος Μήνας",
+      "this_quarter": "Τρέχον Τρίμηνο",
+      "last_quarter": "Προηγούμενο Τρίμηνο",
+      "this_year": "Τρέχον Έτος",
+      "last_year": "Προηγούμενο Έτος",
+      "ytd": "Από Αρχή Έτους",
+      "custom": "Προσαρμοσμένο Εύρος"
+    },
+    "reportTypes": {
+      "profit_and_loss": "Κέρδη & Ζημίες",
+      "trial_balance": "Ισοζύγιο",
+      "ar_aging": "Ηλικίωση Απαιτήσεων",
+      "tax_summary": "Σύνοψη Φόρων",
+      "bank_reconciliation": "Συμφωνία Τράπεζας",
+      "cash_flow": "Ταμειακές Ροές",
+      "income_by_customer": "Έσοδα ανά Πελάτη",
+      "expense_by_category": "Έξοδα ανά Κατηγορία"
+    },
+    "metrics": {
+      "netProfit": "Καθαρό Κέρδος",
+      "netBalance": "Καθαρό Υπόλοιπο",
+      "totalOutstanding": "Σύνολο Εκκρεμών",
+      "estimatedTax": "Εκτιμώμενος Φόρος",
+      "matchRate": "Ποσοστό Αντιστοίχισης",
+      "netCashFlow": "Καθαρές Ταμειακές Ροές",
+      "totalIncome": "Σύνολο Εσόδων",
+      "totalExpenses": "Σύνολο Εξόδων"
+    },
+    "export": {
+      "pdf": "Εξαγωγή PDF",
+      "excel": "Εξαγωγή Excel",
+      "csv": "Εξαγωγή CSV",
+      "exporting": "Εξαγωγή..."
+    },
+    "table": {
+      "current": "Τρέχουσα",
+      "previousPeriod": "Προηγούμενη",
+      "yearOverYear": "Πέρυσι",
+      "change": "Μεταβολή",
+      "changePercent": "Μεταβολή %"
+    },
+    "detail": {
+      "backToReports": "Πίσω στις Αναφορές",
+      "from": "Από",
+      "to": "Έως"
+    }
   },
   "tax": {
     "partnerBreakdown": {

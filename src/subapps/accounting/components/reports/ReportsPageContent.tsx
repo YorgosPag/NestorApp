@@ -19,6 +19,7 @@ import {
   Calculator,
   DollarSign,
 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { formatCurrency } from '../../utils/format';
@@ -30,6 +31,7 @@ import { VATReportCard } from './VATReportCard';
 import { TaxEstimateCard } from './TaxEstimateCard';
 import { TaxDashboard } from './TaxDashboard';
 import { PartnerTaxBreakdown } from '../tax/PartnerTaxBreakdown';
+import { FinancialReportsDashboard } from './FinancialReportsDashboard';
 
 // ============================================================================
 // COMPONENT
@@ -143,23 +145,33 @@ export function ReportsPageContent() {
       {/* Stats Dashboard */}
       {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
 
-      {/* Report Cards — Entity-aware */}
-      <section className="p-6 space-y-6">
-        {entityType === 'oe' && partnershipResult ? (
-          <PartnerTaxBreakdown result={partnershipResult} />
-        ) : (
-          <>
-            {/* Top Row: VAT and Tax Estimate */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <VATReportCard fiscalYear={selectedYear} />
-              <TaxEstimateCard fiscalYear={selectedYear} />
-            </div>
+      {/* Tabbed Content: Tax/VAT + Financial Reports */}
+      <Tabs defaultValue="tax" className="px-6 pt-4">
+        <TabsList>
+          <TabsTrigger value="tax">{t('reports.tabs.taxVat')}</TabsTrigger>
+          <TabsTrigger value="financial">{t('reports.tabs.financialReports')}</TabsTrigger>
+        </TabsList>
 
-            {/* Bottom Row: Tax Dashboard (full width) */}
-            <TaxDashboard fiscalYear={selectedYear} />
-          </>
-        )}
-      </section>
+        <TabsContent value="tax">
+          <section className="py-6 space-y-6">
+            {entityType === 'oe' && partnershipResult ? (
+              <PartnerTaxBreakdown result={partnershipResult} />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <VATReportCard fiscalYear={selectedYear} />
+                  <TaxEstimateCard fiscalYear={selectedYear} />
+                </div>
+                <TaxDashboard fiscalYear={selectedYear} />
+              </>
+            )}
+          </section>
+        </TabsContent>
+
+        <TabsContent value="financial">
+          <FinancialReportsDashboard />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }
