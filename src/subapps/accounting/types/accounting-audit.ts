@@ -32,7 +32,9 @@ export type AccountingAuditEventType =
   | 'PERIOD_REOPENED'
   | 'CREDIT_LIMIT_CHANGED'
   | 'DISPUTE_FLAGGED'
-  | 'BANK_MATCHED';
+  | 'BANK_MATCHED'
+  | 'BANK_RECONCILED'
+  | 'BANK_RECONCILE_UNLOCKED';
 
 /**
  * Entity types that can be audited

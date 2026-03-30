@@ -26,7 +26,7 @@ export type TransactionDirection = 'credit' | 'debit';
  * - `manual_matched`: Χειροκίνητη αντιστοίχιση
  * - `excluded`: Εξαιρέθηκε (π.χ. μεταφορά μεταξύ λογαριασμών)
  */
-export type MatchStatus = 'unmatched' | 'auto_matched' | 'manual_matched' | 'excluded';
+export type MatchStatus = 'unmatched' | 'auto_matched' | 'manual_matched' | 'excluded' | 'reconciled';
 
 // ============================================================================
 // BANK ACCOUNT CONFIG
@@ -111,6 +111,18 @@ export interface BankTransaction {
   matchGroupId?: string | null;
   /** All matched entity references (for N:M; single-element for 1:1) */
   matchedEntities?: MatchedEntityRef[] | null;
+
+  // — Reconciliation (Phase 1c — Q1, Q7, Q8) —
+  /** Optimistic locking version (incremented on every write) */
+  version?: number;
+  /** Display name of user who last matched */
+  matchedByName?: string | null;
+  /** User ID who reconciled */
+  reconciledBy?: string | null;
+  /** ISO 8601 timestamp of reconciliation */
+  reconciledAt?: string | null;
+  /** Display name of user who reconciled */
+  reconciledByName?: string | null;
 
   // — Metadata —
   /** ID batch εισαγωγής */
