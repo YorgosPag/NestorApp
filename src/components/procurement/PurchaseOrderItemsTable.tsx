@@ -33,6 +33,7 @@ import {
 import { cn } from '@/lib/design-system';
 import { Plus, Trash2 } from 'lucide-react';
 import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
+import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface FormItem {
@@ -275,9 +276,9 @@ export function PurchaseOrderItemsTable({
                   <SelectValue placeholder="ΑΤΟΕ" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ATOE_CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.value}
+                  {ATOE_MASTER_CATEGORIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code} — {c.nameEL}
                     </SelectItem>
                   ))}
                 </SelectContent>
