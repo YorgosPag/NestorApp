@@ -67,6 +67,7 @@ import {
   BarChart3,
   PieChart,
   ShoppingCart,
+  Banknote,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -154,6 +155,7 @@ const NAVIGATION_LABELS = {
   reports_compliance: 'reports.compliance',
   reports_export: 'reports.export',
   reports_builder: 'reports.builder',
+  reports_cashFlow: 'reports.cashFlow',
 
   // CRM submenu
   crm_overview: 'crm.overview',
@@ -522,6 +524,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               { icon: Construction, href: '/reports/construction' },
               { icon: Shield, href: '/reports/compliance' },
               { icon: FileBarChart, href: '/reports/export' },
+              { icon: Banknote, href: '/reports/cash-flow' },
             ]
           },
           {
@@ -745,6 +748,7 @@ function getLabelKeyForPath(path: string): string {
     'reports/compliance': 'reports_compliance',
     'reports/export': 'reports_export',
     'reports/builder': 'reports_builder',
+    'reports/cash-flow': 'reports_cashFlow',
 
     // CRM main
     'crm': 'crm',

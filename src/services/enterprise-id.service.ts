@@ -246,6 +246,10 @@ export const ENTERPRISE_ID_PREFIXES = {
   // ==========================================================================
   SAVED_REPORT: 'srpt',
 
+  // CASH FLOW (ADR-268 Phase 8: Cash Flow Forecast)
+  // ==========================================================================
+  RECURRING_PAYMENT: 'rpay',
+
   OPTIMISTIC: 'opt',
   TEMP: 'tmp'
 } as const;
@@ -1353,6 +1357,14 @@ export class EnterpriseIdService {
    */
   generateSavedReportId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.SAVED_REPORT).id;
+  }
+
+  /**
+   * 💰 Generate Recurring Payment ID (Cash Flow Forecast)
+   * Format: rpay_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateRecurringPaymentId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.RECURRING_PAYMENT).id;
   }
 
   // ==========================================================================

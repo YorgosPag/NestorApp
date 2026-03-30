@@ -1,0 +1,117 @@
+{
+  "title": "Πρόβλεψη Ταμειακών Ροών",
+  "description": "12μηνη πρόβλεψη ταμειακών ροών με ανάλυση σεναρίων",
+  "kpi": {
+    "currentBalance": "Τρέχον Υπόλοιπο",
+    "forecastInflow": "Προβλεπόμενες Εισροές (12Μ)",
+    "forecastOutflow": "Προβλεπόμενες Εκροές (12Μ)",
+    "lowestBalance": "Χαμηλότερο Υπόλοιπο",
+    "lowestBalanceMonth": "σε {{month}}"
+  },
+  "scenario": {
+    "label": "Σενάριο",
+    "optimistic": "Αισιόδοξο (100%)",
+    "realistic": "Ρεαλιστικό (85%)",
+    "pessimistic": "Απαισιόδοξο (70%)"
+  },
+  "chart": {
+    "title": "Πρόβλεψη Ταμειακών Ροών",
+    "inflow": "Εισροές",
+    "outflow": "Εκροές",
+    "balance": "Υπόλοιπο",
+    "loading": "Φόρτωση γραφήματος...",
+    "noData": "Δεν υπάρχουν δεδομένα"
+  },
+  "table": {
+    "title": "Μηνιαία Ανάλυση",
+    "month": "Μήνας",
+    "opening": "Αρχικό",
+    "installmentsDue": "Δόσεις",
+    "cheqMat": "Επιταγές",
+    "totalInflow": "Σύνολο Εισροών",
+    "purchaseOrders": "Παραγγελίες",
+    "invoices": "Τιμολόγια",
+    "efka": "ΕΦΚΑ",
+    "recurring": "Πάγιες",
+    "totalOutflow": "Σύνολο Εκροών",
+    "netCashFlow": "Καθαρή Ροή",
+    "closingBalance": "Τελικό",
+    "loading": "Φόρτωση..."
+  },
+  "settings": {
+    "title": "Ρυθμίσεις Ταμειακών Ροών",
+    "initialBalance": "Αρχικό Ταμειακό Υπόλοιπο",
+    "recurringPayments": "Πάγιες Πληρωμές",
+    "addPayment": "Προσθήκη Πάγιας Πληρωμής",
+    "editPayment": "Επεξεργασία Πληρωμής",
+    "deletePayment": "Διαγραφή Πληρωμής",
+    "deleteConfirm": "Σίγουρα θέλετε να διαγράψετε αυτή την πάγια πληρωμή;",
+    "saved": "Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς",
+    "save": "Αποθήκευση",
+    "cancel": "Ακύρωση",
+    "delete": "Διαγραφή",
+    "noPayments": "Δεν υπάρχουν πάγιες πληρωμές.",
+    "paymentLabel": "Ετικέτα",
+    "paymentAmount": "Ποσό",
+    "paymentFrequency": "Συχνότητα",
+    "paymentCategory": "Κατηγορία",
+    "labelPlaceholder": "π.χ. Ενοίκιο γραφείου",
+    "startDate": "Ημερομηνία Έναρξης",
+    "frequency": {
+      "monthly": "Μηνιαία",
+      "quarterly": "Τριμηνιαία",
+      "annual": "Ετήσια"
+    },
+    "category": {
+      "rent": "Ενοίκιο",
+      "insurance": "Ασφάλεια",
+      "utilities": "Λογαριασμοί",
+      "salaries": "Μισθοδοσία",
+      "loan": "Δάνειο",
+      "taxes": "Φόροι",
+      "maintenance": "Συντήρηση",
+      "other": "Άλλο"
+    }
+  },
+  "pdc": {
+    "title": "Ημερολόγιο Λήξης Επιταγών",
+    "cheques": "επιταγές",
+    "total": "Σύνολο",
+    "noCheques": "Δεν βρέθηκαν μεταχρονολογημένες επιταγές.",
+    "dayTitle": "Επιταγές που λήγουν στις",
+    "drawer": "Εκδότης",
+    "chequeNo": "Αρ. Επιταγής",
+    "amount": "Ποσό",
+    "status": "Κατάσταση"
+  },
+  "comparison": {
+    "title": "Πρόβλεψη vs Πραγματικά",
+    "forecastInflow": "Πρόβλ. Εισροές",
+    "actualInflow": "Πραγμ. Εισροές",
+    "forecastOutflow": "Πρόβλ. Εκροές",
+    "actualOutflow": "Πραγμ. Εκροές",
+    "variance": "Απόκλιση",
+    "noData": "Δεν υπάρχουν παρελθοντικοί μήνες για σύγκριση."
+  },
+  "alerts": {
+    "title": "Ειδοποιήσεις Ταμειακών Ροών",
+    "dismiss": "Απόρριψη",
+    "lowCashTitle": "Χαμηλό Ταμειακό Υπόλοιπο",
+    "pdcTitle": "Λήξη Επιταγών",
+    "collectionTitle": "Ποσοστό Είσπραξης",
+    "genericTitle": "Ειδοποίηση"
+  },
+  "filter": {
+    "allProjects": "Όλα τα Έργα (Συγκεντρωτικά)",
+    "allBuildings": "Όλα τα Κτίρια",
+    "project": "Έργο",
+    "building": "Κτίριο"
+  },
+  "controls": {
+    "label": "Ρυθμίσεις Πρόβλεψης"
+  },
+  "export": {
+    "pdf": "Εξαγωγή PDF",
+    "excel": "Εξαγωγή Excel"
+  }
+}

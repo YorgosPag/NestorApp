@@ -234,7 +234,8 @@
     "construction": "Construction & Timeline",
     "compliance": "Compliance & Labor",
     "export": "Export Center",
-    "builder": "Report Builder"
+    "builder": "Report Builder",
+    "cashFlow": "Cash Flow Forecast"
   },
   "pages": {
     "home": "Home",

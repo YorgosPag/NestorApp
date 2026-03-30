@@ -1,0 +1,117 @@
+{
+  "title": "Cash Flow Forecast",
+  "description": "12-month cash flow projection with scenario analysis",
+  "kpi": {
+    "currentBalance": "Current Balance",
+    "forecastInflow": "Forecast Inflow (12M)",
+    "forecastOutflow": "Forecast Outflow (12M)",
+    "lowestBalance": "Lowest Balance",
+    "lowestBalanceMonth": "in {{month}}"
+  },
+  "scenario": {
+    "label": "Scenario",
+    "optimistic": "Optimistic (100%)",
+    "realistic": "Realistic (85%)",
+    "pessimistic": "Pessimistic (70%)"
+  },
+  "chart": {
+    "title": "Cash Flow Projection",
+    "inflow": "Inflows",
+    "outflow": "Outflows",
+    "balance": "Balance",
+    "loading": "Loading chart...",
+    "noData": "No data available"
+  },
+  "table": {
+    "title": "Monthly Breakdown",
+    "month": "Month",
+    "opening": "Opening",
+    "installmentsDue": "Installments",
+    "cheqMat": "Cheques",
+    "totalInflow": "Total Inflow",
+    "purchaseOrders": "POs",
+    "invoices": "Invoices",
+    "efka": "EFKA",
+    "recurring": "Recurring",
+    "totalOutflow": "Total Outflow",
+    "netCashFlow": "Net Cash Flow",
+    "closingBalance": "Closing",
+    "loading": "Loading..."
+  },
+  "settings": {
+    "title": "Cash Flow Settings",
+    "initialBalance": "Initial Cash Balance",
+    "recurringPayments": "Recurring Payments",
+    "addPayment": "Add Recurring Payment",
+    "editPayment": "Edit Payment",
+    "deletePayment": "Delete Payment",
+    "deleteConfirm": "Are you sure you want to delete this recurring payment?",
+    "saved": "Settings saved successfully",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "noPayments": "No recurring payments configured.",
+    "paymentLabel": "Label",
+    "paymentAmount": "Amount",
+    "paymentFrequency": "Frequency",
+    "paymentCategory": "Category",
+    "labelPlaceholder": "e.g., Office Rent",
+    "startDate": "Start Date",
+    "frequency": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "annual": "Annual"
+    },
+    "category": {
+      "rent": "Rent",
+      "insurance": "Insurance",
+      "utilities": "Utilities",
+      "salaries": "Salaries",
+      "loan": "Loan",
+      "taxes": "Taxes",
+      "maintenance": "Maintenance",
+      "other": "Other"
+    }
+  },
+  "pdc": {
+    "title": "PDC Maturity Calendar",
+    "cheques": "cheques",
+    "total": "Total",
+    "noCheques": "No post-dated cheques found.",
+    "dayTitle": "Cheques maturing on",
+    "drawer": "Drawer",
+    "chequeNo": "Cheque #",
+    "amount": "Amount",
+    "status": "Status"
+  },
+  "comparison": {
+    "title": "Forecast vs Actual",
+    "forecastInflow": "Forecast In",
+    "actualInflow": "Actual In",
+    "forecastOutflow": "Forecast Out",
+    "actualOutflow": "Actual Out",
+    "variance": "Variance",
+    "noData": "No past months to compare yet."
+  },
+  "alerts": {
+    "title": "Cash Flow Alerts",
+    "dismiss": "Dismiss",
+    "lowCashTitle": "Low Cash Warning",
+    "pdcTitle": "PDC Maturity",
+    "collectionTitle": "Collection Rate",
+    "genericTitle": "Alert"
+  },
+  "filter": {
+    "allProjects": "All Projects (Consolidated)",
+    "allBuildings": "All Buildings",
+    "project": "Project",
+    "building": "Building"
+  },
+  "controls": {
+    "label": "Forecast Controls"
+  },
+  "export": {
+    "pdf": "Export PDF",
+    "excel": "Export Excel"
+  }
+}

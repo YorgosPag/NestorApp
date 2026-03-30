@@ -55,7 +55,8 @@ export const SUPPORTED_NAMESPACES = [
   'legal',      // 🏢 Legal pages — privacy policy, terms, data deletion
   'reports',    // 🏢 Enterprise Reports System (ADR-265)
   'report-builder',         // 🏢 Dynamic Report Builder UI (ADR-268)
-  'report-builder-domains'  // 🏢 Report Builder domain/field labels (ADR-268)
+  'report-builder-domains', // 🏢 Report Builder domain/field labels (ADR-268)
+  'cash-flow'               // 🏢 Cash Flow Forecast (ADR-268 Phase 8)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -187,6 +188,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
         case 'reports':
           translations = await import('./locales/el/reports.json');
           break;
+        case 'cash-flow':
+          translations = await import('./locales/el/cash-flow.json');
+          break;
         default:
           logger.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -298,6 +302,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'reports':
           translations = await import('./locales/en/reports.json');
+          break;
+        case 'cash-flow':
+          translations = await import('./locales/en/cash-flow.json');
           break;
         default:
           logger.warn(`Namespace ${namespace} not found for language ${language}`);

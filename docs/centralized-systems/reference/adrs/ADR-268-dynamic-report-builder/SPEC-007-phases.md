@@ -19,13 +19,13 @@
 | Phase | Τίτλος | Domains | Αρχεία | Test Αρχεία | Εκτ. Tests |
 |-------|--------|---------|--------|-------------|------------|
 | **1** | **Core MVP ✅ DONE** | A1-A4 (Έργα, Κτίρια, Όροφοι, Μονάδες) | 16 | 8 | 254 |
-| 2 | Grouping + KPIs + Charts | — (engine) | ~3 | ~2 | ~25-30 |
-| 3 | Export (Tier 1) | — (PDF + Excel) | ~2 | ~3 | ~40-50 |
-| 4 | Domains A5-A6, B1-B8 + Tier 2 | Parking, Storage, Contacts... | ~5 configs | ~1 | ~20-30 |
+| **2** | **Grouping + KPIs + Charts ✅ DONE** | — (engine) | 6 new + 6 mod | 1 | 29 |
+| **3** | **Export (Tier 1) ✅ DONE** | — (PDF + Excel) | 5 new + 6 mod | 1 | ~30 |
+| **4** | **Domains A5-A6, B1-B8 ✅ DONE** | Parking, Storage, Contacts... | ~5 configs | ~1 | ~20-30 |
 | 5 | Domains C1-C7 (8 domains) + Computed Fields + collectionGroup | Payments, Cheques, Contracts... | ~8 configs + 2 engine | ~3 | ~40-50 |
 | 6 | Domains D1-D4, E1-E2, F1-F2 + Tier 3 | Construction, CRM, Accounting | ~8 configs | ~1 | ~20-30 |
 | 7 | Saved Reports | — | ~3 | ~2 | ~20-25 |
-| 8 | Cash Flow Forecast (Dedicated Module) | — (standalone) | ~4 | ~2 | ~30-40 |
+| **8** | **Cash Flow Forecast ✅ DONE** | — (standalone) | 20 new + 5 mod | 1 | 39 |
 
 **Σύνολο**: ~45 αρχεία κώδικα, ~22 test αρχεία, ~275-345 test cases
 
@@ -80,50 +80,68 @@ src/i18n/locales/{en,el}/report-builder-domains.json               ← Domain/fi
 
 ---
 
-## Phase 2: Grouping + KPIs + Charts
+## Phase 2: Grouping + KPIs + Charts — ✅ IMPLEMENTED (2026-03-29, commit `0ed9a37d`)
 
-**Αρχεία κώδικα:**
+**Αρχεία κώδικα (delivered):**
 ```
-src/components/reports/builder/GroupBySelector.tsx
-(updates to ReportResults.tsx, report-query-executor.ts)
+src/services/report-engine/grouping-engine.ts                         ← NEW: pure functions (groupRows, aggregations, suggestChart, generateKPIs)
+src/components/reports/builder/GroupBySelector.tsx                     ← NEW: 2-level grouping dropdown
+src/components/reports/builder/ChartSection.tsx                        ← NEW: 5 chart types + cross-filter
+src/components/reports/builder/GroupedTreeGrid.tsx                     ← NEW: WAI-ARIA treegrid, expand/collapse
+src/hooks/reports/useReportGrouping.ts                                ← NEW: extracted hook (SRP <500 lines)
+src/components/reports/builder/ReportBuilder.tsx                       ← MODIFIED: +GroupBySelector, ChartSection, KPIs
+src/components/reports/builder/ReportResults.tsx                       ← MODIFIED: +GroupedTreeGrid, CrossFilterChip
+src/config/report-builder/report-builder-types.ts                     ← MODIFIED: +GroupByConfig, GroupingResult, GroupedRow
+src/hooks/reports/useReportBuilder.ts                                  ← MODIFIED: composes useReportGrouping
+src/i18n/locales/{en,el}/report-builder.json                          ← MODIFIED: +grouping, chart, kpi, crossFilter keys
 ```
 
-**Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
+**Test αρχεία:**
 ```
-src/services/report-engine/__tests__/grouping-engine.test.ts          ← Group by 1-2 levels, subtotals, aggregations
-src/components/reports/builder/__tests__/GroupBySelector.test.tsx      ← UI: select group, max 2 levels
+src/services/report-engine/__tests__/grouping-engine.test.ts          ← 29 tests (group, aggregate, suggest, KPIs)
 ```
 
-**Features**: GroupBy 1-2 levels, KPI cards, subtotals, auto bar/pie chart
+**Features (12)**: GroupBy 1-2 levels, COUNT+SUM+AVG+MIN+MAX aggregations, chart auto-suggest + manual override, legend toggle, context-aware KPIs (max 4), grand total sticky footer, % of total toggle, chart↔table cross-filter, WAI-ARIA treegrid, sort by subtotal, animated transitions
 
 ---
 
-## Phase 3: Export (Tier 1)
+## Phase 3: Export (Tier 1) — ✅ IMPLEMENTED (2026-03-29)
 
-**Αρχεία κώδικα:**
+**Αρχεία κώδικα (delivered):**
 ```
-src/components/reports/builder/BuilderExportBar.tsx
-(reuse existing exportReportToPdf, exportReportToExcel)
+src/services/report-engine/builder-export-types.ts                    ← NEW: shared types, operator symbols, filename builder
+src/services/report-engine/builder-pdf-exporter.ts                    ← NEW: SAP Crystal banded, watermark, TOC, bookmarks
+src/services/report-engine/builder-excel-exporter.ts                  ← NEW: 4-sheet, formulas, named ranges, protection
+src/services/report-engine/builder-excel-analysis.ts                  ← NEW: extracted analysis sheet logic
+src/services/report-engine/builder-pdf-extras.ts                      ← NEW: watermark, TOC, bookmarks, footers
+src/components/reports/builder/ExportDialog.tsx                        ← NEW: format + watermark + scope selection
+src/components/reports/builder/ReportBuilder.tsx                       ← MODIFIED: +export wiring (dynamic import, toPng)
+src/config/report-builder/report-builder-types.ts                     ← MODIFIED: +re-export Phase 3 types
+src/i18n/locales/{en,el}/report-builder.json                          ← MODIFIED: +export dialog, watermark, scope keys
 ```
 
-**Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
+**Test αρχεία:**
 ```
-src/services/report-engine/__tests__/builder-pdf-exporter.test.ts     ← PDF: branding, table, pagination, chart
-src/services/report-engine/__tests__/builder-excel-exporter.test.ts   ← Excel: 4-sheet, formulas, charts, format
-src/components/reports/builder/__tests__/BuilderExportBar.test.tsx     ← UI: buttons, loading, format select
+src/services/report-engine/__tests__/builder-export.test.ts           ← ~30 tests (PDF + Excel generation, watermark, formulas)
 ```
+
+**Features (18)**: PDF SAP Crystal banded layout, chart PNG embed (html-to-image 2x DPR), Excel 4-sheet workbook (real COUNTA/SUM/AVERAGE/COUNTIFS/SUMIFS formulas), domain-aware filenames, cross-filter scope dialog, applied filters display, loading spinner + toast, conditional formatting, PDF watermark (3 modes), repeat headers every page, orphan/widow control, TOC + PDF bookmarks, document metadata, named ranges, sheet protection, print setup, outline/group rows, freeze panes + auto-filter
 
 ---
 
-## Phase 4: More Domains + Tier 2 Export
+## Phase 4: More Domains + Tier 2 Export — ✅ IMPLEMENTED (2026-03-30)
 
 **Domains**: A5-A6, B1-B8 (Parking, Storage, Individuals, Companies, Buyers, Suppliers, Engineers, Workers, Legal, Agents)
-**Tier 2**: Row repetition export mode for nested entities
 
-**Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
+**Αρχεία κώδικα (delivered):**
 ```
-src/config/report-builder/__tests__/domain-config-validation.test.ts  ← ALL domain configs schema validation
-src/services/report-engine/__tests__/tier2-row-expansion.test.ts      ← Row repetition: arrays → flat rows
+src/config/report-builder/domain-defs-spaces.ts                       ← NEW: A5 Parking + A6 Storage
+src/config/report-builder/domain-defs-contacts.ts                     ← NEW: B1 Individuals + B2 Companies
+src/config/report-builder/domain-defs-buyers.ts                       ← NEW: B3 Buyers
+src/config/report-builder/domain-defs-persona.ts                      ← NEW: B4-B8 (Suppliers, Engineers, Workers, Legal, Agents)
+src/config/report-builder/domain-definitions.ts                       ← MODIFIED: register new domains
+src/config/report-builder/report-builder-types.ts                     ← MODIFIED: +domain IDs
+src/i18n/locales/{en,el}/report-builder-domains.json                  ← MODIFIED: +domain labels
 ```
 
 ---
@@ -372,18 +390,69 @@ src/components/reports/builder/__tests__/SavedReportManager.test.tsx   ← UI: s
 
 ---
 
-## Phase 8: Cash Flow Forecast (Dedicated Module)
+## Phase 8: Cash Flow Forecast (Dedicated Module) — ✅ IMPLEMENTED (2026-03-30)
 
 **Απόφαση (2026-03-30)**: Standalone module, ΟΧΙ embedded σε generic report builder.
 **Pattern**: ARGUS Enterprise, Yardi Cash Management, Google Finance.
 
-**Features**:
+### Enterprise Research (2026-03-30)
+
+**Πλατφόρμες ερευνηθείσες (12)**: ARGUS Enterprise, Yardi Voyager, Procore, SAP S/4HANA, Oracle NetSuite Cash 360, QuickBooks Enterprise, Xero, Sage Intacct, Microsoft Dynamics 365 Finance, Buildium, AppFolio, HighRadius.
+
+**Πρότυπα κατασκευαστικού κλάδου**: RICS Cash Flow Forecasting 2nd Ed (July 2024), AACE RP 10S-90, PMI PMBOK EVM.
+
+#### Κοινά Enterprise Patterns (consensus 10/12):
+
+| Pattern | Consensus | Best Implementation |
+|---------|-----------|-------------------|
+| 4 KPI cards στην κορυφή | 10/12 | NetSuite Cash 360 |
+| Combo chart (stacked bar + cumulative line) | 8/12 | SAP Fiori, D365 |
+| 3 σενάρια (Optimistic/Realistic/Pessimistic) | 5/12 | D365 snapshots (best-in-class) |
+| Actual vs Forecast variance | 7/12 | D365, Yardi |
+| 12-month rolling forecast | 8/12 | SAP, D365, NetSuite, ARGUS |
+| Monthly breakdown table | 12/12 | Universal |
+| Per-project filtering | 8/12 | Procore, ARGUS, Yardi |
+| Export PDF + Excel | 10/12 | Universal |
+
+#### KPI Cards (industry consensus):
+1. **Current Cash Position** — τρέχον υπόλοιπο (10/12)
+2. **Cash Runway** — μήνες αντοχής (6/12, emerging)
+3. **Collection Rate** — % εισπράξεων εγκαίρως (8/12)
+4. **Net Cash Flow** — καθαρή ροή μήνα (7/12)
+
+#### Construction/RE-specific (ARGUS, Procore, RICS):
+- S-Curve cumulative cost vs plan
+- Retention tracking (5-10% holdback)
+- PDC bounce rate tracking (2-5% historical)
+- Pre-sales % (units sold before completion)
+- Peak Negative Cash Flow (max funding gap)
+- 13-week rolling short-term forecast (Wall Street standard)
+
+### Αποφάσεις Γιώργου
+
+| # | Ερώτηση | Απόφαση | Ημερομηνία |
+|---|---------|---------|------------|
+| Q1 | Τι layout θέλεις στη σελίδα; | "Ό,τι κάνουν οι μεγάλοι" → Dashboard-first: 4 KPI cards + combo chart + monthly table | 2026-03-30 |
+| Q2 | Πώς ορίζεται το αρχικό υπόλοιπο; | **Δρόμος Α (Xero pattern)** — χειροκίνητο αρχικό υπόλοιπο + δυνατότητα επεξεργασίας ανά πάσα στιγμή. Αποθήκευση σε Firestore (settings ή dedicated doc). Ο χρήστης μπορεί να το ενημερώνει όποτε θέλει. | 2026-03-30 |
+| Q3 | Ποιο ποσοστό δόσεων εισπράττεται εγκαίρως; | "Οι περισσότεροι πληρώνουν, κάποιοι καθυστερούν 1-2 μήνες" → Default σενάρια: **Αισιόδοξο 100%**, **Ρεαλιστικό 85%** (με μέσο delay 30 ημέρες), **Απαισιόδοξο 70%** (με μέσο delay 60 ημέρες). Ιδανικά: υπολογισμός collection rate αυτόματα από ιστορικά δεδομένα (paidDate vs dueDate). | 2026-03-30 |
+| Q4 | Τι εκροές μετράμε; | "Ό,τι κάνουν οι μεγάλοι" → **Hybrid approach** (QuickBooks/Xero pattern): (A) Αυτόματα από υπάρχοντα δεδομένα: POs (paymentDueDate+total), Τιμολόγια (dueDate+amount), ΕΦΚΑ (ήδη στο accounting). (B) Χειροκίνητα "Πάγιες Πληρωμές" (recurring expenses): δάνειο, μισθοδοσία, ενοίκια, λοιπά — editable λίστα, εφαρμόζονται κάθε μήνα στο forecast. | 2026-03-30 |
+| Q5 | Συγκεντρωτικά ή ανά έργο; | **Επιλογή Γ — Και τα δύο**: Default = όλα τα έργα μαζί (consolidated view). Φίλτρο ανά έργο/κτίριο. SAP/ARGUS/Procore pattern: consolidated default + drill-down per entity. | 2026-03-30 |
+| Q6 | Ημερολόγιο λήξης PDC; | **Ναι** — Calendar view με ημερομηνίες λήξης επιταγών. Κάθε ημέρα δείχνει ποσό + όνομα. ARGUS/Yardi pattern: PDC maturity calendar. Θα είναι secondary section κάτω από τον πίνακα. | 2026-03-30 |
+| Q7 | Export μορφές; | **PDF + Excel** — Reuse Phase 3 export infrastructure (builder-pdf-exporter, builder-excel-exporter patterns). PDF: branded A4 με KPIs + chart + πίνακα (για τράπεζα/επενδυτές). Excel: monthly breakdown + formulas (για ιδίους υπολογισμούς). | 2026-03-30 |
+| Q8 | Πού η φόρμα πάγιων πληρωμών + αρχικού υπολοίπου; | **Μέσα στη σελίδα ως collapsible panel** (QuickBooks/Xero pattern). Ο χρήστης ανοίγει το πάνελ, αλλάζει ποσά, βλέπει αμέσως πώς αλλάζει η πρόβλεψη. Περιλαμβάνει: αρχικό υπόλοιπο (editable) + λίστα recurring expenses (add/edit/delete). | 2026-03-30 |
+| Q9 | Forecast vs Actual σύγκριση; | **Ναι, από την αρχή** (D365/HighRadius pattern). Για μήνες που έχουν περάσει, δείχνουμε στήλη "Πραγματικά" δίπλα στα "Προβλεπόμενα" + στήλη "Απόκλιση" (ποσό + %). Υλοποίηση: aggregation πραγματικών εισπράξεων/πληρωμών από bank_transactions + payment events για παρελθοντικούς μήνες. | 2026-03-30 |
+| Q10 | Alerts/ειδοποιήσεις; | **Ναι** (SAP/HighRadius pattern). 3 τύποι alerts: (1) Low cash warning — υπόλοιπο πέφτει κάτω από threshold, (2) PDC alerts — επιταγές που λήγουν εντός εβδομάδας, (3) Collection rate drop — είσπραξη κάτω από 80%. Εμφάνιση ως banner/cards στην κορυφή της σελίδας, πάνω από τα KPIs. | 2026-03-30 |
+
+### Features (updated after research):
 - Rolling 12-month cash flow projection (inflows from payment plan installments, outflows from POs)
 - Projected vs Actual comparison (installment dueDate vs actual paidDate)
-- Cumulative balance timeline chart
+- Cumulative balance timeline chart (combo: stacked bar + line)
 - PDC (Post-Dated Cheque) maturity calendar
 - Inflows/Outflows breakdown per project
 - Scenario modeling: optimistic (100% on-time), realistic (historical collection rate), pessimistic
+- 4 KPI hero cards: Cash Position, Cash Runway, Collection Rate, Net Cash Flow
+- Per-project/building filtering
+- Variance column (forecast vs actual)
 
 **Data Sources**:
 - Payment Plans → installments[].dueDate + amount (projected inflows)
@@ -393,16 +462,50 @@ src/components/reports/builder/__tests__/SavedReportManager.test.tsx   ← UI: s
 - Historical payment data → collection rate calculation
 
 **UI**: Dedicated page `/reports/cash-flow` with:
-- Timeline chart (bar + line combo)
-- Monthly breakdown table
+- 4 KPI cards (hero section)
+- Timeline chart (stacked bar inflows/outflows + cumulative balance line)
+- Monthly breakdown table (Opening | Inflows | Outflows | Net | Closing)
+- Scenario selector (Optimistic / Realistic / Pessimistic)
 - Filter by project / building / date range
 - Export PDF + Excel
 
-**Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
+### Implementation (2026-03-30)
+
+**Αρχεία κώδικα (delivered):**
 ```
-src/services/report-engine/__tests__/cash-flow-forecast.test.ts        ← Projection calc, scenarios, cumulative
-src/components/reports/__tests__/CashFlowDashboard.test.tsx            ← UI: chart, filters, export
+src/services/cash-flow/cash-flow.types.ts                              ← NEW: All types & interfaces
+src/services/cash-flow/cash-flow-projection-engine.ts                  ← NEW: Pure functions (bucket, expand, project, alerts, PDC)
+src/services/cash-flow/cash-flow-data-fetcher.ts                       ← NEW: Server-only Firestore queries (6 collections + config)
+src/services/cash-flow/cash-flow-pdf-exporter.ts                       ← NEW: jsPDF A4 branded export
+src/services/cash-flow/cash-flow-excel-exporter.ts                     ← NEW: ExcelJS 4-sheet workbook
+src/services/cash-flow/index.ts                                        ← NEW: Barrel exports
+src/app/api/reports/cash-flow/route.ts                                 ← NEW: GET (forecast) + PUT (config)
+src/hooks/reports/useCashFlowReport.ts                                 ← NEW: Main hook (5-min cache, KPIs, chart, table)
+src/hooks/reports/useCashFlowSettings.ts                               ← NEW: Settings CRUD hook
+src/app/reports/cash-flow/page.tsx                                     ← NEW: Dashboard page
+src/components/reports/sections/cash-flow/CashFlowAlerts.tsx            ← NEW: 3 alert types (Q10)
+src/components/reports/sections/cash-flow/CashFlowControls.tsx          ← NEW: Scenario + filter + export (Q3, Q5)
+src/components/reports/sections/cash-flow/CashFlowChart.tsx             ← NEW: ComposedChart bars + line (Q1)
+src/components/reports/sections/cash-flow/CashFlowTable.tsx             ← NEW: Monthly breakdown table (Q1)
+src/components/reports/sections/cash-flow/CashFlowSettings.tsx          ← NEW: Collapsible CRUD panel (Q2, Q4, Q8)
+src/components/reports/sections/cash-flow/PDCCalendarView.tsx           ← NEW: PDC maturity calendar (Q6)
+src/components/reports/sections/cash-flow/ForecastVsActualTable.tsx     ← NEW: Forecast vs Actual (Q9)
+src/components/reports/sections/cash-flow/index.ts                     ← NEW: Barrel exports
+src/i18n/locales/en/cash-flow.json                                     ← NEW: EN translations
+src/i18n/locales/el/cash-flow.json                                     ← NEW: EL translations
+src/config/smart-navigation-factory.ts                                 ← MODIFIED: +Banknote nav entry
+src/services/enterprise-id.service.ts                                  ← MODIFIED: +rpay_ prefix + generator
+src/i18n/lazy-config.ts                                                ← MODIFIED: +cash-flow namespace
+src/i18n/locales/en/navigation.json                                    ← MODIFIED: +cashFlow key
+src/i18n/locales/el/navigation.json                                    ← MODIFIED: +cashFlow key
 ```
+
+**Test αρχεία:**
+```
+src/services/cash-flow/__tests__/cash-flow-projection-engine.test.ts   ← 39 tests (bucket, expand, project, scenarios, PDC, alerts)
+```
+
+**Test results**: 1/1 suite passed, 39/39 tests passed
 
 ---
 
