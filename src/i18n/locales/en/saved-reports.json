@@ -1,0 +1,96 @@
+{
+  "title": "Saved Reports",
+  "description": "Your saved report configurations",
+  "empty": "No saved reports yet",
+  "emptyHint": "Save a report from the Report Builder to see it here",
+
+  "tabs": {
+    "all": "All",
+    "favorites": "Favorites",
+    "recent": "Recently Run",
+    "shared": "Shared"
+  },
+
+  "categories": {
+    "monthly": "Monthly",
+    "tax": "Tax",
+    "expenses": "Expenses",
+    "bank": "Bank",
+    "efka": "EFKA",
+    "general": "General"
+  },
+
+  "visibility": {
+    "personal": "Personal",
+    "shared": "Shared",
+    "system": "System"
+  },
+
+  "actions": {
+    "save": "Save Report",
+    "saveAs": "Save As New",
+    "load": "Load",
+    "delete": "Delete",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "toggleFavorite": "Toggle Favorite",
+    "changeCategory": "Change Category",
+    "makeShared": "Share with Team",
+    "makePersonal": "Make Personal"
+  },
+
+  "dialog": {
+    "saveTitle": "Save Report",
+    "saveAsTitle": "Save As New Report",
+    "nameLabel": "Report Name",
+    "namePlaceholder": "e.g., Overdue Invoices Monthly",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Optional description",
+    "categoryLabel": "Category",
+    "visibilityLabel": "Visibility",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+
+  "deleteConfirm": {
+    "title": "Delete Report",
+    "message": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+
+  "table": {
+    "name": "Name",
+    "category": "Category",
+    "lastRun": "Last Run",
+    "createdBy": "Created By",
+    "visibility": "Visibility",
+    "actions": "Actions"
+  },
+
+  "datePresets": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "this_week": "This Week",
+    "last_week": "Last Week",
+    "this_month": "This Month",
+    "last_month": "Last Month",
+    "this_quarter": "This Quarter",
+    "last_quarter": "Last Quarter",
+    "this_fiscal_year": "This Fiscal Year",
+    "last_fiscal_year": "Last Fiscal Year",
+    "last_30_days": "Last 30 Days",
+    "last_90_days": "Last 90 Days",
+    "last_12_months": "Last 12 Months",
+    "year_to_date": "Year to Date"
+  },
+
+  "messages": {
+    "saved": "Report saved successfully",
+    "updated": "Report updated",
+    "deleted": "Report deleted",
+    "loaded": "Report loaded",
+    "favorited": "Added to favorites",
+    "unfavorited": "Removed from favorites"
+  }
+}

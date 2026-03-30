@@ -241,6 +241,11 @@ export const ENTERPRISE_ID_PREFIXES = {
   // ==========================================================================
   // OPTIMISTIC & TEMPORARY
   // ==========================================================================
+  // ==========================================================================
+  // REPORTS (ADR-268 Phase 7: Saved Reports)
+  // ==========================================================================
+  SAVED_REPORT: 'srpt',
+
   OPTIMISTIC: 'opt',
   TEMP: 'tmp'
 } as const;
@@ -1340,6 +1345,14 @@ export class EnterpriseIdService {
    */
   generatePOAttachmentId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.PO_ATTACHMENT).id;
+  }
+
+  /**
+   * 📊 Generate Saved Report ID
+   * Format: srpt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateSavedReportId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.SAVED_REPORT).id;
   }
 
   // ==========================================================================
