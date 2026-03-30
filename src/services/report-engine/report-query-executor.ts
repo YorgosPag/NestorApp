@@ -378,7 +378,7 @@ function matchesFilter(row: Record<string, unknown>, filter: ReportBuilderFilter
   }
 
   if (operator === 'in' && Array.isArray(filterValue)) {
-    return filterValue.includes(String(cellValue));
+    return (filterValue as string[]).includes(String(cellValue));
   }
 
   return true;
