@@ -670,6 +670,7 @@ export const API_ROUTES = {
       CANDIDATES: '/api/accounting/bank/candidates',
       MATCH: '/api/accounting/bank/match',
       MATCH_BATCH: '/api/accounting/bank/match-batch',
+      RECONCILE: '/api/accounting/bank/reconcile',
     },
     REPORTS: '/api/accounting/reports',
     DOCUMENTS: {

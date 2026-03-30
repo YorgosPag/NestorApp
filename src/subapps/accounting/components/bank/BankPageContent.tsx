@@ -28,7 +28,9 @@ import type { TransactionDirection, MatchStatus } from '@/subapps/accounting/typ
 import { formatCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useBankTransactions } from '../../hooks/useBankTransactions';
+import { useBankMatching } from '../../hooks/useBankMatching';
 import { TransactionsList } from './TransactionsList';
+import { MatchingPanel } from './MatchingPanel';
 import { ImportCSVDialog } from './ImportCSVDialog';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -108,8 +110,17 @@ export function BankPageContent() {
   const [filters, setFilters] = useState<BankFilterState>({ ...DEFAULT_FILTERS });
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
+
+  const {
+    candidates,
+    loadingCandidates,
+    fetchCandidates,
+    executeMatch,
+    clearCandidates,
+  } = useBankMatching();
 
   const { transactions, loading, error, refetch, importTransactions } = useBankTransactions({
     direction: filters.direction !== 'all' ? (filters.direction as TransactionDirection) : undefined,
@@ -120,6 +131,24 @@ export function BankPageContent() {
     setImportDialogOpen(false);
     await refetch();
   }, [refetch]);
+
+  const handleSelectTransaction = useCallback((transactionId: string | null) => {
+    setSelectedTransactionId(transactionId);
+    if (transactionId) {
+      fetchCandidates(transactionId);
+    } else {
+      clearCandidates();
+    }
+  }, [fetchCandidates, clearCandidates]);
+
+  const handleMatch = useCallback(async (
+    transactionId: string,
+    entityId: string,
+    entityType: string
+  ) => {
+    await executeMatch(transactionId, entityId, entityType);
+    await refetch();
+  }, [executeMatch, refetch]);
 
   // Compute dashboard stats
   const dashboardStats: DashboardStat[] = useMemo(() => {
@@ -217,7 +246,19 @@ export function BankPageContent() {
             </Button>
           </div>
         ) : (
-          <TransactionsList transactions={transactions} onRefresh={refetch} />
+          <>
+            <TransactionsList transactions={transactions} onRefresh={refetch} />
+
+            {/* Smart Matching Panel — side-by-side candidates */}
+            <MatchingPanel
+              transactions={transactions}
+              candidates={candidates}
+              loadingCandidates={loadingCandidates}
+              selectedTransactionId={selectedTransactionId}
+              onSelectTransaction={handleSelectTransaction}
+              onMatch={handleMatch}
+            />
+          </>
         )}
       </section>
 

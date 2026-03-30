@@ -37,7 +37,10 @@ import { cn } from '@/lib/utils';
 interface MatchingPanelProps {
   transactions: BankTransaction[];
   candidates: MatchCandidate[];
-  onMatch: (transactionId: string, entityId: string) => Promise<void>;
+  loadingCandidates?: boolean;
+  onSelectTransaction: (transactionId: string | null) => void;
+  selectedTransactionId: string | null;
+  onMatch: (transactionId: string, entityId: string, entityType: string) => Promise<void>;
 }
 
 // ============================================================================
@@ -56,32 +59,39 @@ function getConfidenceBadgeVariant(
 // COMPONENT
 // ============================================================================
 
-export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPanelProps) {
+export function MatchingPanel({
+  transactions,
+  candidates,
+  loadingCandidates = false,
+  onSelectTransaction,
+  selectedTransactionId,
+  onMatch,
+}: MatchingPanelProps) {
   const { t } = useTranslation('accounting');
   const colors = useSemanticColors();
 
-  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [matching, setMatching] = useState(false);
 
   const unmatchedTransactions = transactions.filter((tx) => tx.matchStatus === 'unmatched');
 
   const handleSelectTransaction = useCallback((transactionId: string) => {
-    setSelectedTransactionId((prev) => (prev === transactionId ? null : transactionId));
-  }, []);
+    const newId = selectedTransactionId === transactionId ? null : transactionId;
+    onSelectTransaction(newId);
+  }, [selectedTransactionId, onSelectTransaction]);
 
   const handleMatch = useCallback(
-    async (entityId: string) => {
+    async (entityId: string, entityType: string) => {
       if (!selectedTransactionId) return;
 
       try {
         setMatching(true);
-        await onMatch(selectedTransactionId, entityId);
-        setSelectedTransactionId(null);
+        await onMatch(selectedTransactionId, entityId, entityType);
+        onSelectTransaction(null);
       } finally {
         setMatching(false);
       }
     },
-    [selectedTransactionId, onMatch],
+    [selectedTransactionId, onMatch, onSelectTransaction],
   );
 
   return (
@@ -151,6 +161,10 @@ export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPan
             <p className={cn("text-center py-6", colors.text.muted)}>
               {t('bank.selectTransactionToMatch')}
             </p>
+          ) : loadingCandidates ? (
+            <p className={cn("text-center py-6", colors.text.muted)}>
+              {t('bank.loadingCandidates', { defaultValue: 'Αναζήτηση υποψηφίων...' })}
+            </p>
           ) : candidates.length === 0 ? (
             <p className={cn("text-center py-6", colors.text.muted)}>
               {t('bank.noCandidatesFound')}
@@ -187,7 +201,7 @@ export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPan
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleMatch(candidate.entityId)}
+                          onClick={() => handleMatch(candidate.entityId, candidate.entityType)}
                           disabled={matching}
                           aria-label={t('bank.matchAction')}
                         >
