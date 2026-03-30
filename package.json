@@ -237,6 +237,7 @@
     "overrides": {
       "react": "^19.2.1",
       "react-dom": "^19.2.1",
+      "next": "15.5.12",
       "@radix-ui/react-presence": "1.1.5",
       "@radix-ui/react-compose-refs": "1.1.2"
     },
