@@ -85,14 +85,15 @@ export interface ReportBuilderFilter {
 // Field & Domain Definitions
 // ============================================================================
 
-/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) + Phase 5 (8) + Phase 6a (3) */
+/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) + Phase 5 (8) + Phase 6a (3) + Phase 6b (3) */
 export type BuilderDomainId =
   | 'projects' | 'buildings' | 'floors' | 'units'
   | 'parking' | 'storage' | 'individuals' | 'companies'
   | 'buyers' | 'suppliers' | 'engineers' | 'workers' | 'legal' | 'agents'
   | 'paymentPlans' | 'cheques' | 'legalContracts' | 'purchaseOrders'
   | 'brokerageAgreements' | 'commissionRecords' | 'ownershipSummary' | 'ownershipDetail'
-  | 'constructionPhases' | 'constructionTasks' | 'resourceAssignments';
+  | 'constructionPhases' | 'constructionTasks' | 'resourceAssignments'
+  | 'boqItems' | 'buildingMilestones' | 'constructionBaselines';
 
 /** Domain groups for UI categorization (Q87) */
 export type DomainGroup = 'realestate' | 'financial' | 'people' | 'specialists' | 'construction';
@@ -351,6 +352,9 @@ export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'constructionPhases',
   'constructionTasks',
   'resourceAssignments',
+  'boqItems',
+  'buildingMilestones',
+  'constructionBaselines',
 ] as const;
 
 // ============================================================================

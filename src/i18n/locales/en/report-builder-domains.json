@@ -955,6 +955,149 @@
           "equipment": "Equipment"
         }
       }
+    },
+    "boqItems": {
+      "label": "BOQ Items",
+      "description": "Bill of Quantities — cost breakdown, quantities, materials across all buildings",
+      "fields": {
+        "title": "Title",
+        "categoryCode": "ATOE Category",
+        "scope": "Scope",
+        "unit": "Unit",
+        "estimatedQuantity": "Est. Quantity",
+        "actualQuantity": "Actual Quantity",
+        "wasteFactor": "Waste %",
+        "wastePolicy": "Waste Policy",
+        "materialUnitCost": "Material Cost/Unit",
+        "laborUnitCost": "Labor Cost/Unit",
+        "equipmentUnitCost": "Equipment Cost/Unit",
+        "priceAuthority": "Price Authority",
+        "status": "Status",
+        "qaStatus": "QA Status",
+        "source": "Source",
+        "measurementMethod": "Measurement Method",
+        "description": "Description",
+        "notes": "Notes",
+        "building": "Building",
+        "project": "Project",
+        "phase": "Phase",
+        "task": "Task",
+        "contractor": "Contractor",
+        "grossQuantity": "Gross Quantity",
+        "unitCost": "Unit Cost",
+        "estimatedTotalCost": "Est. Total Cost",
+        "actualTotalCost": "Actual Total Cost",
+        "materialCost": "Material Cost",
+        "laborCost": "Labor Cost",
+        "equipmentCost": "Equipment Cost",
+        "quantityVariance": "Qty Variance %",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "enums": {
+        "scope": {
+          "building": "Building",
+          "unit": "Unit"
+        },
+        "unit": {
+          "m": "m",
+          "m2": "m²",
+          "m3": "m³",
+          "kg": "kg",
+          "ton": "ton",
+          "pcs": "pcs",
+          "lt": "lt",
+          "set": "set",
+          "hr": "hr",
+          "day": "day",
+          "lump": "lump sum"
+        },
+        "status": {
+          "draft": "Draft",
+          "submitted": "Submitted",
+          "approved": "Approved",
+          "certified": "Certified",
+          "locked": "Locked"
+        },
+        "qaStatus": {
+          "pending": "Pending",
+          "passed": "Passed",
+          "failed": "Failed",
+          "na": "N/A"
+        },
+        "source": {
+          "manual": "Manual",
+          "template": "Template",
+          "dxf_auto": "DXF Auto",
+          "dxf_verified": "DXF Verified",
+          "imported": "Imported",
+          "duplicate": "Duplicate"
+        },
+        "measurementMethod": {
+          "manual": "Manual",
+          "tape": "Tape",
+          "laser": "Laser",
+          "dxf_auto": "DXF Auto",
+          "dxf_verified": "DXF Verified",
+          "bim": "BIM"
+        },
+        "wastePolicy": {
+          "inherited": "Inherited",
+          "overridden": "Overridden"
+        },
+        "priceAuthority": {
+          "master": "Master Price List",
+          "project": "Project Price List",
+          "item": "Item Override"
+        }
+      }
+    },
+    "buildingMilestones": {
+      "label": "Building Milestones",
+      "description": "Construction milestones across all buildings — deadlines, progress, types",
+      "fields": {
+        "code": "Code",
+        "title": "Title",
+        "type": "Type",
+        "status": "Status",
+        "date": "Date",
+        "progress": "Progress",
+        "order": "Order",
+        "description": "Description",
+        "building": "Building",
+        "phase": "Phase",
+        "daysUntil": "Days Until",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "type": {
+          "start": "Start",
+          "construction": "Construction",
+          "systems": "Systems",
+          "finishing": "Finishing",
+          "delivery": "Delivery"
+        },
+        "status": {
+          "completed": "Completed",
+          "in-progress": "In Progress",
+          "pending": "Pending",
+          "delayed": "Delayed"
+        }
+      }
+    },
+    "constructionBaselines": {
+      "label": "Construction Baselines",
+      "description": "Schedule snapshots across all buildings — version history, phase/task counts",
+      "fields": {
+        "name": "Name",
+        "version": "Version",
+        "description": "Description",
+        "building": "Building",
+        "phaseCount": "Phases",
+        "taskCount": "Tasks",
+        "createdAt": "Created"
+      },
+      "enums": {}
     }
   }
 }

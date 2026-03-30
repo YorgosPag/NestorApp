@@ -38,6 +38,11 @@ import {
   CONSTRUCTION_TASKS_DEFINITION,
   RESOURCE_ASSIGNMENTS_DEFINITION,
 } from './domain-defs-construction';
+import {
+  BOQ_ITEMS_DEFINITION,
+  BUILDING_MILESTONES_DEFINITION,
+  CONSTRUCTION_BASELINES_DEFINITION,
+} from './domain-defs-construction-ext';
 
 // ============================================================================
 // Enum Value Constants (SSoT — match actual Firestore data)
@@ -241,6 +246,10 @@ export const DOMAIN_DEFINITIONS: Record<BuilderDomainId, DomainDefinition> = {
   constructionPhases: CONSTRUCTION_PHASES_DEFINITION,
   constructionTasks: CONSTRUCTION_TASKS_DEFINITION,
   resourceAssignments: RESOURCE_ASSIGNMENTS_DEFINITION,
+  // Phase 6b — Construction extended domains
+  boqItems: BOQ_ITEMS_DEFINITION,
+  buildingMilestones: BUILDING_MILESTONES_DEFINITION,
+  constructionBaselines: CONSTRUCTION_BASELINES_DEFINITION,
 };
 
 // ============================================================================

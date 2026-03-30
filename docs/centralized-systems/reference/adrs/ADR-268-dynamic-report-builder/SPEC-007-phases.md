@@ -193,10 +193,23 @@ src/i18n/locales/el/report-builder-domains.json                    ← EDIT: +3 
 - G6 (BOQ Revisions): Post-Phase 6
 - D6 (Baselines domain): Phase 6b
 
-### Phase 6b: Construction Extended (D4-D6) — PENDING
-- D4: BOQ Items (31 fields, 7 enums, Cost/m² computed)
-- D5: Building Milestones
-- D6: Construction Baselines
+### Phase 6b: Construction Extended (D4-D6) ✅ IMPLEMENTED (2026-03-30)
+
+**Domains implemented**:
+- D4: `boqItems` — 31 fields (23 flat + 8 computed: grossQuantity, unitCost, estimatedTotalCost, actualTotalCost, materialCost, laborCost, equipmentCost, quantityVariance), 7 enums
+- D5: `buildingMilestones` — 12 fields (11 flat + 1 computed: daysUntil), 2 enums
+- D6: `constructionBaselines` — 7 fields (4 flat + 2 computed: phaseCount, taskCount + createdAt)
+
+**Files**:
+```
+src/config/report-builder/domain-defs-construction-ext.ts          ← NEW: 3 domain definitions
+src/config/report-builder/report-builder-types.ts                  ← EDIT: +3 domain IDs
+src/config/report-builder/domain-definitions.ts                    ← EDIT: register 3 domains
+src/i18n/locales/en/report-builder-domains.json                    ← EDIT: +3 domains EN
+src/i18n/locales/el/report-builder-domains.json                    ← EDIT: +3 domains EL
+```
+
+**Total construction domains**: 6 (D1-D6), 28 domains total in Report Builder
 
 ### Phase 6c-6f: CRM + Accounting — PENDING
 
