@@ -1,6 +1,7 @@
 {
   "groups": {
     "realestate": "Ακίνητα",
+    "construction": "Κατασκευή",
     "financial": "Οικονομικά",
     "people": "Πρόσωπα",
     "specialists": "Ειδικότητες"
@@ -832,6 +833,126 @@
           "draft": "Προσχέδιο",
           "finalized": "Οριστικοποιημένος",
           "registered": "Καταχωρημένος"
+        }
+      }
+    },
+    "constructionPhases": {
+      "label": "Φάσεις Κατασκευής",
+      "description": "Φάσεις κατασκευής σε όλα τα κτίρια — χρονοδιάγραμμα, πρόοδος, EVM, κίνδυνος",
+      "fields": {
+        "code": "Κωδικός",
+        "name": "Όνομα",
+        "status": "Κατάσταση",
+        "progress": "Πρόοδος",
+        "plannedStartDate": "Προγρ. Έναρξη",
+        "plannedEndDate": "Προγρ. Λήξη",
+        "actualStartDate": "Πραγμ. Έναρξη",
+        "actualEndDate": "Πραγμ. Λήξη",
+        "order": "Σειρά",
+        "delayReason": "Αιτία Καθυστέρησης",
+        "delayNote": "Σημείωση Καθυστέρησης",
+        "description": "Περιγραφή",
+        "building": "Κτίριο",
+        "durationDays": "Διάρκεια (ημέρες)",
+        "delayDays": "Καθυστέρηση (ημέρες)",
+        "riskIndicator": "Κίνδυνος",
+        "spiIndex": "SPI",
+        "scheduleVariance": "Απόκλιση Χρονοδιαγράμματος (%)",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "status": {
+          "planning": "Σχεδιασμός",
+          "inProgress": "Σε Εξέλιξη",
+          "completed": "Ολοκληρωμένη",
+          "delayed": "Καθυστερημένη",
+          "blocked": "Μπλοκαρισμένη"
+        },
+        "delayReason": {
+          "weather": "Καιρικές Συνθήκες",
+          "materials": "Υλικά",
+          "permits": "Άδειες",
+          "subcontractor": "Υπεργολάβος",
+          "other": "Άλλο"
+        },
+        "riskIndicator": {
+          "onTrack": "Εντός Χρόνου",
+          "atRisk": "Σε Κίνδυνο",
+          "late": "Καθυστερεί"
+        }
+      }
+    },
+    "constructionTasks": {
+      "label": "Εργασίες Κατασκευής",
+      "description": "Εργασίες κατασκευής σε όλα τα κτίρια — χρονοδιάγραμμα, εξαρτήσεις, κρίσιμη διαδρομή",
+      "fields": {
+        "code": "Κωδικός",
+        "name": "Όνομα",
+        "status": "Κατάσταση",
+        "progress": "Πρόοδος",
+        "plannedStartDate": "Προγρ. Έναρξη",
+        "plannedEndDate": "Προγρ. Λήξη",
+        "actualStartDate": "Πραγμ. Έναρξη",
+        "actualEndDate": "Πραγμ. Λήξη",
+        "order": "Σειρά",
+        "delayReason": "Αιτία Καθυστέρησης",
+        "delayNote": "Σημείωση Καθυστέρησης",
+        "description": "Περιγραφή",
+        "phase": "Φάση",
+        "building": "Κτίριο",
+        "isCritical": "Κρίσιμη Διαδρομή",
+        "dependencyCount": "Εξαρτήσεις",
+        "durationDays": "Διάρκεια (ημέρες)",
+        "delayDays": "Καθυστέρηση (ημέρες)",
+        "riskIndicator": "Κίνδυνος",
+        "spiIndex": "SPI",
+        "scheduleVariance": "Απόκλιση Χρονοδιαγράμματος (%)",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "status": {
+          "notStarted": "Δεν Ξεκίνησε",
+          "inProgress": "Σε Εξέλιξη",
+          "completed": "Ολοκληρωμένη",
+          "delayed": "Καθυστερημένη",
+          "blocked": "Μπλοκαρισμένη"
+        },
+        "delayReason": {
+          "weather": "Καιρικές Συνθήκες",
+          "materials": "Υλικά",
+          "permits": "Άδειες",
+          "subcontractor": "Υπεργολάβος",
+          "other": "Άλλο"
+        },
+        "riskIndicator": {
+          "onTrack": "Εντός Χρόνου",
+          "atRisk": "Σε Κίνδυνο",
+          "late": "Καθυστερεί"
+        }
+      }
+    },
+    "resourceAssignments": {
+      "label": "Αναθέσεις Πόρων",
+      "description": "Αναθέσεις εργατών και εξοπλισμού σε εργασίες κατασκευής",
+      "fields": {
+        "resourceName": "Πόρος",
+        "resourceType": "Τύπος",
+        "allocatedHours": "Κατανεμημένες Ώρες",
+        "actualHours": "Πραγματικές Ώρες",
+        "equipmentLabel": "Εξοπλισμός",
+        "notes": "Σημειώσεις",
+        "task": "Εργασία",
+        "phase": "Φάση",
+        "building": "Κτίριο",
+        "contact": "Επαφή",
+        "utilizationPercent": "Αξιοποίηση %",
+        "hoursVariance": "Απόκλιση Ωρών",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "resourceType": {
+          "worker": "Εργάτης",
+          "equipment": "Εξοπλισμός"
         }
       }
     }

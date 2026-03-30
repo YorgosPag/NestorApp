@@ -1,6 +1,7 @@
 {
   "groups": {
     "realestate": "Real Estate",
+    "construction": "Construction",
     "financial": "Financial",
     "people": "People",
     "specialists": "Specialists"
@@ -832,6 +833,126 @@
           "draft": "Draft",
           "finalized": "Finalised",
           "registered": "Registered"
+        }
+      }
+    },
+    "constructionPhases": {
+      "label": "Construction Phases",
+      "description": "Construction phases across all buildings — schedule, progress, EVM, risk",
+      "fields": {
+        "code": "Code",
+        "name": "Name",
+        "status": "Status",
+        "progress": "Progress",
+        "plannedStartDate": "Planned Start",
+        "plannedEndDate": "Planned End",
+        "actualStartDate": "Actual Start",
+        "actualEndDate": "Actual End",
+        "order": "Order",
+        "delayReason": "Delay Reason",
+        "delayNote": "Delay Note",
+        "description": "Description",
+        "building": "Building",
+        "durationDays": "Duration (days)",
+        "delayDays": "Delay (days)",
+        "riskIndicator": "Risk",
+        "spiIndex": "SPI",
+        "scheduleVariance": "Schedule Variance (%)",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "status": {
+          "planning": "Planning",
+          "inProgress": "In Progress",
+          "completed": "Completed",
+          "delayed": "Delayed",
+          "blocked": "Blocked"
+        },
+        "delayReason": {
+          "weather": "Weather",
+          "materials": "Materials",
+          "permits": "Permits",
+          "subcontractor": "Subcontractor",
+          "other": "Other"
+        },
+        "riskIndicator": {
+          "onTrack": "On Track",
+          "atRisk": "At Risk",
+          "late": "Late"
+        }
+      }
+    },
+    "constructionTasks": {
+      "label": "Construction Tasks",
+      "description": "Construction tasks across all buildings — schedule, dependencies, critical path",
+      "fields": {
+        "code": "Code",
+        "name": "Name",
+        "status": "Status",
+        "progress": "Progress",
+        "plannedStartDate": "Planned Start",
+        "plannedEndDate": "Planned End",
+        "actualStartDate": "Actual Start",
+        "actualEndDate": "Actual End",
+        "order": "Order",
+        "delayReason": "Delay Reason",
+        "delayNote": "Delay Note",
+        "description": "Description",
+        "phase": "Phase",
+        "building": "Building",
+        "isCritical": "Critical Path",
+        "dependencyCount": "Dependencies",
+        "durationDays": "Duration (days)",
+        "delayDays": "Delay (days)",
+        "riskIndicator": "Risk",
+        "spiIndex": "SPI",
+        "scheduleVariance": "Schedule Variance (%)",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "status": {
+          "notStarted": "Not Started",
+          "inProgress": "In Progress",
+          "completed": "Completed",
+          "delayed": "Delayed",
+          "blocked": "Blocked"
+        },
+        "delayReason": {
+          "weather": "Weather",
+          "materials": "Materials",
+          "permits": "Permits",
+          "subcontractor": "Subcontractor",
+          "other": "Other"
+        },
+        "riskIndicator": {
+          "onTrack": "On Track",
+          "atRisk": "At Risk",
+          "late": "Late"
+        }
+      }
+    },
+    "resourceAssignments": {
+      "label": "Resource Assignments",
+      "description": "Worker and equipment assignments across all construction tasks",
+      "fields": {
+        "resourceName": "Resource",
+        "resourceType": "Type",
+        "allocatedHours": "Allocated Hours",
+        "actualHours": "Actual Hours",
+        "equipmentLabel": "Equipment",
+        "notes": "Notes",
+        "task": "Task",
+        "phase": "Phase",
+        "building": "Building",
+        "contact": "Contact",
+        "utilizationPercent": "Utilization %",
+        "hoursVariance": "Hours Variance",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "resourceType": {
+          "worker": "Worker",
+          "equipment": "Equipment"
         }
       }
     }

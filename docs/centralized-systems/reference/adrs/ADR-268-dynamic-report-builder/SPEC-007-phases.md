@@ -161,8 +161,44 @@ src/services/report-engine/__tests__/tier2-row-expansion.test.ts      ← Row re
 
 ## Phase 6: Construction + CRM + Accounting + Tier 3
 
-**Domains**: D1-D4, E1-E2, F1-F2
+**Domains**: D1-D6, E1-E4, F1-F6
 **Tier 3**: Contact Card PDF renderer
+
+### Phase 6a: Construction Core (D1-D3) ✅ IMPLEMENTED (2026-03-30)
+
+**Domains implemented**:
+- D1: `constructionPhases` — 18 fields (12 flat + 6 computed)
+- D2: `constructionTasks` — 20 fields (12 flat + 8 computed)
+- D3: `resourceAssignments` — 13 fields (9 flat + 4 computed)
+
+**Gap Analysis Enhancements (Web Research: Procore, P6, CostX, Buildertrend, PlanGrid)**:
+- G1: EVM fields (SPI, Schedule Variance) — computed on Phases & Tasks
+- G2: Critical Path flag (isCritical) — computed on Tasks
+- G3+G7: actualHours field + utilization% — on Resource Assignments
+- G4: Auto Risk Indicator (On Track / At Risk / Late) — computed on Phases & Tasks
+- G8: Budget columns — deferred to Phase 6b (requires cross-document BOQ aggregation)
+
+**Files**:
+```
+src/config/report-builder/domain-defs-construction.ts              ← NEW: 3 domain definitions
+src/config/report-builder/report-builder-types.ts                  ← EDIT: +3 domain IDs, +construction group
+src/config/report-builder/domain-definitions.ts                    ← EDIT: register 3 domains
+src/types/building/construction.ts                                 ← EDIT: +actualHours field
+src/i18n/locales/en/report-builder-domains.json                    ← EDIT: +3 domains EN
+src/i18n/locales/el/report-builder-domains.json                    ← EDIT: +3 domains EL
+```
+
+**Decisions recorded**:
+- G5 (Cost/m²): Phase 6b with BOQ domain
+- G6 (BOQ Revisions): Post-Phase 6
+- D6 (Baselines domain): Phase 6b
+
+### Phase 6b: Construction Extended (D4-D6) — PENDING
+- D4: BOQ Items (31 fields, 7 enums, Cost/m² computed)
+- D5: Building Milestones
+- D6: Construction Baselines
+
+### Phase 6c-6f: CRM + Accounting — PENDING
 
 **Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
 ```

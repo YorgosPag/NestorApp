@@ -672,3 +672,44 @@
 | Firestore collections | 9 (boq_items, boq_categories, boq_price_lists, boq_templates, construction_phases, construction_tasks, construction_baselines, construction_resource_assignments, building_milestones) |
 | API route groups | 4 (construction-phases, construction-baselines, construction-resource-assignments, milestones) |
 | Services | 6 (boq-service, boq-repository, cost-engine, resource-assignment.service, cpm-calculator, evm-calculator) |
+
+---
+
+## 8. Gap Analysis — Industry Benchmarking (2026-03-30)
+
+### 8.1 Μεθοδολογία
+
+Web research σε 5 construction management platforms:
+- **Procore** (construction management leader)
+- **Primavera P6 / MS Project** (scheduling, EVM)
+- **CostX / Bluebeam** (quantity surveying, BOQ)
+- **Buildertrend** (residential construction)
+- **PlanGrid / Autodesk Build** (field reports)
+
+### 8.2 Αποφάσεις
+
+| # | Gap | Απόφαση | Phase | Domains |
+|---|-----|---------|-------|---------|
+| G1 | Πλήρες EVM (SPI, SV) | ✅ Υλοποιήθηκε (document-level) | 6a | Phases, Tasks |
+| G2 | Float/Slack/Critical Path | ✅ Υλοποιήθηκε (isCritical flag) | 6a | Tasks |
+| G3+G7 | actualHours + utilization% | ✅ Υλοποιήθηκε | 6a | Resources |
+| G4 | Auto Risk Indicator | ✅ Υλοποιήθηκε (On Track/At Risk/Late) | 6a | Phases, Tasks |
+| G5 | Cost per m² | 📋 Pending | 6b | BOQ |
+| G6 | BOQ Revision Tracking | 📋 Post-Phase 6 | Future | BOQ |
+| G8 | Budget columns (Est./Act./Rem.) | 📋 Pending (cross-doc aggregation) | 6b | Phases |
+
+### 8.3 Νέο πεδίο: actualHours
+
+Προστέθηκε στο `ConstructionResourceAssignment` type (`src/types/building/construction.ts`):
+```typescript
+actualHours?: number;  // Actual hours worked — for utilization tracking
+```
+
+### 8.4 EVM Implementation Notes
+
+Τα πλήρη EVM πεδία (PV, EV, AC, CV, SPI, CPI, EAC, ETC, VAC, TCPI) απαιτούν
+cross-document aggregation (BOQ costs per phase). Στο Phase 6a υλοποιήθηκαν
+**document-level estimates** (SPI, SV) βασισμένα στο progress vs elapsed time.
+
+Για full EVM με BOQ cost integration, απαιτείται post-processing step στο
+`report-query-executor.ts` (Phase 6b ή μεταγενέστερη).

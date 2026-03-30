@@ -33,6 +33,11 @@ import {
 import { PURCHASE_ORDERS_DEFINITION } from './domain-defs-procurement';
 import { BROKERAGE_DEFINITION, COMMISSIONS_DEFINITION } from './domain-defs-brokerage';
 import { OWNERSHIP_SUMMARY_DEFINITION, OWNERSHIP_DETAIL_DEFINITION } from './domain-defs-ownership';
+import {
+  CONSTRUCTION_PHASES_DEFINITION,
+  CONSTRUCTION_TASKS_DEFINITION,
+  RESOURCE_ASSIGNMENTS_DEFINITION,
+} from './domain-defs-construction';
 
 // ============================================================================
 // Enum Value Constants (SSoT — match actual Firestore data)
@@ -232,6 +237,10 @@ export const DOMAIN_DEFINITIONS: Record<BuilderDomainId, DomainDefinition> = {
   commissionRecords: COMMISSIONS_DEFINITION,
   ownershipSummary: OWNERSHIP_SUMMARY_DEFINITION,
   ownershipDetail: OWNERSHIP_DETAIL_DEFINITION,
+  // Phase 6a — Construction domains
+  constructionPhases: CONSTRUCTION_PHASES_DEFINITION,
+  constructionTasks: CONSTRUCTION_TASKS_DEFINITION,
+  resourceAssignments: RESOURCE_ASSIGNMENTS_DEFINITION,
 };
 
 // ============================================================================

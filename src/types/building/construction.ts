@@ -199,6 +199,8 @@ export interface ConstructionResourceAssignment {
   equipmentLabel?: string | null;
   /** Total hours allocated to this task */
   allocatedHours: number;
+  /** Actual hours worked — for utilization tracking (ADR-268 Phase 6a, Gap G3+G7) */
+  actualHours?: number;
   notes?: string | null;
   createdAt?: string;
   updatedAt?: string;
