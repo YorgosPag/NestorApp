@@ -32,9 +32,9 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const { searchParams } = new URL(req.url);
 
         const seriesCode = searchParams.get('seriesCode');

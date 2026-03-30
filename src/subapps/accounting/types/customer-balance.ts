@@ -98,6 +98,10 @@ export interface CustomerBalance {
   /** Πλήθος ανοιχτών τιμολογίων */
   invoiceCount: number;
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+
   // — Metadata —
   /** Φορολογικό έτος */
   fiscalYear: number;

@@ -27,9 +27,9 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const series = await repository.getInvoiceSeries();
 
         return NextResponse.json({ success: true, data: series });

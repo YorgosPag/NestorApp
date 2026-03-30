@@ -60,6 +60,10 @@ export interface FiscalPeriod {
   /** Ποιος κλείδωσε (user ID) */
   lockedBy: string | null;
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+
   // — Reopen audit trail (CLOSED → OPEN only) —
   /** Πότε ξανάνοιξε τελευταία φορά (ISO 8601) */
   reopenedAt: string | null;

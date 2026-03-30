@@ -11,6 +11,7 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 import type { AccountingAuditEntry, AuditEntryFilters } from '../../types/accounting-audit';
+import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore } from './firestore-helpers';
 
@@ -25,10 +26,14 @@ import { sanitizeForFirestore } from './firestore-helpers';
  * NEVER updates or deletes — by design (Q3).
  */
 export async function createAuditEntry(
+  tenant: TenantContext,
   entry: AccountingAuditEntry
 ): Promise<void> {
   await safeFirestoreOperation(async (db) => {
-    const doc = sanitizeForFirestore(entry as unknown as Record<string, unknown>);
+    const doc = sanitizeForFirestore({
+      ...entry,
+      companyId: tenant.companyId,
+    } as unknown as Record<string, unknown>);
     await db
       .collection(COLLECTIONS.ACCOUNTING_AUDIT_LOG)
       .doc(entry.auditId)
@@ -49,11 +54,14 @@ export async function createAuditEntry(
  * 3. userId + timestamp DESC — user activity audit
  */
 export async function listAuditEntries(
+  tenant: TenantContext,
   filters: AuditEntryFilters,
   maxResults: number = 100
 ): Promise<AccountingAuditEntry[]> {
   return safeFirestoreOperation(async (db) => {
     let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_AUDIT_LOG);
+
+    query = query.where('companyId', '==', tenant.companyId);
 
     // Index 1: entityType + entityId + timestamp
     if (filters.entityType) {

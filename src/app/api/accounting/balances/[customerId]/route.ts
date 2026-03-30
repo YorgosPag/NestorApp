@@ -26,7 +26,7 @@ async function handleGet(
   segmentData: { params: Promise<{ customerId: string }> }
 ): Promise<NextResponse> {
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { customerId } = await segmentData.params;
 
@@ -34,7 +34,7 @@ async function handleGet(
           return NextResponse.json({ success: false, error: 'Missing customerId' }, { status: 400 });
         }
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const balance = await repository.getCustomerBalance(customerId);
 
         if (!balance) {

@@ -1,13 +1,15 @@
 /**
- * @fileoverview Accounting Repository — Operations Domain (Bank, Assets, Expenses, APY, Categories)
- * @description Standalone functions extracted from FirestoreAccountingRepository
+ * @fileoverview Accounting Repository — Operations Domain (Bank, Assets, Import Batches)
+ * @description Standalone functions extracted from FirestoreAccountingRepository.
+ *   Documents domain (Expenses, APY, Categories) moved to accounting-repo-documents.ts
  * @author Claude Code (Anthropic AI) + Giorgos Pagonis
  * @created 2026-03-25
- * @see ADR-ACC-010, ADR-ACC-020 APY, ADR-ACC-021 Custom Categories
+ * @modified 2026-03-31 — Split: Expenses/APY/Categories → accounting-repo-documents.ts
+ * @see ADR-ACC-010
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, max 500 lines
  */
 
-import { safeFirestoreOperation, FieldValue } from '@/lib/firebaseAdmin';
+import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import {
@@ -15,9 +17,6 @@ import {
   generateFixedAssetId,
   generateDepreciationId,
   generateImportBatchId,
-  generateExpenseDocId,
-  generateApyCertificateId,
-  generateCustomCategoryId,
 } from '@/services/enterprise-id.service';
 import type { PaginatedResult } from '@/lib/pagination';
 
@@ -33,14 +32,7 @@ import type {
   FixedAssetFilters,
   DepreciationRecord,
 } from '../../types/assets';
-import type { ReceivedExpenseDocument } from '../../types/documents';
-import type { APYCertificate, APYEmailSendRecord } from '../../types/apy-certificate';
-import type {
-  CustomCategoryDocument,
-  CreateCustomCategoryInput,
-  UpdateCustomCategoryInput,
-  CustomCategoryCode,
-} from '../../types/custom-category';
+import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 
@@ -49,12 +41,15 @@ import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 // ============================================================================
 
 export async function createBankTransaction(
+  tenant: TenantContext,
   data: Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>
 ): Promise<{ id: string }> {
   const id = generateBankTransactionId();
   const now = isoNow();
   const doc = sanitizeForFirestore({
     ...data,
+    companyId: tenant.companyId,
+    createdBy: tenant.userId,
     transactionId: id,
     createdAt: now,
     updatedAt: now,
@@ -68,6 +63,7 @@ export async function createBankTransaction(
 }
 
 export async function getBankTransaction(
+  tenant: TenantContext,
   transactionId: string
 ): Promise<BankTransaction | null> {
   return safeFirestoreOperation(async (db) => {
@@ -78,6 +74,7 @@ export async function getBankTransaction(
 }
 
 export async function updateBankTransaction(
+  tenant: TenantContext,
   transactionId: string,
   updates: Partial<BankTransaction>
 ): Promise<void> {
@@ -89,12 +86,14 @@ export async function updateBankTransaction(
 }
 
 export async function listBankTransactions(
+  tenant: TenantContext,
   filters: BankTransactionFilters,
   pageSize: number = 50
 ): Promise<PaginatedResult<BankTransaction>> {
   return safeFirestoreOperation(async (db) => {
     let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_BANK_TRANSACTIONS);
 
+    query = query.where('companyId', '==', tenant.companyId);
     if (filters.accountId) query = query.where('accountId', '==', filters.accountId);
     if (filters.direction) query = query.where('direction', '==', filters.direction);
     if (filters.matchStatus) query = query.where('matchStatus', '==', filters.matchStatus);
@@ -114,7 +113,7 @@ export async function listBankTransactions(
   }, { items: [], hasNext: false, totalShown: 0, pageSize });
 }
 
-export async function getBankAccounts(): Promise<BankAccountConfig[]> {
+export async function getBankAccounts(tenant: TenantContext): Promise<BankAccountConfig[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_BANK_ACCOUNTS)
@@ -125,11 +124,14 @@ export async function getBankAccounts(): Promise<BankAccountConfig[]> {
 }
 
 export async function createImportBatch(
+  tenant: TenantContext,
   data: Omit<ImportBatch, 'batchId'>
 ): Promise<{ id: string }> {
   const id = generateImportBatchId();
   const doc = sanitizeForFirestore({
     ...data,
+    companyId: tenant.companyId,
+    createdBy: tenant.userId,
     batchId: id,
   } as unknown as Record<string, unknown>);
 
@@ -145,6 +147,7 @@ export async function createImportBatch(
 // ============================================================================
 
 export async function createFixedAsset(
+  tenant: TenantContext,
   data: CreateFixedAssetInput
 ): Promise<{ id: string }> {
   const id = generateFixedAssetId();
@@ -152,6 +155,8 @@ export async function createFixedAsset(
   const doc: FixedAsset = {
     ...sanitizeForFirestore(data as unknown as Record<string, unknown>) as unknown as CreateFixedAssetInput,
     assetId: id,
+    companyId: tenant.companyId,
+    createdBy: tenant.userId,
     accumulatedDepreciation: 0,
     netBookValue: data.acquisitionCost - data.residualValue,
     fullyDepreciatedDate: null,
@@ -170,6 +175,7 @@ export async function createFixedAsset(
 }
 
 export async function getFixedAsset(
+  tenant: TenantContext,
   assetId: string
 ): Promise<FixedAsset | null> {
   return safeFirestoreOperation(async (db) => {
@@ -180,6 +186,7 @@ export async function getFixedAsset(
 }
 
 export async function updateFixedAsset(
+  tenant: TenantContext,
   assetId: string,
   updates: Partial<FixedAsset>
 ): Promise<void> {
@@ -191,12 +198,14 @@ export async function updateFixedAsset(
 }
 
 export async function listFixedAssets(
+  tenant: TenantContext,
   filters: FixedAssetFilters,
   pageSize: number = 50
 ): Promise<PaginatedResult<FixedAsset>> {
   return safeFirestoreOperation(async (db) => {
     let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_FIXED_ASSETS);
 
+    query = query.where('companyId', '==', tenant.companyId);
     if (filters.category) query = query.where('category', '==', filters.category);
     if (filters.status) query = query.where(FIELDS.STATUS, '==', filters.status);
     if (filters.acquisitionYear) query = query.where('acquisitionFiscalYear', '==', filters.acquisitionYear);
@@ -216,11 +225,14 @@ export async function listFixedAssets(
 }
 
 export async function createDepreciationRecord(
+  tenant: TenantContext,
   data: Omit<DepreciationRecord, 'recordId'>
 ): Promise<{ id: string }> {
   const id = generateDepreciationId();
   const doc = sanitizeForFirestore({
     ...data,
+    companyId: tenant.companyId,
+    createdBy: tenant.userId,
     recordId: id,
   } as unknown as Record<string, unknown>);
 
@@ -232,6 +244,7 @@ export async function createDepreciationRecord(
 }
 
 export async function getDepreciationRecords(
+  tenant: TenantContext,
   assetId: string,
   fiscalYear?: number
 ): Promise<DepreciationRecord[]> {
@@ -251,248 +264,3 @@ export async function getDepreciationRecords(
   }, []);
 }
 
-// ============================================================================
-// EXPENSE DOCUMENTS
-// ============================================================================
-
-export async function createExpenseDocument(
-  data: Omit<ReceivedExpenseDocument, 'documentId' | 'createdAt' | 'updatedAt'>
-): Promise<{ id: string }> {
-  const id = generateExpenseDocId();
-  const now = isoNow();
-  const doc = sanitizeForFirestore({
-    ...data,
-    documentId: id,
-    createdAt: now,
-    updatedAt: now,
-  } as unknown as Record<string, unknown>);
-
-  await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS).doc(id).set(doc);
-  }, undefined);
-
-  return { id };
-}
-
-export async function getExpenseDocument(
-  documentId: string
-): Promise<ReceivedExpenseDocument | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS).doc(documentId).get();
-    if (!snap.exists) return null;
-    return snap.data() as ReceivedExpenseDocument;
-  }, null);
-}
-
-export async function updateExpenseDocument(
-  documentId: string,
-  updates: Partial<ReceivedExpenseDocument>
-): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS).doc(documentId).update(
-      sanitizeForFirestore({ ...updates, updatedAt: isoNow() } as Record<string, unknown>)
-    );
-  }, undefined);
-}
-
-export async function listExpenseDocuments(
-  fiscalYear: number,
-  status?: ReceivedExpenseDocument['status']
-): Promise<ReceivedExpenseDocument[]> {
-  return safeFirestoreOperation(async (db) => {
-    let query: FirebaseFirestore.Query = db
-      .collection(COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS)
-      .where('fiscalYear', '==', fiscalYear);
-
-    if (status) {
-      query = query.where(FIELDS.STATUS, '==', status);
-    }
-
-    query = query.orderBy(FIELDS.CREATED_AT, 'desc');
-
-    const snap = await query.get();
-    return snap.docs.map((d) => d.data() as ReceivedExpenseDocument);
-  }, []);
-}
-
-// ============================================================================
-// APY CERTIFICATES (ADR-ACC-020)
-// ============================================================================
-
-export async function createAPYCertificate(
-  data: Omit<APYCertificate, 'certificateId' | 'createdAt' | 'updatedAt'>
-): Promise<{ id: string }> {
-  const id = generateApyCertificateId();
-  const now = isoNow();
-  const doc = sanitizeForFirestore({
-    ...data,
-    certificateId: id,
-    createdAt: now,
-    updatedAt: now,
-  } as unknown as Record<string, unknown>);
-
-  await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES).doc(id).set(doc);
-  }, undefined);
-
-  return { id };
-}
-
-export async function getAPYCertificate(
-  certificateId: string
-): Promise<APYCertificate | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
-      .doc(certificateId)
-      .get();
-    if (!snap.exists) return null;
-    return snap.data() as APYCertificate;
-  }, null);
-}
-
-export async function listAPYCertificates(
-  fiscalYear?: number,
-  customerId?: string
-): Promise<APYCertificate[]> {
-  return safeFirestoreOperation(async (db) => {
-    let query: FirebaseFirestore.Query = db.collection(
-      COLLECTIONS.ACCOUNTING_APY_CERTIFICATES
-    );
-
-    if (fiscalYear !== undefined) {
-      query = query.where('fiscalYear', '==', fiscalYear);
-    }
-    if (customerId !== undefined) {
-      query = query.where('customerId', '==', customerId);
-    }
-
-    query = query.orderBy(FIELDS.CREATED_AT, 'desc');
-
-    const snap = await query.get();
-    return snap.docs.map((d) => d.data() as APYCertificate);
-  }, []);
-}
-
-export async function updateAPYCertificate(
-  certificateId: string,
-  updates: Partial<Omit<APYCertificate, 'certificateId' | 'createdAt'>>
-): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
-      .doc(certificateId)
-      .update(
-        sanitizeForFirestore({
-          ...updates,
-          updatedAt: isoNow(),
-        } as Record<string, unknown>)
-      );
-  }, undefined);
-}
-
-export async function pushAPYEmailRecord(
-  certificateId: string,
-  record: APYEmailSendRecord
-): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
-      .doc(certificateId)
-      .update({
-        emailHistory: FieldValue.arrayUnion(
-          sanitizeForFirestore(record as unknown as Record<string, unknown>)
-        ),
-        updatedAt: isoNow(),
-      });
-  }, undefined);
-}
-
-// ============================================================================
-// CUSTOM CATEGORIES (ADR-ACC-021)
-// ============================================================================
-
-export async function createCustomCategory(
-  data: CreateCustomCategoryInput
-): Promise<{ id: string; code: string }> {
-  const id = generateCustomCategoryId();
-  const shortHash = id.replace('custcat_', '').split('-')[0];
-  const code: CustomCategoryCode = `custom_${shortHash}`;
-  const now = isoNow();
-
-  const doc = sanitizeForFirestore({
-    ...data,
-    categoryId: id,
-    code,
-    sortOrder: data.sortOrder ?? 100,
-    icon: data.icon ?? 'Tag',
-    kadCode: data.kadCode ?? null,
-    isActive: true,
-    createdAt: now,
-    updatedAt: now,
-  } as Record<string, unknown>);
-
-  await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES).doc(id).set(doc);
-  }, undefined);
-
-  return { id, code };
-}
-
-export async function getCustomCategory(
-  categoryId: string
-): Promise<CustomCategoryDocument | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
-      .doc(categoryId)
-      .get();
-    if (!snap.exists) return null;
-    return snap.data() as CustomCategoryDocument;
-  }, null);
-}
-
-export async function listCustomCategories(
-  includeInactive = false
-): Promise<CustomCategoryDocument[]> {
-  return safeFirestoreOperation(async (db) => {
-    let query: FirebaseFirestore.Query = db.collection(
-      COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES
-    );
-
-    if (!includeInactive) {
-      query = query.where('isActive', '==', true);
-    }
-
-    query = query.orderBy('sortOrder', 'asc');
-
-    const snap = await query.get();
-    return snap.docs.map((d) => d.data() as CustomCategoryDocument);
-  }, []);
-}
-
-export async function updateCustomCategory(
-  categoryId: string,
-  updates: UpdateCustomCategoryInput
-): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
-      .doc(categoryId)
-      .update(
-        sanitizeForFirestore({
-          ...updates,
-          updatedAt: isoNow(),
-        } as Record<string, unknown>)
-      );
-  }, undefined);
-}
-
-export async function deleteCustomCategory(categoryId: string): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
-      .doc(categoryId)
-      .delete();
-  }, undefined);
-}

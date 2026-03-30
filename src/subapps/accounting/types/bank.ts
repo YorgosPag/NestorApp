@@ -124,6 +124,12 @@ export interface BankTransaction {
   /** Display name of user who reconciled */
   reconciledByName?: string | null;
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   // — Metadata —
   /** ID batch εισαγωγής */
   importBatchId: string;
@@ -268,6 +274,13 @@ export interface ImportBatch {
   skippedCount: number;
   /** Σφάλματα (αν υπάρχουν) */
   errors: string[];
+
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   /** Ημερομηνία εισαγωγής (ISO 8601) */
   importedAt: string;
 }

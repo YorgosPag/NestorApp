@@ -2934,6 +2934,187 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📒 ACCOUNTING MODULE — 19 COLLECTIONS (Q2-Q8, AUDIT-2026-03-29)
+    // =========================================================================
+    // 📅 Added: 2026-03-31 (Εργασία #17 B-7)
+    // 🔒 Tenant isolation via companyId field (Q3 Google pattern A)
+    // 🏢 RBAC: Q4 super_admin/company_admin/internal_user/external_user
+    // =========================================================================
+
+    // ── Pattern A: Standard CRUD (13 collections) ──────────────────────────
+
+    match /accounting_journal_entries/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_invoices/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_bank_transactions/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_bank_accounts/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_fixed_assets/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_depreciation_records/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_expense_documents/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_import_batches/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_tax_installments/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_apy_certificates/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_custom_categories/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_matching_rules/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    match /accounting_efka_payments/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccounting();
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
+    }
+
+    // ── Pattern B: Audit Log — IMMUTABLE (Q7 ΚΦΔ compliance) ───────────────
+
+    match /accounting_audit_log/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccountingSystem()
+                    && request.resource.data.userId is string
+                    && request.resource.data.userId == request.auth.uid;
+      // Q7: Accounting audit log is 100% IMMUTABLE — zero update/delete
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Pattern C: Fiscal Periods — Q8 SAP pattern ─────────────────────────
+
+    match /accounting_fiscal_periods/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if isCompanyAdminOfCompany(request.resource.data.companyId)
+                    && request.resource.data.companyId == getUserCompanyId();
+      allow update: if isInternalUserOfCompany(resource.data.companyId)
+                    && request.resource.data.companyId == resource.data.companyId
+                    // Q8: lock/reopen → admin only; close (OPEN→CLOSED) → admin+internal
+                    && (
+                         // Status not changing → any internal user can update other fields
+                         resource.data.status == request.resource.data.status
+                         // OPEN → CLOSED: admin + internal_user
+                         || (resource.data.status == 'OPEN' && request.resource.data.status == 'CLOSED')
+                         // CLOSED → LOCKED or LOCKED → OPEN: admin only
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+      // Fiscal periods are never deleted
+      allow delete: if false;
+    }
+
+    // ── Pattern D: Settings Singletons — admin-only write ──────────────────
+
+    match /accounting_settings/{docId} {
+      allow read:   if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (resource.data.keys().hasAny(['companyId'])
+                            && isInternalUserOfCompany(resource.data.companyId)));
+      allow create: if isCompanyAdmin()
+                    && request.resource.data.companyId is string
+                    && request.resource.data.companyId == getUserCompanyId();
+      allow update: if resource.data.keys().hasAny(['companyId'])
+                    && canWriteAccountingSingleton(resource.data.companyId)
+                    && request.resource.data.companyId == resource.data.companyId;
+      allow delete: if false;
+    }
+
+    match /accounting_efka_config/{docId} {
+      allow read:   if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (resource.data.keys().hasAny(['companyId'])
+                            && isInternalUserOfCompany(resource.data.companyId)));
+      allow create: if isCompanyAdmin()
+                    && request.resource.data.companyId is string
+                    && request.resource.data.companyId == getUserCompanyId();
+      allow update: if resource.data.keys().hasAny(['companyId'])
+                    && canWriteAccountingSingleton(resource.data.companyId)
+                    && request.resource.data.companyId == resource.data.companyId;
+      allow delete: if false;
+    }
+
+    // ── Pattern E: Server-only (Admin SDK) ─────────────────────────────────
+
+    match /accounting_invoice_counters/{docId} {
+      // Server-only via Admin SDK — no client access
+      allow read, write: if false;
+    }
+
+    // ── Pattern F: Customer Balances — system-calculated ───────────────────
+
+    match /accounting_customer_balances/{docId} {
+      allow read:   if canReadAccounting(resource.data.companyId);
+      allow create: if canCreateAccountingSystem();
+      allow update: if canUpdateAccountingSystem(resource.data.companyId);
+      // Customer balances are system-managed, admin can delete
+      allow delete: if isCompanyAdminOfCompany(resource.data.companyId);
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 
@@ -3167,6 +3348,56 @@ service cloud.firestore {
     function isInternalUserOfCompany(companyId) {
       return isSuperAdminOnly() ||
              (isInternalUser() && belongsToCompany(companyId));
+    }
+
+    // =========================================================================
+    // 📒 ACCOUNTING MODULE — TENANT ISOLATION HELPERS (Q3/Q4/Q7)
+    // =========================================================================
+    // 📅 Added: 2026-03-31 (AUDIT-2026-03-29, Εργασία #17 B-7)
+    // 🔒 RBAC: super_admin/company_admin: full, internal_user: R/W, external_user: zero
+    // 🏢 Pattern: companyId field-based isolation (Google pattern A)
+
+    // Accounting: tenant-scoped read (internal_user+)
+    function canReadAccounting(companyId) {
+      return isSuperAdminOnly() || isInternalUserOfCompany(companyId);
+    }
+
+    // Accounting: tenant-scoped create (companyId + createdBy must match claims)
+    function canCreateAccounting() {
+      return isInternalUser()
+             && request.resource.data.companyId is string
+             && request.resource.data.companyId == getUserCompanyId()
+             && request.resource.data.createdBy is string
+             && request.resource.data.createdBy == request.auth.uid;
+    }
+
+    // Accounting: tenant-scoped create without createdBy (system-generated docs)
+    function canCreateAccountingSystem() {
+      return isInternalUser()
+             && request.resource.data.companyId is string
+             && request.resource.data.companyId == getUserCompanyId();
+    }
+
+    // Accounting: tenant-scoped update (creator or admin, companyId immutable)
+    function canUpdateAccounting(companyId, createdBy) {
+      return (request.auth.uid == createdBy || isCompanyAdminOfCompany(companyId))
+             && request.resource.data.companyId == companyId;
+    }
+
+    // Accounting: tenant-scoped update without createdBy check (system docs)
+    function canUpdateAccountingSystem(companyId) {
+      return isInternalUserOfCompany(companyId)
+             && request.resource.data.companyId == companyId;
+    }
+
+    // Accounting: delete — creator deletes own, admin deletes all (Q6 Xero/QBO pattern)
+    function canDeleteAccounting(companyId, createdBy) {
+      return request.auth.uid == createdBy || isCompanyAdminOfCompany(companyId);
+    }
+
+    // Accounting: admin-only write for settings/config singletons
+    function canWriteAccountingSingleton(companyId) {
+      return isCompanyAdminOfCompany(companyId);
     }
 
     // =========================================================================

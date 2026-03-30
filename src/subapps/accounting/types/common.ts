@@ -25,6 +25,18 @@ export interface PeriodRange {
 }
 
 // ============================================================================
+// TENANT CONTEXT (Q3 — companyId field-based isolation)
+// ============================================================================
+
+/** Tenant context for multi-tenant isolation */
+export interface TenantContext {
+  /** Company ID from auth claims */
+  readonly companyId: string;
+  /** User ID from auth */
+  readonly userId: string;
+}
+
+// ============================================================================
 // ENTRY TYPE
 // ============================================================================
 

@@ -56,9 +56,9 @@ const CreateJournalEntrySchema = z.object({
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const { searchParams } = new URL(req.url);
 
         const filters: JournalEntryFilters = {};
@@ -124,9 +124,9 @@ export const GET = withStandardRateLimit(handleGet);
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const parsed = safeParseBody(CreateJournalEntrySchema, await req.json());
         if (parsed.error) return parsed.error;
         const body = parsed.data;

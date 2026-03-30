@@ -12,6 +12,7 @@
  * to avoid TDZ errors from openai-document-analyzer's module evaluation.
  */
 
+import type { TenantContext } from '../types/common';
 import { AccountingService } from './accounting-service';
 import { FirestoreAccountingRepository } from './repository/firestore-accounting-repository';
 import { VATEngine } from './engines/vat-engine';
@@ -37,8 +38,8 @@ import { CSVImportService } from './external/csv-import-service';
  * const vatCalc = vatEngine.calculateOutputVat(1000, 24);
  * ```
  */
-export function createAccountingServices() {
-  const repository = new FirestoreAccountingRepository();
+export function createAccountingServices(tenant: TenantContext) {
+  const repository = new FirestoreAccountingRepository(tenant);
   const vatEngine = new VATEngine(repository);
   const taxEngine = new TaxEngine(repository);
   const depreciationEngine = new DepreciationEngine(repository);

@@ -35,7 +35,7 @@ const CreateFiscalYearSchema = z.object({
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const url = new URL(req.url);
         const fiscalYearParam = url.searchParams.get('fiscalYear');
@@ -46,7 +46,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           return NextResponse.json({ success: false, error: 'Invalid fiscalYear' }, { status: 400 });
         }
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const periods = await repository.listFiscalPeriods(fiscalYear);
 
         const response: Record<string, unknown> = {
@@ -74,7 +74,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const body = await req.json();
         const parsed = CreateFiscalYearSchema.safeParse(body);
@@ -86,7 +86,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           );
         }
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const periods = await createFiscalYear(repository, parsed.data.fiscalYear);
 
         return NextResponse.json({

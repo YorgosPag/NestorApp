@@ -49,9 +49,9 @@ async function handleGet(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const invoice = await repository.getInvoice(id);
 
         if (!invoice) {
@@ -90,7 +90,7 @@ async function handlePatch(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const parsed = safeParseBody(UpdateInvoiceSchema, await req.json());
         if (parsed.error) return parsed.error;
         const body = parsed.data;
@@ -175,7 +175,7 @@ async function handleDelete(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
         // Parse cancellation reason from body
         const parsed = await safeJsonBody(CancelInvoiceSchema, req);

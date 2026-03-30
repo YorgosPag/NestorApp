@@ -182,6 +182,12 @@ export interface APYCertificate {
    */
   emailHistory?: APYEmailSendRecord[];
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   // — Metadata —
   /** Σημειώσεις */
   notes: string | null;

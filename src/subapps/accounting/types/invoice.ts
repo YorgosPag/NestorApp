@@ -341,6 +341,12 @@ export interface Invoice {
   /** Ημερομηνία αμφισβήτησης (ISO 8601) */
   disputeDate?: string;
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   // — Metadata —
   /** Σημειώσεις/Παρατηρήσεις */
   notes: string | null;

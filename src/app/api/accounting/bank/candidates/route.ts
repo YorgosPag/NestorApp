@@ -27,9 +27,9 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { matchingEngine, repository } = createAccountingServices();
+        const { matchingEngine, repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
         const transactionId = req.nextUrl.searchParams.get('transactionId');
         if (!transactionId) {

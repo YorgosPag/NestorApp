@@ -115,6 +115,12 @@ export interface FixedAsset {
   /** ΑΦΜ προμηθευτή */
   supplierVatNumber: string | null;
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   // — Metadata —
   /** Σημειώσεις */
   notes: string | null;
@@ -158,6 +164,13 @@ export interface DepreciationRecord {
   monthsApplied: number;
   /** Αντιστοιχεί σε εγγραφή Ε-Ε; (journal entry ID) */
   journalEntryId: string | null;
+
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   /** Ημερομηνία εκτέλεσης (ISO 8601) */
   calculatedAt: string;
 }

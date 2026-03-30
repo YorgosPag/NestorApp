@@ -80,7 +80,7 @@ async function handleGet(
   request: NextRequest
 ): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const url = new URL(req.url);
         const fiscalYearParam = url.searchParams.get('fiscalYear');
@@ -95,7 +95,7 @@ async function handleGet(
           );
         }
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const certificates = await repository.listAPYCertificates(fiscalYear, customerId);
 
         return NextResponse.json({ success: true, data: certificates });
@@ -116,7 +116,7 @@ async function handleGet(
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const parsed = safeParseBody(CreateAPYSchema, await req.json());
         if (parsed.error) return parsed.error;
@@ -131,7 +131,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           notes,
         } = parsed.data;
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
         // ── Duplicate check — one per customerId + fiscalYear ───────────
         if (customerId) {

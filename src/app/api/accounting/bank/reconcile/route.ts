@@ -50,7 +50,7 @@ function problemResponse(problem: BankMatchProblem): NextResponse {
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const { repository } = createAccountingServices();
+      const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
       // ── Parse ─────────────────────────────────────────────────────
       const body = await req.json();
@@ -167,7 +167,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 async function handlePatch(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const { repository } = createAccountingServices();
+      const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
       // ── Admin-only ────────────────────────────────────────────────
       if (ctx.globalRole !== 'super_admin' && ctx.globalRole !== 'company_admin') {

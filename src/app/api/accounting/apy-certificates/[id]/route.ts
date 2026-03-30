@@ -53,9 +53,9 @@ async function handleGet(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const cert = await repository.getAPYCertificate(id);
 
         if (!cert) {
@@ -94,7 +94,7 @@ async function handlePatch(
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
         // Verify exists
         const existing = await repository.getAPYCertificate(id);

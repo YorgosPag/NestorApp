@@ -54,9 +54,9 @@ function validateSetupInput(data: Partial<CompanySetupInput>): string | null {
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const profile = await repository.getCompanySetup();
 
         return NextResponse.json({ success: true, data: profile });
@@ -81,9 +81,9 @@ export const GET = withStandardRateLimit(handleGet);
 
 async function handlePut(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const body = (await req.json()) as Partial<CompanySetupInput>;
 
         // Validate required fields

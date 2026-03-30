@@ -62,9 +62,9 @@ async function handleGet(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const category = await repository.getCustomCategory(id);
 
         if (!category) {
@@ -103,7 +103,7 @@ async function handlePatch(
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const existing = await repository.getCustomCategory(id);
 
         if (!existing) {
@@ -146,7 +146,7 @@ async function handleDelete(
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const existing = await repository.getCustomCategory(id);
 
         if (!existing) {

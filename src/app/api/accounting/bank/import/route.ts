@@ -32,9 +32,9 @@ const SUPPORTED_EXTENSIONS = ['.csv', '.txt'];
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { csvImportService } = createAccountingServices();
+        const { csvImportService } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
         const formData = await req.formData();
         const file = formData.get('file');

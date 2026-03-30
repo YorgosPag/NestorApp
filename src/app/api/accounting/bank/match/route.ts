@@ -53,7 +53,7 @@ function problemResponse(problem: BankMatchProblem): NextResponse {
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const { matchingEngine, repository } = createAccountingServices();
+      const { matchingEngine, repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
       // ── Parse & Validate ────────────────────────────────────────────
       const body = await req.json();

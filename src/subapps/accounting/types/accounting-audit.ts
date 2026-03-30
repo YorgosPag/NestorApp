@@ -66,6 +66,9 @@ export interface AccountingAuditEntry {
   entityId: string;
   /** Who performed the action */
   userId: string;
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
   /** ISO 8601 timestamp */
   timestamp: string;
   /** Human-readable description */

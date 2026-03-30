@@ -83,7 +83,7 @@ async function handlePost(
   segmentData?: { params: Promise<{ unitId: string }> }
 ): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { unitId } = await segmentData!.params;
         const body = (await req.json()) as Partial<SalesAccountingEvent>;
@@ -101,7 +101,7 @@ async function handlePost(
         }
 
         // Process event
-        const bridge = new SalesAccountingBridge();
+        const bridge = new SalesAccountingBridge({ companyId: ctx.companyId, userId: ctx.uid });
         const result = await bridge.processEvent(body as SalesAccountingEvent);
 
         if (!result.success) {
@@ -134,7 +134,7 @@ export const POST = withStandardRateLimit(handlePost);
 
 export async function GET(): Promise<NextResponse> {
   try {
-    const bridge = new SalesAccountingBridge();
+    const bridge = new SalesAccountingBridge({ companyId: 'system', userId: 'system' });
     const profile = await bridge.checkSetup();
     return NextResponse.json({
       route: 'sales-accounting-event',

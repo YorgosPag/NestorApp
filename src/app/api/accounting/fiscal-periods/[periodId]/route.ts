@@ -52,7 +52,7 @@ async function handlePatch(
 
         const { action, reason } = parsed.data;
         const userId = ctx.uid;
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
         switch (action) {
           case 'close':

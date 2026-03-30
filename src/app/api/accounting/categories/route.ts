@@ -75,12 +75,12 @@ interface CreateCategoryBody {
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const url = new URL(req.url);
         const includeInactive = url.searchParams.get('includeInactive') === 'true';
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const categories = await repository.listCustomCategories(includeInactive);
 
         return NextResponse.json({ success: true, data: categories });
@@ -101,7 +101,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const parsed = safeParseBody(CreateCategorySchema, await req.json());
         if (parsed.error) return parsed.error;
@@ -135,7 +135,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           kadCode: body.kadCode ?? null,
         };
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const result = await repository.createCustomCategory(input);
 
         logger.info('Custom category created', { id: result.id, code: result.code });

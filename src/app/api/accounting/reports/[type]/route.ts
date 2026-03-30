@@ -43,7 +43,7 @@ async function handleGet(
   segmentData?: { params: Promise<{ type: string }> }
 ): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         // 1. Validate report type from path
         const { type: reportTypeParam } = await segmentData!.params;
@@ -87,7 +87,7 @@ async function handleGet(
         const periods = resolveReportPeriods(dateFilter);
 
         // 5. Generate report
-        const { repository, vatEngine, taxEngine } = createAccountingServices();
+        const { repository, vatEngine, taxEngine } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const result = await generateReport(reportType, { repository, vatEngine, taxEngine }, periods);
 
         return NextResponse.json({ success: true, data: result });

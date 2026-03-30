@@ -54,9 +54,9 @@ async function handleGet(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const entry = await repository.getJournalEntry(id);
 
         if (!entry) {
@@ -95,7 +95,7 @@ async function handlePatch(
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const parsed = safeParseBody(UpdateJournalEntrySchema, await req.json());
         if (parsed.error) return parsed.error;
         const body = parsed.data;
@@ -168,7 +168,7 @@ async function handleDelete(
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
         // Verify entry exists
         const existing = await repository.getJournalEntry(id);

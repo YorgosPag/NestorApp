@@ -144,6 +144,13 @@ export interface EFKAPayment {
   bankTransactionRef: string | null;
   /** ID εταίρου (null = ατομική, backward compatible) */
   partnerId: string | null;
+
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   /** Σημειώσεις */
   notes: string | null;
 }

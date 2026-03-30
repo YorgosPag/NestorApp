@@ -12,6 +12,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 
 import type { CustomerBalance } from '../../types/customer-balance';
 import type { FiscalPeriod } from '../../types/fiscal-period';
+import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 
@@ -20,6 +21,7 @@ import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 // ============================================================================
 
 export async function getCustomerBalance(
+  tenant: TenantContext,
   customerId: string
 ): Promise<CustomerBalance | null> {
   return safeFirestoreOperation(async (db) => {
@@ -33,12 +35,14 @@ export async function getCustomerBalance(
 }
 
 export async function upsertCustomerBalance(
+  tenant: TenantContext,
   customerId: string,
   balance: CustomerBalance
 ): Promise<void> {
   await safeFirestoreOperation(async (db) => {
     const doc = sanitizeForFirestore({
       ...balance,
+      companyId: tenant.companyId,
       updatedAt: isoNow(),
     } as unknown as Record<string, unknown>);
     await db
@@ -49,11 +53,13 @@ export async function upsertCustomerBalance(
 }
 
 export async function listCustomerBalances(
+  tenant: TenantContext,
   fiscalYear: number
 ): Promise<CustomerBalance[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_CUSTOMER_BALANCES)
+      .where('companyId', '==', tenant.companyId)
       .where('fiscalYear', '==', fiscalYear)
       .orderBy('netBalance', 'desc')
       .get();
@@ -66,6 +72,7 @@ export async function listCustomerBalances(
 // ============================================================================
 
 export async function getFiscalPeriod(
+  tenant: TenantContext,
   periodId: string
 ): Promise<FiscalPeriod | null> {
   return safeFirestoreOperation(async (db) => {
@@ -79,11 +86,13 @@ export async function getFiscalPeriod(
 }
 
 export async function listFiscalPeriods(
+  tenant: TenantContext,
   fiscalYear: number
 ): Promise<FiscalPeriod[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_FISCAL_PERIODS)
+      .where('companyId', '==', tenant.companyId)
       .where('fiscalYear', '==', fiscalYear)
       .orderBy('periodNumber', 'asc')
       .get();
@@ -92,6 +101,7 @@ export async function listFiscalPeriods(
 }
 
 export async function updateFiscalPeriod(
+  tenant: TenantContext,
   periodId: string,
   updates: Partial<FiscalPeriod>
 ): Promise<void> {
@@ -106,6 +116,7 @@ export async function updateFiscalPeriod(
 }
 
 export async function createFiscalPeriods(
+  tenant: TenantContext,
   periods: FiscalPeriod[]
 ): Promise<void> {
   await safeFirestoreOperation(async (db) => {

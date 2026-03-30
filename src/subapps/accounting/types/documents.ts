@@ -134,6 +134,12 @@ export interface ReceivedExpenseDocument {
   /** Αναφορά σε εγγραφή Ε-Ε (μετά την επιβεβαίωση) */
   journalEntryId: string | null;
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   // — Metadata —
   /** Σημειώσεις χρήστη */
   notes: string | null;

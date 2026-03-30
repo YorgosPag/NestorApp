@@ -72,7 +72,7 @@ async function handlePost(
   const { id } = await segmentData!.params;
 
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         // ── 1. Parse & validate body ──────────────────────────────────────
         let body: SendEmailRequestBody;
@@ -95,7 +95,7 @@ async function handlePost(
         }
 
         // ── 2. Fetch invoice & company profile ────────────────────────────
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
 
         const [invoice, companyProfile] = await Promise.all([
           repository.getInvoice(id),

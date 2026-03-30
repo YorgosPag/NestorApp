@@ -32,6 +32,7 @@ import type {
   ServicePresetsDocument,
 } from '../../types/invoice';
 import type { TaxInstallment } from '../../types/tax';
+import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 
@@ -48,6 +49,7 @@ function applyJournalDefaults(entry: JournalEntry): JournalEntry {
 }
 
 export async function createJournalEntry(
+  tenant: TenantContext,
   data: CreateJournalEntryInput
 ): Promise<{ id: string }> {
   const id = generateJournalEntryId();
@@ -55,6 +57,8 @@ export async function createJournalEntry(
   const doc: JournalEntry = {
     ...sanitizeForFirestore(data as unknown as Record<string, unknown>) as unknown as CreateJournalEntryInput,
     entryId: id,
+    companyId: tenant.companyId,
+    createdBy: tenant.userId,
     status: 'ACTIVE',
     createdAt: now,
     updatedAt: now,
@@ -70,6 +74,7 @@ export async function createJournalEntry(
 }
 
 export async function getJournalEntry(
+  tenant: TenantContext,
   entryId: string
 ): Promise<JournalEntry | null> {
   return safeFirestoreOperation(async (db) => {
@@ -80,6 +85,7 @@ export async function getJournalEntry(
 }
 
 export async function updateJournalEntry(
+  tenant: TenantContext,
   entryId: string,
   updates: UpdateJournalEntryInput
 ): Promise<void> {
@@ -90,19 +96,21 @@ export async function updateJournalEntry(
   }, undefined);
 }
 
-export async function deleteJournalEntry(entryId: string): Promise<void> {
+export async function deleteJournalEntry(tenant: TenantContext, entryId: string): Promise<void> {
   await safeFirestoreOperation(async (db) => {
     await db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES).doc(entryId).delete();
   }, undefined);
 }
 
 export async function listJournalEntries(
+  tenant: TenantContext,
   filters: JournalEntryFilters,
   pageSize: number = 50
 ): Promise<PaginatedResult<JournalEntry>> {
   return safeFirestoreOperation(async (db) => {
     let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES);
 
+    query = query.where('companyId', '==', tenant.companyId);
     if (filters.type) query = query.where(FIELDS.TYPE, '==', filters.type);
     if (filters.category) query = query.where('category', '==', filters.category);
     if (filters.fiscalYear) query = query.where('fiscalYear', '==', filters.fiscalYear);
@@ -125,11 +133,13 @@ export async function listJournalEntries(
 }
 
 export async function getJournalEntryByInvoiceId(
+  tenant: TenantContext,
   invoiceId: string
 ): Promise<JournalEntry | null> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES)
+      .where('companyId', '==', tenant.companyId)
       .where('invoiceId', '==', invoiceId)
       .limit(1)
       .get();
@@ -142,7 +152,7 @@ export async function getJournalEntryByInvoiceId(
 // INVOICES
 // ============================================================================
 
-export async function getNextInvoiceNumber(seriesCode: string): Promise<number> {
+export async function getNextInvoiceNumber(tenant: TenantContext, seriesCode: string): Promise<number> {
   return safeFirestoreOperation(async (db) => {
     const counterRef = db.collection(COLLECTIONS.ACCOUNTING_INVOICE_COUNTERS).doc(seriesCode);
 
@@ -159,17 +169,20 @@ export async function getNextInvoiceNumber(seriesCode: string): Promise<number> 
 }
 
 export async function createInvoice(
+  tenant: TenantContext,
   data: CreateInvoiceInput
 ): Promise<{ id: string; number: number }> {
   const id = generateInvoiceAccId();
   const now = isoNow();
 
   // Atomic invoice counter
-  const nextNumber = await getNextInvoiceNumber(data.series);
+  const nextNumber = await getNextInvoiceNumber(tenant, data.series);
 
   const doc: Invoice = {
     ...sanitizeForFirestore(data as unknown as Record<string, unknown>) as unknown as CreateInvoiceInput,
     invoiceId: id,
+    companyId: tenant.companyId,
+    createdBy: tenant.userId,
     number: nextNumber,
     createdAt: now,
     updatedAt: now,
@@ -184,7 +197,7 @@ export async function createInvoice(
   return { id, number: nextNumber };
 }
 
-export async function getInvoice(invoiceId: string): Promise<Invoice | null> {
+export async function getInvoice(tenant: TenantContext, invoiceId: string): Promise<Invoice | null> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.ACCOUNTING_INVOICES).doc(invoiceId).get();
     if (!snap.exists) return null;
@@ -193,6 +206,7 @@ export async function getInvoice(invoiceId: string): Promise<Invoice | null> {
 }
 
 export async function updateInvoice(
+  tenant: TenantContext,
   invoiceId: string,
   updates: UpdateInvoiceInput
 ): Promise<void> {
@@ -204,12 +218,14 @@ export async function updateInvoice(
 }
 
 export async function listInvoices(
+  tenant: TenantContext,
   filters: InvoiceFilters,
   pageSize: number = 50
 ): Promise<PaginatedResult<Invoice>> {
   return safeFirestoreOperation(async (db) => {
     let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_INVOICES);
 
+    query = query.where('companyId', '==', tenant.companyId);
     if (filters.type) query = query.where(FIELDS.TYPE, '==', filters.type);
     if (filters.paymentStatus) query = query.where('paymentStatus', '==', filters.paymentStatus);
     if (filters.fiscalYear) query = query.where('fiscalYear', '==', filters.fiscalYear);
@@ -231,7 +247,7 @@ export async function listInvoices(
   }, { items: [], hasNext: false, totalShown: 0, pageSize });
 }
 
-export async function getInvoiceSeries(): Promise<InvoiceSeries[]> {
+export async function getInvoiceSeries(tenant: TenantContext): Promise<InvoiceSeries[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.ACCOUNTING_INVOICE_COUNTERS).get();
     return snap.docs.map((d) => d.data() as InvoiceSeries);
@@ -242,7 +258,7 @@ export async function getInvoiceSeries(): Promise<InvoiceSeries[]> {
 // SERVICE PRESETS (ADR-ACC-011)
 // ============================================================================
 
-export async function getServicePresets(): Promise<ServicePreset[]> {
+export async function getServicePresets(tenant: TenantContext): Promise<ServicePreset[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_SETTINGS)
@@ -254,7 +270,7 @@ export async function getServicePresets(): Promise<ServicePreset[]> {
   }, []);
 }
 
-export async function saveServicePresets(presets: ServicePreset[]): Promise<void> {
+export async function saveServicePresets(tenant: TenantContext, presets: ServicePreset[]): Promise<void> {
   const now = isoNow();
   await safeFirestoreOperation(async (db) => {
     const docRef = db
@@ -273,6 +289,7 @@ export async function saveServicePresets(presets: ServicePreset[]): Promise<void
 // ============================================================================
 
 export async function getTaxInstallments(
+  tenant: TenantContext,
   fiscalYear: number
 ): Promise<TaxInstallment[]> {
   return safeFirestoreOperation(async (db) => {
@@ -287,6 +304,7 @@ export async function getTaxInstallments(
 }
 
 export async function updateTaxInstallment(
+  tenant: TenantContext,
   installmentNumber: number,
   fiscalYear: number,
   updates: Partial<TaxInstallment>

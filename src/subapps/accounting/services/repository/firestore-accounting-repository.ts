@@ -17,6 +17,41 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import type { IAccountingRepository } from '../../types/interfaces';
 import type { CompanyProfile, CompanySetupInput } from '../../types/company';
+import type { TenantContext } from '../../types/common';
+import type {
+  CreateJournalEntryInput,
+  UpdateJournalEntryInput,
+  JournalEntryFilters,
+} from '../../types/journal';
+import type {
+  CreateInvoiceInput,
+  UpdateInvoiceInput,
+  InvoiceFilters,
+  ServicePreset,
+} from '../../types/invoice';
+import type { TaxInstallment } from '../../types/tax';
+import type { Partner, Member, Shareholder } from '../../types/entity';
+import type { EFKAPayment, EFKAUserConfig } from '../../types/efka';
+import type {
+  BankTransaction,
+  BankTransactionFilters,
+  ImportBatch,
+} from '../../types/bank';
+import type {
+  CreateFixedAssetInput,
+  FixedAssetFilters,
+  FixedAsset,
+  DepreciationRecord,
+} from '../../types/assets';
+import type { ReceivedExpenseDocument } from '../../types/documents';
+import type { APYCertificate, APYEmailSendRecord } from '../../types/apy-certificate';
+import type {
+  CreateCustomCategoryInput,
+  UpdateCustomCategoryInput,
+} from '../../types/custom-category';
+import type { CustomerBalance } from '../../types/customer-balance';
+import type { FiscalPeriod } from '../../types/fiscal-period';
+import type { AccountingAuditEntry, AuditEntryFilters } from '../../types/accounting-audit';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 
@@ -24,6 +59,7 @@ import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 import * as financial from './accounting-repo-financial';
 import * as entities from './accounting-repo-entities';
 import * as operations from './accounting-repo-operations';
+import * as documents from './accounting-repo-documents';
 import * as balances from './accounting-repo-balances';
 import * as audit from './accounting-repo-audit';
 
@@ -38,6 +74,8 @@ import * as audit from './accounting-repo-audit';
  * All other methods are delegated to domain-specific modules.
  */
 export class FirestoreAccountingRepository implements IAccountingRepository {
+
+  constructor(private readonly tenant: TenantContext) {}
 
   // ── Company Setup (M-001) ─────────────────────────────────────────────
 
@@ -62,6 +100,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
       const doc = sanitizeForFirestore({
         ...data,
+        companyId: this.tenant.companyId,
         updatedAt: now,
         createdAt: existing.exists
           ? (existing.data() as CompanyProfile).createdAt
@@ -73,98 +112,162 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   }
 
   // ── Financial: Journal Entries ─────────────────────────────────────────
-  createJournalEntry = financial.createJournalEntry;
-  getJournalEntry = financial.getJournalEntry;
-  updateJournalEntry = financial.updateJournalEntry;
-  deleteJournalEntry = financial.deleteJournalEntry;
-  listJournalEntries = financial.listJournalEntries;
-  getJournalEntryByInvoiceId = financial.getJournalEntryByInvoiceId;
+  createJournalEntry = (data: CreateJournalEntryInput) =>
+    financial.createJournalEntry(this.tenant, data);
+  getJournalEntry = (entryId: string) =>
+    financial.getJournalEntry(this.tenant, entryId);
+  updateJournalEntry = (entryId: string, updates: UpdateJournalEntryInput) =>
+    financial.updateJournalEntry(this.tenant, entryId, updates);
+  deleteJournalEntry = (entryId: string) =>
+    financial.deleteJournalEntry(this.tenant, entryId);
+  listJournalEntries = (filters: JournalEntryFilters, pageSize?: number) =>
+    financial.listJournalEntries(this.tenant, filters, pageSize);
+  getJournalEntryByInvoiceId = (invoiceId: string) =>
+    financial.getJournalEntryByInvoiceId(this.tenant, invoiceId);
 
   // ── Financial: Invoices ───────────────────────────────────────────────
-  createInvoice = financial.createInvoice;
-  getInvoice = financial.getInvoice;
-  updateInvoice = financial.updateInvoice;
-  listInvoices = financial.listInvoices;
-  getNextInvoiceNumber = financial.getNextInvoiceNumber;
-  getInvoiceSeries = financial.getInvoiceSeries;
+  createInvoice = (data: CreateInvoiceInput) =>
+    financial.createInvoice(this.tenant, data);
+  getInvoice = (invoiceId: string) =>
+    financial.getInvoice(this.tenant, invoiceId);
+  updateInvoice = (invoiceId: string, updates: UpdateInvoiceInput) =>
+    financial.updateInvoice(this.tenant, invoiceId, updates);
+  listInvoices = (filters: InvoiceFilters, pageSize?: number) =>
+    financial.listInvoices(this.tenant, filters, pageSize);
+  getNextInvoiceNumber = (seriesCode: string) =>
+    financial.getNextInvoiceNumber(this.tenant, seriesCode);
+  getInvoiceSeries = () =>
+    financial.getInvoiceSeries(this.tenant);
 
   // ── Financial: Service Presets ────────────────────────────────────────
-  getServicePresets = financial.getServicePresets;
-  saveServicePresets = financial.saveServicePresets;
+  getServicePresets = () =>
+    financial.getServicePresets(this.tenant);
+  saveServicePresets = (presets: ServicePreset[]) =>
+    financial.saveServicePresets(this.tenant, presets);
 
   // ── Financial: Tax Installments ───────────────────────────────────────
-  getTaxInstallments = financial.getTaxInstallments;
-  updateTaxInstallment = financial.updateTaxInstallment;
+  getTaxInstallments = (fiscalYear: number) =>
+    financial.getTaxInstallments(this.tenant, fiscalYear);
+  updateTaxInstallment = (installmentNumber: number, fiscalYear: number, updates: Partial<TaxInstallment>) =>
+    financial.updateTaxInstallment(this.tenant, installmentNumber, fiscalYear, updates);
 
   // ── Entities: Partners ────────────────────────────────────────────────
-  getPartners = entities.getPartners;
-  savePartners = entities.savePartners;
-  getPartnerEFKAPayments = entities.getPartnerEFKAPayments;
+  getPartners = () =>
+    entities.getPartners(this.tenant);
+  savePartners = (partners: Partner[]) =>
+    entities.savePartners(this.tenant, partners);
+  getPartnerEFKAPayments = (partnerId: string, year: number) =>
+    entities.getPartnerEFKAPayments(this.tenant, partnerId, year);
 
   // ── Entities: Members ─────────────────────────────────────────────────
-  getMembers = entities.getMembers;
-  saveMembers = entities.saveMembers;
-  getMemberEFKAPayments = entities.getMemberEFKAPayments;
+  getMembers = () =>
+    entities.getMembers(this.tenant);
+  saveMembers = (members: Member[]) =>
+    entities.saveMembers(this.tenant, members);
+  getMemberEFKAPayments = (memberId: string, year: number) =>
+    entities.getMemberEFKAPayments(this.tenant, memberId, year);
 
   // ── Entities: Shareholders ────────────────────────────────────────────
-  getShareholders = entities.getShareholders;
-  saveShareholders = entities.saveShareholders;
-  getShareholderEFKAPayments = entities.getShareholderEFKAPayments;
+  getShareholders = () =>
+    entities.getShareholders(this.tenant);
+  saveShareholders = (shareholders: Shareholder[]) =>
+    entities.saveShareholders(this.tenant, shareholders);
+  getShareholderEFKAPayments = (shareholderId: string, year: number) =>
+    entities.getShareholderEFKAPayments(this.tenant, shareholderId, year);
 
   // ── Entities: EFKA ────────────────────────────────────────────────────
-  getEFKAPayments = entities.getEFKAPayments;
-  updateEFKAPayment = entities.updateEFKAPayment;
-  getEFKAUserConfig = entities.getEFKAUserConfig;
-  saveEFKAUserConfig = entities.saveEFKAUserConfig;
+  getEFKAPayments = (year: number) =>
+    entities.getEFKAPayments(this.tenant, year);
+  updateEFKAPayment = (paymentId: string, updates: Partial<EFKAPayment>) =>
+    entities.updateEFKAPayment(this.tenant, paymentId, updates);
+  getEFKAUserConfig = () =>
+    entities.getEFKAUserConfig(this.tenant);
+  saveEFKAUserConfig = (config: EFKAUserConfig) =>
+    entities.saveEFKAUserConfig(this.tenant, config);
 
   // ── Operations: Bank Transactions ─────────────────────────────────────
-  createBankTransaction = operations.createBankTransaction;
-  getBankTransaction = operations.getBankTransaction;
-  updateBankTransaction = operations.updateBankTransaction;
-  listBankTransactions = operations.listBankTransactions;
-  getBankAccounts = operations.getBankAccounts;
-  createImportBatch = operations.createImportBatch;
+  createBankTransaction = (data: Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>) =>
+    operations.createBankTransaction(this.tenant, data);
+  getBankTransaction = (transactionId: string) =>
+    operations.getBankTransaction(this.tenant, transactionId);
+  updateBankTransaction = (transactionId: string, updates: Partial<BankTransaction>) =>
+    operations.updateBankTransaction(this.tenant, transactionId, updates);
+  listBankTransactions = (filters: BankTransactionFilters, pageSize?: number) =>
+    operations.listBankTransactions(this.tenant, filters, pageSize);
+  getBankAccounts = () =>
+    operations.getBankAccounts(this.tenant);
+  createImportBatch = (data: Omit<ImportBatch, 'batchId'>) =>
+    operations.createImportBatch(this.tenant, data);
 
   // ── Operations: Fixed Assets ──────────────────────────────────────────
-  createFixedAsset = operations.createFixedAsset;
-  getFixedAsset = operations.getFixedAsset;
-  updateFixedAsset = operations.updateFixedAsset;
-  listFixedAssets = operations.listFixedAssets;
-  createDepreciationRecord = operations.createDepreciationRecord;
-  getDepreciationRecords = operations.getDepreciationRecords;
+  createFixedAsset = (data: CreateFixedAssetInput) =>
+    operations.createFixedAsset(this.tenant, data);
+  getFixedAsset = (assetId: string) =>
+    operations.getFixedAsset(this.tenant, assetId);
+  updateFixedAsset = (assetId: string, updates: Partial<FixedAsset>) =>
+    operations.updateFixedAsset(this.tenant, assetId, updates);
+  listFixedAssets = (filters: FixedAssetFilters, pageSize?: number) =>
+    operations.listFixedAssets(this.tenant, filters, pageSize);
+  createDepreciationRecord = (data: Omit<DepreciationRecord, 'recordId'>) =>
+    operations.createDepreciationRecord(this.tenant, data);
+  getDepreciationRecords = (assetId: string, fiscalYear?: number) =>
+    operations.getDepreciationRecords(this.tenant, assetId, fiscalYear);
 
-  // ── Operations: Expense Documents ─────────────────────────────────────
-  createExpenseDocument = operations.createExpenseDocument;
-  getExpenseDocument = operations.getExpenseDocument;
-  updateExpenseDocument = operations.updateExpenseDocument;
-  listExpenseDocuments = operations.listExpenseDocuments;
+  // ── Documents: Expense Documents ──────────────────────────────────────
+  createExpenseDocument = (data: Omit<ReceivedExpenseDocument, 'documentId' | 'createdAt' | 'updatedAt'>) =>
+    documents.createExpenseDocument(this.tenant, data);
+  getExpenseDocument = (documentId: string) =>
+    documents.getExpenseDocument(this.tenant, documentId);
+  updateExpenseDocument = (documentId: string, updates: Partial<ReceivedExpenseDocument>) =>
+    documents.updateExpenseDocument(this.tenant, documentId, updates);
+  listExpenseDocuments = (fiscalYear: number, status?: ReceivedExpenseDocument['status']) =>
+    documents.listExpenseDocuments(this.tenant, fiscalYear, status);
 
-  // ── Operations: APY Certificates ──────────────────────────────────────
-  createAPYCertificate = operations.createAPYCertificate;
-  getAPYCertificate = operations.getAPYCertificate;
-  listAPYCertificates = operations.listAPYCertificates;
-  updateAPYCertificate = operations.updateAPYCertificate;
-  pushAPYEmailRecord = operations.pushAPYEmailRecord;
+  // ── Documents: APY Certificates ───────────────────────────────────────
+  createAPYCertificate = (data: Omit<APYCertificate, 'certificateId' | 'createdAt' | 'updatedAt'>) =>
+    documents.createAPYCertificate(this.tenant, data);
+  getAPYCertificate = (certificateId: string) =>
+    documents.getAPYCertificate(this.tenant, certificateId);
+  listAPYCertificates = (fiscalYear?: number, customerId?: string) =>
+    documents.listAPYCertificates(this.tenant, fiscalYear, customerId);
+  updateAPYCertificate = (certificateId: string, updates: Partial<Omit<APYCertificate, 'certificateId' | 'createdAt'>>) =>
+    documents.updateAPYCertificate(this.tenant, certificateId, updates);
+  pushAPYEmailRecord = (certificateId: string, record: APYEmailSendRecord) =>
+    documents.pushAPYEmailRecord(this.tenant, certificateId, record);
 
-  // ── Operations: Custom Categories ─────────────────────────────────────
-  createCustomCategory = operations.createCustomCategory;
-  getCustomCategory = operations.getCustomCategory;
-  listCustomCategories = operations.listCustomCategories;
-  updateCustomCategory = operations.updateCustomCategory;
-  deleteCustomCategory = operations.deleteCustomCategory;
+  // ── Documents: Custom Categories ──────────────────────────────────────
+  createCustomCategory = (data: CreateCustomCategoryInput) =>
+    documents.createCustomCategory(this.tenant, data);
+  getCustomCategory = (categoryId: string) =>
+    documents.getCustomCategory(this.tenant, categoryId);
+  listCustomCategories = (includeInactive?: boolean) =>
+    documents.listCustomCategories(this.tenant, includeInactive);
+  updateCustomCategory = (categoryId: string, updates: UpdateCustomCategoryInput) =>
+    documents.updateCustomCategory(this.tenant, categoryId, updates);
+  deleteCustomCategory = (categoryId: string) =>
+    documents.deleteCustomCategory(this.tenant, categoryId);
 
   // ── Balances: Customer Balances (Phase 1b) ───────────────────────────
-  getCustomerBalance = balances.getCustomerBalance;
-  upsertCustomerBalance = balances.upsertCustomerBalance;
-  listCustomerBalances = balances.listCustomerBalances;
+  getCustomerBalance = (customerId: string) =>
+    balances.getCustomerBalance(this.tenant, customerId);
+  upsertCustomerBalance = (customerId: string, balance: CustomerBalance) =>
+    balances.upsertCustomerBalance(this.tenant, customerId, balance);
+  listCustomerBalances = (fiscalYear: number) =>
+    balances.listCustomerBalances(this.tenant, fiscalYear);
 
   // ── Balances: Fiscal Periods (Phase 1b) ──────────────────────────────
-  getFiscalPeriod = balances.getFiscalPeriod;
-  listFiscalPeriods = balances.listFiscalPeriods;
-  updateFiscalPeriod = balances.updateFiscalPeriod;
-  createFiscalPeriods = balances.createFiscalPeriods;
+  getFiscalPeriod = (periodId: string) =>
+    balances.getFiscalPeriod(this.tenant, periodId);
+  listFiscalPeriods = (fiscalYear: number) =>
+    balances.listFiscalPeriods(this.tenant, fiscalYear);
+  updateFiscalPeriod = (periodId: string, updates: Partial<FiscalPeriod>) =>
+    balances.updateFiscalPeriod(this.tenant, periodId, updates);
+  createFiscalPeriods = (periods: FiscalPeriod[]) =>
+    balances.createFiscalPeriods(this.tenant, periods);
 
   // ── Audit Log (Phase 1c — immutable: create + list ONLY) ──────────────
-  createAuditEntry = audit.createAuditEntry;
-  listAuditEntries = audit.listAuditEntries;
+  createAuditEntry = (entry: AccountingAuditEntry) =>
+    audit.createAuditEntry(this.tenant, entry);
+  listAuditEntries = (filters: AuditEntryFilters, maxResults?: number) =>
+    audit.listAuditEntries(this.tenant, filters, maxResults);
 }

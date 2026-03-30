@@ -12,6 +12,7 @@ import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 
 import type { Partner, Member, Shareholder } from '../../types/entity';
 import type { EFKAPayment, EFKAUserConfig } from '../../types/efka';
+import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 
@@ -19,7 +20,7 @@ import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 // PARTNERS (ADR-ACC-012 OE)
 // ============================================================================
 
-export async function getPartners(): Promise<Partner[]> {
+export async function getPartners(tenant: TenantContext): Promise<Partner[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_PARTNERS).get();
     if (!snap.exists) return [];
@@ -28,12 +29,13 @@ export async function getPartners(): Promise<Partner[]> {
   }, []);
 }
 
-export async function savePartners(partners: Partner[]): Promise<void> {
+export async function savePartners(tenant: TenantContext, partners: Partner[]): Promise<void> {
   const now = isoNow();
   await safeFirestoreOperation(async (db) => {
     const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_PARTNERS);
     const doc = sanitizeForFirestore({
       partners,
+      companyId: tenant.companyId,
       updatedAt: now,
     } as unknown as Record<string, unknown>);
     await docRef.set(doc);
@@ -41,12 +43,14 @@ export async function savePartners(partners: Partner[]): Promise<void> {
 }
 
 export async function getPartnerEFKAPayments(
+  tenant: TenantContext,
   partnerId: string,
   year: number
 ): Promise<EFKAPayment[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_EFKA_PAYMENTS)
+      .where('companyId', '==', tenant.companyId)
       .where('partnerId', '==', partnerId)
       .where('year', '==', year)
       .orderBy('month', 'asc')
@@ -59,7 +63,7 @@ export async function getPartnerEFKAPayments(
 // MEMBERS (ADR-ACC-014 EPE)
 // ============================================================================
 
-export async function getMembers(): Promise<Member[]> {
+export async function getMembers(tenant: TenantContext): Promise<Member[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_MEMBERS).get();
     if (!snap.exists) return [];
@@ -68,12 +72,13 @@ export async function getMembers(): Promise<Member[]> {
   }, []);
 }
 
-export async function saveMembers(members: Member[]): Promise<void> {
+export async function saveMembers(tenant: TenantContext, members: Member[]): Promise<void> {
   const now = isoNow();
   await safeFirestoreOperation(async (db) => {
     const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_MEMBERS);
     const doc = sanitizeForFirestore({
       members,
+      companyId: tenant.companyId,
       updatedAt: now,
     } as unknown as Record<string, unknown>);
     await docRef.set(doc);
@@ -81,12 +86,14 @@ export async function saveMembers(members: Member[]): Promise<void> {
 }
 
 export async function getMemberEFKAPayments(
+  tenant: TenantContext,
   memberId: string,
   year: number
 ): Promise<EFKAPayment[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_EFKA_PAYMENTS)
+      .where('companyId', '==', tenant.companyId)
       .where('partnerId', '==', memberId)
       .where('year', '==', year)
       .orderBy('month', 'asc')
@@ -99,7 +106,7 @@ export async function getMemberEFKAPayments(
 // SHAREHOLDERS (ADR-ACC-015 AE)
 // ============================================================================
 
-export async function getShareholders(): Promise<Shareholder[]> {
+export async function getShareholders(tenant: TenantContext): Promise<Shareholder[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_SHAREHOLDERS).get();
     if (!snap.exists) return [];
@@ -108,12 +115,13 @@ export async function getShareholders(): Promise<Shareholder[]> {
   }, []);
 }
 
-export async function saveShareholders(shareholders: Shareholder[]): Promise<void> {
+export async function saveShareholders(tenant: TenantContext, shareholders: Shareholder[]): Promise<void> {
   const now = isoNow();
   await safeFirestoreOperation(async (db) => {
     const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_SHAREHOLDERS);
     const doc = sanitizeForFirestore({
       shareholders,
+      companyId: tenant.companyId,
       updatedAt: now,
     } as unknown as Record<string, unknown>);
     await docRef.set(doc);
@@ -121,12 +129,14 @@ export async function saveShareholders(shareholders: Shareholder[]): Promise<voi
 }
 
 export async function getShareholderEFKAPayments(
+  tenant: TenantContext,
   shareholderId: string,
   year: number
 ): Promise<EFKAPayment[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_EFKA_PAYMENTS)
+      .where('companyId', '==', tenant.companyId)
       .where('partnerId', '==', shareholderId)
       .where('year', '==', year)
       .orderBy('month', 'asc')
@@ -139,10 +149,11 @@ export async function getShareholderEFKAPayments(
 // EFKA PAYMENTS & CONFIG
 // ============================================================================
 
-export async function getEFKAPayments(year: number): Promise<EFKAPayment[]> {
+export async function getEFKAPayments(tenant: TenantContext, year: number): Promise<EFKAPayment[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_EFKA_PAYMENTS)
+      .where('companyId', '==', tenant.companyId)
       .where('year', '==', year)
       .orderBy('month', 'asc')
       .get();
@@ -151,6 +162,7 @@ export async function getEFKAPayments(year: number): Promise<EFKAPayment[]> {
 }
 
 export async function updateEFKAPayment(
+  tenant: TenantContext,
   paymentId: string,
   updates: Partial<EFKAPayment>
 ): Promise<void> {
@@ -161,7 +173,7 @@ export async function updateEFKAPayment(
   }, undefined);
 }
 
-export async function getEFKAUserConfig(): Promise<EFKAUserConfig | null> {
+export async function getEFKAUserConfig(tenant: TenantContext): Promise<EFKAUserConfig | null> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc(SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG).get();
     if (!snap.exists) return null;
@@ -169,7 +181,7 @@ export async function getEFKAUserConfig(): Promise<EFKAUserConfig | null> {
   }, null);
 }
 
-export async function saveEFKAUserConfig(config: EFKAUserConfig): Promise<void> {
+export async function saveEFKAUserConfig(tenant: TenantContext, config: EFKAUserConfig): Promise<void> {
   await safeFirestoreOperation(async (db) => {
     await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc(SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG).set(
       sanitizeForFirestore(config as unknown as Record<string, unknown>)

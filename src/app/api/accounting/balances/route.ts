@@ -27,7 +27,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const url = new URL(req.url);
         const fiscalYearParam = url.searchParams.get('fiscalYear');
@@ -37,7 +37,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           return NextResponse.json({ success: false, error: 'Invalid fiscalYear' }, { status: 400 });
         }
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const balances = await repository.listCustomerBalances(fiscalYear);
 
         return NextResponse.json({
@@ -58,12 +58,12 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const body = await req.json() as { fiscalYear?: number };
         const fiscalYear = body.fiscalYear ?? new Date().getFullYear();
 
-        const { repository } = createAccountingServices();
+        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
         const result = await reconcileAllBalances(repository, fiscalYear);
 
         return NextResponse.json({

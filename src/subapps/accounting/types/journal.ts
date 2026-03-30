@@ -180,6 +180,12 @@ export interface JournalEntry {
   /** Περίοδος reversal (1-13) */
   reversalPeriod?: number;
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   /** Timestamp δημιουργίας (ISO 8601) */
   createdAt: string;
   /** Timestamp τελευταίας ενημέρωσης (ISO 8601) */

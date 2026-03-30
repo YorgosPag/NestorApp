@@ -122,6 +122,12 @@ export interface CustomCategoryDocument {
   /** ΚΑΔ κωδικός (income only, συνήθως null) */
   kadCode: string | null;
 
+  // — Tenant Isolation (Q3/Q7) —
+  /** Company ID for tenant isolation */
+  companyId?: string;
+  /** User who created this document */
+  createdBy?: string;
+
   /** Timestamp δημιουργίας (ISO 8601) */
   createdAt: string;
 
