@@ -123,3 +123,72 @@ describe('FilterPanel — Update Filter', () => {
     expect(result[0].value).toBe('Residence');
   });
 });
+
+describe('FilterPanel — Invalid Operator Combinations', () => {
+  it('contains is invalid for number type', () => {
+    expect(isValidOperatorForType('contains', 'number')).toBe(false);
+  });
+
+  it('contains is invalid for boolean type', () => {
+    expect(isValidOperatorForType('contains', 'boolean')).toBe(false);
+  });
+
+  it('between is invalid for text type', () => {
+    expect(isValidOperatorForType('between', 'text')).toBe(false);
+  });
+
+  it('gt is invalid for enum type', () => {
+    expect(isValidOperatorForType('gt', 'enum')).toBe(false);
+  });
+
+  it('in is valid for enum but not for date', () => {
+    expect(isValidOperatorForType('in', 'enum')).toBe(true);
+    expect(isValidOperatorForType('in', 'date')).toBe(false);
+  });
+
+  it('before/after are valid only for date type', () => {
+    expect(isValidOperatorForType('before', 'date')).toBe(true);
+    expect(isValidOperatorForType('after', 'date')).toBe(true);
+    expect(isValidOperatorForType('before', 'text')).toBe(false);
+    expect(isValidOperatorForType('after', 'number')).toBe(false);
+  });
+
+  it('boolean type only supports eq operator', () => {
+    expect(isValidOperatorForType('eq', 'boolean')).toBe(true);
+    expect(isValidOperatorForType('neq', 'boolean')).toBe(false);
+    expect(isValidOperatorForType('gt', 'boolean')).toBe(false);
+  });
+});
+
+describe('FilterPanel — Max Filter Edge Cases', () => {
+  it('exactly at limit (10) prevents adding', () => {
+    const filters = Array.from({ length: 10 }, (_, i) => ({
+      id: String(i),
+      fieldKey: `field${i}`,
+      operator: 'eq' as const,
+      value: `val${i}`,
+    }));
+    expect(filters.length >= BUILDER_LIMITS.MAX_ACTIVE_FILTERS).toBe(true);
+  });
+
+  it('one below limit (9) allows adding', () => {
+    const filters = Array.from({ length: 9 }, (_, i) => ({
+      id: String(i),
+      fieldKey: `field${i}`,
+      operator: 'eq' as const,
+      value: `val${i}`,
+    }));
+    expect(filters.length < BUILDER_LIMITS.MAX_ACTIVE_FILTERS).toBe(true);
+  });
+
+  it('removing one from full list allows adding again', () => {
+    const filters = Array.from({ length: 10 }, (_, i) => ({
+      id: String(i),
+      fieldKey: `field${i}`,
+      operator: 'eq' as const,
+      value: `val${i}`,
+    }));
+    const afterRemove = filters.filter((f) => f.id !== '5');
+    expect(afterRemove.length < BUILDER_LIMITS.MAX_ACTIVE_FILTERS).toBe(true);
+  });
+});

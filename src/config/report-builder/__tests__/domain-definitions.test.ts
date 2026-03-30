@@ -60,9 +60,9 @@ function getNestedValue(obj: Record<string, unknown>, dotPath: string): unknown 
 // ============================================================================
 
 describe('Domain Definitions — Schema Integrity', () => {
-  it('defines all 14 domains (Phase 1 + 4a + 4b)', () => {
+  it('defines all domains (Phase 1-6)', () => {
     const definedIds = Object.keys(DOMAIN_DEFINITIONS);
-    expect(definedIds).toHaveLength(14);
+    expect(definedIds.length).toBe(VALID_DOMAIN_IDS.length);
     expect(definedIds).toEqual(
       expect.arrayContaining([
         'projects', 'buildings', 'floors', 'units',
@@ -620,6 +620,68 @@ describe('Domain Definitions — Phase 4b Persona Fields', () => {
       for (const common of commonFields) {
         expect(keys).toContain(common);
       }
+    }
+  });
+});
+
+// ============================================================================
+// Boundary & Consistency Tests (Phase 7 enrichment)
+// ============================================================================
+
+describe('Domain Definitions — Boundary & Consistency', () => {
+  it('every domain has at least one defaultVisible field', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const def = getDomainDefinition(id);
+      const visibleFields = def.fields.filter((f) => f.defaultVisible);
+      expect(visibleFields.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every domain has at least one filterable field', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const fields = getFilterableFields(id);
+      expect(fields.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every domain has at least one sortable field', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const fields = getSortableFields(id);
+      expect(fields.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('no domain has empty labelKey or descriptionKey', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const def = getDomainDefinition(id);
+      expect(def.labelKey.length).toBeGreaterThan(0);
+      expect(def.descriptionKey.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('no field has empty key', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const def = getDomainDefinition(id);
+      for (const field of def.fields) {
+        expect(field.key.trim().length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('entityLinkPath contains {id} placeholder for all domains', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const def = getDomainDefinition(id);
+      expect(def.entityLinkPath).toContain('{');
+    }
+  });
+
+  it('getFieldDefinition returns correct field by key for all domains', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const def = getDomainDefinition(id);
+      const firstField = def.fields[0];
+      const retrieved = getFieldDefinition(id, firstField.key);
+      expect(retrieved).toBeDefined();
+      expect(retrieved!.key).toBe(firstField.key);
     }
   });
 });

@@ -463,10 +463,10 @@ src/app/api/reports/builder/__tests__/route.test.ts
 
 | Μέτρηση | Τιμή |
 |---------|------|
-| Υπάρχοντα test αρχεία (report-related) | 8 |
-| Υπάρχοντα test cases | 255 |
-| Νέα test αρχεία (Report Builder) | ~18 |
-| Νέα test cases (εκτίμηση) | ~225-285 |
+| Test αρχεία (report-related) | 14 |
+| Συνολικά test cases | 1878 |
+| Νέα test αρχεία (SPEC-011) | 6 |
+| Νέα/εμπλουτισμένα test cases | 174 (117 new + 19 enriched + 38 Phase 7) |
 | Test layers | 4 (Unit 80%, Component 15%, Integration 5%, E2E optional) |
 | Coverage target | ≥ 80% statements, ≥ 75% branches |
 | Testing framework | Jest + React Testing Library |
@@ -501,4 +501,33 @@ src/app/api/reports/builder/__tests__/route.test.ts
 - `pdf-parse` και `@testing-library/user-event` ΔΕΝ εγκαταστάθηκαν (npm issue) — δεν χρησιμοποιούνται ακόμα
 - Component tests χρησιμοποιούν fireEvent (fallback) αντί userEvent
 - SaveReportDialog tests: `fireEvent.change` δεν δουλεύει σε jsdom για controlled inputs — χρησιμοποιήθηκε pre-populated via useEffect
-- Pending: Commit 2 (εμπλουτισμός existing tests)
+- Pending: ~~Commit 2 (εμπλουτισμός existing tests)~~ — DONE
+
+### 2026-03-31 — Commit 2: Εμπλουτισμός existing tests (+19 tests)
+
+**3 αρχεία εμπλουτίστηκαν**:
+- `filter-operators.test.ts` (+4 edge cases)
+- `report-builder-types.test.ts` (+8 security/boundary)
+- `builder-export.test.ts` (+7 negative/boundary)
+
+### 2026-03-31 — Commit 3: Phase 7 enrichment + route security (+38 tests)
+
+**Υλοποίηση**: Εμπλουτισμός 4 υπαρχόντων suites + route security, +38 tests, ALL PASS
+
+| # | Test Suite | Before | After | Added |
+|---|-----------|--------|-------|-------|
+| 1 | `domain-definitions.test.ts` | 41 | 48 | +7 boundary/consistency |
+| 2 | `DomainSelector.test.tsx` | 4 → 5 (config) | 11 | +6 accessibility/validation |
+| 3 | `ColumnSelector.test.tsx` | 7 | 12 | +5 boundary/duplicate detection |
+| 4 | `FilterPanel.test.tsx` | 9 | 21 | +12 invalid operators/edge cases |
+| 5 | `route.test.ts` | 11 | 21 | +10 row limits/security |
+
+**Bugfix**: `domain-definitions.test.ts` line 65 — αναμενόμενος αριθμός domains ήταν hardcoded 14, ενημερώθηκε σε δυναμικό `VALID_DOMAIN_IDS.length` (37 domains μετά Phase 5+6)
+
+**Tests κατηγοριοποιημένα**:
+- Boundary: empty fields, min/max limits, zero columns
+- Security: SQL injection, prototype pollution, dot-traversal attacks
+- Consistency: unique keys, valid groups, field existence
+- Operator validation: invalid combos per type, boolean-only eq
+
+**Final verification**: 14 suites, 1878 tests, ALL PASS

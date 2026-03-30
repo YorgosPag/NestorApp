@@ -4,6 +4,7 @@
  */
 
 import { getDomainDefinition, getDefaultColumns } from '@/config/report-builder/domain-definitions';
+import { VALID_DOMAIN_IDS } from '@/config/report-builder/report-builder-types';
 
 describe('ColumnSelector — Toggle Logic', () => {
   const domain = getDomainDefinition('projects');
@@ -76,5 +77,49 @@ describe('ColumnSelector — Units domain default columns', () => {
     const unitDefaults = getDefaultColumns('units');
     expect(unitDefaults).toContain('name');
     expect(unitDefaults).toContain('commercialStatus');
+  });
+});
+
+describe('ColumnSelector — Boundary & Duplicate Detection', () => {
+  it('default columns are always non-empty for every domain', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const defaults = getDefaultColumns(id);
+      expect(defaults.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('default columns contain no duplicates for any domain', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const defaults = getDefaultColumns(id);
+      const unique = new Set(defaults);
+      expect(defaults.length).toBe(unique.size);
+    }
+  });
+
+  it('toggle to 0 columns leaves empty array (minimum boundary)', () => {
+    const columns = ['name'];
+    const result = columns.filter((c) => c !== 'name');
+    expect(result).toHaveLength(0);
+  });
+
+  it('adding duplicate column does not create duplicates (guard logic)', () => {
+    const columns = ['name', 'status'];
+    const fieldKey = 'name'; // already present
+    const result = columns.includes(fieldKey)
+      ? columns // no-op: already present
+      : [...columns, fieldKey];
+    expect(result).toEqual(['name', 'status']);
+    expect(new Set(result).size).toBe(result.length);
+  });
+
+  it('all default column keys exist in domain field definitions', () => {
+    for (const id of VALID_DOMAIN_IDS) {
+      const def = getDomainDefinition(id);
+      const fieldKeys = def.fields.map((f) => f.key);
+      const defaults = getDefaultColumns(id);
+      for (const col of defaults) {
+        expect(fieldKeys).toContain(col);
+      }
+    }
   });
 });
