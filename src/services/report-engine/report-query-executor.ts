@@ -19,8 +19,16 @@ import {
   type BuilderQueryResponse,
   type ReportBuilderFilter,
   type FieldDefinition,
+  type DomainDefinition,
   type PreFilter,
 } from '@/config/report-builder/report-builder-types';
+import {
+  applyComputedFields,
+  expandRows,
+  applySortInJs,
+  getNestedValue,
+  chunkArray,
+} from './report-query-transforms';
 
 const logger = createModuleLogger('ReportQueryExecutor');
 
@@ -50,32 +58,53 @@ export async function executeBuilderQuery(
   const startTime = Date.now();
   const domain = getDomainDefinition(request.domain);
   const fields = domain.fields;
+  const sortField = request.sortField ?? domain.defaultSortField;
+  const sortDirection = request.sortDirection ?? domain.defaultSortDirection;
+  const sortFieldDef = fields.find((f) => f.key === sortField);
+  const isSortComputed = sortFieldDef?.computed === true;
 
   // Plan which filters go to Firestore vs JS
   const plan = planFilterExecution(request.filters, fields);
+
+  // Computed sort or post-filters → need extra headroom from Firestore
+  const needsHeadroom = plan.postFilters.length > 0 || isSortComputed;
 
   // Build and execute Firestore query
   const rawRows = await executeFirestoreQuery(
     domain.collection,
     companyId,
     plan.firestoreClauses,
-    request.sortField ?? domain.defaultSortField,
-    request.sortDirection ?? domain.defaultSortDirection,
-    plan.postFilters.length > 0
+    isSortComputed ? domain.defaultSortField : sortField,
+    isSortComputed ? domain.defaultSortDirection : sortDirection,
+    needsHeadroom
       ? Math.min(request.limit * 3, BUILDER_LIMITS.MAX_SERVER_FETCH)
       : request.limit,
     domain.preFilters,
+    domain.queryType,
   );
+
+  // Phase 5 — Apply computed fields (after fetch, before post-filters)
+  const withComputed = applyComputedFields(rawRows, fields);
+
+  // Phase 5 — Row expansion for detail-grain domains (e.g. C7b ownership rows)
+  const expanded = domain.rowExpansionField
+    ? expandRows(withComputed, domain.rowExpansionField)
+    : withComputed;
 
   // Apply post-filters
   const filtered = plan.postFilters.length > 0
-    ? applyPostFilters(rawRows, plan.postFilters, fields)
-    : rawRows;
+    ? applyPostFilters(expanded, plan.postFilters, fields)
+    : expanded;
 
-  const totalMatched = filtered.length;
+  // Phase 5 — JS sort for computed fields (Firestore can't sort on virtual columns)
+  const sorted = isSortComputed
+    ? applySortInJs(filtered, sortField, sortDirection, getNestedValue)
+    : filtered;
+
+  const totalMatched = sorted.length;
   const limit = Math.min(request.limit, BUILDER_LIMITS.MAX_ROW_LIMIT);
   const truncated = totalMatched > limit;
-  const limitedRows = filtered.slice(0, limit);
+  const limitedRows = sorted.slice(0, limit);
 
   // Resolve refs
   const resolvedRefs = await resolveRefs(limitedRows, fields, request.columns);
@@ -119,6 +148,12 @@ export function planFilterExecution(
   for (const filter of filters) {
     const field = fields.find((f) => f.key === filter.fieldKey);
     if (!field) continue;
+
+    // Phase 5 — Computed fields cannot be pushed to Firestore
+    if (field.computed) {
+      postFilters.push(filter);
+      continue;
+    }
 
     const clauses = mapFilterToFirestore(filter, inequalityFieldUsed);
 
@@ -227,11 +262,12 @@ async function executeFirestoreQuery(
   sortDirection: 'asc' | 'desc',
   limit: number,
   preFilters?: PreFilter[],
+  queryType?: DomainDefinition['queryType'],
 ): Promise<Record<string, unknown>[]> {
   const db = getAdminFirestore();
-  let query: FirebaseFirestore.Query = db
-    .collection(collection)
-    .where('companyId', '==', companyId);
+  let query: FirebaseFirestore.Query = queryType === 'collectionGroup'
+    ? db.collectionGroup(collection).where('companyId', '==', companyId)
+    : db.collection(collection).where('companyId', '==', companyId);
 
   // Apply domain pre-filters (e.g. type='individual' for B1)
   if (preFilters) {
@@ -442,42 +478,5 @@ function docToRow(doc: FirebaseFirestore.DocumentSnapshot): Record<string, unkno
   return { id: doc.id, ...doc.data() } as Record<string, unknown>;
 }
 
-export function getNestedValue(obj: Record<string, unknown>, dotPath: string): unknown {
-  // Persona resolver: persona.<type>.<field> → find matching persona in personas[]
-  if (dotPath.startsWith('persona.')) {
-    const [, personaType, ...fieldParts] = dotPath.split('.');
-    const personas = obj['personas'];
-    if (!Array.isArray(personas)) return undefined;
-    const match = personas.find(
-      (p: Record<string, unknown>) => p['personaType'] === personaType,
-    );
-    if (!match || !fieldParts.length) return undefined;
-    return fieldParts.length === 1
-      ? (match as Record<string, unknown>)[fieldParts[0]]
-      : getNestedValue(match as Record<string, unknown>, fieldParts.join('.'));
-  }
-
-  const parts = dotPath.split('.');
-  let current: unknown = obj;
-
-  for (const part of parts) {
-    if (current === null || current === undefined) return undefined;
-    if (typeof current !== 'object') return undefined;
-    // Array index support: emails.0.email → emails[0].email
-    if (Array.isArray(current) && /^\d+$/.test(part)) {
-      current = (current as unknown[])[parseInt(part, 10)];
-    } else {
-      current = (current as Record<string, unknown>)[part];
-    }
-  }
-
-  return current;
-}
-
-export function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-}
+// Re-export shared utilities + transforms for backward compatibility
+export { getNestedValue, chunkArray, applyComputedFields, expandRows } from './report-query-transforms';

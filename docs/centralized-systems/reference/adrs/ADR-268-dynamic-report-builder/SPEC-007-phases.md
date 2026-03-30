@@ -22,11 +22,12 @@
 | 2 | Grouping + KPIs + Charts | — (engine) | ~3 | ~2 | ~25-30 |
 | 3 | Export (Tier 1) | — (PDF + Excel) | ~2 | ~3 | ~40-50 |
 | 4 | Domains A5-A6, B1-B8 + Tier 2 | Parking, Storage, Contacts... | ~5 configs | ~1 | ~20-30 |
-| 5 | Domains C1-C7 | Payments, Cheques, Contracts... | ~7 configs | ~1 | ~20-30 |
+| 5 | Domains C1-C7 (8 domains) + Computed Fields + collectionGroup | Payments, Cheques, Contracts... | ~8 configs + 2 engine | ~3 | ~40-50 |
 | 6 | Domains D1-D4, E1-E2, F1-F2 + Tier 3 | Construction, CRM, Accounting | ~8 configs | ~1 | ~20-30 |
 | 7 | Saved Reports | — | ~3 | ~2 | ~20-25 |
+| 8 | Cash Flow Forecast (Dedicated Module) | — (standalone) | ~4 | ~2 | ~30-40 |
 
-**Σύνολο**: ~41 αρχεία κώδικα, ~18 test αρχεία, ~225-285 test cases
+**Σύνολο**: ~45 αρχεία κώδικα, ~22 test αρχεία, ~275-345 test cases
 
 ---
 
@@ -127,11 +128,34 @@ src/services/report-engine/__tests__/tier2-row-expansion.test.ts      ← Row re
 
 ---
 
-## Phase 5: Financial Domains
+## Phase 5: Financial Domains — ✅ IMPLEMENTED (2026-03-30)
 
-**Domains**: C1-C7 (Payment Plans, Cheques, Contracts, Brokerage, Commissions, Purchase Orders, Ownership)
+**Domains**: C1-C7b → 8 domains (Payment Plans, Cheques, Legal Contracts, Purchase Orders, Brokerage, Commissions, Ownership Summary, Ownership Detail)
+**Σημ**: C7 σπάει σε C7a (Summary, table-level grain) + C7b (Detail, row-level grain) — Kimball grain consistency
 
-**Tests**: Τα domain configs καλύπτονται από `domain-config-validation.test.ts` (Phase 4). Αν υπάρχει νέα business logic → νέο test file.
+**Engine Upgrades Delivered**:
+- **collectionGroup query support** στον report-query-executor (για subcollection C1 Payment Plans)
+- **Computed fields** (26 virtual columns, at query time) — AR Aging, maturity buckets, completion %, overdue detection
+- **Row expansion** — C7b flattens `rows[]` array: 1 doc → N result rows
+- **JS sort** for computed fields (Firestore can't orderBy virtual columns)
+
+**Domain Group**: New `'financial'` group added to `DomainGroup` union
+
+**Files Created**:
+- `src/config/report-builder/domain-defs-financials.ts` (C1 + C2 + C3)
+- `src/config/report-builder/domain-defs-procurement.ts` (C4)
+- `src/config/report-builder/domain-defs-brokerage.ts` (C5 + C6)
+- `src/config/report-builder/domain-defs-ownership.ts` (C7a + C7b)
+- `src/services/report-engine/report-query-transforms.ts` (extracted utilities + transforms)
+
+**Files Modified**:
+- `src/config/report-builder/report-builder-types.ts` (8 new IDs, financial group, computed/queryType/rowExpansion props)
+- `src/config/report-builder/domain-definitions.ts` (registry: 14→22 domains)
+- `src/services/report-engine/report-query-executor.ts` (collectionGroup, computed pipeline, extracted utils)
+- `src/i18n/locales/{en,el}/report-builder-domains.json` (8 domain blocks, British English)
+- `firestore.indexes.json` (collectionGroup indexes for payment_plans)
+
+**Tests**: Extended `report-query-executor.test.ts` with computed fields, row expansion, and computed-filter-routing tests
 
 ---
 
@@ -156,6 +180,40 @@ src/services/report-engine/__tests__/tier3-card-renderer.test.ts      ← Card P
 ```
 src/services/report-engine/__tests__/saved-reports-service.test.ts    ← CRUD: save, load, update, delete, list
 src/components/reports/builder/__tests__/SavedReportManager.test.tsx   ← UI: save dialog, load list, delete confirm
+```
+
+---
+
+## Phase 8: Cash Flow Forecast (Dedicated Module)
+
+**Απόφαση (2026-03-30)**: Standalone module, ΟΧΙ embedded σε generic report builder.
+**Pattern**: ARGUS Enterprise, Yardi Cash Management, Google Finance.
+
+**Features**:
+- Rolling 12-month cash flow projection (inflows from payment plan installments, outflows from POs)
+- Projected vs Actual comparison (installment dueDate vs actual paidDate)
+- Cumulative balance timeline chart
+- PDC (Post-Dated Cheque) maturity calendar
+- Inflows/Outflows breakdown per project
+- Scenario modeling: optimistic (100% on-time), realistic (historical collection rate), pessimistic
+
+**Data Sources**:
+- Payment Plans → installments[].dueDate + amount (projected inflows)
+- Cheques → maturityDate + amount (PDC inflows)
+- Purchase Orders → paymentDueDate + total (projected outflows)
+- Accounting Invoices → dueDate + amount (actual outflows)
+- Historical payment data → collection rate calculation
+
+**UI**: Dedicated page `/reports/cash-flow` with:
+- Timeline chart (bar + line combo)
+- Monthly breakdown table
+- Filter by project / building / date range
+- Export PDF + Excel
+
+**Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
+```
+src/services/report-engine/__tests__/cash-flow-forecast.test.ts        ← Projection calc, scenarios, cumulative
+src/components/reports/__tests__/CashFlowDashboard.test.tsx            ← UI: chart, filters, export
 ```
 
 ---

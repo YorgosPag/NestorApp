@@ -1,8 +1,8 @@
 # SPEC-019: Πλήρης Χαρτογράφηση — Πίνακας Χιλιοστών (Ownership Tables)
 
 **ADR**: 268 — Dynamic Report Builder
-**Version**: 1.0
-**Last Updated**: 2026-03-29
+**Version**: 1.1
+**Last Updated**: 2026-03-30
 **Source of Truth**: Κώδικας (`src/types/ownership-table.ts`, `src/services/ownership/`)
 
 ---
@@ -267,7 +267,30 @@ Immutable snapshots κάθε φορά που γίνεται finalize. Version hi
 
 ## 6. Report Builder Impact — Τι σημαίνει αυτό για τα Domains
 
-### 6.1 Domain C7 (Πίνακας Ιδιοκτησίας) — Ενημερωμένες Στήλες
+### 6.0 Αρχιτεκτονική Απόφαση: Δύο Ξεχωριστά Domains (2026-03-30)
+
+**Απόφαση**: Ο Πίνακας Χιλιοστών γίνεται **2 ξεχωριστά domains** στο Report Builder:
+
+| Domain | ID | Grain | 1 row = |
+|--------|----|-------|---------|
+| **C7a: Ownership Summary** | `ownership_summary` | Table-level | 1 πίνακας χιλιοστών (per project) |
+| **C7b: Ownership Detail** | `ownership_detail` | Row-level | 1 ιδιοκτησία (unit/parking/storage) |
+
+**Λόγοι (Enterprise Data Modeling — Kimball Grain Consistency)**:
+1. **SAP Pattern**: ME2M (PO headers) ≠ ME2L (PO line items) — ξεχωριστά reports ανά grain
+2. **Oracle ERP**: Separate "Summary" / "Detail" report objects σε κάθε module
+3. **Procore**: Budget Summary ≠ Budget Detail — δύο ξεχωριστά views
+4. **Google BigQuery/Looker**: Separate fact tables ανά grain level (Kimball dimensional modeling)
+5. **Grain mixing = broken aggregations**: Αν αναμείξεις 1 table-level row + 200 row-level rows, τα SUM/AVG/GROUP BY δίνουν λάθος αποτελέσματα
+
+**Υλοποίηση**:
+- C7a: Query `ownership_tables` collection, expose table-level + summary fields
+- C7b: Query `ownership_tables` collection, **flatten `rows[]`** array → 1 result row per `OwnershipTableRow`
+- C7b χρειάζεται **row expansion** στον executor (ίδιο pattern με Tier 2 row repetition)
+
+---
+
+### 6.1 Domain C7a (Ownership Summary) — Table-Level Columns
 
 **Tier 1 (Flat Table) — Primary columns (Table Level):**
 
@@ -307,9 +330,9 @@ Immutable snapshots κάθε φορά που γίνεται finalize. Version hi
 | Μέσος Χιλιοστών/Row | AVG rows[].millesimalShares | number | |
 | Manual Overrides | COUNT rows WHERE isManualOverride | number | |
 
-**Tier 1 (Flat Table) — Row-Level columns (per OwnershipTableRow):**
+### 6.2 Domain C7b (Ownership Detail) — Row-Level Columns
 
-Εναλλακτικά, ο Report Builder μπορεί να δουλέψει σε **row level** (1 row per γραμμή πίνακα):
+**1 row = 1 OwnershipTableRow** (ιδιοκτησία). Flatten μέσω row expansion στον executor:
 
 | Στήλη | Πεδίο | Τύπος | Σημείωση |
 |-------|-------|-------|----------|
@@ -334,7 +357,7 @@ Immutable snapshots κάθε φορά που γίνεται finalize. Version hi
 | Συντ. Αξίας | `coefficients.valueCoefficient` | number | Μόνο Μέθοδος Β |
 | Παρακολουθήματα | COUNT linkedSpacesSummary | number | |
 
-### 6.2 Tier 2 (Row Repetition) — Arrays που χρειάζονται expansion
+### 6.3 Tier 2 (Row Repetition) — Arrays που χρειάζονται expansion
 
 | Array | Πεδία ανά row | Μέγιστο πλήθος |
 |-------|---------------|----------------|
@@ -344,7 +367,7 @@ Immutable snapshots κάθε φορά που γίνεται finalize. Version hi
 | `buildingIds[]` | building ID (join → name) | ~10 |
 | `kaekCodes[]` | KAEK code | ~10 |
 
-### 6.3 Tier 3 (Ownership Table Card PDF) — Sections
+### 6.4 Tier 3 (Ownership Table Card PDF) — Sections
 
 ```
 ┌─────────────────────────────────────────┐

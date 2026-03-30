@@ -9,6 +9,10 @@ import {
   getNestedValue,
   chunkArray,
 } from '../report-query-executor';
+import {
+  applyComputedFields,
+  expandRows,
+} from '../report-query-transforms';
 import { getDomainDefinition } from '@/config/report-builder/domain-definitions';
 import type { ReportBuilderFilter } from '@/config/report-builder/report-builder-types';
 
@@ -267,5 +271,156 @@ describe('applyPostFilters — nested fields', () => {
     const result = applyPostFilters(rows, filters, fields);
     expect(result).toHaveLength(1);
     expect(result[0]['name']).toBe('A-101');
+  });
+});
+
+// ============================================================================
+// Phase 5 — applyComputedFields
+// ============================================================================
+
+describe('applyComputedFields', () => {
+  it('returns rows unchanged when no computed fields', () => {
+    const rows = [{ id: '1', name: 'Test' }];
+    const fields = [
+      { key: 'name', labelKey: 'n', type: 'text' as const, filterable: true, sortable: true, defaultVisible: true },
+    ];
+    const result = applyComputedFields(rows, fields);
+    expect(result).toEqual(rows);
+  });
+
+  it('injects computed values into rows', () => {
+    const rows = [
+      { id: '1', price: 100000, paid: 60000 },
+      { id: '2', price: 200000, paid: 200000 },
+    ];
+    const fields = [
+      { key: 'price', labelKey: 'p', type: 'currency' as const, filterable: true, sortable: true, defaultVisible: true },
+      {
+        key: 'paidPct',
+        labelKey: 'pp',
+        type: 'percentage' as const,
+        filterable: true,
+        sortable: true,
+        defaultVisible: true,
+        computed: true,
+        computeFn: (doc: Record<string, unknown>) => {
+          const price = doc['price'] as number;
+          const paid = doc['paid'] as number;
+          return price > 0 ? Math.round((paid / price) * 100) : 0;
+        },
+      },
+    ];
+    const result = applyComputedFields(rows, fields);
+    expect(result[0]['paidPct']).toBe(60);
+    expect(result[1]['paidPct']).toBe(100);
+  });
+
+  it('does not mutate original rows', () => {
+    const original = { id: '1', value: 10 };
+    const rows = [original];
+    const fields = [
+      {
+        key: 'doubled',
+        labelKey: 'd',
+        type: 'number' as const,
+        filterable: true,
+        sortable: true,
+        defaultVisible: true,
+        computed: true,
+        computeFn: (doc: Record<string, unknown>) => (doc['value'] as number) * 2,
+      },
+    ];
+    applyComputedFields(rows, fields);
+    expect(original).not.toHaveProperty('doubled');
+  });
+});
+
+// ============================================================================
+// Phase 5 — expandRows
+// ============================================================================
+
+describe('expandRows', () => {
+  it('returns rows unchanged when expansion field is empty array', () => {
+    const rows = [{ id: '1', name: 'Table A', rows: [] }];
+    const result = expandRows(rows, 'rows');
+    expect(result).toHaveLength(1);
+    expect(result[0]['id']).toBe('1');
+  });
+
+  it('returns rows unchanged when expansion field is missing', () => {
+    const rows = [{ id: '1', name: 'No rows' }];
+    const result = expandRows(rows, 'rows');
+    expect(result).toHaveLength(1);
+  });
+
+  it('expands array elements into separate rows', () => {
+    const rows = [
+      {
+        id: 'table1',
+        projectId: 'p1',
+        rows: [
+          { ordinal: 1, description: 'Unit A', areaSqm: 100 },
+          { ordinal: 2, description: 'Unit B', areaSqm: 80 },
+        ],
+      },
+    ];
+    const result = expandRows(rows, 'rows');
+    expect(result).toHaveLength(2);
+    // Row-level fields override parent
+    expect(result[0]['ordinal']).toBe(1);
+    expect(result[0]['description']).toBe('Unit A');
+    expect(result[1]['areaSqm']).toBe(80);
+    // Parent fields preserved
+    expect(result[0]['projectId']).toBe('p1');
+    expect(result[1]['projectId']).toBe('p1');
+    // Expansion metadata
+    expect(result[0]['_parentId']).toBe('table1');
+    expect(result[0]['_expansionIndex']).toBe(0);
+    expect(result[1]['_expansionIndex']).toBe(1);
+  });
+
+  it('handles multiple parent docs', () => {
+    const rows = [
+      { id: 't1', rows: [{ ordinal: 1 }, { ordinal: 2 }] },
+      { id: 't2', rows: [{ ordinal: 1 }] },
+    ];
+    const result = expandRows(rows, 'rows');
+    expect(result).toHaveLength(3);
+  });
+});
+
+// ============================================================================
+// Phase 5 — Computed fields route to postFilters
+// ============================================================================
+
+describe('planFilterExecution — computed fields', () => {
+  const paymentFields = getDomainDefinition('paymentPlans').fields;
+
+  it('routes computed field equality filter to postFilters', () => {
+    const filters: ReportBuilderFilter[] = [
+      { id: '1', fieldKey: 'agingBucket', operator: 'eq', value: '31-60' },
+    ];
+    const plan = planFilterExecution(filters, paymentFields);
+    expect(plan.firestoreClauses).toHaveLength(0);
+    expect(plan.postFilters).toHaveLength(1);
+  });
+
+  it('routes computed field numeric filter to postFilters', () => {
+    const filters: ReportBuilderFilter[] = [
+      { id: '1', fieldKey: 'daysOverdue', operator: 'gt', value: 30 },
+    ];
+    const plan = planFilterExecution(filters, paymentFields);
+    expect(plan.firestoreClauses).toHaveLength(0);
+    expect(plan.postFilters).toHaveLength(1);
+  });
+
+  it('handles mix of stored + computed filters', () => {
+    const filters: ReportBuilderFilter[] = [
+      { id: '1', fieldKey: 'status', operator: 'eq', value: 'active' },
+      { id: '2', fieldKey: 'completionPct', operator: 'lt', value: 50 },
+    ];
+    const plan = planFilterExecution(filters, paymentFields);
+    expect(plan.firestoreClauses).toHaveLength(1); // status → Firestore
+    expect(plan.postFilters).toHaveLength(1); // completionPct → JS
   });
 });

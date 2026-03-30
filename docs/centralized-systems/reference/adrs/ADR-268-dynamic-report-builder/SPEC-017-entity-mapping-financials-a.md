@@ -1,9 +1,36 @@
 # SPEC-017: Πλήρης Χαρτογράφηση — Οικονομικά A (Payment Plans + Cheques + Legal Contracts)
 
 **ADR**: 268 — Dynamic Report Builder
-**Version**: 1.0
-**Last Updated**: 2026-03-29
+**Version**: 1.1
+**Last Updated**: 2026-03-30
 **Source of Truth**: Κώδικας (`src/types/payment-plan.ts`, `src/types/loan-tracking.ts`, `src/types/cheque-registry.ts`, `src/types/legal-contracts.ts`)
+
+---
+
+## Αρχιτεκτονική Απόφαση: collectionGroup Queries (2026-03-30)
+
+**Απόφαση**: Τα subcollections (Payment Plans, Brokerage Agreements) θα query-άρονται μέσω **Firestore collectionGroup queries** — ΟΧΙ denormalization σε top-level collection.
+
+**Λόγοι (Google Engineering Pattern)**:
+1. **SSoT**: Ένα σημείο αλήθειας, μηδέν sync logic, μηδέν race conditions
+2. **Firestore Official Recommendation**: Η Google πρόσθεσε collectionGroup (2019) ακριβώς γι' αυτό το use case
+3. **Zero maintenance**: Δεν χρειάζεται Cloud Functions ή double-write middleware
+4. **Κόστος**: 1x reads αντί 2x writes — βέλτιστο για report builder (read-heavy, on-demand)
+5. **Composite Index**: Μόνο `firebase deploy --only firestore:indexes` — ήδη υποστηρίζεται
+
+**Υλοποίηση στον report-query-executor.ts**:
+- Νέα property `queryType: 'collection' | 'collectionGroup'` στο `DomainDefinition`
+- Default: `'collection'` (backward compatible)
+- Subcollections: `queryType: 'collectionGroup'`
+- Ο executor θα χρησιμοποιεί `db.collectionGroup(name)` αντί `db.collection(name)` όταν `queryType === 'collectionGroup'`
+
+**Domains που χρειάζονται collectionGroup**:
+- C1: Payment Plans (`units/{unitId}/payment_plans`)
+
+**Domains που ΔΕΝ χρειάζονται** (top-level, verified 2026-03-30):
+- C2-C4, C5-C6: `cheques`, `legal_contracts`, `purchase_orders`, `brokerage_agreements`, `commission_records` — all top-level
+- C7a/C7b: `ownership_tables` — top-level (rows[] = embedded array, NOT subcollection)
+- *Σημ*: Το briefing αρχείο ανέφερε `projects/{id}/brokerage_agreements` αλλά ο κώδικας (SSoT) = top-level `brokerage_agreements`
 
 ---
 
@@ -250,6 +277,49 @@
 | InterestRateType | fixed, variable, mixed | 3 |
 | DisbursementStatus | pending, requested, approved, disbursed | 4 |
 | LateFeeType | none, fixed_percentage, daily_percentage | 3 |
+
+---
+
+## 1.5.1 Computed Fields — AR Aging (Google Looker Pattern, 2026-03-30)
+
+**Απόφαση**: Τα aging fields υπολογίζονται **at query time** (virtual/computed columns) — ΔΕΝ αποθηκεύονται στο Firestore.
+
+**Λόγοι**:
+- `daysOverdue` αλλάζει κάθε μέρα — stored value = stale data = λάθος αποφάσεις
+- Google BigQuery, Looker, Data Studio: όλα χρησιμοποιούν calculated fields at query time
+- Μηδέν storage overhead, πάντα fresh data
+
+**Υλοποίηση στον report-query-executor.ts**:
+- Νέα property `computed: true` στο `FieldDefinition`
+- Νέα property `computeFn: (doc: Record<string, unknown>) => unknown` — pure function
+- Ο executor εκτελεί `computeFn` σε κάθε row **μετά** το Firestore fetch, **πριν** τα post-filters
+- Computed fields: filterable (post-filter), sortable (JS sort), NOT Firestore-native
+
+### Payment Plan — Computed Fields
+
+| # | Field Key | Τύπος | Υπολογισμός | Περιγραφή |
+|---|-----------|-------|-------------|-----------|
+| C1 | `computed.daysOverdue` | number | `max(0, (now - nearestUnpaidDueDate) / 86400000)` | Ημέρες καθυστέρησης (0 αν ενήμερο) |
+| C2 | `computed.agingBucket` | enum | `daysOverdue → '0-30' / '31-60' / '61-90' / '91-120' / '120+'` | AR Aging bucket (Yardi/MRI standard) |
+| C3 | `computed.completionPct` | percentage | `(paidAmount / totalAmount) × 100` | % αποπληρωμής |
+| C4 | `computed.overdueAmount` | currency | `SUM unpaid installments WHERE dueDate < now` | Ληξιπρόθεσμο ποσό |
+| C5 | `computed.nextDueDate` | date | `MIN(dueDate) WHERE status IN ('pending','due')` | Επόμενη ημ/νία πληρωμής |
+| C6 | `computed.nextDueAmount` | currency | `amount WHERE index = nextDueInstallment` | Ποσό επόμενης δόσης |
+
+### Cheque — Computed Fields
+
+| # | Field Key | Τύπος | Υπολογισμός | Περιγραφή |
+|---|-----------|-------|-------------|-----------|
+| C7 | `computed.daysToMaturity` | number | `(maturityDate - now) / 86400000` | Ημέρες μέχρι λήξη (αρνητικό = ληγμένη) |
+| C8 | `computed.maturityBucket` | enum | `'overdue' / '0-7' / '8-30' / '31-60' / '60+'` | Maturity bucket (PDC calendar) |
+| C9 | `computed.isOverdue` | boolean | `maturityDate < now AND status NOT IN terminal` | Ληξιπρόθεσμη |
+| C10 | `computed.isReplacement` | boolean | `replacesChequeId != null` | Αντικατέστησε άλλη επιταγή |
+| C11 | `computed.hasBeenReplaced` | boolean | `replacedByChequeId != null` | Αντικαταστάθηκε από άλλη |
+| C12 | `computed.isInChain` | boolean | `isReplacement OR hasBeenReplaced` | Μέρος αλυσίδας αντικατάστασης (risk flag) |
+
+> **Σημ**: `chainLength` (βάθος αλυσίδας) δεν γίνεται computed — χρειάζεται recursive lookup σε άλλα documents.
+> Αν χρειαστεί, υλοποιείται ως **denormalized field** `replacementDepth: number` που ενημερώνεται on-write.
+> Για Phase 5: τα 3 boolean flags αρκούν για risk detection (filter: `isInChain === true` → εμφάνισε προβληματικές).
 
 ---
 
@@ -564,6 +634,20 @@ SAP Business Partner pattern: snapshot δεδομένων κατά την υπο
 | LegalPhase (denormalized) | none, preliminary_pending, preliminary_signed, final_pending, final_signed, payoff_pending, payoff_completed | 7 |
 | DepositTermsOnCancellation | forfeit, double_return, refund | 3 |
 | LegalProfessionalRole | seller_lawyer, buyer_lawyer, notary | 3 |
+
+---
+
+## 3.4.1 Computed Fields — Contract Bottleneck Detection (2026-03-30)
+
+**Pattern**: Ίδιο με aging buckets — χρονο-εξαρτώμενα, at query time, bottleneck alerts.
+
+| # | Field Key | Τύπος | Υπολογισμός | Περιγραφή |
+|---|-----------|-------|-------------|-----------|
+| C1 | `computed.daysInStatus` | number | `(now - updatedAt) / 86400000` | Ημέρες στο τρέχον status |
+| C2 | `computed.daysSinceSigned` | number | `signedAt ? (now - signedAt) / 86400000 : null` | Ημέρες από υπογραφή |
+| C3 | `computed.isStale` | boolean | `status === 'pending_signature' AND daysInStatus > 90` | Bottleneck alert: 90+ ημέρες σε αναμονή υπογραφής |
+| C4 | `computed.phaseProgressDays` | number | `(now - createdAt) / 86400000` | Συνολικός χρόνος στη φάση (preliminary/final/payoff) |
+| C5 | `computed.staleBucket` | enum | `daysInStatus → 'ok' (0-30) / 'slow' (31-60) / 'warning' (61-90) / 'critical' (90+)` | Bottleneck severity bucket |
 
 ---
 
@@ -943,3 +1027,47 @@ SAP Business Partner pattern: snapshot δεδομένων κατά την υπο
 | FSM states | 5 (plan) + 15 (loan) | 10 | 4 (per phase) × 3 phases | **~42** |
 | Cross-entity references | 8 | 7 (direct) + 1 (indirect) | 9 | **25** |
 | **Σύνολο πεδίων** | **~100+** | **~47** | **~65** | **~212+** |
+| Computed fields | 6 (C1-C6) | 6 (C7-C12) | 5 (C1-C5) | **17** |
+
+---
+
+# 8. i18n Convention — British English (2026-03-30)
+
+**Απόφαση**: Τα αγγλικά labels χρησιμοποιούν **British English** (EU/UK legal terminology).
+
+**Λόγος**: Ελληνική κατασκευαστική εταιρεία, EU legal context, Ν. 5960/1933 (cheques), ΑΚ 402-403 (contracts).
+
+### Domain Labels
+
+| Domain ID | EL | EN (British) |
+|-----------|----|----|
+| `payment_plans` | Πλάνα Πληρωμών | Payment Plans |
+| `cheques` | Αξιόγραφα | Cheques |
+| `legal_contracts` | Νομικά Συμβόλαια | Legal Contracts |
+| `purchase_orders` | Παραγγελίες Αγοράς | Purchase Orders |
+| `brokerage` | Μεσιτικές Συμφωνίες | Brokerage Agreements |
+| `commissions` | Εγγραφές Προμηθειών | Commission Records |
+| `ownership_summary` | Πίνακας Χιλιοστών (Σύνοψη) | Ownership Table (Summary) |
+| `ownership_detail` | Πίνακας Χιλιοστών (Αναλυτικά) | Ownership Table (Detail) |
+
+### Κρίσιμοι Νομικοί Όροι
+
+| EL | EN (British) | ΟΧΙ American |
+|----|---|---|
+| Επιταγή | Cheque | ~~Check~~ |
+| Οπισθογράφηση | Endorsement | — |
+| Σφράγιση (επιταγής) | Bounced cheque | ~~Bounced check~~ |
+| Αρραβώνας | Deposit / Earnest money | — |
+| Προσύμφωνο | Preliminary contract | — |
+| Οριστικό συμβόλαιο | Final contract / Deed | — |
+| Εξόφληση | Payoff / Settlement | — |
+| Αντιπαροχή | Bartex agreement | — |
+| Χιλιοστά | Millesimal shares (‰) | — |
+| Συντελεστής ορόφου | Floor coefficient | — |
+| Δίγραμμη επιταγή | Crossed cheque | ~~Crossed check~~ |
+| ΤΕΙΡΕΣΙΑΣ | Tiresias (credit bureau) | — |
+| Μηνυτήρια αναφορά | Police report / Criminal complaint | — |
+| Άδεια (επαγγελματική) | Licence | ~~License~~ |
+| Τιμή ζώνης | Zone price | — |
+| Κτηματολόγιο | Land Registry / Cadastre | — |
+| ΚΑΕΚ | KAEK (Cadastral code) | — |

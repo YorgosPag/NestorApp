@@ -1,8 +1,8 @@
 # SPEC-018: Πλήρης Χαρτογράφηση — Οικονομικά B (Purchase Orders + Brokerage + Commissions)
 
 **ADR**: 268 — Dynamic Report Builder
-**Version**: 1.0
-**Last Updated**: 2026-03-29
+**Version**: 1.1
+**Last Updated**: 2026-03-30
 **Source of Truth**: Κώδικας (`src/types/procurement/purchase-order.ts`, `src/types/brokerage.ts`)
 
 ---
@@ -250,6 +250,24 @@
 | PO_CANCEL | `procurement:po:cancel` | Ακύρωση POs |
 | PO_DELETE | `procurement:po:delete` | Διαγραφή POs |
 | PO_READ_INTERNAL | `procurement:po:read_internal` | Internal notes |
+
+---
+
+### 3A.12 Computed Fields — PO Delivery & Aging (Procore/NetSuite Pattern, 2026-03-30)
+
+**Απόφαση**: Ίδιο pattern με Payment Plan aging — virtual columns, at query time, μηδέν storage.
+
+| # | Field Key | Τύπος | Υπολογισμός | Περιγραφή |
+|---|-----------|-------|-------------|-----------|
+| C1 | `computed.deliveryPct` | percentage | `SUM(items[].quantityReceived) / SUM(items[].quantity) × 100` | % παράδοσης (0-100) |
+| C2 | `computed.isOverdue` | boolean | `dateNeeded < now AND status NOT IN ('delivered','closed','cancelled')` | Εκπρόθεσμη παραγγελία |
+| C3 | `computed.daysOverdue` | number | `max(0, (now - dateNeeded) / 86400000)` αν isOverdue, αλλιώς 0 | Ημέρες καθυστέρησης |
+| C4 | `computed.agingBucket` | enum | `daysOverdue → '0-30' / '31-60' / '61-90' / '90+'` | Aging bucket |
+| C5 | `computed.daysInStatus` | number | `(now - updatedAt) / 86400000` | Ημέρες στο τρέχον status |
+| C6 | `computed.itemCount` | number | `items.length` | Πλήθος ειδών |
+| C7 | `computed.receivedItemCount` | number | `COUNT items WHERE quantityReceived >= quantity` | Πλήρως παραληφθέντα είδη |
+| C8 | `computed.paymentOverdue` | boolean | `paymentDueDate < now AND status NOT IN ('closed','cancelled')` | Εκπρόθεσμη πληρωμή |
+| C9 | `computed.daysSinceOrdered` | number | `dateOrdered ? (now - dateOrdered) / 86400000 : null` | Lead time (ημέρες από παραγγελία) |
 
 ---
 

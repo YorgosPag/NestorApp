@@ -1,6 +1,7 @@
 {
   "groups": {
     "realestate": "Real Estate",
+    "financial": "Financial",
     "people": "People",
     "specialists": "Specialists"
   },
@@ -479,6 +480,358 @@
           "active": "Active",
           "inactive": "Inactive",
           "archived": "Archived"
+        }
+      }
+    },
+    "paymentPlans": {
+      "label": "Payment Plans",
+      "description": "Instalment schedules and buyer payment tracking",
+      "fields": {
+        "buyerName": "Buyer",
+        "status": "Status",
+        "planType": "Plan Type",
+        "totalAmount": "Total Amount",
+        "paidAmount": "Paid Amount",
+        "remainingAmount": "Remaining",
+        "taxRegime": "Tax Regime",
+        "taxRate": "Tax Rate",
+        "project": "Project",
+        "building": "Building",
+        "unit": "Unit",
+        "buyer": "Buyer Contact",
+        "daysOverdue": "Days Overdue",
+        "agingBucket": "Ageing Bucket",
+        "completionPct": "Completion %",
+        "overdueAmount": "Overdue Amount",
+        "nextDueDate": "Next Due Date",
+        "nextDueAmount": "Next Due Amount",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "enums": {
+        "status": {
+          "negotiation": "Negotiation",
+          "draft": "Draft",
+          "active": "Active",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        },
+        "planType": {
+          "joint": "Joint",
+          "individual": "Individual"
+        },
+        "taxRegime": {
+          "vat_24": "VAT 24%",
+          "vat_suspension_3": "VAT Suspension (3% FMA)",
+          "transfer_tax_3": "Transfer Tax 3%",
+          "custom": "Custom"
+        },
+        "agingBucket": {
+          "0-30": "0–30 days",
+          "31-60": "31–60 days",
+          "61-90": "61–90 days",
+          "91-120": "91–120 days",
+          "120+": "120+ days"
+        }
+      }
+    },
+    "cheques": {
+      "label": "Cheques",
+      "description": "Cheque registry — custody, clearing, bounced workflow",
+      "fields": {
+        "chequeNumber": "Cheque No.",
+        "chequeType": "Type",
+        "amount": "Amount",
+        "bankName": "Bank",
+        "drawerName": "Drawer",
+        "status": "Status",
+        "issueDate": "Issue Date",
+        "maturityDate": "Maturity Date",
+        "postDated": "Post-Dated",
+        "crossedCheque": "Crossed Cheque",
+        "direction": "Direction",
+        "contextType": "Context",
+        "project": "Project",
+        "daysToMaturity": "Days to Maturity",
+        "maturityBucket": "Maturity Bucket",
+        "isOverdue": "Overdue",
+        "isReplacement": "Is Replacement",
+        "hasBeenReplaced": "Has Been Replaced",
+        "isInChain": "In Replacement Chain",
+        "createdAt": "Created"
+      },
+      "enums": {
+        "chequeType": {
+          "bank_cheque": "Bank Cheque",
+          "personal_cheque": "Personal Cheque"
+        },
+        "status": {
+          "received": "Received",
+          "in_custody": "In Custody",
+          "deposited": "Deposited",
+          "clearing": "Clearing",
+          "cleared": "Cleared",
+          "bounced": "Bounced",
+          "endorsed": "Endorsed",
+          "cancelled": "Cancelled",
+          "expired": "Expired",
+          "replaced": "Replaced"
+        },
+        "direction": {
+          "incoming": "Incoming",
+          "outgoing": "Outgoing"
+        },
+        "contextType": {
+          "unit_sale": "Unit Sale",
+          "supplier": "Supplier",
+          "contractor": "Contractor",
+          "other": "Other"
+        },
+        "maturityBucket": {
+          "overdue": "Overdue",
+          "0-7": "0–7 days",
+          "8-30": "8–30 days",
+          "31-60": "31–60 days",
+          "60+": "60+ days"
+        }
+      }
+    },
+    "legalContracts": {
+      "label": "Legal Contracts",
+      "description": "Preliminary, final and payoff contracts for unit sales",
+      "fields": {
+        "phase": "Phase",
+        "status": "Status",
+        "contractAmount": "Contract Amount",
+        "depositAmount": "Deposit Amount",
+        "depositTerms": "Deposit Terms",
+        "project": "Project",
+        "building": "Building",
+        "unit": "Unit",
+        "buyer": "Buyer Contact",
+        "signedAt": "Signed",
+        "completedAt": "Completed",
+        "createdAt": "Created",
+        "updatedAt": "Updated",
+        "daysInStatus": "Days in Status",
+        "daysSinceSigned": "Days Since Signed",
+        "isStale": "Stale",
+        "phaseProgressDays": "Phase Progress (days)",
+        "staleBucket": "Stale Bucket"
+      },
+      "enums": {
+        "phase": {
+          "preliminary": "Preliminary",
+          "final": "Final",
+          "payoff": "Payoff"
+        },
+        "status": {
+          "draft": "Draft",
+          "pending_signature": "Pending Signature",
+          "signed": "Signed",
+          "completed": "Completed"
+        },
+        "depositTerms": {
+          "forfeit": "Forfeit",
+          "double_return": "Double Return",
+          "refund": "Refund"
+        },
+        "staleBucket": {
+          "ok": "OK (0–30d)",
+          "slow": "Slow (31–60d)",
+          "warning": "Warning (61–90d)",
+          "critical": "Critical (90+d)"
+        }
+      }
+    },
+    "purchaseOrders": {
+      "label": "Purchase Orders",
+      "description": "Supplier purchase orders and delivery tracking",
+      "fields": {
+        "poNumber": "PO Number",
+        "status": "Status",
+        "total": "Total",
+        "subtotal": "Subtotal",
+        "taxRate": "VAT Rate",
+        "taxAmount": "VAT Amount",
+        "dateCreated": "Date Created",
+        "dateNeeded": "Date Needed",
+        "dateOrdered": "Date Ordered",
+        "dateDelivered": "Date Delivered",
+        "paymentTermsDays": "Payment Terms (days)",
+        "paymentDueDate": "Payment Due Date",
+        "supplier": "Supplier",
+        "project": "Project",
+        "deliveryPct": "Delivery %",
+        "isOverdue": "Overdue",
+        "daysOverdue": "Days Overdue",
+        "agingBucket": "Ageing Bucket",
+        "daysInStatus": "Days in Status",
+        "itemCount": "Item Count",
+        "receivedItemCount": "Items Received",
+        "paymentOverdue": "Payment Overdue",
+        "daysSinceOrdered": "Days Since Ordered",
+        "updatedAt": "Updated"
+      },
+      "enums": {
+        "status": {
+          "draft": "Draft",
+          "approved": "Approved",
+          "ordered": "Ordered",
+          "partially_delivered": "Partially Delivered",
+          "delivered": "Delivered",
+          "closed": "Closed",
+          "cancelled": "Cancelled"
+        },
+        "taxRate": {
+          "24": "24%",
+          "13": "13%",
+          "6": "6%",
+          "0": "0%"
+        },
+        "agingBucket": {
+          "0-30": "0–30 days",
+          "31-60": "31–60 days",
+          "61-90": "61–90 days",
+          "90+": "90+ days"
+        }
+      }
+    },
+    "brokerageAgreements": {
+      "label": "Brokerage Agreements",
+      "description": "Real estate agent brokerage agreements",
+      "fields": {
+        "agentName": "Agent",
+        "scope": "Scope",
+        "exclusivity": "Exclusivity",
+        "status": "Status",
+        "commissionType": "Commission Type",
+        "commissionPercentage": "Commission %",
+        "commissionFixedAmount": "Fixed Commission",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "agent": "Agent Contact",
+        "project": "Project",
+        "unit": "Unit",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "enums": {
+        "scope": {
+          "project": "Project",
+          "unit": "Unit"
+        },
+        "exclusivity": {
+          "exclusive": "Exclusive",
+          "non_exclusive": "Non-Exclusive",
+          "semi_exclusive": "Semi-Exclusive"
+        },
+        "commissionType": {
+          "percentage": "Percentage",
+          "fixed": "Fixed",
+          "tiered": "Tiered"
+        },
+        "status": {
+          "active": "Active",
+          "expired": "Expired",
+          "terminated": "Terminated"
+        }
+      }
+    },
+    "commissionRecords": {
+      "label": "Commission Records",
+      "description": "Agent commission payments from unit sales",
+      "fields": {
+        "agentName": "Agent",
+        "salePrice": "Sale Price",
+        "commissionAmount": "Commission Amount",
+        "commissionType": "Commission Type",
+        "commissionPercentage": "Commission %",
+        "paymentStatus": "Payment Status",
+        "paidAt": "Paid Date",
+        "agreement": "Agreement",
+        "unit": "Unit",
+        "project": "Project",
+        "buyer": "Buyer Contact",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "enums": {
+        "commissionType": {
+          "percentage": "Percentage",
+          "fixed": "Fixed",
+          "tiered": "Tiered"
+        },
+        "paymentStatus": {
+          "pending": "Pending",
+          "paid": "Paid",
+          "cancelled": "Cancelled"
+        }
+      }
+    },
+    "ownershipSummary": {
+      "label": "Ownership Tables",
+      "description": "Millesimal ownership table summaries per building",
+      "fields": {
+        "status": "Status",
+        "calculationMethod": "Calculation Method",
+        "version": "Version",
+        "zonePrice": "Zone Price",
+        "commercialityCoefficient": "Commerciality Coeff.",
+        "totalShares": "Total Shares",
+        "deedNumber": "Deed Number",
+        "notary": "Notary",
+        "project": "Project",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "enums": {
+        "status": {
+          "draft": "Draft",
+          "finalized": "Finalised",
+          "registered": "Registered"
+        },
+        "calculationMethod": {
+          "area": "Area",
+          "value": "Value",
+          "volume": "Volume"
+        }
+      }
+    },
+    "ownershipDetail": {
+      "label": "Ownership Detail",
+      "description": "Individual ownership rows — one entry per property unit",
+      "fields": {
+        "ordinal": "No.",
+        "entityCode": "Code",
+        "description": "Description",
+        "category": "Category",
+        "floor": "Floor",
+        "areaNetSqm": "Net Area (m²)",
+        "areaSqm": "Gross Area (m²)",
+        "millesimalShares": "Shares (‰)",
+        "ownerParty": "Owner Party",
+        "buyerName": "Buyer",
+        "tableStatus": "Table Status",
+        "project": "Project",
+        "building": "Building"
+      },
+      "enums": {
+        "category": {
+          "main": "Main",
+          "auxiliary": "Auxiliary",
+          "air_rights": "Air Rights"
+        },
+        "ownerParty": {
+          "contractor": "Contractor",
+          "landowner": "Landowner",
+          "buyer": "Buyer",
+          "unassigned": "Unassigned"
+        },
+        "status": {
+          "draft": "Draft",
+          "finalized": "Finalised",
+          "registered": "Registered"
         }
       }
     }

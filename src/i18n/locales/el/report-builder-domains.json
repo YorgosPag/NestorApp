@@ -1,6 +1,7 @@
 {
   "groups": {
     "realestate": "Ακίνητα",
+    "financial": "Οικονομικά",
     "people": "Πρόσωπα",
     "specialists": "Ειδικότητες"
   },
@@ -479,6 +480,358 @@
           "active": "Ενεργή",
           "inactive": "Ανενεργή",
           "archived": "Αρχειοθετημένη"
+        }
+      }
+    },
+    "paymentPlans": {
+      "label": "Προγράμματα Πληρωμών",
+      "description": "Δόσεις και παρακολούθηση πληρωμών αγοραστών",
+      "fields": {
+        "buyerName": "Αγοραστής",
+        "status": "Κατάσταση",
+        "planType": "Τύπος Πλάνου",
+        "totalAmount": "Συνολικό Ποσό",
+        "paidAmount": "Πληρωμένο Ποσό",
+        "remainingAmount": "Υπόλοιπο",
+        "taxRegime": "Φορολογικό Καθεστώς",
+        "taxRate": "Φόρος",
+        "project": "Έργο",
+        "building": "Κτίριο",
+        "unit": "Μονάδα",
+        "buyer": "Επαφή Αγοραστή",
+        "daysOverdue": "Ημέρες Καθυστέρησης",
+        "agingBucket": "Κατηγορία Ηλικίωσης",
+        "completionPct": "Ολοκλήρωση %",
+        "overdueAmount": "Ληξιπρόθεσμο Ποσό",
+        "nextDueDate": "Επόμενη Λήξη",
+        "nextDueAmount": "Ποσό Επόμενης Δόσης",
+        "createdAt": "Δημιουργία",
+        "updatedAt": "Ενημέρωση"
+      },
+      "enums": {
+        "status": {
+          "negotiation": "Διαπραγμάτευση",
+          "draft": "Προσχέδιο",
+          "active": "Ενεργό",
+          "completed": "Ολοκληρωμένο",
+          "cancelled": "Ακυρωμένο"
+        },
+        "planType": {
+          "joint": "Κοινό",
+          "individual": "Ατομικό"
+        },
+        "taxRegime": {
+          "vat_24": "ΦΠΑ 24%",
+          "vat_suspension_3": "Αναστολή ΦΠΑ (3% ΦΜΑ)",
+          "transfer_tax_3": "Φόρος Μεταβίβασης 3%",
+          "custom": "Προσαρμοσμένο"
+        },
+        "agingBucket": {
+          "0-30": "0–30 ημέρες",
+          "31-60": "31–60 ημέρες",
+          "61-90": "61–90 ημέρες",
+          "91-120": "91–120 ημέρες",
+          "120+": "120+ ημέρες"
+        }
+      }
+    },
+    "cheques": {
+      "label": "Επιταγές",
+      "description": "Μητρώο επιταγών — φύλαξη, εκκαθάριση, σφράγιση",
+      "fields": {
+        "chequeNumber": "Αρ. Επιταγής",
+        "chequeType": "Τύπος",
+        "amount": "Ποσό",
+        "bankName": "Τράπεζα",
+        "drawerName": "Εκδότης",
+        "status": "Κατάσταση",
+        "issueDate": "Ημ. Έκδοσης",
+        "maturityDate": "Ημ. Λήξης",
+        "postDated": "Μεταχρονολογημένη",
+        "crossedCheque": "Δίγραμμη",
+        "direction": "Κατεύθυνση",
+        "contextType": "Πλαίσιο",
+        "project": "Έργο",
+        "daysToMaturity": "Ημέρες μέχρι Λήξη",
+        "maturityBucket": "Κατηγορία Λήξης",
+        "isOverdue": "Ληξιπρόθεσμη",
+        "isReplacement": "Αντικατάσταση",
+        "hasBeenReplaced": "Αντικαταστάθηκε",
+        "isInChain": "Σε Αλυσίδα Αντικατάστασης",
+        "createdAt": "Δημιουργία"
+      },
+      "enums": {
+        "chequeType": {
+          "bank_cheque": "Τραπεζική Επιταγή",
+          "personal_cheque": "Προσωπική Επιταγή"
+        },
+        "status": {
+          "received": "Παραλήφθηκε",
+          "in_custody": "Σε Φύλαξη",
+          "deposited": "Κατατέθηκε",
+          "clearing": "Εκκαθάριση",
+          "cleared": "Εισπράχθηκε",
+          "bounced": "Σφραγίστηκε",
+          "endorsed": "Οπισθογραφήθηκε",
+          "cancelled": "Ακυρώθηκε",
+          "expired": "Έληξε",
+          "replaced": "Αντικαταστάθηκε"
+        },
+        "direction": {
+          "incoming": "Εισερχόμενη",
+          "outgoing": "Εξερχόμενη"
+        },
+        "contextType": {
+          "unit_sale": "Πώληση Μονάδας",
+          "supplier": "Προμηθευτής",
+          "contractor": "Εργολάβος",
+          "other": "Άλλο"
+        },
+        "maturityBucket": {
+          "overdue": "Ληξιπρόθεσμη",
+          "0-7": "0–7 ημέρες",
+          "8-30": "8–30 ημέρες",
+          "31-60": "31–60 ημέρες",
+          "60+": "60+ ημέρες"
+        }
+      }
+    },
+    "legalContracts": {
+      "label": "Συμβόλαια",
+      "description": "Προσύμφωνα, οριστικά συμβόλαια και εξοφλητήρια",
+      "fields": {
+        "phase": "Φάση",
+        "status": "Κατάσταση",
+        "contractAmount": "Ποσό Συμβολαίου",
+        "depositAmount": "Προκαταβολή",
+        "depositTerms": "Όροι Προκαταβολής",
+        "project": "Έργο",
+        "building": "Κτίριο",
+        "unit": "Μονάδα",
+        "buyer": "Επαφή Αγοραστή",
+        "signedAt": "Υπογραφή",
+        "completedAt": "Ολοκλήρωση",
+        "createdAt": "Δημιουργία",
+        "updatedAt": "Ενημέρωση",
+        "daysInStatus": "Ημέρες σε Κατάσταση",
+        "daysSinceSigned": "Ημέρες από Υπογραφή",
+        "isStale": "Στάσιμο",
+        "phaseProgressDays": "Πρόοδος Φάσης (ημέρες)",
+        "staleBucket": "Κατηγορία Στασιμότητας"
+      },
+      "enums": {
+        "phase": {
+          "preliminary": "Προσύμφωνο",
+          "final": "Οριστικό",
+          "payoff": "Εξοφλητήριο"
+        },
+        "status": {
+          "draft": "Προσχέδιο",
+          "pending_signature": "Αναμονή Υπογραφής",
+          "signed": "Υπογεγραμμένο",
+          "completed": "Ολοκληρωμένο"
+        },
+        "depositTerms": {
+          "forfeit": "Κατάπτωση",
+          "double_return": "Διπλή Επιστροφή",
+          "refund": "Επιστροφή"
+        },
+        "staleBucket": {
+          "ok": "OK (0–30η)",
+          "slow": "Αργό (31–60η)",
+          "warning": "Προειδοποίηση (61–90η)",
+          "critical": "Κρίσιμο (90+η)"
+        }
+      }
+    },
+    "purchaseOrders": {
+      "label": "Εντολές Αγοράς",
+      "description": "Εντολές αγοράς προμηθευτών και παρακολούθηση παραδόσεων",
+      "fields": {
+        "poNumber": "Αρ. Εντολής",
+        "status": "Κατάσταση",
+        "total": "Σύνολο",
+        "subtotal": "Μερικό Σύνολο",
+        "taxRate": "Συντελεστής ΦΠΑ",
+        "taxAmount": "Ποσό ΦΠΑ",
+        "dateCreated": "Ημ. Δημιουργίας",
+        "dateNeeded": "Ημ. Ανάγκης",
+        "dateOrdered": "Ημ. Παραγγελίας",
+        "dateDelivered": "Ημ. Παράδοσης",
+        "paymentTermsDays": "Όροι Πληρωμής (ημέρες)",
+        "paymentDueDate": "Λήξη Πληρωμής",
+        "supplier": "Προμηθευτής",
+        "project": "Έργο",
+        "deliveryPct": "Παράδοση %",
+        "isOverdue": "Ληξιπρόθεσμη",
+        "daysOverdue": "Ημέρες Καθυστέρησης",
+        "agingBucket": "Κατηγορία Ηλικίωσης",
+        "daysInStatus": "Ημέρες σε Κατάσταση",
+        "itemCount": "Πλήθος Ειδών",
+        "receivedItemCount": "Παραλαβές",
+        "paymentOverdue": "Καθυστέρηση Πληρωμής",
+        "daysSinceOrdered": "Ημέρες από Παραγγελία",
+        "updatedAt": "Ενημέρωση"
+      },
+      "enums": {
+        "status": {
+          "draft": "Προσχέδιο",
+          "approved": "Εγκεκριμένη",
+          "ordered": "Παραγγέλθηκε",
+          "partially_delivered": "Μερική Παράδοση",
+          "delivered": "Παραδόθηκε",
+          "closed": "Κλεισμένη",
+          "cancelled": "Ακυρωμένη"
+        },
+        "taxRate": {
+          "24": "24%",
+          "13": "13%",
+          "6": "6%",
+          "0": "0%"
+        },
+        "agingBucket": {
+          "0-30": "0–30 ημέρες",
+          "31-60": "31–60 ημέρες",
+          "61-90": "61–90 ημέρες",
+          "90+": "90+ ημέρες"
+        }
+      }
+    },
+    "brokerageAgreements": {
+      "label": "Συμφωνίες Μεσιτείας",
+      "description": "Συμφωνίες μεσιτείας ακινήτων",
+      "fields": {
+        "agentName": "Μεσίτης",
+        "scope": "Εύρος",
+        "exclusivity": "Αποκλειστικότητα",
+        "status": "Κατάσταση",
+        "commissionType": "Τύπος Προμήθειας",
+        "commissionPercentage": "Προμήθεια %",
+        "commissionFixedAmount": "Σταθερή Προμήθεια",
+        "startDate": "Ημ. Έναρξης",
+        "endDate": "Ημ. Λήξης",
+        "agent": "Επαφή Μεσίτη",
+        "project": "Έργο",
+        "unit": "Μονάδα",
+        "createdAt": "Δημιουργία",
+        "updatedAt": "Ενημέρωση"
+      },
+      "enums": {
+        "scope": {
+          "project": "Έργο",
+          "unit": "Μονάδα"
+        },
+        "exclusivity": {
+          "exclusive": "Αποκλειστική",
+          "non_exclusive": "Μη Αποκλειστική",
+          "semi_exclusive": "Ημι-Αποκλειστική"
+        },
+        "commissionType": {
+          "percentage": "Ποσοστό",
+          "fixed": "Σταθερή",
+          "tiered": "Κλιμακωτή"
+        },
+        "status": {
+          "active": "Ενεργή",
+          "expired": "Λήξασα",
+          "terminated": "Τερματισμένη"
+        }
+      }
+    },
+    "commissionRecords": {
+      "label": "Εγγραφές Προμηθειών",
+      "description": "Πληρωμές προμηθειών μεσιτών από πωλήσεις",
+      "fields": {
+        "agentName": "Μεσίτης",
+        "salePrice": "Τιμή Πώλησης",
+        "commissionAmount": "Ποσό Προμήθειας",
+        "commissionType": "Τύπος Προμήθειας",
+        "commissionPercentage": "Προμήθεια %",
+        "paymentStatus": "Κατάσταση Πληρωμής",
+        "paidAt": "Ημ. Πληρωμής",
+        "agreement": "Συμφωνία",
+        "unit": "Μονάδα",
+        "project": "Έργο",
+        "buyer": "Αγοραστής",
+        "createdAt": "Δημιουργία",
+        "updatedAt": "Ενημέρωση"
+      },
+      "enums": {
+        "commissionType": {
+          "percentage": "Ποσοστό",
+          "fixed": "Σταθερή",
+          "tiered": "Κλιμακωτή"
+        },
+        "paymentStatus": {
+          "pending": "Εκκρεμής",
+          "paid": "Πληρωμένη",
+          "cancelled": "Ακυρωμένη"
+        }
+      }
+    },
+    "ownershipSummary": {
+      "label": "Πίνακες Χιλιοστών",
+      "description": "Πίνακες χιλιοστών ιδιοκτησίας ανά κτίριο",
+      "fields": {
+        "status": "Κατάσταση",
+        "calculationMethod": "Μέθοδος Υπολογισμού",
+        "version": "Έκδοση",
+        "zonePrice": "Τιμή Ζώνης",
+        "commercialityCoefficient": "Συντ. Εμπορικότητας",
+        "totalShares": "Σύνολο Χιλιοστών",
+        "deedNumber": "Αρ. Πράξης",
+        "notary": "Συμβολαιογράφος",
+        "project": "Έργο",
+        "createdAt": "Δημιουργία",
+        "updatedAt": "Ενημέρωση"
+      },
+      "enums": {
+        "status": {
+          "draft": "Προσχέδιο",
+          "finalized": "Οριστικοποιημένος",
+          "registered": "Καταχωρημένος"
+        },
+        "calculationMethod": {
+          "area": "Επιφάνεια",
+          "value": "Αξία",
+          "volume": "Όγκος"
+        }
+      }
+    },
+    "ownershipDetail": {
+      "label": "Λεπτομέρειες Χιλιοστών",
+      "description": "Αναλυτικές γραμμές χιλιοστών — μία ανά ιδιοκτησία",
+      "fields": {
+        "ordinal": "Α/Α",
+        "entityCode": "Κωδικός",
+        "description": "Περιγραφή",
+        "category": "Κατηγορία",
+        "floor": "Όροφος",
+        "areaNetSqm": "Καθαρή Επ. (m²)",
+        "areaSqm": "Μικτή Επ. (m²)",
+        "millesimalShares": "Χιλιοστά (‰)",
+        "ownerParty": "Ιδιοκτήτης",
+        "buyerName": "Αγοραστής",
+        "tableStatus": "Κατάσταση Πίνακα",
+        "project": "Έργο",
+        "building": "Κτίριο"
+      },
+      "enums": {
+        "category": {
+          "main": "Κύρια",
+          "auxiliary": "Βοηθητική",
+          "air_rights": "Αέρας"
+        },
+        "ownerParty": {
+          "contractor": "Εργολάβος",
+          "landowner": "Οικοπεδούχος",
+          "buyer": "Αγοραστής",
+          "unassigned": "Αδιάθετο"
+        },
+        "status": {
+          "draft": "Προσχέδιο",
+          "finalized": "Οριστικοποιημένος",
+          "registered": "Καταχωρημένος"
         }
       }
     }

@@ -25,6 +25,14 @@ import {
   LEGAL_DEFINITION,
   AGENTS_DEFINITION,
 } from './domain-defs-persona';
+import {
+  PAYMENT_PLANS_DEFINITION,
+  CHEQUES_DEFINITION,
+  LEGAL_CONTRACTS_DEFINITION,
+} from './domain-defs-financials';
+import { PURCHASE_ORDERS_DEFINITION } from './domain-defs-procurement';
+import { BROKERAGE_DEFINITION, COMMISSIONS_DEFINITION } from './domain-defs-brokerage';
+import { OWNERSHIP_SUMMARY_DEFINITION, OWNERSHIP_DETAIL_DEFINITION } from './domain-defs-ownership';
 
 // ============================================================================
 // Enum Value Constants (SSoT — match actual Firestore data)
@@ -215,6 +223,15 @@ export const DOMAIN_DEFINITIONS: Record<BuilderDomainId, DomainDefinition> = {
   workers: WORKERS_DEFINITION,
   legal: LEGAL_DEFINITION,
   agents: AGENTS_DEFINITION,
+  // Phase 5 — Financial domains
+  paymentPlans: PAYMENT_PLANS_DEFINITION,
+  cheques: CHEQUES_DEFINITION,
+  legalContracts: LEGAL_CONTRACTS_DEFINITION,
+  purchaseOrders: PURCHASE_ORDERS_DEFINITION,
+  brokerageAgreements: BROKERAGE_DEFINITION,
+  commissionRecords: COMMISSIONS_DEFINITION,
+  ownershipSummary: OWNERSHIP_SUMMARY_DEFINITION,
+  ownershipDetail: OWNERSHIP_DETAIL_DEFINITION,
 };
 
 // ============================================================================

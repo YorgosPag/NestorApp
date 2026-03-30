@@ -85,18 +85,21 @@ export interface ReportBuilderFilter {
 // Field & Domain Definitions
 // ============================================================================
 
-/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) */
+/** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) + Phase 5 (8) */
 export type BuilderDomainId =
   | 'projects' | 'buildings' | 'floors' | 'units'
   | 'parking' | 'storage' | 'individuals' | 'companies'
-  | 'buyers' | 'suppliers' | 'engineers' | 'workers' | 'legal' | 'agents';
+  | 'buyers' | 'suppliers' | 'engineers' | 'workers' | 'legal' | 'agents'
+  | 'paymentPlans' | 'cheques' | 'legalContracts' | 'purchaseOrders'
+  | 'brokerageAgreements' | 'commissionRecords' | 'ownershipSummary' | 'ownershipDetail';
 
 /** Domain groups for UI categorization (Q87) */
-export type DomainGroup = 'realestate' | 'people' | 'specialists';
+export type DomainGroup = 'realestate' | 'financial' | 'people' | 'specialists';
 
 /** Ordered groups for DomainSelector rendering */
 export const DOMAIN_GROUP_ORDER: readonly DomainGroup[] = [
   'realestate',
+  'financial',
   'people',
   'specialists',
 ] as const;
@@ -128,6 +131,10 @@ export interface FieldDefinition {
   enumLabelPrefix?: string;
   /** Auto-format hint for ReportTable (overrides type default) */
   format?: 'currency' | 'number' | 'percentage' | 'date' | 'text';
+  /** Phase 5 — True if this field is computed at query time (not stored in Firestore) */
+  computed?: boolean;
+  /** Phase 5 — Pure function to derive value from the raw document. Only used when computed=true */
+  computeFn?: (doc: Record<string, unknown>) => unknown;
   /** Foreign key reference to another domain */
   refDomain?: BuilderDomainId;
   /** Field on referenced doc to display (default: 'name') */
@@ -158,6 +165,10 @@ export interface DomainDefinition {
   defaultSortDirection: 'asc' | 'desc';
   /** Firestore WHERE clauses applied before user filters */
   preFilters?: PreFilter[];
+  /** Phase 5 — Query strategy: 'collection' (default) or 'collectionGroup' for subcollections */
+  queryType?: 'collection' | 'collectionGroup';
+  /** Phase 5 — Field path to an embedded array; each element becomes a separate result row */
+  rowExpansionField?: string;
 }
 
 // ============================================================================
@@ -311,7 +322,7 @@ export const BUILDER_LIMITS = {
   MAX_AGGREGATIONS: 8,
 } as const;
 
-/** All valid domain IDs (Phase 1 + Phase 4a + Phase 4b) */
+/** All valid domain IDs (Phase 1 + Phase 4a + Phase 4b + Phase 5) */
 export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'projects',
   'buildings',
@@ -327,6 +338,14 @@ export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'workers',
   'legal',
   'agents',
+  'paymentPlans',
+  'cheques',
+  'legalContracts',
+  'purchaseOrders',
+  'brokerageAgreements',
+  'commissionRecords',
+  'ownershipSummary',
+  'ownershipDetail',
 ] as const;
 
 // ============================================================================
