@@ -317,10 +317,46 @@ src/services/report-engine/__tests__/tier3-card-renderer.test.ts      ← Card P
 
 ---
 
-## Phase 7: Saved Reports
+## Phase 7: Saved Reports — ✅ BACKEND DONE / ⬜ FRONTEND PENDING (2026-03-30)
 
-**Features**: Save/Load/Delete/Update saved report configurations
-**Firestore**: `saved_reports` collection
+**Research**: Salesforce, HubSpot, QuickBooks, Xero, Power BI, Google Analytics
+**Decisions by Γιώργος** (5 ερωτήσεις, 5 αποφάσεις):
+1. Visibility: Role-based 3-tier (personal/shared/system) — Salesforce pattern
+2. Persistence: Config-only ("recipe"), live data on each run — QuickBooks pattern
+3. Date ranges: Relative by default (this_month, last_quarter, etc.) — industry standard
+4. Favorites: Per-user via `favoritedBy[]` array — Power BI pattern
+5. Categories: Predefined (monthly/tax/expenses/bank/efka/general) — QuickBooks Groups
+6. Recent tab: Via `lastRunAt` + `runCount` tracking — GA4 pattern
+
+**Firestore**: `saved_reports` collection, ID prefix: `srpt_`
+
+### Phase 7a: Backend — ✅ DONE (commit `3e73b845`)
+
+**Αρχεία delivered:**
+```
+src/types/reports/saved-report.ts                    ← Types, interfaces, enums
+src/services/saved-reports/saved-reports-service.ts  ← Firestore CRUD (7 methods)
+src/app/api/reports/saved/route.ts                   ← GET (list) + POST (create)
+src/app/api/reports/saved/[reportId]/route.ts        ← GET + PUT + DELETE + POST (actions)
+src/i18n/locales/en/saved-reports.json               ← EN labels
+src/i18n/locales/el/saved-reports.json               ← EL labels
+src/config/firestore-collections.ts                  ← +SAVED_REPORTS
+src/services/enterprise-id.service.ts                ← +srpt_ generator
+```
+
+**Service methods**: create, get, list, update, delete, toggleFavorite, trackRun
+**API endpoints**: 5 (GET/POST list+create, GET/PUT/DELETE/POST per-report)
+
+### Phase 7b: Frontend — ⬜ PENDING
+
+**Αρχεία planned:**
+```
+src/hooks/reports/useSavedReports.ts                 ← React hook (CRUD + filtering + tabs)
+src/hooks/reports/useReportBuilder.ts                ← +loadSavedReport() + getCurrentConfig()
+src/components/reports/builder/SaveReportDialog.tsx   ← Save modal (Radix Dialog)
+src/components/reports/builder/SavedReportsList.tsx   ← List table + tabs + search
+src/components/reports/builder/ReportBuilder.tsx      ← +Save/Load buttons + unsaved indicator
+```
 
 **Test αρχεία (ΥΠΟΧΡΕΩΤΙΚΑ):**
 ```
