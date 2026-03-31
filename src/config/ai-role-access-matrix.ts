@@ -55,10 +55,10 @@ const COMMERCIAL_PRICING_FIELDS = [
   'commercial.finalPrice',
 ] as const;
 
-/** Buyer identity fields — hidden from non-buyer roles */
+/** Buyer identity fields — hidden from non-buyer roles (ADR-244: owners[] SSoT) */
 const BUYER_IDENTITY_FIELDS = [
-  'commercial.buyerContactId',
-  'commercial.buyerName',
+  'commercial.owners',
+  'commercial.ownerContactIds',
 ] as const;
 
 /** Payment summary fields — hidden from external roles (must match PaymentSummary type) */
@@ -101,6 +101,7 @@ const BUYER_BLOCKED_PAYMENT_FIELDS: readonly string[] = PAYMENT_SUMMARY_FIELDS
  * SPEC-257D: Complaint triage prompt — shared across buyer/owner/tenant (SSOT).
  * Defined ONCE, appended to each customer role's promptDescription.
  */
+// eslint-disable-next-line custom/no-hardcoded-strings -- AI system prompts are not user-facing i18n
 const COMPLAINT_TRIAGE_PROMPT = `
 ΠΑΡΑΠΟΝΑ/ΠΡΟΒΛΗΜΑΤΑ:
 Αν αναφέρει πρόβλημα στο ακίνητο, χρησιμοποίησε create_complaint_task.
@@ -111,6 +112,7 @@ const COMPLAINT_TRIAGE_PROMPT = `
  * SPEC-257E: Contact update prompt — shared across buyer/owner/tenant (SSOT).
  * Defined ONCE, appended to each customer role's promptDescription.
  */
+// eslint-disable-next-line custom/no-hardcoded-strings -- AI system prompts are not user-facing i18n
 const CONTACT_UPDATE_PROMPT = `
 ΕΝΗΜΕΡΩΣΗ ΣΤΟΙΧΕΙΩΝ ΕΠΙΚΟΙΝΩΝΙΑΣ:
 Μπορείς να ΠΡΟΣΘΕΣΕΙΣ νέο τηλέφωνο, email ή social media χρησιμοποιώντας append_contact_info.
@@ -121,6 +123,7 @@ const CONTACT_UPDATE_PROMPT = `
  * SPEC-257F: File delivery prompt — shared across buyer/owner/tenant (SSOT).
  * Defined ONCE, appended to each customer role's promptDescription.
  */
+// eslint-disable-next-line custom/no-hardcoded-strings -- AI system prompts are not user-facing i18n
 const FILE_DELIVERY_PROMPT = `
 ΑΠΟΣΤΟΛΗ ΑΡΧΕΙΩΝ (φωτογραφίες, κατόψεις, έγγραφα):
 Μπορείς να στείλεις αρχεία στον χρήστη χρησιμοποιώντας deliver_file_to_chat.
@@ -133,6 +136,7 @@ const FILE_DELIVERY_PROMPT = `
  * SPEC-257G: Knowledge base prompt — shared across buyer/owner/tenant (SSOT).
  * Defined ONCE, appended to each customer role's promptDescription.
  */
+// eslint-disable-next-line custom/no-hardcoded-strings -- AI system prompts are not user-facing i18n
 const KNOWLEDGE_BASE_PROMPT = `
 ΔΙΑΔΙΚΑΣΙΕΣ & ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ:
 Αν ρωτήσει για δικαιολογητικά, συμβολαιογράφο, δάνειο, μεταβίβαση ή νομικές διαδικασίες → search_knowledge_base(query).
