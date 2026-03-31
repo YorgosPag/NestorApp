@@ -468,7 +468,7 @@ export function BuildingAddressesCard({
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => router.push(`/audit?projectId=${projectId}&tab=locations`)}
+                onClick={() => router.push(`/projects?projectId=${projectId}&tab=locations`)}
               >
                 <ExternalLink className={`${iconSizes.sm} mr-2`} />
                 {t('address.labels.goToProjectAddresses')}

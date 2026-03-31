@@ -152,8 +152,8 @@ export function useNavigationData(): UseNavigationDataReturn {
         // apiClient automatically handles errors (401/403/500) and unwraps response
         // Bust server cache when explicitly refreshing (e.g. after adding a company)
         const url = bustServerCacheRef.current
-          ? `${API_ROUTES.AUDIT.BOOTSTRAP}?t=${Date.now()}`
-          : API_ROUTES.AUDIT.BOOTSTRAP;
+          ? `${API_ROUTES.PROJECTS_BOOTSTRAP.BOOTSTRAP}?t=${Date.now()}`
+          : API_ROUTES.PROJECTS_BOOTSTRAP.BOOTSTRAP;
         bustServerCacheRef.current = false;
         const bootstrapData = await apiClient.get<BootstrapResponse>(url);
         logger.info('Bootstrap loaded', { companiesCount: bootstrapData.companies.length, projectsCount: bootstrapData.projects.length });
@@ -241,7 +241,7 @@ export function useNavigationData(): UseNavigationDataReturn {
   /**
    * Load all projects - now returns cached data from bootstrap
    */
-  const loadAllProjects = async (companies: NavigationCompany[]): Promise<NavigationProject[]> => {
+  const loadAllProjects = async (_companies: NavigationCompany[]): Promise<NavigationProject[]> => {
     // If we already have projects from bootstrap, return them
     if (projectsDataRef.current.length > 0) {
       logger.info('Using cached projects from bootstrap');

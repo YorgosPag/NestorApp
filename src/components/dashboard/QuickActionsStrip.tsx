@@ -23,7 +23,7 @@ interface QuickAction {
 
 const QUICK_ACTIONS: QuickAction[] = [
   { labelKey: 'newContact', icon: UserPlus, href: '/contacts/new/individual', variant: 'blue' },
-  { labelKey: 'newProject', icon: FolderPlus, href: '/audit', variant: 'purple' },
+  { labelKey: 'newProject', icon: FolderPlus, href: '/projects', variant: 'purple' },
   { labelKey: 'newInvoice', icon: Receipt, href: '/accounting/invoices', variant: 'green' },
   { labelKey: 'search', icon: Search, href: '/contacts', variant: 'neutral' },
 ];

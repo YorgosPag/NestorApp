@@ -387,7 +387,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
           },
           {
             icon: Briefcase,
-            href: "/audit",
+            href: "/projects",
             badge: null,
             smartConfig: {
               priority: 'high',
@@ -705,7 +705,7 @@ function getLabelKeyForPath(path: string): string {
     '': 'home',
     'properties': 'properties_index',
     'contacts': 'contacts',
-    'audit': 'projects', // Special mapping
+    'projects': 'projects',
     'buildings': 'buildings',
     'spaces': 'spaces',
     'sales': 'sales',

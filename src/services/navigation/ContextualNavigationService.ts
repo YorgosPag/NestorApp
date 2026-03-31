@@ -89,7 +89,7 @@ const ENTITY_ROUTES: Record<NavigableEntityType, EntityRouteConfig> = {
     supportedActions: ['view', 'filter', 'select']
   },
   project: {
-    basePath: '/audit',  // ✅ ΣΩΣΤΟ: Υπάρχει /audit σελίδα για Projects
+    basePath: '/projects',  // ✅ Renamed from /audit → /projects
     parameterKeys: {
       id: 'projectId',
       filter: 'filter',

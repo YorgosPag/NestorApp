@@ -1,6 +1,6 @@
 /**
- * 🏢 ENTERPRISE: Audit Error Boundary
- * @route /audit
+ * 🏢 ENTERPRISE: Projects Error Boundary
+ * @route /projects
  * @enterprise SAP/Salesforce/Microsoft - Centralized Error Handling
  */
 'use client';
@@ -12,6 +12,6 @@ interface ErrorProps {
   reset: () => void;
 }
 
-export default function AuditError({ error, reset }: ErrorProps) {
-  return <RouteErrorFallback error={error} reset={reset} componentName="Audit" />;
+export default function ProjectsError({ error, reset }: ErrorProps) {
+  return <RouteErrorFallback error={error} reset={reset} componentName="Projects" />;
 }

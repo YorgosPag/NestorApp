@@ -15,7 +15,7 @@ const logger = createModuleLogger('useFirestoreProjects');
  * 🏗️ FIRESTORE PROJECTS HOOK
  *
  * Enterprise-grade hook για loading projects via /api/projects/list
- * Option A Architecture: Διαχωρισμένο από /api/audit/bootstrap
+ * Option A Architecture: Διαχωρισμένο από /api/projects/bootstrap
  *
  * @module hooks/useFirestoreProjects
  * @version 4.0.0

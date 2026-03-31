@@ -61,7 +61,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
    *
    * Κάθε item έχει href που δημιουργείται από ContextualNavigationService.generateRoute()
    * - company → /contacts?contactId=X&selectedCompany=true
-   * - project → /audit?projectId=X&selected=true
+   * - project → /projects?projectId=X&selected=true
    * - building → /buildings?buildingId=X&selected=true
    * - unit/storage/parking → current page (last item, not clickable)
    */

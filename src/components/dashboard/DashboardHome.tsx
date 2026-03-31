@@ -48,7 +48,7 @@ function useMainMenuTiles(t: (key: string) => string): NavigationTile[] {
       title: t('home.modules.projects.title'),
       description: t('home.modules.projects.description'),
       icon: Briefcase,
-      href: '/audit',
+      href: '/projects',
       colorVariant: 'purple',
     },
     {

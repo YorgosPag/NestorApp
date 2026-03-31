@@ -2,11 +2,11 @@
  * 🏢 ENTERPRISE: Domain-scoped Project Component Mapping
  *
  * Contains ONLY project-related components.
- * This file is the ONLY mapping import needed for /audit and project pages.
+ * This file is the ONLY mapping import needed for /projects pages.
  *
  * RATIONALE: Splitting from master barrel eliminates transitive imports
  * of building/unit/contact/parking/storage components from project pages,
- * significantly reducing module graph for /audit route.
+ * significantly reducing module graph for /projects route.
  *
  * NOTE: These mappings are IDENTICAL to those in index.ts.
  * This is NOT duplication - it's domain scoping.

@@ -1,12 +1,12 @@
 /**
  * =============================================================================
- * AUDIT BOOTSTRAP ENDPOINT - PROTECTED (AUTHZ Phase 2)
+ * PROJECTS BOOTSTRAP ENDPOINT - PROTECTED (AUTHZ Phase 2)
  * =============================================================================
  *
- * Enterprise-grade aggregated data loading για /audit page
+ * Enterprise-grade aggregated data loading για /projects page
  * Αντικαθιστά 85+ N+1 cascade API calls με 1 single request
  *
- * @module api/audit/bootstrap
+ * @module api/projects/bootstrap
  * @version 2.0.0
  * @enterprise Phase 2 - RBAC Protection + Tenant Isolation
  *
@@ -99,7 +99,7 @@ export const dynamic = 'force-dynamic';
 // ============================================================================
 
 /**
- * GET /api/audit/bootstrap
+ * GET /api/projects/bootstrap
  *
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: projects:projects:view

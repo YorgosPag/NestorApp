@@ -775,9 +775,9 @@ export const API_ROUTES = {
     AUDIT_TRAIL: '/api/relationships/audit-trail',
   },
 
-  // ── Audit ─────────────────────────────────────────────────────────────
-  AUDIT: {
-    BOOTSTRAP: '/api/audit/bootstrap',
+  // ── Projects ───────────────────────────────────────────────────────────
+  PROJECTS_BOOTSTRAP: {
+    BOOTSTRAP: '/api/projects/bootstrap',
   },
   AUDIT_TRAIL: {
     RECORD: '/api/audit-trail/record',
