@@ -51,8 +51,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
   const spacing = useSpacingTokens();
 
   // 🏢 ENTERPRISE: Helper to translate option labels
-  // Supports both translation keys (e.g., 'units.operationalStatus.ready') and direct values
-  // 🎯 PR1.2: Auto-detect namespace from key prefix (e.g., 'units.x.y' → ns:'units', key:'x.y')
+  // Supports both translation keys (e.g., 'properties.operationalStatus.ready') and direct values
+  // 🎯 PR1.2: Auto-detect namespace from key prefix (e.g., 'properties.x.y' → ns:'properties', key:'x.y')
   const translateLabel = (label: string | undefined): string => {
     // 🛡️ ENTERPRISE: Guard against undefined/null labels
     if (!label) return '';

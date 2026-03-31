@@ -64,7 +64,7 @@ export function PropertyCustomerTab({
   const iconSizes = useIconSizes();
   useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
 
   const hasSoldStatus = selectedUnit?.status === 'sold' ||
                        selectedUnit?.status === 'reserved' ||

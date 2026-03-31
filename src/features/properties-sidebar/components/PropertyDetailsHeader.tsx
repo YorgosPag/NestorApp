@@ -36,11 +36,11 @@ export function PropertyDetailsHeader({
   onNewUnit,
   onDeleteUnit,
 }: PropertyDetailsHeaderProps) {
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
 
-  // 🏢 ENTERPRISE: Header Save — programmatically submits the UnitFieldsBlock form
+  // 🏢 ENTERPRISE: Header Save — programmatically submits the PropertyFieldsBlock form
   const handleHeaderSave = useCallback(() => {
-    const form = document.getElementById('unit-fields-form') as HTMLFormElement | null;
+    const form = document.getElementById('property-fields-form') as HTMLFormElement | null;
     if (form) {
       form.requestSubmit();
     } else {

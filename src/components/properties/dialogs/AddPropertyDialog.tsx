@@ -64,7 +64,7 @@ export function AddPropertyDialog({
   buildings,
   buildingsLoading = false,
 }: AddPropertyDialogProps) {
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();

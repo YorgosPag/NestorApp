@@ -1,13 +1,13 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Unit Fields Block Component
+ * 🏢 ENTERPRISE: Property Fields Block Component
  * =============================================================================
  *
- * Displays and edits extended unit fields (layout, areas, orientations, etc.)
+ * Displays and edits extended property fields (layout, areas, orientations, etc.)
  * View mode: clean text values. Edit mode: inputs/selects.
  * Consistent with Parking/Building Card pattern.
  *
- * @module features/property-details/components/UnitFieldsBlock
+ * @module features/property-details/components/PropertyFieldsBlock
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
  * @since 2026-01-24
  * @updated 2026-02-17 — View/Edit mode split + Card containers
@@ -29,7 +29,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { Property } from '@/types/property-viewer';
-import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/unit';
+import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/property';
 import { aggregateLevelData } from '@/services/multi-level.service';
 import type {
   ConditionType,
@@ -37,20 +37,20 @@ import type {
   EnergyClassType,
   InteriorFeatureCodeType,
   SecurityFeatureCodeType
-} from '@/constants/unit-features-enterprise';
+} from '@/constants/property-features-enterprise';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
-import { ReadOnlyCompactView } from './UnitFieldsReadOnly';
-import { UnitFieldsEditForm } from './UnitFieldsEditForm';
-import type { UnitFieldsFormData } from './unit-fields-form-types';
-import type { UnitType as UnitTypeImport } from '@/types/unit';
-const logger = createModuleLogger('UnitFieldsBlock');
+import { ReadOnlyCompactView } from './PropertyFieldsReadOnly';
+import { PropertyFieldsEditForm } from './PropertyFieldsEditForm';
+import type { PropertyFieldsFormData } from './property-fields-form-types';
+import type { PropertyType } from '@/types/property';
+const logger = createModuleLogger('PropertyFieldsBlock');
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-interface UnitFieldsBlockProps {
+interface PropertyFieldsBlockProps {
   property: Property;
   onUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
   isReadOnly?: boolean;
@@ -70,7 +70,7 @@ interface UnitFieldsBlockProps {
 // COMPONENT
 // =============================================================================
 
-export function UnitFieldsBlock({
+export function PropertyFieldsBlock({
   property,
   onUpdateProperty,
   isReadOnly = false,
@@ -80,8 +80,8 @@ export function UnitFieldsBlock({
   onUnitCreated,
   activeLevelId: controlledLevelId,
   onActiveLevelChange,
-}: UnitFieldsBlockProps) {
-  const { t } = useTranslation('units');
+}: PropertyFieldsBlockProps) {
+  const { t } = useTranslation('properties');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future spacing tokens
   const _spacing = useSpacingTokens();
   const iconSizes = useIconSizes();
@@ -106,11 +106,11 @@ export function UnitFieldsBlock({
     entityType: 'unit',
     buildingId: property.buildingId ?? '',
     floorLevel: property.floor ?? 0,
-    unitType: (property.type as UnitTypeImport) || undefined,
+    unitType: (property.type as PropertyType) || undefined,
     disabled: codeOverridden || !!property.code,
   });
 
-  const [formData, setFormData] = useState<UnitFieldsFormData>({
+  const [formData, setFormData] = useState<PropertyFieldsFormData>({
     name: property.name ?? '',
     code: property.code ?? '',
     type: property.type ?? '',
@@ -306,7 +306,7 @@ export function UnitFieldsBlock({
       if (isCreatingNewUnit) {
         // 🏢 ENTERPRISE: Create new unit via server-side API (Admin SDK)
         // Client-side setDoc blocked by Firestore rules — must use API endpoint
-        const { createUnit } = await import('@/services/units.service');
+        const { createUnit } = await import('@/services/properties.service');
         const unitData = {
           ...updates,
           name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
@@ -348,7 +348,7 @@ export function UnitFieldsBlock({
       } else {
         notifyError(t('save.error', { defaultValue: 'Σφάλμα κατά την αποθήκευση' }));
       }
-      logger.error('UnitFieldsBlock save error:', { error });
+      logger.error('PropertyFieldsBlock save error:', { error });
     } finally {
       setIsSaving(false);
     }
@@ -411,7 +411,7 @@ export function UnitFieldsBlock({
   }
 
   return (
-    <UnitFieldsEditForm
+    <PropertyFieldsEditForm
       formData={formData}
       setFormData={setFormData}
       property={property}
@@ -438,6 +438,6 @@ export function UnitFieldsBlock({
   );
 }
 
-// Extracted to: UnitFieldsEditForm.tsx, UnitFieldsReadOnly.tsx, unit-fields-constants.ts
+// Extracted to: PropertyFieldsEditForm.tsx, PropertyFieldsReadOnly.tsx, property-fields-constants.ts
 
-export default UnitFieldsBlock;
+export default PropertyFieldsBlock;

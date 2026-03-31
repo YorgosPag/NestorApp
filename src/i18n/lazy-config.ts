@@ -39,7 +39,6 @@ export const SUPPORTED_NAMESPACES = [
   'users',
   'building',
   'contacts',
-  'units',
   'landing',
   'telegram',  // Telegram bot templates - PR1 centralization
   'files',     // File storage display names (ADR-031)
@@ -144,9 +143,6 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'contacts':
           translations = await import('./locales/el/contacts.json');
-          break;
-        case 'units':
-          translations = await import('./locales/el/units.json');
           break;
         case 'landing':
           translations = await import('./locales/el/landing.json');
@@ -271,9 +267,6 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'contacts':
           translations = await import('./locales/en/contacts.json');
-          break;
-        case 'units':
-          translations = await import('./locales/en/units.json');
           break;
         case 'landing':
           translations = await import('./locales/en/landing.json');
@@ -439,12 +432,11 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'projects',      // Projects module
     'obligations',   // Obligations module (register/edit/workflow)
     'contacts',      // Contacts module
-    'units',         // Units module
+    'properties',    // 🏢 Properties module (renamed from units — ADR-269)
     'storage',       // 🏢 Storage management module - added 2026-01-24
     'parking',       // 🏢 Parking management module - added 2026-01-24
     'dxf-viewer',    // ?? DXF viewer UI - avoids fallback-to-keys after language switch
     'files',         // 🏢 File storage, floorplan import wizard (SPEC-237D)
-    'properties',    // 🏢 Property viewer, media tabs
     'accounting',    // 🏢 Accounting subapp - all financial modules
     'crm',           // 🏢 CRM module - calendar, teams, pipeline, contacts
   ];

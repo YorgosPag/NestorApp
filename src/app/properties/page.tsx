@@ -35,7 +35,7 @@ import { createStatusLabelGetter, createTypeLabelGetter } from './properties-pag
 
 function UnitsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const _colors = useSemanticColors();
   const searchParams = useSearchParams();
   const urlUnitId = searchParams.get('unitId');

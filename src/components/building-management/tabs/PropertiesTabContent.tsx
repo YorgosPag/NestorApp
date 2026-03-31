@@ -1,5 +1,5 @@
 /* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors */
-/** UnitsTabContent — Building Units tab with inline create/edit. ADR-184 */
+/** PropertiesTabContent — Building Properties tab with inline create/edit. ADR-184 */
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -28,8 +28,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
-import type { Unit, UnitType } from '@/types/unit';
-import { UnitInlineCreateForm } from './UnitInlineCreateForm';
+import type { Property, PropertyType } from '@/types/property';
+import { PropertyInlineCreateForm } from './PropertyInlineCreateForm';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -37,16 +37,16 @@ import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import {
   UNIT_TYPES_FOR_FILTER, UNIT_STATUSES_FOR_FILTER,
   UNIT_STATUS_COLOR_MAP, getUnitTypeLabel, getUnitStatusLabel,
-} from './unit-tab-constants';
-import type { FloorRecord } from './unit-tab-constants';
+} from './property-tab-constants';
+import type { FloorRecord } from './property-tab-constants';
 import { usePropertyInlineEdit } from './usePropertyInlineEdit';
 
-type UnitConfirmAction =
-  | { type: 'delete'; item: Unit }
-  | { type: 'unlink'; item: Unit };
+type PropertyConfirmAction =
+  | { type: 'delete'; item: Property }
+  | { type: 'unlink'; item: Property };
 
-interface UnitsApiResponse {
-  units: Unit[];
+interface PropertiesApiResponse {
+  units: Property[];
   count?: number;
 }
 
@@ -54,29 +54,29 @@ interface FloorsApiResponse {
   floors: FloorRecord[];
 }
 
-interface UnitsTabContentProps {
+interface PropertiesTabContentProps {
   building: Building;
 }
 
-export function UnitsTabContent({ building }: UnitsTabContentProps) {
+export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   const { t } = useTranslation('building');
-  const { t: tUnits } = useTranslation('units');
+  const { t: tUnits } = useTranslation('properties');
   const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 
   // Data state
-  const [units, setUnits] = useState<Unit[]>([]);
+  const [units, setUnits] = useState<Property[]>([]);
   const [floors, setFloors] = useState<FloorRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create form visibility (form state managed by UnitInlineCreateForm)
+  // Create form visibility (form state managed by PropertyInlineCreateForm)
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   // Delete & Unlink state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<UnitConfirmAction | null>(null);
+  const [confirmAction, setConfirmAction] = useState<PropertyConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   // 🛡️ ADR-226 Phase 3: Deletion Guard
@@ -87,7 +87,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<UnitType | 'all'>('all');
+  const [filterType, setFilterType] = useState<PropertyType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
@@ -112,11 +112,11 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.get<UnitsApiResponse>(
+      const result = await apiClient.get<PropertiesApiResponse>(
         `${API_ROUTES.UNITS.LIST}?buildingId=${building.id}`
       );
       if (result?.units) {
-        setUnits(result.units as Unit[]);
+        setUnits(result.units as Property[]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load units');
@@ -163,14 +163,14 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     await fetchUnits();
   }, [fetchUnits]);
 
-  const handleDeleteClick = async (unit: Unit) => {
+  const handleDeleteClick = async (unit: Property) => {
     const allowed = await checkBeforeDelete(unit.id);
     if (allowed) {
       setConfirmAction({ type: 'delete', item: unit });
     }
   };
 
-  const handleUnlinkClick = (unit: Unit) => {
+  const handleUnlinkClick = (unit: Property) => {
     setConfirmAction({ type: 'unlink', item: unit });
   };
 
@@ -203,7 +203,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   };
 
   const fetchUnlinkedUnits = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<UnitsApiResponse>(API_ROUTES.UNITS.LIST);
+    const result = await apiClient.get<PropertiesApiResponse>(API_ROUTES.UNITS.LIST);
     if (!result?.units) return [];
     return result.units
       .filter((u) => !u.buildingId)
@@ -226,7 +226,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     </span>
   );
 
-  const unitColumns: SpaceColumn<Unit>[] = useMemo(() => [
+  const unitColumns: SpaceColumn<Property>[] = useMemo(() => [
     { key: 'name', label: t('tabs.floors.name'), sortValue: (u) => u.name, render: (u) => <span className="font-medium">{u.name}</span> },
     { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{getUnitTypeLabel(u.type, tUnits)}</span> },
     { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className={cn("font-mono text-sm", colors.text.muted)}>{u.floor}</span> },
@@ -234,7 +234,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     { key: 'status', label: t('tabs.labels.details'), width: 'w-28', sortValue: (u) => u.status, render: (u) => getStatusBadge(u.status) },
   ], [t, tUnits]);
 
-  const unitCardFields: SpaceCardField<Unit>[] = useMemo(() => [
+  const unitCardFields: SpaceCardField<Property>[] = useMemo(() => [
     { label: tUnits('card.stats.type'), render: (u) => getUnitTypeLabel(u.type, tUnits) },
     { label: tUnits('card.stats.floor'), render: (u) => u.floor || '—' },
     { label: 'm²', render: (u) => u.area || '—' },
@@ -298,7 +298,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               />
             </label>
 
-            <Select value={filterType} onValueChange={(val) => setFilterType(val as UnitType | 'all')}>
+            <Select value={filterType} onValueChange={(val) => setFilterType(val as PropertyType | 'all')}>
               <SelectTrigger>
                 <SelectValue placeholder={t('allTypes', { ns: 'filters' })} />
               </SelectTrigger>
@@ -331,7 +331,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       </Card>
 
       {showCreateForm && (
-        <UnitInlineCreateForm
+        <PropertyInlineCreateForm
           buildingId={building.id}
           buildingName={building.name || ''}
           floors={floors}
@@ -361,7 +361,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         </p>
       ) : viewMode === 'cards' ? (
         <>
-          <BuildingSpaceCardGrid<Unit>
+          <BuildingSpaceCardGrid<Property>
             items={filteredUnits}
             getKey={(u) => u.id}
             getName={(u) => u.name}
@@ -381,7 +381,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         </>
       ) : (
         <>
-          <BuildingSpaceTable<Unit>
+          <BuildingSpaceTable<Property>
             items={filteredUnits}
             columns={unitColumns}
             getKey={(u) => u.id}
@@ -399,7 +399,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
                   <Input value={edit.editName} onChange={(e) => edit.setEditName(e.target.value)} className="h-8" disabled={edit.saving} />
                 </TableCell>
                 <TableCell>
-                  <Select value={edit.editType || 'apartment'} onValueChange={(v) => edit.setEditType(v as UnitType)} disabled={edit.saving}>
+                  <Select value={edit.editType || 'apartment'} onValueChange={(v) => edit.setEditType(v as PropertyType)} disabled={edit.saving}>
                     <SelectTrigger className="h-8">
                       <SelectValue />
                     </SelectTrigger>
@@ -495,4 +495,4 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   );
 }
 
-export default UnitsTabContent;
+export default PropertiesTabContent;

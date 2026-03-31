@@ -70,7 +70,7 @@ interface BuildingSelectorCardProps {
 }
 
 // ============================================================================
-// 🌐 i18n: Labels now use useTranslation hook (namespace: 'units')
+// 🌐 i18n: Labels now use useTranslation hook (namespace: 'properties')
 // ============================================================================
 
 // ============================================================================
@@ -91,7 +91,7 @@ export function BuildingSelectorCard({
   isEditing = true,
 }: BuildingSelectorCardProps) {
   // 🏢 ENTERPRISE: Centralized hooks (ZERO inline styles)
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

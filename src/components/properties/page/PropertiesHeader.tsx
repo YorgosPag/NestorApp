@@ -47,7 +47,7 @@ export function PropertiesHeader({
   setShowFilters,
 }: PropertiesHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

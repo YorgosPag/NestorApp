@@ -85,7 +85,7 @@ export function FloorPlanTab({
   selectedUnit,
 }: FloorPlanTabProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const fallbackCompanyId = useCompanyId()?.companyId;

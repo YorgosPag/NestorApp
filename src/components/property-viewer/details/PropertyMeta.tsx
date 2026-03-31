@@ -44,7 +44,7 @@ export function PropertyMeta({
   const _statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
   // 🏢 ENTERPRISE: i18n support - properties + units namespaces
   const { t } = useTranslation('properties');
-  const { t: tUnits } = useTranslation('units');
+  const { t: tUnits } = useTranslation('properties');
 
   // 🏢 ENTERPRISE: Use new areas schema with legacy fallback
   const displayArea = property.areas?.gross ?? property.area;

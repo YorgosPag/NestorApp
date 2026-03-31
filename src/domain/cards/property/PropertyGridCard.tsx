@@ -118,7 +118,7 @@ export function PropertyGridCard({
   compact = false,
   className,
 }: PropertyGridCardProps) {
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)

@@ -34,7 +34,7 @@ interface ToolbarMainActionsProps {
 
 export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const handleNew = () => logger.info('Creating new unit...');

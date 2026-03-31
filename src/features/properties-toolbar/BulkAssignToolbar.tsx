@@ -30,7 +30,7 @@ export function BulkAssignToolbar({
   onClearSelection: () => void;
   onAssignmentSuccess: () => void;
 }) {
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();

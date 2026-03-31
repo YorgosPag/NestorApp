@@ -40,7 +40,7 @@ export function PropertiesList({
   onDeleteUnit,
 }: PropertiesListProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   const [favorites, setFavorites] = useState<string[]>(['prop-1']);

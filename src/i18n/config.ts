@@ -81,10 +81,9 @@ if (typeof window !== 'undefined') {
       'building',      // Building management - core module
       'projects',      // Projects module
       'contacts',      // Contacts module
-      'units',         // Units module
+      'properties',    // 🏢 Properties module (renamed from units — ADR-269)
       'storage',       // 🏢 Storage module - added 2026-01-24
       'parking',       // 🏢 Parking module - added 2026-01-24
-      'properties',    // 🏢 Properties module - status labels used by DXF overlays
       'dxf-viewer',
       'geo-canvas',
       'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets

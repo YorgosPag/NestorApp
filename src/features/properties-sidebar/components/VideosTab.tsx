@@ -77,7 +77,7 @@ export function VideosTab({
   selectedUnit,
 }: VideosTabProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

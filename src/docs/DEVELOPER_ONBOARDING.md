@@ -429,9 +429,9 @@ function isDevMode() {
 | `/api/admin/create-clean-projects` | POST | Admin | None | Create clean project data |
 | `/api/admin/fix-building-project` | POST | Admin | None | Fix building-project links |
 | `/api/admin/fix-projects-direct` | POST | Admin | None | Direct project fixes |
-| `/api/admin/fix-unit-project` | POST | Admin | None | Fix unit-project links |
+| `/api/admin/fix-property-project` | POST | Admin | None | Fix property-project links |
 | `/api/admin/migrate-dxf` | POST | Admin | None | DXF migration |
-| `/api/admin/migrate-units` | POST | Admin | None | Unit migration |
+| `/api/admin/migrate-properties` | POST | Admin | None | Property migration |
 | `/api/admin/seed-parking` | POST | Admin | None | Seed parking data |
 | `/api/admin/migrations/execute` | POST | Admin | None | Run migrations |
 | `/api/admin/migrations/execute-admin` | POST | Admin | None | Admin migrations |
@@ -454,7 +454,7 @@ function isDevMode() {
 | Endpoint | Methods | Description |
 |----------|---------|-------------|
 | `/api/contacts/[contactId]` | GET, PUT, DELETE | Contact CRUD |
-| `/api/contacts/[contactId]/units` | GET | Contact's units |
+| `/api/contacts/[contactId]/properties` | GET | Contact's properties |
 | `/api/contacts/add-real-contacts` | POST | Add contacts |
 | `/api/contacts/create-sample` | POST | Create samples |
 | `/api/contacts/list-companies` | GET | List company contacts |
@@ -1062,7 +1062,7 @@ export async function GET(
 export async function GET() {
   try {
     // NO admin role check!
-    const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
+    const unitsQuery = query(collection(db, COLLECTIONS.PROPERTIES));
     const snapshot = await getDocs(unitsQuery);
     // Performs admin operations without verification
   }

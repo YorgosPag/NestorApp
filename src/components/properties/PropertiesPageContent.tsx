@@ -13,7 +13,7 @@ import '@/lib/design-system';
 
 // Loading component for dynamic import
 const LoadingComponent = () => {
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const colors = useSemanticColors();
   return (
     <div className={`min-h-screen ${colors.bg.secondary} dark:${colors.bg.primary} flex items-center justify-center`}>

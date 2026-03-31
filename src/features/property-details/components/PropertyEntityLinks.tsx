@@ -1,26 +1,26 @@
 'use client';
 
 /**
- * UnitEntityLinks — Building linking for units
+ * PropertyEntityLinks — Building linking for properties
  *
- * A unit's only direct parent is its Building.
+ * A property's only direct parent is its Building.
  * Company and Project are resolved through the hierarchy:
- * Unit → Building → Project → Company
+ * Property → Building → Project → Company
  *
  * ADR-200: Uses centralized useEntityLink hook.
  * @see ADR-199 changelog 2026-03-12
  *
- * @module features/property-details/components/UnitEntityLinks
+ * @module features/property-details/components/PropertyEntityLinks
  */
 
 import React, { useCallback } from 'react';
 import { Building } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
-import { updateUnitLink, getBuildingsList } from '@/services/units.service';
+import { updatePropertyLink, getBuildingsList } from '@/services/properties.service';
 import { useTranslation } from 'react-i18next';
 import { useEntityLink } from '@/hooks/useEntityLink';
 
-interface UnitEntityLinksProps {
+interface PropertyEntityLinksProps {
   unitId: string;
   /** @deprecated Kept for backward compatibility — no longer rendered */
   currentCompanyId?: string;
@@ -31,18 +31,18 @@ interface UnitEntityLinksProps {
   onLinkChanged?: () => void;
 }
 
-export function UnitEntityLinks({
+export function PropertyEntityLinks({
   unitId,
   currentBuildingId,
   isEditing,
   onLinkChanged,
-}: UnitEntityLinksProps) {
-  const { t } = useTranslation('units');
+}: PropertyEntityLinksProps) {
+  const { t } = useTranslation('properties');
 
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 
   const saveBuilding = useCallback(async (newId: string | null) => {
-    const result = await updateUnitLink(unitId, { buildingId: newId });
+    const result = await updatePropertyLink(unitId, { buildingId: newId });
     if (result.success && onLinkChanged) onLinkChanged();
     return result;
   }, [unitId, onLinkChanged]);

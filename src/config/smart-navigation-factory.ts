@@ -119,13 +119,13 @@ const NAVIGATION_LABELS = {
   badge_new: 'badges.new',
 
   // Spaces submenu
-  apartments: 'sidebar.apartments',
+  properties: 'sidebar.properties',
   storage: 'sidebar.storage',
   parking: 'sidebar.parking',
   common_areas: 'sidebar.commonAreas',
 
   // Sales submenu
-  available_apartments: 'sidebar.availableApartments',
+  available_properties: 'sidebar.availableProperties',
   available_storage: 'sidebar.availableStorage',
   available_parking: 'sidebar.availableParking',
   sold_properties: 'sidebar.soldProperties',
@@ -417,7 +417,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             subItems: [
               {
                 icon: NAVIGATION_ENTITIES.unit.icon,
-                href: '/spaces/apartments'
+                href: '/spaces/properties'
               },
               {
                 icon: NAVIGATION_ENTITIES.storage.icon,
@@ -455,7 +455,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             subItems: [
               {
                 icon: NAVIGATION_ENTITIES.unit.icon,
-                href: '/sales/available-apartments'
+                href: '/sales/available-properties'
               },
               {
                 icon: NAVIGATION_ENTITIES.storage.icon,
@@ -711,13 +711,13 @@ function getLabelKeyForPath(path: string): string {
     'sales': 'sales',
 
     // Spaces subpaths
-    'spaces/apartments': 'apartments',
+    'spaces/properties': 'properties',
     'spaces/storage': 'storage',
     'spaces/parking': 'parking',
     'spaces/common': 'common_areas',
 
     // Sales subpaths
-    'sales/available-apartments': 'available_apartments',
+    'sales/available-properties': 'available_properties',
     'sales/available-storage': 'available_storage',
     'sales/available-parking': 'available_parking',
     'sales/sold': 'sold_properties',

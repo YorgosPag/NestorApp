@@ -1,22 +1,22 @@
 /* eslint-disable design-system/enforce-semantic-colors */
 /**
- * Unit tab constants — SSOT for labels and option arrays.
+ * Property tab constants — SSOT for labels and option arrays.
  *
  * Label values are i18n translation KEYS (not raw text).
  * Consumers resolve them via t(key), e.g. t(UNIT_TYPE_LABEL_KEYS[type]).
  *
- * Used by: UnitsTabContent, UnitInlineCreateForm
- * @module components/building-management/tabs/unit-tab-constants
+ * Used by: PropertiesTabContent, PropertyInlineCreateForm
+ * @module components/building-management/tabs/property-tab-constants
  */
 
 import type { TFunction } from 'i18next';
-import type { UnitType, CommercialStatus, OperationalStatus } from '@/types/unit';
+import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
 
 // ============================================================================
 // TYPE LABELS & OPTIONS (i18n keys — resolve with t())
 // ============================================================================
 
-/** Maps unit type value → i18n key in "units" namespace */
+/** Maps unit type value → i18n key in "properties" namespace */
 export const UNIT_TYPE_LABEL_KEYS: Record<string, string> = {
   apartment: 'types.apartment',
   studio: 'types.studio',
@@ -29,7 +29,7 @@ export const UNIT_TYPE_LABEL_KEYS: Record<string, string> = {
   storage: 'types.storage',
 };
 
-export const UNIT_TYPES_FOR_FILTER: UnitType[] = [
+export const UNIT_TYPES_FOR_FILTER: PropertyType[] = [
   'studio', 'apartment_1br', 'apartment', 'apartment_2br', 'apartment_3br',
   'maisonette', 'shop', 'office', 'storage',
 ];
@@ -38,7 +38,7 @@ export const UNIT_TYPES_FOR_FILTER: UnitType[] = [
 // STATUS LABELS & OPTIONS (i18n keys — resolve with t())
 // ============================================================================
 
-/** Maps commercial status value → i18n key in "units" namespace */
+/** Maps commercial status value → i18n key in "properties" namespace */
 export const UNIT_STATUS_LABEL_KEYS: Record<string, string> = {
   'for-sale': 'commercialStatus.for-sale',
   'for-rent': 'commercialStatus.for-rent',

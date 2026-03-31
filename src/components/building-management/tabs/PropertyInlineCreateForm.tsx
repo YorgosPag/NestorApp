@@ -2,15 +2,15 @@
 'use client';
 
 /**
- * UnitInlineCreateForm — Extracted inline create form for units in Building Management.
+ * PropertyInlineCreateForm — Extracted inline create form for properties in Building Management.
  *
  * Google SRP: This component owns ALL create-form state, validation, and submission.
- * The parent (UnitsTabContent) only controls visibility and receives success callback.
+ * The parent (PropertiesTabContent) only controls visibility and receives success callback.
  *
  * Labels match Διαχείριση Μονάδων (SSOT via units i18n namespace).
- * Code field uses EntityCodeField (ADR-233) — same as AddUnitDialog.
+ * Code field uses EntityCodeField (ADR-233) — same as AddPropertyDialog.
  *
- * @module components/building-management/tabs/UnitInlineCreateForm
+ * @module components/building-management/tabs/PropertyInlineCreateForm
  */
 
 import { useState } from 'react';
@@ -31,18 +31,18 @@ import {
 import { Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
-import type { UnitType, CommercialStatus, OperationalStatus } from '@/types/unit';
+import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
 import {
   UNIT_TYPE_LABEL_KEYS, UNIT_TYPES_FOR_FILTER,
   CREATION_COMMERCIAL_OPTION_KEYS, OPERATIONAL_STATUS_OPTION_KEYS,
-} from './unit-tab-constants';
-import type { FloorRecord } from './unit-tab-constants';
+} from './property-tab-constants';
+import type { FloorRecord } from './property-tab-constants';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface UnitInlineCreateFormProps {
+interface PropertyInlineCreateFormProps {
   buildingId: string;
   buildingName: string;
   floors: FloorRecord[];
@@ -54,21 +54,21 @@ interface UnitInlineCreateFormProps {
 // COMPONENT
 // ============================================================================
 
-export function UnitInlineCreateForm({
+export function PropertyInlineCreateForm({
   buildingId,
   buildingName,
   floors,
   onCreated,
   onCancel,
-}: UnitInlineCreateFormProps) {
-  const { t: tUnits } = useTranslation('units');
+}: PropertyInlineCreateFormProps) {
+  const { t: tUnits } = useTranslation('properties');
   const colors = useSemanticColors();
   const { success, error: notifyError } = useNotifications();
 
   // Row 1 fields
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [type, setType] = useState<UnitType>('apartment');
+  const [type, setType] = useState<PropertyType>('apartment');
   const [commercialStatus, setCommercialStatus] = useState<CommercialStatus>('for-sale');
   const [askingPrice, setAskingPrice] = useState('');
   const [operationalStatus, setOperationalStatus] = useState<OperationalStatus>('draft');
@@ -173,7 +173,7 @@ export function UnitInlineCreateForm({
           <span className={cn("text-xs font-medium", colors.text.muted)}>
             {tUnits('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
           </span>
-          <Select value={type} onValueChange={(v) => setType(v as UnitType)} disabled={creating}>
+          <Select value={type} onValueChange={(v) => setType(v as PropertyType)} disabled={creating}>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>

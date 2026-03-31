@@ -23,8 +23,8 @@ import { PropertiesList } from '@/components/properties/PropertiesList';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
 // UniversalTabsRenderer from generic (renderer only, no mappings)
 import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
-// UNITS_COMPONENT_MAPPING from domain-scoped file (not master barrel)
-import { UNITS_COMPONENT_MAPPING } from '@/components/generic/mappings/unitsMappings';
+// PROPERTIES_COMPONENT_MAPPING from domain-scoped file (not master barrel)
+import { PROPERTIES_COMPONENT_MAPPING } from '@/components/generic/mappings/propertiesMappings';
 import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { DetailsContainer } from '@/core/containers';
@@ -52,7 +52,7 @@ export function PropertiesSidebar({
   defaultTab,
 }: PropertiesSidebarProps) {
   // 🗨️ ENTERPRISE: Centralized systems
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const emptyStateMessages = useEmptyStateMessages();
@@ -123,7 +123,7 @@ export function PropertiesSidebar({
         <UniversalTabsRenderer
           tabs={propertiesTabs.map(convertToUniversalConfig)}
           data={selectedUnit}
-          componentMapping={UNITS_COMPONENT_MAPPING}
+          componentMapping={PROPERTIES_COMPONENT_MAPPING}
           defaultTab={defaultTab || "info"}
           theme="default"
           // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels

@@ -33,7 +33,7 @@ import { useTranslation } from 'react-i18next';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Domain constants for space types + Select clear value
 import { API_ROUTES, ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES, SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
-import type { LinkedSpace } from '@/types/unit';
+import type { LinkedSpace } from '@/types/property';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
@@ -91,7 +91,7 @@ export function LinkedSpacesCard({
   isEditing = true,
 }: LinkedSpacesCardProps) {
   // 🏢 ENTERPRISE: Centralized hooks (ZERO inline styles)
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

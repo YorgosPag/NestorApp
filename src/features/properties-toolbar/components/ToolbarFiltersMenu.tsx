@@ -28,7 +28,7 @@ function UnitFiltersMenu({ activeFilters, onActiveFiltersChange }: {
   activeFilters: string[];
   onActiveFiltersChange: (filters: string[]) => void;
 }) {
-  const { t } = useTranslation('units');
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const handleFilterChange = (filter: string, checked: boolean) => {
     onActiveFiltersChange(

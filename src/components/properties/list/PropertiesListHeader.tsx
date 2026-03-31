@@ -20,7 +20,7 @@ export function PropertiesListHeader({
     showToolbar = false,
     onToolbarToggle
 }: PropertiesListHeaderProps) {
-    const { t } = useTranslation('units');
+    const { t } = useTranslation('properties');
 
     return (
         <div>

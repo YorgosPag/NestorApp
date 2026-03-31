@@ -17,7 +17,7 @@ import { PropertyHoverHeader } from './PropertyHoverHeader';
 import { getPropertyStatusConfig } from '../constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { ORIENTATION_LABELS } from '@/constants/unit-features-enterprise';
-import type { OrientationType } from '@/types/unit';
+import type { OrientationType } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
@@ -42,7 +42,7 @@ function QuickViewRow({ label, value }: { label: string; value: React.ReactNode 
 
 export function PropertyQuickView({ property }: PropertyQuickViewProps) {
   const { t } = useTranslation('properties');
-  const { t: tUnits } = useTranslation('units');
+  const { t: tUnits } = useTranslation('properties');
   const colors = useSemanticColors();
   const statusConfig = getPropertyStatusConfig();
   // 🏢 ADR-258: commercialStatus is SSoT, legacy status is fallback
