@@ -133,21 +133,21 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     dependencies: [
       {
         collection: COLLECTIONS.UNITS,
-        foreignKey: 'commercial.buyerContactId',
+        foreignKey: 'commercial.ownerContactIds',
         label: 'Πωλημένα διαμερίσματα',
-        queryType: 'equals',
+        queryType: 'array-contains',
       },
       {
         collection: COLLECTIONS.PARKING_SPACES,
-        foreignKey: 'commercial.buyerContactId',
+        foreignKey: 'commercial.ownerContactIds',
         label: 'Πωλημένες θέσεις στάθμευσης',
-        queryType: 'equals',
+        queryType: 'array-contains',
       },
       {
         collection: COLLECTIONS.STORAGE,
-        foreignKey: 'commercial.buyerContactId',
+        foreignKey: 'commercial.ownerContactIds',
         label: 'Πωλημένες αποθήκες',
-        queryType: 'equals',
+        queryType: 'array-contains',
       },
       {
         collection: COLLECTIONS.OPPORTUNITIES,
@@ -202,8 +202,8 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   unit: {
     strategy: 'BLOCK',
     conditionalBlock: {
-      field: 'commercial.buyerContactId',
-      condition: 'not-null',
+      field: 'commercial.owners',
+      condition: 'exists',
       message: 'Η μονάδα έχει αγοραστή (κράτηση ή πώληση) και δεν μπορεί να διαγραφεί. Ακυρώστε πρώτα την κράτηση/πώληση.',
     },
     cascadeDependencies: [
@@ -402,8 +402,8 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   parking: {
     strategy: 'BLOCK',
     conditionalBlock: {
-      field: 'commercial.buyerContactId',
-      condition: 'not-null',
+      field: 'commercial.owners',
+      condition: 'exists',
       message: 'Η θέση στάθμευσης έχει πωληθεί και δεν μπορεί να διαγραφεί.',
     },
     cascadeDependencies: [
@@ -418,7 +418,7 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     // TODO: ADR-AUDIT — Add check for unit.linkedSpaces[] referencing this parking spot.
     // Firestore cannot query array-of-objects by nested field (spaceId).
     // Options: (1) denormalize linkedUnitId on parking doc, (2) Cloud Function trigger.
-    // Current protection: conditionalBlock catches sold spots (buyerContactId set by appurtenance-sync).
+    // Current protection: conditionalBlock catches sold spots (owners set by appurtenance-sync).
     dependencies: [
       {
         collection: COLLECTIONS.CONTACT_LINKS,
@@ -433,8 +433,8 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   storage: {
     strategy: 'BLOCK',
     conditionalBlock: {
-      field: 'commercial.buyerContactId',
-      condition: 'not-null',
+      field: 'commercial.owners',
+      condition: 'exists',
       message: 'Η αποθήκη έχει πωληθεί και δεν μπορεί να διαγραφεί.',
     },
     cascadeDependencies: [

@@ -1,6 +1,6 @@
 # ADR-244: Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων
 
-**Status**: PROPOSED (Απαιτεί Συζήτηση)
+**Status**: IN PROGRESS (Phase 3 — Session 1/3 completed)
 **Date**: 2026-03-21
 **Author**: Claude + Γιώργος Παγώνης
 **Priority**: CRITICAL — Blockers για production deployment
@@ -218,3 +218,4 @@ interface PropertyOwnerEntry {
 | 2026-03-21 | 7/7 ερωτήσεις απαντήθηκαν — Αποφάσεις: κοινά+ξεχωριστά πλάνα, κοινά+ξεχωριστά συμβόλαια, ονόματα+% στον πίνακα, SSoT οικοπεδούχοι στο project, πολλαπλοί αγοραστές από κράτηση, ενιαίο owner model |
 | 2026-03-21 | FIX: `landowners` + `bartexPercentage` λείπανε από `/api/projects/list` response — δεδομένα αποθηκεύονταν στη Firestore αλλά δεν εμφανίζονταν στο UI μετά refresh |
 | 2026-03-21 | SSOT REFACTOR: Κατάργηση 3 duplicate interfaces (ProjectListItem, FirestoreProject x2). Νέο `ProjectSummary = Pick<Project, ...>` στο `src/types/project.ts` — μία πηγή αλήθειας για list/grid views |
+| 2026-03-31 | **SPEC-244D Session 1/3**: Αφαίρεση `buyerContactId`/`buyerName` από 6 types + 5 services. `owners[]` = SSoT. Νέο `ownerContactIds[]` flat array για Firestore queries. `buildOwnerFields()` updated. `propagateContactNameChange()` rewritten. `deletion-registry` migrated to `owners`/`ownerContactIds`. |

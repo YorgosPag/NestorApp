@@ -18,15 +18,17 @@ export type SpaceCommercialStatus =
 // 🏢 COMMERCIAL DATA — overlay for Storage & Parking
 // =============================================================================
 
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
+
 export interface SpaceCommercialData {
   /** Asking price in EUR */
   askingPrice?: number | null;
   /** Final sale price in EUR */
   finalPrice?: number | null;
-  /** Buyer contact ID (Firestore ref) */
-  buyerContactId?: string | null;
-  /** Buyer display name (denormalized) */
-  buyerName?: string | null;
+  /** Ιδιοκτήτες χώρου — SSoT (ADR-244 Phase 3) */
+  owners?: PropertyOwnerEntry[] | null;
+  /** Flat contactIds για Firestore queries (ADR-244 Phase 3) */
+  ownerContactIds?: string[] | null;
   /** Date when listed for sale */
   listedDate?: { toDate?: () => Date } | null;
   /** Reservation deposit in EUR */

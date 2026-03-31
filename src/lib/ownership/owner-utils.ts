@@ -73,23 +73,36 @@ export function getPrimaryBuyerContactId(owners: PropertyOwnerEntry[]): string |
 }
 
 // ============================================================================
-// DUAL-WRITE PAYLOAD
+// FLAT ARRAY FOR FIRESTORE QUERIES
 // ============================================================================
 
 /**
- * Build the dual-write fields for Firestore commercial data.
- * SSoT for backward-compat `buyerContactId` + `buyerName` + new `owners[]`.
+ * Extract flat array of contactIds from owners — for Firestore `array-contains` queries.
+ * Firestore cannot query nested objects inside arrays, so we denormalize to a flat string[].
+ *
+ * Pattern: Same as `landownerContactIds` in Project type.
+ */
+export function extractOwnerContactIds(owners: PropertyOwnerEntry[]): string[] {
+  return owners.map(o => o.contactId).filter(Boolean);
+}
+
+// ============================================================================
+// OWNER FIELDS PAYLOAD (SSoT — ADR-244 Phase 3)
+// ============================================================================
+
+/**
+ * Build the owner fields for Firestore commercial data.
+ * SSoT: `owners[]` + `ownerContactIds[]` (flat array for queries).
  *
  * Used in: ReserveDialog PATCH, SellDialog PATCH, appurtenance sync.
  */
 export function buildOwnerFields(owners: PropertyOwnerEntry[]): {
-  buyerContactId: string | null;
-  buyerName: string | null;
   owners: PropertyOwnerEntry[] | null;
+  ownerContactIds: string[] | null;
 } {
+  const hasOwners = owners.length > 0;
   return {
-    buyerContactId: getPrimaryBuyerContactId(owners),
-    buyerName: formatOwnerNames(owners),
-    owners: owners.length > 0 ? owners : null,
+    owners: hasOwners ? owners : null,
+    ownerContactIds: hasOwners ? extractOwnerContactIds(owners) : null,
   };
 }

@@ -125,14 +125,11 @@ export interface UnitCommercialData {
   /** Ποσό προκαταβολής κράτησης */
   reservationDeposit: number | null;
 
-  /** Reference → contacts collection (αγοραστής/ενοικιαστής) */
-  buyerContactId: string | null;
+  /** Ιδιοκτήτες μονάδας — SSoT (ADR-244 Phase 3). null = δεν υπάρχει αγοραστής. */
+  owners: PropertyOwnerEntry[] | null;
 
-  /** Όνομα αγοραστή (denormalized για εμφάνιση σε κάρτες/emails χωρίς extra fetch) */
-  buyerName: string | null;
-
-  /** Πολλαπλοί ιδιοκτήτες (ADR-244 Phase 0). Συνυπάρχει με buyerContactId. */
-  owners?: PropertyOwnerEntry[] | null;
+  /** Flat array contactIds για Firestore array-contains queries (ADR-244 Phase 3). */
+  ownerContactIds: string[] | null;
 
   /** Ημερομηνία κράτησης */
   reservationDate: Timestamp | null;

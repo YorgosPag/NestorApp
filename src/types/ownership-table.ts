@@ -224,10 +224,8 @@ export interface OwnershipTableRow {
   readonly linkedSpacesSummary: ReadonlyArray<LinkedSpaceDetail> | null;
   /** Ιδιοκτήτης (αντιπαροχή) */
   readonly ownerParty: OwnerParty;
-  /** Contact ID αγοραστή (αν πωλήθηκε) */
-  readonly buyerContactId: string | null;
-  /** Ονοματεπώνυμο αγοραστή (denormalized for display) */
-  readonly buyerName: string | null;
+  /** Ιδιοκτήτες μονάδας — SSoT (ADR-244 Phase 3) */
+  readonly owners: ReadonlyArray<PropertyOwnerEntry> | null;
   /** Αριθμός προσυμφώνου */
   readonly preliminaryContract: string | null;
   /** Αριθμός οριστικού συμβολαίου */

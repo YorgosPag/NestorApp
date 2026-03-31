@@ -2,7 +2,7 @@
 
 **Parent ADR**: ADR-244 (Multi-Buyer Co-Ownership)
 **Depends on**: SPEC-244A + SPEC-244B + SPEC-244C (ALL previous phases complete)
-**Status**: DO NOT START until Phases 0-2 are stable
+**Status**: IN PROGRESS — Session 1/3 completed (Types + Services)
 **Risk**: 🔴 ΥΨΗΛΟΣ — breaking changes σε 42 αρχεία
 **Εκτίμηση**: 8-10 ώρες
 

@@ -100,8 +100,8 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       'commercial.askingPrice': 'number? (τιμή ζητούμενη σε €)',
       'commercial.finalPrice': 'number? (τελική τιμή πώλησης σε €)',
       'commercial.reservationDeposit': 'number? (προκαταβολή κράτησης σε €)',
-      'commercial.buyerContactId': 'string? (->contacts, ID αγοραστή)',
-      'commercial.buyerName': 'string? (όνομα αγοραστή)',
+      'commercial.owners': 'PropertyOwnerEntry[]? (ιδιοκτήτες μονάδας — SSoT ADR-244)',
+      'commercial.ownerContactIds': 'string[]? (flat contactIds για Firestore queries)',
       'commercial.reservationDate': 'string? (ISO date κράτησης)',
       'commercial.saleDate': 'string? (ISO date πώλησης)',
       'commercial.listedDate': 'string? (ISO date καταχώρησης)',
@@ -118,7 +118,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
     },
     relationships: {
       'contact_links.entityId': 'units.id (buyer/tenant)',
-      'commercial.buyerContactId': 'contacts.id (αγοραστής)',
+      'commercial.ownerContactIds': 'contacts.id[] (ιδιοκτήτες — array-contains queries)',
     },
   },
 

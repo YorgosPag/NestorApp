@@ -79,13 +79,18 @@ export function defaultCustomer(): InvoiceCustomer {
   };
 }
 
-export async function resolveCustomer(buyerContactId: string | null): Promise<InvoiceCustomer> {
-  if (!buyerContactId) {
+/**
+ * Resolve customer data from a contact ID.
+ * Used by Sales Accounting Bridge to build invoice customer.
+ * The contactId comes from owners[] via getPrimaryBuyerContactId().
+ */
+export async function resolveCustomer(contactId: string | null): Promise<InvoiceCustomer> {
+  if (!contactId) {
     return defaultCustomer();
   }
 
   return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.CONTACTS).doc(buyerContactId).get();
+    const snap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
     if (!snap.exists) return defaultCustomer();
 
     const contact = snap.data() as Record<string, unknown>;
@@ -100,7 +105,7 @@ export async function resolveCustomer(buyerContactId: string | null): Promise<In
     const resolvedEmail = primaryEmail ?? (contact.email as string) ?? null;
 
     return {
-      contactId: buyerContactId,
+      contactId,
       name,
       vatNumber: (contact.vatNumber as string) ?? (contact.afm as string) ?? null,
       taxOffice: (contact.taxOffice as string) ?? (contact.doy as string) ?? null,

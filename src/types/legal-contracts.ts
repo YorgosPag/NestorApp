@@ -172,7 +172,8 @@ export interface LegalContract {
   unitId: string;
   projectId: string;
   buildingId: string;
-  buyerContactId: string;
+  /** Primary buyer contact ID (extracted from unit owners) */
+  primaryBuyerContactId: string;
 
   // === Phase & Status (FSM) ===
   phase: ContractPhase;
@@ -213,7 +214,7 @@ export interface CreateContractInput {
   unitId: string;
   projectId: string;
   buildingId: string;
-  buyerContactId: string;
+  primaryBuyerContactId: string;
   phase: ContractPhase;
   contractAmount?: number | null;
   depositAmount?: number | null;

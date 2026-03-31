@@ -95,7 +95,8 @@ export interface CommissionRecord {
   agentName: string;
   unitId: string;
   projectId: string;
-  buyerContactId: string;
+  /** Primary buyer contact ID (snapshot at commission time) */
+  primaryBuyerContactId: string;
 
   // === Ποσά ===
   salePrice: number;
@@ -172,7 +173,7 @@ export interface RecordCommissionInput {
   agentName: string;
   unitId: string;
   projectId: string;
-  buyerContactId: string;
+  primaryBuyerContactId: string;
   salePrice: number;
   commissionType: CommissionType;
   commissionPercentage: number | null;
