@@ -1,6 +1,6 @@
 # ADR-244: Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων
 
-**Status**: IN PROGRESS (Phase 3 — Session 1/3 completed)
+**Status**: IN PROGRESS (Phase 3 — Session 2/3 completed)
 **Date**: 2026-03-21
 **Author**: Claude + Γιώργος Παγώνης
 **Priority**: CRITICAL — Blockers για production deployment
@@ -219,3 +219,4 @@ interface PropertyOwnerEntry {
 | 2026-03-21 | FIX: `landowners` + `bartexPercentage` λείπανε από `/api/projects/list` response — δεδομένα αποθηκεύονταν στη Firestore αλλά δεν εμφανίζονταν στο UI μετά refresh |
 | 2026-03-21 | SSOT REFACTOR: Κατάργηση 3 duplicate interfaces (ProjectListItem, FirestoreProject x2). Νέο `ProjectSummary = Pick<Project, ...>` στο `src/types/project.ts` — μία πηγή αλήθειας για list/grid views |
 | 2026-03-31 | **SPEC-244D Session 1/3**: Αφαίρεση `buyerContactId`/`buyerName` από 6 types + 5 services. `owners[]` = SSoT. Νέο `ownerContactIds[]` flat array για Firestore queries. `buildOwnerFields()` updated. `propagateContactNameChange()` rewritten. `deletion-registry` migrated to `owners`/`ownerContactIds`. |
+| 2026-03-31 | **SPEC-244D Session 2/3**: Components + API Routes migration — 14 αρχεία. `commercial?.buyerContactId`/`buyerName` αφαιρέθηκαν πλήρως. Display derives από `getPrimaryBuyerContactId(owners)` + `formatOwnerNames(owners)`. Zod schemas, props (`ownerContactId`/`ownerName`), Firestore writes (`owners`/`ownerContactIds`). SRP splits: `units/[id]/route.ts` → +3 helpers, `notifications/professional-assigned/route.ts` → +hierarchy-resolver. Fix: `brokerage/commissions` + `contracts` routes aligned με `primaryBuyerContactId`. |

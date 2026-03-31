@@ -267,7 +267,7 @@
 | **ADR-241** | Fullscreen — Composition Architecture | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-241-fullscreen-container-centralization.md) |
 | **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | ✅ 🟡 IN PROGRESS — SPEC-242A✅ B✅ C✅ D✅ E🟡 | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
 | **ADR-243** | Custom Firestore MCP Server — Secure Database Access for Claude Code | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
-| **ADR-244** | Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων | 🟡 IN PROGRESS — SPEC-244D Session 1/3 (types+services done, components pending) | 2026-03-31 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-244-multi-buyer-co-ownership.md) |
+| **ADR-244** | Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων | 🟡 IN PROGRESS — SPEC-244D Session 2/3 done (types+services+components+API routes, reports pending) | 2026-03-31 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-244-multi-buyer-co-ownership.md) |
 | **ADR-244** | Role Management Admin Console | ✅ IMPLEMENTED (Phase A + Phase B) | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
 | **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ ✅ PHASE_C_COMPLETE — Scattered code eliminated. Route helpers centralized. N+1 batch resolved. | 2026-03-19 | Backend Systems / Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
 | **ADR-246** | Καθολική Κεντρικοποίηση Firestore→API Mappers | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
