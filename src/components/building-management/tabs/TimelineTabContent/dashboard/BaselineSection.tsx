@@ -114,6 +114,7 @@ export function BaselineSection({ baseline, loading }: BaselineSectionProps) {
   return (
     <ReportSection
       title={t(`${tBase}.title`)}
+      tooltip={t('tabs.timeline.dashboard.tooltips.baselineTitle')}
       id="schedule-baselines"
     >
       {/* Header: Save button */}

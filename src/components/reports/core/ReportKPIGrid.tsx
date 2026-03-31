@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { cn } from '@/lib/utils';
 import { ReportSparkline } from './ReportSparkline';
 import { ReportTrafficLight, type RAGStatus } from './ReportTrafficLight';
@@ -34,6 +35,8 @@ export interface ReportKPI {
   value: string | number;
   /** Optional description */
   description?: string;
+  /** Tooltip explanation shown via info icon next to the title */
+  tooltip?: string;
   /** Icon component */
   icon: React.ElementType;
   /** Color accent */
@@ -131,7 +134,7 @@ function KPICard({
   if (kpi.loading) {
     return (
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-2">
           <div className="space-y-3">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-8 w-32" />
@@ -172,7 +175,7 @@ function KPICard({
         'aria-label': `${kpi.title}: ${kpi.value}${kpi.description ? `. ${kpi.description}` : ''}`,
       })}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-2">
         <article className="flex flex-col gap-2">
           {/* Header: Icon + Title + Status */}
           <header className="flex items-center justify-between">
@@ -183,6 +186,7 @@ function KPICard({
               <span className={cn('text-sm font-medium', colors.text.secondary)}>
                 {kpi.title}
               </span>
+              {kpi.tooltip && <InfoTooltip content={kpi.tooltip} side="bottom" />}
             </div>
             {kpi.status && <ReportTrafficLight status={kpi.status} size="sm" />}
           </header>
@@ -240,7 +244,7 @@ export function ReportKPIGrid({
   return (
     <section
       className={cn(
-        'grid gap-4',
+        'grid gap-2',
         columns === 4 && 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
         columns === 3 && 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
         columns === 2 && 'grid-cols-1 sm:grid-cols-2',

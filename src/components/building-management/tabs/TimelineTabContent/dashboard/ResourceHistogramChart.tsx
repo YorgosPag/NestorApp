@@ -101,7 +101,7 @@ export function ResourceHistogramChart({
 
   if (!loading && data.length === 0) {
     return (
-      <ReportSection title={t(`${tBase}.title`)} id="resource-histogram">
+      <ReportSection title={t(`${tBase}.title`)} tooltip={t('tabs.timeline.dashboard.tooltips.resourceHistogramTitle')} id="resource-histogram">
         <ReportEmptyState
           title={t(`${tBase}.empty`)}
           description={t(`${tBase}.emptyDesc`)}
@@ -111,7 +111,7 @@ export function ResourceHistogramChart({
   }
 
   return (
-    <ReportSection title={t(`${tBase}.title`)} id="resource-histogram">
+    <ReportSection title={t(`${tBase}.title`)} tooltip={t('tabs.timeline.dashboard.tooltips.resourceHistogramTitle')} id="resource-histogram">
       <figure
         role="img"
         aria-label={t(`${tBase}.ariaLabel`)}

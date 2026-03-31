@@ -68,7 +68,7 @@ export function ResourceUtilizationKPIs({ utilization, loading }: ResourceUtiliz
   ];
 
   return (
-    <ReportSection title={t(`${tBase}.title`)} id="resource-utilization">
+    <ReportSection title={t(`${tBase}.title`)} tooltip={t('tabs.timeline.dashboard.tooltips.resourceUtilizationTitle')} id="resource-utilization">
       <ReportKPIGrid kpis={kpis} />
     </ReportSection>
   );

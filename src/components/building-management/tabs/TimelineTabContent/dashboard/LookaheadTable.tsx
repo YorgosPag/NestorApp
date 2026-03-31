@@ -58,6 +58,7 @@ export function LookaheadTable({
   return (
     <ReportSection
       title={t('tabs.timeline.dashboard.lookahead.title')}
+      tooltip={t('tabs.timeline.dashboard.tooltips.lookaheadTitle')}
       id="schedule-lookahead"
     >
       {/* Window toggle */}

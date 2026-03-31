@@ -105,6 +105,7 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
     return (
       <ReportSection
         title={t('tabs.timeline.dashboard.delayBreakdown.title')}
+        tooltip={t('tabs.timeline.dashboard.tooltips.delayBreakdownTitle')}
         id="schedule-delay-breakdown"
       >
         <ReportEmptyState
@@ -120,6 +121,7 @@ export function DelayBreakdownChart({ data, loading }: DelayBreakdownChartProps)
   return (
     <ReportSection
       title={t('tabs.timeline.dashboard.delayBreakdown.title')}
+      tooltip={t('tabs.timeline.dashboard.tooltips.delayBreakdownTitle')}
       id="schedule-delay-breakdown"
     >
       <figure

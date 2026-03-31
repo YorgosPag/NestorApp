@@ -13,6 +13,7 @@ import { Route, AlertTriangle } from 'lucide-react';
 import { ReportSection } from '@/components/reports/core/ReportSection';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -130,7 +131,10 @@ export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSect
 
   if (loading) {
     return (
-      <ReportSection title={t('tabs.timeline.dashboard.criticalPath.title')}>
+      <ReportSection
+        title={t('tabs.timeline.dashboard.criticalPath.title')}
+        tooltip={t('tabs.timeline.dashboard.tooltips.criticalPathTitle')}
+      >
         <Skeleton className="h-48 w-full" />
       </ReportSection>
     );
@@ -138,7 +142,10 @@ export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSect
 
   if (!cpmResult || !cpmResult.isValid) {
     return (
-      <ReportSection title={t('tabs.timeline.dashboard.criticalPath.title')}>
+      <ReportSection
+        title={t('tabs.timeline.dashboard.criticalPath.title')}
+        tooltip={t('tabs.timeline.dashboard.tooltips.criticalPathTitle')}
+      >
         <ReportEmptyState
           title={t('tabs.timeline.dashboard.criticalPath.empty')}
         />
@@ -157,6 +164,7 @@ export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSect
     <ReportSection
       title={t('tabs.timeline.dashboard.criticalPath.title')}
       description={t('tabs.timeline.dashboard.criticalPath.description')}
+      tooltip={t('tabs.timeline.dashboard.tooltips.criticalPathTitle')}
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -172,22 +180,40 @@ export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSect
                 {t('tabs.timeline.dashboard.criticalPath.colPhase')}
               </th>
               <th scope="col" className="text-right py-2 px-2 font-medium">
-                {t('tabs.timeline.dashboard.criticalPath.colDuration')}
+                <span className="inline-flex items-center gap-1">
+                  {t('tabs.timeline.dashboard.criticalPath.colDuration')}
+                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.duration')} side="bottom" />
+                </span>
               </th>
               <th scope="col" className="text-right py-2 px-2 font-medium hidden md:table-cell">
-                {t('tabs.timeline.dashboard.criticalPath.colES')}
+                <span className="inline-flex items-center gap-1 justify-end">
+                  {t('tabs.timeline.dashboard.criticalPath.colES')}
+                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.es')} side="bottom" />
+                </span>
               </th>
               <th scope="col" className="text-right py-2 px-2 font-medium hidden md:table-cell">
-                {t('tabs.timeline.dashboard.criticalPath.colEF')}
+                <span className="inline-flex items-center gap-1 justify-end">
+                  {t('tabs.timeline.dashboard.criticalPath.colEF')}
+                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.ef')} side="bottom" />
+                </span>
               </th>
               <th scope="col" className="text-right py-2 px-2 font-medium hidden lg:table-cell">
-                {t('tabs.timeline.dashboard.criticalPath.colLS')}
+                <span className="inline-flex items-center gap-1 justify-end">
+                  {t('tabs.timeline.dashboard.criticalPath.colLS')}
+                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.ls')} side="bottom" />
+                </span>
               </th>
               <th scope="col" className="text-right py-2 px-2 font-medium hidden lg:table-cell">
-                {t('tabs.timeline.dashboard.criticalPath.colLF')}
+                <span className="inline-flex items-center gap-1 justify-end">
+                  {t('tabs.timeline.dashboard.criticalPath.colLF')}
+                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.lf')} side="bottom" />
+                </span>
               </th>
               <th scope="col" className="text-right py-2 px-2 font-medium">
-                {t('tabs.timeline.dashboard.criticalPath.colFloat')}
+                <span className="inline-flex items-center gap-1 justify-end">
+                  {t('tabs.timeline.dashboard.criticalPath.colFloat')}
+                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.float')} side="bottom" />
+                </span>
               </th>
             </tr>
           </thead>

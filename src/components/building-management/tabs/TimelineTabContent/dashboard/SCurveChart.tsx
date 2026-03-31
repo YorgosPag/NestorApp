@@ -40,9 +40,12 @@ interface SCurveTooltipProps {
   active?: boolean;
   payload?: TooltipPayloadItem[];
   label?: string;
+  labelMap: Record<string, string>;
+  svLabel: string;
+  cvLabel: string;
 }
 
-function SCurveTooltip({ active, payload, label }: SCurveTooltipProps) {
+function SCurveTooltip({ active, payload, label, labelMap, svLabel, cvLabel }: SCurveTooltipProps) {
   if (!active || !payload?.length) return null;
 
   const pv = payload.find(p => p.name === 'PV')?.value ?? 0;
@@ -56,15 +59,21 @@ function SCurveTooltip({ active, payload, label }: SCurveTooltipProps) {
       <p className="font-medium mb-2">{label ? formatDateShort(label) : ''}</p>
       {payload.map(entry => (
         <p key={entry.name} style={{ color: entry.color }}>
-          {entry.name}: {formatCurrency(entry.value)}
+          <span className="font-medium">{entry.name}</span>
+          <span className="text-muted-foreground text-xs ml-1">{labelMap[entry.name] ?? ''}</span>
+          : {formatCurrency(entry.value)}
         </p>
       ))}
       <hr className="my-1.5 border-border" />
       <p className={sv >= 0 ? getStatusColor('available', 'text') : getStatusColor('error', 'text')}>
-        SV: {sv >= 0 ? '+' : ''}{formatCurrency(sv)}
+        <span className="font-medium">SV</span>
+        <span className="text-muted-foreground text-xs ml-1">{svLabel}</span>
+        : {sv >= 0 ? '+' : ''}{formatCurrency(sv)}
       </p>
       <p className={cv >= 0 ? getStatusColor('available', 'text') : getStatusColor('error', 'text')}>
-        CV: {cv >= 0 ? '+' : ''}{formatCurrency(cv)}
+        <span className="font-medium">CV</span>
+        <span className="text-muted-foreground text-xs ml-1">{cvLabel}</span>
+        : {cv >= 0 ? '+' : ''}{formatCurrency(cv)}
       </p>
     </div>
   );
@@ -83,6 +92,13 @@ interface SCurveChartProps {
 
 export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
   const { t } = useTranslation('building');
+  const tt = (key: string) => t(`tabs.timeline.dashboard.tooltips.${key}`);
+
+  const sCurveLabelMap: Record<string, string> = {
+    PV: tt('pvShort'),
+    EV: tt('evShort'),
+    AC: tt('acShort'),
+  };
 
   const todayStr = useMemo(() => {
     const d = new Date();
@@ -95,6 +111,7 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
     return (
       <ReportSection
         title={t('tabs.timeline.dashboard.sCurve.title')}
+        tooltip={t('tabs.timeline.dashboard.tooltips.sCurveTitle')}
         id="schedule-scurve"
       >
         <ReportEmptyState
@@ -108,6 +125,7 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
   return (
     <ReportSection
       title={t('tabs.timeline.dashboard.sCurve.title')}
+      tooltip={t('tabs.timeline.dashboard.tooltips.sCurveTitle')}
       id="schedule-scurve"
     >
       <figure
@@ -128,7 +146,7 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
               className="text-xs"
               width={80}
             />
-            <Tooltip content={<SCurveTooltip />} />
+            <Tooltip content={<SCurveTooltip labelMap={sCurveLabelMap} svLabel={tt('svShort')} cvLabel={tt('cvShort')} />} />
             <Legend />
 
             {/* Today marker */}

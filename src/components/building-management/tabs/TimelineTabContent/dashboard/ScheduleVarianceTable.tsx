@@ -89,6 +89,7 @@ export function ScheduleVarianceTable({ rows, loading, baselineData, onClearBase
     return (
       <ReportSection
         title={t('tabs.timeline.dashboard.variance.title')}
+        tooltip={t('tabs.timeline.dashboard.tooltips.varianceTitle')}
         id="schedule-variance"
       >
         <ReportEmptyState
@@ -101,6 +102,7 @@ export function ScheduleVarianceTable({ rows, loading, baselineData, onClearBase
   return (
     <ReportSection
       title={t('tabs.timeline.dashboard.variance.title')}
+      tooltip={t('tabs.timeline.dashboard.tooltips.varianceTitle')}
       id="schedule-variance"
     >
       {/* Baseline comparison badge */}

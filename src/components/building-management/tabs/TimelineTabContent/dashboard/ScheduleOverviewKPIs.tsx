@@ -69,6 +69,8 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
     const progressDelta = kpis.overallProgress - kpis.expectedProgress;
     const progressSign = progressDelta >= 0 ? '+' : '';
 
+    const tt = (key: string) => t(`tabs.timeline.dashboard.tooltips.${key}`);
+
     return [
       {
         title: t('tabs.timeline.dashboard.kpis.overallProgress'),
@@ -80,6 +82,7 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
           value: progressDelta,
           label: `${progressSign}${progressDelta.toFixed(1)}% ${t('tabs.timeline.dashboard.kpis.vsPlan')}`,
         },
+        tooltip: tt('overallProgress'),
         loading,
       },
       {
@@ -89,6 +92,7 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
         icon: TrendingUp,
         color: kpis.spi >= 0.95 ? 'green' : kpis.spi >= 0.85 ? 'orange' : 'red',
         status: trafficToRAG(getTrafficLight(kpis.spi)),
+        tooltip: tt('spi'),
         loading,
       },
       {
@@ -98,6 +102,7 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
         icon: CircleDollarSign,
         color: kpis.cpi >= 0.95 ? 'green' : kpis.cpi >= 0.85 ? 'orange' : 'red',
         status: trafficToRAG(getTrafficLight(kpis.cpi)),
+        tooltip: tt('cpi'),
         loading,
       },
       {
@@ -106,6 +111,7 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
         icon: CalendarDays,
         color: 'orange',
         status: kpis.daysRemaining <= 0 ? 'green' : kpis.daysRemaining <= 7 ? 'amber' : 'gray',
+        tooltip: tt('daysRemaining'),
         loading,
       },
       {
@@ -114,6 +120,7 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
         icon: CheckCircle2,
         color: 'green',
         status: phasesRAG(kpis.phasesOnTrack, kpis.totalPhases),
+        tooltip: tt('phasesOnTrack'),
         loading,
       },
       {
@@ -123,6 +130,7 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
         icon: AlertTriangle,
         color: kpis.delayedTasks === 0 ? 'green' : 'red',
         status: delayedRAG(kpis.delayedTasks),
+        tooltip: tt('delayedTasks'),
         loading,
       },
       {
@@ -133,6 +141,7 @@ export function ScheduleOverviewKPIs({ kpis, loading }: ScheduleOverviewKPIsProp
         icon: Route,
         color: 'orange',
         status: 'gray' as RAGStatus,
+        tooltip: tt('criticalPathLength'),
         loading,
       },
     ];

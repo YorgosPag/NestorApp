@@ -17,6 +17,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Card, CardContent } from '@/components/ui/card';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { EnterpriseErrorBoundary as ErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,8 @@ export interface ReportSectionProps {
   className?: string;
   /** Anchor ID for deep linking */
   id?: string;
+  /** Info tooltip shown next to the section title */
+  tooltip?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,6 +56,7 @@ export function ReportSection({
   children,
   className,
   id,
+  tooltip,
 }: ReportSectionProps) {
   const { t } = useTranslation('reports');
   const colors = useSemanticColors();
@@ -64,12 +68,15 @@ export function ReportSection({
   const headerContent = (
     <header className="flex items-center justify-between">
       <div>
-        <h3
-          id={sectionId}
-          className={cn(typography.heading.h4, colors.text.primary)}
-        >
-          {title}
-        </h3>
+        <div className="flex items-center gap-1.5">
+          <h3
+            id={sectionId}
+            className={cn(typography.heading.h4, colors.text.primary)}
+          >
+            {title}
+          </h3>
+          {tooltip && <InfoTooltip content={tooltip} side="bottom" />}
+        </div>
         {description && (
           <p className={cn('mt-0.5', typography.body.sm, colors.text.muted)}>
             {description}
@@ -90,14 +97,14 @@ export function ReportSection({
 
   const content = (
     <ErrorBoundary>
-      <div className="pt-4">{children}</div>
+      <div className="pt-2">{children}</div>
     </ErrorBoundary>
   );
 
   if (!collapsible) {
     return (
-      <Card className={cn(className)}>
-        <CardContent className="p-4 sm:p-6" role="region" aria-labelledby={sectionId}>
+      <Card className={cn('overflow-visible', className)}>
+        <CardContent className="p-2" role="region" aria-labelledby={sectionId}>
           {headerContent}
           {content}
         </CardContent>
@@ -107,9 +114,9 @@ export function ReportSection({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
-      <Card className={cn(className)}>
+      <Card className={cn('overflow-visible', className)}>
         <section aria-labelledby={sectionId}>
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-2">
             <CollapsibleTrigger
               className="w-full cursor-pointer"
               aria-label={isOpen ? t('section.collapse') : t('section.expand')}
