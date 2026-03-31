@@ -150,7 +150,7 @@ Common Greek terms mapping:
 - "υπό κατασκευή" → operationalStatus = "under-construction"
 - "τετραγωνικά/τ.μ." → areas.gross
 - "τιμή πώλησης" → commercial.finalPrice
-- "αγοραστής" → commercial.buyerName
+- "αγοραστής" → commercial.ownerContactIds (array-contains) / owners[]
 - "ενεργειακή κλάση" → energy.class
 - "κτήριο/πολυκατοικία" → buildings domain
 - "διαμέρισμα/μονάδα" → units domain

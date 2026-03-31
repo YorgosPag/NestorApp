@@ -40,9 +40,9 @@ export class ClientService {
    * Check if a contact has active purchased units, parking spots, or storage units.
    *
    * Queries 3 collections in parallel:
-   * - units (buyerContactId)
-   * - parking_spots (buyerContactId)
-   * - storage_units (buyerContactId)
+   * - units (ownerContactIds array-contains)
+   * - parking_spots (ownerContactIds array-contains)
+   * - storage_units (ownerContactIds array-contains)
    *
    * @param contactId - The contact's Firestore document ID
    * @returns Object indicating which collection types have active records
@@ -53,21 +53,21 @@ export class ClientService {
         getDocs(
           query(
             collection(db, COLLECTIONS.UNITS),
-            where('commercial.buyerContactId', '==', contactId),
+            where('commercial.ownerContactIds', 'array-contains', contactId),
             limit(1)
           )
         ),
         getDocs(
           query(
             collection(db, COLLECTIONS.PARKING_SPACES),
-            where('commercial.buyerContactId', '==', contactId),
+            where('commercial.ownerContactIds', 'array-contains', contactId),
             limit(1)
           )
         ),
         getDocs(
           query(
             collection(db, COLLECTIONS.STORAGE),
-            where('commercial.buyerContactId', '==', contactId),
+            where('commercial.ownerContactIds', 'array-contains', contactId),
             limit(1)
           )
         ),

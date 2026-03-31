@@ -9,6 +9,7 @@
  */
 
 import type { Installment } from '@/types/payment-plan';
+import { formatOwnerNames } from '@/lib/ownership/owner-utils';
 import type {
   UnitDoc,
   BOQItemDoc,
@@ -110,10 +111,10 @@ export function buildTopBuyers(
   const buyers: Record<string, { value: number; count: number }> = {};
   for (const u of units) {
     if (u.commercialStatus !== 'sold' || !u.commercial?.finalPrice) continue;
-    const buyerName = u.commercial.buyerName ?? 'unknown';
-    if (!buyers[buyerName]) buyers[buyerName] = { value: 0, count: 0 };
-    buyers[buyerName].value += u.commercial.finalPrice;
-    buyers[buyerName].count += 1;
+    const ownerNames = formatOwnerNames(u.commercial?.owners ?? []) ?? 'unknown';
+    if (!buyers[ownerNames]) buyers[ownerNames] = { value: 0, count: 0 };
+    buyers[ownerNames].value += u.commercial.finalPrice;
+    buyers[ownerNames].count += 1;
   }
   return Object.entries(buyers)
     .map(([name, b]) => ({

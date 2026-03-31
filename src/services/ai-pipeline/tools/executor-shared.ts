@@ -379,8 +379,8 @@ export function flattenNestedFields(data: Record<string, unknown>): Record<strin
   if (commercial && typeof commercial === 'object') {
     if (commercial.askingPrice != null) result._askingPrice = commercial.askingPrice;
     if (commercial.finalPrice != null) result._finalPrice = commercial.finalPrice;
-    if (commercial.buyerName != null) result._buyerName = commercial.buyerName;
-    if (commercial.buyerContactId != null) result._buyerContactId = commercial.buyerContactId;
+    if (commercial.owners != null) result._owners = commercial.owners;
+    if (commercial.ownerContactIds != null) result._ownerContactIds = commercial.ownerContactIds;
     if (commercial.reservationDate != null) result._reservationDate = commercial.reservationDate;
     if (commercial.saleDate != null) result._saleDate = commercial.saleDate;
 

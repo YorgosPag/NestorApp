@@ -370,7 +370,7 @@ async function checkSingleDependency(
 }
 
 /**
- * Safely read a nested field path (e.g. 'commercial.buyerContactId')
+ * Safely read a nested field path (e.g. 'commercial.ownerContactIds')
  */
 function getNestedField(data: Record<string, unknown> | undefined, path: string): unknown {
   if (!data) return undefined;

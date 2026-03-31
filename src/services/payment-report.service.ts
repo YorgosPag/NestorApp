@@ -12,6 +12,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { formatOwnerNames } from '@/lib/ownership/owner-utils';
 import type { PaymentReportData, PaymentReportRow } from '@/services/payment-export/types';
 import type { PaymentSummary } from '@/types/payment-plan';
 
@@ -29,7 +30,7 @@ interface UnitDoc {
   buildingName?: string;
   project?: string;
   commercial?: {
-    buyerName?: string | null;
+    owners?: ReadonlyArray<{ contactId: string; name: string; ownershipPct: number; role: string; paymentPlanId: string | null }> | null;
     paymentSummary?: PaymentSummary | null;
   } | null;
 }
@@ -89,7 +90,7 @@ export class PaymentReportService {
         unitId: unit.id,
         unitLabel: unit.label ?? unit.name ?? unit.id,
         buildingName: unit.buildingName ?? unit.buildingId ?? '-',
-        buyerName: unit.commercial?.buyerName ?? '-',
+        buyerName: formatOwnerNames(unit.commercial?.owners ?? []) ?? '-',
         planStatus: summary.planStatus,
         totalAmount: summary.totalAmount,
         paidAmount: summary.paidAmount,
@@ -172,7 +173,7 @@ export class PaymentReportService {
         unitId: doc.id,
         unitLabel: data.label ?? data.name ?? doc.id,
         projectId: data.project ?? '',
-        buyerName: data.commercial?.buyerName ?? '-',
+        buyerName: formatOwnerNames(data.commercial?.owners ?? []) ?? '-',
         overdueCount: summary?.overdueInstallments ?? 0,
         remainingAmount: summary?.remainingAmount ?? 0,
       };

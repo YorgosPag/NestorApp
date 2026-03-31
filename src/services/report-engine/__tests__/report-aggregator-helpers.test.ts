@@ -25,6 +25,11 @@ import {
 
 // ─── Test Data Factories ───────────────────────────────────────────────
 
+/** Helper: create a minimal owners array from a display name */
+function makeOwners(name: string) {
+  return [{ contactId: `c_${name}`, name, ownershipPct: 100, role: 'buyer' as const, paymentPlanId: null }];
+}
+
 function makeUnitDoc(overrides: Partial<UnitDoc> = {}): UnitDoc {
   return {
     project: 'proj_1',
@@ -32,7 +37,7 @@ function makeUnitDoc(overrides: Partial<UnitDoc> = {}): UnitDoc {
     commercialStatus: 'sold',
     commercial: {
       finalPrice: 100000,
-      buyerName: 'buyer_1',
+      owners: makeOwners('buyer_1'),
       paymentSummary: null,
     },
     areas: { gross: 80 },
@@ -89,9 +94,9 @@ describe('buildRevenueByProject', () => {
 
   it('sums revenue from sold units by project name', () => {
     const units = [
-      makeUnitDoc({ project: 'proj_1', commercial: { finalPrice: 100000, buyerName: 'b1', paymentSummary: null } }),
-      makeUnitDoc({ project: 'proj_1', commercial: { finalPrice: 200000, buyerName: 'b2', paymentSummary: null } }),
-      makeUnitDoc({ project: 'proj_2', commercial: { finalPrice: 150000, buyerName: 'b3', paymentSummary: null } }),
+      makeUnitDoc({ project: 'proj_1', commercial: { finalPrice: 100000, owners: makeOwners('b1'), paymentSummary: null } }),
+      makeUnitDoc({ project: 'proj_1', commercial: { finalPrice: 200000, owners: makeOwners('b2'), paymentSummary: null } }),
+      makeUnitDoc({ project: 'proj_2', commercial: { finalPrice: 150000, owners: makeOwners('b3'), paymentSummary: null } }),
     ];
     const result = buildRevenueByProject(units, projectNames);
     expect(result['Sunrise Tower']).toBe(300000);
@@ -108,7 +113,7 @@ describe('buildRevenueByProject', () => {
 
   it('skips units without finalPrice', () => {
     const units = [
-      makeUnitDoc({ commercial: { finalPrice: 0, buyerName: 'b1', paymentSummary: null } }),
+      makeUnitDoc({ commercial: { finalPrice: 0, owners: makeOwners('b1'), paymentSummary: null } }),
     ];
     expect(buildRevenueByProject(units, projectNames)).toEqual({});
   });
@@ -127,8 +132,8 @@ describe('buildPricePerSqm', () => {
 
   it('calculates average price per m² by building', () => {
     const units = [
-      makeUnitDoc({ buildingId: 'bld_1', commercial: { finalPrice: 80000, buyerName: 'b', paymentSummary: null }, areas: { gross: 80 } }),
-      makeUnitDoc({ buildingId: 'bld_1', commercial: { finalPrice: 120000, buyerName: 'b', paymentSummary: null }, areas: { gross: 120 } }),
+      makeUnitDoc({ buildingId: 'bld_1', commercial: { finalPrice: 80000, owners: makeOwners('b'), paymentSummary: null }, areas: { gross: 80 } }),
+      makeUnitDoc({ buildingId: 'bld_1', commercial: { finalPrice: 120000, owners: makeOwners('b'), paymentSummary: null }, areas: { gross: 120 } }),
     ];
     const result = buildPricePerSqm(units, buildingNames);
     // Total: 200000 / 200 = 1000 €/m²
@@ -191,7 +196,7 @@ describe('buildTopBuyers', () => {
   it('returns top 10 buyers sorted by totalValue', () => {
     const units = Array.from({ length: 12 }, (_, i) =>
       makeUnitDoc({
-        commercial: { finalPrice: (i + 1) * 10000, buyerName: `buyer_${i}`, paymentSummary: null },
+        commercial: { finalPrice: (i + 1) * 10000, owners: makeOwners(`buyer_${i}`), paymentSummary: null },
       }),
     );
     const contacts = units.map((_, i) => ({ id: `buyer_${i}`, displayName: `Buyer ${i}` }));
@@ -202,8 +207,8 @@ describe('buildTopBuyers', () => {
 
   it('aggregates multiple units per buyer', () => {
     const units = [
-      makeUnitDoc({ commercial: { finalPrice: 50000, buyerName: 'buyer_A', paymentSummary: null } }),
-      makeUnitDoc({ commercial: { finalPrice: 30000, buyerName: 'buyer_A', paymentSummary: null } }),
+      makeUnitDoc({ commercial: { finalPrice: 50000, owners: makeOwners('buyer_A'), paymentSummary: null } }),
+      makeUnitDoc({ commercial: { finalPrice: 30000, owners: makeOwners('buyer_A'), paymentSummary: null } }),
     ];
     const contacts = [{ id: 'buyer_A', displayName: 'Αλέξανδρος' }];
     const result = buildTopBuyers(units, contacts);
@@ -261,14 +266,14 @@ describe('buildOverdueInstallments', () => {
       makeUnitDoc({
         commercial: {
           finalPrice: 100000,
-          buyerName: 'b1',
+          owners: makeOwners('b1'),
           paymentSummary: { overdueInstallments: 2, remainingAmount: 25000 },
         },
       }),
       makeUnitDoc({
         commercial: {
           finalPrice: 50000,
-          buyerName: 'b2',
+          owners: makeOwners('b2'),
           paymentSummary: { overdueInstallments: 0, remainingAmount: 0 },
         },
       }),
@@ -285,7 +290,7 @@ describe('buildOverdueInstallments', () => {
       makeUnitDoc({
         commercial: {
           finalPrice: 100000,
-          buyerName: 'b1',
+          owners: makeOwners('b1'),
           paymentSummary: { overdueInstallments: 0, remainingAmount: 0 },
         },
       }),
@@ -296,7 +301,7 @@ describe('buildOverdueInstallments', () => {
   it('returns empty for units without payment summary', () => {
     const units = [
       makeUnitDoc({
-        commercial: { finalPrice: 100000, buyerName: 'b1', paymentSummary: null },
+        commercial: { finalPrice: 100000, owners: makeOwners('b1'), paymentSummary: null },
       }),
     ];
     expect(buildOverdueInstallments(units)).toEqual([]);
@@ -310,7 +315,7 @@ describe('buildOverdueInstallments', () => {
 describe('Edge cases — buildRevenueByProject', () => {
   it('uses project ID as fallback when not in names map', () => {
     const units = [
-      makeUnitDoc({ project: 'unknown_proj', commercial: { finalPrice: 50000, buyerName: 'b', paymentSummary: null } }),
+      makeUnitDoc({ project: 'unknown_proj', commercial: { finalPrice: 50000, owners: makeOwners('b'), paymentSummary: null } }),
     ];
     const result = buildRevenueByProject(units, {});
     expect(result['unknown_proj']).toBe(50000);
@@ -320,8 +325,8 @@ describe('Edge cases — buildRevenueByProject', () => {
 describe('Edge cases — buildPricePerSqm', () => {
   it('handles multiple buildings correctly', () => {
     const units = [
-      makeUnitDoc({ buildingId: 'bld_1', commercial: { finalPrice: 100000, buyerName: 'b', paymentSummary: null }, areas: { gross: 100 } }),
-      makeUnitDoc({ buildingId: 'bld_2', commercial: { finalPrice: 200000, buyerName: 'b', paymentSummary: null }, areas: { gross: 100 } }),
+      makeUnitDoc({ buildingId: 'bld_1', commercial: { finalPrice: 100000, owners: makeOwners('b'), paymentSummary: null }, areas: { gross: 100 } }),
+      makeUnitDoc({ buildingId: 'bld_2', commercial: { finalPrice: 200000, owners: makeOwners('b'), paymentSummary: null }, areas: { gross: 100 } }),
     ];
     const names = { bld_1: 'A', bld_2: 'B' };
     const result = buildPricePerSqm(units, names);
@@ -334,11 +339,11 @@ describe('Edge cases — buildPricePerSqm', () => {
 });
 
 describe('Edge cases — buildTopBuyers', () => {
-  it('handles units with missing buyerName', () => {
+  it('handles units with missing owners', () => {
     const units = [
-      makeUnitDoc({ commercial: { finalPrice: 50000, buyerName: undefined as unknown as string, paymentSummary: null } }),
+      makeUnitDoc({ commercial: { finalPrice: 50000, owners: undefined, paymentSummary: null } }),
     ];
-    // Should not crash
+    // Should not crash — formatOwnerNames([]) returns null, fallback to 'unknown'
     const result = buildTopBuyers(units, []);
     expect(result.length).toBeLessThanOrEqual(10);
   });

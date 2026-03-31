@@ -231,7 +231,7 @@ export interface UnitDoc {
   commercial?: {
     askingPrice?: number;
     finalPrice?: number;
-    buyerName?: string;
+    owners?: ReadonlyArray<{ contactId: string; name: string; ownershipPct: number; role: string; paymentPlanId: string | null }>;
     legalPhase?: string;
     paymentSummary?: {
       totalAmount: number;

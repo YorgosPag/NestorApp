@@ -46,7 +46,7 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 
 Ερώτηση: "Πόσα χρωστάει ο X"
 → firestore_query("units") χωρίς nested filters
-→ Κοίτα κάθε unit: βρες αυτό με _buyerName == "X"
+→ Κοίτα κάθε unit: βρες αυτό με _owners που περιέχει name == "X"
 → Διάβασε _paymentRemaining
 
 Ερώτηση: "Τιμή ακινήτου Y"
@@ -57,12 +57,12 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 → firestore_query("units") ΧΩΡΙΣ filters
 → Κοίτα ΚΑΘΕ unit: αν _paymentPaid == 0 ΚΑΙ _paymentTotal > 0 → δεν έχει πληρώσει τίποτα
 → Κοίτα ΚΑΘΕ unit: αν _installmentsOverdue > 0 → έχει ληξιπρόθεσμες δόσεις
-→ Ο _buyerName δείχνει ποιος πελάτης χρωστάει
+→ Τα _owners δείχνουν ποιος πελάτης χρωστάει (array με name, contactId, ownershipPct)
 → ΔΕΝ υπάρχει collection "payments" ή "invoices" για δόσεις ακινήτων — ΟΛΑ είναι ΜΕΣΑ στα units
 
 Ερώτηση: "Στείλε email σε πελάτες με οφειλές + δημιούργησε task"
 → ΒΗΜΑ 1: firestore_query("units") → βρες units με _installmentsOverdue > 0
-→ ΒΗΜΑ 2: Για κάθε unit, πάρε _buyerContactId → firestore_get_document("contacts", _buyerContactId) → πάρε email
+→ ΒΗΜΑ 2: Για κάθε unit, πάρε _ownerContactIds → firestore_get_document("contacts", ownerContactId) → πάρε email
 → ΒΗΜΑ 3: send_email_to_contact για κάθε πελάτη
 → ΒΗΜΑ 4: firestore_write("tasks", create) για κάθε πελάτη με dueDate = σήμερα + 3 μέρες
 
@@ -75,7 +75,7 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - Παράδειγμα labels: "Κράτηση", "Θεμελίωση", "Σκελετός", "Τοιχοποιία", "Δάπεδα", "Κουφώματα", "Αποπεράτωση"
 
 ΣΗΜΑΝΤΙΚΟ: Τα nested πεδία επιστρέφονται FLAT (με prefix _):
-- _askingPrice, _finalPrice, _buyerName, _buyerContactId, _reservationDate, _saleDate
+- _askingPrice, _finalPrice, _owners (array), _ownerContactIds (array), _reservationDate, _saleDate
 - _paymentTotal, _paymentPaid, _paymentRemaining, _paymentPaidPct
 - _installmentsTotal, _installmentsPaid, _installmentsOverdue
 - _nextInstallmentAmount, _nextInstallmentDate
@@ -83,7 +83,7 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 Αν δεν βλέπεις αυτά τα πεδία, σημαίνει ότι δεν υπάρχουν δεδομένα (ΟΧΙ ότι δεν δουλεύει).
 
 Τα units documents περιέχουν ΜΕΣΑ ΤΟΥΣ:
-- commercial.askingPrice, .finalPrice, .buyerContactId, .buyerName, .reservationDate, .saleDate
+- commercial.askingPrice, .finalPrice, .owners (PropertyOwnerEntry[]), .ownerContactIds (string[]), .reservationDate, .saleDate
 - commercial.paymentSummary: .totalAmount, .paidAmount, .remainingAmount, .paidPercentage, .totalInstallments, .paidInstallments, .overdueInstallments, .nextInstallmentAmount, .nextInstallmentDate
 - areas: .gross, .net, .balcony, .terrace, .garden
 ΔΕΝ υπάρχει ξεχωριστό collection για πληρωμές/τιμές!
