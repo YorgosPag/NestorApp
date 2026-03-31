@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { ReportKPI } from '@/components/reports/core';
 import type { Project } from '@/types/project';
-import type { Property } from '@/types/property-viewer';
+import type { Unit } from '@/types/unit';
 import type { Opportunity } from '@/types/crm';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
@@ -165,7 +165,7 @@ function buildProjectHealth(projects: Project[]): ProjectHealthRow[] {
   });
 }
 
-function buildRevenueTrend(units: Property[]): RevenueTrendPoint[] {
+function buildRevenueTrend(units: Unit[]): RevenueTrendPoint[] {
   const currentYear = new Date().getFullYear();
   const monthLabels = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(currentYear, i, 1);
@@ -193,7 +193,7 @@ function buildRevenueTrend(units: Property[]): RevenueTrendPoint[] {
   }));
 }
 
-function buildTopOverdue(units: Property[]): OverdueItem[] {
+function buildTopOverdue(units: Unit[]): OverdueItem[] {
   // Simplified: units sold without sale date or recent sale
   const soldUnits = units.filter(
     u => (u.status === 'sold' || u.commercialStatus === 'sold') && u.price,

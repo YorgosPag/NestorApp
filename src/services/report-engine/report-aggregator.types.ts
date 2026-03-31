@@ -28,6 +28,7 @@ export interface ReportFilter {
 // ============================================================================
 
 export interface TopBuyerItem {
+  [key: string]: unknown;
   name: string;
   totalValue: number;
   unitCount: number;

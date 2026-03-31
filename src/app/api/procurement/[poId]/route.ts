@@ -43,7 +43,7 @@ const UpdatePOItemSchema = z.object({
   unit: z.string().min(1).max(20),
   unitPrice: z.number().min(0),
   total: z.number().min(0),
-  boqItemId: z.string().nullable().optional(),
+  boqItemId: z.string().nullable().default(null),
   categoryCode: z.string().min(1).max(20),
 });
 

@@ -51,15 +51,6 @@ export function ReportBuilder() {
   const [saveDialogMode, setSaveDialogMode] = useState<'save' | 'saveAs'>('save');
   const [showSavedList, setShowSavedList] = useState(false);
 
-  const handleExportBarClick = useCallback((format: BarExportFormat) => {
-    if (format === 'csv') return; // CSV deferred to Phase 4
-    if (builder.chartCrossFilter) {
-      setExportDialogOpen(true);
-    } else {
-      void handleExport(format as ExportFormat, 'none', 'all');
-    }
-  }, [builder.chartCrossFilter, handleExport]);
-
   const handleExport = useCallback(async (
     format: ExportFormat,
     watermark: WatermarkMode,
@@ -124,6 +115,15 @@ export function ReportBuilder() {
     }
   }, [builder, t]);
 
+  const handleExportBarClick = useCallback((format: BarExportFormat) => {
+    if (format === 'csv') return; // CSV deferred to Phase 4
+    if (builder.chartCrossFilter) {
+      setExportDialogOpen(true);
+    } else {
+      void handleExport(format as ExportFormat, 'none', 'all');
+    }
+  }, [builder.chartCrossFilter, handleExport]);
+
   // Saved Reports handlers
   const handleSaveClick = useCallback(() => {
     if (builder.activeSavedReport) {
@@ -186,7 +186,7 @@ export function ReportBuilder() {
         <aside
           className={cn(
             'flex items-center justify-between rounded-md border px-4 py-2',
-            colors.getStatusColor('warning', 'border'),
+            colors.border.warning,
             colors.bg.warning,
           )}
           role="status"

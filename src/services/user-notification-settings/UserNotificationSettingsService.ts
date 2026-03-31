@@ -415,6 +415,10 @@ class UserNotificationSettingsService {
           ...defaults.categories.security,
           ...((data.categories as Record<string, unknown>)?.security as Record<string, boolean>),
         },
+        procurement: {
+          ...defaults.categories.procurement,
+          ...((data.categories as Record<string, unknown>)?.procurement as Record<string, boolean>),
+        },
       },
       quietHours: {
         ...defaults.quietHours,

@@ -27,7 +27,7 @@ export const PCT_TOLERANCE = 0.01;
  * - All have contactId selected
  * - Percentages sum to 100% (single owner auto-valid)
  */
-export function isOwnersValid(owners: PropertyOwnerEntry[]): boolean {
+export function isOwnersValid(owners: readonly PropertyOwnerEntry[]): boolean {
   if (owners.length === 0) return false;
   if (owners.some(o => !o.contactId)) return false;
   if (owners.length === 1) return true;
@@ -40,7 +40,7 @@ export function isOwnersValid(owners: PropertyOwnerEntry[]): boolean {
  * UI-only — used by OwnersList validation indicator.
  * Does NOT check contactId selection (use isOwnersValid for full check).
  */
-export function isPercentageValid(owners: PropertyOwnerEntry[]): boolean {
+export function isPercentageValid(owners: readonly PropertyOwnerEntry[]): boolean {
   if (owners.length <= 1) return true;
   const total = owners.reduce((sum, o) => sum + o.ownershipPct, 0);
   return Math.abs(total - 100) < PCT_TOLERANCE;
@@ -56,7 +56,7 @@ export function isPercentageValid(owners: PropertyOwnerEntry[]): boolean {
  * Multiple: "Γιάννης Π. & Μαρία Κ."
  * Empty: null
  */
-export function formatOwnerNames(owners: PropertyOwnerEntry[]): string | null {
+export function formatOwnerNames(owners: readonly Pick<PropertyOwnerEntry, 'name'>[]): string | null {
   if (owners.length === 0) return null;
   return owners.map(o => o.name).join(' & ');
 }
@@ -68,7 +68,7 @@ export function formatOwnerNames(owners: PropertyOwnerEntry[]): string | null {
 /**
  * Get primary buyer contactId (first owner) for backward-compat `buyerContactId`.
  */
-export function getPrimaryBuyerContactId(owners: PropertyOwnerEntry[]): string | null {
+export function getPrimaryBuyerContactId(owners: readonly PropertyOwnerEntry[]): string | null {
   return owners[0]?.contactId ?? null;
 }
 
@@ -82,7 +82,7 @@ export function getPrimaryBuyerContactId(owners: PropertyOwnerEntry[]): string |
  *
  * Pattern: Same as `landownerContactIds` in Project type.
  */
-export function extractOwnerContactIds(owners: PropertyOwnerEntry[]): string[] {
+export function extractOwnerContactIds(owners: readonly PropertyOwnerEntry[]): string[] {
   return owners.map(o => o.contactId).filter(Boolean);
 }
 

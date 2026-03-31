@@ -7,8 +7,16 @@
  */
 
 import { useMemo } from 'react';
-import type { Property } from '@/types/property-viewer';
 import { useEntityStats, countBy, rate } from './useEntityStats';
+
+/** Minimal shape required by useUnitsStats — compatible with UnitStatsInput and Unit */
+interface UnitStatsInput {
+  area?: number;
+  price?: number;
+  status?: string;
+  type?: string;
+  unitCoverage?: { hasPhotos?: boolean; hasFloorplans?: boolean; hasDocuments?: boolean };
+}
 
 /**
  * Unit documentation coverage stats
@@ -40,12 +48,12 @@ export interface UnitsStats {
 const AVAILABLE_STATUSES = ['for-sale', 'for-rent'];
 const SOLD_STATUSES = ['sold', 'rented'];
 
-const getArea = (u: Property): number => u.area || 0;
-const getValue = (u: Property): number => u.price || 0;
-const getStatus = (u: Property): string => u.status || 'unknown';
-const getType = (u: Property): string => u.type || 'unknown';
+const getArea = (u: UnitStatsInput): number => u.area || 0;
+const getValue = (u: UnitStatsInput): number => u.price || 0;
+const getStatus = (u: UnitStatsInput): string => u.status || 'unknown';
+const getType = (u: UnitStatsInput): string => u.type || 'unknown';
 
-export function useUnitsStats(units: Property[]): UnitsStats {
+export function useUnitsStats(units: UnitStatsInput[]): UnitsStats {
   const base = useEntityStats(units, { getArea, getValue, getStatus, getType });
 
   const stats = useMemo<UnitsStats>(() => {

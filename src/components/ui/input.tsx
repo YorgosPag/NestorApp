@@ -14,7 +14,7 @@ import '@/lib/design-system';
 
 type InputSize = 'sm' | 'md' | 'lg';
 
-interface InputProps extends React.ComponentProps<"input"> {
+interface InputProps extends Omit<React.ComponentProps<"input">, 'size'> {
   /** Has icon on the left side - applies correct padding */
   hasLeftIcon?: boolean;
   /** Has icon on the right side - applies correct padding */

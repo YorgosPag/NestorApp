@@ -117,8 +117,9 @@ export const ListLoadingSkeleton = () => (
   </main>
 );
 
-/** Type for lazy-loaded component modules */
-type LazyComponentModule = { default: ComponentType<Record<string, unknown>> };
+/** Type for lazy-loaded component modules — permissive to accept named/default exports */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LazyComponentModule = { default: ComponentType<any> };
 
 // Utility function to create lazy routes with different loading states
 export function createLazyRoute(

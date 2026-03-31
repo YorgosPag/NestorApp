@@ -10,6 +10,7 @@ import type { RAGStatus } from '@/components/reports/core';
 // ---------------------------------------------------------------------------
 
 export interface ProjectHealthRow {
+  [key: string]: unknown;
   id: string;
   name: string;
   progress: number;
@@ -26,6 +27,7 @@ export interface ProjectHealthRow {
 // ---------------------------------------------------------------------------
 
 export interface OverdueItem {
+  [key: string]: unknown;
   unitId: string;
   unitName: string;
   projectName: string;

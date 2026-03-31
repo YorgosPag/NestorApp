@@ -78,8 +78,8 @@ interface UseAddressMapGeocodingReturn {
     addressId: string,
     addressIndex: number,
   ) => Promise<void>;
-  autoPanRafRef: React.RefObject<number | null>;
-  autoPanDeltaRef: React.RefObject<{ dx: number; dy: number }>;
+  autoPanRafRef: React.MutableRefObject<number | null>;
+  autoPanDeltaRef: React.MutableRefObject<{ dx: number; dy: number }>;
   stopAutoPan: () => void;
   tickAutoPan: () => void;
 }

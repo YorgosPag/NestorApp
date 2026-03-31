@@ -36,7 +36,6 @@ interface ProjectToolbarProps {
 
 export function ProjectToolbar({
   selectedItems = [],
-  _onSelectionChange,
   activeFilters = [],
   onFiltersChange,
   onNewProject,

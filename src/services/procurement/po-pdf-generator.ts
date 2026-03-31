@@ -323,8 +323,7 @@ function drawLineItems(
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (pdf as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 40;
+  return (pdf as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 40;
 }
 
 // ============================================================================

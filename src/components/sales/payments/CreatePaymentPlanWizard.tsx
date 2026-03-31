@@ -60,7 +60,7 @@ interface CreatePaymentPlanWizardProps {
   /** ADR-244: Create split plans (individual mode) */
   onCreateSplit?: (
     owners: PropertyOwnerEntry[],
-    baseInput: Omit<CreatePaymentPlanInput, 'unitId' | 'buyerContactId' | 'buyerName' | 'totalAmount' | 'installments'>,
+    baseInput: Omit<CreatePaymentPlanInput, 'unitId' | 'ownerContactId' | 'ownerName' | 'totalAmount' | 'installments'>,
     totalPrice: number,
     baseInstallments: CreateInstallmentInput[],
   ) => Promise<{ success: boolean; error?: string }>;

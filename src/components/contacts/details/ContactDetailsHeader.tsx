@@ -38,7 +38,6 @@ interface ContactDetailsHeaderProps {
 
 export function ContactDetailsHeader({
   contact,
-  _onEditContact,
   onDeleteContact,
   onContactUpdate,
   onNewContact,

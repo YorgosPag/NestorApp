@@ -43,8 +43,7 @@ export function BOQCostBreakdownChart({ data, loading }: BOQCostBreakdownChartPr
         data={data}
         config={config}
         height={320}
-        xKey="building"
-        bars={['estimated', 'actual']}
+        xAxisKey="building"
       />
     </ReportSection>
   );

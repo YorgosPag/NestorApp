@@ -155,9 +155,9 @@ export async function executeBuildingConnection(deps: BuildingConnectionDeps): P
 // ── Filtered buildings helper ──
 
 export function filterBuildings(
-  projectBuildings: NavigationBuilding[],
+  projectBuildings: Pick<NavigationBuilding, 'id' | 'name'>[],
   searchTerm: string
-): NavigationBuilding[] {
+): Pick<NavigationBuilding, 'id' | 'name'>[] {
   if (!searchTerm.trim()) return projectBuildings;
   const lower = searchTerm.toLowerCase();
   return projectBuildings.filter(b => b.name.toLowerCase().includes(lower));

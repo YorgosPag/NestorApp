@@ -10,6 +10,7 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { validateSocialUrl as enterpriseValidator } from '@/lib/social-platform-system/profile-service';
+import { type SocialPlatformType } from '@/lib/social-platform-system/platform-config';
 const logger = createModuleLogger('socialUrlGenerator');
 
 // ============================================================================
@@ -132,7 +133,7 @@ export function generateSocialUrl(platform: string, username: string): string {
 export function validateSocialUrl(url: string, platform?: SocialPlatform): boolean {
   // ✅ ENTERPRISE MIGRATION: Delegating to centralized social platform system
   // BACKWARDS COMPATIBLE: Same interface, enterprise implementation
-  return enterpriseValidator(url, platform as string | undefined);
+  return enterpriseValidator(url, platform as SocialPlatformType | undefined);
 }
 
 /**

@@ -97,7 +97,7 @@ export function ReportResults({
 
   // Error state
   if (error) {
-    return <ReportEmptyState type="error" message={error} />;
+    return <ReportEmptyState type="error" description={error} />;
   }
 
   // No results yet
@@ -107,7 +107,7 @@ export function ReportResults({
 
   // Empty results
   if (results && results.rows.length === 0 && !loading) {
-    return <ReportEmptyState type="noResults" />;
+    return <ReportEmptyState type="no-results" />;
   }
 
   const hasGrouping = !!groupingResult && !!filteredGroups && filteredGroups.length > 0;

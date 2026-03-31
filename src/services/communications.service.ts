@@ -21,7 +21,7 @@ import { normalizeToISO } from '@/lib/date-local';
 // ── Re-exports for backward compatibility ──────────
 // In 'use server' files, only async functions can be exported.
 // Wrap re-exports as async pass-through to satisfy Next.js constraint.
-type TriageResult<T = Record<string, never>> =
+type TriageResult<T = Record<string, unknown>> =
   | ({ ok: true } & T)
   | { ok: false; errorId: string; code: string };
 
@@ -54,7 +54,7 @@ const logger = createModuleLogger('COMMUNICATIONS_SERVICE');
 // ERROR HELPERS
 // ============================================================================
 
-type ActionErrorCode = 'invalid_context' | 'not_found' | 'tenant_mismatch' | 'unknown';
+type ActionErrorCode = string;
 
 function getErrorDetails(error: unknown): { message: string; stack?: string; cause?: unknown } {
   if (error instanceof Error) {

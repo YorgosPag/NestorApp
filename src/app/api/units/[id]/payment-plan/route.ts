@@ -37,8 +37,6 @@ const installmentSchema = z.object({
 });
 
 const createPaymentPlanSchema = z.object({
-  ownerContactId: z.string().min(1).max(200),
-  ownerName: z.string().min(1).max(500),
   buildingId: z.string().min(1).max(200),
   projectId: z.string().min(1).max(200),
   totalAmount: z.number().positive().max(100_000_000),
@@ -49,7 +47,7 @@ const createPaymentPlanSchema = z.object({
   loan: z.record(z.unknown()).optional(),
   loans: z.array(z.record(z.unknown())).optional(),
   notes: z.string().max(5000).optional(),
-  // ADR-244: Multi-owner support
+  // ADR-244: Multi-owner support — ownerContactId/ownerName nullable for joint plans
   planType: z.enum(['joint', 'individual']).optional(),
   planGroupId: z.string().max(128).optional(),
   ownerContactId: z.string().max(200).nullable().optional(),

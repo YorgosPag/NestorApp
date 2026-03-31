@@ -43,8 +43,7 @@ export function PhaseProgressChart({ data, loading }: PhaseProgressChartProps) {
         data={data}
         config={config}
         height={320}
-        xKey="building"
-        bars={['cpi', 'spi']}
+        xAxisKey="building"
       />
     </ReportSection>
   );

@@ -29,7 +29,7 @@ const SendEmailSchema = z.object({
 async function handlePost(
   request: NextRequest,
   segmentData?: { params: Promise<{ poId: string }> }
-): Promise<NextResponse> {
+) {
   const { poId } = await segmentData!.params;
 
   const handler = withAuth(

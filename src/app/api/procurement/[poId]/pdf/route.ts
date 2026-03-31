@@ -21,7 +21,7 @@ const logger = createModuleLogger('PO_PDF_API');
 async function handleGet(
   request: NextRequest,
   segmentData?: { params: Promise<{ poId: string }> }
-): Promise<NextResponse> {
+) {
   const { poId } = await segmentData!.params;
   const lang = (request.nextUrl.searchParams.get('lang') ?? 'el') as 'el' | 'en';
 

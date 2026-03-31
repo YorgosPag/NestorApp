@@ -27,7 +27,7 @@ const RevokeSchema = z.object({
 async function handlePost(
   request: NextRequest,
   segmentData?: { params: Promise<{ poId: string }> }
-): Promise<NextResponse> {
+) {
   const { poId } = await segmentData!.params;
 
   const handler = withAuth(
@@ -71,7 +71,7 @@ async function handlePost(
 async function handleDelete(
   request: NextRequest,
   segmentData?: { params: Promise<{ poId: string }> }
-): Promise<NextResponse> {
+) {
   await segmentData!.params; // consume params
 
   const handler = withAuth(

@@ -34,11 +34,11 @@ import { ReportEmptyState } from './ReportEmptyState';
 
 export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'stacked-bar';
 
-export interface ReportChartProps {
+export interface ReportChartProps<T extends object = Record<string, unknown>> {
   /** Chart visualization type */
   type: ChartType;
   /** Data array — each object = one data point */
-  data: Record<string, unknown>[];
+  data: T[];
   /** Chart config — defines series keys, labels, colors */
   config: ChartConfig;
   /** Height in px (default: 350) */
@@ -60,7 +60,7 @@ export interface ReportChartProps {
   /** Pie chart: data key for labels (default: 'name') */
   pieNameKey?: string;
   /** Click handler for chart elements */
-  onElementClick?: (data: Record<string, unknown>) => void;
+  onElementClick?: (data: T) => void;
   className?: string;
 }
 
@@ -201,7 +201,7 @@ function renderPie(
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReportChart({
+export function ReportChart<T extends object = Record<string, unknown>>({
   type,
   data,
   config,
@@ -216,7 +216,7 @@ export function ReportChart({
   pieNameKey = 'name',
   onElementClick,
   className,
-}: ReportChartProps) {
+}: ReportChartProps<T>) {
   const colors = useSemanticColors();
   const typography = useTypography();
 
@@ -227,8 +227,8 @@ export function ReportChart({
   const chart = (
     <ChartContainer config={config} className="w-full" style={{ height }}>
       {type === 'pie'
-        ? renderPie(data, config, pieDataKey, pieNameKey, showTooltip, showLegend, onElementClick)
-        : renderCartesian(type, data, config, xAxisKey, showGrid, showTooltip, showLegend, onElementClick)
+        ? renderPie(data as Record<string, unknown>[], config, pieDataKey, pieNameKey, showTooltip, showLegend, onElementClick as ((data: Record<string, unknown>) => void) | undefined)
+        : renderCartesian(type, data as Record<string, unknown>[], config, xAxisKey, showGrid, showTooltip, showLegend, onElementClick as ((data: Record<string, unknown>) => void) | undefined)
       }
     </ChartContainer>
   );

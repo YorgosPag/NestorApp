@@ -31,6 +31,7 @@ interface ModalItem {
   id: string;
   name: string;
   subtitle: string;
+  [key: string]: unknown;
 }
 
 interface DesktopNavDialogsProps {

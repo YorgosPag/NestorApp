@@ -69,7 +69,7 @@ export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorP
                 <h3 className="font-medium text-foreground">
                   {t(`types.${type}`)}
                 </h3>
-                <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
+                <p className={cn("text-xs leading-relaxed text-muted-foreground")}>
                   {t(TYPE_DESCRIPTION_KEYS[type])}
                 </p>
               </CardContent>

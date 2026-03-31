@@ -96,20 +96,18 @@ export function ReportSection({
 
   if (!collapsible) {
     return (
-      <Card className={cn(className)} asChild>
-        <section aria-labelledby={sectionId}>
-          <CardContent className="p-4 sm:p-6">
-            {headerContent}
-            {content}
-          </CardContent>
-        </section>
+      <Card className={cn(className)}>
+        <CardContent className="p-4 sm:p-6" role="region" aria-labelledby={sectionId}>
+          {headerContent}
+          {content}
+        </CardContent>
       </Card>
     );
   }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
-      <Card className={cn(className)} asChild>
+      <Card className={cn(className)}>
         <section aria-labelledby={sectionId}>
           <CardContent className="p-4 sm:p-6">
             <CollapsibleTrigger

@@ -42,6 +42,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 import { ReadOnlyCompactView } from './UnitFieldsReadOnly';
 import { UnitFieldsEditForm } from './UnitFieldsEditForm';
+import type { UnitFieldsFormData } from './unit-fields-form-types';
 import type { UnitType as UnitTypeImport } from '@/types/unit';
 const logger = createModuleLogger('UnitFieldsBlock');
 
@@ -109,7 +110,7 @@ export function UnitFieldsBlock({
     disabled: codeOverridden || !!property.code,
   });
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UnitFieldsFormData>({
     name: property.name ?? '',
     code: property.code ?? '',
     type: property.type ?? '',

@@ -187,7 +187,7 @@ export function useCashFlowReport(): UseCashFlowReportReturn {
 
 function buildKPIs(
   projection: ScenarioProjection,
-  t: (key: string) => string,
+  t: (key: string, params?: Record<string, string>) => string,
 ): ReportKPI[] {
   const lastMonth = projection.months[projection.months.length - 1];
   const firstMonth = projection.months[0];
@@ -197,19 +197,19 @@ function buildKPIs(
       title: t('kpi.currentBalance'),
       value: formatCurrency(firstMonth?.openingBalance ?? 0),
       icon: Banknote,
-      status: (firstMonth?.openingBalance ?? 0) > 0 ? 'success' : 'danger',
+      status: (firstMonth?.openingBalance ?? 0) > 0 ? 'green' : 'red',
     },
     {
       title: t('kpi.forecastInflow'),
       value: formatCurrency(projection.totalInflow),
       icon: TrendingUp,
-      status: 'success',
+      status: 'green',
     },
     {
       title: t('kpi.forecastOutflow'),
       value: formatCurrency(projection.totalOutflow),
       icon: TrendingDown,
-      status: 'neutral',
+      status: 'gray',
     },
     {
       title: t('kpi.lowestBalance'),
@@ -218,7 +218,7 @@ function buildKPIs(
         ? `${t('kpi.lowestBalanceMonth', { month: projection.lowestBalanceMonth })}`
         : undefined,
       icon: AlertTriangle,
-      status: projection.lowestBalance < 0 ? 'danger' : projection.lowestBalance < 10000 ? 'warning' : 'success',
+      status: projection.lowestBalance < 0 ? 'red' : projection.lowestBalance < 10000 ? 'amber' : 'green',
     },
   ];
 }

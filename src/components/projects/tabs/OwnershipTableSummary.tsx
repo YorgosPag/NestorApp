@@ -13,6 +13,8 @@
 import '@/lib/design-system';
 import React from 'react';
 import { cn } from '@/lib/utils';
+import type { SpacingTokens } from '@/hooks/useSpacingTokens';
+import type { UseIconSizesReturn } from '@/hooks/useIconSizes';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -34,12 +36,6 @@ interface TypographyTokens {
   special: Record<string, string>;
 }
 
-interface SpacingTokens {
-  padding: Record<string, string>;
-  margin: { bottom: Record<string, string>; top: Record<string, string> };
-  gap: Record<string, string>;
-  spaceBetween: Record<string, string>;
-}
 
 interface ColorTokens {
   text: Record<string, string>;
@@ -238,7 +234,7 @@ interface LinkedSpaceRowsProps {
   typography: TypographyTokens;
   spacing: SpacingTokens;
   colors: ColorTokens;
-  iconSizes: Record<string, string>;
+  iconSizes: UseIconSizesReturn;
   onNavigate: (path: string) => void;
   updateLinkedSpace: (rowIndex: number, spaceIndex: number, field: 'hasOwnShares' | 'millesimalShares', value: boolean | number) => void;
 }

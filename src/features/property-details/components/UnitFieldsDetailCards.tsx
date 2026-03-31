@@ -29,7 +29,7 @@ import {
   Bed, Bath, Compass, Wrench, Zap,
   Thermometer, Snowflake, Home, Shield, Flame,
 } from 'lucide-react';
-import type { FlooringType, FrameType, GlazingType } from '@/constants/unit-features-enterprise';
+import type { FlooringType, FrameType, GlazingType, OrientationType } from '@/constants/unit-features-enterprise';
 import {
   ORIENTATION_OPTIONS, CONDITION_OPTIONS, ENERGY_CLASS_OPTIONS,
   HEATING_OPTIONS, COOLING_OPTIONS, FLOORING_OPTIONS, FRAME_OPTIONS,

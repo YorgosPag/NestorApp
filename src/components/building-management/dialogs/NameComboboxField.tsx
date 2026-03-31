@@ -30,9 +30,9 @@ interface NameComboboxFieldProps {
   popoverOpen: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.Ref<HTMLInputElement>;
   highlightedIndex: number;
-  resultsRef: React.RefObject<HTMLDivElement | null>;
+  resultsRef: React.Ref<HTMLDivElement>;
   filteredOptions: ComboboxOption[];
   onSelectPredefined: (option: ComboboxOption) => void;
   onUseCustomText: () => void;

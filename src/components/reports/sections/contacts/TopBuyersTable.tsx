@@ -32,7 +32,7 @@ export function TopBuyersTable({ data, loading }: TopBuyersTableProps) {
       key: 'totalValue',
       header: t('contacts.buyers.value'),
       sortable: true,
-      render: (row) => formatEuro(row.totalValue),
+      render: (_value, row) => formatEuro(row.totalValue),
     },
     { key: 'unitCount', header: t('contacts.buyers.units'), sortable: true },
   ];

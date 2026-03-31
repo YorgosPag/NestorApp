@@ -289,7 +289,7 @@ export function ShareDialog({
               {parseInt(maxDownloads, 10) > 0 && (
                 <p className="flex items-center gap-1">
                   <Download className="h-3 w-3" />
-                  {t('share.maxDownloadsLabel', { count: maxDownloads })}
+                  {t('share.maxDownloadsLabel', { count: parseInt(maxDownloads, 10) })}
                 </p>
               )}
             </footer>

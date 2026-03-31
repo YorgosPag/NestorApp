@@ -121,7 +121,7 @@ export function ContactPurchaseOrdersTab({ contactId }: ContactPurchaseOrdersTab
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium">{po.poNumber}</span>
                   <Badge variant="outline" className="text-xs">
-                    {meta.labelEl}
+                    {meta.label.el}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">

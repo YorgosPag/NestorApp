@@ -109,7 +109,7 @@ export const getComponentSizeClass = (
   size: string
 ) => {
   const componentSizes = designTokens.componentSizes[component];
-  return componentSizes[size as keyof typeof componentSizes] || componentSizes.md;
+  return (componentSizes as Record<string, string>)[size] || (componentSizes as Record<string, string>).md;
 };
 
 // Interactive state utilities

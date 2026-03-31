@@ -63,7 +63,7 @@ interface FloorFloorplanLike {
   pdfImageUrl?: string;
   timestamp?: number;
   processedDataPath?: string;
-  scene?: Record<string, unknown>;
+  scene?: object | null;
 }
 
 /**
@@ -94,8 +94,8 @@ export function adaptFloorFloorplanToFileRecord(
           scene: floorplan.scene as unknown as import('@/types/file-record').DxfSceneData,
           processedAt: Date.now(),
           sceneStats: {
-            entityCount: (floorplan.scene.entities as unknown[] | undefined)?.length || 0,
-            layerCount: Object.keys((floorplan.scene.layers as Record<string, unknown>) || {}).length,
+            entityCount: ((floorplan.scene as Record<string, unknown>).entities as unknown[] | undefined)?.length || 0,
+            layerCount: Object.keys(((floorplan.scene as Record<string, unknown>).layers as Record<string, unknown>) || {}).length,
             parseTimeMs: 0,
           },
         }

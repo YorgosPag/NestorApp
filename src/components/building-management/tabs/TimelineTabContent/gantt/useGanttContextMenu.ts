@@ -25,8 +25,8 @@ interface UseGanttContextMenuParams {
   openCreateTaskDialog: (phaseId: string) => void;
   openEditPhaseDialog: (phase: ConstructionPhase) => void;
   openEditTaskDialog: (task: ConstructionTask) => void;
-  removePhase: (phaseId: string) => Promise<void>;
-  removeTask: (taskId: string) => Promise<void>;
+  removePhase: (phaseId: string) => Promise<boolean | void>;
+  removeTask: (taskId: string) => Promise<boolean | void>;
   updateBarColor: (id: string, isPhase: boolean, color: string) => Promise<void>;
 }
 

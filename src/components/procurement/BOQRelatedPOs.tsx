@@ -117,7 +117,7 @@ export function BOQRelatedPOs({ projectId, boqItemId }: BOQRelatedPOsProps) {
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{po.poNumber}</span>
                   <Badge variant="outline" className="text-xs">
-                    {meta.labelEl}
+                    {meta.label.el}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-3 text-muted-foreground">

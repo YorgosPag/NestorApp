@@ -43,8 +43,7 @@ export function SpaceValueByBuildingChart({ data, loading }: SpaceValueByBuildin
         data={data}
         config={config}
         height={320}
-        xKey="building"
-        bars={['parkingValue', 'storageValue']}
+        xAxisKey="building"
       />
     </ReportSection>
   );

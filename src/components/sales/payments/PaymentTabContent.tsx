@@ -79,7 +79,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   // ADR-244: Create split plans — delegates to hook (SSoT for API calls)
   const handleCreateSplit = useCallback(async (
     splitOwners: PropertyOwnerEntry[],
-    baseInput: Omit<CreatePaymentPlanInput, 'unitId' | 'buyerContactId' | 'buyerName' | 'totalAmount' | 'installments'>,
+    baseInput: Omit<CreatePaymentPlanInput, 'unitId' | 'ownerContactId' | 'ownerName' | 'totalAmount' | 'installments'>,
     totalPrice: number,
     baseInstallments: CreateInstallmentInput[],
   ): Promise<{ success: boolean; error?: string }> => {

@@ -88,7 +88,7 @@ export function GanttContextMenuPortal({
 
   return createPortal(
     <nav
-      ref={contextMenuRef}
+      ref={contextMenuRef as React.RefObject<HTMLElement>}
       className="min-w-48 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
       style={{
         position: 'fixed',
@@ -168,7 +168,7 @@ export function GanttTooltipPortal({
 
   return createPortal(
     <aside
-      ref={tooltipElRef}
+      ref={tooltipElRef as React.RefObject<HTMLDivElement>}
       className="min-w-48 rounded border bg-popover p-2 text-popover-foreground text-xs shadow-lg pointer-events-none"
       style={{
         position: 'fixed',

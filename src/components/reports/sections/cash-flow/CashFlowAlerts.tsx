@@ -9,6 +9,7 @@ import '@/lib/design-system';
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { AlertTriangle, X, Banknote, FileText, TrendingDown } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,7 @@ export function CashFlowAlerts({ alerts }: CashFlowAlertsProps) {
 
 function getAlertTitle(
   type: CashFlowAlertType,
-  t: (key: string, fallback?: string) => string,
+  t: TFunction,
 ): string {
   switch (type) {
     case 'low-cash': return t('alerts.lowCashTitle', 'Low Cash Warning');

@@ -228,8 +228,7 @@ export async function exportOwnerReportToPdf(config: OwnerReportPdfConfig): Prom
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    y = (pdf as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 30;
+    y = (pdf as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 30;
   }
 
   // ── Phases Summary Table ────────────────────────────────────────────
