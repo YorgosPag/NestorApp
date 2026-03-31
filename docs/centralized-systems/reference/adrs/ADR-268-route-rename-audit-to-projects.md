@@ -88,7 +88,7 @@ Rename `/audit` → `/projects` σε όλα τα σημεία: folder structure,
 
 ## Pending
 
-3 αρχεία API routes (`search-backfill/route.ts`, `companies/route.ts`, `projects/list/route.ts`) έχουν ενημερωμένα σχόλια αλλά δεν μπήκαν στο commit λόγω pre-commit hook (file size >300 lines). Θα συμπεριληφθούν όταν γίνει split σε μικρότερα modules.
+Κανένα — όλες οι εκκρεμότητες ολοκληρώθηκαν.
 
 ---
 
@@ -97,3 +97,5 @@ Rename `/audit` → `/projects` σε όλα τα σημεία: folder structure,
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-31 | Initial implementation — route rename /audit → /projects | Claude + Γιώργος |
+| 2026-03-31 | Comprehensive cleanup — 16 files with stale audit→projects references (cache keys, logger, function names, docs, scripts) | Claude + Γιώργος |
+| 2026-03-31 | Final cleanup: split bootstrap/route.ts (SRP), fix comment audit:data:view→projects:projects:view, fix VERCEL_PRODUCTION_SETUP.md UI URL, remove dead permission audit:data:view from auth types/roles | Claude + Γιώργος |

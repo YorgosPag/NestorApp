@@ -18,7 +18,7 @@ import type { NextRequest } from 'next/server';
  * Extract the last path segment as the document ID.
  *
  * Works for routes like:
- * - `/api/units/unit_abc123`     → `"unit_abc123"`
+ * - `/api/properties/prop_abc123` → `"prop_abc123"`
  * - `/api/parking/park_xyz`      → `"park_xyz"`
  * - `/api/storages/stor_xyz`     → `"stor_xyz"`
  */
@@ -34,11 +34,11 @@ export function extractIdFromUrl(url: string): string | null {
 /**
  * Extract a document ID that appears before a sub-resource segment.
  *
- * Example: `/api/units/unit_abc123/activity`
- *   → `extractNestedIdFromUrl(url, 'units')` → `"unit_abc123"`
+ * Example: `/api/properties/prop_abc123/activity`
+ *   → `extractNestedIdFromUrl(url, 'properties')` → `"prop_abc123"`
  *
  * @param url       Full request URL
- * @param parentSeg The path segment that precedes the ID (e.g. `"units"`)
+ * @param parentSeg The path segment that precedes the ID (e.g. `"properties"`)
  */
 export function extractNestedIdFromUrl(
   url: string,

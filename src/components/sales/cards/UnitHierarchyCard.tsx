@@ -22,7 +22,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
-import type { UnitHierarchyResponse } from '@/app/api/units/[id]/hierarchy/route';
+import type { PropertyHierarchyResponse } from '@/app/api/properties/[id]/hierarchy/route';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -44,7 +44,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { syncBreadcrumb } = useNavigation();
-  const [hierarchy, setHierarchy] = useState<UnitHierarchyResponse | null>(null);
+  const [hierarchy, setHierarchy] = useState<PropertyHierarchyResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
 
     async function fetchHierarchy() {
       try {
-        const data = await apiClient.get<UnitHierarchyResponse>(
+        const data = await apiClient.get<PropertyHierarchyResponse>(
           API_ROUTES.UNITS.HIERARCHY(encodeURIComponent(unitId))
         );
         if (!cancelled) {

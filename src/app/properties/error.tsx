@@ -1,6 +1,6 @@
 /**
- * 🏢 ENTERPRISE: Properties Error Boundary
- * @route /properties
+ * 🏢 ENTERPRISE: Units Error Boundary
+ * @route /units
  * @enterprise SAP/Salesforce/Microsoft - Centralized Error Handling
  */
 'use client';
@@ -12,6 +12,6 @@ interface ErrorProps {
   reset: () => void;
 }
 
-export default function PropertiesError({ error, reset }: ErrorProps) {
-  return <RouteErrorFallback error={error} reset={reset} componentName="Properties" />;
+export default function UnitsError({ error, reset }: ErrorProps) {
+  return <RouteErrorFallback error={error} reset={reset} componentName="Units" />;
 }
