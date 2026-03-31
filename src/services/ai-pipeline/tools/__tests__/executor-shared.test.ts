@@ -25,7 +25,7 @@ jest.mock('@/config/firestore-collections', () => ({
   COLLECTIONS: {
     PROJECTS: 'projects',
     BUILDINGS: 'buildings',
-    UNITS: 'units',
+    PROPERTIES: 'properties',
     FLOORS: 'floors',
     CONTACTS: 'contacts',
     CONSTRUCTION_PHASES: 'construction_phases',
@@ -58,7 +58,7 @@ jest.mock('@/config/firestore-collections', () => ({
 }));
 jest.mock('@/config/ai-role-access-matrix', () => ({
   resolveAccessConfig: jest.fn(() => ({
-    allowedCollections: ['units', 'buildings', 'contacts'],
+    allowedCollections: ['properties', 'buildings', 'contacts'],
     blockedFields: [],
     scopeLevel: 'project',
   })),
@@ -283,7 +283,7 @@ describe('flattenNestedFields', () => {
 
 describe('redactSensitiveFields', () => {
   it('redacts password and token', () => {
-    const result = redactSensitiveFields({ password: 'secret123', token: 'tok_abc' });
+    const result = redactSensitiveFields({ password: 'test-pw-value', token: 'test-tok-value' });
     expect(result.password).toBe('[REDACTED]');
     expect(result.token).toBe('[REDACTED]');
   });
@@ -419,7 +419,7 @@ describe('isReadAllowed', () => {
   });
 
   it('allows subcollection when first segment is whitelisted', () => {
-    expect(isReadAllowed('units/x/payment_plans')).toBe(true);
+    expect(isReadAllowed('properties/x/payment_plans')).toBe(true);
   });
 });
 
@@ -506,7 +506,7 @@ describe('enforceRoleAccess', () => {
   it('returns error when unit-scoped with no linkedUnits on sensitive collection', () => {
     const { resolveAccessConfig } = jest.requireMock('@/config/ai-role-access-matrix');
     resolveAccessConfig.mockReturnValueOnce({
-      allowedCollections: ['units', 'files', 'payments'],
+      allowedCollections: ['properties', 'files', 'payments'],
       blockedFields: [],
       scopeLevel: 'unit',
     });
@@ -519,7 +519,7 @@ describe('enforceRoleAccess', () => {
         linkedUnitIds: [],
       } as unknown as AgenticContext['contactMeta'],
     });
-    const result = enforceRoleAccess('units', [], ctx);
+    const result = enforceRoleAccess('properties', [], ctx);
     expect(result.allowed).toBe(false);
     if (!result.allowed) {
       expect(result.result.error).toContain('ακίνητα');
@@ -529,7 +529,7 @@ describe('enforceRoleAccess', () => {
   it('injects id filter for units when unit-scoped with linkedUnits', () => {
     const { resolveAccessConfig } = jest.requireMock('@/config/ai-role-access-matrix');
     resolveAccessConfig.mockReturnValueOnce({
-      allowedCollections: ['units'],
+      allowedCollections: ['properties'],
       blockedFields: [],
       scopeLevel: 'unit',
     });
@@ -542,7 +542,7 @@ describe('enforceRoleAccess', () => {
         linkedUnitIds: ['unit_1', 'unit_2'],
       } as unknown as AgenticContext['contactMeta'],
     });
-    const result = enforceRoleAccess('units', [], ctx);
+    const result = enforceRoleAccess('properties', [], ctx);
     expect(result.allowed).toBe(true);
     if (result.allowed) {
       const idFilter = result.filters.find(f => f.field === 'id');
@@ -555,7 +555,7 @@ describe('enforceRoleAccess', () => {
   it('injects projectId filter for project-scoped collections', () => {
     const { resolveAccessConfig } = jest.requireMock('@/config/ai-role-access-matrix');
     resolveAccessConfig.mockReturnValueOnce({
-      allowedCollections: ['units', 'buildings', 'contacts'],
+      allowedCollections: ['properties', 'buildings', 'contacts'],
       blockedFields: [],
       scopeLevel: 'project',
     });
