@@ -37,8 +37,8 @@ const installmentSchema = z.object({
 });
 
 const createPaymentPlanSchema = z.object({
-  buyerContactId: z.string().min(1).max(200),
-  buyerName: z.string().min(1).max(500),
+  ownerContactId: z.string().min(1).max(200),
+  ownerName: z.string().min(1).max(500),
   buildingId: z.string().min(1).max(200),
   projectId: z.string().min(1).max(200),
   totalAmount: z.number().positive().max(100_000_000),

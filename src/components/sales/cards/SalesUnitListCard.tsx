@@ -6,7 +6,7 @@
  * @pattern Same as UnitListCard but with commercial data prominent
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
   DollarSign,
   Calendar,
@@ -19,8 +19,8 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { Unit, CommercialStatus } from '@/types/unit';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
+import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -151,37 +151,17 @@ export function SalesUnitListCard({
   const isSold = commercialStatus === 'sold';
   const showBuyerSection = isReserved || isSold;
 
-  // Fallback: fetch buyer name from API if missing in Firestore
-  const [resolvedBuyerName, setResolvedBuyerName] = useState<string | null>(
-    unit.commercial?.buyerName ?? null
-  );
-
-  useEffect(() => {
-    const contactId = unit.commercial?.buyerContactId;
-    const existingName = unit.commercial?.buyerName;
-    if (existingName || !contactId || !showBuyerSection) {
-      setResolvedBuyerName(existingName ?? null);
-      return;
-    }
-
-    let cancelled = false;
-    apiClient.get<{ contact: { displayName: string } }>(
-      API_ROUTES.CONTACTS.BY_ID(encodeURIComponent(contactId))
-    ).then((data) => {
-      if (!cancelled && data?.contact?.displayName) {
-        setResolvedBuyerName(data.contact.displayName);
-      }
-    }).catch(() => { /* silent */ });
-
-    return () => { cancelled = true; };
-  }, [unit.commercial?.buyerContactId, unit.commercial?.buyerName, showBuyerSection]);
+  // ADR-244: Derive buyer info from owners[] SSoT
+  const unitOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
+  const resolvedBuyerName = formatOwnerNames(unitOwners);
+  const primaryBuyerContactId = getPrimaryBuyerContactId(unitOwners);
 
   const buyerStats = useMemo(() => {
     if (!showBuyerSection) return undefined;
     const stats = [];
 
-    // Αγοραστής — reserved & sold
-    if (unit.commercial?.buyerContactId) {
+    // Αγοραστής — reserved & sold (ADR-244: from owners[])
+    if (primaryBuyerContactId) {
       stats.push({
         icon: User,
         iconColor: 'text-violet-600',

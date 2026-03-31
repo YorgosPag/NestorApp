@@ -1,106 +1,49 @@
 /**
- * Unit PATCH / DELETE endpoint
+ * Unit PATCH / DELETE / GET endpoint
  *
  * @module api/units/[id]
- * @permission units:units:update (PATCH), units:units:update (DELETE)
+ * @permission units:units:update (PATCH), units:units:delete (DELETE), units:units:view (GET)
  * @rateLimit STANDARD (60 req/min)
  * @see ADR-184 (Building Spaces Tabs)
  */
 
-import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
-import { aggregateLevelData } from '@/services/multi-level.service';
-import type { LevelData } from '@/types/unit';
 import { UNIT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
 import { validateUnitFieldLocking } from '@/lib/firestore/unit-field-locking';
-import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
 import { PaymentPlanService } from '@/services/payment-plan.service';
-import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
-import { validateContactForSale, isServiceContact } from '@/types/contacts/helpers';
-import type { Contact } from '@/types/contacts/contracts';
-import type { CommercialTransactionType } from '@/types/contacts/helpers';
 import type { PropertyOwnerRole } from '@/types/ownership-table';
-import { generateContactLinkId } from '@/lib/contact-link-id';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
 import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
-
-const UnitPatchSchema = z.object({
-  name: z.string().max(500).optional(),
-  type: z.string().max(50).optional(),
-  status: z.string().max(50).optional(),
-  floor: z.union([z.string().max(50), z.number()]).optional(),
-  floorId: z.string().max(128).optional(),
-  area: z.number().min(0).max(999_999).nullable().optional(),
-  price: z.number().min(0).max(999_999_999).nullable().optional(),
-  description: z.string().max(5000).optional(),
-  buildingId: z.string().max(128).optional(),
-  projectId: z.string().max(128).optional(),
-  companyId: z.string().max(128).optional(),
-  isMultiLevel: z.boolean().optional(),
-  _v: z.number().int().optional(),
-}).passthrough();
+import {
+  activateClientPersona,
+  autoCreateUnitContactLinks,
+  deactivateUnitContactLinks,
+} from './unit-contact-links';
+import { validateCommercialTransaction } from './unit-commercial-validation';
+import {
+  UnitPatchSchema,
+  applyMultiLevelDefaults,
+  applyLevelDataAggregation,
+  buildUpdateData,
+  detectCancellation,
+  type UnitMutationResult,
+  type UnitPatchPayload,
+} from './unit-patch-helpers';
 
 const logger = createModuleLogger('UnitIdRoute');
-
-/** Fields that are NEVER writable via PATCH (security) */
-const FORBIDDEN_FIELDS: ReadonlySet<string> = new Set([
-  'id', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
-]);
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface UnitLevelPayload {
-  floorId: string;
-  floorNumber: number;
-  name: string;
-  isPrimary: boolean;
-}
-
-/** Unit PATCH body — core fields explicitly typed, extended fields passed through */
-interface UnitPatchPayload extends Record<string, unknown> {
-  name?: string;
-  type?: string;
-  status?: string;
-  floor?: string | number;
-  area?: number;
-  price?: number;
-  description?: string;
-  buildingId?: string | null;
-  projectId?: string | null;
-  companyId?: string | null;
-  companyName?: string;
-  projectName?: string;
-  // ADR-236: Multi-level fields
-  isMultiLevel?: boolean;
-  levels?: UnitLevelPayload[];
-  // ADR-236 Phase 2: Per-level data
-  levelData?: Record<string, unknown>;
-  // Auto-aggregated fields (set by server from levelData)
-  areas?: Record<string, number>;
-  layout?: Record<string, number>;
-  orientations?: string[];
-}
-
-interface UnitMutationResult {
-  id: string;
-  _v?: number;
-}
 
 // ============================================================================
 // PATCH — Update Unit
@@ -119,195 +62,55 @@ export const PATCH = withStandardRateLimit(
       try {
         const docRef = adminDb.collection(COLLECTIONS.UNITS).doc(id);
         const doc = await docRef.get();
-
         if (!doc.exists) throw new ApiError(404, 'Unit not found');
 
         await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]' });
-
         const existing = doc.data() as Record<string, unknown>;
 
         const parsed = safeParseBody(UnitPatchSchema, await request.json());
         if (parsed.error) throw new ApiError(400, 'Validation failed');
-        const { _v: expectedVersion, ...body } = parsed.data;
+        const { _v: expectedVersion, ...body } = parsed.data as UnitPatchPayload & { _v?: number };
 
-        // ================================================================
-        // VALIDATION: Field locking based on commercialStatus
-        // After sale/reservation, critical fields cannot be modified
-        // (legal requirement: cadastre, tax office, contracts)
-        // 🛡️ ADR-249 P0-2: Uses shared utility (unit-field-locking.ts)
-        // ================================================================
+        // 🛡️ ADR-249: Field locking after sale/reservation
         validateUnitFieldLocking(
           existing.commercialStatus as string | undefined,
-          Object.keys(body)
+          Object.keys(body),
         );
 
-        // ================================================================
-        // VALIDATION: ADR-236 — Multi-level floors
-        // ================================================================
-        if (Array.isArray(body.levels)) {
-          if (body.levels.length >= 2) {
-            const primaryCount = body.levels.filter((l: UnitLevelPayload) => l.isPrimary).length;
-            if (primaryCount !== 1) {
-              throw new ApiError(400, 'Exactly one floor must be marked as primary');
-            }
-            // Auto-derive backward-compat fields from primary level
-            const primary = body.levels.find((l: UnitLevelPayload) => l.isPrimary);
-            if (primary) {
-              body.floor = primary.floorNumber;
-              body.floorId = primary.floorId;
-              body.isMultiLevel = true;
-            }
-          } else if (body.levels.length === 0) {
-            // Clearing levels — revert to single floor mode
-            body.isMultiLevel = false;
-          }
-        }
+        // ADR-236: Multi-level floors — mutates body in-place
+        applyMultiLevelDefaults(body);
 
-        // ================================================================
-        // VALIDATION + AGGREGATION: ADR-236 Phase 2 — Per-level data
-        // ================================================================
-        if (body.levelData && typeof body.levelData === 'object') {
-          const ld = body.levelData as Record<string, LevelData>;
-          const existingLevels = (body.levels ?? existing.levels) as UnitLevelPayload[] | undefined;
+        // ADR-236 Phase 2: Per-level data aggregation — mutates body in-place
+        applyLevelDataAggregation(body, existing.levels as typeof body.levels);
 
-          if (existingLevels && existingLevels.length >= 2) {
-            const validFloorIds = new Set(existingLevels.map((l) => l.floorId));
-            const invalidKeys = Object.keys(ld).filter((k) => !validFloorIds.has(k));
-            if (invalidKeys.length > 0) {
-              throw new ApiError(400, `levelData contains invalid floorIds: ${invalidKeys.join(', ')}`);
-            }
-          }
-
-          // Auto-aggregate into top-level fields
-          const aggregated = aggregateLevelData(ld);
-          body.areas = aggregated.areas;
-          body.layout = aggregated.layout;
-          body.orientations = aggregated.orientations;
-        }
-
-        // ================================================================
-        // VALIDATION: Company chain check for reserve/sell operations
-        // ================================================================
+        // Hierarchy + buyer validation for reserve/sell operations
         const isCommercialTransaction =
           body.commercialStatus === 'reserved' || body.commercialStatus === 'sold';
-
         if (isCommercialTransaction) {
-          // Hierarchy validation: Unit → Building → Project → Company
-          // Each check is separate so the user gets a specific error message
-          const buildingId = (existing.buildingId as string) ?? null;
-          const floorId = (existing.floorId as string) ?? null;
-          // 🔒 ADR-232: Only floorId (document reference) counts as valid floor link
-          const hasFloor = !!floorId;
-
-          // 1. Building check
-          if (!buildingId) {
-            throw new ApiError(400, 'Unit is not linked to a building');
-          }
-
-          // 2. Floor check
-          if (!hasFloor) {
-            throw new ApiError(400, 'Unit is not linked to a floor');
-          }
-
-          // 3. Project check (building → project)
-          const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-          const projectId = buildingDoc.exists
-            ? (buildingDoc.data()?.projectId as string) ?? null
-            : null;
-
-          if (!projectId) {
-            throw new ApiError(400, 'Building is not linked to a project');
-          }
-
-          // 4. Company check (project → linkedCompanyId — ADR-232 business link)
-          const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-          const linkedCompanyId = projectDoc.exists
-            ? (projectDoc.data()?.linkedCompanyId as string) ?? null
-            : null;
-
-          if (!linkedCompanyId) {
-            throw new ApiError(400, 'Project is not linked to a company');
-          }
-
-          // 5. Asking price check — cannot reserve/sell without a price
-          const commercialPayload = body.commercial as Record<string, unknown> | undefined;
-          const askingPrice = (commercialPayload?.askingPrice as number)
-            ?? (existing.commercial as Record<string, unknown> | undefined)?.askingPrice as number | undefined
-            ?? null;
-
-          if (!askingPrice || askingPrice <= 0) {
-            throw new ApiError(400, 'Unit must have an asking price before reservation or sale');
-          }
-
-          // 5b. Area check — unit must have net or gross area
-          const unitArea = (existing.area as number) ?? 0;
-          const unitGrossArea = (existing.areas as Record<string, number> | undefined)?.gross ?? 0;
-          if (unitArea <= 0 && unitGrossArea <= 0) {
-            throw new ApiError(400, 'Unit must have area (sqm) before reservation or sale');
-          }
-
-          // 6. Buyer contact validation (enterprise-grade)
-          const buyerContactId = (commercialPayload?.buyerContactId as string) ?? null;
-
-          if (!buyerContactId) {
-            throw new ApiError(400, 'Buyer contact is required');
-          }
-
-          const buyerDoc = await adminDb.collection(COLLECTIONS.CONTACTS).doc(buyerContactId).get();
-          if (!buyerDoc.exists) {
-            throw new ApiError(400, 'Buyer contact not found');
-          }
-
-          const buyerData = buyerDoc.data() as Contact;
-
-          if (isServiceContact(buyerData)) {
-            throw new ApiError(400, 'Service contacts cannot be buyers');
-          }
-
-          const transactionType: CommercialTransactionType =
-            body.commercialStatus === 'reserved' ? 'reserve' : 'sell';
-          const readiness = validateContactForSale(buyerData, transactionType);
-
-          if (!readiness.valid) {
-            throw new ApiError(400, `Buyer missing required fields: ${readiness.missingFields.join(', ')}`);
-          }
+          await validateCommercialTransaction(
+            adminDb,
+            existing,
+            body.commercial as Record<string, unknown> | undefined,
+            body.commercialStatus as 'reserved' | 'sold',
+          );
         }
 
-        // SPEC-257A: Detect cancellation state transition (used AFTER successful write)
-        const wasSoldOrReserved =
-          existing.commercialStatus === 'reserved' || existing.commercialStatus === 'sold';
-        const isNoLongerSoldOrReserved =
-          !!body.commercialStatus
-          && body.commercialStatus !== 'reserved'
-          && body.commercialStatus !== 'sold';
-        const isCancellation = wasSoldOrReserved && isNoLongerSoldOrReserved;
+        // SPEC-257A: Detect cancellation before write
+        const isCancellation = detectCancellation(existing, body);
 
-        // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
-        const updateData: Record<string, unknown> = {};
+        // Build sanitised Firestore payload
+        const updateData = buildUpdateData(body, existing);
 
-        // Pass through all fields except forbidden ones
-        // Handles both core fields (name, status, etc.) and extended fields (layout, areas, orientation, etc.)
-        for (const [key, value] of Object.entries(body)) {
-          if (FORBIDDEN_FIELDS.has(key)) continue;
-          if (value === undefined) continue;
-          updateData[key] = value ?? null;
-        }
-
-        // Trim string fields for core fields
-        if (typeof updateData.name === 'string') updateData.name = (updateData.name as string).trim() || existing.name;
-        if (typeof updateData.floor === 'string') updateData.floor = (updateData.floor as string).trim() || null;
-        if (typeof updateData.description === 'string') updateData.description = (updateData.description as string).trim() || null;
-
-        // Compute field-level diffs BEFORE the update (with ID→name resolution)
+        // Compute field-level diffs BEFORE the write (with ID→name resolution)
         const auditChanges = await EntityAuditService.diffFieldsWithResolution(
           existing,
           updateData,
           UNIT_TRACKED_FIELDS,
           {
-            buildingId: async (id) => {
-              if (!id || typeof id !== 'string') return null;
-              const bldgSnap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(id).get();
-              return bldgSnap.exists ? (bldgSnap.data()?.name as string) ?? null : null;
+            buildingId: async (bldgId) => {
+              if (!bldgId || typeof bldgId !== 'string') return null;
+              const snap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(bldgId).get();
+              return snap.exists ? (snap.data()?.name as string) ?? null : null;
             },
           },
         );
@@ -317,12 +120,13 @@ export const PATCH = withStandardRateLimit(
           const buildingId = (existing.buildingId as string) ?? null;
           if (buildingId) {
             await validateLinkedSpacesUniqueness(
-              adminDb, buildingId, id, body.linkedSpaces as ReadonlyArray<{ spaceId: string }>
+              adminDb, buildingId, id,
+              body.linkedSpaces as ReadonlyArray<{ spaceId: string }>,
             );
           }
         }
 
-        // SPEC-256A: Version-checked write
+        // SPEC-256A: Version-checked write (injects updatedAt + updatedBy)
         const versionResult = await withVersionCheck({
           db: adminDb,
           collection: COLLECTIONS.UNITS,
@@ -332,17 +136,16 @@ export const PATCH = withStandardRateLimit(
           userId: ctx.uid,
         });
 
-        // ── Resync payment plan when sale price changes ──
+        // Resync payment plan when sale price changes (non-blocking)
         const newCommercial = updateData.commercial as Record<string, unknown> | undefined;
         if (newCommercial) {
-          const newPrice = (newCommercial.askingPrice as number | null)
-            ?? (newCommercial.finalPrice as number | null);
+          const newPrice =
+            (newCommercial.askingPrice as number | null) ??
+            (newCommercial.finalPrice as number | null);
           if (newPrice && newPrice > 0) {
             PaymentPlanService.resyncTotalAmount(id, newPrice, ctx.uid).catch((err) => {
               logger.warn('Payment plan resync failed (non-blocking)', {
-                unitId: id,
-                newPrice,
-                error: getErrorMessage(err),
+                unitId: id, newPrice, error: getErrorMessage(err),
               });
             });
           }
@@ -350,7 +153,7 @@ export const PATCH = withStandardRateLimit(
 
         logger.info('Unit updated', { id, companyId: ctx.companyId });
 
-        // 🔗 ADR-239: Centralized linking — change detection + cascade (skipAudit=true: units PATCH has own audit)
+        // 🔗 ADR-239: Centralized linking — change detection + cascade (non-blocking)
         if ('buildingId' in body) {
           linkEntity('unit:buildingId', {
             auth: ctx,
@@ -359,14 +162,10 @@ export const PATCH = withStandardRateLimit(
             existingDoc: existing,
             apiPath: '/api/units/[id] (PATCH)',
           }).catch((err) => {
-            logger.warn('linkEntity failed (non-blocking)', {
-              unitId: id,
-              error: getErrorMessage(err),
-            });
+            logger.warn('linkEntity failed (non-blocking)', { unitId: id, error: getErrorMessage(err) });
           });
         }
 
-        // Auth audit (existing — kept)
         await logAuditEvent(ctx, 'data_updated', 'unit', 'api', {
           newValue: { type: 'status', value: { unitId: id, updates: Object.keys(updateData) } },
           metadata: { reason: 'Unit updated via API' },
@@ -374,46 +173,36 @@ export const PATCH = withStandardRateLimit(
 
         // ================================================================
         // POST-WRITE SIDE EFFECTS (fire-and-forget, non-blocking)
-        // All side effects run AFTER successful Firestore write to avoid
-        // inconsistent state on write failure (version conflict, etc.)
+        // All side effects run AFTER successful Firestore write.
         // ================================================================
         if (isCommercialTransaction) {
-          const buyerContactId = (newCommercial?.buyerContactId as string | null) ?? null;
+          const ownersArr = newCommercial?.owners as
+            ReadonlyArray<{ contactId: string; role: PropertyOwnerRole }> | null ?? null;
+          const primaryBuyerId = ownersArr?.[0]?.contactId ?? null;
 
-          if (buyerContactId) {
-            // AUTO-PERSONA: Activate "client" persona on buyer contact
-            activateClientPersona(adminDb, buyerContactId).catch((err) => {
+          if (primaryBuyerId) {
+            activateClientPersona(adminDb, primaryBuyerId).catch((err) => {
               logger.warn('Auto-persona activation failed (non-blocking)', {
-                buyerContactId,
-                error: getErrorMessage(err),
+                buyerContactId: primaryBuyerId, error: getErrorMessage(err),
               });
             });
-
-            // SPEC-257A: Auto-create unit-level contact links
-            const ownersArr = newCommercial?.owners as
-              ReadonlyArray<{ contactId: string; role: PropertyOwnerRole }> | null ?? null;
-
-            autoCreateUnitContactLinks(adminDb, id, buyerContactId, ownersArr, ctx.companyId, ctx.uid)
+            autoCreateUnitContactLinks(adminDb, id, ownersArr!, ctx.companyId, ctx.uid)
               .catch((err) => {
                 logger.warn('SPEC-257A: Auto-link failed (non-blocking)', {
-                  unitId: id,
-                  error: getErrorMessage(err),
+                  unitId: id, error: getErrorMessage(err),
                 });
               });
           }
         }
 
-        // SPEC-257A: Deactivate links on cancellation (AFTER successful write)
         if (isCancellation) {
           deactivateUnitContactLinks(adminDb, id, ctx.uid).catch((err) => {
             logger.warn('SPEC-257A: Deactivate links failed (non-blocking)', {
-              unitId: id,
-              error: getErrorMessage(err),
+              unitId: id, error: getErrorMessage(err),
             });
           });
         }
 
-        // Entity audit trail (fire-and-forget)
         if (auditChanges.length > 0) {
           const isStatusChange = auditChanges.some((c) => c.field === 'status');
           EntityAuditService.recordChange({
@@ -458,11 +247,9 @@ export const DELETE = withStandardRateLimit(
       try {
         const docRef = adminDb.collection(COLLECTIONS.UNITS).doc(id);
         const doc = await docRef.get();
-
         if (!doc.exists) throw new ApiError(404, 'Unit not found');
 
         await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]' });
-
         const existing = doc.data() as Record<string, unknown>;
 
         // 🛡️ ADR-226: Guarded deletion (checks dependencies → blocks or deletes + audit)
@@ -470,7 +257,6 @@ export const DELETE = withStandardRateLimit(
 
         logger.info('Unit deleted', { id, companyId: ctx.companyId });
 
-        // Auth audit (dual audit — executeDeletion handles entity audit with full snapshot)
         await logAuditEvent(ctx, 'data_deleted', 'unit', 'api', {
           newValue: { type: 'status', value: { unitId: id, name: existing.name } },
           metadata: { reason: 'Unit deleted via API' },
@@ -500,12 +286,10 @@ export const GET = withStandardRateLimit(
       const id = extractIdFromUrl(request.url);
       if (!id) throw new ApiError(400, 'Unit ID is required');
 
-      // 🔒 ADR: Centralized tenant isolation
       await requireUnitInTenant({ ctx, unitId: id, path: '/api/units/[id]' });
 
       const docRef = adminDb.collection(COLLECTIONS.UNITS).doc(id);
       const doc = await docRef.get();
-
       if (!doc.exists) throw new ApiError(404, 'Unit not found');
 
       return apiSuccess({ id: doc.id, ...doc.data() }, 'Unit loaded');
@@ -513,164 +297,3 @@ export const GET = withStandardRateLimit(
     { permissions: 'units:units:view' }
   )
 );
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Activate "client" persona on a contact if not already active.
- * Fire-and-forget — errors are logged but never block the response.
- */
-async function activateClientPersona(
-  db: FirebaseFirestore.Firestore,
-  contactId: string
-): Promise<void> {
-  const contactRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
-  const contactDoc = await contactRef.get();
-
-  if (!contactDoc.exists) {
-    logger.warn('activateClientPersona: contact not found', { contactId });
-    return;
-  }
-
-  const contactData = contactDoc.data() as { personas?: PersonaData[] };
-  const personas = contactData.personas ?? [];
-
-  // Already has active client persona — skip
-  const existingClient = findActivePersona<ClientPersona>(personas, 'client');
-  if (existingClient) return;
-
-  // Create new client persona with clientSince = today
-  const newPersona = createDefaultPersonaData('client') as ClientPersona;
-  newPersona.clientSince = new Date().toISOString();
-
-  await contactRef.update({
-    personas: [...personas, newPersona],
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-
-  logger.info('Client persona auto-activated', { contactId });
-}
-
-// ============================================================================
-// SPEC-257A: Unit-Level Contact Links (Server-Side, Admin SDK)
-// ============================================================================
-
-/**
- * Map PropertyOwnerRole (ADR-244) to contact_link role (ADR-032).
- */
-function mapOwnerRoleToLinkRole(ownerRole: PropertyOwnerRole): string {
-  switch (ownerRole) {
-    case 'buyer':
-    case 'co_buyer':
-      return 'buyer';
-    case 'landowner':
-      return 'owner';
-    default:
-      return 'buyer';
-  }
-}
-
-/**
- * Upsert a single unit-level contact link.
- * Idempotent: active link → skip, inactive → reactivate, missing → create.
- */
-async function upsertUnitContactLink(
-  db: FirebaseFirestore.Firestore,
-  contactId: string,
-  unitId: string,
-  role: string,
-  companyId: string,
-  userId: string,
-): Promise<void> {
-  const linkId = generateContactLinkId(contactId, 'unit', unitId, role);
-  const linkRef = db.collection(COLLECTIONS.CONTACT_LINKS).doc(linkId);
-  const existing = await linkRef.get();
-
-  if (existing.exists) {
-    const data = existing.data();
-    if (data?.status === 'active') return; // idempotent — already linked
-    // Reactivate inactive link
-    await linkRef.update({
-      status: 'active',
-      updatedBy: userId,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    logger.info('Reactivated unit contact link', { linkId });
-    return;
-  }
-
-  // Create new link
-  await linkRef.set({
-    id: linkId,
-    sourceWorkspaceId: companyId,
-    sourceContactId: contactId,
-    targetEntityType: 'unit',
-    targetEntityId: unitId,
-    role,
-    status: 'active',
-    createdAt: FieldValue.serverTimestamp(),
-    createdBy: userId,
-    reason: 'Auto-created on reservation/sale',
-  });
-  logger.info('Created unit contact link', { linkId, contactId, unitId, role });
-}
-
-/**
- * Auto-create unit-level contact links for buyer + co-buyers.
- * Fire-and-forget — called after successful reservation/sale.
- */
-async function autoCreateUnitContactLinks(
-  db: FirebaseFirestore.Firestore,
-  unitId: string,
-  buyerContactId: string,
-  owners: ReadonlyArray<{ contactId: string; role: PropertyOwnerRole }> | null,
-  companyId: string,
-  userId: string,
-): Promise<void> {
-  // 1. Primary buyer link
-  await upsertUnitContactLink(db, buyerContactId, unitId, 'buyer', companyId, userId);
-
-  // 2. Co-buyers from owners[] (ADR-244)
-  if (owners?.length) {
-    for (const owner of owners) {
-      if (owner.contactId === buyerContactId) continue; // skip primary — already linked above
-      const linkRole = mapOwnerRoleToLinkRole(owner.role);
-      await upsertUnitContactLink(db, owner.contactId, unitId, linkRole, companyId, userId);
-    }
-  }
-}
-
-/**
- * Deactivate all active unit-level contact links for a unit.
- * Called when a reservation/sale is cancelled (soft delete — audit trail).
- */
-async function deactivateUnitContactLinks(
-  db: FirebaseFirestore.Firestore,
-  unitId: string,
-  userId: string,
-): Promise<void> {
-  const linksSnap = await db.collection(COLLECTIONS.CONTACT_LINKS)
-    .where('targetEntityType', '==', 'unit')
-    .where('targetEntityId', '==', unitId)
-    .where('status', '==', 'active')
-    .get();
-
-  if (linksSnap.empty) return;
-
-  const batch = db.batch();
-  for (const linkDoc of linksSnap.docs) {
-    batch.update(linkDoc.ref, {
-      status: 'inactive',
-      updatedBy: userId,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-  }
-  await batch.commit();
-
-  logger.info('Deactivated unit contact links on cancellation', {
-    unitId,
-    count: linksSnap.size,
-  });
-}

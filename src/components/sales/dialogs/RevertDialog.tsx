@@ -23,6 +23,8 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { AppurtenancesSection } from './AppurtenancesSection';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
+import { getPrimaryBuyerContactId, formatOwnerNames } from '@/lib/ownership/owner-utils';
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
@@ -51,7 +53,9 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
     setSaving(true);
     try {
       const depositToRefund = unit.commercial?.reservationDeposit ?? 0;
-      const refundBuyerContactId = unit.commercial?.buyerContactId ?? null;
+      const existingOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
+      const refundBuyerContactId = getPrimaryBuyerContactId(existingOwners);
+      const refundBuyerName = formatOwnerNames(existingOwners);
 
       await apiClient.patch(API_ROUTES.UNITS.BY_ID(unit.id), {
         commercialStatus: 'for-sale',
@@ -59,8 +63,8 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           askingPrice: unit.commercial?.askingPrice ?? null,
           finalPrice: null,
           reservationDeposit: null,
-          buyerContactId: null,
-          buyerName: null,
+          owners: null,
+          ownerContactIds: null,
           reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: null,
           listedDate: unit.commercial?.listedDate ?? null,
@@ -90,7 +94,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           unitId: unit.id, unitName,
           projectId: resolveProjectId(unit) ?? null,
           buyerContactId: refundBuyerContactId,
-          buyerName: unit.commercial?.buyerName ?? null,
+          buyerName: refundBuyerName,
           projectName: null, permitTitle: null, companyName: null,
           buildingName: null, unitFloor: unit.floor ?? null,
           projectAddress: null, paymentMethod: 'bank_transfer', notes: null,
@@ -108,8 +112,8 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
             action: 'revert',
             spaces: syncPayload,
-            buyerContactId: null,
-            buyerName: null,
+            owners: null,
+            ownerContactIds: null,
           }).catch((err: unknown) => {
             logger.warn('Appurtenance revert sync failed', { error: err });
           });
@@ -143,10 +147,12 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
             <span className="font-semibold">{statusLabel}</span>
           </p>
 
-          {unit.commercial?.buyerContactId && (
+          {unit.commercial?.owners && (unit.commercial.owners as PropertyOwnerEntry[]).length > 0 && (
             <p className={cn("text-sm", colors.text.muted)}>
               {t('sales.dialogs.revert.buyer', { defaultValue: 'Αγοραστής' })}:{' '}
-              <span className="font-medium text-foreground">{unit.commercial.buyerContactId}</span>
+              <span className="font-medium text-foreground">
+                {formatOwnerNames(unit.commercial.owners as PropertyOwnerEntry[]) ?? '—'}
+              </span>
             </p>
           )}
 

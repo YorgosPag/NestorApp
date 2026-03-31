@@ -34,8 +34,8 @@ import type {
 /** ADR-244: Input for creating split plans — owners array triggers server-side split */
 interface CreateSplitPlansInput {
   owners: Array<{ contactId: string; name: string; ownershipPct: number }>;
-  buyerContactId: string;
-  buyerName: string;
+  ownerContactId: string;
+  ownerName: string;
   buildingId: string;
   projectId: string;
   totalAmount: number;

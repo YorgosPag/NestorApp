@@ -29,6 +29,8 @@ import {
 import { useEntityContactLinks } from '@/hooks/useEntityAssociations';
 import type { Unit } from '@/types/unit';
 import type { ContractPhase } from '@/types/legal-contracts';
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
+import { getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -83,7 +85,10 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
   );
 
   const handleCreate = useCallback(async () => {
-    if (!unit.commercial?.buyerContactId) {
+    const primaryBuyerContactId = getPrimaryBuyerContactId(
+      (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? []
+    );
+    if (!primaryBuyerContactId) {
       toast.error(t('sales.legal.noBuyer', { defaultValue: 'Δεν υπάρχει αγοραστής' }));
       return;
     }
@@ -102,7 +107,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
       unitId: unit.id,
       projectId: resolvedProjectId,
       buildingId: unit.buildingId,
-      buyerContactId: unit.commercial.buyerContactId,
+      primaryBuyerContactId,
       phase: selectedPhase,
     });
     setCreating(false);

@@ -85,8 +85,8 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   ): Promise<{ success: boolean; error?: string }> => {
     return createSplitPlans({
       owners: splitOwners.map(o => ({ contactId: o.contactId, name: o.name, ownershipPct: o.ownershipPct })),
-      buyerContactId: getPrimaryBuyerContactId(splitOwners) ?? '',
-      buyerName: formatOwnerNames(splitOwners) ?? '',
+      ownerContactId: getPrimaryBuyerContactId(splitOwners) ?? '',
+      ownerName: formatOwnerNames(splitOwners) ?? '',
       buildingId: unit.buildingId,
       projectId: resolvedProjectId,
       totalAmount: totalPrice,
@@ -170,9 +170,10 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     );
   }
 
-  // resolvedProjectId defined above (before callbacks)
-  const buyerContactId = unit.commercial?.buyerContactId ?? '';
-  const buyerName = unit.commercial?.buyerName ?? '';
+  // ADR-244: Derive buyer from owners[] SSoT
+  const allOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
+  const buyerContactId = getPrimaryBuyerContactId(allOwners) ?? '';
+  const buyerName = formatOwnerNames(allOwners) ?? '';
   const suggestedAmount = unit.commercial?.finalPrice ?? unit.commercial?.askingPrice ?? 0;
 
   // No plan yet
@@ -213,8 +214,8 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
           unitId={unit.id}
           buildingId={unit.buildingId}
           projectId={resolvedProjectId}
-          buyerContactId={buyerContactId}
-          buyerName={buyerName}
+          ownerContactId={buyerContactId}
+          ownerName={buyerName}
           suggestedAmount={suggestedAmount}
           onCreate={createPlan}
           owners={owners ?? undefined}
@@ -289,7 +290,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
             <AccordionItem key={p.id} value={p.id}>
               <AccordionTrigger className="text-sm">
                 <span className="flex items-center gap-2">
-                  {p.ownerName ?? p.buyerName}
+                  {p.ownerName}
                   {p.ownershipPct != null && (
                     <Badge variant="secondary" className="tabular-nums text-xs">
                       {p.ownershipPct}%

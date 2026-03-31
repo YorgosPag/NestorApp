@@ -4,8 +4,8 @@
  * =============================================================================
  *
  * Propagates a contact's display name change to all denormalized locations:
- * - units.commercial.buyerName
- * - payment_plans.buyerName (subcollection)
+ * - units.commercial.owners[].name (ADR-244: via ownerContactIds array-contains query)
+ * - payment_plans.ownerName (subcollection)
  *
  * Called client-side from contacts.service.ts after updateContactFromForm().
  *

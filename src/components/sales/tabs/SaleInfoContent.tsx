@@ -6,7 +6,7 @@
  * @pattern Enterprise card layout with semantic sections
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import {
@@ -27,10 +27,10 @@ import { normalizeToDate } from '@/lib/date-local';
 import { InfoRow } from '@/components/shared/InfoRow';
 import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
 import type { Unit } from '@/types/unit';
+import type { PropertyOwnerEntry } from '@/types/ownership-table';
+import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
 import { TransactionChainCard } from '@/components/sales/cards/TransactionChainCard';
 import { UnitHierarchyCard } from '@/components/sales/cards/UnitHierarchyCard';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 
@@ -83,30 +83,10 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
   const iconSizes = useIconSizes();
   const router = useRouter();
 
-  // Fallback: αν buyerName λείπει αλλά buyerContactId υπάρχει, φέρνουμε από API
-  const [resolvedBuyerName, setResolvedBuyerName] = useState<string | null>(
-    unit?.commercial?.buyerName ?? null
-  );
-
-  useEffect(() => {
-    const contactId = unit?.commercial?.buyerContactId;
-    const existingName = unit?.commercial?.buyerName;
-    if (existingName || !contactId) {
-      setResolvedBuyerName(existingName ?? null);
-      return;
-    }
-
-    let cancelled = false;
-    apiClient.get<{ contact: { displayName: string } }>(
-      API_ROUTES.CONTACTS.BY_ID(encodeURIComponent(contactId))
-    ).then((data) => {
-      if (!cancelled && data?.contact?.displayName) {
-        setResolvedBuyerName(data.contact.displayName);
-      }
-    }).catch(() => { /* silent */ });
-
-    return () => { cancelled = true; };
-  }, [unit?.commercial?.buyerContactId, unit?.commercial?.buyerName]);
+  // ADR-244: Derive buyer info from owners[] SSoT
+  const unitOwners = (unit?.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
+  const resolvedBuyerName = formatOwnerNames(unitOwners);
+  const primaryBuyerContactId = getPrimaryBuyerContactId(unitOwners);
 
   if (!unit) return null;
 
@@ -160,7 +140,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
       </Card>
 
       {/* Κράτηση / Αγοραστής */}
-      {(commercial?.buyerContactId || commercial?.reservationDeposit) && (
+      {(primaryBuyerContactId || commercial?.reservationDeposit) && (
         <Card>
           <CardHeader className="p-3 pb-0">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -177,14 +157,14 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
                 value={formatCurrencyWhole(commercial.reservationDeposit)}
               />
             )}
-            {commercial?.buyerContactId && (
+            {primaryBuyerContactId && (
               <div className="flex items-center justify-between py-1.5">
                 <span className={cn("flex items-center gap-2 text-sm", colors.text.muted)}>
                   <UserCheck className={`${iconSizes.sm} ${SALES_ICON_COLORS.buyer} flex-shrink-0`} />
                   {t('sales.saleInfo.buyer')}
                 </span>
                 <button
-                  onClick={() => router.push(ENTITY_ROUTES.contacts.withId(commercial.buyerContactId!))}
+                  onClick={() => router.push(ENTITY_ROUTES.contacts.withId(primaryBuyerContactId))}
                   className={`text-sm font-medium ${colors.text.info} flex items-center gap-1 hover:underline`}
                 >
                   {resolvedBuyerName ?? t('sales.saleInfo.unknownBuyer')}

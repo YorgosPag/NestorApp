@@ -51,8 +51,8 @@ interface CreatePaymentPlanWizardProps {
   unitId: string;
   buildingId: string;
   projectId: string;
-  buyerContactId: string;
-  buyerName: string;
+  ownerContactId: string;
+  ownerName: string;
   suggestedAmount: number;
   onCreate: (input: Omit<CreatePaymentPlanInput, 'unitId'>) => Promise<{ success: boolean; error?: string }>;
   /** ADR-244: Multi-owner support — if >1, shows joint/individual step */
@@ -82,8 +82,8 @@ export function CreatePaymentPlanWizard({
   onOpenChange,
   buildingId,
   projectId,
-  buyerContactId,
-  buyerName,
+  ownerContactId,
+  ownerName,
   suggestedAmount,
   onCreate,
   owners,
@@ -216,8 +216,8 @@ export function CreatePaymentPlanWizard({
       result = await onCreate({
         buildingId,
         projectId,
-        buyerContactId,
-        buyerName: hasMultipleOwners && owners ? (formatOwnerNames(owners) ?? buyerName) : buyerName,
+        ownerContactId,
+        ownerName: hasMultipleOwners && owners ? (formatOwnerNames(owners) ?? ownerName) : ownerName,
         totalAmount: total,
         taxRegime,
         taxRate,
@@ -235,7 +235,7 @@ export function CreatePaymentPlanWizard({
     } else {
       toast.error(result.error ?? t('errors.createFailed'));
     }
-  }, [totalAmount, taxRegime, installments, buildingId, projectId, buyerContactId, buyerName, planMode, hasMultipleOwners, owners, onCreate, onCreateSplit, onOpenChange, t]);
+  }, [totalAmount, taxRegime, installments, buildingId, projectId, ownerContactId, ownerName, planMode, hasMultipleOwners, owners, onCreate, onCreateSplit, onOpenChange, t]);
 
   const installmentSum = installments.reduce((s, i) => s + i.amount, 0);
   const total = parseFloat(totalAmount) || 0;

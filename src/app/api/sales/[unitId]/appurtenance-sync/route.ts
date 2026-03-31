@@ -42,9 +42,7 @@ interface SyncSpacePayload {
 interface SyncRequestBody {
   action: SyncAction;
   spaces: SyncSpacePayload[];
-  buyerContactId: string | null;
-  buyerName: string | null;
-  /** ADR-244: Multi-buyer owners — propagated to linked spaces */
+  /** ADR-244: owners[] SSoT — propagated to linked spaces */
   owners?: Array<{
     contactId: string;
     name: string;
@@ -52,6 +50,8 @@ interface SyncRequestBody {
     role: string;
     paymentPlanId: string | null;
   }> | null;
+  /** ADR-244: Flat contactId array for Firestore array-contains queries */
+  ownerContactIds?: string[] | null;
 }
 
 const VALID_ACTIONS: readonly SyncAction[] = ['reserve', 'sell', 'revert'];
@@ -106,7 +106,7 @@ async function handlePost(
           );
         }
 
-        const { action, spaces, buyerContactId, buyerName } = body as SyncRequestBody;
+        const { action, spaces } = body as SyncRequestBody;
 
         await safeFirestoreOperation(async (db) => {
           // Validate area > 0 for reserve/sell (not revert)
@@ -134,9 +134,8 @@ async function handlePost(
               case 'reserve':
                 batch.update(docRef, {
                   commercialStatus: 'reserved',
-                  'commercial.buyerContactId': buyerContactId ?? null,
-                  'commercial.buyerName': buyerName ?? null,
                   'commercial.owners': body.owners ?? null,
+                  'commercial.ownerContactIds': body.ownerContactIds ?? null,
                   'commercial.askingPrice': space.salePrice ?? null,
                   'commercial.reservationDate': now,
                   'commercial.linkedUnitId': unitId,
@@ -146,9 +145,8 @@ async function handlePost(
               case 'sell':
                 batch.update(docRef, {
                   commercialStatus: 'sold',
-                  'commercial.buyerContactId': buyerContactId ?? null,
-                  'commercial.buyerName': buyerName ?? null,
                   'commercial.owners': body.owners ?? null,
+                  'commercial.ownerContactIds': body.ownerContactIds ?? null,
                   'commercial.finalPrice': space.salePrice ?? null,
                   'commercial.saleDate': now,
                   'commercial.linkedUnitId': unitId,
@@ -158,9 +156,8 @@ async function handlePost(
               case 'revert':
                 batch.update(docRef, {
                   commercialStatus: null,
-                  'commercial.buyerContactId': null,
-                  'commercial.buyerName': null,
                   'commercial.owners': null,
+                  'commercial.ownerContactIds': null,
                   'commercial.askingPrice': null,
                   'commercial.finalPrice': null,
                   'commercial.reservationDeposit': null,

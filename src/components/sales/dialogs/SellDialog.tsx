@@ -60,20 +60,15 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   const [saveError, setSaveError] = useState<string>('');
 
   const existingOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
-  const existingBuyerId = unit.commercial?.buyerContactId ?? '';
-  const existingBuyerName = unit.commercial?.buyerName ?? '';
 
   const [owners, setOwners] = useState<PropertyOwnerEntry[]>(() => {
     if (existingOwners && existingOwners.length > 0) return existingOwners;
-    if (existingBuyerId) {
-      return [{ contactId: existingBuyerId, name: existingBuyerName, ownershipPct: 100, role: 'buyer' as const, paymentPlanId: null }];
-    }
     return [];
   });
 
   const buyerContactId = getPrimaryBuyerContactId(owners) ?? '';
   const buyerName = formatOwnerNames(owners) ?? '';
-  const hasExistingOwners = Boolean(existingOwners?.length || existingBuyerId);
+  const hasExistingOwners = Boolean(existingOwners?.length);
 
   const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
   const hierarchy = useUnitHierarchyValidation(unit, open);
@@ -92,12 +87,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       setSelectedBrokerId('none');
 
       const unitOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
-      const unitBuyerId = unit.commercial?.buyerContactId ?? '';
-      const unitBuyerName = unit.commercial?.buyerName ?? '';
       if (unitOwners && unitOwners.length > 0) {
         setOwners(unitOwners);
-      } else if (unitBuyerId) {
-        setOwners([{ contactId: unitBuyerId, name: unitBuyerName, ownershipPct: 100, role: 'buyer' as const, paymentPlanId: null }]);
       } else {
         setOwners([]);
       }
@@ -106,7 +97,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         .then(setBrokerAgreements)
         .catch(() => setBrokerAgreements([]));
     }
-  }, [open, unit.commercial?.askingPrice, unit.commercial?.buyerContactId, unit.commercial?.buyerName, unit.commercial?.owners, unit.project, unit.id]);
+  }, [open, unit.commercial?.askingPrice, unit.commercial?.owners, unit.project, unit.id]);
 
   const handleSave = useCallback(async () => {
     const price = Number(finalPrice);
@@ -164,7 +155,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
               agentName: agreement.agentName,
               unitId: unit.id,
               projectId: resolveProjectId(unit) ?? '',
-              buyerContactId: buyerContactId || '',
+              primaryBuyerContactId: buyerContactId || '',
               salePrice: price,
               commissionType: agreement.commissionType,
               commissionPercentage: agreement.commissionPercentage,
