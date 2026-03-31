@@ -67,9 +67,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       try {
         const body = (await req.json()) as CreateContractInput;
 
-        if (!body.unitId || !body.projectId || !body.buildingId || !body.buyerContactId) {
+        if (!body.unitId || !body.projectId || !body.buildingId || !body.primaryBuyerContactId) {
           return NextResponse.json(
-            { success: false, error: 'unitId, projectId, buildingId, and buyerContactId are required' },
+            { success: false, error: 'unitId, projectId, buildingId, and primaryBuyerContactId are required' },
             { status: 400 }
           );
         }

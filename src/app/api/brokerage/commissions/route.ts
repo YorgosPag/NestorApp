@@ -25,7 +25,7 @@ const RecordCommissionSchema = z.object({
   agentName: z.string().min(1).max(200),
   unitId: z.string().min(1).max(128),
   projectId: z.string().min(1).max(128),
-  buyerContactId: z.string().min(1).max(128),
+  primaryBuyerContactId: z.string().min(1).max(128),
   salePrice: z.number().positive().max(999_999_999),
   commissionType: z.enum(['percentage', 'fixed', 'tiered']),
   commissionPercentage: z.number().min(0).max(100).nullable(),
