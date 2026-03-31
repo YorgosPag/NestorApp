@@ -184,12 +184,12 @@ describe('Domain Definitions — PreFilters', () => {
     });
   });
 
-  it('buyers has buyerContactId != null preFilter (Q94)', () => {
+  it('buyers has ownerContactIds != null preFilter (ADR-244)', () => {
     const def = getDomainDefinition('buyers');
     expect(def.preFilters).toBeDefined();
     expect(def.preFilters).toHaveLength(1);
     expect(def.preFilters![0]).toEqual({
-      fieldPath: 'commercial.buyerContactId',
+      fieldPath: 'commercial.ownerContactIds',
       opStr: '!=',
       value: null,
     });
@@ -559,8 +559,8 @@ describe('getNestedValue — Persona Resolver (Q93)', () => {
   });
 
   it('does not interfere with regular dot paths', () => {
-    const obj = { commercial: { buyerName: 'Test' } } as Record<string, unknown>;
-    expect(getNestedValue(obj, 'commercial.buyerName')).toBe('Test');
+    const obj = { commercial: { ownerContactIds: ['cont_123'] } } as Record<string, unknown>;
+    expect(getNestedValue(obj, 'commercial.ownerContactIds')).toEqual(['cont_123']);
   });
 });
 

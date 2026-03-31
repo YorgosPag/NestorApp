@@ -43,7 +43,7 @@ export const UNIT_TRACKED_FIELDS: Record<string, string> = {
   'commercial.askingPrice': 'Τιμή ζητούμενη',
   'commercial.finalPrice': 'Τελική τιμή',
   'commercial.reservationDeposit': 'Προκαταβολή',
-  'commercial.buyerName': 'Αγοραστής',
+  'commercial.owners': 'Ιδιοκτήτες/Αγοραστές',
   'commercial.reservationDate': 'Ημερ. κράτησης',
   'commercial.saleDate': 'Ημερ. πώλησης',
 };

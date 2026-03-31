@@ -149,7 +149,7 @@ export const PAYMENT_PLANS_DEFINITION: DomainDefinition = {
   defaultSortDirection: 'desc',
   fields: [
     // Identity
-    { key: 'buyerName', labelKey: 'domains.paymentPlans.fields.buyerName', type: 'text', filterable: true, sortable: true, defaultVisible: true },
+    { key: 'ownerName', labelKey: 'domains.paymentPlans.fields.ownerName', type: 'text', filterable: true, sortable: true, defaultVisible: true },
     { key: 'status', labelKey: 'domains.paymentPlans.fields.status', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: PAYMENT_PLAN_STATUSES, enumLabelPrefix: 'domains.paymentPlans.enums.status' },
     { key: 'planType', labelKey: 'domains.paymentPlans.fields.planType', type: 'enum', filterable: true, sortable: false, defaultVisible: false, enumValues: PLAN_TYPES, enumLabelPrefix: 'domains.paymentPlans.enums.planType' },
     // Amounts
@@ -163,7 +163,7 @@ export const PAYMENT_PLANS_DEFINITION: DomainDefinition = {
     { key: 'projectId', labelKey: 'domains.paymentPlans.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'projects', refDisplayField: 'name' },
     { key: 'buildingId', labelKey: 'domains.paymentPlans.fields.building', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'buildings', refDisplayField: 'name' },
     { key: 'unitId', labelKey: 'domains.paymentPlans.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'units', refDisplayField: 'name' },
-    { key: 'buyerContactId', labelKey: 'domains.paymentPlans.fields.buyer', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
+    { key: 'ownerContactId', labelKey: 'domains.paymentPlans.fields.owner', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
     // Computed — Aging
     { key: 'daysOverdue', labelKey: 'domains.paymentPlans.fields.daysOverdue', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number', computed: true, computeFn: computeDaysOverdue },
     { key: 'agingBucket', labelKey: 'domains.paymentPlans.fields.agingBucket', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: AGING_BUCKETS, enumLabelPrefix: 'domains.paymentPlans.enums.agingBucket', computed: true, computeFn: computeAgingBucket },
@@ -317,7 +317,7 @@ export const LEGAL_CONTRACTS_DEFINITION: DomainDefinition = {
     { key: 'projectId', labelKey: 'domains.legalContracts.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'projects', refDisplayField: 'name' },
     { key: 'buildingId', labelKey: 'domains.legalContracts.fields.building', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'buildings', refDisplayField: 'name' },
     { key: 'unitId', labelKey: 'domains.legalContracts.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'units', refDisplayField: 'name' },
-    { key: 'buyerContactId', labelKey: 'domains.legalContracts.fields.buyer', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
+    { key: 'primaryBuyerContactId', labelKey: 'domains.legalContracts.fields.buyer', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
     // Dates
     { key: 'signedAt', labelKey: 'domains.legalContracts.fields.signedAt', type: 'date', filterable: true, sortable: true, defaultVisible: true, format: 'date' },
     { key: 'completedAt', labelKey: 'domains.legalContracts.fields.completedAt', type: 'date', filterable: true, sortable: true, defaultVisible: false, format: 'date' },

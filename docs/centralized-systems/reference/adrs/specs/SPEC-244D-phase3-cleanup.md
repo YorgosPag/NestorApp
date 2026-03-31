@@ -2,7 +2,7 @@
 
 **Parent ADR**: ADR-244 (Multi-Buyer Co-Ownership)
 **Depends on**: SPEC-244A + SPEC-244B + SPEC-244C (ALL previous phases complete)
-**Status**: IN PROGRESS — Session 2/3 completed (Types + Services + Components + API Routes)
+**Status**: ✅ COMPLETED — All 3 sessions done (Types + Services + Components + API Routes + Reports + Config)
 **Risk**: 🔴 ΥΨΗΛΟΣ — breaking changes σε 42 αρχεία
 **Εκτίμηση**: 8-10 ώρες
 
@@ -12,7 +12,7 @@
 |---------|-------|--------|--------|
 | 1/3 | Types + Services + SRP Split | ✅ Done | `4b686e46` + `ad91e5af` |
 | 2/3 | Components + API Routes (14 αρχεία) + SRP splits (4 helpers) + 2 tsc fixes | ✅ Done | `e6b552d7` + `2e502caa` |
-| 3/3 | Report Builders + Hooks + AI Role + Final Verification | ⏳ Pending | — |
+| 3/3 | Report Builders + Config + Tests + Final Verification | ✅ Done | `pending` |
 
 ---
 

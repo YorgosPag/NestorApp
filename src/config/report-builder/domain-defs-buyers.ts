@@ -2,8 +2,8 @@
  * @module config/report-builder/domain-defs-buyers
  * @enterprise ADR-268 Phase 4b — B3 Buyers (Transaction-Based)
  *
- * Buyer = unit with buyerContactId (Q79: transaction-based, not persona).
- * Collection: units WHERE commercial.buyerContactId != null (Q94: schema discipline).
+ * Buyer = unit with owners[] (ADR-244: transaction-based, not persona).
+ * Collection: units WHERE commercial.ownerContactIds != null (Q94: schema discipline).
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -25,15 +25,15 @@ export const BUYERS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.buyers.label',
   descriptionKey: 'domains.buyers.description',
   entityLinkPath: '/units/{id}',
-  defaultSortField: 'commercial.buyerName',
+  defaultSortField: 'commercial.ownerContactIds',
   defaultSortDirection: 'asc',
   preFilters: [
-    { fieldPath: 'commercial.buyerContactId', opStr: '!=', value: null },
+    { fieldPath: 'commercial.ownerContactIds', opStr: '!=', value: null },
   ],
   fields: [
-    // Buyer info (denormalized on unit)
+    // Buyer info — ADR-244: derived from owners[] SSoT
     {
-      key: 'commercial.buyerName',
+      key: 'commercial.ownerContactIds',
       labelKey: 'domains.buyers.fields.buyerName',
       type: 'text',
       filterable: true,

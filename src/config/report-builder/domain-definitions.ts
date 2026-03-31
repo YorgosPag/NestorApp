@@ -211,7 +211,7 @@ const UNITS_DEFINITION: DomainDefinition = {
     // Commercial
     { key: 'commercial.askingPrice', labelKey: 'domains.units.fields.askingPrice', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
     { key: 'commercial.finalPrice', labelKey: 'domains.units.fields.finalPrice', type: 'currency', filterable: true, sortable: true, defaultVisible: true, format: 'currency' },
-    { key: 'commercial.buyerName', labelKey: 'domains.units.fields.buyerName', type: 'text', filterable: true, sortable: true, defaultVisible: false },
+    { key: 'commercial.ownerContactIds', labelKey: 'domains.units.fields.ownerContactIds', type: 'text', filterable: true, sortable: false, defaultVisible: false },
     { key: 'commercial.legalPhase', labelKey: 'domains.units.fields.legalPhase', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: LEGAL_PHASES, enumLabelPrefix: 'domains.units.enums.legalPhase' },
     // Payment summary (denormalized)
     { key: 'commercial.paymentSummary.totalAmount', labelKey: 'domains.units.fields.paymentTotal', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },

@@ -83,7 +83,7 @@ export const OWNERSHIP_DETAIL_DEFINITION: DomainDefinition = {
     { key: 'areaSqm', labelKey: 'domains.ownershipDetail.fields.areaSqm', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number' },
     { key: 'millesimalShares', labelKey: 'domains.ownershipDetail.fields.millesimalShares', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number' },
     { key: 'ownerParty', labelKey: 'domains.ownershipDetail.fields.ownerParty', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: OWNER_PARTIES, enumLabelPrefix: 'domains.ownershipDetail.enums.ownerParty' },
-    { key: 'buyerName', labelKey: 'domains.ownershipDetail.fields.buyerName', type: 'text', filterable: true, sortable: true, defaultVisible: false },
+    { key: 'ownerName', labelKey: 'domains.ownershipDetail.fields.ownerName', type: 'text', filterable: true, sortable: true, defaultVisible: false },
     // Parent-level fields (from the ownership table document)
     { key: 'status', labelKey: 'domains.ownershipDetail.fields.tableStatus', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: OWNERSHIP_TABLE_STATUSES, enumLabelPrefix: 'domains.ownershipDetail.enums.status' },
     // Refs (parent-level)
