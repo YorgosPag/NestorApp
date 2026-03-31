@@ -220,7 +220,7 @@ export class NavigationApiService {
         }>;
       }
 
-      const unitsResult = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.UNITS.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
+      const unitsResult = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
 
       // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
       return (unitsResult?.units || []).map((unit): NavigationUnit => ({
@@ -255,7 +255,7 @@ export class NavigationApiService {
         }>;
       }
 
-      const unitsResult = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.UNITS.LIST}?buildingId=${buildingId}`);
+      const unitsResult = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`);
 
       // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
       return (unitsResult?.units || []).map((unit): NavigationUnit => ({
@@ -305,7 +305,7 @@ export class NavigationApiService {
 
       return allProjects;
 
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }

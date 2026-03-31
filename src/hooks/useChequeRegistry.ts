@@ -68,7 +68,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const basePath = unitId ? API_ROUTES.UNITS.CHEQUES(unitId) : null;
+  const basePath = unitId ? API_ROUTES.PROPERTIES.CHEQUES(unitId) : null;
 
   // Fetch cheques
   const fetchData = useCallback(async () => {

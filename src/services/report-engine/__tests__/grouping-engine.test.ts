@@ -298,7 +298,7 @@ describe('generateKPIs', () => {
       ],
     };
     const result = groupRows(SAMPLE_ROWS, config, UNIT_FIELDS);
-    const kpis = generateKPIs(result, config, 'units', ['commercial.askingPrice', 'areas.gross'], UNIT_FIELDS);
+    const kpis = generateKPIs(result, config, 'properties', ['commercial.askingPrice', 'areas.gross'], UNIT_FIELDS);
 
     expect(kpis.length).toBeLessThanOrEqual(4);
     expect(kpis.length).toBeGreaterThanOrEqual(1);
@@ -313,7 +313,7 @@ describe('generateKPIs', () => {
       aggregations: [{ fieldKey: 'commercial.askingPrice', function: 'SUM' }],
     };
     const result = groupRows(SAMPLE_ROWS, config, UNIT_FIELDS);
-    const kpis = generateKPIs(result, config, 'units', ['commercial.askingPrice'], UNIT_FIELDS);
+    const kpis = generateKPIs(result, config, 'properties', ['commercial.askingPrice'], UNIT_FIELDS);
 
     const soldKPI = kpis.find(k => k.title === 'Sold %');
     expect(soldKPI).toBeDefined();

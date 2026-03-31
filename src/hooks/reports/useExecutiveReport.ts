@@ -16,13 +16,13 @@ import {
 } from 'lucide-react';
 import type { ReportKPI } from '@/components/reports/core';
 import type { Project } from '@/types/project';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 import type { Opportunity } from '@/types/crm';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { useFirestoreUnits } from '@/hooks/useFirestoreUnits';
+import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
-import { useUnitsStats } from '@/hooks/useUnitsStats';
+import { usePropertiesStats } from '@/hooks/usePropertiesStats';
 import { useRealtimeOpportunities } from '@/services/realtime/hooks/useRealtimeOpportunities';
 import { useRealtimeTasks } from '@/services/realtime/hooks/useRealtimeTasks';
 import { getTrafficLight } from '@/services/report-engine/evm-calculator';
@@ -71,7 +71,7 @@ export interface UseExecutiveReportReturn {
 
 function buildKPIs(
   projectStats: ReturnType<typeof useProjectsStats>,
-  unitStats: ReturnType<typeof useUnitsStats>,
+  unitStats: ReturnType<typeof usePropertiesStats>,
   opportunities: Opportunity[],
   taskOverdue: number,
   t: (key: string) => string,
@@ -96,8 +96,8 @@ function buildKPIs(
     },
     {
       title: t('executive.kpis.collectionRate'),
-      value: unitStats.totalUnits > 0
-        ? `${rate(unitStats.soldUnits, unitStats.totalUnits)}%`
+      value: unitStats.totalProperties > 0
+        ? `${rate(unitStats.soldProperties, unitStats.totalProperties)}%`
         : '0%',
       icon: Percent,
       color: 'purple' as const,
@@ -117,7 +117,7 @@ function buildKPIs(
     },
     {
       title: t('executive.kpis.availableProperties'),
-      value: unitStats.availableUnits,
+      value: unitStats.availableProperties,
       icon: Home,
       color: 'indigo' as const,
     },
@@ -165,7 +165,7 @@ function buildProjectHealth(projects: Project[]): ProjectHealthRow[] {
   });
 }
 
-function buildRevenueTrend(units: Unit[]): RevenueTrendPoint[] {
+function buildRevenueTrend(units: Property[]): RevenueTrendPoint[] {
   const currentYear = new Date().getFullYear();
   const monthLabels = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(currentYear, i, 1);
@@ -193,7 +193,7 @@ function buildRevenueTrend(units: Unit[]): RevenueTrendPoint[] {
   }));
 }
 
-function buildTopOverdue(units: Unit[]): OverdueItem[] {
+function buildTopOverdue(units: Property[]): OverdueItem[] {
   // Simplified: units sold without sale date or recent sale
   const soldUnits = units.filter(
     u => (u.status === 'sold' || u.commercialStatus === 'sold') && u.price,
@@ -284,8 +284,8 @@ export function useExecutiveReport(): UseExecutiveReportReturn {
     buildings, loading: bldLoading, error: bldError, refetch: bldRefetch,
   } = useFirestoreBuildings();
   const {
-    units, loading: unitLoading, error: unitError, refetch: unitRefetch,
-  } = useFirestoreUnits();
+    properties, loading: unitLoading, error: unitError, refetch: unitRefetch,
+  } = useFirestoreProperties();
   const {
     opportunities, loading: oppLoading, refetch: oppRefetch,
   } = useRealtimeOpportunities();
@@ -295,7 +295,7 @@ export function useExecutiveReport(): UseExecutiveReportReturn {
 
   // Stats hooks (pure computation, no loading)
   const projectStats = useProjectsStats(projects);
-  const unitStats = useUnitsStats(units);
+  const unitStats = usePropertiesStats(properties);
 
   const loading = projLoading || bldLoading || unitLoading || oppLoading || taskLoading;
   const error = projError || bldError || unitError || null;
@@ -335,8 +335,8 @@ export function useExecutiveReport(): UseExecutiveReportReturn {
 
     const kpis = buildKPIs(projectStats, unitStats, opportunities, taskStats.overdue, t);
     const projectHealth = buildProjectHealth(projects);
-    const revenueTrend = buildRevenueTrend(units);
-    const topOverdue = buildTopOverdue(units);
+    const revenueTrend = buildRevenueTrend(properties);
+    const topOverdue = buildTopOverdue(properties);
     const pipelineSummary = buildPipelineSummary(opportunities, t);
 
     cacheRef.current = {
@@ -345,7 +345,7 @@ export function useExecutiveReport(): UseExecutiveReportReturn {
     };
 
     return { kpis, projectHealth, revenueTrend, topOverdue, pipelineSummary };
-  }, [loading, projectStats, unitStats, opportunities, taskStats, projects, units, t]);
+  }, [loading, projectStats, unitStats, opportunities, taskStats, projects, properties, t]);
 
   return { ...result, loading, error, refetch };
 }

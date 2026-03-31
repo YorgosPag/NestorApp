@@ -78,7 +78,7 @@ export async function createProperty(
     interface PropertyCreateResult {
       propertyId: string;
     }
-    const result = await apiClient.post<PropertyCreateResult>(API_ROUTES.UNITS.CREATE, propertyData);
+    const result = await apiClient.post<PropertyCreateResult>(API_ROUTES.PROPERTIES.CREATE, propertyData);
 
     const propertyId = result?.propertyId;
     logger.info(`Property created with ID: ${propertyId}`);
@@ -149,7 +149,7 @@ export async function getPropertiesByBuilding(buildingId: string): Promise<Prope
 
 // Update a property via Admin SDK API (server-side validation + audit trail)
 export async function updateProperty(propertyId: string, updates: Partial<Property>): Promise<{ success: boolean }> {
-  await apiClient.patch(API_ROUTES.UNITS.BY_ID(propertyId), updates);
+  await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), updates);
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
   // Dispatch event for all components to update their local state
@@ -191,7 +191,7 @@ export async function updateMultiplePropertiesOwner(propertyIds: string[], conta
 
 // 🔒 SECURITY: Delete property via Admin SDK API (client-side Firestore deletes are blocked)
 export async function deleteProperty(propertyId: string): Promise<{ success: boolean }> {
-  await apiClient.delete(API_ROUTES.UNITS.BY_ID(propertyId));
+  await apiClient.delete(API_ROUTES.PROPERTIES.BY_ID(propertyId));
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
   RealtimeService.dispatch('UNIT_DELETED', {
@@ -286,7 +286,7 @@ export async function updatePropertyLink(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await apiClient.patch(API_ROUTES.UNITS.BY_ID(propertyId), updates);
+    await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), updates);
     return { success: true };
   } catch (error) {
     return {

@@ -230,7 +230,7 @@ export class EnterpriseIdMigrationService {
       case 'building':
         return enterpriseIdService.generateBuildingId();
       case 'unit':
-        return enterpriseIdService.generateUnitId();
+        return enterpriseIdService.generatePropertyId();
       case 'contact':
         return enterpriseIdService.generateContactId();
       case 'floor':

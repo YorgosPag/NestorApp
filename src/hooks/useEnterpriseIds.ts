@@ -41,7 +41,7 @@ export function useEnterpriseIdGeneration() {
   const generateCompanyId = useCallback(() => enterpriseIdService.generateCompanyId(), []);
   const generateProjectId = useCallback(() => enterpriseIdService.generateProjectId(), []);
   const generateBuildingId = useCallback(() => enterpriseIdService.generateBuildingId(), []);
-  const generateUnitId = useCallback(() => enterpriseIdService.generateUnitId(), []);
+  const generatePropertyId = useCallback(() => enterpriseIdService.generatePropertyId(), []);
   const generateContactId = useCallback(() => enterpriseIdService.generateContactId(), []);
   const generateFloorId = useCallback(() => enterpriseIdService.generateFloorId(), []);
   const generateDocumentId = useCallback(() => enterpriseIdService.generateDocumentId(), []);
@@ -51,7 +51,7 @@ export function useEnterpriseIdGeneration() {
     generateCompanyId,
     generateProjectId,
     generateBuildingId,
-    generateUnitId,
+    generatePropertyId,
     generateContactId,
     generateFloorId,
     generateDocumentId,
@@ -60,7 +60,7 @@ export function useEnterpriseIdGeneration() {
     generateCompanyId,
     generateProjectId,
     generateBuildingId,
-    generateUnitId,
+    generatePropertyId,
     generateContactId,
     generateFloorId,
     generateDocumentId,

@@ -27,7 +27,7 @@ const LoadingComponent = () => {
 
 // Dynamically import the Units page content
 const UnitsPageContent = dynamic(
-  () => import('@/app/units/page').then(mod => ({ default: mod.default })),
+  () => import('@/app/properties/page').then(mod => ({ default: mod.default })),
   {
     loading: () => <LoadingComponent />,
     ssr: false

@@ -20,7 +20,7 @@ import type { UploadEntryPoint, UploadEntryPointsConfig, FloorInfo } from './typ
 import { CONTACT_ENTRY_POINTS } from './entries-contact';
 import { BUILDING_ENTRY_POINTS } from './entries-building';
 import { FLOOR_ENTRY_POINTS } from './entries-floor';
-import { UNIT_ENTRY_POINTS } from './entries-unit';
+import { PROPERTY_ENTRY_POINTS } from './entries-property';
 import { PROJECT_ENTRY_POINTS } from './entries-project';
 import { STUDY_ENTRIES } from './entries-studies';
 
@@ -56,7 +56,7 @@ export const UPLOAD_ENTRY_POINTS: UploadEntryPointsConfig = {
   contact: CONTACT_ENTRY_POINTS,
   building: [...BUILDING_ENTRY_POINTS, ...getStudyEntriesForEntityLevel('building')],
   floor: FLOOR_ENTRY_POINTS,
-  unit: UNIT_ENTRY_POINTS,
+  property: PROPERTY_ENTRY_POINTS,
   project: [...PROJECT_ENTRY_POINTS, ...getStudyEntriesForEntityLevel('project')],
 };
 

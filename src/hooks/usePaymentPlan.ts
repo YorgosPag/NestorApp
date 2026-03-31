@@ -58,7 +58,7 @@ interface UsePaymentPlanReturn {
   /** ADR-244: Create split plans (1 per owner) */
   createSplitPlans: (input: CreateSplitPlansInput) => Promise<{ success: boolean; error?: string }>;
   refetch: () => void;
-  createPlan: (input: Omit<CreatePaymentPlanInput, 'unitId'>) => Promise<{ success: boolean; error?: string }>;
+  createPlan: (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => Promise<{ success: boolean; error?: string }>;
   updatePlan: (planId: string, updates: UpdatePaymentPlanInput) => Promise<{ success: boolean; error?: string }>;
   recordPayment: (input: CreatePaymentInput) => Promise<{ success: boolean; error?: string }>;
   addInstallment: (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) => Promise<{ success: boolean; error?: string }>;
@@ -109,10 +109,10 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     try {
       const [planRes, paymentsRes] = await Promise.all([
         fetchJson<{ success: boolean; data: PaymentPlan | PaymentPlan[] | null }>(
-          API_ROUTES.UNITS.PAYMENT_PLAN(unitId)
+          API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId)
         ),
         fetchJson<{ success: boolean; data: PaymentRecord[] }>(
-          API_ROUTES.UNITS.PAYMENTS(unitId)
+          API_ROUTES.PROPERTIES.PAYMENTS(unitId)
         ),
       ]);
 
@@ -137,11 +137,11 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
 
   // Create payment plan
   const createPlan = useCallback(
-    async (input: Omit<CreatePaymentPlanInput, 'unitId'>) => {
+    async (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.UNITS.PAYMENT_PLAN(unitId),
+          API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -163,7 +163,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.UNITS.PAYMENT_PLAN(unitId),
+          API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -185,7 +185,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.UNITS.PAYMENT_PLAN(unitId),
+          API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -207,7 +207,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.UNITS.PAYMENTS(unitId),
+          API_ROUTES.PROPERTIES.PAYMENTS(unitId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -229,7 +229,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.UNITS.INSTALLMENTS(unitId),
+          API_ROUTES.PROPERTIES.INSTALLMENTS(unitId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -251,7 +251,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.UNITS.INSTALLMENTS(unitId),
+          API_ROUTES.PROPERTIES.INSTALLMENTS(unitId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -273,7 +273,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.UNITS.INSTALLMENTS(unitId),
+          API_ROUTES.PROPERTIES.INSTALLMENTS(unitId),
           {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -295,7 +295,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
       if (!unitId) return { success: false, error: 'No unit selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.UNITS.LOAN(unitId),
+          API_ROUTES.PROPERTIES.LOAN(unitId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -315,7 +315,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     async (planId: string) => {
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `${API_ROUTES.UNITS.PAYMENT_PLAN(unitId!)}?planId=${encodeURIComponent(planId)}`,
+          `${API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId!)}?planId=${encodeURIComponent(planId)}`,
           { method: 'DELETE' }
         );
         if (data.success) await fetchData();

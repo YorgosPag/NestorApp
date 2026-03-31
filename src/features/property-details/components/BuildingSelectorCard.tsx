@@ -270,8 +270,8 @@ export function BuildingSelectorCard({
 
       // 🔒 ADR-232: Use Admin SDK PATCH (Client SDK blocked by Firestore rules
       // which treat buildingId/floorId as structural invariants)
-      const { updateUnit } = await import('@/services/units.service');
-      await updateUnit(unitId, {
+      const { updateProperty } = await import('@/services/properties.service');
+      await updateProperty(unitId, {
         buildingId: buildingIdToSave,
         floorId: floorIdToSave,
       } as Record<string, unknown>);

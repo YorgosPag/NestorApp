@@ -82,7 +82,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     setSaving(true);
     setSaveError('');
     try {
-      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unit.id), {
+      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unit.id), {
         commercialStatus: 'reserved',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,

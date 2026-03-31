@@ -69,7 +69,7 @@ export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const basePath = unitId ? API_ROUTES.UNITS.LOANS(unitId) : null;
+  const basePath = unitId ? API_ROUTES.PROPERTIES.LOANS(unitId) : null;
 
   // Fetch loans
   const fetchData = useCallback(async () => {

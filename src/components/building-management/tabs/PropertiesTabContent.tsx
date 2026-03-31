@@ -80,7 +80,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   // 🛡️ ADR-226 Phase 3: Deletion Guard
-  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('unit');
+  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('property');
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -113,7 +113,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     setError(null);
     try {
       const result = await apiClient.get<PropertiesApiResponse>(
-        `${API_ROUTES.UNITS.LIST}?buildingId=${building.id}`
+        `${API_ROUTES.PROPERTIES.LIST}?buildingId=${building.id}`
       );
       if (result?.units) {
         setUnits(result.units as Property[]);
@@ -183,11 +183,11 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     try {
       if (type === 'delete') {
         setDeletingId(item.id);
-        await apiClient.delete(API_ROUTES.UNITS.BY_ID(item.id));
+        await apiClient.delete(API_ROUTES.PROPERTIES.BY_ID(item.id));
         success(t('unitStats.deleted'));
       } else {
         setUnlinkingId(item.id);
-        await apiClient.patch(API_ROUTES.UNITS.BY_ID(item.id), { buildingId: null });
+        await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(item.id), { buildingId: null });
         success(t('unitStats.unlinked'));
       }
       await fetchUnits();
@@ -203,7 +203,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   };
 
   const fetchUnlinkedUnits = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<PropertiesApiResponse>(API_ROUTES.UNITS.LIST);
+    const result = await apiClient.get<PropertiesApiResponse>(API_ROUTES.PROPERTIES.LIST);
     if (!result?.units) return [];
     return result.units
       .filter((u) => !u.buildingId)
@@ -215,7 +215,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   }, [tUnits]);
 
   const handleLinkUnit = useCallback(async (itemId: string) => {
-    await apiClient.patch(API_ROUTES.UNITS.BY_ID(itemId), { buildingId: building.id });
+    await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(itemId), { buildingId: building.id });
     success(t('unitStats.linked'));
     await fetchUnits();
   }, [building.id, fetchUnits]);

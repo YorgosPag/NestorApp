@@ -116,7 +116,7 @@ export const POST = withStandardRateLimit(
           codeOptions: {
             currentValue: body.code?.trim(),
             floorLevel: typeof body.floor === 'number' ? body.floor : 0,
-            propertyType: (body.type || 'apartment') as PropertyType,
+            unitType: (body.type || 'apartment') as PropertyType,
           },
           apiPath: '/api/properties/create (POST)',
         });

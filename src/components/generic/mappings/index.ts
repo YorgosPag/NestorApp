@@ -95,14 +95,14 @@ export const STORAGE_COMPONENT_MAPPING = {
 } as const;
 
 // ============================================================================
-// UNITS COMPONENT MAPPING
+// PROPERTIES COMPONENT MAPPING
 // ============================================================================
 
 import { PropertyDetailsContent } from '../../property-viewer/details/PropertyDetailsContent';
-import { UnitCustomerTab } from '../../units/tabs/UnitCustomerTab';
+import { UnitCustomerTab } from '../../properties/tabs/PropertyCustomerTab';
 import { FloorPlanTab } from '../../../features/properties-sidebar/components/FloorPlanTab';
 
-export const UNITS_COMPONENT_MAPPING = {
+export const PROPERTIES_COMPONENT_MAPPING = {
   'PropertyDetailsContent': PropertyDetailsContent,
   'UnitCustomerTab': UnitCustomerTab,
   'FloorPlanTab': FloorPlanTab,
@@ -171,7 +171,7 @@ export const MASTER_COMPONENT_MAPPING = {
   ...PROJECT_COMPONENT_MAPPING,
   ...BUILDING_COMPONENT_MAPPING,
   ...STORAGE_COMPONENT_MAPPING,
-  ...UNITS_COMPONENT_MAPPING,
+  ...PROPERTIES_COMPONENT_MAPPING,
   ...CONTACT_COMPONENT_MAPPING,
   ...PARKING_COMPONENT_MAPPING,
 } as const;
@@ -183,7 +183,7 @@ export const MASTER_COMPONENT_MAPPING = {
 export type ProjectComponentName = keyof typeof PROJECT_COMPONENT_MAPPING;
 export type BuildingComponentName = keyof typeof BUILDING_COMPONENT_MAPPING;
 export type StorageComponentName = keyof typeof STORAGE_COMPONENT_MAPPING;
-export type UnitsComponentName = keyof typeof UNITS_COMPONENT_MAPPING;
+export type PropertiesComponentName = keyof typeof PROPERTIES_COMPONENT_MAPPING;
 export type ContactComponentName = keyof typeof CONTACT_COMPONENT_MAPPING;
 export type ParkingComponentName = keyof typeof PARKING_COMPONENT_MAPPING;
 export type MasterComponentName = keyof typeof MASTER_COMPONENT_MAPPING;
@@ -204,7 +204,7 @@ export function getComponentMapping(type: 'project' | 'building' | 'storage' | '
     case 'storage':
       return STORAGE_COMPONENT_MAPPING;
     case 'units':
-      return UNITS_COMPONENT_MAPPING;
+      return PROPERTIES_COMPONENT_MAPPING;
     case 'contact':
       return CONTACT_COMPONENT_MAPPING;
     case 'master':

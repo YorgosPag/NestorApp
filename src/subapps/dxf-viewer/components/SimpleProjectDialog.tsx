@@ -134,7 +134,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       if (selectedCompanyId) params.set('companyId', selectedCompanyId);
       params.set('buildingId', buildingId);
       const result = await apiClient.get<UnitsApiResponse>(
-        `${API_ROUTES.UNITS.LIST}?${params.toString()}`
+        `${API_ROUTES.PROPERTIES.LIST}?${params.toString()}`
       );
       setUnits(result?.units || []);
     } catch (err) {

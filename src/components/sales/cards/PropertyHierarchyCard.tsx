@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview Unit Hierarchy Card — ADR-198
+ * @fileoverview Property Hierarchy Card — ADR-198
  * @description Εμφανίζει ιεραρχία: Εταιρεία → Έργο → Κτίριο → Μονάδα + Διεύθυνση
  * @pattern Enterprise card with semantic hierarchy display
  */
@@ -31,7 +31,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // TYPES
 // =============================================================================
 
-interface UnitHierarchyCardProps {
+interface PropertyHierarchyCardProps {
   unitId: string;
 }
 
@@ -39,7 +39,7 @@ interface UnitHierarchyCardProps {
 // COMPONENT
 // =============================================================================
 
-export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
+export function PropertyHierarchyCard({ unitId }: PropertyHierarchyCardProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -53,7 +53,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
     async function fetchHierarchy() {
       try {
         const data = await apiClient.get<PropertyHierarchyResponse>(
-          API_ROUTES.UNITS.HIERARCHY(encodeURIComponent(unitId))
+          API_ROUTES.PROPERTIES.HIERARCHY(encodeURIComponent(unitId))
         );
         if (!cancelled) {
           setHierarchy(data);
@@ -66,7 +66,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
               building: data.building
                 ? { id: data.building.id, name: data.building.name }
                 : undefined,
-              unit: { id: data.unit.id, name: data.unit.name },
+              unit: { id: data.property.id, name: data.property.name },
               currentLevel: 'units',
             });
           }
@@ -156,7 +156,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
             icon={Home}
             iconColor="text-green-600"
             label={t('sales.hierarchy.unit')}
-            value={`${hierarchy.unit.name} — ${formatFloorLabel(hierarchy.unit.floor)}`}
+            value={`${hierarchy.property.name} — ${formatFloorLabel(hierarchy.property.floor)}`}
             iconSizeClass={iconSizes.xs}
             isLast
           />

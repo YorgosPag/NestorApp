@@ -49,7 +49,7 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
 
     setSaving(true);
     try {
-      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unit.id), {
+      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unit.id), {
         commercialStatus: unit.commercialStatus ?? 'for-sale',
         commercial: {
           askingPrice: price,

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 
-const logger = createModuleLogger('LinkSoldUnitsToCustomers');
+const logger = createModuleLogger('LinkSoldPropertiesToCustomers');
 
 interface LinkingResult {
   success: boolean;
@@ -29,7 +29,7 @@ interface LinkingResult {
   }>;
 }
 
-export function LinkSoldUnitsToCustomers() {
+export function LinkSoldPropertiesToCustomers() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -48,7 +48,7 @@ export function LinkSoldUnitsToCustomers() {
       logger.info('Starting sold units linking process');
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      const data = await apiClient.post<LinkingResult>(API_ROUTES.UNITS.ADMIN_LINK, {});
+      const data = await apiClient.post<LinkingResult>(API_ROUTES.PROPERTIES.ADMIN_LINK, {});
 
       if (data?.success) {
         setResult(data);
@@ -184,4 +184,4 @@ export function LinkSoldUnitsToCustomers() {
   );
 }
 
-export default LinkSoldUnitsToCustomers;
+export default LinkSoldPropertiesToCustomers;

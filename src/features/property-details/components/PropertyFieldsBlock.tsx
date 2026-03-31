@@ -306,7 +306,7 @@ export function PropertyFieldsBlock({
       if (isCreatingNewUnit) {
         // 🏢 ENTERPRISE: Create new unit via server-side API (Admin SDK)
         // Client-side setDoc blocked by Firestore rules — must use API endpoint
-        const { createUnit } = await import('@/services/properties.service');
+        const { createProperty } = await import('@/services/properties.service');
         const unitData = {
           ...updates,
           name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
@@ -317,12 +317,12 @@ export function PropertyFieldsBlock({
           floor: formData.floor,
           area: formData.areaGross,
         };
-        const result = await createUnit(unitData);
+        const result = await createProperty(unitData);
         if (!result.success) {
           throw new Error(result.error ?? 'Unit creation failed');
         }
-        if (result.unitId && onUnitCreated) {
-          onUnitCreated(result.unitId);
+        if (result.propertyId && onUnitCreated) {
+          onUnitCreated(result.propertyId);
         }
         success(t('save.createSuccess', { defaultValue: 'Η μονάδα δημιουργήθηκε επιτυχώς' }));
       } else {

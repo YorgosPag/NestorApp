@@ -15,7 +15,7 @@ import { getCompanyById } from '@/services/companies.service';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import { Video } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,7 @@ const logger = createModuleLogger('SalesVideosTab');
 // =============================================================================
 
 interface SalesVideosTabProps {
-  unit: Unit;
+  unit: Property;
 }
 
 // =============================================================================
@@ -85,7 +85,7 @@ export function SalesVideosTab({ unit }: SalesVideosTabProps) {
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="unit"
+      entityType="property"
       entityId={unit.id}
       entityLabel={unit.name || `Μονάδα ${unit.id}`}
       domain="sales"

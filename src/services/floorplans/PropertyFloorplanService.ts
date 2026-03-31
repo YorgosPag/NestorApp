@@ -2,13 +2,13 @@
 
 /**
  * =============================================================================
- * 🏢 ENTERPRISE Unit Floorplan Service (V2)
+ * 🏢 ENTERPRISE Property Floorplan Service (V2)
  * =============================================================================
  *
  * Manages unit floorplan files using the Enterprise File Storage pattern.
  * Uses FileRecordService for metadata and canonical storage paths.
  *
- * @module services/floorplans/UnitFloorplanService
+ * @module services/floorplans/PropertyFloorplanService
  * @version 2.0.0
  * @enterprise ADR-031 - Canonical File Storage System
  *
@@ -57,7 +57,7 @@ interface DxfSceneData {
   [key: string]: unknown;
 }
 
-export interface UnitFloorplanData {
+export interface PropertyFloorplanData {
   unitId: string;
   type: 'unit';
   scene: DxfSceneData;
@@ -70,7 +70,7 @@ export interface UnitFloorplanData {
 /**
  * 🏢 ENTERPRISE: Parameters for saving a unit floorplan
  */
-export interface SaveUnitFloorplanParams {
+export interface SavePropertyFloorplanParams {
   /** Company ID (REQUIRED) */
   companyId: string;
   /** Project ID (optional but recommended) */
@@ -80,7 +80,7 @@ export interface SaveUnitFloorplanParams {
   /** Unit ID (REQUIRED) */
   unitId: string;
   /** Floorplan data */
-  data: UnitFloorplanData;
+  data: PropertyFloorplanData;
   /** User ID who created this */
   createdBy: string;
   /** Original file for direct upload (DXF/PDF) */
@@ -90,7 +90,7 @@ export interface SaveUnitFloorplanParams {
 /**
  * 🏢 ENTERPRISE: Parameters for loading a unit floorplan
  */
-export interface LoadUnitFloorplanParams {
+export interface LoadPropertyFloorplanParams {
   /** Company ID (REQUIRED) */
   companyId: string;
   /** Unit ID */
@@ -101,7 +101,7 @@ export interface LoadUnitFloorplanParams {
 // SERVICE IMPLEMENTATION
 // ============================================================================
 
-export class UnitFloorplanService {
+export class PropertyFloorplanService {
   /** @deprecated Legacy collection — kept for backward-compatible reads only */
   private static readonly LEGACY_COLLECTION = 'unit_floorplans';
 
@@ -117,7 +117,7 @@ export class UnitFloorplanService {
    *
    * NOTE: Does NOT write to legacy `unit_floorplans` collection.
    */
-  static async saveFloorplan(params: SaveUnitFloorplanParams): Promise<boolean> {
+  static async saveFloorplan(params: SavePropertyFloorplanParams): Promise<boolean> {
     const { companyId, projectId, buildingId, unitId, data, createdBy, originalFile } = params;
 
     try {
@@ -141,9 +141,9 @@ export class UnitFloorplanService {
       const result = await FloorplanSaveOrchestrator.save({
         companyId,
         projectId,
-        entityType: ENTITY_TYPES.UNIT,
+        entityType: ENTITY_TYPES.PROPERTY,
         entityId: unitId,
-        purpose: FLOORPLAN_PURPOSES.UNIT,
+        purpose: FLOORPLAN_PURPOSES.PROPERTY,
         entityLabel: `Unit ${unitId}`,
         ext: fileExtension,
         descriptors: [unitId, buildingId || '', 'unit-floorplan'].filter(Boolean),
@@ -164,7 +164,7 @@ export class UnitFloorplanService {
       RealtimeService.dispatch('FLOORPLAN_CREATED', {
         floorplanId: result.fileId,
         floorplan: {
-          entityType: ENTITY_TYPES.UNIT,
+          entityType: ENTITY_TYPES.PROPERTY,
           entityId: unitId,
           name: fileName,
         },
@@ -190,7 +190,7 @@ export class UnitFloorplanService {
    * 2. Fallback: Check legacy `unit_floorplans/{unitId}_unit` for embedded scene (old data)
    * 3. If neither → return null
    */
-  static async loadFloorplan(params: LoadUnitFloorplanParams): Promise<UnitFloorplanData | null> {
+  static async loadFloorplan(params: LoadPropertyFloorplanParams): Promise<PropertyFloorplanData | null> {
     const { companyId, unitId } = params;
 
     try {
@@ -198,13 +198,13 @@ export class UnitFloorplanService {
 
       // ── Primary: FileRecord-based lookup ──
       const fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.UNIT,
+        ENTITY_TYPES.PROPERTY,
         unitId,
         {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.UNIT,
+          purpose: FLOORPLAN_PURPOSES.PROPERTY,
         }
       );
 
@@ -264,7 +264,7 @@ export class UnitFloorplanService {
         // Only return if scene is embedded (truly old data)
         if (data.scene && !data.sceneStoredInStorage) {
           logger.warn('Loaded unit floorplan from LEGACY collection (embedded scene)', { unitId });
-          return data as UnitFloorplanData;
+          return data as PropertyFloorplanData;
         }
       }
 
@@ -286,13 +286,13 @@ export class UnitFloorplanService {
   static async hasFloorplan(companyId: string, unitId: string): Promise<boolean> {
     try {
       const fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.UNIT,
+        ENTITY_TYPES.PROPERTY,
         unitId,
         {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.UNIT,
+          purpose: FLOORPLAN_PURPOSES.PROPERTY,
         }
       );
 
@@ -319,13 +319,13 @@ export class UnitFloorplanService {
   static async deleteFloorplan(companyId: string, unitId: string, deletedBy: string): Promise<boolean> {
     try {
       const fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.UNIT,
+        ENTITY_TYPES.PROPERTY,
         unitId,
         {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.UNIT,
+          purpose: FLOORPLAN_PURPOSES.PROPERTY,
         }
       );
 

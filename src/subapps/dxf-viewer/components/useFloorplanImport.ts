@@ -5,7 +5,7 @@ import { useFloorplan } from '../../../contexts/FloorplanContext';
 import { dxfImportService } from '../io/dxf-import';
 import { FloorplanService, type FloorplanData } from '../../../services/floorplans/FloorplanService';
 import { BuildingFloorplanService } from '../../../services/floorplans/BuildingFloorplanService';
-import { UnitFloorplanService, type UnitFloorplanData } from '../../../services/floorplans/UnitFloorplanService';
+import { PropertyFloorplanService, type PropertyFloorplanData } from '../../../services/floorplans/PropertyFloorplanService';
 import { FloorFloorplanService } from '../../../services/floorplans/FloorFloorplanService';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { resolveCompanyIdForBuilding } from '@/services/company-id-resolver';
@@ -154,17 +154,17 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
     if (currentStep === 'unit' && type === 'unit') {
       const unitData = {
         unitId: selectedUnitId, type: 'unit' as const,
-        scene: scene as unknown as UnitFloorplanData['scene'],
+        scene: scene as unknown as PropertyFloorplanData['scene'],
         fileName: file.name, timestamp: Date.now(),
       };
       const { companyId } = resolveCompanyId();
-      saved = await UnitFloorplanService.saveFloorplan({
+      saved = await PropertyFloorplanService.saveFloorplan({
         companyId, projectId: selectedProjectId || undefined,
         buildingId: selectedBuildingId, unitId: selectedUnitId,
         data: unitData, createdBy: createdBy || '', originalFile: file,
       });
       if (saved) {
-        apiClient.post(API_ROUTES.UNITS.ACTIVITY(selectedUnitId), {
+        apiClient.post(API_ROUTES.PROPERTIES.ACTIVITY(selectedUnitId), {
           action: 'updated',
           changes: [{ field: 'floorplan', oldValue: null, newValue: file.name, label: 'Κάτοψη μονάδας' }],
         }).catch(() => { /* fire-and-forget */ });
@@ -300,7 +300,7 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
   const checkExistingFloorplan = async (type: FloorplanType): Promise<boolean> => {
     if (currentStep === 'unit' && type === 'unit') {
       const { companyId } = resolveCompanyId();
-      return UnitFloorplanService.hasFloorplan(companyId, selectedUnitId);
+      return PropertyFloorplanService.hasFloorplan(companyId, selectedUnitId);
     }
     if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
       const { companyId } = resolveCompanyId();

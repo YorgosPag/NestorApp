@@ -31,7 +31,7 @@ const logger = createModuleLogger('DeletionGuardRoute');
 
 const ENTITY_PERMISSION_MAP: Record<EntityType, PermissionId> = {
   contact: 'crm:contacts:delete',
-  unit: 'units:units:delete',
+  property: 'properties:properties:delete',
   floor: 'projects:floors:delete',
   project: 'projects:projects:delete',
   building: 'buildings:buildings:delete',

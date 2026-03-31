@@ -86,7 +86,7 @@ export function PropertiesSidebar({
   }, [isCreatingNewUnit, onCancelCreate]);
 
   // 🛡️ ADR-226: Deletion Guard — pre-check dependencies before allowing delete
-  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('unit');
+  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('property');
 
   // Confirmation state for centered AlertDialog (NOT toast)
   const [confirmDelete, setConfirmDelete] = useState(false);

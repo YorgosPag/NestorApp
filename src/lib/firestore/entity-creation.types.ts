@@ -12,7 +12,7 @@
  */
 
 import type { AuthContext, AuditTargetType } from '@/lib/auth/types';
-import type { UnitType } from '@/types/unit';
+import type { PropertyType } from '@/types/property';
 import type { ParkingLocationZone } from '@/types/parking';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -21,7 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // =============================================================================
 
 /** Entity types handled by the centralized creation service */
-export type ServerEntityType = 'building' | 'floor' | 'unit' | 'storage' | 'parking';
+export type ServerEntityType = 'building' | 'floor' | 'unit' | 'property' | 'storage' | 'parking';
 
 /** Determines how companyId is resolved */
 export type EntityHierarchy = 'project-child' | 'building-child';
@@ -30,7 +30,7 @@ export type EntityHierarchy = 'project-child' | 'building-child';
 export type EntityIdGeneratorName =
   | 'generateBuildingId'
   | 'generateFloorId'
-  | 'generateUnitId'
+  | 'generatePropertyId'
   | 'generateStorageId'
   | 'generateParkingId';
 
@@ -88,14 +88,24 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     auditTargetType: 'api',
   },
   unit: {
-    collection: COLLECTIONS.UNITS,
+    collection: COLLECTIONS.PROPERTIES,
     hierarchy: 'building-child',
     parentField: 'buildingId',
-    idGenerator: 'generateUnitId',
+    idGenerator: 'generatePropertyId',
     codeType: 'unit',
     codeField: 'code',
     tenantCheck: true,
     auditTargetType: 'unit',
+  },
+  property: {
+    collection: COLLECTIONS.PROPERTIES,
+    hierarchy: 'building-child',
+    parentField: 'buildingId',
+    idGenerator: 'generatePropertyId',
+    codeType: 'unit',
+    codeField: 'code',
+    tenantCheck: true,
+    auditTargetType: 'property',
   },
   storage: {
     collection: COLLECTIONS.STORAGE,
@@ -138,7 +148,7 @@ export interface EntityCreationParams {
     /** Floor level for code generation (default: 0) */
     floorLevel?: number;
     /** Unit type (for unit entity code resolution) */
-    unitType?: UnitType;
+    unitType?: PropertyType;
     /** Parking location zone (for parking entity code resolution) */
     locationZone?: ParkingLocationZone;
   };

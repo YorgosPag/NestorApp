@@ -281,7 +281,7 @@ export function useContactEntityLinks(
             case 'building':
               result.buildings.push(entityLink);
               break;
-            case 'unit':
+            case 'property':
               result.units.push(entityLink);
               break;
           }

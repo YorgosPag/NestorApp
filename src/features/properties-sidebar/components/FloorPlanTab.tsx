@@ -151,12 +151,12 @@ export function FloorPlanTab({
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="unit"
+      entityType="property"
       entityId={String(selectedUnit.id)}
       entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
       domain="construction"
       category="floorplans"
-      purpose={FLOORPLAN_PURPOSES.UNIT}
+      purpose={FLOORPLAN_PURPOSES.PROPERTY}
       entryPointCategoryFilter="floorplans"
       displayStyle="floorplan-gallery"
       acceptedTypes={FLOORPLAN_ACCEPT}

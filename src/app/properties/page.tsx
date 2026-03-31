@@ -153,8 +153,8 @@ function UnitsPageContent() {
   // 🏢 ENTERPRISE: Delete unit handler — Firestore + local state sync
   const handleDeleteUnit = useCallback(async (unitId: string) => {
     try {
-      const { deleteUnit } = await import('@/services/properties.service');
-      await deleteUnit(unitId);
+      const { deleteProperty } = await import('@/services/properties.service');
+      await deleteProperty(unitId);
       handleDelete(unitId);
       // Deselect the deleted unit
       handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
@@ -190,7 +190,7 @@ function UnitsPageContent() {
     async function syncFromHierarchy() {
       try {
         const data = await apiClient.get<PropertyHierarchyResponse>(
-          API_ROUTES.UNITS.HIERARCHY(encodeURIComponent(selectedUnit!.id))
+          API_ROUTES.PROPERTIES.HIERARCHY(encodeURIComponent(selectedUnit!.id))
         );
         if (cancelled || !data.company || !data.project) return;
         syncBreadcrumb({
@@ -199,7 +199,7 @@ function UnitsPageContent() {
           building: data.building
             ? { id: data.building.id, name: data.building.name }
             : undefined,
-          unit: { id: data.unit.id, name: data.unit.name },
+          unit: { id: data.property.id, name: data.property.name },
           currentLevel: 'units',
         });
       } catch {

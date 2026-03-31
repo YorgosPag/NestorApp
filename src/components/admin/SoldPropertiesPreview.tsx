@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 
-const logger = createModuleLogger('SoldUnitsPreview');
+const logger = createModuleLogger('SoldPropertiesPreview');
 
 // 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -49,7 +49,7 @@ interface ContactLookup {
   [contactId: string]: string; // contactId -> contact name
 }
 
-export function SoldUnitsPreview() {
+export function SoldPropertiesPreview() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -67,7 +67,7 @@ export function SoldUnitsPreview() {
 
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      const data = await apiClient.get<UnitsData>(API_ROUTES.UNITS.LIST);
+      const data = await apiClient.get<UnitsData>(API_ROUTES.PROPERTIES.LIST);
 
       if (data?.success) {
         setUnits(data.units);
@@ -321,4 +321,4 @@ export function SoldUnitsPreview() {
   );
 }
 
-export default SoldUnitsPreview;
+export default SoldPropertiesPreview;

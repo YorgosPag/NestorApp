@@ -163,7 +163,7 @@ export async function getAllContactIds(): Promise<string[]> {
 }
 
 export async function getOwnerContactIds(): Promise<string[]> {
-  const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
+  const result = await firestoreQueryService.getAll<DocumentData>('PROPERTIES', {
     constraints: [where('soldTo', '>=', '')],
     tenantOverride: 'skip',
   });

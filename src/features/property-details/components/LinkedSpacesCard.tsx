@@ -158,7 +158,7 @@ export function LinkedSpacesCard({
           units?: Array<{ id: string; linkedSpaces?: Array<{ spaceId: string }> }>;
         }
         const result = await apiClient.get<UnitsApiResponse>(
-          `${API_ROUTES.UNITS.LIST}?buildingId=${buildingId}`
+          `${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`
         );
         const occupied = new Set<string>();
         for (const unit of result?.units ?? []) {
@@ -273,7 +273,7 @@ export function LinkedSpacesCard({
     if (!unitId) return;
     setSaving(true);
     try {
-      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unitId), {
+      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unitId), {
         linkedSpaces: newDraft,
       });
       logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);

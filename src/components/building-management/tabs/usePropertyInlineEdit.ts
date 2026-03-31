@@ -72,7 +72,7 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
       };
       if (editVersion !== undefined) payload._v = editVersion;
 
-      await apiClient.patch(API_ROUTES.UNITS.BY_ID(editingId), payload);
+      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(editingId), payload);
       success(t('inlineEdit.updated'));
       setEditingId(null);
       await onSaved();

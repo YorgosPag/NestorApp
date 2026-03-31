@@ -18,6 +18,7 @@ import type {
 } from '../builder-export-types';
 import type {
   DomainDefinition,
+  BuilderDomainId,
   BuilderQueryResponse,
   ReportBuilderFilter,
   GroupingResult,
@@ -38,8 +39,8 @@ const UNIT_FIELDS: FieldDefinition[] = [
 ];
 
 const DOMAIN_DEF: DomainDefinition = {
-  id: 'units',
-  collection: 'units',
+  id: 'properties',
+  collection: 'properties',
   labelKey: 'Μονάδες',
   descriptionKey: 'desc',
   entityLinkPath: '/units/{id}',
@@ -94,7 +95,7 @@ const SAMPLE_GROUPING_RESULT: GroupingResult = {
 
 function buildTestParams(overrides?: Partial<BuilderExportParams>): BuilderExportParams {
   return {
-    domain: 'units',
+    domain: 'properties',
     domainDefinition: DOMAIN_DEF,
     results: SAMPLE_RESPONSE,
     columns: ['name', 'commercialStatus', 'commercial.askingPrice', 'areas.gross'],
@@ -172,7 +173,7 @@ describe('buildFiltersText', () => {
 
 describe('buildExportFilename', () => {
   it('generates PDF filename with domain and date', () => {
-    const filename = buildExportFilename('units', 'pdf');
+    const filename = buildExportFilename('properties', 'pdf');
     expect(filename).toMatch(/^Nestor_Units_Report_\d{4}-\d{2}-\d{2}\.pdf$/);
   });
 
@@ -194,7 +195,7 @@ describe('buildExportFilename', () => {
 describe('BuilderExportParams', () => {
   it('builds params with all required fields', () => {
     const params = buildTestParams();
-    expect(params.domain).toBe('units');
+    expect(params.domain).toBe('properties');
     expect(params.columns).toHaveLength(4);
     expect(params.filters).toHaveLength(2);
     expect(params.groupingResult).toBeTruthy();
@@ -345,7 +346,7 @@ describe('Export — Negative & Boundary Cases', () => {
   });
 
   it('buildExportFilename generates valid filename for all domains', () => {
-    const domains = ['projects', 'buildings', 'units', 'floors'];
+    const domains: BuilderDomainId[] = ['projects', 'buildings', 'properties', 'floors'];
     for (const domain of domains) {
       const pdfName = buildExportFilename(domain, 'pdf');
       const xlsxName = buildExportFilename(domain, 'xlsx');

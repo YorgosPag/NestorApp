@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useEntityContactLinks } from '@/hooks/useEntityAssociations';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 import type { ContractPhase } from '@/types/legal-contracts';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
@@ -40,7 +40,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // ============================================================================
 
 interface LegalTabContentProps {
-  unit: Unit;
+  unit: Property;
 }
 
 // ============================================================================
@@ -72,7 +72,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
   } = useLegalContracts(unit.id, unit.project);
 
   // Self-contained: load associations directly (page.tsx does NOT pass them)
-  const { links, addLink, removeLink } = useEntityContactLinks('unit', unit.id);
+  const { links, addLink, removeLink } = useEntityContactLinks('property', unit.id);
 
   const [selectedPhase, setSelectedPhase] = useState<ContractPhase>('preliminary');
   const [creating, setCreating] = useState(false);

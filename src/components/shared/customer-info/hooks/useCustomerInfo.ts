@@ -158,7 +158,7 @@ async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExt
     // Παράλληλη φόρτωση basic info και units info από τα νέα enterprise APIs
     const [basicInfo, unitsData] = await Promise.all([
       fetchCustomerBasicInfo(contactId),
-      apiClient.get<UnitsApiResponse>(API_ROUTES.CONTACTS.UNITS(contactId))
+      apiClient.get<UnitsApiResponse>(API_ROUTES.CONTACTS.PROPERTIES(contactId))
     ]);
 
     const units = unitsData?.units || [];
@@ -211,7 +211,7 @@ export function useCustomerInfo(
     cacheTimeout = 5 * 60 * 1000, // 5 minutes default
     retries = 2,
     enabled = true,
-    staleTime = 60 * 1000 // 1 minute stale time
+    _staleTime = 60 * 1000 // 1 minute stale time
   } = config;
 
   // ========================================================================
@@ -443,7 +443,7 @@ export function useCustomerInfo(
  */
 export function useMultipleCustomerInfo(
   contactIds: string[],
-  config: UseCustomerInfoConfig = {}
+  _config: UseCustomerInfoConfig = {}
 ) {
   const [results, setResults] = useState<Record<string, UseCustomerInfoReturn>>({});
 

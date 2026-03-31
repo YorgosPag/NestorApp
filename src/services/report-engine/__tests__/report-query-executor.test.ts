@@ -74,7 +74,7 @@ describe('chunkArray', () => {
 
 describe('planFilterExecution', () => {
   const projectFields = getDomainDefinition('projects').fields;
-  const unitFields = getDomainDefinition('units').fields;
+  const unitFields = getDomainDefinition('properties').fields;
 
   it('routes equality filter to Firestore', () => {
     const filters: ReportBuilderFilter[] = [
@@ -248,7 +248,7 @@ describe('applyPostFilters', () => {
 // ============================================================================
 
 describe('applyPostFilters — nested fields', () => {
-  const fields = getDomainDefinition('units').fields;
+  const fields = getDomainDefinition('properties').fields;
 
   const rows: Record<string, unknown>[] = [
     { id: 'u1', name: 'A-101', areas: { gross: 120 }, commercial: { askingPrice: 200000 } },

@@ -57,7 +57,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       const refundBuyerContactId = getPrimaryBuyerContactId(existingOwners);
       const refundBuyerName = formatOwnerNames(existingOwners);
 
-      await apiClient.patch(API_ROUTES.UNITS.BY_ID(unit.id), {
+      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unit.id), {
         commercialStatus: 'for-sale',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,

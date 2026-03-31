@@ -19,11 +19,11 @@ import {
   ENTITY_CODE_SEPARATOR as SEP,
   ENTITY_CODE_SEQUENCE_PADDING,
   VALID_TYPE_CODES,
-  UNIT_TYPE_TO_CODE,
+  PROPERTY_TYPE_TO_CODE,
   PARKING_ZONE_TO_CODE,
   extractBuildingLetter,
 } from '@/config/entity-code-config';
-import type { UnitType } from '@/types/unit';
+import type { PropertyType } from '@/types/property';
 import type { ParkingLocationZone } from '@/types/parking';
 
 // =============================================================================
@@ -41,7 +41,7 @@ export interface EntityCodeSuggestionParams {
   entityType: 'unit' | 'parking' | 'storage';
   buildingName: string;
   floorLevel: number;
-  unitType?: UnitType;
+  unitType?: PropertyType;
   locationZone?: ParkingLocationZone;
 }
 
@@ -137,13 +137,13 @@ export function isStandardEntityCode(code: string): boolean {
  */
 export function resolveTypeCode(
   entityType: 'unit' | 'parking' | 'storage',
-  unitType?: UnitType,
+  unitType?: PropertyType,
   locationZone?: ParkingLocationZone
 ): string | null {
   switch (entityType) {
     case 'unit':
       if (!unitType) return null;
-      return UNIT_TYPE_TO_CODE[unitType] ?? null;
+      return PROPERTY_TYPE_TO_CODE[unitType] ?? null;
     case 'parking':
       if (!locationZone) return 'PK'; // default: closed parking
       return PARKING_ZONE_TO_CODE[locationZone] ?? 'PK';

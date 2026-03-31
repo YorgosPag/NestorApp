@@ -353,7 +353,7 @@ function getDomainSpecificKPI(
   config: GroupByConfig,
   domain: BuilderDomainId,
 ): ReportKPI | null {
-  if (domain === 'units' && config.level1 === 'commercialStatus') {
+  if (domain === 'properties' && config.level1 === 'commercialStatus') {
     const soldGroup = result.groups.find(g => g.groupKey === 'sold');
     if (soldGroup && result.totalRowCount > 0) {
       const pct = ((soldGroup.rowCount / result.totalRowCount) * 100).toFixed(1);

@@ -74,7 +74,7 @@ export function getKindFromLabel(label: string): OverlayKind | null {
 // ============================================================================
 // Κεντρική mapping function — parking/storage χρησιμοποιούν SpaceCommercialStatus
 // (υποσύνολο του CommercialStatus, χωρίς for-rent/for-sale-and-rent/rented)
-import type { CommercialStatus } from '../../../types/unit';
+import type { CommercialStatus } from '../../../types/property';
 import type { SpaceCommercialStatus } from '../../../types/sales-shared';
 
 const COMMERCIAL_TO_PROPERTY_STATUS: Record<string, PropertyStatus> = {

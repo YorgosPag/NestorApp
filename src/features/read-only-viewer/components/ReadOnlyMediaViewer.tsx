@@ -118,7 +118,7 @@ export function ReadOnlyMediaViewer({
   // ==========================================================================
 
   const floorplansData = useEntityFiles({
-    entityType: 'unit', entityId: unitId || '', companyId: effectiveCompanyId,
+    entityType: 'property', entityId: unitId || '', companyId: effectiveCompanyId,
     category: 'floorplans', autoFetch: !!unitId && !!effectiveCompanyId,
   });
 
@@ -145,12 +145,12 @@ export function ReadOnlyMediaViewer({
   }, [floorFloorplan, floorFloorplanLoading, floorFloorplanError, refetchFloorFloorplan, effectiveCompanyId]);
 
   const photosData = useEntityFiles({
-    entityType: 'unit', entityId: unitId || '', companyId: effectiveCompanyId,
+    entityType: 'property', entityId: unitId || '', companyId: effectiveCompanyId,
     category: 'photos', autoFetch: !!unitId && !!effectiveCompanyId,
   });
 
   const videosData = useEntityFiles({
-    entityType: 'unit', entityId: unitId || '', companyId: effectiveCompanyId,
+    entityType: 'property', entityId: unitId || '', companyId: effectiveCompanyId,
     category: 'videos', autoFetch: !!unitId && !!effectiveCompanyId,
   });
 

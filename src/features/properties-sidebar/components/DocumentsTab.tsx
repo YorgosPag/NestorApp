@@ -140,7 +140,7 @@ export function DocumentsTab({
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="unit"
+      entityType="property"
       entityId={String(selectedUnit.id)}
       entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
       domain="sales"
