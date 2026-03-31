@@ -44,7 +44,7 @@ export const GET = withStandardRateLimit(async function GET(
       req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<CFResponse>> => {
+    ) => {
       try {
         const { searchParams } = req.nextUrl;
         const projectId = searchParams.get('projectId') ?? undefined;
@@ -88,7 +88,7 @@ export const GET = withStandardRateLimit(async function GET(
         );
       }
     },
-    { requiredPermission: 'reports:reports:view' },
+    { permissions: 'reports:reports:view' },
   );
 
   return handler(request);
@@ -106,7 +106,7 @@ export const PUT = withStandardRateLimit(async function PUT(
       req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<ApiSuccessResponse<{ saved: boolean }>>> => {
+    ) => {
       try {
         const body = await req.json();
         const validation = validateConfigUpdate(body);
@@ -135,7 +135,7 @@ export const PUT = withStandardRateLimit(async function PUT(
         );
       }
     },
-    { requiredPermission: 'reports:reports:view' },
+    { permissions: 'reports:reports:view' },
   );
 
   return handler(request);

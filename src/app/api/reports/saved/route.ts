@@ -43,12 +43,12 @@ type ListResponse = ApiSuccessResponse<SavedReport[]>;
 export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
 ) {
-  const handler = withAuth<SavedReport[]>(
+  const handler = withAuth<ListResponse>(
     async (
       req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<ListResponse>> => {
+    ) => {
       try {
         const url = new URL(req.url);
         const visibility = url.searchParams.get('visibility') as SavedReportVisibility | null;
@@ -85,12 +85,12 @@ type CreateResponse = ApiSuccessResponse<SavedReport>;
 export const POST = withStandardRateLimit(async function POST(
   request: NextRequest,
 ) {
-  const handler = withAuth<SavedReport>(
+  const handler = withAuth<CreateResponse>(
     async (
       req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<CreateResponse>> => {
+    ) => {
       try {
         const body = (await req.json()) as CreateSavedReportInput;
 

@@ -35,7 +35,7 @@ export const POST = withStandardRateLimit(async function POST(
       req: NextRequest,
       _ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<AIResponse>> => {
+    ) => {
       try {
         const body = (await req.json()) as AIQueryRequestBody;
 
@@ -65,7 +65,7 @@ export const POST = withStandardRateLimit(async function POST(
         );
       }
     },
-    { requiredPermission: 'reports:reports:view' },
+    { permissions: 'reports:reports:view' },
   );
 
   return handler(request);

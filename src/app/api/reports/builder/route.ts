@@ -42,7 +42,7 @@ export const POST = withStandardRateLimit(async function POST(
       req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<BuilderResponse>> => {
+    ) => {
       try {
         const body = (await req.json()) as BuilderQueryRequest;
 
@@ -75,7 +75,7 @@ export const POST = withStandardRateLimit(async function POST(
         );
       }
     },
-    { requiredPermission: 'reports:reports:view' },
+    { permissions: 'reports:reports:view' },
   );
 
   return handler(request);

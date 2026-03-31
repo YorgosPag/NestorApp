@@ -11,6 +11,8 @@ import { Map, FileText, Camera, Video, User } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from 'react-i18next';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 const logger = createModuleLogger('GenericUnitsTabsRenderer');
 
@@ -76,6 +78,16 @@ import { FloorPlanTab } from '@/features/units-sidebar/components/FloorPlanTab';
 import { UnitCustomerTab } from '@/components/units/tabs/UnitCustomerTab';
 import '@/lib/design-system';
 
+function DocumentsPlaceholder({ title, subtitle }: { title: string; subtitle: string }) {
+  const colors = useSemanticColors();
+  return (
+    <div className={cn("text-center p-4", colors.text.muted)}>
+      <p>{title} - Coming Soon</p>
+      <p className="text-xs mt-2">{subtitle}</p>
+    </div>
+  );
+}
+
 /**
  * Component mapping για την αντιστοίχιση component names σε actual components
  */
@@ -85,12 +97,7 @@ const COMPONENT_MAPPING: Record<string, React.ComponentType<GenericComponentProp
   'FloorPlanTab': FloorPlanTab as unknown as React.ComponentType<GenericComponentProps>,
   'PhotosTabContent': PhotosTabContent as unknown as React.ComponentType<GenericComponentProps>,
   'VideosTabContent': VideosTabContent as unknown as React.ComponentType<GenericComponentProps>,
-  'DocumentsPlaceholder': (({ title, subtitle }: { title: string; subtitle: string }) => (
-    <div className={cn("text-center p-4", colors.text.muted)}>
-      <p>{title} - Coming Soon</p>
-      <p className="text-xs mt-2">{subtitle}</p>
-    </div>
-  )) as unknown as React.ComponentType<GenericComponentProps>,
+  'DocumentsPlaceholder': DocumentsPlaceholder as unknown as React.ComponentType<GenericComponentProps>,
 };
 
 // ============================================================================

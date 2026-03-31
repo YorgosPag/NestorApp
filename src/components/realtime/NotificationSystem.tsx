@@ -55,6 +55,7 @@ function NotificationItem({
   onDismiss: () => void;
 }) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <div className={cn(

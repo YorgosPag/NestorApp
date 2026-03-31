@@ -27,7 +27,7 @@ export const GET = withStandardRateLimit(async function GET(
       _req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<CrmResponse>> => {
+    ) => {
       try {
         const filter = { companyId: ctx.companyId };
         const data = await ReportDataAggregator.getCrmReport(filter);
@@ -41,7 +41,7 @@ export const GET = withStandardRateLimit(async function GET(
         );
       }
     },
-    { requiredPermission: 'reports:reports:view' },
+    { permissions: 'reports:reports:view' },
   );
 
   return handler(request);

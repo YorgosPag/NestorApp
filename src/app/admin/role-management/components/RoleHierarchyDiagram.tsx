@@ -113,6 +113,7 @@ const HIERARCHY: HierarchyNode = {
 // =============================================================================
 
 function TreeNode({ node }: { node: HierarchyNode }) {
+  const colors = useSemanticColors();
   const roleDef = PREDEFINED_ROLES[node.roleId];
   const permCount = roleDef?.isBypass
     ? 'all'

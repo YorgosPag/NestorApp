@@ -206,6 +206,7 @@ interface CategoryItemsTableProps {
 }
 
 function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, t }: CategoryItemsTableProps) {
+  const colors = useSemanticColors();
   return (
     <Table>
       <TableHeader>

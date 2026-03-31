@@ -38,7 +38,7 @@ export const GET = withStandardRateLimit(async function GET(
       _req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<FinancialResponse>> => {
+    ) => {
       try {
         const filter = { companyId: ctx.companyId };
 
@@ -64,7 +64,7 @@ export const GET = withStandardRateLimit(async function GET(
         );
       }
     },
-    { requiredPermission: 'reports:reports:view' },
+    { permissions: 'reports:reports:view' },
   );
 
   return handler(request);

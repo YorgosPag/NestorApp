@@ -93,8 +93,9 @@ export function AuditTab({ canExport }: AuditTabProps) {
   // ---------------------------------------------------------------------------
   // Filter callbacks
   // ---------------------------------------------------------------------------
-  const handleFilterByActor = useCallback((actorId: string) => {
   const colors = useSemanticColors();
+
+  const handleFilterByActor = useCallback((actorId: string) => {
     setFilters((prev) => ({ ...prev, actorId }));
   }, []);
 

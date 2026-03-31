@@ -101,8 +101,9 @@ export function PermissionSetManager({
   // ---------------------------------------------------------------------------
   // Submit
   // ---------------------------------------------------------------------------
-  const handleSubmit = useCallback(async () => {
   const colors = useSemanticColors();
+
+  const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
 
     setIsSubmitting(true);

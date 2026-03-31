@@ -48,12 +48,12 @@ export const GET = withStandardRateLimit(async function GET(
 ) {
   const { reportId } = await segmentData!.params;
 
-  const handler = withAuth<SavedReport>(
+  const handler = withAuth<SingleResponse>(
     async (
       _req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<SingleResponse>> => {
+    ) => {
       try {
         const report = await getSavedReport(ctx.companyId, reportId);
         if (!report) {
@@ -86,12 +86,12 @@ export const PUT = withStandardRateLimit(async function PUT(
 ) {
   const { reportId } = await segmentData!.params;
 
-  const handler = withAuth<SavedReport>(
+  const handler = withAuth<SingleResponse>(
     async (
       req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<SingleResponse>> => {
+    ) => {
       try {
         const body = (await req.json()) as UpdateSavedReportInput;
 
@@ -134,12 +134,12 @@ export const DELETE = withStandardRateLimit(async function DELETE(
 ) {
   const { reportId } = await segmentData!.params;
 
-  const handler = withAuth<{ deleted: boolean }>(
+  const handler = withAuth<DeleteResponse>(
     async (
       _req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<DeleteResponse>> => {
+    ) => {
       try {
         const success = await deleteSavedReport(
           ctx.companyId,
@@ -179,12 +179,12 @@ export const POST = withStandardRateLimit(async function POST(
 ) {
   const { reportId } = await segmentData!.params;
 
-  const handler = withAuth<{ action: string; result: boolean }>(
+  const handler = withAuth<ActionResponse>(
     async (
       req: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-    ): Promise<NextResponse<ActionResponse>> => {
+    ) => {
       try {
         const body = (await req.json()) as { action: string };
 

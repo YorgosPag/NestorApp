@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
-import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
+import { useAdministrativeHierarchy, type AdminLevel } from '@/hooks/useAdministrativeHierarchy';
 import {
   EMPTY_VALUE,
   PATH_TO_VALUE,

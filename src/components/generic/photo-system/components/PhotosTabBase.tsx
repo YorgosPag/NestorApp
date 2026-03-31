@@ -66,6 +66,7 @@ interface StatsProps {
 }
 
 function PhotosTabStats({ totalCount: _totalCount, categoryStats, categories }: StatsProps) {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
@@ -125,6 +126,7 @@ function PhotosTabCategories({
   onCategoryChange,
   categoryStats,
 }: CategoriesProps) {
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
 

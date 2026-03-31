@@ -16,6 +16,7 @@ import React from 'react';
 import { getDynamicHeightClass } from '@/components/ui/utils/dynamic-styles';
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -62,6 +63,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
   height = 'h-8',
   className
 }) => {
+  const colors = useSemanticColors();
   // Process data
   const chartData = history.slice(-maxPoints);
   const maxFPS = Math.max(...chartData.map(m => m.fps || 60), 60);

@@ -7,6 +7,8 @@ import { getIconComponent } from './utils/IconMapping';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GenericTabRenderer');
@@ -143,6 +145,7 @@ function DisplayField({
   customRenderers?: Record<string, CustomFieldRenderer>;
   valueFormatters?: Record<string, ValueFormatter>;
 }) {
+  const colors = useSemanticColors();
   // Check for custom renderer
   if (customRenderers && customRenderers[field.id]) {
     return customRenderers[field.id](field, data);
@@ -223,6 +226,7 @@ function FullSectionRenderer({
   customRenderers?: Record<string, CustomFieldRenderer>;
   valueFormatters?: Record<string, ValueFormatter>;
 }) {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const IconComponent = getIconComponent(section.icon);
 
@@ -283,6 +287,7 @@ export function GenericTabRenderer({
   customRenderers,
   valueFormatters
 }: GenericTabRendererProps) {
+  const colors = useSemanticColors();
   if (!section) {
     logger.warn('No section provided');
     return <div className={cn("text-center", colors.text.muted)}>Δεν υπάρχουν διαθέσιμα δεδομένα</div>;

@@ -141,6 +141,7 @@ export function ActionsTabContent({
 export function CommunicationTabContent({
   selectedItems = []
 }: ContactsTabContentProps) {
+  const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -301,6 +302,7 @@ export function FiltersTabContent({
   onToggleArchivedFilter,
   onToggleSort
 }: ContactsTabContentProps) {
+  const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');

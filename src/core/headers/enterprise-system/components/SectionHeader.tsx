@@ -11,6 +11,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import type { SectionHeaderProps } from '../types';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 
@@ -24,6 +25,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   variant = 'default',
   headingLevel = 'span'
 }) => {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
   // Combine title with count if provided

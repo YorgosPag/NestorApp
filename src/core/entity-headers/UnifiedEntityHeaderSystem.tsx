@@ -71,6 +71,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   className,
   children
 }) => {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
 

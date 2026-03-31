@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { designSystem } from '@/lib/design-system';
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatMetricValue, type TrendDirection, type MetricType } from '../utils/performance-utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -67,6 +68,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   trend,
   className
 }) => {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const valueColorClass = performanceMonitorUtilities.getMetricValueClasses(type, value);
 

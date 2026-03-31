@@ -107,6 +107,7 @@ function PdfPreview({ url, title }: { url: string; title: string }) {
 
 /** Image preview with zoom/rotate */
 function ImagePreview({ url, title }: { url: string; title: string }) {
+  const colors = useSemanticColors();
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
 
@@ -218,6 +219,7 @@ function UnsupportedPreview({
 // ============================================================================
 
 export function FilePreviewPanel({ file, onClose, companyId, currentUserId, currentUserName, onRefresh, className }: FilePreviewPanelProps) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('files');
   const [showVersions, setShowVersions] = useState(false);
   const [showAudit, setShowAudit] = useState(false);

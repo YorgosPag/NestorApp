@@ -8,6 +8,8 @@ import type { CRMDashboardTabConfig } from '@/config/crm-dashboard-tabs-config';
 import { TrendingUp, Target, Users, MessageSquare, Clock, Calendar } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 const logger = createModuleLogger('GenericCRMDashboardTabsRenderer');
 

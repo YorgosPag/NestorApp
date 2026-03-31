@@ -20,6 +20,7 @@ import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTypography } from '@/hooks/useTypography';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('ProjectsTabContent');
@@ -54,6 +55,7 @@ export function ActionsTabContent({
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const typography = useTypography();
   return (
     <>
       <Button

@@ -260,6 +260,7 @@ export function BaseToolbar({
 
 // Search component
 function ToolbarSearchComponent({ search, compact }: { search: ToolbarSearch; compact?: boolean }) {
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   return (
@@ -368,6 +369,7 @@ function ToolbarFiltersComponent({
 
 // Actions component
 function ToolbarActionsComponent({ actions }: { actions: ToolbarAction[] }) {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
   const renderButton = (action: ToolbarAction) => (
