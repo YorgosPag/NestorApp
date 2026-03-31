@@ -1561,9 +1561,9 @@
         "newContact": "Create new contact",
         "confirm": "Reserve",
         "unknownError": "Error during reservation",
-        "buyerName": "Buyer",
-        "buyerRequired": "Buyer selection is required",
-        "buyerPlaceholder": "Search contact..."
+        "ownerLabel": "Buyer",
+        "ownerRequired": "Buyer selection is required",
+        "ownerPlaceholder": "Search contact..."
       },
       "owners": {
         "label": "Owners",

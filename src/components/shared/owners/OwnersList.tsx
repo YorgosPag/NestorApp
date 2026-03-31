@@ -102,11 +102,11 @@ export function OwnersList({
   const colors = useSemanticColors();
 
   // Context-aware labels — defaults are sales-oriented, overridable per domain
-  const labelSingular = labels?.singular ?? t('sales.dialogs.reserve.buyerName');
+  const labelSingular = labels?.singular ?? t('sales.dialogs.reserve.ownerLabel');
   const labelPlural = labels?.plural ?? t('sales.dialogs.owners.label');
   const labelAdd = labels?.addButton ?? t('sales.dialogs.owners.addCoOwner');
-  const labelRequired = labels?.required ?? t('sales.dialogs.reserve.buyerRequired');
-  const labelPlaceholder = labels?.placeholder ?? t('sales.dialogs.reserve.buyerPlaceholder');
+  const labelRequired = labels?.required ?? t('sales.dialogs.reserve.ownerRequired');
+  const labelPlaceholder = labels?.placeholder ?? t('sales.dialogs.reserve.ownerPlaceholder');
 
   // ── Derived state (validation via SSoT: owner-utils) ─────────────────
   const totalPct = useMemo(

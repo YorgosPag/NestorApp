@@ -125,7 +125,7 @@
         "energyClass": "Ενεργειακή Κλάση",
         "askingPrice": "Τιμή Ζητούμενη",
         "finalPrice": "Τελική Τιμή",
-        "buyerName": "Αγοραστής",
+        "ownerContactIds": "Ιδιοκτήτης/-ες",
         "legalPhase": "Νομική Φάση",
         "paymentTotal": "Σύνολο Πληρωμών",
         "paymentPaid": "Πληρωμένο Ποσό",
@@ -490,7 +490,7 @@
       "label": "Προγράμματα Πληρωμών",
       "description": "Δόσεις και παρακολούθηση πληρωμών αγοραστών",
       "fields": {
-        "buyerName": "Αγοραστής",
+        "ownerName": "Ιδιοκτήτης",
         "status": "Κατάσταση",
         "planType": "Τύπος Πλάνου",
         "totalAmount": "Συνολικό Ποσό",
@@ -814,7 +814,7 @@
         "areaSqm": "Μικτή Επ. (m²)",
         "millesimalShares": "Χιλιοστά (‰)",
         "ownerParty": "Ιδιοκτήτης",
-        "buyerName": "Αγοραστής",
+        "ownerName": "Ιδιοκτήτης",
         "tableStatus": "Κατάσταση Πίνακα",
         "project": "Έργο",
         "building": "Κτίριο"

@@ -125,7 +125,7 @@
         "energyClass": "Energy Class",
         "askingPrice": "Asking Price",
         "finalPrice": "Final Price",
-        "buyerName": "Buyer",
+        "ownerContactIds": "Owner(s)",
         "legalPhase": "Legal Phase",
         "paymentTotal": "Payment Total",
         "paymentPaid": "Paid Amount",
@@ -490,7 +490,7 @@
       "label": "Payment Plans",
       "description": "Instalment schedules and buyer payment tracking",
       "fields": {
-        "buyerName": "Buyer",
+        "ownerName": "Owner",
         "status": "Status",
         "planType": "Plan Type",
         "totalAmount": "Total Amount",
@@ -814,7 +814,7 @@
         "areaSqm": "Gross Area (m²)",
         "millesimalShares": "Shares (‰)",
         "ownerParty": "Owner Party",
-        "buyerName": "Buyer",
+        "ownerName": "Owner",
         "tableStatus": "Table Status",
         "project": "Project",
         "building": "Building"

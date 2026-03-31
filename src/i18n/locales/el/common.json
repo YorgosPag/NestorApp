@@ -1560,9 +1560,9 @@
         "newContact": "Δημιουργία νέας επαφής",
         "confirm": "Κράτηση",
         "unknownError": "Σφάλμα κατά την κράτηση",
-        "buyerName": "Αγοραστής",
-        "buyerRequired": "Η επιλογή αγοραστή είναι υποχρεωτική",
-        "buyerPlaceholder": "Αναζήτηση επαφής..."
+        "ownerLabel": "Αγοραστής",
+        "ownerRequired": "Η επιλογή αγοραστή είναι υποχρεωτική",
+        "ownerPlaceholder": "Αναζήτηση επαφής..."
       },
       "owners": {
         "label": "Ιδιοκτήτες",
