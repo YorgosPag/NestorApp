@@ -9,6 +9,8 @@ import {
   BarChart3,
   // 🎭 ENTERPRISE: Persona System icons (ADR-121)
   HardHat, UserCog, Calculator, Scale, Key, Euro, Award, Tag,
+  // 🏢 Procurement icons (PO statuses)
+  FileEdit, Send, PackageOpen, PackageCheck, CircleCheck,
   LucideIcon
 } from 'lucide-react';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
@@ -154,6 +156,18 @@ export const ICON_MAPPING = {
   'euro': Euro,
   'award': Award,
   'tag': Tag,
+
+  // 🏢 Procurement PO status icons (PascalCase aliases)
+  'FileEdit': FileEdit,
+  'Send': Send,
+  'PackageOpen': PackageOpen,
+  'PackageCheck': PackageCheck,
+  'CircleCheck': CircleCheck,
+  'file-edit': FileEdit,
+  'send': Send,
+  'package-open': PackageOpen,
+  'package-check': PackageCheck,
+  'circle-check': CircleCheck,
 
   // 🔧 Legacy emoji fallbacks για backward compatibility
   'handshake': UserCheck, // Alias

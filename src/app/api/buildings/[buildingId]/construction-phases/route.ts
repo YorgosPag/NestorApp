@@ -19,6 +19,8 @@ import {
   type UpdatePayload,
 } from './_helpers';
 
+export const maxDuration = 60;
+
 const logger = createModuleLogger('ConstructionPhasesRoute');
 
 // ADR-217: firestoreTimestampToISO replaced by centralised normalizeToISO from @/lib/date-local
@@ -48,11 +50,19 @@ export async function GET(
         path: `/api/buildings/${buildingId}/construction-phases`,
       });
 
-      const phasesSnapshot = await adminDb
-        .collection(COLLECTIONS.CONSTRUCTION_PHASES)
-        .where(FIELDS.BUILDING_ID, '==', buildingId)
-        .orderBy('order', 'asc')
-        .get();
+      // Parallel fetch — phases + tasks simultaneously (Google pattern)
+      const [phasesSnapshot, tasksSnapshot] = await Promise.all([
+        adminDb
+          .collection(COLLECTIONS.CONSTRUCTION_PHASES)
+          .where(FIELDS.BUILDING_ID, '==', buildingId)
+          .orderBy('order', 'asc')
+          .get(),
+        adminDb
+          .collection(COLLECTIONS.CONSTRUCTION_TASKS)
+          .where(FIELDS.BUILDING_ID, '==', buildingId)
+          .orderBy('order', 'asc')
+          .get(),
+      ]);
 
       const phases: ConstructionPhase[] = phasesSnapshot.docs.map((doc) => {
         const data = doc.data() as Omit<ConstructionPhase, 'id'>;
@@ -79,12 +89,6 @@ export async function GET(
           updatedBy: data.updatedBy,
         };
       });
-
-      const tasksSnapshot = await adminDb
-        .collection(COLLECTIONS.CONSTRUCTION_TASKS)
-        .where(FIELDS.BUILDING_ID, '==', buildingId)
-        .orderBy('order', 'asc')
-        .get();
 
       const tasks: ConstructionTask[] = tasksSnapshot.docs.map((doc) => {
         const data = doc.data() as Omit<ConstructionTask, 'id'>;
@@ -136,7 +140,7 @@ export async function POST(
 ) {
   const { buildingId } = await segmentData.params;
 
-  const handler = withStandardRateLimit(withAuth<ConstructionMutationResponse>(
+  const handler = withStandardRateLimit(withAuth(
     async (req: NextRequest, ctx: AuthContext) => {
       const body: CreatePayload = await req.json();
       return handleCreate(body, buildingId, ctx);
@@ -157,7 +161,7 @@ export async function PATCH(
 ) {
   const { buildingId } = await segmentData.params;
 
-  const handler = withStandardRateLimit(withAuth<ConstructionMutationResponse>(
+  const handler = withStandardRateLimit(withAuth(
     async (req: NextRequest, ctx: AuthContext) => {
       const adminDb = getAdminFirestore();
       if (!adminDb) throw new ApiError(503, 'Database unavailable');
@@ -218,7 +222,7 @@ export async function DELETE(
 ) {
   const { buildingId } = await segmentData.params;
 
-  const handler = withStandardRateLimit(withAuth<ConstructionMutationResponse>(
+  const handler = withStandardRateLimit(withAuth(
     async (req: NextRequest, ctx: AuthContext) => {
       return handleDelete(req.url, buildingId, ctx);
     },

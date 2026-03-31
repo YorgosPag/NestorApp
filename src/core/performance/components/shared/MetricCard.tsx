@@ -20,7 +20,6 @@ import { designSystem } from '@/lib/design-system';
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatMetricValue, type TrendDirection, type MetricType } from '../utils/performance-utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES

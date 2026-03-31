@@ -56,7 +56,9 @@ export const SUPPORTED_NAMESPACES = [
   'reports',    // 🏢 Enterprise Reports System (ADR-265)
   'report-builder',         // 🏢 Dynamic Report Builder UI (ADR-268)
   'report-builder-domains', // 🏢 Report Builder domain/field labels (ADR-268)
-  'cash-flow'               // 🏢 Cash Flow Forecast (ADR-268 Phase 8)
+  'cash-flow',              // 🏢 Cash Flow Forecast (ADR-268 Phase 8)
+  'procurement',            // 🏢 Procurement / Purchase Orders
+  'saved-reports',          // 🏢 Saved Reports management
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -191,6 +193,18 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
         case 'cash-flow':
           translations = await import('./locales/el/cash-flow.json');
           break;
+        case 'procurement':
+          translations = await import('./locales/el/procurement.json');
+          break;
+        case 'report-builder':
+          translations = await import('./locales/el/report-builder.json');
+          break;
+        case 'report-builder-domains':
+          translations = await import('./locales/el/report-builder-domains.json');
+          break;
+        case 'saved-reports':
+          translations = await import('./locales/el/saved-reports.json');
+          break;
         default:
           logger.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -305,6 +319,18 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'cash-flow':
           translations = await import('./locales/en/cash-flow.json');
+          break;
+        case 'procurement':
+          translations = await import('./locales/en/procurement.json');
+          break;
+        case 'report-builder':
+          translations = await import('./locales/en/report-builder.json');
+          break;
+        case 'report-builder-domains':
+          translations = await import('./locales/en/report-builder-domains.json');
+          break;
+        case 'saved-reports':
+          translations = await import('./locales/en/saved-reports.json');
           break;
         default:
           logger.warn(`Namespace ${namespace} not found for language ${language}`);

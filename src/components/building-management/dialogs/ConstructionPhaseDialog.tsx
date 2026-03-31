@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -107,6 +108,8 @@ export function ConstructionPhaseDialog({
     handleOpen: handleComboboxOpen,
   } = combobox;
 
+  const comboboxReset = combobox.reset;
+
   useEffect(() => {
     if (!open) return;
 
@@ -146,8 +149,8 @@ export function ConstructionPhaseDialog({
       setSelectedPhaseId(phaseId ?? phases[0]?.id ?? '');
     }
     setErrors({});
-    combobox.reset();
-  }, [open, mode, phase, task, isPhaseMode, phaseId, phases, combobox]);
+    comboboxReset();
+  }, [open, mode, phase, task, isPhaseMode, phaseId, phases, comboboxReset]);
 
   const validate = useCallback((): boolean => {
     const e: Record<string, string> = {};
@@ -264,11 +267,18 @@ export function ConstructionPhaseDialog({
 
   const statusOptions = isPhaseMode ? PHASE_STATUSES : TASK_STATUSES;
 
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) onClose();
+  }, [onClose]);
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className={DIALOG_SIZES.md}>
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {dialogTitle}
+          </DialogDescription>
         </DialogHeader>
 
         <FormGrid>
