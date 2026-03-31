@@ -331,32 +331,18 @@
         "completedAt": "2026-02-06",
         "routes": [
           {
-            "path": "src/app/api/audit/bootstrap/route.ts",
+            "path": "src/app/api/projects/bootstrap/route.ts",
             "category": "HIGH",
             "limit": "100 req/min",
             "pattern": "WITH_AUTH",
             "verified": true
-          },
-          {
-            "path": "src/app/api/audit/logs/route.ts",
-            "category": "STANDARD",
-            "limit": "60 req/min",
-            "pattern": "WITH_AUTH",
-            "verified": true
-          },
-          {
-            "path": "src/app/api/audit/events/route.ts",
-            "category": "LOW",
-            "limit": "20 req/min",
-            "pattern": "MULTIPLE_METHODS",
-            "verified": true
           }
         ],
         "summary": {
-          "total": 3,
+          "total": 1,
           "high": 1,
-          "standard": 1,
-          "low": 1
+          "standard": 0,
+          "low": 0
         }
       },
       "batch9": {

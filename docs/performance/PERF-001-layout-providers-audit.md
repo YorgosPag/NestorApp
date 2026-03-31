@@ -114,7 +114,7 @@ const { unitsByBuilding, ... } = useRealtimeUnits();         // ← onSnapshot(u
 
 ### Metrics to Track:
 
-- `/audit` route cold load time
+- `/projects` route cold load time
 - Network tab: Firestore reads count on initial load
 - Memory: heap snapshot with/without global listeners
 
@@ -123,7 +123,7 @@ const { unitsByBuilding, ... } = useRealtimeUnits();         // ← onSnapshot(u
 ## Validation
 
 After implementing fixes:
-- [ ] `/audit` loads without units collection listener (if not needed)
+- [ ] `/projects` loads without units collection listener (if not needed)
 - [ ] Navigation shows counts from bootstrap (not real-time) initially
 - [ ] Real-time updates only when user navigates to project details
 - [ ] No regression in features that depend on real-time data

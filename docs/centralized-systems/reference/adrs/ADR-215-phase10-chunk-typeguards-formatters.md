@@ -19,7 +19,7 @@
 | 3 | `src/server/comms/workers/email-ingestion-worker.ts` | Private method `this.chunkArray` | Import from `array-utils` |
 | 4 | `src/server/ai/workers/ai-pipeline-worker.ts` | Private method `this.chunkArray` | Import from `array-utils` |
 | 5 | `src/lib/layer-sync.ts` | Private method `this.chunkArray` | Import from `array-utils` |
-| 6 | `src/app/api/audit/bootstrap/route.ts` | Module function `chunkArray` | Import from `array-utils` |
+| 6 | `src/app/api/projects/bootstrap/route.ts` | Module function `chunkArray` | Import from `array-utils` |
 
 ### 2. `isRecord` → `src/lib/type-guards.ts` (ΝΕΟΣ)
 

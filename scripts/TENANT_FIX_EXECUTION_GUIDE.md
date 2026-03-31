@@ -160,7 +160,7 @@ After running all steps, verify:
 ### 2. **Bootstrap API**
 - Open DevTools → Network tab
 - Reload page
-- Find `/api/audit/bootstrap` request
+- Find `/api/projects/bootstrap` request
 - Should see: **200 OK** (not 401)
 - Should NOT see error: "User's company … not found"
 
@@ -246,7 +246,7 @@ Once all steps are complete:
 All 4 verifications must pass:
 
 1. ✅ `/debug/token-info` shows `companyId: "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757"`
-2. ✅ `/api/audit/bootstrap` returns **200 OK** (no "company not found")
+2. ✅ `/api/projects/bootstrap` returns **200 OK** (no "company not found")
 3. ✅ `/api/projects/list` returns **200 OK** with projects
 4. ✅ `/api/buildings` returns **200 OK** with buildings (if buildings exist)
 

@@ -120,7 +120,7 @@ function Get-RateLimitCategory {
     $path = $RoutePath.Replace('\', '/').ToLower()
 
     # SENSITIVE (20 req/min): Admin, auth, financial
-    if ($path -match '/api/admin/|/api/auth/|/api/pricing/|/api/setup/|/api/fix-|/api/audit/bootstrap|/api/enterprise-ids/migrate') {
+    if ($path -match '/api/admin/|/api/auth/|/api/pricing/|/api/setup/|/api/fix-|/api/projects/bootstrap|/api/enterprise-ids/migrate') {
         return "SENSITIVE"
     }
 

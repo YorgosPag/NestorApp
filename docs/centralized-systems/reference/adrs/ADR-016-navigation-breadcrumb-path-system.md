@@ -34,7 +34,7 @@
 | Route | Header Component |
 |-------|------------------|
 | `/navigation` | NavigationBreadcrumb + NavigationTree |
-| `/audit` (Projects) | ProjectsHeader.tsx |
+| `/projects` | ProjectsHeader.tsx |
 | `/buildings` | BuildingsHeader.tsx |
 | `/units` | UnitsHeader.tsx |
 | `/spaces/parking` | ParkingsHeader.tsx |

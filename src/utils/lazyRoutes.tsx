@@ -194,7 +194,7 @@ export const LazyRoutes = {
 
   // ⚡ NEW ADDITIONS: Recently identified heavy components που χρειάζονται lazy loading
 
-  // Projects/Audit Management (heavy with data tables και reports)
+  // Projects Management (heavy with data tables και reports)
   Projects: createLazyRoute(
     () => import('@/components/projects/projects-page-content').then(mod => ({ default: mod.ProjectsPageContent })),
     { loadingType: 'dashboard', ssr: false }

@@ -46,7 +46,7 @@
 |--------|-------|-------|
 | Ευρετήριο Ακινήτων | `/properties` | blue |
 | Επαφές | `/contacts` | green |
-| Έργα | `/audit` | purple |
+| Έργα | `/projects` | purple |
 | Κτίρια | `/buildings` | orange |
 | Χώροι | `/spaces` | teal |
 | Πωλήσεις | `/sales` | yellow |

@@ -75,7 +75,7 @@
 | 21 | `/api/fix-companies` | ❌ | SENSITIVE | `withSensitiveRateLimit` | Company data fix |
 | 22 | `/api/fix-projects` | ❌ | SENSITIVE | `withSensitiveRateLimit` | Project data fix |
 | 23 | `/api/setup/firebase-collections` | ❌ | SENSITIVE | `withSensitiveRateLimit` | Database setup |
-| 24 | `/api/audit/bootstrap` | ❌ | SENSITIVE | `withSensitiveRateLimit` | Audit setup |
+| 24 | `/api/projects/bootstrap` | ❌ | SENSITIVE | `withSensitiveRateLimit` | Projects bootstrap |
 | 25 | `/api/units/admin-link` | ❌ | SENSITIVE | `withSensitiveRateLimit` | Admin unit link |
 | 26 | `/api/units/force-update` | ❌ | SENSITIVE | `withSensitiveRateLimit` | Force update |
 | 27 | `/api/units/final-solution` | ❌ | SENSITIVE | `withSensitiveRateLimit` | Unit solution |
@@ -449,7 +449,7 @@ logger.warn('Request denied', {
 - `/api/floors/admin`
 - `/api/navigation/radical-clean-schema`
 - `/api/navigation/force-uniform-schema`
-- `/api/audit/bootstrap`
+- `/api/projects/bootstrap`
 
 **Day 5**: Testing & verification
 - TypeScript compilation

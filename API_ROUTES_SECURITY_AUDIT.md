@@ -150,7 +150,7 @@ These routes **SHOULD** have authentication but **DON'T**:
 - ✅ `POST /api/navigation/add-companies` - super_admin
 - ✅ `POST /api/navigation/force-uniform-schema` - super_admin
 - ✅ `POST /api/navigation/normalize-schema` - super_admin
-- ✅ `GET /api/audit/bootstrap` - Permission: `projects:projects:view`
+- ✅ `GET /api/projects/bootstrap` - Permission: `projects:projects:view`
 
 #### 📋 Setup
 - ✅ `POST /api/setup/firebase-collections` - Permission: `admin:data:fix`
@@ -592,9 +592,9 @@ export async function POST() {
 32. ✅ `POST /api/admin/telegram/webhook` - admin:system:configure
 33. ✅ `DELETE /api/admin/telegram/webhook` - admin:system:configure
 
-#### /api/audit/*
+#### /api/projects/bootstrap
 
-34. ✅ `GET /api/audit/bootstrap` - projects:projects:view
+34. ✅ `GET /api/projects/bootstrap` - projects:projects:view
 
 #### /api/auth/*
 

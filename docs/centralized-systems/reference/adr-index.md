@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 258 ADRs | Last Updated: 2026-03-31
+**📊 Stats**: 259 ADRs | Last Updated: 2026-03-31
 
 ---
 
@@ -21,7 +21,7 @@
 | 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
 | 📊 **Data & State** | 12 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
-| 📂 **Entity Systems** | 15 | [View](#entity-systems) |
+| 📂 **Entity Systems** | 16 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 8 | [View](#security-auth) |
@@ -93,7 +93,7 @@
 | **ADR-056** | Centralized Entity Completion Styles | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-056-centralized-entity-completion-styles.md) |
 | **ADR-057** | Unified Entity Completion Pipeline | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-057-unified-entity-completion-pipeline.md) |
 | **ADR-058** | Canvas Drawing Primitives (Arc via Ellipse) | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-058-canvas-drawing-primitives-arc-via-ellipse.md) |
-| **ADR-059** | Separate /api/audit/bootstrap from /api/projects/list | ✅ ✅ Active | 2026-01-11 | Backend Systems | [📄](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md) |
+| **ADR-059** | Separate /api/projects/bootstrap from /api/projects/list | ✅ ✅ Active | 2026-01-11 | Backend Systems | [📄](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md) |
 | **ADR-060** | Migrate BuildingFloorplanService to Enterprise Storage Architecture | ✅ ✅ Active | 2026-01-11 | Backend Systems | [📄](./adrs/ADR-060-building-floorplan-enterprise-storage.md) |
 | **ADR-061** | Path Aliases Strategy | ✅ ✅ Active | 2026-01-13 | Infrastructure | [📄](./adrs/ADR-061-path-aliases.md) |
 | **ADR-062** | No Debug/Admin Analysis Endpoints in Production | ✅ ✅ Active | 2026-01-17 | Security & Auth | [📄](./adrs/ADR-062-no-debug-endpoints-in-production.md) |
@@ -293,6 +293,7 @@
 | **ADR-266** | Gantt & Construction Schedule Reports | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-268-route-rename-audit-to-projects.md) |
+| **ADR-269** | Unit to Property Rename — Naming Standardization | ✅ APPROVED | 2026-03-31 | Entity Systems | [📄](./adrs/ADR-269-unit-to-property-rename.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -445,6 +446,7 @@
 | **ADR-233** | Entity Coding System — Κωδικοποίηση Οντοτήτων | ✅ ✅ ACCEPTED | [View](./adrs/ADR-233-entity-coding-system.md) |
 | **ADR-238** | Entity Creation Centralization | ✅ PHASE 2 COMPLETE | [View](./adrs/ADR-238-entity-creation-centralization.md) |
 | **ADR-239** | Entity Linking Centralization | ✅ ✅ IMPLEMENTED | [View](./adrs/ADR-239-entity-linking-centralization.md) |
+| **ADR-269** | Unit to Property Rename — Naming Standardization | ✅ APPROVED | [View](./adrs/ADR-269-unit-to-property-rename.md) |
 
 ---
 
@@ -490,7 +492,7 @@
 
 | ADR | Decision | Status | Link |
 |-----|----------|--------|------|
-| **ADR-059** | Separate /api/audit/bootstrap from /api/projects/list | ✅ ✅ Active | [View](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md) |
+| **ADR-059** | Separate /api/projects/bootstrap from /api/projects/list | ✅ ✅ Active | [View](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md) |
 | **ADR-060** | Migrate BuildingFloorplanService to Enterprise Storage Architecture | ✅ ✅ Active | [View](./adrs/ADR-060-building-floorplan-enterprise-storage.md) |
 | **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
 

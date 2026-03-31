@@ -52,7 +52,7 @@ Phased remediation approach — από κρίσιμα σε λιγότερο κρ
 | `/api/admin/migrations/execute` | `withAuth` + `super_admin` | `withSensitiveRateLimit` | GET intentionally public (discovery) |
 | `/api/admin/migrations/normalize-floors` | `withAuth` + `super_admin` | `withSensitiveRateLimit` | Enterprise-grade |
 | `/api/admin/setup-admin-config` | `withAuth` | `withSensitiveRateLimit` | First-setup open by design |
-| `/api/audit/bootstrap` | `withAuth` + permissions | `withSensitiveRateLimit` | Enterprise-grade |
+| `/api/projects/bootstrap` | `withAuth` + permissions | `withSensitiveRateLimit` | Enterprise-grade |
 | `/api/buildings/[buildingId]/construction-phases` | `withAuth` + tenant isolation | `withStandardRateLimit` | Full CRUD protected |
 | `/api/buildings/[buildingId]/customers` | `withAuth` + tenant isolation | `withStandardRateLimit` | Double tenant validation |
 

@@ -120,7 +120,7 @@ interface BootstrapResponse {
 - **Cache:** 3-minute TTL per tenant (line 186)
 
 **✅ CLIENT USAGE CORRECT:**
-- Client calls: `/api/audit/bootstrap` (line 158, `useNavigationData.ts`)
+- Client calls: `/api/projects/bootstrap` (line 158, `useNavigationData.ts`)
 - ✅ **NO MISMATCH** - Endpoint exists at correct path
 
 ---
@@ -416,7 +416,7 @@ export const GLOBAL_ROLES = [
 
 **✅ NO ACTION NEEDED**
 
-**Reason:** Endpoint exists at correct path (`/api/audit/bootstrap`)
+**Reason:** Endpoint exists at correct path (`/api/projects/bootstrap`)
 **Contract:** TypeScript interface matches client expectations
 **Security:** RBAC protection με `projects:projects:view`
 **Tenant Isolation:** Filters by `ctx.companyId`

@@ -80,7 +80,7 @@ export function getNestedTimestampISO(data: Record<string, unknown>, path: strin
 - `src/services/ai-pipeline/shared/sender-history.ts` (1 — function simplified)
 - `src/lib/firestore/converters/workspace.converter.ts` (4 occurrences)
 - `src/lib/firestore/converters/association.converter.ts` (4 occurrences)
-- `src/app/api/audit/bootstrap/route.ts` (full function replaced)
+- `src/app/api/projects/bootstrap/route.ts` (full function replaced)
 - `src/components/file-manager/hooks/useAllCompanyFiles.ts` (function simplified)
 
 **Fixed duplicate**:
