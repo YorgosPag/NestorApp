@@ -238,7 +238,7 @@ export function ReportChart({
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className={cn(typography.h4, colors.text.primary)}>{title}</CardTitle>
+        <CardTitle className={cn(typography.heading.h4, colors.text.primary)}>{title}</CardTitle>
         {description && (
           <CardDescription className={cn(colors.text.muted)}>{description}</CardDescription>
         )}

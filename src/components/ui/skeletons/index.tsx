@@ -58,7 +58,7 @@ export function SkeletonAvatar({
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & { size?: "sm" | "md" | "lg" | "xl" }) {
   const iconSizes = useIconSizes();
-  useBorderTokens();
+  const { radiusClass } = useBorderTokens();
   const sizeClasses = {
     sm: iconSizes.xl, // h-8 w-8
     md: iconSizes.xl2, // h-12 w-12
@@ -69,7 +69,7 @@ export function SkeletonAvatar({
   return (
     <Skeleton
       className={cn(
-        "${radius.full}",
+        radiusClass.full,
         sizeClasses[size],
         className
       )}
@@ -93,7 +93,7 @@ export function SkeletonCard({
   showActions?: boolean;
 }) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, radiusClass } = useBorderTokens();
 
   return (
     <div
@@ -112,7 +112,7 @@ export function SkeletonCard({
               <Skeleton className={`${iconSizes.xs} w-24`} />
             </div>
           </div>
-          <Skeleton className={`${iconSizes.lg} w-16 ${radius.full}`} />
+          <Skeleton className={`${iconSizes.lg} w-16 ${radiusClass.full}`} />
         </div>
       )}
       
@@ -237,7 +237,7 @@ export function SkeletonChart({
   showLegend?: boolean;
 }) {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick, radiusClass } = useBorderTokens();
   return (
     <div
       className={cn(
@@ -251,11 +251,11 @@ export function SkeletonChart({
         {showLegend && (
           <div className="flex space-x-4">
             <div className="flex items-center space-x-2">
-              <Skeleton className={`${iconSizes.xs} ${radius.full}`} />
+              <Skeleton className={`${iconSizes.xs} ${radiusClass.full}`} />
               <Skeleton className={`${iconSizes.xs} w-16`} />
             </div>
             <div className="flex items-center space-x-2">
-              <Skeleton className={`${iconSizes.xs} ${radius.full}`} />
+              <Skeleton className={`${iconSizes.xs} ${radiusClass.full}`} />
               <Skeleton className={`${iconSizes.xs} w-16`} />
             </div>
           </div>
@@ -283,7 +283,7 @@ export function SkeletonChart({
         
         {type === "pie" && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <Skeleton className={`${iconSizes.xl8} ${radius.full}`} />
+            <Skeleton className={`${iconSizes.xl8} ${radiusClass.full}`} />
           </div>
         )}
       </div>

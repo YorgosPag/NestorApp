@@ -150,7 +150,7 @@ export function ReportPage({
             </span>
           )}
           <div>
-            <h1 className={cn(typography.h2, colors.text.primary)}>{title}</h1>
+            <h1 className={cn(typography.heading.h2, colors.text.primary)}>{title}</h1>
             {description && (
               <p className={cn('mt-0.5', typography.body, colors.text.muted)}>
                 {description}

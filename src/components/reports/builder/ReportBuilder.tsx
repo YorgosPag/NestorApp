@@ -174,7 +174,7 @@ export function ReportBuilder() {
     <section className="space-y-6 p-6" aria-label={t('title')}>
       {/* Header */}
       <header className="flex items-center gap-3">
-        <Database className="h-6 w-6" style={{ color: colors.primary }} />
+        <Database className={cn("h-6 w-6", colors.text.primary)} />
         <div>
           <h1 className="text-2xl font-bold">{t('title')}</h1>
           <p className="text-sm text-muted-foreground">{t('description')}</p>

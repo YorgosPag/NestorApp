@@ -214,6 +214,8 @@ export interface SemanticBackgroundColors {
  * Border color patterns - Semantic borders
  */
 export interface SemanticBorderColors {
+  /** Default border color - 'border-border' */
+  readonly default: string;
   /** Success border color - 'border-green-300' */
   readonly success: string;
   /** Error border color - 'border-red-300' */

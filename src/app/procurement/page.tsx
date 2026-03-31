@@ -61,7 +61,7 @@ export default function ProcurementPage() {
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
       <header>
-        <h1 className={cn(typography.heading1)}>
+        <h1 className={cn(typography.heading.h1)}>
           {t('list.createPO', 'Προμήθειες')}
         </h1>
       </header>

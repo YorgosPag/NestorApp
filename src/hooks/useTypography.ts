@@ -131,6 +131,10 @@ export interface UseTypographyReturn {
     readonly sm: string;
     /** "text-xs font-semibold" - Small headings */
     readonly xs: string;
+    /** "text-4xl font-bold" - Semantic H1 alias (from SEMANTIC_TYPOGRAPHY_TOKENS) */
+    readonly h1: string;
+    /** "text-3xl font-bold" - Semantic H2 alias (from SEMANTIC_TYPOGRAPHY_TOKENS) */
+    readonly h2: string;
     /** "text-2xl font-semibold" - Semantic H3 alias (from SEMANTIC_TYPOGRAPHY_TOKENS) */
     readonly h3: string;
     /** "text-xl font-semibold" - Semantic H4 alias (from SEMANTIC_TYPOGRAPHY_TOKENS) */
@@ -237,6 +241,8 @@ export function useTypography(): UseTypographyReturn {
       md: "text-lg font-semibold",          // Custom size (h4.5 - not in tokens yet)
       sm: "text-sm font-semibold",          // "text-sm font-semibold" (caption size + semibold)
       xs: "text-xs font-semibold",          // Extra small (not in tokens yet)
+      h1: SEMANTIC_TYPOGRAPHY_TOKENS.h1.tailwind, // "text-4xl font-bold" (semantic alias)
+      h2: SEMANTIC_TYPOGRAPHY_TOKENS.h2.tailwind, // "text-3xl font-bold" (semantic alias)
       h3: SEMANTIC_TYPOGRAPHY_TOKENS.h3.tailwind, // "text-2xl font-semibold" (semantic alias)
       h4: h4Token.tailwind,                 // "text-xl font-semibold" (semantic alias = lg)
     },

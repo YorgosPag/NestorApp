@@ -48,7 +48,7 @@ export function ExportDomainGrid({ domains, onExport, exportingDomains }: Export
             >
               <header className="flex items-center gap-2">
                 <Icon className={cn('h-5 w-5', colors.text.primary)} />
-                <h3 className={cn('font-medium', colors.text.default)}>
+                <h3 className={cn('font-medium', colors.text.primary)}>
                   {t(domain.titleKey)}
                 </h3>
               </header>

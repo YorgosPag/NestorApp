@@ -138,7 +138,7 @@ export function ReportFunnel({
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className={cn(typography.h4, colors.text.primary)}>
+        <CardTitle className={cn(typography.heading.h4, colors.text.primary)}>
           {title}
         </CardTitle>
       </CardHeader>

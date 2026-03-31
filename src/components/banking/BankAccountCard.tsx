@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
-import { colors } from '@/styles/design-tokens';
+import { colors as rawColors } from '@/styles/design-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -92,7 +92,7 @@ export function BankAccountCard({
 
   // Get bank info for color
   const bankInfo = account.bankCode ? getBankByCode(account.bankCode) : null;
-  const brandColor = bankInfo?.brandColor || colors.gray['500'];
+  const brandColor = bankInfo?.brandColor || rawColors.gray['500'];
 
   // Format IBAN for display
   const formattedIban = formatIBAN(account.iban);

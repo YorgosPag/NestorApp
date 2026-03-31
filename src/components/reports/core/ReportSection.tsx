@@ -66,12 +66,12 @@ export function ReportSection({
       <div>
         <h3
           id={sectionId}
-          className={cn(typography.h4, colors.text.primary)}
+          className={cn(typography.heading.h4, colors.text.primary)}
         >
           {title}
         </h3>
         {description && (
-          <p className={cn('mt-0.5', typography.caption, colors.text.muted)}>
+          <p className={cn('mt-0.5', typography.body.sm, colors.text.muted)}>
             {description}
           </p>
         )}

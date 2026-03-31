@@ -66,7 +66,7 @@ export function ExportStatusPanel({ jobs }: ExportStatusPanelProps) {
                   isSpinning && 'animate-spin',
                 )}
               />
-              <span className={cn('text-sm font-medium', colors.text.default)}>
+              <span className={cn('text-sm font-medium', colors.text.primary)}>
                 {t(`nav.${job.domain === 'executive' ? 'overview' : job.domain}`)}
               </span>
               <span className={cn('text-xs uppercase', colors.text.muted)}>

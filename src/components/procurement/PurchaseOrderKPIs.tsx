@@ -49,10 +49,10 @@ function KPICard({ label, value, icon, variant = 'default' }: KPICardProps) {
           {icon}
         </div>
         <div className="min-w-0">
-          <p className={cn(typography.label, 'text-muted-foreground truncate')}>
+          <p className={cn(typography.label.sm, 'text-muted-foreground truncate')}>
             {label}
           </p>
-          <p className={cn(typography.heading3, 'tabular-nums')}>
+          <p className={cn(typography.heading.h3, 'tabular-nums')}>
             {value}
           </p>
         </div>
