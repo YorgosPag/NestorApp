@@ -5,7 +5,7 @@
  *
  * All state, effects, and constants for the AddPropertyDialog.
  *
- * @module components/units/dialogs/useAddPropertyDialogState
+ * @module components/properties/dialogs/useAddPropertyDialogState
  * @enterprise ADR-034
  */
 

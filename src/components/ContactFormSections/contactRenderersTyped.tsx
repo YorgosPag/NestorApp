@@ -192,7 +192,7 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
             </label>
             <span className="text-sm font-semibold">{displayDate}</span>
           </div>
-          <Link href="/sales/available-apartments" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
+          <Link href="/sales/available-properties" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
             <ExternalLink className="h-3.5 w-3.5" />
             {t('persona.links.viewClientPurchases', 'Προβολή αγορών πελάτη')}
           </Link>

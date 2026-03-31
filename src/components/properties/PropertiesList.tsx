@@ -3,11 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { UnitsListHeader } from './list/UnitsListHeader';
+import { PropertiesListHeader } from './list/PropertiesListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { UnitListCard } from '@/domain';
 import { CompactToolbar, unitsConfig, type SortField } from '@/components/core/CompactToolbar';
-import { UnitTypeQuickFilters } from './UnitTypeQuickFilters';
+import { PropertyTypeQuickFilters } from './PropertyTypeQuickFilters';
 import type { Property } from '@/types/property-viewer';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
@@ -17,20 +17,20 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
-interface UnitsListProps {
+interface PropertiesListProps {
   units: Property[];
   selectedUnitIds: string[];
   onSelectUnit: (unitId: string, isShift: boolean) => void;
   onAssignmentSuccess: () => void;
-  /** Callback for creating a new unit (inline) */
+  /** Callback for creating a new property (inline) */
   onNewUnit?: () => void;
-  /** Callback for editing the selected unit */
+  /** Callback for editing the selected property */
   onEditUnit?: () => void;
-  /** Callback for deleting the selected unit */
+  /** Callback for deleting the selected property */
   onDeleteUnit?: () => void;
 }
 
-export function UnitsList({
+export function PropertiesList({
   units,
   selectedUnitIds,
   onSelectUnit,
@@ -38,7 +38,7 @@ export function UnitsList({
   onNewUnit,
   onEditUnit,
   onDeleteUnit,
-}: UnitsListProps) {
+}: PropertiesListProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('units');
   // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -153,8 +153,8 @@ export function UnitsList({
 
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
-      <UnitsListHeader
-        unitCount={sortedUnits.length}  // 🏢 ENTERPRISE: Δυναμικό count με filtered results
+      <PropertiesListHeader
+        propertyCount={sortedUnits.length}  // 🏢 ENTERPRISE: Δυναμικό count με filtered results
         showToolbar={showToolbar}
         onToolbarToggle={setShowToolbar}
       />
@@ -207,7 +207,7 @@ export function UnitsList({
 
       {/* 🏢 ENTERPRISE: Quick Filters for Unit Types (local_4.log architecture) */}
       {/* List-scoped filtering - NOT global filter panel */}
-      <UnitTypeQuickFilters
+      <PropertyTypeQuickFilters
         selectedTypes={selectedTypes}
         onTypeChange={setSelectedTypes}
         compact
@@ -230,3 +230,6 @@ export function UnitsList({
     </EntityListColumn>
   );
 }
+
+// Backward compatibility
+export { PropertiesList as UnitsList };

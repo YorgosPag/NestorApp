@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { Ruler, Euro } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
-import { getUnitsByOwner } from '@/services/units.service';
+import { getPropertiesByOwner } from '@/services/properties.service';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -40,7 +40,7 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
       }
       setLoading(true);
       try {
-        const units = await getUnitsByOwner(contactId);
+        const units = await getPropertiesByOwner(contactId);
         if (units.length > 0) {
             const unitsCount = units.length;
             const totalArea = units.reduce((sum, unit) => sum + (unit.area || 0), 0);

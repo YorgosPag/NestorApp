@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 🏢 ENTERPRISE: UnitsToolbarMainActions with full i18n support
+ * 🏢 ENTERPRISE: PropertiesToolbarMainActions with full i18n support
  * ZERO HARDCODED STRINGS - All labels from centralized translations
  */
 

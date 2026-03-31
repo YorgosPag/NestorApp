@@ -29,7 +29,7 @@ import { AppurtenancesSection } from './AppurtenancesSection';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import { useContactEmailWatch } from '@/hooks/sales/useContactEmailWatch';
-import { useUnitHierarchyValidation } from '@/hooks/sales/useUnitHierarchyValidation';
+import { usePropertyHierarchyValidation } from '@/hooks/sales/usePropertyHierarchyValidation';
 import {
   Select,
   SelectContent,
@@ -71,7 +71,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   const hasExistingOwners = Boolean(existingOwners?.length);
 
   const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
-  const hierarchy = useUnitHierarchyValidation(unit, open);
+  const hierarchy = usePropertyHierarchyValidation(unit, open);
 
   const sellNetArea = unit.area ?? 0;
   const sellGrossArea = (unit.areas as Record<string, number> | undefined)?.gross ?? 0;

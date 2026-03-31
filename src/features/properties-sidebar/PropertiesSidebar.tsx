@@ -19,23 +19,23 @@ import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 // 🏢 ENTERPRISE: Centralized confirmation dialog (AlertDialog, centered)
 import { BuildingSpaceConfirmDialog } from '@/components/building-management/shared/BuildingSpaceConfirmDialog';
 
-import { UnitsList } from '@/components/units/UnitsList';
+import { PropertiesList } from '@/components/properties/PropertiesList';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
 // UniversalTabsRenderer from generic (renderer only, no mappings)
 import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
 // UNITS_COMPONENT_MAPPING from domain-scoped file (not master barrel)
 import { UNITS_COMPONENT_MAPPING } from '@/components/generic/mappings/unitsMappings';
-import { getSortedUnitsTabs } from '@/config/units-tabs-config';
+import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { DetailsContainer } from '@/core/containers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
-import { useUnitsSidebar } from './hooks/useUnitsSidebar';
-import { UnitDetailsHeader } from './components/UnitDetailsHeader';
-import type { UnitsSidebarProps } from './types';
+import { usePropertiesSidebar } from './hooks/usePropertiesSidebar';
+import { PropertyDetailsHeader } from './components/PropertyDetailsHeader';
+import type { PropertiesSidebarProps } from './types';
 import '@/lib/design-system';
 
-export function UnitsSidebar({
+export function PropertiesSidebar({
   units,
   selectedUnit,
   viewerProps,
@@ -50,7 +50,7 @@ export function UnitsSidebar({
   onUnitCreated,
   onCancelCreate,
   defaultTab,
-}: UnitsSidebarProps) {
+}: PropertiesSidebarProps) {
   // 🗨️ ENTERPRISE: Centralized systems
   const { t } = useTranslation('units');
   const { quick } = useBorderTokens();
@@ -70,7 +70,7 @@ export function UnitsSidebar({
     currentFloor,
     safeViewerPropsWithFloors,
     safeViewerProps,
-  } = useUnitsSidebar(floors, viewerProps);
+  } = usePropertiesSidebar(floors, viewerProps);
 
   // 🏢 ENTERPRISE: Edit mode state - lifted to sidebar level (Pattern A)
   const [isEditMode, setIsEditMode] = useState(false);
@@ -112,16 +112,16 @@ export function UnitsSidebar({
   }, [selectedUnit, onDeleteUnit]);
 
   // Get units tabs from centralized config
-  const unitsTabs = getSortedUnitsTabs();
+  const propertiesTabs = getSortedPropertiesTabs();
 
   // Details content component using centralized DetailsContainer
   const detailsContent = (
     <DetailsContainer
       selectedItem={selectedUnit}
-      header={<UnitDetailsHeader unit={selectedUnit} isEditMode={effectiveEditMode} isCreatingNewUnit={isCreatingNewUnit} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewUnit={onNewUnit} onDeleteUnit={handleDeleteUnit} />}
+      header={<PropertyDetailsHeader unit={selectedUnit} isEditMode={effectiveEditMode} isCreatingNewUnit={isCreatingNewUnit} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewUnit={onNewUnit} onDeleteUnit={handleDeleteUnit} />}
       tabsRenderer={
         <UniversalTabsRenderer
-          tabs={unitsTabs.map(convertToUniversalConfig)}
+          tabs={propertiesTabs.map(convertToUniversalConfig)}
           data={selectedUnit}
           componentMapping={UNITS_COMPONENT_MAPPING}
           defaultTab={defaultTab || "info"}
@@ -163,7 +163,7 @@ export function UnitsSidebar({
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}
       <div className={`hidden md:flex flex-1 ${layout.listItemsGap} min-h-0 min-w-0 overflow-hidden`}>
-        <UnitsList
+        <PropertiesList
           units={units}
           selectedUnitIds={selectedUnitIds}
           onSelectUnit={onSelectUnit}
@@ -178,7 +178,7 @@ export function UnitsSidebar({
 
       {/* 📱 MOBILE: Show only UnitsList when no unit is selected */}
       <div className={`md:hidden w-full ${selectedUnit ? 'hidden' : 'block'}`}>
-        <UnitsList
+        <PropertiesList
           units={units}
           selectedUnitIds={selectedUnitIds}
           onSelectUnit={onSelectUnit}

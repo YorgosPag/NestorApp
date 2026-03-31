@@ -23,11 +23,11 @@ import type { ComponentType } from 'react';
 import type { TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 
 import { PropertyDetailsContent } from '@/components/property-viewer/details/PropertyDetailsContent';
-import { UnitCustomerTab } from '@/components/units/tabs/UnitCustomerTab';
-import { FloorPlanTab } from '@/features/units-sidebar/components/FloorPlanTab';
-import { DocumentsTab } from '@/features/units-sidebar/components/DocumentsTab';
-import { PhotosTab } from '@/features/units-sidebar/components/PhotosTab';
-import { VideosTab } from '@/features/units-sidebar/components/VideosTab';
+import { PropertyCustomerTab as UnitCustomerTab } from '@/components/properties/tabs/PropertyCustomerTab';
+import { FloorPlanTab } from '@/features/properties-sidebar/components/FloorPlanTab';
+import { DocumentsTab } from '@/features/properties-sidebar/components/DocumentsTab';
+import { PhotosTab } from '@/features/properties-sidebar/components/PhotosTab';
+import { VideosTab } from '@/features/properties-sidebar/components/VideosTab';
 
 // ============================================================================
 // SHARED COMPONENTS (legacy - kept for backward compatibility)

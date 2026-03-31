@@ -13,23 +13,23 @@ import { ToolbarMainActions } from './components/ToolbarMainActions';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { BulkAssignToolbar } from './BulkAssignToolbar';
-import { useUnitsToolbarState } from './hooks/useUnitsToolbarState';
+import { usePropertiesToolbarState } from './hooks/usePropertiesToolbarState';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 
-export function UnitsToolbar({
-  selectedUnitIds,
+export function PropertiesToolbar({
+  selectedPropertyIds,
   onSelectAll,
   onClearSelection,
   onAssignmentSuccess,
-  totalUnits,
+  totalProperties,
 }: {
-  selectedUnitIds: string[];
+  selectedPropertyIds: string[];
   onSelectAll: (checked: boolean) => void;
   onClearSelection: () => void;
   onAssignmentSuccess: () => void;
-  totalUnits: number;
+  totalProperties: number;
 }) {
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
@@ -46,27 +46,27 @@ export function UnitsToolbar({
     toggleSort,
     toggleAdvancedMode,
     allSelected,
-  } = useUnitsToolbarState(totalUnits, selectedUnitIds);
+  } = usePropertiesToolbarState(totalProperties, selectedPropertyIds);
 
   return (
       <div className={`${quick.separatorH} bg-muted/30 backdrop-blur-sm`}>
         <div className="p-2 flex items-center gap-1">
           <div className="flex items-center gap-2 pl-2">
             <Checkbox
-              id="select-all-units"
+              id="select-all-properties"
               checked={allSelected}
               onCheckedChange={(checked) => onSelectAll(!!checked)}
             />
-            <Label htmlFor="select-all-units" className="text-xs font-normal">
-              {selectedUnitIds.length > 0
-                ? t('toolbar.selectedCount', { count: selectedUnitIds.length })
+            <Label htmlFor="select-all-properties" className="text-xs font-normal">
+              {selectedPropertyIds.length > 0
+                ? t('toolbar.selectedCount', { count: selectedPropertyIds.length })
                 : t('toolbar.selectAll')}
             </Label>
           </div>
 
           <div className={`w-px h-6 ${quick.separatorV} mx-1`} />
 
-          <ToolbarMainActions selectedItemsCount={selectedUnitIds.length} />
+          <ToolbarMainActions selectedItemsCount={selectedPropertyIds.length} />
 
           <div className={`w-px h-6 ${quick.separatorV} mx-1`} />
 
@@ -110,9 +110,9 @@ export function UnitsToolbar({
           </div>
         </div>
 
-        {selectedUnitIds.length > 0 && (
+        {selectedPropertyIds.length > 0 && (
           <BulkAssignToolbar
-            selectedIds={selectedUnitIds}
+            selectedIds={selectedPropertyIds}
             onClearSelection={onClearSelection}
             onAssignmentSuccess={onAssignmentSuccess}
           />

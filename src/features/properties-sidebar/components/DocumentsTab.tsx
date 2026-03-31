@@ -9,7 +9,7 @@
  * - Entry point selection for document types
  * - EXCLUDES photos, videos, and floorplans (they have dedicated tabs)
  *
- * @module features/units-sidebar/components/DocumentsTab
+ * @module features/properties-sidebar/components/DocumentsTab
  * @enterprise ADR-031 - Canonical File Storage System
  *
  * Storage Path:

@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * 🏢 UNIT CUSTOMER TAB - ENTERPRISE IMPLEMENTATION
+ * 🏢 PROPERTY CUSTOMER TAB - ENTERPRISE IMPLEMENTATION
  *
- * Full-featured customer management tab for units με real Firebase integration
- * Εμφανίζει complete customer profile για sold/rented/reserved units
+ * Full-featured customer management tab for properties με real Firebase integration
+ * Εμφανίζει complete customer profile για sold/rented/reserved properties
  */
 
 import React from 'react';
@@ -36,7 +36,7 @@ import { CustomerProfileSection } from './CustomerProfileSection';
 export { CustomerProfileSection } from './CustomerProfileSection';
 export type { CustomerProfileSectionProps } from './CustomerProfileSection';
 
-const logger = createModuleLogger('UnitCustomerTab');
+const logger = createModuleLogger('PropertyCustomerTab');
 
 interface AdditionalTabData {
   buildingId?: string;
@@ -50,17 +50,17 @@ interface GlobalTabProps {
   [key: string]: unknown;
 }
 
-export interface UnitCustomerTabProps {
+export interface PropertyCustomerTabProps {
   selectedUnit: Property;
   additionalData?: AdditionalTabData;
   globalProps?: GlobalTabProps;
 }
 
-export function UnitCustomerTab({
+export function PropertyCustomerTab({
   selectedUnit,
   additionalData: _additionalData,
   globalProps: _globalProps
-}: UnitCustomerTabProps) {
+}: PropertyCustomerTabProps) {
   const iconSizes = useIconSizes();
   useBorderTokens();
   const colors = useSemanticColors();
@@ -321,3 +321,7 @@ export function UnitCustomerTab({
     </div>
   );
 }
+
+// Backward compatibility
+export { PropertyCustomerTab as UnitCustomerTab };
+export type { PropertyCustomerTabProps as UnitCustomerTabProps };

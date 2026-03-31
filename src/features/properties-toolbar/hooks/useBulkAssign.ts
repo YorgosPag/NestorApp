@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { ContactsService } from '@/services/contacts.service';
-import { updateMultipleUnitsOwner } from '@/services/units.service';
+import { updateMultiplePropertiesOwner } from '@/services/properties.service';
 import type { Contact } from '@/types/contacts';
 
 interface NotificationFunctions {
@@ -40,7 +40,7 @@ export function useBulkAssign({ notifications, onSuccess }: UseBulkAssignProps) 
       }
       setIsLoading(true);
       try {
-        await updateMultipleUnitsOwner(ids, selectedContactId);
+        await updateMultiplePropertiesOwner(ids, selectedContactId);
         notifications.success('✅ Τα ακίνητα ανατέθηκαν στον επιλεγμένο πελάτη');
         onSuccess();
       } catch {

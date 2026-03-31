@@ -19,7 +19,7 @@ export interface ViewerPassthroughProps {
   [key: string]: unknown;
 }
 
-export interface UnitsSidebarProps {
+export interface PropertiesSidebarProps {
   units: Property[];
   selectedUnit: Property | null;
   viewerProps: ViewerPassthroughProps;

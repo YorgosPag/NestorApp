@@ -2,15 +2,15 @@
 'use client';
 
 /**
- * 🏠 ENTERPRISE UNIT GRID CARD - Domain Component
+ * 🏠 ENTERPRISE PROPERTY GRID CARD - Domain Component
  *
- * Domain-specific card for units/properties in grid/tile views.
- * Extends GridCard with unit-specific defaults and stats.
+ * Domain-specific card for properties in grid/tile views.
+ * Extends GridCard with property-specific defaults and stats.
  *
- * @fileoverview Unit domain card using centralized GridCard.
+ * @fileoverview Property domain card using centralized GridCard.
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
  * @see GridCard for base component
- * @see UnitListCard for list view equivalent
+ * @see PropertyListCard for list view equivalent
  * @see NAVIGATION_ENTITIES for entity config
  * @author Enterprise Architecture Team
  * @since 2026-01-24
@@ -43,9 +43,9 @@ import '@/lib/design-system';
 // 🏢 TYPES
 // =============================================================================
 
-export interface UnitGridCardProps {
-  /** Unit/Property data */
-  unit: Property;
+export interface PropertyGridCardProps {
+  /** Property data */
+  property: Property;
   /** Whether card is selected */
   isSelected?: boolean;
   /** Whether item is favorite */
@@ -66,7 +66,7 @@ export interface UnitGridCardProps {
 
 /**
  * ✅ DOMAIN SEPARATION: Operational status mapping (construction/readiness)
- * Shared with UnitListCard for consistency
+ * Shared with PropertyListCard for consistency
  */
 const OPERATIONAL_STATUS_VARIANTS: Record<string, GridCardBadgeVariant> = {
   'ready': 'success',              // Έτοιμο
@@ -93,15 +93,15 @@ const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
 // =============================================================================
 
 /**
- * 🏠 UnitGridCard Component
+ * 🏠 PropertyGridCard Component
  *
- * Domain-specific card for units/properties in grid views.
- * Uses GridCard with unit defaults from NAVIGATION_ENTITIES.
+ * Domain-specific card for properties in grid views.
+ * Uses GridCard with property defaults from NAVIGATION_ENTITIES.
  *
  * @example
  * ```tsx
- * <UnitGridCard
- *   unit={property}
+ * <PropertyGridCard
+ *   property={property}
  *   isSelected={selectedId === property.id}
  *   onSelect={() => setSelectedId(property.id)}
  *   onToggleFavorite={() => toggleFavorite(property.id)}
@@ -109,15 +109,15 @@ const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
  * />
  * ```
  */
-export function UnitGridCard({
-  unit,
+export function PropertyGridCard({
+  property,
   isSelected = false,
   isFavorite,
   onSelect,
   onToggleFavorite,
   compact = false,
   className,
-}: UnitGridCardProps) {
+}: PropertyGridCardProps) {
   const { t } = useTranslation('units');
 
   // ==========================================================================
@@ -129,25 +129,25 @@ export function UnitGridCard({
     const items: StatItem[] = [];
 
     // 🏢 ENTERPRISE: Use new areas schema with legacy fallback (Fix 85 vs 5.2 inconsistency)
-    const displayArea = unit.areas?.gross ?? unit.area;
+    const displayArea = property.areas?.gross ?? property.area;
 
     // Building with icon
-    if (unit.building) {
+    if (property.building) {
       items.push({
         icon: NAVIGATION_ENTITIES.building.icon,
         iconColor: NAVIGATION_ENTITIES.building.color,
         label: t('card.stats.building'),
-        value: unit.building,
+        value: property.building,
       });
     }
 
     // Floor with icon
-    if (unit.floor !== undefined && unit.floor !== null) {
+    if (property.floor !== undefined && property.floor !== null) {
       items.push({
         icon: NAVIGATION_ENTITIES.floor.icon,
         iconColor: NAVIGATION_ENTITIES.floor.color,
         label: t('card.stats.floor'),
-        value: formatFloorLabel(unit.floor),
+        value: formatFloorLabel(property.floor),
       });
     }
 
@@ -161,28 +161,28 @@ export function UnitGridCard({
       });
     }
 
-    // 🛏️ Bedrooms (Phase 1 Unit Fields)
-    if (unit.layout?.bedrooms !== undefined && unit.layout.bedrooms > 0) {
+    // 🛏️ Bedrooms (Phase 1 Property Fields)
+    if (property.layout?.bedrooms !== undefined && property.layout.bedrooms > 0) {
       items.push({
         icon: Bed,
         iconColor: 'text-violet-600',
         label: t('card.stats.bedrooms'),
-        value: String(unit.layout.bedrooms),
+        value: String(property.layout.bedrooms),
       });
     }
 
-    // 🚿 Bathrooms (Phase 1 Unit Fields)
-    if (unit.layout?.bathrooms !== undefined && unit.layout.bathrooms > 0) {
+    // 🚿 Bathrooms (Phase 1 Property Fields)
+    if (property.layout?.bathrooms !== undefined && property.layout.bathrooms > 0) {
       items.push({
         icon: Bath,
         iconColor: 'text-cyan-600',
         label: t('card.stats.bathrooms'),
-        value: String(unit.layout.bathrooms),
+        value: String(property.layout.bathrooms),
       });
     }
 
-    // 🔧 Condition (Phase 4 Unit Fields)
-    if (unit.condition) {
+    // 🔧 Condition (Phase 4 Property Fields)
+    if (property.condition) {
       // Color coding based on condition
       const conditionColors: Record<string, string> = {
         'new': 'text-green-600',
@@ -192,24 +192,24 @@ export function UnitGridCard({
       };
       items.push({
         icon: Wrench,
-        iconColor: conditionColors[unit.condition] || 'text-gray-600',
+        iconColor: conditionColors[property.condition] || 'text-gray-600',
         label: t('card.stats.condition'),
-        value: t(`condition.${unit.condition}`, { defaultValue: unit.condition }),
+        value: t(`condition.${property.condition}`, { defaultValue: property.condition }),
       });
     }
 
     return items;
-  }, [unit.building, unit.floor, unit.area, unit.areas, unit.layout, unit.condition, t]);
+  }, [property.building, property.floor, property.area, property.areas, property.layout, property.condition, t]);
 
   /** Build badges from operational status */
   const badges = useMemo(() => {
-    const opStatus = unit.operationalStatus || 'ready';
+    const opStatus = property.operationalStatus || 'ready';
     const labelKey = OPERATIONAL_STATUS_LABEL_KEYS[opStatus] || 'operationalStatus.ready';
     const statusLabel = t(labelKey);
     const variant = OPERATIONAL_STATUS_VARIANTS[opStatus] || 'success';
 
     return [{ label: statusLabel, variant }];
-  }, [unit.operationalStatus, t]);
+  }, [property.operationalStatus, t]);
 
   // ==========================================================================
   // 🏢 HANDLERS
@@ -233,8 +233,8 @@ export function UnitGridCard({
   return (
     <GridCard
       entityType="unit"
-      title={unit.name || unit.code || unit.id}
-      subtitle={t(`types.${unit.type}`, { defaultValue: unit.type })}
+      title={property.name || property.code || property.id}
+      subtitle={t(`types.${property.type}`, { defaultValue: property.type })}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
@@ -244,11 +244,11 @@ export function UnitGridCard({
       onToggleFavorite={onToggleFavorite}
       compact={compact}
       className={className}
-      aria-label={t('card.ariaLabel', { name: unit.name || unit.code || unit.id })}
+      aria-label={t('card.ariaLabel', { name: property.name || property.code || property.id })}
     />
   );
 }
 
-UnitGridCard.displayName = 'UnitGridCard';
+PropertyGridCard.displayName = 'PropertyGridCard';
 
-export default UnitGridCard;
+export default PropertyGridCard;

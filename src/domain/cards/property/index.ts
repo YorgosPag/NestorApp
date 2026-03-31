@@ -8,3 +8,4 @@
  */
 
 export { PropertyListCard, type PropertyListCardProps } from './PropertyListCard';
+export { PropertyGridCard, type PropertyGridCardProps } from './PropertyGridCard';

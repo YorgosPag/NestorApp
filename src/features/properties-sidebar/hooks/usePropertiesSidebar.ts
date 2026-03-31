@@ -5,9 +5,9 @@ import type { FloorData, ViewerPassthroughProps } from '../types';
 // 🏢 ENTERPRISE: Firestore persistence for unit updates
 import { updateProperty } from '@/services/properties.service';
 import { createModuleLogger } from '@/lib/telemetry';
-const logger = createModuleLogger('useUnitsSidebar');
+const logger = createModuleLogger('usePropertiesSidebar');
 
-export function useUnitsSidebar(floors: FloorData[]|undefined, viewerProps: ViewerPassthroughProps | null | undefined) {
+export function usePropertiesSidebar(floors: FloorData[]|undefined, viewerProps: ViewerPassthroughProps | null | undefined) {
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeViewerProps = viewerProps || {};
   const safeSelectedFloorId = safeViewerProps.selectedFloorId as string | undefined;

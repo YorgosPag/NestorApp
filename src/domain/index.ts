@@ -17,9 +17,9 @@ export {
   // Parking
   ParkingListCard,
   type ParkingListCardProps,
-  // Unit
-  UnitListCard,
-  type UnitListCardProps,
+  // Property (formerly Unit)
+  /** @deprecated */ UnitListCard,
+  /** @deprecated */ type UnitListCardProps,
   // Storage
   StorageListCard,
   type StorageListCardProps,
@@ -45,9 +45,11 @@ export {
 // =============================================================================
 
 export {
-  // Unit
-  UnitGridCard,
-  type UnitGridCardProps,
+  // Property (formerly Unit)
+  PropertyGridCard,
+  type PropertyGridCardProps,
+  /** @deprecated */ UnitGridCard,
+  /** @deprecated */ type UnitGridCardProps,
   // Building
   BuildingGridCard,
   type BuildingGridCardProps,

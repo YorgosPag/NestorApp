@@ -39,7 +39,7 @@ import {
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
-import { getBuildingsList } from '@/services/units.service';
+import { getBuildingsList } from '@/services/properties.service';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';

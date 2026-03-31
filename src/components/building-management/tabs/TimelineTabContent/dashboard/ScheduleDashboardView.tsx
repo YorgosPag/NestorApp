@@ -10,6 +10,9 @@
 
 import { useCallback, useState } from 'react';
 import { RefreshCw, Download, FileDown, FileSpreadsheet, UserCheck, Table2 } from 'lucide-react';
+// 🏢 ADR-241: Centralized fullscreen system (SSoT)
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -65,6 +68,8 @@ export function ScheduleDashboardView({
   const iconSizes = useIconSizes();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  // 🏢 ADR-241: Centralized fullscreen
+  const fullscreen = useFullscreen();
 
   const {
     kpis,
@@ -259,8 +264,14 @@ export function ScheduleDashboardView({
   }
 
   return (
-    <section className="space-y-4" aria-label={t('tabs.timeline.dashboard.title')}>
-      {/* Header: Last updated + Refresh + Export */}
+    <FullscreenOverlay
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      ariaLabel={t('tabs.timeline.dashboard.title')}
+      className="space-y-2"
+      fullscreenClassName="p-2 space-y-2 overflow-auto"
+    >
+      {/* Header: Last updated + Refresh + Fullscreen + Export */}
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold">{t('tabs.timeline.dashboard.title')}</h2>
@@ -281,6 +292,12 @@ export function ScheduleDashboardView({
           >
             <RefreshCw className={cn(iconSizes.sm, isRefreshing && 'animate-spin')} />
           </Button>
+
+          {/* 🏢 ADR-241: Centralized fullscreen toggle (SSoT) */}
+          <FullscreenToggleButton
+            isFullscreen={fullscreen.isFullscreen}
+            onToggle={fullscreen.toggle}
+          />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -349,6 +366,6 @@ export function ScheduleDashboardView({
           <GanttSnapshotCard onViewChange={onViewChange} />
         </>
       )}
-    </section>
+    </FullscreenOverlay>
   );
 }

@@ -39,7 +39,7 @@ import {
   UNIT_STATUS_COLOR_MAP, getUnitTypeLabel, getUnitStatusLabel,
 } from './unit-tab-constants';
 import type { FloorRecord } from './unit-tab-constants';
-import { useUnitInlineEdit } from './useUnitInlineEdit';
+import { usePropertyInlineEdit } from './usePropertyInlineEdit';
 
 type UnitConfirmAction =
   | { type: 'delete'; item: Unit }
@@ -130,7 +130,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     fetchFloors();
   }, [fetchUnits, fetchFloors]);
 
-  const edit = useUnitInlineEdit(fetchUnits);
+  const edit = usePropertyInlineEdit(fetchUnits);
 
   const stats = useMemo(() => ({
     total: units.length,
@@ -368,7 +368,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             renderStatus={(u) => getStatusBadge(u.status)}
             fields={unitCardFields}
             actions={{
-              onView: (u) => router.push(ENTITY_ROUTES.units.withId(u.id)),
+              onView: (u) => router.push(ENTITY_ROUTES.properties.withId(u.id)),
               onEdit: edit.startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
@@ -386,7 +386,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             columns={unitColumns}
             getKey={(u) => u.id}
             actions={{
-              onView: (u) => router.push(ENTITY_ROUTES.units.withId(u.id)),
+              onView: (u) => router.push(ENTITY_ROUTES.properties.withId(u.id)),
               onEdit: edit.startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,

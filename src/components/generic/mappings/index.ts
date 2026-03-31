@@ -100,7 +100,7 @@ export const STORAGE_COMPONENT_MAPPING = {
 
 import { PropertyDetailsContent } from '../../property-viewer/details/PropertyDetailsContent';
 import { UnitCustomerTab } from '../../units/tabs/UnitCustomerTab';
-import { FloorPlanTab } from '../../../features/units-sidebar/components/FloorPlanTab';
+import { FloorPlanTab } from '../../../features/properties-sidebar/components/FloorPlanTab';
 
 export const UNITS_COMPONENT_MAPPING = {
   'PropertyDetailsContent': PropertyDetailsContent,

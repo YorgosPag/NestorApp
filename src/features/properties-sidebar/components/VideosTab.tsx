@@ -9,7 +9,7 @@
  * - Entry point selection for video types
  * - Media gallery display style
  *
- * @module features/units-sidebar/components/VideosTab
+ * @module features/properties-sidebar/components/VideosTab
  * @enterprise ADR-031 - Canonical File Storage System
  *
  * Storage Path:

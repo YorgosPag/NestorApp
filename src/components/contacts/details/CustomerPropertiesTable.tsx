@@ -5,7 +5,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useRouter } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { getUnitsByOwner } from '@/services/units.service';
+import { getPropertiesByOwner } from '@/services/properties.service';
 import type { Property } from '@/types/property-viewer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CommonBadge } from '@/core/badges';
@@ -47,7 +47,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
             }
             setLoading(true);
             try {
-                const ownedProperties = await getUnitsByOwner(contactId);
+                const ownedProperties = await getPropertiesByOwner(contactId);
                 setProperties(ownedProperties);
             } catch (error) {
                 logger.error('Failed to fetch customer properties', { error });
@@ -65,7 +65,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
     }
     
     const handleViewUnit = (unitId: string) => {
-        router.push(ENTITY_ROUTES.units.withId(unitId));
+        router.push(ENTITY_ROUTES.properties.withId(unitId));
     };
 
     return (

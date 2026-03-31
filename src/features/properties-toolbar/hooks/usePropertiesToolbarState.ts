@@ -1,9 +1,9 @@
 'use client';
 import { useState, useCallback } from 'react';
 
-export function useUnitsToolbarState(
-  totalUnits: number,
-  selectedUnitIds: string[]
+export function usePropertiesToolbarState(
+  totalProperties: number,
+  selectedPropertyIds: string[]
 ) {
   const [isAdvancedMode, setIsAdvancedMode] = useState(false);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -24,7 +24,7 @@ export function useUnitsToolbarState(
   const toggleAdvancedMode = useCallback(() => setIsAdvancedMode((v) => !v), []);
 
   const allSelected =
-    selectedUnitIds.length === totalUnits && totalUnits > 0;
+    selectedPropertyIds.length === totalProperties && totalProperties > 0;
 
   return {
     isAdvancedMode,

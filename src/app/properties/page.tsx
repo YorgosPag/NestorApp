@@ -4,7 +4,7 @@ import React, { useCallback, useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
-import { UnitsHeader } from '@/components/units/page/UnitsHeader';
+import { PropertiesHeader } from '@/components/properties/page/PropertiesHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   TrendingUp,
@@ -22,7 +22,7 @@ import { DetailsCard } from '@/components/property-management/dashboard/DetailsC
 import { CoverageCard } from '@/components/property-management/dashboard/CoverageCard';
 import { AdvancedFiltersPanel, unitFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { UnitsSidebar } from '@/components/units/UnitsSidebar';
+import { PropertiesSidebar } from '@/components/properties/PropertiesSidebar';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 // 🏢 ENTERPRISE: Import from canonical location
 import { PageLoadingState, StaticPageLoading } from '@/core/states';
@@ -31,7 +31,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
-import { createStatusLabelGetter, createTypeLabelGetter } from './units-page-helpers';
+import { createStatusLabelGetter, createTypeLabelGetter } from './properties-page-helpers';
 
 function UnitsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -153,7 +153,7 @@ function UnitsPageContent() {
   // 🏢 ENTERPRISE: Delete unit handler — Firestore + local state sync
   const handleDeleteUnit = useCallback(async (unitId: string) => {
     try {
-      const { deleteUnit } = await import('@/services/units.service');
+      const { deleteUnit } = await import('@/services/properties.service');
       await deleteUnit(unitId);
       handleDelete(unitId);
       // Deselect the deleted unit
@@ -382,7 +382,7 @@ function UnitsPageContent() {
 
   return (
     <PageContainer ariaLabel={t('page.pageLabel')}>
-        <UnitsHeader
+        <PropertiesHeader
           viewMode={viewMode as 'list' | 'grid'}
           setViewMode={setViewMode}
           showDashboard={showDashboard}
@@ -440,7 +440,7 @@ function UnitsPageContent() {
 
         <ListContainer>
           {viewMode === 'list' ? (
-            <UnitsSidebar
+            <PropertiesSidebar
               units={searchFilteredProperties}
               selectedUnit={isCreatingNewUnit ? newUnitTemplate : (selectedUnit || null)}
               onSelectUnit={handlePolygonSelect}

@@ -26,7 +26,7 @@ import { FileImage, FileText, FolderOpen, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 // 🏢 ENTERPRISE: Types
-import type { CoverageStats } from '@/hooks/useUnitsStats';
+import type { CoverageStats } from '@/hooks/usePropertiesStats';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -34,7 +34,7 @@ import '@/lib/design-system';
 // =============================================================================
 
 export interface CoverageCardProps {
-  /** Coverage statistics from useUnitsStats */
+  /** Coverage statistics from usePropertiesStats */
   coverage: CoverageStats;
   /** Click handler for "missing photos" filter */
   onMissingPhotosClick?: () => void;
@@ -83,9 +83,9 @@ export function CoverageCard({
   // ==========================================================================
 
   /** Calculate missing counts for actionable metrics */
-  const missingPhotos = coverage.totalUnits - coverage.unitsWithPhotos;
-  const missingFloorplans = coverage.totalUnits - coverage.unitsWithFloorplans;
-  const missingDocuments = coverage.totalUnits - coverage.unitsWithDocuments;
+  const missingPhotos = coverage.totalProperties - coverage.propertiesWithPhotos;
+  const missingFloorplans = coverage.totalProperties - coverage.propertiesWithFloorplans;
+  const missingDocuments = coverage.totalProperties - coverage.propertiesWithDocuments;
 
   // ==========================================================================
   // 🏢 RENDER
@@ -130,7 +130,7 @@ export function CoverageCard({
                 {t('page.dashboard.coverage.photos')}
               </p>
               <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.unitsWithPhotos}/{coverage.totalUnits} {t('navigation.units', { ns: 'common' })}
+                {coverage.propertiesWithPhotos}/{coverage.totalProperties} {t('navigation.units', { ns: 'common' })}
               </p>
               {missingPhotos > 0 && (
                 <p className={`text-xs ${colors.text.warning}`}>
@@ -169,7 +169,7 @@ export function CoverageCard({
                 {t('page.dashboard.coverage.floorplans')}
               </p>
               <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.unitsWithFloorplans}/{coverage.totalUnits} {t('navigation.units', { ns: 'common' })}
+                {coverage.propertiesWithFloorplans}/{coverage.totalProperties} {t('navigation.units', { ns: 'common' })}
               </p>
               {missingFloorplans > 0 && (
                 <p className={`text-xs ${colors.text.warning}`}>
@@ -208,7 +208,7 @@ export function CoverageCard({
                 {t('page.dashboard.coverage.documents')}
               </p>
               <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.unitsWithDocuments}/{coverage.totalUnits} {t('navigation.units', { ns: 'common' })}
+                {coverage.propertiesWithDocuments}/{coverage.totalProperties} {t('navigation.units', { ns: 'common' })}
               </p>
               {missingDocuments > 0 && (
                 <p className={`text-xs ${colors.text.warning}`}>

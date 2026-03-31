@@ -1,10 +1,10 @@
 /**
- * useUnitInlineEdit — Hook that manages inline edit state for units table.
+ * usePropertyInlineEdit — Hook that manages inline edit state for properties table.
  *
  * Google SRP: Owns ALL edit state, validation, save, and cancel logic.
- * The parent component only calls startEdit(unit) and renders the edit row.
+ * The parent component only calls startEdit(property) and renders the edit row.
  *
- * @module components/building-management/tabs/useUnitInlineEdit
+ * @module components/building-management/tabs/usePropertyInlineEdit
  */
 
 import { useState, useCallback } from 'react';
@@ -12,47 +12,47 @@ import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { Unit, UnitType } from '@/types/unit';
+import type { Property, PropertyType } from '@/types/property';
 
-interface UseUnitInlineEditReturn {
+interface UsePropertyInlineEditReturn {
   editingId: string | null;
   editName: string;
-  editType: UnitType | '';
+  editType: PropertyType | '';
   editFloor: string;
   editArea: string;
   editStatus: string;
   saving: boolean;
   setEditName: (v: string) => void;
-  setEditType: (v: UnitType | '') => void;
+  setEditType: (v: PropertyType | '') => void;
   setEditFloor: (v: string) => void;
   setEditArea: (v: string) => void;
   setEditStatus: (v: string) => void;
-  startEdit: (unit: Unit) => void;
+  startEdit: (property: Property) => void;
   cancelEdit: () => void;
   handleSaveEdit: () => Promise<void>;
 }
 
-export function useUnitInlineEdit(onSaved: () => Promise<void>): UseUnitInlineEditReturn {
+export function usePropertyInlineEdit(onSaved: () => Promise<void>): UsePropertyInlineEditReturn {
   const { t } = useTranslation('units');
   const { success, error: notifyError } = useNotifications();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editType, setEditType] = useState<UnitType | ''>('apartment');
+  const [editType, setEditType] = useState<PropertyType | ''>('apartment');
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
   const [editStatus, setEditStatus] = useState('for-sale');
   const [editVersion, setEditVersion] = useState<number | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
-  const startEdit = useCallback((unit: Unit) => {
-    setEditingId(unit.id);
-    setEditName(unit.name || '');
-    setEditType(unit.type || 'apartment');
-    setEditFloor(unit.floor ? String(unit.floor) : '');
-    setEditArea(unit.area ? String(unit.area) : '');
-    setEditStatus(unit.status || 'for-sale');
-    setEditVersion((unit as unknown as { _v?: number })._v);
+  const startEdit = useCallback((property: Property) => {
+    setEditingId(property.id);
+    setEditName(property.name || '');
+    setEditType(property.type || 'apartment');
+    setEditFloor(property.floor ? String(property.floor) : '');
+    setEditArea(property.area ? String(property.area) : '');
+    setEditStatus(property.status || 'for-sale');
+    setEditVersion((property as unknown as { _v?: number })._v);
   }, []);
 
   const cancelEdit = useCallback(() => {

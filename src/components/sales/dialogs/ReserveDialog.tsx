@@ -29,7 +29,7 @@ import { AppurtenancesSection } from './AppurtenancesSection';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import { useContactEmailWatch } from '@/hooks/sales/useContactEmailWatch';
-import { useUnitHierarchyValidation } from '@/hooks/sales/useUnitHierarchyValidation';
+import { usePropertyHierarchyValidation } from '@/hooks/sales/usePropertyHierarchyValidation';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
@@ -53,7 +53,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const buyerName = formatOwnerNames(owners) ?? '';
 
   const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
-  const hierarchy = useUnitHierarchyValidation(unit, open);
+  const hierarchy = usePropertyHierarchyValidation(unit, open);
 
   const hasAskingPrice = (unit.commercial?.askingPrice ?? 0) > 0;
   const netArea = unit.area ?? 0;

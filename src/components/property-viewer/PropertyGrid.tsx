@@ -10,8 +10,8 @@ import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// 🏢 ENTERPRISE: Using centralized UnitGridCard (PR: Enterprise Grid System)
-import { UnitGridCard } from '@/domain';
+// 🏢 ENTERPRISE: Using centralized PropertyGridCard (PR: Enterprise Grid System)
+import { PropertyGridCard } from '@/domain';
 
 // 🚀 ENTERPRISE: PropertyGridView features integration (conditional imports)
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
@@ -24,7 +24,7 @@ import '@/lib/design-system';
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 const unitColor = NAVIGATION_ENTITIES.unit.color;
 
-// ✅ ENTERPRISE: PropertyCard REPLACED with UnitGridCard from @/domain (PR: Enterprise Grid System)
+// ✅ ENTERPRISE: PropertyCard REPLACED with PropertyGridCard from @/domain (PR: Enterprise Grid System)
 // 🏢 All grid cards now use the centralized design system GridCard molecule
 
 
@@ -86,9 +86,9 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
           {/* NO max-width constraint - grid expands to fill available space */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
             {displayProperties.map((property: Property) => (
-              <UnitGridCard
+              <PropertyGridCard
                 key={property.id}
-                unit={property}
+                property={property}
                 onSelect={() => onSelect(property.id, false)}
                 isSelected={selectedPropertyIds.includes(property.id)}
               />
@@ -104,9 +104,9 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
     <ScrollArea className="h-full">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-4">
         {displayProperties.map(prop => (
-          <UnitGridCard
+          <PropertyGridCard
             key={prop.id}
-            unit={prop}
+            property={prop}
             onSelect={() => onSelect(prop.id, false)}
             isSelected={selectedPropertyIds.includes(prop.id)}
           />

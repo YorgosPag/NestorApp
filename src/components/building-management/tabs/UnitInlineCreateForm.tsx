@@ -17,7 +17,7 @@ import { useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { createUnit } from '@/services/units.service';
+import { createProperty } from '@/services/properties.service';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,7 +120,7 @@ export function UnitInlineCreateForm({
       if (wc) layout.wc = parseInt(wc, 10);
       if (Object.keys(layout).length > 0) unitData.layout = layout;
 
-      const result = await createUnit(unitData);
+      const result = await createProperty(unitData);
 
       if (result.success) {
         success(tUnits('inlineCreate.created'));

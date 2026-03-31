@@ -2,13 +2,13 @@
 
 /**
  * =============================================================================
- * ENTERPRISE: AddUnitDialog Component
+ * ENTERPRISE: AddPropertyDialog Component
  * =============================================================================
  *
- * Enterprise-grade dialog for creating new units.
- * Render-only: all logic delegated to useAddUnitDialogState.
+ * Enterprise-grade dialog for creating new properties.
+ * Render-only: all logic delegated to useAddPropertyDialogState.
  *
- * @module components/units/dialogs/AddUnitDialog
+ * @module components/properties/dialogs/AddPropertyDialog
  * @enterprise ADR-034
  */
 
@@ -45,25 +45,25 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-import type { AddUnitDialogProps } from './useAddUnitDialogState';
+import type { AddPropertyDialogProps } from './useAddPropertyDialogState';
 import {
-  useAddUnitDialogState,
-  UNIT_TYPE_OPTIONS,
+  useAddPropertyDialogState,
+  PROPERTY_TYPE_OPTIONS,
   OPERATIONAL_STATUS_OPTIONS,
   CREATION_COMMERCIAL_STATUS_OPTIONS,
-} from './useAddUnitDialogState';
+} from './useAddPropertyDialogState';
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function AddUnitDialog({
+export function AddPropertyDialog({
   open,
   onOpenChange,
-  onUnitAdded,
+  onPropertyAdded,
   buildings,
   buildingsLoading = false,
-}: AddUnitDialogProps) {
+}: AddPropertyDialogProps) {
   const { t } = useTranslation('units');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
@@ -78,7 +78,7 @@ export function AddUnitDialog({
     isMultiLevelType,
     activeTab, setActiveTab,
     handleBuildingChange, handleFloorSelection,
-  } = useAddUnitDialogState({ open, onUnitAdded, onOpenChange });
+  } = useAddPropertyDialogState({ open, onPropertyAdded, onOpenChange });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,8 +144,8 @@ export function AddUnitDialog({
                     <Select value={formData.type} onValueChange={(v) => handleSelectChange('type', v)} disabled={loading}>
                       <SelectTrigger><SelectValue placeholder={t('dialog.addUnit.placeholders.type')} /></SelectTrigger>
                       <SelectContent>
-                        {UNIT_TYPE_OPTIONS.map((unitType) => (
-                          <SelectItem key={unitType} value={unitType}>{t(`types.${unitType}`)}</SelectItem>
+                        {PROPERTY_TYPE_OPTIONS.map((propertyType) => (
+                          <SelectItem key={propertyType} value={propertyType}>{t(`types.${propertyType}`)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -291,4 +291,6 @@ export function AddUnitDialog({
   );
 }
 
-export default AddUnitDialog;
+// Backward compatibility
+export { AddPropertyDialog as AddUnitDialog };
+export default AddPropertyDialog;

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 🏢 ENTERPRISE UnitsHeader with i18n support
+ * 🏢 ENTERPRISE PropertiesHeader with i18n support
  * ZERO HARDCODED STRINGS - All labels from centralized translations
  */
 
@@ -22,11 +22,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import '@/lib/design-system';
 
-export type UnitsViewMode = 'list' | 'grid';
+export type PropertiesViewMode = 'list' | 'grid';
 
-interface UnitsHeaderProps {
-  viewMode: UnitsViewMode;
-  setViewMode: (mode: UnitsViewMode) => void;
+interface PropertiesHeaderProps {
+  viewMode: PropertiesViewMode;
+  setViewMode: (mode: PropertiesViewMode) => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
   searchTerm: string;
@@ -36,7 +36,7 @@ interface UnitsHeaderProps {
   setShowFilters?: (show: boolean) => void;
 }
 
-export function UnitsHeader({
+export function PropertiesHeader({
   viewMode,
   setViewMode,
   showDashboard,
@@ -45,7 +45,7 @@ export function UnitsHeader({
   setSearchTerm,
   showFilters,
   setShowFilters,
-}: UnitsHeaderProps) {
+}: PropertiesHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
@@ -73,7 +73,7 @@ export function UnitsHeader({
           showDashboard,
           onDashboardToggle: () => setShowDashboard(!showDashboard),
           viewMode: viewMode as CoreViewMode,
-          onViewModeChange: (mode) => setViewMode(mode as UnitsViewMode),
+          onViewModeChange: (mode) => setViewMode(mode as PropertiesViewMode),
           viewModes: ['list', 'grid'] as CoreViewMode[],
           // Mobile-only filter button
           customActions: setShowFilters ? [
@@ -94,3 +94,7 @@ export function UnitsHeader({
       />
   );
 }
+
+// Backward compatibility
+export { PropertiesHeader as UnitsHeader };
+export type { PropertiesViewMode as UnitsViewMode };

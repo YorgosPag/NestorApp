@@ -10,7 +10,7 @@
  * - Entry point selection for photo types
  * - Media gallery display style
  *
- * @module features/units-sidebar/components/PhotosTab
+ * @module features/properties-sidebar/components/PhotosTab
  * @enterprise ADR-031 - Canonical File Storage System
  *
  * Storage Path:

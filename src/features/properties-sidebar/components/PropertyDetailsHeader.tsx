@@ -11,7 +11,7 @@ import '@/lib/design-system';
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
-interface UnitDetailsHeaderProps {
+interface PropertyDetailsHeaderProps {
   unit: Property | null;
   /** 🏢 ENTERPRISE: Edit mode state - Pattern A (entity header) */
   isEditMode?: boolean;
@@ -27,7 +27,7 @@ interface UnitDetailsHeaderProps {
   onDeleteUnit?: () => void;
 }
 
-export function UnitDetailsHeader({
+export function PropertyDetailsHeader({
   unit,
   isEditMode = false,
   isCreatingNewUnit = false,
@@ -35,7 +35,7 @@ export function UnitDetailsHeader({
   onExitEditMode,
   onNewUnit,
   onDeleteUnit,
-}: UnitDetailsHeaderProps) {
+}: PropertyDetailsHeaderProps) {
   const { t } = useTranslation('units');
 
   // 🏢 ENTERPRISE: Header Save — programmatically submits the UnitFieldsBlock form

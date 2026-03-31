@@ -9,7 +9,7 @@
  * - Enterprise naming convention (ΔΟΜΗ.txt pattern)
  * - Multi-tenant Storage Rules
  *
- * @module features/units-sidebar/components/FloorPlanTab
+ * @module features/properties-sidebar/components/FloorPlanTab
  * @enterprise ADR-031 - Canonical File Storage System
  * @enterprise ADR-033 - Floorplan Processing Pipeline
  *

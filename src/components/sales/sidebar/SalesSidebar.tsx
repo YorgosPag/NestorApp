@@ -222,7 +222,7 @@ export function SalesSidebar({
                       size="sm"
                       className="w-full justify-center gap-2 text-sm"
                       onClick={() => {
-                        window.location.href = `/units?unitId=${selectedUnit.id}&tab=${tabId}`;
+                        window.location.href = `/properties?unitId=${selectedUnit.id}&tab=${tabId}`;
                       }}
                     >
                       <ExternalLink className={iconSizes.sm} />

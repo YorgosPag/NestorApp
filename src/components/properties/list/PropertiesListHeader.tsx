@@ -6,20 +6,20 @@ import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from 'react-i18next';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+// 🏢 ENTERPRISE: Centralized Property Icon
+const PropertyIcon = NAVIGATION_ENTITIES.unit.icon;
 
-interface UnitsListHeaderProps {
-    unitCount: number;
+interface PropertiesListHeaderProps {
+    propertyCount: number;
     showToolbar?: boolean;
     onToolbarToggle?: (show: boolean) => void;
 }
 
-export function UnitsListHeader({
-    unitCount,
+export function PropertiesListHeader({
+    propertyCount,
     showToolbar = false,
     onToolbarToggle
-}: UnitsListHeaderProps) {
+}: PropertiesListHeaderProps) {
     const { t } = useTranslation('units');
 
     return (
@@ -27,9 +27,9 @@ export function UnitsListHeader({
             {/* 🏢 ENTERPRISE CENTRALIZED GenericListHeader */}
             {/* 🏢 local_4.log: hideSearch=true - Search is handled in CompactToolbar/list area */}
             <GenericListHeader
-                icon={UnitIcon}
+                icon={PropertyIcon}
                 entityName={t('list.title')}
-                itemCount={unitCount}
+                itemCount={propertyCount}
                 hideSearch
                 showToolbar={showToolbar}
                 onToolbarToggle={onToolbarToggle}
@@ -38,3 +38,6 @@ export function UnitsListHeader({
         </div>
     );
 }
+
+// Backward compatibility
+export { PropertiesListHeader as UnitsListHeader };

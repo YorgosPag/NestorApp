@@ -5,7 +5,7 @@ import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
-import type { UnitsTabConfig } from '@/config/units-tabs-config';
+import type { UnitsTabConfig } from '@/config/properties-tabs-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Map, FileText, Camera, Video, User } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -74,8 +74,8 @@ function getIconComponent(icon: string) {
 import { PropertyDetailsContent } from '@/components/property-viewer/details/PropertyDetailsContent';
 import PhotosTabContent from '@/components/building-management/tabs/PhotosTabContent';
 import VideosTabContent from '@/components/building-management/tabs/VideosTabContent';
-import { FloorPlanTab } from '@/features/units-sidebar/components/FloorPlanTab';
-import { UnitCustomerTab } from '@/components/units/tabs/UnitCustomerTab';
+import { FloorPlanTab } from '@/features/properties-sidebar/components/FloorPlanTab';
+import { PropertyCustomerTab as UnitCustomerTab } from '@/components/properties/tabs/PropertyCustomerTab';
 import '@/lib/design-system';
 
 function DocumentsPlaceholder({ title, subtitle }: { title: string; subtitle: string }) {
@@ -137,7 +137,7 @@ export interface GenericUnitsTabsRendererProps {
  *
  * @example
  * ```tsx
- * import { getSortedUnitsTabs } from '@/config/units-tabs-config';
+ * import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
  * import { GenericUnitsTabsRenderer } from '@/components/generic';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';

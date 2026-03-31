@@ -18,11 +18,15 @@ export { ParkingListCard, type ParkingListCardProps } from './parking';
 export { ParkingGridCard, type ParkingGridCardProps } from './parking';
 
 // =============================================================================
-// 🏠 UNIT
+// 🏠 PROPERTY (formerly Unit)
 // =============================================================================
 
-export { UnitListCard, type UnitListCardProps } from './unit';
-export { UnitGridCard, type UnitGridCardProps } from './unit';
+export { PropertyListCard, type PropertyListCardProps } from './property';
+export { PropertyGridCard, type PropertyGridCardProps } from './property';
+/** @deprecated Use PropertyGridCard */
+export { PropertyGridCard as UnitGridCard, type PropertyGridCardProps as UnitGridCardProps } from './property';
+/** @deprecated Use PropertyListCard */
+export { PropertyListCard as UnitListCard, type PropertyListCardProps as UnitListCardProps } from './property';
 
 // =============================================================================
 // 📦 STORAGE
@@ -52,11 +56,6 @@ export { ContactGridCard, type ContactGridCardProps } from './contact';
 export { ProjectListCard, type ProjectListCardProps } from './project';
 export { ProjectGridCard, type ProjectGridCardProps } from './project';
 
-// =============================================================================
-// 🏠 PROPERTY
-// =============================================================================
-
-export { PropertyListCard, type PropertyListCardProps } from './property';
 
 // =============================================================================
 // 🗺️ OVERLAY (DXF Viewer Regions/Areas)
