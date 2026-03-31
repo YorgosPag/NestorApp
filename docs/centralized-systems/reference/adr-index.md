@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 251 ADRs | Last Updated: 2026-03-24
+**📊 Stats**: 258 ADRs | Last Updated: 2026-03-31
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 69 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 76 | [View](#uncategorized) |
 
 ---
 
@@ -267,7 +267,7 @@
 | **ADR-241** | Fullscreen — Composition Architecture | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-241-fullscreen-container-centralization.md) |
 | **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | ✅ 🟡 IN PROGRESS — SPEC-242A✅ B✅ C✅ D✅ E🟡 | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
 | **ADR-243** | Custom Firestore MCP Server — Secure Database Access for Claude Code | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
-| **ADR-244** | Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων | ✅ SPEC-244D COMPLETE — owners[] SSoT, buyerContactId removed (3 sessions) | 2026-03-31 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-244-multi-buyer-co-ownership.md) |
+| **ADR-244** | Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-244-multi-buyer-co-ownership.md) |
 | **ADR-244** | Role Management Admin Console | ✅ IMPLEMENTED (Phase A + Phase B) | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
 | **ADR-245** | API Routes Centralization — Zero Hardcoded Endpoints | ✅ ✅ PHASE_C_COMPLETE — Scattered code eliminated. Route helpers centralized. N+1 batch resolved. | 2026-03-19 | Backend Systems / Infrastructure | [📄](./adrs/ADR-245-api-routes-centralization.md) |
 | **ADR-246** | Καθολική Κεντρικοποίηση Firestore→API Mappers | ✅ APPROVED | 2026-03-19 | Data Access Layer / Entity Systems | [📄](./adrs/ADR-246-universal-firestore-mapper-centralization.md) |
@@ -285,14 +285,14 @@
 | **ADR-258** | Twin Architecture — Dynamic Overlay Coloring from Unit CommercialStatus | ✅ 📋 PLANNED | 2026-03-23 | Canvas & Rendering / Property Management / DXF Viewer | [📄](./adrs/ADR-258-twin-architecture-dynamic-overlay-coloring.md) |
 | **ADR-259** | Production Readiness Audit — 6 Critical Findings | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-259-production-readiness-audit.md) |
 | **ADR-260** | Καθολικός Κατάλογος Firestore Collections | ✅ ACTIVE | 2026-03-24 | Data & State | [📄](./adrs/ADR-260-firestore-collections-catalog.md) |
-| **ADR-261** | Multi-Agent Orchestrator (Claude Agent SDK) | ✅ IMPLEMENTED | 2026-03-24 | Infrastructure | [📄](./adrs/ADR-261-multi-agent-orchestrator.md) |
-| **ADR-262** | AI Agent Testing & Production Standards | ✅ ACTIVE | 2026-03-25 | AI Architecture / Quality Standards / Operations | [📄](./adrs/ADR-262-ai-agent-testing-production-standards.md) |
-| **ADR-263** | Telegram Bot Testing Playbook | ✅ ACTIVE | 2026-03-25 | Testing & QA / AI Architecture / Operations | [📄](./adrs/ADR-263-telegram-bot-testing-playbook.md) |
-| **ADR-264** | Document Preview Mode — AI Auto-Analysis for File-Only Messages | ✅ IMPLEMENTED | 2026-03-26 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md) |
-| **ADR-265** | Vision-in-the-Loop — Document Images in Agentic Loop | ✅ IMPLEMENTED | 2026-03-27 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md#changelog) |
-| **ADR-266** | Gantt & Construction Schedule Reports (Dashboard) | ✅ PHASE A IMPLEMENTED | 2026-03-28 | Reports / Construction | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
-| **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ PHASE A IMPLEMENTED | 2026-03-28 | Procurement / Supply Chain | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
-| **ADR-268** | Dynamic Report Builder — Cross-Entity Tabular Reports + PDF/Excel Export + Cash Flow Forecast | ✅ ALL 8 PHASES COMPLETE | 2026-03-30 | Reports / Analytics | [📄](./adrs/ADR-268-dynamic-report-builder/ADR-268.md) |
+| **ADR-261** | Multi-Agent Orchestrator (Claude Agent SDK) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-261-multi-agent-orchestrator.md) |
+| **ADR-262** | AI Agent Testing & Production Standards | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-262-ai-agent-testing-production-standards.md) |
+| **ADR-263** | Telegram Bot Testing Playbook | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-263-telegram-bot-testing-playbook.md) |
+| **ADR-264** | Document Preview Mode — AI Auto-Analysis for File-Only Messages | ✅ ✅ IMPLEMENTED | 2026-03-26 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md) |
+| **ADR-265** | Enterprise Reports System — Research & Architecture | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-265-enterprise-reports-system.md) |
+| **ADR-266** | Gantt & Construction Schedule Reports | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
+| **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
+| **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -589,6 +589,13 @@
 | **ADR-251** | Scattered Code Patterns Audit & Consolidation Roadmap | ✅ DOCUMENTED | [View](./adrs/ADR-251-scattered-code-patterns-audit.md) |
 | **ADR-255** | Security Hardening Phase 4 — Tenant Isolation, Validation, Audit Trail | ✅ APPROVED | [View](./adrs/ADR-255-security-hardening-phase-4.md) |
 | **ADR-259** | Production Readiness Audit — 6 Critical Findings | ✅ APPROVED | [View](./adrs/ADR-259-production-readiness-audit.md) |
+| **ADR-261** | Multi-Agent Orchestrator (Claude Agent SDK) | ✅ APPROVED | [View](./adrs/ADR-261-multi-agent-orchestrator.md) |
+| **ADR-262** | AI Agent Testing & Production Standards | ✅ APPROVED | [View](./adrs/ADR-262-ai-agent-testing-production-standards.md) |
+| **ADR-263** | Telegram Bot Testing Playbook | ✅ APPROVED | [View](./adrs/ADR-263-telegram-bot-testing-playbook.md) |
+| **ADR-265** | Enterprise Reports System — Research & Architecture | ✅ APPROVED | [View](./adrs/ADR-265-enterprise-reports-system.md) |
+| **ADR-266** | Gantt & Construction Schedule Reports | ✅ APPROVED | [View](./adrs/ADR-266-gantt-construction-reports.md) |
+| **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | [View](./adrs/ADR-267-lightweight-procurement-module.md) |
+| **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | [View](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
