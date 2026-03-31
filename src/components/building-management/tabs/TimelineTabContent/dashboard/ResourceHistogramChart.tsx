@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * @module ResourceHistogramChart
@@ -18,16 +18,16 @@ import {
   Legend,
   ReferenceLine,
   ResponsiveContainer,
-} from 'recharts';
-import { ReportSection } from '@/components/reports/core/ReportSection';
-import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { cn } from '@/lib/utils';
-import '@/lib/design-system';
+} from "recharts";
+import { ReportSection } from "@/components/reports/core/ReportSection";
+import { ReportEmptyState } from "@/components/reports/core/ReportEmptyState";
+import { useTranslation } from "@/i18n/hooks/useTranslation";
+import { cn } from "@/lib/utils";
+import "@/lib/design-system";
 import type {
   ResourceHistogramBar,
   ResourceChartConfigEntry,
-} from './resource-histogram.types';
+} from "./resource-histogram.types";
 
 // ─── Props ───────────────────────────────────────────────────────────────
 
@@ -66,7 +66,10 @@ function CustomTooltip({
     <div className="rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
       <p className="font-medium mb-1">{label}</p>
       {payload.map((entry) => (
-        <div key={entry.name} className="flex items-center justify-between gap-4">
+        <div
+          key={entry.name}
+          className="flex items-center justify-between gap-4"
+        >
           <span className="flex items-center gap-1.5">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
@@ -77,10 +80,12 @@ function CustomTooltip({
           <span className="tabular-nums font-medium">{entry.value}h</span>
         </div>
       ))}
-      <div className={cn(
-        'mt-1 pt-1 border-t flex justify-between font-semibold',
-        isOver && 'text-destructive'
-      )}>
+      <div
+        className={cn(
+          "mt-1 pt-1 border-t flex justify-between font-semibold",
+          isOver && "text-destructive",
+        )}
+      >
         <span>{totalLabel}</span>
         <span>{Math.round(total * 10) / 10}h</span>
       </div>
@@ -96,12 +101,16 @@ export function ResourceHistogramChart({
   resourceNames,
   loading,
 }: ResourceHistogramChartProps) {
-  const { t } = useTranslation('building');
-  const tBase = 'tabs.timeline.dashboard.resourceHistogram';
+  const { t } = useTranslation("building");
+  const tBase = "tabs.timeline.dashboard.resourceHistogram";
 
   if (!loading && data.length === 0) {
     return (
-      <ReportSection title={t(`${tBase}.title`)} tooltip={t('tabs.timeline.dashboard.tooltips.resourceHistogramTitle')} id="resource-histogram">
+      <ReportSection
+        title={t(`${tBase}.title`)}
+        tooltip={t("tabs.timeline.dashboard.tooltips.resourceHistogramTitle")}
+        id="resource-histogram"
+      >
         <ReportEmptyState
           title={t(`${tBase}.empty`)}
           description={t(`${tBase}.emptyDesc`)}
@@ -111,87 +120,100 @@ export function ResourceHistogramChart({
   }
 
   return (
-    <ReportSection title={t(`${tBase}.title`)} tooltip={t('tabs.timeline.dashboard.tooltips.resourceHistogramTitle')} id="resource-histogram">
-      <figure
-        role="img"
-        aria-label={t(`${tBase}.ariaLabel`)}
-      >
-      <ResponsiveContainer width="100%" height={320}>
-        <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <XAxis
-            dataKey="weekLabel"
-            tick={{ fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-            label={{
-              value: t(`${tBase}.hoursPerWeek`),
-              angle: -90,
-              position: 'insideLeft',
-              style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))' },
-            }}
-          />
-          <Tooltip content={<CustomTooltip totalLabel={t(`${tBase}.total`)} />} />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
-
-          {/* Capacity reference line at 40hrs */}
-          <ReferenceLine
-            y={40}
-            stroke="hsl(var(--destructive))"
-            strokeDasharray="4 4"
-            label={{
-              value: t(`${tBase}.capacity`),
-              position: 'right',
-              style: { fontSize: 10, fill: 'hsl(var(--destructive))' },
-            }}
-          />
-
-          {/* Stacked bars — one per resource */}
-          {resourceNames.map((name) => (
-            <Bar
-              key={name}
-              dataKey={name}
-              stackId="resources"
-              fill={chartConfig[name]?.color ?? 'hsl(var(--muted))'}
-              radius={resourceNames.indexOf(name) === resourceNames.length - 1 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
+    <ReportSection
+      title={t(`${tBase}.title`)}
+      tooltip={t("tabs.timeline.dashboard.tooltips.resourceHistogramTitle")}
+      id="resource-histogram"
+    >
+      <figure role="img" aria-label={t(`${tBase}.ariaLabel`)}>
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart
+            data={data}
+            margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+          >
+            <XAxis
+              dataKey="weekLabel"
+              tick={{ fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
             />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+            <YAxis
+              tick={{ fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              label={{
+                value: t(`${tBase}.hoursPerWeek`),
+                angle: -90,
+                position: "insideLeft",
+                style: { fontSize: 11, fill: "hsl(var(--muted-foreground))" },
+              }}
+            />
+            <Tooltip
+              content={<CustomTooltip totalLabel={t(`${tBase}.total`)} />}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
 
-      {/* Screen-reader data table */}
-      <table className="sr-only">
-        <caption>{t(`${tBase}.title`)}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t(`${tBase}.colWeek`)}</th>
-            {resourceNames.map(name => (
-              <th key={name} scope="col">{chartConfig[name]?.label ?? name}</th>
+            {/* Capacity reference line at 40hrs */}
+            <ReferenceLine
+              y={40}
+              stroke="hsl(var(--destructive))"
+              strokeDasharray="4 4"
+              label={{
+                value: t(`${tBase}.capacity`),
+                position: "right",
+                style: { fontSize: 10, fill: "hsl(var(--destructive))" },
+              }}
+            />
+
+            {/* Stacked bars — one per resource */}
+            {resourceNames.map((name) => (
+              <Bar
+                key={name}
+                dataKey={name}
+                stackId="resources"
+                fill={chartConfig[name]?.color ?? "hsl(var(--muted))"}
+                radius={
+                  resourceNames.indexOf(name) === resourceNames.length - 1
+                    ? [2, 2, 0, 0]
+                    : [0, 0, 0, 0]
+                }
+              />
             ))}
-            <th scope="col">{t(`${tBase}.total`)}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map(bar => {
-            const total = resourceNames.reduce(
-              (sum, name) => sum + (Number(bar[name]) || 0), 0,
-            );
-            return (
-              <tr key={bar.weekLabel}>
-                <th scope="row">{bar.weekLabel}</th>
-                {resourceNames.map(name => (
-                  <td key={name}>{bar[name] ?? 0}h</td>
-                ))}
-                <td>{Math.round(total * 10) / 10}h</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+          </BarChart>
+        </ResponsiveContainer>
+
+        {/* Screen-reader data table */}
+        <table className="sr-only">
+          <caption>{t(`${tBase}.title`)}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t(`${tBase}.colWeek`)}</th>
+              {resourceNames.map((name) => (
+                <th key={name} scope="col">
+                  {chartConfig[name]?.label ?? name}
+                </th>
+              ))}
+              <th scope="col">{t(`${tBase}.total`)}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((bar) => {
+              const total = resourceNames.reduce(
+                (sum, name) => sum + (Number(bar[name]) || 0),
+                0,
+              );
+              return (
+                <tr key={bar.weekLabel}>
+                  <th scope="row">{bar.weekLabel}</th>
+                  {resourceNames.map((name) => (
+                    <td key={name}>{bar[name] ?? 0}h</td>
+                  ))}
+                  <td>{Math.round(total * 10) / 10}h</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </figure>
     </ReportSection>
   );

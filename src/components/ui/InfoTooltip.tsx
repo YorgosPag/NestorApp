@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * @module InfoTooltip
@@ -12,20 +12,20 @@
  *   <InfoTooltip content={t('tooltips.spi')} side="bottom" />
  */
 
-import { Info } from 'lucide-react';
+import { Info } from "lucide-react";
 import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import '@/lib/design-system';
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import "@/lib/design-system";
 
 interface InfoTooltipProps {
   /** Tooltip text content */
   content: string;
   /** Tooltip placement side */
-  side?: 'top' | 'right' | 'bottom' | 'left';
+  side?: "top" | "right" | "bottom" | "left";
   /** Icon size class (default: h-3.5 w-3.5) */
   iconClassName?: string;
   /** Max width of tooltip (default: max-w-xs) */
@@ -36,9 +36,9 @@ interface InfoTooltipProps {
 
 export function InfoTooltip({
   content,
-  side = 'top',
+  side = "top",
   iconClassName,
-  maxWidth = 'max-w-xs',
+  maxWidth = "max-w-xs",
   className,
 }: InfoTooltipProps) {
   if (!content) return null;
@@ -49,19 +49,19 @@ export function InfoTooltip({
         <button
           type="button"
           className={cn(
-            'inline-flex items-center justify-center rounded-full',
-            'text-muted-foreground/60 hover:text-muted-foreground transition-colors',
-            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+            "inline-flex items-center justify-center rounded-full",
+            "text-muted-foreground/60 hover:text-muted-foreground transition-colors",
+            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             className,
           )}
           aria-label={content}
         >
-          <Info className={cn('h-3.5 w-3.5', iconClassName)} />
+          <Info className={cn("h-3.5 w-3.5", iconClassName)} />
         </button>
       </TooltipTrigger>
       <TooltipContent
         side={side}
-        className={cn(maxWidth, 'text-xs leading-relaxed whitespace-pre-line')}
+        className={cn(maxWidth, "text-xs leading-relaxed whitespace-pre-line")}
       >
         {content}
       </TooltipContent>

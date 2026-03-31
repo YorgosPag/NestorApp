@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * @module ReportSection
@@ -8,18 +8,22 @@
  * (Decision 12.21). If one section fails, the rest continue working.
  */
 
-import '@/lib/design-system';
-import { useState, useId } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import "@/lib/design-system";
+import { useState, useId } from "react";
+import { useTranslation } from "react-i18next";
+import { useSemanticColors } from "@/hooks/useSemanticColors";
 
-import { useTypography } from '@/hooks/useTypography';
-import { ChevronDown } from 'lucide-react';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { Card, CardContent } from '@/components/ui/card';
-import { InfoTooltip } from '@/components/ui/InfoTooltip';
-import { EnterpriseErrorBoundary as ErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
-import { cn } from '@/lib/utils';
+import { useTypography } from "@/hooks/useTypography";
+import { ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { Card, CardContent } from "@/components/ui/card";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { EnterpriseErrorBoundary as ErrorBoundary } from "@/components/ui/ErrorBoundary/ErrorBoundary";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,7 +62,7 @@ export function ReportSection({
   id,
   tooltip,
 }: ReportSectionProps) {
-  const { t } = useTranslation('reports');
+  const { t } = useTranslation("reports");
   const colors = useSemanticColors();
   const typography = useTypography();
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -78,7 +82,7 @@ export function ReportSection({
           {tooltip && <InfoTooltip content={tooltip} side="bottom" />}
         </div>
         {description && (
-          <p className={cn('mt-0.5', typography.body.sm, colors.text.muted)}>
+          <p className={cn("mt-0.5", typography.body.sm, colors.text.muted)}>
             {description}
           </p>
         )}
@@ -86,9 +90,9 @@ export function ReportSection({
       {collapsible && (
         <ChevronDown
           className={cn(
-            'h-5 w-5 shrink-0 transition-transform duration-200',
+            "h-5 w-5 shrink-0 transition-transform duration-200",
             colors.text.muted,
-            isOpen && 'rotate-180',
+            isOpen && "rotate-180",
           )}
         />
       )}
@@ -103,7 +107,7 @@ export function ReportSection({
 
   if (!collapsible) {
     return (
-      <Card className={cn('overflow-visible', className)}>
+      <Card className={cn("overflow-visible", className)}>
         <CardContent className="p-2" role="region" aria-labelledby={sectionId}>
           {headerContent}
           {content}
@@ -114,12 +118,12 @@ export function ReportSection({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
-      <Card className={cn('overflow-visible', className)}>
+      <Card className={cn("overflow-visible", className)}>
         <section aria-labelledby={sectionId}>
           <CardContent className="p-2">
             <CollapsibleTrigger
               className="w-full cursor-pointer"
-              aria-label={isOpen ? t('section.collapse') : t('section.expand')}
+              aria-label={isOpen ? t("section.collapse") : t("section.expand")}
             >
               {headerContent}
             </CollapsibleTrigger>

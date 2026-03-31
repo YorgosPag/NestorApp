@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * @module CriticalPathSection
@@ -8,21 +8,24 @@
  * Critical path tasks highlighted. Uses ReportSection wrapper.
  */
 
-import { useMemo } from 'react';
-import { Route, AlertTriangle } from 'lucide-react';
-import { ReportSection } from '@/components/reports/core/ReportSection';
-import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
-import { Skeleton } from '@/components/ui/skeleton';
-import { InfoTooltip } from '@/components/ui/InfoTooltip';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatDateShort } from '@/lib/intl-utils';
-import { cn } from '@/lib/utils';
-import { computeCPM } from '@/services/construction-scheduling/cpm-calculator';
-import type { CPMTaskResult } from '@/services/construction-scheduling/cpm-types';
-import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
-import '@/lib/design-system';
+import { useMemo } from "react";
+import { Route, AlertTriangle } from "lucide-react";
+import { ReportSection } from "@/components/reports/core/ReportSection";
+import { ReportEmptyState } from "@/components/reports/core/ReportEmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { useSemanticColors } from "@/hooks/useSemanticColors";
+import { useIconSizes } from "@/hooks/useIconSizes";
+import { useTranslation } from "@/i18n/hooks/useTranslation";
+import { formatDateShort } from "@/lib/intl-utils";
+import { cn } from "@/lib/utils";
+import { computeCPM } from "@/services/construction-scheduling/cpm-calculator";
+import type { CPMTaskResult } from "@/services/construction-scheduling/cpm-types";
+import type {
+  ConstructionPhase,
+  ConstructionTask,
+} from "@/types/building/construction";
+import "@/lib/design-system";
 
 // ─── Props ──────────────────────────────────────────────────────────────
 
@@ -43,11 +46,13 @@ function CPMRow({ task, t }: CPMRowProps) {
   const isCritical = task.isCritical && !task.hasCyclicDependency;
 
   return (
-    <tr className={cn(
-      'border-b border-border/50 transition-colors',
-      isCritical && 'bg-orange-50/50 dark:bg-orange-950/20',
-      task.hasCyclicDependency && 'bg-amber-50/50 dark:bg-amber-950/20',
-    )}>
+    <tr
+      className={cn(
+        "border-b border-border/50 transition-colors",
+        isCritical && "bg-orange-50/50 dark:bg-orange-950/20",
+        task.hasCyclicDependency && "bg-amber-50/50 dark:bg-amber-950/20",
+      )}
+    >
       <th scope="row" className="py-2 px-2 font-medium">
         <div className="flex items-center gap-1.5">
           {isCritical && (
@@ -81,7 +86,11 @@ function CPMRow({ task, t }: CPMRowProps) {
         {formatDateShort(task.lateFinish)}
       </td>
       <td className="py-2 px-2 text-right">
-        <FloatBadge float={task.totalFloat} isCyclic={task.hasCyclicDependency} t={t} />
+        <FloatBadge
+          float={task.totalFloat}
+          isCyclic={task.hasCyclicDependency}
+          t={t}
+        />
       </td>
     </tr>
   );
@@ -99,28 +108,32 @@ function FloatBadge({ float, isCyclic, t }: FloatBadgeProps) {
   if (isCyclic) {
     return (
       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-        {t('tabs.timeline.dashboard.criticalPath.cyclicDep')}
+        {t("tabs.timeline.dashboard.criticalPath.cyclicDep")}
       </span>
     );
   }
   if (float === 0) {
     return (
       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300">
-        {t('tabs.timeline.dashboard.criticalPath.critical')}
+        {t("tabs.timeline.dashboard.criticalPath.critical")}
       </span>
     );
   }
   return (
     <span className="text-sm tabular-nums text-muted-foreground">
-      {t('tabs.timeline.dashboard.criticalPath.days', { days: float })}
+      {t("tabs.timeline.dashboard.criticalPath.days", { days: float })}
     </span>
   );
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────
 
-export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSectionProps) {
-  const { t } = useTranslation('building');
+export function CriticalPathSection({
+  tasks,
+  phases,
+  loading,
+}: CriticalPathSectionProps) {
+  const { t } = useTranslation("building");
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
@@ -132,8 +145,8 @@ export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSect
   if (loading) {
     return (
       <ReportSection
-        title={t('tabs.timeline.dashboard.criticalPath.title')}
-        tooltip={t('tabs.timeline.dashboard.tooltips.criticalPathTitle')}
+        title={t("tabs.timeline.dashboard.criticalPath.title")}
+        tooltip={t("tabs.timeline.dashboard.tooltips.criticalPathTitle")}
       >
         <Skeleton className="h-48 w-full" />
       </ReportSection>
@@ -143,11 +156,11 @@ export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSect
   if (!cpmResult || !cpmResult.isValid) {
     return (
       <ReportSection
-        title={t('tabs.timeline.dashboard.criticalPath.title')}
-        tooltip={t('tabs.timeline.dashboard.tooltips.criticalPathTitle')}
+        title={t("tabs.timeline.dashboard.criticalPath.title")}
+        tooltip={t("tabs.timeline.dashboard.tooltips.criticalPathTitle")}
       >
         <ReportEmptyState
-          title={t('tabs.timeline.dashboard.criticalPath.empty')}
+          title={t("tabs.timeline.dashboard.criticalPath.empty")}
         />
       </ReportSection>
     );
@@ -162,63 +175,99 @@ export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSect
 
   return (
     <ReportSection
-      title={t('tabs.timeline.dashboard.criticalPath.title')}
-      description={t('tabs.timeline.dashboard.criticalPath.description')}
-      tooltip={t('tabs.timeline.dashboard.tooltips.criticalPathTitle')}
+      title={t("tabs.timeline.dashboard.criticalPath.title")}
+      description={t("tabs.timeline.dashboard.criticalPath.description")}
+      tooltip={t("tabs.timeline.dashboard.tooltips.criticalPathTitle")}
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className={cn('border-b', colors.border.default)}>
+            <tr className={cn("border-b", colors.border.default)}>
               <th scope="col" className="text-left py-2 px-2 font-medium">
-                {t('tabs.timeline.dashboard.criticalPath.colTask')}
+                {t("tabs.timeline.dashboard.criticalPath.colTask")}
               </th>
-              <th scope="col" className="text-left py-2 px-2 font-medium hidden lg:table-cell">
-                {t('tabs.timeline.dashboard.criticalPath.colTask')}
+              <th
+                scope="col"
+                className="text-left py-2 px-2 font-medium hidden lg:table-cell"
+              >
+                {t("tabs.timeline.dashboard.criticalPath.colTask")}
               </th>
-              <th scope="col" className="text-left py-2 px-2 font-medium hidden md:table-cell">
-                {t('tabs.timeline.dashboard.criticalPath.colPhase')}
+              <th
+                scope="col"
+                className="text-left py-2 px-2 font-medium hidden md:table-cell"
+              >
+                {t("tabs.timeline.dashboard.criticalPath.colPhase")}
               </th>
               <th scope="col" className="text-right py-2 px-2 font-medium">
                 <span className="inline-flex items-center gap-1">
-                  {t('tabs.timeline.dashboard.criticalPath.colDuration')}
-                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.duration')} side="bottom" />
+                  {t("tabs.timeline.dashboard.criticalPath.colDuration")}
+                  <InfoTooltip
+                    content={t("tabs.timeline.dashboard.tooltips.duration")}
+                    side="bottom"
+                  />
                 </span>
               </th>
-              <th scope="col" className="text-right py-2 px-2 font-medium hidden md:table-cell">
+              <th
+                scope="col"
+                className="text-right py-2 px-2 font-medium hidden md:table-cell"
+              >
                 <span className="inline-flex items-center gap-1 justify-end">
-                  {t('tabs.timeline.dashboard.criticalPath.colES')}
-                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.es')} side="bottom" />
+                  {t("tabs.timeline.dashboard.criticalPath.colES")}
+                  <InfoTooltip
+                    content={t("tabs.timeline.dashboard.tooltips.es")}
+                    side="bottom"
+                  />
                 </span>
               </th>
-              <th scope="col" className="text-right py-2 px-2 font-medium hidden md:table-cell">
+              <th
+                scope="col"
+                className="text-right py-2 px-2 font-medium hidden md:table-cell"
+              >
                 <span className="inline-flex items-center gap-1 justify-end">
-                  {t('tabs.timeline.dashboard.criticalPath.colEF')}
-                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.ef')} side="bottom" />
+                  {t("tabs.timeline.dashboard.criticalPath.colEF")}
+                  <InfoTooltip
+                    content={t("tabs.timeline.dashboard.tooltips.ef")}
+                    side="bottom"
+                  />
                 </span>
               </th>
-              <th scope="col" className="text-right py-2 px-2 font-medium hidden lg:table-cell">
+              <th
+                scope="col"
+                className="text-right py-2 px-2 font-medium hidden lg:table-cell"
+              >
                 <span className="inline-flex items-center gap-1 justify-end">
-                  {t('tabs.timeline.dashboard.criticalPath.colLS')}
-                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.ls')} side="bottom" />
+                  {t("tabs.timeline.dashboard.criticalPath.colLS")}
+                  <InfoTooltip
+                    content={t("tabs.timeline.dashboard.tooltips.ls")}
+                    side="bottom"
+                  />
                 </span>
               </th>
-              <th scope="col" className="text-right py-2 px-2 font-medium hidden lg:table-cell">
+              <th
+                scope="col"
+                className="text-right py-2 px-2 font-medium hidden lg:table-cell"
+              >
                 <span className="inline-flex items-center gap-1 justify-end">
-                  {t('tabs.timeline.dashboard.criticalPath.colLF')}
-                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.lf')} side="bottom" />
+                  {t("tabs.timeline.dashboard.criticalPath.colLF")}
+                  <InfoTooltip
+                    content={t("tabs.timeline.dashboard.tooltips.lf")}
+                    side="bottom"
+                  />
                 </span>
               </th>
               <th scope="col" className="text-right py-2 px-2 font-medium">
                 <span className="inline-flex items-center gap-1 justify-end">
-                  {t('tabs.timeline.dashboard.criticalPath.colFloat')}
-                  <InfoTooltip content={t('tabs.timeline.dashboard.tooltips.float')} side="bottom" />
+                  {t("tabs.timeline.dashboard.criticalPath.colFloat")}
+                  <InfoTooltip
+                    content={t("tabs.timeline.dashboard.tooltips.float")}
+                    side="bottom"
+                  />
                 </span>
               </th>
             </tr>
           </thead>
           <tbody>
-            {sortedTasks.map(task => (
+            {sortedTasks.map((task) => (
               <CPMRow key={task.taskId} task={task} t={t} />
             ))}
           </tbody>
@@ -227,15 +276,22 @@ export function CriticalPathSection({ tasks, phases, loading }: CriticalPathSect
 
       {/* Footer: Critical Path Length */}
       {cpmResult.criticalPath.length > 0 && (
-        <div className={cn('flex items-center justify-between pt-3 mt-3 border-t', colors.border.default)}>
+        <div
+          className={cn(
+            "flex items-center justify-between pt-3 mt-3 border-t",
+            colors.border.default,
+          )}
+        >
           <div className="flex items-center gap-2">
-            <Route className={cn(iconSizes.sm, 'text-orange-500')} />
+            <Route className={cn(iconSizes.sm, "text-orange-500")} />
             <span className="text-sm font-medium">
-              {t('tabs.timeline.dashboard.criticalPath.pathLength')}
+              {t("tabs.timeline.dashboard.criticalPath.pathLength")}
             </span>
           </div>
           <span className="text-sm font-semibold tabular-nums">
-            {t('tabs.timeline.dashboard.criticalPath.days', { days: cpmResult.criticalPathLength })}
+            {t("tabs.timeline.dashboard.criticalPath.days", {
+              days: cpmResult.criticalPathLength,
+            })}
           </span>
         </div>
       )}

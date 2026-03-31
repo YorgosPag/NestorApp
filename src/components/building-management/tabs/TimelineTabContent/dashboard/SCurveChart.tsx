@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * @module SCurveChart
@@ -8,7 +8,7 @@
  * Colors from useSemanticColors() — no hardcoded hex.
  */
 
-import { useMemo } from 'react';
+import { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -20,13 +20,13 @@ import {
   ReferenceLine,
   Brush,
   ResponsiveContainer,
-} from 'recharts';
-import { ReportSection } from '@/components/reports/core/ReportSection';
-import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency, formatDateShort } from '@/lib/intl-utils';
-import { getStatusColor } from '@/lib/design-system';
-import type { SCurveDataPoint } from '@/services/report-engine/evm-calculator';
+} from "recharts";
+import { ReportSection } from "@/components/reports/core/ReportSection";
+import { ReportEmptyState } from "@/components/reports/core/ReportEmptyState";
+import { useTranslation } from "@/i18n/hooks/useTranslation";
+import { formatCurrency, formatDateShort } from "@/lib/intl-utils";
+import { getStatusColor } from "@/lib/design-system";
+import type { SCurveDataPoint } from "@/services/report-engine/evm-calculator";
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────
 
@@ -45,35 +45,58 @@ interface SCurveTooltipProps {
   cvLabel: string;
 }
 
-function SCurveTooltip({ active, payload, label, labelMap, svLabel, cvLabel }: SCurveTooltipProps) {
+function SCurveTooltip({
+  active,
+  payload,
+  label,
+  labelMap,
+  svLabel,
+  cvLabel,
+}: SCurveTooltipProps) {
   if (!active || !payload?.length) return null;
 
-  const pv = payload.find(p => p.name === 'PV')?.value ?? 0;
-  const ev = payload.find(p => p.name === 'EV')?.value ?? 0;
-  const ac = payload.find(p => p.name === 'AC')?.value ?? 0;
+  const pv = payload.find((p) => p.name === "PV")?.value ?? 0;
+  const ev = payload.find((p) => p.name === "EV")?.value ?? 0;
+  const ac = payload.find((p) => p.name === "AC")?.value ?? 0;
   const sv = ev - pv;
   const cv = ev - ac;
 
   return (
     <div className="rounded-md border bg-popover p-3 shadow-md text-sm">
-      <p className="font-medium mb-2">{label ? formatDateShort(label) : ''}</p>
-      {payload.map(entry => (
+      <p className="font-medium mb-2">{label ? formatDateShort(label) : ""}</p>
+      {payload.map((entry) => (
         <p key={entry.name} style={{ color: entry.color }}>
           <span className="font-medium">{entry.name}</span>
-          <span className="text-muted-foreground text-xs ml-1">{labelMap[entry.name] ?? ''}</span>
+          <span className="text-muted-foreground text-xs ml-1">
+            {labelMap[entry.name] ?? ""}
+          </span>
           : {formatCurrency(entry.value)}
         </p>
       ))}
       <hr className="my-1.5 border-border" />
-      <p className={sv >= 0 ? getStatusColor('available', 'text') : getStatusColor('error', 'text')}>
+      <p
+        className={
+          sv >= 0
+            ? getStatusColor("available", "text")
+            : getStatusColor("error", "text")
+        }
+      >
         <span className="font-medium">SV</span>
-        <span className="text-muted-foreground text-xs ml-1">{svLabel}</span>
-        : {sv >= 0 ? '+' : ''}{formatCurrency(sv)}
+        <span className="text-muted-foreground text-xs ml-1">{svLabel}</span>:{" "}
+        {sv >= 0 ? "+" : ""}
+        {formatCurrency(sv)}
       </p>
-      <p className={cv >= 0 ? getStatusColor('available', 'text') : getStatusColor('error', 'text')}>
+      <p
+        className={
+          cv >= 0
+            ? getStatusColor("available", "text")
+            : getStatusColor("error", "text")
+        }
+      >
         <span className="font-medium">CV</span>
-        <span className="text-muted-foreground text-xs ml-1">{cvLabel}</span>
-        : {cv >= 0 ? '+' : ''}{formatCurrency(cv)}
+        <span className="text-muted-foreground text-xs ml-1">{cvLabel}</span>:{" "}
+        {cv >= 0 ? "+" : ""}
+        {formatCurrency(cv)}
       </p>
     </div>
   );
@@ -91,18 +114,18 @@ interface SCurveChartProps {
 // ─── Component ───────────────────────────────────────────────────────────
 
 export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation("building");
   const tt = (key: string) => t(`tabs.timeline.dashboard.tooltips.${key}`);
 
   const sCurveLabelMap: Record<string, string> = {
-    PV: tt('pvShort'),
-    EV: tt('evShort'),
-    AC: tt('acShort'),
+    PV: tt("pvShort"),
+    EV: tt("evShort"),
+    AC: tt("acShort"),
   };
 
   const todayStr = useMemo(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
   }, []);
 
   const isEmpty = data.length === 0;
@@ -110,13 +133,13 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
   if (!loading && isEmpty) {
     return (
       <ReportSection
-        title={t('tabs.timeline.dashboard.sCurve.title')}
-        tooltip={t('tabs.timeline.dashboard.tooltips.sCurveTitle')}
+        title={t("tabs.timeline.dashboard.sCurve.title")}
+        tooltip={t("tabs.timeline.dashboard.tooltips.sCurveTitle")}
         id="schedule-scurve"
       >
         <ReportEmptyState
-          title={t('tabs.timeline.dashboard.empty.noBOQ')}
-          description={t('tabs.timeline.dashboard.empty.noBOQDesc')}
+          title={t("tabs.timeline.dashboard.empty.noBOQ")}
+          description={t("tabs.timeline.dashboard.empty.noBOQDesc")}
         />
       </ReportSection>
     );
@@ -124,107 +147,122 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
 
   return (
     <ReportSection
-      title={t('tabs.timeline.dashboard.sCurve.title')}
-      tooltip={t('tabs.timeline.dashboard.tooltips.sCurveTitle')}
+      title={t("tabs.timeline.dashboard.sCurve.title")}
+      tooltip={t("tabs.timeline.dashboard.tooltips.sCurveTitle")}
       id="schedule-scurve"
     >
       <figure
         role="img"
-        aria-label={t('tabs.timeline.dashboard.sCurve.ariaLabel')}
+        aria-label={t("tabs.timeline.dashboard.sCurve.ariaLabel")}
       >
-      <div className="h-[350px] w-full sm:h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(v: string) => formatDateShort(v)}
-              className="text-xs"
-            />
-            <YAxis
-              tickFormatter={(v: number) => formatCurrency(v)}
-              className="text-xs"
-              width={80}
-            />
-            <Tooltip content={<SCurveTooltip labelMap={sCurveLabelMap} svLabel={tt('svShort')} cvLabel={tt('cvShort')} />} />
-            <Legend />
-
-            {/* Today marker */}
-            <ReferenceLine
-              x={todayStr}
-              stroke="hsl(var(--muted-foreground))"
-              strokeDasharray="4 4"
-              label={{ value: t('tabs.timeline.dashboard.sCurve.today'), position: 'top', fontSize: 11 }}
-            />
-
-            {/* PV — dashed gray (baseline) */}
-            <Line
-              type="monotone"
-              dataKey="plannedValue"
-              name="PV"
-              stroke="hsl(var(--muted-foreground))"
-              strokeDasharray="5 5"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-
-            {/* EV — solid (value produced) */}
-            <Line
-              type="monotone"
-              dataKey="earnedValue"
-              name="EV"
-              stroke="hsl(var(--chart-1))"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-
-            {/* AC — solid red (money spent) */}
-            <Line
-              type="monotone"
-              dataKey="actualCost"
-              name="AC"
-              stroke="hsl(var(--destructive))"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-            {/* Brush zoom — Phase B (ADR-266) */}
-            {enableBrush && data.length >= 6 && (
-              <Brush
+        <div className="h-[350px] w-full sm:h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={data}
+              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis
                 dataKey="date"
-                height={28}
-                stroke="hsl(var(--chart-1))"
                 tickFormatter={(v: string) => formatDateShort(v)}
+                className="text-xs"
               />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+              <YAxis
+                tickFormatter={(v: number) => formatCurrency(v)}
+                className="text-xs"
+                width={80}
+              />
+              <Tooltip
+                content={
+                  <SCurveTooltip
+                    labelMap={sCurveLabelMap}
+                    svLabel={tt("svShort")}
+                    cvLabel={tt("cvShort")}
+                  />
+                }
+              />
+              <Legend />
 
-      {/* Screen-reader data table */}
-      <table className="sr-only">
-        <caption>{t('tabs.timeline.dashboard.sCurve.title')}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t('tabs.timeline.dashboard.sCurve.colDate')}</th>
-            <th scope="col">{t('tabs.timeline.dashboard.sCurve.pv')}</th>
-            <th scope="col">{t('tabs.timeline.dashboard.sCurve.ev')}</th>
-            <th scope="col">{t('tabs.timeline.dashboard.sCurve.ac')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map(point => (
-            <tr key={point.date}>
-              <td>{formatDateShort(point.date)}</td>
-              <td>{formatCurrency(point.plannedValue)}</td>
-              <td>{formatCurrency(point.earnedValue)}</td>
-              <td>{formatCurrency(point.actualCost)}</td>
+              {/* Today marker */}
+              <ReferenceLine
+                x={todayStr}
+                stroke="hsl(var(--muted-foreground))"
+                strokeDasharray="4 4"
+                label={{
+                  value: t("tabs.timeline.dashboard.sCurve.today"),
+                  position: "top",
+                  fontSize: 11,
+                }}
+              />
+
+              {/* PV — dashed gray (baseline) */}
+              <Line
+                type="monotone"
+                dataKey="plannedValue"
+                name="PV"
+                stroke="hsl(var(--muted-foreground))"
+                strokeDasharray="5 5"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+
+              {/* EV — solid (value produced) */}
+              <Line
+                type="monotone"
+                dataKey="earnedValue"
+                name="EV"
+                stroke="hsl(var(--chart-1))"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+
+              {/* AC — solid red (money spent) */}
+              <Line
+                type="monotone"
+                dataKey="actualCost"
+                name="AC"
+                stroke="hsl(var(--destructive))"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+              {/* Brush zoom — Phase B (ADR-266) */}
+              {enableBrush && data.length >= 6 && (
+                <Brush
+                  dataKey="date"
+                  height={28}
+                  stroke="hsl(var(--chart-1))"
+                  tickFormatter={(v: string) => formatDateShort(v)}
+                />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Screen-reader data table */}
+        <table className="sr-only">
+          <caption>{t("tabs.timeline.dashboard.sCurve.title")}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t("tabs.timeline.dashboard.sCurve.colDate")}</th>
+              <th scope="col">{t("tabs.timeline.dashboard.sCurve.pv")}</th>
+              <th scope="col">{t("tabs.timeline.dashboard.sCurve.ev")}</th>
+              <th scope="col">{t("tabs.timeline.dashboard.sCurve.ac")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((point) => (
+              <tr key={point.date}>
+                <td>{formatDateShort(point.date)}</td>
+                <td>{formatCurrency(point.plannedValue)}</td>
+                <td>{formatCurrency(point.earnedValue)}</td>
+                <td>{formatCurrency(point.actualCost)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </figure>
     </ReportSection>
   );
