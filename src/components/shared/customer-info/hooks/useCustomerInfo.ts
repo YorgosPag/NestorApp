@@ -211,7 +211,7 @@ export function useCustomerInfo(
     cacheTimeout = 5 * 60 * 1000, // 5 minutes default
     retries = 2,
     enabled = true,
-    _staleTime = 60 * 1000 // 1 minute stale time
+    staleTime: _staleTime = 60 * 1000 // 1 minute stale time
   } = config;
 
   // ========================================================================
