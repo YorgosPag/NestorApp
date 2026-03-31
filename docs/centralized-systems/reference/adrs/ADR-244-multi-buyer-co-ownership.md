@@ -1,6 +1,6 @@
 # ADR-244: Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων
 
-**Status**: IN PROGRESS (Phase 3 — Session 3/3 completed, i18n keys pending)
+**Status**: COMPLETED (SPEC-244D fully done — code, indexes, i18n)
 **Date**: 2026-03-21
 **Author**: Claude + Γιώργος Παγώνης
 **Priority**: CRITICAL — Blockers για production deployment
@@ -222,3 +222,4 @@ interface PropertyOwnerEntry {
 | 2026-03-31 | **SPEC-244D Session 2/3**: Components + API Routes migration — 14 αρχεία. `commercial?.buyerContactId`/`buyerName` αφαιρέθηκαν πλήρως. Display derives από `getPrimaryBuyerContactId(owners)` + `formatOwnerNames(owners)`. Zod schemas, props (`ownerContactId`/`ownerName`), Firestore writes (`owners`/`ownerContactIds`). SRP splits: `units/[id]/route.ts` → +3 helpers, `notifications/professional-assigned/route.ts` → +hierarchy-resolver. Fix: `brokerage/commissions` + `contracts` routes aligned με `primaryBuyerContactId`. |
 | 2026-03-31 | **SPEC-244D Session 3/3**: Report builders + config migration — 8 αρχεία. `domain-defs-financials` (ownerName/ownerContactId/primaryBuyerContactId), `domain-defs-buyers` (ownerContactIds preFilter+sort), `domain-defs-brokerage` (primaryBuyerContactId), `domain-defs-ownership` (ownerName), `domain-definitions` (ownerContactIds), `ai-role-access-matrix` (owners+ownerContactIds), `audit-tracked-fields` (commercial.owners). Tests updated. |
 | 2026-03-31 | **SPEC-244D Session 4/4**: Εκκαθάριση εναπομεινάντων legacy refs — 6 αρχεία. `client.service.ts` Firestore queries → `ownerContactIds` array-contains (ΚΡΙΣΙΜΟ). `report-aggregator.helpers.ts` → `formatOwnerNames(owners)`. `ai-query-translator.ts` mapping updated. `payment-report.service.ts` → owners[]. `report-aggregator.types.ts` UnitDoc.commercial.owners. Tests updated (14 mock data entries). **SPEC-244D COMPLETE** — μηδέν `commercial.buyerContactId`/`commercial.buyerName` αναφορές σε active code. |
+| 2026-03-31 | **SPEC-244D Cleanup**: Αφαίρεση legacy Firestore composite index (`companyId + commercial.buyerContactId`) από `firestore.indexes.json` + deployed. Fix 3 orphaned i18n keys: `ownerContactIds` (units), `ownerName` (paymentPlans, ownershipDetail). Rename common.json keys `buyerName/Required/Placeholder` → `ownerLabel/Required/Placeholder` + `OwnersList.tsx` updated. |
