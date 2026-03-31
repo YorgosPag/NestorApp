@@ -12,7 +12,7 @@
 |---------|-------|--------|--------|
 | 1/3 | Types + Services + SRP Split | ✅ Done | `4b686e46` + `ad91e5af` |
 | 2/3 | Components + API Routes (14 αρχεία) + SRP splits (4 helpers) + 2 tsc fixes | ✅ Done | `e6b552d7` + `2e502caa` |
-| 3/3 | Report Builders + Config + Tests + Final Verification | ✅ Done | `pending` |
+| 3/3 | Report Builders + Config + Tests + Final Verification | ✅ Done | `dc03ab3b` + `3556c05b` |
 
 ---
 
