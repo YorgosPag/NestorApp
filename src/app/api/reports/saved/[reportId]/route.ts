@@ -98,7 +98,7 @@ export const PUT = withStandardRateLimit(async function PUT(
         const updated = await updateSavedReport(
           ctx.companyId,
           reportId,
-          ctx.userId,
+          ctx.uid,
           body,
         );
 
@@ -144,7 +144,7 @@ export const DELETE = withStandardRateLimit(async function DELETE(
         const success = await deleteSavedReport(
           ctx.companyId,
           reportId,
-          ctx.userId,
+          ctx.uid,
         );
 
         if (!success) {
@@ -192,7 +192,7 @@ export const POST = withStandardRateLimit(async function POST(
           const isFavorited = await toggleFavorite(
             ctx.companyId,
             reportId,
-            ctx.userId,
+            ctx.uid,
           );
           return apiSuccess<{ action: string; result: boolean }>(
             { action: 'toggle_favorite', result: isFavorited },

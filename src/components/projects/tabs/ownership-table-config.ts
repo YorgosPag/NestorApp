@@ -99,7 +99,7 @@ export function buildColumns(_t: (key: string) => string): OwnershipColumnDef[] 
     { key: 'grossArea', labelKey: 'common:ownership.columns.areaGross', width: 'w-20', whitespace: true, alignRight: true, filterable: true, sortValue: r => r.areaSqm }, // eslint-disable-line custom/no-hardcoded-strings
     { key: 'shares', labelKey: 'common:ownership.columns.millesimalShares', width: 'w-28', whitespace: true, alignRight: true, filterable: true, sortValue: r => r.millesimalShares }, // eslint-disable-line custom/no-hardcoded-strings
     { key: 'allocation', labelKey: 'common:ownership.columns.allocation', width: 'w-32', whitespace: true, filterable: true, sortValue: r => r.ownerParty }, // eslint-disable-line custom/no-hardcoded-strings
-    { key: 'buyer', labelKey: 'common:ownership.columns.ownerParty', whitespace: true, filterable: true, sortValue: r => r.buyerName ?? '' }, // eslint-disable-line custom/no-hardcoded-strings
+    { key: 'buyer', labelKey: 'common:ownership.columns.ownerParty', whitespace: true, filterable: true, sortValue: r => r.owners?.[0]?.name ?? '' }, // eslint-disable-line custom/no-hardcoded-strings
     { key: 'preliminary', labelKey: 'common:ownership.columns.preliminary', width: 'w-28', whitespace: true, filterable: true, sortValue: r => r.preliminaryContract ?? '' }, // eslint-disable-line custom/no-hardcoded-strings
     { key: 'final', labelKey: 'common:ownership.columns.final', width: 'w-28', whitespace: true, filterable: true, sortValue: r => r.finalContract ?? '' }, // eslint-disable-line custom/no-hardcoded-strings
   ];

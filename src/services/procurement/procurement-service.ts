@@ -82,7 +82,7 @@ async function audit(
   poId: string,
   meta?: Record<string, unknown>
 ): Promise<void> {
-  await logAuditEvent(ctx, action as string, poId, 'purchase_order', {
+  await logAuditEvent(ctx, action, poId, 'purchase_order', {
     metadata: meta as Record<string, string | number | boolean | null> | undefined,
   });
 }
@@ -100,7 +100,7 @@ export async function createPO(
 
   const result = await createPurchaseOrder(
     ctx.companyId,
-    ctx.userId,
+    ctx.uid,
     dto
   );
 
@@ -118,7 +118,7 @@ export async function createPO(
     entityName: result.poNumber,
     action: 'created',
     changes: [{ field: 'status', oldValue: null, newValue: 'draft', label: 'Status' }],
-    performedBy: ctx.userId,
+    performedBy: ctx.uid,
     performedByName: null,
     companyId: ctx.companyId,
   }).catch(() => {});
@@ -216,7 +216,7 @@ export async function approvePO(
   assertTransition(po.status, 'approved');
 
   await updatePOStatus(poId, 'approved', {
-    approvedBy: ctx.userId,
+    approvedBy: ctx.uid,
   });
 
   await audit(ctx, 'procurement.po.approved', poId, {
@@ -230,7 +230,7 @@ export async function approvePO(
     entityName: po.poNumber,
     action: 'status_changed',
     changes: [{ field: 'status', oldValue: 'draft', newValue: 'approved', label: 'Status' }],
-    performedBy: ctx.userId,
+    performedBy: ctx.uid,
     performedByName: null,
     companyId: ctx.companyId,
   }).catch(() => {});
@@ -268,7 +268,7 @@ export async function markOrdered(
     entityName: po.poNumber,
     action: 'status_changed',
     changes: [{ field: 'status', oldValue: 'approved', newValue: 'ordered', label: 'Status' }],
-    performedBy: ctx.userId,
+    performedBy: ctx.uid,
     performedByName: null,
     companyId: ctx.companyId,
   }).catch(() => {});
@@ -297,7 +297,7 @@ export async function closePO(
     entityName: po.poNumber,
     action: 'status_changed',
     changes: [{ field: 'status', oldValue: po.status, newValue: 'closed', label: 'Status' }],
-    performedBy: ctx.userId,
+    performedBy: ctx.uid,
     performedByName: null,
     companyId: ctx.companyId,
   }).catch(() => {});
@@ -333,7 +333,7 @@ export async function cancelPO(
       { field: 'status', oldValue: po.status, newValue: 'cancelled', label: 'Status' },
       { field: 'cancellationReason', oldValue: null, newValue: reason, label: 'Reason' },
     ],
-    performedBy: ctx.userId,
+    performedBy: ctx.uid,
     performedByName: null,
     companyId: ctx.companyId,
   }).catch(() => {});
@@ -369,7 +369,7 @@ export async function recordPODelivery(
     entityName: po.poNumber,
     action: 'status_changed',
     changes: [{ field: 'status', oldValue: po.status, newValue: result.newStatus, label: 'Status' }],
-    performedBy: ctx.userId,
+    performedBy: ctx.uid,
     performedByName: null,
     companyId: ctx.companyId,
   }).catch(() => {});
@@ -398,7 +398,7 @@ export async function linkInvoiceToPO(
     entityName: poId,
     action: 'linked',
     changes: [{ field: 'linkedInvoiceIds', oldValue: null, newValue: invoiceId, label: 'Invoice Linked' }],
-    performedBy: ctx.userId,
+    performedBy: ctx.uid,
     performedByName: null,
     companyId: ctx.companyId,
   }).catch(() => {});
@@ -427,7 +427,7 @@ export async function deletePO(
     entityName: po.poNumber,
     action: 'deleted',
     changes: [{ field: 'isDeleted', oldValue: false, newValue: true, label: 'Deleted' }],
-    performedBy: ctx.userId,
+    performedBy: ctx.uid,
     performedByName: null,
     companyId: ctx.companyId,
   }).catch(() => {});

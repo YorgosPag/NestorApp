@@ -289,7 +289,7 @@ export function LinkedSpaceRows({
               ) : <span className={cn(typography.special.codeId, colors.text.muted)}>—</span>}
             </TableCell>
             <TableCell className={typography.special.tertiary}>{ownerLabel(row.ownerParty, t)}</TableCell>
-            <TableCell className={typography.special.tertiary}>{row.buyerName ?? '—'}</TableCell>
+            <TableCell className={typography.special.tertiary}>{row.owners?.[0]?.name ?? '—'}</TableCell>
             <TableCell className={typography.special.codeId}>{row.preliminaryContract ?? '—'}</TableCell>
             <TableCell className={typography.special.codeId}>{row.finalContract ?? '—'}</TableCell>
           </TableRow>

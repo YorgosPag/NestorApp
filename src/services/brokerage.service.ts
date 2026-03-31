@@ -32,8 +32,8 @@ import type {
   RecordCommissionInput,
   ExclusivityValidationResult,
   ExclusivityValidationInput,
-  ExclusivityValidationIssue,
 } from '@/types/brokerage';
+import { evaluateExclusivityRules } from './brokerage-exclusivity-rules';
 
 const logger = createModuleLogger('BrokerageService');
 
@@ -246,198 +246,8 @@ export class BrokerageService {
   static async validateExclusivity(
     input: ExclusivityValidationInput
   ): Promise<ExclusivityValidationResult> {
-    try {
-      const { projectId, unitId, scope, exclusivity, excludeAgreementId } = input;
-      const today = new Date().toISOString().split('T')[0];
-
-      // Fetch ALL agreements for this project
-      const allAgreements = await this.getAgreements(projectId);
-
-      // Filter: only active + not expired + not self
-      const active = allAgreements.filter((a) => {
-        if (a.status !== 'active') return false;
-        if (a.endDate && a.endDate.split('T')[0] < today) return false;
-        if (excludeAgreementId && a.id === excludeAgreementId) return false;
-        return true;
-      });
-
-      const issues: ExclusivityValidationIssue[] = [];
-      const excludedUnitIds: string[] = [];
-
-      // Separate by type for clarity
-      const exclusiveProject = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'project');
-      const exclusiveUnits = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'unit');
-      const nonExclusiveUnits = active.filter((a) => a.exclusivity === 'non_exclusive' && a.scope === 'unit');
-
-      // ========================================================================
-      // NEW agreement is EXCLUSIVE + PROJECT scope
-      // ========================================================================
-      if (exclusivity === 'exclusive' && scope === 'project') {
-        // Block if another exclusive project exists
-        for (const conflict of exclusiveProject) {
-          issues.push({
-            severity: 'error',
-            messageKey: 'sales.legal.exclusivityConflictProjectExclusive',
-            messageParams: { agentName: conflict.agentName },
-            conflictingAgreementId: conflict.id,
-            conflictingAgentName: conflict.agentName,
-          });
-        }
-
-        // Block if any exclusive unit exists
-        for (const conflict of exclusiveUnits) {
-          issues.push({
-            severity: 'error',
-            messageKey: 'sales.legal.exclusivityConflictUnitExclusive',
-            messageParams: {
-              agentName: conflict.agentName,
-              unitName: conflict.unitId ?? '',
-            },
-            conflictingAgreementId: conflict.id,
-            conflictingAgentName: conflict.agentName,
-          });
-        }
-
-        // Rule 3: WARNING if non-exclusive unit agreements exist
-        for (const existing of nonExclusiveUnits) {
-          if (existing.unitId) {
-            excludedUnitIds.push(existing.unitId);
-          }
-        }
-        if (excludedUnitIds.length > 0) {
-          const unitNames = excludedUnitIds.join(', ');
-          issues.push({
-            severity: 'warning',
-            messageKey: 'sales.legal.exclusivityWarningExcludedUnits',
-            messageParams: { unitNames },
-            conflictingAgreementId: null,
-            conflictingAgentName: null,
-          });
-        }
-      }
-
-      // ========================================================================
-      // NEW agreement is EXCLUSIVE + UNIT scope
-      // ========================================================================
-      if (exclusivity === 'exclusive' && scope === 'unit' && unitId) {
-        // Block by project-level exclusive
-        for (const conflict of exclusiveProject) {
-          issues.push({
-            severity: 'error',
-            messageKey: 'sales.legal.exclusivityBlockedByProjectExclusive',
-            messageParams: { agentName: conflict.agentName },
-            conflictingAgreementId: conflict.id,
-            conflictingAgentName: conflict.agentName,
-          });
-        }
-
-        // Block by exclusive on same unit
-        const sameUnitExclusive = exclusiveUnits.filter((a) => a.unitId === unitId);
-        for (const conflict of sameUnitExclusive) {
-          issues.push({
-            severity: 'error',
-            messageKey: 'sales.legal.exclusivityConflictSameUnit',
-            messageParams: {
-              agentName: conflict.agentName,
-              unitName: unitId,
-            },
-            conflictingAgreementId: conflict.id,
-            conflictingAgentName: conflict.agentName,
-          });
-        }
-
-        // Block by non-exclusive on same unit (exclusive requires clearing the unit)
-        const sameUnitNonExclusive = nonExclusiveUnits.filter((a) => a.unitId === unitId);
-        for (const conflict of sameUnitNonExclusive) {
-          issues.push({
-            severity: 'error',
-            messageKey: 'sales.legal.exclusivityBlockedByExistingUnit',
-            messageParams: {
-              agentName: conflict.agentName,
-              unitName: unitId,
-            },
-            conflictingAgreementId: conflict.id,
-            conflictingAgentName: conflict.agentName,
-          });
-        }
-      }
-
-      // ========================================================================
-      // NEW agreement is NON-EXCLUSIVE + PROJECT scope
-      // ========================================================================
-      if (exclusivity === 'non_exclusive' && scope === 'project') {
-        // Block by project-level exclusive
-        for (const conflict of exclusiveProject) {
-          issues.push({
-            severity: 'error',
-            messageKey: 'sales.legal.nonExclusiveBlockedByProjectExclusive',
-            messageParams: { agentName: conflict.agentName },
-            conflictingAgreementId: conflict.id,
-            conflictingAgentName: conflict.agentName,
-          });
-        }
-      }
-
-      // ========================================================================
-      // NEW agreement is NON-EXCLUSIVE + UNIT scope
-      // ========================================================================
-      if (exclusivity === 'non_exclusive' && scope === 'unit' && unitId) {
-        // Block by project-level exclusive
-        for (const conflict of exclusiveProject) {
-          issues.push({
-            severity: 'error',
-            messageKey: 'sales.legal.nonExclusiveBlockedByProjectExclusive',
-            messageParams: { agentName: conflict.agentName },
-            conflictingAgreementId: conflict.id,
-            conflictingAgentName: conflict.agentName,
-          });
-        }
-
-        // Block by exclusive on same unit
-        const sameUnitExclusive = exclusiveUnits.filter((a) => a.unitId === unitId);
-        for (const conflict of sameUnitExclusive) {
-          issues.push({
-            severity: 'error',
-            messageKey: 'sales.legal.nonExclusiveBlockedByUnitExclusive',
-            messageParams: {
-              agentName: conflict.agentName,
-              unitName: unitId,
-            },
-            conflictingAgreementId: conflict.id,
-            conflictingAgentName: conflict.agentName,
-          });
-        }
-      }
-
-      const hasErrors = issues.some((i) => i.severity === 'error');
-      const firstIssue = issues[0] ?? null;
-
-      return {
-        canProceed: !hasErrors,
-        issues,
-        excludedUnitIds,
-        // backward compat
-        valid: !hasErrors,
-        conflictingAgreementId: firstIssue?.conflictingAgreementId ?? null,
-        reason: firstIssue?.messageKey ?? null,
-      };
-    } catch (error) {
-      logger.error('[BrokerageService] Exclusivity validation failed:', error);
-      return {
-        canProceed: false,
-        issues: [{
-          severity: 'error',
-          messageKey: 'sales.legal.saveError',
-          messageParams: {},
-          conflictingAgreementId: null,
-          conflictingAgentName: null,
-        }],
-        excludedUnitIds: [],
-        valid: false,
-        conflictingAgreementId: null,
-        reason: 'sales.legal.saveError',
-      };
-    }
+    const allAgreements = await this.getAgreements(input.projectId);
+    return evaluateExclusivityRules(input, allAgreements);
   }
 
   // ==========================================================================
@@ -459,7 +269,7 @@ export class BrokerageService {
         agentName: input.agentName,
         unitId: input.unitId,
         projectId: input.projectId,
-        buyerContactId: input.buyerContactId,
+        primaryBuyerContactId: input.primaryBuyerContactId,
         salePrice: input.salePrice,
         commissionType: input.commissionType,
         commissionPercentage: input.commissionPercentage,

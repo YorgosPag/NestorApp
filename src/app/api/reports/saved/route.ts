@@ -56,7 +56,7 @@ export const GET = withStandardRateLimit(async function GET(
 
         const reports = await listSavedReports(
           ctx.companyId,
-          ctx.userId,
+          ctx.uid,
           {
             visibility: visibility ?? undefined,
             category: category ?? undefined,
@@ -121,7 +121,7 @@ export const POST = withStandardRateLimit(async function POST(
 
         const report = await createSavedReport(
           ctx.companyId,
-          ctx.userId,
+          ctx.uid,
           { ...body, category },
         );
 

@@ -437,7 +437,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                             </Select>
                           )}
                         </TableCell>
-                        <TableCell className={typography.special.tertiary}>{row.buyerName ?? '—'}</TableCell>
+                        <TableCell className={typography.special.tertiary}>{row.owners?.[0]?.name ?? '—'}</TableCell>
                         <TableCell className={typography.special.codeId}>{row.preliminaryContract ?? '—'}</TableCell>
                         <TableCell className={typography.special.codeId}>
                           {isAirRights && !isLocked ? (

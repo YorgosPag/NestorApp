@@ -146,8 +146,7 @@ export function useOwnershipRowMutations({
         participatesInCalculation: true,
         linkedSpacesSummary: null,
         ownerParty: 'unassigned',
-        buyerContactId: null,
-        buyerName: null,
+        owners: null,
         preliminaryContract: null,
         finalContract: null,
       };

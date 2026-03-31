@@ -224,35 +224,28 @@ export const AUDIT_ACTIONS = {
   'ownership_changed': true,
   'system_bootstrap': true,
   'migration_executed': true,
-  // Communications domain events (Phase 1)
-  'email_sent': true,
-  'message_sent': true,
-  // Communications audit trail (2026-02-06 - Enterprise Audit System Extension)
-  'communication_created': true,     // Communication created (email/phone/etc)
-  'communication_approved': true,    // Communication approved → CRM task created
-  'communication_rejected': true,    // Communication rejected (no action needed)
-  // Admin operations (Phase 2)
-  'data_fix_executed': true,        // Data correction operations (fix incorrect data)
-  'direct_operation_executed': true, // Direct database operations (bypass normal flows)
-  'system_configured': true,         // System configuration changes (webhooks, integrations)
-  // Data access operations (AUTHZ Phase 2)
-  'data_accessed': true,             // API data access events (read operations with tenant isolation)
-  'data_created': true,              // API data creation events (POST operations with tenant isolation)
-  'data_updated': true,              // API data update events (PATCH/PUT operations with tenant isolation)
-  'data_deleted': true,              // API data delete events (DELETE operations with tenant isolation)
-  // Webhook operations (External integrations)
-  'webhook_received': true,          // External webhook event received (Mailgun, Telegram, etc.)
-  // Role Management operations (ADR-244: Admin Console)
-  'user_suspended': true,            // User account suspended (Firebase Auth disabled)
-  'user_activated': true,            // User account reactivated (Firebase Auth enabled)
-  'permission_set_granted': true,    // Org-level permission set assigned to user
-  'permission_set_revoked': true,    // Org-level permission set removed from user
-  // Project membership operations (ADR-244 Phase B: Project Members)
-  'member_added': true,              // User added as project member
-  'member_removed': true,            // User removed from project
-  'member_updated': true,            // Project member role/permissions updated
-  // Financial operations (ADR-255 SPEC-255E — Financial Audit Trail)
-  'financial_transition': true,      // Cheque/loan status transition (FSM)
+  // Communications
+  'email_sent': true, 'message_sent': true,
+  'communication_created': true, 'communication_approved': true, 'communication_rejected': true,
+  // Admin operations
+  'data_fix_executed': true, 'direct_operation_executed': true, 'system_configured': true,
+  // Data access (AUTHZ Phase 2)
+  'data_accessed': true, 'data_created': true, 'data_updated': true, 'data_deleted': true,
+  // Webhooks
+  'webhook_received': true,
+  // Role Management (ADR-244)
+  'user_suspended': true, 'user_activated': true,
+  'permission_set_granted': true, 'permission_set_revoked': true,
+  // Project membership (ADR-244 Phase B)
+  'member_added': true, 'member_removed': true, 'member_updated': true,
+  // Financial (ADR-255 SPEC-255E)
+  'financial_transition': true,
+  // Procurement (ADR-267)
+  'procurement.po.created': true, 'procurement.po.approved': true,
+  'procurement.po.ordered': true, 'procurement.po.status_changed': true,
+  'procurement.po.items_edited': true, 'procurement.po.cancelled': true,
+  'procurement.po.deleted': true, 'procurement.po.delivery_recorded': true,
+  'procurement.po.invoice_linked': true,
 } as const;
 
 /**
@@ -273,20 +266,12 @@ export const AUDIT_TARGET_TYPES = {
   'opportunity': true,    // CRM opportunities (ADR-255 SPEC-255B)
   'cheque': true,         // Financial cheques (ADR-255 SPEC-255E)
   'loan': true,           // Financial loans (ADR-255 SPEC-255E)
-  'payment': true,        // Payment records (ADR-255 SPEC-255E)
-  'invoice': true,        // Fiscal invoices (ADR-255 SPEC-255E)
-  'journal_entry': true,  // Accounting journal entries (ADR-255 SPEC-255E)
-  'expense_document': true, // AI-processed expense documents (ADR-255 SPEC-255E)
-  'category': true,       // Accounting custom categories (ADR-255 SPEC-255E)
-  'apy_certificate': true, // Tax withholding certificates (ADR-255 SPEC-255E)
-  'commission': true,     // Brokerage commissions (ADR-255 SPEC-255E)
-  'agreement': true,      // Brokerage agreements (ADR-255 SPEC-255E)
-  'role': true,
-  'grant': true,
-  'api': true,
-  'migration': true,
-  'webhook': true,        // External webhook integrations
-  'communication': true,  // Communications/messages (2026-02-06 - Enterprise Audit Extension)
+  // Financial (ADR-255 SPEC-255E)
+  'payment': true, 'invoice': true, 'journal_entry': true,
+  'expense_document': true, 'category': true, 'apy_certificate': true,
+  'commission': true, 'agreement': true,
+  'role': true, 'grant': true, 'api': true, 'migration': true,
+  'webhook': true, 'communication': true, 'purchase_order': true,
 } as const;
 
 /**

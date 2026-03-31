@@ -97,7 +97,7 @@ export class LegalContractService {
         unitId: input.unitId,
         projectId: input.projectId,
         buildingId: input.buildingId,
-        buyerContactId: input.buyerContactId,
+        primaryBuyerContactId: input.primaryBuyerContactId,
         phase: input.phase,
         status: 'draft',
         contractAmount: input.contractAmount ?? null,
