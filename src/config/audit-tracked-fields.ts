@@ -11,11 +11,11 @@
 import type { AuditFieldChange } from '@/types/audit-trail';
 
 // ============================================================================
-// UNIT TRACKED FIELDS (Centralized — previously in units/[id]/route.ts)
+// PROPERTY TRACKED FIELDS (Centralized — previously in properties/[id]/route.ts)
 // ============================================================================
 
-/** Fields tracked for unit audit trail (field → Greek label) */
-export const UNIT_TRACKED_FIELDS: Record<string, string> = {
+/** Fields tracked for property audit trail (field → Greek label) */
+export const PROPERTY_TRACKED_FIELDS: Record<string, string> = {
   // Core fields
   name: 'Όνομα',
   type: 'Τύπος',
@@ -27,7 +27,7 @@ export const UNIT_TRACKED_FIELDS: Record<string, string> = {
   buildingId: 'Κτίριο',
   projectId: 'Έργο',
   companyId: 'Εταιρεία',
-  // Extended fields (from UnitFieldsBlock)
+  // Extended fields (from PropertyFieldsBlock)
   layout: 'Διαρρύθμιση',
   areas: 'Εμβαδά',
   orientations: 'Προσανατολισμοί',

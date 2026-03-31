@@ -6,7 +6,7 @@
 export { ProjectsKPIs } from './ProjectsKPIs';
 export { ProjectStatusChart } from './ProjectStatusChart';
 export { ProjectProgressChart } from './ProjectProgressChart';
-export { UnitStatusChart } from './UnitStatusChart';
+export { PropertyStatusChart } from './PropertyStatusChart';
 export { RevenueByProjectChart } from './RevenueByProjectChart';
 export { PricePerSqmChart } from './PricePerSqmChart';
 export { BOQVarianceChart } from './BOQVarianceChart';
@@ -15,6 +15,6 @@ export { EnergyClassDistribution } from './EnergyClassDistribution';
 export type {
   ProjectsReportPayload,
   RevenueByProjectItem,
-  UnitStatusByBuildingItem,
+  PropertyStatusByBuildingItem,
   EnergyClassItem,
 } from './types';

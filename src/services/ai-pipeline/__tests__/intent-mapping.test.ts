@@ -39,7 +39,7 @@ jest.mock('@/types/ai-pipeline', () => ({
     ADMIN_CONTACT_SEARCH: 'admin_contact_search',
     ADMIN_PROJECT_STATUS: 'admin_project_status',
     ADMIN_SEND_EMAIL: 'admin_send_email',
-    ADMIN_UNIT_STATS: 'admin_unit_stats',
+    ADMIN_PROPERTY_STATS: 'admin_property_stats',
     ADMIN_CREATE_CONTACT: 'admin_create_contact',
     ADMIN_UPDATE_CONTACT: 'admin_update_contact',
     ADMIN_GENERAL_QUESTION: 'admin_general_question',

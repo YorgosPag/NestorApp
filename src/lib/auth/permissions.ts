@@ -217,9 +217,9 @@ async function getUnitGrant(
     const grantDoc = await db
       .collection(COLLECTIONS.COMPANIES)
       .doc(ctx.companyId)
-      .collection(SUBCOLLECTIONS.COMPANY_UNITS)
+      .collection(SUBCOLLECTIONS.COMPANY_PROPERTIES)
       .doc(unitId)
-      .collection(SUBCOLLECTIONS.UNIT_GRANTS)
+      .collection(SUBCOLLECTIONS.PROPERTY_GRANTS)
       .doc(ctx.uid)
       .get();
 

@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * 🏢 UNIT CUSTOMER DISPLAY COMPONENT
+ * 🏢 PROPERTY CUSTOMER DISPLAY COMPONENT
  *
- * Enterprise-class component για εμφάνιση customer information σε unit contexts
+ * Enterprise-class component για εμφάνιση customer information σε property contexts
  * Βασισμένο στη real Firebase database - zero mock data
  *
  * ENTERPRISE FEATURES:
@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
-export interface UnitCustomerDisplayProps {
+export interface PropertyCustomerDisplayProps {
   /** The unit/property object from real Firebase database */
   unit: Property;
   /** Display variant for different contexts */
@@ -58,13 +58,13 @@ export interface UnitCustomerDisplayProps {
  * - unit.status → 'sold' | 'reserved' | 'rented' (real statuses)
  * - Real-time data fetching μόνο όταν χρειάζεται
  */
-export function UnitCustomerDisplay({
+export function PropertyCustomerDisplay({
   unit,
   variant = 'inline',
   size = 'md',
   showActions = true,
   className = ''
-}: UnitCustomerDisplayProps) {
+}: PropertyCustomerDisplayProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook

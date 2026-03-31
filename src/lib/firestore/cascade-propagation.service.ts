@@ -42,7 +42,7 @@ export interface CascadeResult {
 
 /** Collections that are direct children of a building */
 const BUILDING_CHILD_COLLECTIONS = [
-  COLLECTIONS.UNITS,
+  COLLECTIONS.PROPERTIES,
   COLLECTIONS.FLOORS,
   COLLECTIONS.PARKING_SPACES,
   COLLECTIONS.STORAGE,
@@ -256,7 +256,7 @@ export async function propagateUnitBuildingLink(
         }
 
         // 🏢 ENTERPRISE: Update BOTH companyId AND linkedCompanyId
-        await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+        await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
           projectId: resolvedProjectId,
           companyId: resolvedCompanyId,
           linkedCompanyId: resolvedLinkedCompanyId,
@@ -265,7 +265,7 @@ export async function propagateUnitBuildingLink(
       }
     } else {
       // Unlink: clear project/company references
-      await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+      await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
         projectId: null,
         linkedCompanyId: null,
         updatedAt: FieldValue.serverTimestamp(),
@@ -282,7 +282,7 @@ export async function propagateUnitBuildingLink(
     return {
       success: true,
       totalUpdated: 1,
-      collections: { [COLLECTIONS.UNITS]: 1 },
+      collections: { [COLLECTIONS.PROPERTIES]: 1 },
     };
   } catch (error) {
     const message = getErrorMessage(error);
@@ -398,7 +398,7 @@ export async function propagateSpaceAllocationCodeChange(
 
     // Query units in the same building
     const snapshot = await db
-      .collection(COLLECTIONS.UNITS)
+      .collection(COLLECTIONS.PROPERTIES)
       .where(FIELDS.BUILDING_ID, '==', resolvedBuildingId)
       .get();
 
@@ -436,7 +436,7 @@ export async function propagateSpaceAllocationCodeChange(
     if (batchCount > 0) {
       await batch.commit();
       totalUpdated = batchCount;
-      collections[COLLECTIONS.UNITS] = batchCount;
+      collections[COLLECTIONS.PROPERTIES] = batchCount;
     }
 
     logger.info('Space→allocationCode cascade completed', {

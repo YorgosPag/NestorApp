@@ -1,16 +1,16 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Unit Fields Form Constants
+ * 🏢 ENTERPRISE: Property Fields Form Constants
  * =============================================================================
  *
- * Extracted from UnitFieldsBlock.tsx for SRP compliance (ADR N.7.1).
+ * Extracted from PropertyFieldsBlock.tsx for SRP compliance (ADR N.7.1).
  * Single source of truth for all dropdown/select option arrays.
  *
- * @module features/property-details/components/unit-fields-constants
+ * @module features/property-details/components/property-fields-constants
  * @since 2026-03-27
  */
 
-import type { UnitType, CommercialStatus, OperationalStatus } from '@/types/unit';
+import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
 import type {
   OrientationType,
   ConditionType,
@@ -22,7 +22,7 @@ import type {
   GlazingType,
   InteriorFeatureCodeType,
   SecurityFeatureCodeType,
-} from '@/constants/unit-features-enterprise';
+} from '@/constants/property-features-enterprise';
 
 export const ORIENTATION_OPTIONS: OrientationType[] = [
   'north', 'northeast', 'east', 'southeast',
@@ -66,7 +66,7 @@ export const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [
   'alarm', 'security-door', 'cctv', 'access-control', 'intercom', 'motion-sensors',
 ];
 
-export const UNIT_TYPE_OPTIONS: UnitType[] = [
+export const UNIT_TYPE_OPTIONS: PropertyType[] = [
   'studio', 'apartment_1br', 'apartment', 'apartment_2br',
   'apartment_3br', 'maisonette', 'penthouse', 'loft',
   'detached_house', 'villa', 'shop', 'office', 'hall', 'storage',

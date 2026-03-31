@@ -39,7 +39,7 @@ export class ReportDataAggregator {
 
     const [contactsSnap, unitsSnap] = await Promise.all([
       db.collection(COLLECTIONS.CONTACTS).where('companyId', '==', cid).get(),
-      db.collection(COLLECTIONS.UNITS).where('companyId', '==', cid).get(),
+      db.collection(COLLECTIONS.PROPERTIES).where('companyId', '==', cid).get(),
     ]);
 
     const contacts = contactsSnap.docs.map(d => ({ id: d.id, ...d.data() as ContactDoc }));
@@ -88,7 +88,7 @@ export class ReportDataAggregator {
 
     const [projectsSnap, unitsSnap, buildingsSnap, boqSnap] = await Promise.all([
       db.collection(COLLECTIONS.PROJECTS).where('companyId', '==', cid).get(),
-      db.collection(COLLECTIONS.UNITS).where('companyId', '==', cid).get(),
+      db.collection(COLLECTIONS.PROPERTIES).where('companyId', '==', cid).get(),
       db.collection(COLLECTIONS.BUILDINGS).where('companyId', '==', cid).get(),
       db.collection(COLLECTIONS.BOQ_ITEMS).where('companyId', '==', cid).get(),
     ]);
@@ -143,7 +143,7 @@ export class ReportDataAggregator {
   static async getSalesReport(filter: ReportFilter): Promise<SalesReportData> {
     const db = getAdminFirestore();
 
-    const unitsSnap = await db.collection(COLLECTIONS.UNITS)
+    const unitsSnap = await db.collection(COLLECTIONS.PROPERTIES)
       .where('companyId', '==', filter.companyId).get();
     const units = unitsSnap.docs.map(d => d.data() as UnitDoc);
 
@@ -422,7 +422,7 @@ export class ReportDataAggregator {
     const db = getAdminFirestore();
 
     // Receivables from units
-    const unitsSnap = await db.collection(COLLECTIONS.UNITS)
+    const unitsSnap = await db.collection(COLLECTIONS.PROPERTIES)
       .where('companyId', '==', filter.companyId).get();
     const units = unitsSnap.docs.map(d => d.data() as UnitDoc);
 

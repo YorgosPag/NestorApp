@@ -125,7 +125,7 @@ export async function validateBuildingData(
     totalFloors += floorsSnap.size;
 
     const unitsSnap = await getDocs(
-      query(collection(db, COLLECTIONS.UNITS), where('buildingId', '==', bId)),
+      query(collection(db, COLLECTIONS.PROPERTIES), where('buildingId', '==', bId)),
     );
     totalUnits += unitsSnap.size;
 
@@ -293,7 +293,7 @@ export async function finalizeTable(
       if (row.entityRef.collection === 'units') {
         writes.push(
           setDoc(
-            doc(db, COLLECTIONS.UNITS, row.entityRef.id),
+            doc(db, COLLECTIONS.PROPERTIES, row.entityRef.id),
             { millesimalShares: row.millesimalShares },
             { merge: true },
           ),

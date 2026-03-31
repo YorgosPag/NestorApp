@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * @fileoverview Sales Unit List Card — ADR-197
- * @description Domain card for units in sales context — extends ListCard molecule
- * @pattern Same as UnitListCard but with commercial data prominent
+ * @fileoverview Sales Property List Card — ADR-197
+ * @description Domain card for properties in sales context — extends ListCard molecule
+ * @pattern Same as PropertyListCard but with commercial data prominent
  */
 
 import React, { useMemo } from 'react';
@@ -18,7 +18,7 @@ import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
-import type { Unit, CommercialStatus } from '@/types/unit';
+import type { Property, CommercialStatus } from '@/types/property';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
 import '@/lib/design-system';
@@ -27,8 +27,8 @@ import '@/lib/design-system';
 // 🏢 TYPES
 // =============================================================================
 
-interface SalesUnitListCardProps {
-  unit: Unit;
+interface SalesPropertyListCardProps {
+  unit: Property;
   isSelected?: boolean;
   onSelect?: (unitId: string) => void;
   compact?: boolean;
@@ -66,13 +66,13 @@ function computeDaysOnMarket(listedDate: { toDate?: () => Date } | null | undefi
 // 🏢 COMPONENT
 // =============================================================================
 
-export function SalesUnitListCard({
+export function SalesPropertyListCard({
   unit,
   isSelected = false,
   onSelect,
   compact = true,
   className,
-}: SalesUnitListCardProps) {
+}: SalesPropertyListCardProps) {
   const { t } = useTranslation('common');
 
   const commercialStatus = unit.commercialStatus ?? 'unavailable';

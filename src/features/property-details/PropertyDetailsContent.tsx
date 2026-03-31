@@ -19,7 +19,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ContactsBlock } from './components/ContactsBlock';
 import { DocumentsBlock } from './components/DocumentsBlock';
 import { DatesBlock } from './components/DatesBlock';
-import { UnitFieldsBlock } from './components/UnitFieldsBlock';
+import { PropertyFieldsBlock } from './components/PropertyFieldsBlock';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { resolveAttachments } from './utils/attachments';
@@ -27,12 +27,12 @@ import { makeSafeUpdate } from './utils/safeUpdate';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('PropertyDetailsContent');
 
-import { UnitEntityLinks } from './components/UnitEntityLinks';
+import { PropertyEntityLinks } from './components/PropertyEntityLinks';
 import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
-import type { UnitLevel } from '@/types/unit';
+import type { PropertyLevel } from '@/types/property';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin } from 'lucide-react';
@@ -179,7 +179,7 @@ export function PropertyDetailsContent({
       {/* Building Link + Floor/MultiLevel + Linked Spaces — top row */}
       {!isReadOnly && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <UnitEntityLinks
+          <PropertyEntityLinks
             unitId={resolvedProperty?.id ?? ''}
             currentBuildingId={resolvedProperty?.buildingId}
             isEditing={isEditMode && !isSoldOrRented}
@@ -226,7 +226,7 @@ export function PropertyDetailsContent({
               onActiveLevelChange={setActiveLevelId}
               isEditing={isEditMode && !isSoldOrRented}
               buildingId={resolvedProperty?.buildingId}
-              onLevelsChange={(levels: UnitLevel[]) => {
+              onLevelsChange={(levels: PropertyLevel[]) => {
                 if (safeOnUpdateProperty && resolvedProperty?.id) {
                   const derived = deriveMultiLevelFields(levels);
                   safeOnUpdateProperty(resolvedProperty.id, {
@@ -251,8 +251,8 @@ export function PropertyDetailsContent({
         </div>
       )}
 
-      {/* 🏢 ENTERPRISE: Unit Fields Block (identity, location, layout, areas, etc) */}
-      <UnitFieldsBlock
+      {/* 🏢 ENTERPRISE: Property Fields Block (identity, location, layout, areas, etc) */}
+      <PropertyFieldsBlock
         property={resolvedProperty}
         onUpdateProperty={safeOnUpdateProperty}
         isReadOnly={isReadOnly}

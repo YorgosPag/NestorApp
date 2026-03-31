@@ -33,7 +33,7 @@ export {
   PROJECT_COMPONENT_MAPPING,
   BUILDING_COMPONENT_MAPPING,
   STORAGE_COMPONENT_MAPPING,
-  UNITS_COMPONENT_MAPPING,
+  PROPERTIES_COMPONENT_MAPPING,
   CONTACT_COMPONENT_MAPPING,
   PARKING_COMPONENT_MAPPING,
   MASTER_COMPONENT_MAPPING,
@@ -44,7 +44,7 @@ export type {
   ProjectComponentName,
   BuildingComponentName,
   StorageComponentName,
-  UnitsComponentName,
+  PropertiesComponentName,
   ContactComponentName,
   ParkingComponentName,
   MasterComponentName
@@ -56,7 +56,7 @@ export type {
 //
 // export { GenericProjectTabsRenderer } from './GenericProjectTabsRenderer';
 // export { GenericBuildingTabsRenderer } from './GenericBuildingTabsRenderer';
-// export { GenericUnitsTabsRenderer } from './GenericUnitsTabsRenderer';
+// export { GenericPropertiesTabsRenderer } from './GenericPropertiesTabsRenderer';
 
 // CRM Dashboard Tab Components
 export { GenericCRMDashboardTabsRenderer } from './GenericCRMDashboardTabsRenderer';

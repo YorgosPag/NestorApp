@@ -87,7 +87,7 @@ export interface ReportBuilderFilter {
 
 /** Domain IDs — Phase 1 (4) + Phase 4a (4) + Phase 4b (6) + Phase 5 (8) + Phase 6a (3) + Phase 6b (3) + Phase 6c (2) + Phase 6d (2) + Phase 6e (2) + Phase 6f (3) */
 export type BuilderDomainId =
-  | 'projects' | 'buildings' | 'floors' | 'units'
+  | 'projects' | 'buildings' | 'floors' | 'properties'
   | 'parking' | 'storage' | 'individuals' | 'companies'
   | 'buyers' | 'suppliers' | 'engineers' | 'workers' | 'legal' | 'agents'
   | 'paymentPlans' | 'cheques' | 'legalContracts' | 'purchaseOrders'
@@ -336,7 +336,7 @@ export const VALID_DOMAIN_IDS: readonly BuilderDomainId[] = [
   'projects',
   'buildings',
   'floors',
-  'units',
+  'properties',
   'parking',
   'storage',
   'individuals',

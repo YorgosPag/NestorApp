@@ -16,7 +16,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 jest.mock('@/config/firestore-collections', () => ({
   COLLECTIONS: {
-    UNITS: 'units',
+    PROPERTIES: 'properties',
     FILES: 'files',
     FLOORPLANS: 'floorplans',
   },
@@ -101,7 +101,7 @@ describe('FileDeliveryHandler', () => {
 
     it('should reject unit_photo when unit not in linkedUnitIds', async () => {
       setupFirestore({
-        units: { unit_999: { photoURL: 'https://example.com/photo.jpg' } },
+        properties: { unit_999: { photoURL: 'https://example.com/photo.jpg' } },
       });
 
       const result = await handler.execute(
@@ -115,7 +115,7 @@ describe('FileDeliveryHandler', () => {
 
     it('should deliver unit photos successfully', async () => {
       setupFirestore({
-        units: {
+        properties: {
           unit_001: {
             photoURL: 'https://example.com/main.jpg',
             multiplePhotoURLs: ['https://example.com/extra.jpg'],
@@ -136,7 +136,7 @@ describe('FileDeliveryHandler', () => {
 
     it('should fail when unit has no photos', async () => {
       setupFirestore({
-        units: { unit_001: {} },
+        properties: { unit_001: {} },
       });
 
       const result = await handler.execute(
@@ -156,7 +156,7 @@ describe('FileDeliveryHandler', () => {
   describe('admin path', () => {
     it('should deliver unit_photo without contactMeta', async () => {
       setupFirestore({
-        units: {
+        properties: {
           unit_999: {
             photoURL: 'https://example.com/admin-photo.jpg',
           },

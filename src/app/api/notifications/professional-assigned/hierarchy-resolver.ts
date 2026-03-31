@@ -113,7 +113,7 @@ export async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarch
   const db = getAdminFirestore();
 
   // 1. Unit
-  const unitSnap = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
+  const unitSnap = await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).get();
   if (!unitSnap.exists) return null;
   const unitData = unitSnap.data() as Record<string, unknown>;
 

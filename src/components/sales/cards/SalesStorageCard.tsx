@@ -3,7 +3,7 @@
 /**
  * @fileoverview Sales Storage List Card — ADR-199
  * @description Card for storage units in sales context — extends ListCard molecule
- * @pattern Same as SalesUnitListCard but with storage-specific data
+ * @pattern Same as SalesPropertyListCard but with storage-specific data
  */
 
 import React, { useMemo } from 'react';

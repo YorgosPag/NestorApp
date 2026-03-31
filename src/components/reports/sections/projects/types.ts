@@ -44,7 +44,7 @@ export interface RevenueByProjectItem {
   revenue: number;
 }
 
-export interface UnitStatusByBuildingItem {
+export interface PropertyStatusByBuildingItem {
   building: string;
   [status: string]: string | number;
 }

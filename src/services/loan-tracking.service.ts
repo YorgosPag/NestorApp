@@ -52,7 +52,7 @@ function getDb() {
 }
 
 function planCollectionPath(unitId: string): string {
-  return `${COLLECTIONS.UNITS}/${unitId}/${SUBCOLLECTIONS.UNIT_PAYMENT_PLANS}`;
+  return `${COLLECTIONS.PROPERTIES}/${unitId}/${SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS}`;
 }
 
 /** Read loans from plan, with migration fallback for old `loan` field */

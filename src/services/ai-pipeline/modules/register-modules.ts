@@ -25,7 +25,7 @@ import { DocumentRequestModule } from './uc-006-document-request';
 import { AdminContactSearchModule } from './uc-010-admin-contact-search';
 import { AdminProjectStatusModule } from './uc-011-admin-project-status';
 import { AdminSendEmailModule } from './uc-012-admin-send-email';
-import { AdminUnitStatsModule } from './uc-013-admin-unit-stats';
+import { AdminPropertyStatsModule } from './uc-013-admin-property-stats';
 import { AdminCreateContactModule } from './uc-015-admin-create-contact';
 import { AdminUpdateContactModule } from './uc-016-admin-update-contact';
 
@@ -70,8 +70,8 @@ export function registerAllPipelineModules(): void {
   // UC-012: Admin Send Email
   registry.register(new AdminSendEmailModule());
 
-  // UC-013: Admin Unit Stats
-  registry.register(new AdminUnitStatsModule());
+  // UC-013: Admin Property Stats
+  registry.register(new AdminPropertyStatsModule());
 
   // UC-015: Admin Create Contact
   registry.register(new AdminCreateContactModule());

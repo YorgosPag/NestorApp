@@ -16,7 +16,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PropertyHoverHeader } from './PropertyHoverHeader';
 import { getPropertyStatusConfig } from '../constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
-import { ORIENTATION_LABELS } from '@/constants/unit-features-enterprise';
+import { ORIENTATION_LABELS } from '@/constants/property-features-enterprise';
 import type { OrientationType } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';

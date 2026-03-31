@@ -88,7 +88,7 @@ export const GET = withStandardRateLimit(
 
         const propertiesSnapshot = await unitsQuery.get();
 
-        let units = propertiesSnapshot.docs.map(doc => ({
+        let properties = propertiesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));

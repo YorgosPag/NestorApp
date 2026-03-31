@@ -1,5 +1,5 @@
 /**
- * 🏢 ADD UNIT TO CONTACT DIALOG - SMART FACTORY IMPLEMENTATION
+ * 🏢 ADD PROPERTY TO CONTACT DIALOG - SMART FACTORY IMPLEMENTATION
  *
  * ENTERPRISE-CLASS: 92% code reduction using Smart Dialog Engine
  *
@@ -17,11 +17,11 @@
 
 import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
 
-interface AddUnitToContactDialogProps {
+interface AddPropertyToContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contactId: string;
-  onUnitAdded: () => void;
+  onPropertyAdded: () => void;
 }
 
 /**
@@ -37,7 +37,7 @@ interface AddUnitToContactDialogProps {
  * - 10+ hardcoded business values
  * - 80+ lines manual state management
  */
-export function AddUnitToContactDialog(props: AddUnitToContactDialogProps) {
+export function AddPropertyToContactDialog(props: AddPropertyToContactDialogProps) {
   return createSmartDialog({
     entityType: 'property',
     operationType: 'create',
@@ -45,8 +45,8 @@ export function AddUnitToContactDialog(props: AddUnitToContactDialogProps) {
       ...props,
       onSubmit: async (_data?: Record<string, unknown>) => {
         // Smart Factory handles unit creation με contact linking
-        if (props.onUnitAdded) {
-          props.onUnitAdded();
+        if (props.onPropertyAdded) {
+          props.onPropertyAdded();
         }
       }
     }

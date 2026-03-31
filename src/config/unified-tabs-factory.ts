@@ -1,3 +1,4 @@
+/* eslint-disable custom/no-hardcoded-strings */
 /**
  * 🏭 ENTERPRISE TABS SMART FACTORY
  *
@@ -422,7 +423,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             description: 'Μονάδες (διαμερίσματα, καταστήματα, γραφεία) του κτιρίου',
             order: 3,
             enabled: true,
-            component: 'UnitsTabContent'
+            component: 'PropertiesTabContent'
           },
           {
             id: 'storage',

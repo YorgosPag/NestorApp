@@ -50,13 +50,13 @@ export function roundTwo(n: number): number {
 // ERROR HELPER
 // ============================================================================
 
-export function errorResult(unitId: string, error: string): SalesAccountingResult {
+export function errorResult(propertyId: string, error: string): SalesAccountingResult {
   return {
     success: false,
     invoiceId: null,
     invoiceNumber: null,
     journalEntryId: null,
-    transactionChainId: `txn_error_${unitId}`,
+    transactionChainId: `txn_error_${propertyId}`,
     error,
   };
 }
@@ -139,16 +139,16 @@ export function buildIssuer(profile: CompanyProfile): InvoiceIssuer {
 // FIRESTORE RESOLVERS
 // ============================================================================
 
-export async function resolveUnitCompanyId(unitId: string): Promise<string | null> {
+export async function resolveUnitCompanyId(propertyId: string): Promise<string | null> {
   return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
+    const snap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
     return snap.exists ? (snap.data()?.companyId as string) ?? null : null;
   }, null);
 }
 
-export async function resolveTransactionChainId(unitId: string): Promise<string> {
+export async function resolveTransactionChainId(propertyId: string): Promise<string> {
   const existing = await safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
+    const snap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
     if (!snap.exists) return null;
     const data = snap.data() as Record<string, unknown> | undefined;
     const commercial = data?.commercial as Record<string, unknown> | undefined;
@@ -159,21 +159,21 @@ export async function resolveTransactionChainId(unitId: string): Promise<string>
 }
 
 export async function updateUnitTransactionChain(
-  unitId: string,
+  propertyId: string,
   transactionChainId: string
 ): Promise<void> {
   await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+    await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
       'commercial.transactionChainId': transactionChainId,
     });
   }, undefined);
 }
 
-export async function findDepositInvoiceId(unitId: string): Promise<string | null> {
+export async function findDepositInvoiceId(propertyId: string): Promise<string | null> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_INVOICES)
-      .where(FIELDS.UNIT_ID, '==', unitId)
+      .where(FIELDS.UNIT_ID, '==', propertyId)
       .where(FIELDS.TYPE, '==', 'sales_invoice')
       .orderBy(FIELDS.CREATED_AT, 'asc')
       .limit(1)
@@ -190,7 +190,7 @@ export async function resolveHierarchy(event: SalesAccountingEvent): Promise<voi
 
   await safeFirestoreOperation(async (db) => {
     // 1. Fetch unit -> buildingId, floor
-    const unitSnap = await db.collection(COLLECTIONS.UNITS).doc(event.unitId).get();
+    const unitSnap = await db.collection(COLLECTIONS.PROPERTIES).doc(event.propertyId).get();
     if (!unitSnap.exists) return;
     const unitData = unitSnap.data() as Record<string, unknown>;
     event.unitFloor = (unitData.floor as number) ?? null;
@@ -251,7 +251,7 @@ export interface BuildInvoiceInputParams {
   grossAmount: number;
   paymentMethod: string;
   projectId: string | null;
-  unitId: string;
+  propertyId: string;
   relatedInvoiceId: string | null;
   notes: string | null;
   /** ADR-199: Multi-line items (unit + appurtenances) */
@@ -359,7 +359,7 @@ export function buildInvoiceInput(params: BuildInvoiceInputParams): CreateInvoic
       errorMessage: null,
     },
     projectId: params.projectId,
-    unitId: params.unitId,
+    unitId: params.propertyId,
     relatedInvoiceId: params.relatedInvoiceId,
     journalEntryId: null,
     notes: params.notes,

@@ -1,7 +1,7 @@
 /**
- * 🧪 ENTERPRISE: Unit Tests for Unit Normalizer
+ * 🧪 ENTERPRISE: Unit Tests for Property Normalizer
  *
- * Comprehensive test suite for unit normalization functions.
+ * Comprehensive test suite for property normalization functions.
  * Tests all edge cases, error conditions, and business logic.
  *
  * @author Claude AI Assistant
@@ -12,15 +12,15 @@
 
 import { Timestamp } from 'firebase/firestore';
 import {
-  normalizeUnit,
-  validateUnitCompleteness,
-  prepareUnitForFirestore,
-  getUnitDisplaySummary
-} from '../unit-normalizer';
+  normalizeProperty,
+  validatePropertyCompleteness,
+  preparePropertyForFirestore,
+  getPropertyDisplaySummary
+} from '../property-normalizer';
 import type {
-  UnitDoc,
+  PropertyDoc,
   BackfillDefaults
-} from '@/types/unit';
+} from '@/types/property';
 
 // ============================================================================
 // TEST DATA
@@ -28,7 +28,7 @@ import type {
 
 const mockTimestamp = Timestamp.fromDate(new Date('2024-01-23T00:00:00Z'));
 
-const minimalUnitDoc: UnitDoc = {
+const minimalPropertyDoc: PropertyDoc = {
   id: 'unit-001',
   name: 'Unit 001',
   type: 'apartment',
@@ -46,8 +46,8 @@ const minimalUnitDoc: UnitDoc = {
   }
 };
 
-const completeUnitDoc: UnitDoc = {
-  ...minimalUnitDoc,
+const completePropertyDoc: PropertyDoc = {
+  ...minimalPropertyDoc,
   code: 'U001',
   useCategory: 'residential',
   operationalStatus: 'ready',
@@ -143,13 +143,13 @@ const backfillDefaults: BackfillDefaults = {
 };
 
 // ============================================================================
-// TESTS: normalizeUnit
+// TESTS: normalizeProperty
 // ============================================================================
 
-describe('normalizeUnit', () => {
+describe('normalizeProperty', () => {
   describe('Post-backfill validation (no backfillData)', () => {
     test('should accept complete valid unit document', () => {
-      const result = normalizeUnit(completeUnitDoc);
+      const result = normalizeProperty(completePropertyDoc);
       
       expect(result.id).toBe('unit-001');
       expect(result.name).toBe('Unit 001');
@@ -160,7 +160,7 @@ describe('normalizeUnit', () => {
     });
 
     test('should accept minimal valid unit document', () => {
-      const result = normalizeUnit(minimalUnitDoc);
+      const result = normalizeProperty(minimalPropertyDoc);
       
       expect(result.id).toBe('unit-001');
       expect(result.orientations).toEqual([]);
@@ -169,47 +169,47 @@ describe('normalizeUnit', () => {
     });
 
     test('should throw error for missing required field: id', () => {
-      const invalidDoc = { ...minimalUnitDoc, id: undefined } as unknown as UnitDoc;
+      const invalidDoc = { ...minimalPropertyDoc, id: undefined } as unknown as PropertyDoc;
       
-      expect(() => normalizeUnit(invalidDoc)).toThrow(
-        'Invalid unit data: missing required fields post-backfill. Missing: id'
+      expect(() => normalizeProperty(invalidDoc)).toThrow(
+        'Invalid property data: missing required fields post-backfill. Missing: id'
       );
     });
 
     test('should throw error for missing required field: name', () => {
-      const invalidDoc = { ...minimalUnitDoc, name: undefined } as unknown as UnitDoc;
+      const invalidDoc = { ...minimalPropertyDoc, name: undefined } as unknown as PropertyDoc;
       
-      expect(() => normalizeUnit(invalidDoc)).toThrow(
-        'Invalid unit data: missing required fields post-backfill. Missing: name'
+      expect(() => normalizeProperty(invalidDoc)).toThrow(
+        'Invalid property data: missing required fields post-backfill. Missing: name'
       );
     });
 
     test('should throw error for missing required field: type', () => {
-      const invalidDoc = { ...minimalUnitDoc, type: undefined } as unknown as UnitDoc;
+      const invalidDoc = { ...minimalPropertyDoc, type: undefined } as unknown as PropertyDoc;
       
-      expect(() => normalizeUnit(invalidDoc)).toThrow(
-        'Invalid unit data: missing required fields post-backfill. Missing: type'
+      expect(() => normalizeProperty(invalidDoc)).toThrow(
+        'Invalid property data: missing required fields post-backfill. Missing: type'
       );
     });
 
     test('should throw error for missing unitCoverage.updatedAt', () => {
       const invalidDoc = {
-        ...minimalUnitDoc,
+        ...minimalPropertyDoc,
         unitCoverage: {
           hasPhotos: false,
           hasFloorplans: false,
           hasDocuments: false,
           updatedAt: undefined
         }
-      } as unknown as UnitDoc;
+      } as unknown as PropertyDoc;
       
-      expect(() => normalizeUnit(invalidDoc)).toThrow(
+      expect(() => normalizeProperty(invalidDoc)).toThrow(
         'unitCoverage.updatedAt is required post-backfill'
       );
     });
 
     test('should validate that all required fields exist', () => {
-      const result = normalizeUnit(minimalUnitDoc);
+      const result = normalizeProperty(minimalPropertyDoc);
 
       // Check that required fields exist (no defaults)
       expect(result.building).toBe('Building A');
@@ -232,10 +232,10 @@ describe('normalizeUnit', () => {
     });
 
     test('should throw error for missing hierarchy fields', () => {
-      const invalidDoc = { ...minimalUnitDoc, building: undefined } as unknown as UnitDoc;
+      const invalidDoc = { ...minimalPropertyDoc, building: undefined } as unknown as PropertyDoc;
 
-      expect(() => normalizeUnit(invalidDoc)).toThrow(
-        'Invalid unit data: missing required fields post-backfill. Missing: building'
+      expect(() => normalizeProperty(invalidDoc)).toThrow(
+        'Invalid property data: missing required fields post-backfill. Missing: building'
       );
     });
   });
@@ -248,9 +248,9 @@ describe('normalizeUnit', () => {
           hasFloorplans: false,
           hasDocuments: false
         }
-      } as unknown as UnitDoc;
+      } as unknown as PropertyDoc;
       
-      const result = normalizeUnit(incompleteDoc, backfillDefaults);
+      const result = normalizeProperty(incompleteDoc, backfillDefaults);
       
       expect(result.id).toBe('default-id');
       expect(result.name).toBe('Default Unit');
@@ -266,9 +266,9 @@ describe('normalizeUnit', () => {
           hasFloorplans: false,
           hasDocuments: false
         }
-      } as unknown as UnitDoc;
+      } as unknown as PropertyDoc;
       
-      const result = normalizeUnit(partialDoc, backfillDefaults);
+      const result = normalizeProperty(partialDoc, backfillDefaults);
       
       expect(result.id).toBe('custom-id'); // Document value
       expect(result.name).toBe('Default Unit'); // Backfill value
@@ -276,27 +276,27 @@ describe('normalizeUnit', () => {
     });
 
     test('should handle all extended fields during migration', () => {
-      const result = normalizeUnit(completeUnitDoc, backfillDefaults);
+      const result = normalizeProperty(completePropertyDoc, backfillDefaults);
       
       // Verify all extended fields are preserved
-      expect(result.areas).toEqual(completeUnitDoc.areas);
-      expect(result.layout).toEqual(completeUnitDoc.layout);
-      expect(result.orientations).toEqual(completeUnitDoc.orientations);
-      expect(result.views).toEqual(completeUnitDoc.views);
-      expect(result.condition).toEqual(completeUnitDoc.condition);
-      expect(result.energy).toEqual(completeUnitDoc.energy);
-      expect(result.finishes).toEqual(completeUnitDoc.finishes);
-      expect(result.interiorFeatures).toEqual(completeUnitDoc.interiorFeatures);
-      expect(result.securityFeatures).toEqual(completeUnitDoc.securityFeatures);
-      expect(result.unitAmenities).toEqual(completeUnitDoc.unitAmenities);
-      expect(result.linkedSpaces).toEqual(completeUnitDoc.linkedSpaces);
+      expect(result.areas).toEqual(completePropertyDoc.areas);
+      expect(result.layout).toEqual(completePropertyDoc.layout);
+      expect(result.orientations).toEqual(completePropertyDoc.orientations);
+      expect(result.views).toEqual(completePropertyDoc.views);
+      expect(result.condition).toEqual(completePropertyDoc.condition);
+      expect(result.energy).toEqual(completePropertyDoc.energy);
+      expect(result.finishes).toEqual(completePropertyDoc.finishes);
+      expect(result.interiorFeatures).toEqual(completePropertyDoc.interiorFeatures);
+      expect(result.securityFeatures).toEqual(completePropertyDoc.securityFeatures);
+      expect(result.unitAmenities).toEqual(completePropertyDoc.unitAmenities);
+      expect(result.linkedSpaces).toEqual(completePropertyDoc.linkedSpaces);
     });
   });
 
   describe('Edge cases and type safety', () => {
     test('should handle empty arrays correctly', () => {
       const docWithEmptyArrays = {
-        ...minimalUnitDoc,
+        ...minimalPropertyDoc,
         orientations: [],
         views: [],
         interiorFeatures: [],
@@ -305,7 +305,7 @@ describe('normalizeUnit', () => {
         linkedSpaces: []
       };
       
-      const result = normalizeUnit(docWithEmptyArrays);
+      const result = normalizeProperty(docWithEmptyArrays);
       
       expect(result.orientations).toEqual([]);
       expect(result.views).toEqual([]);
@@ -317,14 +317,14 @@ describe('normalizeUnit', () => {
 
     test('should handle null vs undefined correctly', () => {
       const docWithNulls = {
-        ...minimalUnitDoc,
+        ...minimalPropertyDoc,
         price: null,
         area: null,
         description: null,
         soldTo: null
-      } as unknown as UnitDoc;
+      } as unknown as PropertyDoc;
 
-      const result = normalizeUnit(docWithNulls);
+      const result = normalizeProperty(docWithNulls);
 
       // Nulls are preserved as null (not converted to undefined)
       expect(result.price).toBeNull();
@@ -334,7 +334,7 @@ describe('normalizeUnit', () => {
     });
 
     test('should handle complex nested structures', () => {
-      const result = normalizeUnit(completeUnitDoc);
+      const result = normalizeProperty(completePropertyDoc);
       
       // Test nested object integrity
       expect(result.areas?.gross).toBe(100);
@@ -351,13 +351,13 @@ describe('normalizeUnit', () => {
 });
 
 // ============================================================================
-// TESTS: validateUnitCompleteness
+// TESTS: validatePropertyCompleteness
 // ============================================================================
 
-describe('validateUnitCompleteness', () => {
+describe('validatePropertyCompleteness', () => {
   test('should return 100% for complete unit', () => {
-    const unit = normalizeUnit(completeUnitDoc);
-    const result = validateUnitCompleteness(unit);
+    const unit = normalizeProperty(completePropertyDoc);
+    const result = validatePropertyCompleteness(unit);
     
     expect(result.isComplete).toBe(true);
     expect(result.completenessPercentage).toBe(100);
@@ -365,8 +365,8 @@ describe('validateUnitCompleteness', () => {
   });
 
   test('should return 0% for unit with no documentation', () => {
-    const unit = normalizeUnit(minimalUnitDoc);
-    const result = validateUnitCompleteness(unit);
+    const unit = normalizeProperty(minimalPropertyDoc);
+    const result = validatePropertyCompleteness(unit);
     
     expect(result.isComplete).toBe(false);
     expect(result.completenessPercentage).toBe(0);
@@ -374,8 +374,8 @@ describe('validateUnitCompleteness', () => {
   });
 
   test('should return 33.33% for unit with only photos', () => {
-    const unitDoc: UnitDoc = {
-      ...minimalUnitDoc,
+    const unitDoc: PropertyDoc = {
+      ...minimalPropertyDoc,
       unitCoverage: {
         hasPhotos: true,
         hasFloorplans: false,
@@ -384,8 +384,8 @@ describe('validateUnitCompleteness', () => {
       }
     };
     
-    const unit = normalizeUnit(unitDoc);
-    const result = validateUnitCompleteness(unit);
+    const unit = normalizeProperty(unitDoc);
+    const result = validatePropertyCompleteness(unit);
     
     expect(result.isComplete).toBe(false);
     expect(result.completenessPercentage).toBeCloseTo(33.33, 1);
@@ -393,8 +393,8 @@ describe('validateUnitCompleteness', () => {
   });
 
   test('should return 66.67% for unit with photos and floorplans', () => {
-    const unitDoc: UnitDoc = {
-      ...minimalUnitDoc,
+    const unitDoc: PropertyDoc = {
+      ...minimalPropertyDoc,
       unitCoverage: {
         hasPhotos: true,
         hasFloorplans: true,
@@ -403,8 +403,8 @@ describe('validateUnitCompleteness', () => {
       }
     };
     
-    const unit = normalizeUnit(unitDoc);
-    const result = validateUnitCompleteness(unit);
+    const unit = normalizeProperty(unitDoc);
+    const result = validatePropertyCompleteness(unit);
     
     expect(result.isComplete).toBe(false);
     expect(result.completenessPercentage).toBeCloseTo(66.67, 1);
@@ -424,8 +424,8 @@ describe('validateUnitCompleteness', () => {
     ];
     
     testCases.forEach(({ photos, floorplans, documents, expected }) => {
-      const unitDoc: UnitDoc = {
-        ...minimalUnitDoc,
+      const unitDoc: PropertyDoc = {
+        ...minimalPropertyDoc,
         unitCoverage: {
           hasPhotos: photos,
           hasFloorplans: floorplans,
@@ -434,8 +434,8 @@ describe('validateUnitCompleteness', () => {
         }
       };
       
-      const unit = normalizeUnit(unitDoc);
-      const result = validateUnitCompleteness(unit);
+      const unit = normalizeProperty(unitDoc);
+      const result = validatePropertyCompleteness(unit);
       
       expect(result.missingItems).toEqual(expected);
       expect(result.isComplete).toBe(expected.length === 0);
@@ -444,13 +444,13 @@ describe('validateUnitCompleteness', () => {
 });
 
 // ============================================================================
-// TESTS: prepareUnitForFirestore
+// TESTS: preparePropertyForFirestore
 // ============================================================================
 
-describe('prepareUnitForFirestore', () => {
+describe('preparePropertyForFirestore', () => {
   test('should include all required fields', () => {
-    const unit = normalizeUnit(minimalUnitDoc);
-    const doc = prepareUnitForFirestore(unit);
+    const unit = normalizeProperty(minimalPropertyDoc);
+    const doc = preparePropertyForFirestore(unit);
     
     // All required fields must be present
     expect(doc.id).toBe('unit-001');
@@ -466,8 +466,8 @@ describe('prepareUnitForFirestore', () => {
   });
 
   test('should exclude undefined optional fields', () => {
-    const unit = normalizeUnit(minimalUnitDoc);
-    const doc = prepareUnitForFirestore(unit);
+    const unit = normalizeProperty(minimalPropertyDoc);
+    const doc = preparePropertyForFirestore(unit);
     
     // Undefined fields should not be in the document
     expect('code' in doc).toBe(false);
@@ -479,8 +479,8 @@ describe('prepareUnitForFirestore', () => {
   });
 
   test('should include defined optional fields', () => {
-    const unit = normalizeUnit(completeUnitDoc);
-    const doc = prepareUnitForFirestore(unit);
+    const unit = normalizeProperty(completePropertyDoc);
+    const doc = preparePropertyForFirestore(unit);
     
     // All defined fields should be present
     expect(doc.code).toBe('U001');
@@ -492,8 +492,8 @@ describe('prepareUnitForFirestore', () => {
   });
 
   test('should exclude empty arrays', () => {
-    const unit = normalizeUnit(minimalUnitDoc);
-    const doc = prepareUnitForFirestore(unit);
+    const unit = normalizeProperty(minimalPropertyDoc);
+    const doc = preparePropertyForFirestore(unit);
     
     // Empty arrays should not be in the document
     expect('orientations' in doc).toBe(false);
@@ -505,8 +505,8 @@ describe('prepareUnitForFirestore', () => {
   });
 
   test('should include non-empty arrays', () => {
-    const unit = normalizeUnit(completeUnitDoc);
-    const doc = prepareUnitForFirestore(unit);
+    const unit = normalizeProperty(completePropertyDoc);
+    const doc = preparePropertyForFirestore(unit);
     
     // Non-empty arrays should be present
     expect(doc.orientations).toEqual(['north', 'east']);
@@ -518,15 +518,15 @@ describe('prepareUnitForFirestore', () => {
   });
 
   test('should handle zero values correctly', () => {
-    const unitDoc: UnitDoc = {
-      ...minimalUnitDoc,
+    const unitDoc: PropertyDoc = {
+      ...minimalPropertyDoc,
       price: 0,
       area: 0,
       floor: 0
     };
     
-    const unit = normalizeUnit(unitDoc);
-    const doc = prepareUnitForFirestore(unit);
+    const unit = normalizeProperty(unitDoc);
+    const doc = preparePropertyForFirestore(unit);
     
     // Zero values should be preserved
     expect(doc.price).toBe(0);
@@ -535,26 +535,26 @@ describe('prepareUnitForFirestore', () => {
   });
 
   test('should preserve complex nested structures', () => {
-    const unit = normalizeUnit(completeUnitDoc);
-    const doc = prepareUnitForFirestore(unit);
+    const unit = normalizeProperty(completePropertyDoc);
+    const doc = preparePropertyForFirestore(unit);
     
-    expect(doc.areas).toEqual(completeUnitDoc.areas);
-    expect(doc.layout).toEqual(completeUnitDoc.layout);
-    expect(doc.condition).toEqual(completeUnitDoc.condition);
-    expect(doc.energy).toEqual(completeUnitDoc.energy);
-    expect(doc.finishes).toEqual(completeUnitDoc.finishes);
-    expect(doc.systemsOverride).toEqual(completeUnitDoc.systemsOverride);
+    expect(doc.areas).toEqual(completePropertyDoc.areas);
+    expect(doc.layout).toEqual(completePropertyDoc.layout);
+    expect(doc.condition).toEqual(completePropertyDoc.condition);
+    expect(doc.energy).toEqual(completePropertyDoc.energy);
+    expect(doc.finishes).toEqual(completePropertyDoc.finishes);
+    expect(doc.systemsOverride).toEqual(completePropertyDoc.systemsOverride);
   });
 });
 
 // ============================================================================
-// TESTS: getUnitDisplaySummary
+// TESTS: getPropertyDisplaySummary
 // ============================================================================
 
-describe('getUnitDisplaySummary', () => {
+describe('getPropertyDisplaySummary', () => {
   test('should generate correct title and subtitle with i18n', () => {
-    const unit = normalizeUnit(minimalUnitDoc);
-    const summary = getUnitDisplaySummary(unit);
+    const unit = normalizeProperty(minimalPropertyDoc);
+    const summary = getPropertyDisplaySummary(unit);
 
     expect(summary.title).toBe('Unit 001');
     expect(summary.subtitle).toEqual({
@@ -568,17 +568,17 @@ describe('getUnitDisplaySummary', () => {
   });
 
   test('should use unit ID as fallback title', () => {
-    const unitDoc: UnitDoc = { ...minimalUnitDoc, name: '' };
-    const unit = normalizeUnit(unitDoc, backfillDefaults);
+    const unitDoc: PropertyDoc = { ...minimalPropertyDoc, name: '' };
+    const unit = normalizeProperty(unitDoc, backfillDefaults);
     unit.name = ''; // Override after normalization
-    const summary = getUnitDisplaySummary(unit);
+    const summary = getPropertyDisplaySummary(unit);
     
-    expect(summary.title).toBe('Unit unit-001');
+    expect(summary.title).toBe('Property unit-001');
   });
 
   test('should generate correct badges with i18n keys', () => {
-    const unit = normalizeUnit(completeUnitDoc);
-    const summary = getUnitDisplaySummary(unit);
+    const unit = normalizeProperty(completePropertyDoc);
+    const summary = getPropertyDisplaySummary(unit);
 
     expect(summary.badges).toContainEqual({ key: 'unit.status.ready' });
     expect(summary.badges).toContainEqual({ key: 'unit.features.views', params: { count: 2 } });
@@ -587,20 +587,20 @@ describe('getUnitDisplaySummary', () => {
   });
 
   test('should handle single view correctly with i18n', () => {
-    const unitDoc: UnitDoc = {
-      ...minimalUnitDoc,
+    const unitDoc: PropertyDoc = {
+      ...minimalPropertyDoc,
       views: [{ type: 'sea' as const, quality: 'full' as const }]
     };
 
-    const unit = normalizeUnit(unitDoc);
-    const summary = getUnitDisplaySummary(unit);
+    const unit = normalizeProperty(unitDoc);
+    const summary = getPropertyDisplaySummary(unit);
 
     expect(summary.badges).toContainEqual({ key: 'unit.features.views', params: { count: 1 } });
   });
 
   test('should handle multiple parking spaces with i18n', () => {
-    const unitDoc: UnitDoc = {
-      ...minimalUnitDoc,
+    const unitDoc: PropertyDoc = {
+      ...minimalPropertyDoc,
       linkedSpaces: [
         { spaceType: 'parking' as const, spaceId: 'p1', quantity: 1, inclusion: 'included' as const, metadata: {} },
         { spaceType: 'parking' as const, spaceId: 'p2', quantity: 1, inclusion: 'included' as const, metadata: {} },
@@ -608,38 +608,38 @@ describe('getUnitDisplaySummary', () => {
       ]
     };
 
-    const unit = normalizeUnit(unitDoc);
-    const summary = getUnitDisplaySummary(unit);
+    const unit = normalizeProperty(unitDoc);
+    const summary = getPropertyDisplaySummary(unit);
 
     expect(summary.badges).toContainEqual({ key: 'unit.spaces.parking', params: { count: 3 } });
   });
 
   test('should return empty badges for minimal unit', () => {
-    const unit = normalizeUnit(minimalUnitDoc);
-    const summary = getUnitDisplaySummary(unit);
+    const unit = normalizeProperty(minimalPropertyDoc);
+    const summary = getPropertyDisplaySummary(unit);
     
     expect(summary.badges).toEqual([]);
   });
 
   test('should not include Ready badge for non-ready units', () => {
-    const unitDoc: UnitDoc = {
-      ...completeUnitDoc,
+    const unitDoc: PropertyDoc = {
+      ...completePropertyDoc,
       operationalStatus: 'under-construction' as const
     };
 
-    const unit = normalizeUnit(unitDoc);
-    const summary = getUnitDisplaySummary(unit);
+    const unit = normalizeProperty(unitDoc);
+    const summary = getPropertyDisplaySummary(unit);
 
     expect(summary.badges).not.toContainEqual({ key: 'unit.status.ready' });
   });
 
   test('should calculate correct completeness percentage', () => {
-    const completeUnit = normalizeUnit(completeUnitDoc);
-    const completeSummary = getUnitDisplaySummary(completeUnit);
+    const completeUnit = normalizeProperty(completePropertyDoc);
+    const completeSummary = getPropertyDisplaySummary(completeUnit);
     expect(completeSummary.completeness).toBe(100);
     
-    const incompleteUnit = normalizeUnit(minimalUnitDoc);
-    const incompleteSummary = getUnitDisplaySummary(incompleteUnit);
+    const incompleteUnit = normalizeProperty(minimalPropertyDoc);
+    const incompleteSummary = getPropertyDisplaySummary(incompleteUnit);
     expect(incompleteSummary.completeness).toBe(0);
   });
 });
@@ -650,8 +650,8 @@ describe('getUnitDisplaySummary', () => {
 
 describe('Performance tests', () => {
   test('should handle large arrays efficiently', () => {
-    const largeDoc: UnitDoc = {
-      ...completeUnitDoc,
+    const largeDoc: PropertyDoc = {
+      ...completePropertyDoc,
       interiorFeatures: Array(100).fill('fireplace'),
       linkedSpaces: Array(50).fill(null).map((_, i) => ({
         spaceType: 'parking' as const,
@@ -663,7 +663,7 @@ describe('Performance tests', () => {
     };
     
     const start = performance.now();
-    const unit = normalizeUnit(largeDoc);
+    const unit = normalizeProperty(largeDoc);
     const duration = performance.now() - start;
     
     expect(unit.interiorFeatures).toHaveLength(100);
@@ -672,8 +672,8 @@ describe('Performance tests', () => {
   });
 
   test('should handle deeply nested structures', () => {
-    const deepDoc: UnitDoc = {
-      ...completeUnitDoc,
+    const deepDoc: PropertyDoc = {
+      ...completePropertyDoc,
       linkedSpaces: [{
         spaceType: 'parking' as const,
         spaceId: 'deep-1',
@@ -683,8 +683,8 @@ describe('Performance tests', () => {
       }]
     };
     
-    const unit = normalizeUnit(deepDoc);
-    const doc = prepareUnitForFirestore(unit);
+    const unit = normalizeProperty(deepDoc);
+    const doc = preparePropertyForFirestore(unit);
     
     expect(doc.linkedSpaces?.[0].metadata).toBeDefined();
     const metadata = doc.linkedSpaces?.[0].metadata as Record<string, string | number | boolean> | undefined;
@@ -698,10 +698,10 @@ describe('Performance tests', () => {
 
 describe('Type safety tests', () => {
   test('should maintain type safety through normalization cycle', () => {
-    const original = completeUnitDoc;
-    const normalized = normalizeUnit(original);
-    const prepared = prepareUnitForFirestore(normalized);
-    const reNormalized = normalizeUnit(prepared);
+    const original = completePropertyDoc;
+    const normalized = normalizeProperty(original);
+    const prepared = preparePropertyForFirestore(normalized);
+    const reNormalized = normalizeProperty(prepared);
     
     // Key fields should remain consistent
     expect(reNormalized.id).toBe(original.id);
@@ -716,12 +716,12 @@ describe('Type safety tests', () => {
 
   test('should handle type coercion safely', () => {
     const docWithWrongTypes = {
-      ...minimalUnitDoc,
+      ...minimalPropertyDoc,
       floor: '1' as unknown as number, // String instead of number
       price: '250000' as unknown as number // String instead of number
     };
     
-    const unit = normalizeUnit(docWithWrongTypes);
+    const unit = normalizeProperty(docWithWrongTypes);
     
     // Values should be passed through without coercion
     expect(typeof unit.floor).toBe('string');

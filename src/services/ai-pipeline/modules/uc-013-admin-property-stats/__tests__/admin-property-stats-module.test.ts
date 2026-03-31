@@ -7,7 +7,7 @@
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/telemetry/Logger', () => ({ createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }) }));
 jest.mock('@/lib/error-utils', () => ({ getErrorMessage: jest.fn((e: unknown) => e instanceof Error ? e.message : String(e)) }));
-jest.mock('@/config/firestore-collections', () => ({ COLLECTIONS: { CONTACTS: 'contacts', UNITS: 'units', BUILDINGS: 'buildings', PROJECTS: 'projects', AI_PIPELINE_AUDIT: 'ai_pipeline_audit' } }));
+jest.mock('@/config/firestore-collections', () => ({ COLLECTIONS: { CONTACTS: 'contacts', PROPERTIES: 'properties', BUILDINGS: 'buildings', PROJECTS: 'projects', AI_PIPELINE_AUDIT: 'ai_pipeline_audit' } }));
 jest.mock('@/config/firestore-field-constants', () => ({ FIELDS: { COMPANY_ID: 'companyId', CREATED_AT: 'createdAt', STATUS: 'status' } }));
 jest.mock('@/config/tenant', () => ({ getCompanyId: () => 'comp_pagonis' }));
 jest.mock('@/config/ai-pipeline-config', () => ({ PIPELINE_PROTOCOL_CONFIG: { SCHEMA_VERSION: 1 } }));
@@ -31,7 +31,7 @@ jest.mock('../../../shared/channel-reply-dispatcher', () => ({
   extractChannelIds: (...args: unknown[]) => Reflect.apply(mockExtractChannelIds, null, args),
 }));
 
-import { AdminUnitStatsModule } from '../admin-unit-stats-module';
+import { AdminPropertyStatsModule } from '../admin-property-stats-module';
 import type { PipelineContext } from '@/types/ai-pipeline';
 
 // ============================================================================
@@ -57,7 +57,7 @@ function createMockCtx(overrides?: Record<string, unknown>): PipelineContext {
       metadata: { providerMessageId: 'pm_001', signatureVerified: true },
       schemaVersion: 1,
     },
-    understanding: { intent: 'admin_unit_stats', confidence: 0.95, entities: {} },
+    understanding: { intent: 'admin_property_stats', confidence: 0.95, entities: {} },
     lookupData: {},
     adminCommandMeta: { isAdminCommand: true, adminIdentity: { displayName: '\u0393\u03b9\u03ce\u03c1\u03b3\u03bf\u03c2', userId: '5618410820' } },
     errors: [],
@@ -67,7 +67,7 @@ function createMockCtx(overrides?: Record<string, unknown>): PipelineContext {
   } as unknown as PipelineContext;
 }
 
-function createUnitDocs() {
+function createPropertyDocs() {
   return {
     empty: false,
     size: 5,
@@ -108,25 +108,25 @@ function createContactDocs() {
 // TESTS
 // ============================================================================
 
-describe('AdminUnitStatsModule (UC-013)', () => {
-  let mod: AdminUnitStatsModule;
+describe('AdminPropertyStatsModule (UC-013)', () => {
+  let mod: AdminPropertyStatsModule;
 
   beforeEach(() => {
-    mod = new AdminUnitStatsModule();
+    mod = new AdminPropertyStatsModule();
     jest.clearAllMocks();
   });
 
   // ── 1. Identity ──
-  it('has moduleId UC-013 and handles admin_unit_stats intent', () => {
+  it('has moduleId UC-013 and handles admin_property_stats intent', () => {
     expect(mod.moduleId).toBe('UC-013');
-    expect(mod.handledIntents).toContain('admin_unit_stats');
+    expect(mod.handledIntents).toContain('admin_property_stats');
   });
 
-  // ── 2. Lookup: detects "units" stats type from Greek keyword ──
-  it('lookup detects units stats type from keyword "\u03b1\u03ba\u03af\u03bd\u03b7\u03c4\u03b1"', async () => {
+  // ── 2. Lookup: detects "properties" stats type from Greek keyword ──
+  it('lookup detects properties stats type from keyword "\u03b1\u03ba\u03af\u03bd\u03b7\u03c4\u03b1"', async () => {
     mockCollGet
       .mockResolvedValueOnce(createProjectDocs())   // projects query
-      .mockResolvedValueOnce(createUnitDocs());      // units query
+      .mockResolvedValueOnce(createPropertyDocs());      // units query
 
     const ctx = createMockCtx({
       intake: {
@@ -146,7 +146,7 @@ describe('AdminUnitStatsModule (UC-013)', () => {
     });
 
     const result = await mod.lookup(ctx);
-    expect(result.statsType).toBe('units');
+    expect(result.statsType).toBe('properties');
     expect(result.totalStats).toBeDefined();
   });
 
@@ -178,11 +178,11 @@ describe('AdminUnitStatsModule (UC-013)', () => {
     expect(result.contactStats).toBeDefined();
   });
 
-  // ── 4. Lookup: defaults to "units" for generic question ──
-  it('lookup defaults to units for generic stats question without keywords', async () => {
+  // ── 4. Lookup: defaults to "properties" for generic question ──
+  it('lookup defaults to properties for generic stats question without keywords', async () => {
     mockCollGet
       .mockResolvedValueOnce(createProjectDocs())    // projects query
-      .mockResolvedValueOnce(createUnitDocs());       // units query
+      .mockResolvedValueOnce(createPropertyDocs());       // units query
 
     const ctx = createMockCtx({
       intake: {
@@ -202,14 +202,14 @@ describe('AdminUnitStatsModule (UC-013)', () => {
     });
 
     const result = await mod.lookup(ctx);
-    expect(result.statsType).toBe('units');
+    expect(result.statsType).toBe('properties');
   });
 
   // ── 5. Propose: auto-approvable with summary ──
   it('propose is auto-approvable with summary containing totals', async () => {
     const ctx = createMockCtx({
       lookupData: {
-        statsType: 'units',
+        statsType: 'properties',
         projectFilter: null,
         totalStats: { total: 5, sold: 2, available: 2, reserved: 1, other: 0, byType: {} },
         projectBreakdown: [],
@@ -224,18 +224,18 @@ describe('AdminUnitStatsModule (UC-013)', () => {
     expect(proposal.requiredApprovals).toHaveLength(0);
     expect(proposal.summary).toContain('5');
     expect(proposal.summary).toContain('\u03b1\u03ba\u03af\u03bd\u03b7\u03c4\u03b1');
-    expect(proposal.suggestedActions[0].type).toBe('admin_unit_stats_reply');
+    expect(proposal.suggestedActions[0].type).toBe('admin_property_stats_reply');
   });
 
   // ── 6. Execute: formats stats with Greek labels and sends reply ──
-  it('execute formats unit stats report and sends channel reply', async () => {
+  it('execute formats property stats report and sends channel reply', async () => {
     const ctx = createMockCtx({
       proposal: {
         suggestedActions: [
           {
-            type: 'admin_unit_stats_reply',
+            type: 'admin_property_stats_reply',
             params: {
-              statsType: 'units',
+              statsType: 'properties',
               projectFilter: null,
               totalStats: { total: 5, sold: 2, available: 2, reserved: 1, other: 0, byType: { apartment: 2, studio: 1 } },
               projectBreakdown: [

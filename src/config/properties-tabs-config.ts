@@ -1,5 +1,5 @@
 /**
- * Units Tabs Configuration - MIGRATED TO UNIFIED FACTORY
+ * Properties Tabs Configuration - MIGRATED TO UNIFIED FACTORY
  *
  * ✅ ENTERPRISE MIGRATION: This file now uses unified-tabs-factory.ts
  * ✅ BACKWARD COMPATIBLE: All existing imports continue to work unchanged
@@ -8,6 +8,7 @@
  * @author Claude AI Assistant + Unified Factory Migration (2025-12-27)
  * @migrated 2025-12-27
  * @version 2.0.0 (Factory-based)
+ * @renamed 2026-03-31 units → properties
  */
 
 // 🏢 ENTERPRISE: Import from unified factory (NEW)
@@ -21,7 +22,7 @@ import {
   type UnifiedTabConfig
 } from './unified-tabs-factory';
 import { createModuleLogger } from '@/lib/telemetry';
-const logger = createModuleLogger('units-tabs-config');
+const logger = createModuleLogger('properties-tabs-config');
 
 // 🏢 BACKWARD COMPATIBILITY: Legacy imports (DEPRECATED but maintained)
 
@@ -30,23 +31,29 @@ const logger = createModuleLogger('units-tabs-config');
 // ============================================================================
 
 /**
- * ✅ BACKWARD COMPATIBLE: Legacy UnitsTabConfig interface
+ * ✅ BACKWARD COMPATIBLE: PropertiesTabConfig interface
  * Re-exported from unified factory για zero breaking changes
  */
-export interface UnitsTabConfig extends UnifiedTabConfig {
+export interface PropertiesTabConfig extends UnifiedTabConfig {
   // Same interface as before - no changes needed
 }
+
+/** @deprecated Use PropertiesTabConfig */
+export type UnitsTabConfig = PropertiesTabConfig;
 
 // ============================================================================
 // FACTORY-BASED CONFIGURATION (ENTERPRISE)
 // ============================================================================
 
 /**
- * ✅ ENTERPRISE: Units tabs configuration via unified factory
- * ✅ BACKWARD COMPATIBLE: Same UNITS_TABS export as before
+ * ✅ ENTERPRISE: Properties tabs configuration via unified factory
+ * ✅ BACKWARD COMPATIBLE: Same PROPERTIES_TABS export as before
  * ✅ CENTRALIZED: All configuration now comes from unified-tabs-factory.ts
  */
-export const UNITS_TABS: UnitsTabConfig[] = createTabsConfig('units') as UnitsTabConfig[];
+export const PROPERTIES_TABS: PropertiesTabConfig[] = createTabsConfig('units') as PropertiesTabConfig[];
+
+/** @deprecated Use PROPERTIES_TABS */
+export const UNITS_TABS = PROPERTIES_TABS;
 
 // ============================================================================
 // BACKWARD COMPATIBLE UTILITY FUNCTIONS
@@ -60,53 +67,74 @@ export const UNITS_TABS: UnitsTabConfig[] = createTabsConfig('units') as UnitsTa
 /**
  * Επιστρέφει όλες τις ενεργές καρτέλες ταξινομημένες κατά order
  */
-export function getSortedUnitsTabs(): UnitsTabConfig[] {
-  return getSortedTabs('units') as UnitsTabConfig[];
+export function getSortedPropertiesTabs(): PropertiesTabConfig[] {
+  return getSortedTabs('units') as PropertiesTabConfig[];
 }
+
+/** @deprecated Use getSortedPropertiesTabs */
+export const getSortedUnitsTabs = getSortedPropertiesTabs;
 
 /**
  * Επιστρέφει μόνο τις enabled καρτέλες
  */
-export function getEnabledUnitsTabs(): UnitsTabConfig[] {
-  return getSortedTabs('units') as UnitsTabConfig[];
+export function getEnabledPropertiesTabs(): PropertiesTabConfig[] {
+  return getSortedTabs('units') as PropertiesTabConfig[];
 }
+
+/** @deprecated Use getEnabledPropertiesTabs */
+export const getEnabledUnitsTabs = getEnabledPropertiesTabs;
 
 /**
  * Βρίσκει μία καρτέλα με βάση το ID
  */
-export function getUnitsTabById(id: string): UnitsTabConfig | undefined {
-  return getTabById('units', id) as UnitsTabConfig | undefined;
+export function getPropertiesTabById(id: string): PropertiesTabConfig | undefined {
+  return getTabById('units', id) as PropertiesTabConfig | undefined;
 }
+
+/** @deprecated Use getPropertiesTabById */
+export const getUnitsTabById = getPropertiesTabById;
 
 /**
  * Βρίσκει μία καρτέλα με βάση το value
  */
-export function getUnitsTabByValue(value: string): UnitsTabConfig | undefined {
-  return getTabByValue('units', value) as UnitsTabConfig | undefined;
+export function getPropertiesTabByValue(value: string): PropertiesTabConfig | undefined {
+  return getTabByValue('units', value) as PropertiesTabConfig | undefined;
 }
+
+/** @deprecated Use getPropertiesTabByValue */
+export const getUnitsTabByValue = getPropertiesTabByValue;
 
 /**
  * Επιστρέφει όλες τις διαθέσιμες καρτέλες (enabled/disabled)
  */
-export function getAllUnitsTabs(): UnitsTabConfig[] {
-  return [...UNITS_TABS];
+export function getAllPropertiesTabs(): PropertiesTabConfig[] {
+  return [...PROPERTIES_TABS];
 }
+
+/** @deprecated Use getAllPropertiesTabs */
+export const getAllUnitsTabs = getAllPropertiesTabs;
 
 /**
  * Επιστρέφει καρτέλες που ταιριάζουν σε συγκεκριμένα criteria
  */
-export function getUnitsTabsByCondition(
-  predicate: (tab: UnitsTabConfig) => boolean
-): UnitsTabConfig[] {
-  return UNITS_TABS.filter(predicate);
+export function getPropertiesTabsByCondition(
+  predicate: (tab: PropertiesTabConfig) => boolean
+): PropertiesTabConfig[] {
+  return PROPERTIES_TABS.filter(predicate);
 }
+
+/** @deprecated Use getPropertiesTabsByCondition */
+export const getUnitsTabsByCondition = getPropertiesTabsByCondition;
 
 /**
  * Επιστρέφει στατιστικά των καρτελών
  */
-export function getUnitsTabsStats() {
+export function getPropertiesTabsStats() {
   return getTabsStats('units');
 }
+
+/** @deprecated Use getPropertiesTabsStats */
+export const getUnitsTabsStats = getPropertiesTabsStats;
 
 // ============================================================================
 // BACKWARD COMPATIBLE VALIDATION UTILITIES
@@ -120,50 +148,59 @@ export function getUnitsTabsStats() {
 /**
  * Ελέγχει αν όλες οι καρτέλες έχουν μοναδικά IDs
  */
-export function validateUnitsTabIds(): boolean {
-  const ids = UNITS_TABS.map(tab => tab.id);
+export function validatePropertiesTabIds(): boolean {
+  const ids = PROPERTIES_TABS.map(tab => tab.id);
   return ids.length === new Set(ids).size;
 }
+
+/** @deprecated Use validatePropertiesTabIds */
+export const validateUnitsTabIds = validatePropertiesTabIds;
 
 /**
  * Ελέγχει αν όλες οι καρτέλες έχουν μοναδικά values
  */
-export function validateUnitsTabValues(): boolean {
-  const values = UNITS_TABS.map(tab => tab.value);
+export function validatePropertiesTabValues(): boolean {
+  const values = PROPERTIES_TABS.map(tab => tab.value);
   return values.length === new Set(values).size;
 }
+
+/** @deprecated Use validatePropertiesTabValues */
+export const validateUnitsTabValues = validatePropertiesTabValues;
 
 /**
  * Ελέγχει αν όλες οι καρτέλες έχουν μοναδικά orders
  */
-export function validateUnitsTabOrders(): boolean {
-  const orders = UNITS_TABS.map(tab => tab.order);
+export function validatePropertiesTabOrders(): boolean {
+  const orders = PROPERTIES_TABS.map(tab => tab.order);
   return orders.length === new Set(orders).size;
 }
+
+/** @deprecated Use validatePropertiesTabOrders */
+export const validateUnitsTabOrders = validatePropertiesTabOrders;
 
 /**
  * Comprehensive validation όλων των καρτελών
  */
-export function validateUnitsTabsConfiguration(): {
+export function validatePropertiesTabsConfiguration(): {
   valid: boolean;
   errors: string[];
 } {
   const errors: string[] = [];
 
-  if (!validateUnitsTabIds()) {
+  if (!validatePropertiesTabIds()) {
     errors.push('Duplicate tab IDs found');
   }
 
-  if (!validateUnitsTabValues()) {
+  if (!validatePropertiesTabValues()) {
     errors.push('Duplicate tab values found');
   }
 
-  if (!validateUnitsTabOrders()) {
+  if (!validatePropertiesTabOrders()) {
     errors.push('Duplicate tab orders found');
   }
 
   // Έλεγχος για κενά required fields using unified factory validation
-  UNITS_TABS.forEach((tab, index) => {
+  PROPERTIES_TABS.forEach((tab, index) => {
     if (!validateTabConfig(tab)) {
       errors.push(`Tab at index ${index} failed validation`);
     }
@@ -175,6 +212,9 @@ export function validateUnitsTabsConfiguration(): {
   };
 }
 
+/** @deprecated Use validatePropertiesTabsConfiguration */
+export const validateUnitsTabsConfiguration = validatePropertiesTabsConfiguration;
+
 // ============================================================================
 // BACKWARD COMPATIBLE DEVELOPMENT HELPERS
 // ============================================================================
@@ -182,21 +222,24 @@ export function validateUnitsTabsConfiguration(): {
 /**
  * ✅ BACKWARD COMPATIBLE: Development helper για debugging
  */
-export function debugUnitsTabs(): void {
+export function debugPropertiesTabs(): void {
   if (process.env.NODE_ENV === 'development') {
-    logger.info('Units Tabs Configuration Debug (Factory-based)', {
-      stats: getUnitsTabsStats(),
-      validation: validateUnitsTabsConfiguration(),
-      enabledTabs: getEnabledUnitsTabs().map(t => t.label),
-      allTabsCount: UNITS_TABS.length,
+    logger.info('Properties Tabs Configuration Debug (Factory-based)', {
+      stats: getPropertiesTabsStats(),
+      validation: validatePropertiesTabsConfiguration(),
+      enabledTabs: getEnabledPropertiesTabs().map(t => t.label),
+      allTabsCount: PROPERTIES_TABS.length,
       factory: 'unified-tabs-factory.ts'
     });
   }
 }
 
+/** @deprecated Use debugPropertiesTabs */
+export const debugUnitsTabs = debugPropertiesTabs;
+
 // Development debug (μόνο στο development)
 if (process.env.NODE_ENV === 'development') {
-  debugUnitsTabs();
+  debugPropertiesTabs();
 }
 
 // ============================================================================
@@ -208,14 +251,14 @@ if (process.env.NODE_ENV === 'development') {
  * All functionality remains the same - powered by unified factory
  */
 export default {
-  tabs: UNITS_TABS,
-  getSorted: getSortedUnitsTabs,
-  getEnabled: getEnabledUnitsTabs,
-  getById: getUnitsTabById,
-  getByValue: getUnitsTabByValue,
-  getAll: getAllUnitsTabs,
-  getByCondition: getUnitsTabsByCondition,
-  getStats: getUnitsTabsStats,
-  validate: validateUnitsTabsConfiguration,
-  debug: debugUnitsTabs,
+  tabs: PROPERTIES_TABS,
+  getSorted: getSortedPropertiesTabs,
+  getEnabled: getEnabledPropertiesTabs,
+  getById: getPropertiesTabById,
+  getByValue: getPropertiesTabByValue,
+  getAll: getAllPropertiesTabs,
+  getByCondition: getPropertiesTabsByCondition,
+  getStats: getPropertiesTabsStats,
+  validate: validatePropertiesTabsConfiguration,
+  debug: debugPropertiesTabs,
 };

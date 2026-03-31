@@ -2,13 +2,13 @@
 /* eslint-disable custom/no-hardcoded-strings */
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Unit Fields Read-Only Components
+ * 🏢 ENTERPRISE: Property Fields Read-Only Components
  * =============================================================================
  *
- * Extracted from UnitFieldsBlock.tsx for SRP compliance (ADR N.7.1).
+ * Extracted from PropertyFieldsBlock.tsx for SRP compliance (ADR N.7.1).
  * Contains: CompactField, ReadOnlyCompactView, LevelTabStrip.
  *
- * @module features/property-details/components/UnitFieldsReadOnly
+ * @module features/property-details/components/PropertyFieldsReadOnly
  * @since 2026-03-27
  */
 
@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import '@/lib/design-system';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { Property } from '@/types/property-viewer';
-import type { UnitLevel } from '@/types/unit';
+import type { PropertyLevel } from '@/types/property';
 import type { TFunction } from 'i18next';
 
 // =============================================================================
@@ -168,7 +168,7 @@ export function LevelTabStrip({
   onSelectLevel,
   t,
 }: {
-  levels: UnitLevel[];
+  levels: PropertyLevel[];
   activeLevelId: string | null;
   onSelectLevel: (id: string | null) => void;
   t: TFunction;

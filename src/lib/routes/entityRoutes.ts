@@ -21,9 +21,9 @@ export const ENTITY_ROUTES = {
     withFilter: (term: string) => `/contacts?filter=${encodeURIComponent(term)}`,
     withId: (id: string) => `/contacts?contactId=${id}`,
   },
-  units: {
-    list: '/units',
-    withId: (id: string) => `/units?unitId=${id}`,
+  properties: {
+    list: '/properties',
+    withId: (id: string) => `/properties?unitId=${id}`,
   },
   spaces: {
     parking: (id: string) => `/spaces/parking?parkingId=${id}`,

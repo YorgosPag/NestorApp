@@ -64,7 +64,7 @@ export interface EntityDeletionConfig {
 /** All entity types managed by the deletion guard */
 export type EntityType =
   | 'contact'
-  | 'unit'
+  | 'property'
   | 'floor'
   | 'project'
   | 'building'
@@ -132,7 +132,7 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     // Blocking dependencies — user must delete manually
     dependencies: [
       {
-        collection: COLLECTIONS.UNITS,
+        collection: COLLECTIONS.PROPERTIES,
         foreignKey: 'commercial.ownerContactIds',
         label: 'Πωλημένα διαμερίσματα',
         queryType: 'array-contains',
@@ -198,13 +198,13 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     ],
   },
 
-  // ─── UNIT ───────────────────────────────────────────────────────────
-  unit: {
+  // ─── PROPERTY ──────────────────────────────────────────────────────
+  property: {
     strategy: 'BLOCK',
     conditionalBlock: {
       field: 'commercial.owners',
       condition: 'exists',
-      message: 'Η μονάδα έχει αγοραστή (κράτηση ή πώληση) και δεν μπορεί να διαγραφεί. Ακυρώστε πρώτα την κράτηση/πώληση.',
+      message: 'Το ακίνητο έχει αγοραστή (κράτηση ή πώληση) και δεν μπορεί να διαγραφεί. Ακυρώστε πρώτα την κράτηση/πώληση.',
     },
     cascadeDependencies: [
       {
@@ -261,7 +261,7 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     strategy: 'BLOCK',
     dependencies: [
       {
-        collection: COLLECTIONS.UNITS,
+        collection: COLLECTIONS.PROPERTIES,
         foreignKey: 'floorId',
         label: 'Διαμερίσματα ορόφου',
         queryType: 'equals',
@@ -335,7 +335,7 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     ],
     dependencies: [
       {
-        collection: COLLECTIONS.UNITS,
+        collection: COLLECTIONS.PROPERTIES,
         foreignKey: 'buildingId',
         label: 'Διαμερίσματα',
         queryType: 'equals',
@@ -466,7 +466,7 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
 export function getEntityCollection(entityType: EntityType): string {
   const map: Record<EntityType, string> = {
     contact: COLLECTIONS.CONTACTS,
-    unit: COLLECTIONS.UNITS,
+    property: COLLECTIONS.PROPERTIES,
     floor: COLLECTIONS.FLOORS,
     project: COLLECTIONS.PROJECTS,
     building: COLLECTIONS.BUILDINGS,

@@ -60,7 +60,7 @@ export async function searchProperties(
 
     try {
       // Firebase Admin SDK: use collection(path) then chain .where().orderBy().limit()
-      let q = collection(COLLECTIONS.UNITS)
+      let q = collection(COLLECTIONS.PROPERTIES)
         .where(FIELDS.STATUS, '==', 'available');
 
       if (criteria.type) {

@@ -164,7 +164,7 @@ Telegram webhook → processMessage() (existing bot flow)
 | `admin_contact_search` | UC-010 | ✅ NEW (ADR-145) — search + list + missing fields analysis |
 | `admin_project_status` | UC-011 | ✅ NEW (ADR-145) |
 | `admin_send_email` | UC-012 | ✅ NEW (ADR-145) |
-| `admin_unit_stats` | UC-013 | ✅ NEW (ADR-145) |
+| `admin_property_stats` | UC-013 | ✅ NEW (ADR-145) |
 | `admin_create_contact` | UC-015 | ✅ NEW (ADR-145) |
 | `admin_update_contact` | UC-016 | ✅ NEW (ADR-145 — Secretary Mode) |
 

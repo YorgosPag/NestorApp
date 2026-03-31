@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * POST /api/sales/{unitId}/appurtenance-sync — Sync parking/storage status
+ * POST /api/sales/{propertyId}/appurtenance-sync — Sync parking/storage status
  * =============================================================================
  *
  * Updates commercialStatus and commercial data on linked parking/storage
@@ -11,7 +11,7 @@
  * Auth: withAuth (authenticated users)
  * Rate: withStandardRateLimit (60 req/min)
  *
- * @module api/sales/[unitId]/appurtenance-sync
+ * @module api/sales/[propertyId]/appurtenance-sync
  * @see ADR-199 Sales Appurtenances
  */
 
@@ -90,12 +90,12 @@ function getCollectionName(spaceType: 'parking' | 'storage'): string {
 
 async function handlePost(
   request: NextRequest,
-  segmentData?: { params: Promise<{ unitId: string }> }
+  segmentData?: { params: Promise<{ propertyId: string }> }
 ): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { unitId } = await segmentData!.params;
+        const { propertyId } = await segmentData!.params;
         const body = (await req.json()) as Partial<SyncRequestBody>;
 
         const validationError = validateBody(body);
@@ -138,7 +138,7 @@ async function handlePost(
                   'commercial.ownerContactIds': body.ownerContactIds ?? null,
                   'commercial.askingPrice': space.salePrice ?? null,
                   'commercial.reservationDate': now,
-                  'commercial.linkedUnitId': unitId,
+                  'commercial.linkedPropertyId': propertyId,
                 });
                 break;
 
@@ -149,7 +149,7 @@ async function handlePost(
                   'commercial.ownerContactIds': body.ownerContactIds ?? null,
                   'commercial.finalPrice': space.salePrice ?? null,
                   'commercial.saleDate': now,
-                  'commercial.linkedUnitId': unitId,
+                  'commercial.linkedPropertyId': propertyId,
                 });
                 break;
 
@@ -163,7 +163,7 @@ async function handlePost(
                   'commercial.reservationDeposit': null,
                   'commercial.reservationDate': null,
                   'commercial.saleDate': null,
-                  'commercial.linkedUnitId': null,
+                  'commercial.linkedPropertyId': null,
                 });
                 break;
             }
@@ -180,8 +180,8 @@ async function handlePost(
         };
         const spaceTypeLabels = { parking: 'Παρκινγκ', storage: 'Αποθήκη' };
         safeFireAndForget(EntityAuditService.recordChange({
-          entityType: 'unit',
-          entityId: unitId,
+          entityType: 'property',
+          entityId: propertyId,
           entityName: null,
           action: 'updated',
           changes: spaces.map((s) => ({
@@ -198,7 +198,7 @@ async function handlePost(
         return NextResponse.json({
           success: true,
           message: `Synced ${spaces.length} space(s) with action: ${action}`,
-          unitId,
+          propertyId,
         });
       } catch (error) {
         const message = getErrorMessage(error, 'Failed to sync appurtenances');

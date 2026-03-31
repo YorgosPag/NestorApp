@@ -61,7 +61,7 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
     selectedBuilding,
     selectUnit,
     getBuildingsForProject,
-    getUnitsForBuilding,
+    getPropertiesForBuilding,
   } = useNavigation();
 
   const { t } = useTranslation('navigation');
@@ -143,7 +143,7 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
   // ── Building units (excluding storages) ──
   const buildingUnits = useMemo((): NavigationUnit[] => {
     if (!selectedBuilding) return [];
-    const realtimeUnits = getUnitsForBuilding(selectedBuilding.id);
+    const realtimeUnits = getPropertiesForBuilding(selectedBuilding.id);
     return realtimeUnits
       .filter(unit => !isStorageType(unit as unknown as NavigationUnit))
       .map(unit => ({
@@ -154,7 +154,7 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
         area: unit.area || 0,
         status: (unit.status || 'owner') as NavigationUnit['status'],
       }));
-  }, [selectedBuilding, getUnitsForBuilding, isStorageType]);
+  }, [selectedBuilding, getPropertiesForBuilding, isStorageType]);
 
   // ── Building storages (API + legacy) ──
   const buildingStorages = useMemo((): StorageUnit[] => {
@@ -173,7 +173,7 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
         status: storage.status as StorageUnit['status'],
       }));
 
-    const realtimeUnits = getUnitsForBuilding(selectedBuilding.id);
+    const realtimeUnits = getPropertiesForBuilding(selectedBuilding.id);
     const legacyStorages: StorageUnit[] = realtimeUnits
       .filter(unit => isStorageType(unit as unknown as NavigationUnit))
       .map(unit => ({
@@ -191,7 +191,7 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
       }
     });
     return allStorages;
-  }, [selectedBuilding, storages, getUnitsForBuilding, isStorageType]);
+  }, [selectedBuilding, storages, getPropertiesForBuilding, isStorageType]);
 
   // ── Building parking spots ──
   const buildingParkingSpots = useMemo((): NavigationParkingSpot[] => {

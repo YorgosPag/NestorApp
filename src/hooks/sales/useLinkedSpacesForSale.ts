@@ -11,7 +11,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import type { Unit, LinkedSpace } from '@/types/unit';
+import type { Property, LinkedSpace } from '@/types/property';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import type { SaleLineItem } from '@/services/sales-accounting/types';
 import type { BatchResolveResponse } from '@/types/spaces';
@@ -70,7 +70,7 @@ function buildDisplayName(space: LinkedSpace): string {
 // HOOK
 // =============================================================================
 
-export function useLinkedSpacesForSale(unit: Unit): UseLinkedSpacesForSaleResult {
+export function useLinkedSpacesForSale(unit: Property): UseLinkedSpacesForSaleResult {
   const [spaces, setSpaces] = useState<ResolvedLinkedSpace[]>([]);
   const [loading, setLoading] = useState(false);
 

@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * @fileoverview Unit Summary Tab Content — ADR-197 §2.7 Tab 2
- * @description Read-only preview of physical unit data + link to /units
+ * @fileoverview Property Summary Tab Content — ADR-197 §2.7 Tab 2
+ * @description Read-only preview of physical property data + link to /properties
  * @pattern Enterprise card layout, read-only mode
  */
 
@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -31,8 +31,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 TYPES
 // =============================================================================
 
-interface UnitSummaryContentProps {
-  data?: Unit;
+interface PropertySummaryContentProps {
+  data?: Property;
 }
 
 // =============================================================================
@@ -67,7 +67,7 @@ function SummaryField({
 // 🏢 COMPONENT
 // =============================================================================
 
-export function UnitSummaryContent({ data: unit }: UnitSummaryContentProps) {
+export function PropertySummaryContent({ data: unit }: PropertySummaryContentProps) {
   const _colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();

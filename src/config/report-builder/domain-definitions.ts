@@ -2,7 +2,7 @@
  * @module config/report-builder/domain-definitions
  * @enterprise ADR-268 — Domain Definitions for Dynamic Report Builder (Phase 1 + 4a)
  *
- * Static field schemas for 8 domains: Projects, Buildings, Floors, Units,
+ * Static field schemas for 8 domains: Projects, Buildings, Floors, Properties,
  * Parking, Storage, Individuals, Companies & Services.
  * Each domain defines its Firestore collection, fields, types, and refs.
  * These definitions drive the UI (filter panel, column selector) and
@@ -154,7 +154,7 @@ const BUILDINGS_DEFINITION: DomainDefinition = {
     { key: 'totalArea', labelKey: 'domains.buildings.fields.totalArea', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number' },
     { key: 'totalValue', labelKey: 'domains.buildings.fields.totalValue', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
     { key: 'floors', labelKey: 'domains.buildings.fields.floorCount', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number' },
-    { key: 'totalUnits', labelKey: 'domains.buildings.fields.totalUnits', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
+    { key: 'totalProperties', labelKey: 'domains.buildings.fields.totalProperties', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
     { key: 'energyClass', labelKey: 'domains.buildings.fields.energyClass', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: ENERGY_CLASSES, enumLabelPrefix: 'domains.buildings.enums.energyClass' },
     { key: 'city', labelKey: 'domains.buildings.fields.city', type: 'text', filterable: true, sortable: true, defaultVisible: false },
     { key: 'createdAt', labelKey: 'domains.buildings.fields.createdAt', type: 'date', filterable: true, sortable: true, defaultVisible: false, format: 'date' },
@@ -181,48 +181,48 @@ const FLOORS_DEFINITION: DomainDefinition = {
   ],
 };
 
-const UNITS_DEFINITION: DomainDefinition = {
-  id: 'units',
-  collection: COLLECTIONS.UNITS,
+const PROPERTIES_DEFINITION: DomainDefinition = {
+  id: 'properties',
+  collection: COLLECTIONS.PROPERTIES,
   group: 'realestate',
-  labelKey: 'domains.units.label',
-  descriptionKey: 'domains.units.description',
+  labelKey: 'domains.properties.label',
+  descriptionKey: 'domains.properties.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/units/{id}',
+  entityLinkPath: '/properties/{id}',
   defaultSortField: 'name',
   defaultSortDirection: 'asc',
   fields: [
     // Identity
-    { key: 'name', labelKey: 'domains.units.fields.name', type: 'text', filterable: true, sortable: true, defaultVisible: true },
-    { key: 'code', labelKey: 'domains.units.fields.code', type: 'text', filterable: true, sortable: true, defaultVisible: true },
-    { key: 'type', labelKey: 'domains.units.fields.type', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: UNIT_TYPES, enumLabelPrefix: 'domains.units.enums.type' },
+    { key: 'name', labelKey: 'domains.properties.fields.name', type: 'text', filterable: true, sortable: true, defaultVisible: true },
+    { key: 'code', labelKey: 'domains.properties.fields.code', type: 'text', filterable: true, sortable: true, defaultVisible: true },
+    { key: 'type', labelKey: 'domains.properties.fields.type', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: UNIT_TYPES, enumLabelPrefix: 'domains.properties.enums.type' },
     // Hierarchy refs
-    { key: 'buildingId', labelKey: 'domains.units.fields.building', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'buildings', refDisplayField: 'name' },
-    { key: 'project', labelKey: 'domains.units.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'projects', refDisplayField: 'name' },
-    { key: 'floor', labelKey: 'domains.units.fields.floor', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
+    { key: 'buildingId', labelKey: 'domains.properties.fields.building', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'buildings', refDisplayField: 'name' },
+    { key: 'project', labelKey: 'domains.properties.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'projects', refDisplayField: 'name' },
+    { key: 'floor', labelKey: 'domains.properties.fields.floor', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
     // Status
-    { key: 'commercialStatus', labelKey: 'domains.units.fields.commercialStatus', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: COMMERCIAL_STATUSES, enumLabelPrefix: 'domains.units.enums.commercialStatus' },
-    { key: 'operationalStatus', labelKey: 'domains.units.fields.operationalStatus', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: OPERATIONAL_STATUSES, enumLabelPrefix: 'domains.units.enums.operationalStatus' },
+    { key: 'commercialStatus', labelKey: 'domains.properties.fields.commercialStatus', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: COMMERCIAL_STATUSES, enumLabelPrefix: 'domains.properties.enums.commercialStatus' },
+    { key: 'operationalStatus', labelKey: 'domains.properties.fields.operationalStatus', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: OPERATIONAL_STATUSES, enumLabelPrefix: 'domains.properties.enums.operationalStatus' },
     // Areas
-    { key: 'areas.gross', labelKey: 'domains.units.fields.grossArea', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number' },
-    { key: 'areas.net', labelKey: 'domains.units.fields.netArea', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
+    { key: 'areas.gross', labelKey: 'domains.properties.fields.grossArea', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number' },
+    { key: 'areas.net', labelKey: 'domains.properties.fields.netArea', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
     // Energy
-    { key: 'energy.class', labelKey: 'domains.units.fields.energyClass', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: ENERGY_CLASSES, enumLabelPrefix: 'domains.units.enums.energyClass' },
+    { key: 'energy.class', labelKey: 'domains.properties.fields.energyClass', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: ENERGY_CLASSES, enumLabelPrefix: 'domains.properties.enums.energyClass' },
     // Commercial
-    { key: 'commercial.askingPrice', labelKey: 'domains.units.fields.askingPrice', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
-    { key: 'commercial.finalPrice', labelKey: 'domains.units.fields.finalPrice', type: 'currency', filterable: true, sortable: true, defaultVisible: true, format: 'currency' },
-    { key: 'commercial.ownerContactIds', labelKey: 'domains.units.fields.ownerContactIds', type: 'text', filterable: true, sortable: false, defaultVisible: false },
-    { key: 'commercial.legalPhase', labelKey: 'domains.units.fields.legalPhase', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: LEGAL_PHASES, enumLabelPrefix: 'domains.units.enums.legalPhase' },
+    { key: 'commercial.askingPrice', labelKey: 'domains.properties.fields.askingPrice', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
+    { key: 'commercial.finalPrice', labelKey: 'domains.properties.fields.finalPrice', type: 'currency', filterable: true, sortable: true, defaultVisible: true, format: 'currency' },
+    { key: 'commercial.ownerContactIds', labelKey: 'domains.properties.fields.ownerContactIds', type: 'text', filterable: true, sortable: false, defaultVisible: false },
+    { key: 'commercial.legalPhase', labelKey: 'domains.properties.fields.legalPhase', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: LEGAL_PHASES, enumLabelPrefix: 'domains.properties.enums.legalPhase' },
     // Payment summary (denormalized)
-    { key: 'commercial.paymentSummary.totalAmount', labelKey: 'domains.units.fields.paymentTotal', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
-    { key: 'commercial.paymentSummary.paidAmount', labelKey: 'domains.units.fields.paymentPaid', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
-    { key: 'commercial.paymentSummary.paidPercentage', labelKey: 'domains.units.fields.paymentPaidPct', type: 'percentage', filterable: true, sortable: true, defaultVisible: false, format: 'percentage' },
-    { key: 'commercial.paymentSummary.overdueInstallments', labelKey: 'domains.units.fields.overdueInstallments', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
+    { key: 'commercial.paymentSummary.totalAmount', labelKey: 'domains.properties.fields.paymentTotal', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
+    { key: 'commercial.paymentSummary.paidAmount', labelKey: 'domains.properties.fields.paymentPaid', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
+    { key: 'commercial.paymentSummary.paidPercentage', labelKey: 'domains.properties.fields.paymentPaidPct', type: 'percentage', filterable: true, sortable: true, defaultVisible: false, format: 'percentage' },
+    { key: 'commercial.paymentSummary.overdueInstallments', labelKey: 'domains.properties.fields.overdueInstallments', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
     // Layout
-    { key: 'layout.bedrooms', labelKey: 'domains.units.fields.bedrooms', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
-    { key: 'layout.bathrooms', labelKey: 'domains.units.fields.bathrooms', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
+    { key: 'layout.bedrooms', labelKey: 'domains.properties.fields.bedrooms', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
+    { key: 'layout.bathrooms', labelKey: 'domains.properties.fields.bathrooms', type: 'number', filterable: true, sortable: true, defaultVisible: false, format: 'number' },
     // Dates
-    { key: 'createdAt', labelKey: 'domains.units.fields.createdAt', type: 'date', filterable: true, sortable: true, defaultVisible: false, format: 'date' },
+    { key: 'createdAt', labelKey: 'domains.properties.fields.createdAt', type: 'date', filterable: true, sortable: true, defaultVisible: false, format: 'date' },
   ],
 };
 
@@ -235,7 +235,7 @@ export const DOMAIN_DEFINITIONS: Record<BuilderDomainId, DomainDefinition> = {
   projects: PROJECTS_DEFINITION,
   buildings: BUILDINGS_DEFINITION,
   floors: FLOORS_DEFINITION,
-  units: UNITS_DEFINITION,
+  properties: PROPERTIES_DEFINITION,
   // Phase 4a — Spaces
   parking: PARKING_DEFINITION,
   storage: STORAGE_DEFINITION,

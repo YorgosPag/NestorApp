@@ -97,7 +97,7 @@ export function useBrokerageAgreements(
     if (!projectId) return;
     try {
       const q = query(
-        collection(db, COLLECTIONS.UNITS),
+        collection(db, COLLECTIONS.PROPERTIES),
         where('projectId', '==', projectId)
       );
       const snap = await getDocs(q);

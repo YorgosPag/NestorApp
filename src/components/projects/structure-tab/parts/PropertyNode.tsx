@@ -22,7 +22,7 @@ import { getStatusColor } from '@/lib/design-system';
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 const unitColor = NAVIGATION_ENTITIES.unit.color;
 
-export const UnitNode = ({ unit }: { unit: UnitModel }) => {
+export const PropertyNode = ({ unit }: { unit: UnitModel }) => {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const { quick } = useBorderTokens();

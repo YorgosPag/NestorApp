@@ -76,13 +76,13 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       createdAt: 'Timestamp?',
     },
     relationships: {
-      'units.buildingId': 'buildings.id',
+      'properties.buildingId': 'buildings.id',
       'construction_phases.buildingId': 'buildings.id',
     },
   },
 
-  units: {
-    description: 'Ακίνητα/μονάδες (διαμερίσματα, καταστήματα, parking κλπ)',
+  properties: {
+    description: 'Ακίνητα (διαμερίσματα, καταστήματα, parking κλπ)',
     fields: {
       name: 'string',
       buildingId: 'string (->buildings)',
@@ -117,7 +117,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       'commercial.paymentSummary.nextInstallmentDate': 'string? (ημ/νία επόμενης δόσης)',
     },
     relationships: {
-      'contact_links.entityId': 'units.id (buyer/tenant)',
+      'contact_links.entityId': 'properties.id (buyer/tenant)',
       'commercial.ownerContactIds': 'contacts.id[] (ιδιοκτήτες — array-contains queries)',
     },
   },
@@ -212,7 +212,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       name: 'string',
       contactId: 'string? (->contacts)',
       companyId: 'string',
-      unitId: 'string? (->units)',
+      unitId: 'string? (->properties)',
       status: 'string?',
       value: 'number?',
       probability: 'number?',
@@ -256,7 +256,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
     fields: {
       contactId: 'string (->contacts)',
       companyId: 'string',
-      unitId: 'string? (->units)',
+      unitId: 'string? (->properties)',
       amount: 'number',
       status: 'pending|paid|overdue?',
       dueDate: 'Timestamp?',
@@ -342,8 +342,8 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
     description: 'Συνδέσεις επαφών με entities (μονάδες, έργα) — RBAC. Χρησιμοποίησε sourceContactId + targetEntityType + targetEntityId + role.',
     fields: {
       sourceContactId: 'string (->contacts, ID επαφής)',
-      targetEntityType: 'project|building|unit (τύπος entity)',
-      targetEntityId: 'string (ID του project/building/unit)',
+      targetEntityType: 'project|building|property (τύπος entity)',
+      targetEntityId: 'string (ID του project/building/property)',
       role: 'supervisor|architect|engineer|contractor|buyer|tenant|owner|lawyer|notary|realtor|accountant (ρόλος στο entity)',
       status: 'active|inactive',
       companyId: 'string',
@@ -352,7 +352,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
     },
     relationships: {
       'sourceContactId': 'contacts.id',
-      'targetEntityId': 'projects.id | buildings.id | units.id',
+      'targetEntityId': 'projects.id | buildings.id | properties.id',
     },
   },
 
@@ -406,15 +406,15 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
   },
 
   files: {
-    description: 'Αρχεία και κατόψεις (DXF, PDF κλπ) — κάθε αρχείο συνδέεται με entity (floor, unit κλπ)',
+    description: 'Αρχεία και κατόψεις (DXF, PDF κλπ) — κάθε αρχείο συνδέεται με entity (floor, property κλπ)',
     fields: {
       displayName: 'string',
       originalFilename: 'string',
       ext: 'string (dxf, pdf, jpg κλπ)',
       companyId: 'string',
       projectId: 'string (->projects)',
-      entityType: 'string (floor, unit, building κλπ)',
-      entityId: 'string (->floors, ->units κλπ)',
+      entityType: 'string (floor, property, building κλπ)',
+      entityId: 'string (->floors, ->properties κλπ)',
       domain: 'string (construction, sales κλπ)',
       category: 'string (floorplans, photos κλπ)',
       purpose: 'string (floor-floorplan κλπ)',
@@ -485,13 +485,13 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
   },
 
   boq_items: {
-    description: 'Επιμετρήσεις BOQ (Quantity Surveying) — εργασίες/υλικά ανά κτίριο ή μονάδα',
+    description: 'Επιμετρήσεις BOQ (Quantity Surveying) — εργασίες/υλικά ανά κτίριο ή ακίνητο',
     fields: {
       companyId: 'string',
       projectId: 'string (->projects)',
       buildingId: 'string (->buildings)',
-      scope: 'building|unit',
-      linkedUnitId: 'string? (->units)',
+      scope: 'building|property',
+      linkedUnitId: 'string? (->properties)',
       categoryCode: 'string (ΑΤΟΕ κωδικός, π.χ. OIK-2)',
       title: 'string',
       unit: 'm|m2|m3|kg|ton|pcs|lt|set|hr|day|lump',

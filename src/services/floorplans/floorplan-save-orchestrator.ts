@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Centralizes the 4-step FileRecord save pattern that was duplicated across
- * FloorFloorplanService, UnitFloorplanService, and BuildingFloorplanService.
+ * FloorFloorplanService, PropertyFloorplanService, and BuildingFloorplanService.
  *
  * The 4 steps:
  * 1. FileRecordService.createPendingFileRecord() → fileId, storagePath
@@ -47,7 +47,7 @@ const logger = createModuleLogger('FloorplanSaveOrchestrator');
  * Discriminated union for the file data to upload.
  *
  * - `json`:      Raw JSON (FloorFloorplanService scene data)
- * - `gzip-json`: Gzipped JSON (UnitFloorplanService / BuildingFloorplanService scene)
+ * - `gzip-json`: Gzipped JSON (PropertyFloorplanService / BuildingFloorplanService scene)
  * - `raw-file`:  Browser File object (DXF/PDF original files)
  */
 export type FloorplanPayload =

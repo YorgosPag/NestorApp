@@ -32,7 +32,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import type { UnitLevel } from '@/types/unit';
+import type { PropertyLevel } from '@/types/property';
 import type { FloorOption } from '@/services/multi-level.service';
 import { buildLevelsFromSelection } from '@/services/multi-level.service';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -46,9 +46,9 @@ export interface FloorMultiSelectFieldProps {
   /** Building ID to fetch floors for — null/undefined = disabled */
   buildingId: string | null | undefined;
   /** Current levels (from unit data) */
-  value: UnitLevel[];
+  value: PropertyLevel[];
   /** Callback when levels change */
-  onChange: (levels: UnitLevel[]) => void;
+  onChange: (levels: PropertyLevel[]) => void;
   /** Field label */
   label: string;
   /** Hint shown when no building is linked */

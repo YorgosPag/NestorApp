@@ -233,7 +233,7 @@ export async function requireUnitInTenant(params: {
     throw new Error('Firebase Admin not initialized');
   }
 
-  const doc = await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unitId).get();
+  const doc = await getAdminFirestore().collection(COLLECTIONS.PROPERTIES).doc(unitId).get();
 
   if (!doc.exists) {
     await logAuditEvent(ctx, 'access_denied', unitId, 'unit', {

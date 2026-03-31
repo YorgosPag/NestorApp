@@ -235,10 +235,10 @@ export interface NavigationActions {
   getBuildingCount: (projectId: string) => number;
   /** 🏢 ENTERPRISE: Get all buildings for a project in real-time */
   getBuildingsForProject: (projectId: string) => RealtimeBuildingRef[];
-  /** 🏢 ENTERPRISE: Get real-time unit count for a building */
-  getUnitCount: (buildingId: string) => number;
-  /** 🏢 ENTERPRISE: Get all units for a building in real-time */
-  getUnitsForBuilding: (buildingId: string) => RealtimeUnitRef[];
+  /** 🏢 ENTERPRISE: Get real-time property count for a building */
+  getPropertyCount: (buildingId: string) => number;
+  /** 🏢 ENTERPRISE: Get all properties for a building in real-time */
+  getPropertiesForBuilding: (buildingId: string) => RealtimeUnitRef[];
 }
 
 /** 🏢 ENTERPRISE: Reference to a building from real-time system */

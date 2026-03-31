@@ -305,7 +305,7 @@ export const CRM_TASKS_DEFINITION: DomainDefinition = {
     { key: 'contactId', labelKey: 'domains.crmTasks.fields.contact', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'individuals', refDisplayField: 'displayName' },
     { key: 'opportunityId', labelKey: 'domains.crmTasks.fields.opportunity', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'opportunities', refDisplayField: 'title' },
     { key: 'projectId', labelKey: 'domains.crmTasks.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'projects', refDisplayField: 'name' },
-    { key: 'unitId', labelKey: 'domains.crmTasks.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'units', refDisplayField: 'name' },
+    { key: 'unitId', labelKey: 'domains.crmTasks.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
     // --- Computed: G4 — Overdue (all platforms) ---
     {
       key: 'isOverdue',

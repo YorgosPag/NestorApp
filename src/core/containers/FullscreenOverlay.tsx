@@ -127,7 +127,7 @@ export function FullscreenOverlay({
   const fullscreenContent = (
     <section
       className={cn(
-        'fixed inset-0 z-50 flex flex-col overflow-auto',
+        'fixed inset-0 z-[60] flex flex-col overflow-y-auto',
         colors.bg.primary,
         fullscreenClassName,
       )}
@@ -136,7 +136,7 @@ export function FullscreenOverlay({
       aria-modal
     >
       {headerContent && (
-        <header className="flex items-center justify-between shrink-0 border-b px-4 py-2">
+        <header className="flex items-center justify-between shrink-0 border-b px-2 py-2">
           <span className="flex items-center gap-2">{headerContent}</span>
           <FullscreenToggleButton isFullscreen onToggle={onToggle} />
         </header>

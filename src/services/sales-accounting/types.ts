@@ -43,10 +43,10 @@ export interface SaleLineItem {
 
 /** Κοινά πεδία για όλα τα sales-accounting events */
 export interface SalesAccountingEventBase {
-  /** Firestore unit ID */
-  unitId: string;
-  /** Ανθρώπινο όνομα μονάδας (π.χ. "Α-101") */
-  unitName: string;
+  /** Firestore property ID */
+  propertyId: string;
+  /** Ανθρώπινο όνομα ακινήτου (π.χ. "Α-101") */
+  propertyName: string;
   /** Firestore project ID (αν υπάρχει) */
   projectId: string | null;
   /** Firestore contact ID αγοραστή (αν υπάρχει) */

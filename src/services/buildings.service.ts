@@ -8,7 +8,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('BuildingsService');
 
-const UNITS_COLLECTION = COLLECTIONS.UNITS;
+const UNITS_COLLECTION = COLLECTIONS.PROPERTIES;
 
 export async function getBuildingStats(buildingId: string): Promise<BuildingStats> {
   try {

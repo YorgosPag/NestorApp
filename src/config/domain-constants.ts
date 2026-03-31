@@ -100,8 +100,8 @@ export const ENTITY_TYPES = {
   COMPANY: 'company',
   /** Project entity */
   PROJECT: 'project',
-  /** Unit entity */
-  UNIT: 'unit',
+  /** Property entity */
+  PROPERTY: 'property',
   /** Building entity */
   BUILDING: 'building',
   /** Floor entity */
@@ -335,14 +335,14 @@ export const FLOORPLAN_PURPOSES = {
   FLOOR_ELECTRICAL: 'floor-electrical',
   /** Floor plumbing plan */
   FLOOR_PLUMBING: 'floor-plumbing',
-  /** Unit architectural plan */
-  UNIT: 'unit-floorplan',
-  /** Unit section drawing */
-  UNIT_SECTION: 'unit-section',
-  /** Unit electrical plan */
-  UNIT_ELECTRICAL: 'unit-electrical',
-  /** Unit plumbing plan */
-  UNIT_PLUMBING: 'unit-plumbing',
+  /** Property architectural plan */
+  PROPERTY: 'property-floorplan',
+  /** Property section drawing */
+  PROPERTY_SECTION: 'property-section',
+  /** Property electrical plan */
+  PROPERTY_ELECTRICAL: 'property-electrical',
+  /** Property plumbing plan */
+  PROPERTY_PLUMBING: 'property-plumbing',
 } as const;
 
 export type FloorplanPurpose = typeof FLOORPLAN_PURPOSES[keyof typeof FLOORPLAN_PURPOSES];
@@ -585,20 +585,20 @@ export const API_ROUTES = {
     BY_ID: (id: string) => `/api/floors/${id}` as const,
   },
 
-  // ── Units ─────────────────────────────────────────────────────────────
-  UNITS: {
-    LIST: '/api/units',
-    CREATE: '/api/units/create',
-    BY_ID: (id: string) => `/api/units/${id}` as const,
-    ADMIN_LINK: '/api/units/admin-link',
-    HIERARCHY: (unitId: string) => `/api/units/${unitId}/hierarchy` as const,
-    ACTIVITY: (unitId: string) => `/api/units/${unitId}/activity` as const,
-    PAYMENT_PLAN: (unitId: string) => `/api/units/${unitId}/payment-plan` as const,
-    PAYMENTS: (unitId: string) => `/api/units/${unitId}/payments` as const,
-    INSTALLMENTS: (unitId: string) => `/api/units/${unitId}/payment-plan/installments` as const,
-    LOAN: (unitId: string) => `/api/units/${unitId}/payment-plan/loan` as const,
-    LOANS: (unitId: string) => `/api/units/${unitId}/payment-plan/loans` as const,
-    CHEQUES: (unitId: string) => `/api/units/${unitId}/cheques` as const,
+  // ── Properties ────────────────────────────────────────────────────────
+  PROPERTIES: {
+    LIST: '/api/properties',
+    CREATE: '/api/properties/create',
+    BY_ID: (id: string) => `/api/properties/${id}` as const,
+    ADMIN_LINK: '/api/properties/admin-link',
+    HIERARCHY: (propertyId: string) => `/api/properties/${propertyId}/hierarchy` as const,
+    ACTIVITY: (propertyId: string) => `/api/properties/${propertyId}/activity` as const,
+    PAYMENT_PLAN: (propertyId: string) => `/api/properties/${propertyId}/payment-plan` as const,
+    PAYMENTS: (propertyId: string) => `/api/properties/${propertyId}/payments` as const,
+    INSTALLMENTS: (propertyId: string) => `/api/properties/${propertyId}/payment-plan/installments` as const,
+    LOAN: (propertyId: string) => `/api/properties/${propertyId}/payment-plan/loan` as const,
+    LOANS: (propertyId: string) => `/api/properties/${propertyId}/payment-plan/loans` as const,
+    CHEQUES: (propertyId: string) => `/api/properties/${propertyId}/cheques` as const,
   },
 
   // ── Parking ───────────────────────────────────────────────────────────
@@ -621,7 +621,7 @@ export const API_ROUTES = {
   // ── Contacts ──────────────────────────────────────────────────────────
   CONTACTS: {
     BY_ID: (id: string) => `/api/contacts/${id}` as const,
-    UNITS: (contactId: string) => `/api/contacts/${contactId}/units` as const,
+    PROPERTIES: (contactId: string) => `/api/contacts/${contactId}/properties` as const,
     SEARCH_INDIVIDUALS: '/api/contacts/search-individuals',
   },
 
@@ -635,8 +635,8 @@ export const API_ROUTES = {
 
   // ── Sales ─────────────────────────────────────────────────────────────
   SALES: {
-    ACCOUNTING_EVENT: (unitId: string) => `/api/sales/${unitId}/accounting-event` as const,
-    APPURTENANCE_SYNC: (unitId: string) => `/api/sales/${unitId}/appurtenance-sync` as const,
+    ACCOUNTING_EVENT: (propertyId: string) => `/api/sales/${propertyId}/accounting-event` as const,
+    APPURTENANCE_SYNC: (propertyId: string) => `/api/sales/${propertyId}/appurtenance-sync` as const,
   },
 
   // ── Files & Floorplans ────────────────────────────────────────────────
@@ -889,11 +889,11 @@ export const MESSAGES_PAGE_SIZE = 50;
 export const MESSAGE_PREVIEW_LENGTH = 120;
 
 // ============================================================================
-// MULTI-LEVEL UNIT DETECTION (ADR-236)
+// MULTI-LEVEL PROPERTY DETECTION (ADR-236)
 // ============================================================================
 
 /**
- * 🏢 ENTERPRISE: Unit types that can span multiple floors
+ * 🏢 ENTERPRISE: Property types that can span multiple floors
  * SSoT for multi-level detection — includes both canonical English
  * codes and legacy Greek values for backward compatibility.
  *
@@ -914,8 +914,8 @@ export const MULTI_LEVEL_CAPABLE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Check if a unit type supports multi-level floors.
- * @param type — UnitType value (canonical or legacy)
+ * Check if a property type supports multi-level floors.
+ * @param type — PropertyType value (canonical or legacy)
  */
 export function isMultiLevelCapableType(type: string | undefined | null): boolean {
   if (!type) return false;

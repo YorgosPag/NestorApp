@@ -1,22 +1,22 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Unit Fields Form Types
+ * 🏢 ENTERPRISE: Property Fields Form Types
  * =============================================================================
  *
- * Shared types between UnitFieldsBlock (orchestrator) and UnitFieldsEditForm (renderer).
+ * Shared types between PropertyFieldsBlock (orchestrator) and PropertyFieldsEditForm (renderer).
  * Extracted for SRP compliance (ADR N.7.1).
  *
- * @module features/property-details/components/unit-fields-form-types
+ * @module features/property-details/components/property-fields-form-types
  * @since 2026-03-27
  */
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/unit';
+import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 import type { TFunction } from 'i18next';
 
-/** Flat form data state for the unit fields form */
-export interface UnitFieldsFormData {
+/** Flat form data state for the property fields form */
+export interface PropertyFieldsFormData {
   name: string;
   code: string;
   type: string;
@@ -47,11 +47,11 @@ export interface UnitFieldsFormData {
 }
 
 /** Props for the form renderer component */
-export interface UnitFieldsEditFormProps {
+export interface PropertyFieldsEditFormProps {
   /** Current form state */
-  formData: UnitFieldsFormData;
+  formData: PropertyFieldsFormData;
   /** State setter */
-  setFormData: Dispatch<SetStateAction<UnitFieldsFormData>>;
+  setFormData: Dispatch<SetStateAction<PropertyFieldsFormData>>;
   /** Original property from Firestore */
   property: Property;
   /** Whether form is in editing mode */

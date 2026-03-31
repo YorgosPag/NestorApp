@@ -7,7 +7,7 @@
  * Compact design with 8px spacing to match application standard.
  *
  * Active level is controlled by parent (PropertyDetailsContent) for bidirectional
- * synchronization with LevelTabStrip in UnitFieldsBlock.
+ * synchronization with LevelTabStrip in PropertyFieldsBlock.
  *
  * @module components/property-viewer/details/MultiLevelNavigation
  * @since ADR-236 — Multi-Level Property Management
@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
-import type { UnitLevel } from '@/types/unit';
+import type { PropertyLevel } from '@/types/property';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -42,7 +42,7 @@ interface MultiLevelNavigationProps {
   /** Building ID for floor subscription */
   buildingId?: string | null;
   /** Callback when levels change (edit mode) */
-  onLevelsChange?: (levels: UnitLevel[]) => void;
+  onLevelsChange?: (levels: PropertyLevel[]) => void;
 }
 
 export function MultiLevelNavigation({

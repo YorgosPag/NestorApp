@@ -128,13 +128,13 @@ GENERAL RULES:
 
 ADMIN INTENT TYPES (choose the most specific match — PREFER specific intents over general_inquiry):
 
-- admin_contact_search: Any request to FIND, VIEW, LIST, or CHECK contacts/people/companies in the system. Includes: searching by name, listing contacts by type, checking a contact's data completeness or missing fields. Also covers questions like "ποιοι είναι οι πελάτες μας", "δείξε επαφές", "τι στοιχεία έχουμε για τον X". If a specific name is given, extract it in contactName. If listing all, set contactName to empty string. IMPORTANT: Questions about a SPECIFIC contact's data/fields → this intent, NOT admin_unit_stats.
+- admin_contact_search: Any request to FIND, VIEW, LIST, or CHECK contacts/people/companies in the system. Includes: searching by name, listing contacts by type, checking a contact's data completeness or missing fields. Also covers questions like "ποιοι είναι οι πελάτες μας", "δείξε επαφές", "τι στοιχεία έχουμε για τον X". If a specific name is given, extract it in contactName. If listing all, set contactName to empty string. IMPORTANT: Questions about a SPECIFIC contact's data/fields → this intent, NOT admin_property_stats.
 
 - admin_project_status: Any question about CONSTRUCTION PROJECTS — single project status, listing all projects, or searching by criteria. Covers BOTH: single-project queries ("τι γίνεται με το έργο Πανόραμα") AND multi-project queries ("ποια έργα έχουν gantt", "πόσα έργα σε εξέλιξη", "δείξε μου τα ολοκληρωμένα", "σε ποια έργα υπάρχει gantt/χρονοδιάγραμμα"). Use this for ANY question about projects, progress, timelines, Gantt charts, or construction status.
 
 - admin_send_email: Any request to SEND a message/email to someone. Covers: "στείλε email", "στείλε μήνυμα", "γράψε στον X ότι...".
 
-- admin_unit_stats: ANY question about REAL ESTATE PROPERTIES and BUSINESS DATA. This is the broadest business intelligence intent. Covers ALL of the following:
+- admin_property_stats: ANY question about REAL ESTATE PROPERTIES and BUSINESS DATA. This is the broadest business intelligence intent. Covers ALL of the following:
   • Property questions: houses (σπίτια), apartments (διαμερίσματα), units, plots (οικόπεδα), studios, offices, shops, parking spots — ANY type of property
   • Status questions: sold (πωλημένα), available (διαθέσιμα), reserved (κρατημένα) — whether asking counts, yes/no, or lists
   • Business totals: how many contacts, how many projects, overall statistics
@@ -146,7 +146,7 @@ ADMIN INTENT TYPES (choose the most specific match — PREFER specific intents o
 
 - admin_create_contact: Any request to CREATE/ADD a new contact. Covers: "δημιούργησε επαφή", "πρόσθεσε επαφή", "νέα επαφή", "φτιάξε επαφή". Extract: contactName, email, phone, contactType.
 
-- admin_update_contact: Any request to UPDATE/MODIFY/ADD/REMOVE an existing contact's field. Covers: "πρόσθεσε τηλέφωνο", "βάλε ΑΦΜ", "άλλαξε email", "ενημέρωσε διεύθυνση", "αφαίρεσε τηλέφωνο", "σβήσε email", "θέλω τον αριθμό ταυτότητας στη X" (= add ID number to contact X). IMPORTANT: Any mention of "ταυτότητα", "ΑΔΤ", "αριθμό ταυτότητας" in context of a PERSON → this intent, NOT admin_unit_stats. Extract: contactName, fieldName, fieldValue.
+- admin_update_contact: Any request to UPDATE/MODIFY/ADD/REMOVE an existing contact's field. Covers: "πρόσθεσε τηλέφωνο", "βάλε ΑΦΜ", "άλλαξε email", "ενημέρωσε διεύθυνση", "αφαίρεσε τηλέφωνο", "σβήσε email", "θέλω τον αριθμό ταυτότητας στη X" (= add ID number to contact X). IMPORTANT: Any mention of "ταυτότητα", "ΑΔΤ", "αριθμό ταυτότητας" in context of a PERSON → this intent, NOT admin_property_stats. Extract: contactName, fieldName, fieldValue.
 
 - admin_general_question: General questions, advice, translation, or knowledge requests that don't map to a specific business ACTION but can be answered conversationally. Covers: "πώς γράφεται...", "τι σημαίνει...", "ποια η διαφορά...", "πώς μεταφράζεται...", casual conversation, greetings, thanks. Use this INSTEAD of general_inquiry for admin messages.
 
@@ -158,7 +158,7 @@ ENTITY EXTRACTION RULES:
 - For admin_send_email: Extract "recipientName" and "emailContent"
 - For admin_create_contact: Extract "contactName", "email", "phone", "contactType" (default: "individual")
 - For admin_update_contact: Extract "contactName", "fieldName" (e.g., "phone", "email", "vatNumber", "idNumber", "profession"), "fieldValue" (empty if removing)
-- For admin_unit_stats: Extract "projectName" if a specific project is mentioned (otherwise means all projects)
+- For admin_property_stats: Extract "projectName" if a specific project is mentioned (otherwise means all projects)
 
 RULES:
 - SEMANTIC UNDERSTANDING: Understand what the admin MEANS, not just the words they use. Greek has many ways to express the same idea — handle all variations naturally.

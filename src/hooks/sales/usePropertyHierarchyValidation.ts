@@ -23,7 +23,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { RealtimeService } from '@/services/realtime';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 
 // ============================================================================
 // TYPES
@@ -57,26 +57,26 @@ export interface HierarchyValidationState {
 // ============================================================================
 
 /**
- * Real-time hierarchy validation for a unit.
+ * Real-time hierarchy validation for a property.
  *
  * Checks (in hierarchy order):
  * 1. Company — project.companyId must exist
  * 2. Project — building.projectId must exist
- * 3. Building — unit.buildingId must exist
- * 4. Floor — unit.floorId must exist
+ * 3. Building — property.buildingId must exist
+ * 4. Floor — property.floorId must exist
  *
- * @param unit - The unit object (from parent component — always fresh)
+ * @param property - The property object (from parent component — always fresh)
  * @param enabled - Whether validation is active (tie to dialog `open` state)
  */
-export function useUnitHierarchyValidation(
-  unit: Unit,
+export function usePropertyHierarchyValidation(
+  property: Property,
   enabled = true
 ): HierarchyValidationState {
-  // ── Unit-level: read directly from prop (no subscription needed) ──
-  const buildingId = unit.buildingId || null;
+  // ── Property-level: read directly from prop (no subscription needed) ──
+  const buildingId = property.buildingId || null;
   // 🔒 ADR-232: Only floorId (document reference) counts as valid floor link.
   // Legacy numeric floor is NOT sufficient for sales operations.
-  const floorId = unit.floorId || null;
+  const floorId = property.floorId || null;
   const hasFloor = !!floorId;
 
   // ── Upstream chain state ──

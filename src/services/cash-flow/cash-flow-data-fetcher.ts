@@ -67,7 +67,7 @@ export async function fetchInstallments(
 ): Promise<RawInstallment[]> {
   const db = getAdminFirestore();
   const snap = await db
-    .collectionGroup(SUBCOLLECTIONS.UNIT_PAYMENT_PLANS)
+    .collectionGroup(SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS)
     .where('companyId', '==', filter.companyId)
     .where('status', 'in', ['active', 'draft'])
     .get();

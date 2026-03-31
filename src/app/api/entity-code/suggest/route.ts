@@ -26,7 +26,7 @@ import {
   parseEntityCode,
 } from '@/services/entity-code.service';
 import { extractBuildingLetter } from '@/config/entity-code-config';
-import type { UnitType } from '@/types/unit';
+import type { PropertyType } from '@/types/property';
 import type { ParkingLocationZone } from '@/types/parking';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -60,7 +60,7 @@ export const GET = withStandardRateLimit(
       const entityType = searchParams.get('entityType') as 'unit' | 'parking' | 'storage';
       const buildingId = searchParams.get('buildingId');
       const floorLevelStr = searchParams.get('floorLevel');
-      const unitType = searchParams.get('unitType') as UnitType | null;
+      const unitType = searchParams.get('unitType') as PropertyType | null;
       const locationZone = searchParams.get('locationZone') as ParkingLocationZone | null;
 
       // Validation
@@ -151,7 +151,7 @@ async function findNextSequence(
 
   switch (entityType) {
     case 'unit':
-      collectionName = COLLECTIONS.UNITS;
+      collectionName = COLLECTIONS.PROPERTIES;
       codeField = 'code';
       break;
     case 'parking':

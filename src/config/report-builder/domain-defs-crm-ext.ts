@@ -141,7 +141,7 @@ export const COMMUNICATIONS_DEFINITION: DomainDefinition = {
     // References
     { key: 'contactId', labelKey: 'domains.communications.fields.contact', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'individuals', refDisplayField: 'displayName' },
     { key: 'projectId', labelKey: 'domains.communications.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'projects', refDisplayField: 'name' },
-    { key: 'unitId', labelKey: 'domains.communications.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'units', refDisplayField: 'name' },
+    { key: 'unitId', labelKey: 'domains.communications.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
     { key: 'opportunityId', labelKey: 'domains.communications.fields.opportunity', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'opportunities', refDisplayField: 'title' },
     // --- Computed: G6 — Days Since Contact (all platforms) ---
     {

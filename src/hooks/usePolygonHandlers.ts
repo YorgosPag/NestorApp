@@ -4,7 +4,7 @@
 import type { Property } from '@/types/property-viewer';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 // 🏢 ENTERPRISE: Firestore persistence for property updates
-import { updateUnit } from '@/services/units.service';
+import { updateProperty } from '@/services/properties.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('usePolygonHandlers');
@@ -115,7 +115,7 @@ export function usePolygonHandlers({
 
       // 🏢 ENTERPRISE: Persist to Firestore for data durability
       try {
-          await updateUnit(propertyId, updates);
+          await updateProperty(propertyId, updates);
       } catch (error) {
           logger.error('Failed to persist property update to Firestore', { error });
           // Note: Local state is already updated for optimistic UI

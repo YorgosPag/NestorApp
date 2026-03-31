@@ -55,7 +55,7 @@ const TOOL_TO_INTENT_MAP: Record<string, string> = {
   search_contacts: 'admin_contact_search',
   get_project_status: 'admin_project_status',
   send_email: 'admin_send_email',
-  get_business_stats: 'admin_unit_stats',
+  get_business_stats: 'admin_property_stats',
   create_contact: 'admin_create_contact',
   update_contact_field: 'admin_update_contact',
   remove_contact_field: 'admin_update_contact',
@@ -347,6 +347,7 @@ function cleanTextReply(rawText: string): string {
   const trimmed = rawText.trim();
 
   // Strip markdown code blocks: ```json ... ``` or ``` ... ```
+  // eslint-disable-next-line custom/no-hardcoded-strings
   const codeBlockMatch = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
   const jsonCandidate = codeBlockMatch ? codeBlockMatch[1].trim() : trimmed;
 

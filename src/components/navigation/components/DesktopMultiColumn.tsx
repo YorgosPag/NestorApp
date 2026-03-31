@@ -75,7 +75,7 @@ export function DesktopMultiColumn({
     loadCompanies,
     selectUnit,
     getBuildingCount,
-    getUnitCount,
+    getPropertyCount,
   } = useNavigation();
 
   const { warning } = useNotifications();
@@ -175,7 +175,7 @@ export function DesktopMultiColumn({
 
   const handleDeleteBuilding = () => {
     if (!selectedBuilding) return;
-    const totalUnits = getUnitCount(selectedBuilding.id);
+    const totalUnits = getPropertyCount(selectedBuilding.id);
     if (totalUnits > 0) { showDeleteWarning('building', totalUnits); return; }
     setPendingUnlinkBuilding({ id: selectedBuilding.id, name: selectedBuilding.name });
     setBuildingDialogOpen(true);
@@ -358,7 +358,7 @@ export function DesktopMultiColumn({
             <ul className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto" role="list"
                 aria-label={t('columns.buildings.listLabel')} data-navigation-scroll="true">
               {filteredProjectBuildings.map(building => {
-                const unitCount = getUnitCount(building.id);
+                const unitCount = getPropertyCount(building.id);
                 const hasUnits = unitCount > 0;
                 return (
                   <li key={building.id}>

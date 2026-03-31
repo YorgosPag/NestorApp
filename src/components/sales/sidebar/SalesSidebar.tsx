@@ -11,11 +11,11 @@ import React, { useState, useCallback } from 'react';
 import { ShoppingBag, ExternalLink } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
-import { SalesUnitListCard } from '@/components/sales/cards/SalesUnitListCard';
+import { SalesPropertyListCard } from '@/components/sales/cards/SalesPropertyListCard';
 import { SalesQuickFilters } from '@/components/sales/page/SalesQuickFilters';
 import { SalesDetailsHeader } from '@/components/sales/sidebar/SalesDetailsHeader';
 import { SaleInfoContent } from '@/components/sales/tabs/SaleInfoContent';
-import { UnitSummaryContent } from '@/components/sales/tabs/UnitSummaryContent';
+import { PropertySummaryContent } from '@/components/sales/tabs/PropertySummaryContent';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 import {
   ChangePriceDialog,
@@ -42,7 +42,7 @@ import {
 } from 'lucide-react';
 import { LegalTabContent } from '@/components/sales/legal/LegalTabContent';
 import { PaymentTabContent } from '@/components/sales/payments/PaymentTabContent';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -52,8 +52,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // =============================================================================
 
 interface SalesSidebarProps {
-  units: Unit[];
-  selectedUnit: Unit | null;
+  units: Property[];
+  selectedUnit: Property | null;
   onSelectUnit: (unitId: string) => void;
   selectedUnitId: string | null;
   /** Quick filter: selected commercial status */
@@ -95,19 +95,19 @@ const LEGAL_TAB: SalesTabConfig = { id: 'legal', icon: Scale, labelKey: 'sales.t
 const PAYMENT_TAB: SalesTabConfig = { id: 'payments', icon: CreditCard, labelKey: 'sales.tabs.payments', defaultLabel: 'Πληρωμές' };
 
 /** Check if unit has reserved/sold status → show legal tab */
-function shouldShowLegalTab(unit: Unit | null): boolean {
+function shouldShowLegalTab(unit: Property | null): boolean {
   if (!unit) return false;
   return unit.commercialStatus === 'reserved' || unit.commercialStatus === 'sold';
 }
 
 /** Check if unit has reserved/sold status → show payment tab */
-function shouldShowPaymentTab(unit: Unit | null): boolean {
+function shouldShowPaymentTab(unit: Property | null): boolean {
   if (!unit) return false;
   return unit.commercialStatus === 'reserved' || unit.commercialStatus === 'sold';
 }
 
 /** Build dynamic tabs array */
-function buildTabs(unit: Unit | null): SalesTabConfig[] {
+function buildTabs(unit: Property | null): SalesTabConfig[] {
   const tabs = [...BASE_SALES_TABS];
   if (shouldShowLegalTab(unit)) {
     // Insert legal tab after sale-info (position 1)
@@ -191,7 +191,7 @@ export function SalesSidebar({
           </TabsContent>
 
           <TabsContent value="unit-summary" className="flex-1">
-            <UnitSummaryContent data={selectedUnit} />
+            <PropertySummaryContent data={selectedUnit} />
           </TabsContent>
 
           {/* Legal Tab — ADR-230 (conditional, reserved/sold only) */}
@@ -265,7 +265,7 @@ export function SalesSidebar({
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-1 p-1 sm:p-2">
           {units.map(unit => (
-            <SalesUnitListCard
+            <SalesPropertyListCard
               key={unit.id}
               unit={unit}
               isSelected={unit.id === selectedUnitId}

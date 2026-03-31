@@ -35,7 +35,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import type { CreateInstallmentInput, CreatePaymentPlanInput } from '@/types/payment-plan';
 import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
@@ -50,7 +50,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // ============================================================================
 
 interface PaymentTabContentProps {
-  unit: Unit;
+  unit: Property;
 }
 
 export function PaymentTabContent({ unit }: PaymentTabContentProps) {
@@ -74,12 +74,12 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
 
   // ADR-244: Multi-owner support
   const owners = (unit.commercial?.owners ?? null) as PropertyOwnerEntry[] | null;
-  const resolvedProjectId = (unit as Unit & { projectId?: string }).projectId ?? unit.project ?? '';
+  const resolvedProjectId = (unit as Property & { projectId?: string }).projectId ?? unit.project ?? '';
 
   // ADR-244: Create split plans — delegates to hook (SSoT for API calls)
   const handleCreateSplit = useCallback(async (
     splitOwners: PropertyOwnerEntry[],
-    baseInput: Omit<CreatePaymentPlanInput, 'unitId' | 'ownerContactId' | 'ownerName' | 'totalAmount' | 'installments'>,
+    baseInput: Omit<CreatePaymentPlanInput, 'propertyId' | 'ownerContactId' | 'ownerName' | 'totalAmount' | 'installments'>,
     totalPrice: number,
     baseInstallments: CreateInstallmentInput[],
   ): Promise<{ success: boolean; error?: string }> => {

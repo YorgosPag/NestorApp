@@ -59,7 +59,7 @@ export class PaymentReportService {
 
     // Fetch ALL units for this project — single query
     const unitsSnap = await db
-      .collection(COLLECTIONS.UNITS)
+      .collection(COLLECTIONS.PROPERTIES)
       .where('project', '==', projectId)
       .get();
 
@@ -161,7 +161,7 @@ export class PaymentReportService {
     // Firestore doesn't support > on nested fields directly,
     // so we query all units with a paymentSummary and filter in-memory
     const unitsSnap = await db
-      .collection(COLLECTIONS.UNITS)
+      .collection(COLLECTIONS.PROPERTIES)
       .where('commercial.paymentSummary.overdueInstallments', '>', 0)
       .get();
 

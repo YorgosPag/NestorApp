@@ -123,7 +123,7 @@ export const AI_ERRORS = {
 export const ALLOWED_READ_COLLECTIONS = new Set([
   COLLECTIONS.PROJECTS,
   COLLECTIONS.BUILDINGS,
-  COLLECTIONS.UNITS,
+  COLLECTIONS.PROPERTIES,
   COLLECTIONS.FLOORS,
   COLLECTIONS.CONTACTS,
   COLLECTIONS.CONSTRUCTION_PHASES,
@@ -158,7 +158,7 @@ export const ALLOWED_WRITE_COLLECTIONS = new Set([
   COLLECTIONS.APPOINTMENTS,
   COLLECTIONS.ACTIVITIES,
   COLLECTIONS.LEADS,
-  COLLECTIONS.UNITS,
+  COLLECTIONS.PROPERTIES,
   COLLECTIONS.PROJECTS,
   COLLECTIONS.BUILDINGS,
   COLLECTIONS.CONSTRUCTION_PHASES,
@@ -246,14 +246,14 @@ export function enforceRoleAccess(
   // SPEC-257B: Unit-level scoping for buyer/owner/tenant
   const linkedUnitIds = ctx.contactMeta?.linkedUnitIds ?? [];
   if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length === 0) {
-    const unitSensitive = new Set([COLLECTIONS.UNITS, COLLECTIONS.FILES, COLLECTIONS.PAYMENTS]);
+    const unitSensitive = new Set([COLLECTIONS.PROPERTIES, COLLECTIONS.FILES, COLLECTIONS.PAYMENTS]);
     if (unitSensitive.has(collection)) {
       return { allowed: false, result: { success: false, error: AI_ERRORS.NO_LINKED_UNITS } };
     }
     return { allowed: true, filters };
   }
   if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length > 0) {
-    if (collection === COLLECTIONS.UNITS) {
+    if (collection === COLLECTIONS.PROPERTIES) {
       const hasIdFilter = filters.some(f => f.field === 'id');
       if (!hasIdFilter) {
         filters = [...filters, {
@@ -278,7 +278,7 @@ export function enforceRoleAccess(
   }
 
   // Project-level scoping
-  const projectScopedByProjectId = new Set([COLLECTIONS.BUILDINGS, COLLECTIONS.UNITS]);
+  const projectScopedByProjectId = new Set([COLLECTIONS.BUILDINGS, COLLECTIONS.PROPERTIES]);
   if (projectScopedByProjectId.has(collection) && linkedProjectIds.length > 0) {
     const hasProjectFilter = filters.some(f => f.field === 'projectId');
     if (!hasProjectFilter) {

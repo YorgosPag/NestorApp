@@ -76,7 +76,7 @@ describe('Builder Route — Valid Requests', () => {
 
   it('accepts request with filters', () => {
     const req: BuilderQueryRequest = {
-      domain: 'units',
+      domain: 'properties',
       filters: [
         { id: '1', fieldKey: 'commercialStatus', operator: 'eq', value: 'sold' },
         { id: '2', fieldKey: 'areas.gross', operator: 'gt', value: 100 },
@@ -311,7 +311,7 @@ describe('Builder Route — Security Edge Cases', () => {
 
   it('validates all Phase 1-6 domains accept valid requests', () => {
     const testDomains: BuilderQueryRequest['domain'][] = [
-      'projects', 'buildings', 'floors', 'units',
+      'projects', 'buildings', 'floors', 'properties',
       'parking', 'storage', 'individuals', 'companies',
     ];
     for (const domain of testDomains) {

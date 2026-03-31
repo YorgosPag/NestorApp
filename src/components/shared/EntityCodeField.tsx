@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 import { isValidEntityCodeFormat } from '@/services/entity-code.service';
 import type { ParkingLocationZone } from '@/types/parking';
-import type { UnitType } from '@/types/unit';
+import type { PropertyType } from '@/types/property';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -46,7 +46,7 @@ interface EntityCodeFieldProps {
   /** Floor level for code suggestion context */
   floorLevel: number;
   /** Unit type (required for entityType='unit') */
-  unitType?: UnitType;
+  unitType?: PropertyType;
   /** Location zone (parking only) */
   locationZone?: ParkingLocationZone;
   /** Label text */

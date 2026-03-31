@@ -1,0 +1,175 @@
+# ADR-269: Unit to Property Rename — Naming Standardization
+
+| Metadata | Value |
+|----------|-------|
+| **Status** | APPROVED |
+| **Date** | 2026-03-31 |
+| **Category** | Entity Systems |
+| **Canonical Location** | `src/types/property.ts` |
+| **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
+
+---
+
+## 1. Context
+
+Η εφαρμογή χρησιμοποιεί τρεις διαφορετικούς όρους για την ίδια οντότητα (ακίνητο μέσα σε κτίριο):
+
+### The Problem
+
+- **"Unit"** — στα types (`src/types/unit.ts`), Firestore collection (`units`), services (`units.service.ts`)
+- **"Property"** — στα components, navigation, i18n (`properties.json`)
+- **"Apartment"** — στα routes (`/spaces/apartments`), sidebar labels, sales pages
+
+Αυτό δημιουργεί:
+- Σύγχυση σε developers (ποιον όρο χρησιμοποιώ πού;)
+- Ασυνέπεια στο codebase (3 type files για το ίδιο πράγμα)
+- Πρόβλημα onboarding όταν μπουν εξωτερικοί συνεργάτες
+- Τεχνικό χρέος που αυξάνεται με κάθε νέο feature
+
+### Industry Standard
+
+| Platform | Term Used |
+|----------|-----------|
+| Google Real Estate | Property |
+| Procore | Property |
+| Salesforce Real Estate | Property |
+| Yardi | Property / Unit (unit = subunit of property) |
+| AppFolio | Property |
+
+---
+
+## 2. Decision
+
+**Υιοθέτηση "Property" ως canonical term παντού στο codebase.**
+
+### Naming Convention
+
+| Πριν | Μετά |
+|------|------|
+| Unit (interface) | Property |
+| UnitType | PropertyType |
+| UnitDoc | PropertyDoc |
+| UnitModel | PropertyModel |
+| UnitCommercialData | PropertyCommercialData |
+| UnitCoverage | PropertyCoverage |
+| UnitLevel | PropertyLevel |
+| UnitSortKey | PropertySortKey |
+| units (Firestore collection) | properties |
+| COLLECTIONS.UNITS | COLLECTIONS.PROPERTIES |
+| generateUnitId() | generatePropertyId() |
+| /api/units | /api/properties |
+| /spaces/apartments | /spaces/properties |
+| /sales/available-apartments | /sales/available-properties |
+
+### Hierarchy (δεν αλλάζει)
+
+```
+Project → Building → Floor → Property (πρώην Unit), Storage, Parking
+```
+
+### What "Apartment" becomes
+
+"Apartment" γίνεται **μόνο τιμή** του `PropertyType` enum:
+```typescript
+type PropertyType = 'apartment' | 'apartment_1br' | 'apartment_2br' | 'apartment_3br' | 'studio' | 'maisonette' | 'penthouse' | 'loft' | 'detached_house' | 'villa' | 'shop' | 'office' | 'hall' | 'storage';
+```
+
+### Canonical Source
+
+```
+src/types/property.ts          — Core type definitions
+src/services/properties.service.ts — Data service
+src/config/firestore-collections.ts — COLLECTIONS.PROPERTIES
+```
+
+### What does NOT change
+
+| Item | Reason |
+|------|--------|
+| `src/config/procurement-units.ts` | BOQ measurement units — different concept |
+| `src/types/boq/units.ts` | BOQ measurement units — different concept |
+| `storage_units` Firestore collection | Different entity (storage spaces) |
+| Firestore subcollection values (photos, documents, history) | Only TS constant names change |
+| PropertyType values (apartment, maisonette, etc.) | These are property subtypes, correct as-is |
+
+---
+
+## 3. Consequences
+
+### Positive
+
+- Single term for single concept across entire codebase
+- Industry-standard naming (Google, Procore, Salesforce pattern)
+- Eliminates 3 duplicate type files → 1 canonical source
+- Clear onboarding for new developers
+- Clean URL structure (/properties, /api/properties)
+
+### Negative
+
+- ~120 files affected (mechanical rename)
+- Firestore collection rename requires data recreation (test data only)
+- One-time large diff in git history
+
+---
+
+## 4. Prohibitions (after this ADR)
+
+- **"Unit"** as entity name for real estate properties (σε types, services, routes, components)
+- **"Apartment"** as page/route name (μόνο ως `propertyType` value)
+- `src/types/unit.ts` — DELETED, replaced by `src/types/property.ts`
+- `COLLECTIONS.UNITS` — DELETED, replaced by `COLLECTIONS.PROPERTIES`
+- `generateUnitId()` — DELETED, replaced by `generatePropertyId()`
+- Any new file/type/route using "unit" for real estate properties
+
+---
+
+## 5. Migration
+
+### Phase 0: ADR Creation
+| File | Status | Notes |
+|------|--------|-------|
+| `ADR-145-unit-to-property-rename.md` | ✅ Created | This file |
+| `adr-index.md` | ✅ Updated | Added ADR-145 entry |
+
+### Phase 1: Type System (~5 files)
+| File | Status | Notes |
+|------|--------|-------|
+| `src/types/unit.ts` → `property.ts` | Pending | Split if >500 lines |
+| `src/types/property.ts` (legacy) | Pending | DELETE + merge |
+| `src/types/property-viewer.ts` | Pending | Update imports |
+| `src/constants/unit-features-enterprise.ts` | Pending | Rename |
+
+### Phase 2: Config & Data Layer (~15 files)
+| File | Status | Notes |
+|------|--------|-------|
+| `src/config/firestore-collections.ts` | Pending | UNITS→PROPERTIES |
+| `src/services/units.service.ts` | Pending | Rename |
+| `src/services/enterprise-id.service.ts` | Pending | generatePropertyId |
+| + 12 more config files | Pending | |
+
+### Phase 3-8: Hooks, API, UI, Components, Nav, AI
+See implementation plan for full file list (~100 files).
+
+---
+
+## 6. References
+
+- Related: [ADR-017](./ADR-017-enterprise-id-generation.md) — Enterprise ID Generation (unit prefix → property)
+- Related: [ADR-025](./ADR-025-unit-linking-system.md) — Unit Linking System (rename to Property Linking)
+- Related: [ADR-210](./ADR-210-document-id-audit.md) — Document ID Audit
+- Industry: Google Real Estate API naming conventions
+- Industry: Procore API v1 property management terminology
+
+---
+
+## 7. Decision Log
+
+| Date | Decision | Author |
+|------|----------|--------|
+| 2026-03-31 | ADR Created — Naming standardization approved | Γιώργος Παγώνης + Claude Code |
+| 2026-03-31 | Status: APPROVED — Begin phased implementation | Γιώργος Παγώνης |
+
+---
+
+*ADR Format based on: Michael Nygard's Architecture Decision Records*
+*Enterprise standards inspired by: Autodesk, Adobe, Bentley Systems, SAP, Google*

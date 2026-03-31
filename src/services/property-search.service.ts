@@ -191,7 +191,7 @@ export async function searchProperties(searchInput: string | PropertySearchCrite
   'use server';
   try {
     const criteria = typeof searchInput === 'string' ? extractSearchCriteria(searchInput) : searchInput;
-    const collectionRef = db.collection(COLLECTIONS.UNITS);
+    const collectionRef = db.collection(COLLECTIONS.PROPERTIES);
     const q = buildPropertyQuery(criteria, collectionRef);
     const snapshot = await q.get();
     const properties = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Omit<Property, 'id'>) }));
@@ -216,28 +216,23 @@ export async function searchProperties(searchInput: string | PropertySearchCrite
  */
 export async function getPropertySummary(criteria?: Partial<PropertySearchCriteria>): Promise<PropertySummary> {
   'use server';
-  try {
-    const snapshot = await db.collection(COLLECTIONS.UNITS).get();
-    const properties = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Omit<Property, 'id'>) }));
+  const snapshot = await db.collection(COLLECTIONS.PROPERTIES).get();
+  const properties = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Omit<Property, 'id'>) }));
 
-    const summary: PropertySummary = {
-      totalProperties: properties.length,
-      availableCount: properties.filter(p => p.status === 'available').length,
-      soldCount: properties.filter(p => p.status === 'sold').length,
-      reservedCount: properties.filter(p => p.status === 'reserved').length,
-      averagePrice: 0, priceRange: { min: 0, max: 0 }, areaRange: { min: 0, max: 0 },
-      buildingCounts: {}, typeCounts: {}
-    };
+  const summary: PropertySummary = {
+    totalProperties: properties.length,
+    availableCount: properties.filter(p => p.status === 'available').length,
+    soldCount: properties.filter(p => p.status === 'sold').length,
+    reservedCount: properties.filter(p => p.status === 'reserved').length,
+    averagePrice: 0, priceRange: { min: 0, max: 0 }, areaRange: { min: 0, max: 0 },
+    buildingCounts: {}, typeCounts: {}
+  };
 
-    if (properties.length > 0) {
-      const prices = properties.map(p => p.price).filter((p): p is number => !!p && p > 0);
-      summary.averagePrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-    }
-    return summary;
-  } catch (error) {
-    // Error logging removed //('Error getting property summary:', error);
-    throw error;
+  if (properties.length > 0) {
+    const prices = properties.map(p => p.price).filter((p): p is number => !!p && p > 0);
+    summary.averagePrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
   }
+  return summary;
 }
 
 // =============================================================================
@@ -293,7 +288,7 @@ export async function unifiedPropertySearch(searchText: string): Promise<Unified
 
     // 🏠 Search Units collection
     if (searchUnits) {
-      const unitsSnapshot = await db.collection(COLLECTIONS.UNITS).limit(20).get();
+      const unitsSnapshot = await db.collection(COLLECTIONS.PROPERTIES).limit(20).get();
       results.units = unitsSnapshot.docs
         .map(doc => ({ id: doc.id, ...(doc.data() as Omit<Property, 'id'>) }))
         .filter(unit => {

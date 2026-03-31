@@ -41,7 +41,7 @@ export async function propagateContactNameChange(
   try {
     // --- Step 1: Update owners[].name in units ---
     const unitsSnapshot = await db
-      .collection(COLLECTIONS.UNITS)
+      .collection(COLLECTIONS.PROPERTIES)
       .where('commercial.ownerContactIds', 'array-contains', contactId)
       .select('commercial')
       .get();
@@ -74,7 +74,7 @@ export async function propagateContactNameChange(
       }
 
       await unitBatch.commit();
-      collections[COLLECTIONS.UNITS] = unitCount;
+      collections[COLLECTIONS.PROPERTIES] = unitCount;
       totalUpdated += unitCount;
 
       // --- Step 2: Update payment_plans subcollections ---
@@ -82,7 +82,7 @@ export async function propagateContactNameChange(
 
       for (const unitDoc of unitsSnapshot.docs) {
         const plansSnapshot = await db
-          .collection(COLLECTIONS.UNITS)
+          .collection(COLLECTIONS.PROPERTIES)
           .doc(unitDoc.id)
           .collection('payment_plans')
           .where('ownerContactId', '==', contactId)
@@ -109,7 +109,7 @@ export async function propagateContactNameChange(
         totalUpdated += planCount;
       }
     } else {
-      collections[COLLECTIONS.UNITS] = 0;
+      collections[COLLECTIONS.PROPERTIES] = 0;
     }
 
     logger.info('Contact→Name cascade completed', {

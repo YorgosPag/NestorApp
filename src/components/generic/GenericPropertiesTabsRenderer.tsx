@@ -14,7 +14,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
-const logger = createModuleLogger('GenericUnitsTabsRenderer');
+const logger = createModuleLogger('GenericPropertiesTabsRenderer');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -104,7 +104,7 @@ const COMPONENT_MAPPING: Record<string, React.ComponentType<GenericComponentProp
 // INTERFACES
 // ============================================================================
 
-export interface GenericUnitsTabsRendererProps {
+export interface GenericPropertiesTabsRendererProps {
   /** Units tabs configuration */
   tabs: UnitsTabConfig[];
   /** Selected unit data */
@@ -138,7 +138,7 @@ export interface GenericUnitsTabsRendererProps {
  * @example
  * ```tsx
  * import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
- * import { GenericUnitsTabsRenderer } from '@/components/generic';
+ * import { GenericPropertiesTabsRenderer } from '@/components/generic';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
  *
@@ -146,7 +146,7 @@ import { cn } from '@/lib/utils';
  *   const tabs = getSortedUnitsTabs();
  *
  *   return (
- *     <GenericUnitsTabsRenderer
+ *     <GenericPropertiesTabsRenderer
  *       tabs={tabs}
  *       selectedUnit={selectedUnit}
  *       defaultTab="info"
@@ -155,14 +155,14 @@ import { cn } from '@/lib/utils';
  * }
  * ```
  */
-export function GenericUnitsTabsRenderer({
+export function GenericPropertiesTabsRenderer({
   tabs,
   selectedUnit,
   defaultTab = 'info',
   additionalData = {},
   customComponents = {},
   globalProps = {},
-}: GenericUnitsTabsRendererProps) {
+}: GenericPropertiesTabsRendererProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n translation for tab labels
@@ -315,4 +315,4 @@ export function GenericUnitsTabsRenderer({
 // EXPORTS
 // ============================================================================
 
-export default GenericUnitsTabsRenderer;
+export default GenericPropertiesTabsRenderer;

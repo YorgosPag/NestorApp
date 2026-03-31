@@ -1,22 +1,22 @@
 /**
- * 🏢 ENTERPRISE UNIT FEATURES SYSTEM
+ * 🏢 ENTERPRISE PROPERTY FEATURES SYSTEM
  *
- * Enterprise-class κεντρικοποιημένο σύστημα για unit features και lookups
- * Self-contained αρχείο με όλα τα unit feature definitions
+ * Enterprise-class κεντρικοποιημένο σύστημα για property features και lookups
+ * Self-contained αρχείο με όλα τα property feature definitions
  * Following the pattern of property-statuses-enterprise.ts
  *
  * @created 2026-01-23
  * @author Claude AI Assistant
  * @version 1.0.5
- * @enterprise Production-ready unit features management system
+ * @enterprise Production-ready property features management system
  */
 
 
 // =============================================================================
-// 🏢 REUSE EXISTING UNIT TYPE (from src/types/unit.ts)
+// 🏢 REUSE EXISTING PROPERTY TYPE (from src/types/property.ts)
 // =============================================================================
 
-export type { UnitType } from '@/types/unit';
+export type { PropertyType } from '@/types/property';
 
 // =============================================================================
 // 🏢 ORIENTATION CONSTANTS (STORED VALUES = FULL NAMES)

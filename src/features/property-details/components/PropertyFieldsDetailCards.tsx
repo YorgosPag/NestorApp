@@ -1,13 +1,13 @@
 /* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors, custom/no-hardcoded-strings */
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Unit Fields Detail Cards (Row 1 + Row 2)
+ * 🏢 ENTERPRISE: Property Fields Detail Cards (Row 1 + Row 2)
  * =============================================================================
  *
  * Layout, Orientation, Condition/Energy, Systems, Finishes, Features cards.
- * Extracted from UnitFieldsEditForm.tsx for SRP compliance.
+ * Extracted from PropertyFieldsEditForm.tsx for SRP compliance.
  *
- * @module features/property-details/components/UnitFieldsDetailCards
+ * @module features/property-details/components/PropertyFieldsDetailCards
  * @since 2026-03-27
  */
 
@@ -29,21 +29,21 @@ import {
   Bed, Bath, Compass, Wrench, Zap,
   Thermometer, Snowflake, Home, Shield, Flame,
 } from 'lucide-react';
-import type { FlooringType, FrameType, GlazingType, OrientationType } from '@/constants/unit-features-enterprise';
+import type { FlooringType, FrameType, GlazingType, OrientationType } from '@/constants/property-features-enterprise';
 import {
   ORIENTATION_OPTIONS, CONDITION_OPTIONS, ENERGY_CLASS_OPTIONS,
   HEATING_OPTIONS, COOLING_OPTIONS, FLOORING_OPTIONS, FRAME_OPTIONS,
   GLAZING_OPTIONS, INTERIOR_FEATURE_OPTIONS, SECURITY_FEATURE_OPTIONS,
-} from './unit-fields-constants';
-import type { UnitFieldsEditFormProps } from './unit-fields-form-types';
+} from './property-fields-constants';
+import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 
-type DetailCardsProps = Pick<UnitFieldsEditFormProps,
+type DetailCardsProps = Pick<PropertyFieldsEditFormProps,
   'formData' | 'setFormData' | 'isEditing' | 'isSoldOrRented' |
   'isMultiLevel' | 'activeLevelId' | 'currentLevelData' | 'aggregatedTotals' |
   'toggleArrayItem' | 'updateLevelField' | 't' | 'typography' | 'iconSizes' | 'quick'
 >;
 
-export function UnitFieldsDetailCards(props: DetailCardsProps) {
+export function PropertyFieldsDetailCards(props: DetailCardsProps) {
   const {
     formData, setFormData, isEditing, isSoldOrRented,
     isMultiLevel, activeLevelId, currentLevelData, aggregatedTotals,

@@ -56,7 +56,7 @@ export const GET = async (request: NextRequest) => {
       const db = getAdminFirestore();
 
       // 1. Get unit document
-      const unitDoc = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
+      const unitDoc = await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).get();
       const unitData = unitDoc.exists ? (unitDoc.data() as DocData) : null;
 
       // 2. Get floor document if floorId exists

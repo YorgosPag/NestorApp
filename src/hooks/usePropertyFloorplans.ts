@@ -1,70 +1,70 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { UnitFloorplanService, type UnitFloorplanData } from '@/services/floorplans/UnitFloorplanService';
+import { PropertyFloorplanService, type PropertyFloorplanData } from '@/services/floorplans/PropertyFloorplanService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { RealtimeService } from '@/services/realtime';
 import type { FloorplanCreatedPayload, FloorplanDeletedPayload } from '@/services/realtime';
 
-const logger = createModuleLogger('useUnitFloorplans');
+const logger = createModuleLogger('usePropertyFloorplans');
 
-interface UseUnitFloorplansReturn {
-  unitFloorplan: UnitFloorplanData | null;
+interface UsePropertyFloorplansReturn {
+  propertyFloorplan: PropertyFloorplanData | null;
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
 /**
- * 🏢 ENTERPRISE: Load unit floorplan with companyId (REQUIRED) for Storage-backed scenes.
- * @param unitId - The unit ID to load floorplan for
+ * 🏢 ENTERPRISE: Load property floorplan with companyId (REQUIRED) for Storage-backed scenes.
+ * @param propertyId - The property ID to load floorplan for
  * @param companyId - Company ID (REQUIRED for FileRecord lookup)
  */
-export function useUnitFloorplans(unitId: string | number, companyId: string): UseUnitFloorplansReturn {
-  const [unitFloorplan, setUnitFloorplan] = useState<UnitFloorplanData | null>(null);
+export function usePropertyFloorplans(propertyId: string | number, companyId: string): UsePropertyFloorplansReturn {
+  const [propertyFloorplan, setPropertyFloorplan] = useState<PropertyFloorplanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const unitIdStr = unitId.toString();
+  const propertyIdStr = propertyId.toString();
 
   const fetchFloorplans = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      logger.info('Fetching unit floorplan', { unitId: unitIdStr, companyId });
+      logger.info('Fetching property floorplan', { propertyId: propertyIdStr, companyId });
 
-      const unitData = await UnitFloorplanService.loadFloorplan({ companyId, unitId: unitIdStr });
-      setUnitFloorplan(unitData);
+      const data = await PropertyFloorplanService.loadFloorplan({ companyId, unitId: propertyIdStr });
+      setPropertyFloorplan(data);
 
-      logger.info('Unit floorplan loaded', { hasUnitFloorplan: !!unitData });
+      logger.info('Property floorplan loaded', { hasPropertyFloorplan: !!data });
 
     } catch (err) {
       const errorMessage = getErrorMessage(err);
-      logger.error('Error fetching unit floorplan', { error: err });
+      logger.error('Error fetching property floorplan', { error: err });
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [unitIdStr, companyId]);
+  }, [propertyIdStr, companyId]);
 
   useEffect(() => {
-    if (unitIdStr && unitIdStr !== '0' && unitIdStr !== 'undefined' && companyId) {
+    if (propertyIdStr && propertyIdStr !== '0' && propertyIdStr !== 'undefined' && companyId) {
       fetchFloorplans();
     } else {
-      setUnitFloorplan(null);
+      setPropertyFloorplan(null);
       setLoading(false);
     }
-  }, [unitIdStr, companyId, fetchFloorplans]);
+  }, [propertyIdStr, companyId, fetchFloorplans]);
 
   // 🏢 ENTERPRISE: Event bus subscribers for cross-tab floorplan sync (ADR-228 Tier 2)
   useEffect(() => {
-    if (!unitIdStr || unitIdStr === '0') return;
+    if (!propertyIdStr || propertyIdStr === '0') return;
 
     const handleCreated = (payload: FloorplanCreatedPayload) => {
-      if (payload.floorplan.entityId === unitIdStr) {
-        logger.info('Floorplan created for current unit — refetching');
+      if (payload.floorplan.entityId === propertyIdStr) {
+        logger.info('Floorplan created for current property — refetching');
         fetchFloorplans();
       }
     };
@@ -78,10 +78,10 @@ export function useUnitFloorplans(unitId: string | number, companyId: string): U
     const unsub2 = RealtimeService.subscribe('FLOORPLAN_DELETED', handleDeleted);
 
     return () => { unsub1(); unsub2(); };
-  }, [unitIdStr, fetchFloorplans]);
+  }, [propertyIdStr, fetchFloorplans]);
 
   return {
-    unitFloorplan,
+    propertyFloorplan,
     loading,
     error,
     refetch: fetchFloorplans

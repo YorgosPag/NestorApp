@@ -6,14 +6,14 @@
  * @see ADR-197
  */
 
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export interface BaseDialogProps {
-  unit: Unit;
+  unit: Property;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
@@ -23,8 +23,8 @@ export interface BaseDialogProps {
 // HELPERS
 // =============================================================================
 
-/** Resolve projectId — Unit.project is the canonical field */
-export function resolveProjectId(unit: Unit): string {
+/** Resolve projectId — Property.project is the canonical field */
+export function resolveProjectId(unit: Property): string {
   return unit.project;
 }
 

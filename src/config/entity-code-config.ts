@@ -13,7 +13,7 @@
  * @module config/entity-code-config
  */
 
-import type { UnitType } from '@/types/unit';
+import type { PropertyType } from '@/types/property';
 import type { ParkingLocationZone } from '@/types/parking';
 
 // =============================================================================
@@ -21,13 +21,13 @@ import type { ParkingLocationZone } from '@/types/parking';
 // =============================================================================
 
 /**
- * Maps UnitType → 2-character ADR-233 code.
+ * Maps PropertyType → 2-character ADR-233 code.
  *
  * Residential (8): DI, GK, ST, ME, RE, LO, MO, BI
  * Commercial (3): KA, GR, AI
  * Auxiliary (1): AP
  */
-export const UNIT_TYPE_TO_CODE: Partial<Record<UnitType, string>> = {
+export const PROPERTY_TYPE_TO_CODE: Partial<Record<PropertyType, string>> = {
   // Residential
   studio: 'ST',
   apartment_1br: 'GK',

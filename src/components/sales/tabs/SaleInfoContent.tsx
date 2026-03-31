@@ -26,11 +26,11 @@ import { formatCurrencyWhole, formatDate as formatDateIntl } from '@/lib/intl-ut
 import { normalizeToDate } from '@/lib/date-local';
 import { InfoRow } from '@/components/shared/InfoRow';
 import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
 import { TransactionChainCard } from '@/components/sales/cards/TransactionChainCard';
-import { UnitHierarchyCard } from '@/components/sales/cards/UnitHierarchyCard';
+import { PropertyHierarchyCard } from '@/components/sales/cards/PropertyHierarchyCard';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
 // =============================================================================
 
 interface SaleInfoContentProps {
-  data?: Unit;
+  data?: Property;
 }
 
 // =============================================================================
@@ -101,7 +101,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
   return (
     <section className="flex flex-col gap-2 p-2" aria-label={t('sales.tabs.saleInfo')}>
       {/* Ιεραρχία Ακινήτου: Εταιρεία → Έργο → Κτίριο → Μονάδα */}
-      <UnitHierarchyCard unitId={unit.id} />
+      <PropertyHierarchyCard unitId={unit.id} />
 
       {/* Εμπορικά Στοιχεία */}
       <Card>

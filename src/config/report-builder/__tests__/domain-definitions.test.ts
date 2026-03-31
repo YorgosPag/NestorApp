@@ -65,7 +65,7 @@ describe('Domain Definitions — Schema Integrity', () => {
     expect(definedIds.length).toBe(VALID_DOMAIN_IDS.length);
     expect(definedIds).toEqual(
       expect.arrayContaining([
-        'projects', 'buildings', 'floors', 'units',
+        'projects', 'buildings', 'floors', 'properties',
         'parking', 'storage', 'individuals', 'companies',
         'buyers', 'suppliers', 'engineers', 'workers', 'legal', 'agents',
       ]),
@@ -132,7 +132,7 @@ describe('Domain Definitions — Groups', () => {
   });
 
   it('real estate domains have group realestate', () => {
-    for (const id of ['projects', 'buildings', 'floors', 'units', 'parking', 'storage'] as BuilderDomainId[]) {
+    for (const id of ['projects', 'buildings', 'floors', 'properties', 'parking', 'storage'] as BuilderDomainId[]) {
       expect(getDomainDefinition(id).group).toBe('realestate');
     }
   });
@@ -233,7 +233,7 @@ describe('Domain Definitions — PreFilters', () => {
   });
 
   it('Phase 1 domains have no preFilters', () => {
-    for (const id of ['projects', 'buildings', 'floors', 'units'] as BuilderDomainId[]) {
+    for (const id of ['projects', 'buildings', 'floors', 'properties'] as BuilderDomainId[]) {
       expect(getDomainDefinition(id).preFilters).toBeUndefined();
     }
   });
@@ -328,13 +328,13 @@ describe('Domain Definitions — Reference Fields', () => {
     expect(field?.refDisplayField).toBe('name');
   });
 
-  it('units.buildingId refs buildings', () => {
-    const field = getFieldDefinition('units', 'buildingId');
+  it('properties.buildingId refs buildings', () => {
+    const field = getFieldDefinition('properties', 'buildingId');
     expect(field?.refDomain).toBe('buildings');
   });
 
-  it('units.project refs projects', () => {
-    const field = getFieldDefinition('units', 'project');
+  it('properties.project refs projects', () => {
+    const field = getFieldDefinition('properties', 'project');
     expect(field?.refDomain).toBe('projects');
   });
 
@@ -384,10 +384,10 @@ describe('Domain Definitions — Accessors', () => {
   });
 
   it('getDefaultColumns returns only defaultVisible field keys', () => {
-    const columns = getDefaultColumns('units');
+    const columns = getDefaultColumns('properties');
     expect(columns.length).toBeGreaterThan(0);
 
-    const def = getDomainDefinition('units');
+    const def = getDomainDefinition('properties');
     for (const key of columns) {
       const field = def.fields.find((f) => f.key === key);
       expect(field?.defaultVisible).toBe(true);

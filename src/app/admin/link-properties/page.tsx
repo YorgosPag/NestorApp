@@ -4,8 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import LinkSoldUnitsToCustomers from '@/components/admin/LinkSoldUnitsToCustomers';
-import SoldUnitsPreview from '@/components/admin/SoldUnitsPreview';
+import LinkSoldPropertiesToCustomers from '@/components/admin/LinkSoldPropertiesToCustomers';
+import SoldPropertiesPreview from '@/components/admin/SoldPropertiesPreview';
 // Enterprise Configuration Management - CLAUDE.md Protocol compliance
 import { useEnterpriseConfig } from '@/core/configuration/useEnterpriseConfig';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -13,7 +13,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
-export default function LinkUnitsPage() {
+export default function LinkPropertiesPage() {
   // Enterprise Configuration Hook - replaces hardcoded values
   const { companyConfig, isLoading } = useEnterpriseConfig();
   const iconSizes = useIconSizes();
@@ -51,13 +51,13 @@ export default function LinkUnitsPage() {
         {/* Units Preview */}
         <div>
           <h2 className="text-xl font-semibold mb-4">📊 Τρέχουσα Κατάσταση Units</h2>
-          <SoldUnitsPreview />
+          <SoldPropertiesPreview />
         </div>
 
         {/* Main Tool */}
         <div>
           <h2 className="text-xl font-semibold mb-4">🔧 Εργαλείο Σύνδεσης</h2>
-          <LinkSoldUnitsToCustomers />
+          <LinkSoldPropertiesToCustomers />
         </div>
 
         {/* Additional Info */}

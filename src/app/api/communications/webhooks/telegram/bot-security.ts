@@ -18,7 +18,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('TelegramBotSecurity');
 
 export const ALLOWED_COLLECTIONS = [
-    COLLECTIONS.UNITS,
+    COLLECTIONS.PROPERTIES,
     COLLECTIONS.BUILDINGS,
     COLLECTIONS.PROJECTS,
     COLLECTIONS.PARKING_SPACES,

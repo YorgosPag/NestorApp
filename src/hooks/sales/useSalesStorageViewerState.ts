@@ -3,7 +3,7 @@
 /**
  * @fileoverview Sales Storage Viewer State Hook — ADR-199
  * @description State management for "Διαθέσιμες Αποθήκες" sales page
- * @pattern Mirrors useSalesUnitsViewerState with storage-specific data
+ * @pattern Mirrors useSalesPropertiesViewerState with storage-specific data
  */
 
 import { useMemo, useState, useCallback } from 'react';

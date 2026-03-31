@@ -47,7 +47,7 @@ export async function resyncTotalAmount(
     }
 
     const planRef = db.collection(planCollectionPath(unitId)).doc(activePlan.id);
-    const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
+    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
 
     await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);
@@ -143,7 +143,7 @@ export async function deletePlan(
 
     const db = getDb();
     await db.collection(planCollectionPath(unitId)).doc(planId).delete();
-    await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+    await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
       'commercial.paymentSummary': null,
       updatedAt: new Date().toISOString(),
     });
@@ -207,7 +207,7 @@ export async function addInstallment(
   try {
     const db = getDb();
     const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
-    const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
+    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
 
     await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);
@@ -288,7 +288,7 @@ export async function updateInstallment(
   try {
     const db = getDb();
     const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
-    const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
+    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
 
     await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);
@@ -376,7 +376,7 @@ export async function removeInstallment(
   try {
     const db = getDb();
     const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
-    const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
+    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
 
     await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);

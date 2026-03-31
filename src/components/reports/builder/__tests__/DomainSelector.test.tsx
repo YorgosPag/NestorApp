@@ -35,9 +35,9 @@ describe('DomainSelector — Domain Availability', () => {
     expect(def.id).toBe('floors');
   });
 
-  it('units is a valid domain', () => {
-    const def = getDomainDefinition('units');
-    expect(def.id).toBe('units');
+  it('properties is a valid domain', () => {
+    const def = getDomainDefinition('properties');
+    expect(def.id).toBe('properties');
     expect(def.fields.length).toBeGreaterThan(15);
   });
 });

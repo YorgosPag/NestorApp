@@ -25,7 +25,7 @@ const getMultiplePhotoURLs = (contact: Contact): string[] => {
 };
 import { useContactPhotoHandlers } from './useContactPhotoHandlers';
 import { ContactDetailsHeader } from './ContactDetailsHeader';
-import { AddUnitToContactDialog } from './AddUnitToContactDialog';
+import { AddPropertyToContactDialog } from './AddPropertyToContactDialog';
 import { openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { DetailsContainer } from '@/core/containers';
@@ -448,11 +448,11 @@ export function ContactDetails({ contact, onEditContact: _onEditContact, onDelet
       </DetailsContainer>
 
       {contact?.id && (
-        <AddUnitToContactDialog
+        <AddPropertyToContactDialog
             open={isAddUnitDialogOpen}
             onOpenChange={setIsAddUnitDialogOpen}
             contactId={contact.id}
-            onUnitAdded={handleUnitAdded}
+            onPropertyAdded={handleUnitAdded}
         />
       )}
 

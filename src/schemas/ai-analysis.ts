@@ -52,7 +52,7 @@ export const IntentType = z.enum([
   'admin_contact_search',  // Admin: Αναζήτηση στοιχείων επαφής (UC-010)
   'admin_project_status',  // Admin: Κατάσταση έργου (UC-011)
   'admin_send_email',      // Admin: Αποστολή email (UC-012)
-  'admin_unit_stats',      // Admin: Στατιστικά ακινήτων (UC-013)
+  'admin_property_stats',  // Admin: Στατιστικά ακινήτων (UC-013)
   'admin_create_contact',  // Admin: Δημιουργία νέας επαφής (UC-015)
   'admin_update_contact',  // Admin: Ενημέρωση στοιχείων επαφής (UC-016)
   'admin_general_question', // Admin: Γενική ερώτηση/συζήτηση (UC-014 conversational)

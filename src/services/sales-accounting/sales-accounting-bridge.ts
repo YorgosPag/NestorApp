@@ -77,7 +77,7 @@ export class SalesAccountingBridge {
     const companyProfile = await this.services.repository.getCompanySetup();
     if (!companyProfile) {
       return errorResult(
-        event.unitId,
+        event.propertyId,
         'Η λογιστική δεν είναι ρυθμισμένη. Δημιουργήστε πρώτα το προφίλ εταιρείας στη Λογιστική.'
       );
     }
@@ -154,7 +154,7 @@ export class SalesAccountingBridge {
       invoiceId: null,
       invoiceNumber: null,
       journalEntryId: null,
-      transactionChainId: `notify_${event.unitId}`,
+      transactionChainId: `notify_${event.propertyId}`,
       error: null,
     };
   }
@@ -167,7 +167,7 @@ export class SalesAccountingBridge {
   ): Promise<SalesAccountingResult> {
     const grossAmount = event.depositAmount;
     if (grossAmount <= 0) {
-      return errorResult(event.unitId, 'Το ποσό προκαταβολής πρέπει να είναι θετικό.');
+      return errorResult(event.propertyId, 'Το ποσό προκαταβολής πρέπει να είναι θετικό.');
     }
 
     const netAmount = roundTwo(grossAmount / VAT_DIVISOR);
@@ -175,26 +175,26 @@ export class SalesAccountingBridge {
 
     const customer = await resolveCustomer(event.buyerContactId);
     const issuer = buildIssuer(profile);
-    const transactionChainId = await resolveTransactionChainId(event.unitId);
+    const transactionChainId = await resolveTransactionChainId(event.propertyId);
 
     const invoiceInput = buildInvoiceInput({
       type: 'sales_invoice',
       series: DEFAULT_SERIES,
       issuer,
       customer,
-      description: `Προκαταβολή κράτησης — ${event.unitName}`,
+      description: `Προκαταβολή κράτησης — ${event.propertyName}`,
       netAmount,
       vatAmount,
       grossAmount,
       paymentMethod: event.paymentMethod,
       projectId: event.projectId,
-      unitId: event.unitId,
+      propertyId: event.propertyId,
       relatedInvoiceId: null,
       notes: event.notes,
       saleLineItems: event.lineItems,
     });
 
-    return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.unitId);
+    return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.propertyId);
   }
 
   // ── Final Sale Invoice ───────────────────────────────────────────────────
@@ -206,7 +206,7 @@ export class SalesAccountingBridge {
     const remainingGross = event.finalPrice - event.depositAlreadyInvoiced;
     if (remainingGross <= 0) {
       return errorResult(
-        event.unitId,
+        event.propertyId,
         'Η τελική τιμή πρέπει να είναι μεγαλύτερη από την ήδη τιμολογημένη προκαταβολή.'
       );
     }
@@ -216,28 +216,28 @@ export class SalesAccountingBridge {
 
     const customer = await resolveCustomer(event.buyerContactId);
     const issuer = buildIssuer(profile);
-    const transactionChainId = await resolveTransactionChainId(event.unitId);
+    const transactionChainId = await resolveTransactionChainId(event.propertyId);
 
-    const depositInvoiceId = await findDepositInvoiceId(event.unitId);
+    const depositInvoiceId = await findDepositInvoiceId(event.propertyId);
 
     const invoiceInput = buildInvoiceInput({
       type: 'sales_invoice',
       series: DEFAULT_SERIES,
       issuer,
       customer,
-      description: `Πώληση ακινήτου — ${event.unitName} (υπόλοιπο)`,
+      description: `Πώληση ακινήτου — ${event.propertyName} (υπόλοιπο)`,
       netAmount,
       vatAmount,
       grossAmount: remainingGross,
       paymentMethod: event.paymentMethod,
       projectId: event.projectId,
-      unitId: event.unitId,
+      propertyId: event.propertyId,
       relatedInvoiceId: depositInvoiceId,
       notes: event.notes,
       saleLineItems: event.lineItems,
     });
 
-    return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.unitId);
+    return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.propertyId);
   }
 
   // ── Credit Invoice (Cancellation) ────────────────────────────────────────
@@ -248,7 +248,7 @@ export class SalesAccountingBridge {
   ): Promise<SalesAccountingResult> {
     const grossAmount = event.creditAmount;
     if (grossAmount <= 0) {
-      return errorResult(event.unitId, 'Το ποσό επιστροφής πρέπει να είναι θετικό.');
+      return errorResult(event.propertyId, 'Το ποσό επιστροφής πρέπει να είναι θετικό.');
     }
 
     const netAmount = roundTwo(grossAmount / VAT_DIVISOR);
@@ -256,28 +256,28 @@ export class SalesAccountingBridge {
 
     const customer = await resolveCustomer(event.buyerContactId);
     const issuer = buildIssuer(profile);
-    const transactionChainId = await resolveTransactionChainId(event.unitId);
+    const transactionChainId = await resolveTransactionChainId(event.propertyId);
 
-    const depositInvoiceId = await findDepositInvoiceId(event.unitId);
+    const depositInvoiceId = await findDepositInvoiceId(event.propertyId);
 
     const invoiceInput = buildInvoiceInput({
       type: 'credit_invoice',
       series: DEFAULT_SERIES,
       issuer,
       customer,
-      description: `Πιστωτικό — Ακύρωση κράτησης ${event.unitName}: ${event.reason}`,
+      description: `Πιστωτικό — Ακύρωση κράτησης ${event.propertyName}: ${event.reason}`,
       netAmount,
       vatAmount,
       grossAmount,
       paymentMethod: event.paymentMethod,
       projectId: event.projectId,
-      unitId: event.unitId,
+      propertyId: event.propertyId,
       relatedInvoiceId: depositInvoiceId,
       notes: event.notes,
       saleLineItems: event.lineItems,
     });
 
-    return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.unitId);
+    return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.propertyId);
   }
 
   // ── Invoice Execution ───────────────────────────────────────────────────
@@ -288,7 +288,7 @@ export class SalesAccountingBridge {
   private async executeInvoiceCreation(
     invoiceInput: CreateInvoiceInput,
     transactionChainId: string,
-    unitId: string
+    propertyId: string
   ): Promise<SalesAccountingResult> {
     try {
       // 1. Create invoice (atomic numbering)
@@ -300,14 +300,14 @@ export class SalesAccountingBridge {
         await this.services.service.createJournalEntryFromInvoice(invoiceId);
 
       // 3. Update unit.commercial.transactionChainId
-      await updateUnitTransactionChain(unitId, transactionChainId);
+      await updateUnitTransactionChain(propertyId, transactionChainId);
 
       // 4. Audit trail: invoice created
       const invoiceTypeLabel = invoiceInput.type === 'credit_invoice' ? 'Πιστωτικό' : 'Τιμολόγιο';
-      const companyId = await resolveUnitCompanyId(unitId);
+      const companyId = await resolveUnitCompanyId(propertyId);
       safeFireAndForget(EntityAuditService.recordChange({
         entityType: 'unit',
-        entityId: unitId,
+        entityId: propertyId,
         entityName: null,
         action: 'invoice_created',
         changes: [{
@@ -331,8 +331,8 @@ export class SalesAccountingBridge {
       };
     } catch (err) {
       const message = getErrorMessage(err, 'Unknown error creating invoice');
-      console.error(`[SalesAccountingBridge] Error for unit ${unitId}:`, message);
-      return errorResult(unitId, message);
+      console.error(`[SalesAccountingBridge] Error for property ${propertyId}:`, message);
+      return errorResult(propertyId, message);
     }
   }
 }

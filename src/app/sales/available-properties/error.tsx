@@ -1,6 +1,6 @@
 /**
- * 🏢 ENTERPRISE: Available Apartments Error Boundary
- * @route /sales/available-apartments
+ * 🏢 ENTERPRISE: Available Properties Error Boundary
+ * @route /sales/available-properties
  * @enterprise SAP/Salesforce/Microsoft - Centralized Error Handling
  */
 'use client';
@@ -12,6 +12,6 @@ interface ErrorProps {
   reset: () => void;
 }
 
-export default function AvailableApartmentsError({ error, reset }: ErrorProps) {
-  return <RouteErrorFallback error={error} reset={reset} componentName="Available Apartments" />;
+export default function AvailablePropertiesError({ error, reset }: ErrorProps) {
+  return <RouteErrorFallback error={error} reset={reset} componentName="Available Properties" />;
 }

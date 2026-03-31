@@ -16,7 +16,7 @@ import type { ReportKPI } from '@/components/reports/core';
 import type {
   ProjectsReportPayload,
   RevenueByProjectItem,
-  UnitStatusByBuildingItem,
+  PropertyStatusByBuildingItem,
   EnergyClassItem,
 } from '@/components/reports/sections/projects/types';
 import type { ProjectProgressItem, PricePerSqmItem, BOQVarianceItem } from '@/services/report-engine';
@@ -41,7 +41,7 @@ export interface UseProjectsReportReturn {
   kpis: ReportKPI[];
   statusPie: { name: string; value: number }[];
   projectProgress: ProjectProgressItem[];
-  unitStatusByBuilding: UnitStatusByBuildingItem[];
+  unitStatusByBuilding: PropertyStatusByBuildingItem[];
   revenueByProject: RevenueByProjectItem[];
   pricePerSqm: PricePerSqmItem[];
   boqVariance: BOQVarianceItem[];
@@ -109,7 +109,7 @@ function buildRevenueItems(
 
 function buildUnitStatusItems(
   unitsByBuilding: Record<string, Record<string, number>>,
-): UnitStatusByBuildingItem[] {
+): PropertyStatusByBuildingItem[] {
   return Object.entries(unitsByBuilding).map(([building, statuses]) => ({
     building,
     ...statuses,

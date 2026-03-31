@@ -166,7 +166,7 @@ export type PaymentMethodDetails =
 // 🏦 PAYMENT RECORD (Καταγραφή Πληρωμής)
 // =============================================================================
 
-/** Μεμονωμένη πληρωμή — subcollection units/{unitId}/payments */
+/** Μεμονωμένη πληρωμή — subcollection properties/{propertyId}/payments */
 export interface PaymentRecord {
   /** Document ID */
   id: string;
@@ -278,10 +278,10 @@ export const DEFAULT_PAYMENT_PLAN_CONFIG: PaymentPlanConfig = {
 // 🏦 PAYMENT PLAN (Πρόγραμμα Αποπληρωμής)
 // =============================================================================
 
-/** Πρόγραμμα αποπληρωμής — subcollection units/{unitId}/payment_plans */
+/** Πρόγραμμα αποπληρωμής — subcollection properties/{propertyId}/payment_plans */
 export interface PaymentPlan {
   id: string;
-  unitId: string;
+  propertyId: string;
   buildingId: string;
   projectId: string;
   status: PaymentPlanStatus;
@@ -332,7 +332,7 @@ export interface PaymentPlan {
 // 🏦 PAYMENT SUMMARY (Denormalized στο unit.commercial)
 // =============================================================================
 
-/** Σύνοψη πληρωμών — denormalized στο unit.commercial.paymentSummary */
+/** Σύνοψη πληρωμών — denormalized στο property.commercial.paymentSummary */
 export interface PaymentSummary {
   planStatus: PaymentPlanStatus;
   totalAmount: number;
@@ -362,7 +362,7 @@ export interface PaymentSummary {
 
 /** Input για δημιουργία payment plan */
 export interface CreatePaymentPlanInput {
-  unitId: string;
+  propertyId: string;
   buildingId: string;
   projectId: string;
   /** Contact ID ιδιοκτήτη — joint = primary buyer, individual = specific owner */

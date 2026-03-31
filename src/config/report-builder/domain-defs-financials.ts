@@ -137,7 +137,7 @@ function computeNextDueAmount(doc: Record<string, unknown>): number | null {
 
 export const PAYMENT_PLANS_DEFINITION: DomainDefinition = {
   id: 'paymentPlans',
-  collection: SUBCOLLECTIONS.UNIT_PAYMENT_PLANS,
+  collection: SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS,
   group: 'financial',
   queryType: 'collectionGroup',
   // eslint-disable-next-line custom/no-hardcoded-strings -- i18n key
@@ -162,7 +162,7 @@ export const PAYMENT_PLANS_DEFINITION: DomainDefinition = {
     // Refs
     { key: 'projectId', labelKey: 'domains.paymentPlans.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'projects', refDisplayField: 'name' },
     { key: 'buildingId', labelKey: 'domains.paymentPlans.fields.building', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'buildings', refDisplayField: 'name' },
-    { key: 'unitId', labelKey: 'domains.paymentPlans.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'units', refDisplayField: 'name' },
+    { key: 'unitId', labelKey: 'domains.paymentPlans.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
     { key: 'ownerContactId', labelKey: 'domains.paymentPlans.fields.owner', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
     // Computed — Aging
     { key: 'daysOverdue', labelKey: 'domains.paymentPlans.fields.daysOverdue', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number', computed: true, computeFn: computeDaysOverdue },
@@ -316,7 +316,7 @@ export const LEGAL_CONTRACTS_DEFINITION: DomainDefinition = {
     // Refs
     { key: 'projectId', labelKey: 'domains.legalContracts.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'projects', refDisplayField: 'name' },
     { key: 'buildingId', labelKey: 'domains.legalContracts.fields.building', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'buildings', refDisplayField: 'name' },
-    { key: 'unitId', labelKey: 'domains.legalContracts.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'units', refDisplayField: 'name' },
+    { key: 'unitId', labelKey: 'domains.legalContracts.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
     { key: 'primaryBuyerContactId', labelKey: 'domains.legalContracts.fields.buyer', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
     // Dates
     { key: 'signedAt', labelKey: 'domains.legalContracts.fields.signedAt', type: 'date', filterable: true, sortable: true, defaultVisible: true, format: 'date' },

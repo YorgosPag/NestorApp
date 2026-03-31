@@ -31,7 +31,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   COMPANY: 'comp',
   PROJECT: 'proj',
   BUILDING: 'bldg',
-  UNIT: 'unit',
+  PROPERTY: 'prop',
   STORAGE: 'stor',
   PARKING: 'park',
   CONTACT: 'cont',
@@ -394,11 +394,11 @@ export class EnterpriseIdService {
   }
 
   /**
-   * 🏠 Generate Unit ID
-   * Format: unit_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   * 🏠 Generate Property ID
+   * Format: prop_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
-  generateUnitId(): string {
-    return this.generateId(ENTERPRISE_ID_PREFIXES.UNIT).id;
+  generatePropertyId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PROPERTY).id;
   }
 
   /**
@@ -412,7 +412,7 @@ export class EnterpriseIdService {
   /**
    * 🅿️ Generate Parking ID
    * Format: park_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-   * 🏢 ENTERPRISE: Parallel category to units (per local_4.log architecture)
+   * 🏢 ENTERPRISE: Parallel category to properties (per local_4.log architecture)
    */
   generateParkingId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.PARKING).id;
@@ -1470,7 +1470,7 @@ export const enterpriseIdService = new EnterpriseIdService({
 export const generateCompanyId = () => enterpriseIdService.generateCompanyId();
 export const generateProjectId = () => enterpriseIdService.generateProjectId();
 export const generateBuildingId = () => enterpriseIdService.generateBuildingId();
-export const generateUnitId = () => enterpriseIdService.generateUnitId();
+export const generatePropertyId = () => enterpriseIdService.generatePropertyId();
 export const generateStorageId = () => enterpriseIdService.generateStorageId();
 export const generateParkingId = () => enterpriseIdService.generateParkingId();
 export const generateContactId = () => enterpriseIdService.generateContactId();

@@ -7,7 +7,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
-const logger = createModuleLogger('ContactUnitsRoute');
+const logger = createModuleLogger('ContactPropertiesRoute');
 
 // 🏢 ENTERPRISE: Firestore data types (includes legacy fields for backward compatibility)
 type FirestoreContactData = Record<string, unknown> & {
@@ -15,20 +15,20 @@ type FirestoreContactData = Record<string, unknown> & {
   companyId?: string;
 };
 
-type FirestoreUnitData = Record<string, unknown> & {
+type FirestorePropertyData = Record<string, unknown> & {
   id: string;
 };
 
 /** 🏢 ENTERPRISE: Discriminated union response types */
-interface ContactUnitsSuccessResponse {
+interface ContactPropertiesSuccessResponse {
   success: true;
   contactId: string;
-  units: unknown[];
-  unitsCount: number;
+  properties: unknown[];
+  propertiesCount: number;
   totalValue: number;
-  averageUnitValue: number;
+  averagePropertyValue: number;
   totalArea: number;
-  averageUnitArea: number;
+  averagePropertyArea: number;
   statistics: {
     byType: Record<string, number>;
     byBuilding: Record<string, number>;
@@ -44,14 +44,14 @@ interface ContactUnitsSuccessResponse {
   dataSource: string;
 }
 
-interface ContactUnitsErrorResponse {
+interface ContactPropertiesErrorResponse {
   success: false;
   error: string;
   errorCategory?: string;
   contactId?: string | null;
   timestamp?: string;
-  units?: unknown[];
-  unitsCount?: number;
+  properties?: unknown[];
+  propertiesCount?: number;
   totalValue?: number;
   totalArea?: number;
   statistics?: {
@@ -62,19 +62,19 @@ interface ContactUnitsErrorResponse {
   };
 }
 
-type ContactUnitsResponse = ContactUnitsSuccessResponse | ContactUnitsErrorResponse;
+type ContactPropertiesResponse = ContactPropertiesSuccessResponse | ContactPropertiesErrorResponse;
 
 /**
- * 🏠 ENTERPRISE CONTACT UNITS API ENDPOINT
+ * 🏠 ENTERPRISE CONTACT PROPERTIES API ENDPOINT
  *
- * RESTful API για units που ανήκουν σε συγκεκριμένο contact
+ * RESTful API για properties που ανήκουν σε συγκεκριμένο contact
  * Enterprise-class endpoint με aggregated data και statistics
  *
- * @route GET /api/contacts/[contactId]/units
- * @returns Contact's units information με statistics
+ * @route GET /api/contacts/[contactId]/properties
+ * @returns Contact's properties information με statistics
  * @created 2025-12-14
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC protection
- * @security Admin SDK + withAuth + Tenant Isolation (contact + units)
+ * @security Admin SDK + withAuth + Tenant Isolation (contact + properties)
  * @permission contacts:contacts:view
  * @author Claude AI Assistant
  */
@@ -90,7 +90,7 @@ export async function GET(
   const handler = withAuth<unknown>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        logger.info('Loading units for contact', { contactId });
+        logger.info('Loading properties for contact', { contactId });
 
     // ========================================================================
     // VALIDATION
@@ -146,7 +146,7 @@ export async function GET(
     const contactData = { id: contactDoc.id, ...contactDoc.data() } as FirestoreContactData;
 
     // ========================================================================
-    // TENANT ISOLATION - CONTACT CHECK
+    // TENANT ISOLATION — CONTACT CHECK
     // ========================================================================
 
     if (contactData.companyId !== ctx.companyId) {
@@ -161,85 +161,85 @@ export async function GET(
     logger.info('Tenant isolation check passed for contact', { companyId: ctx.companyId });
 
     // ========================================================================
-    // FETCH UNITS OWNED BY CONTACT (ADMIN SDK)
+    // FETCH PROPERTIES OWNED BY CONTACT (ADMIN SDK)
     // ========================================================================
 
-    logger.info('Fetching units', { soldTo: contactId, companyId: ctx.companyId });
+    logger.info('Fetching properties', { soldTo: contactId, companyId: ctx.companyId });
 
-    const unitsSnapshot = await adminDb
-      .collection(COLLECTIONS.UNITS)
+    const propertiesSnapshot = await adminDb
+      .collection(COLLECTIONS.PROPERTIES)
       .where('soldTo', '==', contactId)
       .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
       .get();
 
-    const units = unitsSnapshot.docs.map(unitDoc => ({
-      id: unitDoc.id,
-      ...unitDoc.data()
-    }) as FirestoreUnitData);
+    const properties = propertiesSnapshot.docs.map(propDoc => ({
+      id: propDoc.id,
+      ...propDoc.data()
+    }) as FirestorePropertyData);
 
-    logger.info('Found units for contact', { count: units.length, contactId });
-    logger.info('Tenant isolation enforced in units query', { companyId: ctx.companyId });
+    logger.info('Found properties for contact', { count: properties.length, contactId });
+    logger.info('Tenant isolation enforced in properties query', { companyId: ctx.companyId });
 
     // ========================================================================
-    // PROCESS UNITS DATA & CALCULATE STATISTICS
+    // PROCESS PROPERTIES DATA & CALCULATE STATISTICS
     // ========================================================================
 
     let totalValue = 0;
     let totalArea = 0;
-    const unitsByType: Record<string, number> = {};
-    const unitsByBuilding: Record<string, number> = {};
-    const unitsByProject: Record<string, number> = {};
-    const unitsByStatus: Record<string, number> = {};
+    const propsByType: Record<string, number> = {};
+    const propsByBuilding: Record<string, number> = {};
+    const propsByProject: Record<string, number> = {};
+    const propsByStatus: Record<string, number> = {};
 
-    const processedUnits = units.map(unit => {
+    const processedProperties = properties.map(prop => {
       // Calculate totals
-      const unitPrice = typeof unit.price === 'number' ? unit.price : 0;
-      const unitArea = typeof unit.area === 'number' ? unit.area : 0;
+      const propPrice = typeof prop.price === 'number' ? prop.price : 0;
+      const propArea = typeof prop.area === 'number' ? prop.area : 0;
 
-      totalValue += unitPrice;
-      totalArea += unitArea;
+      totalValue += propPrice;
+      totalArea += propArea;
 
       // Count by type - cast to string for safe indexing
-      const unitType = String(unit.type || unit.propertyType || 'unknown');
-      unitsByType[unitType] = (unitsByType[unitType] || 0) + 1;
+      const propType = String(prop.type || prop.propertyType || 'unknown');
+      propsByType[propType] = (propsByType[propType] || 0) + 1;
 
       // Count by building - cast to string for safe indexing
-      const buildingId = String(unit.buildingId || 'unknown');
-      unitsByBuilding[buildingId] = (unitsByBuilding[buildingId] || 0) + 1;
+      const buildingId = String(prop.buildingId || 'unknown');
+      propsByBuilding[buildingId] = (propsByBuilding[buildingId] || 0) + 1;
 
       // Count by project - cast to string for safe indexing
-      const projectId = String(unit.projectId || 'unknown');
-      unitsByProject[projectId] = (unitsByProject[projectId] || 0) + 1;
+      const projectId = String(prop.projectId || 'unknown');
+      propsByProject[projectId] = (propsByProject[projectId] || 0) + 1;
 
       // Count by status - cast to string for safe indexing
-      const unitStatus = String(unit.status || 'unknown');
-      unitsByStatus[unitStatus] = (unitsByStatus[unitStatus] || 0) + 1;
+      const propStatus = String(prop.status || 'unknown');
+      propsByStatus[propStatus] = (propsByStatus[propStatus] || 0) + 1;
 
-      // Return processed unit data
+      // Return processed property data
       return {
-        id: unit.id,
-        name: unit.name || unit.title || `Unit ${unit.id}`,
-        type: unitType,
-        status: unitStatus,
-        price: unitPrice,
-        area: unitArea,
+        id: prop.id,
+        name: prop.name || prop.title || `Property ${prop.id}`,
+        type: propType,
+        status: propStatus,
+        price: propPrice,
+        area: propArea,
         buildingId,
         projectId,
 
         // Building information (if available)
-        buildingName: unit.buildingName || unit.building || null,
+        buildingName: prop.buildingName || prop.building || null,
 
         // Project information (if available)
-        projectName: unit.projectName || unit.project || null,
+        projectName: prop.projectName || prop.project || null,
 
         // Location information
-        floor: unit.floor || null,
-        address: unit.address || null,
+        floor: prop.floor || null,
+        address: prop.address || null,
 
         // Metadata
-        purchaseDate: unit.purchaseDate || unit.soldDate || null,
-        createdAt: unit.createdAt || null,
-        updatedAt: unit.updatedAt || null
+        purchaseDate: prop.purchaseDate || prop.soldDate || null,
+        createdAt: prop.createdAt || null,
+        updatedAt: prop.updatedAt || null
       };
     });
 
@@ -261,24 +261,24 @@ export async function GET(
       success: true,
       contactId,
 
-      // Units data
-      units: processedUnits,
-      unitsCount: units.length,
+      // Properties data
+      properties: processedProperties,
+      propertiesCount: properties.length,
 
       // Financial statistics
       totalValue,
-      averageUnitValue: units.length > 0 ? totalValue / units.length : 0,
+      averagePropertyValue: properties.length > 0 ? totalValue / properties.length : 0,
 
       // Area statistics
       totalArea,
-      averageUnitArea: units.length > 0 ? totalArea / units.length : 0,
+      averagePropertyArea: properties.length > 0 ? totalArea / properties.length : 0,
 
       // Categorized statistics
       statistics: {
-        byType: unitsByType,
-        byBuilding: unitsByBuilding,
-        byProject: unitsByProject,
-        byStatus: unitsByStatus
+        byType: propsByType,
+        byBuilding: propsByBuilding,
+        byProject: propsByProject,
+        byStatus: propsByStatus
       },
 
       // Additional contact information για extended view
@@ -293,13 +293,13 @@ export async function GET(
       dataSource: 'firestore'
     };
 
-    logger.info('Contact units loaded successfully', { contactId });
-    logger.info('Statistics', { unitsCount: units.length, totalValue, totalArea });
+    logger.info('Contact properties loaded successfully', { contactId });
+    logger.info('Statistics', { propertiesCount: properties.length, totalValue, totalArea });
 
     return NextResponse.json(response);
 
   } catch (error) {
-    logger.error('Error loading contact units', { error });
+    logger.error('Error loading contact properties', { error });
 
     // Enterprise error handling με detailed error information
     const isFirebaseError = error instanceof Error && error.message.includes('Firebase');
@@ -323,14 +323,14 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: getErrorMessage(error, 'Άγνωστο σφάλμα φόρτωσης μονάδων επαφής'),
+        error: getErrorMessage(error, 'Άγνωστο σφάλμα φόρτωσης ιδιοκτησιών επαφής'),
         errorCategory,
         contactId: contactId || null,
         timestamp: new Date().toISOString(),
 
         // Empty data structure for consistency
-        units: [],
-        unitsCount: 0,
+        properties: [],
+        propertiesCount: 0,
         totalValue: 0,
         totalArea: 0,
         statistics: {

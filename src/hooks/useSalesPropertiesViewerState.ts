@@ -9,7 +9,7 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
-import type { Unit, CommercialStatus } from '@/types/unit';
+import type { Property, CommercialStatus } from '@/types/property';
 
 // =============================================================================
 // 🏢 TYPES
@@ -48,8 +48,8 @@ const DEFAULT_FILTERS: SalesFilterState = {
 // 🏢 MAIN HOOK
 // =============================================================================
 
-export function useSalesUnitsViewerState() {
-  // Data from SharedPropertiesProvider — SAME data source as /units page
+export function useSalesPropertiesViewerState() {
+  // Data from SharedPropertiesProvider — SAME data source as /properties page
   const { properties: allUnits, isLoading: loading, forceDataRefresh: refetch } = useSharedProperties();
 
   // View state
@@ -68,7 +68,7 @@ export function useSalesUnitsViewerState() {
   // Sold/rented units remain accessible for post-sale follow-up (ADR-197)
   // =========================================================================
   const salesUnits = useMemo(() => {
-    return allUnits as Unit[];
+    return allUnits as Property[];
   }, [allUnits]);
 
   // =========================================================================

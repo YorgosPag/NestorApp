@@ -21,7 +21,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for icons/colors
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
-import { UnitNode } from './UnitNode';
+import { PropertyNode } from './PropertyNode';
 import { StorageNode } from './StorageNode';
 import { ParkingNode } from './ParkingNode';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -181,7 +181,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
                   {t('structure.noUnits', 'Δεν υπάρχουν μονάδες')}
                 </p>
               ) : (
-                units.map(unit => <UnitNode key={unit.id} unit={unit} />)
+                units.map(unit => <PropertyNode key={unit.id} unit={unit} />)
               )
             )}
 

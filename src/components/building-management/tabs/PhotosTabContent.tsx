@@ -31,7 +31,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 interface PhotosTabContentProps {
   /** Building entity (for building context) */
   building?: Building;
-  /** Selected unit (for units context via GenericUnitsTabsRenderer) */
+  /** Selected unit (for units context via GenericPropertiesTabsRenderer) */
   selectedUnit?: { id: string; name?: string };
 }
 
@@ -46,7 +46,7 @@ interface PhotosTabContentProps {
  *
  * Supports both:
  * - Building context (receives building prop)
- * - Units context (receives selectedUnit prop from GenericUnitsTabsRenderer)
+ * - Units context (receives selectedUnit prop from GenericPropertiesTabsRenderer)
  */
 const PhotosTabContent = ({ building, selectedUnit }: PhotosTabContentProps) => {
   // 🏢 ENTERPRISE: i18n hook for translations

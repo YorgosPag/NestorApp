@@ -65,7 +65,7 @@ export function MobileNavigation({
     getBuildingCount,
     getBuildingsForProject,
     // 🏢 ENTERPRISE: Real-time unit functions
-    getUnitCount
+    getPropertyCount
   } = useNavigation();
 
   // 🏢 ENTERPRISE: i18n hook
@@ -187,7 +187,7 @@ export function MobileNavigation({
           <>
             {projectBuildings.map(building => {
               // 🏢 ENTERPRISE: Real-time unit count
-              const unitCount = getUnitCount(building.id);
+              const unitCount = getPropertyCount(building.id);
               const hasUnits = unitCount > 0;
 
               return (

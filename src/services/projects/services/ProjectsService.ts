@@ -168,7 +168,7 @@ export class ProjectsService implements IProjectsService {
         for (const building of buildings.docs) {
             // 🏢 ENTERPRISE: Use configurable building ID pattern
             const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
-            const unitsQuery = database.collection(COLLECTIONS.UNITS).where(FIELDS.BUILDING_ID, '==', `${buildingIdPattern}${building.id}`);
+            const unitsQuery = database.collection(COLLECTIONS.PROPERTIES).where(FIELDS.BUILDING_ID, '==', `${buildingIdPattern}${building.id}`);
             const units = await unitsQuery.get();
             units.docs.forEach(doc => {
                 const data = doc.data();
@@ -177,7 +177,7 @@ export class ProjectsService implements IProjectsService {
         }
 
         try {
-            const directUnitsQuery = database.collection(COLLECTIONS.UNITS).where(FIELDS.PROJECT_ID, '==', projectId);
+            const directUnitsQuery = database.collection(COLLECTIONS.PROPERTIES).where(FIELDS.PROJECT_ID, '==', projectId);
             const directUnits = await directUnitsQuery.get();
             if (!directUnits.empty) {
                 // Has direct units

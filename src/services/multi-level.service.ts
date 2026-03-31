@@ -4,15 +4,15 @@
  * =============================================================================
  *
  * Utility functions for multi-level property management.
- * Converts floor selections to UnitLevel arrays, derives backward-compatible
+ * Converts floor selections to PropertyLevel arrays, derives backward-compatible
  * fields, and validates multi-level floor constraints.
  *
  * @module services/multi-level
  * @since ADR-236 — Multi-Level Property Management
  */
 
-import type { UnitLevel, LevelData } from '@/types/unit';
-import type { OrientationType } from '@/constants/unit-features-enterprise';
+import type { PropertyLevel, LevelData } from '@/types/property';
+import type { OrientationType } from '@/constants/property-features-enterprise';
 
 // =============================================================================
 // TYPES
@@ -36,8 +36,8 @@ export interface DerivedMultiLevelFields {
   floorId: string;
   /** Whether unit is multi-level */
   isMultiLevel: boolean;
-  /** Sorted UnitLevel array */
-  levels: UnitLevel[];
+  /** Sorted PropertyLevel array */
+  levels: PropertyLevel[];
 }
 
 // =============================================================================
@@ -45,16 +45,16 @@ export interface DerivedMultiLevelFields {
 // =============================================================================
 
 /**
- * Convert selected floor options into a UnitLevel array.
+ * Convert selected floor options into a PropertyLevel array.
  *
  * @param selectedFloors — floor options selected by the user
  * @param primaryFloorId — the floor ID marked as primary (entrance)
- * @returns sorted UnitLevel array with exactly one isPrimary=true
+ * @returns sorted PropertyLevel array with exactly one isPrimary=true
  */
 export function buildLevelsFromSelection(
   selectedFloors: FloorOption[],
   primaryFloorId: string
-): UnitLevel[] {
+): PropertyLevel[] {
   return selectedFloors
     .map((floor) => ({
       floorId: floor.id,
@@ -70,13 +70,13 @@ export function buildLevelsFromSelection(
 // =============================================================================
 
 /**
- * Auto-derive `floor`, `floorId`, `isMultiLevel`, and `levels` from a UnitLevel array.
+ * Auto-derive `floor`, `floorId`, `isMultiLevel`, and `levels` from a PropertyLevel array.
  * The primary level determines the backward-compatible `floor`/`floorId` fields.
  *
- * @param levels — UnitLevel array (must have exactly one primary)
+ * @param levels — PropertyLevel array (must have exactly one primary)
  * @returns derived fields ready for Firestore persistence
  */
-export function deriveMultiLevelFields(levels: UnitLevel[]): DerivedMultiLevelFields {
+export function deriveMultiLevelFields(levels: PropertyLevel[]): DerivedMultiLevelFields {
   const primary = levels.find((l) => l.isPrimary) ?? levels[0];
 
   return {
@@ -104,9 +104,9 @@ export interface ValidationResult {
  * - Exactly one floor must be marked as primary
  * - At least 2 floors required for multi-level
  *
- * @param levels — candidate UnitLevel array
+ * @param levels — candidate PropertyLevel array
  */
-export function validateMultiLevelFloors(levels: UnitLevel[]): ValidationResult {
+export function validateMultiLevelFloors(levels: PropertyLevel[]): ValidationResult {
   if (levels.length < 2) {
     return { valid: false, error: 'Multi-level units require at least 2 floors' };
   }

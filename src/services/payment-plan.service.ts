@@ -94,7 +94,7 @@ export class PaymentPlanService {
 
       const plan: PaymentPlan = {
         id,
-        unitId: input.unitId,
+        propertyId: input.propertyId,
         buildingId: input.buildingId,
         projectId: input.projectId,
         status: 'negotiation',
@@ -121,13 +121,13 @@ export class PaymentPlanService {
       };
 
       const db = getDb();
-      await db.collection(planCollectionPath(input.unitId)).doc(id).set(plan);
+      await db.collection(planCollectionPath(input.propertyId)).doc(id).set(plan);
 
       if (!options?.skipSummarySync) {
-        await syncPaymentSummary(input.unitId, id);
+        await syncPaymentSummary(input.propertyId, id);
       }
 
-      logger.info(`[PaymentPlanService] Created plan ${id} for unit ${input.unitId}`);
+      logger.info(`[PaymentPlanService] Created plan ${id} for unit ${input.propertyId}`);
       return { success: true, plan };
     } catch (error) {
       logger.error('[PaymentPlanService] Failed to create plan:', error);
@@ -175,7 +175,7 @@ export class PaymentPlanService {
         const result = await this.createPaymentPlan(
           {
             ...baseInput,
-            unitId,
+            propertyId: unitId,
             ownerContactId: owner.contactId,
             ownerName: owner.name,
             totalAmount: ownerAmount,

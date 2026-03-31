@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @module reports/sections/projects/UnitStatusChart
+ * @module reports/sections/projects/PropertyStatusChart
  * @enterprise ADR-265 Phase 7 — Unit commercial status stacked bar per building
  */
 
@@ -9,10 +9,10 @@ import '@/lib/design-system';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
 import type { ChartConfig } from '@/components/ui/chart';
-import type { UnitStatusByBuildingItem } from './types';
+import type { PropertyStatusByBuildingItem } from './types';
 
-interface UnitStatusChartProps {
-  data: UnitStatusByBuildingItem[];
+interface PropertyStatusChartProps {
+  data: PropertyStatusByBuildingItem[];
   loading?: boolean;
 }
 
@@ -26,7 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
   'for-sale-and-rent': 'hsl(var(--report-chart-7))',
 };
 
-export function UnitStatusChart({ data, loading }: UnitStatusChartProps) {
+export function PropertyStatusChart({ data, loading }: PropertyStatusChartProps) {
   const { t } = useTranslation('reports');
 
   // Collect all status keys across buildings

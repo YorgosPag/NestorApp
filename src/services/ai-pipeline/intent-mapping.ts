@@ -62,7 +62,7 @@ export function mapLegacyIntentToPipeline(legacyIntent: string): PipelineIntentT
     'admin_contact_search': PipelineIntentType.ADMIN_CONTACT_SEARCH,
     'admin_project_status': PipelineIntentType.ADMIN_PROJECT_STATUS,
     'admin_send_email': PipelineIntentType.ADMIN_SEND_EMAIL,
-    'admin_unit_stats': PipelineIntentType.ADMIN_UNIT_STATS,
+    'admin_property_stats': PipelineIntentType.ADMIN_PROPERTY_STATS,
     'admin_create_contact': PipelineIntentType.ADMIN_CREATE_CONTACT,
     'admin_update_contact': PipelineIntentType.ADMIN_UPDATE_CONTACT,
     'admin_general_question': PipelineIntentType.ADMIN_GENERAL_QUESTION,

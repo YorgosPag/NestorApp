@@ -7,7 +7,7 @@
  *
  * Centralized statistics computation for entity collections.
  * Eliminates ~400 lines of duplicated useMemo logic across
- * useProjectsStats, useUnitsStats, useParkingStats, useStorageStats, useBuildingStats.
+ * useProjectsStats, usePropertiesStats, useParkingStats, useStorageStats, useBuildingStats.
  *
  * Pattern: Config-driven generic hook + thin entity-specific wrappers.
  *

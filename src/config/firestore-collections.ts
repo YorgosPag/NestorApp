@@ -22,7 +22,7 @@ export const COLLECTIONS = {
   // 🏢 PROJECTS & PROPERTIES
   PROJECTS: process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects',
   BUILDINGS: process.env.NEXT_PUBLIC_BUILDINGS_COLLECTION || 'buildings',
-  UNITS: process.env.NEXT_PUBLIC_UNITS_COLLECTION || 'units',
+  PROPERTIES: process.env.NEXT_PUBLIC_PROPERTIES_COLLECTION || 'properties',
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
 
   // 💬 COMMUNICATIONS
@@ -301,26 +301,26 @@ export const SUBCOLLECTIONS = {
 
   // Building subcollections
   BUILDING_FLOORS: process.env.NEXT_PUBLIC_BUILDING_FLOORS_SUBCOL || 'floors',
-  BUILDING_UNITS: process.env.NEXT_PUBLIC_BUILDING_UNITS_SUBCOL || 'units',
+  BUILDING_PROPERTIES: process.env.NEXT_PUBLIC_BUILDING_PROPERTIES_SUBCOL || 'properties',
   BUILDING_MAINTENANCE: process.env.NEXT_PUBLIC_BUILDING_MAINTENANCE_SUBCOL || 'maintenance',
 
-  // Unit subcollections
-  UNIT_PHOTOS: process.env.NEXT_PUBLIC_UNIT_PHOTOS_SUBCOL || 'photos',
-  UNIT_DOCUMENTS: process.env.NEXT_PUBLIC_UNIT_DOCUMENTS_SUBCOL || 'documents',
-  UNIT_HISTORY: process.env.NEXT_PUBLIC_UNIT_HISTORY_SUBCOL || 'history',
+  // Property subcollections
+  PROPERTY_PHOTOS: process.env.NEXT_PUBLIC_PROPERTY_PHOTOS_SUBCOL || 'photos',
+  PROPERTY_DOCUMENTS: process.env.NEXT_PUBLIC_PROPERTY_DOCUMENTS_SUBCOL || 'documents',
+  PROPERTY_HISTORY: process.env.NEXT_PUBLIC_PROPERTY_HISTORY_SUBCOL || 'history',
 
-  // Unit payment subcollections (ADR-234: Payment Plan & Installment Tracking)
-  UNIT_PAYMENT_PLANS: process.env.NEXT_PUBLIC_UNIT_PAYMENT_PLANS_SUBCOL || 'payment_plans',
-  UNIT_PAYMENTS: process.env.NEXT_PUBLIC_UNIT_PAYMENTS_SUBCOL || 'payments',
+  // Property payment subcollections (ADR-234: Payment Plan & Installment Tracking)
+  PROPERTY_PAYMENT_PLANS: process.env.NEXT_PUBLIC_PROPERTY_PAYMENT_PLANS_SUBCOL || 'payment_plans',
+  PROPERTY_PAYMENTS: process.env.NEXT_PUBLIC_PROPERTY_PAYMENTS_SUBCOL || 'payments',
 
   // User subcollections
   USER_PREFERENCES: process.env.NEXT_PUBLIC_USER_PREFERENCES_SUBCOL || 'preferences',
   USER_SESSIONS: process.env.NEXT_PUBLIC_USER_SESSIONS_SUBCOL || 'sessions',
   USER_NOTIFICATIONS: process.env.NEXT_PUBLIC_USER_NOTIFICATIONS_SUBCOL || 'notifications',
 
-  // Company subcollections (RBAC paths: /companies/{id}/projects, /companies/{id}/units)
+  // Company subcollections (RBAC paths: /companies/{id}/projects, /companies/{id}/properties)
   COMPANY_PROJECTS: process.env.NEXT_PUBLIC_COMPANY_PROJECTS_SUBCOL || 'projects',
-  COMPANY_UNITS: process.env.NEXT_PUBLIC_COMPANY_UNITS_SUBCOL || 'units',
+  COMPANY_PROPERTIES: process.env.NEXT_PUBLIC_COMPANY_PROPERTIES_SUBCOL || 'properties',
 
   // Project subcollections (RBAC: /companies/{id}/projects/{id}/members)
   PROJECT_MEMBERS: process.env.NEXT_PUBLIC_PROJECT_MEMBERS_SUBCOL || 'members',
@@ -328,8 +328,8 @@ export const SUBCOLLECTIONS = {
   // Company member subcollections (ADR-244: Role Management — /companies/{id}/members/{uid})
   COMPANY_MEMBERS: process.env.NEXT_PUBLIC_COMPANY_MEMBERS_SUBCOL || 'members',
 
-  // Unit subcollections (RBAC: /companies/{id}/units/{id}/grants)
-  UNIT_GRANTS: process.env.NEXT_PUBLIC_UNIT_GRANTS_SUBCOL || 'grants',
+  // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
+  PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
 
   // File subcollections (ADR-191: Document Management)
   FILE_VERSIONS: process.env.NEXT_PUBLIC_FILE_VERSIONS_SUBCOL || 'versions',

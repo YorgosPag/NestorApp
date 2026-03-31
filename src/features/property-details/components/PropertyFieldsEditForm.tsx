@@ -1,14 +1,14 @@
 /* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors, custom/no-hardcoded-strings */
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Unit Fields Edit Form
+ * 🏢 ENTERPRISE: Property Fields Edit Form
  * =============================================================================
  *
- * Form renderer for unit fields (edit mode). Extracted from UnitFieldsBlock.tsx
- * for SRP compliance (ADR N.7.1). The orchestrator (UnitFieldsBlock) manages
+ * Form renderer for property fields (edit mode). Extracted from PropertyFieldsBlock.tsx
+ * for SRP compliance (ADR N.7.1). The orchestrator (PropertyFieldsBlock) manages
  * state, effects, and handlers; this component renders the form cards.
  *
- * @module features/property-details/components/UnitFieldsEditForm
+ * @module features/property-details/components/PropertyFieldsEditForm
  * @since 2026-03-27
  */
 
@@ -40,16 +40,16 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 
-import type { CommercialStatus, OperationalStatus } from '@/types/unit';
+import type { CommercialStatus, OperationalStatus } from '@/types/property';
 import { isValidEntityCodeFormat } from '@/services/entity-code.service';
-import { LevelTabStrip } from './UnitFieldsReadOnly';
+import { LevelTabStrip } from './PropertyFieldsReadOnly';
 import {
   UNIT_TYPE_OPTIONS, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
-} from './unit-fields-constants';
-import type { UnitFieldsEditFormProps } from './unit-fields-form-types';
-import { UnitFieldsDetailCards } from './UnitFieldsDetailCards';
+} from './property-fields-constants';
+import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
+import { PropertyFieldsDetailCards } from './PropertyFieldsDetailCards';
 
-export function UnitFieldsEditForm({
+export function PropertyFieldsEditForm({
   formData,
   setFormData,
   property,
@@ -72,11 +72,11 @@ export function UnitFieldsEditForm({
   typography,
   iconSizes,
   quick,
-}: UnitFieldsEditFormProps) {
+}: PropertyFieldsEditFormProps) {
   const colors = useSemanticColors();
   return (
     <form
-      id={isEditing ? 'unit-fields-form' : undefined}
+      id={isEditing ? 'property-fields-form' : undefined}
       className="space-y-4 p-1"
       onSubmit={(e) => { e.preventDefault(); if (isEditing) handleSave(); }}
     >
@@ -382,7 +382,7 @@ export function UnitFieldsEditForm({
       </section>
 
 
-      <UnitFieldsDetailCards
+      <PropertyFieldsDetailCards
         formData={formData}
         setFormData={setFormData}
         isEditing={isEditing}

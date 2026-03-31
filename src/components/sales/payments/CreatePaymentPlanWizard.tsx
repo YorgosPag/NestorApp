@@ -54,13 +54,13 @@ interface CreatePaymentPlanWizardProps {
   ownerContactId: string;
   ownerName: string;
   suggestedAmount: number;
-  onCreate: (input: Omit<CreatePaymentPlanInput, 'unitId'>) => Promise<{ success: boolean; error?: string }>;
+  onCreate: (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => Promise<{ success: boolean; error?: string }>;
   /** ADR-244: Multi-owner support — if >1, shows joint/individual step */
   owners?: PropertyOwnerEntry[];
   /** ADR-244: Create split plans (individual mode) */
   onCreateSplit?: (
     owners: PropertyOwnerEntry[],
-    baseInput: Omit<CreatePaymentPlanInput, 'unitId' | 'ownerContactId' | 'ownerName' | 'totalAmount' | 'installments'>,
+    baseInput: Omit<CreatePaymentPlanInput, 'propertyId' | 'ownerContactId' | 'ownerName' | 'totalAmount' | 'installments'>,
     totalPrice: number,
     baseInstallments: CreateInstallmentInput[],
   ) => Promise<{ success: boolean; error?: string }>;

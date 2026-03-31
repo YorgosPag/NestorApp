@@ -17,7 +17,7 @@ import {
   ProjectsKPIs,
   ProjectStatusChart,
   ProjectProgressChart,
-  UnitStatusChart,
+  PropertyStatusChart,
   RevenueByProjectChart,
   PricePerSqmChart,
   BOQVarianceChart,
@@ -44,7 +44,7 @@ export default function ProjectsReportsPage() {
 
       <ProjectProgressChart data={report.projectProgress} loading={report.loading} />
 
-      <UnitStatusChart data={report.unitStatusByBuilding} loading={report.loading} />
+      <PropertyStatusChart data={report.unitStatusByBuilding} loading={report.loading} />
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RevenueByProjectChart data={report.revenueByProject} loading={report.loading} />

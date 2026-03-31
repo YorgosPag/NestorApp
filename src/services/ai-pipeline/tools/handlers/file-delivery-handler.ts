@@ -121,7 +121,7 @@ export class FileDeliveryHandler implements ToolHandler {
       }
     }
 
-    const unitDoc = await db.collection(COLLECTIONS.UNITS).doc(sourceId).get();
+    const unitDoc = await db.collection(COLLECTIONS.PROPERTIES).doc(sourceId).get();
     if (!unitDoc.exists) {
       return { success: false, error: 'Το ακίνητο δεν βρέθηκε.' };
     }

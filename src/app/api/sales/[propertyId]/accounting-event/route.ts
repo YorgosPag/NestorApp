@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * POST /api/sales/{unitId}/accounting-event — Sales-to-Accounting Bridge
+ * POST /api/sales/{propertyId}/accounting-event — Sales-to-Accounting Bridge
  * =============================================================================
  *
  * Δημιουργεί λογιστικά παραστατικά (invoice + journal entry) από sales events.
@@ -8,7 +8,7 @@
  * Auth: withAuth (authenticated users)
  * Rate: withStandardRateLimit (60 req/min)
  *
- * @module api/sales/[unitId]/accounting-event
+ * @module api/sales/[propertyId]/accounting-event
  * @see ADR-198 Sales-to-Accounting Bridge
  */
 
@@ -32,8 +32,8 @@ function validateEvent(body: Partial<SalesAccountingEvent>): string | null {
   if (!body.eventType || !VALID_EVENT_TYPES.includes(body.eventType as typeof VALID_EVENT_TYPES[number])) {
     return 'eventType must be one of: deposit_invoice, final_sale_invoice, credit_invoice, reservation_notify';
   }
-  if (!body.unitId?.trim()) return 'unitId is required';
-  if (!body.unitName?.trim()) return 'unitName is required';
+  if (!body.propertyId?.trim()) return 'propertyId is required';
+  if (!body.propertyName?.trim()) return 'propertyName is required';
 
   switch (body.eventType) {
     case 'deposit_invoice': {
@@ -80,16 +80,16 @@ function validateEvent(body: Partial<SalesAccountingEvent>): string | null {
 
 async function handlePost(
   request: NextRequest,
-  segmentData?: { params: Promise<{ unitId: string }> }
+  segmentData?: { params: Promise<{ propertyId: string }> }
 ): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { unitId } = await segmentData!.params;
+        const { propertyId } = await segmentData!.params;
         const body = (await req.json()) as Partial<SalesAccountingEvent>;
 
-        // Ensure unitId from URL matches body
-        body.unitId = unitId;
+        // Ensure propertyId from URL matches body
+        body.propertyId = propertyId;
 
         // Validate
         const validationError = validateEvent(body);

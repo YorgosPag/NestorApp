@@ -72,9 +72,9 @@ describe('ColumnSelector — Reorder Logic', () => {
   });
 });
 
-describe('ColumnSelector — Units domain default columns', () => {
-  it('units default columns include key fields', () => {
-    const unitDefaults = getDefaultColumns('units');
+describe('ColumnSelector — Properties domain default columns', () => {
+  it('properties default columns include key fields', () => {
+    const unitDefaults = getDefaultColumns('properties');
     expect(unitDefaults).toContain('name');
     expect(unitDefaults).toContain('commercialStatus');
   });

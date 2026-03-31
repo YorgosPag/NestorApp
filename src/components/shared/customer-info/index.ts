@@ -16,7 +16,7 @@
 export { UnifiedCustomerCard } from './components/UnifiedCustomerCard';
 export { CustomerInfoCompact } from './components/CustomerInfoCompact';
 export { CustomerActionButtons } from './components/CustomerActionButtons';
-export { UnitCustomerDisplay } from './components/UnitCustomerDisplay';
+export { PropertyCustomerDisplay } from './components/PropertyCustomerDisplay';
 
 // ============================================================================
 // HOOKS
@@ -156,9 +156,13 @@ export class CustomerInfoBuilder {
       label: type,
       icon: (() => {
         switch (type) {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
           case 'view': return require('lucide-react').Eye;
+          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
           case 'call': return require('lucide-react').Phone;
+          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
           case 'email': return require('lucide-react').Mail;
+          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
           default: return require('lucide-react').ArrowRight;
         }
       })(),

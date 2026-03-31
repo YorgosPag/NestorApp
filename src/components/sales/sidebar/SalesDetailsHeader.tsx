@@ -11,14 +11,14 @@ import { ShoppingBag, DollarSign, UserCheck, CheckCircle, Undo2 } from 'lucide-r
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { EntityHeaderAction } from '@/core/entity-headers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 
 // =============================================================================
 // 🏢 TYPES
 // =============================================================================
 
 interface SalesDetailsHeaderProps {
-  unit: Unit;
+  unit: Property;
   onChangePrice: () => void;
   onReserve: () => void;
   onSell: () => void;

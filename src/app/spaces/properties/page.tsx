@@ -10,7 +10,7 @@ import '@/lib/design-system';
 /**
  * ENTERPRISE ROUTE REDIRECT
  *
- * This page redirects /spaces/apartments to /units to maintain
+ * This page redirects /spaces/properties to /properties to maintain
  * backward compatibility while implementing the new Physical Space
  * vs Sellable Asset architecture.
  *
@@ -36,7 +36,7 @@ function RedirectContent() {
   useEffect(() => {
     // 🏢 ENTERPRISE: Preserve URL parameters during redirect (contextual navigation)
     const queryString = searchParams.toString();
-    const targetUrl = queryString ? `/units?${queryString}` : '/units'; // eslint-disable-line custom/no-hardcoded-strings
+    const targetUrl = queryString ? `/properties?${queryString}` : '/properties'; // eslint-disable-line custom/no-hardcoded-strings
     router.replace(targetUrl);
   }, [router, searchParams]);
 
@@ -57,7 +57,7 @@ function RedirectContent() {
 /**
  * 🔧 Next.js 15: Page component with Suspense boundary
  */
-export default function SpacesApartmentsRedirectPage() {
+export default function SpacesPropertiesRedirectPage() {
   return (
     <Suspense fallback={<StaticPageLoading />}>
       <RedirectContent />

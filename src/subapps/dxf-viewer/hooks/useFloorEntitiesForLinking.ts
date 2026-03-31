@@ -7,7 +7,7 @@
  * detection for the Properties Panel entity dropdown.
  *
  * Reuses existing centralized hooks:
- * - useFirestoreUnits (supports floorId via API)
+ * - useFirestoreProperties (supports floorId via API)
  * - useFirestoreParkingSpots (building-level, filtered client-side by floorId)
  * - useFirestoreStorages (building-level, filtered client-side by floorId)
  *
@@ -15,10 +15,10 @@
  */
 
 import { useMemo } from 'react';
-import { useFirestoreUnits } from '@/hooks/useFirestoreUnits';
+import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
-import type { CommercialStatus } from '@/types/unit';
+import type { CommercialStatus } from '@/types/property';
 import type { SpaceCommercialStatus } from '@/types/sales-shared';
 import type { OverlayKind, Overlay } from '../overlays/types';
 
@@ -81,7 +81,7 @@ export function useFloorEntitiesForLinking({
   // Parking/Storage: API requires buildingId — floorId filtered client-side
   const hasFloorOrBuilding = !!buildingId || !!floorId;
 
-  const { units, loading: unitsLoading } = useFirestoreUnits({
+  const { properties: units, loading: unitsLoading } = useFirestoreProperties({
     buildingId,
     floorId,
     autoFetch: enabled && isUnit && hasFloorOrBuilding,
@@ -113,7 +113,7 @@ export function useFloorEntitiesForLinking({
     let result: LinkableEntity[] = [];
 
     if (isUnit) {
-      // useFirestoreUnits already supports floorId in API query — no client filter needed
+      // useFirestoreProperties already supports floorId in API query — no client filter needed
       result = units.map(u => ({
         id: u.id,
         displayName: u.name || u.unitName || u.code || u.id,

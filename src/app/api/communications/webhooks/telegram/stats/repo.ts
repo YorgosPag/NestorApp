@@ -27,7 +27,7 @@ export async function getPropertySummary(): Promise<PropertySummary> {
     const { collection, getDocs } = firestoreHelpers;
 
     // Firebase Admin SDK: collection() returns a CollectionReference directly
-    const unitsCollection = collection(COLLECTIONS.UNITS);
+    const unitsCollection = collection(COLLECTIONS.PROPERTIES);
     const querySnapshot = await getDocs(unitsCollection);
 
     interface PropertyDoc {

@@ -89,7 +89,7 @@ export default function FirestoreTestData() {
     const setupTestData = async () => {
       try {
         // Check if data exists
-        const unitsCollection = collection(db, COLLECTIONS.UNITS);
+        const unitsCollection = collection(db, COLLECTIONS.PROPERTIES);
         const snapshot = await getDocs(unitsCollection);
 
         logger.info('Current Firestore units count', { count: snapshot.size });
@@ -101,7 +101,7 @@ export default function FirestoreTestData() {
           // Add test properties
           for (const property of TEST_PROPERTIES) {
             const { id, ...propertyData } = property;
-            await setDoc(doc(db, COLLECTIONS.UNITS, id), propertyData);
+            await setDoc(doc(db, COLLECTIONS.PROPERTIES, id), propertyData);
             logger.info('Created test property', { name: property.name });
           }
 

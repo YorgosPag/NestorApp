@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Contact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
-import { getUnits } from '@/services/units.service';
+import { getProperties } from '@/services/properties.service';
 import type { Property } from '@/types/property-viewer';
 import { getContactDisplayName } from '@/types/contacts';
 import { normalizeToDate } from '@/lib/date-local';
@@ -88,7 +88,7 @@ export function useContactsState() {
     const setup = async () => {
       try {
         // Units: one-time fetch (no real-time needed)
-        const units = await getUnits();
+        const units = await getProperties();
         setAllUnits(units);
 
         // Contacts: real-time subscription (ADR-227 Phase 2: canonical pattern)

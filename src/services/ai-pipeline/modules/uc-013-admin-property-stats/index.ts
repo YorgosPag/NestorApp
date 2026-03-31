@@ -1,5 +1,5 @@
 /**
- * UC-013: Admin Unit Stats
+ * UC-013: Admin Property Stats
  * @see ADR-145 (Super Admin AI Assistant)
  */
-export { AdminUnitStatsModule } from './admin-unit-stats-module';
+export { AdminPropertyStatsModule } from './admin-property-stats-module';

@@ -21,9 +21,9 @@ import type {
   FlooringType,
   FrameType,
   GlazingType
-} from '@/constants/unit-features-enterprise';
+} from '@/constants/property-features-enterprise';
 
-// Re-export feature types for consumers that import from '@/types/unit'
+// Re-export feature types for consumers that import from '@/types/property'
 export type {
   OrientationType,
   ViewTypeValue,
@@ -115,7 +115,7 @@ export type CommercialStatus =
  * @since ADR-197 — Sales Pages Implementation
  * @pattern Salesforce Property Cloud, HubSpot CRM — pricing + buyer tracking
  */
-export interface UnitCommercialData {
+export interface PropertyCommercialData {
   /** Ζητούμενη τιμή καταλόγου */
   askingPrice: number | null;
 
@@ -160,12 +160,12 @@ export interface UnitCommercialData {
 /**
  * ✅ ENTERPRISE: Floor-level record for multi-level units (maisonettes, penthouses, etc.)
  *
- * Units that span multiple floors store an array of UnitLevel entries.
+ * Units that span multiple floors store an array of PropertyLevel entries.
  * The `isPrimary` floor is used to derive backward-compatible `floor`/`floorId` fields.
  *
  * @since ADR-236 — Multi-Level Property Management
  */
-export interface UnitLevel {
+export interface PropertyLevel {
   /** Firestore floor document ID */
   floorId: string;
   /** Floor number (used for sorting) */
@@ -212,7 +212,7 @@ export interface LevelData {
 // Legacy Greek values ('Στούντιο', 'Διαμέρισμα 2Δ', etc.) may still exist in Firestore
 // UI should use i18n mapping: t(`types.${unit.type}`, { defaultValue: unit.type })
 
-export type UnitType =
+export type PropertyType =
   | 'studio'          // Στούντιο
   | 'apartment_1br'   // Γκαρσονιέρα
   | 'apartment'       // Διαμέρισμα (generic)
@@ -246,7 +246,7 @@ export type UnitType =
  * - Requires backfill to set false where missing for existing units
  * - Firestore where(hasPhotos, '==', false) only matches explicit false, not undefined
  */
-export interface UnitCoverage {
+export interface PropertyCoverage {
   /** Unit has at least 1 photo - MUST be explicit true/false for filtering */
   hasPhotos: boolean;
   /** Unit has at least 1 floorplan - MUST be explicit true/false for filtering */
@@ -306,7 +306,7 @@ export interface LinkedSpace {
 // =============================================================================
 
 /**
- * ✅ DOMAIN SEPARATION: Unit = Physical Space (NOT Sales Asset)
+ * ✅ DOMAIN SEPARATION: Property = Physical Space (NOT Sales Asset)
  *
  * Contains ONLY physical/technical/operational data
  * Sales data (price, soldTo, saleDate) are DEPRECATED and will be removed
@@ -316,11 +316,11 @@ export interface LinkedSpace {
  * @future Move sales data to SalesAsset type in /sales module
  */
 
-export interface Unit {
+export interface Property {
   // === EXISTING FIELDS ===
   id: string;
   name: string;
-  type: UnitType;
+  type: PropertyType;
   building: string;
   floor: number;
 
@@ -370,7 +370,7 @@ export interface Unit {
    * Used for Πληρότητα dashboard card and filtering
    * @since PR1.2 - Coverage/Completeness implementation
    */
-  unitCoverage?: UnitCoverage;
+  unitCoverage?: PropertyCoverage;
 
   /**
    * ✅ NEW: Commercial status (market disposition)
@@ -385,7 +385,7 @@ export interface Unit {
    * Contains asking price, final price, buyer, dates
    * @since ADR-197 — Sales Pages Implementation
    */
-  commercial?: UnitCommercialData;
+  commercial?: PropertyCommercialData;
 
   unitName?: string; // ✅ ENTERPRISE FIX: Optional fallback property for backward compatibility
 
@@ -481,24 +481,24 @@ export interface Unit {
   /** Whether this unit spans multiple floors (maisonette, penthouse, loft, etc.) */
   isMultiLevel?: boolean;
   /** Floor-level details when unit spans multiple floors */
-  levels?: UnitLevel[];
+  levels?: PropertyLevel[];
   /** Per-level content data keyed by floorId — multi-level units only (ADR-236 Phase 2) */
   levelData?: Record<string, LevelData>;
 }
 
 // =============================================================================
-// 🏢 MIGRATION TYPES (UnitDoc vs UnitModel Pattern)
+// 🏢 MIGRATION TYPES (PropertyDoc vs PropertyModel Pattern)
 // =============================================================================
 
 /**
  * Firestore Document type - allows missing fields for backward compatibility
  * Used when reading from Firestore during migration period
  */
-export interface UnitDoc {
+export interface PropertyDoc {
   // Legacy fields - all optional
   id?: string;
   name?: string;
-  type?: UnitType;
+  type?: PropertyType;
 
   // New extended fields - all optional during migration
   code?: string;
@@ -522,7 +522,7 @@ export interface UnitDoc {
     levels: number;
     balconies: number;
   }>;
-  unitCoverage?: Partial<UnitCoverage>;
+  unitCoverage?: Partial<PropertyCoverage>;
 
   // Additional extended fields (optional during migration)
   operationalStatus?: OperationalStatus;
@@ -551,12 +551,12 @@ export interface UnitDoc {
 
   // Multi-level fields (ADR-236)
   isMultiLevel?: boolean;
-  levels?: UnitLevel[];
+  levels?: PropertyLevel[];
   levelData?: Record<string, LevelData>;
 
   // Commercial fields (ADR-197, ADR-230)
   commercialStatus?: CommercialStatus;
-  commercial?: Partial<UnitCommercialData>; // includes legalPhase via ADR-230
+  commercial?: Partial<PropertyCommercialData>; // includes legalPhase via ADR-230
 
   // Legacy fields that might exist in old documents
   status?: LegacySalesStatus;
@@ -580,11 +580,11 @@ export interface UnitDoc {
  * Application Model type - normalized with defaults
  * Used in application after normalization
  */
-export interface UnitModel extends Unit {
+export interface PropertyModel extends Property {
   // All required fields have values (never undefined)
   id: string;
   name: string;
-  type: UnitType;
+  type: PropertyType;
 
   // Arrays default to empty (never undefined)
   orientations: OrientationType[];
@@ -593,7 +593,7 @@ export interface UnitModel extends Unit {
   securityFeatures: SecurityFeatureCodeType[];
 
   // Coverage defaults to false (never undefined)
-  unitCoverage: UnitCoverage;
+  unitCoverage: PropertyCoverage;
 }
 
 /**
@@ -604,7 +604,7 @@ export interface BackfillDefaults {
   // Identity fields (server-generated)
   id: string;
   name: string;
-  type: UnitType;
+  type: PropertyType;
 
   // Hierarchy fields (from building/project context)
   building: string;
@@ -628,4 +628,45 @@ export interface BackfillDefaults {
  * ⚠️ PARTIAL DEPRECATION: 'price' sort key will be removed
  * @migration PR1: Remove price sorting from UnitsList
  */
-export type UnitSortKey = 'name' | 'price' | 'area';
+export type PropertySortKey = 'name' | 'price' | 'area';
+
+// =============================================================================
+// 🏢 PROPERTY FILTERS & STATS (merged from legacy property.ts)
+// =============================================================================
+
+export interface PropertyFilters {
+  searchTerm: string;
+  type: string;
+  status: string;
+  floor: string;
+  building: string;
+  minArea: number | null;
+  maxArea: number | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+}
+
+export interface PropertyStats {
+  totalProperties: number;
+  availableProperties: number;
+  totalValue: number;
+  totalArea: number;
+  averagePrice: number;
+  propertiesByStatus: Record<string, number>;
+  propertiesByType: Record<string, number>;
+  propertiesByFloor: Record<string, number>;
+  totalStorageUnits: number;
+  availableStorageUnits: number;
+  uniqueBuildings: number;
+
+  // 🎯 DOMAIN SEPARATION: Operational Status Metrics (Properties = Physical Truth)
+  underConstructionProperties?: number;
+  maintenanceProperties?: number;
+  inspectionProperties?: number;
+  draftProperties?: number;
+
+  // ⚠️ DEPRECATED: Sales metrics (for backward compatibility only)
+  soldProperties?: number;
+  soldStorageUnits?: number;
+  reserved?: number;
+}

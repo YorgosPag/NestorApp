@@ -109,7 +109,7 @@ export async function getBuildingSpaces(
       : buildingId;
 
     // --- UNITS: always have buildingId ---
-    const unitsRef = collection(db, COLLECTIONS.UNITS);
+    const unitsRef = collection(db, COLLECTIONS.PROPERTIES);
     const unitsQuery = query(unitsRef, where('buildingId', '==', buildingId));
     const unitsSnap = await getDocs(unitsQuery);
 

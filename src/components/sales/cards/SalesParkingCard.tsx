@@ -3,7 +3,7 @@
 /**
  * @fileoverview Sales Parking List Card — ADR-199
  * @description Card for parking spots in sales context — extends ListCard molecule
- * @pattern Same as SalesUnitListCard but with parking-specific data
+ * @pattern Same as SalesPropertyListCard but with parking-specific data
  */
 
 import React, { useMemo } from 'react';

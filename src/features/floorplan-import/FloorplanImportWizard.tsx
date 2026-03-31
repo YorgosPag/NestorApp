@@ -33,7 +33,7 @@ import { WizardProgress } from '@/subapps/dxf-viewer/ui/components/WizardProgres
 
 import { useFloorplanImportState } from './hooks/useFloorplanImportState';
 import { StepEntitySelector } from './components/StepEntitySelector';
-import { StepUnitSelector } from './components/StepUnitSelector';
+import { StepPropertySelector } from './components/StepPropertySelector';
 import { StepUpload } from './components/StepUpload';
 import type { FloorplanType } from './hooks/useFloorplanImportState';
 import '@/lib/design-system';
@@ -188,7 +188,7 @@ export function FloorplanImportWizard({
 
           {/* Step 5: Unit selector + levels */}
           {state.step === 5 && (
-            <StepUnitSelector
+            <StepPropertySelector
               unitItems={state.unitItems}
               unitLoading={state.unitLoading}
               selectedUnitId={state.selection.unitId}

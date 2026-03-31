@@ -1,6 +1,6 @@
 /**
- * 🏢 ENTERPRISE: Link Units Error Boundary
- * @route /admin/link-units
+ * 🏢 ENTERPRISE: Link Properties Error Boundary
+ * @route /admin/link-properties
  * @enterprise SAP/Salesforce/Microsoft - Centralized Error Handling
  */
 'use client';
@@ -12,6 +12,6 @@ interface ErrorProps {
   reset: () => void;
 }
 
-export default function LinkUnitsError({ error, reset }: ErrorProps) {
-  return <RouteErrorFallback error={error} reset={reset} componentName="Link Units" />;
+export default function LinkPropertiesError({ error, reset }: ErrorProps) {
+  return <RouteErrorFallback error={error} reset={reset} componentName="Link Properties" />;
 }

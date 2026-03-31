@@ -1,8 +1,8 @@
 /**
- * ?? ENTERPRISE: Domain-scoped Units Component Mapping
+ * ?? ENTERPRISE: Domain-scoped Properties Component Mapping
  *
- * Contains ONLY units-related components.
- * This file is the ONLY mapping import needed for /units and UnitsSidebar.
+ * Contains ONLY properties-related components.
+ * This file is the ONLY mapping import needed for /properties and PropertiesSidebar.
  *
  * RATIONALE: Splitting from master barrel eliminates transitive imports
  * of project/building/contact/parking/storage components from units pages,
@@ -12,7 +12,7 @@
  * This is NOT duplication - it's domain scoping.
  * The index.ts will be kept for legacy/backward compatibility.
  *
- * @module components/generic/mappings/unitsMappings
+ * @module components/generic/mappings/propertiesMappings
  */
 
 // ============================================================================
@@ -43,7 +43,7 @@ import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 // UNITS COMPONENT MAPPING
 // ============================================================================
 
-export const UNITS_COMPONENT_MAPPING: Record<string, ComponentType<TabComponentProps>> = {
+export const PROPERTIES_COMPONENT_MAPPING: Record<string, ComponentType<TabComponentProps>> = {
   'PropertyDetailsContent': PropertyDetailsContent as ComponentType<TabComponentProps>,
   'UnitCustomerTab': UnitCustomerTab as ComponentType<TabComponentProps>,
   'FloorPlanTab': FloorPlanTab as unknown as ComponentType<TabComponentProps>,
@@ -65,5 +65,5 @@ export const UNITS_COMPONENT_MAPPING: Record<string, ComponentType<TabComponentP
 // TYPE DEFINITIONS
 // ============================================================================
 
-export type UnitsComponentName = keyof typeof UNITS_COMPONENT_MAPPING;
+export type PropertiesComponentName = keyof typeof PROPERTIES_COMPONENT_MAPPING;
 

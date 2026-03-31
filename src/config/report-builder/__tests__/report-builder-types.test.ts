@@ -162,7 +162,7 @@ describe('URL State — encodeBuilderState / decodeBuilderState', () => {
 
   it('round-trips sort and limit', () => {
     const encoded = encodeBuilderState(
-      'units', [], ['name'], 'commercial.finalPrice', 'desc', 1000,
+      'properties', [], ['name'], 'commercial.finalPrice', 'desc', 1000,
     );
     const decoded = decodeBuilderState(new URLSearchParams(encoded));
 

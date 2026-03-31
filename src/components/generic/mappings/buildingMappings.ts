@@ -64,7 +64,7 @@ import { FloorsTabContent } from '@/components/building-management/tabs/FloorsTa
 // ============================================================================
 
 import { ParkingTabContent } from '@/components/building-management/tabs/ParkingTabContent';
-import { UnitsTabContent } from '@/components/building-management/tabs/UnitsTabContent';
+import { PropertiesTabContent } from '@/components/building-management/tabs/PropertiesTabContent';
 
 // ============================================================================
 // AUDIT & HISTORY (ADR-195)
@@ -93,7 +93,7 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   'MeasurementsTabContent': MeasurementsTabContent as ComponentType<TabComponentProps>,
   'FloorsTabContent': FloorsTabContent as ComponentType<TabComponentProps>,
   'ParkingTabContent': ParkingTabContent as ComponentType<TabComponentProps>,
-  'UnitsTabContent': UnitsTabContent as ComponentType<TabComponentProps>,
+  'PropertiesTabContent': PropertiesTabContent as ComponentType<TabComponentProps>,
 
   // 🏢 ENTERPRISE: Unified Factory aliases - all using EntityFilesManager (ADR-031)
   'BuildingGeneralTab': GeneralTabContent as ComponentType<TabComponentProps>,

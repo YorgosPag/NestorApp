@@ -12,11 +12,11 @@ import { BUILDING_IDS } from '@/config/building-ids-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { tallyBy } from '@/utils/collection-utils';
 
-const logger = createModuleLogger('useUnitsViewerState');
+const logger = createModuleLogger('usePropertiesViewerState');
 
 const noop = () => {};
 
-export function useUnitsViewerState() {
+export function usePropertiesViewerState() {
   const searchParams = useSearchParams();
   const unitIdFromUrl = searchParams.get('unitId');
   
@@ -255,18 +255,18 @@ export function useUnitsViewerState() {
     // ✅ ENTERPRISE: Coverage stats for Πληρότητα card (PR1.2)
     // ⚠️ BACKWARD COMPATIBILITY: Handle missing unitCoverage until backfill completes
     coverage: (() => {
-      const totalUnits = safeProperties.length;
-      const unitsWithPhotos = safeProperties.filter(p => p.unitCoverage?.hasPhotos === true).length;
-      const unitsWithFloorplans = safeProperties.filter(p => p.unitCoverage?.hasFloorplans === true).length;
-      const unitsWithDocuments = safeProperties.filter(p => p.unitCoverage?.hasDocuments === true).length;
+      const totalProperties = safeProperties.length;
+      const propertiesWithPhotos = safeProperties.filter(p => p.unitCoverage?.hasPhotos === true).length;
+      const propertiesWithFloorplans = safeProperties.filter(p => p.unitCoverage?.hasFloorplans === true).length;
+      const propertiesWithDocuments = safeProperties.filter(p => p.unitCoverage?.hasDocuments === true).length;
       return {
-        totalUnits,
-        unitsWithPhotos,
-        unitsWithFloorplans,
-        unitsWithDocuments,
-        photosPercentage: totalUnits > 0 ? Math.round((unitsWithPhotos / totalUnits) * 100) : 0,
-        floorplansPercentage: totalUnits > 0 ? Math.round((unitsWithFloorplans / totalUnits) * 100) : 0,
-        documentsPercentage: totalUnits > 0 ? Math.round((unitsWithDocuments / totalUnits) * 100) : 0,
+        totalProperties,
+        propertiesWithPhotos,
+        propertiesWithFloorplans,
+        propertiesWithDocuments,
+        photosPercentage: totalProperties > 0 ? Math.round((propertiesWithPhotos / totalProperties) * 100) : 0,
+        floorplansPercentage: totalProperties > 0 ? Math.round((propertiesWithFloorplans / totalProperties) * 100) : 0,
+        documentsPercentage: totalProperties > 0 ? Math.round((propertiesWithDocuments / totalProperties) * 100) : 0,
       };
     })(),
   }), [safeProperties]);

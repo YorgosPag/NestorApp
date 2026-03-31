@@ -92,7 +92,7 @@ export class CustomerHandler implements ToolHandler {
     const db = getAdminFirestore();
     let projectId: string | null = null;
     try {
-      const unitDoc = await db.collection(COLLECTIONS.UNITS).doc(unitId).get();
+      const unitDoc = await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).get();
       if (unitDoc.exists) {
         projectId = String(unitDoc.data()?.projectId ?? '') || null;
       }

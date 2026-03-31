@@ -3,12 +3,12 @@ import type { GenericFilterState, NumericRange } from '@/components/core/Advance
 
 // Re-export PropertyStats from property.ts
 export type { PropertyStats } from './property';
-// Re-export UnitCoverage from unit.ts for property compatibility
+// Re-export PropertyCoverage from property.ts for property compatibility
 // Also import for local use in Property interface
-import type { UnitCoverage, CommercialStatus, UnitLevel, LevelData } from './unit';
-export type { UnitCoverage };
+import type { PropertyCoverage, CommercialStatus, PropertyLevel, LevelData } from './property';
+export type { PropertyCoverage };
 
-// 🏢 PHASE 3-5: Import all unit feature types
+// 🏢 PHASE 3-5: Import all property feature types
 import type {
   OrientationType,
   ViewTypeValue,
@@ -24,10 +24,10 @@ import type {
   GlazingType,
   InteriorFeatureCodeType,
   SecurityFeatureCodeType
-} from '@/constants/unit-features-enterprise';
+} from '@/constants/property-features-enterprise';
 import type { Timestamp } from 'firebase/firestore';
 // 🏢 PHASE 2: LinkedSpaces type
-import type { LinkedSpace } from './unit';
+import type { LinkedSpace } from './property';
 
 /**
  * ✅ DOMAIN SEPARATION: Operational status type (re-imported from unit.ts)
@@ -89,7 +89,7 @@ export interface Property {
     floorId: string;
     vertices: Array<{x: number, y: number}>;
     isMultiLevel?: boolean;
-    levels?: UnitLevel[];
+    levels?: PropertyLevel[];
     /** Per-level data keyed by floorId — multi-level units only (ADR-236 Phase 2) */
     levelData?: Record<string, LevelData>;
     parentPropertyId?: string;
@@ -116,7 +116,7 @@ export interface Property {
      * Used for Πληρότητα dashboard card and filtering
      * @since PR1.2 - Coverage/Completeness implementation
      */
-    unitCoverage?: UnitCoverage;
+    unitCoverage?: PropertyCoverage;
 
     // === LAYOUT (room configuration) - Phase 1 Unit Fields ===
     layout?: {

@@ -5,7 +5,7 @@ import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PropertiesListHeader } from './list/PropertiesListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
-import { UnitListCard } from '@/domain';
+import { PropertyListCard } from '@/domain';
 import { CompactToolbar, unitsConfig, type SortField } from '@/components/core/CompactToolbar';
 import { PropertyTypeQuickFilters } from './PropertyTypeQuickFilters';
 import type { Property } from '@/types/property-viewer';
@@ -216,9 +216,9 @@ export function PropertiesList({
       <ScrollArea className="flex-1">
         <div className={`${spacing.padding.sm} ${spacing.spaceBetween.sm}`}>
           {sortedUnits.map((unit) => (
-            <UnitListCard
+            <PropertyListCard
               key={unit.id}
-              unit={unit}
+              property={unit}
               isSelected={selectedUnitIds.includes(unit.id)}
               isFavorite={favorites.includes(unit.id)}
               onSelect={(isShift) => onSelectUnit(unit.id, isShift ?? false)}

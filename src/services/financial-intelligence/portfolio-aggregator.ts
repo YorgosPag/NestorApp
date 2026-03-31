@@ -136,7 +136,7 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
 
       // Query units for this project — S-1 fix: add companyId tenant isolation
       const unitsSnap = await db
-        .collection(COLLECTIONS.UNITS)
+        .collection(COLLECTIONS.PROPERTIES)
         .where('project', '==', projectId)
         .where(FIELDS.COMPANY_ID, '==', companyId)
         .get();

@@ -9,7 +9,7 @@
  * If the selected unit is multi-level (ADR-236: maisonette, penthouse),
  * shows radio buttons for level selection.
  *
- * @module features/floorplan-import/components/StepUnitSelector
+ * @module features/floorplan-import/components/StepPropertySelector
  */
 
 import React from 'react';
@@ -31,7 +31,7 @@ import '@/lib/design-system';
 // TYPES
 // =============================================================================
 
-interface StepUnitSelectorProps {
+interface StepPropertySelectorProps {
   unitItems: EntityOption[];
   unitLoading: boolean;
   selectedUnitId: string | null;
@@ -47,7 +47,7 @@ interface StepUnitSelectorProps {
 // COMPONENT
 // =============================================================================
 
-export function StepUnitSelector({
+export function StepPropertySelector({
   unitItems,
   unitLoading,
   selectedUnitId,
@@ -56,7 +56,7 @@ export function StepUnitSelector({
   levelItems,
   selectedLevelId,
   onSelectLevel,
-}: StepUnitSelectorProps) {
+}: StepPropertySelectorProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('files');
 

@@ -81,7 +81,7 @@ export async function GET(
 
         // 🔒 TENANT ISOLATION: Query units with both companyId AND buildingId filters
         logger.info('Fetching units for building', { buildingId });
-        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS)
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.PROPERTIES)
           .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
           .where(FIELDS.BUILDING_ID, '==', buildingId)
           .get();

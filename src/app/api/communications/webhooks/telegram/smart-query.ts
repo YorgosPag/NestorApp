@@ -102,7 +102,7 @@ export async function executeSmartSearch(
     const { collection, getDocs } = firestoreHelpers;
 
     // 🏢 ENTERPRISE: Use Firebase Admin SDK pattern
-    let q = collection(COLLECTIONS.UNITS)
+    let q = collection(COLLECTIONS.PROPERTIES)
       .where(FIELDS.STATUS, '==', 'available');
 
     if (criteria.type) {

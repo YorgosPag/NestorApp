@@ -267,7 +267,7 @@ export default function DatabaseUpdatePage() {
     let updatedCount = 0;
 
     try {
-      const unitsQuery = query(collection(db, COLLECTIONS.UNITS), limit(20));
+      const unitsQuery = query(collection(db, COLLECTIONS.PROPERTIES), limit(20));
       const unitsSnapshot = await getDocs(unitsQuery);
 
       const batch = writeBatch(db);

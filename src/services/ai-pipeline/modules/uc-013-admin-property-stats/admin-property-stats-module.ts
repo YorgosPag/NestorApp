@@ -4,13 +4,13 @@
  * =============================================================================
  *
  * Super admin commands:
- *   "Πόσα ακίνητα έχουμε πωλημένα;" → unit stats
+ *   "Πόσα ακίνητα έχουμε πωλημένα;" → property stats
  *   "Πόσες επαφές έχουμε;" → contact stats
  *   "Πόσα έργα έχουμε;" → project stats
  *
  * Detects stats type from the original message text and queries accordingly.
  *
- * @module services/ai-pipeline/modules/uc-013-admin-unit-stats
+ * @module services/ai-pipeline/modules/uc-013-admin-property-stats
  * @see ADR-145 (Super Admin AI Assistant)
  */
 
@@ -33,16 +33,16 @@ import type {
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
 
-const logger = createModuleLogger('UC_013_ADMIN_UNIT_STATS');
+const logger = createModuleLogger('UC_013_ADMIN_PROPERTY_STATS');
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-type StatsType = 'units' | 'contacts' | 'projects' | 'all' | 'unit_categories';
+type StatsType = 'properties' | 'contacts' | 'projects' | 'all' | 'property_categories';
 
 const VALID_STATS_TYPES: ReadonlySet<string> = new Set<StatsType>([
-  'units', 'contacts', 'projects', 'all', 'unit_categories',
+  'properties', 'contacts', 'projects', 'all', 'property_categories',
 ]);
 
 function isValidStatsType(value: string): value is StatsType {
@@ -52,8 +52,8 @@ function isValidStatsType(value: string): value is StatsType {
 interface BusinessStatsLookupData {
   statsType: StatsType;
   projectFilter: string | null;
-  totalStats: AggregateUnitStats;
-  projectBreakdown: ProjectUnitBreakdown[];
+  totalStats: AggregatePropertyStats;
+  projectBreakdown: ProjectPropertyBreakdown[];
   contactStats: ContactStats | null;
   projectStats: ProjectStats | null;
   companyId: string;
@@ -70,7 +70,7 @@ interface ProjectStats {
   names: string[];
 }
 
-interface AggregateUnitStats {
+interface AggregatePropertyStats {
   total: number;
   sold: number;
   available: number;
@@ -80,7 +80,7 @@ interface AggregateUnitStats {
   byType: Record<string, number>;
 }
 
-interface ProjectUnitBreakdown {
+interface ProjectPropertyBreakdown {
   projectId: string;
   projectName: string;
   total: number;
@@ -91,10 +91,10 @@ interface ProjectUnitBreakdown {
 }
 
 // ============================================================================
-// UNIT TYPE LABELS — Greek display names for unit types
+// PROPERTY TYPE LABELS — Greek display names for property types
 // ============================================================================
 
-const UNIT_TYPE_LABELS: Record<string, string> = {
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
   studio: 'Στούντιο',
   apartment_1br: 'Γκαρσονιέρα',
   apartment: 'Διαμέρισμα',
@@ -119,11 +119,11 @@ const UNIT_TYPE_LABELS: Record<string, string> = {
 // MODULE
 // ============================================================================
 
-export class AdminUnitStatsModule implements IUCModule {
+export class AdminPropertyStatsModule implements IUCModule {
   readonly moduleId = 'UC-013';
   readonly displayName = 'Admin: Στατιστικά Επιχείρησης';
   readonly handledIntents: readonly PipelineIntentTypeValue[] = [
-    PipelineIntentType.ADMIN_UNIT_STATS,
+    PipelineIntentType.ADMIN_PROPERTY_STATS,
   ];
   readonly requiredRoles: readonly string[] = [];
 
@@ -136,16 +136,16 @@ export class AdminUnitStatsModule implements IUCModule {
   private detectStatsType(messageText: string): StatsType {
     const text = messageText.toLowerCase();
 
-    // Category/type breakdown keywords — must check FIRST (before generic unit keywords)
+    // Category/type breakdown keywords — must check FIRST (before generic property keywords)
     const categoryKeywords = ['κατηγορί', 'τύπο', 'τυπο', 'είδ', 'ειδ', 'categories', 'types'];
     const hasCategories = categoryKeywords.some(kw => text.includes(kw));
-    if (hasCategories && text.includes('ακίνητ')) return 'unit_categories';
+    if (hasCategories && text.includes('ακίνητ')) return 'property_categories';
 
     const contactKeywords = ['επαφ', 'contact', 'πελάτ', 'φυσικ', 'εταιρ', 'πρόσωπ', 'customer', 'client'];
     const projectKeywords = ['έργ', 'project', 'πρότζεκτ'];
-    const unitKeywords = [
+    const propertyKeywords = [
       // Property types
-      'ακίνητ', 'unit', 'μονάδ', 'διαμέρ', 'στούντι', 'σπίτι', 'σπίτ',
+      'ακίνητ', 'property', 'μονάδ', 'διαμέρ', 'στούντι', 'σπίτι', 'σπίτ',
       'κατοικ', 'οικόπεδ', 'αποθήκ', 'γκαράζ', 'γραφεί', 'κατάστημ',
       'parking', 'στάθμ', 'μεζονέτ', 'ρετιρέ', 'loft', 'penthouse',
       // Status & sales
@@ -155,14 +155,14 @@ export class AdminUnitStatsModule implements IUCModule {
 
     const hasContacts = contactKeywords.some(kw => text.includes(kw));
     const hasProjects = projectKeywords.some(kw => text.includes(kw));
-    const hasUnits = unitKeywords.some(kw => text.includes(kw));
+    const hasProperties = propertyKeywords.some(kw => text.includes(kw));
 
     // If multiple → return 'all'; if specific → return that
-    if (hasContacts && !hasUnits && !hasProjects) return 'contacts';
-    if (hasProjects && !hasUnits && !hasContacts) return 'projects';
-    if (hasUnits && !hasContacts && !hasProjects) return 'units';
-    if (hasCategories) return 'unit_categories'; // fallback: categories asked but no "ακίνητ" keyword
-    if (!hasContacts && !hasProjects && !hasUnits) return 'units'; // default
+    if (hasContacts && !hasProperties && !hasProjects) return 'contacts';
+    if (hasProjects && !hasProperties && !hasContacts) return 'projects';
+    if (hasProperties && !hasContacts && !hasProjects) return 'properties';
+    if (hasCategories) return 'property_categories'; // fallback: categories asked but no "ακίνητ" keyword
+    if (!hasContacts && !hasProjects && !hasProperties) return 'properties'; // default
     return 'all';
   }
 
@@ -185,8 +185,8 @@ export class AdminUnitStatsModule implements IUCModule {
     });
 
     const adminDb = getAdminFirestore();
-    const totalStats: AggregateUnitStats = { total: 0, sold: 0, available: 0, reserved: 0, other: 0, byType: {} };
-    const projectBreakdown: ProjectUnitBreakdown[] = [];
+    const totalStats: AggregatePropertyStats = { total: 0, sold: 0, available: 0, reserved: 0, other: 0, byType: {} };
+    const projectBreakdown: ProjectPropertyBreakdown[] = [];
     let contactStats: ContactStats | null = null;
     let projectStats: ProjectStats | null = null;
 
@@ -231,16 +231,16 @@ export class AdminUnitStatsModule implements IUCModule {
         projectStats = { total: projectsSnapshot.size, names: projectNames };
       }
 
-      // ── Unit stats (if requested) ──
-      if (statsType === 'units' || statsType === 'all' || statsType === 'unit_categories') {
-        const unitsSnapshot = await adminDb
-          .collection(COLLECTIONS.UNITS)
+      // ── Property stats (if requested) ──
+      if (statsType === 'properties' || statsType === 'all' || statsType === 'property_categories') {
+        const propertiesSnapshot = await adminDb
+          .collection(COLLECTIONS.PROPERTIES)
           .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
           .get();
 
-        const perProject = new Map<string, ProjectUnitBreakdown>();
+        const perProject = new Map<string, ProjectPropertyBreakdown>();
 
-        for (const doc of unitsSnapshot.docs) {
+        for (const doc of propertiesSnapshot.docs) {
           const data = doc.data();
           const projectId = (data.projectId as string) ?? 'unknown';
           const projectName = projectMap.get(projectId) ?? 'Χωρίς έργο';
@@ -261,10 +261,10 @@ export class AdminUnitStatsModule implements IUCModule {
           stats.total++;
           totalStats.total++;
 
-          // Collect unit type for category breakdown
-          const unitType = ((data.type ?? '') as string);
-          if (unitType) {
-            const typeKey = unitType.toLowerCase();
+          // Collect property type for category breakdown
+          const propertyType = ((data.type ?? '') as string);
+          if (propertyType) {
+            const typeKey = propertyType.toLowerCase();
             totalStats.byType[typeKey] = (totalStats.byType[typeKey] ?? 0) + 1;
           }
 
@@ -307,7 +307,7 @@ export class AdminUnitStatsModule implements IUCModule {
 
   async propose(ctx: PipelineContext): Promise<Proposal> {
     const lookup = ctx.lookupData as unknown as BusinessStatsLookupData | undefined;
-    const statsType = lookup?.statsType ?? 'units';
+    const statsType = lookup?.statsType ?? 'properties';
 
     // Build dynamic summary
     const summaryParts: string[] = [];
@@ -317,7 +317,7 @@ export class AdminUnitStatsModule implements IUCModule {
     if (lookup?.projectStats && (statsType === 'projects' || statsType === 'all')) {
       summaryParts.push(`${lookup.projectStats.total} έργα`);
     }
-    if (lookup?.totalStats && (statsType === 'units' || statsType === 'all')) {
+    if (lookup?.totalStats && (statsType === 'properties' || statsType === 'all')) {
       summaryParts.push(`${lookup.totalStats.total} ακίνητα`);
     }
     const summary = summaryParts.length > 0
@@ -328,7 +328,7 @@ export class AdminUnitStatsModule implements IUCModule {
       messageId: ctx.intake.id,
       suggestedActions: [
         {
-          type: 'admin_unit_stats_reply',
+          type: 'admin_property_stats_reply',
           params: {
             statsType,
             projectFilter: lookup?.projectFilter ?? null,
@@ -353,16 +353,16 @@ export class AdminUnitStatsModule implements IUCModule {
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
     try {
       const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'admin_unit_stats_reply');
+      const action = actions.find(a => a.type === 'admin_property_stats_reply');
 
       if (!action) {
-        return { success: false, sideEffects: [], error: 'No admin_unit_stats_reply action found' };
+        return { success: false, sideEffects: [], error: 'No admin_property_stats_reply action found' };
       }
 
       const params = action.params;
       const statsType = (params.statsType as StatsType) ?? 'units';
-      const totalStats = params.totalStats as AggregateUnitStats | null;
-      const projectBreakdown = (params.projectBreakdown as ProjectUnitBreakdown[]) ?? [];
+      const totalStats = params.totalStats as AggregatePropertyStats | null;
+      const projectBreakdown = (params.projectBreakdown as ProjectPropertyBreakdown[]) ?? [];
       const projectFilter = params.projectFilter as string | null;
       const cStats = params.contactStats as ContactStats | null;
       const pStats = params.projectStats as ProjectStats | null;
@@ -392,11 +392,11 @@ export class AdminUnitStatsModule implements IUCModule {
         }
       }
 
-      // ── Unit stats ──
-      if (totalStats && (statsType === 'units' || statsType === 'all' || statsType === 'unit_categories')) {
+      // ── Property stats ──
+      if (totalStats && (statsType === 'properties' || statsType === 'all' || statsType === 'property_categories')) {
         if (lines.length > 0) lines.push('');
 
-        if (statsType === 'unit_categories') {
+        if (statsType === 'property_categories') {
           // Category/type breakdown mode
           lines.push('Κατηγορίες ακινήτων:');
           lines.push('');
@@ -409,7 +409,7 @@ export class AdminUnitStatsModule implements IUCModule {
             lines.push('');
             lines.push('Ανά τύπο:');
             for (const [typeName, count] of typeEntries) {
-              const label = UNIT_TYPE_LABELS[typeName] ?? typeName;
+              const label = PROPERTY_TYPE_LABELS[typeName] ?? typeName;
               lines.push(`  ${label}: ${count}`);
             }
           } else {
@@ -437,7 +437,7 @@ export class AdminUnitStatsModule implements IUCModule {
             lines.push('');
             lines.push('Ανά τύπο:');
             for (const [typeName, count] of typeEntries) {
-              const label = UNIT_TYPE_LABELS[typeName] ?? typeName;
+              const label = PROPERTY_TYPE_LABELS[typeName] ?? typeName;
               lines.push(`  ${label}: ${count}`);
             }
           }

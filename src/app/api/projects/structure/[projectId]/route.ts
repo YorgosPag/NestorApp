@@ -139,7 +139,7 @@ export const GET = withStandardRateLimit(async function GET(
           // 🏠 UNITS
           logger.info('Fetching units for building', { buildingId: building.id });
           let unitsQuery = getAdminFirestore()
-            .collection(COLLECTIONS.UNITS)
+            .collection(COLLECTIONS.PROPERTIES)
             .where(FIELDS.BUILDING_ID, '==', building.id);
           if (!isSuperAdmin) {
             unitsQuery = unitsQuery.where(FIELDS.COMPANY_ID, '==', ctx.companyId);

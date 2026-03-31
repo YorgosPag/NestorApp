@@ -53,7 +53,7 @@ export const BROKERAGE_DEFINITION: DomainDefinition = {
     // Refs
     { key: 'agentContactId', labelKey: 'domains.brokerageAgreements.fields.agent', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'agents', refDisplayField: 'firstName' },
     { key: 'projectId', labelKey: 'domains.brokerageAgreements.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'projects', refDisplayField: 'name' },
-    { key: 'unitId', labelKey: 'domains.brokerageAgreements.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'units', refDisplayField: 'name' },
+    { key: 'unitId', labelKey: 'domains.brokerageAgreements.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
     // Audit
     { key: 'createdAt', labelKey: 'domains.brokerageAgreements.fields.createdAt', type: 'date', filterable: true, sortable: true, defaultVisible: false, format: 'date' },
     { key: 'updatedAt', labelKey: 'domains.brokerageAgreements.fields.updatedAt', type: 'date', filterable: true, sortable: true, defaultVisible: false, format: 'date' },
@@ -87,7 +87,7 @@ export const COMMISSIONS_DEFINITION: DomainDefinition = {
     { key: 'paidAt', labelKey: 'domains.commissionRecords.fields.paidAt', type: 'date', filterable: true, sortable: true, defaultVisible: false, format: 'date' },
     // Refs
     { key: 'brokerageAgreementId', labelKey: 'domains.commissionRecords.fields.agreement', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'brokerageAgreements', refDisplayField: 'agentName' },
-    { key: 'unitId', labelKey: 'domains.commissionRecords.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'units', refDisplayField: 'name' },
+    { key: 'unitId', labelKey: 'domains.commissionRecords.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
     { key: 'projectId', labelKey: 'domains.commissionRecords.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'projects', refDisplayField: 'name' },
     { key: 'primaryBuyerContactId', labelKey: 'domains.commissionRecords.fields.buyer', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
     // Audit

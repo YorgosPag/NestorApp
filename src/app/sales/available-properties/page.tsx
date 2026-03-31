@@ -11,7 +11,7 @@
 import React, { Suspense } from 'react';
 import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
 
-import { useSalesUnitsViewerState } from '@/hooks/useSalesUnitsViewerState';
+import { useSalesPropertiesViewerState } from '@/hooks/useSalesPropertiesViewerState';
 import { SalesAvailableHeader } from '@/components/sales/page/SalesAvailableHeader';
 import { SalesSidebar } from '@/components/sales/sidebar/SalesSidebar';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -27,7 +27,7 @@ import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { Unit } from '@/types/unit';
+import type { Property } from '@/types/property';
 import '@/lib/design-system';
 
 // formatCurrencyCompact() → imported from @/lib/intl-utils (ADR-212)
@@ -60,7 +60,7 @@ function SalesAvailableContent() {
     setSelectedUnitType,
     dashboardStats,
     refetch,
-  } = useSalesUnitsViewerState();
+  } = useSalesPropertiesViewerState();
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -176,8 +176,8 @@ function SalesAvailableContent() {
       <ListContainer>
         {viewMode === 'list' ? (
           <SalesSidebar
-            units={filteredUnits as Unit[]}
-            selectedUnit={selectedUnit as Unit | null}
+            units={filteredUnits as Property[]}
+            selectedUnit={selectedUnit as Property | null}
             onSelectUnit={handleSelectUnit}
             selectedUnitId={selectedUnitId}
             selectedCommercialStatus={selectedCommercialStatus}
@@ -192,7 +192,7 @@ function SalesAvailableContent() {
             className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
             aria-label={t('sales.available.gridLabel')}
           >
-            {(filteredUnits as Unit[]).map(unit => (
+            {(filteredUnits as Property[]).map(unit => (
               <article
                 key={unit.id}
                 onClick={() => handleSelectUnit(unit.id)}
@@ -256,7 +256,7 @@ function SalesAvailableContent() {
 // 🏢 PAGE EXPORT
 // =============================================================================
 
-export default function AvailableApartmentsPage() {
+export default function AvailablePropertiesPage() {
   return (
     <Suspense fallback={<StaticPageLoading message="Φόρτωση διαθέσιμων μονάδων..." />}> {/* eslint-disable-line custom/no-hardcoded-strings */}
       <SalesAvailableContent />

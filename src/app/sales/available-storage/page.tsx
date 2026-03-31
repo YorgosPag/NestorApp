@@ -4,7 +4,7 @@
 /**
  * @fileoverview Sales Available Storage Page — ADR-199
  * @description Full enterprise page: header, dashboard, filters, list+details
- * @pattern Mirrors /sales/available-apartments with storage-specific data
+ * @pattern Mirrors /sales/available-properties with storage-specific data
  * @replaces Previous mock implementation with real Firestore data
  */
 

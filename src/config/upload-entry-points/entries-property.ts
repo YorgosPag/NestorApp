@@ -1,9 +1,9 @@
 /**
  * =============================================================================
- * Upload Entry Points — Unit Entries (18 entries)
+ * Upload Entry Points — Property Entries (18 entries)
  * =============================================================================
  *
- * @module config/upload-entry-points/entries-unit
+ * @module config/upload-entry-points/entries-property
  * @enterprise ADR-031
  */
 
@@ -11,15 +11,15 @@ import type { UploadEntryPoint } from './types';
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 
 /**
- * Unit (apartment/office/shop) upload entry points.
+ * Property (apartment/office/shop) upload entry points.
  */
-export const UNIT_ENTRY_POINTS: UploadEntryPoint[] = [
+export const PROPERTY_ENTRY_POINTS: UploadEntryPoint[] = [
     // ------------------------------------------------------------------------
     // ΣΧΕΔΙΑ ΜΟΝΑΔΑΣ (Floorplans) - Same as Projects
     // ------------------------------------------------------------------------
     {
       id: 'unit-floor-plan',
-      purpose: FLOORPLAN_PURPOSES.UNIT,
+      purpose: FLOORPLAN_PURPOSES.PROPERTY,
       domain: 'construction',
       category: 'floorplans',
       label: {
@@ -35,7 +35,7 @@ export const UNIT_ENTRY_POINTS: UploadEntryPoint[] = [
     },
     {
       id: 'unit-section-drawing',
-      purpose: FLOORPLAN_PURPOSES.UNIT_SECTION,
+      purpose: FLOORPLAN_PURPOSES.PROPERTY_SECTION,
       domain: 'construction',
       category: 'floorplans',
       label: {
@@ -51,7 +51,7 @@ export const UNIT_ENTRY_POINTS: UploadEntryPoint[] = [
     },
     {
       id: 'unit-electrical-plan',
-      purpose: FLOORPLAN_PURPOSES.UNIT_ELECTRICAL,
+      purpose: FLOORPLAN_PURPOSES.PROPERTY_ELECTRICAL,
       domain: 'construction',
       category: 'floorplans',
       label: {
@@ -67,7 +67,7 @@ export const UNIT_ENTRY_POINTS: UploadEntryPoint[] = [
     },
     {
       id: 'unit-plumbing-plan',
-      purpose: FLOORPLAN_PURPOSES.UNIT_PLUMBING,
+      purpose: FLOORPLAN_PURPOSES.PROPERTY_PLUMBING,
       domain: 'construction',
       category: 'floorplans',
       label: {

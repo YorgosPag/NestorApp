@@ -3,7 +3,7 @@
 /**
  * @fileoverview Sales Parking Viewer State Hook — ADR-199
  * @description State management for "Διαθέσιμες Θέσεις Στάθμευσης" sales page
- * @pattern Mirrors useSalesUnitsViewerState with parking-specific data
+ * @pattern Mirrors useSalesPropertiesViewerState with parking-specific data
  */
 
 import { useMemo, useState, useCallback } from 'react';

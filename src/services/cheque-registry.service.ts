@@ -52,7 +52,7 @@ function chequeCollectionPath(): string {
 }
 
 function paymentCollectionPath(unitId: string): string {
-  return `${COLLECTIONS.UNITS}/${unitId}/${SUBCOLLECTIONS.UNIT_PAYMENTS}`;
+  return `${COLLECTIONS.PROPERTIES}/${unitId}/${SUBCOLLECTIONS.PROPERTY_PAYMENTS}`;
 }
 
 // ============================================================================

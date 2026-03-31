@@ -135,7 +135,7 @@ interface AdminCommandMeta {
 | `admin_contact_search` | UC-010 | Αναζήτηση στοιχείων επαφής |
 | `admin_project_status` | UC-011 | Κατάσταση έργου, λίστα, αναζήτηση (Gantt, status, κλπ.) |
 | `admin_send_email` | UC-012 | Αποστολή email σε επαφή |
-| `admin_unit_stats` | UC-013 | Στατιστικά ακινήτων (πωλημένα/διαθέσιμα/δεσμευμένα) |
+| `admin_property_stats` | UC-013 | Στατιστικά ακινήτων (πωλημένα/διαθέσιμα/δεσμευμένα) |
 | `admin_create_contact` | UC-015 | Δημιουργία νέας επαφής (+ smart confirmation) |
 | `admin_update_contact` | UC-016 | Ενημέρωση στοιχείων επαφής (Secretary Mode) |
 | _(no intent match)_ | UC-014 | Fallback — help text με διαθέσιμες εντολές |
@@ -209,7 +209,7 @@ if (isAdminCommand && intent δεν ξεκινά με 'admin_')
 
 ### UC-013: Admin Business Stats (Units + Contacts + Projects)
 
-- **Intents**: `admin_unit_stats`
+- **Intents**: `admin_property_stats`
 - **Smart Detection**: `detectStatsType()` αναλύει keywords στο μήνυμα:
   - "πόσα ακίνητα" → query units (sold, available, reserved)
   - "πόσες επαφές" → query contacts (φυσικά πρόσωπα + εταιρείες)
@@ -353,7 +353,7 @@ interface AdminSession {
 | `admin_contact_search` | UC-010 | ✅ **NEW** (ADR-145) |
 | `admin_project_status` | UC-011 | ✅ **NEW** (ADR-145) |
 | `admin_send_email` | UC-012 | ✅ **NEW** (ADR-145) |
-| `admin_unit_stats` | UC-013 | ✅ **NEW** (ADR-145) |
+| `admin_property_stats` | UC-013 | ✅ **NEW** (ADR-145) |
 | `admin_create_contact` | UC-015 | ✅ **NEW** (ADR-145) |
 | `admin_update_contact` | UC-016 | ✅ **NEW** (ADR-145 — Secretary Mode) |
 | _(admin fallback)_ | UC-014 | ✅ **NEW** (ADR-145) |
@@ -377,8 +377,8 @@ interface AdminSession {
 | 7 | `src/services/ai-pipeline/modules/uc-011-admin-project-status/index.ts` | Barrel |
 | 8 | `src/services/ai-pipeline/modules/uc-012-admin-send-email/admin-send-email-module.ts` | UC-012 |
 | 9 | `src/services/ai-pipeline/modules/uc-012-admin-send-email/index.ts` | Barrel |
-| 10 | `src/services/ai-pipeline/modules/uc-013-admin-unit-stats/admin-unit-stats-module.ts` | UC-013 |
-| 11 | `src/services/ai-pipeline/modules/uc-013-admin-unit-stats/index.ts` | Barrel |
+| 10 | `src/services/ai-pipeline/modules/uc-013-admin-property-stats/admin-property-stats-module.ts` | UC-013 |
+| 11 | `src/services/ai-pipeline/modules/uc-013-admin-property-stats/index.ts` | Barrel |
 | 12 | `src/services/ai-pipeline/modules/uc-014-admin-fallback/admin-fallback-module.ts` | UC-014 |
 | 13 | `src/services/ai-pipeline/modules/uc-014-admin-fallback/index.ts` | Barrel |
 | 14 | `src/services/ai-pipeline/modules/uc-015-admin-create-contact/admin-create-contact-module.ts` | UC-015 |
@@ -508,7 +508,7 @@ interface AdminSession {
 | 2026-02-09 | Seed: Γιώργος Παγώνης = Telegram 5618410820 (@SteFanoThess) | Claude Code |
 | 2026-02-09 | Fix: UC-013 broadened → business stats (contacts + projects + units) with detectStatsType() | Claude Code |
 | 2026-02-09 | Feat: UC-010 list mode — "ποιες επαφές" → listContacts() with type filter (individual/company) | Claude Code |
-| 2026-02-09 | AI prompt: admin_contact_search covers name search + list contacts; admin_unit_stats covers all "πόσα" questions | Claude Code |
+| 2026-02-09 | AI prompt: admin_contact_search covers name search + list contacts; admin_property_stats covers all "πόσα" questions | Claude Code |
 | 2026-02-09 | UC-015: Admin Create Contact — δημιουργία επαφών via admin command, duplicate detection by email, createContactServerSide() | Claude Code |
 | 2026-02-09 | UC-015 Enhancement: Smart Confirmation — ελλιπή στοιχεία checklist + suggested commands μετά δημιουργία | Claude Code |
 | 2026-02-09 | UC-016: Admin Update Contact (Secretary Mode) — keyword-to-field mapping, session context, updateContactField(), getContactMissingFields() | Claude Code |
@@ -518,9 +518,9 @@ interface AdminSession {
 | 2026-02-09 | Fix: Admin entity extraction — `AI_ADMIN_COMMAND_SCHEMA` with 14 fields (base+admin) replaces 5-field schema for admin commands. `ExtractedEntitiesSchema` gets `.passthrough()`. UC-012 fallback parsing from raw message. | Claude Code |
 | 2026-02-09 | ADR-164: In-App Voice AI Pipeline — third channel adapter (IN_APP), `isSuperAdminFirebaseUid()` + email fallback, `voice_commands` Firestore rules | Claude Code |
 | 2026-02-09 | Data fix: Set `firebaseUid: "ITjmw0syn7WiYuskqaGtzLPuN852"` in `settings/super_admin_registry` for in-app admin detection | Claude Code |
-| 2026-02-09 | Fix: AI prompt intent detection — "πόσα πεδία κενά στην επαφή X" λανθασμένα πήγαινε σε UC-013 (stats) αντί UC-010 (contact search). Διευκρίνιση ότι ερωτήσεις για πεδία ΣΥΓΚΕΚΡΙΜΕΝΗΣ επαφής → `admin_contact_search`, aggregate stats → `admin_unit_stats` | Claude Code |
+| 2026-02-09 | Fix: AI prompt intent detection — "πόσα πεδία κενά στην επαφή X" λανθασμένα πήγαινε σε UC-013 (stats) αντί UC-010 (contact search). Διευκρίνιση ότι ερωτήσεις για πεδία ΣΥΓΚΕΚΡΙΜΕΝΗΣ επαφής → `admin_contact_search`, aggregate stats → `admin_property_stats` | Claude Code |
 | 2026-02-09 | Feat: UC-010 missing fields mode — `detectMissingFieldsMode()` + `getContactMissingFields()` integration. Δείχνει filled/total πεδία + λίστα κενών πεδίων ανά επαφή | Claude Code |
-| 2026-02-10 | Prompt Upgrade: SEMANTIC UNDERSTANDING — αντικατάσταση keyword-based περιγραφών με σημασιολογικές. Το AI πλέον κατανοεί ΝΟΗΜΑ αντί να ψάχνει λέξεις-κλειδιά. `admin_unit_stats` καλύπτει ΟΠΟΙΑΔΗΠΟΤΕ ερώτηση για ακίνητα (σπίτια, διαμερίσματα, οικόπεδα κτλ.), status, πωλήσεις, ερωτήσεις ναι/όχι. `general_inquiry` ορίστηκε ως LAST RESORT. | Claude Code |
+| 2026-02-10 | Prompt Upgrade: SEMANTIC UNDERSTANDING — αντικατάσταση keyword-based περιγραφών με σημασιολογικές. Το AI πλέον κατανοεί ΝΟΗΜΑ αντί να ψάχνει λέξεις-κλειδιά. `admin_property_stats` καλύπτει ΟΠΟΙΑΔΗΠΟΤΕ ερώτηση για ακίνητα (σπίτια, διαμερίσματα, οικόπεδα κτλ.), status, πωλήσεις, ερωτήσεις ναι/όχι. `general_inquiry` ορίστηκε ως LAST RESORT. | Claude Code |
 | 2026-02-10 | UC-013 keywords: Προσθήκη 15+ νέων property/status keywords (σπίτι, κατοικία, οικόπεδο, μεζονέτα, ρετιρέ, πουλημένα, διαθέσιμα, αδιάθετα κτλ.) στο `detectStatsType()` | Claude Code |
 | 2026-02-10 | Fix 1: Fuzzy Greek name search — `greek-text-utils.ts` (transliteration, stem match, accent strip). `findContactByName()` χρησιμοποιεί `fuzzyGreekMatch()` αντί exact substring. "Γιάννη"→"Γιάννης", "Giorgos"→"Γιώργος" | Claude Code |
 | 2026-02-10 | Fix 2: Compound commands — UC-012 ανιχνεύει "στοιχεία του/της X" pattern, κάνει δεύτερο lookup, στέλνει contact card ως email body | Claude Code |

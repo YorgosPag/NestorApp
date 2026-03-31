@@ -15,7 +15,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import type { UnitType } from '@/types/unit';
+import type { PropertyType } from '@/types/property';
 import type { ParkingLocationZone } from '@/types/parking';
 
 // =============================================================================
@@ -26,7 +26,7 @@ interface UseEntityCodeSuggestionParams {
   entityType: 'unit' | 'parking' | 'storage';
   buildingId: string;
   floorLevel: number | '';
-  unitType?: UnitType | '';
+  unitType?: PropertyType | '';
   locationZone?: ParkingLocationZone | '';
   /** If true, the hook will not auto-fetch (user has overridden the code) */
   disabled?: boolean;

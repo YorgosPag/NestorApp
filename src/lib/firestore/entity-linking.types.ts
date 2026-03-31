@@ -83,7 +83,7 @@ export const LINK_REGISTRY: Record<string, LinkRegistryEntry> = {
     skipAudit: false,
   },
   'unit:buildingId': {
-    collection: COLLECTIONS.UNITS,
+    collection: COLLECTIONS.PROPERTIES,
     linkField: 'buildingId',
     cascadeType: 'unit-building',
     auditEntityType: 'unit',

@@ -17,7 +17,7 @@ import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
-import type { CommercialStatus } from '@/types/unit';
+import type { CommercialStatus } from '@/types/property';
 import '@/lib/design-system';
 
 /**

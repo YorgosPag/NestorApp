@@ -168,7 +168,7 @@ export class ProjectsService implements IProjectsService {
         });
         
         for (const building of buildings.docs) {
-            const units = await db.collection(COLLECTIONS.UNITS).where(FIELDS.BUILDING_ID, '==', `building-${building.id}`).get();
+            const units = await db.collection(COLLECTIONS.PROPERTIES).where(FIELDS.BUILDING_ID, '==', `building-${building.id}`).get();
             // Debug logging removed
             units.docs.forEach((doc) => {
                 const data = doc.data();
@@ -177,7 +177,7 @@ export class ProjectsService implements IProjectsService {
         }
         
         try {
-            const directUnits = await db.collection(COLLECTIONS.UNITS).where(FIELDS.PROJECT_ID, '==', projectId).get();
+            const directUnits = await db.collection(COLLECTIONS.PROPERTIES).where(FIELDS.PROJECT_ID, '==', projectId).get();
             if (!directUnits.empty) {
                 // Debug logging removed
             }

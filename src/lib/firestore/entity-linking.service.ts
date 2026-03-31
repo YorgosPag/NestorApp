@@ -276,7 +276,7 @@ export async function validateLinkedSpacesUniqueness(
 
   // Query all units in the same building (typically ≤50)
   const snapshot = await db
-    .collection(COLLECTIONS.UNITS)
+    .collection(COLLECTIONS.PROPERTIES)
     .where(FIELDS.BUILDING_ID, '==', buildingId)
     .select('linkedSpaces')
     .get();

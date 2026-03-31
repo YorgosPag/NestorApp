@@ -20,11 +20,11 @@ const LEGAL_PHASES = [
 
 export const BUYERS_DEFINITION: DomainDefinition = {
   id: 'buyers',
-  collection: COLLECTIONS.UNITS,
+  collection: COLLECTIONS.PROPERTIES,
   group: 'people',
   labelKey: 'domains.buyers.label',
   descriptionKey: 'domains.buyers.description',
-  entityLinkPath: '/units/{id}',
+  entityLinkPath: '/properties/{id}',
   defaultSortField: 'commercial.ownerContactIds',
   defaultSortDirection: 'asc',
   preFilters: [

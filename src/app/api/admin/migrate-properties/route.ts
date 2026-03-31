@@ -1,16 +1,16 @@
 /**
  * =============================================================================
- * MIGRATE UNITS - PROTECTED (AUTHZ Phase 2)
+ * MIGRATE PROPERTIES - PROTECTED (AUTHZ Phase 2)
  * =============================================================================
  *
- * @purpose Migrates units from legacy IDs to enterprise structure
+ * @purpose Migrates properties from legacy IDs to enterprise structure
  * @author Enterprise Architecture Team
  * @protection withAuth + super_admin + audit logging
  * @classification Data migration operation (DELETE + CREATE)
  *
- * This endpoint performs unit migration:
- * 1. DELETES units with legacy buildingIds
- * 2. CREATES new units with Firebase auto-generated IDs
+ * This endpoint performs property migration:
+ * 1. DELETES properties with legacy buildingIds
+ * 2. CREATES new properties with Firebase auto-generated IDs
  * 3. Links them to enterprise buildings
  *
  * @method GET - Preview migration (dry run, read-only)
@@ -21,7 +21,7 @@
  *   - Layer 2: super_admin role check (explicit)
  *   - Layer 3: Audit logging (logDataFix)
  *
- * @classification CRITICAL - Mass deletion + creation operation
+ * @classification CRITICAL - Mass deletion + creation operation (properties)
  * =============================================================================
  */
 
@@ -29,7 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { processAdminBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
-import { generateUnitId } from '@/services/enterprise-id.service';
+import { generatePropertyId } from '@/services/enterprise-id.service';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
@@ -38,17 +38,17 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
-const logger = createModuleLogger('MigrateUnitsRoute');
+const logger = createModuleLogger('MigratePropertiesRoute');
 
-// 🏢 ENTERPRISE: Enterprise building για τις νέες μονάδες
+// 🏢 ENTERPRISE: Enterprise building για τα νέα properties
 const TARGET_ENTERPRISE_BUILDING = {
   id: 'G8kMxQ2pVwN5jR7tE1sA',
   name: 'ΚΤΙΡΙΟ Α - Παλαιολόγου',
   projectId: 'xL2nV4bC6mZ8kJ9hG1fQ',
 };
 
-// 🏢 ENTERPRISE: Unit templates για τις νέες μονάδες
-const UNIT_TEMPLATES = [
+// 🏢 ENTERPRISE: Property templates για τα νέα properties
+const PROPERTY_TEMPLATES = [
   {
     name: 'Διαμέρισμα Α1',
     type: 'apartment',
@@ -121,7 +121,7 @@ const UNIT_TEMPLATES = [
   },
 ];
 
-interface UnitData {
+interface PropertyData {
   id: string;
   name: string;
   buildingId?: string;
@@ -130,14 +130,14 @@ interface UnitData {
 
 /**
  * GET - Preview Migration (withAuth protected)
- * Read-only preview of units to be migrated.
+ * Read-only preview of properties to be migrated.
  *
  * @security withAuth + super_admin check + admin:data:fix permission
  * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
 export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    return handleMigrateUnitsPreview(req, ctx);
+    return handleMigratePropertiesPreview(req, ctx);
   },
   { permissions: 'admin:data:fix' }
 ));
@@ -145,12 +145,12 @@ export const GET = withSensitiveRateLimit(withAuth(
 /**
  * Internal handler for GET (preview migration).
  */
-async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+async function handleMigratePropertiesPreview(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    logger.warn('BLOCKED: Non-super_admin attempted unit migration preview', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
+    logger.warn('BLOCKED: Non-super_admin attempted property migration preview', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -162,18 +162,18 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
   }
 
   try {
-    logger.info('Analyzing units for migration...');
+    logger.info('Analyzing properties for migration...');
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const db = getAdminFirestore();
-    const units: UnitData[] = [];
+    const properties: PropertyData[] = [];
     await processAdminBatch(
-      db.collection(COLLECTIONS.UNITS),
+      db.collection(COLLECTIONS.PROPERTIES),
       BATCH_SIZE_READ,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
-          units.push({
+          properties.push({
             id: docSnap.id,
             name: (data.name as string) || 'UNNAMED',
             buildingId: data.buildingId as string | undefined,
@@ -183,14 +183,14 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
       },
     );
 
-    // Find legacy units (buildingId starts with "building_")
-    const legacyUnits = units.filter((u) => {
+    // Find legacy properties (buildingId starts with "building_")
+    const legacyProperties = properties.filter((u) => {
       const bid = String(u.buildingId || '');
       return bid.startsWith('building_');
     });
 
-    // Find enterprise units
-    const enterpriseUnits = units.filter((u) => {
+    // Find enterprise properties
+    const enterpriseProperties = properties.filter((u) => {
       const bid = String(u.buildingId || '');
       return !bid.startsWith('building_') && bid.length >= 20;
     });
@@ -200,27 +200,27 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
     return NextResponse.json({
       success: true,
       mode: 'preview',
-      totalUnits: units.length,
-      legacyUnits: legacyUnits.length,
-      enterpriseUnits: enterpriseUnits.length,
-      legacyDetails: legacyUnits.map((u) => ({
+      totalProperties: properties.length,
+      legacyProperties: legacyProperties.length,
+      enterpriseProperties: enterpriseProperties.length,
+      legacyDetails: legacyProperties.map((u) => ({
         id: u.id,
         name: u.name,
         buildingId: u.buildingId,
       })),
-      newUnitsToCreate: UNIT_TEMPLATES.length,
+      newPropertiesToCreate: PROPERTY_TEMPLATES.length,
       targetBuilding: TARGET_ENTERPRISE_BUILDING,
-      message: `Found ${legacyUnits.length} legacy units to delete. Will create ${UNIT_TEMPLATES.length} new enterprise units. Use POST to execute.`,
+      message: `Found ${legacyProperties.length} legacy properties to delete. Will create ${PROPERTY_TEMPLATES.length} new enterprise properties. Use POST to execute.`,
       executionTimeMs: duration,
     });
   } catch (error: unknown) {
-    logger.error('Error analyzing units', { error });
+    logger.error('Error analyzing properties', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to analyze units',
+        error: 'Failed to analyze properties',
         details: getErrorMessage(error),
         executionTimeMs: duration,
       },
@@ -231,14 +231,14 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
 
 /**
  * POST - Execute Migration (withAuth protected)
- * DELETES legacy units + CREATES new enterprise units.
+ * DELETES legacy properties + CREATES new enterprise properties.
  *
  * @security withAuth + super_admin check + audit logging + admin:data:fix permission
  * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
 export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    return handleMigrateUnitsExecute(req, ctx);
+    return handleMigratePropertiesExecute(req, ctx);
   },
   { permissions: 'admin:data:fix' }
 ));
@@ -246,12 +246,12 @@ export const POST = withSensitiveRateLimit(withAuth(
 /**
  * Internal handler for POST (execute migration).
  */
-async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+async function handleMigratePropertiesExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    logger.warn('BLOCKED: Non-super_admin attempted unit migration execution', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
+    logger.warn('BLOCKED: Non-super_admin attempted property migration execution', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -263,18 +263,18 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
   }
 
   try {
-    logger.info('Starting unit migration...');
+    logger.info('Starting property migration...');
 
-    // Step 1: Get all units (ADR-214 Phase 8: batched)
+    // Step 1: Get all properties (ADR-214 Phase 8: batched)
     const db = getAdminFirestore();
-    const units: UnitData[] = [];
+    const properties: PropertyData[] = [];
     await processAdminBatch(
-      db.collection(COLLECTIONS.UNITS),
+      db.collection(COLLECTIONS.PROPERTIES),
       BATCH_SIZE_WRITE,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
-          units.push({
+          properties.push({
             id: docSnap.id,
             name: (data.name as string) || 'UNNAMED',
             buildingId: data.buildingId as string | undefined,
@@ -284,33 +284,33 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
       },
     );
 
-    // Step 2: Find and delete legacy units
-    const legacyUnits = units.filter((u) => {
+    // Step 2: Find and delete legacy properties
+    const legacyProperties = properties.filter((u) => {
       const bid = String(u.buildingId || '');
       return bid.startsWith('building_');
     });
 
-    logger.info('Deleting legacy units', { count: legacyUnits.length });
+    logger.info('Deleting legacy properties', { count: legacyProperties.length });
 
     let deletedCount = 0;
-    for (const unit of legacyUnits) {
+    for (const property of legacyProperties) {
       try {
-        await db.collection(COLLECTIONS.UNITS).doc(unit.id).delete();
+        await db.collection(COLLECTIONS.PROPERTIES).doc(property.id).delete();
         deletedCount++;
-        logger.info('Deleted unit', { unitId: unit.id, unitName: unit.name });
+        logger.info('Deleted property', { propertyId: property.id, propertyName: property.name });
       } catch (err) {
-        logger.error('Failed to delete unit', { unitId: unit.id, error: err });
+        logger.error('Failed to delete property', { propertyId: property.id, error: err });
       }
     }
 
-    // Step 3: Create new enterprise units
-    logger.info('Creating new enterprise units', { count: UNIT_TEMPLATES.length });
+    // Step 3: Create new enterprise properties
+    logger.info('Creating new enterprise properties', { count: PROPERTY_TEMPLATES.length });
 
-    const createdUnits: Array<{ id: string; name: string }> = [];
+    const createdProperties: Array<{ id: string; name: string }> = [];
 
-    for (const template of UNIT_TEMPLATES) {
+    for (const template of PROPERTY_TEMPLATES) {
       try {
-        const newUnit = {
+        const newProperty = {
           ...template,
           buildingId: TARGET_ENTERPRISE_BUILDING.id,
           projectId: TARGET_ENTERPRISE_BUILDING.projectId,
@@ -320,12 +320,12 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
         };
 
         // 🏢 ENTERPRISE: ADR-017 compliant — enterprise-id.service generates IDs
-        const unitId = generateUnitId();
-        await db.collection(COLLECTIONS.UNITS).doc(unitId).set(newUnit);
-        createdUnits.push({ id: unitId, name: template.name });
-        logger.info('Created unit', { unitId, unitName: template.name });
+        const propertyId = generatePropertyId();
+        await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).set(newProperty);
+        createdProperties.push({ id: propertyId, name: template.name });
+        logger.info('Created property', { propertyId, propertyName: template.name });
       } catch (err) {
-        logger.error('Failed to create unit', { unitName: template.name, error: err });
+        logger.error('Failed to create property', { propertyName: template.name, error: err });
       }
     }
 
@@ -335,28 +335,28 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
     const metadata = extractRequestMetadata(request);
     await logDataFix(
       ctx,
-      'migrate_units_legacy_to_enterprise',
+      'migrate_properties_legacy_to_enterprise',
       {
-        operation: 'migrate-units',
+        operation: 'migrate-properties',
         deleted: deletedCount,
-        created: createdUnits.length,
+        created: createdProperties.length,
         targetBuilding: TARGET_ENTERPRISE_BUILDING,
-        createdUnits: createdUnits.map(u => ({ id: u.id, name: u.name })),
+        createdProperties: createdProperties.map(u => ({ id: u.id, name: u.name })),
         executionTimeMs: duration,
         result: 'success',
         metadata,
       },
-      `Unit migration by ${ctx.globalRole} ${ctx.email}`
+      `Property migration by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
       logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
       success: true,
-      message: `Migration complete! Deleted ${deletedCount} legacy units, created ${createdUnits.length} enterprise units.`,
+      message: `Migration complete! Deleted ${deletedCount} legacy properties, created ${createdProperties.length} enterprise properties.`,
       deleted: deletedCount,
-      created: createdUnits.length,
-      createdUnits,
+      created: createdProperties.length,
+      createdProperties,
       targetBuilding: TARGET_ENTERPRISE_BUILDING,
       executionTimeMs: duration,
     });
@@ -367,7 +367,7 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to migrate units',
+        error: 'Failed to migrate properties',
         details: getErrorMessage(error),
         executionTimeMs: duration,
       },

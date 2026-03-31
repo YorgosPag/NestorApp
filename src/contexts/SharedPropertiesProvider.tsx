@@ -78,7 +78,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
 
   // Local-only state update — Firestore writes happen via API routes (Admin SDK).
   // The onSnapshot listener below picks up changes automatically.
-  // Legacy callers (usePolygonHandlers, useUnitsViewerState) still call this
+  // Legacy callers (usePolygonHandlers, usePropertiesViewerState) still call this
   // for optimistic local updates; Firestore sync happens through the listener.
   const setProperties = useCallback((newProperties: Property[], description: string) => {
     if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info(`Local state update: ${description}`);
@@ -95,7 +95,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     setIsLoading(true);
     setError(null);
 
-    const unitsCollection = collection(db, COLLECTIONS.UNITS);
+    const unitsCollection = collection(db, COLLECTIONS.PROPERTIES);
     logger.info('[SharedProperties] Setting up Firestore listener (activated)...');
 
     const unsubscribe = onSnapshot(

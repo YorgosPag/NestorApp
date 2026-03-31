@@ -52,7 +52,7 @@ export class ClientService {
       const [unitsSnap, parkingSnap, storageSnap] = await Promise.all([
         getDocs(
           query(
-            collection(db, COLLECTIONS.UNITS),
+            collection(db, COLLECTIONS.PROPERTIES),
             where('commercial.ownerContactIds', 'array-contains', contactId),
             limit(1)
           )

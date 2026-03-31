@@ -80,14 +80,14 @@ describe('FilterPanel — Filterable Fields', () => {
     expect(fields.length).toBeGreaterThan(5);
   });
 
-  it('units has the most filterable fields', () => {
+  it('properties has the most filterable fields', () => {
     const projectFields = getFilterableFields('projects');
-    const unitFields = getFilterableFields('units');
-    expect(unitFields.length).toBeGreaterThan(projectFields.length);
+    const propertyFields = getFilterableFields('properties');
+    expect(propertyFields.length).toBeGreaterThan(projectFields.length);
   });
 
   it('all filterable fields have valid operators for their type', () => {
-    for (const domainId of ['projects', 'buildings', 'floors', 'units'] as const) {
+    for (const domainId of ['projects', 'buildings', 'floors', 'properties'] as const) {
       const fields = getFilterableFields(domainId);
       for (const field of fields) {
         // The first operator for this type should be valid

@@ -46,7 +46,7 @@ export async function recordPayment(
 
     const db = getDb();
     const planRef = db.collection(planCollectionPath(unitId)).doc(input.paymentPlanId);
-    const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
+    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
     const paymentId = generatePaymentRecordId();
     const paymentRef = db.collection(paymentCollectionPath(unitId)).doc(paymentId);
 
@@ -227,7 +227,7 @@ export async function syncPaymentSummary(unitId: string, planId: string): Promis
       const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
       const summary = computeSummaryFromPlan(plan, planId);
 
-      const unitRef = db.collection(COLLECTIONS.UNITS).doc(unitId);
+      const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
       tx.update(unitRef, { 'commercial.paymentSummary': summary });
     });
 
@@ -277,7 +277,7 @@ export async function syncAggregatedPaymentSummary(unitId: string): Promise<void
     };
 
     const db = getDb();
-    await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+    await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
       'commercial.paymentSummary': summary,
     });
 

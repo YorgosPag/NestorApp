@@ -461,7 +461,7 @@ export class LegalContractService {
   ): Promise<void> {
     try {
       const db = getDb();
-      await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
+      await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
         'commercial.legalPhase': legalPhase,
       });
       logger.info(`[LegalContractService] Unit ${unitId} legalPhase → ${legalPhase}`);

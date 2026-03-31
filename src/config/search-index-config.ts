@@ -74,7 +74,7 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
   // UNIT
   // =========================================================================
   [SEARCH_ENTITY_TYPES.UNIT]: {
-    collection: COLLECTIONS.UNITS,
+    collection: COLLECTIONS.PROPERTIES,
     titleField: 'name',
     subtitleFields: ['floor', 'type'],
     searchableFields: ['name', 'unitCode', 'floor'],

@@ -36,7 +36,7 @@ import { commercialToPropertyStatus } from '@/subapps/dxf-viewer/config/color-ma
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { OverlayKind } from '@/subapps/dxf-viewer/overlays/types';
-import type { CommercialStatus } from '@/types/unit';
+import type { CommercialStatus } from '@/types/property';
 import type { SpaceCommercialStatus } from '@/types/sales-shared';
 
 const logger = createModuleLogger('useEntityStatusResolver');
@@ -149,7 +149,7 @@ export function useEntityStatusResolver(
     liveMapRef.current = new Map();
 
     const subscriptions: CollectionSubscription[] = [
-      { collectionName: COLLECTIONS.UNITS, entityIds: entityGroups.units },
+      { collectionName: COLLECTIONS.PROPERTIES, entityIds: entityGroups.units },
       { collectionName: COLLECTIONS.PARKING_SPACES, entityIds: entityGroups.parking },
       { collectionName: COLLECTIONS.STORAGE, entityIds: entityGroups.storage },
     ];
@@ -222,7 +222,6 @@ export function useEntityStatusResolver(
     return () => {
       unsubscribes.forEach((fn) => fn());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subscriptionKey]);
 
   // ── Step C: Build overlayId → PropertyStatus result map ───────────────

@@ -18,7 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 jest.mock('@/config/firestore-collections', () => ({
   COLLECTIONS: {
     TASKS: 'tasks',
-    UNITS: 'units',
+    PROPERTIES: 'properties',
     FILES: 'files',
     FLOORPLANS: 'floorplans',
   },
@@ -128,7 +128,7 @@ describe('CustomerHandler', () => {
 
     it('should create task with correct data', async () => {
       const kit = setupFirestore({
-        units: { unit_001: { projectId: 'proj_001' } },
+        properties: { unit_001: { projectId: 'proj_001' } },
         tasks: {},
       });
 
@@ -164,7 +164,7 @@ describe('CustomerHandler', () => {
 
     it('should map severity to priority correctly', async () => {
       setupFirestore({
-        units: { unit_001: {} },
+        properties: { unit_001: {} },
         tasks: {},
       });
 
