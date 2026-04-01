@@ -1,6 +1,7 @@
 import {
   ContactRelationship,
   ContactWithRelationship,
+  OrganizationTree,
   RelationshipType
 } from '@/types/contacts/relationships';
 import type { Contact, ContactType } from '@/types/contacts';
@@ -145,7 +146,7 @@ export class ContactRelationshipExtendedService {
     }
   }
 
-  static async buildOrganizationHierarchy(organizationId: string) {
+  static async buildOrganizationHierarchy(organizationId: string): Promise<OrganizationTree> {
     try {
       const cacheKey = { type: 'organization' as const, id: organizationId, params: { hierarchy: true } };
       const cached = RelationshipCacheAdapter.get(cacheKey);
