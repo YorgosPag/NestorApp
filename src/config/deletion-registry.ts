@@ -210,6 +210,13 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         label: 'Συνδεδεμένα έργα (ως εταιρεία)',
         queryType: 'equals',
       },
+      // 🛡️ Block deletion of contact used as landowner in projects
+      {
+        collection: COLLECTIONS.PROJECTS,
+        foreignKey: 'landownerContactIds',
+        label: 'Έργα (ως οικοπεδούχος)',
+        queryType: 'array-contains',
+      },
     ],
   },
 

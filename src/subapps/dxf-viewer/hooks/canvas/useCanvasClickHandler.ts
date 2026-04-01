@@ -29,6 +29,7 @@
 import { useCallback } from 'react';
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
 import {
   isLineEntity, isPolylineEntity, isLWPolylineEntity,
   isArcEntity, isCircleEntity, isRectangleEntity, isRectEntity,
@@ -253,7 +254,7 @@ function handleRotationEntitySelection(
  */
 function testEntityHit(
   worldPoint: Point2D,
-  entity: { type: string; id: string; [key: string]: unknown },
+  entity: Entity,
   hitTolerance: number,
 ): boolean {
   if (isLineEntity(entity)) {

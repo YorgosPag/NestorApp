@@ -26,6 +26,7 @@ import { KadCodePicker } from '@/components/shared/KadCodePicker';
 import { Plus, Trash2 } from 'lucide-react';
 import type { KadActivity } from '@/types/ContactFormTypes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -64,6 +65,7 @@ export function ContactKadSection({
 }: ContactKadSectionProps) {
   const { t } = useTranslation('forms');
   const colors = useSemanticColors();
+  const { success, info, warning, showConfirmDialog } = useNotifications();
 
   // Derive primary from array (first 'primary', or first entry, or empty)
   const primary: KadActivity = activities.find((a) => a.type === 'primary') ?? {
@@ -80,20 +82,91 @@ export function ContactKadSection({
   );
 
   const handlePrimaryChange = useCallback(
-    (val: { code: string; description: string }) => {
+    async (val: { code: string; description: string }) => {
+      const nextCode = val.code.trim();
+      const previousCode = primary.code.trim();
+
+      if (!nextCode) {
+        warning(t('kad.notifications.primaryRequired'));
+        return;
+      }
+
+      if (previousCode === nextCode && primary.description === val.description) {
+        return;
+      }
+
+      if (previousCode && previousCode !== nextCode) {
+        const confirmed = await showConfirmDialog(
+          t('kad.confirmPrimaryChange.message', {
+            oldCode: previousCode,
+            newCode: nextCode,
+          }),
+          () => undefined,
+          undefined,
+          {
+            title: t('kad.confirmPrimaryChange.title'),
+            confirmText: t('kad.confirmPrimaryChange.confirm'),
+            cancelText: t('kad.confirmPrimaryChange.cancel'),
+            type: 'warning',
+          },
+        );
+
+        if (!confirmed) {
+          return;
+        }
+      }
+
       const updated = { ...primary, code: val.code, description: val.description };
       onChange({ activities: rebuildActivities(updated, secondaries), chamber });
+
+      success(
+        t(
+          previousCode
+            ? 'kad.notifications.primaryUpdated'
+            : 'kad.notifications.primarySet',
+          { code: nextCode },
+        ),
+      );
+
+      if (!previousCode || previousCode !== nextCode) {
+        info(t('kad.notifications.primaryImpact'));
+      }
     },
-    [primary, secondaries, chamber, onChange, rebuildActivities],
+    [primary, secondaries, chamber, onChange, rebuildActivities, showConfirmDialog, success, info, warning, t],
   );
 
   const handleSecondaryChange = useCallback(
     (index: number, val: { code: string; description: string }) => {
+      const existing = secondaries[index];
+      if (!existing) {
+        return;
+      }
+
+      const previousCode = existing.code.trim();
+      const nextCode = val.code.trim();
+      if (previousCode === nextCode && existing.description === val.description) {
+        return;
+      }
+
       const updated = [...secondaries];
       updated[index] = { ...updated[index], code: val.code, description: val.description };
       onChange({ activities: rebuildActivities(primary, updated), chamber });
+
+      if (!previousCode && nextCode) {
+        success(t('kad.notifications.secondaryAdded', { code: nextCode }));
+        return;
+      }
+
+      if (previousCode && nextCode && previousCode !== nextCode) {
+        info(
+          t('kad.notifications.secondaryUpdated', {
+            oldCode: previousCode,
+            newCode: nextCode,
+          }),
+        );
+      }
     },
-    [primary, secondaries, chamber, onChange, rebuildActivities],
+    [primary, secondaries, chamber, onChange, rebuildActivities, success, info, t],
   );
 
   const addSecondary = useCallback(() => {
@@ -101,14 +174,43 @@ export function ContactKadSection({
       activities: rebuildActivities(primary, [...secondaries, createEmptySecondary()]),
       chamber,
     });
-  }, [primary, secondaries, chamber, onChange, rebuildActivities]);
+    info(t('kad.notifications.secondaryRowAdded'));
+  }, [primary, secondaries, chamber, onChange, rebuildActivities, info, t]);
 
   const removeSecondary = useCallback(
-    (index: number) => {
-      const updated = secondaries.filter((_, i) => i !== index);
+    async (index: number) => {
+      const target = secondaries[index];
+      if (!target) {
+        return;
+      }
+
+      const code = target.code.trim();
+      if (code) {
+        const confirmed = await showConfirmDialog(
+          t('kad.confirmRemove.message', { code }),
+          () => undefined,
+          undefined,
+          {
+            title: t('kad.confirmRemove.title'),
+            confirmText: t('kad.confirmRemove.confirm'),
+            cancelText: t('kad.confirmRemove.cancel'),
+            type: 'warning',
+          },
+        );
+
+        if (!confirmed) {
+          return;
+        }
+      }
+
+      const updated = secondaries.filter((_, currentIndex) => currentIndex !== index);
       onChange({ activities: rebuildActivities(primary, updated), chamber });
+
+      if (code) {
+        success(t('kad.notifications.secondaryRemoved', { code }));
+      }
     },
-    [primary, secondaries, chamber, onChange, rebuildActivities],
+    [primary, secondaries, chamber, onChange, rebuildActivities, showConfirmDialog, success, t],
   );
 
   const handleChamberChange = useCallback(
@@ -132,7 +234,7 @@ export function ContactKadSection({
           onChange={handlePrimaryChange}
         />
         {primary.description && (
-          <p className={cn("mt-1 text-sm", colors.text.muted)}>{primary.description}</p>
+          <p className={cn('mt-1 text-sm', colors.text.muted)}>{primary.description}</p>
         )}
       </section>
 
@@ -157,7 +259,7 @@ export function ContactKadSection({
         </header>
 
         {secondaries.length === 0 ? (
-          <p className={cn("text-sm py-2 text-center", colors.text.muted)}>
+          <p className={cn('text-sm py-2 text-center', colors.text.muted)}>
             {t('kad.noSecondaryActivities')}
           </p>
         ) : (
@@ -169,17 +271,17 @@ export function ContactKadSection({
                     value={kad.code}
                     description={kad.description}
                     disabled={disabled}
-                    onChange={(val) => handleSecondaryChange(index, val)}
+                    onChange={(val) => void handleSecondaryChange(index, val)}
                   />
                   {kad.description && (
-                    <p className={cn("text-sm", colors.text.muted)}>{kad.description}</p>
+                    <p className={cn('text-sm', colors.text.muted)}>{kad.description}</p>
                   )}
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={() => removeSecondary(index)}
+                  onClick={() => void removeSecondary(index)}
                   disabled={disabled}
                   aria-label={t('kad.removeActivity')}
                   className="text-destructive hover:text-destructive mt-1"

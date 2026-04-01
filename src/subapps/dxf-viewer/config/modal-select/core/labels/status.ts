@@ -53,7 +53,8 @@ export const MODAL_SELECT_CONTACT_STATUS_LABELS = {
   inactive: 'contacts.status.inactive',
   pending: 'contacts.status.pending',
   blocked: 'contacts.status.blocked',
-  archived: 'contacts.status.archived'
+  archived: 'contacts.status.archived',
+  deleted: 'contacts.trash.deletedAt'
 } as const;
 
 /**

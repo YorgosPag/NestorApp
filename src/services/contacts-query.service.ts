@@ -97,6 +97,7 @@ export async function getAllContacts(options?: {
   type?: ContactType;
   onlyFavorites?: boolean;
   includeArchived?: boolean;
+  includeDeleted?: boolean;
   searchTerm?: string;
   orderByField?: string;
   orderDirection?: 'asc' | 'desc';
@@ -116,11 +117,13 @@ export async function getAllContacts(options?: {
 
   let filtered = contacts;
 
-  // Filter by archived status (client-side to avoid composite Firestore index)
-  if (options?.includeArchived === true) {
+  // Filter by lifecycle status (client-side to avoid composite Firestore index)
+  if (options?.includeDeleted === true) {
+    filtered = filtered.filter((c) => c.status === 'deleted');
+  } else if (options?.includeArchived === true) {
     filtered = filtered.filter((c) => c.status === 'archived');
   } else {
-    filtered = filtered.filter((c) => !c.status || c.status !== 'archived');
+    filtered = filtered.filter((c) => !c.status || (c.status !== 'archived' && c.status !== 'deleted'));
   }
 
   // Search filter

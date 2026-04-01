@@ -30,6 +30,9 @@ interface ContactsToolbarProps {
   onToggleFavoritesFilter?: () => void;
   showArchivedContacts?: boolean;
   onToggleArchivedFilter?: () => void;
+  showTrash?: boolean;
+  trashCount?: number;
+  onToggleTrash?: () => void;
 }
 
 export function ContactsToolbar(props: ContactsToolbarProps) {
@@ -48,7 +51,10 @@ export function ContactsToolbar(props: ContactsToolbarProps) {
     showOnlyFavorites = false,
     onToggleFavoritesFilter,
     showArchivedContacts = false,
-    onToggleArchivedFilter
+    onToggleArchivedFilter,
+    showTrash = false,
+    trashCount = 0,
+    onToggleTrash
   } = props;
 
   // Define tabs configuration
@@ -100,8 +106,11 @@ export function ContactsToolbar(props: ContactsToolbarProps) {
         <FiltersTabContent
           showOnlyFavorites={showOnlyFavorites}
           showArchivedContacts={showArchivedContacts}
+          showTrash={showTrash}
+          trashCount={trashCount}
           onToggleFavoritesFilter={onToggleFavoritesFilter}
           onToggleArchivedFilter={onToggleArchivedFilter}
+          onToggleTrash={onToggleTrash}
         />
       )
     }

@@ -4,7 +4,7 @@ export type FirestoreishTimestamp = Date | { toDate: () => Date };
 
 // Βασικοί τύποι επαφών
 export type ContactType = 'individual' | 'company' | 'service';
-export type ContactStatus = 'active' | 'inactive' | 'archived';
+export type ContactStatus = 'active' | 'inactive' | 'archived' | 'deleted';
 
 // Βασικό interface για όλες τις επαφές
 export interface BaseContact {
@@ -15,6 +15,15 @@ export interface BaseContact {
   tags?: string[];
   notes?: string;
   customFields?: Record<string, unknown>;
+
+  // 🗑️ Soft-delete lifecycle fields (ADR-191 pattern)
+  /** Timestamp when the contact was soft-deleted (moved to trash) */
+  deletedAt?: FirestoreishTimestamp;
+  /** UID of the user who soft-deleted this contact */
+  deletedBy?: string;
+  /** Status before deletion — used by restore to return to correct state */
+  previousStatus?: ContactStatus;
+
   createdAt: FirestoreishTimestamp;
   updatedAt: FirestoreishTimestamp;
   createdBy?: string;

@@ -37,8 +37,11 @@ export const GET = withStandardRateLimit(
       cache: PermissionCache,
       segmentData?: { params: Promise<{ projectId: string }> }
     ) => {
+      // Extract params first so project-scoped authorization uses the correct resource ID
+      const { projectId } = await segmentData!.params;
+
       // Permission check
-      if (!hasPermission(cache, 'projects:projects:update')) {
+      if (!(await hasPermission(ctx, 'projects:projects:update', { projectId }, cache))) {
         throw new ApiError(403, 'Insufficient permissions', 'FORBIDDEN');
       }
 
@@ -47,8 +50,6 @@ export const GET = withStandardRateLimit(
         throw new ApiError(503, 'Firestore not available', 'DB_UNAVAILABLE');
       }
 
-      // Extract params
-      const { projectId } = await segmentData!.params;
       const url = new URL(request.url);
       const contactId = url.searchParams.get('contactId');
 

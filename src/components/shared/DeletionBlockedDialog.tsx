@@ -35,6 +35,8 @@ interface DeletionBlockedDialogProps {
   onOpenChange: (open: boolean) => void;
   dependencies: DependencyCheckResult['dependencies'];
   message: string;
+  /** Optional entity subtype for type-specific messaging (e.g., individual/company/service) */
+  entitySubtype?: string;
 }
 
 // ============================================================================
@@ -46,6 +48,7 @@ export function DeletionBlockedDialog({
   onOpenChange,
   dependencies,
   message,
+  entitySubtype,
 }: DeletionBlockedDialogProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -61,6 +64,11 @@ export function DeletionBlockedDialog({
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <section className="space-y-3">
+              {entitySubtype && (
+                <p className="font-medium text-foreground">
+                  {t(`deletionGuard.subtypeWarning.${entitySubtype}`, { defaultValue: '' })}
+                </p>
+              )}
               <p>{message}</p>
 
               {dependencies.length > 0 && (

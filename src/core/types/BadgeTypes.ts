@@ -58,7 +58,8 @@ export type ContactStatus =
   | 'inactive'
   | 'pending'
   | 'blocked'
-  | 'archived';
+  | 'archived'
+  | 'deleted';
 
 export type PropertyStatus =
   // Βασικές καταστάσεις (legacy)

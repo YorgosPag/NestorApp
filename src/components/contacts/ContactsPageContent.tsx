@@ -33,6 +33,14 @@ const ArchiveContactDialog = dynamic(
   () => import('./dialogs/ArchiveContactDialog').then(mod => ({ default: mod.ArchiveContactDialog })),
   { ssr: false },
 );
+const PermanentDeleteDialog = dynamic(
+  () => import('./dialogs/PermanentDeleteDialog').then(mod => ({ default: mod.PermanentDeleteDialog })),
+  { ssr: false },
+);
+const TrashActionsBar = dynamic(
+  () => import('./trash/TrashActionsBar').then(mod => ({ default: mod.TrashActionsBar })),
+  { ssr: false },
+);
 
 export function ContactsPageContent() {
   const state = useContactsPageState();
@@ -67,6 +75,13 @@ export function ContactsPageContent() {
     handleContactsDeleted,
     handleArchiveContacts,
     handleContactsArchived,
+    showTrash,
+    trashCount,
+    handleToggleTrash,
+    showPermanentDeleteDialog,
+    setShowPermanentDeleteDialog,
+    handlePermanentDeleteContacts,
+    handleContactsPermanentDeleted,
     filters,
     setFilters,
     searchParams,
@@ -99,6 +114,9 @@ export function ContactsPageContent() {
         setShowDashboard={setShowDashboard}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
+        showTrash={showTrash}
+        trashCount={trashCount}
+        onToggleTrash={handleToggleTrash}
         breadcrumb={<ModuleBreadcrumb />}
       />
 
@@ -140,6 +158,16 @@ export function ContactsPageContent() {
             defaultOpen
           />
         </aside>
+      )}
+
+      {showTrash && (
+        <TrashActionsBar
+          selectedIds={selectedContactIds}
+          onBack={handleToggleTrash}
+          onRefresh={handleContactsDeleted}
+          onPermanentDelete={handlePermanentDeleteContacts}
+          trashCount={trashCount}
+        />
       )}
 
       <ListContainer>
@@ -306,6 +334,14 @@ export function ContactsPageContent() {
         contact={selectedContact}
         selectedContactIds={selectedContactIds}
         onContactsArchived={handleContactsArchived}
+      />
+
+      <PermanentDeleteDialog
+        open={showPermanentDeleteDialog}
+        onOpenChange={setShowPermanentDeleteDialog}
+        contact={selectedContact}
+        selectedContactIds={selectedContactIds}
+        onContactsDeleted={handleContactsPermanentDeleted}
       />
     </PageContainer>
   );

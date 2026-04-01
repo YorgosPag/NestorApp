@@ -14,6 +14,7 @@ import {
   ToolbarHelpButton,
   ToolbarFavoritesButton,
   ToolbarArchivedFilterButton,
+  ToolbarTrashFilterButton,
   ToolbarRefreshButton,
   ToolbarSortToggleButton
 } from '@/components/ui/form/ActionButtons';
@@ -34,6 +35,8 @@ interface ContactsTabContentProps {
   hasSelectedContact?: boolean;
   showOnlyFavorites?: boolean;
   showArchivedContacts?: boolean;
+  showTrash?: boolean;
+  trashCount?: number;
   sortDirection?: 'asc' | 'desc';
   onNewContact?: () => void;
   onEditContact?: () => void;
@@ -43,6 +46,7 @@ interface ContactsTabContentProps {
   onRefresh?: () => void;
   onToggleFavoritesFilter?: () => void;
   onToggleArchivedFilter?: () => void;
+  onToggleTrash?: () => void;
   onToggleSort?: () => void;
 }
 
@@ -297,9 +301,12 @@ export function ManagementTabContent({
 export function FiltersTabContent({
   showOnlyFavorites = false,
   showArchivedContacts = false,
+  showTrash = false,
+  trashCount = 0,
   sortDirection = 'asc',
   onToggleFavoritesFilter,
   onToggleArchivedFilter,
+  onToggleTrash,
   onToggleSort
 }: ContactsTabContentProps) {
   const colors = useSemanticColors();
@@ -334,6 +341,21 @@ export function FiltersTabContent({
           </TooltipTrigger>
           <TooltipContent>
             <p>{showArchivedContacts ? t('toolbar.tabs.filters.showActiveContacts') : t('toolbar.tabs.filters.filterArchivedOnly')}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <ToolbarTrashFilterButton
+              active={showTrash}
+              badge={trashCount}
+              onClick={() => onToggleTrash?.()}
+            >
+              {t('trash.viewTrash')}
+            </ToolbarTrashFilterButton>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{showTrash ? t('trash.backToContacts') : t('trash.viewTrash')}</p>
           </TooltipContent>
         </Tooltip>
 

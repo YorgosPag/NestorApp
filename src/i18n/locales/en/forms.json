@@ -298,7 +298,29 @@
     "noSecondaryActivities": "No secondary activities added",
     "addActivity": "Add KAD",
     "removeActivity": "Remove KAD",
-    "chamber": "Chamber / GEMI Office"
+    "chamber": "Chamber / GEMI Office",
+    "confirmRemove": {
+      "title": "Remove secondary KAD",
+      "message": "Removing KAD {code} will affect future contact usage in searches, profiles, and accounting flows that read live data.",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
+    "confirmPrimaryChange": {
+      "title": "Change primary activity",
+      "message": "The primary activity will change from {oldCode} to {newCode}. This may affect accounting settings, invoice PDFs, and future documents that use the company's primary KAD.",
+      "confirm": "Change primary KAD",
+      "cancel": "Cancel"
+    },
+    "notifications": {
+      "primaryRequired": "The company must have one primary activity.",
+      "primarySet": "The primary KAD was set to {code}.",
+      "primaryUpdated": "The primary KAD was updated to {code}.",
+      "primaryImpact": "This change will be used in future documents and accounting flows that read live data. Existing snapshots will not change.",
+      "secondaryRowAdded": "A new secondary KAD row was added.",
+      "secondaryAdded": "Secondary KAD {code} was added to the form.",
+      "secondaryUpdated": "Secondary KAD changed from {oldCode} to {newCode}.",
+      "secondaryRemoved": "Secondary KAD {code} was removed from the form."
+    }
   },
   "labels": {
     "name": "Name",

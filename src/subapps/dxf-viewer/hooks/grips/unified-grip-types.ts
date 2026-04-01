@@ -9,6 +9,19 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type {
+  VertexHoverInfo,
+  EdgeHoverInfo,
+  SelectedGrip,
+  DraggingVertexState,
+  DraggingEdgeMidpointState,
+  DraggingOverlayBodyState,
+  GripHoverThrottle,
+} from './useGripSystem';
+import type {
+  DxfGripDragPreview,
+  DxfGripInteractionState,
+} from '../useDxfGripInteraction';
 
 // ============================================================================
 // RE-EXPORTS from existing types (backward compatibility)

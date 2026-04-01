@@ -156,7 +156,7 @@ export function ReconciliationPageContent() {
         />
 
         <ResizablePanelGroup
-          direction="horizontal"
+          orientation="horizontal"
           className="flex-1 min-h-[400px]"
         >
           <ResizablePanel defaultSize={45} minSize={25}>

@@ -136,7 +136,8 @@ export const createContactStatuses = (colors: UseSemanticColorsReturn): Record<C
   inactive: { label: contactStatusLabels.inactive, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'userX' },
   pending: { label: contactStatusLabels.pending, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'clock' },
   blocked: { label: contactStatusLabels.blocked, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'shield' },
-  archived: { label: contactStatusLabels.archived, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'archive' }
+  archived: { label: contactStatusLabels.archived, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'archive' },
+  deleted: { label: contactStatusLabels.deleted, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'trash' }
 });
 
 /**

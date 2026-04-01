@@ -31,6 +31,7 @@ export {
   ToolbarHelpButton,
   ToolbarFavoritesButton,
   ToolbarArchivedFilterButton,
+  ToolbarTrashFilterButton,
   ToolbarRefreshButton,
 } from './ToolbarButtons';
 

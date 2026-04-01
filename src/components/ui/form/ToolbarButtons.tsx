@@ -385,6 +385,36 @@ export function ToolbarArchivedFilterButton({
   );
 }
 
+export function ToolbarTrashFilterButton({
+  children,
+  disabled = false,
+  onClick,
+  className,
+  size = 'sm',
+  active = false,
+  badge,
+}: FilterButtonProps & { badge?: number }) {
+  const iconSizes = useIconSizes();
+  const buttonClassName = active
+    ? cn(BUTTON_CATEGORIES.primary, "flex items-center gap-2 min-w-[100px] justify-start", className)
+    : cn(BUTTON_CATEGORIES.utility, getStatusColor('error', 'text'), "flex items-center gap-2 min-w-[100px] justify-start", className);
+
+  return (
+    <Button
+      size={size}
+      onClick={onClick}
+      disabled={disabled}
+      className={buttonClassName}
+    >
+      <Trash2 className={iconSizes.sm} />
+      <span className="hidden md:inline">{children}</span>
+      {badge != null && badge > 0 && (
+        <CommonBadge status="deleted" customLabel={String(badge)} className="ml-1" />
+      )}
+    </Button>
+  );
+}
+
 export function ToolbarRefreshButton({
   children,
   disabled = false,

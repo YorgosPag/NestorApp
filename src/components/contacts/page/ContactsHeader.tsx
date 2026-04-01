@@ -8,7 +8,8 @@ import '@/lib/design-system';
  */
 
 import React from 'react';
-import { Users, Filter } from 'lucide-react';
+import { Users, Filter, Trash2 } from 'lucide-react';
+import { CommonBadge } from '@/core/badges';
 import { PageHeader } from '@/core/headers';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 import type { ViewMode } from '@/hooks/useContactsState';
@@ -28,6 +29,10 @@ interface ContactsHeaderProps {
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
+  // Trash toggle
+  showTrash?: boolean;
+  trashCount?: number;
+  onToggleTrash?: () => void;
   /** Breadcrumb element to display inside PageHeader */
   breadcrumb?: React.ReactNode;
 }
@@ -40,6 +45,9 @@ export function ContactsHeader({
   setShowDashboard,
   showFilters,
   setShowFilters,
+  showTrash = false,
+  trashCount = 0,
+  onToggleTrash,
   breadcrumb,
 }: ContactsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
@@ -66,18 +74,45 @@ export function ContactsHeader({
         viewMode: viewMode as CoreViewMode,
         onViewModeChange: (mode) => setViewMode(mode as ViewMode),
         viewModes: ['list', 'grid'] as CoreViewMode[],
-        customActions: setShowFilters ? [
-          React.createElement('button', {
-            key: 'mobile-filter',
-            onClick: () => setShowFilters(!showFilters),
-            className: `md:hidden p-2 ${quick.input} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-              showFilters
-                ? `bg-primary text-primary-foreground ${getStatusBorder('default')}`
-                : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-            }`,
-            'aria-label': 'Toggle filters',
-          }, React.createElement(Filter, { className: iconSizes.sm }))
-        ] : undefined
+        customActions: [
+          // 🗑️ Trash toggle button
+          ...(onToggleTrash ? [
+            React.createElement('button', {
+              key: 'trash-toggle',
+              onClick: onToggleTrash,
+              className: `relative p-2 ${quick.input} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                showTrash
+                  ? `bg-destructive text-destructive-foreground ${getStatusBorder('default')}`
+                  : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              }`,
+              'aria-label': t('trash.viewTrash'),
+              title: showTrash ? t('trash.backToContacts') : t('trash.viewTrash'),
+            },
+              React.createElement(Trash2, { className: iconSizes.sm }),
+              trashCount > 0 && !showTrash
+                ? React.createElement(CommonBadge, {
+                    key: 'trash-badge',
+                    status: 'deleted',
+                    customLabel: String(trashCount),
+                    className: 'absolute -top-1 -right-1 h-4 min-w-[16px] text-[10px] px-1',
+                  })
+                : null,
+            )
+          ] : []),
+          // Mobile filter toggle
+          ...(setShowFilters ? [
+            React.createElement('button', {
+              key: 'mobile-filter',
+              onClick: () => setShowFilters(!showFilters),
+              className: `md:hidden p-2 ${quick.input} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                showFilters
+                  ? `bg-primary text-primary-foreground ${getStatusBorder('default')}`
+                  : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              }`,
+              'aria-label': 'Toggle filters',
+            }, React.createElement(Filter, { className: iconSizes.sm }))
+          ] : []),
+        ]
       }}
     />
   );

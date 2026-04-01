@@ -31,7 +31,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Plus, Building2, CreditCard } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -54,6 +54,16 @@ interface ContactBankingTabProps {
   additionalData?: {
     disabled?: boolean;
   };
+}
+
+function hasSensitiveBankingChanges(existing: BankAccount, next: BankAccountInput): boolean {
+  return (
+    existing.bankName !== next.bankName
+    || existing.bankCode !== next.bankCode
+    || existing.iban !== next.iban
+    || existing.holderName !== next.holderName
+    || existing.isPrimary !== next.isPrimary
+  );
 }
 
 // ============================================================================
@@ -81,12 +91,12 @@ interface ContactBankingTabProps {
  */
 export function ContactBankingTab({
   data,
-  additionalData
+  additionalData,
 }: ContactBankingTabProps) {
   const { t } = useTranslation('contacts');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
-  const { success, error: notifyError } = useNotifications();
+  const { success, error: notifyError, info } = useNotifications();
   const disabled = additionalData?.disabled ?? false;
 
   // State
@@ -99,9 +109,11 @@ export function ContactBankingTab({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | undefined>();
   const [deletingAccount, setDeletingAccount] = useState<BankAccount | null>(null);
+  const [primaryAccountCandidate, setPrimaryAccountCandidate] = useState<BankAccount | null>(null);
 
   // Contact ID check
   const contactId = data.id;
+  const activeAccountsCount = accounts.filter((account) => account.isActive).length;
 
   // Load accounts
   const loadAccounts = useCallback(async () => {
@@ -121,7 +133,7 @@ export function ContactBankingTab({
     } finally {
       setLoading(false);
     }
-  }, [contactId]);
+  }, [contactId, t]);
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -132,7 +144,7 @@ export function ContactBankingTab({
       (updatedAccounts) => {
         setAccounts(updatedAccounts);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -140,7 +152,7 @@ export function ContactBankingTab({
 
   // Initial load
   useEffect(() => {
-    loadAccounts();
+    void loadAccounts();
   }, [loadAccounts]);
 
   // Handle add account
@@ -168,6 +180,13 @@ export function ContactBankingTab({
       setActionLoading(true);
       await BankAccountsService.deleteAccount(contactId, deletingAccount.id);
       success(t('bankingTab.toasts.deleted', { bankName: deletingAccount.bankName }));
+      info(
+        t(
+          deletingAccount.isPrimary
+            ? 'bankingTab.impact.primaryDeleted'
+            : 'bankingTab.impact.deleted',
+        ),
+      );
     } catch (err) {
       logger.error('[ContactBankingTab] Error deleting account:', { error: err });
       notifyError(t('bankingTab.toasts.deleteError'));
@@ -177,25 +196,38 @@ export function ContactBankingTab({
     }
   };
 
-  // Handle set primary
-  const handleSetPrimary = async (account: BankAccount) => {
-    if (!contactId) return;
+  // Handle set primary confirmation
+  const handleSetPrimaryClick = (account: BankAccount) => {
+    setPrimaryAccountCandidate(account);
+  };
+
+  const handleSetPrimaryConfirm = async () => {
+    if (!contactId || !primaryAccountCandidate) return;
 
     try {
       setActionLoading(true);
-      await BankAccountsService.setPrimaryAccount(contactId, account.id);
-      success(t('bankingTab.toasts.setPrimary', { bankName: account.bankName }));
+      await BankAccountsService.setPrimaryAccount(contactId, primaryAccountCandidate.id);
+      success(t('bankingTab.toasts.setPrimary', { bankName: primaryAccountCandidate.bankName }));
+      info(t('bankingTab.impact.primaryApplied'));
     } catch (err) {
       logger.error('[ContactBankingTab] Error setting primary:', { error: err });
       notifyError(t('bankingTab.toasts.setPrimaryError'));
     } finally {
       setActionLoading(false);
+      setPrimaryAccountCandidate(null);
     }
   };
 
   // Handle form submit
   const handleFormSubmit = async (formData: BankAccountInput) => {
     if (!contactId) return;
+
+    const isSensitiveEdit = editingAccount
+      ? hasSensitiveBankingChanges(editingAccount, formData)
+      : false;
+    const becomesPrimary = editingAccount
+      ? !editingAccount.isPrimary && formData.isPrimary
+      : formData.isPrimary;
 
     try {
       setActionLoading(true);
@@ -204,10 +236,20 @@ export function ContactBankingTab({
         // Update existing
         await BankAccountsService.updateAccount(contactId, editingAccount.id, formData);
         success(t('bankingTab.toasts.updated', { bankName: formData.bankName }));
+
+        if (becomesPrimary) {
+          info(t('bankingTab.impact.primaryApplied'));
+        } else if (isSensitiveEdit) {
+          info(t('bankingTab.impact.updatedSensitive'));
+        }
       } else {
         // Create new
         await BankAccountsService.addAccount(contactId, formData);
         success(t('bankingTab.toasts.created', { bankName: formData.bankName }));
+
+        if (formData.isPrimary) {
+          info(t('bankingTab.impact.createdPrimary'));
+        }
       }
 
       setIsFormOpen(false);
@@ -227,7 +269,8 @@ export function ContactBankingTab({
   };
 
   // Group accounts by bank — ADR-207
-  const accountsByBank = groupByKey(accounts, account => account.bankName);
+  const accountsByBank = groupByKey(accounts, (account) => account.bankName);
+  const deletingIsLastActive = deletingAccount?.isActive === true && activeAccountsCount === 1;
 
   // Render loading state
   if (loading) {
@@ -243,7 +286,7 @@ export function ContactBankingTab({
     return (
       <div className="text-center py-12">
         <p className="text-destructive">{error}</p>
-        <Button variant="outline" onClick={loadAccounts} className="mt-2">
+        <Button variant="outline" onClick={() => void loadAccounts()} className="mt-2">
           {t('bankingTab.retry')}
         </Button>
       </div>
@@ -258,12 +301,12 @@ export function ContactBankingTab({
           <CardContent className="flex flex-col items-center justify-center py-12">
             <CreditCard
               size={iconSizes.numeric.xl}
-              className={cn("mb-2", colors.text.muted)}
+              className={cn('mb-2', colors.text.muted)}
             />
             <h3 className="text-lg font-medium mb-2">
               {t('bankingTab.empty.title')}
             </h3>
-            <p className={cn("text-center mb-2 max-w-md", colors.text.muted)}>
+            <p className={cn('text-center mb-2 max-w-md', colors.text.muted)}>
               {t('bankingTab.empty.description')}
             </p>
             {!disabled && (
@@ -281,7 +324,7 @@ export function ContactBankingTab({
             <CardContent className="pt-2">
               <header className="mb-2">
                 <h3 className="text-lg font-medium">{t('bankingTab.newAccount.title')}</h3>
-                <p className={cn("text-sm", colors.text.muted)}>
+                <p className={cn('text-sm', colors.text.muted)}>
                   {t('bankingTab.newAccount.description')}
                 </p>
               </header>
@@ -322,7 +365,7 @@ export function ContactBankingTab({
         {Object.entries(accountsByBank).map(([bankName, bankAccounts]) => (
           <div key={bankName} className="space-y-2">
             {Object.keys(accountsByBank).length > 1 && (
-              <h4 className={cn("text-sm font-medium flex items-center gap-2", colors.text.muted)}>
+              <h4 className={cn('text-sm font-medium flex items-center gap-2', colors.text.muted)}>
                 <Building2 size={iconSizes.numeric.sm} />
                 {bankName}
               </h4>
@@ -335,7 +378,7 @@ export function ContactBankingTab({
                   editable={!disabled}
                   onEdit={handleEdit}
                   onDelete={handleDeleteClick}
-                  onSetPrimary={handleSetPrimary}
+                  onSetPrimary={handleSetPrimaryClick}
                 />
               ))}
             </div>
@@ -351,7 +394,7 @@ export function ContactBankingTab({
               <h3 className="text-lg font-medium">
                 {editingAccount ? t('bankingTab.editAccount.title') : t('bankingTab.newAccount.title')}
               </h3>
-              <p className={cn("text-sm", colors.text.muted)}>
+              <p className={cn('text-sm', colors.text.muted)}>
                 {editingAccount
                   ? t('bankingTab.editAccount.description')
                   : t('bankingTab.newAccount.description')}
@@ -376,13 +419,27 @@ export function ContactBankingTab({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('bankingTab.deleteAccount.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('bankingTab.deleteAccount.confirmation')}{' '}
-              <strong>{deletingAccount?.bankName}</strong> {t('bankingTab.deleteAccount.withIban')}{' '}
-              <code className="text-xs">{deletingAccount?.iban}</code>;
-              <br />
-              <br />
-              {t('bankingTab.deleteAccount.irreversible')}
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  {t('bankingTab.deleteAccount.confirmation')}{' '}
+                  <strong>{deletingAccount?.bankName}</strong> {t('bankingTab.deleteAccount.withIban')}{' '}
+                  <code className="text-xs">{deletingAccount?.iban}</code>;
+                </p>
+                <p>{t('bankingTab.impact.futureUse')}</p>
+                <p className={cn('text-sm', colors.text.muted)}>{t('bankingTab.impact.snapshotPreserved')}</p>
+                {deletingAccount?.isPrimary && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    {t('bankingTab.impact.deletePrimary')}
+                  </p>
+                )}
+                {deletingIsLastActive && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    {t('bankingTab.impact.deleteLastActive')}
+                  </p>
+                )}
+                <p>{t('bankingTab.deleteAccount.irreversible')}</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -396,6 +453,38 @@ export function ContactBankingTab({
                 <Spinner size="small" color="inherit" className="mr-2" />
               ) : null}
               {t('bankingTab.deleteAccount.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Set Primary Confirmation Dialog */}
+      <AlertDialog
+        open={!!primaryAccountCandidate}
+        onOpenChange={(open) => !open && setPrimaryAccountCandidate(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('bankingTab.setPrimaryDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  {t('bankingTab.setPrimaryDialog.confirmation', {
+                    bankName: primaryAccountCandidate?.bankName ?? '',
+                  })}
+                </p>
+                <p>{t('bankingTab.setPrimaryDialog.impact')}</p>
+                <p className={cn('text-sm', colors.text.muted)}>{t('bankingTab.impact.snapshotPreserved')}</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>{t('bankingTab.setPrimaryDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSetPrimaryConfirm} disabled={actionLoading}>
+              {actionLoading ? (
+                <Spinner size="small" color="inherit" className="mr-2" />
+              ) : null}
+              {t('bankingTab.setPrimaryDialog.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

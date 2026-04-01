@@ -63,6 +63,12 @@ interface ContactArchiveFields {
   restoredBy?: string;
 }
 
+interface ContactSoftDeleteFields {
+  deletedAt?: FieldValue | Date | { toDate: () => Date };
+  deletedBy?: string;
+  previousStatus?: string;
+}
+
 interface ContactPhotoFields {
   photoURL?: string;
   multiplePhotoURLs?: string[] | FieldValue;
@@ -71,10 +77,10 @@ interface ContactPhotoFields {
 type ContactFirestoreData = Omit<Contact, 'createdAt' | 'updatedAt'> & {
   createdAt?: FieldValue;
   updatedAt?: FieldValue;
-} & ContactArchiveFields;
+} & ContactArchiveFields & ContactSoftDeleteFields;
 
 type ContactUpdatePayload = Omit<Partial<Contact>, 'multiplePhotoURLs'>
-  & ContactArchiveFields & ContactPhotoFields & { updatedAt?: FieldValue };
+  & ContactArchiveFields & ContactSoftDeleteFields & ContactPhotoFields & { updatedAt?: FieldValue };
 
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
@@ -125,7 +131,8 @@ const SYSTEM_FIELDS = ['id', 'createdAt', 'createdBy', 'ownerId'] as const;
 // ============================================================================
 
 export class ContactsService {
-  private static getContactDisplayName(contactData: Partial<Contact>): string {
+  /** Build display name from contact data. Public for pre-flight name change checks. */
+  static getDisplayName(contactData: Partial<Contact>): string {
     switch (contactData.type) {
       case 'individual': return `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim();
       case 'company': return contactData.companyName || 'Unknown Company';
@@ -239,8 +246,8 @@ export class ContactsService {
     await this.updateContact(id, enterpriseData);
 
     // ADR-249: Contact name cascade (fire-and-forget)
-    const oldName = this.getContactDisplayName(existingContact);
-    const newName = this.getContactDisplayName({ ...existingContact, ...enterpriseData });
+    const oldName = this.getDisplayName(existingContact);
+    const newName = this.getDisplayName({ ...existingContact, ...enterpriseData });
     if (oldName !== newName && newName.length > 0) {
       apiClient.post(`/api/contacts/${id}/name-cascade`, { newDisplayName: newName }).catch(() => {});
     }
@@ -255,7 +262,7 @@ export class ContactsService {
       const isStatusChange = changes.some((c) => c.field === 'status');
       apiClient.post(API_ROUTES.AUDIT_TRAIL.RECORD, {
         entityType: 'contact', entityId: id,
-        entityName: this.getContactDisplayName(existingContact),
+        entityName: this.getDisplayName(existingContact),
         action: isStatusChange ? 'status_changed' : 'updated',
         changes,
       }).catch(() => {});
@@ -343,13 +350,41 @@ export class ContactsService {
     });
   }
 
+  // ==== SOFT DELETE (Trash) ====
+
+  /** Soft-delete: moves contact to trash (status='deleted') with undo capability */
   static async deleteContact(id: string): Promise<void> {
     await apiClient.delete(API_ROUTES.CONTACTS.BY_ID(id));
     RealtimeService.dispatch('CONTACT_DELETED', { contactId: id, timestamp: Date.now() });
   }
 
+  /** Soft-delete multiple contacts in parallel */
   static async deleteMultipleContacts(ids: string[]): Promise<void> {
     await Promise.all(ids.map(id => apiClient.delete(API_ROUTES.CONTACTS.BY_ID(id))));
+  }
+
+  /** Restore a soft-deleted contact from trash to its previous status */
+  static async restoreDeletedContact(id: string): Promise<void> {
+    await apiClient.post(API_ROUTES.CONTACTS.RESTORE(id));
+    RealtimeService.dispatch('CONTACT_UPDATED', { contactId: id, updates: { status: 'active' }, timestamp: Date.now() });
+  }
+
+  /** Restore multiple soft-deleted contacts in parallel */
+  static async restoreMultipleDeletedContacts(ids: string[]): Promise<void> {
+    await Promise.all(ids.map(id => apiClient.post(API_ROUTES.CONTACTS.RESTORE(id))));
+  }
+
+  // ==== PERMANENT DELETE ====
+
+  /** Permanently delete a contact (must be in trash first). Runs full dependency check. */
+  static async permanentDeleteContact(id: string): Promise<void> {
+    await apiClient.delete(API_ROUTES.CONTACTS.PERMANENT_DELETE(id));
+    RealtimeService.dispatch('CONTACT_DELETED', { contactId: id, timestamp: Date.now() });
+  }
+
+  /** Permanently delete multiple trashed contacts */
+  static async permanentDeleteMultipleContacts(ids: string[]): Promise<void> {
+    await Promise.all(ids.map(id => apiClient.delete(API_ROUTES.CONTACTS.PERMANENT_DELETE(id))));
   }
 
   // ==== DELEGATED READ METHODS (backward compatibility) ====
