@@ -73,7 +73,7 @@ export function CoverageCard({
   onMissingDocumentsClick,
   className,
 }: CoverageCardProps) {
-  const { t } = useTranslation(['units', 'common']);
+  const { t } = useTranslation(['properties', 'common']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();

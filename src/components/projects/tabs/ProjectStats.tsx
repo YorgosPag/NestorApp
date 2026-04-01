@@ -13,8 +13,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('ProjectStats');
 
-// 🏢 ENTERPRISE: Centralized Unit Icon
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+// 🏢 ENTERPRISE: Centralized Property Icon
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 interface ProjectStatsProps {
   projectId: string;
@@ -46,7 +46,7 @@ export function ProjectStats({ projectId }: ProjectStatsProps) {
     {
       title: t('stats.totalProperties'),
       value: loading ? '...' : stats?.totalProperties ?? 0,
-      icon: UnitIcon,
+      icon: PropertyIcon,
       color: 'blue',
       loading,
     },

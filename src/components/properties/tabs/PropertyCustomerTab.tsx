@@ -11,8 +11,8 @@ import React from 'react';
 import { User, Phone, Calendar, FileText, AlertTriangle } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,14 +88,14 @@ export function PropertyCustomerTab({
       <Card className="m-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
+            <PropertyIcon className={`${iconSizes.md} ${propertyColor}`} />
             {t('customerTab.availableUnit')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <div className={`${colors.bg.info} rounded-full ${iconSizes.xl4} flex items-center justify-center mx-auto mb-4`}>
-              <UnitIcon className={`${iconSizes.xl} ${unitColor}`} />
+              <PropertyIcon className={`${iconSizes.xl} ${propertyColor}`} />
             </div>
             <h3 className="font-semibold text-lg mb-2">
               {t('customerTab.unitAvailable', { name: selectedProperty.name })}
@@ -165,7 +165,7 @@ export function PropertyCustomerTab({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
+            <PropertyIcon className={`${iconSizes.md} ${propertyColor}`} />
             {t('customerTab.transactionDetails')}
           </CardTitle>
         </CardHeader>
@@ -221,7 +221,7 @@ export function PropertyCustomerTab({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
+            <PropertyIcon className={`${iconSizes.md} ${propertyColor}`} />
             {t('customerTab.propertyRelations')}
           </CardTitle>
         </CardHeader>
@@ -258,7 +258,7 @@ export function PropertyCustomerTab({
             </Button>
 
             <Button variant="outline" className="justify-start h-auto p-4">
-              <UnitIcon className={`${iconSizes.md} mr-3 ${unitColor}`} />
+              <PropertyIcon className={`${iconSizes.md} mr-3 ${propertyColor}`} />
               <div className="text-left">
                 <div className="font-medium">{t('customerTab.otherProperties')}</div>
                 <div className={cn("text-sm", colors.text.muted)}>

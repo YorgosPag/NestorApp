@@ -139,7 +139,7 @@ export function useAddPropertyDialogState({
   const [codeOverridden, setCodeOverridden] = useState(false);
 
   const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
-    entityType: 'unit',
+    entityType: 'property',
     buildingId: formData.buildingId,
     floorLevel: formData.floor,
     propertyType: formData.type || undefined,

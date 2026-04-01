@@ -5,15 +5,15 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EmptyState } from '@/components/shared/EmptyState';
 import '@/lib/design-system';
 
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 export function PropertyListEmptyState() {
   const { t } = useTranslation('properties');
   return (
     <EmptyState
-      icon={UnitIcon}
-      iconColor={unitColor}
+      icon={PropertyIcon}
+      iconColor={propertyColor}
       title={t('grid.emptyState.title')}
       description={t('grid.emptyState.subtitle')}
       size="sm"

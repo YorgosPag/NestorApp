@@ -92,7 +92,7 @@ export function PropertyPageFilters({
       />
       <LabeledSelect
         id="type-filter"
-        icon={<NAVIGATION_ENTITIES.unit.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />}
+        icon={<NAVIGATION_ENTITIES.property.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.property.color)} />}
         label={t('pageFilters.type.label')}
         value={filterType}
         onValueChange={setFilterType}

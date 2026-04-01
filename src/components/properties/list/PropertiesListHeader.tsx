@@ -7,7 +7,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from 'react-i18next';
 
 // 🏢 ENTERPRISE: Centralized Property Icon
-const PropertyIcon = NAVIGATION_ENTITIES.unit.icon;
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 interface PropertiesListHeaderProps {
     propertyCount: number;

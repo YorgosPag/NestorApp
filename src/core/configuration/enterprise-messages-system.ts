@@ -513,7 +513,6 @@ export const Messages = {
     project: () => getMessagesManager().getEmptyState('project'),
     building: () => getMessagesManager().getEmptyState('building'),
     storage: () => getMessagesManager().getEmptyState('storage'),
-    unit: () => getMessagesManager().getEmptyState('unit'),
     property: () => getMessagesManager().getEmptyState('property'),
     generic: () => getMessagesManager().getEmptyState('generic'),
   },
@@ -574,7 +573,6 @@ export const ENTITY_TYPES = {
   PROJECT: 'project',
   BUILDING: 'building',
   STORAGE: 'storage',
-  UNIT: 'unit',
   PROPERTY: 'property',
   GENERIC: 'generic'
 } as const;

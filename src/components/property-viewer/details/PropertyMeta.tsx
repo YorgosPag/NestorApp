@@ -120,7 +120,7 @@ export function PropertyMeta({
           )}
           {property.rooms && (
             <div className={`flex items-center ${spacing.gap.sm}`}>
-              <NAVIGATION_ENTITIES.unit.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />
+              <NAVIGATION_ENTITIES.property.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.property.color)} />
               <span>{property.rooms} {t('meta.rooms')}</span>
             </div>
           )}

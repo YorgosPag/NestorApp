@@ -3,8 +3,8 @@
 import { MousePointer } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 import { Separator } from '@/components/ui/separator';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -44,7 +44,7 @@ export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoP
   if (!property) {
     return (
       <div className={cn(`flex flex-col items-center justify-center h-full ${spacing.padding.sm}`, colors.text.muted)}>
-        <UnitIcon className={`${iconSizes.md} mb-2 ${unitColor}`} />
+        <PropertyIcon className={`${iconSizes.md} mb-2 ${propertyColor}`} />
         <p className="text-xs text-center">{t('hoverInfo.noDataFound')}</p>
         <p className="text-xs text-center">{t('hoverInfo.forThisProperty')}</p>
       </div>

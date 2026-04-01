@@ -365,7 +365,7 @@ export function UnifiedCustomerCard({
               </div>
             </div>
 
-            {context === 'unit' && (
+            {context === 'property' && (
               <Button variant="ghost" size="sm" className="shrink-0">
                 <ArrowRight className={iconSizes.sm} />
               </Button>

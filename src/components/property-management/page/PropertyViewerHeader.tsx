@@ -46,7 +46,7 @@ export function PropertyViewerHeader({
         variant="static"
         layout="single-row"
         title={{
-          icon: NAVIGATION_ENTITIES.unit.icon,
+          icon: NAVIGATION_ENTITIES.property.icon,
           title: t('propertyViewer.title'),
           subtitle: t('propertyViewer.subtitle')
         }}

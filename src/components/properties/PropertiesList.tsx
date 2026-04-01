@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PropertiesListHeader } from './list/PropertiesListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { PropertyListCard } from '@/domain';
-import { CompactToolbar, unitsConfig, type SortField } from '@/components/core/CompactToolbar';
+import { CompactToolbar, propertiesConfig, type SortField } from '@/components/core/CompactToolbar';
 import { PropertyTypeQuickFilters } from './PropertyTypeQuickFilters';
 import type { Property } from '@/types/property-viewer';
 import { EntityListColumn } from '@/core/containers';
@@ -162,7 +162,7 @@ export function PropertiesList({
       {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
       <div className="hidden md:block">
         <CompactToolbar
-          config={unitsConfig}
+          config={propertiesConfig}
           selectedItems={selectedItems}
           onSelectionChange={setSelectedItems}
           searchTerm={searchTerm}
@@ -185,7 +185,7 @@ export function PropertiesList({
       <div className="md:hidden">
         {showToolbar && (
           <CompactToolbar
-            config={unitsConfig}
+            config={propertiesConfig}
             selectedItems={selectedItems}
             onSelectionChange={setSelectedItems}
             searchTerm={searchTerm}

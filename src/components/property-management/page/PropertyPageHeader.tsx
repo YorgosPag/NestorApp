@@ -33,7 +33,7 @@ export function PropertyPageHeader({
       variant="static"
       layout="single-row"
       title={{
-        icon: NAVIGATION_ENTITIES.unit.icon,
+        icon: NAVIGATION_ENTITIES.property.icon,
         title: t('header.title'),
         badge: (
           <CommonBadge

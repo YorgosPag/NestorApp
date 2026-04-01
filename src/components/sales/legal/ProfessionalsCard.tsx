@@ -215,7 +215,7 @@ export function ProfessionalsCard({
 
         // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
-        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('unit', propertyId), {
+        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('property', propertyId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -315,7 +315,7 @@ export function ProfessionalsCard({
 
         // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
-        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('unit', propertyId), {
+        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('property', propertyId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

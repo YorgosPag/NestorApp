@@ -65,7 +65,7 @@ export interface CustomerExtendedInfo extends CustomerBasicInfo {
  * Context types για διαφορετικές χρήσεις του component
  */
 export type CustomerInfoContext =
-  | 'unit'      // Εμφάνιση σε unit details
+  | 'property'  // Εμφάνιση σε property details
   | 'building'  // Εμφάνιση σε building customers list
   | 'project'   // Εμφάνιση σε project customers table
   | 'contact'   // Εμφάνιση σε contact details
@@ -327,9 +327,7 @@ export type ContextualData = {
   project: {
     projectId: string;
   };
-  contact: {
-    // No additional data needed
-  };
+  contact: Record<string, never>;
   dashboard: {
     metric?: string;
     timeRange?: string;

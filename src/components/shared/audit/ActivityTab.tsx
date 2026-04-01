@@ -97,7 +97,7 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
     ?? (unit as Record<string, unknown> | undefined)?.id as string | undefined
     ?? (data as Record<string, unknown> | undefined)?.id as string | undefined;
 
-  const resolvedEntityType = entityType ?? 'unit';
+  const resolvedEntityType = entityType ?? 'property';
   const { t } = useTranslation('common');
   const colors = useSemanticColors();
   const [activeFilter, setActiveFilter] = useState<AuditAction | 'all'>('all');

@@ -15,8 +15,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon (fallback)
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+// 🏢 ENTERPRISE: Centralized Property Icon (fallback)
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 interface PropertyLayerHeaderProps {
   property: Property;
@@ -40,7 +40,7 @@ export function PropertyLayerHeader({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
-  const IconComponent = PROPERTY_TYPE_ICONS[property.type] || UnitIcon;
+  const IconComponent = PROPERTY_TYPE_ICONS[property.type] || PropertyIcon;
 
   return (
     <div>

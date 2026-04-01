@@ -105,8 +105,8 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
             <PropertyInfoItem icon={<MapPin />} label={t('details.floor')} value={property.floor} />
             <PropertyInfoItem icon={<Euro />} label={t('details.price')} value={formatCurrency(property.price)} valueClassName={`font-semibold ${colors.text.price}`} iconClassName={colors.text.price} />
             <PropertyInfoItem icon={<Ruler />} label={t('details.area')} value={`${property.area} m²`} />
-            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.unit.icon className={NAVIGATION_ENTITIES.unit.color} />} label={t('details.rooms')} value={property.rooms} />
-            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.unit.icon className={NAVIGATION_ENTITIES.unit.color} />} label={t('details.balcony')} value={property.balconyArea ? `${property.balconyArea} m²` : '-'} />
+            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.property.icon className={NAVIGATION_ENTITIES.property.color} />} label={t('details.rooms')} value={property.rooms} />
+            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.property.icon className={NAVIGATION_ENTITIES.property.color} />} label={t('details.balcony')} value={property.balconyArea ? `${property.balconyArea} m²` : '-'} />
           </div>
           
           <Separator />

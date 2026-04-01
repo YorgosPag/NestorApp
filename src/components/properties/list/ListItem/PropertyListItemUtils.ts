@@ -30,7 +30,7 @@ export const getPropertyTypeIcon = (type: string) => {
     // 🏠 Μεζονέτα (maisonette/house-style) - uses centralized unit icon
     if (typeUpper.includes('ΜΕΖΟΝΈΤΑ') || typeUpper.includes('ΜΕΖΟΝΕΤΑ') ||
         typeUpper.includes('MAISONETTE') || typeUpper.includes('ΟΙΚΟΔΟΜΉ')) {
-        return NAVIGATION_ENTITIES.unit.icon;
+        return NAVIGATION_ENTITIES.property.icon;
     }
 
     // 🏪 Κατάστημα (retail/shop)

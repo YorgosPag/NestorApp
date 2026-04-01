@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 interface EmptyLayerMessageProps {
   searchQuery: string;
@@ -24,7 +24,7 @@ export function EmptyLayerMessage({ searchQuery }: EmptyLayerMessageProps) {
 
   return (
     <div className={cn("text-center py-8", colors.text.muted)}>
-      <UnitIcon className={`${iconSizes.xl} mx-auto mb-2 ${unitColor}`} />
+      <PropertyIcon className={`${iconSizes.xl} mx-auto mb-2 ${propertyColor}`} />
       <p className="text-sm">{t('layerManager.noLayersFound')}</p>
       {searchQuery ? (
         <p className="text-xs mt-1 italic">

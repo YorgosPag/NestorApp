@@ -71,7 +71,7 @@ export function FloorMultiSelectField({
   noBuildingHint,
   disabled = false,
 }: FloorMultiSelectFieldProps) {
-  const { t } = useTranslation(['units']);
+  const { t } = useTranslation(['properties']);
   const { user } = useAuth();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();

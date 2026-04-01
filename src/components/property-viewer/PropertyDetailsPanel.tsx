@@ -15,9 +15,9 @@ import { PropertyDetailsContent } from './details/PropertyDetailsContent';
 import type { ExtendedPropertyDetails } from '@/types/property-viewer';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 interface PropertyDetailsPanelProps {
   propertyIds: string[];
@@ -50,7 +50,7 @@ export function PropertyDetailsPanel({
     return (
       // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
       <div className={cn("flex flex-col items-center justify-center h-full", colors.text.muted)}>
-        <UnitIcon className={`${iconSizes.xl} mb-2 ${unitColor}`} />
+        <PropertyIcon className={`${iconSizes.xl} mb-2 ${propertyColor}`} />
         <p className="text-sm text-center">{t('detailsPanel.selectProperty')}</p>
         <p className="text-xs text-center">{t('detailsPanel.toViewDetails')}</p>
       </div>
@@ -75,7 +75,7 @@ export function PropertyDetailsPanel({
     return (
       // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
       <div className={cn("flex flex-col items-center justify-center h-full", colors.text.muted)}>
-        <UnitIcon className={`${iconSizes.xl} mb-2 ${unitColor}`} />
+        <PropertyIcon className={`${iconSizes.xl} mb-2 ${propertyColor}`} />
         <p className="text-sm text-center">{t('detailsPanel.noDataFound')}</p>
         <p className="text-xs text-center">{t('detailsPanel.forSelectedProperty')}</p>
       </div>

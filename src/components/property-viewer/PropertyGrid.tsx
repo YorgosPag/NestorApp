@@ -20,9 +20,9 @@ import { usePropertyGridFilters } from '@/components/core/AdvancedFilters';
 import '@/lib/design-system';
 
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color (for empty state)
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color (for empty state)
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 // ✅ ENTERPRISE: PropertyCard REPLACED with PropertyGridCard from @/domain (PR: Enterprise Grid System)
 // 🏢 All grid cards now use the centralized design system GridCard molecule
@@ -66,7 +66,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
   if (displayProperties.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center h-full ${colors.text.muted} p-4`}>
-        <UnitIcon className={`${iconSizes.xl} mb-4 ${unitColor}`} />
+        <PropertyIcon className={`${iconSizes.xl} mb-4 ${propertyColor}`} />
         <h2 className="text-xl font-semibold">{t('grid.emptyState.title')}</h2>
         <p className="text-sm">{t('grid.emptyState.subtitle')}</p>
       </div>

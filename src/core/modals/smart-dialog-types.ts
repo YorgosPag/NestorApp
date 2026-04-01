@@ -18,7 +18,6 @@ export type DialogEntityType =
   | 'company'
   | 'project'
   | 'building'
-  | 'unit'
   | 'opportunity'
   | 'property'
   | 'service'

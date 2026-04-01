@@ -45,7 +45,7 @@ interface UseFileAuditReturn {
 // ============================================================================
 
 /** Entity types that support activity recording via API */
-const AUDITABLE_ENTITY_TYPES: ReadonlySet<string> = new Set(['unit']);
+const AUDITABLE_ENTITY_TYPES: ReadonlySet<string> = new Set(['property']);
 
 // ============================================================================
 // HOOK

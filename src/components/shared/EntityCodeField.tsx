@@ -40,12 +40,12 @@ interface EntityCodeFieldProps {
   /** Called when user changes value */
   onChange: (value: string) => void;
   /** Entity type for code suggestion */
-  entityType: 'unit' | 'storage' | 'parking';
+  entityType: 'property' | 'storage' | 'parking';
   /** Building ID for code suggestion context */
   buildingId: string;
   /** Floor level for code suggestion context */
   floorLevel: number;
-  /** Unit type (required for entityType='unit') */
+  /** Property type (required for entityType='property') */
   propertyType?: PropertyType;
   /** Location zone (parking only) */
   locationZone?: ParkingLocationZone;

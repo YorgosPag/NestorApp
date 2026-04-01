@@ -99,11 +99,13 @@ export function getLayoutTokens(entityType: DialogEntityType): LayoutConfig {
 // VALIDATION RULES
 // =============================================================================
 
+/* eslint-disable custom/no-hardcoded-strings -- i18n fallback values for validation messages */
 const STANDARD_VALIDATION_RULES: Record<string, ValidationRule> = {
   email: { type: 'email', message: i18n.t('validation.email_invalid', 'Παρακαλώ εισάγετε έγκυρη διεύθυνση email') },
   phone: { type: 'phone', message: i18n.t('validation.phone_invalid', 'Παρακαλώ εισάγετε έγκυρο τηλέφωνο') },
   vat_number: { type: 'pattern', message: i18n.t('validation.vat_invalid', 'Παρακαλώ εισάγετε έγκυρο ΑΦΜ'), options: { pattern: '^[0-9]{9}$' } },
 };
+/* eslint-enable custom/no-hardcoded-strings */
 
 export function getValidationRules(): Record<string, ValidationRule> {
   return STANDARD_VALIDATION_RULES;
@@ -240,7 +242,7 @@ export function getActionLabels(operationType: DialogOperationType) {
 // =============================================================================
 
 export function getThemeForEntity(entityType: DialogEntityType): SmartDialogConfiguration['styling']['theme'] {
-  if (entityType === 'building' || entityType === 'unit') return 'dxf_technical';
+  if (entityType === 'building' || entityType === 'property') return 'dxf_technical';
   return 'default';
 }
 

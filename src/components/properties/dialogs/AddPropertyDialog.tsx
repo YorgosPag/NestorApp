@@ -85,7 +85,7 @@ export function AddPropertyDialog({
       <DialogContent className={cn(DIALOG_SIZES.xl, DIALOG_HEIGHT.standard, DIALOG_SCROLL.scrollable)}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <NAVIGATION_ENTITIES.unit.icon className={iconSizes.md} />
+            <NAVIGATION_ENTITIES.property.icon className={iconSizes.md} />
             {t('dialog.addUnit.title')}
           </DialogTitle>
           <DialogDescription>{t('dialog.addUnit.description')}</DialogDescription>

@@ -174,7 +174,7 @@ export function CustomerInfoCompact({
     if (!showActions || !displayInfo || nameOnly) return null;
 
     // Voor compact mode, toon alleen de meest belangrijke acties
-    const quickActions: CustomerActionType[] = context === 'unit'
+    const quickActions: CustomerActionType[] = context === 'property'
       ? ['view']
       : ['view', 'call'];
 

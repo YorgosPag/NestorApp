@@ -236,7 +236,7 @@ export function SalesSidebar({
 
           {/* History — Centralized ActivityTab (ADR-195) */}
           <TabsContent value="history" className="flex-1">
-            <ActivityTab entityType="unit" entityId={selectedProperty.id} />
+            <ActivityTab entityType="property" entityId={selectedProperty.id} />
           </TabsContent>
         </Tabs>
       }
@@ -258,7 +258,7 @@ export function SalesSidebar({
       <SalesQuickFilters
         selectedCommercialStatus={selectedCommercialStatus}
         onCommercialStatusChange={onCommercialStatusChange}
-        selectedUnitType={selectedPropertyType}
+        selectedPropertyType={selectedPropertyType}
         onPropertyTypeChange={onPropertyTypeChange}
       />
 

@@ -58,7 +58,7 @@ export function PropertiesHeader({
         layout="compact"
         spacing="compact"
         title={{
-          icon: NAVIGATION_ENTITIES.unit.icon,
+          icon: NAVIGATION_ENTITIES.property.icon,
           title: t('header.title'),
           subtitle: t('header.subtitle')
         }}

@@ -68,7 +68,7 @@ interface SearchResultItemProps {
 const SEARCH_TO_NAVIGATION_ENTITY: Record<SearchEntityType, NavigationEntityType> = {
   [SEARCH_ENTITY_TYPES.PROJECT]: 'project',
   [SEARCH_ENTITY_TYPES.BUILDING]: 'building',
-  [SEARCH_ENTITY_TYPES.UNIT]: 'unit',
+  [SEARCH_ENTITY_TYPES.PROPERTY]: 'property',
   [SEARCH_ENTITY_TYPES.CONTACT]: 'contact',
   [SEARCH_ENTITY_TYPES.FILE]: 'file',
   [SEARCH_ENTITY_TYPES.PARKING]: 'parking',
@@ -84,7 +84,7 @@ const SEARCH_TO_NAVIGATION_ENTITY: Record<SearchEntityType, NavigationEntityType
 const ENTITY_LABEL_KEYS: Record<SearchEntityType, string> = {
   [SEARCH_ENTITY_TYPES.PROJECT]: 'search.entityTypes.project',
   [SEARCH_ENTITY_TYPES.BUILDING]: 'search.entityTypes.building',
-  [SEARCH_ENTITY_TYPES.UNIT]: 'search.entityTypes.unit',
+  [SEARCH_ENTITY_TYPES.PROPERTY]: 'search.entityTypes.property',
   [SEARCH_ENTITY_TYPES.CONTACT]: 'search.entityTypes.contact',
   [SEARCH_ENTITY_TYPES.FILE]: 'search.entityTypes.file',
   [SEARCH_ENTITY_TYPES.PARKING]: 'search.entityTypes.parking',

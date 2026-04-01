@@ -60,7 +60,7 @@ export function MultiLevelNavigation({
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   const typography = useTypography();
-  const { t } = useTranslation(['properties', 'units']);
+  const { t } = useTranslation(['properties']);
 
   const levels = property.levels;
   const hasLevels = levels && levels.length > 0;

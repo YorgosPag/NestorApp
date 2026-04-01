@@ -47,7 +47,7 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
     // 🏢 ENTERPRISE: Using centralized icons for area and price
     // 🏢 ENTERPRISE: Fallback values for optional stats to ensure type safety
     const statsCardsData = [
-        { title: t('dashboard.stats.totalProperties'), value: stats.totalProperties ?? 0, icon: NAVIGATION_ENTITIES.unit.icon, color: "blue" },
+        { title: t('dashboard.stats.totalProperties'), value: stats.totalProperties ?? 0, icon: NAVIGATION_ENTITIES.property.icon, color: "blue" },
         { title: t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' }), value: stats.availableProperties ?? 0, icon: TrendingUp, color: "gray" },
         { title: t('dashboard.stats.totalValue'), value: formatCurrency(stats.totalValue), icon: NAVIGATION_ENTITIES.price.icon, color: "green" },
         { title: t('dashboard.stats.totalArea'), value: `${Math.round(stats.totalArea ?? 0)} m²`, icon: NAVIGATION_ENTITIES.area.icon, color: "purple" },
@@ -61,7 +61,7 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
                 <StatsCard key={card.title} {...card} />
             ))}
             <StatusCard statsByStatus={stats.propertiesByStatus} getStatusLabel={getStatusLabel} />
-            <DetailsCard title={t('dashboard.cards.unitTypes')} icon={NAVIGATION_ENTITIES.unit.icon} data={stats.propertiesByType} labelFormatter={getTypeLabel} />
+            <DetailsCard title={t('dashboard.cards.unitTypes')} icon={NAVIGATION_ENTITIES.property.icon} data={stats.propertiesByType} labelFormatter={getTypeLabel} />
             <DetailsCard title={t('dashboard.cards.distributionByFloor')} icon={NAVIGATION_ENTITIES.floor.icon} data={stats.propertiesByFloor} isFloorData />
             <DetailsCard
                 title={t('dashboard.cards.storages')}

@@ -173,7 +173,7 @@ export function CustomerActionButtons({
 
       reassign: {
         type: 'reassign' as const,
-        label: context === 'unit' ? t('customerActions.changeUnit') : t('customerActions.reassign'),
+        label: context === 'property' ? t('customerActions.changeUnit') : t('customerActions.reassign'),
         icon: RefreshCw,
         variant: 'outline' as const,
         onClick: () => {
@@ -303,7 +303,7 @@ export function CustomerActionButtons({
   }
 
   // Special handling για single primary action (π.χ. unit context)
-  if (context === 'unit' && finalActions.length === 1 && finalActions[0]?.type === 'view') {
+  if (context === 'property' && finalActions.length === 1 && finalActions[0]?.type === 'view') {
     return (
       <Link href={`/contacts?contactId=${customerInfo.contactId}`} className="inline-block">
         <Button
