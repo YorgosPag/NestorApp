@@ -1,8 +1,8 @@
-# 🏢 **UNIT FIELDS SYSTEM**
+# 🏢 **PROPERTY FIELDS SYSTEM**
 
-> **Enterprise Unit Property Management**
+> **Enterprise Property Management**
 >
-> Complete system για διαχείριση extended unit fields (layout, areas, orientations, systems, features)
+> Complete system για διαχείριση extended property fields (layout, areas, orientations, systems, features)
 
 **📅 Implemented**: 2026-01-24 | **Status**: ✅ **PRODUCTION READY**
 
@@ -10,7 +10,7 @@
 
 ## 📋 **OVERVIEW**
 
-Το Unit Fields System παρέχει πλήρη διαχείριση extended fields για μονάδες ακινήτων:
+Το Property Fields System παρέχει πλήρη διαχείριση extended fields για ακίνητα:
 
 | Category | Fields | Purpose |
 |----------|--------|---------|
@@ -131,8 +131,8 @@ type UnitType = 'studio' | 'apartment' | 'apartment_1br' | 'apartment_2br' |
 | File | Purpose |
 |------|---------|
 | `src/types/property-viewer.ts` | Property interface with Unit Fields |
-| `src/types/unit.ts` | UnitModel type definition |
-| `src/constants/unit-features-enterprise.ts` | Type definitions & enums |
+| `src/types/property.ts` | PropertyModel type definition |
+| `src/constants/property-features-enterprise.ts` | Type definitions & enums |
 
 ### i18n
 
@@ -145,7 +145,7 @@ type UnitType = 'studio' | 'apartment' | 'apartment_1br' | 'apartment_2br' |
 
 | File | Purpose |
 |------|---------|
-| `src/services/units.service.ts` | Firestore CRUD operations |
+| `src/services/properties.service.ts` | Firestore CRUD operations |
 | `src/features/units-sidebar/hooks/useUnitsSidebar.ts` | Firestore persistence hook |
 | `src/features/units-sidebar/UnitsSidebar.tsx` | Prop chain για `onUpdateProperty` |
 | `firestore.rules` | Security rules (`allow update: if isSuperAdminOnly()` - security stub) |
@@ -357,8 +357,8 @@ npx tsc --noEmit --skipLibCheck
 ## 🔗 **RELATED DOCUMENTATION**
 
 - **[Property Types](../../../src/types/property-viewer.ts)** - Property interface definition
-- **[Unit Features Enterprise](../../../src/constants/unit-features-enterprise.ts)** - Type definitions
-- **[Units Service](../../../src/services/units.service.ts)** - Firestore service
+- **[Property Features Enterprise](../../../src/constants/property-features-enterprise.ts)** - Type definitions
+- **[Properties Service](../../../src/services/properties.service.ts)** - Firestore service
 - **[Design Tokens](../design-system/tokens.md)** - Spacing, icons, colors
 
 ---
@@ -377,6 +377,6 @@ npx tsc --noEmit --skipLibCheck
 
 > **💡 Tip**: Για νέα fields, ακολούθησε το ίδιο pattern: Type → i18n → UI → Service
 >
-> **🔄 Last Updated**: 2026-01-24
+> **🔄 Last Updated**: 2026-04-01 (renamed from unit-fields.md per ADR-269)
 >
 > **👥 Maintainer**: Claude Code (Anthropic AI)

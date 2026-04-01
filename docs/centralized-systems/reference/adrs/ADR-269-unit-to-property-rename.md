@@ -128,8 +128,8 @@ src/config/firestore-collections.ts — COLLECTIONS.PROPERTIES
 ### Phase 0: ADR Creation
 | File | Status | Notes |
 |------|--------|-------|
-| `ADR-145-unit-to-property-rename.md` | ✅ Created | This file |
-| `adr-index.md` | ✅ Updated | Added ADR-145 entry |
+| `ADR-269-unit-to-property-rename.md` | ✅ Created | This file |
+| `adr-index.md` | ✅ Updated | Added ADR-269 entry |
 
 ### Phase 1: Type System (~5 files)
 | File | Status | Notes |
@@ -168,6 +168,17 @@ See implementation plan for full file list (~100 files).
 |------|----------|--------|
 | 2026-03-31 | ADR Created — Naming standardization approved | Γιώργος Παγώνης + Claude Code |
 | 2026-03-31 | Status: APPROVED — Begin phased implementation | Γιώργος Παγώνης |
+
+---
+
+---
+
+## Changelog
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-03-31 | ADR created | Claude Code |
+| 2026-04-01 | Implementation complete — all 8 phases executed, ~200 files renamed. 21 pre-existing oversized files have changes on disk but pending commit. | Claude Code |
 
 ---
 

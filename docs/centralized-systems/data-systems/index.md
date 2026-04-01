@@ -12,7 +12,7 @@
 
 | System | Lines | Files | Status | Key Features |
 |--------|-------|-------|--------|--------------|
-| **Unit Fields System** | 875+ | 8 files | ✅ **Production** | Extended unit properties (layout, areas, features) |
+| **Property Fields System** | 875+ | 8 files | ✅ **Production** | Extended property fields (layout, areas, features) |
 | **Alert Engine** | 2,000+ | 6 subsystems | ✅ **Production** | Real-time monitoring ecosystem |
 | **Polygon System** | 800+ | 3 modules | ✅ **Enterprise** | Geographic drawing engine |
 | **Context Providers** | 900+ | 6 providers | ✅ **Complete** | Global state management |
@@ -25,13 +25,13 @@
 
 ---
 
-## 🏠 **UNIT FIELDS SYSTEM** ✨ NEW
+## 🏠 **PROPERTY FIELDS SYSTEM** ✨ NEW
 
-### 📁 **EXTENDED UNIT PROPERTIES**
+### 📁 **EXTENDED PROPERTY FIELDS**
 
 **📍 Location**: `src/features/property-details/components/UnitFieldsBlock.tsx` (875 lines)
 
-**🎯 Mission**: Complete unit property management με Firestore persistence
+**🎯 Mission**: Complete property field management με Firestore persistence
 
 #### **🏢 ARCHITECTURE:**
 
@@ -63,7 +63,7 @@ import { UnitFieldsBlock } from '@/features/property-details/components/UnitFiel
 />
 ```
 
-**📚 Full Documentation**: **[Unit Fields Guide](unit-fields.md)**
+**📚 Full Documentation**: **[Property Fields Guide](property-fields.md)**
 
 ---
 
@@ -387,7 +387,7 @@ User Interaction → Context Providers → Business Logic → Alert Engine → U
 ## 📚 **DETAILED DOCUMENTATION**
 
 ### 🎯 **SYSTEM-SPECIFIC GUIDES**
-- **[🏠 Unit Fields](unit-fields.md)** - Extended unit properties guide
+- **[🏠 Property Fields](property-fields.md)** - Extended property fields guide
 - **[🚨 Alert Engine](alert-engine.md)** - Complete monitoring system guide
 - **[🌍 Polygon System](polygon-system.md)** - Drawing engine documentation
 - **[🏗️ State Management](state-management.md)** - Context providers detailed guide

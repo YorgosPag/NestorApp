@@ -1,4 +1,4 @@
-# ADR-078: Server-Side Unit Creation via Admin SDK
+# ADR-078: Server-Side Property Creation via Admin SDK
 
 ## Status
 ✅ IMPLEMENTED
@@ -17,7 +17,7 @@ Firestore security rules block client-side unit creation:
 allow create: if false;
 ```
 
-The existing `addUnit()` function in `units.service.ts` uses client-side `addDoc()` which is blocked by these rules. Users clicking the "+" button on the Units page (`/units`) could not create new units.
+The existing `addUnit()` function in `properties.service.ts` uses client-side `addDoc()` which is blocked by these rules. Users clicking the "+" button on the Properties page could not create new properties.
 
 ## Decision
 
@@ -27,7 +27,7 @@ Implement a **server-side API endpoint** using Firebase Admin SDK — the same p
 
 ```
 AddUnitDialog → useUnitForm.handleSubmit()
-  → createUnit() [units.service.ts]
+  → createUnit() [properties.service.ts]
     → apiClient.post('/api/units/create', data) [Bearer token auto-injected]
       → /api/units/create/route.ts [API endpoint]
         → withStandardRateLimit(withAuth(handler, { permissions: 'units:units:create' }))
@@ -60,7 +60,7 @@ AddUnitDialog → useUnitForm.handleSubmit()
 | `src/lib/auth/types.ts` | EDIT | Added `units:units:create` permission |
 | `src/lib/auth/roles.ts` | EDIT | Granted to `company_admin` + `project_manager` |
 | `src/app/api/units/create/route.ts` | NEW | Server-side API endpoint |
-| `src/services/units.service.ts` | EDIT | Added `createUnit()` function |
+| `src/services/properties.service.ts` | EDIT | Added `createUnit()` function |
 | `src/components/units/hooks/useUnitForm.ts` | EDIT | Uses `createUnit()` instead of `addUnit()` |
 
 ## Consequences
@@ -80,3 +80,10 @@ AddUnitDialog → useUnitForm.handleSubmit()
 - Buildings API pattern: `src/app/api/buildings/route.ts` (POST handler)
 - Enterprise API Client: `src/lib/api/enterprise-api-client.ts`
 - RealtimeService: `src/services/realtime/RealtimeService.ts`
+
+## Changelog
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-02-06 | ADR created | Claude Code |
+| 2026-04-01 | Title renamed: Server-Side Unit Creation → Server-Side Property Creation; updated service file references per ADR-269 | Claude Code |
