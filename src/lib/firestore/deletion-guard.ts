@@ -16,9 +16,11 @@ import 'server-only';
 
 import {
   DELETION_REGISTRY,
+  LINK_REMOVAL_REGISTRY,
   getEntityCollection,
   type EntityType,
   type DependencyDef,
+  type CompoundDependencyDef,
   type CascadeDependencyDef,
   type DependencyCheckResult,
 } from '@/config/deletion-registry';
@@ -306,6 +308,87 @@ export async function executeDeletion(
   });
 
   return { success: true, entityId };
+}
+
+// ============================================================================
+// LINK REMOVAL GUARD (ADR-226 Phase 2)
+// ============================================================================
+
+/**
+ * Check if a contact has active dependencies within a project/building scope
+ * before allowing their link to be removed.
+ *
+ * Uses compound queries (contactField + scopeField) from LINK_REMOVAL_REGISTRY.
+ */
+export async function checkLinkRemovalDependencies(
+  db: FirebaseFirestore.Firestore,
+  contactId: string,
+  targetEntityType: EntityType,
+  targetEntityId: string,
+  companyId: string
+): Promise<DependencyCheckResult> {
+  const deps = LINK_REMOVAL_REGISTRY[targetEntityType];
+
+  if (!deps || deps.length === 0) {
+    return { allowed: true, dependencies: [], totalDependents: 0, message: 'Δεν υπάρχουν εξαρτήσεις.' };
+  }
+
+  const results = await Promise.all(
+    deps.map((dep) => checkCompoundDependency(db, dep, contactId, targetEntityId, companyId))
+  );
+
+  const blocking = results.filter((r) => r.count > 0);
+  const totalDependents = blocking.reduce((sum, r) => sum + r.count, 0);
+
+  if (blocking.length === 0) {
+    return { allowed: true, dependencies: [], totalDependents: 0, message: 'Δεν υπάρχουν εξαρτήσεις. Η αφαίρεση επιτρέπεται.' };
+  }
+
+  const depLabels = blocking.map((d) => `${d.label} (${d.count})`).join(', ');
+
+  return {
+    allowed: false,
+    dependencies: blocking,
+    totalDependents,
+    message: `Ο συνεργάτης δεν μπορεί να αφαιρεθεί. Εμπλέκεται σε ${totalDependents} εγγραφές: ${depLabels}.`,
+  };
+}
+
+/**
+ * Query a single compound dependency (contact + scope).
+ */
+async function checkCompoundDependency(
+  db: FirebaseFirestore.Firestore,
+  dep: CompoundDependencyDef,
+  contactId: string,
+  scopeEntityId: string,
+  companyId: string
+): Promise<{ label: string; collection: string; count: number; documentIds: string[] }> {
+  try {
+    let query: FirebaseFirestore.Query = db.collection(dep.collection);
+
+    if (!dep.skipCompanyFilter) {
+      query = query.where(FIELDS.COMPANY_ID, '==', companyId);
+    }
+
+    query = dep.contactQueryType === 'array-contains'
+      ? query.where(dep.contactField, 'array-contains', contactId)
+      : query.where(dep.contactField, '==', contactId);
+
+    query = dep.scopeQueryType === 'array-contains'
+      ? query.where(dep.scopeField, 'array-contains', scopeEntityId)
+      : query.where(dep.scopeField, '==', scopeEntityId);
+
+    const snapshot = await query.limit(MAX_PREVIEW_IDS + 1).get();
+    const documentIds = snapshot.docs.slice(0, MAX_PREVIEW_IDS).map((doc) => doc.id);
+
+    return { label: dep.label, collection: dep.collection, count: snapshot.size, documentIds };
+  } catch (err) {
+    logger.error(`[LinkRemovalGuard] Failed to check ${dep.collection}`, {
+      error: getErrorMessage(err), contactId, scopeEntityId,
+    });
+    return { label: dep.label, collection: dep.collection, count: -1, documentIds: [] };
+  }
 }
 
 // ============================================================================

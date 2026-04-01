@@ -72,6 +72,21 @@ export type EntityType =
   | 'parking'
   | 'storage';
 
+// ============================================================================
+// LINK REMOVAL GUARD TYPES (ADR-226 Phase 2)
+// ============================================================================
+
+/** Compound dependency: checks contact + scope entity in the same query */
+export interface CompoundDependencyDef {
+  collection: string;
+  contactField: string;
+  contactQueryType: QueryType;
+  scopeField: string;
+  scopeQueryType: QueryType;
+  label: string;
+  skipCompanyFilter?: boolean;
+}
+
 /** Result of a dependency check */
 export interface DependencyCheckResult {
   /** Whether deletion is allowed */
@@ -457,6 +472,27 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     ],
   },
 } as const;
+
+// ============================================================================
+// LINK REMOVAL REGISTRY — Compound dependency checks (ADR-226 Phase 2)
+// ============================================================================
+
+/**
+ * When removing a contact link from an entity (project/building),
+ * check if the contact has active references within that entity's scope.
+ */
+export const LINK_REMOVAL_REGISTRY: Partial<Record<EntityType, readonly CompoundDependencyDef[]>> = {
+  project: [
+    { collection: COLLECTIONS.PROPERTIES, contactField: 'commercial.ownerContactIds', contactQueryType: 'array-contains', scopeField: 'projectId', scopeQueryType: 'equals', label: 'Ιδιοκτησία ακινήτου' },
+    { collection: COLLECTIONS.OPPORTUNITIES, contactField: 'contactId', contactQueryType: 'equals', scopeField: 'projectIds', scopeQueryType: 'array-contains', label: 'Ευκαιρίες πώλησης' },
+    { collection: COLLECTIONS.COMMUNICATIONS, contactField: 'contactId', contactQueryType: 'equals', scopeField: 'projectId', scopeQueryType: 'equals', label: 'Επικοινωνίες' },
+  ],
+  building: [
+    { collection: COLLECTIONS.PARKING_SPACES, contactField: 'commercial.ownerContactIds', contactQueryType: 'array-contains', scopeField: 'buildingId', scopeQueryType: 'equals', label: 'Θέσεις parking' },
+    { collection: COLLECTIONS.STORAGE, contactField: 'commercial.ownerContactIds', contactQueryType: 'array-contains', scopeField: 'buildingId', scopeQueryType: 'equals', label: 'Αποθήκες' },
+  ],
+  // TODO Phase 2: property-scoped deps (legal_contracts.professionals[] — needs denormalization)
+};
 
 // ============================================================================
 // HELPERS
