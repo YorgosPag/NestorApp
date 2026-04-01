@@ -9,7 +9,7 @@
 
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import { validateUploadState } from '@/utils/contactForm/formDataMapper';
+import { validateUploadState } from '@/utils/contactForm/validators';
 
 // ============================================================================
 // TYPES
