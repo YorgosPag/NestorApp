@@ -30,13 +30,13 @@ interface OverlayState {
 const DEFAULT_OVERLAY_STATE: OverlayState = {
   mode: 'select',
   status: 'for-sale',
-  kind: 'unit',
+  kind: 'property',
 };
 
 // ✅ ENTERPRISE: State validation schema
 const VALID_MODES: OverlayEditorMode[] = ['select', 'draw', 'edit'];
 const VALID_STATUSES: Status[] = ['for-sale', 'for-rent', 'reserved', 'sold', 'landowner'];
-const VALID_KINDS: OverlayKind[] = ['unit', 'parking', 'storage', 'footprint'];
+const VALID_KINDS: OverlayKind[] = ['property', 'parking', 'storage', 'footprint'];
 
 // ✅ ENTERPRISE: Runtime validator
 function validateOverlayState(state: Partial<OverlayState>): OverlayState {

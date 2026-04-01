@@ -127,7 +127,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
       case 'project': return Building;
       case 'building': return Building2;
       case 'floor': return Home;
-      case 'unit': return DoorOpen;
+      case 'property': return DoorOpen;
       case 'storage': return Package;
       case 'parking': return ParkingCircle;
       default: return Folder;
@@ -140,7 +140,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
       case 'project': return `${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`;
       case 'building': return `${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON}`;
       case 'floor': return `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`;
-      case 'unit': return `${colors.bg.warning} ${HOVER_BACKGROUND_EFFECTS.ORANGE_BUTTON}`;
+      case 'property': return `${colors.bg.warning} ${HOVER_BACKGROUND_EFFECTS.ORANGE_BUTTON}`;
       case 'storage': return `${colors.bg.warning} ${HOVER_BACKGROUND_EFFECTS.YELLOW_BUTTON}`;
       case 'parking': return `${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.INDIGO_BUTTON}`;
       default: return `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON}`;

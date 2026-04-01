@@ -135,7 +135,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       companyId: user?.companyId ?? null,
       // ADR-258: status δεν αποθηκεύεται πλέον σε νέα overlays — χρωματισμός βάσει entity.commercialStatus
       ...(overlayData.status ? { status: overlayData.status } : {}),
-      kind: overlayData.kind || 'unit',
+      kind: overlayData.kind || 'property',
       polygon: polygonForFirestore,
       createdBy: user.uid,
     };
@@ -204,7 +204,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       companyId: user?.companyId ?? null,
       // ADR-258: status δεν αποθηκεύεται σε νέα overlays — backward compat για restore
       ...(overlay.status ? { status: overlay.status } : {}),
-      kind: overlay.kind || 'unit',
+      kind: overlay.kind || 'property',
       polygon: polygonForFirestore,
       createdBy: overlay.createdBy || user?.uid || SYSTEM_IDENTITY.ID,
       restoredAt: serverTimestamp(),

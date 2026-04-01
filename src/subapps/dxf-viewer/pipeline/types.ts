@@ -3,7 +3,7 @@
 
 export interface DxfDestination {
   id: string;
-  type: 'project' | 'building' | 'floor' | 'unit' | 'storage' | 'parking';
+  type: 'project' | 'building' | 'floor' | 'property' | 'storage' | 'parking';
   label: string;
   parentId?: string;
   metadata?: {

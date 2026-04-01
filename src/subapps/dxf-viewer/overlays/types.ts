@@ -7,8 +7,8 @@ import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
 import { EventBus } from '../systems/events';
 
-export type Scope = 'project' | 'building' | 'floor' | 'unit' | 'parking' | 'storage';
-export type OverlayKind = 'unit' | 'parking' | 'storage' | 'footprint';
+export type Scope = 'project' | 'building' | 'floor' | 'property' | 'parking' | 'storage';
+export type OverlayKind = 'property' | 'parking' | 'storage' | 'footprint';
 
 // Use centralized PropertyStatus instead of local Status
 export type Status = PropertyStatus;
@@ -32,10 +32,10 @@ export interface Overlay {
   /** @deprecated ADR-258: Χρωματισμός γίνεται δυναμικά βάσει linked entity → commercialStatus */
   status?: Status;
   label?: string;             // A-12, P-034 κτλ
-  linked?: { 
-    unitId?: string; 
-    parkingId?: string; 
-    storageId?: string; 
+  linked?: {
+    propertyId?: string;
+    parkingId?: string;
+    storageId?: string;
   };
   style?: OverlayStyle;       // ToolStyle colors and properties
   createdAt: number; 
@@ -154,7 +154,7 @@ export interface BoundingBox {
  * Default values
  */
 export const DEFAULT_STATUS: Status = DEFAULT_PROPERTY_STATUS;
-export const DEFAULT_KIND: OverlayKind = 'unit';
+export const DEFAULT_KIND: OverlayKind = 'property';
 export const UNDO_STACK_SIZE = 50;
 
 /**

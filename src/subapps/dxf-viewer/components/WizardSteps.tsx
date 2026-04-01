@@ -176,7 +176,7 @@ interface BuildingStepProps {
   selectedFloorId: string;
   onBuildingChange: (id: string) => void;
   onFloorChange: (id: string) => void;
-  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => void;
+  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor') => void;
 }
 
 export function BuildingStep({
@@ -286,7 +286,7 @@ interface FloorSectionProps {
   floors: Floor[];
   selectedFloorId: string;
   onFloorChange: (id: string) => void;
-  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => void;
+  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor') => void;
 }
 
 function FloorSection({ floors, selectedFloorId, onFloorChange, onLoadFloorplan }: FloorSectionProps) {

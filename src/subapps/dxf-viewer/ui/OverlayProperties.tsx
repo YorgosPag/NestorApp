@@ -71,7 +71,7 @@ interface PendingTransfer {
 /** Extract the linked entity ID based on overlay kind — exhaustive switch */
 function getLinkedEntityId(ov: Overlay): string | undefined {
   switch (ov.kind) {
-    case 'unit': return ov.linked?.unitId;
+    case 'property': return ov.linked?.propertyId;
     case 'parking': return ov.linked?.parkingId;
     case 'storage': return ov.linked?.storageId;
     case 'footprint': return undefined;
@@ -81,7 +81,7 @@ function getLinkedEntityId(ov: Overlay): string | undefined {
 /** Build the `linked` payload for a specific kind + entity ID — exhaustive switch */
 function buildLinkedPayload(kind: OverlayKind, entityId: string): Overlay['linked'] {
   switch (kind) {
-    case 'unit': return { unitId: entityId };
+    case 'property': return { propertyId: entityId };
     case 'parking': return { parkingId: entityId };
     case 'storage': return { storageId: entityId };
     case 'footprint': return undefined;
@@ -129,7 +129,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
   // 🏢 ADR-258B: Floor-filtered entities for linking dropdown
   // Units: API supports floorId-only (company-scoped). Parking/Storage: needs buildingId.
   const { entities, loading: entitiesLoading } = useFloorEntitiesForLinking({
-    kind: overlay?.kind ?? 'unit',
+    kind: overlay?.kind ?? 'property',
     buildingId: selectedBuilding?.id,
     floorId: currentFloorId,
     overlays,

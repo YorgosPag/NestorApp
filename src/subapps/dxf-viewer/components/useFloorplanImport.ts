@@ -18,8 +18,8 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { SceneModel } from '../types/scene';
 
-type DialogStep = 'company' | 'project' | 'building' | 'unit';
-type FloorplanType = 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor';
+type DialogStep = 'company' | 'project' | 'building' | 'property';
+type FloorplanType = 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor';
 
 interface UseFloorplanImportParams {
   selectedProjectId: string;
@@ -151,16 +151,16 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
     let saved = false;
     const createdBy = user?.uid;
 
-    if (currentStep === 'unit' && type === 'unit') {
+    if (currentStep === 'property' && type === 'property') {
       const unitData = {
-        unitId: selectedUnitId, type: 'unit' as const,
+        propertyId: selectedUnitId, type: 'property' as const,
         scene: scene as unknown as PropertyFloorplanData['scene'],
         fileName: file.name, timestamp: Date.now(),
       };
       const { companyId } = resolveCompanyId();
       saved = await PropertyFloorplanService.saveFloorplan({
         companyId, projectId: selectedProjectId || undefined,
-        buildingId: selectedBuildingId, unitId: selectedUnitId,
+        buildingId: selectedBuildingId, propertyId: selectedUnitId,
         data: unitData, createdBy: createdBy || '', originalFile: file,
       });
       if (saved) {
@@ -298,7 +298,7 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
 
   // ── Existence Check Helper ───────────────────────────────────
   const checkExistingFloorplan = async (type: FloorplanType): Promise<boolean> => {
-    if (currentStep === 'unit' && type === 'unit') {
+    if (currentStep === 'property' && type === 'property') {
       const { companyId } = resolveCompanyId();
       return PropertyFloorplanService.hasFloorplan(companyId, selectedUnitId);
     }

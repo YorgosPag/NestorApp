@@ -19,7 +19,7 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
   // 🔧 FIX: Local state as FALLBACK only - prefer props from parent for Single Source of Truth
   const [localOverlayMode, setLocalOverlayMode] = useState<OverlayEditorMode>('select');
   const [localCurrentStatus, setLocalCurrentStatus] = useState<Status>('for-sale');
-  const [localCurrentKind, setLocalCurrentKind] = useState<OverlayKind>('unit');
+  const [localCurrentKind, setLocalCurrentKind] = useState<OverlayKind>('property');
 
   // 🏢 ADR-050: Overlay section collapse state
   const [isOverlaySectionCollapsed, setIsOverlaySectionCollapsed] = useState(false);

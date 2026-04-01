@@ -33,7 +33,7 @@ interface SimpleProjectDialogProps {
   onFileImport?: (file: File) => Promise<void>;
 }
 
-type DialogStep = 'company' | 'project' | 'building' | 'unit';
+type DialogStep = 'company' | 'project' | 'building' | 'property';
 
 // ── Component ──────────────────────────────────────────────────
 export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimpleProjectDialogProps) {
@@ -161,7 +161,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       setUnits([]);
       setSelectedUnitId('');
     }
-    if (from === 'unit') {
+    if (from === 'property') {
       setSelectedUnitId('');
     }
   };
@@ -210,7 +210,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       resetDownstream('building');
       await loadBuildingsForProject(selectedProjectId);
     } else if (currentStep === 'building' && selectedBuildingId) {
-      setCurrentStep('unit');
+      setCurrentStep('property');
     }
   };
 
@@ -221,9 +221,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     } else if (currentStep === 'building') {
       setCurrentStep('project');
       resetDownstream('building');
-    } else if (currentStep === 'unit') {
+    } else if (currentStep === 'property') {
       setCurrentStep('building');
-      resetDownstream('unit');
+      resetDownstream('property');
     }
   };
 
@@ -299,7 +299,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               <SitePlanSection onLoadFloorplan={floorplanImport.handleLoadFloorplan} />
             )}
 
-            {currentStep === 'unit' && (
+            {currentStep === 'property' && (
               <UnitStep
                 companies={companies}
                 selectedCompanyId={selectedCompanyId}
@@ -337,7 +337,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               </Button>
             )}
 
-            {currentStep === 'unit' && (
+            {currentStep === 'property' && (
               <Button
                 variant="default" size="default"
                 onClick={() => dlog('ProjectDialog', 'Ready for unit floorplan selection:', selectedUnitId)}

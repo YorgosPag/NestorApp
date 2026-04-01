@@ -163,7 +163,7 @@ export function useDxfPipeline() {
         processedScene = await prepareForLayerOverlays(processedScene);
         break;
 
-      case 'unit':
+      case 'property':
         // For units: isolate unit boundary, remove building context
         processedScene = await isolateUnitView(processedScene);
         break;

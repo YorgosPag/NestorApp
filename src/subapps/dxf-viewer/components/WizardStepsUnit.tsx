@@ -43,7 +43,7 @@ interface UnitStepProps {
   units: Unit[];
   selectedUnitId: string;
   onUnitChange: (id: string) => void;
-  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => void;
+  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor') => void;
 }
 
 export function UnitStep({
@@ -124,7 +124,7 @@ export function UnitStep({
         >
           <ModalActions alignment="center">
             <Button
-              onClick={() => onLoadFloorplan('unit')}
+              onClick={() => onLoadFloorplan('property')}
               variant="default" size="default"
               className={MODAL_DIMENSIONS.BUTTONS.flex}
             >
@@ -142,7 +142,7 @@ export function UnitStep({
 
 // ── Status Counts ──────────────────────────────────────────────
 interface StatusCountsProps {
-  currentStep: 'company' | 'project' | 'building' | 'unit';
+  currentStep: 'company' | 'project' | 'building' | 'property';
   companies: CompanyData[];
   projects: ProjectData[];
   buildings: Building[];
@@ -173,7 +173,7 @@ export function StatusCounts({
           {t('wizard.counts.buildingsFound', { count: buildings.length })}
         </p>
       )}
-      {currentStep === 'unit' && units.length > 0 && (
+      {currentStep === 'property' && units.length > 0 && (
         <p className={typography.body.sm}>
           {t('wizard.counts.unitsFound', { count: units.length })}
         </p>
@@ -184,7 +184,7 @@ export function StatusCounts({
 
 // ── Site Plan Section (Project-level) ──────────────────────────
 interface SitePlanSectionProps {
-  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => void;
+  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor') => void;
 }
 
 export function SitePlanSection({ onLoadFloorplan }: SitePlanSectionProps) {

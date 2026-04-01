@@ -39,7 +39,7 @@ export function useUnifiedOverlayCreation() {
         // 🔺 ΝΕΑ ΛΟΓΙΚΗ: Χρήση επιλεγμένου status και kind από το OverlayToolbar
         const overlayId = await add({
           levelId: '', // will be set by overlay store based on currentLevelId
-          kind: opts.kind || 'unit', // Χρήση επιλεγμένου kind ή default
+          kind: opts.kind || 'property', // Χρήση επιλεγμένου kind ή default
           polygon: points.map(p => [p.x, p.y] as [number, number]),
           // ADR-258: status δεν αποθηκεύεται πλέον — χρωματισμός βάσει entity.commercialStatus
           ...(opts.status ? { status: opts.status } : {}),

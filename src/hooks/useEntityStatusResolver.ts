@@ -76,7 +76,7 @@ interface CollectionSubscription {
  */
 function getLinkedEntityId(overlay: ResolvableOverlay): string | undefined {
   switch (overlay.kind) {
-    case 'unit': return overlay.linked?.propertyId;
+    case 'property': return overlay.linked?.propertyId;
     case 'parking': return overlay.linked?.parkingId;
     case 'storage': return overlay.linked?.storageId;
     default: return undefined;
@@ -113,7 +113,7 @@ export function useEntityStatusResolver(
     const storageIds = new Set<string>();
 
     for (const overlay of overlays) {
-      if (overlay.kind === 'unit' && overlay.linked?.propertyId) {
+      if (overlay.kind === 'property' && overlay.linked?.propertyId) {
         propertyIds.add(overlay.linked.propertyId);
       }
       if (overlay.kind === 'parking' && overlay.linked?.parkingId) {

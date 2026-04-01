@@ -37,7 +37,7 @@ export interface LinkableEntity {
   /** Overlay ID this entity is linked to, or null if free */
   linkedToOverlayId: string | null;
   /** Entity kind for type discrimination */
-  kind: 'unit' | 'parking' | 'storage';
+  kind: 'property' | 'parking' | 'storage';
 }
 
 interface UseFloorEntitiesForLinkingParams {
@@ -72,7 +72,7 @@ export function useFloorEntitiesForLinking({
   enabled,
 }: UseFloorEntitiesForLinkingParams): UseFloorEntitiesForLinkingReturn {
 
-  const isUnit = kind === 'unit';
+  const isUnit = kind === 'property';
   const isParking = kind === 'parking';
   const isStorage = kind === 'storage';
 
@@ -101,7 +101,7 @@ export function useFloorEntitiesForLinking({
   const linkedEntityIds = useMemo(() => {
     const map = new Map<string, string>();
     for (const ov of Object.values(overlays)) {
-      if (ov.linked?.unitId) map.set(ov.linked.unitId, ov.id);
+      if (ov.linked?.propertyId) map.set(ov.linked.propertyId, ov.id);
       if (ov.linked?.parkingId) map.set(ov.linked.parkingId, ov.id);
       if (ov.linked?.storageId) map.set(ov.linked.storageId, ov.id);
     }
@@ -119,7 +119,7 @@ export function useFloorEntitiesForLinking({
         displayName: u.name || u.unitName || u.code || u.id,
         commercialStatus: u.commercialStatus,
         linkedToOverlayId: linkedEntityIds.get(u.id) ?? null,
-        kind: 'unit' as const,
+        kind: 'property' as const,
       }));
     } else if (isParking) {
       // Parking hook fetches by building — filter by floorId client-side

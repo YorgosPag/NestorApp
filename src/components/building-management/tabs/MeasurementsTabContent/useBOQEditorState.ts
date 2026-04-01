@@ -38,7 +38,7 @@ export interface EditorFormState {
   categoryCode: string;
   title: string;
   description: string;
-  scope: 'building' | 'unit';
+  scope: 'building' | 'property';
   linkedUnitId: string;
   unit: BOQMeasurementUnit;
   estimatedQuantity: string;
@@ -180,7 +180,7 @@ export function useBOQEditorState({
         const createData: CreateBOQItemInput = {
           projectId, buildingId,
           scope: form.scope,
-          linkedUnitId: form.scope === 'unit' ? form.linkedUnitId || null : null,
+          linkedUnitId: form.scope === 'property' ? form.linkedUnitId || null : null,
           categoryCode: form.categoryCode,
           title: form.title.trim(),
           description: form.description.trim() || null,

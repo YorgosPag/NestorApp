@@ -92,7 +92,7 @@ export function BOQItemEditor({ open, onClose, item, buildingId, projectId, cate
                   <span className="text-sm">{t('tabs.measurements.editor.fields.scopeBuilding')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="scope" value="unit" checked={form.scope === 'unit'} onChange={() => updateField('scope', 'unit')} className="accent-primary" />
+                  <input type="radio" name="scope" value="property" checked={form.scope === 'property'} onChange={() => updateField('scope', 'property')} className="accent-primary" />
                   <span className="text-sm">{t('tabs.measurements.editor.fields.scopeUnit')}</span>
                 </label>
               </section>
