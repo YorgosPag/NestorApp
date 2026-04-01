@@ -39,10 +39,10 @@ export interface BrokerageAgreement {
   /** Denormalized όνομα μεσίτη */
   agentName: string;
   /** Scope σύμβασης */
-  scope: 'project' | 'unit';
+  scope: 'project' | 'property';
   /** Project ID (πάντα παρόν) */
   projectId: string;
-  /** Property ID (μόνο αν scope === 'unit') */
+  /** Property ID (μόνο αν scope === 'property') */
   propertyId: string | null;
 
   // === Όροι ===
@@ -154,7 +154,7 @@ export function calculateCommission(input: CommissionCalculationInput): number {
 export interface CreateBrokerageAgreementInput {
   agentContactId: string;
   agentName: string;
-  scope: 'project' | 'unit';
+  scope: 'project' | 'property';
   projectId: string;
   propertyId?: string | null;
   exclusivity: ExclusivityType;
@@ -202,7 +202,7 @@ export interface ExclusivityValidationIssue {
 export interface ExclusivityValidationInput {
   projectId: string;
   propertyId: string | null;
-  scope: 'project' | 'unit';
+  scope: 'project' | 'property';
   exclusivity: ExclusivityType;
   /** Εξαίρεση εαυτού κατά update — δεν ελέγχει τη σύμβαση με αυτό το ID */
   excludeAgreementId?: string;

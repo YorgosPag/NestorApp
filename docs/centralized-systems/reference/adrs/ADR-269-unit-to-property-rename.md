@@ -189,8 +189,25 @@ Renamed all remaining "unit" type fields across ~70 files:
 
 **Excluded from rename** (same as Phase 9):
 - `src/subapps/dxf-viewer/` — measurement units (different concept)
-- `ProjectsService-broken.ts` — broken backup file
-- `Property.unitName` — kept as legacy fallback
+
+### Phase 12: Config, Navigation, Firestore Fields & Cleanup — ✅ COMPLETE (2026-04-01)
+Comprehensive final rename pass:
+
+| Category | Change | Files |
+|----------|--------|-------|
+| `NavigationEntityType` | `'unit'` → `'property'` | 1 |
+| `NAVIGATION_ENTITIES` key | `unit:` → `property:` | 1 |
+| `NAVIGATION_ENTITIES.unit` usages | → `.property` | ~70 |
+| `UnitIcon` / `unitColor` variables | → `PropertyIcon` / `propertyColor` | ~50 |
+| `ENTITY_ASSOCIATION_ROLES.unit` | → `.property` | 1 |
+| `UnitRole` type | → `PropertyRole` | 3 |
+| Firestore field `unitCoverage` | → `propertyCoverage` | ~8 |
+| Firestore field `unitAmenities` | → `propertyAmenities` | ~3 |
+| Firestore field `unitName` | → `propertyName` | ~6 |
+| i18n locale keys | ~70 `unit.*` keys → `property.*` | 4 JSON files |
+| Collection literals `=== 'units'` | → `=== 'properties'` | 3 |
+| Deprecated aliases deleted | `UnitOwner`, `UnitGrant`, `UnitListCard`, `UnitGridCard` | 4 |
+| `ProjectsService-broken.ts` | DELETED (unused) | 1 |
 
 ### Phase 11: PascalCase Type Names Rename — ✅ COMPLETE (2026-04-01)
 Renamed remaining PascalCase "Unit" type names to "Property" across ~20 files:
@@ -214,6 +231,34 @@ Renamed remaining PascalCase "Unit" type names to "Property" across ~20 files:
 - `UnitBadge` component — Tied to UNIT badge domain (parking/storage)
 - `UnitsApiResponse` in dxf-viewer — Excluded directory
 - `StorageUnit*` types — Different entity
+
+### Phase 13: DXF Overlay Kind + BOQ Scope — ✅ COMPLETE (2026-04-01)
+
+Renamed `'unit'` string literal values to `'property'` in DXF overlay system and BOQ scope types.
+
+#### A. DXF Overlay Kind: `kind: 'unit'` → `kind: 'property'`
+
+| File | Change |
+|------|--------|
+| `src/subapps/dxf-viewer/overlays/types.ts` | OverlayKind type + KIND_LABELS key |
+| `src/subapps/dxf-viewer/components/useFloorplanImport.ts` | getTypeLabel key |
+| `src/hooks/useFloorOverlays.ts` | fallback `kind ?? 'property'` |
+| `src/domain/cards/overlay/OverlayListCard.tsx` | KIND_TO_ENTITY key |
+| `src/i18n/locales/en/dxf-viewer.json` | `kindLabels.property`, `floorplanTypes.property` |
+| `src/i18n/locales/el/dxf-viewer.json` | `kindLabels.property`, `floorplanTypes.property` |
+
+Other DXF files (OverlayProperties, useDxfPipeline, useEntityStatusResolver, etc.) were already updated by a parallel agent.
+
+#### B. BOQ Scope: `scope: 'unit'` → `scope: 'property'`
+
+| File | Change |
+|------|--------|
+| `src/types/boq/boq.ts` | `BOQItem.scope`, `CreateBOQItemInput.scope`, `BOQFilters.scope` |
+| `src/hooks/useBOQItems.ts` | `BOQUIFilters.scope` |
+| `src/components/building-management/tabs/MeasurementsTabContent/useBOQEditorState.ts` | scope check |
+| `src/components/building-management/tabs/MeasurementsTabContent/BOQItemEditor.tsx` | radio value + scope checks |
+
+**Firestore note**: Dev data only — existing documents with old values will not match (recreate test data).
 
 ---
 
@@ -248,6 +293,8 @@ Renamed remaining PascalCase "Unit" type names to "Property" across ~20 files:
 | 2026-04-01 | Phase 2 fix: Fixed ~15 remaining TS errors from rename — linkedUnitIds→linkedPropertyIds in AI pipeline (14 files), SEARCH_ENTITY_TYPES.UNIT→.PROPERTY, onSelectUnit→onSelectProperty, unitLabel→propertyLabel, OverlayEntity.linked.unitId→propertyId, ResolvedContact.linkedUnitIds→linkedPropertyIds. Documented Phase 10 (pending 70-file type field renames). | Claude Code |
 | 2026-04-01 | Phase 10: Renamed remaining type fields — unitsCount→propertiesCount, totalUnits→totalProperties, soldUnits→soldProperties, BuildingStats fields, payment report fields, i18n keys+values across ~70 files (types, services, API routes, components, hooks, 18 JSON locale files). All phases complete. | Claude Code |
 | 2026-04-01 | Phase 11: PascalCase type names — UnitItem→PropertyItem, UnitSummary→PropertySummary, UnitData→PropertyData, UnitsApiResponse→PropertiesApiResponse, UnitsListSuccess/Error/Response→PropertiesListSuccess/Error/Response, UnitFloorplanTabContentProps→PropertyFloorplanTabContentProps, UnitFilterState→PropertyListFilterState (deprecated alias kept), unitOwners→propertyOwners across ~20 files. UnitStatus/UnitBadge kept (different concept: parking/storage badge domain). | Claude Code |
+| 2026-04-01 | Phase 12: Config & Navigation — NavigationEntityType `'unit'`→`'property'`, NAVIGATION_ENTITIES key `unit`→`property`, ENTITY_ASSOCIATION_ROLES key `unit`→`property`, UnitRole→PropertyRole, GroupedContactEntityLinks.units→.properties. Firestore fields: unitCoverage→propertyCoverage, unitAmenities→propertyAmenities, unitName→propertyName (dev data only, no migration). i18n: ~70 locale keys renamed in en/el navigation.json + common.json. NAVIGATION_ENTITIES.unit→.property + UnitIcon→PropertyIcon + unitColor→propertyColor across ~70 component/feature/app files. Deleted UnitOwner/UnitGrant deprecated aliases, deleted ProjectsService-broken.ts, deleted deprecated UnitListCard/UnitGridCard exports. Collection literals `'units'`→`'properties'` in ownership services. | Claude Code |
+| 2026-04-01 | Phase 13: DXF Overlay Kind + BOQ Scope — OverlayKind `'unit'`→`'property'` (types, KIND_LABELS, i18n en/el dxf-viewer.json), BOQ scope type `'unit'`→`'property'` (boq.ts, useBOQItems.ts, useBOQEditorState.ts, BOQItemEditor.tsx), useFloorOverlays fallback, OverlayListCard KIND_TO_ENTITY key. ~14 files. Dev data only — no Firestore migration. | Claude Code |
 
 ---
 

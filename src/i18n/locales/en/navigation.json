@@ -26,14 +26,14 @@
       "companies": "Select Company",
       "projects": "Select Project",
       "buildings": "Select Building",
-      "units": "Select Destination",
+      "properties": "Select Destination",
       "default": "Navigation"
     },
     "descriptions": {
       "companies": "Select a company to view its projects",
       "projects": "Select a project to view the buildings",
-      "buildings": "Select a building to view the units",
-      "units": "Select the final destination",
+      "buildings": "Select a building to view the properties",
+      "properties": "Select the final destination",
       "default": ""
     },
     "loading": "Loading data...",
@@ -76,7 +76,7 @@
       "title": "Buildings",
       "listLabel": "Buildings List",
       "sectionLabel": "Buildings",
-      "unitCount": "{count} units",
+      "propertyCount": "{count} properties",
       "openTooltip": "Open in Buildings"
     },
     "actions": {
@@ -100,10 +100,10 @@
       "description": "Select a building to link with project \"{projectName}\".",
       "searchPlaceholder": "Search building..."
     },
-    "linkUnit": {
-      "title": "Link Unit",
-      "description": "Select a unit to link with building \"{buildingName}\".",
-      "searchPlaceholder": "Search unit..."
+    "linkProperty": {
+      "title": "Link Property",
+      "description": "Select a property to link with building \"{buildingName}\".",
+      "searchPlaceholder": "Search property..."
     },
     "availableForLinking": "Available for linking",
     "selectFirst": "Please select a project first."
@@ -145,22 +145,22 @@
       "successMessage": "Building \"{buildingName}\" was successfully unlinked.",
       "errorMessage": "Failed to unlink building. Please try again."
     },
-    "unit": {
-      "title": "Unlink Unit from Building",
-      "confirmation": "Are you sure you want to unlink unit \"{unitName}\" from the building?",
+    "property": {
+      "title": "Unlink Property from Building",
+      "confirmation": "Are you sure you want to unlink property \"{propertyName}\" from the building?",
       "infoTitle": "This action will:",
-      "willUnlink": "Unlink the unit from the building",
-      "willNotDelete": "Will NOT delete the unit from the database",
+      "willUnlink": "Unlink the property from the building",
+      "willNotDelete": "Will NOT delete the property from the database",
       "canLinkLater": "You can link it again later",
       "cancel": "Cancel",
       "confirm": "Unlink",
-      "successMessage": "Unit \"{unitName}\" was successfully unlinked.",
-      "errorMessage": "Failed to unlink unit. Please try again."
+      "successMessage": "Property \"{propertyName}\" was successfully unlinked.",
+      "errorMessage": "Failed to unlink property. Please try again."
     },
     "dependencies": {
       "cannotRemoveCompany": "Cannot remove this company because it has {count} projects. Please unlink the projects first.",
       "cannotUnlinkProject": "Cannot unlink this project because it has {count} buildings. Please unlink the buildings first.",
-      "cannotUnlinkBuilding": "Cannot unlink this building because it has {count} units. Please unlink the units first."
+      "cannotUnlinkBuilding": "Cannot unlink this building because it has {count} properties. Please unlink the properties first."
     }
   },
   "actions": {
@@ -243,7 +243,7 @@
     "contacts": "Contacts",
     "projects": "Projects",
     "buildings": "Buildings",
-    "units": "Units",
+    "properties": "Properties",
     "crm": "CRM",
     "login": "Login",
     "navigation": "Navigation",
@@ -378,7 +378,7 @@
       "project": "Search project...",
       "building": "Search building...",
       "floor": "Search floor...",
-      "unit": "Search unit...",
+      "property": "Search property...",
       "storage": "Search storage...",
       "parking": "Search parking space..."
     },
@@ -403,10 +403,10 @@
         "edit": "Edit floor",
         "delete": "Unlink floor"
       },
-      "units": {
-        "new": "Link unit to selected floor",
-        "edit": "Edit unit",
-        "delete": "Unlink unit"
+      "properties": {
+        "new": "Link property to selected floor",
+        "edit": "Edit property",
+        "delete": "Unlink property"
       },
       "storage": {
         "new": "Link storage to selected building",
@@ -457,10 +457,10 @@
       "plural": "Floors",
       "description": "Building floor or level"
     },
-    "unit": {
-      "label": "Unit",
-      "plural": "Units",
-      "description": "Individual unit within building"
+    "property": {
+      "label": "Property",
+      "plural": "Properties",
+      "description": "Individual property within building"
     },
     "storage": {
       "label": "Storage",
@@ -520,12 +520,12 @@
   },
   "buildingSpaces": {
     "sectionLabel": "Building Spaces",
-    "units": {
-      "title": "Units",
-      "listLabel": "Units List",
-      "empty": "No units available",
-      "defaultSubtitle": "Unit",
-      "openTooltip": "Open in Units"
+    "properties": {
+      "title": "Properties",
+      "listLabel": "Properties List",
+      "empty": "No properties available",
+      "defaultSubtitle": "Property",
+      "openTooltip": "Open in Properties"
     },
     "storage": {
       "title": "Storage",
@@ -577,21 +577,21 @@
       "floors1to3": "1-3 floors",
       "floors4to6": "4-6 floors",
       "floors7plus": "7+ floors",
-      "withoutUnits": "Without units"
+      "withoutProperties": "Without properties"
     },
     "floors": {
       "typeLabel": "Floor Type",
-      "unitsLabel": "Number of Units",
+      "propertiesLabel": "Number of Properties",
       "basement": "Basement",
       "ground": "Ground Floor",
       "floor": "Floor",
       "penthouse": "Penthouse",
-      "units1to2": "1-2 units",
-      "units3to5": "3-5 units",
-      "units6plus": "6+ units"
+      "properties1to2": "1-2 properties",
+      "properties3to5": "3-5 properties",
+      "properties6plus": "6+ properties"
     },
-    "units": {
-      "typeLabel": "Unit Type",
+    "properties": {
+      "typeLabel": "Property Type",
       "statusLabel": "Status",
       "roomsLabel": "Number of Rooms",
       "apartment": "Apartment",

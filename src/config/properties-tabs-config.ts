@@ -34,9 +34,7 @@ const logger = createModuleLogger('properties-tabs-config');
  * ✅ BACKWARD COMPATIBLE: PropertiesTabConfig interface
  * Re-exported from unified factory για zero breaking changes
  */
-export interface PropertiesTabConfig extends UnifiedTabConfig {
-  // Same interface as before - no changes needed
-}
+export type PropertiesTabConfig = UnifiedTabConfig;
 
 /** @deprecated Use PropertiesTabConfig */
 export type UnitsTabConfig = PropertiesTabConfig;
@@ -50,7 +48,7 @@ export type UnitsTabConfig = PropertiesTabConfig;
  * ✅ BACKWARD COMPATIBLE: Same PROPERTIES_TABS export as before
  * ✅ CENTRALIZED: All configuration now comes from unified-tabs-factory.ts
  */
-export const PROPERTIES_TABS: PropertiesTabConfig[] = createTabsConfig('units') as PropertiesTabConfig[];
+export const PROPERTIES_TABS: PropertiesTabConfig[] = createTabsConfig('properties') as PropertiesTabConfig[];
 
 /** @deprecated Use PROPERTIES_TABS */
 export const UNITS_TABS = PROPERTIES_TABS;
@@ -68,7 +66,7 @@ export const UNITS_TABS = PROPERTIES_TABS;
  * Επιστρέφει όλες τις ενεργές καρτέλες ταξινομημένες κατά order
  */
 export function getSortedPropertiesTabs(): PropertiesTabConfig[] {
-  return getSortedTabs('units') as PropertiesTabConfig[];
+  return getSortedTabs('properties') as PropertiesTabConfig[];
 }
 
 /** @deprecated Use getSortedPropertiesTabs */
@@ -78,7 +76,7 @@ export const getSortedUnitsTabs = getSortedPropertiesTabs;
  * Επιστρέφει μόνο τις enabled καρτέλες
  */
 export function getEnabledPropertiesTabs(): PropertiesTabConfig[] {
-  return getSortedTabs('units') as PropertiesTabConfig[];
+  return getSortedTabs('properties') as PropertiesTabConfig[];
 }
 
 /** @deprecated Use getEnabledPropertiesTabs */
@@ -88,7 +86,7 @@ export const getEnabledUnitsTabs = getEnabledPropertiesTabs;
  * Βρίσκει μία καρτέλα με βάση το ID
  */
 export function getPropertiesTabById(id: string): PropertiesTabConfig | undefined {
-  return getTabById('units', id) as PropertiesTabConfig | undefined;
+  return getTabById('properties', id) as PropertiesTabConfig | undefined;
 }
 
 /** @deprecated Use getPropertiesTabById */
@@ -98,7 +96,7 @@ export const getUnitsTabById = getPropertiesTabById;
  * Βρίσκει μία καρτέλα με βάση το value
  */
 export function getPropertiesTabByValue(value: string): PropertiesTabConfig | undefined {
-  return getTabByValue('units', value) as PropertiesTabConfig | undefined;
+  return getTabByValue('properties', value) as PropertiesTabConfig | undefined;
 }
 
 /** @deprecated Use getPropertiesTabByValue */
@@ -130,7 +128,7 @@ export const getUnitsTabsByCondition = getPropertiesTabsByCondition;
  * Επιστρέφει στατιστικά των καρτελών
  */
 export function getPropertiesTabsStats() {
-  return getTabsStats('units');
+  return getTabsStats('properties');
 }
 
 /** @deprecated Use getPropertiesTabsStats */

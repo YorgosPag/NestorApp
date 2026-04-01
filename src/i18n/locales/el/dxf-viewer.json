@@ -200,7 +200,7 @@
       "building": "Κάτοψη Κτηρίου",
       "buildingGeneral": "Γενική Κάτοψη Κτιρίου",
       "storage": "Κάτοψη Αποθηκών",
-      "unit": "Κάτοψη Μονάδας",
+      "property": "Κάτοψη Ακινήτου",
       "floor": "Κάτοψη Ορόφου"
     },
     "floorplanSections": {
@@ -1080,7 +1080,7 @@
     "area": "Εμβαδόν:",
     "perimeter": "Περίμετρος:",
     "kindLabels": {
-      "unit": "Μονάδα",
+      "property": "Ακίνητο",
       "parking": "Θέση Στάθμευσης",
       "storage": "Αποθήκη",
       "footprint": "Αποτύπωμα"

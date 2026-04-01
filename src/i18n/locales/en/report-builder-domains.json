@@ -336,8 +336,8 @@
       "description": "Sold units — by buyer",
       "fields": {
         "buyerName": "Buyer",
-        "unitName": "Unit",
-        "unitCode": "Unit Code",
+        "propertyName": "Property",
+        "propertyCode": "Property Code",
         "building": "Building",
         "project": "Project",
         "askingPrice": "Asking Price",
@@ -500,7 +500,7 @@
         "taxRate": "Tax Rate",
         "project": "Project",
         "building": "Building",
-        "unit": "Unit",
+        "property": "Property",
         "buyer": "Buyer Contact",
         "daysOverdue": "Days Overdue",
         "agingBucket": "Ageing Bucket",
@@ -585,7 +585,7 @@
           "outgoing": "Outgoing"
         },
         "contextType": {
-          "unit_sale": "Unit Sale",
+          "property_sale": "Property Sale",
           "supplier": "Supplier",
           "contractor": "Contractor",
           "other": "Other"
@@ -610,7 +610,7 @@
         "depositTerms": "Deposit Terms",
         "project": "Project",
         "building": "Building",
-        "unit": "Unit",
+        "property": "Property",
         "buyer": "Buyer Contact",
         "signedAt": "Signed",
         "completedAt": "Completed",
@@ -715,14 +715,14 @@
         "endDate": "End Date",
         "agent": "Agent Contact",
         "project": "Project",
-        "unit": "Unit",
+        "property": "Property",
         "createdAt": "Created",
         "updatedAt": "Updated"
       },
       "enums": {
         "scope": {
           "project": "Project",
-          "unit": "Unit"
+          "property": "Property"
         },
         "exclusivity": {
           "exclusive": "Exclusive",
@@ -753,7 +753,7 @@
         "paymentStatus": "Payment Status",
         "paidAt": "Paid Date",
         "agreement": "Agreement",
-        "unit": "Unit",
+        "property": "Property",
         "project": "Project",
         "buyer": "Buyer Contact",
         "createdAt": "Created",
@@ -999,7 +999,7 @@
       "enums": {
         "scope": {
           "building": "Building",
-          "unit": "Unit"
+          "property": "Property"
         },
         "unit": {
           "m": "m",
@@ -1185,7 +1185,7 @@
         "contact": "Contact",
         "opportunity": "Opportunity",
         "project": "Project",
-        "unit": "Unit",
+        "property": "Property",
         "isOverdue": "Overdue",
         "daysUntilDue": "Days Until Due",
         "daysOpen": "Days Open",
@@ -1242,7 +1242,7 @@
         "createdAt": "Created",
         "contact": "Contact",
         "project": "Project",
-        "unit": "Unit",
+        "property": "Property",
         "opportunity": "Opportunity",
         "daysSinceContact": "Days Since Contact",
         "isGoingCold": "Going Cold"

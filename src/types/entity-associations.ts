@@ -37,7 +37,7 @@ export const ENTITY_ASSOCIATION_ROLES = {
     'manager',
     'engineer',
   ] as const,
-  unit: [
+  property: [
     'owner',
     'tenant',
     'buyer',
@@ -56,11 +56,11 @@ export type ProjectRole = typeof ENTITY_ASSOCIATION_ROLES.project[number];
 /** Role values for building associations */
 export type BuildingRole = typeof ENTITY_ASSOCIATION_ROLES.building[number];
 
-/** Role values for unit associations */
-export type UnitRole = typeof ENTITY_ASSOCIATION_ROLES.unit[number];
+/** Role values for property associations */
+export type PropertyRole = typeof ENTITY_ASSOCIATION_ROLES.property[number];
 
 /** Union of all role values */
-export type AssociationRoleValue = ProjectRole | BuildingRole | UnitRole;
+export type AssociationRoleValue = ProjectRole | BuildingRole | PropertyRole;
 
 // ============================================================================
 // VIEW MODELS — FOR UI DISPLAY
@@ -116,7 +116,7 @@ export interface ContactEntityLink {
 export interface GroupedContactEntityLinks {
   projects: ContactEntityLink[];
   buildings: ContactEntityLink[];
-  units: ContactEntityLink[];
+  properties: ContactEntityLink[];
 }
 
 // ============================================================================

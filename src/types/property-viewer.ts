@@ -116,7 +116,7 @@ export interface Property {
      * Used for Πληρότητα dashboard card and filtering
      * @since PR1.2 - Coverage/Completeness implementation
      */
-    unitCoverage?: PropertyCoverage;
+    propertyCoverage?: PropertyCoverage;
 
     // === LAYOUT (room configuration) - Phase 1 Unit Fields ===
     layout?: {

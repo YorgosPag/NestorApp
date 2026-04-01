@@ -37,7 +37,7 @@ interface I18n_Building {
   'floors': I18n_Building_Floors;
   'categories': I18n_Building_Categories;
   'status': I18n_Building_Status;
-  'units': I18n_Building_Units;
+  'properties': I18n_Building_Properties;
   'filters': I18n_Building_Filters;
 }
 
@@ -64,7 +64,7 @@ interface I18n_Building_Status {
   completed: string;
 }
 
-interface I18n_Building_Units {
+interface I18n_Building_Properties {
   pricePerSqm: string;
   sqm: string;
 }
@@ -2263,7 +2263,7 @@ interface I18n_Projects_Messages {
 
 interface I18n_Properties {
   'building': I18n_Properties_Building;
-  'units': I18n_Properties_Units;
+  'properties': I18n_Properties_Properties;
   'search': I18n_Properties_Search;
   'filters': I18n_Properties_Filters;
   'projects': I18n_Properties_Projects;
@@ -2335,11 +2335,11 @@ interface I18n_Properties_Building_Storage_Form_Placeholders {
   descriptionParking: string;
 }
 
-interface I18n_Properties_Units {
-  'types': I18n_Properties_Units_Types;
+interface I18n_Properties_Properties {
+  'types': I18n_Properties_Properties_Types;
 }
 
-interface I18n_Properties_Units_Types {
+interface I18n_Properties_Properties_Types {
   studio: string;
   apartment_1br: string;
   apartment_2br: string;
@@ -2742,20 +2742,20 @@ interface I18n_Toolbars_Messages {
   refreshSuccess: string;
 }
 
-interface I18n_Units {
-  'management': I18n_Units_Management;
-  'tooltips': I18n_Units_Tooltips;
-  'actions': I18n_Units_Actions;
-  'types': I18n_Units_Types;
-  'status': I18n_Units_Status;
+interface _I18n_PropertiesNs {
+  'management': I18n_PropertiesNs_Management;
+  'tooltips': I18n_PropertiesNs_Tooltips;
+  'actions': I18n_PropertiesNs_Actions;
+  'types': I18n_PropertiesNs_Types;
+  'status': I18n_PropertiesNs_Status;
 }
 
-interface I18n_Units_Management {
+interface I18n_PropertiesNs_Management {
   title: string;
   subtitle: string;
 }
 
-interface I18n_Units_Tooltips {
+interface I18n_PropertiesNs_Tooltips {
   dashboard: string;
   listView: string;
   gridView: string;
@@ -2763,13 +2763,13 @@ interface I18n_Units_Tooltips {
   groupByStatus: string;
 }
 
-interface I18n_Units_Actions {
+interface I18n_PropertiesNs_Actions {
   groupByType: string;
   groupByStatus: string;
   newUnit: string;
 }
 
-interface I18n_Units_Types {
+interface I18n_PropertiesNs_Types {
   studio: string;
   apartment_1br: string;
   apartment_2br: string;
@@ -2779,7 +2779,7 @@ interface I18n_Units_Types {
   storage: string;
 }
 
-interface I18n_Units_Status {
+interface I18n_PropertiesNs_Status {
   available: string;
   reserved: string;
   sold: string;
@@ -2979,11 +2979,10 @@ export interface I18nKeys {
   'tasks': I18n_Tasks;
   'toasts': I18n_Toasts;
   'toolbars': I18n_Toolbars;
-  'units': I18n_Units;
   'users': I18n_Users;
 }
 
-export type TranslationNamespace = 'auth' | 'building' | 'common' | 'compositions' | 'contacts' | 'crm' | 'dashboard' | 'dxf-viewer' | 'errors' | 'forms' | 'geo-canvas' | 'landing' | 'navigation' | 'projects' | 'properties' | 'tasks' | 'toasts' | 'toolbars' | 'units' | 'users';
+export type TranslationNamespace = 'auth' | 'building' | 'common' | 'compositions' | 'contacts' | 'crm' | 'dashboard' | 'dxf-viewer' | 'errors' | 'forms' | 'geo-canvas' | 'landing' | 'navigation' | 'projects' | 'properties' | 'tasks' | 'toasts' | 'toolbars' | 'users';
 
 /**
  * Utility type for nested translation keys

@@ -236,7 +236,6 @@ export const NOTIFICATION_ENTITY_TYPES = {
   TASK: 'task',
   PROJECT: 'project',
   BUILDING: 'building',
-  UNIT: 'unit',
   USER: 'user',
   PURCHASE_ORDER: 'purchase_order',
 } as const;

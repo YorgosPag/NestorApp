@@ -25,8 +25,8 @@
       "project": "Έργο",
       "idLabel": "ID"
     },
-    "mainProjectUnits": "Units {project}",
-    "allUnits": "Όλα τα Units",
+    "mainProjectProperties": "Ακίνητα {project}",
+    "allProperties": "Όλα τα Ακίνητα",
     "contactLoading": "Φόρτωση..."
   },
   "aiInbox": {

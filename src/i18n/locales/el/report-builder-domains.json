@@ -336,8 +336,8 @@
       "description": "Μονάδες που έχουν πωληθεί — ανά αγοραστή",
       "fields": {
         "buyerName": "Αγοραστής",
-        "unitName": "Μονάδα",
-        "unitCode": "Κωδικός Μονάδας",
+        "propertyName": "Ακίνητο",
+        "propertyCode": "Κωδικός Ακινήτου",
         "building": "Κτήριο",
         "project": "Έργο",
         "askingPrice": "Τιμή Ζητούμενη",
@@ -500,7 +500,7 @@
         "taxRate": "Φόρος",
         "project": "Έργο",
         "building": "Κτίριο",
-        "unit": "Μονάδα",
+        "property": "Ακίνητο",
         "buyer": "Επαφή Αγοραστή",
         "daysOverdue": "Ημέρες Καθυστέρησης",
         "agingBucket": "Κατηγορία Ηλικίωσης",
@@ -585,7 +585,7 @@
           "outgoing": "Εξερχόμενη"
         },
         "contextType": {
-          "unit_sale": "Πώληση Μονάδας",
+          "property_sale": "Πώληση Ακινήτου",
           "supplier": "Προμηθευτής",
           "contractor": "Εργολάβος",
           "other": "Άλλο"
@@ -610,7 +610,7 @@
         "depositTerms": "Όροι Προκαταβολής",
         "project": "Έργο",
         "building": "Κτίριο",
-        "unit": "Μονάδα",
+        "property": "Ακίνητο",
         "buyer": "Επαφή Αγοραστή",
         "signedAt": "Υπογραφή",
         "completedAt": "Ολοκλήρωση",
@@ -715,14 +715,14 @@
         "endDate": "Ημ. Λήξης",
         "agent": "Επαφή Μεσίτη",
         "project": "Έργο",
-        "unit": "Μονάδα",
+        "property": "Ακίνητο",
         "createdAt": "Δημιουργία",
         "updatedAt": "Ενημέρωση"
       },
       "enums": {
         "scope": {
           "project": "Έργο",
-          "unit": "Μονάδα"
+          "property": "Ακίνητο"
         },
         "exclusivity": {
           "exclusive": "Αποκλειστική",
@@ -753,7 +753,7 @@
         "paymentStatus": "Κατάσταση Πληρωμής",
         "paidAt": "Ημ. Πληρωμής",
         "agreement": "Συμφωνία",
-        "unit": "Μονάδα",
+        "property": "Ακίνητο",
         "project": "Έργο",
         "buyer": "Αγοραστής",
         "createdAt": "Δημιουργία",
@@ -999,7 +999,7 @@
       "enums": {
         "scope": {
           "building": "Κτίριο",
-          "unit": "Μονάδα"
+          "property": "Ακίνητο"
         },
         "unit": {
           "m": "μ.",
@@ -1185,7 +1185,7 @@
         "contact": "Επαφή",
         "opportunity": "Ευκαιρία",
         "project": "Έργο",
-        "unit": "Μονάδα",
+        "property": "Ακίνητο",
         "isOverdue": "Εκπρόθεσμη",
         "daysUntilDue": "Μέρες ως Λήξη",
         "daysOpen": "Μέρες Ανοιχτή",
@@ -1242,7 +1242,7 @@
         "createdAt": "Δημιουργία",
         "contact": "Επαφή",
         "project": "Έργο",
-        "unit": "Μονάδα",
+        "property": "Ακίνητο",
         "opportunity": "Ευκαιρία",
         "daysSinceContact": "Μέρες από Επικοινωνία",
         "isGoingCold": "Κρυώνει"

@@ -28,7 +28,7 @@ export type OwnerParty = 'contractor' | 'landowner' | 'buyer' | 'unassigned';
 export type OwnershipTableStatus = 'draft' | 'finalized' | 'registered';
 
 /** Entity collection references */
-export type OwnershipEntityCollection = 'units' | 'parking_spots' | 'storage_units';
+export type OwnershipEntityCollection = 'properties' | 'parking_spots' | 'storage_units';
 
 // ============================================================================
 // FLOOR COEFFICIENTS — ΠΟΛ 1149/1994 (ΑΑΔΕ)

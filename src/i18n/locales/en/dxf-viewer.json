@@ -263,7 +263,7 @@
       "building": "Building Floorplan",
       "buildingGeneral": "Building General Floorplan",
       "storage": "Storage Floorplan",
-      "unit": "Unit Floorplan",
+      "property": "Property Floorplan",
       "floor": "Floor Plan"
     },
     "floorplanSections": {
@@ -1233,7 +1233,7 @@
     "area": "Area:",
     "perimeter": "Perimeter:",
     "kindLabels": {
-      "unit": "Unit",
+      "property": "Property",
       "parking": "Parking",
       "storage": "Storage",
       "footprint": "Footprint"

@@ -220,7 +220,7 @@
     "overdue": {
       "title": "Recent Sales",
       "description": "Latest sold units overview",
-      "unit": "Unit",
+      "property": "Property",
       "project": "Project",
       "buyer": "Buyer",
       "amount": "Amount",

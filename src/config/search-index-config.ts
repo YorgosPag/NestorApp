@@ -73,17 +73,17 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
   // =========================================================================
   // UNIT
   // =========================================================================
-  [SEARCH_ENTITY_TYPES.UNIT]: {
+  [SEARCH_ENTITY_TYPES.PROPERTY]: {
     collection: COLLECTIONS.PROPERTIES,
     titleField: 'name',
     subtitleFields: ['floor', 'type'],
-    searchableFields: ['name', 'unitCode', 'floor'],
+    searchableFields: ['name', 'propertyCode', 'floor'],
     statusField: 'status',
-    audience: (doc) => {
+    audience: (doc: Record<string, unknown>) => {
       const isPublished = doc.isPublished as boolean | undefined;
       return isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL;
     },
-    requiredPermission: 'units:units:view' satisfies PermissionId,
+    requiredPermission: 'properties:properties:view' satisfies PermissionId,
     routeTemplate: '/properties/{id}',
   },
 

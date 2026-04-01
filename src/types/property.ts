@@ -370,7 +370,7 @@ export interface Property {
    * Used for Πληρότητα dashboard card and filtering
    * @since PR1.2 - Coverage/Completeness implementation
    */
-  unitCoverage?: PropertyCoverage;
+  propertyCoverage?: PropertyCoverage;
 
   /**
    * ✅ NEW: Commercial status (market disposition)
@@ -387,7 +387,7 @@ export interface Property {
    */
   commercial?: PropertyCommercialData;
 
-  unitName?: string; // ✅ ENTERPRISE FIX: Optional fallback property for backward compatibility
+  propertyName?: string; // ✅ ENTERPRISE FIX: Optional fallback property for backward compatibility
 
   // === NEW EXTENDED FIELDS (v1.0.5) ===
 
@@ -467,7 +467,7 @@ export interface Property {
   securityFeatures?: SecurityFeatureCodeType[];
 
   /** Private unit amenities */
-  unitAmenities?: AmenityCodeType[];
+  propertyAmenities?: AmenityCodeType[];
 
   // === OWNERSHIP TABLE ===
   /** Χιλιοστά ιδιοκτησίας — read-only, ενημερώνεται αυτόματα κατά την οριστικοποίηση πίνακα ποσοστών */
@@ -522,7 +522,7 @@ export interface PropertyDoc {
     levels: number;
     balconies: number;
   }>;
-  unitCoverage?: Partial<PropertyCoverage>;
+  propertyCoverage?: Partial<PropertyCoverage>;
 
   // Additional extended fields (optional during migration)
   operationalStatus?: OperationalStatus;
@@ -546,7 +546,7 @@ export interface PropertyDoc {
     windowFrames?: FrameType;
     glazing?: GlazingType;
   };
-  unitAmenities?: AmenityCodeType[];
+  propertyAmenities?: AmenityCodeType[];
   linkedSpaces?: LinkedSpace[];
 
   // Multi-level fields (ADR-236)
@@ -573,7 +573,7 @@ export interface PropertyDoc {
   floor?: number;
   soldTo?: string | null;
   saleDate?: string;
-  unitName?: string;
+  propertyName?: string;
 }
 
 /**
@@ -593,7 +593,7 @@ export interface PropertyModel extends Property {
   securityFeatures: SecurityFeatureCodeType[];
 
   // Coverage defaults to false (never undefined)
-  unitCoverage: PropertyCoverage;
+  propertyCoverage: PropertyCoverage;
 }
 
 /**

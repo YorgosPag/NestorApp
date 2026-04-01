@@ -41,10 +41,10 @@ export interface BOQItem {
 
   // --- Scope ---
 
-  /** Scope: ολόκληρο κτίριο ή μεμονωμένη μονάδα */
-  scope: 'building' | 'unit';
+  /** Scope: ολόκληρο κτίριο ή μεμονωμένο ακίνητο */
+  scope: 'building' | 'property';
 
-  /** ID μονάδας αν scope = 'unit' (null αν scope = 'building') */
+  /** ID ακινήτου αν scope = 'property' (null αν scope = 'building') */
   linkedUnitId: string | null;
 
   // --- Ταυτότητα ---
@@ -223,7 +223,7 @@ export interface BOQProjectSummary {
 export interface CreateBOQItemInput {
   projectId: string;
   buildingId: string;
-  scope: 'building' | 'unit';
+  scope: 'building' | 'property';
   linkedUnitId?: string | null;
   categoryCode: string;
   title: string;
@@ -266,7 +266,7 @@ export interface UpdateBOQItemInput {
 /** Φίλτρα αναζήτησης BOQ items */
 export interface BOQFilters {
   buildingId?: string;
-  scope?: 'building' | 'unit';
+  scope?: 'building' | 'property';
   categoryCode?: string;
   status?: BOQItemStatus | 'all';
   source?: BOQSource;

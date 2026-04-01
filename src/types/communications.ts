@@ -171,7 +171,7 @@ export interface BaseMessageInput {
   metadata?: Record<string, unknown>;
   messageType?: string; // channel-specific (e.g., telegram: 'text'|'photo'...)
   attachments?: string[];
-  entityType?: 'lead' | 'contact' | 'unit' | null;
+  entityType?: 'lead' | 'contact' | 'property' | null;
   entityId?: string | null;
   threadId?: string | null;
 }
@@ -189,7 +189,7 @@ export interface TemplateSendInput {
   to: string;
   content?: string | null;
   variables?: Record<string, string>;
-  entityType?: 'lead' | 'contact' | 'unit';
+  entityType?: 'lead' | 'contact' | 'property';
   entityId?: string;
   metadata?: Record<string, unknown>;
 }

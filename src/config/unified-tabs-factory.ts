@@ -23,7 +23,7 @@ export type { ContactType };
 
 // 🏢 ENTERPRISE: Import centralized tab labels - ZERO HARDCODED VALUES
 import {
-  getUnitsTabLabels,
+  getUnitsTabLabels as getPropertiesTabLabels,
   getStorageTabLabels,
   getBuildingTabLabels,
   getContactTabLabels,
@@ -39,7 +39,7 @@ import {
 /**
  * Supported entity types για το tabs factory
  */
-export type TabEntityType = 'units' | 'storage' | 'building' | 'contact' | 'project' | 'crm-dashboard' | 'parking';
+export type TabEntityType = 'properties' | 'storage' | 'building' | 'contact' | 'project' | 'crm-dashboard' | 'parking';
 
 /**
  * Supported contact types για conditional tabs
@@ -151,8 +151,8 @@ export function createTabsConfig(
  */
 function getLabelsForEntity(entityType: TabEntityType): Record<string, string> {
   switch (entityType) {
-    case 'units':
-      return getUnitsTabLabels() as unknown as Record<string, string>;
+    case 'properties':
+      return getPropertiesTabLabels() as unknown as Record<string, string>;
     case 'storage':
       return getStorageTabLabels() as unknown as Record<string, string>;
     case 'building':
@@ -178,7 +178,7 @@ function getLabelsForEntity(entityType: TabEntityType): Record<string, string> {
 function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
   switch (entityType) {
 
-    case 'units':
+    case 'properties':
       return {
         baseTabs: [
           {

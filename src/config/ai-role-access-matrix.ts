@@ -41,8 +41,8 @@ export interface RoleAccessConfig {
   blockedFields: readonly string[];
   /** System prompt description for AI (ελληνικά) */
   promptDescription: string;
-  /** Scoping level: 'project' = filter by projectId, 'unit' = filter by unit ID (SPEC-257B) */
-  scopeLevel: 'project' | 'unit';
+  /** Scoping level: 'project' = filter by projectId, 'property' = filter by property ID (SPEC-257B) */
+  scopeLevel: 'project' | 'property';
 }
 
 // ============================================================================
@@ -328,7 +328,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
 - ΝΑΙ: units (μόνο τα δικά), buildings (βασικά), documents (δικά), ραντεβού, tasks (δικά)
 - ΠΛΗΡΩΜΕΣ: υπόλοιπο οφειλής, επόμενη δόση (ποσό + ημ/νία), ληξιπρόθεσμες
 - ΟΧΙ: τιμές λίστας, αναλυτικά ποσά πληρωμών, construction, contacts, εσωτερικά${COMPLAINT_TRIAGE_PROMPT}${CONTACT_UPDATE_PROMPT}${FILE_DELIVERY_PROMPT}${KNOWLEDGE_BASE_PROMPT}`,
-    scopeLevel: 'unit',
+    scopeLevel: 'property',
   },
 
   // owner = same as buyer but without price redaction
@@ -341,7 +341,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
 - ΝΑΙ: units (μόνο τα δικά), buildings (βασικά), documents, ραντεβού, tasks (δικά)
 - ΠΛΗΡΩΜΕΣ: πλήρης πρόσβαση — τελική τιμή, υπόλοιπο, δόσεις, αναλυτικά ποσά
 - ΟΧΙ: τιμή λίστας, κατασκευαστικά, contacts, leads, εσωτερικά${COMPLAINT_TRIAGE_PROMPT}${CONTACT_UPDATE_PROMPT}${FILE_DELIVERY_PROMPT}${KNOWLEDGE_BASE_PROMPT}`,
-    scopeLevel: 'unit',
+    scopeLevel: 'property',
   },
 
   // ── ΕΝΟΙΚΙΑΣΤΗΣ — Minimum access ──
@@ -357,7 +357,7 @@ CONFLICT DETECTION (overlap, ΟΧΙ μόνο exact match):
 ΕΛΑΧΙΣΤΗ ΠΡΟΣΒΑΣΗ:
 - ΝΑΙ: units (μόνο το δικό), buildings (βασικά), ραντεβού, tasks (δικά)
 - ΟΧΙ: κατασκευαστικά, έγγραφα, contacts, τιμές, πληρωμές${COMPLAINT_TRIAGE_PROMPT}${CONTACT_UPDATE_PROMPT}${FILE_DELIVERY_PROMPT}${KNOWLEDGE_BASE_PROMPT}`,
-    scopeLevel: 'unit',
+    scopeLevel: 'property',
   },
 
 } as const satisfies Record<string, RoleAccessConfig>;

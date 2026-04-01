@@ -71,7 +71,7 @@
     "allTypes": "All Types",
     "allStatuses": "All Statuses",
     "allFloors": "All Floors",
-    "allUnits": "All Units",
+    "allProperties": "All Properties",
     "allAreas": "All Areas",
     "allProjects": "All Projects",
     "allLocations": "All Locations",
@@ -95,7 +95,7 @@
     },
     "placeholders": {
       "general": "Search...",
-      "unitsSearch": "Search units...",
+      "propertiesSearch": "Search properties...",
       "contactsSearch": "Search contacts...",
       "buildingsSearch": "Search buildings...",
       "projectsSearch": "Search projects...",
@@ -113,8 +113,8 @@
       "selectRiskLevel": "Select risk level",
       "selectComplexity": "Select complexity"
     },
-    "unitTypes": {
-      "ariaLabel": "Unit type filters",
+    "propertyTypes": {
+      "ariaLabel": "Property type filters",
       "all": "All",
       "allTooltip": "Show all types",
       "studio": "Studio",
@@ -227,7 +227,7 @@
     "contacts": "Contacts",
     "projects": "Projects",
     "buildings": "Buildings",
-    "units": "Units",
+    "properties": "Properties",
     "storages": "Storages",
     "details": "Details"
   },
@@ -310,9 +310,9 @@
         "edit": "Edit project",
         "delete": "Delete project"
       },
-      "units": {
-        "edit": "Edit unit",
-        "delete": "Delete unit"
+      "properties": {
+        "edit": "Edit property",
+        "delete": "Delete property"
       },
       "storage": {
         "edit": "Edit storage",
@@ -428,7 +428,7 @@
     "keyboardNav": "Use ↑↓ arrows to navigate and Enter to select",
     "searchProperty": "Search property...",
     "searchCompany": "Search company...",
-    "searchUnits": "Search units...",
+    "searchProperties": "Search properties...",
     "searchBuildings": "Search buildings...",
     "searchProjects": "Search projects...",
     "searchContacts": "Search contacts...",
@@ -472,12 +472,12 @@
     "newBuilding": "New Building",
     "newProject": "New Project",
     "newContact": "New Contact",
-    "newUnit": "New Unit",
+    "newProperty": "New Property",
     "newStorage": "New Storage",
     "newParking": "New Parking Space",
     "newMessage": "New Message"
   },
-  "unitStatus": {
+  "propertyStatus": {
     "sold": "Sold",
     "reserved": "Reserved",
     "rented": "Rented"
@@ -490,7 +490,7 @@
     "message": "Message",
     "edit": "Edit",
     "reassign": "Reassign",
-    "changeUnit": "Change Unit",
+    "changeProperty": "Change Property",
     "history": "History",
     "documents": "Documents",
     "notes": "Notes",
@@ -538,7 +538,7 @@
     "newBuildingShortcut": "New Building (Ctrl+N)",
     "newProjectShortcut": "New Project (Ctrl+N)",
     "newContactShortcut": "New Contact (Ctrl+N)",
-    "newUnitShortcut": "New Unit (Ctrl+N)",
+    "newPropertyShortcut": "New Property (Ctrl+N)",
     "newStorageShortcut": "New Storage (Ctrl+N)",
     "newParkingShortcut": "New Parking Space (Ctrl+N)",
     "newMessageShortcut": "New Message (Ctrl+N)",
@@ -549,7 +549,7 @@
     "shareBuilding": "Share building",
     "shareProject": "Share project",
     "shareContact": "Share contact",
-    "shareUnit": "Share unit",
+    "shareProperty": "Share property",
     "shareStorage": "Share storage",
     "bulkActions": "Bulk actions for selected items",
     "toolbar": "Toolbar"
@@ -692,7 +692,7 @@
         },
         "properties": {
           "title": "Properties",
-          "description": "Notifications for properties and units",
+          "description": "Notifications for properties",
           "statusChange": "Property status change",
           "newProperty": "New property",
           "priceChange": "Price change",
@@ -1079,7 +1079,7 @@
     "selectCompany": "Select Company",
     "selectProject": "Select Project",
     "selectBuilding": "Select Building",
-    "selectUnit": "Select Unit",
+    "selectProperty": "Select Property",
     "selectClient": "Select Client",
     "selectContact": "Select Contact",
     "selectFile": "Select File",
@@ -1096,7 +1096,7 @@
     "stats": {
       "totalSpaces": "Total Spaces",
       "allPhysicalSpaces": "All physical spaces",
-      "apartments": "Units",
+      "apartments": "Properties",
       "residentialSpaces": "Residential spaces",
       "storageUnits": "Storage Units",
       "storageSpaces": "Storage spaces",
@@ -1106,8 +1106,8 @@
     },
     "cards": {
       "apartments": {
-        "title": "Units",
-        "description": "All units across all buildings",
+        "title": "Properties",
+        "description": "All properties across all buildings",
         "details": "Apartments, maisonettes, studios"
       },
       "storage": {
@@ -1213,8 +1213,8 @@
     },
     "cards": {
       "apartments": {
-        "title": "Available Units",
-        "description": "Units, maisonettes and studios for sale"
+        "title": "Available Properties",
+        "description": "Properties, maisonettes and studios for sale"
       },
       "storage": {
         "title": "Available Storage",
@@ -1255,8 +1255,8 @@
       },
       "cards": {
         "apartments": {
-          "title": "Units",
-          "description": "Sold units & maisonettes"
+          "title": "Properties",
+          "description": "Sold properties & maisonettes"
         },
         "storage": {
           "title": "Storage",
@@ -1298,15 +1298,15 @@
       }
     },
     "available": {
-      "title": "Available Units",
-      "subtitle": "Units for sale - Active listings",
-      "overview": "Available Units - Overview",
-      "listTitle": "Available Units",
-      "listLabel": "Available units for sale list",
-      "noResults": "No units found matching these criteria.",
-      "unitDetails": "Unit Details",
+      "title": "Available Properties",
+      "subtitle": "Properties for sale - Active listings",
+      "overview": "Available Properties - Overview",
+      "listTitle": "Available Properties",
+      "listLabel": "Available properties for sale list",
+      "noResults": "No properties found matching these criteria.",
+      "propertyDetails": "Property Details",
       "stats": {
-        "availableApartments": "Available Units",
+        "availableApartments": "Available Properties",
         "forSaleNow": "For sale now",
         "avgPrice": "Average Price",
         "avgPriceDesc": "Average price",
@@ -1361,7 +1361,7 @@
     },
     "tabs": {
       "saleInfo": "Sale",
-      "unitSummary": "Unit",
+      "propertySummary": "Property",
       "photos": "Photos",
       "videos": "Videos",
       "documents": "Documents",
@@ -1369,9 +1369,9 @@
       "legal": "Legal",
       "payments": "Payments",
       "openInSpaces": "Open in Spaces",
-      "documentsHint": "Documents are managed in Spaces → Units",
-      "photosHint": "Photos are managed in Spaces → Units",
-      "videosHint": "Videos are managed in Spaces → Units"
+      "documentsHint": "Documents are managed in Spaces → Properties",
+      "photosHint": "Photos are managed in Spaces → Properties",
+      "videosHint": "Videos are managed in Spaces → Properties"
     },
     "actions": {
       "changePrice": "Change Price",
@@ -1410,9 +1410,9 @@
       "project": "Project",
       "permit": "Permit Title",
       "building": "Building",
-      "unit": "Unit"
+      "property": "Property"
     },
-    "unitSummary": {
+    "propertySummary": {
       "physicalData": "Physical Data",
       "type": "Type",
       "area": "Area",
@@ -1480,7 +1480,7 @@
       "exclusive": "Exclusive",
       "nonExclusive": "Non-exclusive",
       "scopeProject": "Project Level",
-      "scopeUnit": "Unit Level",
+      "scopeProperty": "Property Level",
       "commission": "Commission",
       "commissionPercentage": "Percentage (%)",
       "commissionFixed": "Fixed amount (€)",
@@ -1495,19 +1495,19 @@
       "attachFiles": "Agreement attachments",
       "selectAgent": "Select broker",
       "selectScope": "Select scope",
-      "selectUnit": "Select unit",
+      "selectProperty": "Select property",
       "selectExclusivity": "Select type",
       "selectCommissionType": "Select commission type",
       "notes": "Notes",
       "exclusivityConflict": "Cannot create exclusive agreement",
       "exclusivityConflictProjectExclusive": "Exclusive project-level agreement exists ({{agentName}})",
-      "exclusivityConflictUnitExclusive": "Exclusive agreement on unit {{unitName}} ({{agentName}})",
-      "exclusivityConflictSameUnit": "Exclusive agreement on {{unitName}} ({{agentName}})",
+      "exclusivityConflictPropertyExclusive": "Exclusive agreement on property {{propertyName}} ({{agentName}})",
+      "exclusivityConflictSameProperty": "Exclusive agreement on {{propertyName}} ({{agentName}})",
       "exclusivityBlockedByProjectExclusive": "Project-level exclusive ({{agentName}}). No new agreements allowed",
-      "exclusivityBlockedByExistingUnit": "Existing agreement on {{unitName}} ({{agentName}}) must be terminated",
+      "exclusivityBlockedByExistingProperty": "Existing agreement on {{propertyName}} ({{agentName}}) must be terminated",
       "nonExclusiveBlockedByProjectExclusive": "Project-level exclusive ({{agentName}}). No new agreements allowed",
-      "nonExclusiveBlockedByUnitExclusive": "Exclusive on {{unitName}} ({{agentName}}). No new agreements allowed",
-      "exclusivityWarningExcludedUnits": "Units with existing agreements excluded: {{unitNames}}",
+      "nonExclusiveBlockedByPropertyExclusive": "Exclusive on {{propertyName}} ({{agentName}}). No new agreements allowed",
+      "exclusivityWarningExcludedProperties": "Properties with existing agreements excluded: {{propertyNames}}",
       "duplicateAgent": "Agent {{agentName}} already has an active agreement in this project",
       "validating": "Checking exclusivity...",
       "saveSuccess": "Agreement saved",
@@ -1522,12 +1522,12 @@
       "noBuyerDesc": "You must assign a buyer first (Reserve/Sell)"
     },
     "errors": {
-      "noBuilding": "The unit is not linked to a building. Go to Unit Management → Info and link a building.",
-      "noFloor": "The unit is not linked to a floor. Go to Unit Management → Info and select a floor.",
+      "noBuilding": "The property is not linked to a building. Go to Property Management → Info and link a building.",
+      "noFloor": "The property is not linked to a floor. Go to Property Management → Info and select a floor.",
       "noProject": "The building is not linked to a project. Go to Buildings → General and link a project.",
       "noCompany": "The project is not linked to a company. Go to Projects → General and link a company.",
-      "noAskingPrice": "The unit has no asking price. Set a price before reservation or sale.",
-      "noArea": "The unit has no area (sqm). Set net or gross area before reservation or sale.",
+      "noAskingPrice": "The property has no asking price. Set a price before reservation or sale.",
+      "noArea": "The property has no area (sqm). Set net or gross area before reservation or sale.",
       "noBuyer": "Buyer contact is required",
       "buyerNotFound": "Buyer contact not found",
       "buyerMissingFields": "Buyer missing required fields: {fields}",
@@ -1538,7 +1538,7 @@
       "activeRental": "Active rental",
       "noArea": "No area (sqm) — cannot be included",
       "pricePlaceholder": "Price €",
-      "grandTotal": "Total (unit + appurtenances)"
+      "grandTotal": "Total (property + appurtenances)"
     },
     "commercialStatus": {
       "sold": "Sold",
@@ -1547,13 +1547,13 @@
     "dialogs": {
       "changePrice": {
         "title": "Change Price",
-        "description": "Set the asking price for the unit",
+        "description": "Set the asking price for the property",
         "askingPrice": "Asking price (€)",
-        "hint": "The unit will automatically be set to «For Sale» status",
+        "hint": "The property will automatically be set to «For Sale» status",
         "placeholder": "e.g. 150000"
       },
       "reserve": {
-        "title": "Reserve Unit",
+        "title": "Reserve Property",
         "description": "Enter reservation details",
         "deposit": "Deposit (€)",
         "depositPlaceholder": "e.g. 5000",
@@ -1572,7 +1572,7 @@
         "totalMustBe100": "must be 100%"
       },
       "sell": {
-        "title": "Sell Unit",
+        "title": "Sell Property",
         "description": "Confirm the final sale price",
         "askingWas": "Asking price",
         "finalPrice": "Final sale price (€)",
@@ -1581,13 +1581,13 @@
         "broker": "Broker (optional)",
         "noBroker": "No broker",
         "commissionPreview": "Commission",
-        "warning": "The unit will be set to «Sold» status and will no longer appear in the available listings.",
+        "warning": "The property will be set to «Sold» status and will no longer appear in the available listings.",
         "confirm": "Confirm Sale",
         "unknownError": "Error during sale"
       },
       "revert": {
-        "title": "Revert Unit",
-        "description": "Cancel sale or reservation — the unit returns to «For Sale» status",
+        "title": "Revert Property",
+        "description": "Cancel sale or reservation — the property returns to «For Sale» status",
         "currentStatus": "Current status",
         "buyer": "Buyer",
         "finalPrice": "Sale price",
@@ -1784,17 +1784,13 @@
       "title": "Create Storage",
       "description": "Select a storage from the list or create a new one."
     },
-    "unit": {
-      "title": "Create Unit",
-      "description": "Select a unit from the list or create a new one."
+    "property": {
+      "title": "Create Property",
+      "description": "Select a property from the list or create a new one."
     },
     "parking": {
       "title": "Create Parking Spot",
       "description": "Select a parking spot from the list or create a new one."
-    },
-    "property": {
-      "title": "Create Property",
-      "description": "Select a property from the list or create a new one."
     },
     "generic": {
       "title": "Create",
@@ -1879,23 +1875,17 @@
         "articleWithSingular": "the building",
         "plural": "Buildings"
       },
-      "unit": {
-        "singular": "Unit",
+      "property": {
+        "singular": "Property",
         "article": "the",
-        "articleWithSingular": "the unit",
-        "plural": "Units"
+        "articleWithSingular": "the property",
+        "plural": "Properties"
       },
       "opportunity": {
         "singular": "Opportunity",
         "article": "the",
         "articleWithSingular": "the opportunity",
         "plural": "Opportunities"
-      },
-      "property": {
-        "singular": "Property",
-        "article": "the",
-        "articleWithSingular": "the property",
-        "plural": "Properties"
       },
       "service": {
         "singular": "Service",
@@ -1955,7 +1945,7 @@
       "project": "Project",
       "building": "Building",
       "contact": "Contact",
-      "unit": "Unit"
+      "property": "Property"
     }
   },
   "viewMode": {
@@ -1989,7 +1979,7 @@
     "entityTypes": {
       "project": "Project",
       "building": "Building",
-      "unit": "Unit",
+      "property": "Property",
       "contact": "Contact",
       "file": "File",
       "parking": "Parking",
@@ -2241,9 +2231,9 @@
     "messages": {
       "noBuildings": "No buildings linked to this project. Link a building first (Building → General → Project).",
       "noFloors": "No floors in buildings. Add floors first.",
-      "noUnits": "No units in buildings. Add units first.",
-      "unitsWithoutArea": "{count} unit(s) without area — millesimal calculation will be incorrect.",
-      "unitsWithoutFloor": "{count} unit(s) without floor link — floor coefficient will not be calculated.",
+      "noProperties": "No properties in buildings. Add properties first.",
+      "propertiesWithoutArea": "{count} property(ies) without area — millesimal calculation will be incorrect.",
+      "propertiesWithoutFloor": "{count} property(ies) without floor link — floor coefficient will not be calculated.",
       "populateSuccess": "Populated {count} entries. Click \"Calculate\" to compute millesimal shares.",
       "populateWithWarnings": "Populated {count} entries, but:",
       "dataCheckError": "Error checking data. Try again.",

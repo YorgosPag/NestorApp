@@ -22,7 +22,7 @@
     "contact": "Contact",
     "building": "Building",
     "floor": "Floor",
-    "unit": "Unit",
+    "property": "Property",
     "project": "Project",
     "company": "Company"
   },
@@ -112,7 +112,7 @@
     "categories": "Categories",
     "projects": "Project Files",
     "buildings": "Building Files",
-    "units": "Unit Files",
+    "properties": "Property Files",
     "contacts": "Contact Files"
   },
   "filters": {
@@ -188,7 +188,7 @@
   "entities": {
     "projects": "Projects",
     "buildings": "Buildings",
-    "units": "Units",
+    "properties": "Properties",
     "contacts": "Contacts"
   },
   "list": {
@@ -595,7 +595,7 @@
       "project": "Project",
       "building": "Building",
       "floor": "Floor",
-      "unit": "Unit",
+      "property": "Property",
       "upload": "Upload"
     },
     "select": {
@@ -603,8 +603,8 @@
       "project": "Select project",
       "building": "Select building",
       "floor": "Select floor",
-      "unit": "Select unit",
-      "level": "Select unit level"
+      "property": "Select property",
+      "level": "Select property level"
     },
     "shortcuts": {
       "project": "Upload General Project Floorplan",
@@ -614,7 +614,7 @@
     "types": {
       "building": "General Building Floorplan",
       "floor": "Floor Floorplan",
-      "unit": "Unit Floorplan"
+      "property": "Property Floorplan"
     },
     "noItems": "No items found",
     "autoSelected": "Auto-selected",
