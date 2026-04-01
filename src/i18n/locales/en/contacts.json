@@ -181,21 +181,6 @@
     },
     "tabs": {
       "actions": "Actions",
-      "communication": "Communication",
-      "management": "Management",
-      "filters": "Filters",
-      "actionsContent": {
-        "newContact": "New Contact",
-        "newContactTooltip": "Add new contact",
-        "edit": "Edit",
-        "editTooltip": "Edit selected contact",
-        "delete": "Delete",
-        "deleteCount": "Delete {count} contact(s)",
-        "deleteSelected": "Delete selected contact",
-        "deleteSelectFirst": "Select a contact to delete",
-        "refresh": "Refresh",
-        "refreshTooltip": "Refresh contacts list"
-      },
       "communication": {
         "call": "Call",
         "callTooltip": "Call selected contacts",
@@ -227,6 +212,18 @@
         "sortAtoZ": "Sort A to Z",
         "sortZtoA": "Sort Z to A",
         "filterHint": "Use the header filters for more options"
+      },
+      "actionsContent": {
+        "newContact": "New Contact",
+        "newContactTooltip": "Add new contact",
+        "edit": "Edit",
+        "editTooltip": "Edit selected contact",
+        "delete": "Delete",
+        "deleteCount": "Delete {count} contact(s)",
+        "deleteSelected": "Delete selected contact",
+        "deleteSelectFirst": "Select a contact to delete",
+        "refresh": "Refresh",
+        "refreshTooltip": "Refresh contacts list"
       }
     }
   },
@@ -400,7 +397,10 @@
       "deleteSuccess": "Relationship deleted successfully!",
       "createError": "Error creating relationship",
       "updateError": "Error updating relationship",
-      "deleteError": "Error deleting relationship"
+      "deleteError": "Error deleting relationship",
+      "terminateSuccess": "The relationship was terminated successfully and preserved in history.",
+      "terminateError": "Error terminating relationship",
+      "deleteBlockedActiveRole": "This active relationship cannot be permanently deleted. Terminate it instead."
     },
     "list": {
       "newContact": {
@@ -453,6 +453,17 @@
       "lastUpdated": "Last updated",
       "createdAt": "Created",
       "unknown": "Unknown"
+    },
+    "governance": {
+      "confirmTerminateTitle": "Terminate relationship?",
+      "confirmTerminateBody": "The relationship will be removed from active views but kept in history.",
+      "confirmDeleteTitle": "Permanently delete relationship?",
+      "confirmDeleteBody": "The relationship will be permanently deleted from the profile and related summaries.",
+      "impact": {
+        "protectedRole": "This role is treated as critical company data and must remain in history.",
+        "hierarchy": "This action affects the organization tree and related personnel metrics.",
+        "reciprocal": "This action also affects the reciprocal relationship on the linked contact."
+      }
     }
   },
   "options": {

@@ -13,6 +13,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { buildContactDashboardStats } from './contactDashboardStats';
+import { useContactsTrashState } from './useContactsTrashState';
 
 const logger = createModuleLogger('ContactsPageContent');
 
@@ -316,13 +317,33 @@ export function useContactsPageState() {
     refreshContacts();
   }, [selectedContact, selectedContactIds, refreshContacts]);
 
+  // ==== TRASH: Delegated to useContactsTrashState ====
+  const trash = useContactsTrashState({
+    contacts,
+    selectedContact,
+    setSelectedContact,
+    setSelectedContactIds,
+    selectedContactIds,
+    refreshContacts,
+    setActiveCardFilter,
+  });
+
   // ---------------------------------------------------------------------------
   // Filtering
   // ---------------------------------------------------------------------------
+
   const filteredContacts = useMemo(() => {
     const contactIdParam = searchParams.get('contactId');
 
+    // 🗑️ Trash mode: show ONLY deleted contacts
+    if (trash.showTrash) {
+      return contacts.filter(c => c.status === 'deleted');
+    }
+
     return contacts.filter(contact => {
+      // Exclude soft-deleted contacts from normal view
+      if (contact.status === 'deleted') return false;
+
       if (contactIdParam) return true;
 
       // Dashboard card filter
@@ -383,7 +404,7 @@ export function useContactsPageState() {
 
       return true;
     });
-  }, [contacts, searchParams, activeCardFilter, filters.searchTerm, filters.contactType, filters.isFavorite, t]);
+  }, [contacts, searchParams, activeCardFilter, filters.searchTerm, filters.contactType, filters.isFavorite, trash.showTrash, t]);
 
   // Dashboard stats (extracted to contactDashboardStats.ts — SRP)
   const dashboardStats = useMemo(
@@ -438,11 +459,20 @@ export function useContactsPageState() {
     setShowDeleteContactDialog,
     showArchiveContactDialog,
     setShowArchiveContactDialog,
+    showPermanentDeleteDialog: trash.showPermanentDeleteDialog,
+    setShowPermanentDeleteDialog: trash.setShowPermanentDeleteDialog,
     selectedContactIds,
     handleDeleteContacts,
     handleContactsDeleted,
     handleArchiveContacts,
     handleContactsArchived,
+    // Trash
+    showTrash: trash.showTrash,
+    trashCount: trash.trashCount,
+    handleToggleTrash: trash.handleToggleTrash,
+    handleRestoreContacts: trash.handleRestoreContacts,
+    handlePermanentDeleteContacts: trash.handlePermanentDeleteContacts,
+    handleContactsPermanentDeleted: trash.handleContactsPermanentDeleted,
     // Filters
     filters,
     setFilters,

@@ -1,12 +1,3 @@
-// ============================================================================
-// RELATIONSHIP PROVIDER CONTEXT
-// ============================================================================
-//
-// 🏢 Shared context για relationship data management
-// Prevents duplicate API calls between RelationshipsSummary και ContactRelationshipManager
-//
-// ============================================================================
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
@@ -16,27 +7,18 @@ import { RequestDeduplicator } from '../hooks/useRelationshipListOptimized';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import type { RelationshipCreatedPayload, RelationshipUpdatedPayload, RelationshipDeletedPayload } from '@/services/realtime';
+
 const logger = createModuleLogger('RelationshipProvider');
 
-// ============================================================================
-// CONTEXT TYPES
-// ============================================================================
-
 interface RelationshipContextState {
-  // Data state
   relationships: ContactRelationship[];
   loading: boolean;
   error: string | null;
-
-  // UI state
   expandedRelationships: Set<string>;
-
-  // Operations
   refreshRelationships: () => Promise<void>;
   deleteRelationship: (relationshipId: string) => Promise<void>;
+  terminateRelationship: (relationshipId: string) => Promise<void>;
   toggleExpanded: (relationshipId: string) => void;
-
-  // Contact info
   contactId: string;
   contactType: ContactType;
 }
@@ -48,15 +30,7 @@ interface RelationshipProviderProps {
   children: ReactNode;
 }
 
-// ============================================================================
-// CONTEXT CREATION
-// ============================================================================
-
 const RelationshipContext = createContext<RelationshipContextState | null>(null);
-
-// ============================================================================
-// PROVIDER COMPONENT
-// ============================================================================
 
 export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
   contactId,
@@ -64,22 +38,11 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
   onRelationshipsChange,
   children
 }) => {
-  // ============================================================================
-  // STATE MANAGEMENT
-  // ============================================================================
-
   const [relationships, setRelationships] = useState<ContactRelationship[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedRelationships, setExpandedRelationships] = useState<Set<string>>(new Set());
 
-  // ============================================================================
-  // API OPERATIONS
-  // ============================================================================
-
-  /**
-   * 🔄 Load relationships using optimized request deduplicator
-   */
   const loadRelationships = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
@@ -96,15 +59,15 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
         const newIds = new Set(data.map(rel => rel.id));
 
         const hasChanged = prevRelationships.length !== data.length ||
-                          !Array.from(newIds).every(id => prevIds.has(id));
+          !Array.from(newIds).every(id => prevIds.has(id));
 
         if (hasChanged || forceRefresh) {
           onRelationshipsChange?.(data);
           return data;
         }
+
         return prevRelationships;
       });
-
     } catch (err) {
       logger.error('loadRelationships failed:', { error: err });
       setError('relationships.manager.errors.listError');
@@ -114,26 +77,39 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
     }
   }, [contactId, onRelationshipsChange]);
 
-  /**
-   * 🔄 Refresh relationships (public API)
-   */
   const refreshRelationships = useCallback(async () => {
     logger.info('PROVIDER: Force refreshing relationships for', { data: contactId });
-
-    // 🔧 FIX: Ensure cache is fully invalidated before reload
     RequestDeduplicator.invalidate(contactId);
-
-    // Small delay για Firestore eventual consistency
     await new Promise(resolve => setTimeout(resolve, 200));
-
     logger.info('PROVIDER: Cache invalidated, now reloading...');
     await loadRelationships(true);
     logger.info('PROVIDER: Refresh completed');
   }, [contactId, loadRelationships]);
 
-  /**
-   * 🗑️ Delete relationship με cache invalidation
-   */
+  const terminateRelationship = useCallback(async (relationshipId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      logger.info('PROVIDER: Terminating relationship:', { data: relationshipId });
+
+      const { ContactRelationshipService } = await import('@/services/contact-relationships/ContactRelationshipService');
+      await ContactRelationshipService.terminateRelationship(relationshipId, 'user');
+
+      RequestDeduplicator.invalidate(contactId);
+      await loadRelationships(true);
+
+      logger.info('PROVIDER: Relationship terminated successfully');
+    } catch (err) {
+      const errorMessage = 'relationships.status.terminateError';
+      setError(errorMessage);
+      logger.error('PROVIDER: Error terminating relationship:', { error: err });
+      await loadRelationships(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [contactId, loadRelationships]);
+
   const deleteRelationship = useCallback(async (relationshipId: string) => {
     try {
       setLoading(true);
@@ -141,21 +117,17 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
 
       logger.info('PROVIDER: Deleting relationship:', { data: relationshipId });
 
-      // Import dynamically to avoid circular dependencies
       const { ContactRelationshipService } = await import('@/services/contact-relationships/ContactRelationshipService');
       await ContactRelationshipService.deleteRelationship(relationshipId, 'user');
 
-      // Invalidate cache
       RequestDeduplicator.invalidate(contactId);
 
-      // Remove from local state immediately
       setRelationships(prev => {
         const updated = prev.filter(rel => rel.id !== relationshipId);
         onRelationshipsChange?.(updated);
         return updated;
       });
 
-      // Remove from expanded set
       setExpandedRelationships(prev => {
         const newSet = new Set(prev);
         newSet.delete(relationshipId);
@@ -167,17 +139,11 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       const errorMessage = 'relationships.errors.saveFailed';
       setError(errorMessage);
       logger.error('PROVIDER: Error deleting relationship:', { error: err });
-
-      // Force refresh to ensure consistency
       await loadRelationships(true);
     } finally {
       setLoading(false);
     }
   }, [contactId, loadRelationships, onRelationshipsChange]);
-
-  // ============================================================================
-  // UI STATE MANAGEMENT
-  // ============================================================================
 
   const toggleExpanded = useCallback((relationshipId: string) => {
     setExpandedRelationships(prev => {
@@ -191,13 +157,6 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
     });
   }, []);
 
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
-
-  /**
-   * 🏗️ Load relationships when contactId changes
-   */
   useEffect(() => {
     if (contactId && contactId !== 'new-contact' && contactId.trim() !== '') {
       loadRelationships();
@@ -208,14 +167,13 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
     }
   }, [contactId, loadRelationships]);
 
-  // 🏢 ENTERPRISE: Event bus subscribers for cross-tab relationship sync (ADR-228 Tier 3)
   useEffect(() => {
     if (!contactId || contactId === 'new-contact') return;
 
     const handleCreated = (payload: RelationshipCreatedPayload) => {
       if (payload.relationship.sourceId === contactId || payload.relationship.targetId === contactId) {
         RequestDeduplicator.invalidate(contactId);
-        loadRelationships(true);
+        void loadRelationships(true);
       }
     };
 
@@ -239,28 +197,22 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
     const unsub2 = RealtimeService.subscribe('RELATIONSHIP_UPDATED', handleUpdated);
     const unsub3 = RealtimeService.subscribe('RELATIONSHIP_DELETED', handleDeleted);
 
-    return () => { unsub1(); unsub2(); unsub3(); };
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
   }, [contactId, loadRelationships, onRelationshipsChange]);
 
-  // ============================================================================
-  // CONTEXT VALUE
-  // ============================================================================
-
   const contextValue: RelationshipContextState = {
-    // Data state
     relationships,
     loading,
     error,
-
-    // UI state
     expandedRelationships,
-
-    // Operations
     refreshRelationships,
     deleteRelationship,
+    terminateRelationship,
     toggleExpanded,
-
-    // Contact info
     contactId,
     contactType
   };
@@ -272,16 +224,6 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
   );
 };
 
-// ============================================================================
-// HOOK FOR CONSUMING CONTEXT
-// ============================================================================
-
-/**
- * 🪝 Hook για accessing relationship context
- *
- * Use this instead of useRelationshipList in components that are
- * wrapped with RelationshipProvider
- */
 export const useRelationshipContext = (): RelationshipContextState => {
   const context = useContext(RelationshipContext);
 

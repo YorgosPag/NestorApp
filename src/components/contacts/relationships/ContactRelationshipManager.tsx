@@ -43,6 +43,7 @@ import { OrganizationTree } from './OrganizationTree';
 import { useRelationshipContext } from './context/RelationshipProvider';
 import { useRelationshipForm } from './hooks/useRelationshipForm';
 import { useOrganizationTree } from './hooks/useOrganizationTree';
+import { getRelationshipGovernanceInfo } from '@/services/contact-relationships/core/relationship-governance';
 
 // 🏢 ENTERPRISE: Import types
 import type { ContactRelationshipManagerProps } from './types/relationship-manager.types';
@@ -89,7 +90,8 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     error: listError,
     expandedRelationships,
     toggleExpanded: handleToggleExpanded,
-    deleteRelationship: handleDelete,
+    deleteRelationship,
+    terminateRelationship,
     refreshRelationships
   } = useRelationshipContext();
 
@@ -159,6 +161,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const showForm = !readonly && !isNewContact;
   const anyLoading = listLoading || formLoading || treeLoading;
   const hasAnyError = listError || formError || treeError;
+  const [actionMessage, setActionMessage] = React.useState<string | null>(null);
 
   // 🏢 ENTERPRISE: Compute used relationship types for the selected target contact
   // Prevents duplicate selections by filtering out already-used types from the dropdown
@@ -186,11 +189,50 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
    */
   const [showFormCard, setShowFormCard] = React.useState(false);
 
-  const handleShowForm = () => setShowFormCard(true);
+  const handleShowForm = () => {
+    setActionMessage(null);
+    setShowFormCard(true);
+  };
   const handleHideForm = () => {
     setShowFormCard(false);
     handleCancel();
   };
+
+  const buildImpactMessages = React.useCallback((relationship: ContactRelationship): string[] => {
+    const governance = getRelationshipGovernanceInfo(relationship);
+    const messages: string[] = [];
+
+    if (governance.isProtectedRole) messages.push(t('relationships.governance.impact.protectedRole'));
+    if (governance.affectsHierarchy) messages.push(t('relationships.governance.impact.hierarchy'));
+    if (governance.affectsReciprocal) messages.push(t('relationships.governance.impact.reciprocal'));
+
+    return messages;
+  }, [t]);
+
+  const handleRelationshipRemoval = React.useCallback(async (relationship: ContactRelationship) => {
+    const governance = getRelationshipGovernanceInfo(relationship);
+    const impactMessages = buildImpactMessages(relationship);
+    const impactSuffix = impactMessages.length > 0
+      ? `\n\n${impactMessages.map(message => `• ${message}`).join('\n')}`
+      : '';
+
+    try {
+      if (governance.requiresTermination) {
+        const shouldTerminate = window.confirm(`${t('relationships.governance.confirmTerminateTitle')}\n\n${t('relationships.governance.confirmTerminateBody')}${impactSuffix}`);
+        if (!shouldTerminate) return;
+        await terminateRelationship(relationship.id);
+        setActionMessage(t('relationships.status.terminateSuccess'));
+        return;
+      }
+
+      const shouldDelete = window.confirm(`${t('relationships.governance.confirmDeleteTitle')}\n\n${t('relationships.governance.confirmDeleteBody')}${impactSuffix}`);
+      if (!shouldDelete) return;
+      await deleteRelationship(relationship.id);
+      setActionMessage(t('relationships.status.deleteSuccess'));
+    } catch (err) {
+      logger.error('Relationship removal flow failed:', { error: err });
+    }
+  }, [buildImpactMessages, deleteRelationship, terminateRelationship, t]);
 
   /**
    * ✏️ Handle edit relationship (show form with data)
@@ -308,13 +350,13 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
    * ✅ Render success messages
    */
   const renderSuccess = () => {
-    if (!successMessage) return null;
+    if (!successMessage && !actionMessage) return null;
 
     return (
       <Alert className={`mb-6 ${getStatusBorder('success')} ${colors.bg.success}`}>
         <AlertCircle className={`${iconSizes.sm} ${colors.text.success}`} />
         <AlertDescription className={`${colors.text.success}`}>
-          {successMessage}
+          {successMessage || actionMessage}
         </AlertDescription>
       </Alert>
     );
@@ -382,7 +424,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           expandedRelationships={expandedRelationships}
           onToggleExpanded={handleToggleExpanded}
           onEdit={handleEditRelationship}
-          onDelete={handleDelete}
+          onDelete={handleRelationshipRemoval}
         />
 
         {/* Footer note for new contacts */}

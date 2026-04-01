@@ -120,8 +120,8 @@ export interface RelationshipListProps {
   /** Edit relationship handler */
   onEdit?: (relationship: ContactRelationship) => void;
 
-  /** Delete relationship handler */
-  onDelete?: (id: string) => void;
+  /** Delete or terminate relationship handler */
+  onDelete?: (relationship: ContactRelationship) => void;
 }
 
 /**

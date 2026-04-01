@@ -2,14 +2,9 @@ import 'server-only';
 
 /**
  * @fileoverview Bank Accounts API — PATCH (Update) & DELETE (Soft-Delete)
- * @description Server-side endpoints for modifying/removing bank accounts.
- * Part of ADR-252 security audit: routes client writes through server-side validation.
- *
  * @route PATCH /api/contacts/[id]/bank-accounts/[accountId]
  * @route DELETE /api/contacts/[id]/bank-accounts/[accountId]
  * @security withAuth + withSensitiveRateLimit + tenant isolation
- * @author Claude Code (Anthropic AI) + Georgios Pagonis
- * @created 2026-03-20
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,29 +12,19 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { BankAccountsServerService } from '@/services/banking/bank-accounts-server.service';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isCurrencyCode, isAccountType } from '@/types/contacts/banking';
 import type { BankAccountUpdate, AccountType, CurrencyCode } from '@/types/contacts/banking';
 import { createModuleLogger } from '@/lib/telemetry';
+import { mapBoolean, buildUpdateAuditChanges, getExistingAccount } from './bank-account-audit';
 
 const logger = createModuleLogger('BankAccountsPatchDeleteRoute');
 
-// Force dynamic rendering
 export const dynamic = 'force-dynamic';
-
-// ============================================================================
-// ROUTE CONTEXT
-// ============================================================================
 
 type RouteContext = { params: Promise<{ contactId: string; accountId: string }> };
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Map server service error messages to HTTP status codes.
- */
 function errorToStatus(errorMsg: string): number {
   if (errorMsg === 'Access denied') return 403;
   if (errorMsg === 'Contact not found' || errorMsg === 'Bank account not found') return 404;
@@ -52,45 +37,49 @@ function errorToStatus(errorMsg: string): number {
 
 async function handlePatch(
   request: NextRequest,
-  segmentData?: RouteContext
+  segmentData?: RouteContext,
 ): Promise<NextResponse> {
   const handler = withAuth(
     async (
       req: NextRequest,
       ctx: AuthContext,
-      _cache: PermissionCache
+      _cache: PermissionCache,
     ): Promise<NextResponse> => {
       try {
         const { contactId, accountId } = await segmentData!.params;
 
-        // Validate path params
         if (!contactId || !accountId) {
           return NextResponse.json(
             { success: false, error: 'Contact ID and Account ID are required' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
-        // Parse request body
+        const existingAccount = await getExistingAccount(contactId, accountId);
+        if (!existingAccount) {
+          return NextResponse.json(
+            { success: false, error: 'Bank account not found' },
+            { status: 404 },
+          );
+        }
+
         const body: unknown = await req.json();
 
         if (!body || typeof body !== 'object') {
           return NextResponse.json(
             { success: false, error: 'Request body is required' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
         const rawBody = body as Record<string, unknown>;
-
-        // Build validated update — only include fields that are present
         const updates: BankAccountUpdate = {};
 
         if (rawBody.bankName !== undefined) {
           if (typeof rawBody.bankName !== 'string' || rawBody.bankName.trim().length === 0) {
             return NextResponse.json(
               { success: false, error: 'bankName must be a non-empty string' },
-              { status: 400 }
+              { status: 400 },
             );
           }
           updates.bankName = rawBody.bankName;
@@ -104,7 +93,7 @@ async function handlePatch(
           if (typeof rawBody.iban !== 'string') {
             return NextResponse.json(
               { success: false, error: 'iban must be a string' },
-              { status: 400 }
+              { status: 400 },
             );
           }
           updates.iban = rawBody.iban;
@@ -124,7 +113,7 @@ async function handlePatch(
           if (typeof rawBody.accountType !== 'string' || !isAccountType(rawBody.accountType)) {
             return NextResponse.json(
               { success: false, error: 'Invalid accountType' },
-              { status: 400 }
+              { status: 400 },
             );
           }
           updates.accountType = rawBody.accountType as AccountType;
@@ -134,7 +123,7 @@ async function handlePatch(
           if (typeof rawBody.currency !== 'string' || !isCurrencyCode(rawBody.currency)) {
             return NextResponse.json(
               { success: false, error: 'Invalid currency' },
-              { status: 400 }
+              { status: 400 },
             );
           }
           updates.currency = rawBody.currency as CurrencyCode;
@@ -158,27 +147,39 @@ async function handlePatch(
           updates.isActive = rawBody.isActive === true;
         }
 
-        // Check that at least one field is being updated
         if (Object.keys(updates).length === 0) {
           return NextResponse.json(
             { success: false, error: 'No fields to update' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
-        // Call server service
         const result = await BankAccountsServerService.updateAccount(
           contactId,
           accountId,
           updates,
-          ctx.companyId
+          ctx.companyId,
         );
 
         if (!result.success) {
           return NextResponse.json(
             { success: false, error: result.error },
-            { status: errorToStatus(result.error) }
+            { status: errorToStatus(result.error) },
           );
+        }
+
+        const changes = buildUpdateAuditChanges(existingAccount, updates);
+        if (changes.length > 0) {
+          await EntityAuditService.recordChange({
+            entityType: 'contact',
+            entityId: contactId,
+            entityName: null,
+            action: 'updated',
+            changes,
+            performedBy: ctx.uid,
+            performedByName: ctx.email,
+            companyId: ctx.companyId,
+          });
         }
 
         logger.info('Bank account updated via API', { contactId, accountId, uid: ctx.uid });
@@ -189,10 +190,10 @@ async function handlePatch(
         logger.error('PATCH /api/contacts/[id]/bank-accounts/[accountId] error', { error: msg });
         return NextResponse.json(
           { success: false, error: msg },
-          { status: 500 }
+          { status: 500 },
         );
       }
-    }
+    },
   );
 
   return handler(request);
@@ -204,38 +205,68 @@ async function handlePatch(
 
 async function handleDelete(
   request: NextRequest,
-  segmentData?: RouteContext
+  segmentData?: RouteContext,
 ): Promise<NextResponse> {
   const handler = withAuth(
     async (
       req: NextRequest,
       ctx: AuthContext,
-      _cache: PermissionCache
+      _cache: PermissionCache,
     ): Promise<NextResponse> => {
       try {
         const { contactId, accountId } = await segmentData!.params;
 
-        // Validate path params
         if (!contactId || !accountId) {
           return NextResponse.json(
             { success: false, error: 'Contact ID and Account ID are required' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
-        // Call server service (soft delete)
+        const existingAccount = await getExistingAccount(contactId, accountId);
+        if (!existingAccount) {
+          return NextResponse.json(
+            { success: false, error: 'Bank account not found' },
+            { status: 404 },
+          );
+        }
+
         const result = await BankAccountsServerService.deleteAccount(
           contactId,
           accountId,
-          ctx.companyId
+          ctx.companyId,
         );
 
         if (!result.success) {
           return NextResponse.json(
             { success: false, error: result.error },
-            { status: errorToStatus(result.error) }
+            { status: errorToStatus(result.error) },
           );
         }
+
+        await EntityAuditService.recordChange({
+          entityType: 'contact',
+          entityId: contactId,
+          entityName: null,
+          action: 'updated',
+          changes: [
+            {
+              field: 'bankAccounts',
+              oldValue: `${existingAccount.bankName} (${existingAccount.iban})`,
+              newValue: null,
+              label: 'Τραπεζικός λογαριασμός',
+            },
+            {
+              field: 'bankAccounts.isActive',
+              oldValue: mapBoolean(existingAccount.isActive),
+              newValue: 'Όχι',
+              label: 'Ενεργός λογαριασμός',
+            },
+          ],
+          performedBy: ctx.uid,
+          performedByName: ctx.email,
+          companyId: ctx.companyId,
+        });
 
         logger.info('Bank account soft-deleted via API', { contactId, accountId, uid: ctx.uid });
 
@@ -245,10 +276,10 @@ async function handleDelete(
         logger.error('DELETE /api/contacts/[id]/bank-accounts/[accountId] error', { error: msg });
         return NextResponse.json(
           { success: false, error: msg },
-          { status: 500 }
+          { status: 500 },
         );
       }
-    }
+    },
   );
 
   return handler(request);

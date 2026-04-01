@@ -130,7 +130,7 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
             onToggleExpanded={() => onToggleExpanded(relationshipId)}
             readonly={readonly}
             onEdit={onEdit ? () => onEdit(relationship) : undefined}
-            onDelete={onDelete ? () => onDelete(relationshipId) : undefined}
+            onDelete={onDelete ? () => onDelete(relationship) : undefined}
           />
         );
       })}

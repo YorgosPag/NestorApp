@@ -23,6 +23,8 @@ import {
   createReciprocalRelationship,
   updateOrganizationalHierarchy
 } from './relationship-helpers';
+import { getRelationshipGovernanceInfo } from './relationship-governance';
+import { deleteReciprocalRelationship, terminateReciprocalRelationship } from './relationship-reciprocal-ops';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -331,6 +333,52 @@ export class RelationshipCRUDService {
   // ========================================================================
 
   /**
+   * 🛑 Terminate Relationship (Lifecycle-safe deactivation)
+   */
+  static async terminateRelationship(relationshipId: string, terminatedBy: string): Promise<ContactRelationship> {
+    const relationship = await this.getRelationshipById(relationshipId);
+    if (!relationship) {
+      throw new Error('relationships.form.validation.relationshipNotFound');
+    }
+
+    const terminationDate = relationship.endDate || new Date().toISOString();
+    const changeEntry = {
+      changeDate: new Date().toISOString(),
+      changeType: 'status_change' as const,
+      changedBy: terminatedBy,
+      notes: 'Relationship terminated via governed UI flow'
+    };
+
+    const updates: Partial<ContactRelationship> = {
+      status: 'terminated',
+      endDate: terminationDate,
+      updatedAt: new Date(),
+      lastModifiedBy: terminatedBy,
+      changeHistory: [...(relationship.changeHistory || []), changeEntry]
+    };
+
+    if (relationship.employmentStatus && relationship.employmentStatus !== 'terminated') {
+      updates.employmentStatus = 'terminated';
+    }
+
+    await FirestoreRelationshipAdapter.updateRelationship(relationshipId, updates);
+
+    try {
+      await terminateReciprocalRelationship(relationship, terminatedBy, terminationDate);
+    } catch (reciprocalError) {
+      logger.warn('⚠️ CRUD: Reciprocal termination failed (non-blocking):', reciprocalError);
+    }
+
+    const terminatedRelationship: ContactRelationship = {
+      ...relationship,
+      ...updates
+    };
+
+    logger.info('✅ CRUD: Relationship terminated successfully:', relationshipId);
+    return terminatedRelationship;
+  }
+
+  /**
    * 🗑️ Delete Relationship (Hard Delete + Cascade Reciprocal)
    */
   static async deleteRelationship(relationshipId: string, _deletedBy: string): Promise<boolean> {
@@ -341,13 +389,18 @@ export class RelationshipCRUDService {
         return false;
       }
 
+      const governance = getRelationshipGovernanceInfo(relationship);
+      if (!governance.canHardDelete) {
+        throw new Error('relationships.status.deleteBlockedActiveRole');
+      }
+
       // Hard delete the relationship from Firestore
       await FirestoreRelationshipAdapter.deleteRelationship(relationshipId);
       logger.info('✅ CRUD: Relationship hard-deleted:', relationshipId);
 
       // Cascade: delete reciprocal relationship (reverse direction, same type or mapped type)
       try {
-        await this.deleteReciprocalRelationship(relationship);
+        await deleteReciprocalRelationship(relationship);
       } catch (reciprocalError) {
         logger.warn('⚠️ CRUD: Reciprocal deletion failed (non-blocking):', reciprocalError);
       }
@@ -356,42 +409,7 @@ export class RelationshipCRUDService {
 
     } catch (error) {
       logger.error('❌ CRUD: Error deleting relationship:', error);
-      return false;
-    }
-  }
-
-  /**
-   * 🔄 Delete Reciprocal Relationship (cascade)
-   */
-  private static async deleteReciprocalRelationship(relationship: ContactRelationship): Promise<void> {
-    const reciprocalMappings: Partial<Record<RelationshipType, RelationshipType>> = {
-      'client': 'vendor',
-      'vendor': 'client',
-      'partner': 'partner',
-      'colleague': 'colleague',
-      'mentor': 'protege',
-      'protege': 'mentor',
-      'friend': 'friend',
-      'family': 'family',
-    };
-
-    const reciprocalType = reciprocalMappings[relationship.relationshipType];
-    if (!reciprocalType) return; // Employment/government types have no reciprocal
-
-    try {
-      const reciprocal = await FirestoreRelationshipAdapter.getSpecificRelationship(
-        relationship.targetContactId,
-        relationship.sourceContactId,
-        reciprocalType
-      );
-
-      if (reciprocal) {
-        await FirestoreRelationshipAdapter.deleteRelationship(reciprocal.id);
-        logger.info('✅ CRUD: Reciprocal relationship cascade-deleted:', reciprocal.id);
-      }
-    } catch (error) {
-      // Swallow index errors — reciprocal might not exist
-      logger.warn('⚠️ CRUD: Could not find/delete reciprocal:', error);
+      throw error;
     }
   }
 
