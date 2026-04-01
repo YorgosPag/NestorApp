@@ -1,12 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent, requireProjectInTenant, TenantIsolationError } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { Pool } from 'pg';
-import { generateRequestId } from '@/services/enterprise-id.service';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { createModuleLogger } from '@/lib/telemetry';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  withAuth,
+  logAuditEvent,
+  requireProjectInTenant,
+  TenantIsolationError,
+} from "@/lib/auth";
+import type { AuthContext, PermissionCache } from "@/lib/auth";
+import { Pool } from "pg";
+import { generateRequestId } from "@/services/enterprise-id.service";
+import { withStandardRateLimit } from "@/lib/middleware/with-rate-limit";
+import { createModuleLogger } from "@/lib/telemetry";
 
-const logger = createModuleLogger('V2ProjectCustomersRoute');
+const logger = createModuleLogger("V2ProjectCustomersRoute");
 
 // 🏢 ENTERPRISE API V2 - PostgreSQL Version
 // ============================================
@@ -30,7 +35,7 @@ const logger = createModuleLogger('V2ProjectCustomersRoute');
 // PostgreSQL Connection Pool (Enterprise-grade)
 const pool = new Pool({
   host: process.env.POSTGRES_HOST,
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
+  port: parseInt(process.env.POSTGRES_PORT || "5432"),
   database: process.env.POSTGRES_DATABASE,
   user: process.env.POSTGRES_USER,
   password: process.env.POSTGRES_PASSWORD,
@@ -46,7 +51,7 @@ interface ProjectCustomer {
   email: string;
   phone: string;
   mobile: string;
-  contactType: 'individual' | 'company' | 'service';
+  contactType: "individual" | "company" | "service";
   propertiesCount: number;
   totalValue: number;
   averagePropertyValue: number;
@@ -73,7 +78,7 @@ interface ProjectCustomersResponse {
   customers: ProjectCustomer[];
   summary: {
     totalCustomers: number;
-    totalUnitsSold: number;
+    totalPropertiesSold: number;
     totalSalesValue: number;
     averageSaleValue: number;
     deliveryCompleteCount: number;
@@ -102,13 +107,15 @@ interface ProjectCustomersResponse {
  */
 export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
-  context?: { params: Promise<{ projectId: string }> }
+  context?: { params: Promise<{ projectId: string }> },
 ) {
-  const handler = withAuth<ProjectCustomersResponse | { success: boolean; error: string }>(
+  const handler = withAuth<
+    ProjectCustomersResponse | { success: boolean; error: string }
+  >(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleGetCustomers(req, ctx, context!.params);
     },
-    { permissions: 'projects:projects:view' }
+    { permissions: "projects:projects:view" },
   );
 
   return handler(request);
@@ -117,7 +124,7 @@ export const GET = withStandardRateLimit(async function GET(
 async function handleGetCustomers(
   request: NextRequest,
   ctx: AuthContext,
-  paramsPromise: Promise<{ projectId: string }>
+  paramsPromise: Promise<{ projectId: string }>,
 ) {
   const startTime = Date.now();
   // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
@@ -127,11 +134,14 @@ async function handleGetCustomers(
     const { projectId } = await paramsPromise;
 
     // 🔒 Input Validation
-    if (!projectId || projectId.trim() === '') {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid project ID provided'
-      }, { status: 400 });
+    if (!projectId || projectId.trim() === "") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid project ID provided",
+        },
+        { status: 400 },
+      );
     }
 
     // 🔒 TENANT ISOLATION - Centralized validation
@@ -139,15 +149,18 @@ async function handleGetCustomers(
       await requireProjectInTenant({
         ctx,
         projectId,
-        path: `/api/v2/projects/${projectId}/customers`
+        path: `/api/v2/projects/${projectId}/customers`,
       });
     } catch (error) {
       // Enterprise: Typed error with explicit status (NO string parsing)
       if (error instanceof TenantIsolationError) {
-        return NextResponse.json({
-          success: false,
-          error: error.message
-        }, { status: error.status });
+        return NextResponse.json(
+          {
+            success: false,
+            error: error.message,
+          },
+          { status: error.status },
+        );
       }
       throw error; // Re-throw unexpected errors
     }
@@ -221,7 +234,7 @@ async function handleGetCustomers(
               'phone', ca.phone,
               'mobile', ca.mobile,
               'contactType', ca.contact_type,
-              'unitsCount', ca.units_count,
+              'propertiesCount', ca.units_count,
               'totalValue', ca.total_value,
               'averageUnitValue', ca.avg_unit_value,
               'purchaseDate', ca.first_purchase_date,
@@ -259,11 +272,14 @@ async function handleGetCustomers(
     const processingStartTime = Date.now();
 
     if (result.rows.length === 0) {
-      logger.info('Project not found', { requestId, projectId });
-      return NextResponse.json({
-        success: false,
-        error: 'Project not found'
-      }, { status: 404 });
+      logger.info("Project not found", { requestId, projectId });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Project not found",
+        },
+        { status: 404 },
+      );
     }
 
     const projectData = result.rows[0];
@@ -280,71 +296,78 @@ async function handleGetCustomers(
       customers: customers,
       summary: {
         totalCustomers: parseInt(projectData.total_customers) || 0,
-        totalUnitsSold: parseInt(projectData.total_units_sold) || 0,
+        totalPropertiesSold: parseInt(projectData.total_units_sold) || 0,
         totalSalesValue: parseFloat(projectData.total_sales_value) || 0,
         averageSaleValue: parseFloat(projectData.average_sale_value) || 0,
-        deliveryCompleteCount: parseInt(projectData.delivery_complete_count) || 0,
+        deliveryCompleteCount:
+          parseInt(projectData.delivery_complete_count) || 0,
         pendingDeliveryCount: parseInt(projectData.pending_delivery_count) || 0,
       },
       performance: {
         queryTimeMs: queryEndTime - queryStartTime,
         dataProcessingTimeMs: processingEndTime - processingStartTime,
-        totalTimeMs: totalTime
-      }
+        totalTimeMs: totalTime,
+      },
     };
 
     // 🎯 Performance Logging
-    logger.info('Enterprise API completed successfully', {
+    logger.info("Enterprise API completed successfully", {
       requestId,
       totalTimeMs: totalTime,
       queryTimeMs: queryEndTime - queryStartTime,
       totalCustomers: response.summary.totalCustomers,
-      totalUnitsSold: response.summary.totalUnitsSold,
-      totalSalesValue: response.summary.totalSalesValue
+      totalPropertiesSold: response.summary.totalPropertiesSold,
+      totalSalesValue: response.summary.totalSalesValue,
     });
 
     // Audit successful access
-    await logAuditEvent(ctx, 'data_accessed', projectId, 'project', {
+    await logAuditEvent(ctx, "data_accessed", projectId, "project", {
       metadata: {
         path: `/api/v2/projects/${projectId}/customers`,
-        reason: `Project customers accessed (${response.summary.totalCustomers} customers, ${response.summary.totalUnitsSold} units, ${totalTime}ms)`
-      }
+        reason: `Project customers accessed (${response.summary.totalCustomers} customers, ${response.summary.totalPropertiesSold} properties, ${totalTime}ms)`,
+      },
     });
 
     return NextResponse.json(response);
-
   } catch (error) {
     const totalTime = Date.now() - startTime;
-    logger.error('Enterprise API Error', { requestId, totalTimeMs: totalTime, error });
+    logger.error("Enterprise API Error", {
+      requestId,
+      totalTimeMs: totalTime,
+      error,
+    });
 
     // 🚨 Enterprise Error Handling
-    let errorMessage = 'Internal server error';
+    let errorMessage = "Internal server error";
     let errorCode = 500;
 
     if (error instanceof Error) {
-      if (error.message.includes('connection')) {
-        errorMessage = 'Database connection error';
+      if (error.message.includes("connection")) {
+        errorMessage = "Database connection error";
         errorCode = 503;
-      } else if (error.message.includes('timeout')) {
-        errorMessage = 'Database query timeout';
+      } else if (error.message.includes("timeout")) {
+        errorMessage = "Database query timeout";
         errorCode = 504;
-      } else if (error.message.includes('permission')) {
-        errorMessage = 'Database permission error';
+      } else if (error.message.includes("permission")) {
+        errorMessage = "Database permission error";
         errorCode = 403;
       }
     }
 
-    return NextResponse.json({
-      success: false,
-      error: errorMessage,
-      errorType: 'DATABASE_ERROR',
-      requestId,
-      projectId: (await paramsPromise).projectId,
-      performance: {
-        totalTimeMs: totalTime,
-        failed: true
-      }
-    }, { status: errorCode });
+    return NextResponse.json(
+      {
+        success: false,
+        error: errorMessage,
+        errorType: "DATABASE_ERROR",
+        requestId,
+        projectId: (await paramsPromise).projectId,
+        performance: {
+          totalTimeMs: totalTime,
+          failed: true,
+        },
+      },
+      { status: errorCode },
+    );
   }
 }
 
@@ -352,7 +375,10 @@ async function handleGetCustomers(
 
 // GET /api/v2/projects/[projectId]/customers/[customerId]
 // - Single customer detailed view με όλες τις purchases
-export async function getCustomerDetails(projectId: string, customerId: string) {
+export async function getCustomerDetails(
+  projectId: string,
+  customerId: string,
+) {
   const query = `
     SELECT
       c.*,
