@@ -37,22 +37,23 @@ import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
   ENTITY_LINKING_CONFIG,
-  ENTITY_API_ENDPOINTS,
   ERROR_MESSAGES,
   getRelationshipKey,
-  isEnterpriseId,
 } from './config';
+import {
+  getAvailableEntities,
+  getAvailableBuildingsForProject,
+  getAvailablePropertiesForBuilding,
+} from './entity-linking-queries';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import type {
   EntityType,
   LinkEntityParams,
   UnlinkEntityParams,
-  GetAvailableEntitiesParams,
   LinkResult,
   OperationErrorResult,
   GetAvailableEntitiesResult,
-  EntityWithMetadata,
   EntityLinkingErrorCode,
 } from './types';
 
@@ -245,7 +246,7 @@ export class EntityLinkingService {
     const parentTypeMap: Record<EntityType, EntityType | null> = {
       project: 'company',
       building: 'project',
-      unit: 'building',
+      property: 'building',
       floor: 'building',
       company: null, // Companies have no parent
     };
@@ -355,152 +356,17 @@ export class EntityLinkingService {
     };
   }
 
-  /**
-   * 📋 Get available entities for linking
-   *
-   * Features:
-   * - Cache-aside pattern with TTL
-   * - Retry logic with exponential backoff
-   * - Audit logging
-   *
-   * @param params - Query parameters
-   * @returns Promise<GetAvailableEntitiesResult> - Available entities
-   */
+  /** 📋 Delegates to entity-linking-queries.ts (SRP extraction) */
   static async getAvailableEntities(
-    params: GetAvailableEntitiesParams
+    params: import('./types').GetAvailableEntitiesParams
   ): Promise<GetAvailableEntitiesResult> {
-    const { entityType, parentId, includeLinkedToOthers = false } = params;
-    const startTime = Date.now();
-
-    // Try cache first
-    const cached = EntityLinkingCache.getAvailableEntities(entityType, parentId);
-    if (cached) {
-      AuditLogger.log({
-        action: 'CACHE_HIT',
-        entityType,
-        success: true,
-        metadata: { parentId, count: cached.length },
-      });
-      return {
-        success: true,
-        entities: cached,
-        count: cached.length,
-      };
-    }
-
-    AuditLogger.log({
-      action: 'CACHE_MISS',
-      entityType,
-      success: true,
-      metadata: { parentId },
-    });
-
-    const endpoint = ENTITY_API_ENDPOINTS[entityType];
-
-    // Execute with retry logic
-    const retryResult = await withFirestoreRetry(async () => {
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      return response.json();
-    });
-
-    const durationMs = Date.now() - startTime;
-
-    if (!retryResult.success) {
-      AuditLogger.logError(
-        'GET_AVAILABLE_ENTITIES',
-        entityType,
-        parentId ?? 'all',
-        retryResult.error?.message ?? 'Unknown error',
-        'NETWORK_ERROR'
-      );
-      return {
-        success: false,
-        entities: [],
-        count: 0,
-        error: retryResult.error?.message ?? 'Network error',
-      };
-    }
-
-    const result = retryResult.data;
-
-    if (!result.success) {
-      return {
-        success: false,
-        entities: [],
-        count: 0,
-        error: result.error || 'Failed to fetch entities',
-      };
-    }
-
-    // Get the entities array from response (different APIs return different keys)
-    const rawEntities = result[`${entityType}s`] || result.data || result.entities || [];
-
-    // Filter entities
-    const filteredEntities: EntityWithMetadata[] = rawEntities
-      .filter((entity: Record<string, unknown>) => {
-        // Filter by enterprise ID
-        const entityId = String(entity.id || '');
-        if (!isEnterpriseId(entityId)) return false;
-
-        // Filter by parent linkage if specified
-        if (parentId && !includeLinkedToOthers) {
-          const foreignKeyMap: Record<EntityType, string> = {
-            building: 'projectId',
-            unit: 'buildingId',
-            project: 'companyId',
-            floor: 'buildingId',
-            company: '',
-          };
-
-          const foreignKey = foreignKeyMap[entityType];
-          if (foreignKey) {
-            const linkedParent = entity[foreignKey] as string | null | undefined;
-            // Only include if not linked OR linked to current parent
-            if (linkedParent && linkedParent !== parentId) {
-              return false;
-            }
-          }
-        }
-
-        return true;
-      })
-      .map((entity: Record<string, unknown>) => ({
-        id: String(entity.id),
-        name: String(entity.name || 'Χωρίς όνομα'),
-        subtitle: 'Διαθέσιμο για σύνδεση',
-        status: entity.status as string | undefined,
-      }));
-
-    // Cache the results
-    EntityLinkingCache.setAvailableEntities(entityType, filteredEntities, parentId);
-
-    // Log audit
-    AuditLogger.logSuccess('GET_AVAILABLE_ENTITIES', entityType, parentId ?? 'all', {
-      count: filteredEntities.length,
-      durationMs,
-    });
-
-    logger.info(
-      `✅ [EntityLinkingService] Found ${filteredEntities.length} available ${entityType}s (${durationMs}ms)`
-    );
-
-    return {
-      success: true,
-      entities: filteredEntities,
-      count: filteredEntities.length,
-    };
+    return getAvailableEntities(params);
   }
 
   // ==========================================================================
   // CONVENIENCE METHODS
   // ==========================================================================
 
-  /**
-   * 🏢 Link a building to a project (convenience method)
-   */
   static async linkBuildingToProject(buildingId: string, projectId: string): Promise<LinkResult> {
     return this.linkEntity({
       entityId: buildingId,
@@ -510,9 +376,6 @@ export class EntityLinkingService {
     });
   }
 
-  /**
-   * 🏠 Link a property to a building (convenience method)
-   */
   static async linkPropertyToBuilding(propertyId: string, buildingId: string): Promise<LinkResult> {
     return this.linkEntity({
       entityId: propertyId,
@@ -522,9 +385,6 @@ export class EntityLinkingService {
     });
   }
 
-  /**
-   * 📋 Link a project to a company (convenience method)
-   */
   static async linkProjectToCompany(projectId: string, companyId: string): Promise<LinkResult> {
     return this.linkEntity({
       entityId: projectId,
@@ -534,28 +394,12 @@ export class EntityLinkingService {
     });
   }
 
-  /**
-   * 🏢 Get available buildings for a project
-   */
   static async getAvailableBuildingsForProject(projectId: string): Promise<GetAvailableEntitiesResult> {
-    return this.getAvailableEntities({
-      entityType: 'building',
-      parentId: projectId,
-      parentType: 'project',
-      includeLinkedToOthers: false,
-    });
+    return getAvailableBuildingsForProject(projectId);
   }
 
-  /**
-   * 🏠 Get available properties for a building
-   */
   static async getAvailablePropertiesForBuilding(buildingId: string): Promise<GetAvailableEntitiesResult> {
-    return this.getAvailableEntities({
-      entityType: 'property',
-      parentId: buildingId,
-      parentType: 'building',
-      includeLinkedToOthers: false,
-    });
+    return getAvailablePropertiesForBuilding(buildingId);
   }
 
   // ==========================================================================

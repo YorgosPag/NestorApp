@@ -94,8 +94,8 @@ export function UnitStep({
               {units.map(unit => (
                 <SelectItem key={unit.id} value={unit.id}>
                   <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
-                    <NAVIGATION_ENTITIES.unit.icon
-                      className={`${getIconSize('field')} ${NAVIGATION_ENTITIES.unit.color}`}
+                    <NAVIGATION_ENTITIES.property.icon
+                      className={`${getIconSize('field')} ${NAVIGATION_ENTITIES.property.color}`}
                     />
                     <span>{unit.name || unit.unitName}</span>
                     {unit.type && <span className={typography.body.sm}>({unit.type})</span>}

@@ -23,7 +23,7 @@ interface KindSelectorProps {
 }
 
 const kindIcons = {
-  unit: { icon: Home, color: OVERLAY_TOOLBAR_COLORS.unit, label: 'Unit' },
+  property: { icon: Home, color: OVERLAY_TOOLBAR_COLORS.property, label: 'Property' },
   parking: { icon: Car, color: OVERLAY_TOOLBAR_COLORS.parking, label: 'Parking' },
   storage: { icon: Package, color: OVERLAY_TOOLBAR_COLORS.storage, label: 'Storage' },
   footprint: { icon: Footprints, color: OVERLAY_TOOLBAR_COLORS.footprint, label: 'Footprint' }

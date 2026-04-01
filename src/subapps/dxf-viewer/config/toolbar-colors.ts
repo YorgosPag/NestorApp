@@ -145,7 +145,7 @@ export const OVERLAY_TOOLBAR_COLORS = {
   redo: HOVER_TEXT_EFFECTS.INDIGO,
 
   // Kind icons (overlay types)
-  unit: HOVER_TEXT_EFFECTS.BLUE,        // Unit overlays
+  property: HOVER_TEXT_EFFECTS.BLUE,     // Property overlays
   parking: HOVER_TEXT_EFFECTS.AMBER,    // Parking overlays
   storage: HOVER_TEXT_EFFECTS.TEAL,     // Storage overlays
   footprint: HOVER_TEXT_EFFECTS.SLATE,  // Footprint overlays

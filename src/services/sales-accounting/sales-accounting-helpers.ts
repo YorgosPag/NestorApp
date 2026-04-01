@@ -266,7 +266,7 @@ export function buildLineDescription(
   item: SaleLineItem
 ): string {
   const assetLabels: Record<SaleLineItem['assetType'], string> = {
-    unit: 'Μονάδα',
+    property: 'Ακίνητο',
     parking: 'Θέση στάθμευσης',
     storage: 'Αποθήκη',
   };

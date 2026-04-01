@@ -116,7 +116,7 @@ export function useFloorEntitiesForLinking({
       // useFirestoreProperties already supports floorId in API query — no client filter needed
       result = units.map(u => ({
         id: u.id,
-        displayName: u.name || u.unitName || u.code || u.id,
+        displayName: u.name || u.code || u.id,
         commercialStatus: u.commercialStatus,
         linkedToOverlayId: linkedEntityIds.get(u.id) ?? null,
         kind: 'property' as const,

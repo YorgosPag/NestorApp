@@ -59,7 +59,7 @@ const logger = createModuleLogger('CustomerActionButtons');
  */
 const getDefaultContextActions = (context: CustomerInfoContext): CustomerActionType[] => {
   const defaultActions: Record<CustomerInfoContext, CustomerActionType[]> = {
-    unit: ['view', 'call', 'email', 'reassign'],
+    property: ['view', 'call', 'email', 'reassign'],
     building: ['view', 'call', 'email', 'history'],
     project: ['view', 'call', 'email', 'history'],
     contact: ['call', 'email', 'edit', 'documents'],

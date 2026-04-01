@@ -66,8 +66,8 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
               building: data.building
                 ? { id: data.building.id, name: data.building.name }
                 : undefined,
-              unit: { id: data.property.id, name: data.property.name },
-              currentLevel: 'units',
+              property: { id: data.property.id, name: data.property.name },
+              currentLevel: 'properties',
             });
           }
         }

@@ -235,7 +235,7 @@ export function useContactEntityLinks(
   const [grouped, setGrouped] = useState<GroupedContactEntityLinks>({
     projects: [],
     buildings: [],
-    units: [],
+    properties: [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -245,7 +245,7 @@ export function useContactEntityLinks(
 
   useEffect(() => {
     if (!contactId || !user) {
-      setGrouped({ projects: [], buildings: [], units: [] });
+      setGrouped({ projects: [], buildings: [], properties: [] });
       setIsLoading(false);
       return;
     }
@@ -267,7 +267,7 @@ export function useContactEntityLinks(
         const result: GroupedContactEntityLinks = {
           projects: [],
           buildings: [],
-          units: [],
+          properties: [],
         };
 
         for (const link of rawLinks) {
@@ -282,7 +282,7 @@ export function useContactEntityLinks(
               result.buildings.push(entityLink);
               break;
             case 'property':
-              result.units.push(entityLink);
+              result.properties.push(entityLink);
               break;
           }
         }

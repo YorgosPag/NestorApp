@@ -91,7 +91,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
           {...props}
           overlayMode="draw"
           currentStatus="for-sale"
-          currentKind="unit"
+          currentKind="property"
         />
     </div>
   </div>

@@ -106,7 +106,7 @@ const ENTITY_ROUTES: Record<NavigableEntityType, EntityRouteConfig> = {
     },
     supportedActions: ['view', 'edit', 'filter', 'select']
   },
-  unit: {
+  property: {
     basePath: '/spaces/properties',  // ✅ ΣΩΣΤΟ: Υπάρχει /spaces/properties σελίδα
     parameterKeys: {
       id: 'propertyId',

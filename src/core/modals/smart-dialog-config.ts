@@ -41,9 +41,8 @@ const ENTITY_FIELDS: Record<DialogEntityType, string[]> = {
   company: ['company_name', 'vat_number', 'legal_form', 'activity_description'],
   project: ['name', 'description', 'status', 'company', 'budget'],
   building: ['name', 'address', 'floors', 'units', 'project'],
-  unit: ['name', 'type', 'area', 'floor', 'status'],
   opportunity: ['title', 'fullName', 'email', 'phone', 'stage', 'estimatedValue'],
-  property: ['name', 'type', 'status', 'price', 'area'],
+  property: ['name', 'type', 'area', 'floor', 'status', 'price'],
   service: ['service_name', 'category', 'legal_status', 'phone', 'email'],
   task: ['title', 'description', 'type', 'priority', 'status'],
 };
@@ -83,7 +82,6 @@ const ENTITY_LAYOUT: Record<DialogEntityType, LayoutConfig> = {
   project: { size: 'lg', gridColumns: 2, spacing: 'normal' },
   opportunity: { size: 'md', gridColumns: 2, spacing: 'normal' },
   building: { size: 'lg', gridColumns: 2, spacing: 'normal' },
-  unit: { size: 'md', gridColumns: 2, spacing: 'normal' },
   property: { size: 'md', gridColumns: 2, spacing: 'normal' },
   task: { size: 'lg', gridColumns: 2, spacing: 'normal' },
   service: { size: 'md', gridColumns: 2, spacing: 'normal' },

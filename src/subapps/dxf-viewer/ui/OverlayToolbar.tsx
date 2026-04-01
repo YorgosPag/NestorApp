@@ -92,7 +92,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: getShortcutDisplayLabel('overlayEdit') },
   ];
 
-  const kindIcons = { unit: Square, parking: Circle, storage: Triangle, footprint: Grid };
+  const kindIcons = { property: Square, parking: Circle, storage: Triangle, footprint: Grid };
 
   const handleModeChange = (newMode: OverlayEditorMode) => {
     if (newMode === 'draw') {

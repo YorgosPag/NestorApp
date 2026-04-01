@@ -176,7 +176,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
   // 🎨 ENTERPRISE: Kind icons with centralized colors
   const kindIcons: Record<OverlayKind, { icon: typeof Square; color: string }> = {
-    unit: { icon: Square, color: OVERLAY_TOOLBAR_COLORS.unit },
+    property: { icon: Square, color: OVERLAY_TOOLBAR_COLORS.property },
     parking: { icon: Circle, color: OVERLAY_TOOLBAR_COLORS.parking },
     storage: { icon: Triangle, color: OVERLAY_TOOLBAR_COLORS.storage },
     footprint: { icon: Grid, color: OVERLAY_TOOLBAR_COLORS.footprint },

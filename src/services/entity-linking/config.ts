@@ -88,7 +88,7 @@ export const ENTITY_API_ENDPOINTS: Record<EntityType, string> = {
   company: API_ROUTES.COMPANIES.LIST,
   project: API_ROUTES.PROJECTS.LIST,
   building: API_ROUTES.BUILDINGS.LIST,
-  unit: API_ROUTES.PROPERTIES.LIST,
+  property: API_ROUTES.PROPERTIES.LIST,
   floor: API_ROUTES.FLOORS.LIST,
 } as const;
 

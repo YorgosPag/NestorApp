@@ -98,7 +98,7 @@ const STATUS_BADGE_VARIANTS: Record<Status, ListCardBadgeVariant> = {
  * Maps OverlayKind to NavigationEntityType for icon/color resolution
  */
 const KIND_TO_ENTITY: Record<OverlayKind, NavigationEntityType> = {
-  'property': 'unit',
+  'property': 'property',
   'parking': 'parking',
   'storage': 'storage',
   'footprint': 'building', // Use building icon for footprint
@@ -191,7 +191,7 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(fun
    * Determine entity type from overlay kind for icon/color
    */
   const entityType = useMemo<NavigationEntityType>(() => {
-    return KIND_TO_ENTITY[overlay.kind] || 'unit';
+    return KIND_TO_ENTITY[overlay.kind] || 'property';
   }, [overlay.kind]);
 
   /**

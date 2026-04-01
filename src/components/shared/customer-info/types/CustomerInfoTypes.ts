@@ -315,7 +315,7 @@ export interface UseCustomerInfoConfig {
  * Context-specific additional data
  */
 export type ContextualData = {
-  unit: {
+  property: {
     propertyId: string;
     buildingId?: string;
     projectId?: string;
@@ -380,7 +380,7 @@ export type {
  * Default context actions configuration
  */
 export const DEFAULT_CONTEXT_ACTIONS: Record<CustomerInfoContext, CustomerActionType[]> = {
-  unit: ['view', 'call', 'email', 'reassign'],
+  property: ['view', 'call', 'email', 'reassign'],
   building: ['view', 'call', 'email', 'history'],
   project: ['view', 'call', 'email', 'history'],
   contact: ['call', 'email', 'edit', 'documents'],
@@ -392,7 +392,7 @@ export const DEFAULT_CONTEXT_ACTIONS: Record<CustomerInfoContext, CustomerAction
  * Default variant για context
  */
 export const DEFAULT_CONTEXT_VARIANT: Record<CustomerInfoContext, CustomerInfoVariant> = {
-  unit: 'card',
+  property: 'card',
   building: 'table',    // Νέο: table layout με 4 στήλες
   project: 'table',     // Νέο: table layout με 4 στήλες
   contact: 'full',
