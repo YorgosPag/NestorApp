@@ -59,7 +59,7 @@ export async function feedTelegramToPipeline(
         firstName: resolved.firstName,
         primaryPersona: resolved.primaryPersona,
         projectRoles: resolved.projectRoles,
-        linkedPropertyIds: resolved.linkedPropertyIds ?? resolved.linkedUnitIds,
+        linkedPropertyIds: resolved.linkedPropertyIds,
       };
     }
   } catch {

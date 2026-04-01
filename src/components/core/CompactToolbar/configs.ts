@@ -40,7 +40,7 @@ const COMMUNICATIONS_STATUS_LABELS = {
 } as const;
 
 // 🚀 ENTERPRISE: Helper functions για filter categories και sort options
-function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications') {
+function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications') {
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   const baseCategories = [
     {
@@ -136,7 +136,7 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
 }
 
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications') {
+function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications') {
   if (type === 'communications') {
     return [
       { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
@@ -157,7 +157,7 @@ const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
   buildings: 'actions.newBuilding',
   projects: 'actions.newProject',
   contacts: 'actions.newContact',
-  units: 'actions.newUnit',
+  properties: 'actions.newUnit',
   storages: 'actions.newStorage',
   parking: 'actions.newParking',
   communications: 'actions.newMessage'
@@ -169,7 +169,7 @@ const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'tooltips.newBuildingShortcut',
   projects: 'tooltips.newProjectShortcut',
   contacts: 'tooltips.newContactShortcut',
-  units: 'tooltips.newUnitShortcut',
+  properties: 'tooltips.newUnitShortcut',
   storages: 'tooltips.newStorageShortcut',
   parking: 'tooltips.newParkingShortcut',
   communications: 'tooltips.newMessageShortcut'
@@ -179,7 +179,7 @@ const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'toolbar.actions.buildings.edit',
   projects: 'toolbar.actions.projects.edit',
   contacts: 'tooltips.editContact',
-  units: 'toolbar.actions.units.edit',
+  properties: 'toolbar.actions.units.edit',
   storages: 'toolbar.actions.storage.edit',
   parking: 'tooltips.editSelected',
   communications: 'tooltips.editSelected'
@@ -189,7 +189,7 @@ const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'toolbar.actions.buildings.delete',
   projects: 'toolbar.actions.projects.delete',
   contacts: 'tooltips.deleteContact',
-  units: 'toolbar.actions.units.delete',
+  properties: 'toolbar.actions.units.delete',
   storages: 'toolbar.actions.storage.delete',
   parking: 'tooltips.deleteSelected',
   communications: 'tooltips.deleteSelected'
@@ -199,7 +199,7 @@ const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'tooltips.shareBuilding',
   projects: 'tooltips.shareProject',
   contacts: 'tooltips.shareContact',
-  units: 'tooltips.shareUnit',
+  properties: 'tooltips.shareUnit',
   storages: 'tooltips.shareStorage',
   parking: 'toolbar.labels.share',
   communications: 'toolbar.labels.share'
@@ -207,7 +207,7 @@ const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
 
 // 🚀 ENTERPRISE: Smart Configuration Factory - No duplicated labels!
 function createToolbarConfig(
-  type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications'
+  type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications'
 ): CompactToolbarConfig {
   return {
     searchPlaceholder: searchPlaceholders[type],
@@ -263,7 +263,7 @@ function createToolbarConfig(
       deleteItems: true,
       filters: true,
       favorites: true,
-      archive: type !== 'units', // Units might not need archive
+      archive: type !== 'properties', // Properties might not need archive
       export: true,
       import: true,
       refresh: true,
@@ -303,8 +303,9 @@ export const contactsToolbarConfig: CompactToolbarConfig = {
   },
 };
 
-// 🚀 ENTERPRISE: Units Configuration - Using Smart Factory (100+ lines → 1 line!)
-export const unitsToolbarConfig: CompactToolbarConfig = createToolbarConfig('units');
+// 🚀 ENTERPRISE: Properties Configuration - Using Smart Factory (100+ lines → 1 line!)
+export const propertiesToolbarConfig: CompactToolbarConfig = createToolbarConfig('properties');
+
 
 // 🚀 ENTERPRISE: Storages Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const storagesToolbarConfig: CompactToolbarConfig = createToolbarConfig('storages');

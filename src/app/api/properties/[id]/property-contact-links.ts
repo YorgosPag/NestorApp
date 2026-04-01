@@ -123,7 +123,7 @@ export async function deactivatePropertyContactLinks(
   userId: string,
 ): Promise<void> {
   const linksSnap = await db.collection(COLLECTIONS.CONTACT_LINKS)
-    .where('targetEntityType', '==', 'unit')
+    .where('targetEntityType', '==', 'property')
     .where('targetEntityId', '==', propertyId)
     .where('status', '==', 'active')
     .get();

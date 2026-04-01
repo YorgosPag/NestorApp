@@ -158,7 +158,7 @@ export function PropertyInlineCreateForm({
         <EntityCodeField
           value={code}
           onChange={setCode}
-          entityType="unit"
+          entityType="property"
           buildingId={buildingId}
           floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
           propertyType={type || undefined}

@@ -57,15 +57,15 @@ export const GET = withStandardRateLimit(
       }
 
       const { searchParams } = new URL(request.url);
-      const entityType = searchParams.get('entityType') as 'unit' | 'parking' | 'storage';
+      const entityType = searchParams.get('entityType') as 'property' | 'parking' | 'storage';
       const buildingId = searchParams.get('buildingId');
       const floorLevelStr = searchParams.get('floorLevel');
       const propertyType = searchParams.get('propertyType') as PropertyType | null;
       const locationZone = searchParams.get('locationZone') as ParkingLocationZone | null;
 
       // Validation
-      if (!entityType || !['unit', 'parking', 'storage'].includes(entityType)) {
-        throw new ApiError(400, 'entityType must be unit, parking, or storage');
+      if (!entityType || !['property', 'parking', 'storage'].includes(entityType)) {
+        throw new ApiError(400, 'entityType must be property, parking, or storage');
       }
       if (!buildingId) {
         throw new ApiError(400, 'buildingId is required');
@@ -139,7 +139,7 @@ export const GET = withStandardRateLimit(
  */
 async function findNextSequence(
   adminDb: FirebaseFirestore.Firestore,
-  entityType: 'unit' | 'parking' | 'storage',
+  entityType: 'property' | 'parking' | 'storage',
   buildingId: string,
   typeCode: string,
   floorCode: string,
@@ -150,7 +150,7 @@ async function findNextSequence(
   let codeField: string;
 
   switch (entityType) {
-    case 'unit':
+    case 'property':
       collectionName = COLLECTIONS.PROPERTIES;
       codeField = 'code';
       break;
@@ -168,8 +168,8 @@ async function findNextSequence(
   let queryRef = adminDb.collection(collectionName)
     .where(FIELDS.BUILDING_ID, '==', buildingId);
 
-  // For units, we can also filter by floor
-  if (entityType === 'unit') {
+  // For properties, we can also filter by floor
+  if (entityType === 'property') {
     queryRef = queryRef.where('floor', '==', floorLevel);
   }
 

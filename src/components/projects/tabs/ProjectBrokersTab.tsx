@@ -67,7 +67,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   );
 
   const unitLevel = useMemo(
-    () => hook.agreements.filter((a) => a.scope === 'unit'),
+    () => hook.agreements.filter((a) => a.scope === 'property'),
     [hook.agreements]
   );
 

@@ -12,8 +12,8 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+// 🏢 ENTERPRISE: Centralized Property Icon
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 interface CustomerStatsProps {
   contactId: string;
@@ -72,7 +72,7 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
     {
       title: t('stats.propertiesCount'),
       value: stats.propertiesCount,
-      icon: UnitIcon,
+      icon: PropertyIcon,
       color: 'blue',
     },
     {

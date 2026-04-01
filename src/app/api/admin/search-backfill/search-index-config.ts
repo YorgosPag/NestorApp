@@ -46,13 +46,13 @@ export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = 
     requiredPermission: 'buildings:buildings:view',
     routeTemplate: '/buildings?buildingId={id}&selected=true',
   },
-  unit: {
+  property: {
     collection: COLLECTIONS.PROPERTIES,
     titleField: 'name',
     subtitleFields: ['floor', 'type'],
     searchableFields: ['name', 'propertyCode', 'floor'],
     statusField: 'status',
-    audience: (doc) => (doc.isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL),
+    audience: (doc: Record<string, unknown>) => (doc.isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL),
     requiredPermission: 'properties:properties:view',
     routeTemplate: '/properties?propertyId={id}&selected=true',
   },

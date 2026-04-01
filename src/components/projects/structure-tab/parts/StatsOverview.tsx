@@ -44,7 +44,7 @@ export function StatsOverview({
       title: t('structure.stats.units'),
       value: totalProperties,
       description: `${soldProperties} ${t('structure.stats.sold')} • ${unitsArea.toFixed(0)} m²`,
-      icon: NAVIGATION_ENTITIES.unit.icon,
+      icon: NAVIGATION_ENTITIES.property.icon,
       color: 'blue',
     },
     {

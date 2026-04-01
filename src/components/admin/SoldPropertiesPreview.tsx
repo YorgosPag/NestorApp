@@ -25,8 +25,8 @@ import '@/lib/design-system';
 
 const logger = createModuleLogger('SoldPropertiesPreview');
 
-// 🏢 ENTERPRISE: Centralized Unit Icon
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+// 🏢 ENTERPRISE: Centralized Property Icon
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 interface Unit {
   id: string;
@@ -55,13 +55,13 @@ export function SoldPropertiesPreview() {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('admin');
-  const [units, setUnits] = useState<Unit[]>([]);
+  const [properties, setProperties] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [contactLookup, setContactLookup] = useState<ContactLookup>({});
 
-  const loadUnits = async () => {
+  const loadProperties = async () => {
     setLoading(true);
     setError(null);
 
@@ -70,12 +70,12 @@ export function SoldPropertiesPreview() {
       const data = await apiClient.get<UnitsData>(API_ROUTES.PROPERTIES.LIST);
 
       if (data?.success) {
-        setUnits(data.units);
+        setProperties(data.units);
 
-        // 🔍 Load contact names για sold units
+        // 🔍 Load contact names για sold properties
         await loadContactNames(data.units);
       } else {
-        throw new Error('Failed to load units');
+        throw new Error('Failed to load properties');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -84,12 +84,12 @@ export function SoldPropertiesPreview() {
     }
   };
 
-  const loadContactNames = async (units: Unit[]) => {
+  const loadContactNames = async (props: Unit[]) => {
     try {
-      // Get unique contact IDs from sold units
-      const contactIds = units
-        .filter(unit => unit.status === 'sold' && unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD)
-        .map(unit => unit.soldTo!)
+      // Get unique contact IDs from sold properties
+      const contactIds = props
+        .filter(prop => prop.status === 'sold' && prop.soldTo && prop.soldTo !== UNIT_SALE_STATUS.NOT_SOLD)
+        .map(prop => prop.soldTo!)
         .filter((id, index, arr) => arr.indexOf(id) === index); // unique IDs
 
       if (contactIds.length === 0) return;
@@ -134,27 +134,27 @@ export function SoldPropertiesPreview() {
   };
 
   useEffect(() => {
-    loadUnits();
+    loadProperties();
   }, []);
 
-  // Filter sold units without soldTo
-  const soldPropertiesWithoutCustomer = units.filter(unit =>
-    unit.status === 'sold' && (!unit.soldTo || unit.soldTo === UNIT_SALE_STATUS.NOT_SOLD)
+  // Filter sold properties without soldTo
+  const soldPropertiesWithoutCustomer = properties.filter(prop =>
+    prop.status === 'sold' && (!prop.soldTo || prop.soldTo === UNIT_SALE_STATUS.NOT_SOLD)
   );
 
-  // Filter sold units with soldTo
-  const soldPropertiesWithCustomer = units.filter(unit =>
-    unit.status === 'sold' && unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD
+  // Filter sold properties with soldTo
+  const soldPropertiesWithCustomer = properties.filter(prop =>
+    prop.status === 'sold' && prop.soldTo && prop.soldTo !== UNIT_SALE_STATUS.NOT_SOLD
   );
 
-  // 🏢 ENTERPRISE: All units for configured main project
-  const palaiologouUnits = units.filter(unit =>
-    unit.buildingId?.includes('palaiologou') ||
-    unit.project?.includes(process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project') ||
-    unit.project?.includes('Κέντρο') // Based on the API response
+  // 🏢 ENTERPRISE: All properties for configured main project
+  const palaiologouProperties = properties.filter(prop =>
+    prop.buildingId?.includes('palaiologou') ||
+    prop.project?.includes(process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project') ||
+    prop.project?.includes('Κέντρο') // Based on the API response
   );
 
-  const displayUnits = showAll ? units : palaiologouUnits;
+  const displayProperties = showAll ? properties : palaiologouProperties;
 
   return (
     <div className="space-y-6">
@@ -164,13 +164,13 @@ export function SoldPropertiesPreview() {
         stats={[
           {
             title: t('units.total'),
-            value: units.length,
-            icon: UnitIcon,
+            value: properties.length,
+            icon: PropertyIcon,
             color: 'blue',
           },
           {
-            title: t('units.mainProjectUnits', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' }),
-            value: palaiologouUnits.length,
+            title: t('units.mainProjectProperties', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' }),
+            value: palaiologouProperties.length,
             icon: Building2,
             color: 'cyan',
           },
@@ -210,7 +210,7 @@ export function SoldPropertiesPreview() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={loadUnits}
+                onClick={loadProperties}
                 disabled={loading}
               >
                 {loading ? (
@@ -249,41 +249,41 @@ export function SoldPropertiesPreview() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayUnits.length === 0 ? (
+                  {displayProperties.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className={cn("text-center py-8", colors.text.muted)}>
                         {t('units.notFound')}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    displayUnits.map((unit) => (
-                      <TableRow key={unit.id}>
+                    displayProperties.map((prop) => (
+                      <TableRow key={prop.id}>
                         <TableCell className="font-mono text-xs">
-                          {unit.id.substring(0, 8)}...
+                          {prop.id.substring(0, 8)}...
                         </TableCell>
                         <TableCell className="font-medium">
-                          {unit.name || t('units.unnamed')}
+                          {prop.name || t('units.unnamed')}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={
-                              unit.status === 'sold' ? 'destructive' :
-                              unit.status === 'reserved' ? 'secondary' :
-                              unit.status === 'rented' ? 'default' :
+                              prop.status === 'sold' ? 'destructive' :
+                              prop.status === 'reserved' ? 'secondary' :
+                              prop.status === 'rented' ? 'default' :
                               'outline'
                             }
                           >
-                            {unit.status}
+                            {prop.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD ? (
+                          {prop.soldTo && prop.soldTo !== UNIT_SALE_STATUS.NOT_SOLD ? (
                             <div className="space-y-1">
                               <Badge variant="default" className="text-xs">
-                                {contactLookup[unit.soldTo] || t('units.contactLoading')}
+                                {contactLookup[prop.soldTo] || t('units.contactLoading')}
                               </Badge>
                               <div className={cn("text-xs font-mono", colors.text.muted)}>
-                                {t('units.table.idLabel')}: {unit.soldTo.substring(0, 8)}...
+                                {t('units.table.idLabel')}: {prop.soldTo.substring(0, 8)}...
                               </div>
                             </div>
                           ) : (
@@ -293,13 +293,13 @@ export function SoldPropertiesPreview() {
                           )}
                         </TableCell>
                         <TableCell className={cn("text-sm", colors.text.muted)}>
-                          {unit.buildingId?.substring(0, 15)}...
+                          {prop.buildingId?.substring(0, 15)}...
                         </TableCell>
                         <TableCell className={cn("text-sm", colors.text.muted)}>
-                          {unit.project?.substring(0, 20)}...
+                          {prop.project?.substring(0, 20)}...
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrencyWhole(unit.price)}
+                          {formatCurrencyWhole(prop.price)}
                         </TableCell>
                       </TableRow>
                     ))
@@ -311,7 +311,7 @@ export function SoldPropertiesPreview() {
 
           {/* Statistics */}
           <div className={cn("mt-4 text-sm", colors.text.muted)}>
-            {t('units.displaying', { displayed: displayUnits.length, total: units.length })}
+            {t('units.displaying', { displayed: displayProperties.length, total: properties.length })}
             {!showAll && ` ${t('units.filteredFor', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' })}`}
           </div>
         </CardContent>

@@ -39,7 +39,7 @@ export default function SpacesPage() {
       title: t('spaces.stats.apartments'),
       value: '486',
       description: t('spaces.stats.residentialSpaces'),
-      icon: NAVIGATION_ENTITIES.unit.icon,
+      icon: NAVIGATION_ENTITIES.property.icon,
       color: 'green',
       trend: { value: 0, label: t('spaces.stats.stable') }
     },
@@ -92,7 +92,7 @@ export default function SpacesPage() {
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
-                    {React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: `${iconSizes.md} ${NAVIGATION_ENTITIES.unit.color}` })}
+                    {React.createElement(NAVIGATION_ENTITIES.property.icon, { className: `${iconSizes.md} ${NAVIGATION_ENTITIES.property.color}` })}
                   </div>
                   <h3 className="font-semibold">{t('spaces.cards.apartments.title')}</h3>
                 </div>

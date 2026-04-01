@@ -43,7 +43,7 @@ export function ContactEntityLinksView({ contactId }: ContactEntityLinksViewProp
   const hasLinks =
     grouped.projects.length > 0 ||
     grouped.buildings.length > 0 ||
-    grouped.units.length > 0;
+    grouped.properties.length > 0;
 
   const getRoleLabel = (role: string): string => {
     const key = `associations.roles.${role}`;
@@ -91,12 +91,12 @@ export function ContactEntityLinksView({ contactId }: ContactEntityLinksViewProp
               />
             )}
 
-            {/* Units */}
-            {grouped.units.length > 0 && (
+            {/* Properties */}
+            {grouped.properties.length > 0 && (
               <EntityGroup
                 icon={<Home className="h-4 w-4" />}
                 title={t('associations.entityLinks.units')}
-                links={grouped.units}
+                links={grouped.properties}
                 getRoleLabel={getRoleLabel}
               />
             )}

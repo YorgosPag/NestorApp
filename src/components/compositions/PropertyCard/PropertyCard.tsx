@@ -14,9 +14,9 @@ import { cn } from '@/lib/utils';
 import type { StorageUnit } from '@/types/storage';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 interface PropertyCardProps {
   property: StorageUnit;
@@ -151,7 +151,7 @@ export function PropertyCard({
           
           {property.floor && (
             <div className="flex items-center gap-1">
-              <UnitIcon className={`${iconSizes.sm} ${unitColor}`} />
+              <PropertyIcon className={`${iconSizes.sm} ${propertyColor}`} />
               <span>{property.floor}</span>
             </div>
           )}

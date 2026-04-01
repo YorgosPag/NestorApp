@@ -35,7 +35,7 @@ import {
 // TYPES
 // ============================================================================
 
-export type FileEntityType = 'project' | 'building' | 'unit' | 'contact' | 'company';
+export type FileEntityType = 'project' | 'building' | 'property' | 'contact' | 'company';
 export type GroupingMode = 'entity' | 'category';
 export type ViewMode = 'business' | 'technical';
 
@@ -71,7 +71,7 @@ export type DisplayNameTranslator = (file: FileRecord) => string;
 export const ENTITY_ICONS: Record<FileEntityType, React.ReactNode> = {
   project: React.createElement(NAVIGATION_ENTITIES.project.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.project.color}` }),
   building: React.createElement(NAVIGATION_ENTITIES.building.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.building.color}` }),
-  unit: React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.unit.color}` }),
+  property: React.createElement(NAVIGATION_ENTITIES.property.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.property.color}` }),
   contact: React.createElement(NAVIGATION_ENTITIES.contact.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.contact.color}` }),
   company: React.createElement(NAVIGATION_ENTITIES.company.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.company.color}` }),
 };
@@ -101,7 +101,7 @@ export function getFileIcon(file: FileRecord): React.ReactNode {
 export const ENTITY_LABELS: Record<FileEntityType, string> = {
   project: 'files.entities.projects',
   building: 'files.entities.buildings',
-  unit: 'files.entities.units',
+  property: 'files.entities.properties',
   contact: 'files.entities.contacts',
   company: 'files.entities.company',
 };
@@ -119,10 +119,10 @@ export const CATEGORY_LABELS: Partial<Record<FileCategory | 'other', string>> = 
 // TREE BUILDING FUNCTIONS
 // ============================================================================
 
-const SUPPORTED_ENTITY_TYPES: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
+const SUPPORTED_ENTITY_TYPES: FileEntityType[] = ['project', 'building', 'property', 'contact', 'company'];
 
 function createEmptyEntityBuckets(): Record<FileEntityType, Record<string, FileRecord[]>> {
-  return { project: {}, building: {}, unit: {}, contact: {}, company: {} };
+  return { project: {}, building: {}, property: {}, contact: {}, company: {} };
 }
 
 export function buildTreeByEntity(
@@ -251,7 +251,7 @@ export function buildTreeByCategory(
       const meta = group ? STUDY_GROUPS.find((sg) => sg.group === group) ?? null : null;
       groupedByStudyGroup.set(key, {
         meta,
-        entities: { project: [], building: [], unit: [], contact: [], company: [] },
+        entities: { project: [], building: [], property: [], contact: [], company: [] },
       });
     }
     groupedByStudyGroup.get(key)!.entities[entityType as FileEntityType].push(file);

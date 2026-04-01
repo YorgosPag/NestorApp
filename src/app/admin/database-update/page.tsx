@@ -261,19 +261,19 @@ export default function DatabaseUpdatePage() {
     }
   };
 
-  const updateUnitsWithNewStatuses = async (): Promise<number> => {
+  const updatePropertiesWithNewStatuses = async (): Promise<number> => {
     addLog(`🔄 ${t('databaseUpdate.logs.updatingUnits')}`);
 
     let updatedCount = 0;
 
     try {
-      const unitsQuery = query(collection(db, COLLECTIONS.PROPERTIES), limit(20));
-      const unitsSnapshot = await getDocs(unitsQuery);
+      const propertiesQuery = query(collection(db, COLLECTIONS.PROPERTIES), limit(20));
+      const propertiesSnapshot = await getDocs(propertiesQuery);
 
       const batch = writeBatch(db);
       const contactIds = Object.keys(CONTACT_ASSIGNMENTS);
 
-      unitsSnapshot.docs.forEach((unitDoc, index) => {
+      propertiesSnapshot.docs.forEach((propDoc, index) => {
         if (index < contactIds.length) {
           const contactId = contactIds[index];
           // 🏢 ENTERPRISE: Type-safe access with guard
@@ -298,9 +298,9 @@ export default function DatabaseUpdatePage() {
             updateData.companyId = contactId;
           }
 
-          batch.update(doc(db, 'units', unitDoc.id), updateData);
+          batch.update(doc(db, 'properties', propDoc.id), updateData);
 
-          addLog(`  ✅ ${t('databaseUpdate.logs.unitUpdated', { id: unitDoc.id, status: newStatus, contactId })}`);
+          addLog(`  ✅ ${t('databaseUpdate.logs.unitUpdated', { id: propDoc.id, status: newStatus, contactId })}`);
           updatedCount++;
         }
       });
@@ -336,8 +336,8 @@ export default function DatabaseUpdatePage() {
       await updateExistingContacts();
       setCompleted(prev => ({ ...prev, updates: true }));
 
-      // Step 3: Update units and create relationships
-      await updateUnitsWithNewStatuses();
+      // Step 3: Update properties and create relationships
+      await updatePropertiesWithNewStatuses();
       setCompleted(prev => ({ ...prev, units: true, relationships: true }));
 
       addLog(`🎉 ${t('databaseUpdate.logs.completed')}`);

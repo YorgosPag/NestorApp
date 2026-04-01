@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { isRoleBypass } from '@/lib/auth/roles';
+import { requireBuildingInTenant, requireProjectInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -114,15 +115,57 @@ export const GET = withStandardRateLimit(
         // ============================================================================
 
         const baseCollection = getAdminFirestore().collection(COLLECTIONS.FLOORS);
-        let floorsQuery: FirebaseFirestore.Query = isSuperAdmin
-          ? baseCollection
-          : baseCollection.where(FIELDS.COMPANY_ID, '==', tenantCompanyId);
+        let floorsQuery: FirebaseFirestore.Query = baseCollection;
 
-        // Apply additional filters
-        if (buildingId) {
+        if (buildingId && !isSuperAdmin) {
+          try {
+            await requireBuildingInTenant({
+              ctx,
+              buildingId,
+              path: '/api/floors',
+            });
+          } catch (error) {
+            if (error instanceof TenantIsolationError) {
+              return NextResponse.json({
+                success: false,
+                error: error.code === 'NOT_FOUND' ? 'Building not found' : 'Access denied',
+                details: error.message,
+              }, { status: error.status });
+            }
+            throw error;
+          }
+
           floorsQuery = floorsQuery.where(FIELDS.BUILDING_ID, '==', buildingId);
-        } else if (projectId) {
+        } else if (projectId && !isSuperAdmin) {
+          try {
+            await requireProjectInTenant({
+              ctx,
+              projectId,
+              path: '/api/floors',
+            });
+          } catch (error) {
+            if (error instanceof TenantIsolationError) {
+              return NextResponse.json({
+                success: false,
+                error: error.code === 'NOT_FOUND' ? 'Project not found' : 'Access denied',
+                details: error.message,
+              }, { status: error.status });
+            }
+            throw error;
+          }
+
           floorsQuery = floorsQuery.where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(projectId));
+        } else if (isSuperAdmin) {
+          if (queryCompanyId) {
+            floorsQuery = floorsQuery.where(FIELDS.COMPANY_ID, '==', queryCompanyId);
+          }
+          if (buildingId) {
+            floorsQuery = floorsQuery.where(FIELDS.BUILDING_ID, '==', buildingId);
+          } else if (projectId) {
+            floorsQuery = floorsQuery.where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(projectId));
+          }
+        } else {
+          floorsQuery = floorsQuery.where(FIELDS.COMPANY_ID, '==', tenantCompanyId);
         }
 
         // Execute query

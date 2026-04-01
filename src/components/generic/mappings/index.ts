@@ -195,7 +195,7 @@ export type MasterComponentName = keyof typeof MASTER_COMPONENT_MAPPING;
 /**
  * Factory function για να πάρεις το σωστό mapping based on type
  */
-export function getComponentMapping(type: 'project' | 'building' | 'storage' | 'units' | 'contact' | 'master') {
+export function getComponentMapping(type: 'project' | 'building' | 'storage' | 'properties' | 'contact' | 'master') {
   switch (type) {
     case 'project':
       return PROJECT_COMPONENT_MAPPING;
@@ -203,7 +203,7 @@ export function getComponentMapping(type: 'project' | 'building' | 'storage' | '
       return BUILDING_COMPONENT_MAPPING;
     case 'storage':
       return STORAGE_COMPONENT_MAPPING;
-    case 'units':
+    case 'properties':
       return PROPERTIES_COMPONENT_MAPPING;
     case 'contact':
       return CONTACT_COMPONENT_MAPPING;

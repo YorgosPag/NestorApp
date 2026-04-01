@@ -219,7 +219,7 @@ export function BuildingsPageContent() {
     {
       title: t('pages.buildings.dashboard.totalProperties'),
       value: buildingsStats.totalProperties,
-      icon: NAVIGATION_ENTITIES.unit.icon,
+      icon: NAVIGATION_ENTITIES.property.icon,
       color: "pink"
     }
   ];

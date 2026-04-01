@@ -73,7 +73,7 @@ export type PhotosTabEntityType =
   | 'building'
   | 'contact'
   | 'storage'
-  | 'unit'
+  | 'property'
   | 'parking'
   | 'floor';
 
@@ -419,7 +419,7 @@ export type EntityTypeMap = {
   building: { id: string; name: string; address?: string };
   contact: { id: string; name?: string; firstName?: string; lastName?: string };
   storage: { id: string; name: string; area?: number; status?: string; type?: string };
-  unit: { id: string; name: string; floor?: number };
+  property: { id: string; name: string; floor?: number };
   parking: { id: string; name: string; spotNumber?: string };
   floor: { id: string; name: string; level?: number };
 };

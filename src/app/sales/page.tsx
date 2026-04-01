@@ -22,9 +22,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 export default function SalesPage() {
   const iconSizes = useIconSizes();
@@ -108,7 +108,7 @@ export default function SalesPage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-primary/10 rounded-lg">
-                        <UnitIcon className={`${iconSizes.sm} ${unitColor}`} />
+                        <PropertyIcon className={`${iconSizes.sm} ${propertyColor}`} />
                       </div>
                       <h3 className="font-medium">{t('sales.cards.apartments.title')}</h3>
                       <span className="ml-auto bg-primary/20 text-primary px-2 py-1 rounded text-sm font-medium">

@@ -1,5 +1,5 @@
 // 🏢 ENTERPRISE: Types imported from contracts (not server actions file)
-import type { ProjectStructure, ProjectBuilding, ProjectUnit, ProjectStorage, ProjectParking } from "@/services/projects/contracts";
+import type { ProjectStructure, ProjectBuilding, ProjectProperty, ProjectStorage, ProjectParking } from "@/services/projects/contracts";
 
 export interface ProjectStructureTabProps {
   projectId: string;
@@ -8,8 +8,8 @@ export interface ProjectStructureTabProps {
 /** 🏢 ENTERPRISE: Building model with full hierarchy */
 export type BuildingModel = ProjectBuilding;
 
-/** 🏢 ENTERPRISE: Unit model */
-export type UnitModel = ProjectUnit;
+/** 🏢 ENTERPRISE: Property model */
+export type PropertyModel = ProjectProperty;
 
 /** 🏢 ENTERPRISE: Storage model */
 export type StorageModel = ProjectStorage;

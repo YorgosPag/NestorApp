@@ -76,7 +76,7 @@ function SalesAvailableContent() {
       searchTerm: unitFilters.searchTerm || '',
       building: unitFilters.building?.[0] || 'all',
       floor: unitFilters.floor?.[0] || 'all',
-      unitType: unitFilters.type?.[0] || 'all',
+      propertyType: unitFilters.type?.[0] || 'all',
       areaRange: {
         min: unitFilters.areaRange?.min ?? null,
         max: unitFilters.areaRange?.max ?? null,
@@ -195,11 +195,11 @@ function SalesAvailableContent() {
             {(filteredUnits as Property[]).map(unit => (
               <article
                 key={unit.id}
-                onClick={() => handleSelectUnit(unit.id)}
+                onClick={() => handleSelectProperty(unit.id)}
                 className="border border-border rounded-lg shadow-sm bg-card overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectUnit(unit.id); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectProperty(unit.id); }}
               >
                 {/* Thumbnail placeholder */}
                 <div className="aspect-[16/10] bg-muted flex items-center justify-center">

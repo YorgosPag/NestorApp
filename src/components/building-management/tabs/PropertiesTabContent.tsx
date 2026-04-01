@@ -450,8 +450,8 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
       <BuildingSpaceLinkDialog
         open={showLinkDialog}
         onOpenChange={setShowLinkDialog}
-        title={t('spaceLink.linkUnit')}
-        description={t('spaceLink.linkUnitDesc')}
+        title={t('spaceLink.linkProperty')}
+        description={t('spaceLink.linkPropertyDesc')}
         fetchUnlinked={fetchUnlinkedUnits}
         onLink={handleLinkUnit}
       />
@@ -464,7 +464,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
         title={
           confirmAction?.type === 'delete'
             ? t('spaceConfirm.deleteUnit')
-            : t('spaceConfirm.unlinkUnit')
+            : t('spaceConfirm.unlinkProperty')
         }
         description={
           confirmAction?.type === 'delete' ? (
@@ -476,7 +476,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
             </>
           ) : (
             <>
-              {t('spaceConfirm.unlinkUnitDesc')}
+              {t('spaceConfirm.unlinkPropertyDesc')}
               <br /><br />
               <strong>{confirmAction?.item.name}</strong>
             </>

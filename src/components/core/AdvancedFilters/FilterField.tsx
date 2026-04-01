@@ -60,7 +60,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
     if (label.includes('.')) {
       // Check if key has namespace prefix (e.g., 'units.operationalStatus.ready')
       const parts = label.split('.');
-      const knownNamespaces = ['units', 'common', 'navigation', 'properties', 'building', 'filters', 'parking', 'storage'];
+      const knownNamespaces = ['common', 'navigation', 'properties', 'building', 'filters', 'parking', 'storage'];
       if (parts.length >= 2 && knownNamespaces.includes(parts[0])) {
         const namespace = parts[0];
         const key = parts.slice(1).join('.');
@@ -213,15 +213,15 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
                 value={selectedPreset}
               >
                 <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
-                  <SelectValue placeholder={t('filters.areaPresets.all', { ns: 'units' })} />
+                  <SelectValue placeholder={t('filters.areaPresets.all', { ns: 'properties' })} />
                 </SelectTrigger>
                 <SelectContent className="min-w-[14rem]">
-                  <SelectItem value="all">{t('filters.areaPresets.all', { ns: 'units' })}</SelectItem>
-                  <SelectItem value="small">{t('filters.areaPresets.small', { ns: 'units' })}</SelectItem>
-                  <SelectItem value="medium">{t('filters.areaPresets.medium', { ns: 'units' })}</SelectItem>
-                  <SelectItem value="large">{t('filters.areaPresets.large', { ns: 'units' })}</SelectItem>
-                  <SelectItem value="veryLarge">{t('filters.areaPresets.veryLarge', { ns: 'units' })}</SelectItem>
-                  <SelectItem value="custom">{t('filters.areaPresets.custom', { ns: 'units' })}</SelectItem>
+                  <SelectItem value="all">{t('filters.areaPresets.all', { ns: 'properties' })}</SelectItem>
+                  <SelectItem value="small">{t('filters.areaPresets.small', { ns: 'properties' })}</SelectItem>
+                  <SelectItem value="medium">{t('filters.areaPresets.medium', { ns: 'properties' })}</SelectItem>
+                  <SelectItem value="large">{t('filters.areaPresets.large', { ns: 'properties' })}</SelectItem>
+                  <SelectItem value="veryLarge">{t('filters.areaPresets.veryLarge', { ns: 'properties' })}</SelectItem>
+                  <SelectItem value="custom">{t('filters.areaPresets.custom', { ns: 'properties' })}</SelectItem>
                 </SelectContent>
               </Select>
 

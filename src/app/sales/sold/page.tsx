@@ -24,9 +24,9 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 export default function SoldPropertiesPage() {
   const iconSizes = useIconSizes();
@@ -101,7 +101,7 @@ export default function SoldPropertiesPage() {
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                    <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
+                    <PropertyIcon className={`${iconSizes.md} ${propertyColor}`} />
                   </div>
                   <h3 className="font-semibold">{t('sales.sold.cards.apartments.title')}</h3>
                 </div>

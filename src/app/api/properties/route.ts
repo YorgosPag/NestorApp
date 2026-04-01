@@ -19,6 +19,7 @@ import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { isRoleBypass } from '@/lib/auth/roles';
+import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -39,6 +40,16 @@ type PropertiesListError = {
 };
 
 type PropertiesListResponse = PropertiesListSuccess | PropertiesListError;
+
+function sortPropertiesByName(
+  properties: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  return properties.sort((left, right) => {
+    const leftName = typeof left.name === 'string' ? left.name : '';
+    const rightName = typeof right.name === 'string' ? right.name : '';
+    return leftName.localeCompare(rightName);
+  });
+}
 
 /**
  * @rateLimit STANDARD (60 req/min) - CRUD
@@ -69,49 +80,50 @@ export const GET = withStandardRateLimit(
         // ============================================================================
 
         const db = getAdminFirestore();
-        let unitsQuery;
+        let unitsQuery: FirebaseFirestore.Query = db.collection(COLLECTIONS.PROPERTIES);
 
-        if (isSuperAdmin && buildingId) {
-          // 🏢 ADR-232: Super admin by buildingId — skip companyId filter
-          unitsQuery = db.collection(COLLECTIONS.PROPERTIES)
-            .where(FIELDS.BUILDING_ID, '==', buildingId)
-            .orderBy('name', 'asc');
+        if (buildingId && !isSuperAdmin) {
+          try {
+            await requireBuildingInTenant({
+              ctx,
+              buildingId,
+              path: '/api/properties',
+            });
+          } catch (error) {
+            if (error instanceof TenantIsolationError) {
+              return NextResponse.json({
+                success: false,
+                error: error.code === 'NOT_FOUND' ? 'Building not found' : 'Access denied',
+                details: error.message,
+              }, { status: error.status });
+            }
+            throw error;
+          }
+
+          unitsQuery = unitsQuery.where(FIELDS.BUILDING_ID, '==', buildingId);
         } else if (isSuperAdmin) {
-          // 🏢 ADR-232: Super admin without buildingId — load ALL units
-          unitsQuery = db.collection(COLLECTIONS.PROPERTIES)
-            .orderBy('name', 'asc');
+          if (queryCompanyId) {
+            unitsQuery = unitsQuery.where(FIELDS.COMPANY_ID, '==', queryCompanyId);
+          }
+          if (buildingId) {
+            unitsQuery = unitsQuery.where(FIELDS.BUILDING_ID, '==', buildingId);
+          }
         } else {
-          unitsQuery = db.collection(COLLECTIONS.PROPERTIES)
-            .where(FIELDS.COMPANY_ID, '==', tenantCompanyId)
-            .orderBy('name', 'asc');
+          unitsQuery = unitsQuery.where(FIELDS.COMPANY_ID, '==', tenantCompanyId);
+        }
+
+        if (floorId) {
+          unitsQuery = unitsQuery.where(FIELDS.FLOOR_ID, '==', floorId);
         }
 
         const propertiesSnapshot = await unitsQuery.get();
 
-        let properties = propertiesSnapshot.docs.map(doc => ({
+        const properties = sortPropertiesByName(propertiesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        }));
+        })));
 
         logger.info('[Properties/List] Found properties', { count: properties.length, companyId: tenantCompanyId, buildingId: buildingId || 'all' });
-
-        // 🏢 ENTERPRISE: Filter by buildingId if provided (for non-super-admin path)
-        if (buildingId && !isSuperAdmin) {
-          properties = properties.filter(property => {
-            const propData = property as Record<string, unknown> & { buildingId?: string };
-            return propData.buildingId === buildingId;
-          });
-          logger.info('[Properties/List] Filtered by buildingId', { buildingId, count: properties.length });
-        }
-
-        // 🏢 ENTERPRISE: Filter by floorId if provided
-        if (floorId) {
-          properties = properties.filter(property => {
-            const propData = property as Record<string, unknown> & { floorId?: string };
-            return propData.floorId === floorId;
-          });
-          logger.info('[Properties/List] Filtered by floorId', { floorId, count: properties.length });
-        }
 
         logger.info('[Properties/List] Complete', { count: properties.length });
 

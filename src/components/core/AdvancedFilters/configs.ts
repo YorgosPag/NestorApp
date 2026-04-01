@@ -38,7 +38,7 @@
 import type {
   FilterPanelConfig,
   ContactFilterState,
-  UnitFilterState,
+  PropertyListFilterState,
   BuildingFilterState,
   ProjectFilterState,
   PropertyFilterState,
@@ -964,7 +964,7 @@ export const defaultPropertyFilters: PropertyFilterState = {
 };
 
 // Default filter states - unchanged for backward compatibility
-export const defaultUnitFilters: UnitFilterState = {
+export const defaultUnitFilters: PropertyListFilterState = {
   searchTerm: "",
   project: [],
   building: [],

@@ -39,19 +39,19 @@ export const getTotals = (structure: ProjectStructure): ProjectTotals => {
   // ==========================================================================
   // UNITS STATS
   // ==========================================================================
-  const totalProperties = structure.buildings.reduce((s, b) => s + (b.units?.length || 0), 0);
+  const totalProperties = structure.buildings.reduce((s, b) => s + (b.properties?.length || 0), 0);
   const soldProperties = structure.buildings.reduce(
-    (s, b) => s + (b.units?.filter(u => u.status === "sold").length || 0), 0
+    (s, b) => s + (b.properties?.filter(u => u.status === "sold").length || 0), 0
   );
   // 🏢 ENTERPRISE: "for-sale" and "for-rent" are the "available" states in property-viewer
   const availableProperties = structure.buildings.reduce(
-    (s, b) => s + (b.units?.filter(u => u.status === "for-sale" || u.status === "for-rent").length || 0), 0
+    (s, b) => s + (b.properties?.filter(u => u.status === "for-sale" || u.status === "for-rent").length || 0), 0
   );
   const reservedProperties = structure.buildings.reduce(
-    (s, b) => s + (b.units?.filter(u => u.status === "reserved").length || 0), 0
+    (s, b) => s + (b.properties?.filter(u => u.status === "reserved").length || 0), 0
   );
   const unitsArea = structure.buildings.reduce(
-    (s, b) => s + (b.units?.reduce((x, u) => x + (u.area || 0), 0) || 0), 0
+    (s, b) => s + (b.properties?.reduce((x, u) => x + (u.area || 0), 0) || 0), 0
   );
 
   // ==========================================================================

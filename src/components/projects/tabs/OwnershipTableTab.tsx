@@ -401,8 +401,8 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                           </span>
                         </TableCell>
                         <TableCell className={typography.special.codeId}>
-                          {row.entityRef.collection === 'units' && <NAVIGATION_ENTITIES.unit.icon className={cn('inline mr-1', iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />}
-                          {row.entityRef.collection === 'units' ? (
+                          {row.entityRef.collection === 'properties' && <NAVIGATION_ENTITIES.property.icon className={cn('inline mr-1', iconSizes.xs, NAVIGATION_ENTITIES.property.color)} />}
+                          {row.entityRef.collection === 'properties' ? (
                             <button type="button" className="hover:underline cursor-pointer" onClick={() => router.push(`/spaces/properties?propertyId=${row.entityRef.id}`)}>{row.entityCode}</button>
                           ) : row.entityCode}
                         </TableCell>

@@ -18,9 +18,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 interface CustomerPropertiesTableProps {
     contactId: string;
@@ -72,7 +72,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
         <div className="mt-4">
             <div className="flex justify-between items-center mb-2">
                 <h3 className="font-semibold text-sm flex items-center gap-2">
-                    <UnitIcon className={`${iconSizes.sm} ${unitColor}`}/>
+                    <PropertyIcon className={`${iconSizes.sm} ${propertyColor}`}/>
                     {t('properties.title', { count: properties.length })}
                 </h3>
                 <Button variant="outline" size="sm" onClick={onAddUnit}>

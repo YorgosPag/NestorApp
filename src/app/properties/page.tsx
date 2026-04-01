@@ -199,8 +199,8 @@ function UnitsPageContent() {
           building: data.building
             ? { id: data.building.id, name: data.building.name }
             : undefined,
-          unit: { id: data.property.id, name: data.property.name },
-          currentLevel: 'units',
+          property: { id: data.property.id, name: data.property.name },
+          currentLevel: 'properties',
         });
       } catch {
         // Graceful — breadcrumb won't sync but page still works
@@ -233,7 +233,7 @@ function UnitsPageContent() {
     {
       title: t('dashboard.stats.totalProperties'),
       value: dashboardStats.totalProperties,
-      icon: NAVIGATION_ENTITIES.unit.icon,
+      icon: NAVIGATION_ENTITIES.property.icon,
       color: "blue"
     },
     // 🏢 ENTERPRISE: Operational status "Ready" instead of sales "Available"
@@ -333,7 +333,7 @@ function UnitsPageContent() {
   if (loading) {
     return (
       <PageContainer ariaLabel={t('page.pageLabel')}>
-        <PageLoadingState icon={NAVIGATION_ENTITIES.unit.icon} message={t('page.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
+        <PageLoadingState icon={NAVIGATION_ENTITIES.property.icon} message={t('page.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
       </PageContainer>
     );
   }
@@ -401,7 +401,7 @@ function UnitsPageContent() {
             additionalContainers={
               <>
                 <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
-                <DetailsCard title={t('page.dashboard.unitTypes')} icon={NAVIGATION_ENTITIES.unit.icon} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
+                <DetailsCard title={t('page.dashboard.unitTypes')} icon={NAVIGATION_ENTITIES.property.icon} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
                 <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData />
                 {/* ✅ ENTERPRISE: Coverage card for documentation completeness (PR1.2) */}
                 <CoverageCard

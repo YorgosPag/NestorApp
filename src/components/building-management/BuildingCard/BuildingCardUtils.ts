@@ -4,8 +4,8 @@ import { Users } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building & Unit icons
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+// 🏢 ENTERPRISE: Centralized Property Icon
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 import { formatFloorLabel, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber, getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -24,17 +24,19 @@ export const formatPricePerSqm = (price?: number, area?: number): string => {
     return formatNumber(value) + getPricePerSqmUnit();
 };
 
+/* eslint-disable design-system/enforce-semantic-colors -- config: defines semantic color mapping */
 export const getProgressColor = (progress: number) => {
     if (progress < 25) return 'text-red-500';
     if (progress < 50) return 'text-yellow-500';
     if (progress < 75) return brandClasses.primary.text;
     return 'text-green-500';
 };
+/* eslint-enable design-system/enforce-semantic-colors */
 
 // 🏢 ENTERPRISE: Centralized Category Icons - ZERO HARDCODED VALUES
 export const getCategoryIcon = (category: string) => {
     switch (category) {
-        case 'residential': return UnitIcon;
+        case 'residential': return PropertyIcon;
         case 'commercial': return NAVIGATION_ENTITIES.building.icon;
         case 'mixed': return Users;
         case 'industrial': return NAVIGATION_ENTITIES.building.icon;
@@ -43,6 +45,7 @@ export const getCategoryIcon = (category: string) => {
 };
 
 
+/* eslint-disable design-system/enforce-semantic-colors -- this IS the semantic color mapping function */
 export const getStatusColor = (status: string, colors?: ReturnType<typeof useSemanticColors>) => {
     if (!colors) {
         // Fallback for cases where colors hook is not available
@@ -63,4 +66,5 @@ export const getStatusColor = (status: string, colors?: ReturnType<typeof useSem
         default: return colors.bg.mutedLight;
     }
 };
+/* eslint-enable design-system/enforce-semantic-colors */
 

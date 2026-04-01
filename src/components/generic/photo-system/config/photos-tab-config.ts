@@ -20,6 +20,7 @@ import type {
   PhotoGridCols,
   PhotoWithMetadata,
 } from './photos-tab-types';
+import { getStatusColor } from '@/lib/design-system';
 
 // =============================================================================
 // SHARED CONSTANTS
@@ -85,14 +86,14 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
     id: 'all',
     label: 'photos.categories.all',
     icon: 'Image',
-    colorClass: 'text-blue-600',
+    colorClass: getStatusColor('info', 'text'),
     filter: () => true,
   },
   {
     id: 'exterior',
     label: 'photos.categories.exterior',
     icon: 'Home',
-    colorClass: 'text-green-600',
+    colorClass: getStatusColor('success', 'text'),
     filter: (photo) =>
       photo.name.includes('Εξωτερική') ||
       photo.name.includes('Πόρτα') ||
@@ -129,7 +130,7 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
     id: 'all',
     label: 'photos.categories.all',
     icon: 'Image',
-    colorClass: 'text-blue-600',
+    colorClass: getStatusColor('info', 'text'),
     filter: () => true,
   },
   {
@@ -260,10 +261,10 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   },
 
   // ---------------------------------------------------------------------------
-  // UNIT
+  // PROPERTY
   // ---------------------------------------------------------------------------
-  unit: {
-    entityType: 'unit',
+  property: {
+    entityType: 'property',
     title: 'photos.tabs.unit',
     titleIcon: 'Home',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,
@@ -272,7 +273,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
     showCategories: false,
     categories: undefined,
     uploadPurpose: 'photo',
-    storageFolder: 'units',
+    storageFolder: 'properties',
     gridCols: DEFAULT_GRID_COLS,
     showEntityInfo: true,
     acceptedTypes: ACCEPTED_IMAGE_TYPES,

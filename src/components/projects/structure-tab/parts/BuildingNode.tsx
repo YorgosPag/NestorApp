@@ -30,7 +30,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import type { BuildingModel, StorageModel, ParkingModel, UnitModel } from '../types';
+import type { BuildingModel, StorageModel, ParkingModel, PropertyModel } from '../types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -39,7 +39,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // =============================================================================
 
 /** Tab types for building spaces */
-type SpaceTab = 'units' | 'storage' | 'parking';
+type SpaceTab = 'properties' | 'storage' | 'parking';
 
 // =============================================================================
 // COMPONENT
@@ -49,7 +49,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const [isExpanded, setIsExpanded] = useState(true);
-  const [activeTab, setActiveTab] = useState<SpaceTab>('units');
+  const [activeTab, setActiveTab] = useState<SpaceTab>('properties');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
@@ -60,15 +60,15 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   // COMPUTED VALUES
   // ==========================================================================
 
-  const units = (building.units || []) as UnitModel[];
+  const properties = (building.properties || []) as PropertyModel[];
   const storages = (building.storages || []) as StorageModel[];
   const parkingSpots = (building.parkingSpots || []) as ParkingModel[];
 
-  // Unit stats
-  const soldProperties = units.filter((u) => u.status === 'sold').length;
-  const totalProperties = units.length;
-  const _totalArea = units.reduce((sum: number, u) => sum + (u.area || 0), 0);
-  const soldArea = units.filter((u) => u.status === 'sold').reduce((sum: number, u) => sum + (u.area || 0), 0);
+  // Property stats
+  const soldProperties = properties.filter((p) => p.status === 'sold').length;
+  const totalProperties = properties.length;
+  const _totalArea = properties.reduce((sum: number, p) => sum + (p.area || 0), 0);
+  const soldArea = properties.filter((p) => p.status === 'sold').reduce((sum: number, p) => sum + (p.area || 0), 0);
 
   // Total counts for subtitle
   const totalStorages = storages.length;
@@ -80,10 +80,10 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
 
   const tabs = useMemo(() => [
     {
-      id: 'units' as SpaceTab,
+      id: 'properties' as SpaceTab,
       label: t('structure.tabs.units'),
-      icon: NAVIGATION_ENTITIES.unit.icon,
-      iconColor: NAVIGATION_ENTITIES.unit.color,
+      icon: NAVIGATION_ENTITIES.property.icon,
+      iconColor: NAVIGATION_ENTITIES.property.color,
       count: totalProperties
     },
     {
@@ -175,13 +175,13 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
 
           {/* Tab content */}
           <div className={spacing.spaceBetween.sm}>
-            {activeTab === 'units' && (
-              units.length === 0 ? (
+            {activeTab === 'properties' && (
+              properties.length === 0 ? (
                 <p className={cn(typography.body.sm, colors.text.muted, spacing.padding.y.md, "text-center")}>
                   {t('structure.noUnits', 'Δεν υπάρχουν μονάδες')}
                 </p>
               ) : (
-                units.map(unit => <PropertyNode key={unit.id} unit={unit} />)
+                properties.map(property => <PropertyNode key={property.id} property={property} />)
               )
             )}
 

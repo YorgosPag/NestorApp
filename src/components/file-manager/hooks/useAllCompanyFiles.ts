@@ -9,6 +9,8 @@
  * Uses Firestore onSnapshot for instant updates when files are uploaded
  * from ANY entry point (project tab, building tab, central file manager).
  *
+ * Types and helper functions extracted to useAllCompanyFiles.helpers.ts (ADR-261)
+ *
  * @module components/file-manager/hooks/useAllCompanyFiles
  * @enterprise ADR-031 - Canonical File Storage System
  *
@@ -36,16 +38,20 @@ import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_STATUS } from '@/config/domain-constants';
 import { normalizeToISO } from '@/lib/date-local';
-
-/**
- * Supported entity types for file stats
- */
-type FileEntityType = 'project' | 'building' | 'unit' | 'contact' | 'company';
-
-/**
- * Common file categories for grouping
- */
-type FileGroupCategory = 'photos' | 'videos' | 'documents' | 'contracts' | 'floorplans' | 'other';
+// 🏢 ENTERPRISE: Helpers extracted for SRP compliance (ADR-261)
+import {
+  groupFilesByEntity,
+  groupFilesByCategory,
+  calculateStats,
+} from './useAllCompanyFiles.helpers';
+// Re-export types for backward compatibility
+export type {
+  FileEntityType,
+  FileGroupCategory,
+  FilesByEntity,
+  FilesByCategory,
+  FileStats,
+} from './useAllCompanyFiles.helpers';
 
 // ============================================================================
 // MODULE LOGGER
@@ -70,39 +76,6 @@ export interface UseAllCompanyFilesParams {
 }
 
 /**
- * Files grouped by entity type and ID
- */
-export interface FilesByEntity {
-  projects: Record<string, FileRecord[]>;
-  buildings: Record<string, FileRecord[]>;
-  units: Record<string, FileRecord[]>;
-  contacts: Record<string, FileRecord[]>;
-  companies: Record<string, FileRecord[]>;
-}
-
-/**
- * Files grouped by category
- */
-export interface FilesByCategory {
-  photos: FileRecord[];
-  videos: FileRecord[];
-  documents: FileRecord[];
-  contracts: FileRecord[];
-  floorplans: FileRecord[];
-  other: FileRecord[];
-}
-
-/**
- * File statistics
- */
-export interface FileStats {
-  totalFiles: number;
-  totalSizeBytes: number;
-  byEntityType: Record<FileEntityType, number>;
-  byCategory: Record<FileGroupCategory, number>;
-}
-
-/**
  * Hook return value
  */
 export interface UseAllCompanyFilesReturn {
@@ -117,11 +90,11 @@ export interface UseAllCompanyFilesReturn {
   /** Refetch files from Firestore */
   refetch: () => Promise<void>;
   /** Files grouped by entity type and ID */
-  filesByEntity: FilesByEntity;
+  filesByEntity: import('./useAllCompanyFiles.helpers').FilesByEntity;
   /** Files grouped by category */
-  filesByCategory: FilesByCategory;
+  filesByCategory: import('./useAllCompanyFiles.helpers').FilesByCategory;
   /** File statistics */
-  stats: FileStats;
+  stats: import('./useAllCompanyFiles.helpers').FileStats;
   /** Move file to trash */
   moveToTrash: (fileId: string, trashedBy: string) => Promise<void>;
   /** Restore file from trash */
@@ -129,150 +102,12 @@ export interface UseAllCompanyFilesReturn {
 }
 
 // ============================================================================
-// HELPER FUNCTIONS
+// HELPER FUNCTIONS (local)
 // ============================================================================
 
 // ADR-218: toISOStringOrPassthrough replaced by centralized normalizeToISO
 const toISOStringOrPassthrough = (value: unknown): string | undefined =>
   normalizeToISO(value) ?? (value as string | undefined);
-
-/**
- * Group files by entity type and ID
- */
-function groupFilesByEntity(files: FileRecord[]): FilesByEntity {
-  const grouped: FilesByEntity = {
-    projects: {},
-    buildings: {},
-    units: {},
-    contacts: {},
-    companies: {},
-  };
-
-  for (const file of files) {
-    const entityType = file.entityType as string;
-    const entityId = file.entityId;
-
-    // Map entity types to our structure
-    let targetGroup: Record<string, FileRecord[]> | undefined;
-    switch (entityType) {
-      case 'project':
-        targetGroup = grouped.projects;
-        break;
-      case 'building':
-        targetGroup = grouped.buildings;
-        break;
-      case 'unit':
-        targetGroup = grouped.units;
-        break;
-      case 'contact':
-        targetGroup = grouped.contacts;
-        break;
-      case 'company':
-        targetGroup = grouped.companies;
-        break;
-      default:
-        // Skip unknown entity types
-        continue;
-    }
-
-    if (!targetGroup) continue;
-
-    if (!targetGroup[entityId]) {
-      targetGroup[entityId] = [];
-    }
-    targetGroup[entityId].push(file);
-  }
-
-  return grouped;
-}
-
-/**
- * Group files by category
- */
-function groupFilesByCategory(files: FileRecord[]): FilesByCategory {
-  const grouped: FilesByCategory = {
-    photos: [],
-    videos: [],
-    documents: [],
-    contracts: [],
-    floorplans: [],
-    other: [],
-  };
-
-  for (const file of files) {
-    const category = file.category as string;
-
-    switch (category) {
-      case 'photos':
-        grouped.photos.push(file);
-        break;
-      case 'videos':
-        grouped.videos.push(file);
-        break;
-      case 'documents':
-        grouped.documents.push(file);
-        break;
-      case 'contracts':
-        grouped.contracts.push(file);
-        break;
-      case 'floorplans':
-        grouped.floorplans.push(file);
-        break;
-      default:
-        grouped.other.push(file);
-    }
-  }
-
-  return grouped;
-}
-
-/**
- * Calculate file statistics
- */
-function calculateStats(files: FileRecord[]): FileStats {
-  const stats: FileStats = {
-    totalFiles: files.length,
-    totalSizeBytes: 0,
-    byEntityType: {
-      project: 0,
-      building: 0,
-      unit: 0,
-      contact: 0,
-      company: 0,
-    },
-    byCategory: {
-      photos: 0,
-      videos: 0,
-      documents: 0,
-      contracts: 0,
-      floorplans: 0,
-      other: 0,
-    },
-  };
-
-  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
-  const supportedCategories: FileGroupCategory[] = ['photos', 'videos', 'documents', 'contracts', 'floorplans'];
-
-  for (const file of files) {
-    stats.totalSizeBytes += file.sizeBytes || 0;
-
-    // Count by entity type
-    const entityType = file.entityType as string;
-    if (supportedEntityTypes.includes(entityType as FileEntityType)) {
-      stats.byEntityType[entityType as FileEntityType]++;
-    }
-
-    // Count by category
-    const category = file.category as string;
-    if (supportedCategories.includes(category as FileGroupCategory)) {
-      stats.byCategory[category as FileGroupCategory]++;
-    } else {
-      stats.byCategory.other++;
-    }
-  }
-
-  return stats;
-}
 
 // ============================================================================
 // HOOK
