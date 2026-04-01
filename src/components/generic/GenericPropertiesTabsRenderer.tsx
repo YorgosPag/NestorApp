@@ -5,7 +5,7 @@ import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
-import type { UnitsTabConfig } from '@/config/properties-tabs-config';
+import type { PropertiesTabConfig } from '@/config/properties-tabs-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Map, FileText, Camera, Video, User } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -21,7 +21,7 @@ const logger = createModuleLogger('GenericPropertiesTabsRenderer');
 // ============================================================================
 
 /** Unit data type for the tabs renderer - Must have id field for PhotosTabContentProps compatibility */
-export type UnitData = { id: string; name?: string; [key: string]: unknown };
+export type PropertyData = { id: string; name?: string; [key: string]: unknown };
 
 /** Floor data type */
 export type FloorData = Record<string, unknown>;
@@ -32,9 +32,9 @@ export type ViewerProps = Record<string, unknown>;
 /** Generic component props type */
 export type GenericComponentProps = Record<string, unknown>;
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 // ============================================================================
 // ICON MAPPING
@@ -44,15 +44,15 @@ const unitColor = NAVIGATION_ENTITIES.unit.color;
  * Mapping από string icons σε Lucide React icons
  */
 const ICON_MAPPING = {
-  // Emoji mapping (legacy) - 🏢 ENTERPRISE: Using centralized UnitIcon
-  '🏠': UnitIcon,
+  // Emoji mapping (legacy) - 🏢 ENTERPRISE: Using centralized PropertyIcon
+  '🏠': PropertyIcon,
   '🗺️': Map,
   '📄': FileText,
   '📸': Camera,
   '🎬': Video,
 
-  // String mapping (new) - 🏢 ENTERPRISE: Using centralized UnitIcon
-  'home': UnitIcon,
+  // String mapping (new) - 🏢 ENTERPRISE: Using centralized PropertyIcon
+  'home': PropertyIcon,
   'user': User,
   'map': Map,
   'file-text': FileText,
@@ -64,7 +64,7 @@ const ICON_MAPPING = {
  * Helper function για την μετατροπή string/emoji icon σε Lucide icon
  */
 function getIconComponent(icon: string) {
-  return ICON_MAPPING[icon as keyof typeof ICON_MAPPING] || UnitIcon;
+  return ICON_MAPPING[icon as keyof typeof ICON_MAPPING] || PropertyIcon;
 }
 
 // ============================================================================
@@ -106,9 +106,9 @@ const COMPONENT_MAPPING: Record<string, React.ComponentType<GenericComponentProp
 
 export interface GenericPropertiesTabsRendererProps {
   /** Units tabs configuration */
-  tabs: UnitsTabConfig[];
+  tabs: PropertiesTabConfig[];
   /** Selected unit data */
-  selectedProperty?: UnitData;
+  selectedProperty?: PropertyData;
   /** Default tab to show */
   defaultTab?: string;
   /** Additional data for specific tabs */
@@ -118,7 +118,7 @@ export interface GenericPropertiesTabsRendererProps {
     safeViewerProps?: ViewerProps;
     safeViewerPropsWithFloors?: ViewerProps;
     setShowHistoryPanel?: (show: boolean) => void;
-    units?: UnitData[];
+    units?: PropertyData[];
   };
   /** Custom component renderers */
   customComponents?: Record<string, React.ComponentType<GenericComponentProps>>;
@@ -196,7 +196,7 @@ export function GenericPropertiesTabsRenderer({
   };
 
   // Helper function to get component props
-  const getComponentProps = (tab: UnitsTabConfig): GenericComponentProps => {
+  const getComponentProps = (tab: PropertiesTabConfig): GenericComponentProps => {
     const baseProps: GenericComponentProps = {
       selectedProperty,
       ...globalProps,
@@ -244,7 +244,7 @@ export function GenericPropertiesTabsRenderer({
   };
 
   // Helper function to get content wrapper
-  const getContentWrapper = (tab: UnitsTabConfig, content: React.ReactNode) => {
+  const getContentWrapper = (tab: PropertiesTabConfig, content: React.ReactNode) => {
     // Special wrapping για info tab
     if (tab.value === 'info') {
       return (
@@ -253,7 +253,7 @@ export function GenericPropertiesTabsRenderer({
             content
           ) : (
             <div className={cn("flex flex-col items-center justify-center h-full text-center", colors.text.muted)}>
-              <UnitIcon className={`${iconSizes.xl3} mb-4 opacity-50 ${unitColor}`} />
+              <PropertyIcon className={`${iconSizes.xl3} mb-4 opacity-50 ${propertyColor}`} />
               <h3 className="text-lg font-semibold mb-2">Επιλέξτε μια μονάδα</h3>
               <p className="text-sm">Επιλέξτε μια μονάδα από τη λίστα αριστερά για να δείτε τις πληροφορίες της.</p>
             </div>
@@ -279,7 +279,7 @@ export function GenericPropertiesTabsRenderer({
     );
   };
 
-  // Μετατροπή UnitsTabConfig[] σε TabDefinition[]
+  // Μετατροπή PropertiesTabConfig[] σε TabDefinition[]
   // 🏢 ENTERPRISE: Translate i18n keys to actual labels
   const tabDefinitions: TabDefinition[] = enabledTabs.map((tab) => {
     const Component = getComponent(tab.component || 'PropertyDetailsContent');

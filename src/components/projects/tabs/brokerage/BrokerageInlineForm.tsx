@@ -31,7 +31,7 @@ import type {
   ExclusivityValidationResult,
 } from '@/types/brokerage';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import type { InlineFormState, UnitSummary } from './brokerage-form-types';
+import type { InlineFormState, PropertySummary } from './brokerage-form-types';
 
 // =============================================================================
 // PROPS
@@ -42,7 +42,7 @@ interface BrokerageInlineFormProps {
   updateForm: <K extends keyof InlineFormState>(key: K, value: InlineFormState[K]) => void;
   isEditMode: boolean;
   projectName: string;
-  units: UnitSummary[];
+  units: PropertySummary[];
   propertyNameMap: Map<string, string>;
   saving: boolean;
   canSave: boolean | string;
@@ -163,20 +163,20 @@ export function BrokerageInlineForm({
         <Label className={typography.label.sm}>{t('sales.legal.selectScope')}</Label>
         <Select
           value={form.scope}
-          onValueChange={(v) => updateForm('scope', v as 'project' | 'unit')}
+          onValueChange={(v) => updateForm('scope', v as 'project' | 'property')}
         >
           <SelectTrigger className="h-9">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="project">{t('sales.legal.scopeProject')}</SelectItem>
-            <SelectItem value="unit">{t('sales.legal.scopeUnit')}</SelectItem>
+            <SelectItem value="property">{t('sales.legal.scopeUnit')}</SelectItem>
           </SelectContent>
         </Select>
       </fieldset>
 
       {/* Unit — conditional */}
-      {form.scope === 'unit' && (
+      {form.scope === 'property' && (
         <fieldset className="space-y-1">
           <Label className={typography.label.sm}>{t('sales.legal.selectProperty')}</Label>
           <Select value={form.propertyId} onValueChange={(v) => updateForm('propertyId', v)}>

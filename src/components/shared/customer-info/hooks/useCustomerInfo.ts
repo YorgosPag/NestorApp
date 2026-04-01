@@ -144,7 +144,7 @@ async function fetchCustomerBasicInfo(contactId: string): Promise<CustomerBasicI
 async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExtendedInfo> {
   try {
     // 🏢 ENTERPRISE: Type-safe API response
-    interface UnitsApiResponse {
+    interface PropertiesApiResponse {
       units: Array<{ id: string }>;
       propertiesCount?: number;
       totalValue?: number;
@@ -158,7 +158,7 @@ async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExt
     // Παράλληλη φόρτωση basic info και units info από τα νέα enterprise APIs
     const [basicInfo, unitsData] = await Promise.all([
       fetchCustomerBasicInfo(contactId),
-      apiClient.get<UnitsApiResponse>(API_ROUTES.CONTACTS.PROPERTIES(contactId))
+      apiClient.get<PropertiesApiResponse>(API_ROUTES.CONTACTS.PROPERTIES(contactId))
     ]);
 
     const units = unitsData?.units || [];

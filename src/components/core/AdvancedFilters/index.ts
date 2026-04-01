@@ -64,6 +64,7 @@ export type {
   FilterPanelConfig,
   GenericFilterState,
   ContactFilterState,
+  PropertyListFilterState,
   UnitFilterState,
   BuildingFilterState,
   ProjectFilterState,

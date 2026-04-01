@@ -209,7 +209,7 @@ export class NavigationApiService {
   static async loadUnitsForFloor(floorId: string, buildingId: string): Promise<NavigationUnit[]> {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      interface UnitsApiResponse {
+      interface PropertiesApiResponse {
         units: Array<{
           id: string;
           name?: string;
@@ -220,7 +220,7 @@ export class NavigationApiService {
         }>;
       }
 
-      const unitsResult = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
+      const unitsResult = await apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
 
       // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
       return (unitsResult?.units || []).map((unit): NavigationUnit => ({
@@ -244,7 +244,7 @@ export class NavigationApiService {
   static async loadUnitsForBuilding(buildingId: string): Promise<NavigationUnit[]> {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      interface UnitsApiResponse {
+      interface PropertiesApiResponse {
         units: Array<{
           id: string;
           name?: string;
@@ -255,7 +255,7 @@ export class NavigationApiService {
         }>;
       }
 
-      const unitsResult = await apiClient.get<UnitsApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`);
+      const unitsResult = await apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`);
 
       // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
       return (unitsResult?.units || []).map((unit): NavigationUnit => ({

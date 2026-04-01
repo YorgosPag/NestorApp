@@ -10,7 +10,7 @@ import type { FloorplanPurpose } from '@/config/domain-constants';
 // TYPES
 // =============================================================================
 
-export type FloorplanType = 'project' | 'building' | 'floor' | 'unit';
+export type FloorplanType = 'project' | 'building' | 'floor' | 'property';
 
 export interface FloorplanImportSelection {
   companyId: string | null;
@@ -109,7 +109,7 @@ export interface FloorsApiResponse {
   floors: FloorItem[];
 }
 
-export interface UnitItem {
+export interface PropertyItem {
   id: string;
   name: string;
   isMultiLevel?: boolean;
@@ -143,7 +143,7 @@ export const FLOORPLAN_PURPOSE_BY_TYPE: Record<FloorplanType, FloorplanPurpose> 
   project: FLOORPLAN_PURPOSES.PROJECT,
   building: FLOORPLAN_PURPOSES.BUILDING,
   floor: FLOORPLAN_PURPOSES.FLOOR,
-  unit: FLOORPLAN_PURPOSES.PROPERTY,
+  property: FLOORPLAN_PURPOSES.PROPERTY,
 };
 
 // =============================================================================

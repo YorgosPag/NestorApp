@@ -26,27 +26,27 @@ import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('PropertiesRoute');
 
 // Response types for type-safe withAuth
-type UnitsListSuccess = {
+type PropertiesListSuccess = {
   success: true;
   properties: unknown[];
   count: number;
 };
 
-type UnitsListError = {
+type PropertiesListError = {
   success: false;
   error: string;
   details?: string;
 };
 
-type UnitsListResponse = UnitsListSuccess | UnitsListError;
+type PropertiesListResponse = PropertiesListSuccess | PropertiesListError;
 
 /**
  * @rateLimit STANDARD (60 req/min) - CRUD
  */
 export const GET = withStandardRateLimit(
   async (request: NextRequest) => {
-  const handler = withAuth<UnitsListResponse>(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<UnitsListResponse>> => {
+  const handler = withAuth<PropertiesListResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<PropertiesListResponse>> => {
       try {
         // 🏢 ENTERPRISE: Extract query parameters for filtering
         const { searchParams } = new URL(request.url);

@@ -231,7 +231,7 @@ export interface ContactFilterState extends GenericFilterState {
   };
 }
 
-export interface UnitFilterState extends GenericFilterState {
+export interface PropertyListFilterState extends GenericFilterState {
   searchTerm: string;
   project: string[];
   building: string[];
@@ -248,6 +248,9 @@ export interface UnitFilterState extends GenericFilterState {
   };
   features: string[];
 }
+
+/** @deprecated Use PropertyListFilterState */
+export type UnitFilterState = PropertyListFilterState;
 
 export interface BuildingFilterState extends GenericFilterState {
   searchTerm: string;

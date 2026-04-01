@@ -91,7 +91,7 @@ export function SalesPropertyListCard({
   const area = unit.areas?.gross ?? unit.area ?? 0;
   const physicalStats = useMemo(() => [
     {
-      icon: NAVIGATION_ENTITIES.unit.icon,
+      icon: NAVIGATION_ENTITIES.property.icon,
       iconColor: 'text-teal-600',
       label: t('sales.fields.type', { defaultValue: 'Τύπος' }),
       value: t(`units:types.${unit.type}`, { defaultValue: unit.type }),
@@ -152,9 +152,9 @@ export function SalesPropertyListCard({
   const showBuyerSection = isReserved || isSold;
 
   // ADR-244: Derive buyer info from owners[] SSoT
-  const unitOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
-  const resolvedBuyerName = formatOwnerNames(unitOwners);
-  const primaryBuyerContactId = getPrimaryBuyerContactId(unitOwners);
+  const propertyOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
+  const resolvedBuyerName = formatOwnerNames(propertyOwners);
+  const primaryBuyerContactId = getPrimaryBuyerContactId(propertyOwners);
 
   const buyerStats = useMemo(() => {
     if (!showBuyerSection) return undefined;
@@ -213,7 +213,7 @@ export function SalesPropertyListCard({
       isSelected={isSelected}
       onClick={() => onSelect?.(unit.id)}
       role="option"
-      entityType="unit"
+      entityType="property"
       className={className}
     />
   );

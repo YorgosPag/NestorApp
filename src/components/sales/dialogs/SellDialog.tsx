@@ -86,9 +86,9 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       setFinalPrice(unit.commercial?.askingPrice?.toString() ?? '');
       setSelectedBrokerId('none');
 
-      const unitOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
-      if (unitOwners && unitOwners.length > 0) {
-        setOwners(unitOwners);
+      const propertyOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
+      if (propertyOwners && propertyOwners.length > 0) {
+        setOwners(propertyOwners);
       } else {
         setOwners([]);
       }

@@ -84,9 +84,9 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
   const router = useRouter();
 
   // ADR-244: Derive buyer info from owners[] SSoT
-  const unitOwners = (unit?.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
-  const resolvedBuyerName = formatOwnerNames(unitOwners);
-  const primaryBuyerContactId = getPrimaryBuyerContactId(unitOwners);
+  const propertyOwners = (unit?.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
+  const resolvedBuyerName = formatOwnerNames(propertyOwners);
+  const primaryBuyerContactId = getPrimaryBuyerContactId(propertyOwners);
 
   if (!unit) return null;
 

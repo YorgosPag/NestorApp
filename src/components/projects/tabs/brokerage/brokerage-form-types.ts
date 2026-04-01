@@ -16,7 +16,7 @@ import type { ExclusivityType, CommissionType } from '@/types/brokerage';
 export interface InlineFormState {
   agentContactId: string;
   agentName: string;
-  scope: 'project' | 'unit';
+  scope: 'project' | 'property';
   propertyId: string;
   exclusivity: ExclusivityType;
   commissionType: CommissionType;
@@ -27,7 +27,7 @@ export interface InlineFormState {
   notes: string;
 }
 
-export interface UnitSummary {
+export interface PropertySummary {
   id: string;
   name: string;
 }

@@ -21,7 +21,7 @@ import type {
   ExclusivityValidationResult,
 } from '@/types/brokerage';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import type { InlineFormState, UnitSummary } from './brokerage-form-types';
+import type { InlineFormState, PropertySummary } from './brokerage-form-types';
 import { EMPTY_FORM } from './brokerage-form-types';
 import { agreementToFormState } from './brokerage-helpers';
 
@@ -40,7 +40,7 @@ export function useBrokerageAgreements(
 
   // Data
   const [agreements, setAgreements] = useState<BrokerageAgreement[]>([]);
-  const [units, setUnits] = useState<UnitSummary[]>([]);
+  const [units, setUnits] = useState<PropertySummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Inline form
@@ -101,7 +101,7 @@ export function useBrokerageAgreements(
         where('projectId', '==', projectId)
       );
       const snap = await getDocs(q);
-      const list: UnitSummary[] = snap.docs.map((d) => ({
+      const list: PropertySummary[] = snap.docs.map((d) => ({
         id: d.id,
         name: (d.data().name as string) || (d.data().propertyName as string) || d.id,
       }));
@@ -125,7 +125,7 @@ export function useBrokerageAgreements(
       return;
     }
 
-    if (form.scope === 'unit' && !form.propertyId) {
+    if (form.scope === 'property' && !form.propertyId) {
       setValidationResult(null);
       return;
     }
@@ -135,7 +135,7 @@ export function useBrokerageAgreements(
       try {
         const result = await BrokerageService.validateExclusivity({
           projectId,
-          propertyId: form.scope === 'unit' ? form.propertyId : null,
+          propertyId: form.scope === 'property' ? form.propertyId : null,
           scope: form.scope,
           exclusivity: form.exclusivity,
           excludeAgreementId: editingAgreement?.id,
@@ -207,7 +207,7 @@ export function useBrokerageAgreements(
 
   const handleSave = useCallback(async () => {
     if (!form.agentContactId || !form.startDate || !projectId) return;
-    if (form.scope === 'unit' && !form.propertyId) return;
+    if (form.scope === 'property' && !form.propertyId) return;
 
     if (!isEditMode) {
       const hasActive = agreements.some(
@@ -233,7 +233,7 @@ export function useBrokerageAgreements(
           editingAgreement.id,
           {
             scope: form.scope,
-            propertyId: form.scope === 'unit' ? form.propertyId : null,
+            propertyId: form.scope === 'property' ? form.propertyId : null,
             exclusivity: form.exclusivity,
             commissionType: form.commissionType,
             commissionPercentage: form.commissionType === 'percentage' ? Number(form.commissionPercentage) : null,
@@ -255,7 +255,7 @@ export function useBrokerageAgreements(
             agentName: form.agentName,
             scope: form.scope,
             projectId,
-            propertyId: form.scope === 'unit' ? form.propertyId : undefined,
+            propertyId: form.scope === 'property' ? form.propertyId : undefined,
             exclusivity: form.exclusivity,
             commissionType: form.commissionType,
             commissionPercentage: form.commissionType === 'percentage' ? Number(form.commissionPercentage) : undefined,

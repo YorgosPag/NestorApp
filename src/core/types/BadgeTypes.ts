@@ -228,11 +228,9 @@ export interface PropertyBadgeProps extends BadgeFactoryOptions {
 
 /**
  * Unit Badge Props - Unit-specific badge component
+ * @deprecated Use PropertyBadgeProps — ADR-269 rename
  */
-export interface UnitBadgeProps extends BadgeFactoryOptions {
-  propertyId?: string;
-  className?: string;
-}
+export type UnitBadgeProps = PropertyBadgeProps;
 
 /**
  * Common Badge Props - Shared badge properties

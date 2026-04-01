@@ -127,7 +127,7 @@ export function FloorFloorplanTabContent({
 
 // ── UnitFloorplanTabContent — per-level filtering (ADR-236 Phase 3) ──
 
-interface UnitFloorplanTabContentProps {
+interface PropertyFloorplanTabContentProps {
   allUnitFloorplans: FileRecord[];
   levelFloorId: string;
   isFirstLevel: boolean;
@@ -142,7 +142,7 @@ interface UnitFloorplanTabContentProps {
 export function UnitFloorplanTabContent({
   allUnitFloorplans, levelFloorId, isFirstLevel,
   loading, error, onRetry, spacing, iconSizes, t,
-}: UnitFloorplanTabContentProps) {
+}: PropertyFloorplanTabContentProps) {
   const filteredFiles = React.useMemo(() => {
     return allUnitFloorplans.filter((file) => {
       if (file.levelFloorId === levelFloorId) return true;

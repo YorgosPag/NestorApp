@@ -192,6 +192,29 @@ Renamed all remaining "unit" type fields across ~70 files:
 - `ProjectsService-broken.ts` — broken backup file
 - `Property.unitName` — kept as legacy fallback
 
+### Phase 11: PascalCase Type Names Rename — ✅ COMPLETE (2026-04-01)
+Renamed remaining PascalCase "Unit" type names to "Property" across ~20 files:
+
+| Old Name | New Name | Files Affected |
+|----------|----------|----------------|
+| `UnitItem` | `PropertyItem` | 2 (floorplan-import-types.ts, useFloorplanImportState.ts) |
+| `UnitSummary` | `PropertySummary` | 4 (brokerage-form-types.ts, useBrokerageAgreements.ts, BrokerageInlineForm.tsx, index.ts) |
+| `UnitData` | `PropertyData` | 1 (GenericPropertiesTabsRenderer.tsx) |
+| `AggregatedUnitData` | `AggregatedPropertyData` | 1 (multi-level.service.ts) |
+| `UnitsApiResponse` | `PropertiesApiResponse` | 3 (LinkedSpacesCard.tsx, useCustomerInfo.ts, navigationApi.ts) |
+| `UnitsListSuccess/Error/Response` | `PropertiesListSuccess/Error/Response` | 1 (api/properties/route.ts) |
+| `UnitFloorplanTabContentProps` | `PropertyFloorplanTabContentProps` | 1 (ReadOnlyMediaSubTabs.tsx) |
+| `UnitFilterState` | `PropertyListFilterState` (+ deprecated alias) | 3 (types.ts, configs.ts, index.ts) |
+| `UnitsTabConfig` | `PropertiesTabConfig` (+ deprecated alias) | 1 (GenericPropertiesTabsRenderer.tsx) |
+| `unitOwners` (variable) | `propertyOwners` | 3 (SaleInfoContent.tsx, SellDialog.tsx, SalesPropertyListCard.tsx) |
+| `UnitBadgeProps` | deprecated alias → `PropertyBadgeProps` | 1 (BadgeTypes.ts) |
+
+**Not renamed** (different concepts or would cause type conflicts):
+- `UnitStatus` — Different type from `PropertyStatus` (parking/storage badge domain)
+- `UnitBadge` component — Tied to UNIT badge domain (parking/storage)
+- `UnitsApiResponse` in dxf-viewer — Excluded directory
+- `StorageUnit*` types — Different entity
+
 ---
 
 ## 6. References
@@ -224,6 +247,7 @@ Renamed all remaining "unit" type fields across ~70 files:
 | 2026-04-01 | Phase 2: Cross-reference fields rename — unitId→propertyId, unitName→propertyName, selectedUnit→selectedProperty, UNIT_*→PROPERTY_* constants, and ~30 other patterns across ~150 files. Clean rename (no backward-compat mapping — dev data only). Remaining `unitId` refs are: dxf-viewer (measurement units), database migrations (historical), auth layer (deprecated aliases), booking-codec (deprecated alias). | Claude Code |
 | 2026-04-01 | Phase 2 fix: Fixed ~15 remaining TS errors from rename — linkedUnitIds→linkedPropertyIds in AI pipeline (14 files), SEARCH_ENTITY_TYPES.UNIT→.PROPERTY, onSelectUnit→onSelectProperty, unitLabel→propertyLabel, OverlayEntity.linked.unitId→propertyId, ResolvedContact.linkedUnitIds→linkedPropertyIds. Documented Phase 10 (pending 70-file type field renames). | Claude Code |
 | 2026-04-01 | Phase 10: Renamed remaining type fields — unitsCount→propertiesCount, totalUnits→totalProperties, soldUnits→soldProperties, BuildingStats fields, payment report fields, i18n keys+values across ~70 files (types, services, API routes, components, hooks, 18 JSON locale files). All phases complete. | Claude Code |
+| 2026-04-01 | Phase 11: PascalCase type names — UnitItem→PropertyItem, UnitSummary→PropertySummary, UnitData→PropertyData, UnitsApiResponse→PropertiesApiResponse, UnitsListSuccess/Error/Response→PropertiesListSuccess/Error/Response, UnitFloorplanTabContentProps→PropertyFloorplanTabContentProps, UnitFilterState→PropertyListFilterState (deprecated alias kept), unitOwners→propertyOwners across ~20 files. UnitStatus/UnitBadge kept (different concept: parking/storage badge domain). | Claude Code |
 
 ---
 

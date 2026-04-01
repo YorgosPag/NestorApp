@@ -154,10 +154,10 @@ export function LinkedSpacesCard({
       }
 
       try {
-        interface UnitsApiResponse {
+        interface PropertiesApiResponse {
           units?: Array<{ id: string; linkedSpaces?: Array<{ spaceId: string }> }>;
         }
-        const result = await apiClient.get<UnitsApiResponse>(
+        const result = await apiClient.get<PropertiesApiResponse>(
           `${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`
         );
         const occupied = new Set<string>();

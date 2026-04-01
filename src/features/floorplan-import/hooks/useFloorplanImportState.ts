@@ -38,7 +38,7 @@ import {
   type BuildingItem,
   type FloorsApiResponse,
   type FloorItem,
-  type UnitItem,
+  type PropertyItem,
   INITIAL_SELECTION,
   TOTAL_STEPS,
   FLOORPLAN_PURPOSE_BY_TYPE,
@@ -100,13 +100,13 @@ export function useFloorplanImportState(
     autoFetch: !!selection.buildingId && step === 5,
   });
 
-  const unitItems: EntityOption[] = rawUnits.map((u: UnitItem) => ({
+  const unitItems: EntityOption[] = rawUnits.map((u: PropertyItem) => ({
     id: u.id,
     label: u.name,
   }));
 
   // ── Multi-level unit detection (ADR-236) ──
-  const selectedProperty = rawUnits.find((u: UnitItem) => u.id === selection.propertyId) as UnitItem | undefined;
+  const selectedProperty = rawUnits.find((u: PropertyItem) => u.id === selection.propertyId) as PropertyItem | undefined;
   const selectedPropertyIsMultiLevel = !!(selectedProperty?.isMultiLevel && selectedProperty.levels && selectedProperty.levels.length >= 2);
 
   const unitLevelItems: EntityOption[] = useMemo(() => {
@@ -318,7 +318,7 @@ export function useFloorplanImportState(
     const label = unitItems.find((u) => u.id === id)?.label ?? null;
     setSelection((prev) => ({
       ...prev, propertyId: id, propertyName: label,
-      floorplanType: 'unit', levelFloorId: null, levelName: null,
+      floorplanType: 'property', levelFloorId: null, levelName: null,
     }));
   }, [unitItems]);
 
@@ -366,7 +366,7 @@ export function useFloorplanImportState(
   const handleNext = useCallback(() => {
     if (canProceed && step < TOTAL_STEPS) {
       if (step === 5) {
-        setSelection((prev) => ({ ...prev, floorplanType: 'unit' }));
+        setSelection((prev) => ({ ...prev, floorplanType: 'property' }));
       }
       setStep((prev) => prev + 1);
     }
@@ -419,8 +419,8 @@ export function useFloorplanImportState(
         entityId = selection.floorId!;
         entityLabel = selection.floorName ?? undefined;
         break;
-      case 'unit':
-        entityType = 'unit' as EntityType;
+      case 'property':
+        entityType = 'property' as EntityType;
         entityId = selection.propertyId!;
         entityLabel = selection.levelName
           ? `${selection.propertyName} — ${selection.levelName}`
@@ -431,7 +431,7 @@ export function useFloorplanImportState(
     }
 
     const linkedTo: string[] = [];
-    if (selection.floorplanType === 'unit') {
+    if (selection.floorplanType === 'property') {
       if (selection.floorId) linkedTo.push(`floor:${selection.floorId}`);
       if (selection.buildingId) linkedTo.push(`building:${selection.buildingId}`);
     } else if (selection.floorplanType === 'floor') {

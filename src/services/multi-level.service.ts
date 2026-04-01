@@ -133,7 +133,7 @@ export function validateMultiLevelFloors(levels: PropertyLevel[]): ValidationRes
 // =============================================================================
 
 /** Aggregated totals computed from per-level data */
-export interface AggregatedUnitData {
+export interface AggregatedPropertyData {
   areas: {
     gross: number;
     net: number;
@@ -162,7 +162,7 @@ export interface AggregatedUnitData {
  * @param levelData — Record<floorId, LevelData> from the unit document
  * @returns aggregated totals ready to be merged into top-level unit fields
  */
-export function aggregateLevelData(levelData: Record<string, LevelData>): AggregatedUnitData {
+export function aggregateLevelData(levelData: Record<string, LevelData>): AggregatedPropertyData {
   const entries = Object.values(levelData);
 
   const areas = {
