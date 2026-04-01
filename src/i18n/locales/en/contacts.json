@@ -394,6 +394,14 @@
         "description": "To create relationships, first save the contact. After saving, the relationship management options will appear."
       }
     },
+    "status": {
+      "createSuccess": "Relationship created successfully!",
+      "updateSuccess": "Relationship updated successfully!",
+      "deleteSuccess": "Relationship deleted successfully!",
+      "createError": "Error creating relationship",
+      "updateError": "Error updating relationship",
+      "deleteError": "Error deleting relationship"
+    },
     "list": {
       "newContact": {
         "title": "Create relationships",
@@ -931,7 +939,19 @@
     },
     "vatDuplicate": "VAT {{vatNumber}} is already used by: {{contactName}}",
     "vatChecking": "Checking VAT...",
-    "vatInvalid": "VAT number must be exactly 9 digits"
+    "vatInvalid": "VAT number must be exactly 9 digits",
+    "arrayValidation": {
+      "invalidEmail": "One or more email addresses are invalid.",
+      "invalidPhone": "One or more phone numbers are invalid.",
+      "invalidUrl": "One or more website URLs are invalid.",
+      "duplicateEmail": "Duplicate email addresses found.",
+      "duplicatePhone": "Duplicate phone numbers found.",
+      "duplicateUrl": "Duplicate website URLs found.",
+      "missingPrimaryEmail": "One email must be marked as primary.",
+      "missingPrimaryPhone": "One phone must be marked as primary.",
+      "multiplePrimaryEmails": "Only one email can be marked as primary.",
+      "multiplePrimaryPhones": "Only one phone can be marked as primary."
+    }
   },
   "submission": {
     "failedUploads": "There are failed uploads. Please try again.",
@@ -1348,5 +1368,29 @@
   },
   "filterBar": {
     "showOnlyWithProperties": "Show only customers with properties"
+  },
+  "trash": {
+    "viewTrash": "Trash",
+    "backToContacts": "Back to Contacts",
+    "trashCount": "{{count}} in trash",
+    "trashCount_one": "1 in trash",
+    "deleteSuccess": "Contact moved to trash",
+    "deleteSuccessMultiple": "{{count}} contacts moved to trash",
+    "undo": "Undo",
+    "undoSuccess": "Contact restored",
+    "undoFailed": "Failed to undo",
+    "restore": "Restore",
+    "restoreSelected": "Restore selected",
+    "restoreSuccess": "{{count}} contacts restored",
+    "restoreSuccess_one": "Contact restored",
+    "restoreFailed": "Failed to restore",
+    "permanentDelete": "Permanently delete",
+    "permanentDeleteConfirm": "This action cannot be undone. The contact will be permanently deleted.",
+    "permanentDeleteSuccess": "Contact permanently deleted",
+    "emptyTrash": "Empty trash",
+    "emptyTrashConfirm": "All contacts in trash will be permanently deleted.",
+    "autoDeleteWarning": "Contacts in trash are automatically deleted after 30 days.",
+    "noTrashItems": "Trash is empty",
+    "deletedAt": "Deleted"
   }
 }

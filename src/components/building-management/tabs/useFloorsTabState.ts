@@ -66,6 +66,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const [createName, setCreateName] = useState('');
   const [createNameManuallyEdited, setCreateNameManuallyEdited] = useState(false);
   const [createElevation, setCreateElevation] = useState('');
+  const [createElevationManuallyEdited, setCreateElevationManuallyEdited] = useState(false);
   const [creating, setCreating] = useState(false);
 
   // Inline edit state
@@ -74,6 +75,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const [editName, setEditName] = useState('');
   const [editNameManuallyEdited, setEditNameManuallyEdited] = useState(false);
   const [editElevation, setEditElevation] = useState('');
+  const [editElevationManuallyEdited, setEditElevationManuallyEdited] = useState(false);
   const [editVersion, setEditVersion] = useState<number | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
@@ -85,17 +87,28 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   };
 
   // =========================================================================
-  // AUTO-SUGGEST: Number → Name (Google/IFC Pattern)
+  // AUTO-SUGGEST: Number → Name + Elevation (Revit/ArchiCAD Pattern)
+  // Default storey height: 3.0m (residential standard)
   // =========================================================================
 
-  /** Update create number and auto-suggest name if user hasn't manually edited it */
+  const DEFAULT_STOREY_HEIGHT = 3.0;
+
+  /** Compute default elevation for a floor number (0=ground=0m, 1=+3m, -1=-3m) */
+  const computeDefaultElevation = useCallback((floorNumber: number): string => {
+    return (floorNumber * DEFAULT_STOREY_HEIGHT).toFixed(2);
+  }, []);
+
+  /** Update create number and auto-suggest name + elevation if user hasn't manually edited them */
   const handleCreateNumberChange = useCallback((value: string) => {
     setCreateNumber(value);
+    const num = parseInt(value, 10);
     if (!createNameManuallyEdited) {
-      const num = parseInt(value, 10);
       setCreateName(isNaN(num) ? '' : formatFloorLabel(num));
     }
-  }, [createNameManuallyEdited]);
+    if (!createElevationManuallyEdited) {
+      setCreateElevation(isNaN(num) ? '' : computeDefaultElevation(num));
+    }
+  }, [createNameManuallyEdited, createElevationManuallyEdited, computeDefaultElevation]);
 
   /** Mark name as manually edited when user types in the name field */
   const handleCreateNameChange = useCallback((value: string) => {
@@ -103,19 +116,34 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     setCreateNameManuallyEdited(true);
   }, []);
 
-  /** Update edit number and auto-suggest name if user hasn't manually edited it */
+  /** Mark elevation as manually edited when user types in the elevation field */
+  const handleCreateElevationChange = useCallback((value: string) => {
+    setCreateElevation(value);
+    setCreateElevationManuallyEdited(true);
+  }, []);
+
+  /** Update edit number and auto-suggest name + elevation if user hasn't manually edited them */
   const handleEditNumberChange = useCallback((value: string) => {
     setEditNumber(value);
+    const num = parseInt(value, 10);
     if (!editNameManuallyEdited) {
-      const num = parseInt(value, 10);
       setEditName(isNaN(num) ? '' : formatFloorLabel(num));
     }
-  }, [editNameManuallyEdited]);
+    if (!editElevationManuallyEdited) {
+      setEditElevation(isNaN(num) ? '' : computeDefaultElevation(num));
+    }
+  }, [editNameManuallyEdited, editElevationManuallyEdited, computeDefaultElevation]);
 
   /** Mark edit name as manually edited */
   const handleEditNameChange = useCallback((value: string) => {
     setEditName(value);
     setEditNameManuallyEdited(true);
+  }, []);
+
+  /** Mark edit elevation as manually edited */
+  const handleEditElevationChange = useCallback((value: string) => {
+    setEditElevation(value);
+    setEditElevationManuallyEdited(true);
   }, []);
 
   // =========================================================================
@@ -173,7 +201,10 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   useEffect(() => { fetchFloors(); }, [fetchFloors]);
 
   const handleCreate = async () => {
-    if (!createName.trim()) return;
+    if (!createName.trim()) {
+      toast.error(t('tabs.floors.validationNameRequired'));
+      return;
+    }
     setCreating(true);
     try {
       await apiClient.post<FloorMutationResponse>(API_ROUTES.FLOORS.LIST, {
@@ -188,10 +219,16 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
       setCreateName('');
       setCreateNameManuallyEdited(false);
       setCreateElevation('');
+      setCreateElevationManuallyEdited(false);
       toast.success(t('tabs.floors.createSuccess'));
       await fetchFloors();
     } catch (err) {
-      toast.error(t('tabs.floors.createError'));
+      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
+        toast.error(t('tabs.floors.duplicateNumber'));
+      } else {
+        const msg = err instanceof Error ? err.message : '';
+        toast.error(t('tabs.floors.createError') + (msg ? `: ${msg}` : ''));
+      }
       console.error('[FloorsTab] Create error:', err);
     } finally {
       setCreating(false);
@@ -204,6 +241,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     setEditName(floor.name);
     setEditNameManuallyEdited(false);
     setEditElevation(floor.elevation != null ? String(floor.elevation) : '');
+    setEditElevationManuallyEdited(floor.elevation != null);
     setEditVersion(floor._v);
   };
 
@@ -243,14 +281,22 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   };
 
   const handleDelete = async (floor: FloorRecord) => {
-    const allowed = await checkBeforeDelete(floor.id);
-    if (!allowed) return;
+    try {
+      const allowed = await checkBeforeDelete(floor.id);
+      if (!allowed) return;
+    } catch (guardErr) {
+      console.error('[FloorsTab] Deletion guard error:', guardErr);
+      toast.error(t('tabs.floors.deleteGuardError'));
+      return;
+    }
+
     const confirmed = await confirm({
-      title: t('tabs.floors.deleteConfirm', { name: floor.name }),
+      title: t('tabs.floors.deleteConfirmTitle'),
       description: t('tabs.floors.deleteConfirm', { name: floor.name }),
       variant: 'destructive',
     });
     if (!confirmed) return;
+
     setDeletingId(floor.id);
     try {
       const result = await apiClient.delete<FloorMutationResponse>(
@@ -263,7 +309,8 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
         toast.error(result?.error ?? t('tabs.floors.deleteError'));
       }
     } catch (err) {
-      toast.error(t('tabs.floors.deleteError'));
+      const msg = err instanceof Error ? err.message : '';
+      toast.error(t('tabs.floors.deleteError') + (msg ? `: ${msg}` : ''));
       console.error('[FloorsTab] Delete error:', err);
     } finally {
       setDeletingId(null);
@@ -280,10 +327,10 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
     showCreateForm, setShowCreateForm,
     createNumber, handleCreateNumberChange, createName, handleCreateNameChange,
-    createElevation, setCreateElevation, creating, handleCreate,
+    createElevation, handleCreateElevationChange, creating, handleCreate,
     createNameMismatch,
     editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
-    editElevation, setEditElevation, saving,
+    editElevation, handleEditElevationChange, saving,
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,

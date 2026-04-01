@@ -16,8 +16,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { OwnersList } from '@/components/shared/owners/OwnersList';
+import { LandownerRemovalDialog } from '@/components/shared/owners/LandownerRemovalDialog';
 import { isOwnersValid } from '@/lib/ownership/owner-utils';
 import { updateProjectClient } from '@/services/projects-client.service';
+import { useLandownerUnlinkGuard } from '@/hooks/useLandownerUnlinkGuard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -26,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useTypography } from '@/hooks/useTypography';
 import { Landmark, Save } from 'lucide-react';
 import type { LandownerEntry, PropertyOwnerEntry } from '@/types/ownership-table';
+import type { UnlinkDependency } from '@/lib/firestore/landowner-unlink-guard.types';
 
 // ============================================================================
 // TYPES
@@ -42,6 +45,16 @@ interface ProjectLandownersTabProps {
 
 /** Max millesimal shares (1000‰) */
 const TOTAL_SHARES = 1000;
+
+/** State for the removal safety dialog */
+interface RemovalDialogState {
+  open: boolean;
+  variant: 'confirm' | 'warning' | 'blocked';
+  index: number;
+  contactName: string;
+  blockingDeps: UnlinkDependency[];
+  warningDeps: UnlinkDependency[];
+}
 
 // ============================================================================
 // BOUNDARY CONVERTERS (LandownerEntry ↔ PropertyOwnerEntry)
@@ -112,6 +125,13 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   const [bartexPct, setBartexPct] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Removal guard
+  const { checkBeforeRemove, resetCheck } = useLandownerUnlinkGuard();
+  const [removalDialog, setRemovalDialog] = useState<RemovalDialogState>({
+    open: false, variant: 'confirm', index: -1, contactName: '',
+    blockingDeps: [], warningDeps: [],
+  });
+
   // Persisted snapshot for dirty-check
   const [persisted, setPersisted] = useState<{
     entries: LandownerEntry[];
@@ -146,6 +166,52 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   // ── Derived state ──────────────────────────────────────────────────────
   const canSave = isOwnersValid(owners) && !saving;
   const isDirty = hasChanges(owners, persisted.entries, bartexPct, persisted.bartexPct);
+
+  // ── Removal guard handlers ─────────────────────────────────────────────
+
+  /**
+   * Guard callback for OwnersList — intercepts trash click.
+   * Returns false to cancel removal (dialog handles it instead).
+   */
+  const handleBeforeRemove = useCallback(async (index: number, owner: PropertyOwnerEntry): Promise<boolean> => {
+    // Skip check for entries without a contact (empty slots)
+    if (!owner.contactId) return true;
+
+    // Skip check for entries not yet persisted (newly added, unsaved)
+    const isPersisted = persisted.entries.some(e => e.contactId === owner.contactId);
+    if (!isPersisted) return true;
+
+    // Server-side dependency check
+    if (!projectId) return true;
+    const result = await checkBeforeRemove(projectId, owner.contactId);
+
+    setRemovalDialog({
+      open: true,
+      variant: result.variant,
+      index,
+      contactName: owner.name || owner.contactId,
+      blockingDeps: result.blockingDeps,
+      warningDeps: result.warningDeps,
+    });
+
+    return false; // Always false — dialog handles the actual removal
+  }, [projectId, persisted.entries, checkBeforeRemove]);
+
+  /**
+   * Confirm removal from dialog (confirm / warning variants only)
+   */
+  const handleConfirmRemoval = useCallback(() => {
+    const { index } = removalDialog;
+    if (index < 0 || index >= owners.length) return;
+
+    const updated = owners.filter((_, i) => i !== index);
+    if (updated.length === 1) {
+      updated[0] = { ...updated[0], ownershipPct: 100, role: 'landowner' as const };
+    }
+    setOwners(updated);
+    setRemovalDialog(prev => ({ ...prev, open: false }));
+    resetCheck();
+  }, [removalDialog, owners, setOwners, resetCheck]);
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
@@ -223,6 +289,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
         defaultRole="landowner"
         disabled={saving}
         allowEmpty
+        onBeforeRemove={handleBeforeRemove}
         labels={{
           singular: t('ownership.landownersTab.selectContact'),
           plural: t('ownership.bartex.landowners'),
@@ -230,6 +297,20 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
           required: t('ownership.landownersTab.selectContact'),
           placeholder: t('ownership.landownersTab.selectContact'),
         }}
+      />
+
+      {/* Safety dialog for landowner removal */}
+      <LandownerRemovalDialog
+        open={removalDialog.open}
+        onOpenChange={(open) => {
+          setRemovalDialog(prev => ({ ...prev, open }));
+          if (!open) resetCheck();
+        }}
+        variant={removalDialog.variant}
+        contactName={removalDialog.contactName}
+        blockingDeps={removalDialog.blockingDeps}
+        warningDeps={removalDialog.warningDeps}
+        onConfirm={handleConfirmRemoval}
       />
 
       {/* Save button */}

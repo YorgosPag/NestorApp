@@ -13,6 +13,7 @@ import { Fragment } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -42,10 +43,10 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
     showCreateForm, setShowCreateForm,
     createNumber, handleCreateNumberChange, createName, handleCreateNameChange,
-    createElevation, setCreateElevation, creating, handleCreate,
+    createElevation, handleCreateElevationChange, creating, handleCreate,
     createNameMismatch,
     editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
-    editElevation, setEditElevation, saving,
+    editElevation, handleEditElevationChange, saving,
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
@@ -102,7 +103,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
             </fieldset>
             <fieldset className="flex flex-col gap-1">
               <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.elevation')}</label>
-              <Input type="number" step="0.01" value={createElevation} onChange={(e) => setCreateElevation(e.target.value)} placeholder={t('tabs.floors.elevationPlaceholder')} className="h-9" disabled={creating} />
+              <Input type="number" step="0.01" value={createElevation} onChange={(e) => handleCreateElevationChange(e.target.value)} placeholder={t('tabs.floors.elevationPlaceholder')} className="h-9" disabled={creating} />
             </fieldset>
             <nav className="flex gap-1">
               <Button type="submit" size="sm" disabled={!createName.trim() || creating} className="h-9">
@@ -146,9 +147,20 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                   <Fragment key={floor.id}>
                     <tr className={`border-b border-border/50 hover:bg-muted/20 ${isExpanded ? 'bg-muted/10' : ''}`}>
                       <td className="px-2 py-2">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleFloorExpand(floor.id)} title={isExpanded ? t('tabs.floors.collapseFloor') : t('tabs.floors.expandFloor')}>
-                          {isExpanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className={`h-4 w-4 ${colors.text.muted}`} />}
-                        </Button>
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleFloorExpand(floor.id)}>
+                                {isExpanded
+                                  ? <ChevronDown className="h-4 w-4 text-primary" />
+                                  : <ChevronRight className="h-4 w-4 text-primary/70" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              {isExpanded ? t('tabs.floors.collapseFloor') : t('tabs.floors.expandFloor')}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </td>
 
                       {isEditing ? (
@@ -163,7 +175,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                               </p>
                             )}
                           </td>
-                          <td className="px-2 py-2"><Input type="number" step="0.01" value={editElevation} onChange={(e) => setEditElevation(e.target.value)} placeholder="—" className="h-8 w-24" disabled={saving} /></td>
+                          <td className="px-2 py-2"><Input type="number" step="0.01" value={editElevation} onChange={(e) => handleEditElevationChange(e.target.value)} placeholder="—" className="h-8 w-24" disabled={saving} /></td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">

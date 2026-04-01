@@ -393,6 +393,91 @@
       "company": "Company",
       "service": "Public Service",
       "organization": "Organization"
+    },
+    "nameCascade": {
+      "title": "Contact Name Change",
+      "body": "Changing the name from \"{oldName}\" to \"{newName}\" will automatically update the following:",
+      "depProperties": "Properties (ownerships)",
+      "depPaymentPlans": "Payment plans",
+      "count": "{count, plural, one {# record} other {# records}}",
+      "warning": "{count} records will be automatically updated across all projects.",
+      "confirm": "Save & Update",
+      "cancel": "Cancel"
+    },
+    "addressImpact": {
+      "title": "Address Change Impact",
+      "body": "Changing the \"{addressLabel}\" address may affect the following records:",
+      "sectionLive": "Live references (will read the updated address)",
+      "depProperties": "Properties (ownerships)",
+      "depPaymentPlans": "Payment plans",
+      "sectionSnapshot": "Snapshots (frozen at creation — not affected)",
+      "depInvoices": "Invoices",
+      "depApyCertificates": "APY certificates",
+      "count": "{count, plural, one {# record} other {# records}}",
+      "warningLive": "{count} records reference this contact.",
+      "confirm": "Save & Continue",
+      "cancel": "Cancel",
+      "branchDelete": {
+        "title": "Remove Branch Address",
+        "body": "Are you sure you want to remove this branch address? This action cannot be undone.",
+        "confirm": "Remove",
+        "cancel": "Cancel"
+      },
+      "mapDragWarning": {
+        "title": "Administrative Hierarchy Reset",
+        "body": "Moving the pin will clear the administrative hierarchy fields (settlement, municipality, region). You will need to re-select from the hierarchy dropdown.",
+        "confirm": "Continue",
+        "cancel": "Cancel"
+      }
+    },
+    "companyIdentityImpact": {
+      "title": "Company Identity Change Impact",
+      "body": "The following identity fields are being modified:",
+      "fieldChanged": "\"{oldValue}\" → \"{newValue}\"",
+      "fieldCleared": "\"{oldValue}\" → (cleared)",
+      "sectionLive": "Live references (will read the updated data)",
+      "depProjects": "Projects",
+      "depProperties": "Properties (ownerships)",
+      "depObligations": "Obligations",
+      "sectionSnapshot": "Snapshots (frozen at creation — not affected)",
+      "depInvoices": "Invoices",
+      "depApyCertificates": "APY certificates",
+      "count": "{count, plural, one {# record} other {# records}}",
+      "warningLive": "{count} records reference this contact and will reflect the new identity data.",
+      "confirm": "Save & Continue",
+      "cancel": "Cancel",
+      "unsafeClear": "Cannot clear the field(s): {fields}. They are critical to company identity.",
+      "fields": {
+        "companyName": "Company Name",
+        "vatNumber": "VAT Number",
+        "gemiNumber": "GEMI Number",
+        "taxOffice": "Tax Office",
+        "legalForm": "Legal Form",
+        "tradeName": "Trade Name",
+        "gemiStatus": "GEMI Status"
+      }
+    },
+    "communicationImpact": {
+      "title": "Communication Change Impact",
+      "body": "The following communication fields are being modified:",
+      "changeTypes": {
+        "primaryEmailChanged": "Primary Email",
+        "primaryPhoneChanged": "Primary Phone",
+        "corporateWebsiteChanged": "Corporate Website"
+      },
+      "fieldChanged": "\"{oldValue}\" → \"{newValue}\"",
+      "sectionLive": "Live references (will read the updated data)",
+      "depProperties": "Properties (ownerships)",
+      "depPaymentPlans": "Payment plans",
+      "depProjects": "Projects",
+      "sectionSnapshot": "Snapshots (frozen at creation — not affected)",
+      "depInvoices": "Invoices",
+      "depApyCertificates": "APY certificates",
+      "count": "{count, plural, one {# record} other {# records}}",
+      "warningLive": "{count} records reference this contact and will use the new communication details.",
+      "confirm": "Save & Continue",
+      "cancel": "Cancel",
+      "unsafeRemoval": "Cannot remove all emails or phones from a company contact. At least one is required for communication workflows."
     }
   },
   "status": {
@@ -2155,7 +2240,12 @@
     "dependencies": "Dependent records",
     "checking": "Checking dependencies...",
     "count": "{count, plural, one {# record} other {# records}}",
-    "deleteFirst": "Please delete the following dependencies first:"
+    "deleteFirst": "Please delete the following dependencies first:",
+    "subtypeWarning": {
+      "individual": "This individual has the following dependencies:",
+      "company": "This company is linked to the following:",
+      "service": "This public service is referenced in the following:"
+    }
   },
   "versioning": {
     "conflictTitle": "Version conflict",
@@ -2276,7 +2366,22 @@
       "saved": "Changes saved",
       "saveError": "Save error",
       "save": "Save",
-      "noChanges": "No changes"
+      "noChanges": "No changes",
+      "removalGuard": {
+        "confirmTitle": "Remove Landowner",
+        "confirmBody": "You are about to remove \"{name}\" from the project landowners. The contact will not be deleted.",
+        "warningTitle": "Remove Landowner — Caution",
+        "warningBody": "\"{name}\" is referenced in the following:",
+        "warningNote": "You will need to manually update the ownership table after removal.",
+        "blockedTitle": "Removal not possible",
+        "blockedBody": "\"{name}\" is an owner of properties in this project. You must first remove the properties/spaces from this owner.",
+        "confirmRemove": "Remove",
+        "confirmRemoveAnyway": "Remove anyway",
+        "cancel": "Cancel",
+        "understood": "I understand",
+        "checking": "Checking dependencies...",
+        "count": "{count, plural, one {# record} other {# records}}"
+      }
     },
     "validation": {
       "totalMismatch": "Total shares ≠ 1000‰",

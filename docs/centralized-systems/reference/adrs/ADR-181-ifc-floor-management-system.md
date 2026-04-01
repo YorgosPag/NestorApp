@@ -73,3 +73,12 @@ Per IFC 4.3 (`IfcBuildingStorey`), a storey has:
 - Building details → "Floors" tab provides full CRUD for floor records
 - DXF wizard inline form captures complete floor data on creation
 - Elevation data enables future 3D/BIM integrations
+
+---
+
+## Changelog
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-02-14 | ADR Created — Initial IFC Floor Management implementation | Γιώργος Παγώνης + Claude Code |
+| 2026-04-01 | **5 Bug Fixes**: (1) Specific error toasts — duplicate number 409, validation name required. (2) Auto-elevation — Revit/ArchiCAD pattern, 3.0m default storey height, auto-suggest on number change. (3) Delete guard — try/catch wrap, fallback toast on guard failure. (4) Chevron visibility — `text-primary/70` replaces `colors.text.muted` (blended with dark bg). (5) Radix Tooltip replaces native `title=` for centralized dark theme. Files: `FloorsTabContent.tsx`, `useFloorsTabState.ts`, `el/building.json`, `en/building.json`. | Claude Code |

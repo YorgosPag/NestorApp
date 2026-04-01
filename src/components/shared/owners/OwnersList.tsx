@@ -48,6 +48,8 @@ export interface OwnersListProps {
   readOnly?: boolean;
   /** Allow removing the last owner (default: false — sales requires >=1 buyer) */
   allowEmpty?: boolean;
+  /** Async guard before removal — return false to cancel. Used for dependency checks. */
+  onBeforeRemove?: (index: number, owner: PropertyOwnerEntry) => Promise<boolean>;
   /** Context-aware labels (override defaults for different domains) */
   labels?: {
     /** Label for single owner (default: "Αγοραστής") */
@@ -95,6 +97,7 @@ export function OwnersList({
   maxOwners = DEFAULT_MAX_OWNERS,
   readOnly = false,
   allowEmpty = false,
+  onBeforeRemove,
   labels,
 }: OwnersListProps) {
   const { t } = useTranslation('common');
@@ -135,14 +138,19 @@ export function OwnersList({
     }
   }, [owners, onChange, maxOwners, defaultRole]);
 
-  const handleRemove = useCallback((index: number) => {
+  const handleRemove = useCallback(async (index: number) => {
+    // Guard: allow consumer to intercept removal (e.g., dependency check)
+    if (onBeforeRemove) {
+      const allowed = await onBeforeRemove(index, owners[index]);
+      if (!allowed) return;
+    }
     const updated = owners.filter((_, i) => i !== index);
     // If back to single owner, auto-set 100% (regardless of allowEmpty)
     if (updated.length === 1) {
       updated[0] = { ...updated[0], ownershipPct: 100, role: defaultRole };
     }
     onChange(updated);
-  }, [owners, onChange, defaultRole]);
+  }, [owners, onChange, defaultRole, onBeforeRemove]);
 
   const handleContactSelect = useCallback((index: number, contact: ContactSummary | null) => {
     onChange(owners.map((entry, i) =>
