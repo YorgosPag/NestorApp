@@ -23,11 +23,15 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 async function handleGet(
   request: NextRequest,
-  segmentData: { params: Promise<{ customerId: string }> }
+  segmentData?: { params: Promise<{ customerId: string }> }
 ): Promise<NextResponse> {
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
+        if (!segmentData?.params) {
+          return NextResponse.json({ success: false, error: 'Missing route params' }, { status: 400 });
+        }
+
         const { customerId } = await segmentData.params;
 
         if (!customerId) {

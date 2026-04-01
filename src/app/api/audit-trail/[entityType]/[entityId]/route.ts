@@ -25,7 +25,7 @@ import type { AuditEntityType, EntityAuditEntry, EntityAuditResponse } from '@/t
 // ============================================================================
 
 const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact', 'building', 'unit', 'project', 'parking', 'storage',
+  'contact', 'building', 'property', 'project', 'parking', 'storage',
 ]);
 
 // ============================================================================

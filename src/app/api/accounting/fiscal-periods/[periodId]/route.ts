@@ -34,11 +34,15 @@ const PatchPeriodSchema = z.object({
 
 async function handlePatch(
   request: NextRequest,
-  segmentData: { params: Promise<{ periodId: string }> }
+  segmentData?: { params: Promise<{ periodId: string }> }
 ): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
+        if (!segmentData?.params) {
+          return NextResponse.json({ success: false, error: 'Missing route params' }, { status: 400 });
+        }
+
         const { periodId } = await segmentData.params;
         const body = await req.json();
         const parsed = PatchPeriodSchema.safeParse(body);

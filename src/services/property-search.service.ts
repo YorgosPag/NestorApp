@@ -3,6 +3,7 @@ import type { CollectionReference, Query } from 'firebase-admin/firestore';
 import type { Property } from '@/types/property';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { isPropertyAvailable } from '@/services/property-status';
 
 const db = getAdminFirestore();
 
@@ -221,7 +222,7 @@ export async function getPropertySummary(criteria?: Partial<PropertySearchCriter
 
   const summary: PropertySummary = {
     totalProperties: properties.length,
-    availableCount: properties.filter(p => p.status === 'available').length,
+    availableCount: properties.filter((p) => isPropertyAvailable(p.status)).length,
     soldCount: properties.filter(p => p.status === 'sold').length,
     reservedCount: properties.filter(p => p.status === 'reserved').length,
     averagePrice: 0, priceRange: { min: 0, max: 0 }, areaRange: { min: 0, max: 0 },

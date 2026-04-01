@@ -27,7 +27,7 @@ const UpdateAgreementSchema = z.object({
   startDate: z.string().max(30).optional(),
   endDate: z.string().max(30).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
-  scope: z.enum(['project', 'unit']).optional(),
+  scope: z.enum(['project', 'property']).optional(),
   propertyId: z.string().max(128).nullable().optional(),
 });
 

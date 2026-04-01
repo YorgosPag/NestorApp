@@ -25,11 +25,6 @@ export function useMatchingConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    void loadConfig();
-  }, [user, loadConfig]);
-
   const loadConfig = useCallback(async () => {
     try {
       setLoading(true);
@@ -47,6 +42,11 @@ export function useMatchingConfig() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    void loadConfig();
+  }, [user, loadConfig]);
 
   const saveConfig = useCallback(async (newConfig: MatchingConfig): Promise<boolean> => {
     try {

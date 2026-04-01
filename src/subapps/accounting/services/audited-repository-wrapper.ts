@@ -138,9 +138,9 @@ export function createAuditedRepository(
     async updateJournalEntry(entryId, updates) {
       await repo.updateJournalEntry(entryId, updates);
       // Journal updates are rare (usually reversal) — log as JOURNAL_REVERSED if reversed
-      const eventType: AccountingAuditEventType = updates.isReversed
+      const eventType: AccountingAuditEventType = updates.reversedAt
         ? 'JOURNAL_REVERSED' : 'JOURNAL_CREATED';
-      if (updates.isReversed) {
+      if (updates.reversedAt) {
         await logAudit(repo, userId, eventType, 'journal', entryId,
           'Αντιλογιστική εγγραφή');
       }

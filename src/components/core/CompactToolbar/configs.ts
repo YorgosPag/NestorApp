@@ -10,7 +10,7 @@ import {
 } from '@/constants/property-statuses-enterprise';
 
 // 🏢 ENTERPRISE: Import centralized CompactToolbar search placeholders from modal-select
-import { getCompactToolbarSearchPlaceholders } from '@/subapps/dxf-viewer/config/modal-select';
+import { getCompactToolbarSearchPlaceholders } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 
 // 🅿️ ENTERPRISE: Import parking labels
 import {

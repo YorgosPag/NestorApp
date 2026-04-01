@@ -122,7 +122,7 @@ export interface ErrorFallbackUIProps {
   actionState: ErrorActionState;
   actionHandlers: ErrorActionHandlers;
   tokens: DesignTokenProps;
-  showTourTrigger?: boolean;
+  showTourTrigger?: ReactNode;
   showTourButton?: boolean;
   onStartTour?: () => void;
   digest?: string;

@@ -19,7 +19,7 @@ import type { TaxResult, TaxEstimate, PartnershipTaxResult, EPETaxResult, AETaxR
 import type { EFKAAnnualSummary, PartnershipEFKASummary, EPEEFKASummary, AEEFKASummary } from '../types/efka';
 import type { DepreciationRecord } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
-import type { FiscalQuarter, AccountCategory } from '../types/common';
+import type { FiscalQuarter, AccountCategory, PaymentMethod } from '../types/common';
 import { getCategoryByCode } from '../config/account-categories';
 import { calculateMonthlyBreakdown } from './config/efka-config';
 import {
@@ -113,7 +113,7 @@ export class AccountingService {
     confirmedCategory: AccountCategory;
     confirmedDate: string;
     confirmedIssuerName: string | null;
-    confirmedPaymentMethod: string;
+    confirmedPaymentMethod: PaymentMethod;
     fiscalYear: number;
   }): Promise<JournalEntry | null> {
     const grossAmount = params.confirmedNetAmount + params.confirmedVatAmount;

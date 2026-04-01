@@ -42,6 +42,7 @@ const MATCH_STATUS_VARIANTS: Record<MatchStatus, 'default' | 'secondary' | 'dest
   auto_matched: 'default',
   manual_matched: 'secondary',
   excluded: 'outline',
+  reconciled: 'default',
 };
 
 // ============================================================================

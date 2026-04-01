@@ -32,7 +32,7 @@ const logger = createModuleLogger('AuditTrailRecord');
 // ============================================================================
 
 const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact', 'building', 'unit', 'project', 'parking', 'storage',
+  'contact', 'building', 'property', 'project', 'parking', 'storage',
 ]);
 
 const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
@@ -44,7 +44,7 @@ const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
 const ENTITY_COLLECTION_MAP: Record<string, string> = {
   contact: COLLECTIONS.CONTACTS,
   building: COLLECTIONS.BUILDINGS,
-  unit: COLLECTIONS.PROPERTIES,
+  property: COLLECTIONS.PROPERTIES,
   project: COLLECTIONS.PROJECTS,
   parking: COLLECTIONS.PARKING_SPACES,
   storage: COLLECTIONS.STORAGE,

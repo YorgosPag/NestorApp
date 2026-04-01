@@ -52,6 +52,7 @@ const STATUS_VARIANT: Record<MatchStatus, 'success' | 'warning' | 'muted' | 'inf
   manual_matched: 'info',
   unmatched: 'warning',
   excluded: 'muted',
+  reconciled: 'success',
 };
 
 // ============================================================================

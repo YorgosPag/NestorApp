@@ -22,7 +22,7 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 const CreateAgreementSchema = z.object({
   agentContactId: z.string().min(1).max(128),
   agentName: z.string().min(1).max(200),
-  scope: z.enum(['project', 'unit']),
+  scope: z.enum(['project', 'property']),
   projectId: z.string().min(1).max(128),
   propertyId: z.string().max(128).nullable().optional(),
   exclusivity: z.enum(['exclusive', 'non_exclusive', 'semi_exclusive']),

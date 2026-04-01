@@ -172,7 +172,7 @@ export function ErrorFallbackUI({
                     id={ERROR_DIALOG_BUTTON_IDS.notify}
                     onClick={handleSendToAdmin}
                     disabled={isSendingToAdmin || emailSent || showEmailOptions}
-                    variant={actionHandlers.handleSendToAdmin ? 'default' : 'default'}
+                    variant="default"
                     size="sm"
                     className={`flex items-center ${spacingTokens.gap.sm}`}
                   >

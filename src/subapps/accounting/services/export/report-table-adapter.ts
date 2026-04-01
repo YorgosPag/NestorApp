@@ -224,9 +224,9 @@ function flattenARAging(data: ARAgingData): FlatTableData {
   const rows: CellValue[][] = data.customers.current.map((c) => [
     c.customerName,
     c.aging.current,
-    c.aging.thirtyDays,
-    c.aging.sixtyDays,
-    c.aging.ninetyPlus,
+    c.aging.days1_30,
+    c.aging.days31_60,
+    c.aging.days61_90 + c.aging.days91_120 + c.aging.days120plus,
     c.totalOutstanding,
   ]);
 

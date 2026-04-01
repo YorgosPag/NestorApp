@@ -8,7 +8,7 @@
  * @module api/communications/webhooks/telegram/booking/booking-admin-actions
  */
 
-import type { TelegramSendPayload } from '../telegram/types';
+import type { TelegramSendPayload, TelegramSendResult } from '../telegram/types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { formatDateGreek } from './booking-codec';
@@ -70,7 +70,7 @@ export async function handleAdminAppointmentAction(
 // ACTION HANDLERS
 // =============================================================================
 
-type SendFn = (payload: Record<string, unknown>) => Promise<unknown>;
+type SendFn = (payload: TelegramSendPayload) => Promise<TelegramSendResult>;
 
 async function handleApprove(
   appointmentRef: FirebaseFirestore.DocumentReference,
