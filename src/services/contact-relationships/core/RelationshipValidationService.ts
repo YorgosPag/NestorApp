@@ -98,24 +98,24 @@ export class RelationshipValidationService {
    */
   static validateRequiredFields(data: Partial<ContactRelationship>): void {
     if (!data.sourceContactId) {
-      throw new RelationshipValidationError('Source contact ID is required');
+      throw new RelationshipValidationError('relationships.form.validation.sourceContactRequired');
     }
 
     if (!data.targetContactId) {
-      throw new RelationshipValidationError('Target contact ID is required');
+      throw new RelationshipValidationError('relationships.form.validation.contactRequired');
     }
 
     if (!data.relationshipType) {
-      throw new RelationshipValidationError('Relationship type is required');
+      throw new RelationshipValidationError('relationships.form.validation.relationshipTypeRequired');
     }
 
     // Validate contact IDs format
     if (typeof data.sourceContactId !== 'string' || data.sourceContactId.trim() === '') {
-      throw new RelationshipValidationError('Invalid source contact ID format');
+      throw new RelationshipValidationError('relationships.form.validation.invalidSourceFormat');
     }
 
     if (typeof data.targetContactId !== 'string' || data.targetContactId.trim() === '') {
-      throw new RelationshipValidationError('Invalid target contact ID format');
+      throw new RelationshipValidationError('relationships.form.validation.invalidTargetFormat');
     }
   }
 
@@ -124,7 +124,7 @@ export class RelationshipValidationService {
    */
   static validateSelfRelationship(data: Partial<ContactRelationship>): void {
     if (data.sourceContactId === data.targetContactId) {
-      throw new RelationshipValidationError('Cannot create relationship with self');
+      throw new RelationshipValidationError('relationships.form.validation.selfRelationship');
     }
   }
 
@@ -149,7 +149,7 @@ export class RelationshipValidationService {
     // Individual can't be an employee of another individual
     if (sourceType === 'individual' && targetType === 'individual' && isEmployment) {
       throw new InvalidRelationshipError(
-        'Individual cannot have employment relationship with another individual'
+        'relationships.form.validation.individualEmploymentIndividual'
       );
     }
 
@@ -158,7 +158,7 @@ export class RelationshipValidationService {
       const allowedForServices = ['representative', 'advisor', 'consultant', 'client'];
       if (!allowedForServices.includes(relationshipType)) {
         throw new InvalidRelationshipError(
-          'Invalid relationship type for public service organization'
+          'relationships.form.validation.invalidTypeForService'
         );
       }
     }
@@ -166,7 +166,7 @@ export class RelationshipValidationService {
     // Company ownership validation
     if (relationshipType === 'shareholder' && targetType !== 'company') {
       throw new InvalidRelationshipError(
-        'Shareholder relationships can only be created with companies'
+        'relationships.form.validation.shareholderRequiresCompany'
       );
     }
 
@@ -175,21 +175,21 @@ export class RelationshipValidationService {
       // Company cannot be employee of another company
       if (sourceType === 'company') {
         throw new InvalidRelationshipError(
-          'Μία εταιρεία δεν μπορεί να είναι εργαζόμενη σε άλλη εταιρεία. Επιλέξτε άλλο τύπο σχέσης (π.χ. Σύμβουλος, Συνεργάτης).'
+          'relationships.form.validation.companyCannotBeEmployee'
         );
       }
 
       // Service cannot be employee of company
       if (sourceType === 'service') {
         throw new InvalidRelationshipError(
-          'Μία υπηρεσία δεν μπορεί να είναι εργαζόμενη σε εταιρεία. Επιλέξτε άλλο τύπο σχέσης (π.χ. Σύμβουλος, Προμηθευτής).'
+          'relationships.form.validation.serviceCannotBeEmployee'
         );
       }
 
       // Original rule: Employment relationships require a company or service as target
       if (targetType === 'individual') {
         throw new InvalidRelationshipError(
-          'Employment relationships require a company or service as target'
+          'relationships.form.validation.employmentRequiresCompanyTarget'
         );
       }
     }
@@ -198,7 +198,7 @@ export class RelationshipValidationService {
     if (isGovernment) {
       if (targetType !== 'service') {
         throw new InvalidRelationshipError(
-          'Government relationships can only be created with public services'
+          'relationships.form.validation.governmentRequiresService'
         );
       }
     }
@@ -215,7 +215,7 @@ export class RelationshipValidationService {
 
       if (endDate < startDate) {
         throw new RelationshipValidationError(
-          'End date cannot be before start date'
+          'relationships.form.validation.endDateBeforeStart'
         );
       }
     }
@@ -223,14 +223,14 @@ export class RelationshipValidationService {
     // Validate status
     if (data.status && !['active', 'inactive', 'terminated', 'pending'].includes(data.status)) {
       throw new RelationshipValidationError(
-        'Invalid relationship status'
+        'relationships.form.validation.invalidStatus'
       );
     }
 
     // Validate priority
     if (data.priority && !['low', 'medium', 'high', 'critical'].includes(data.priority)) {
       throw new RelationshipValidationError(
-        'Invalid priority level'
+        'relationships.form.validation.invalidPriority'
       );
     }
 
@@ -238,7 +238,7 @@ export class RelationshipValidationService {
     if (data.relationshipStrength &&
         !['weak', 'moderate', 'strong', 'very_strong'].includes(data.relationshipStrength)) {
       throw new RelationshipValidationError(
-        'Invalid relationship strength'
+        'relationships.form.validation.invalidStrength'
       );
     }
 
@@ -247,14 +247,14 @@ export class RelationshipValidationService {
       if (data.employmentStatus &&
           !['full_time', 'part_time', 'contract', 'internship', 'volunteer'].includes(data.employmentStatus)) {
         throw new RelationshipValidationError(
-          'Invalid employment status'
+          'relationships.form.validation.invalidEmploymentStatus'
         );
       }
 
       if (data.employmentType &&
           !['permanent', 'temporary', 'seasonal', 'project_based'].includes(data.employmentType)) {
         throw new RelationshipValidationError(
-          'Invalid employment type'
+          'relationships.form.validation.invalidEmploymentType'
         );
       }
     }
@@ -263,13 +263,13 @@ export class RelationshipValidationService {
     if (data.contactInfo) {
       if (data.contactInfo.businessEmail && !this.isValidEmail(data.contactInfo.businessEmail)) {
         throw new RelationshipValidationError(
-          'Invalid business email format'
+          'relationships.form.validation.invalidEmailFormat'
         );
       }
 
       if (data.contactInfo.businessPhone && !this.isValidPhone(data.contactInfo.businessPhone)) {
         throw new RelationshipValidationError(
-          'Invalid business phone format'
+          'relationships.form.validation.invalidPhoneFormat'
         );
       }
     }
@@ -290,7 +290,7 @@ export class RelationshipValidationService {
   ): void {
     if (existingRelationship) {
       throw new DuplicateRelationshipError(
-        `Relationship already exists between contacts (ID: ${existingRelationship.id})`
+        'relationships.form.validation.duplicateRelationship'
       );
     }
   }

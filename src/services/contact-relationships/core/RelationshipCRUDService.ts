@@ -16,9 +16,13 @@ import {
 } from '@/types/contacts/relationships';
 import { Contact } from '@/types/contacts';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
-import { ContactsService } from '@/services/contacts.service';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { RelationshipValidationService } from './RelationshipValidationService';
+import {
+  getContactById,
+  createReciprocalRelationship,
+  updateOrganizationalHierarchy
+} from './relationship-helpers';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -66,12 +70,12 @@ export class RelationshipCRUDService {
 
     // Required field validation
     if (!data.sourceContactId || !data.targetContactId || !data.relationshipType) {
-      throw new Error('Missing required fields: sourceContactId, targetContactId, relationshipType');
+      throw new Error('relationships.form.validation.missingRequiredFields');
     }
 
     // Self-relationship validation
     if (data.sourceContactId === data.targetContactId) {
-      throw new Error('Cannot create relationship with self');
+      throw new Error('relationships.form.validation.selfRelationship');
     }
 
     // Check for duplicate relationships (handle Firebase index errors gracefully)
@@ -82,7 +86,7 @@ export class RelationshipCRUDService {
         data.relationshipType
       );
       if (existing) {
-        throw new Error('Relationship already exists');
+        throw new Error('relationships.form.validation.duplicateRelationship');
       }
     } catch (error) {
       // 🔧 If Firebase index is missing, log warning but continue with creation
@@ -116,7 +120,7 @@ export class RelationshipCRUDService {
     ]);
 
     if (!sourceContact || !targetContact) {
-      throw new Error('One or both contacts do not exist');
+      throw new Error('relationships.form.validation.contactsNotFound');
     }
 
     // Business rule validation
@@ -278,7 +282,7 @@ export class RelationshipCRUDService {
     try {
       const existing = await this.getRelationshipById(relationshipId);
       if (!existing) {
-        throw new Error('Relationship not found');
+        throw new Error('relationships.form.validation.relationshipNotFound');
       }
 
       // Validate updates
@@ -392,160 +396,47 @@ export class RelationshipCRUDService {
   }
 
   // ========================================================================
-  // HELPER METHODS
+  // PRIVATE HELPERS (delegating to extracted relationship-helpers.ts)
   // ========================================================================
 
-
-  /**
-   * 👤 Get Contact by ID
-   */
   private static async getContactById(contactId: string): Promise<Contact | null> {
-    try {
-      return await ContactsService.getContact(contactId);
-    } catch (error) {
-      logger.error('❌ CRUD: Error fetching contact:', error);
-      return null;
-    }
+    return getContactById(contactId);
   }
 
-  /**
-   * 🔄 Create Reciprocal Relationship
-   */
   private static async createReciprocalRelationship(
     relationship: ContactRelationship,
-    sourceContact: Contact,
-    targetContact: Contact
+    _sourceContact: Contact,
+    _targetContact: Contact
   ): Promise<void> {
-    // Define reciprocal relationship mappings
-    // 🔧 FIX: Symmetric types (colleague, partner, friend, family, competitor)
-    // set to null because getContactRelationships() queries BOTH source+target
-    // so the relationship is already visible from both sides without a reciprocal.
-    const reciprocalMappings: Record<RelationshipType, RelationshipType | null> = {
-      'employee': null,
-      'manager': null,
-      'director': null,
-      'executive': null,
-      'shareholder': null,
-      'client': 'vendor',
-      'vendor': 'client',
-      'partner': null,        // Symmetric — visible from both sides
-      'colleague': null,      // Symmetric — visible from both sides
-      'mentor': 'protege',
-      'protege': 'mentor',
-      'civil_servant': null,
-      'elected_official': null,
-      'appointed_official': null,
-      'department_head': null,
-      'ministry_official': null,
-      'mayor': null,
-      'deputy_mayor': null,
-      'regional_governor': null,
-      'board_member': null,
-      'chairman': null,
-      'ceo': null,
-      'representative': null,
-      'intern': null,
-      'contractor': null,
-      'consultant': null,
-      'advisor': null,
-      'supplier': 'customer',
-      'customer': 'supplier',
-      'competitor': null,     // Symmetric — visible from both sides
-      'friend': null,         // Symmetric — visible from both sides
-      'family': null,         // Symmetric — visible from both sides
-      'property_buyer': null,
-      'property_co_buyer': null,
-      'property_landowner': null,
-      'other': null
-    };
-
-    const reciprocalType = reciprocalMappings[relationship.relationshipType];
-    if (reciprocalType) {
-      try {
-        // Check αν reciprocal relationship already exists
-        const existing = await FirestoreRelationshipAdapter.getSpecificRelationship(
-          relationship.targetContactId,
-          relationship.sourceContactId,
-          reciprocalType
-        );
-
-        if (!existing) {
-          await this.createRelationship({
-            sourceContactId: relationship.targetContactId,
-            targetContactId: relationship.sourceContactId,
-            relationshipType: reciprocalType,
-            status: relationship.status,
-            startDate: relationship.startDate,
-            createdBy: relationship.createdBy,
-            lastModifiedBy: relationship.lastModifiedBy
-          }, { skipReciprocal: true }); // 🔧 FIX: Prevent infinite recursion
-        }
-      } catch (error) {
-        logger.warn('⚠️ CRUD: Error creating reciprocal relationship:', error);
-        // Don't fail the main operation αν reciprocal creation fails
-      }
-    }
+    return createReciprocalRelationship(
+      relationship,
+      (data, opts) => this.createRelationship(data, opts)
+    );
   }
 
-  /**
-   * 📊 Update Organizational Hierarchy
-   */
   private static async updateOrganizationalHierarchy(relationship: ContactRelationship): Promise<void> {
-    logger.info('📊 CRUD: Starting organizational hierarchy update για relationship', relationship.id);
-
-    // Add timeout to prevent infinite hanging
-    return new Promise((resolve) => {
-      logger.info('💭 CRUD: Organizational hierarchy update is placeholder - completing successfully');
-
-      // Complete immediately to prevent any hanging
-      setTimeout(() => {
-        logger.info('✅ CRUD: Organizational hierarchy update completed (placeholder)');
-        resolve();
-      }, 10); // Minimal delay just to ensure logs appear in correct order
-    });
+    return updateOrganizationalHierarchy(relationship);
   }
 
-  // ========================================================================
-  // MISSING METHODS FROM OLD CODE
-  // ========================================================================
-
-  /**
-   * 💾 Save Relationship to Database (Copied από παλιό working code)
-   */
   private static async saveRelationship(relationship: ContactRelationship): Promise<void> {
     logger.info('💾 CRUD: Saving relationship to database', relationship.id);
     await FirestoreRelationshipAdapter.saveRelationship(relationship);
   }
 
-  /**
-   * 🆔 Generate Unique ID
-   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
-   */
   private static generateId(): string {
     return generateRelationshipId();
   }
 
-  /**
-   * 🔍 Validate Business Rules — delegates to centralized RelationshipValidationService (SSoT)
-   */
   private static async validateBusinessRules(
     source: Contact,
     target: Contact,
     relationshipType: RelationshipType
   ): Promise<void> {
-    logger.info('🔍 VALIDATION: Delegating to centralized RelationshipValidationService', {
-      sourceType: source.type,
-      targetType: target.type,
-      relationshipType
-    });
-
     RelationshipValidationService.validateBusinessRules(
       source.type,
       target.type,
       relationshipType
     );
-
-    logger.info('✅ VALIDATION: Business rules passed');
   }
 }
 
