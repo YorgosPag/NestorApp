@@ -33,7 +33,7 @@ interface MobileNavigationProps {
   onBuildingSelect: (buildingId: string) => void;
   /** @deprecated 🏢 ENTERPRISE: Floors αφαιρέθηκαν από navigation (Επιλογή Α) */
   onFloorSelect?: (floorId: string) => void;
-  onUnitSelect?: (unitId: string) => void;
+  onPropertySelect?: (propertyId: string) => void;
   onNavigateToPage: (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => void;
   navigationCompanyIds: string[];
 }
@@ -47,7 +47,7 @@ export function MobileNavigation({
   onBuildingSelect,
   // 🏢 ENTERPRISE: onFloorSelect deprecated - Floors δεν είναι navigation level
   onFloorSelect: _onFloorSelect,
-  onUnitSelect,
+  onPropertySelect,
   onNavigateToPage,
   navigationCompanyIds
 }: MobileNavigationProps) {
@@ -57,10 +57,10 @@ export function MobileNavigation({
     selectedCompany,
     selectedProject,
     selectedBuilding,
-    selectedUnit,  // 🏢 ENTERPRISE: Centralized unit selection for breadcrumb
+    selectedProperty,  // 🏢 ENTERPRISE: Centralized unit selection for breadcrumb
     // 🏢 ENTERPRISE: selectedFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     projectsLoading,
-    selectUnit,  // 🏢 ENTERPRISE: Centralized unit selection action
+    selectProperty,  // 🏢 ENTERPRISE: Centralized unit selection action
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
     getBuildingsForProject,
@@ -187,8 +187,8 @@ export function MobileNavigation({
           <>
             {projectBuildings.map(building => {
               // 🏢 ENTERPRISE: Real-time unit count
-              const unitCount = getPropertyCount(building.id);
-              const hasUnits = unitCount > 0;
+              const propertyCount = getPropertyCount(building.id);
+              const hasProperties = propertyCount > 0;
 
               return (
                 <NavigationButton
@@ -197,9 +197,9 @@ export function MobileNavigation({
                   icon={NAVIGATION_ENTITIES.building.icon}
                   iconColor={NAVIGATION_ENTITIES.building.color}
                   title={building.name}
-                  subtitle={t('columns.buildings.unitCount', { count: unitCount })}
-                  badgeStatus={!hasUnits ? 'no_projects' : undefined}
-                  badgeText={!hasUnits ? getNavigationFilterCategories().building_without_units : undefined}
+                  subtitle={t('columns.buildings.propertyCount', { count: propertyCount })}
+                  badgeStatus={!hasProperties ? 'no_projects' : undefined}
+                  badgeText={!hasProperties ? getNavigationFilterCategories().building_without_units : undefined}
                 />
               );
             })}
@@ -219,15 +219,15 @@ export function MobileNavigation({
               <NavigationButton
                 key={unit.id}
                 onClick={() => {
-                  // 🏢 ENTERPRISE: Use centralized selectUnit for breadcrumb display
-                  selectUnit({ id: unit.id, name: unit.name, type: unit.type });
-                  onUnitSelect?.(unit.id);
+                  // 🏢 ENTERPRISE: Use centralized selectProperty for breadcrumb display
+                  selectProperty({ id: unit.id, name: unit.name, type: unit.type });
+                  onPropertySelect?.(unit.id);
                 }}
                 icon={NAVIGATION_ENTITIES.unit.icon}
                 iconColor={NAVIGATION_ENTITIES.unit.color}
                 title={unit.name}
                 subtitle={unit.type || NAVIGATION_ENTITIES.unit.label}
-                isSelected={selectedUnit?.id === unit.id}
+                isSelected={selectedProperty?.id === unit.id}
               />
             ))}
           </>
@@ -241,7 +241,7 @@ export function MobileNavigation({
               icon={NAVIGATION_ENTITIES.unit.icon}
               iconColor={NAVIGATION_ENTITIES.unit.color}
               title={t('columns.actions.viewUnits')}
-              subtitle={t('columns.actions.unitsCount', { count: buildingUnits.length })}
+              subtitle={t('columns.actions.propertiesCount', { count: buildingUnits.length })}
               variant="compact"
             />
 

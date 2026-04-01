@@ -139,7 +139,7 @@ export function buildIssuer(profile: CompanyProfile): InvoiceIssuer {
 // FIRESTORE RESOLVERS
 // ============================================================================
 
-export async function resolveUnitCompanyId(propertyId: string): Promise<string | null> {
+export async function resolvePropertyCompanyId(propertyId: string): Promise<string | null> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
     return snap.exists ? (snap.data()?.companyId as string) ?? null : null;
@@ -158,7 +158,7 @@ export async function resolveTransactionChainId(propertyId: string): Promise<str
   return existing ?? generateTransactionId();
 }
 
-export async function updateUnitTransactionChain(
+export async function updatePropertyTransactionChain(
   propertyId: string,
   transactionChainId: string
 ): Promise<void> {
@@ -173,7 +173,7 @@ export async function findDepositInvoiceId(propertyId: string): Promise<string |
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_INVOICES)
-      .where(FIELDS.UNIT_ID, '==', propertyId)
+      .where(FIELDS.PROPERTY_ID, '==', propertyId)
       .where(FIELDS.TYPE, '==', 'sales_invoice')
       .orderBy(FIELDS.CREATED_AT, 'asc')
       .limit(1)
@@ -189,13 +189,13 @@ export async function resolveHierarchy(event: SalesAccountingEvent): Promise<voi
   if (event.companyName && event.buildingName && event.projectAddress) return;
 
   await safeFirestoreOperation(async (db) => {
-    // 1. Fetch unit -> buildingId, floor
-    const unitSnap = await db.collection(COLLECTIONS.PROPERTIES).doc(event.propertyId).get();
-    if (!unitSnap.exists) return;
-    const unitData = unitSnap.data() as Record<string, unknown>;
-    event.unitFloor = (unitData.floor as number) ?? null;
+    // 1. Fetch property -> buildingId, floor
+    const propertySnap = await db.collection(COLLECTIONS.PROPERTIES).doc(event.propertyId).get();
+    if (!propertySnap.exists) return;
+    const propertyData = propertySnap.data() as Record<string, unknown>;
+    event.unitFloor = (propertyData.floor as number) ?? null;
 
-    const buildingId = unitData.buildingId as string | undefined;
+    const buildingId = propertyData.buildingId as string | undefined;
     if (!buildingId) return;
 
     // 2. Fetch building
@@ -359,7 +359,7 @@ export function buildInvoiceInput(params: BuildInvoiceInputParams): CreateInvoic
       errorMessage: null,
     },
     projectId: params.projectId,
-    unitId: params.propertyId,
+    propertyId: params.propertyId,
     relatedInvoiceId: params.relatedInvoiceId,
     journalEntryId: null,
     notes: params.notes,

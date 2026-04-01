@@ -227,8 +227,8 @@ describe('computeInflows', () => {
 
   it('includes only pending/due installments', () => {
     const installments: RawInstallment[] = [
-      { paymentPlanId: 'pp1', unitId: 'u1', projectId: 'p1', buildingId: 'b1', amount: 1000, dueDate: '2026-01-15', status: 'pending', paidAmount: 0, paidDate: null },
-      { paymentPlanId: 'pp2', unitId: 'u2', projectId: 'p1', buildingId: 'b1', amount: 2000, dueDate: '2026-01-20', status: 'paid', paidAmount: 2000, paidDate: '2026-01-18' },
+      { paymentPlanId: 'pp1', propertyId: 'u1', projectId: 'p1', buildingId: 'b1', amount: 1000, dueDate: '2026-01-15', status: 'pending', paidAmount: 0, paidDate: null },
+      { paymentPlanId: 'pp2', propertyId: 'u2', projectId: 'p1', buildingId: 'b1', amount: 2000, dueDate: '2026-01-20', status: 'paid', paidAmount: 2000, paidDate: '2026-01-18' },
     ];
 
     const result = computeInflows(installments, [], monthKeys);
@@ -237,7 +237,7 @@ describe('computeInflows', () => {
 
   it('subtracts paidAmount from partial installments', () => {
     const installments: RawInstallment[] = [
-      { paymentPlanId: 'pp1', unitId: 'u1', projectId: 'p1', buildingId: 'b1', amount: 1000, dueDate: '2026-01-15', status: 'due', paidAmount: 300, paidDate: null },
+      { paymentPlanId: 'pp1', propertyId: 'u1', projectId: 'p1', buildingId: 'b1', amount: 1000, dueDate: '2026-01-15', status: 'due', paidAmount: 300, paidDate: null },
     ];
 
     const result = computeInflows(installments, [], monthKeys);
@@ -375,7 +375,7 @@ describe('buildAllScenarios', () => {
       ],
     },
     installments: [
-      { paymentPlanId: 'pp1', unitId: 'u1', projectId: 'p1', buildingId: 'b1', amount: 5000, dueDate: '2026-04-15', status: 'pending', paidAmount: 0, paidDate: null },
+      { paymentPlanId: 'pp1', propertyId: 'u1', projectId: 'p1', buildingId: 'b1', amount: 5000, dueDate: '2026-04-15', status: 'pending', paidAmount: 0, paidDate: null },
     ],
     cheques: [],
     purchaseOrders: [],
@@ -415,7 +415,7 @@ describe('computeActualVsForecast', () => {
     const projection = buildAllScenarios({
       config: { initialBalance: 10000, updatedAt: '', recurringPayments: [] },
       installments: [
-        { paymentPlanId: 'pp1', unitId: 'u1', projectId: 'p1', buildingId: 'b1', amount: 5000, dueDate: '2026-01-15', status: 'pending', paidAmount: 0, paidDate: null },
+        { paymentPlanId: 'pp1', propertyId: 'u1', projectId: 'p1', buildingId: 'b1', amount: 5000, dueDate: '2026-01-15', status: 'pending', paidAmount: 0, paidDate: null },
       ],
       cheques: [],
       purchaseOrders: [],

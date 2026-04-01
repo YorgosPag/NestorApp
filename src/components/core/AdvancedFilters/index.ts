@@ -13,7 +13,7 @@ export type { UseGenericFiltersReturn } from './useGenericFilters';
 
 // Configurations
 export {
-  unitFiltersConfig,
+  propertyListFiltersConfig,
   contactFiltersConfig,
   buildingFiltersConfig,
   projectFiltersConfig,

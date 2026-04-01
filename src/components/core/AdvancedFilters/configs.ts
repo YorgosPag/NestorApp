@@ -86,7 +86,7 @@ const RL = {
   area_101_300: 'filters.ranges.area101to300',
   area_301_plus: 'filters.ranges.area301Plus'
 };
-const ECL = {};
+const _ECL = {};
 
 // 🏢 ENTERPRISE: Task filter labels (i18n keys - centralized)
 const TASK_STATUS_LABELS = {
@@ -177,7 +177,7 @@ const FT = {
 // 🏢 ENTERPRISE: Area range presets (centralized, i18n-ready)
 // PR1.2: Combobox presets for area range filter
 // Labels are i18n keys from units namespace
-export const UNIT_AREA_RANGE_PRESETS = [
+export const PROPERTY_AREA_RANGE_PRESETS = [
   { id: 'all', label: 'filters.areaPresets.all', min: null, max: null },
   { id: 'small', label: 'filters.areaPresets.small', min: 0, max: 50 },
   { id: 'medium', label: 'filters.areaPresets.medium', min: 50, max: 100 },
@@ -190,10 +190,10 @@ export const UNIT_AREA_RANGE_PRESETS = [
 // [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 // ✅ PR1.1 Fix-up: Removed sales data (priceRange), added operational statuses
 // ✅ PR1.2: Configurable i18n namespace - domain separation
-export const unitFiltersConfig: FilterPanelConfig = {
+export const propertyListFiltersConfig: FilterPanelConfig = {
   title: FT.units,
   searchPlaceholder: SP.units_search,
-  i18nNamespace: 'units', // 🏢 ENTERPRISE: Units domain namespace
+  i18nNamespace: 'properties', // 🏢 ENTERPRISE: Properties domain namespace (ADR-269)
   rows: [
     {
       id: 'basic-filters',
@@ -359,7 +359,7 @@ export const contactFiltersConfig: FilterPanelConfig = {
       id: 'contact-properties',
       fields: [
         {
-          id: 'unitsCount',
+          id: 'propertiesCount',
           type: 'select',
           label: FL.units_count,
           placeholder: RL.units_all,
@@ -917,7 +917,7 @@ export const defaultContactFilters: ContactFilterState = {
   company: [],
   status: [],
   contactType: 'all',
-  unitsCount: 'all',
+  propertiesCount: 'all',
   totalArea: 'all',
   hasProperties: false,
   isFavorite: false,
@@ -1478,7 +1478,7 @@ export const fileFiltersConfig: FilterPanelConfig = {
             { value: 'all', label: 'filters.allEntityTypes' },
             { value: 'project', label: 'files.entityTypes.project' },
             { value: 'building', label: 'files.entityTypes.building' },
-            { value: 'unit', label: 'files.entityTypes.unit' },
+            { value: 'property', label: 'files.entityTypes.property' },
             { value: 'contact', label: 'files.entityTypes.contact' }
           ]
         }

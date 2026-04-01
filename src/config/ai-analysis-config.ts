@@ -82,7 +82,7 @@ RULES:
 - Prefer specific intents over generic ones
 - Set confidence 0.0-1.0 reflecting your certainty
 - Set needsTriage=true if confidence < 0.6
-- Extract entities when identifiable (projectId, unitId, etc.)
+- Extract entities when identifiable (projectId, propertyId, etc.)
 - Messages in Greek (el) are expected`,
 
   /**
@@ -93,7 +93,7 @@ RULES:
 
 INTENT TYPES (use these for both primaryIntent and secondaryIntents):
 - appointment_request: Request for a meeting, viewing, or appointment (ραντεβού, συνάντηση, επίσκεψη)
-- property_search: Inquiry about available properties, units, apartments, studios, pricing (αναζήτηση ακινήτου, διαθέσιμα, τιμές, τ.μ.)
+- property_search: Inquiry about available properties, apartments, studios, pricing (αναζήτηση ακινήτου, διαθέσιμα, τιμές, τ.μ.)
 - invoice: Invoice submission or inquiry (τιμολόγιο)
 - payment / payment_notification: Payment confirmation or notice (πληρωμή, κατάθεση)
 - defect_report / issue: Report of a defect, damage, or problem (βλάβη, πρόβλημα, ζημιά)
@@ -118,7 +118,7 @@ MULTI-INTENT RULES:
 GENERAL RULES:
 - Prefer specific intents over generic ones
 - Do NOT duplicate the same intent in both primary and secondary
-- Extract entities when identifiable (projectId, unitId, etc.)
+- Extract entities when identifiable (projectId, propertyId, etc.)
 - Messages in Greek (el) are expected`,
   /**
    * Admin command system prompt — used when sender is a verified super admin
@@ -188,13 +188,13 @@ const documentOptions = DocumentType.options;
 /** Shared extractedEntities sub-schema (all fields nullable) */
 const EXTRACTED_ENTITIES_SCHEMA = {
   type: 'object' as const,
-  required: ['companyId', 'projectId', 'buildingId', 'unitId', 'contactId'],
+  required: ['companyId', 'projectId', 'buildingId', 'propertyId', 'contactId'],
   additionalProperties: false as const,
   properties: {
     companyId: { type: ['string', 'null'] as const },
     projectId: { type: ['string', 'null'] as const },
     buildingId: { type: ['string', 'null'] as const },
-    unitId: { type: ['string', 'null'] as const },
+    propertyId: { type: ['string', 'null'] as const },
     contactId: { type: ['string', 'null'] as const },
   },
 };
@@ -208,7 +208,7 @@ const EXTRACTED_ADMIN_ENTITIES_SCHEMA = {
   type: 'object' as const,
   required: [
     // Base fields (same as EXTRACTED_ENTITIES_SCHEMA)
-    'companyId', 'projectId', 'buildingId', 'unitId', 'contactId',
+    'companyId', 'projectId', 'buildingId', 'propertyId', 'contactId',
     // Admin-specific fields
     'contactName', 'contactType', 'projectName', 'searchCriteria',
     'recipientName', 'emailContent', 'email', 'phone',
@@ -220,7 +220,7 @@ const EXTRACTED_ADMIN_ENTITIES_SCHEMA = {
     companyId: { type: ['string', 'null'] as const },
     projectId: { type: ['string', 'null'] as const },
     buildingId: { type: ['string', 'null'] as const },
-    unitId: { type: ['string', 'null'] as const },
+    propertyId: { type: ['string', 'null'] as const },
     contactId: { type: ['string', 'null'] as const },
     // ── Admin-specific fields ──
     contactName: { type: ['string', 'null'] as const },

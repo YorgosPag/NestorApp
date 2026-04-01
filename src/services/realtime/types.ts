@@ -137,7 +137,7 @@ export interface RealtimeProject {
 
 /**
  * 🏢 ENTERPRISE: Unit data for navigation real-time
- * Used by useRealtimeUnits hook for live unit counts per building
+ * Used by useRealtimeProperties hook for live property counts per building
  */
 export interface RealtimeUnit {
   id: string;
@@ -282,8 +282,8 @@ export interface BuildingProjectLinkPayload {
 /**
  * 🏢 ENTERPRISE: Event payload for unit-building link
  */
-export interface UnitBuildingLinkPayload {
-  unitId: string;
+export interface PropertyBuildingLinkPayload {
+  propertyId: string;
   previousBuildingId: string | null;
   newBuildingId: string | null;
   timestamp: number;
@@ -313,8 +313,8 @@ export interface BuildingUpdatedPayload {
  * 🏢 ENTERPRISE: Event payload for unit update
  * Used for real-time sync when unit data changes
  */
-export interface UnitUpdatedPayload {
-  unitId: string;
+export interface PropertyUpdatedPayload {
+  propertyId: string;
   updates: {
     name?: string;
     type?: string;
@@ -421,9 +421,9 @@ export interface ContactDeletedPayload {
  * 🏢 ENTERPRISE: Event payload for unit creation
  * Used for real-time sync when new unit is created
  */
-export interface UnitCreatedPayload {
-  unitId: string;
-  unit: {
+export interface PropertyCreatedPayload {
+  propertyId: string;
+  property: {
     name?: string;
     type?: string;
     buildingId?: string | null;
@@ -435,8 +435,8 @@ export interface UnitCreatedPayload {
  * 🏢 ENTERPRISE: Event payload for unit deletion
  * Used for real-time sync when unit is deleted
  */
-export interface UnitDeletedPayload {
-  unitId: string;
+export interface PropertyDeletedPayload {
+  propertyId: string;
   timestamp: number;
 }
 
@@ -1076,20 +1076,20 @@ export interface CascadePropagatedPayload {
 
 export interface ContractCreatedPayload {
   contractId: string;
-  unitId: string;
+  propertyId: string;
   phase: string;
   timestamp: number;
 }
 
 export interface ContractUpdatedPayload {
   contractId: string;
-  unitId: string;
+  propertyId: string;
   timestamp: number;
 }
 
 export interface ContractStatusChangedPayload {
   contractId: string;
-  unitId: string;
+  propertyId: string;
   previousStatus: string;
   newStatus: string;
   timestamp: number;
@@ -1097,13 +1097,13 @@ export interface ContractStatusChangedPayload {
 
 export interface ContractDeletedPayload {
   contractId: string;
-  unitId: string;
+  propertyId: string;
   timestamp: number;
 }
 
 export interface ContractProfessionalChangedPayload {
   contractId: string;
-  unitId: string;
+  propertyId: string;
   role: string;
   contactId: string | null;
   timestamp: number;
@@ -1122,7 +1122,7 @@ export interface RealtimeEventMap {
   // Update events (16)
   PROJECT_UPDATED: ProjectUpdatedPayload;
   BUILDING_UPDATED: BuildingUpdatedPayload;
-  UNIT_UPDATED: UnitUpdatedPayload;
+  UNIT_UPDATED: PropertyUpdatedPayload;
   CONTACT_UPDATED: ContactUpdatedPayload;
   TASK_UPDATED: TaskUpdatedPayload;
   OPPORTUNITY_UPDATED: OpportunityUpdatedPayload;
@@ -1140,7 +1140,7 @@ export interface RealtimeEventMap {
   // Create events (15+)
   PROJECT_CREATED: ProjectCreatedPayload;
   BUILDING_CREATED: BuildingCreatedPayload;
-  UNIT_CREATED: UnitCreatedPayload;
+  UNIT_CREATED: PropertyCreatedPayload;
   CONTACT_CREATED: ContactCreatedPayload;
   TASK_CREATED: TaskCreatedPayload;
   OPPORTUNITY_CREATED: OpportunityCreatedPayload;
@@ -1157,7 +1157,7 @@ export interface RealtimeEventMap {
   // Delete events (15+)
   PROJECT_DELETED: ProjectDeletedPayload;
   BUILDING_DELETED: BuildingDeletedPayload;
-  UNIT_DELETED: UnitDeletedPayload;
+  UNIT_DELETED: PropertyDeletedPayload;
   CONTACT_DELETED: ContactDeletedPayload;
   TASK_DELETED: TaskDeletedPayload;
   OPPORTUNITY_DELETED: OpportunityDeletedPayload;
@@ -1182,7 +1182,7 @@ export interface RealtimeEventMap {
   FILE_LINK_DELETED: FileLinkDeletedPayload;
   // Specific link events (legacy — kept for backward compat)
   BUILDING_PROJECT_LINKED: BuildingProjectLinkPayload;
-  UNIT_BUILDING_LINKED: UnitBuildingLinkPayload;
+  UNIT_BUILDING_LINKED: PropertyBuildingLinkPayload;
   NAVIGATION_REFRESH: { timestamp: number };
   // Entity linking (2)
   ENTITY_LINKED: EntityLinkedPayload;

@@ -53,15 +53,15 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface SalesSidebarProps {
   units: Property[];
-  selectedUnit: Property | null;
-  onSelectUnit: (unitId: string) => void;
-  selectedUnitId: string | null;
+  selectedProperty: Property | null;
+  onSelectProperty: (propertyId: string) => void;
+  selectedPropertyId: string | null;
   /** Quick filter: selected commercial status */
   selectedCommercialStatus: string;
   onCommercialStatusChange: (status: string) => void;
-  /** Quick filter: selected unit type */
-  selectedUnitType: string;
-  onUnitTypeChange: (type: string) => void;
+  /** Quick filter: selected property type */
+  selectedPropertyType: string;
+  onPropertyTypeChange: (type: string) => void;
   /** Callback after commercial data mutation (price change, reserve, sell) */
   onDataMutated?: () => void;
 }
@@ -127,13 +127,13 @@ function buildTabs(unit: Property | null): SalesTabConfig[] {
 
 export function SalesSidebar({
   units,
-  selectedUnit,
-  onSelectUnit,
-  selectedUnitId,
+  selectedProperty,
+  onSelectProperty,
+  selectedPropertyId,
   selectedCommercialStatus,
   onCommercialStatusChange,
-  selectedUnitType,
-  onUnitTypeChange,
+  selectedPropertyType,
+  onPropertyTypeChange,
   onDataMutated,
 }: SalesSidebarProps) {
   const colors = useSemanticColors();
@@ -157,12 +157,12 @@ export function SalesSidebar({
   // =========================================================================
   // Details Content (shared between desktop & mobile)
   // =========================================================================
-  const detailsContent = selectedUnit ? (
+  const detailsContent = selectedProperty ? (
     <DetailsContainer
-      selectedItem={selectedUnit}
+      selectedItem={selectedProperty}
       header={
         <SalesDetailsHeader
-          unit={selectedUnit}
+          unit={selectedProperty}
           onChangePrice={handleChangePrice}
           onReserve={handleReserve}
           onSell={handleSell}
@@ -172,7 +172,7 @@ export function SalesSidebar({
       tabsRenderer={
         <Tabs defaultValue="sale-info" className="flex flex-col">
           <TabsList className="flex flex-wrap gap-1 w-full h-auto min-h-fit flex-shrink-0">
-            {buildTabs(selectedUnit).map(tab => (
+            {buildTabs(selectedProperty).map(tab => (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
@@ -187,24 +187,24 @@ export function SalesSidebar({
           </TabsList>
 
           <TabsContent value="sale-info" className="flex-1">
-            <SaleInfoContent data={selectedUnit} />
+            <SaleInfoContent data={selectedProperty} />
           </TabsContent>
 
           <TabsContent value="unit-summary" className="flex-1">
-            <PropertySummaryContent data={selectedUnit} />
+            <PropertySummaryContent data={selectedProperty} />
           </TabsContent>
 
           {/* Legal Tab — ADR-230 (conditional, reserved/sold only) */}
-          {shouldShowLegalTab(selectedUnit) && (
+          {shouldShowLegalTab(selectedProperty) && (
             <TabsContent value="legal" className="flex-1">
-              <LegalTabContent unit={selectedUnit} />
+              <LegalTabContent unit={selectedProperty} />
             </TabsContent>
           )}
 
           {/* Payments Tab — ADR-234 (conditional, reserved/sold only) */}
-          {shouldShowPaymentTab(selectedUnit) && (
+          {shouldShowPaymentTab(selectedProperty) && (
             <TabsContent value="payments" className="flex-1">
-              <PaymentTabContent unit={selectedUnit} />
+              <PaymentTabContent unit={selectedProperty} />
             </TabsContent>
           )}
 
@@ -222,7 +222,7 @@ export function SalesSidebar({
                       size="sm"
                       className="w-full justify-center gap-2 text-sm"
                       onClick={() => {
-                        window.location.href = `/properties?unitId=${selectedUnit.id}&tab=${tabId}`;
+                        window.location.href = `/properties?propertyId=${selectedProperty.id}&tab=${tabId}`;
                       }}
                     >
                       <ExternalLink className={iconSizes.sm} />
@@ -236,7 +236,7 @@ export function SalesSidebar({
 
           {/* History — Centralized ActivityTab (ADR-195) */}
           <TabsContent value="history" className="flex-1">
-            <ActivityTab entityType="unit" entityId={selectedUnit.id} />
+            <ActivityTab entityType="unit" entityId={selectedProperty.id} />
           </TabsContent>
         </Tabs>
       }
@@ -258,8 +258,8 @@ export function SalesSidebar({
       <SalesQuickFilters
         selectedCommercialStatus={selectedCommercialStatus}
         onCommercialStatusChange={onCommercialStatusChange}
-        selectedUnitType={selectedUnitType}
-        onUnitTypeChange={onUnitTypeChange}
+        selectedUnitType={selectedPropertyType}
+        onPropertyTypeChange={onPropertyTypeChange}
       />
 
       <ScrollArea className="flex-1">
@@ -268,8 +268,8 @@ export function SalesSidebar({
             <SalesPropertyListCard
               key={unit.id}
               unit={unit}
-              isSelected={unit.id === selectedUnitId}
-              onSelect={onSelectUnit}
+              isSelected={unit.id === selectedPropertyId}
+              onSelect={onSelectProperty}
             />
           ))}
 
@@ -294,34 +294,34 @@ export function SalesSidebar({
 
       {/* Mobile: slide-in details */}
       <MobileDetailsSlideIn
-        isOpen={isMobile && !!selectedUnit}
-        onClose={() => onSelectUnit('__none__')}
-        title={selectedUnit?.name || t('sales.available.unitDetails')}
+        isOpen={isMobile && !!selectedProperty}
+        onClose={() => onSelectProperty('__none__')}
+        title={selectedProperty?.name || t('sales.available.unitDetails')}
       >
-        {isMobile && selectedUnit && detailsContent}
+        {isMobile && selectedProperty && detailsContent}
       </MobileDetailsSlideIn>
 
       {/* Commercial Action Dialogs (ADR-197 §2.9) */}
-      {selectedUnit && (
+      {selectedProperty && (
         <>
           <ChangePriceDialog
-            unit={selectedUnit}
+            unit={selectedProperty}
             open={changePriceOpen}
             onOpenChange={setChangePriceOpen}
             onSuccess={onDataMutated}
           />
           <ReserveDialog
-            unit={selectedUnit}
+            unit={selectedProperty}
             open={reserveOpen}
             onOpenChange={setReserveOpen}
           />
           <SellDialog
-            unit={selectedUnit}
+            unit={selectedProperty}
             open={sellOpen}
             onOpenChange={setSellOpen}
           />
           <RevertDialog
-            unit={selectedUnit}
+            unit={selectedProperty}
             open={revertOpen}
             onOpenChange={setRevertOpen}
           />

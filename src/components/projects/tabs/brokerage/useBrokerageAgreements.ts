@@ -93,7 +93,7 @@ export function useBrokerageAgreements(
     return unsubscribe;
   }, [projectId]);
 
-  const fetchUnits = useCallback(async () => {
+  const fetchProperties = useCallback(async () => {
     if (!projectId) return;
     try {
       const q = query(
@@ -103,7 +103,7 @@ export function useBrokerageAgreements(
       const snap = await getDocs(q);
       const list: UnitSummary[] = snap.docs.map((d) => ({
         id: d.id,
-        name: (d.data().name as string) || (d.data().unitName as string) || d.id,
+        name: (d.data().name as string) || (d.data().propertyName as string) || d.id,
       }));
       setUnits(list);
     } catch {
@@ -112,8 +112,8 @@ export function useBrokerageAgreements(
   }, [projectId]);
 
   useEffect(() => {
-    fetchUnits();
-  }, [fetchUnits]);
+    fetchProperties();
+  }, [fetchProperties]);
 
   // ---------------------------------------------------------------------------
   // EXCLUSIVITY VALIDATION (debounced)
@@ -125,7 +125,7 @@ export function useBrokerageAgreements(
       return;
     }
 
-    if (form.scope === 'unit' && !form.unitId) {
+    if (form.scope === 'unit' && !form.propertyId) {
       setValidationResult(null);
       return;
     }
@@ -135,7 +135,7 @@ export function useBrokerageAgreements(
       try {
         const result = await BrokerageService.validateExclusivity({
           projectId,
-          unitId: form.scope === 'unit' ? form.unitId : null,
+          propertyId: form.scope === 'unit' ? form.propertyId : null,
           scope: form.scope,
           exclusivity: form.exclusivity,
           excludeAgreementId: editingAgreement?.id,
@@ -149,7 +149,7 @@ export function useBrokerageAgreements(
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [isFormVisible, projectId, form.scope, form.unitId, form.exclusivity, editingAgreement?.id]);
+  }, [isFormVisible, projectId, form.scope, form.propertyId, form.exclusivity, editingAgreement?.id]);
 
   // ---------------------------------------------------------------------------
   // FORM HANDLERS
@@ -207,7 +207,7 @@ export function useBrokerageAgreements(
 
   const handleSave = useCallback(async () => {
     if (!form.agentContactId || !form.startDate || !projectId) return;
-    if (form.scope === 'unit' && !form.unitId) return;
+    if (form.scope === 'unit' && !form.propertyId) return;
 
     if (!isEditMode) {
       const hasActive = agreements.some(
@@ -233,7 +233,7 @@ export function useBrokerageAgreements(
           editingAgreement.id,
           {
             scope: form.scope,
-            unitId: form.scope === 'unit' ? form.unitId : null,
+            propertyId: form.scope === 'unit' ? form.propertyId : null,
             exclusivity: form.exclusivity,
             commissionType: form.commissionType,
             commissionPercentage: form.commissionType === 'percentage' ? Number(form.commissionPercentage) : null,
@@ -255,7 +255,7 @@ export function useBrokerageAgreements(
             agentName: form.agentName,
             scope: form.scope,
             projectId,
-            unitId: form.scope === 'unit' ? form.unitId : undefined,
+            propertyId: form.scope === 'unit' ? form.propertyId : undefined,
             exclusivity: form.exclusivity,
             commissionType: form.commissionType,
             commissionPercentage: form.commissionType === 'percentage' ? Number(form.commissionPercentage) : undefined,
@@ -323,7 +323,7 @@ export function useBrokerageAgreements(
 
   const hasValidationErrors = validationResult?.issues.some((i) => i.severity === 'error') ?? false;
   const canSave = form.agentContactId && form.startDate
-    && (form.scope === 'project' || form.unitId)
+    && (form.scope === 'project' || form.propertyId)
     && !hasValidationErrors;
 
   return {

@@ -87,8 +87,8 @@ export class PaymentReportService {
       totalOverdueCount += summary.overdueInstallments;
 
       rows.push({
-        unitId: unit.id,
-        unitLabel: unit.label ?? unit.name ?? unit.id,
+        propertyId: unit.id,
+        propertyLabel: unit.label ?? unit.name ?? unit.id,
         buildingName: unit.buildingName ?? unit.buildingId ?? '-',
         buyerName: formatOwnerNames(unit.commercial?.owners ?? []) ?? '-',
         planStatus: summary.planStatus,
@@ -111,7 +111,7 @@ export class PaymentReportService {
     rows.sort((a, b) => {
       if (a.overdueInstallments > 0 && b.overdueInstallments === 0) return -1;
       if (a.overdueInstallments === 0 && b.overdueInstallments > 0) return 1;
-      return a.unitLabel.localeCompare(b.unitLabel, 'el');
+      return a.propertyLabel.localeCompare(b.propertyLabel, 'el');
     });
 
     const overallPaidPercentage = totalAmount > 0
@@ -148,8 +148,8 @@ export class PaymentReportService {
    * Returns minimal data needed for notification creation.
    */
   static async getOverdueUnits(): Promise<Array<{
-    unitId: string;
-    unitLabel: string;
+    propertyId: string;
+    propertyLabel: string;
     projectId: string;
     buyerName: string;
     overdueCount: number;
@@ -170,8 +170,8 @@ export class PaymentReportService {
       const summary = data.commercial?.paymentSummary;
 
       return {
-        unitId: doc.id,
-        unitLabel: data.label ?? data.name ?? doc.id,
+        propertyId: doc.id,
+        propertyLabel: data.label ?? data.name ?? doc.id,
         projectId: data.project ?? '',
         buyerName: formatOwnerNames(data.commercial?.owners ?? []) ?? '-',
         overdueCount: summary?.overdueInstallments ?? 0,

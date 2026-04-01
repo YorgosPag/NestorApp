@@ -22,9 +22,9 @@ interface PropertyDetailsHeaderProps {
   /** 🏢 ENTERPRISE: Exit edit mode callback (cancel without save) */
   onExitEditMode?: () => void;
   /** Callback for creating a new unit */
-  onNewUnit?: () => void;
+  onNewProperty?: () => void;
   /** Callback for deleting the current unit */
-  onDeleteUnit?: () => void;
+  onDeleteProperty?: () => void;
 }
 
 export function PropertyDetailsHeader({
@@ -33,8 +33,8 @@ export function PropertyDetailsHeader({
   isCreatingNewUnit = false,
   onToggleEditMode,
   onExitEditMode,
-  onNewUnit,
-  onDeleteUnit,
+  onNewProperty,
+  onDeleteProperty,
 }: PropertyDetailsHeaderProps) {
   const { t } = useTranslation('properties');
 
@@ -60,7 +60,7 @@ export function PropertyDetailsHeader({
       <div className="hidden md:block">
         <EntityDetailsHeader
           icon={UnitIcon}
-          title={t('details.selectUnit')}
+          title={t('details.selectProperty')}
           subtitle={t('details.noUnitSelected')}
           variant="detailed"
           className="h-[81px] flex items-center"
@@ -86,8 +86,8 @@ export function PropertyDetailsHeader({
       ]
     : [
         createEntityAction('edit', t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }), () => onToggleEditMode?.()),
-        createEntityAction('new', t('navigation.actions.newUnit.label', { defaultValue: 'Νέα Μονάδα' }), () => onNewUnit?.()),
-        createEntityAction('delete', t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }), () => onDeleteUnit?.()),
+        createEntityAction('new', t('navigation.actions.newUnit.label', { defaultValue: 'Νέα Μονάδα' }), () => onNewProperty?.()),
+        createEntityAction('delete', t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }), () => onDeleteProperty?.()),
       ];
 
   // Selected State - Unit is selected (or creating new)

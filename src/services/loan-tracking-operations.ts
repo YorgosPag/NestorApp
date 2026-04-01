@@ -37,12 +37,12 @@ function getDb() {
   return db;
 }
 
-function planCollectionPath(unitId: string): string {
-  return `${COLLECTIONS.PROPERTIES}/${unitId}/${SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS}`;
+function planCollectionPath(propertyId: string): string {
+  return `${COLLECTIONS.PROPERTIES}/${propertyId}/${SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS}`;
 }
 
-function paymentCollectionPath(unitId: string): string {
-  return `${COLLECTIONS.PROPERTIES}/${unitId}/${SUBCOLLECTIONS.PROPERTY_PAYMENTS}`;
+function paymentCollectionPath(propertyId: string): string {
+  return `${COLLECTIONS.PROPERTIES}/${propertyId}/${SUBCOLLECTIONS.PROPERTY_PAYMENTS}`;
 }
 
 interface ServiceResult {
@@ -70,7 +70,7 @@ export function resolveLoansFromPlan(plan: PaymentPlan): LoanTracking[] {
  * Auto-links to payment plan via PaymentPlanService.recordPayment().
  */
 export async function recordDisbursement(
-  unitId: string,
+  propertyId: string,
   planId: string,
   loanId: string,
   input: RecordDisbursementInput,
@@ -78,7 +78,7 @@ export async function recordDisbursement(
   resolveLoans: (plan: PaymentPlan) => LoanTracking[]
 ): Promise<ServiceResult & { paymentId?: string }> {
   try {
-    const plan = await PaymentPlanService.getPaymentPlan(unitId, planId);
+    const plan = await PaymentPlanService.getPaymentPlan(propertyId, planId);
     if (!plan) return { success: false, error: 'Payment plan not found' };
 
     const loans = resolveLoans(plan);
@@ -162,15 +162,15 @@ export async function recordDisbursement(
     const db = getDb();
     const batch = db.batch();
 
-    batch.set(db.collection(paymentCollectionPath(unitId)).doc(paymentId), paymentRecord);
-    batch.update(db.collection(planCollectionPath(unitId)).doc(planId), {
+    batch.set(db.collection(paymentCollectionPath(propertyId)).doc(paymentId), paymentRecord);
+    batch.update(db.collection(planCollectionPath(propertyId)).doc(planId), {
       loans: updatedLoans,
       updatedAt: now,
       updatedBy: createdBy,
     });
 
     await batch.commit();
-    await PaymentPlanService.syncPaymentSummary(unitId, planId);
+    await PaymentPlanService.syncPaymentSummary(propertyId, planId);
 
     logger.info(`[LoanTrackingOps] Disbursement: €${input.amount} from ${loan.bankName} (payment: ${paymentId})`);
     return { success: true, paymentId };
@@ -186,7 +186,7 @@ export async function recordDisbursement(
 
 /** Append a communication log entry (append-only) */
 export async function addCommunicationLog(
-  unitId: string,
+  propertyId: string,
   planId: string,
   loanId: string,
   input: AddCommunicationLogInput,
@@ -194,7 +194,7 @@ export async function addCommunicationLog(
   resolveLoans: (plan: PaymentPlan) => LoanTracking[]
 ): Promise<ServiceResult> {
   try {
-    const plan = await PaymentPlanService.getPaymentPlan(unitId, planId);
+    const plan = await PaymentPlanService.getPaymentPlan(propertyId, planId);
     if (!plan) return { success: false, error: 'Payment plan not found' };
 
     const loans = resolveLoans(plan);
@@ -224,7 +224,7 @@ export async function addCommunicationLog(
     updatedLoans[loanIndex] = loan;
 
     const db = getDb();
-    await db.collection(planCollectionPath(unitId)).doc(planId).update({
+    await db.collection(planCollectionPath(propertyId)).doc(planId).update({
       loans: updatedLoans,
       updatedAt: now,
       updatedBy: createdBy,

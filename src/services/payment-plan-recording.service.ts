@@ -35,7 +35,7 @@ import {
 // ============================================================================
 
 export async function recordPayment(
-  unitId: string,
+  propertyId: string,
   input: CreatePaymentInput,
   createdBy: string
 ): Promise<{ success: boolean; payment?: PaymentRecord; error?: string }> {
@@ -45,10 +45,10 @@ export async function recordPayment(
     }
 
     const db = getDb();
-    const planRef = db.collection(planCollectionPath(unitId)).doc(input.paymentPlanId);
-    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
+    const planRef = db.collection(planCollectionPath(propertyId)).doc(input.paymentPlanId);
+    const propertyRef = db.collection(COLLECTIONS.PROPERTIES).doc(propertyId);
     const paymentId = generatePaymentRecordId();
-    const paymentRef = db.collection(paymentCollectionPath(unitId)).doc(paymentId);
+    const paymentRef = db.collection(paymentCollectionPath(propertyId)).doc(paymentId);
 
     const paymentRecord = await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);
@@ -147,7 +147,7 @@ export async function recordPayment(
         paidAmount: newPaidAmount, remainingAmount: newRemainingAmount,
         status: newStatus, updatedAt: now, updatedBy: createdBy,
       });
-      tx.update(unitRef, { 'commercial.paymentSummary': summary });
+      tx.update(propertyRef, { 'commercial.paymentSummary': summary });
 
       return record;
     });
@@ -165,11 +165,11 @@ export async function recordPayment(
   }
 }
 
-export async function getPayments(unitId: string): Promise<PaymentRecord[]> {
+export async function getPayments(propertyId: string): Promise<PaymentRecord[]> {
   try {
     const db = getDb();
     const snapshot = await db
-      .collection(paymentCollectionPath(unitId))
+      .collection(paymentCollectionPath(propertyId))
       .orderBy(FIELDS.CREATED_AT, 'desc')
       .get();
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as PaymentRecord);
@@ -184,10 +184,10 @@ export async function getPayments(unitId: string): Promise<PaymentRecord[]> {
 // ============================================================================
 
 export async function updateLoanInfo(
-  unitId: string, planId: string, loan: Partial<LoanInfo>, updatedBy: string
+  propertyId: string, planId: string, loan: Partial<LoanInfo>, updatedBy: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const plan = await getPaymentPlan(unitId, planId);
+    const plan = await getPaymentPlan(propertyId, planId);
     if (!plan) return { success: false, error: 'Payment plan not found' };
 
     const updatedLoan: LoanInfo = { ...plan.loan, ...loan };
@@ -196,13 +196,13 @@ export async function updateLoanInfo(
     }
 
     const db = getDb();
-    await db.collection(planCollectionPath(unitId)).doc(planId).update({
+    await db.collection(planCollectionPath(propertyId)).doc(planId).update({
       loan: updatedLoan,
       updatedAt: new Date().toISOString(),
       updatedBy,
     });
 
-    await syncPaymentSummary(unitId, planId);
+    await syncPaymentSummary(propertyId, planId);
 
     logger.info(`[PaymentPlanService] Updated loan info for plan ${planId}`);
     return { success: true };
@@ -216,34 +216,34 @@ export async function updateLoanInfo(
 // SUMMARY SYNC
 // ============================================================================
 
-export async function syncPaymentSummary(unitId: string, planId: string): Promise<void> {
+export async function syncPaymentSummary(propertyId: string, planId: string): Promise<void> {
   try {
     const db = getDb();
     await db.runTransaction(async (tx) => {
-      const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
+      const planRef = db.collection(planCollectionPath(propertyId)).doc(planId);
       const planSnap = await tx.get(planRef);
       if (!planSnap.exists) return;
 
       const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
       const summary = computeSummaryFromPlan(plan, planId);
 
-      const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
-      tx.update(unitRef, { 'commercial.paymentSummary': summary });
+      const propertyRef = db.collection(COLLECTIONS.PROPERTIES).doc(propertyId);
+      tx.update(propertyRef, { 'commercial.paymentSummary': summary });
     });
 
-    logger.info(`[PaymentPlanService] Synced summary for unit ${unitId}`);
+    logger.info(`[PaymentPlanService] Synced summary for property ${propertyId}`);
   } catch (error) {
     logger.error('[PaymentPlanService] Failed to sync summary:', error);
   }
 }
 
-export async function syncAggregatedPaymentSummary(unitId: string): Promise<void> {
+export async function syncAggregatedPaymentSummary(propertyId: string): Promise<void> {
   try {
-    const plans = await getPaymentPlans(unitId);
+    const plans = await getPaymentPlans(propertyId);
     if (plans.length === 0) return;
 
     if (plans.length === 1) {
-      await syncPaymentSummary(unitId, plans[0].id);
+      await syncPaymentSummary(propertyId, plans[0].id);
       return;
     }
 
@@ -277,11 +277,11 @@ export async function syncAggregatedPaymentSummary(unitId: string): Promise<void
     };
 
     const db = getDb();
-    await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
+    await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
       'commercial.paymentSummary': summary,
     });
 
-    logger.info(`[PaymentPlanService] Synced aggregated summary for unit ${unitId} (${plans.length} plans)`);
+    logger.info(`[PaymentPlanService] Synced aggregated summary for property ${propertyId} (${plans.length} plans)`);
   } catch (error) {
     logger.error('[PaymentPlanService] Failed to sync aggregated summary:', error);
   }

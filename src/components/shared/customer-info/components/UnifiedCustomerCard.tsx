@@ -199,10 +199,10 @@ export function UnifiedCustomerCard({
 
     return (
       <aside className="flex flex-wrap gap-2 mt-2">
-        {showUnitsCount && extendedInfo.unitsCount > 0 && (
+        {showUnitsCount && extendedInfo.propertiesCount > 0 && (
           <CommonBadge
             status="units"
-            customLabel={t('customer.unitsCount', { count: extendedInfo.unitsCount })}
+            customLabel={t('customer.propertiesCount', { count: extendedInfo.propertiesCount })}
             variant="secondary"
           />
         )}

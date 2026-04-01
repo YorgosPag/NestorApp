@@ -206,7 +206,7 @@ async function handleMigration(
 
     // Load units to find companyId via units that reference these buildings/floors
     const unitsByBuilding = new Map<string, string>(); // buildingId → companyId
-    const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+    const unitsSnapshot = await adminDb.collection(COLLECTIONS.PROPERTIES).get();
     for (const doc of unitsSnapshot.docs) {
       const data = doc.data();
       if (data.buildingId && data.companyId && buildingIds.has(data.buildingId as string)) {

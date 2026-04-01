@@ -211,7 +211,7 @@ export interface CashFlowAPIResponse {
 
 export interface RawInstallment {
   paymentPlanId: string;
-  unitId: string;
+  propertyId: string;
   projectId: string;
   buildingId: string;
   amount: number;

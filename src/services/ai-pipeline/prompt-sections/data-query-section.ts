@@ -9,8 +9,8 @@ export function buildDataQuerySection(_ctx: PromptSectionContext): string {
 - construction_phases: πάρε το buildingId → firestore_get_document("buildings", buildingId) → πάρε building.name + building.projectId → firestore_get_document("projects", projectId) → πάρε project.name
 - construction_tasks: πάρε phaseId → resolve phase → resolve building → resolve project
 - buildings: πάρε projectId → firestore_get_document("projects", projectId) → πάρε project.name
-- units: πάρε buildingId → resolve building → resolve project
-- Ποτέ μην δείχνεις φάσεις/κτήρια/μονάδες χωρίς να αναφέρεις ΣΕ ΠΟΙΟ ΕΡΓΟ και ΚΤΗΡΙΟ ανήκουν!
+- properties: πάρε buildingId → resolve building → resolve project
+- Ποτέ μην δείχνεις φάσεις/κτήρια/ακίνητα χωρίς να αναφέρεις ΣΕ ΠΟΙΟ ΕΡΓΟ και ΚΤΗΡΙΟ ανήκουν!
 
 COLLECTIONS ΠΟΥ ΔΕΝ ΧΡΕΙΑΖΟΝΤΑΙ JOINS (απάντα κατευθείαν):
 - contacts, leads, appointments, tasks, obligations, invoices, payments, messages
@@ -34,43 +34,43 @@ NESTED DATA — ΑΚΟΛΟΥΘΗΣΕ ΑΥΤΑ ΤΑ ΒΗΜΑΤΑ ΑΚΡΙΒΩΣ:
 ⚠️⚠️⚠️ ΑΠΑΓΟΡΕΥΕΤΑΙ να βάλεις πεδία με ΤΕΛΕΙΑ (.) σε filters! Π.χ. commercial.askingPrice, commercial.paymentSummary.overdueInstallments, areas.gross — ΟΛΕΣ αποτυγχάνουν!
 
 ΑΝΤΙ ΑΥΤΟΥ, ΑΚΟΛΟΥΘΗΣΕ ΑΥΤΟ ΤΟ PATTERN:
-1. firestore_query("units") ΧΩΡΙΣ nested filters → παίρνεις ΟΛΑ τα units
+1. firestore_query("properties") ΧΩΡΙΣ nested filters → παίρνεις ΟΛΑ τα properties
 2. Διαβάζεις τα nested πεδία ΑΠΟ ΤΑ ΑΠΟΤΕΛΕΣΜΑΤΑ
 3. Φιλτράρεις εσύ στην απάντηση
 
 CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 
 Ερώτηση: "Ληξιπρόθεσμες δόσεις"
-→ firestore_query("units") χωρίς filters σε nested πεδία
-→ Κοίτα κάθε unit: αν _installmentsOverdue > 0, συμπερίλαβέ το
+→ firestore_query("properties") χωρίς filters σε nested πεδία
+→ Κοίτα κάθε property: αν _installmentsOverdue > 0, συμπερίλαβέ το
 
 Ερώτηση: "Πόσα χρωστάει ο X"
-→ firestore_query("units") χωρίς nested filters
-→ Κοίτα κάθε unit: βρες αυτό με _owners που περιέχει name == "X"
+→ firestore_query("properties") χωρίς nested filters
+→ Κοίτα κάθε property: βρες αυτό με _owners που περιέχει name == "X"
 → Διάβασε _paymentRemaining
 
 Ερώτηση: "Τιμή ακινήτου Y"
-→ firestore_query("units", filters: [{field: "name", operator: "==", value: "Y"}])
+→ firestore_query("properties", filters: [{field: "name", operator: "==", value: "Y"}])
 → Διάβασε _askingPrice από το αποτέλεσμα
 
 Ερώτηση: "Ποιοι πελάτες δεν έχουν πληρώσει" / "εκκρεμείς δόσεις" / "οφειλές"
-→ firestore_query("units") ΧΩΡΙΣ filters
-→ Κοίτα ΚΑΘΕ unit: αν _paymentPaid == 0 ΚΑΙ _paymentTotal > 0 → δεν έχει πληρώσει τίποτα
-→ Κοίτα ΚΑΘΕ unit: αν _installmentsOverdue > 0 → έχει ληξιπρόθεσμες δόσεις
+→ firestore_query("properties") ΧΩΡΙΣ filters
+→ Κοίτα ΚΑΘΕ property: αν _paymentPaid == 0 ΚΑΙ _paymentTotal > 0 → δεν έχει πληρώσει τίποτα
+→ Κοίτα ΚΑΘΕ property: αν _installmentsOverdue > 0 → έχει ληξιπρόθεσμες δόσεις
 → Τα _owners δείχνουν ποιος πελάτης χρωστάει (array με name, contactId, ownershipPct)
-→ ΔΕΝ υπάρχει collection "payments" ή "invoices" για δόσεις ακινήτων — ΟΛΑ είναι ΜΕΣΑ στα units
+→ ΔΕΝ υπάρχει collection "payments" ή "invoices" για δόσεις ακινήτων — ΟΛΑ είναι ΜΕΣΑ στα properties
 
 Ερώτηση: "Στείλε email σε πελάτες με οφειλές + δημιούργησε task"
-→ ΒΗΜΑ 1: firestore_query("units") → βρες units με _installmentsOverdue > 0
-→ ΒΗΜΑ 2: Για κάθε unit, πάρε _ownerContactIds → firestore_get_document("contacts", ownerContactId) → πάρε email
+→ ΒΗΜΑ 1: firestore_query("properties") → βρες properties με _installmentsOverdue > 0
+→ ΒΗΜΑ 2: Για κάθε property, πάρε _ownerContactIds → firestore_get_document("contacts", ownerContactId) → πάρε email
 → ΒΗΜΑ 3: send_email_to_contact για κάθε πελάτη
 → ΒΗΜΑ 4: firestore_write("tasks", create) για κάθε πελάτη με dueDate = σήμερα + 3 μέρες
 
 ΣΗΜΑΝΤΙΚΟ — ΠΡΟΓΡΑΜΜΑ ΑΠΟΠΛΗΡΩΜΗΣ (ΔΟΣΕΙΣ ΑΝΑ ΦΑΣΗ):
-- Οι δόσεις αποπληρωμής αποθηκεύονται σε SUBCOLLECTION: units/{unitId}/payment_plans
-- Για να τις βρεις: firestore_query("units/{unitId}/payment_plans") — αντικατέστησε {unitId} με το πραγματικό ID
-- ΠΡΩΤΑ βρες το unitId μέσω firestore_query("units") → πάρε το id
-- ΜΕΤΑ κάνε firestore_query("units/{id}/payment_plans")
+- Οι δόσεις αποπληρωμής αποθηκεύονται σε SUBCOLLECTION: properties/{propertyId}/payment_plans
+- Για να τις βρεις: firestore_query("properties/{propertyId}/payment_plans") — αντικατέστησε {propertyId} με το πραγματικό ID
+- ΠΡΩΤΑ βρες το propertyId μέσω firestore_query("properties") → πάρε το id
+- ΜΕΤΑ κάνε firestore_query("properties/{id}/payment_plans")
 - Κάθε payment plan έχει installments[] array με: label (φάση), amount, percentage, dueDate, status
 - Παράδειγμα labels: "Κράτηση", "Θεμελίωση", "Σκελετός", "Τοιχοποιία", "Δάπεδα", "Κουφώματα", "Αποπεράτωση"
 
@@ -82,7 +82,7 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - _areaGross, _areaNet, _areaBalcony, _areaTerrace, _areaGarden
 Αν δεν βλέπεις αυτά τα πεδία, σημαίνει ότι δεν υπάρχουν δεδομένα (ΟΧΙ ότι δεν δουλεύει).
 
-Τα units documents περιέχουν ΜΕΣΑ ΤΟΥΣ:
+Τα properties documents περιέχουν ΜΕΣΑ ΤΟΥΣ:
 - commercial.askingPrice, .finalPrice, .owners (PropertyOwnerEntry[]), .ownerContactIds (string[]), .reservationDate, .saleDate
 - commercial.paymentSummary: .totalAmount, .paidAmount, .remainingAmount, .paidPercentage, .totalInstallments, .paidInstallments, .overdueInstallments, .nextInstallmentAmount, .nextInstallmentDate
 - areas: .gross, .net, .balcony, .terrace, .garden

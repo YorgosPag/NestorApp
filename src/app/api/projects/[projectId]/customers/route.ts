@@ -47,7 +47,7 @@ export const GET = withStandardRateLimit(async function GET(
             error: 'Database connection not available',
             customers: [],
             projectId,
-            summary: { customersCount: 0, soldUnitsCount: 0 }
+            summary: { customersCount: 0, soldPropertiesCount: 0 }
           }, { status: 503 });
         }
 
@@ -69,7 +69,7 @@ export const GET = withStandardRateLimit(async function GET(
               error: error.message,
               customers: [],
               projectId,
-              summary: { customersCount: 0, soldUnitsCount: 0 }
+              summary: { customersCount: 0, soldPropertiesCount: 0 }
             }, { status: error.status });
           }
           throw error; // Re-throw unexpected errors
@@ -98,7 +98,7 @@ export const GET = withStandardRateLimit(async function GET(
             success: true,
             customers: [],
             projectId,
-            summary: { customersCount: 0, soldUnitsCount: 0 },
+            summary: { customersCount: 0, soldPropertiesCount: 0 },
             message: 'No buildings found for this project'
           }, { status: 200 });
         }
@@ -110,42 +110,42 @@ export const GET = withStandardRateLimit(async function GET(
         // ============================================================================
 
         const buildingIds = buildingsSnapshot.docs.map(doc => doc.id);
-        const allUnits = [];
+        const allProperties = [];
 
         for (const buildingId of buildingIds) {
-          let unitsQuery = getAdminFirestore()
+          let propertiesQuery = getAdminFirestore()
             .collection(COLLECTIONS.PROPERTIES)
             .where(FIELDS.BUILDING_ID, '==', buildingId);
           if (!isSuperAdmin) {
-            unitsQuery = unitsQuery.where(FIELDS.COMPANY_ID, '==', ctx.companyId);
+            propertiesQuery = propertiesQuery.where(FIELDS.COMPANY_ID, '==', ctx.companyId);
           }
-          const unitsSnapshot = await unitsQuery.get();
+          const propertiesSnapshot = await propertiesQuery.get();
 
-          const units = unitsSnapshot.docs.map(unitDoc => ({
-            id: unitDoc.id,
-            ...unitDoc.data()
+          const properties = propertiesSnapshot.docs.map(propertyDoc => ({
+            id: propertyDoc.id,
+            ...propertyDoc.data()
           } as Record<string, unknown> & { id: string; status?: string; soldTo?: string }));
 
-          allUnits.push(...units);
+          allProperties.push(...properties);
         }
 
-        logger.info('Total units found', { count: allUnits.length });
+        logger.info('Total properties found', { count: allProperties.length });
 
         // ============================================================================
         // STEP 4: FILTER SOLD UNITS AND EXTRACT CUSTOMER IDs
         // ============================================================================
 
-        const soldUnits = allUnits.filter(u => u.status === 'sold' && u.soldTo);
-        logger.info('Sold units', { count: soldUnits.length });
+        const soldProperties = allProperties.filter(u => u.status === 'sold' && u.soldTo);
+        logger.info('Sold properties', { count: soldProperties.length });
 
-        if (soldUnits.length === 0) {
-          logger.info('No sold units found');
+        if (soldProperties.length === 0) {
+          logger.info('No sold properties found');
           return NextResponse.json({
             success: true,
             customers: [],
             projectId,
-            summary: { customersCount: 0, soldUnitsCount: 0 },
-            message: 'No sold units found for this project'
+            summary: { customersCount: 0, soldPropertiesCount: 0 },
+            message: 'No sold properties found for this project'
           }, { status: 200 });
         }
 
@@ -153,14 +153,14 @@ export const GET = withStandardRateLimit(async function GET(
         // STEP 5: COUNT UNITS PER CUSTOMER
         // ============================================================================
 
-        const customerUnitCount: { [contactId: string]: number } = {};
-        soldUnits.forEach(unit => {
-          if (unit.soldTo) {
-            customerUnitCount[unit.soldTo] = (customerUnitCount[unit.soldTo] || 0) + 1;
+        const customerPropertyCount: { [contactId: string]: number } = {};
+        soldProperties.forEach(prop => {
+          if (prop.soldTo) {
+            customerPropertyCount[prop.soldTo] = (customerPropertyCount[prop.soldTo] || 0) + 1;
           }
         });
 
-        const customerIds = Object.keys(customerUnitCount);
+        const customerIds = Object.keys(customerPropertyCount);
         logger.info('Unique customers', { count: customerIds.length });
 
         if (customerIds.length === 0) {
@@ -168,8 +168,8 @@ export const GET = withStandardRateLimit(async function GET(
             success: true,
             customers: [],
             projectId,
-            summary: { customersCount: 0, soldUnitsCount: 0 },
-            message: 'No customer IDs found in sold units'
+            summary: { customersCount: 0, soldPropertiesCount: 0 },
+            message: 'No customer IDs found in sold properties'
           }, { status: 200 });
         }
 
@@ -214,17 +214,17 @@ export const GET = withStandardRateLimit(async function GET(
             name: getContactDisplayName(contactData),
             phone: getPrimaryPhone(contactData) || null,
             email: getPrimaryEmail(contactData) || null,
-            unitsCount: customerUnitCount[contactData.id] || 0,
+            propertiesCount: customerPropertyCount[contactData.id] || 0,
           };
         });
 
-        logger.info('[Projects/Customers] Complete', { customersCount: customers.length, soldUnitsCount: soldUnits.length });
+        logger.info('[Projects/Customers] Complete', { customersCount: customers.length, soldPropertiesCount: soldProperties.length });
 
         // Audit successful access
         await logAuditEvent(ctx, 'data_accessed', projectId, 'project', {
           metadata: {
             path: `/api/projects/${projectId}/customers`,
-            reason: `Project customers accessed (${customers.length} customers, ${soldUnits.length} units)`
+            reason: `Project customers accessed (${customers.length} customers, ${soldProperties.length} properties)`
           }
         });
 
@@ -234,7 +234,7 @@ export const GET = withStandardRateLimit(async function GET(
           projectId,
           summary: {
             customersCount: customers.length,
-            soldUnitsCount: soldUnits.length
+            soldPropertiesCount: soldProperties.length
           }
         }, { status: 200 });
 
@@ -250,7 +250,7 @@ export const GET = withStandardRateLimit(async function GET(
           error: getErrorMessage(error, 'Failed to load project customers'),
           customers: [],
           projectId,
-          summary: { customersCount: 0, soldUnitsCount: 0 },
+          summary: { customersCount: 0, soldPropertiesCount: 0 },
           timestamp: new Date().toISOString()
         }, { status: 500 });
       }

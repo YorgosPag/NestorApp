@@ -7,10 +7,10 @@ import '@/lib/design-system';
 
 interface StorageCardsViewProps {
   units: StorageUnit[];
-  selectedUnits: string[];
-  onSelectUnit: (unitId: string) => void;
+  selectedProperties: string[];
+  onSelectProperty: (propertyId: string) => void;
   onEdit: (unit: StorageUnit) => void;
-  onDelete: (unitId: string) => void;
+  onDelete: (propertyId: string) => void;
   getStatusColor: (status: StorageStatus) => string;
   getStatusLabel: (status: StorageStatus) => string;
   getTypeIcon: (type: StorageType) => React.ElementType;
@@ -19,8 +19,8 @@ interface StorageCardsViewProps {
 
 export function StorageCardsView({
   units,
-  selectedUnits,
-  onSelectUnit,
+  selectedProperties,
+  onSelectProperty,
   onEdit,
   onDelete,
   getStatusColor,
@@ -34,8 +34,8 @@ export function StorageCardsView({
         <StorageCard
           key={unit.id}
           unit={unit}
-          isSelected={selectedUnits.includes(unit.id)}
-          onSelect={() => onSelectUnit(unit.id)}
+          isSelected={selectedProperties.includes(unit.id)}
+          onSelect={() => onSelectProperty(unit.id)}
           onEdit={() => onEdit(unit)}
           onDelete={() => onDelete(unit.id)}
           getStatusColor={getStatusColor}

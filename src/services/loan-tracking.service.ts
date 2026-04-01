@@ -51,8 +51,8 @@ function getDb() {
   return db;
 }
 
-function planCollectionPath(unitId: string): string {
-  return `${COLLECTIONS.PROPERTIES}/${unitId}/${SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS}`;
+function planCollectionPath(propertyId: string): string {
+  return `${COLLECTIONS.PROPERTIES}/${propertyId}/${SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS}`;
 }
 
 /** Read loans from plan, with migration fallback for old `loan` field */
@@ -89,9 +89,9 @@ export class LoanTrackingService {
   // READ
   // ==========================================================================
 
-  static async getLoans(unitId: string, planId: string): Promise<LoansResult> {
+  static async getLoans(propertyId: string, planId: string): Promise<LoansResult> {
     try {
-      const plan = await PaymentPlanService.getPaymentPlan(unitId, planId);
+      const plan = await PaymentPlanService.getPaymentPlan(propertyId, planId);
       if (!plan) return { success: false, error: 'Payment plan not found' };
       return { success: true, loans: resolveLoans(plan) };
     } catch (error) {
@@ -100,9 +100,9 @@ export class LoanTrackingService {
     }
   }
 
-  static async getLoan(unitId: string, planId: string, loanId: string): Promise<LoanResult> {
+  static async getLoan(propertyId: string, planId: string, loanId: string): Promise<LoanResult> {
     try {
-      const plan = await PaymentPlanService.getPaymentPlan(unitId, planId);
+      const plan = await PaymentPlanService.getPaymentPlan(propertyId, planId);
       if (!plan) return { success: false, error: 'Payment plan not found' };
       const loan = resolveLoans(plan).find(l => l.loanId === loanId);
       if (!loan) return { success: false, error: `Loan ${loanId} not found` };
@@ -117,9 +117,9 @@ export class LoanTrackingService {
   // CREATE
   // ==========================================================================
 
-  static async addLoan(unitId: string, planId: string, input: CreateLoanInput, createdBy: string): Promise<LoanResult> {
+  static async addLoan(propertyId: string, planId: string, input: CreateLoanInput, createdBy: string): Promise<LoanResult> {
     try {
-      const plan = await PaymentPlanService.getPaymentPlan(unitId, planId);
+      const plan = await PaymentPlanService.getPaymentPlan(propertyId, planId);
       if (!plan) return { success: false, error: 'Payment plan not found' };
 
       const loans = resolveLoans(plan);
@@ -145,11 +145,11 @@ export class LoanTrackingService {
       updatedLoans.push(newLoan);
 
       const db = getDb();
-      await db.collection(planCollectionPath(unitId)).doc(planId).update({
+      await db.collection(planCollectionPath(propertyId)).doc(planId).update({
         loans: updatedLoans, updatedAt: new Date().toISOString(), updatedBy: createdBy,
       });
 
-      await PaymentPlanService.syncPaymentSummary(unitId, planId);
+      await PaymentPlanService.syncPaymentSummary(propertyId, planId);
       logger.info(`[LoanTrackingService] Added loan ${loanId} (${input.bankName}) to plan ${planId}`);
       return { success: true, loan: newLoan };
     } catch (error) {
@@ -162,9 +162,9 @@ export class LoanTrackingService {
   // UPDATE
   // ==========================================================================
 
-  static async updateLoan(unitId: string, planId: string, loanId: string, input: UpdateLoanInput, updatedBy: string): Promise<ServiceResult> {
+  static async updateLoan(propertyId: string, planId: string, loanId: string, input: UpdateLoanInput, updatedBy: string): Promise<ServiceResult> {
     try {
-      const plan = await PaymentPlanService.getPaymentPlan(unitId, planId);
+      const plan = await PaymentPlanService.getPaymentPlan(propertyId, planId);
       if (!plan) return { success: false, error: 'Payment plan not found' };
 
       const loans = resolveLoans(plan);
@@ -210,11 +210,11 @@ export class LoanTrackingService {
       updatedLoans[loanIndex] = loan;
 
       const db = getDb();
-      await db.collection(planCollectionPath(unitId)).doc(planId).update({
+      await db.collection(planCollectionPath(propertyId)).doc(planId).update({
         loans: updatedLoans, updatedAt: now, updatedBy,
       });
 
-      await PaymentPlanService.syncPaymentSummary(unitId, planId);
+      await PaymentPlanService.syncPaymentSummary(propertyId, planId);
       logger.info(`[LoanTrackingService] Updated loan ${loanId} in plan ${planId}`);
       return { success: true };
     } catch (error) {
@@ -227,9 +227,9 @@ export class LoanTrackingService {
   // FSM TRANSITION
   // ==========================================================================
 
-  static async transitionLoanStatus(unitId: string, planId: string, loanId: string, input: LoanTransitionInput, updatedBy: string): Promise<ServiceResult> {
+  static async transitionLoanStatus(propertyId: string, planId: string, loanId: string, input: LoanTransitionInput, updatedBy: string): Promise<ServiceResult> {
     try {
-      const plan = await PaymentPlanService.getPaymentPlan(unitId, planId);
+      const plan = await PaymentPlanService.getPaymentPlan(propertyId, planId);
       if (!plan) return { success: false, error: 'Payment plan not found' };
 
       const loans = resolveLoans(plan);
@@ -265,11 +265,11 @@ export class LoanTrackingService {
       updatedLoans[loanIndex] = loan;
 
       const db = getDb();
-      await db.collection(planCollectionPath(unitId)).doc(planId).update({
+      await db.collection(planCollectionPath(propertyId)).doc(planId).update({
         loans: updatedLoans, updatedAt: now, updatedBy,
       });
 
-      await PaymentPlanService.syncPaymentSummary(unitId, planId);
+      await PaymentPlanService.syncPaymentSummary(propertyId, planId);
       logger.info(`[LoanTrackingService] Loan ${loanId}: ${loans[loanIndex].status} → ${input.targetStatus}`);
       return { success: true };
     } catch (error) {
@@ -283,10 +283,10 @@ export class LoanTrackingService {
   // ==========================================================================
 
   static async recordDisbursement(
-    unitId: string, planId: string, loanId: string,
+    propertyId: string, planId: string, loanId: string,
     input: RecordDisbursementInput, createdBy: string
   ): Promise<ServiceResult & { paymentId?: string }> {
-    return recordDisbursementOp(unitId, planId, loanId, input, createdBy, resolveLoans);
+    return recordDisbursementOp(propertyId, planId, loanId, input, createdBy, resolveLoans);
   }
 
   // ==========================================================================
@@ -294,10 +294,10 @@ export class LoanTrackingService {
   // ==========================================================================
 
   static async addCommunicationLog(
-    unitId: string, planId: string, loanId: string,
+    propertyId: string, planId: string, loanId: string,
     input: AddCommunicationLogInput, createdBy: string
   ): Promise<ServiceResult> {
-    return addCommunicationLogOp(unitId, planId, loanId, input, createdBy, resolveLoans);
+    return addCommunicationLogOp(propertyId, planId, loanId, input, createdBy, resolveLoans);
   }
 }
 

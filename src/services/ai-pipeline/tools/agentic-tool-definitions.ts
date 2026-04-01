@@ -59,7 +59,7 @@ export const CONTACT_UPDATABLE_FIELDS = [
 export type ContactUpdatableField = typeof CONTACT_UPDATABLE_FIELDS[number];
 
 /** SPEC-257F: File source types (SSoT — used in tool def enum + executor validation) */
-export const FILE_SOURCE_TYPES = ['unit_photo', 'file', 'floorplan'] as const;
+export const FILE_SOURCE_TYPES = ['property_photo', 'file', 'floorplan'] as const;
 export type FileSourceType = typeof FILE_SOURCE_TYPES[number];
 
 /** Bank account operations (SSoT — used in tool def enum + handler validation) */
@@ -410,7 +410,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     type: 'function' as const,
     function: {
       name: 'create_complaint_task',
-      description: 'Customer (buyer/owner/tenant) reports a problem with their unit. Creates a task and notifies admin for urgent issues. Use ONLY when a linked customer reports an issue with their property.',
+      description: 'Customer (buyer/owner/tenant) reports a problem with their property. Creates a task and notifies admin for urgent issues. Use ONLY when a linked customer reports an issue with their property.',
       parameters: {
         type: 'object',
         properties: {
@@ -427,12 +427,12 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
             description: 'Complaint severity: urgent (structural/safety), normal (wear/material), low (aesthetic/neighbour)',
             enum: [...COMPLAINT_SEVERITIES],
           },
-          unitId: {
+          propertyId: {
             type: 'string',
-            description: 'The unit ID this complaint is about (must be from customer linked units)',
+            description: 'The property ID this complaint is about (must be from customer linked properties)',
           },
         },
-        required: ['title', 'description', 'severity', 'unitId'],
+        required: ['title', 'description', 'severity', 'propertyId'],
         additionalProperties: false,
       },
       strict: true,
@@ -492,12 +492,12 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
         properties: {
           sourceType: {
             type: 'string',
-            description: 'Source type: unit_photo (photos from unit), file (document from files collection), floorplan (floor plan from floorplans collection)',
+            description: 'Source type: property_photo (photos from property), file (document from files collection), floorplan (floor plan from floorplans collection)',
             enum: [...FILE_SOURCE_TYPES],
           },
           sourceId: {
             type: 'string',
-            description: 'Entity ID: unitId for unit_photo, fileId for file, floorplanId for floorplan',
+            description: 'Entity ID: propertyId for property_photo, fileId for file, floorplanId for floorplan',
           },
           caption: {
             type: ['string', 'null'],

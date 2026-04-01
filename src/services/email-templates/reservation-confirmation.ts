@@ -24,7 +24,7 @@ export interface ReservationEmailData {
   /** Buyer display name */
   buyerName: string;
   /** Unit name (e.g. "Α-101") */
-  unitName: string;
+  propertyName: string;
   /** Floor number */
   unitFloor: number | null;
   /** Building name */
@@ -62,7 +62,7 @@ export function buildReservationConfirmationEmail(data: ReservationEmailData): {
   html: string;
   text: string;
 } {
-  const subject = `Επιβεβαίωση κράτησης — ${data.unitName}`;
+  const subject = `Επιβεβαίωση κράτησης — ${data.propertyName}`;
 
   const VAT_DIVISOR = 1.24;
   const netAmount = data.depositAmount / VAT_DIVISOR;
@@ -121,7 +121,7 @@ function buildContentSection(
       </tr>
       <tr>
         <td style="padding:16px;">
-          ${buildInfoRow('Μονάδα', `${escapeHtml(data.unitName)}${floorText}`)}
+          ${buildInfoRow('Μονάδα', `${escapeHtml(data.propertyName)}${floorText}`)}
           ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
           ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
           ${data.projectAddress ? buildInfoRow('Διεύθυνση', escapeHtml(data.projectAddress)) : ''}
@@ -219,7 +219,7 @@ function buildPlainText(
     `Η κράτησή σας καταχωρήθηκε επιτυχώς.`,
     ``,
     `═══ ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ ═══`,
-    `Μονάδα: ${data.unitName}${data.unitFloor !== null ? ` — ${data.unitFloor}ος όροφος` : ''}`,
+    `Μονάδα: ${data.propertyName}${data.unitFloor !== null ? ` — ${data.unitFloor}ος όροφος` : ''}`,
   ];
 
   if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);

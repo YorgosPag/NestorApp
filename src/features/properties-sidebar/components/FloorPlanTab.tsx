@@ -14,7 +14,7 @@
  * @enterprise ADR-033 - Floorplan Processing Pipeline
  *
  * Storage Path:
- * companies/{companyId}/entities/unit/{unitId}/domains/construction/categories/floorplans/files/
+ * companies/{companyId}/entities/unit/{propertyId}/domains/construction/categories/floorplans/files/
  */
 
 'use client';
@@ -52,7 +52,7 @@ interface ViewerProps {
 }
 
 interface FloorPlanTabProps {
-  selectedUnit: Property | null;
+  selectedProperty: Property | null;
   currentFloor: FloorData | null;
   safeFloors: FloorData[];
   safeViewerProps: ViewerProps;
@@ -82,7 +82,7 @@ const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dx
  * - Purpose: 'unit-floorplan' for filtering
  */
 export function FloorPlanTab({
-  selectedUnit,
+  selectedProperty,
 }: FloorPlanTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('properties');
@@ -93,7 +93,7 @@ export function FloorPlanTab({
   // 🏢 ENTERPRISE: Use unit's companyId (from Firestore) if available,
   // fallback to auth context. This ensures super_admin sees files
   // for units belonging to other companies.
-  const unitCompanyId = (selectedUnit as Record<string, unknown> | null)?.companyId as string | undefined;
+  const unitCompanyId = (selectedProperty as Record<string, unknown> | null)?.companyId as string | undefined;
   const companyId = unitCompanyId || fallbackCompanyId;
   const currentUserId = user?.uid;
 
@@ -126,11 +126,11 @@ export function FloorPlanTab({
   }, [companyId]);
 
   // If no unit selected, show placeholder
-  if (!selectedUnit) {
+  if (!selectedProperty) {
     return (
       <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
         <UnitIcon className={`${iconSizes['2xl']} ${unitColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('floorplan.selectUnit')}</h3>
+        <h3 className="text-xl font-semibold mb-2">{t('floorplan.selectProperty')}</h3>
         <p className="text-sm max-w-sm">
           {t('floorplan.selectUnitDescription')}
         </p>
@@ -152,8 +152,8 @@ export function FloorPlanTab({
       companyId={companyId}
       currentUserId={currentUserId}
       entityType="property"
-      entityId={String(selectedUnit.id)}
-      entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
+      entityId={String(selectedProperty.id)}
+      entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
       domain="construction"
       category="floorplans"
       purpose={FLOORPLAN_PURPOSES.PROPERTY}

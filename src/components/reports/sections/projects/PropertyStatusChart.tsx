@@ -40,14 +40,14 @@ export function PropertyStatusChart({ data, loading }: PropertyStatusChartProps)
   const chartConfig: ChartConfig = {};
   for (const status of allStatuses) {
     chartConfig[status] = {
-      label: t(`projects.unitStatus.statuses.${status}`),
+      label: t(`projects.propertyStatus.statuses.${status}`),
       color: STATUS_COLORS[status] ?? 'hsl(var(--report-chart-6))',
     };
   }
 
   if (!loading && data.length === 0) {
     return (
-      <ReportSection title={t('projects.unitStatus.title')} id="unit-status">
+      <ReportSection title={t('projects.propertyStatus.title')} id="unit-status">
         <ReportEmptyState type="no-data" />
       </ReportSection>
     );
@@ -55,8 +55,8 @@ export function PropertyStatusChart({ data, loading }: PropertyStatusChartProps)
 
   return (
     <ReportSection
-      title={t('projects.unitStatus.title')}
-      description={t('projects.unitStatus.description')}
+      title={t('projects.propertyStatus.title')}
+      description={t('projects.propertyStatus.description')}
       id="unit-status"
     >
       <ReportChart

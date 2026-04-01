@@ -222,13 +222,13 @@ export async function propagateProjectCompanyLink(
 /**
  * When a unit gains/changes its buildingId:
  * - Resolve building.projectId → project.companyId
- * - Update unit with projectId + companyId
+ * - Update property with projectId + companyId
  *
  * When buildingId is null (unlink):
- * - Unit loses projectId and companyId (set to null)
+ * - Property loses projectId and companyId (set to null)
  */
 export async function propagateUnitBuildingLink(
-  unitId: string,
+  propertyId: string,
   newBuildingId: string | null
 ): Promise<CascadeResult> {
   const db = getAdminFirestore();
@@ -256,7 +256,7 @@ export async function propagateUnitBuildingLink(
         }
 
         // 🏢 ENTERPRISE: Update BOTH companyId AND linkedCompanyId
-        await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
+        await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
           projectId: resolvedProjectId,
           companyId: resolvedCompanyId,
           linkedCompanyId: resolvedLinkedCompanyId,
@@ -265,15 +265,15 @@ export async function propagateUnitBuildingLink(
       }
     } else {
       // Unlink: clear project/company references
-      await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
+      await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
         projectId: null,
         linkedCompanyId: null,
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
 
-    logger.info('Unit→Building cascade completed', {
-      unitId,
+    logger.info('Property→Building cascade completed', {
+      propertyId,
       newBuildingId,
       resolvedProjectId,
       resolvedCompanyId,
@@ -286,7 +286,7 @@ export async function propagateUnitBuildingLink(
     };
   } catch (error) {
     const message = getErrorMessage(error);
-    logger.error('Unit→Building cascade failed', { unitId, newBuildingId, error: message });
+    logger.error('Property→Building cascade failed', { propertyId, newBuildingId, error: message });
     return { success: false, totalUpdated: 0, collections: {}, error: message };
   }
 }

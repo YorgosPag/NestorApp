@@ -14,10 +14,10 @@
  *
  * Storage Pattern:
  * - Firestore: `files` collection (FileRecord documents)
- * - Storage: `companies/{companyId}/.../entities/unit/{unitId}/domains/construction/categories/floorplans/files/{fileId}.*`
+ * - Storage: `companies/{companyId}/.../entities/property/{propertyId}/domains/construction/categories/floorplans/files/{fileId}.*`
  *
  * Legacy Fallback:
- * - Reads from `unit_floorplans/{unitId}_unit` for backward compatibility with old data
+ * - Reads from `unit_floorplans/{propertyId}_unit` for backward compatibility with old data
  *
  * @see FloorFloorplanService for the gold-standard reference implementation
  * @see FileRecordService for the core file operations
@@ -58,7 +58,7 @@ interface DxfSceneData {
 }
 
 export interface PropertyFloorplanData {
-  unitId: string;
+  propertyId: string;
   type: 'unit';
   scene: DxfSceneData;
   fileName: string;
@@ -77,8 +77,8 @@ export interface SavePropertyFloorplanParams {
   projectId?: string;
   /** Building ID (optional) */
   buildingId?: string;
-  /** Unit ID (REQUIRED) */
-  unitId: string;
+  /** Property ID (REQUIRED) */
+  propertyId: string;
   /** Floorplan data */
   data: PropertyFloorplanData;
   /** User ID who created this */
@@ -93,8 +93,8 @@ export interface SavePropertyFloorplanParams {
 export interface LoadPropertyFloorplanParams {
   /** Company ID (REQUIRED) */
   companyId: string;
-  /** Unit ID */
-  unitId: string;
+  /** Property ID */
+  propertyId: string;
 }
 
 // ============================================================================
@@ -118,12 +118,12 @@ export class PropertyFloorplanService {
    * NOTE: Does NOT write to legacy `unit_floorplans` collection.
    */
   static async saveFloorplan(params: SavePropertyFloorplanParams): Promise<boolean> {
-    const { companyId, projectId, buildingId, unitId, data, createdBy, originalFile } = params;
+    const { companyId, projectId, buildingId, propertyId, data, createdBy, originalFile } = params;
 
     try {
-      logger.debug('Saving unit floorplan via Enterprise storage', { unitId, companyId });
+      logger.debug('Saving property floorplan via Enterprise storage', { propertyId, companyId });
 
-      const fileName = data.fileName || `${unitId}_unit_floorplan.dxf`;
+      const fileName = data.fileName || `${propertyId}_unit_floorplan.dxf`;
       const hasOriginalFile = !!originalFile;
       const fileExtension = hasOriginalFile
         ? (originalFile.name.split('.').pop()?.toLowerCase() || 'dxf')
@@ -142,11 +142,11 @@ export class PropertyFloorplanService {
         companyId,
         projectId,
         entityType: ENTITY_TYPES.PROPERTY,
-        entityId: unitId,
+        entityId: propertyId,
         purpose: FLOORPLAN_PURPOSES.PROPERTY,
-        entityLabel: `Unit ${unitId}`,
+        entityLabel: `Property ${propertyId}`,
         ext: fileExtension,
-        descriptors: [unitId, buildingId || '', 'unit-floorplan'].filter(Boolean),
+        descriptors: [propertyId, buildingId || '', 'unit-floorplan'].filter(Boolean),
         createdBy,
         originalFilename: fileName,
         contentType,
@@ -154,8 +154,8 @@ export class PropertyFloorplanService {
         generateThumbnail: true,
       });
 
-      logger.info('Enterprise save complete for unit', {
-        unitId,
+      logger.info('Enterprise save complete for property', {
+        propertyId,
         fileId: result.fileId,
         ext: fileExtension,
       });
@@ -165,7 +165,7 @@ export class PropertyFloorplanService {
         floorplanId: result.fileId,
         floorplan: {
           entityType: ENTITY_TYPES.PROPERTY,
-          entityId: unitId,
+          entityId: propertyId,
           name: fileName,
         },
         timestamp: Date.now(),
@@ -173,8 +173,8 @@ export class PropertyFloorplanService {
 
       return true;
     } catch (error) {
-      logger.error('Error saving unit floorplan', {
-        unitId,
+      logger.error('Error saving property floorplan', {
+        propertyId,
         companyId,
         error: getErrorMessage(error),
       });
@@ -187,19 +187,19 @@ export class PropertyFloorplanService {
    *
    * Strategy:
    * 1. Primary: Query `files` collection via FileRecordService
-   * 2. Fallback: Check legacy `unit_floorplans/{unitId}_unit` for embedded scene (old data)
+   * 2. Fallback: Check legacy `unit_floorplans/{propertyId}_unit` for embedded scene (old data)
    * 3. If neither → return null
    */
   static async loadFloorplan(params: LoadPropertyFloorplanParams): Promise<PropertyFloorplanData | null> {
-    const { companyId, unitId } = params;
+    const { companyId, propertyId } = params;
 
     try {
-      logger.debug('Loading unit floorplan', { unitId, companyId });
+      logger.debug('Loading property floorplan', { propertyId, companyId });
 
       // ── Primary: FileRecord-based lookup ──
       const fileRecords = await FileRecordService.getFilesByEntity(
         ENTITY_TYPES.PROPERTY,
-        unitId,
+        propertyId,
         {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
@@ -212,7 +212,7 @@ export class PropertyFloorplanService {
         const fileRecord = fileRecords[0];
 
         if (!fileRecord.storagePath) {
-          logger.warn('FileRecord has no storagePath', { unitId, fileId: fileRecord.id });
+          logger.warn('FileRecord has no storagePath', { propertyId, fileId: fileRecord.id });
           return null;
         }
 
@@ -230,18 +230,18 @@ export class PropertyFloorplanService {
 
         const scene = safeJsonParse<DxfSceneData>(sceneJson, null as unknown as DxfSceneData);
         if (scene === null) {
-          logger.error('Failed to parse unit floorplan JSON', { unitId, companyId });
+          logger.error('Failed to parse property floorplan JSON', { propertyId, companyId });
           return null;
         }
 
-        logger.debug('Loaded unit floorplan from FileRecord', {
-          unitId,
+        logger.debug('Loaded property floorplan from FileRecord', {
+          propertyId,
           fileId: fileRecord.id,
           entityCount: scene.entities?.length || 0,
         });
 
         return {
-          unitId,
+          propertyId,
           type: 'unit',
           scene,
           fileName: fileRecord.originalFilename,
@@ -255,7 +255,7 @@ export class PropertyFloorplanService {
       }
 
       // ── Fallback: Legacy collection (backward compat for old data) ──
-      const docId = `${unitId}_unit`;
+      const docId = `${propertyId}_unit`;
       const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
 
       if (docSnap.exists()) {
@@ -263,16 +263,16 @@ export class PropertyFloorplanService {
 
         // Only return if scene is embedded (truly old data)
         if (data.scene && !data.sceneStoredInStorage) {
-          logger.warn('Loaded unit floorplan from LEGACY collection (embedded scene)', { unitId });
+          logger.warn('Loaded property floorplan from LEGACY collection (embedded scene)', { propertyId });
           return data as PropertyFloorplanData;
         }
       }
 
-      logger.debug('No floorplan found for unit', { unitId });
+      logger.debug('No floorplan found for property', { propertyId });
       return null;
     } catch (error) {
-      logger.error('Error loading unit floorplan', {
-        unitId,
+      logger.error('Error loading property floorplan', {
+        propertyId,
         companyId,
         error: getErrorMessage(error),
       });
@@ -283,11 +283,11 @@ export class PropertyFloorplanService {
   /**
    * 🏢 ENTERPRISE: Check if unit floorplan exists
    */
-  static async hasFloorplan(companyId: string, unitId: string): Promise<boolean> {
+  static async hasFloorplan(companyId: string, propertyId: string): Promise<boolean> {
     try {
       const fileRecords = await FileRecordService.getFilesByEntity(
         ENTITY_TYPES.PROPERTY,
-        unitId,
+        propertyId,
         {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
@@ -301,12 +301,12 @@ export class PropertyFloorplanService {
       }
 
       // Fallback: check legacy collection
-      const docId = `${unitId}_unit`;
+      const docId = `${propertyId}_unit`;
       const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
       return docSnap.exists() && !docSnap.data()?.deleted;
     } catch (error) {
-      logger.warn('Error checking unit floorplan', {
-        unitId,
+      logger.warn('Error checking property floorplan', {
+        propertyId,
         error: getErrorMessage(error),
       });
       return false;
@@ -316,11 +316,11 @@ export class PropertyFloorplanService {
   /**
    * 🏢 ENTERPRISE: Delete unit floorplan (soft delete via FileRecordService)
    */
-  static async deleteFloorplan(companyId: string, unitId: string, deletedBy: string): Promise<boolean> {
+  static async deleteFloorplan(companyId: string, propertyId: string, deletedBy: string): Promise<boolean> {
     try {
       const fileRecords = await FileRecordService.getFilesByEntity(
         ENTITY_TYPES.PROPERTY,
-        unitId,
+        propertyId,
         {
           companyId,
           domain: FILE_DOMAINS.CONSTRUCTION,
@@ -337,17 +337,17 @@ export class PropertyFloorplanService {
         await FileRecordService.moveToTrash(fileRecord.id, deletedBy);
       }
 
-      logger.info('Deleted unit floorplan(s)', { unitId, count: fileRecords.length });
+      logger.info('Deleted property floorplan(s)', { propertyId, count: fileRecords.length });
 
       RealtimeService.dispatch('FLOORPLAN_DELETED', {
-        floorplanId: unitId,
+        floorplanId: propertyId,
         timestamp: Date.now(),
       });
 
       return true;
     } catch (error) {
-      logger.error('Error deleting unit floorplan', {
-        unitId,
+      logger.error('Error deleting property floorplan', {
+        propertyId,
         error: getErrorMessage(error),
       });
       return false;

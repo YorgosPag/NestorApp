@@ -403,7 +403,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                         <TableCell className={typography.special.codeId}>
                           {row.entityRef.collection === 'units' && <NAVIGATION_ENTITIES.unit.icon className={cn('inline mr-1', iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />}
                           {row.entityRef.collection === 'units' ? (
-                            <button type="button" className="hover:underline cursor-pointer" onClick={() => router.push(`/spaces/properties?unitId=${row.entityRef.id}`)}>{row.entityCode}</button>
+                            <button type="button" className="hover:underline cursor-pointer" onClick={() => router.push(`/spaces/properties?propertyId=${row.entityRef.id}`)}>{row.entityCode}</button>
                           ) : row.entityCode}
                         </TableCell>
                         <TableCell>{row.description}</TableCell>

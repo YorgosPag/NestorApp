@@ -35,9 +35,9 @@ import {
   resolveCustomer,
   buildIssuer,
   buildInvoiceInput,
-  resolveUnitCompanyId,
+  resolvePropertyCompanyId,
   resolveTransactionChainId,
-  updateUnitTransactionChain,
+  updatePropertyTransactionChain,
   findDepositInvoiceId,
   resolveHierarchy,
 } from './sales-accounting-helpers';
@@ -300,11 +300,11 @@ export class SalesAccountingBridge {
         await this.services.service.createJournalEntryFromInvoice(invoiceId);
 
       // 3. Update unit.commercial.transactionChainId
-      await updateUnitTransactionChain(propertyId, transactionChainId);
+      await updatePropertyTransactionChain(propertyId, transactionChainId);
 
       // 4. Audit trail: invoice created
       const invoiceTypeLabel = invoiceInput.type === 'credit_invoice' ? 'Πιστωτικό' : 'Τιμολόγιο';
-      const companyId = await resolveUnitCompanyId(propertyId);
+      const companyId = await resolvePropertyCompanyId(propertyId);
       safeFireAndForget(EntityAuditService.recordChange({
         entityType: 'unit',
         entityId: propertyId,

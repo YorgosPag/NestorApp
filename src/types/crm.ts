@@ -18,7 +18,7 @@ export interface Opportunity {
   interestedIn?: {
     projectIds?: string[];
     buildingIds?: string[];
-    unitIds?: string[];
+    propertyIds?: string[];
     propertyType?: 'apartment' | 'maisonette' | 'store' | 'office' | 'parking' | 'storage';
     budget?: {
       min?: number;
@@ -54,7 +54,7 @@ export interface Communication {
   companyId?: string; // 🏢 ENTERPRISE: Tenant isolation (added 2026-02-03)
   contactId: string;
   projectId?: string;
-  unitId?: string;
+  propertyId?: string;
   opportunityId?: string;
   type: 'email' | 'phone' | 'sms' | 'whatsapp' | 'telegram' | 'meeting' | 'note';
   direction: 'inbound' | 'outbound';
@@ -124,7 +124,7 @@ export interface CrmTask {
   opportunityId?: string;
   contactId?: string | null;
   projectId?: string | null;
-  unitId?: string;
+  propertyId?: string;
   assignedTo: string; // User ID
   assignedBy?: string; // User ID
   dueDate?: FirestoreishTimestamp | null;

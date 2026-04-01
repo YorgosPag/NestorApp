@@ -127,7 +127,7 @@ function docToTriageCommunication(doc: DocumentData & { id: string }): Communica
     companyId: getString(data, 'companyId'),
     contactId: getString(data, 'contactId') ?? '',
     projectId: getString(data, 'projectId'),
-    unitId: getString(data, 'unitId'),
+    propertyId: getString(data, 'propertyId'),
     opportunityId: getString(data, 'opportunityId'),
     type: getString(data, 'type', 'email') as Communication['type'],
     direction: getString(data, 'direction', 'inbound') as Communication['direction'],

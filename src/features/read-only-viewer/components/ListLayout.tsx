@@ -97,8 +97,8 @@ export function ListLayout({
       {/* Center Panel - ReadOnlyMediaViewer for floorplans/photos/videos */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
         <ReadOnlyMediaViewer
-          unitId={selectedPropertyIds[0] ?? null}
-          unitName={
+          propertyId={selectedPropertyIds[0] ?? null}
+          propertyName={
             selectedPropertyIds[0]
               ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.name
               : undefined
@@ -132,7 +132,7 @@ export function ListLayout({
               : undefined
           }
           onHoverOverlay={onHoverProperty}
-          onClickOverlay={(unitId) => handlePolygonSelect(unitId, false)}
+          onClickOverlay={(propertyId) => handlePolygonSelect(propertyId, false)}
           highlightedOverlayUnitId={hoveredPropertyId}
         />
       </div>

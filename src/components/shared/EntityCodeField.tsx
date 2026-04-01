@@ -46,7 +46,7 @@ interface EntityCodeFieldProps {
   /** Floor level for code suggestion context */
   floorLevel: number;
   /** Unit type (required for entityType='unit') */
-  unitType?: PropertyType;
+  propertyType?: PropertyType;
   /** Location zone (parking only) */
   locationZone?: ParkingLocationZone;
   /** Label text */
@@ -80,7 +80,7 @@ export function EntityCodeField({
   entityType,
   buildingId,
   floorLevel,
-  unitType,
+  propertyType,
   locationZone,
   label,
   placeholderFallback,
@@ -97,7 +97,7 @@ export function EntityCodeField({
     entityType,
     buildingId,
     floorLevel,
-    unitType: unitType || undefined,
+    propertyType: propertyType || undefined,
     locationZone: locationZone || undefined,
     disabled: codeOverridden || disabled,
   });

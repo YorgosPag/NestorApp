@@ -59,7 +59,7 @@ interface PropertyFieldsBlockProps {
   /** Whether we are creating a new unit (inline form) */
   isCreatingNewUnit?: boolean;
   /** Callback when new unit is successfully created */
-  onUnitCreated?: (unitId: string) => void;
+  onPropertyCreated?: (propertyId: string) => void;
   /** Controlled active level — synchronized with MultiLevelNavigation */
   activeLevelId?: string | null;
   /** Callback when user selects a level tab — updates shared state in parent */
@@ -77,7 +77,7 @@ export function PropertyFieldsBlock({
   isEditMode = false,
   onExitEditMode,
   isCreatingNewUnit = false,
-  onUnitCreated,
+  onPropertyCreated,
   activeLevelId: controlledLevelId,
   onActiveLevelChange,
 }: PropertyFieldsBlockProps) {
@@ -106,7 +106,7 @@ export function PropertyFieldsBlock({
     entityType: 'unit',
     buildingId: property.buildingId ?? '',
     floorLevel: property.floor ?? 0,
-    unitType: (property.type as PropertyType) || undefined,
+    propertyType: (property.type as PropertyType) || undefined,
     disabled: codeOverridden || !!property.code,
   });
 
@@ -307,7 +307,7 @@ export function PropertyFieldsBlock({
         // 🏢 ENTERPRISE: Create new unit via server-side API (Admin SDK)
         // Client-side setDoc blocked by Firestore rules — must use API endpoint
         const { createProperty } = await import('@/services/properties.service');
-        const unitData = {
+        const propertyData = {
           ...updates,
           name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
           code: formData.code || suggestedCode || '',
@@ -317,12 +317,12 @@ export function PropertyFieldsBlock({
           floor: formData.floor,
           area: formData.areaGross,
         };
-        const result = await createProperty(unitData);
+        const result = await createProperty(propertyData);
         if (!result.success) {
           throw new Error(result.error ?? 'Unit creation failed');
         }
-        if (result.propertyId && onUnitCreated) {
-          onUnitCreated(result.propertyId);
+        if (result.propertyId && onPropertyCreated) {
+          onPropertyCreated(result.propertyId);
         }
         success(t('save.createSuccess', { defaultValue: 'Η μονάδα δημιουργήθηκε επιτυχώς' }));
       } else {
@@ -352,7 +352,7 @@ export function PropertyFieldsBlock({
     } finally {
       setIsSaving(false);
     }
-  }, [buildUpdatesFromForm, isCreatingNewUnit, formData.name, formData.type, formData.floor, formData.areaGross, property.id, onUpdateProperty, onExitEditMode, onUnitCreated, t]);
+  }, [buildUpdatesFromForm, isCreatingNewUnit, formData.name, formData.type, formData.floor, formData.areaGross, property.id, onUpdateProperty, onExitEditMode, onPropertyCreated, t]);
 
   // ── Cancel handler ──
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- cancel handler kept for future use

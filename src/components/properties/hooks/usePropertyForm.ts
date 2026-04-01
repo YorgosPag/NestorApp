@@ -141,7 +141,7 @@ export function usePropertyForm({
           resolvedFloorId = derived.floorId;
         }
 
-        const unitData: Record<string, unknown> = {
+        const propertyData: Record<string, unknown> = {
           name: formData.name,
           type: formData.type || 'apartment',
           buildingId: formData.buildingId,
@@ -156,22 +156,22 @@ export function usePropertyForm({
 
         // ADR-236: Include multi-level fields
         if (hasMultiLevel) {
-          unitData.isMultiLevel = true;
-          unitData.levels = formData.levels;
+          propertyData.isMultiLevel = true;
+          propertyData.levels = formData.levels;
         }
 
         // Conditionally add optional fields (Firestore rejects undefined)
-        if (formData.code) unitData.code = formData.code;
-        if (formData.area !== '') unitData.area = formData.area;
-        if (formData.description) unitData.description = formData.description;
+        if (formData.code) propertyData.code = formData.code;
+        if (formData.area !== '') propertyData.area = formData.area;
+        if (formData.description) propertyData.description = formData.description;
 
         // Build layout only with populated fields
         const layout: Record<string, number> = {};
         if (formData.bedrooms !== '') layout.bedrooms = formData.bedrooms;
         if (formData.bathrooms !== '') layout.bathrooms = formData.bathrooms;
-        if (Object.keys(layout).length > 0) unitData.layout = layout;
+        if (Object.keys(layout).length > 0) propertyData.layout = layout;
 
-        const result = await createProperty(unitData);
+        const result = await createProperty(propertyData);
 
         if (result.success) {
           success(t('dialog.addUnit.messages.success'));

@@ -1,8 +1,8 @@
 /**
  * 🏗️ PROJECTS LIST ENDPOINT
  *
- * Enterprise-grade endpoint για loading ALL projects για audit grid.
- * Διαχωρισμένο από /api/audit/bootstrap (Option A architecture).
+ * Enterprise-grade endpoint για loading ALL projects.
+ * Διαχωρισμένο από /api/projects/bootstrap (Option A architecture).
  *
  * @module api/projects/list
  * @version 1.0.0

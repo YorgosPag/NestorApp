@@ -36,10 +36,10 @@ export interface FloorplanGalleryProps {
   overlays?: ReadonlyArray<import('@/hooks/useFloorOverlays').FloorOverlayItem>;
   /** ID of unit highlighted externally (from list hover) — bidirectional sync (SPEC-237C) */
   highlightedOverlayUnitId?: string | null;
-  /** Callback: mouse hovers overlay → passes linked unitId (or null on leave) (SPEC-237C) */
-  onHoverOverlay?: (unitId: string | null) => void;
-  /** Callback: user clicks overlay → passes linked unitId (SPEC-237C) */
-  onClickOverlay?: (unitId: string) => void;
+  /** Callback: mouse hovers overlay → passes linked propertyId (or null on leave) (SPEC-237C) */
+  onHoverOverlay?: (propertyId: string | null) => void;
+  /** Callback: user clicks overlay → passes linked propertyId (SPEC-237C) */
+  onClickOverlay?: (propertyId: string) => void;
 }
 
 /**

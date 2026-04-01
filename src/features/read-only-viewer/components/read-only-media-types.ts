@@ -11,16 +11,16 @@ import type { FileRecord } from '@/types/file-record';
 // ── Types ──
 
 export interface ReadOnlyMediaViewerProps {
-  unitId: string | null;
-  unitName?: string;
+  propertyId: string | null;
+  propertyName?: string;
   floorId?: string | null;
   floorName?: string;
   buildingId?: string | null;
   floorNumber?: number | null;
   companyId?: string | null;
   levels?: Array<{ floorId: string; floorNumber: number; name: string }>;
-  onHoverOverlay?: (unitId: string | null) => void;
-  onClickOverlay?: (unitId: string) => void;
+  onHoverOverlay?: (propertyId: string | null) => void;
+  onClickOverlay?: (propertyId: string) => void;
   highlightedOverlayUnitId?: string | null;
   className?: string;
 }

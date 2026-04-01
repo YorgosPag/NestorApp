@@ -51,8 +51,8 @@ function chequeCollectionPath(): string {
   return COLLECTIONS.CHEQUES;
 }
 
-function paymentCollectionPath(unitId: string): string {
-  return `${COLLECTIONS.PROPERTIES}/${unitId}/${SUBCOLLECTIONS.PROPERTY_PAYMENTS}`;
+function paymentCollectionPath(propertyId: string): string {
+  return `${COLLECTIONS.PROPERTIES}/${propertyId}/${SUBCOLLECTIONS.PROPERTY_PAYMENTS}`;
 }
 
 // ============================================================================
@@ -88,13 +88,13 @@ export class ChequeRegistryService {
   // READ
   // ==========================================================================
 
-  /** Get all cheques for a unit (query top-level cheques by context.unitId) */
-  static async getChequesByUnit(unitId: string): Promise<ChequesResult> {
+  /** Get all cheques for a property (query top-level cheques by context.propertyId) */
+  static async getChequesByProperty(propertyId: string): Promise<ChequesResult> {
     try {
       const db = getDb();
       const snapshot = await db
         .collection(chequeCollectionPath())
-        .where('context.unitId', '==', unitId)
+        .where('context.propertyId', '==', propertyId)
         .orderBy(FIELDS.CREATED_AT, 'desc')
         .get();
 
@@ -129,7 +129,7 @@ export class ChequeRegistryService {
 
   /** Create a new cheque */
   static async createCheque(
-    unitId: string,
+    propertyId: string,
     input: CreateChequeInput,
     createdBy: string
   ): Promise<ChequeResult> {
@@ -161,12 +161,12 @@ export class ChequeRegistryService {
       }
 
       const chequeId = generateChequeId();
-      const cheque = createDefaultChequeRecord(chequeId, input, unitId, createdBy);
+      const cheque = createDefaultChequeRecord(chequeId, input, propertyId, createdBy);
 
       const db = getDb();
       await db.collection(chequeCollectionPath()).doc(chequeId).set(cheque);
 
-      logger.info(`[ChequeRegistryService] Created cheque ${chequeId} (${input.chequeNumber}) for unit ${unitId}`);
+      logger.info(`[ChequeRegistryService] Created cheque ${chequeId} (${input.chequeNumber}) for property ${propertyId}`);
       return { success: true, cheque };
     } catch (error) {
       logger.error('[ChequeRegistryService] Failed to create cheque:', error);
@@ -272,7 +272,7 @@ export class ChequeRegistryService {
       }
 
       // If cleared → auto-create PaymentRecord
-      if (input.targetStatus === 'cleared' && cheque.context.unitId) {
+      if (input.targetStatus === 'cleared' && cheque.context.propertyId) {
         const paymentId = generatePaymentRecordId();
         updates.paymentId = paymentId;
 
@@ -305,7 +305,7 @@ export class ChequeRegistryService {
         const batch = db.batch();
         batch.update(docRef, updates);
         batch.set(
-          db.collection(paymentCollectionPath(cheque.context.unitId)).doc(paymentId),
+          db.collection(paymentCollectionPath(cheque.context.propertyId)).doc(paymentId),
           paymentRecord
         );
         await batch.commit();
@@ -437,7 +437,7 @@ export class ChequeRegistryService {
   static async replaceBounced(
     chequeId: string,
     replacementInput: CreateChequeInput,
-    unitId: string,
+    propertyId: string,
     createdBy: string
   ): Promise<ChequeResult> {
     try {
@@ -460,7 +460,7 @@ export class ChequeRegistryService {
 
       // Create new cheque
       const newChequeId = generateChequeId();
-      const newCheque = createDefaultChequeRecord(newChequeId, replacementInput, unitId, createdBy);
+      const newCheque = createDefaultChequeRecord(newChequeId, replacementInput, propertyId, createdBy);
       newCheque.replacesChequeId = chequeId;
 
       const now = new Date().toISOString();

@@ -123,15 +123,15 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       onOpenChange(false);
       onSuccess?.();
 
-      const unitName = unit.name ?? unit.unitName ?? '';
+      const propertyName = unit.name ?? unit.propertyName ?? '';
       const selectedSpaces = linkedSpaces.getSelectedSpaces();
       const lineItems = selectedSpaces.length > 0
-        ? linkedSpaces.buildLineItems(price, unitName)
+        ? linkedSpaces.buildLineItems(price, propertyName)
         : undefined;
 
       apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
         eventType: 'final_sale_invoice',
-        unitId: unit.id, unitName,
+        propertyId: unit.id, propertyName,
         projectId: resolveProjectId(unit) ?? null,
         buyerContactId: buyerContactId || null,
         buyerName: buyerName || null,
@@ -153,7 +153,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
               brokerageAgreementId: agreement.id,
               agentContactId: agreement.agentContactId,
               agentName: agreement.agentName,
-              unitId: unit.id,
+              propertyId: unit.id,
               projectId: resolveProjectId(unit) ?? '',
               primaryBuyerContactId: buyerContactId || '',
               salePrice: price,

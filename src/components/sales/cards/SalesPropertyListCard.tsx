@@ -30,7 +30,7 @@ import '@/lib/design-system';
 interface SalesPropertyListCardProps {
   unit: Property;
   isSelected?: boolean;
-  onSelect?: (unitId: string) => void;
+  onSelect?: (propertyId: string) => void;
   compact?: boolean;
   className?: string;
 }

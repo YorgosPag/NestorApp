@@ -62,7 +62,7 @@ interface StorageOption {
 
 interface LinkedSpacesCardProps {
   /** Unit ID για update */
-  unitId: string;
+  propertyId: string;
   /** Building ID για φιλτράρισμα διαθέσιμων spaces */
   buildingId?: string;
   /** Τρέχοντα linkedSpaces (αν υπάρχουν) */
@@ -84,7 +84,7 @@ interface LinkedSpacesCardProps {
  * Χρησιμοποιεί Radix Select (ADR-001 canonical) και Firestore για persistence.
  */
 export function LinkedSpacesCard({
-  unitId,
+  propertyId,
   buildingId,
   currentLinkedSpaces = [],
   onLinkedSpacesChanged,
@@ -163,7 +163,7 @@ export function LinkedSpacesCard({
         const occupied = new Set<string>();
         for (const unit of result?.units ?? []) {
           // Skip the CURRENT unit — its own spaces should remain selectable
-          if (unit.id === unitId) continue;
+          if (unit.id === propertyId) continue;
           for (const ls of unit.linkedSpaces ?? []) {
             occupied.add(ls.spaceId);
           }
@@ -176,7 +176,7 @@ export function LinkedSpacesCard({
     };
 
     loadOccupiedSpaces();
-  }, [buildingId, unitId]);
+  }, [buildingId, propertyId]);
 
   // 🏢 ENTERPRISE: Load parking options when buildingId changes
   useEffect(() => {
@@ -270,10 +270,10 @@ export function LinkedSpacesCard({
     newDraft: LinkedSpace[],
     rollback: LinkedSpace[],
   ) => {
-    if (!unitId) return;
+    if (!propertyId) return;
     setSaving(true);
     try {
-      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unitId), {
+      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), {
         linkedSpaces: newDraft,
       });
       logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);
@@ -289,7 +289,7 @@ export function LinkedSpacesCard({
     } finally {
       setSaving(false);
     }
-  }, [unitId, onLinkedSpacesChanged]);
+  }, [propertyId, onLinkedSpacesChanged]);
 
   // 🏢 ENTERPRISE: Add parking — optimistic update + background save
   const handleParkingSelected = useCallback((parkingId: string) => {

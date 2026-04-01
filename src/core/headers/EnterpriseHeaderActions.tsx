@@ -49,8 +49,8 @@ interface EnterpriseHeaderActionsComponent extends React.FC<EnterpriseHeaderActi
   forBuildings: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
   /** Contacts header actions factory */
   forContacts: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
-  /** Units header actions factory */
-  forUnits: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+  /** Properties header actions factory */
+  forProperties: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
 }
 
 export interface EnterpriseHeaderActionsProps {
@@ -100,13 +100,13 @@ const ENTITY_TYPE_KEYS: Record<string, string> = {
   'project': 'headerActions.entities.project',
   'building': 'headerActions.entities.building',
   'contact': 'headerActions.entities.contact',
-  'unit': 'headerActions.entities.unit',
+  'property': 'headerActions.entities.property',
   // Legacy Greek identifiers for backward compatibility
   // eslint-disable-next-line custom/no-hardcoded-strings -- object keys used as identifiers, not user-facing
   'έργο': 'headerActions.entities.project', // eslint-disable-line custom/no-hardcoded-strings
   'κτίριο': 'headerActions.entities.building', // eslint-disable-line custom/no-hardcoded-strings
   'επαφή': 'headerActions.entities.contact', // eslint-disable-line custom/no-hardcoded-strings
-  'μονάδα': 'headerActions.entities.unit', // eslint-disable-line custom/no-hardcoded-strings
+  'ακίνητο': 'headerActions.entities.property', // eslint-disable-line custom/no-hardcoded-strings
 };
 
 // ============================================================================
@@ -255,10 +255,10 @@ export const EnterpriseHeaderActionsFactories = {
     <EnterpriseHeaderActions {...props} entityType="contact" />,
 
   /**
-   * Units header actions factory
+   * Properties header actions factory
    */
-  forUnits: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="unit" />
+  forProperties: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
+    <EnterpriseHeaderActions {...props} entityType="property" />
 };
 
 // Factory methods available as separate exports
@@ -273,7 +273,7 @@ export const EnterpriseHeaderActions = Object.assign(EnterpriseHeaderActionsBase
   forProjects: EnterpriseHeaderActionsFactories.forProjects,
   forBuildings: EnterpriseHeaderActionsFactories.forBuildings,
   forContacts: EnterpriseHeaderActionsFactories.forContacts,
-  forUnits: EnterpriseHeaderActionsFactories.forUnits,
+  forProperties: EnterpriseHeaderActionsFactories.forProperties,
 }) as EnterpriseHeaderActionsComponent;
 
 export default EnterpriseHeaderActions;

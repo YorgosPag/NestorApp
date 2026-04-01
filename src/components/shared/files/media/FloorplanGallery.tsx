@@ -111,9 +111,9 @@ export function FloorplanGallery({
       const screenY = (e.clientY - rect.top) * scaleY;
       const worldPt = screenToWorld(screenX, screenY, canvas, loadedScene.bounds!, inlineZP.zoom, inlineZP.panOffset);
       const hit = hitTestOverlays(worldPt, overlays, overlayAABBs);
-      const unitId = hit?.linked?.unitId ?? null;
-      setHoveredOverlayUnitId(unitId);
-      onHoverOverlay?.(unitId);
+      const propertyId = hit?.linked?.propertyId ?? null;
+      setHoveredOverlayUnitId(propertyId);
+      onHoverOverlay?.(propertyId);
     });
   }, [loadedScene?.bounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onHoverOverlay]);
 
@@ -127,8 +127,8 @@ export function FloorplanGallery({
     const screenY = (e.clientY - rect.top) * scaleY;
     const worldPt = screenToWorld(screenX, screenY, canvas, loadedScene.bounds!, inlineZP.zoom, inlineZP.panOffset);
     const hit = hitTestOverlays(worldPt, overlays, overlayAABBs);
-    if (hit?.linked?.unitId) {
-      onClickOverlay?.(hit.linked.unitId);
+    if (hit?.linked?.propertyId) {
+      onClickOverlay?.(hit.linked.propertyId);
     }
   }, [loadedScene?.bounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onClickOverlay]);
 

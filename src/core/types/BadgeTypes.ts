@@ -230,7 +230,7 @@ export interface PropertyBadgeProps extends BadgeFactoryOptions {
  * Unit Badge Props - Unit-specific badge component
  */
 export interface UnitBadgeProps extends BadgeFactoryOptions {
-  unitId?: string;
+  propertyId?: string;
   className?: string;
 }
 

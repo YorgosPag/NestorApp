@@ -20,7 +20,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreateInstallmentInput, UpdateInstallmentInput } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -42,7 +42,7 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
       try {
         const body = (await req.json()) as AddInstallmentBody;
 
@@ -112,7 +112,7 @@ async function handlePatch(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
       try {
         const body = (await req.json()) as UpdateInstallmentBody;
 
@@ -165,7 +165,7 @@ async function handleDelete(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/installments' });
       try {
         const body = (await req.json()) as RemoveInstallmentBody;
 

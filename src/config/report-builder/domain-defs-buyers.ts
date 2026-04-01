@@ -43,7 +43,7 @@ export const BUYERS_DEFINITION: DomainDefinition = {
     // Unit identity
     {
       key: 'name',
-      labelKey: 'domains.buyers.fields.unitName',
+      labelKey: 'domains.buyers.fields.propertyName',
       type: 'text',
       filterable: true,
       sortable: true,

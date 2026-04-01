@@ -119,8 +119,8 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
   let totalOutstanding = 0;
   let totalNPV = 0;
   let totalTimeCost = 0;
-  let totalUnitsAll = 0;
-  let soldUnitsAll = 0;
+  let totalPropertiesAll = 0;
+  let soldPropertiesAll = 0;
 
   // Weighted average accumulators
   let weightedCostSum = 0;
@@ -135,7 +135,7 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
       const projectName = getString(projectData, 'name', '') || getString(projectData, 'title', 'Unknown');
 
       // Query units for this project — S-1 fix: add companyId tenant isolation
-      const unitsSnap = await db
+      const propertiesSnap = await db
         .collection(COLLECTIONS.PROPERTIES)
         .where('project', '==', projectId)
         .where(FIELDS.COMPANY_ID, '==', companyId)
@@ -143,32 +143,32 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
 
       let projectTotalValue = 0;
       let projectCollected = 0;
-      const projectTotalUnits = unitsSnap.size;
-      let projectSoldUnits = 0;
+      const projectTotalProperties = propertiesSnap.size;
+      let projectSoldProperties = 0;
       let projectCostOfMoneySum = 0;
       let projectCostOfMoneyCount = 0;
       let projectCollectionDaysSum = 0;
       let projectCollectionDaysCount = 0;
 
-      for (const unitDoc of unitsSnap.docs) {
-        const unitData = unitDoc.data();
+      for (const propertyDoc of propertiesSnap.docs) {
+        const propertyData = propertyDoc.data();
 
         // Extract sale price — try direct fields first, then nested commercial object
-        const commercial = getObject<Record<string, unknown>>(unitData, 'commercial');
-        const salePrice = getNumber(unitData, 'salePrice', 0)
-          || getNumber(unitData, 'price', 0)
+        const commercial = getObject<Record<string, unknown>>(propertyData, 'commercial');
+        const salePrice = getNumber(propertyData, 'salePrice', 0)
+          || getNumber(propertyData, 'price', 0)
           || (commercial ? getNumber(commercial, 'salePrice', 0) : 0);
 
         projectTotalValue += salePrice;
 
         // Check if sold
-        const status = getString(unitData, 'status', '');
+        const status = getString(propertyData, 'status', '');
         const isSold = status === 'sold' || status === 'reserved' || status === 'contracted';
-        if (isSold) projectSoldUnits++;
+        if (isSold) projectSoldProperties++;
 
         // Use denormalized paymentSummary if available
         const paymentSummary = (commercial ? getObject<Record<string, unknown>>(commercial, 'paymentSummary') : undefined)
-          ?? getObject<Record<string, unknown>>(unitData, 'paymentSummary');
+          ?? getObject<Record<string, unknown>>(propertyData, 'paymentSummary');
 
         if (paymentSummary) {
           const collected = getNumber(paymentSummary, 'totalPaid', 0)
@@ -203,8 +203,8 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
       const avgCollectionDays = projectCollectionDaysCount > 0
         ? projectCollectionDaysSum / projectCollectionDaysCount
         : 0;
-      const soldPercent = projectTotalUnits > 0
-        ? (projectSoldUnits / projectTotalUnits) * 100
+      const soldPercent = projectTotalProperties > 0
+        ? (projectSoldProperties / projectTotalProperties) * 100
         : 0;
 
       // Health status (worst of 3 metrics)
@@ -216,8 +216,8 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
       projectSummaries.push({
         projectId,
         projectName,
-        totalUnits: projectTotalUnits,
-        soldUnits: projectSoldUnits,
+        totalUnits: projectTotalProperties,
+        soldUnits: projectSoldProperties,
         totalValue: Math.round(projectTotalValue * 100) / 100,
         collected: Math.round(projectCollected * 100) / 100,
         costOfMoney: Math.round(avgCostOfMoney * 100) / 100,
@@ -229,8 +229,8 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
       totalPortfolioValue += projectTotalValue;
       totalCollected += projectCollected;
       totalOutstanding += projectOutstanding;
-      totalUnitsAll += projectTotalUnits;
-      soldUnitsAll += projectSoldUnits;
+      totalPropertiesAll += projectTotalProperties;
+      soldPropertiesAll += projectSoldProperties;
 
       // Weighted averages (by project value)
       if (projectTotalValue > 0) {
@@ -255,8 +255,8 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
 
   const portfolio: PortfolioSummary = {
     activeProjects: projectsSnap.size,
-    totalUnits: totalUnitsAll,
-    soldUnits: soldUnitsAll,
+    totalUnits: totalPropertiesAll,
+    soldUnits: soldPropertiesAll,
     totalPortfolioValue: Math.round(totalPortfolioValue * 100) / 100,
     totalCollected: Math.round(totalCollected * 100) / 100,
     totalOutstanding: Math.round(totalOutstanding * 100) / 100,
@@ -270,7 +270,7 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
   const duration = Date.now() - startTime;
   logger.info(`[Portfolio] Aggregation complete in ${duration}ms`, {
     projects: projectsSnap.size,
-    totalUnits: totalUnitsAll,
+    totalUnits: totalPropertiesAll,
   });
 
   return { portfolio, projects: projectSummaries };

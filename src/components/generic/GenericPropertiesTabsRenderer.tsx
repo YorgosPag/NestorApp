@@ -108,7 +108,7 @@ export interface GenericPropertiesTabsRendererProps {
   /** Units tabs configuration */
   tabs: UnitsTabConfig[];
   /** Selected unit data */
-  selectedUnit?: UnitData;
+  selectedProperty?: UnitData;
   /** Default tab to show */
   defaultTab?: string;
   /** Additional data for specific tabs */
@@ -142,13 +142,13 @@ export interface GenericPropertiesTabsRendererProps {
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
  *
- * function UnitTabs({ selectedUnit }) {
+ * function UnitTabs({ selectedProperty }) {
  *   const tabs = getSortedUnitsTabs();
  *
  *   return (
  *     <GenericPropertiesTabsRenderer
  *       tabs={tabs}
- *       selectedUnit={selectedUnit}
+ *       selectedProperty={selectedProperty}
  *       defaultTab="info"
  *     />
  *   );
@@ -157,7 +157,7 @@ import { cn } from '@/lib/utils';
  */
 export function GenericPropertiesTabsRenderer({
   tabs,
-  selectedUnit,
+  selectedProperty,
   defaultTab = 'info',
   additionalData = {},
   customComponents = {},
@@ -198,7 +198,7 @@ export function GenericPropertiesTabsRenderer({
   // Helper function to get component props
   const getComponentProps = (tab: UnitsTabConfig): GenericComponentProps => {
     const baseProps: GenericComponentProps = {
-      selectedUnit,
+      selectedProperty,
       ...globalProps,
     };
 
@@ -220,7 +220,7 @@ export function GenericPropertiesTabsRenderer({
 
       return {
         ...baseProps,
-        property: selectedUnit,
+        property: selectedProperty,
         onSelectFloor,
         onUpdateProperty,
       };
@@ -230,7 +230,7 @@ export function GenericPropertiesTabsRenderer({
     if (tab.component === 'FloorPlanTab') {
       return {
         ...baseProps,
-        selectedUnit,
+        selectedProperty,
         currentFloor: additionalData.currentFloor,
         safeFloors: additionalData.safeFloors,
         safeViewerProps: additionalData.safeViewerProps,
@@ -249,7 +249,7 @@ export function GenericPropertiesTabsRenderer({
     if (tab.value === 'info') {
       return (
         <ScrollArea className="h-full p-4">
-          {selectedUnit ? (
+          {selectedProperty ? (
             content
           ) : (
             <div className={cn("flex flex-col items-center justify-center h-full text-center", colors.text.muted)}>

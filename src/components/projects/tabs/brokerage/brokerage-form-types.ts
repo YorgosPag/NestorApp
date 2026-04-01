@@ -17,7 +17,7 @@ export interface InlineFormState {
   agentContactId: string;
   agentName: string;
   scope: 'project' | 'unit';
-  unitId: string;
+  propertyId: string;
   exclusivity: ExclusivityType;
   commissionType: CommissionType;
   commissionPercentage: string;
@@ -40,7 +40,7 @@ export const EMPTY_FORM: InlineFormState = {
   agentContactId: '',
   agentName: '',
   scope: 'project',
-  unitId: '',
+  propertyId: '',
   exclusivity: 'non_exclusive',
   commissionType: 'percentage',
   commissionPercentage: '',

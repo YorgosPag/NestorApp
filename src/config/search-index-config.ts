@@ -84,7 +84,7 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
       return isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL;
     },
     requiredPermission: 'units:units:view' satisfies PermissionId,
-    routeTemplate: '/units/{id}',
+    routeTemplate: '/properties/{id}',
   },
 
   // =========================================================================

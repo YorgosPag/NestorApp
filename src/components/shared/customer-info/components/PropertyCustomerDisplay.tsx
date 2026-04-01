@@ -176,8 +176,8 @@ export function PropertyCustomerDisplay({
   // ========================================================================
 
   const customerName = customerInfo.displayName || t('customerActions.states.unknownCustomer');
-  const statusText = unit.status === 'sold' ? t('unitStatus.sold') :
-                    unit.status === 'reserved' ? t('unitStatus.reserved') : t('unitStatus.rented');
+  const statusText = unit.status === 'sold' ? t('propertyStatus.sold') :
+                    unit.status === 'reserved' ? t('propertyStatus.reserved') : t('propertyStatus.rented');
 
   // COMPACT VARIANT (για inline display)
   if (variant === 'compact') {

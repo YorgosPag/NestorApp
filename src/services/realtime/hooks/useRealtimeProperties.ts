@@ -16,7 +16,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
-import type { RealtimeUnit, SubscriptionStatus, UnitCreatedPayload, UnitUpdatedPayload, UnitDeletedPayload } from '../types';
+import type { RealtimeUnit, SubscriptionStatus, PropertyCreatedPayload, PropertyUpdatedPayload, PropertyDeletedPayload } from '../types';
 import { REALTIME_EVENTS } from '../types';
 import { RealtimeService } from '../RealtimeService';
 import { applyUpdates } from '@/lib/utils';
@@ -205,16 +205,16 @@ export function useRealtimeProperties(enabled = true): UseRealtimePropertiesRetu
 
   // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-228 Tier 1)
   useEffect(() => {
-    const handleCreated = (_payload: UnitCreatedPayload) => {
+    const handleCreated = (_payload: PropertyCreatedPayload) => {
       logger.info('Unit created — triggering refetch');
       refetch();
     };
 
-    const handleUpdated = (payload: UnitUpdatedPayload) => {
-      logger.info('Applying optimistic update for unit', { unitId: payload.unitId });
+    const handleUpdated = (payload: PropertyUpdatedPayload) => {
+      logger.info('Applying optimistic update for property', { propertyId: payload.propertyId });
       setAllUnits(prev => {
         const updated = prev.map(unit =>
-          unit.id === payload.unitId
+          unit.id === payload.propertyId
             ? applyUpdates(unit, payload.updates as Partial<RealtimeUnit>)
             : unit
         );
@@ -223,10 +223,10 @@ export function useRealtimeProperties(enabled = true): UseRealtimePropertiesRetu
       });
     };
 
-    const handleDeleted = (payload: UnitDeletedPayload) => {
-      logger.info('Removing deleted unit', { unitId: payload.unitId });
+    const handleDeleted = (payload: PropertyDeletedPayload) => {
+      logger.info('Removing deleted property', { propertyId: payload.propertyId });
       setAllUnits(prev => {
-        const filtered = prev.filter(unit => unit.id !== payload.unitId);
+        const filtered = prev.filter(unit => unit.id !== payload.propertyId);
         setUnitsByBuilding(groupUnitsByBuilding(filtered));
         return filtered;
       });

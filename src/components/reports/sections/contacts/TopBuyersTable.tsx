@@ -34,7 +34,7 @@ export function TopBuyersTable({ data, loading }: TopBuyersTableProps) {
       sortable: true,
       render: (_value, row) => formatEuro(row.totalValue),
     },
-    { key: 'unitCount', header: t('contacts.buyers.units'), sortable: true },
+    { key: 'propertyCount', header: t('contacts.buyers.units'), sortable: true },
   ];
 
   if (!loading && data.length === 0) {

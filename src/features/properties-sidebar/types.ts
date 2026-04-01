@@ -21,21 +21,21 @@ export interface ViewerPassthroughProps {
 
 export interface PropertiesSidebarProps {
   units: Property[];
-  selectedUnit: Property | null;
+  selectedProperty: Property | null;
   viewerProps: ViewerPassthroughProps;
   setShowHistoryPanel: (show: boolean) => void;
   floors: FloorData[];
-  onSelectUnit: (id: string, isShift: boolean) => void;
-  selectedUnitIds: string[];
+  onSelectProperty: (id: string, isShift: boolean) => void;
+  selectedPropertyIds: string[];
   onAssignmentSuccess: () => void;
   /** Callback to start inline new unit creation */
-  onNewUnit?: () => void;
+  onNewProperty?: () => void;
   /** Callback to delete the selected unit */
-  onDeleteUnit?: (unitId: string) => void;
+  onDeleteProperty?: (propertyId: string) => void;
   /** Whether we are in "create new unit" mode (inline form) */
   isCreatingNewUnit?: boolean;
   /** Callback when new unit is successfully created */
-  onUnitCreated?: (unitId: string) => void;
+  onPropertyCreated?: (propertyId: string) => void;
   /** Callback to cancel new unit creation */
   onCancelCreate?: () => void;
   /** Default tab to open (from URL query param) */

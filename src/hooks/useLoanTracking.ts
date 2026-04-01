@@ -64,12 +64,12 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 // HOOK
 // ============================================================================
 
-export function useLoanTracking(unitId: string | null): UseLoanTrackingReturn {
+export function useLoanTracking(propertyId: string | null): UseLoanTrackingReturn {
   const [loans, setLoans] = useState<LoanTracking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const basePath = unitId ? API_ROUTES.PROPERTIES.LOANS(unitId) : null;
+  const basePath = propertyId ? API_ROUTES.PROPERTIES.LOANS(propertyId) : null;
 
   // Fetch loans
   const fetchData = useCallback(async () => {

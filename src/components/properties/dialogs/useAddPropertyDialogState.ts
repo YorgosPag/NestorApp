@@ -142,7 +142,7 @@ export function useAddPropertyDialogState({
     entityType: 'unit',
     buildingId: formData.buildingId,
     floorLevel: formData.floor,
-    unitType: formData.type || undefined,
+    propertyType: formData.type || undefined,
     disabled: codeOverridden,
   });
 

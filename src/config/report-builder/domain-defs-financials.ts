@@ -144,7 +144,7 @@ export const PAYMENT_PLANS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.paymentPlans.label',
   descriptionKey: 'domains.paymentPlans.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/units/{unitId}',
+  entityLinkPath: '/properties/{propertyId}',
   defaultSortField: 'updatedAt',
   defaultSortDirection: 'desc',
   fields: [
@@ -162,7 +162,7 @@ export const PAYMENT_PLANS_DEFINITION: DomainDefinition = {
     // Refs
     { key: 'projectId', labelKey: 'domains.paymentPlans.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'projects', refDisplayField: 'name' },
     { key: 'buildingId', labelKey: 'domains.paymentPlans.fields.building', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'buildings', refDisplayField: 'name' },
-    { key: 'unitId', labelKey: 'domains.paymentPlans.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
+    { key: 'propertyId', labelKey: 'domains.paymentPlans.fields.property', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
     { key: 'ownerContactId', labelKey: 'domains.paymentPlans.fields.owner', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
     // Computed — Aging
     { key: 'daysOverdue', labelKey: 'domains.paymentPlans.fields.daysOverdue', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number', computed: true, computeFn: computeDaysOverdue },
@@ -302,7 +302,7 @@ export const LEGAL_CONTRACTS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.legalContracts.label',
   descriptionKey: 'domains.legalContracts.description',
   // eslint-disable-next-line custom/no-hardcoded-strings
-  entityLinkPath: '/units/{unitId}',
+  entityLinkPath: '/properties/{propertyId}',
   defaultSortField: 'updatedAt',
   defaultSortDirection: 'desc',
   fields: [
@@ -316,7 +316,7 @@ export const LEGAL_CONTRACTS_DEFINITION: DomainDefinition = {
     // Refs
     { key: 'projectId', labelKey: 'domains.legalContracts.fields.project', type: 'text', filterable: true, sortable: false, defaultVisible: true, refDomain: 'projects', refDisplayField: 'name' },
     { key: 'buildingId', labelKey: 'domains.legalContracts.fields.building', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'buildings', refDisplayField: 'name' },
-    { key: 'unitId', labelKey: 'domains.legalContracts.fields.unit', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
+    { key: 'propertyId', labelKey: 'domains.legalContracts.fields.property', type: 'text', filterable: true, sortable: false, defaultVisible: false, refDomain: 'properties', refDisplayField: 'name' },
     { key: 'primaryBuyerContactId', labelKey: 'domains.legalContracts.fields.buyer', type: 'text', filterable: false, sortable: false, defaultVisible: false, refDomain: 'individuals', refDisplayField: 'firstName' },
     // Dates
     { key: 'signedAt', labelKey: 'domains.legalContracts.fields.signedAt', type: 'date', filterable: true, sortable: true, defaultVisible: true, format: 'date' },

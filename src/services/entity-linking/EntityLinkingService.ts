@@ -513,9 +513,9 @@ export class EntityLinkingService {
   /**
    * 🏠 Link a unit to a building (convenience method)
    */
-  static async linkUnitToBuilding(unitId: string, buildingId: string): Promise<LinkResult> {
+  static async linkUnitToBuilding(propertyId: string, buildingId: string): Promise<LinkResult> {
     return this.linkEntity({
-      entityId: unitId,
+      entityId: propertyId,
       entityType: 'unit',
       parentId: buildingId,
       parentType: 'building',

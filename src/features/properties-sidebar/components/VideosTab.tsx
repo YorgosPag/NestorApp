@@ -13,7 +13,7 @@
  * @enterprise ADR-031 - Canonical File Storage System
  *
  * Storage Path:
- * companies/{companyId}/entities/unit/{unitId}/domains/sales/categories/videos/files/
+ * companies/{companyId}/entities/unit/{propertyId}/domains/sales/categories/videos/files/
  */
 
 'use client';
@@ -51,7 +51,7 @@ interface ViewerProps {
 }
 
 interface VideosTabProps {
-  selectedUnit: Property | null;
+  selectedProperty: Property | null;
   currentFloor: FloorData | null;
   safeFloors: FloorData[];
   safeViewerProps: ViewerProps;
@@ -74,7 +74,7 @@ interface VideosTabProps {
  * - Entry points: walkthrough, tour, etc.
  */
 export function VideosTab({
-  selectedUnit,
+  selectedProperty,
 }: VideosTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('properties');
@@ -114,11 +114,11 @@ export function VideosTab({
   }, [companyId]);
 
   // If no unit selected, show placeholder
-  if (!selectedUnit) {
+  if (!selectedProperty) {
     return (
       <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
         <UnitIcon className={`${iconSizes['2xl']} ${unitColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('videos.selectUnit', 'Επιλέξτε Μονάδα')}</h3>
+        <h3 className="text-xl font-semibold mb-2">{t('videos.selectProperty', 'Επιλέξτε Μονάδα')}</h3>
         <p className="text-sm max-w-sm">
           {t('videos.selectUnitDescription', 'Επιλέξτε μια μονάδα από τη λίστα για να δείτε τα βίντεο της.')}
         </p>
@@ -140,8 +140,8 @@ export function VideosTab({
       companyId={companyId}
       currentUserId={currentUserId}
       entityType="property"
-      entityId={String(selectedUnit.id)}
-      entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
+      entityId={String(selectedProperty.id)}
+      entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
       domain="sales"
       category="videos"
       purpose="video"

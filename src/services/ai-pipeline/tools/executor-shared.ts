@@ -263,12 +263,12 @@ export function enforceRoleAccess(
         }];
       }
     }
-    const unitIdScopedCollections = new Set([COLLECTIONS.FILES, COLLECTIONS.PAYMENTS, COLLECTIONS.TASKS]);
-    if (unitIdScopedCollections.has(collection)) {
-      const hasUnitFilter = filters.some(f => f.field === 'unitId');
-      if (!hasUnitFilter) {
+    const propertyIdScopedCollections = new Set([COLLECTIONS.FILES, COLLECTIONS.PAYMENTS, COLLECTIONS.TASKS]);
+    if (propertyIdScopedCollections.has(collection)) {
+      const hasPropertyFilter = filters.some(f => f.field === 'propertyId');
+      if (!hasPropertyFilter) {
         filters = [...filters, {
-          field: 'unitId',
+          field: 'propertyId',
           operator: 'in',
           value: linkedUnitIds.slice(0, 30),
         }];

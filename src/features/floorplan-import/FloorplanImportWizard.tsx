@@ -191,9 +191,9 @@ export function FloorplanImportWizard({
             <StepPropertySelector
               unitItems={state.unitItems}
               unitLoading={state.unitLoading}
-              selectedUnitId={state.selection.unitId}
-              onSelectUnit={state.selectUnit}
-              isMultiLevel={state.selectedUnitIsMultiLevel}
+              selectedPropertyId={state.selection.propertyId}
+              onSelectProperty={state.selectProperty}
+              isMultiLevel={state.selectedPropertyIsMultiLevel}
               levelItems={state.unitLevelItems}
               selectedLevelId={state.selection.levelFloorId}
               onSelectLevel={state.selectLevel}

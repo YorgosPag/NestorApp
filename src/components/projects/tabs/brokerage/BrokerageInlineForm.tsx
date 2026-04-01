@@ -43,7 +43,7 @@ interface BrokerageInlineFormProps {
   isEditMode: boolean;
   projectName: string;
   units: UnitSummary[];
-  unitNameMap: Map<string, string>;
+  propertyNameMap: Map<string, string>;
   saving: boolean;
   canSave: boolean | string;
   formError: string;
@@ -66,7 +66,7 @@ export function BrokerageInlineForm({
   isEditMode,
   projectName,
   units,
-  unitNameMap,
+  propertyNameMap,
   saving,
   canSave,
   formError,
@@ -81,15 +81,15 @@ export function BrokerageInlineForm({
   const iconSizes = useIconSizes();
   const typography = useTypography();
 
-  function resolveUnitNames(params: Record<string, string>): Record<string, string> {
+  function resolvePropertyNames(params: Record<string, string>): Record<string, string> {
     const resolved = { ...params };
-    if (resolved.unitName && unitNameMap.has(resolved.unitName)) {
-      resolved.unitName = unitNameMap.get(resolved.unitName) ?? resolved.unitName;
+    if (resolved.propertyName && propertyNameMap.has(resolved.propertyName)) {
+      resolved.propertyName = propertyNameMap.get(resolved.propertyName) ?? resolved.propertyName;
     }
-    if (resolved.unitNames) {
-      resolved.unitNames = resolved.unitNames
+    if (resolved.propertyNames) {
+      resolved.propertyNames = resolved.propertyNames
         .split(', ')
-        .map((id) => unitNameMap.get(id) ?? id)
+        .map((id) => propertyNameMap.get(id) ?? id)
         .join(', ');
     }
     return resolved;
@@ -131,7 +131,7 @@ export function BrokerageInlineForm({
                 : <AlertTriangle className={`${iconSizes.sm} mt-0.5 shrink-0`} />
               }
               <span>{(() => {
-                const resolved = resolveUnitNames(issue.messageParams);
+                const resolved = resolvePropertyNames(issue.messageParams);
                 return t(issue.messageKey, resolved)
                   .replace(/\{\{(\w+)\}\}/g, (_, key: string) => resolved[key] ?? '');
               })()}</span>
@@ -178,10 +178,10 @@ export function BrokerageInlineForm({
       {/* Unit — conditional */}
       {form.scope === 'unit' && (
         <fieldset className="space-y-1">
-          <Label className={typography.label.sm}>{t('sales.legal.selectUnit')}</Label>
-          <Select value={form.unitId} onValueChange={(v) => updateForm('unitId', v)}>
+          <Label className={typography.label.sm}>{t('sales.legal.selectProperty')}</Label>
+          <Select value={form.propertyId} onValueChange={(v) => updateForm('propertyId', v)}>
             <SelectTrigger className="h-9">
-              <SelectValue placeholder={t('sales.legal.selectUnit')} />
+              <SelectValue placeholder={t('sales.legal.selectProperty')} />
             </SelectTrigger>
             <SelectContent>
               {units.map((u) => (

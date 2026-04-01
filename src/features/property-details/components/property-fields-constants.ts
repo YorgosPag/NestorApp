@@ -66,7 +66,7 @@ export const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [
   'alarm', 'security-door', 'cctv', 'access-control', 'intercom', 'motion-sensors',
 ];
 
-export const UNIT_TYPE_OPTIONS: PropertyType[] = [
+export const PROPERTY_TYPE_OPTIONS: PropertyType[] = [
   'studio', 'apartment_1br', 'apartment', 'apartment_2br',
   'apartment_3br', 'maisonette', 'penthouse', 'loft',
   'detached_house', 'villa', 'shop', 'office', 'hall', 'storage',

@@ -23,7 +23,7 @@ export const ENTITY_ROUTES = {
   },
   properties: {
     list: '/properties',
-    withId: (id: string) => `/properties?unitId=${id}`,
+    withId: (id: string) => `/properties?propertyId=${id}`,
   },
   spaces: {
     parking: (id: string) => `/spaces/parking?parkingId=${id}`,

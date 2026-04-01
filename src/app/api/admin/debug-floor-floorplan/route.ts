@@ -48,19 +48,19 @@ function summariseFile(doc: DocData & { id: string }): FileSummary {
 export const GET = async (request: NextRequest) => {
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const unitId = req.nextUrl.searchParams.get('unitId');
-      if (!unitId) {
-        return NextResponse.json({ error: 'unitId query parameter is required' }, { status: 400 });
+      const propertyId = req.nextUrl.searchParams.get('propertyId');
+      if (!propertyId) {
+        return NextResponse.json({ error: 'propertyId query parameter is required' }, { status: 400 });
       }
 
       const db = getAdminFirestore();
 
-      // 1. Get unit document
-      const unitDoc = await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).get();
-      const unitData = unitDoc.exists ? (unitDoc.data() as DocData) : null;
+      // 1. Get property document
+      const propertyDoc = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
+      const propertyData = propertyDoc.exists ? (propertyDoc.data() as DocData) : null;
 
       // 2. Get floor document if floorId exists
-      const floorId = (unitData?.floorId as string) ?? null;
+      const floorId = (propertyData?.floorId as string) ?? null;
       let floorData: (DocData & { id: string }) | null = null;
       if (floorId) {
         const floorDoc = await db.collection(COLLECTIONS.FLOORS).doc(floorId).get();
@@ -83,14 +83,14 @@ export const GET = async (request: NextRequest) => {
         }));
       }
 
-      // 4. Query files collection for unit floorplan records
-      const unitFilesSnap = await db
+      // 4. Query files collection for property floorplan records
+      const propertyFilesSnap = await db
         .collection(COLLECTIONS.FILES)
-        .where(FIELDS.ENTITY_TYPE, '==', 'unit')
-        .where(FIELDS.ENTITY_ID, '==', unitId)
+        .where(FIELDS.ENTITY_TYPE, '==', 'property')
+        .where(FIELDS.ENTITY_ID, '==', propertyId)
         .where('category', '==', 'floorplans')
         .get();
-      const unitFiles: (DocData & { id: string })[] = unitFilesSnap.docs.map((d) => ({
+      const propertyFiles: (DocData & { id: string })[] = propertyFilesSnap.docs.map((d) => ({
         id: d.id,
         ...(d.data() as DocData),
       }));
@@ -109,14 +109,14 @@ export const GET = async (request: NextRequest) => {
       }
 
       return NextResponse.json({
-        unitId,
-        unit: unitData
+        propertyId,
+        property: propertyData
           ? {
-              floorId: unitData.floorId,
-              buildingId: unitData.buildingId,
-              companyId: unitData.companyId,
-              name: unitData.name,
-              floor: unitData.floor,
+              floorId: propertyData.floorId,
+              buildingId: propertyData.buildingId,
+              companyId: propertyData.companyId,
+              name: propertyData.name,
+              floor: propertyData.floor,
             }
           : null,
         floorId,
@@ -125,9 +125,9 @@ export const GET = async (request: NextRequest) => {
           count: floorFiles.length,
           records: floorFiles.map(summariseFile),
         },
-        unitFloorplanFiles: {
-          count: unitFiles.length,
-          records: unitFiles.map(summariseFile),
+        propertyFloorplanFiles: {
+          count: propertyFiles.length,
+          records: propertyFiles.map(summariseFile),
         },
         legacyFloorplans: {
           count: legacyFloorplans.length,

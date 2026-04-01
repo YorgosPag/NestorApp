@@ -43,10 +43,10 @@ export interface CustomerBasicInfo {
  */
 export interface CustomerExtendedInfo extends CustomerBasicInfo {
   /** Αριθμός μονάδων που έχει αγοράσει */
-  unitsCount: number;
+  propertiesCount: number;
 
   /** IDs των μονάδων που κατέχει */
-  unitIds: string[];
+  propertyIds: string[];
 
   /** Συνολική αξία περιουσίας */
   totalValue?: number;
@@ -217,7 +217,7 @@ export interface CustomerInfoCompactProps extends CustomerInfoBaseProps {
   showUnitsCount?: boolean;
 
   /** Units count value (αν διαθέσιμο από το API) */
-  unitsCount?: number;
+  propertiesCount?: number;
 
   /** Pre-loaded customer data (skips fetch if provided) */
   customerData?: {
@@ -316,7 +316,7 @@ export interface UseCustomerInfoConfig {
  */
 export type ContextualData = {
   unit: {
-    unitId: string;
+    propertyId: string;
     buildingId?: string;
     projectId?: string;
   };

@@ -95,7 +95,7 @@ export const ExtractedEntitiesSchema = z.object({
   companyId: z.string().optional(),
   projectId: z.string().optional(),
   buildingId: z.string().optional(),
-  unitId: z.string().optional(),
+  propertyId: z.string().optional(),
   contactId: z.string().optional(),
 }).passthrough();
 

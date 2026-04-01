@@ -52,12 +52,12 @@ export function buildRoleDescription(ctx: AgenticContext): string {
   // SPEC-257B: Unit-scoped roles show linked units instead of projects
   const linkedUnitIds = contact.linkedUnitIds ?? [];
   if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length > 0) {
-    const unitIdList = linkedUnitIds.join(', ');
+    const propertyIdList = linkedUnitIds.join(', ');
     return `Ο χρήστης είναι ο/η ${contact.displayName} (${contact.primaryPersona ?? 'επαφή'}).
-Συνδεδεμένα units: ${unitIdList}
+Συνδεδεμένα properties: ${propertyIdList}
 
 ${accessConfig.promptDescription}
-ΠΕΡΙΟΡΙΣΜΟΣ: ΜΟΝΟ δεδομένα που ανήκουν στα παραπάνω units. ΜΗΝ ψάχνεις άλλα units.`;
+ΠΕΡΙΟΡΙΣΜΟΣ: ΜΟΝΟ δεδομένα που ανήκουν στα παραπάνω properties. ΜΗΝ ψάχνεις άλλα properties.`;
   }
 
   const projectIdList = linkedProjectIds.join(', ');

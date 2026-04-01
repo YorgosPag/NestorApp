@@ -202,8 +202,8 @@ function buildTopOverdue(units: Property[]): OverdueItem[] {
   return soldUnits
     .slice(0, 5)
     .map(u => ({
-      unitId: u.id,
-      unitName: u.name || u.code || u.id,
+      propertyId: u.id,
+      propertyName: u.name || u.code || u.id,
       projectName: u.project || '',
       buyerName: u.soldTo ?? '—',
       amount: u.commercial?.finalPrice ?? u.price ?? 0,

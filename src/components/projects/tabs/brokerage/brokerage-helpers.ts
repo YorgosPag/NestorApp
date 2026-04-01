@@ -54,7 +54,7 @@ export function agreementToFormState(a: BrokerageAgreement): InlineFormState {
     agentContactId: a.agentContactId,
     agentName: a.agentName,
     scope: a.scope,
-    unitId: a.unitId ?? '',
+    propertyId: a.propertyId ?? '',
     exclusivity: a.exclusivity,
     commissionType: a.commissionType,
     commissionPercentage: a.commissionPercentage !== null ? String(a.commissionPercentage) : '',

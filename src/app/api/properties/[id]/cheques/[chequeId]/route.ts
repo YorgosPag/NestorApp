@@ -16,7 +16,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const UpdateChequeSchema = z.object({
@@ -43,7 +43,7 @@ async function handleGet(
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: id, path: '/api/properties/[id]/cheques/[chequeId]' });
+      await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]/cheques/[chequeId]' });
       try {
         const result = await ChequeRegistryService.getCheque(chequeId);
         if (!result.success) {
@@ -74,7 +74,7 @@ async function handlePatch(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: id, path: '/api/properties/[id]/cheques/[chequeId]' });
+      await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]/cheques/[chequeId]' });
       try {
         const parsed = safeParseBody(UpdateChequeSchema, await req.json());
         if (parsed.error) return parsed.error;

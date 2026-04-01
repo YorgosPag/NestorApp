@@ -45,7 +45,7 @@ export function CustomerInfoCompact({
   showPhone = true,
   showActions = true,
   showUnitsCount: _showUnitsCount = false,
-  unitsCount,
+  propertiesCount,
   maxWidth,
   onUpdate: _onUpdate,
   customerData
@@ -397,7 +397,7 @@ export function CustomerInfoCompact({
         {/* Column 4: Units Count (auto - narrow for numbers) */}
         <div className="flex items-center justify-end gap-1 pr-3">
           <span className={`${styles.text} text-foreground font-medium`}>
-            #{unitsCount || 1}
+            #{propertiesCount || 1}
           </span>
         </div>
 

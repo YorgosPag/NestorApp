@@ -33,5 +33,5 @@ export type {
   SmartDialogField,
   SmartDialogAction,
   ValidationRule,
-  SmartDialogEngineState
-} from './SmartDialogEngine';
+  SmartDialogEngineState,
+} from './smart-dialog-types';

@@ -12,7 +12,7 @@
 export {
   UnitTypeQuickFilters as PropertyTypeQuickFilters,
   UnitTypeQuickFilters,
-  UNIT_TYPE_OPTIONS,
+  PROPERTY_TYPE_OPTIONS,
   type TypeFilterOption as PropertyTypeOption,
   type TypeQuickFiltersProps as PropertyTypeQuickFiltersProps
 } from '@/components/shared/TypeQuickFilters';

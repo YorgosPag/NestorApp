@@ -82,8 +82,8 @@ interface FloorFloorplanTabContentProps {
   spacing: ReturnType<typeof useSpacingTokens>;
   iconSizes: ReturnType<typeof useIconSizes>;
   t: (key: string, options?: Record<string, unknown>) => string;
-  onHoverOverlay?: (unitId: string | null) => void;
-  onClickOverlay?: (unitId: string) => void;
+  onHoverOverlay?: (propertyId: string | null) => void;
+  onClickOverlay?: (propertyId: string) => void;
   highlightedOverlayUnitId?: string | null;
 }
 

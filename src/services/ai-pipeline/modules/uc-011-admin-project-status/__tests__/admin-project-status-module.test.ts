@@ -165,7 +165,7 @@ describe('UC-011: AdminProjectStatusModule', () => {
       projects: [
         {
           project: { projectId: 'prj_001', name: 'Panorama', status: 'in_progress', statusLabel: 'Se exelixi', address: 'Thessaloniki', description: null, progress: 45, updatedAt: null },
-          unitStats: { total: 3, sold: 1, available: 1, reserved: 1, other: 0 },
+          propertyStats: { total: 3, sold: 1, available: 1, reserved: 1, other: 0 },
           hasGantt: true,
           buildingCount: 2,
           ganttDetails: [{ buildingName: 'Building Alpha', phaseCount: 2 }],
@@ -187,7 +187,7 @@ describe('UC-011: AdminProjectStatusModule', () => {
   it('execute formats project report and sends reply', async () => {
     const projectDetails = {
       project: { projectId: 'prj_001', name: 'Panorama', status: 'in_progress', statusLabel: 'Se exelixi', address: 'Thessaloniki', description: null, progress: 45, updatedAt: null },
-      unitStats: { total: 3, sold: 1, available: 1, reserved: 1, other: 0 },
+      propertyStats: { total: 3, sold: 1, available: 1, reserved: 1, other: 0 },
       hasGantt: true,
       buildingCount: 2,
       ganttDetails: [{ buildingName: 'Building Alpha', phaseCount: 2 }],

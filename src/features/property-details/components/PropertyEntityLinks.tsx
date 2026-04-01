@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { useEntityLink } from '@/hooks/useEntityLink';
 
 interface PropertyEntityLinksProps {
-  unitId: string;
+  propertyId: string;
   /** @deprecated Kept for backward compatibility — no longer rendered */
   currentCompanyId?: string;
   /** @deprecated Kept for backward compatibility — no longer rendered */
@@ -32,7 +32,7 @@ interface PropertyEntityLinksProps {
 }
 
 export function PropertyEntityLinks({
-  unitId,
+  propertyId,
   currentBuildingId,
   isEditing,
   onLinkChanged,
@@ -42,15 +42,15 @@ export function PropertyEntityLinks({
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 
   const saveBuilding = useCallback(async (newId: string | null) => {
-    const result = await updatePropertyLink(unitId, { buildingId: newId });
+    const result = await updatePropertyLink(propertyId, { buildingId: newId });
     if (result.success && onLinkChanged) onLinkChanged();
     return result;
-  }, [unitId, onLinkChanged]);
+  }, [propertyId, onLinkChanged]);
 
   // ADR-200: Centralized entity linking via useEntityLink
   const buildingLink = useEntityLink({
     relation: 'unit-building',
-    entityId: unitId,
+    entityId: propertyId,
     initialParentId: currentBuildingId ?? null,
     loadOptions: loadBuildings,
     saveMode: 'immediate',

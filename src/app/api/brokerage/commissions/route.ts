@@ -23,7 +23,7 @@ const RecordCommissionSchema = z.object({
   brokerageAgreementId: z.string().min(1).max(128),
   agentContactId: z.string().min(1).max(128),
   agentName: z.string().min(1).max(200),
-  unitId: z.string().min(1).max(128),
+  propertyId: z.string().min(1).max(128),
   projectId: z.string().min(1).max(128),
   primaryBuyerContactId: z.string().min(1).max(128),
   salePrice: z.number().positive().max(999_999_999),

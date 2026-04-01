@@ -67,7 +67,7 @@ export class AdminCreateContactModule implements IUCModule {
 
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
     // NOTE: OpenAI structured output schema (extractedEntities) only supports
-    // companyId/projectId/buildingId/unitId/contactId with additionalProperties: false.
+    // companyId/projectId/buildingId/propertyId/contactId with additionalProperties: false.
     // Admin-specific entities (contactName, email, phone) are NOT available via
     // ctx.understanding.entities. We parse them from the raw message text instead.
     const rawMessage = ctx.intake.normalized.contentText ?? '';

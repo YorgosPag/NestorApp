@@ -37,7 +37,7 @@ type ConnectPropertiesSuccess = {
     status: string;
   }>;
   summary: {
-    totalUnitsConnected: number;
+    totalPropertiesConnected: number;
     buildings: Array<{ id: string; name: string }>;
   };
 };
@@ -96,7 +96,7 @@ export const POST = withHeavyRateLimit(
           id: doc.id,
           buildingId: doc.data().buildingId,
           name: doc.data().name,
-          propertyName: doc.data().unitName
+          propertyName: doc.data().propertyName
         }));
 
         logger.info('[Properties/ConnectToBuildings] Total properties in database', { count: properties.length });
@@ -125,7 +125,7 @@ export const POST = withHeavyRateLimit(
             message: 'No properties need connecting',
             results: [],
             summary: {
-              totalUnitsConnected: 0,
+              totalPropertiesConnected: 0,
               buildings: buildings
             }
           });
@@ -181,7 +181,7 @@ export const POST = withHeavyRateLimit(
           message: 'Properties connected to buildings successfully',
           results,
           summary: {
-            totalUnitsConnected: results.length,
+            totalPropertiesConnected: results.length,
             buildings: buildings
           }
         });

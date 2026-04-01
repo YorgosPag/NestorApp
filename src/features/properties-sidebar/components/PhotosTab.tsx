@@ -14,7 +14,7 @@
  * @enterprise ADR-031 - Canonical File Storage System
  *
  * Storage Path:
- * companies/{companyId}/entities/unit/{unitId}/domains/sales/categories/photos/files/
+ * companies/{companyId}/entities/unit/{propertyId}/domains/sales/categories/photos/files/
  */
 
 'use client';
@@ -52,7 +52,7 @@ interface ViewerProps {
 }
 
 interface PhotosTabProps {
-  selectedUnit: Property | null;
+  selectedProperty: Property | null;
   currentFloor: FloorData | null;
   safeFloors: FloorData[];
   safeViewerProps: ViewerProps;
@@ -75,7 +75,7 @@ interface PhotosTabProps {
  * - Entry points: interior photos, exterior photos, etc.
  */
 export function PhotosTab({
-  selectedUnit,
+  selectedProperty,
 }: PhotosTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('properties');
@@ -115,11 +115,11 @@ export function PhotosTab({
   }, [companyId]);
 
   // If no unit selected, show placeholder
-  if (!selectedUnit) {
+  if (!selectedProperty) {
     return (
       <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
         <UnitIcon className={`${iconSizes['2xl']} ${unitColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('photos.selectUnit', 'Επιλέξτε Μονάδα')}</h3>
+        <h3 className="text-xl font-semibold mb-2">{t('photos.selectProperty', 'Επιλέξτε Μονάδα')}</h3>
         <p className="text-sm max-w-sm">
           {t('photos.selectUnitDescription', 'Επιλέξτε μια μονάδα από τη λίστα για να δείτε τις φωτογραφίες της.')}
         </p>
@@ -141,8 +141,8 @@ export function PhotosTab({
       companyId={companyId}
       currentUserId={currentUserId}
       entityType="property"
-      entityId={String(selectedUnit.id)}
-      entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
+      entityId={String(selectedProperty.id)}
+      entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
       domain="sales"
       category="photos"
       purpose="photo"

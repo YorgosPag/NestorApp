@@ -91,7 +91,7 @@ export function PropertyInlineCreateForm({
 
     setCreating(true);
     try {
-      const unitData: Record<string, unknown> = {
+      const propertyData: Record<string, unknown> = {
         name: name.trim(),
         type,
         buildingId,
@@ -103,24 +103,24 @@ export function PropertyInlineCreateForm({
         vertices: [],
       };
 
-      if (code.trim()) unitData.code = code.trim();
+      if (code.trim()) propertyData.code = code.trim();
       if (askingPrice) {
-        unitData.commercial = { askingPrice: parseFloat(askingPrice) };
+        propertyData.commercial = { askingPrice: parseFloat(askingPrice) };
       }
 
       const areas: Record<string, number> = {};
       if (areaNet) areas.net = parseFloat(areaNet);
       if (areaGross) areas.gross = parseFloat(areaGross);
-      if (Object.keys(areas).length > 0) unitData.areas = areas;
-      if (areaNet) unitData.area = parseFloat(areaNet);
+      if (Object.keys(areas).length > 0) propertyData.areas = areas;
+      if (areaNet) propertyData.area = parseFloat(areaNet);
 
       const layout: Record<string, number> = {};
       if (bedrooms) layout.bedrooms = parseInt(bedrooms, 10);
       if (bathrooms) layout.bathrooms = parseInt(bathrooms, 10);
       if (wc) layout.wc = parseInt(wc, 10);
-      if (Object.keys(layout).length > 0) unitData.layout = layout;
+      if (Object.keys(layout).length > 0) propertyData.layout = layout;
 
-      const result = await createProperty(unitData);
+      const result = await createProperty(propertyData);
 
       if (result.success) {
         success(tUnits('inlineCreate.created'));
@@ -161,7 +161,7 @@ export function PropertyInlineCreateForm({
           entityType="unit"
           buildingId={buildingId}
           floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
-          unitType={type || undefined}
+          propertyType={type || undefined}
           label={tUnits('fields.identity.code', { defaultValue: 'Κωδικός Μονάδας' })}
           placeholderFallback="A-DI-1.01"
           infoExample={tUnits('inlineCreate.codeInfoExample')}
@@ -215,7 +215,7 @@ export function PropertyInlineCreateForm({
         </label>
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {tUnits('fields.identity.unitStatus', { defaultValue: 'Λειτουργική Κατάσταση' })}
+            {tUnits('fields.identity.propertyStatus', { defaultValue: 'Λειτουργική Κατάσταση' })}
           </span>
           <Select value={operationalStatus} onValueChange={(v) => setOperationalStatus(v as OperationalStatus)} disabled={creating}>
             <SelectTrigger className="h-9">

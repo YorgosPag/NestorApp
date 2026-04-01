@@ -19,25 +19,25 @@ import '@/lib/design-system';
 
 interface PropertiesListProps {
   units: Property[];
-  selectedUnitIds: string[];
-  onSelectUnit: (unitId: string, isShift: boolean) => void;
+  selectedPropertyIds: string[];
+  onSelectProperty: (propertyId: string, isShift: boolean) => void;
   onAssignmentSuccess: () => void;
   /** Callback for creating a new property (inline) */
-  onNewUnit?: () => void;
+  onNewProperty?: () => void;
   /** Callback for editing the selected property */
-  onEditUnit?: () => void;
+  onEditProperty?: () => void;
   /** Callback for deleting the selected property */
-  onDeleteUnit?: () => void;
+  onDeleteProperty?: () => void;
 }
 
 export function PropertiesList({
   units,
-  selectedUnitIds,
-  onSelectUnit,
+  selectedPropertyIds,
+  onSelectProperty,
   onAssignmentSuccess: _onAssignmentSuccess,
-  onNewUnit,
-  onEditUnit,
-  onDeleteUnit,
+  onNewProperty,
+  onEditProperty,
+  onDeleteProperty,
 }: PropertiesListProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
@@ -55,11 +55,11 @@ export function PropertiesList({
   // 🏢 ENTERPRISE: Quick filter state for unit types (local_4.log - list-scoped filtering)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
-  const toggleFavorite = (unitId: string) => {
+  const toggleFavorite = (propertyId: string) => {
     setFavorites(prev => 
-      prev.includes(unitId) 
-        ? prev.filter(id => id !== unitId)
-        : [...prev, unitId]
+      prev.includes(propertyId) 
+        ? prev.filter(id => id !== propertyId)
+        : [...prev, propertyId]
     );
   };
 
@@ -68,7 +68,7 @@ export function PropertiesList({
     return units.filter(unit => {
       // Type filter (quick filters - list-scoped)
       if (selectedTypes.length > 0) {
-        const unitType = (unit.type || '').toLowerCase();
+        const propertyType = (unit.type || '').toLowerCase();
 
         // 🏢 ENTERPRISE: Studio filter includes both Studio and Γκαρσονιέρα
         const matchesType = selectedTypes.some(filterType => {
@@ -76,15 +76,15 @@ export function PropertiesList({
 
           // Special case: "studio" matches both studio and γκαρσονιέρα
           if (filter === 'studio') {
-            return unitType.includes('studio') ||
-                   unitType.includes('στούντιο') ||
-                   unitType.includes('στουντιο') ||
-                   unitType.includes('γκαρσονιέρα') ||
-                   unitType.includes('γκαρσονιερα');
+            return propertyType.includes('studio') ||
+                   propertyType.includes('στούντιο') ||
+                   propertyType.includes('στουντιο') ||
+                   propertyType.includes('γκαρσονιέρα') ||
+                   propertyType.includes('γκαρσονιερα');
           }
 
           // Standard matching
-          return unitType.includes(filter);
+          return propertyType.includes(filter);
         });
 
         if (!matchesType) {
@@ -140,9 +140,9 @@ export function PropertiesList({
 
   const _handleSelectAll = (checked: boolean) => {
     if (checked) {
-        onSelectUnit('__all__', false);
+        onSelectProperty('__all__', false);
     } else {
-        onSelectUnit('__none__', false);
+        onSelectProperty('__none__', false);
     }
   };
 
@@ -171,10 +171,10 @@ export function PropertiesList({
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
           onSortChange={onSortChange}
-          hasSelectedContact={selectedUnitIds.length > 0}
-          onNewItem={() => onNewUnit?.()}
-          onEditItem={() => onEditUnit?.()}
-          onDeleteItems={() => onDeleteUnit?.()}
+          hasSelectedContact={selectedPropertyIds.length > 0}
+          onNewItem={() => onNewProperty?.()}
+          onEditItem={() => onEditProperty?.()}
+          onDeleteItems={() => onDeleteProperty?.()}
           onExport={() => {}}
           onRefresh={() => {}}
           onSettings={() => {}}
@@ -194,10 +194,10 @@ export function PropertiesList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={onSortChange}
-            hasSelectedContact={selectedUnitIds.length > 0}
-            onNewItem={() => onNewUnit?.()}
-            onEditItem={() => onEditUnit?.()}
-            onDeleteItems={() => onDeleteUnit?.()}
+            hasSelectedContact={selectedPropertyIds.length > 0}
+            onNewItem={() => onNewProperty?.()}
+            onEditItem={() => onEditProperty?.()}
+            onDeleteItems={() => onDeleteProperty?.()}
             onExport={() => {}}
             onRefresh={() => {}}
             onSettings={() => {}}
@@ -219,9 +219,9 @@ export function PropertiesList({
             <PropertyListCard
               key={unit.id}
               property={unit}
-              isSelected={selectedUnitIds.includes(unit.id)}
+              isSelected={selectedPropertyIds.includes(unit.id)}
               isFavorite={favorites.includes(unit.id)}
-              onSelect={(isShift) => onSelectUnit(unit.id, isShift ?? false)}
+              onSelect={(isShift) => onSelectProperty(unit.id, isShift ?? false)}
               onToggleFavorite={() => toggleFavorite(unit.id)}
             />
           ))}

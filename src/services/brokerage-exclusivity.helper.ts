@@ -40,7 +40,7 @@ export function validateAgreementFields(input: CreateBrokerageAgreementInput): A
   if (!input.scope) return { valid: false, error: 'scope is required' };
   if (!input.exclusivity) return { valid: false, error: 'exclusivity is required' };
   if (!input.commissionType) return { valid: false, error: 'commissionType is required' };
-  if (input.scope === 'unit' && !input.unitId) return { valid: false, error: 'unitId is required for unit scope' };
+  if (input.scope === 'unit' && !input.propertyId) return { valid: false, error: 'propertyId is required for unit scope' };
   if (input.commissionType === 'percentage' && (input.commissionPercentage == null || input.commissionPercentage <= 0)) {
     return { valid: false, error: 'commissionPercentage must be > 0 for percentage type' };
   }
@@ -86,7 +86,7 @@ export async function validateExclusivityServer(
   companyId: string
 ): Promise<ExclusivityValidationResult> {
   try {
-    const { projectId, unitId, scope, exclusivity, excludeAgreementId } = input;
+    const { projectId, propertyId, scope, exclusivity, excludeAgreementId } = input;
     const today = new Date().toISOString().split('T')[0];
 
     const db = getDb();
@@ -107,7 +107,7 @@ export async function validateExclusivityServer(
     });
 
     const issues: ExclusivityValidationIssue[] = [];
-    const excludedUnitIds: string[] = [];
+    const excludedPropertyIds: string[] = [];
 
     const exclusiveProject = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'project');
     const exclusiveUnits = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'unit');
@@ -125,24 +125,24 @@ export async function validateExclusivityServer(
       for (const conflict of exclusiveUnits) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityConflictUnitExclusive',
-          messageParams: { agentName: conflict.agentName, unitName: conflict.unitId ?? '' },
+          messageParams: { agentName: conflict.agentName, propertyName: conflict.propertyId ?? '' },
           conflictingAgreementId: conflict.id, conflictingAgentName: conflict.agentName,
         });
       }
       for (const existing of nonExclusiveUnits) {
-        if (existing.unitId) excludedUnitIds.push(existing.unitId);
+        if (existing.propertyId) excludedPropertyIds.push(existing.propertyId);
       }
-      if (excludedUnitIds.length > 0) {
+      if (excludedPropertyIds.length > 0) {
         issues.push({
           severity: 'warning', messageKey: 'sales.legal.exclusivityWarningExcludedUnits',
-          messageParams: { unitNames: excludedUnitIds.join(', ') },
+          messageParams: { propertyNames: excludedPropertyIds.join(', ') },
           conflictingAgreementId: null, conflictingAgentName: null,
         });
       }
     }
 
     // NEW agreement is EXCLUSIVE + UNIT scope
-    if (exclusivity === 'exclusive' && scope === 'unit' && unitId) {
+    if (exclusivity === 'exclusive' && scope === 'unit' && propertyId) {
       for (const conflict of exclusiveProject) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityBlockedByProjectExclusive',
@@ -150,17 +150,17 @@ export async function validateExclusivityServer(
           conflictingAgreementId: conflict.id, conflictingAgentName: conflict.agentName,
         });
       }
-      for (const conflict of exclusiveUnits.filter((a) => a.unitId === unitId)) {
+      for (const conflict of exclusiveUnits.filter((a) => a.propertyId === propertyId)) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityConflictSameUnit',
-          messageParams: { agentName: conflict.agentName, unitName: unitId },
+          messageParams: { agentName: conflict.agentName, propertyName: propertyId },
           conflictingAgreementId: conflict.id, conflictingAgentName: conflict.agentName,
         });
       }
-      for (const conflict of nonExclusiveUnits.filter((a) => a.unitId === unitId)) {
+      for (const conflict of nonExclusiveUnits.filter((a) => a.propertyId === propertyId)) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityBlockedByExistingUnit',
-          messageParams: { agentName: conflict.agentName, unitName: unitId },
+          messageParams: { agentName: conflict.agentName, propertyName: propertyId },
           conflictingAgreementId: conflict.id, conflictingAgentName: conflict.agentName,
         });
       }
@@ -178,7 +178,7 @@ export async function validateExclusivityServer(
     }
 
     // NEW agreement is NON-EXCLUSIVE + UNIT scope
-    if (exclusivity === 'non_exclusive' && scope === 'unit' && unitId) {
+    if (exclusivity === 'non_exclusive' && scope === 'unit' && propertyId) {
       for (const conflict of exclusiveProject) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.nonExclusiveBlockedByProjectExclusive',
@@ -186,10 +186,10 @@ export async function validateExclusivityServer(
           conflictingAgreementId: conflict.id, conflictingAgentName: conflict.agentName,
         });
       }
-      for (const conflict of exclusiveUnits.filter((a) => a.unitId === unitId)) {
+      for (const conflict of exclusiveUnits.filter((a) => a.propertyId === propertyId)) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.nonExclusiveBlockedByUnitExclusive',
-          messageParams: { agentName: conflict.agentName, unitName: unitId },
+          messageParams: { agentName: conflict.agentName, propertyName: propertyId },
           conflictingAgreementId: conflict.id, conflictingAgentName: conflict.agentName,
         });
       }
@@ -199,7 +199,7 @@ export async function validateExclusivityServer(
     const firstIssue = issues[0] ?? null;
 
     return {
-      canProceed: !hasErrors, issues, excludedUnitIds,
+      canProceed: !hasErrors, issues, excludedPropertyIds,
       valid: !hasErrors,
       conflictingAgreementId: firstIssue?.conflictingAgreementId ?? null,
       reason: firstIssue?.messageKey ?? null,
@@ -212,7 +212,7 @@ export async function validateExclusivityServer(
         severity: 'error', messageKey: 'sales.legal.saveError', messageParams: {},
         conflictingAgreementId: null, conflictingAgentName: null,
       }],
-      excludedUnitIds: [], valid: false,
+      excludedPropertyIds: [], valid: false,
       conflictingAgreementId: null, reason: 'sales.legal.saveError',
     };
   }

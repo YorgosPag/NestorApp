@@ -69,7 +69,7 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
               showPhone
               showActions
               showUnitsCount
-              unitsCount={customer.unitsCount}
+              propertiesCount={customer.propertiesCount}
               className="hover:bg-accent/30 transition-colors rounded-md"
               customerData={{
                 name: customer.name,

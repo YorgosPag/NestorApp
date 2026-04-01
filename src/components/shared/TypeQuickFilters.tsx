@@ -78,7 +78,7 @@ export interface TypeQuickFiltersProps {
  * Icons follow enterprise standards (Zillow, Rightmove, JLL patterns)
  * 🏢 ENTERPRISE: Labels and tooltips use i18n keys (filters.unitTypes.*)
  */
-export const UNIT_TYPE_OPTIONS: TypeFilterOption[] = [
+export const PROPERTY_TYPE_OPTIONS: TypeFilterOption[] = [
   { value: 'all', label: 'filters.unitTypes.all', icon: LayoutGrid, tooltip: 'filters.unitTypes.allTooltip' },
   { value: 'studio', label: 'filters.unitTypes.studio', icon: BedSingle, tooltip: 'filters.unitTypes.studioTooltip' },
   { value: 'apartment', label: 'filters.unitTypes.apartment', icon: Building2, tooltip: 'filters.unitTypes.apartmentTooltip' },
@@ -241,7 +241,7 @@ export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options
   return (
     <TypeQuickFilters
       {...props}
-      options={UNIT_TYPE_OPTIONS}
+      options={PROPERTY_TYPE_OPTIONS}
       ariaLabel={props.ariaLabel ?? t('filters.unitTypes.ariaLabel')}
     />
   );

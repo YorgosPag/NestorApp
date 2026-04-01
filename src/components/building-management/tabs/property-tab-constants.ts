@@ -73,13 +73,13 @@ export const OPERATIONAL_STATUS_OPTION_KEYS: { value: OperationalStatus; labelKe
 // ============================================================================
 
 /** Resolve a unit type to its translated label */
-export function getUnitTypeLabel(type: string, t: TFunction): string {
+export function getPropertyTypeLabel(type: string, t: TFunction): string {
   const key = UNIT_TYPE_LABEL_KEYS[type];
   return key ? t(key) : type;
 }
 
 /** Resolve a commercial status to its translated label */
-export function getUnitStatusLabel(status: string, t: TFunction): string {
+export function getPropertyStatusLabel(status: string, t: TFunction): string {
   const key = UNIT_STATUS_LABEL_KEYS[status];
   return key ? t(key) : status;
 }

@@ -28,7 +28,7 @@ export interface OverlayAABB {
   minY: number;
   maxX: number;
   maxY: number;
-  unitId: string | undefined;
+  propertyId: string | undefined;
 }
 
 /** Coordinate bounds for DXF scene */
@@ -81,7 +81,7 @@ export function drawOverlayPolygons(
 
     // ADR-258D: Dynamic coloring via resolvedStatus (entity.commercialStatus → PropertyStatus)
     const colors = getStatusColors(overlay.resolvedStatus) ?? OVERLAY_FALLBACK;
-    const isHighlighted = !!(highlightedUnitId && overlay.linked?.unitId === highlightedUnitId);
+    const isHighlighted = !!(highlightedUnitId && overlay.linked?.propertyId === highlightedUnitId);
 
     // ADR-258D: No fill on normal, fill on hover only (stroke-only base)
     ctx.fillStyle = isHighlighted
@@ -123,7 +123,7 @@ export function computeOverlayAABBs(overlays: ReadonlyArray<FloorOverlayItem>): 
       if (v.x > maxX) maxX = v.x;
       if (v.y > maxY) maxY = v.y;
     }
-    return { overlayIndex: index, minX, minY, maxX, maxY, unitId: overlay.linked?.unitId };
+    return { overlayIndex: index, minX, minY, maxX, maxY, propertyId: overlay.linked?.propertyId };
   });
 }
 
@@ -156,7 +156,7 @@ export function screenToWorld(
 /**
  * Hit-test overlays at a world-space point.
  * Uses AABB pre-filter + centralized isPointInPolygon (ray casting).
- * Returns the first overlay with a linked unitId, or null.
+ * Returns the first overlay with a linked propertyId, or null.
  */
 export function hitTestOverlays(
   worldPoint: { x: number; y: number },

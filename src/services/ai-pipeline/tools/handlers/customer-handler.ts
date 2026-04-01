@@ -68,7 +68,7 @@ export class CustomerHandler implements ToolHandler {
     const title = String(args.title ?? '').trim();
     const description = String(args.description ?? '').trim();
     const severity = String(args.severity ?? 'normal');
-    const unitId = String(args.unitId ?? '').trim();
+    const propertyId = String(args.propertyId ?? '').trim();
 
     if (!title || !description) {
       return { success: false, error: 'Απαιτούνται τίτλος και περιγραφή παραπόνου.' };
@@ -78,7 +78,7 @@ export class CustomerHandler implements ToolHandler {
       return { success: false, error: `severity must be one of: ${COMPLAINT_SEVERITIES.join(', ')}` };
     }
 
-    if (!linkedUnitIds.includes(unitId)) {
+    if (!linkedUnitIds.includes(propertyId)) {
       return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το ακίνητο.' };
     }
 
@@ -92,12 +92,12 @@ export class CustomerHandler implements ToolHandler {
     const db = getAdminFirestore();
     let projectId: string | null = null;
     try {
-      const unitDoc = await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).get();
-      if (unitDoc.exists) {
-        projectId = String(unitDoc.data()?.projectId ?? '') || null;
+      const propertyDoc = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
+      if (propertyDoc.exists) {
+        projectId = String(propertyDoc.data()?.projectId ?? '') || null;
       }
     } catch {
-      logger.warn('Failed to resolve projectId for complaint task', { unitId });
+      logger.warn('Failed to resolve projectId for complaint task', { propertyId });
     }
 
     const { generateTaskId } = await import('@/services/enterprise-id.service');
@@ -112,7 +112,7 @@ export class CustomerHandler implements ToolHandler {
       priority,
       status: 'pending',
       contactId: contact.contactId,
-      unitId,
+      propertyId,
       projectId: projectId ?? null,
       assignedTo: '',
       createdBy: buildAttribution(ctx),
@@ -135,7 +135,7 @@ export class CustomerHandler implements ToolHandler {
       taskId,
       severity,
       priority,
-      unitId,
+      propertyId,
       contactId: contact.contactId,
       requestId: ctx.requestId,
     });
@@ -158,7 +158,7 @@ export class CustomerHandler implements ToolHandler {
           await sendChannelReply({
             channel: 'telegram',
             telegramChatId: adminChatId,
-            textBody: `🚨 ΕΠΕΙΓΟΝ ΠΑΡΑΠΟΝΟ\n\n📋 ${title}\n👤 ${contact.displayName}\n🏠 Unit: ${unitId}\n\n${truncatedDesc}`,
+            textBody: `🚨 ΕΠΕΙΓΟΝ ΠΑΡΑΠΟΝΟ\n\n📋 ${title}\n👤 ${contact.displayName}\n🏠 Property: ${propertyId}\n\n${truncatedDesc}`,
             requestId: ctx.requestId,
           });
           notifiedAdmin = true;

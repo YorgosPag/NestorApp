@@ -12,7 +12,7 @@ import '@/lib/design-system';
 interface StorageRowActionsProps {
   unit: StorageUnit;
   onEdit: (unit: StorageUnit) => void;
-  onDelete: (unitId: string) => void;
+  onDelete: (propertyId: string) => void;
   deletingId?: string | null;
   unlinkingId?: string | null;
   onUnlink?: (unit: StorageUnit) => void;

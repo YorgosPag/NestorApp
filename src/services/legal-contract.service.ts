@@ -67,7 +67,7 @@ export class LegalContractService {
     try {
       // Validate prerequisites
       const prerequisiteError = await this.validatePhasePrerequisite(
-        input.unitId,
+        input.propertyId,
         input.phase
       );
       if (prerequisiteError) {
@@ -75,7 +75,7 @@ export class LegalContractService {
       }
 
       // Check for existing contract in same phase
-      const existing = await this.getContractByPhase(input.unitId, input.phase);
+      const existing = await this.getContractByPhase(input.propertyId, input.phase);
       if (existing) {
         return {
           success: false,
@@ -83,8 +83,8 @@ export class LegalContractService {
         };
       }
 
-      // Snapshot professionals from unit associations
-      const snapshots = await AssociationService.snapshotProfessionals(input.unitId);
+      // Snapshot professionals from property associations
+      const snapshots = await AssociationService.snapshotProfessionals(input.propertyId);
       const sellerLawyer = snapshots.find((s) => s.role === 'seller_lawyer') ?? null;
       const buyerLawyer = snapshots.find((s) => s.role === 'buyer_lawyer') ?? null;
       const notary = snapshots.find((s) => s.role === 'notary') ?? null;
@@ -94,7 +94,7 @@ export class LegalContractService {
 
       const contract: LegalContract = {
         id,
-        unitId: input.unitId,
+        propertyId: input.propertyId,
         projectId: input.projectId,
         buildingId: input.buildingId,
         primaryBuyerContactId: input.primaryBuyerContactId,
@@ -118,11 +118,11 @@ export class LegalContractService {
       const db = getDb();
       await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(id).set(contract);
 
-      // Sync legalPhase to unit
-      await this.syncLegalPhase(input.unitId);
+      // Sync legalPhase to property
+      await this.syncLegalPhase(input.propertyId);
 
       logger.info(
-        `[LegalContractService] Created ${input.phase} contract ${id} for unit ${input.unitId}`
+        `[LegalContractService] Created ${input.phase} contract ${id} for property ${input.propertyId}`
       );
 
       return { success: true, contract };
@@ -138,12 +138,12 @@ export class LegalContractService {
   /**
    * Ανάκτηση contracts ανά unit.
    */
-  static async getContractsForUnit(unitId: string): Promise<LegalContract[]> {
+  static async getContractsForProperty(propertyId: string): Promise<LegalContract[]> {
     try {
       const db = getDb();
       const snapshot = await db
         .collection(COLLECTIONS.LEGAL_CONTRACTS)
-        .where(FIELDS.UNIT_ID, '==', unitId)
+        .where(FIELDS.PROPERTY_ID, '==', propertyId)
         .orderBy(FIELDS.CREATED_AT, 'asc')
         .get();
       return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as LegalContract);
@@ -157,14 +157,14 @@ export class LegalContractService {
    * Ανάκτηση contract ανά phase.
    */
   static async getContractByPhase(
-    unitId: string,
+    propertyId: string,
     phase: ContractPhase
   ): Promise<LegalContract | null> {
     try {
       const db = getDb();
       const snapshot = await db
         .collection(COLLECTIONS.LEGAL_CONTRACTS)
-        .where(FIELDS.UNIT_ID, '==', unitId)
+        .where(FIELDS.PROPERTY_ID, '==', propertyId)
         .where('phase', '==', phase)
         .get();
       if (snapshot.empty) return null;
@@ -266,7 +266,7 @@ export class LegalContractService {
       await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(id).update(updates);
 
       // Sync legalPhase
-      await this.syncLegalPhase(contract.unitId);
+      await this.syncLegalPhase(contract.propertyId);
 
       logger.info(
         `[LegalContractService] Transition ${id}: ${contract.status} → ${input.targetStatus}`
@@ -315,7 +315,7 @@ export class LegalContractService {
       if (contactId) {
         // Re-snapshot this specific professional
         const snapshots = await AssociationService.snapshotProfessionals(
-          contract.unitId,
+          contract.propertyId,
           [role]
         );
         snapshot = snapshots.find((s) => s.contactId === contactId) ?? null;
@@ -378,12 +378,12 @@ export class LegalContractService {
    * Υπολογίζει και ενημερώνει τη legalPhase στο unit.commercial.
    * Βρίσκει το "πιο προχωρημένο" contract και παράγει τη φάση.
    */
-  static async syncLegalPhase(unitId: string): Promise<LegalPhase> {
+  static async syncLegalPhase(propertyId: string): Promise<LegalPhase> {
     try {
-      const contracts = await this.getContractsForUnit(unitId);
+      const contracts = await this.getContractsForProperty(propertyId);
 
       if (contracts.length === 0) {
-        await this.updateUnitLegalPhase(unitId, 'none');
+        await this.updatePropertyLegalPhase(propertyId, 'none');
         return 'none';
       }
 
@@ -405,7 +405,7 @@ export class LegalContractService {
         }
       }
 
-      await this.updateUnitLegalPhase(unitId, highestPhase);
+      await this.updatePropertyLegalPhase(propertyId, highestPhase);
       return highestPhase;
     } catch (error) {
       logger.error('[LegalContractService] Failed to sync legal phase:', error);
@@ -421,7 +421,7 @@ export class LegalContractService {
    * Ελέγχει prerequisites πριν δημιουργηθεί contract σε μια φάση.
    */
   private static async validatePhasePrerequisite(
-    unitId: string,
+    propertyId: string,
     phase: ContractPhase
   ): Promise<string | null> {
     if (phase === 'preliminary') {
@@ -430,7 +430,7 @@ export class LegalContractService {
 
     if (phase === 'final') {
       // Final: αν υπάρχει preliminary, πρέπει να είναι signed
-      const preliminary = await this.getContractByPhase(unitId, 'preliminary');
+      const preliminary = await this.getContractByPhase(propertyId, 'preliminary');
       if (preliminary && preliminary.status !== 'signed' && preliminary.status !== 'completed') {
         return 'Το Προσύμφωνο πρέπει να είναι υπογεγραμμένο πριν δημιουργηθεί Οριστικό';
       }
@@ -439,7 +439,7 @@ export class LegalContractService {
 
     if (phase === 'payoff') {
       // Payoff: απαιτεί signed final
-      const finalContract = await this.getContractByPhase(unitId, 'final');
+      const finalContract = await this.getContractByPhase(propertyId, 'final');
       if (!finalContract) {
         return 'Δεν υπάρχει Οριστικό Συμβόλαιο — δημιουργήστε πρώτα Οριστικό';
       }
@@ -455,18 +455,18 @@ export class LegalContractService {
   /**
    * Ενημερώνει unit.commercial.legalPhase στο Firestore.
    */
-  private static async updateUnitLegalPhase(
-    unitId: string,
+  private static async updatePropertyLegalPhase(
+    propertyId: string,
     legalPhase: LegalPhase
   ): Promise<void> {
     try {
       const db = getDb();
-      await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
+      await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
         'commercial.legalPhase': legalPhase,
       });
-      logger.info(`[LegalContractService] Unit ${unitId} legalPhase → ${legalPhase}`);
+      logger.info(`[LegalContractService] Property ${propertyId} legalPhase → ${legalPhase}`);
     } catch (error) {
-      logger.error('[LegalContractService] Failed to update unit legalPhase:', error);
+      logger.error('[LegalContractService] Failed to update property legalPhase:', error);
     }
   }
 

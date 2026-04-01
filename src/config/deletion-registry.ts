@@ -218,20 +218,20 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     dependencies: [
       {
         collection: COLLECTIONS.ACCOUNTING_INVOICES,
-        foreignKey: 'unitId',
+        foreignKey: 'propertyId',
         label: 'Τιμολόγια',
         queryType: 'equals',
         skipCompanyFilter: true,
       },
       {
         collection: COLLECTIONS.OPPORTUNITIES,
-        foreignKey: 'unitIds',
+        foreignKey: 'propertyIds',
         label: 'Ευκαιρίες πώλησης',
         queryType: 'array-contains',
       },
       {
         collection: COLLECTIONS.COMMUNICATIONS,
-        foreignKey: 'unitId',
+        foreignKey: 'propertyId',
         label: 'Επικοινωνίες',
         queryType: 'equals',
       },
@@ -243,13 +243,13 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
       },
       {
         collection: COLLECTIONS.BOQ_ITEMS,
-        foreignKey: 'linkedUnitId',
+        foreignKey: 'linkedPropertyId',
         label: 'Επιμετρήσεις (BOQ)',
         queryType: 'equals',
       },
       {
         collection: COLLECTIONS.OBLIGATIONS,
-        foreignKey: 'unitId',
+        foreignKey: 'propertyId',
         label: 'Υποχρεώσεις',
         queryType: 'equals',
       },

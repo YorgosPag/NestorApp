@@ -25,7 +25,7 @@ const logger = createModuleLogger('ClientService');
 
 /** Result of checking a contact's active unit purchases */
 interface ActiveUnitsResult {
-  hasUnits: boolean;
+  hasProperties: boolean;
   hasParking: boolean;
   hasStorage: boolean;
 }
@@ -74,14 +74,14 @@ export class ClientService {
       ]);
 
       return {
-        hasUnits: !unitsSnap.empty,
+        hasProperties: !unitsSnap.empty,
         hasParking: !parkingSnap.empty,
         hasStorage: !storageSnap.empty,
       };
     } catch (error) {
       logger.warn('[ClientService] hasActiveUnits check failed — allowing removal:', error);
       // Fail open: if check fails (e.g., permission issues), allow removal
-      return { hasUnits: false, hasParking: false, hasStorage: false };
+      return { hasProperties: false, hasParking: false, hasStorage: false };
     }
   }
 }

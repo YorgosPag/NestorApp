@@ -49,7 +49,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     selectedCompany,
     selectedProject,
     selectedBuilding,
-    selectedUnit,  // 🏢 ENTERPRISE: Unit for breadcrumb display
+    selectedProperty,  // 🏢 ENTERPRISE: Unit for breadcrumb display
   } = useNavigation();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('navigation');
@@ -108,11 +108,11 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       });
     }
 
-    if (selectedUnit) {
-      // 🏢 ENTERPRISE: Dynamic entity config based on selectedUnit.type
+    if (selectedProperty) {
+      // 🏢 ENTERPRISE: Dynamic entity config based on selectedProperty.type
       // Supports: 'parking', 'storage', or defaults to 'unit'
-      const entityType = selectedUnit.type && isNavigationEntityType(selectedUnit.type)
-        ? selectedUnit.type
+      const entityType = selectedProperty.type && isNavigationEntityType(selectedProperty.type)
+        ? selectedProperty.type
         : 'unit';
       const entityConfig = NAVIGATION_ENTITIES[entityType];
 
@@ -120,13 +120,13 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       const navigableType: NavigableEntityType = entityType as NavigableEntityType;
 
       items.push({
-        id: selectedUnit.id,
-        label: selectedUnit.name,
+        id: selectedProperty.id,
+        label: selectedProperty.name,
         icon: entityConfig.icon,
         color: entityConfig.color,
         level: 'units',
         entityType: navigableType,
-        href: ContextualNavigationService.generateRoute(navigableType, selectedUnit.id, { action: 'select' }),
+        href: ContextualNavigationService.generateRoute(navigableType, selectedProperty.id, { action: 'select' }),
         onClick: () => {} // Legacy - not used with Link
       });
     }

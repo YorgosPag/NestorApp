@@ -28,8 +28,8 @@ export interface ProjectHealthRow {
 
 export interface OverdueItem {
   [key: string]: unknown;
-  unitId: string;
-  unitName: string;
+  propertyId: string;
+  propertyName: string;
   projectName: string;
   buyerName: string;
   amount: number;

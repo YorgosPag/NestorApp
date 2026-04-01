@@ -76,7 +76,7 @@ export class BrokerageServerService {
       const validation = await validateExclusivityServer(
         {
           projectId: input.projectId,
-          unitId: input.unitId ?? null,
+          propertyId: input.propertyId ?? null,
           scope: input.scope,
           exclusivity: input.exclusivity,
         },
@@ -100,7 +100,7 @@ export class BrokerageServerService {
         agentName: input.agentName,
         scope: input.scope,
         projectId: input.projectId,
-        unitId: input.unitId ?? null,
+        propertyId: input.propertyId ?? null,
         exclusivity: input.exclusivity,
         commissionType: input.commissionType,
         commissionPercentage: input.commissionPercentage ?? null,
@@ -137,7 +137,7 @@ export class BrokerageServerService {
     id: string,
     updates: Partial<Pick<BrokerageAgreement,
       'exclusivity' | 'commissionType' | 'commissionPercentage' |
-      'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'unitId'
+      'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'propertyId'
     >>,
     companyId: string,
     updatedBy: string
@@ -158,20 +158,20 @@ export class BrokerageServerService {
         return { success: false, error: 'Access denied' };
       }
 
-      // If exclusivity, scope, or unitId change → re-validate
+      // If exclusivity, scope, or propertyId change → re-validate
       const needsValidation = updates.exclusivity !== undefined
         || updates.scope !== undefined
-        || updates.unitId !== undefined;
+        || updates.propertyId !== undefined;
 
       if (needsValidation) {
         const mergedScope = updates.scope ?? current.scope;
-        const mergedUnitId = updates.unitId !== undefined ? updates.unitId : current.unitId;
+        const mergedPropertyId = updates.propertyId !== undefined ? updates.propertyId : current.propertyId;
         const mergedExclusivity = updates.exclusivity ?? current.exclusivity;
 
         const validation = await validateExclusivityServer(
           {
             projectId: current.projectId,
-            unitId: mergedUnitId,
+            propertyId: mergedPropertyId,
             scope: mergedScope,
             exclusivity: mergedExclusivity,
             excludeAgreementId: id,
@@ -294,7 +294,7 @@ export class BrokerageServerService {
         brokerageAgreementId: input.brokerageAgreementId,
         agentContactId: input.agentContactId,
         agentName: input.agentName,
-        unitId: input.unitId,
+        propertyId: input.propertyId,
         projectId: input.projectId,
         primaryBuyerContactId: input.primaryBuyerContactId,
         salePrice: input.salePrice,

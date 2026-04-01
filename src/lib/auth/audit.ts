@@ -334,12 +334,12 @@ export async function logClaimsUpdated(
  */
 export async function logOwnershipChanged(
   ctx: AuthContext,
-  unitId: string,
+  propertyId: string,
   previousOwnerId: string | null,
   newOwnerId: string,
   reason?: string
 ): Promise<void> {
-  await logAuditEvent(ctx, 'ownership_changed', unitId, 'unit', {
+  await logAuditEvent(ctx, 'ownership_changed', propertyId, 'property', {
     previousValue: previousOwnerId ? { type: 'membership', value: previousOwnerId } : null,
     newValue: { type: 'membership', value: newOwnerId },
     metadata: { reason },
@@ -609,7 +609,7 @@ export async function logCommunicationRejected(
  * @param entityId - Entity document ID
  * @param fromStatus - Previous FSM status
  * @param toStatus - New FSM status
- * @param metadata - Optional additional context (unitId, planId, etc.)
+ * @param metadata - Optional additional context (propertyId, planId, etc.)
  */
 export async function logFinancialTransition(
   ctx: AuthContext,

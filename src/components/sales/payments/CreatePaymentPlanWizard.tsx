@@ -48,7 +48,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 interface CreatePaymentPlanWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  unitId: string;
+  propertyId: string;
   buildingId: string;
   projectId: string;
   ownerContactId: string;

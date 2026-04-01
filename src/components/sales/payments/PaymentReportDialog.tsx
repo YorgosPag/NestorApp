@@ -176,7 +176,7 @@ export function PaymentReportDialog({
                   ) : (
                     report.rows.map((row) => (
                       <TableRow
-                        key={row.unitId}
+                        key={row.propertyId}
                         className={row.overdueInstallments > 0 ? 'bg-red-50' : undefined}
                       >
                         <TableCell className="font-medium">{row.unitLabel}</TableCell>

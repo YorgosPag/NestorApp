@@ -59,7 +59,7 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
   const {
     selectedProject,
     selectedBuilding,
-    selectUnit,
+    selectProperty,
     getBuildingsForProject,
     getPropertiesForBuilding,
   } = useNavigation();
@@ -206,12 +206,12 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
   }, [selectedBuilding, parkingSpots]);
 
   // ── Tab selection callbacks ──
-  const handleUnitSelectFromTabs = useCallback(
+  const handlePropertySelectFromTabs = useCallback(
     (unit: NavigationUnit) => {
-      selectUnit({ id: unit.id, name: unit.name, type: unit.type });
+      selectProperty({ id: unit.id, name: unit.name, type: unit.type });
       setSelectedBuildingSpace({ id: unit.id, name: unit.name, type: 'units' });
     },
-    [selectUnit]
+    [selectProperty]
   );
 
   const handleStorageSelectFromTabs = useCallback((storage: StorageUnit) => {
@@ -229,7 +229,7 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
     buildingStorages,
     buildingParkingSpots,
     selectedBuildingSpace,
-    handleUnitSelectFromTabs,
+    handlePropertySelectFromTabs,
     handleStorageSelectFromTabs,
     handleParkingSelectFromTabs,
   };

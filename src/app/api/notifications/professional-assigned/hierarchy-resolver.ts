@@ -1,5 +1,5 @@
 /**
- * Unit hierarchy resolver and contact data extractors
+ * Property hierarchy resolver and contact data extractors
  * for the professional-assigned notification route.
  *
  * Extracted from route.ts per Google SRP / ADR-N.7.1 file-size rules.
@@ -14,10 +14,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // TYPES
 // ============================================================================
 
-export interface UnitHierarchy {
-  unitName: string;
-  unitCode: string | null;
-  unitFloor: number | null;
+export interface PropertyHierarchy {
+  propertyName: string;
+  propertyCode: string | null;
+  propertyFloor: number | null;
   buildingName: string | null;
   projectName: string | null;
   projectAddress: string | null;
@@ -106,21 +106,21 @@ export function extractPrimaryWebsite(contactData: Record<string, unknown>): str
 // ============================================================================
 
 /**
- * Resolve unit → building → project → company hierarchy via Admin SDK.
+ * Resolve property → building → project → company hierarchy via Admin SDK.
  * Same pattern as sales-accounting-bridge.ts resolveHierarchy().
  */
-export async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarchy | null> {
+export async function resolvePropertyHierarchy(propertyId: string): Promise<PropertyHierarchy | null> {
   const db = getAdminFirestore();
 
-  // 1. Unit
-  const unitSnap = await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).get();
-  if (!unitSnap.exists) return null;
-  const unitData = unitSnap.data() as Record<string, unknown>;
+  // 1. Property
+  const propertySnap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
+  if (!propertySnap.exists) return null;
+  const propertyData = propertySnap.data() as Record<string, unknown>;
 
-  const result: UnitHierarchy = {
-    unitName: (unitData.name as string) ?? unitId,
-    unitCode: (unitData.code as string) ?? null,
-    unitFloor: (unitData.floor as number) ?? null,
+  const result: PropertyHierarchy = {
+    propertyName: (propertyData.name as string) ?? propertyId,
+    propertyCode: (propertyData.code as string) ?? null,
+    propertyFloor: (propertyData.floor as number) ?? null,
     buildingName: null,
     projectName: null,
     projectAddress: null,
@@ -135,7 +135,7 @@ export async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarch
   };
 
   // 2. Building
-  const buildingId = unitData.buildingId as string | undefined;
+  const buildingId = propertyData.buildingId as string | undefined;
   if (buildingId) {
     const buildingSnap = await db.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
     if (buildingSnap.exists) {
@@ -180,12 +180,12 @@ export async function resolveUnitHierarchy(unitId: string): Promise<UnitHierarch
     }
   }
 
-  // 5. Buyer — from unit.commercial.owners[] (ADR-244 SSoT)
-  //    Fallback: unit.soldTo (deprecated)
-  const commercial = unitData.commercial as Record<string, unknown> | undefined;
+  // 5. Buyer — from property.commercial.owners[] (ADR-244 SSoT)
+  //    Fallback: property.soldTo (deprecated)
+  const commercial = propertyData.commercial as Record<string, unknown> | undefined;
   const ownersArr = commercial?.owners as ReadonlyArray<{ contactId: string }> | null ?? null;
   const buyerContactId = ownersArr?.[0]?.contactId
-    ?? (unitData.soldTo as string)
+    ?? (propertyData.soldTo as string)
     ?? null;
 
   if (buyerContactId) {

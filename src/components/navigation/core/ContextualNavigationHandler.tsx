@@ -35,7 +35,7 @@ export function ContextualNavigationHandler() {
   const previousSelections = useRef({
     projectId: null as string | null,
     buildingId: null as string | null,
-    unitId: null as string | null,
+    propertyId: null as string | null,
     storageId: null as string | null,
     parkingId: null as string | null
   });
@@ -52,13 +52,13 @@ export function ContextualNavigationHandler() {
     const params = {
       projectId: searchParams.get('projectId') || searchParams.get('selectedProject'),
       buildingId: searchParams.get('buildingId') || searchParams.get('selectedBuilding'),
-      unitId: searchParams.get('unitId') || searchParams.get('selectedUnit'),
+      propertyId: searchParams.get('propertyId') || searchParams.get('selectedProperty'),
       storageId: searchParams.get('storageId') || searchParams.get('selectedStorage'),
       parkingId: searchParams.get('parkingId') || searchParams.get('selectedParking')
     };
 
     // 🏢 ENTERPRISE: Skip if no contextual parameters
-    if (!params.projectId && !params.buildingId && !params.unitId && !params.storageId && !params.parkingId) {
+    if (!params.projectId && !params.buildingId && !params.propertyId && !params.storageId && !params.parkingId) {
       return;
     }
 
@@ -95,12 +95,12 @@ export function ContextualNavigationHandler() {
     }
 
     // Handle Unit/Storage/Parking Selection
-    else if (params.unitId || params.storageId || params.parkingId) {
-      const spaceId = params.unitId || params.storageId || params.parkingId;
-      const spaceType = params.unitId ? 'unit' : params.storageId ? 'storage' : 'parking';
+    else if (params.propertyId || params.storageId || params.parkingId) {
+      const spaceId = params.propertyId || params.storageId || params.parkingId;
+      const spaceType = params.propertyId ? 'unit' : params.storageId ? 'storage' : 'parking';
 
-      const previousSpaceId = params.unitId
-        ? previousSelections.current.unitId
+      const previousSpaceId = params.propertyId
+        ? previousSelections.current.propertyId
         : params.storageId
         ? previousSelections.current.storageId
         : previousSelections.current.parkingId;
@@ -109,7 +109,7 @@ export function ContextualNavigationHandler() {
         logger.info('Auto-selecting space', { spaceType, spaceId });
 
         // Update previous selection
-        if (params.unitId) previousSelections.current.unitId = params.unitId;
+        if (params.propertyId) previousSelections.current.propertyId = params.propertyId;
         if (params.storageId) previousSelections.current.storageId = params.storageId;
         if (params.parkingId) previousSelections.current.parkingId = params.parkingId;
 

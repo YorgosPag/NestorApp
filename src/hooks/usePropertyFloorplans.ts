@@ -35,7 +35,7 @@ export function usePropertyFloorplans(propertyId: string | number, companyId: st
 
       logger.info('Fetching property floorplan', { propertyId: propertyIdStr, companyId });
 
-      const data = await PropertyFloorplanService.loadFloorplan({ companyId, unitId: propertyIdStr });
+      const data = await PropertyFloorplanService.loadFloorplan({ companyId, propertyId: propertyIdStr });
       setPropertyFloorplan(data);
 
       logger.info('Property floorplan loaded', { hasPropertyFloorplan: !!data });

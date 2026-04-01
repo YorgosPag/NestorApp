@@ -11,7 +11,7 @@ export type PropertyDetailsContentProps = {
   onExitEditMode?: () => void;
   /** Inline new unit creation */
   isCreatingNewUnit?: boolean;
-  onUnitCreated?: (unitId: string) => void;
+  onPropertyCreated?: (propertyId: string) => void;
 };
 
 export type AttachmentsData = {

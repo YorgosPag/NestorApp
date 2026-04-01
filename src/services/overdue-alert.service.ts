@@ -2,7 +2,7 @@
  * 🏢 Overdue Alert Service — ADR-234 Phase 5
  *
  * Scans for units with overdue installments and creates notification documents.
- * Deduplication: tag-based — `overdue_{unitId}_{date}` prevents duplicates.
+ * Deduplication: tag-based — `overdue_{propertyId}_{date}` prevents duplicates.
  *
  * @module services/overdue-alert
  */
@@ -57,7 +57,7 @@ export class OverdueAlertService {
 
       for (const unit of overdueUnits) {
         try {
-          const dedupTag = `overdue_${unit.unitId}_${todayISO}`;
+          const dedupTag = `overdue_${unit.propertyId}_${todayISO}`;
 
           // Check dedup — does a notification with this tag exist today?
           const existing = await db
@@ -81,9 +81,9 @@ export class OverdueAlertService {
 
           batch.set(notificationRef, {
             title: 'Ληξιπρόθεσμη Δόση',
-            body: `Μονάδα ${unit.unitLabel}: ${unit.overdueCount} ληξιπρόθεσμ${unit.overdueCount === 1 ? 'η' : 'ες'} δόσ${unit.overdueCount === 1 ? 'η' : 'εις'} (${amountFormatted})`,
+            body: `Μονάδα ${unit.propertyLabel}: ${unit.overdueCount} ληξιπρόθεσμ${unit.overdueCount === 1 ? 'η' : 'ες'} δόσ${unit.overdueCount === 1 ? 'η' : 'εις'} (${amountFormatted})`,
             severity: 'warning',
-            tags: ['overdue', unit.unitId, todayISO, dedupTag],
+            tags: ['overdue', unit.propertyId, todayISO, dedupTag],
 
             source: {
               service: 'payment-alerts',
@@ -94,7 +94,7 @@ export class OverdueAlertService {
               {
                 id: 'view',
                 label: 'Προβολή',
-                url: `/units/${unit.unitId}`,
+                url: `/properties/${unit.propertyId}`,
               },
             ],
 
@@ -103,7 +103,7 @@ export class OverdueAlertService {
 
             createdAt: new Date().toISOString(),
             meta: {
-              unitId: unit.unitId,
+              propertyId: unit.propertyId,
               projectId: unit.projectId,
               overdueCount: unit.overdueCount,
               remainingAmount: unit.remainingAmount,
@@ -121,7 +121,7 @@ export class OverdueAlertService {
         } catch (unitError) {
           result.errors++;
           logger.error('Failed to process unit for overdue alert', {
-            unitId: unit.unitId,
+            propertyId: unit.propertyId,
             error: getErrorMessage(unitError),
           });
         }

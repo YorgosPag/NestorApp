@@ -104,7 +104,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
 
     setCreating(true);
     const result = await createContract({
-      unitId: unit.id,
+      propertyId: unit.id,
       projectId: resolvedProjectId,
       buildingId: unit.buildingId,
       primaryBuyerContactId,
@@ -211,7 +211,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
 
       {/* Professionals — interactive assign/remove */}
       <ProfessionalsCard
-        unitId={unit.id}
+        propertyId={unit.id}
         associations={links}
         contracts={contracts}
         onAssign={addLink}

@@ -29,8 +29,8 @@ import '@/lib/design-system';
 interface SalesQuickFiltersProps {
   selectedCommercialStatus: string;
   onCommercialStatusChange: (status: string) => void;
-  selectedUnitType: string;
-  onUnitTypeChange: (type: string) => void;
+  selectedPropertyType: string;
+  onPropertyTypeChange: (type: string) => void;
   className?: string;
 }
 
@@ -45,7 +45,7 @@ const COMMERCIAL_STATUS_OPTIONS: TypeFilterOption[] = [
   { value: 'for-sale-and-rent', label: 'sales.quickFilters.dualListing',   icon: Key,         tooltip: 'sales.quickFilters.dualListingTooltip' },
 ];
 
-const UNIT_TYPE_OPTIONS: TypeFilterOption[] = [
+const PROPERTY_TYPE_OPTIONS: TypeFilterOption[] = [
   { value: 'all',        label: 'filters.unitTypes.all',        icon: LayoutGrid, tooltip: 'filters.unitTypes.allTooltip' },
   { value: 'studio',     label: 'filters.unitTypes.studio',     icon: BedSingle,  tooltip: 'filters.unitTypes.studioTooltip' },
   { value: 'apartment',  label: 'filters.unitTypes.apartment',  icon: Building2,  tooltip: 'filters.unitTypes.apartmentTooltip' },
@@ -61,8 +61,8 @@ const UNIT_TYPE_OPTIONS: TypeFilterOption[] = [
 export function SalesQuickFilters({
   selectedCommercialStatus,
   onCommercialStatusChange,
-  selectedUnitType,
-  onUnitTypeChange,
+  selectedPropertyType,
+  onPropertyTypeChange,
   className,
 }: SalesQuickFiltersProps) {
   const { t } = useTranslation('common');
@@ -73,7 +73,7 @@ export function SalesQuickFilters({
   };
 
   const handleTypeChange = (types: string[]) => {
-    onUnitTypeChange(types.length === 0 ? 'all' : types[0]);
+    onPropertyTypeChange(types.length === 0 ? 'all' : types[0]);
   };
 
   return (
@@ -89,8 +89,8 @@ export function SalesQuickFilters({
 
       {/* Row 2: Unit Type */}
       <TypeQuickFilters
-        options={UNIT_TYPE_OPTIONS}
-        selectedTypes={selectedUnitType === 'all' ? [] : [selectedUnitType]}
+        options={PROPERTY_TYPE_OPTIONS}
+        selectedTypes={selectedPropertyType === 'all' ? [] : [selectedPropertyType]}
         onTypeChange={handleTypeChange}
         compact
         ariaLabel={t('sales.quickFilters.typeAriaLabel', { defaultValue: 'Φίλτρο τύπου μονάδας' })}

@@ -127,10 +127,10 @@ const CONTACT_UPDATE_PROMPT = `
 const FILE_DELIVERY_PROMPT = `
 ΑΠΟΣΤΟΛΗ ΑΡΧΕΙΩΝ (φωτογραφίες, κατόψεις, έγγραφα):
 Μπορείς να στείλεις αρχεία στον χρήστη χρησιμοποιώντας deliver_file_to_chat.
-- Φωτογραφίες unit: deliver_file_to_chat(sourceType:"unit_photo", sourceId:"<unitId>", caption:null)
+- Φωτογραφίες property: deliver_file_to_chat(sourceType:"property_photo", sourceId:"<propertyId>", caption:null)
 - Κάτοψη: Πρώτα ψάξε floorplans collection → deliver_file_to_chat(sourceType:"floorplan", sourceId:"<floorplanId>", caption:null)
 - Έγγραφα: Πρώτα ψάξε files collection → deliver_file_to_chat(sourceType:"file", sourceId:"<fileId>", caption:null)
-ΣΗΜΑΝΤΙΚΟ: Μπορείς να στείλεις ΜΟΝΟ αρχεία που ανήκουν στα δικά units του χρήστη.`;
+ΣΗΜΑΝΤΙΚΟ: Μπορείς να στείλεις ΜΟΝΟ αρχεία που ανήκουν στα δικά properties του χρήστη.`;
 
 /**
  * SPEC-257G: Knowledge base prompt — shared across buyer/owner/tenant (SSOT).
@@ -373,7 +373,7 @@ export const UNLINKED_ACCESS: RoleAccessConfig = {
   promptDescription: `ΔΕΝ είναι συνδεδεμένος/η σε κάποιο έργο.
 Μπορείς ΜΟΝΟ να:
 - Απαντήσεις σε γενικές ερωτήσεις
-- Δώσεις πληροφορίες ακινήτων (units: τ.μ., τιμή, τύπος)
+- Δώσεις πληροφορίες ακινήτων (properties: τ.μ., τιμή, τύπος)
 - Κλείσεις ραντεβού
 ΜΗΝ δίνεις πρόσβαση σε εσωτερικά δεδομένα (φάσεις, εργασίες, μετρήσεις, contacts).`,
   scopeLevel: 'project',
@@ -386,7 +386,7 @@ export const UNKNOWN_USER_ACCESS: RoleAccessConfig = {
   promptDescription: `Ο χρήστης δεν είναι αναγνωρισμένος.
 Μπορείς ΜΟΝΟ να:
 - Απαντήσεις σε γενικές ερωτήσεις για ακίνητα
-- Δώσεις πληροφορίες ακινήτων (units: τ.μ., τιμή, τύπος)
+- Δώσεις πληροφορίες ακινήτων (properties: τ.μ., τιμή, τύπος)
 - Κλείσεις ραντεβού
 ΜΗΝ δίνεις πρόσβαση σε εσωτερικά δεδομένα.`,
 };

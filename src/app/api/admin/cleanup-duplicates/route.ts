@@ -3,12 +3,12 @@
  * CLEANUP DUPLICATES - PROTECTED (AUTHZ Phase 2)
  * =============================================================================
  *
- * @purpose Finds and removes duplicate units (same name)
+ * @purpose Finds and removes duplicate properties (same name)
  * @author Enterprise Architecture Team
  * @protection withAuth + super_admin + audit logging
  * @classification Data cleanup operation
  *
- * This endpoint performs duplicate unit cleanup:
+ * This endpoint performs duplicate property cleanup:
  * 1. Groups units by name
  * 2. Keeps the first unit (oldest)
  * 3. Deletes all duplicates
@@ -39,7 +39,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('CleanupDuplicatesRoute');
 
-interface UnitRecord {
+interface PropertyRecord {
   id: string;
   name: string;
   buildingId?: string;
@@ -48,7 +48,7 @@ interface UnitRecord {
 
 /**
  * GET - Preview Duplicates (withAuth protected)
- * Shows duplicate units without deleting them.
+ * Shows duplicate properties without deleting them.
  *
  * @security withAuth + super_admin check + admin:data:fix permission
  * @rateLimit SENSITIVE (20 req/min) - Admin operation
@@ -82,18 +82,18 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
   }
 
   try {
-    logger.info('Analyzing duplicate units...');
+    logger.info('Analyzing duplicate properties...');
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const db = getAdminFirestore();
-    const units: UnitRecord[] = [];
+    const properties: PropertyRecord[] = [];
     await processAdminBatch(
-      db.collection(COLLECTIONS.UNITS),
+      db.collection(COLLECTIONS.PROPERTIES),
       BATCH_SIZE_READ,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
-          units.push({
+          properties.push({
             id: docSnap.id,
             name: (data.name as string) || 'UNNAMED',
             buildingId: data.buildingId as string | undefined,
@@ -104,15 +104,15 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
     );
 
     // Group by name
-    const groupedByName = new Map<string, UnitRecord[]>();
-    units.forEach((unit) => {
+    const groupedByName = new Map<string, PropertyRecord[]>();
+    properties.forEach((unit) => {
       const existing = groupedByName.get(unit.name) || [];
       existing.push(unit);
       groupedByName.set(unit.name, existing);
     });
 
     // Find duplicates (more than 1 unit with same name)
-    const duplicateGroups: Array<{ name: string; keep: UnitRecord; toDelete: UnitRecord[] }> = [];
+    const duplicateGroups: Array<{ name: string; keep: PropertyRecord; toDelete: PropertyRecord[] }> = [];
     let totalToDelete = 0;
 
     groupedByName.forEach((group, name) => {
@@ -129,11 +129,11 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
     return NextResponse.json({
       success: true,
       mode: 'preview',
-      totalUnits: units.length,
+      totalProperties: properties.length,
       uniqueNames: groupedByName.size,
       duplicateGroups: duplicateGroups.length,
       totalToDelete,
-      afterCleanup: units.length - totalToDelete,
+      afterCleanup: properties.length - totalToDelete,
       details: duplicateGroups.map((g) => ({
         name: g.name,
         keepId: g.keep.id,
@@ -141,7 +141,7 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
         deleteCount: g.toDelete.length,
       })),
       executionTimeMs: duration,
-      message: `Found ${totalToDelete} duplicate units to delete. Use DELETE method to execute cleanup.`,
+      message: `Found ${totalToDelete} duplicate properties to delete. Use DELETE method to execute cleanup.`,
     });
   } catch (error: unknown) {
     logger.error('Error analyzing duplicates', { error });
@@ -161,7 +161,7 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
 
 /**
  * DELETE - Execute Cleanup (withAuth protected)
- * Deletes duplicate units, keeping only the first occurrence.
+ * Deletes duplicate properties, keeping only the first occurrence.
  *
  * @security withAuth + super_admin check + audit logging + admin:data:fix permission
  * @rateLimit SENSITIVE (20 req/min) - Admin operation
@@ -199,14 +199,14 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
 
     // ADR-214 Phase 8: Batch processing to prevent unbounded reads
     const db = getAdminFirestore();
-    const units: UnitRecord[] = [];
+    const properties: PropertyRecord[] = [];
     await processAdminBatch(
-      db.collection(COLLECTIONS.UNITS),
+      db.collection(COLLECTIONS.PROPERTIES),
       BATCH_SIZE_WRITE,
       (docs) => {
         for (const docSnap of docs) {
           const data = docSnap.data();
-          units.push({
+          properties.push({
             id: docSnap.id,
             name: (data.name as string) || 'UNNAMED',
             buildingId: data.buildingId as string | undefined,
@@ -217,8 +217,8 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
     );
 
     // Group by name
-    const groupedByName = new Map<string, UnitRecord[]>();
-    units.forEach((unit) => {
+    const groupedByName = new Map<string, PropertyRecord[]>();
+    properties.forEach((unit) => {
       const existing = groupedByName.get(unit.name) || [];
       existing.push(unit);
       groupedByName.set(unit.name, existing);
@@ -247,18 +247,18 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
     }
 
     // Delete duplicates
-    logger.info('Deleting duplicate units', { count: idsToDelete.length });
+    logger.info('Deleting duplicate properties', { count: idsToDelete.length });
 
     let deletedCount = 0;
     const errors: string[] = [];
 
     for (const id of idsToDelete) {
       try {
-        await db.collection(COLLECTIONS.UNITS).doc(id).delete();
+        await db.collection(COLLECTIONS.PROPERTIES).doc(id).delete();
         deletedCount++;
-        logger.info('Deleted duplicate unit', { unitId: id });
+        logger.info('Deleted duplicate property', { propertyId: id });
       } catch (err) {
-        logger.error('Failed to delete duplicate unit', { unitId: id, error: err });
+        logger.error('Failed to delete duplicate property', { propertyId: id, error: err });
         errors.push(id);
       }
     }
@@ -269,14 +269,14 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
     const metadata = extractRequestMetadata(request);
     await logDataFix(
       ctx,
-      'cleanup_duplicate_units',
+      'cleanup_duplicate_properties',
       {
         operation: 'cleanup-duplicates',
-        totalUnits: units.length,
+        totalProperties: properties.length,
         duplicatesDeleted: deletedCount,
         duplicatesFailed: errors.length,
         uniqueNamesAfter: groupedByName.size - deletedDetails.length,
-        remainingUnits: units.length - deletedCount,
+        remainingProperties: properties.length - deletedCount,
         deletedDetails: deletedDetails.map(d => ({
           name: d.name,
           deletedCount: d.deletedIds.length,
@@ -285,19 +285,19 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
         result: errors.length === 0 ? 'success' : 'partial_success',
         metadata,
       },
-      `Duplicate units cleanup by ${ctx.globalRole} ${ctx.email}`
+      `Duplicate properties cleanup by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
       logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
       success: true,
-      message: `Successfully deleted ${deletedCount} duplicate units`,
+      message: `Successfully deleted ${deletedCount} duplicate properties`,
       deleted: deletedCount,
       failed: errors.length,
       failedIds: errors.length > 0 ? errors : undefined,
       details: deletedDetails,
-      remainingUnits: units.length - deletedCount,
+      remainingProperties: properties.length - deletedCount,
       executionTimeMs: duration,
     });
   } catch (error: unknown) {

@@ -62,8 +62,8 @@ const logger = createModuleLogger('ReadOnlyMediaViewer');
 // =============================================================================
 
 export function ReadOnlyMediaViewer({
-  unitId,
-  unitName: _unitName,
+  propertyId,
+  propertyName: _propertyName,
   floorId,
   floorName: _floorName,
   buildingId,
@@ -83,8 +83,8 @@ export function ReadOnlyMediaViewer({
 
   const effectiveCompanyId = propCompanyId || user?.companyId;
 
-  if (unitId && effectiveCompanyId) {
-    logger.debug('Params resolved', { data: { unitId, floorId, buildingId, floorNumber, propCompanyId, effectiveCompanyId } });
+  if (propertyId && effectiveCompanyId) {
+    logger.debug('Params resolved', { data: { propertyId, floorId, buildingId, floorNumber, propCompanyId, effectiveCompanyId } });
   }
 
   // ==========================================================================
@@ -118,8 +118,8 @@ export function ReadOnlyMediaViewer({
   // ==========================================================================
 
   const floorplansData = useEntityFiles({
-    entityType: 'property', entityId: unitId || '', companyId: effectiveCompanyId,
-    category: 'floorplans', autoFetch: !!unitId && !!effectiveCompanyId,
+    entityType: 'property', entityId: propertyId || '', companyId: effectiveCompanyId,
+    category: 'floorplans', autoFetch: !!propertyId && !!effectiveCompanyId,
   });
 
   logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: effectiveCompanyId, isMultiLevel, levelCount: levels?.length } });
@@ -145,20 +145,20 @@ export function ReadOnlyMediaViewer({
   }, [floorFloorplan, floorFloorplanLoading, floorFloorplanError, refetchFloorFloorplan, effectiveCompanyId]);
 
   const photosData = useEntityFiles({
-    entityType: 'property', entityId: unitId || '', companyId: effectiveCompanyId,
-    category: 'photos', autoFetch: !!unitId && !!effectiveCompanyId,
+    entityType: 'property', entityId: propertyId || '', companyId: effectiveCompanyId,
+    category: 'photos', autoFetch: !!propertyId && !!effectiveCompanyId,
   });
 
   const videosData = useEntityFiles({
-    entityType: 'property', entityId: unitId || '', companyId: effectiveCompanyId,
-    category: 'videos', autoFetch: !!unitId && !!effectiveCompanyId,
+    entityType: 'property', entityId: propertyId || '', companyId: effectiveCompanyId,
+    category: 'videos', autoFetch: !!propertyId && !!effectiveCompanyId,
   });
 
   // ==========================================================================
   // Empty State
   // ==========================================================================
 
-  if (!unitId) {
+  if (!propertyId) {
     return (
       <Card className={cn('flex-1 flex flex-col min-h-0', className)}>
         <CardContent className={cn('flex-1 flex items-center justify-center', spacing.padding.md)}>

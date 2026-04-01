@@ -77,7 +77,7 @@ describe('FileDeliveryHandler', () => {
     it('should reject empty sourceId', async () => {
       const result = await handler.execute(
         'deliver_file_to_chat',
-        { sourceType: 'unit_photo', sourceId: '' },
+        { sourceType: 'property_photo', sourceId: '' },
         customerCtx(),
       );
       expect(result.success).toBe(false);
@@ -93,20 +93,20 @@ describe('FileDeliveryHandler', () => {
     it('should reject when no contactMeta', async () => {
       const result = await handler.execute(
         'deliver_file_to_chat',
-        { sourceType: 'unit_photo', sourceId: 'u1' },
+        { sourceType: 'property_photo', sourceId: 'u1' },
         customerCtx({ contactMeta: null }),
       );
       expect(result.success).toBe(false);
     });
 
-    it('should reject unit_photo when unit not in linkedUnitIds', async () => {
+    it('should reject property_photo when unit not in linkedUnitIds', async () => {
       setupFirestore({
         properties: { unit_999: { photoURL: 'https://example.com/photo.jpg' } },
       });
 
       const result = await handler.execute(
         'deliver_file_to_chat',
-        { sourceType: 'unit_photo', sourceId: 'unit_999' },
+        { sourceType: 'property_photo', sourceId: 'unit_999' },
         customerCtx(),
       );
       expect(result.success).toBe(false);
@@ -125,7 +125,7 @@ describe('FileDeliveryHandler', () => {
 
       const result = await handler.execute(
         'deliver_file_to_chat',
-        { sourceType: 'unit_photo', sourceId: 'unit_001' },
+        { sourceType: 'property_photo', sourceId: 'unit_001' },
         customerCtx(),
       );
 
@@ -141,7 +141,7 @@ describe('FileDeliveryHandler', () => {
 
       const result = await handler.execute(
         'deliver_file_to_chat',
-        { sourceType: 'unit_photo', sourceId: 'unit_001' },
+        { sourceType: 'property_photo', sourceId: 'unit_001' },
         customerCtx(),
       );
       expect(result.success).toBe(false);
@@ -154,7 +154,7 @@ describe('FileDeliveryHandler', () => {
   // ==========================================================================
 
   describe('admin path', () => {
-    it('should deliver unit_photo without contactMeta', async () => {
+    it('should deliver property_photo without contactMeta', async () => {
       setupFirestore({
         properties: {
           unit_999: {
@@ -165,7 +165,7 @@ describe('FileDeliveryHandler', () => {
 
       const result = await handler.execute(
         'deliver_file_to_chat',
-        { sourceType: 'unit_photo', sourceId: 'unit_999' },
+        { sourceType: 'property_photo', sourceId: 'unit_999' },
         adminCtx(),
       );
 

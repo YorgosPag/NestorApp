@@ -32,7 +32,7 @@ interface PhotosTabContentProps {
   /** Building entity (for building context) */
   building?: Building;
   /** Selected unit (for units context via GenericPropertiesTabsRenderer) */
-  selectedUnit?: { id: string; name?: string };
+  selectedProperty?: { id: string; name?: string };
 }
 
 // =============================================================================
@@ -46,15 +46,15 @@ interface PhotosTabContentProps {
  *
  * Supports both:
  * - Building context (receives building prop)
- * - Units context (receives selectedUnit prop from GenericPropertiesTabsRenderer)
+ * - Units context (receives selectedProperty prop from GenericPropertiesTabsRenderer)
  */
-const PhotosTabContent = ({ building, selectedUnit }: PhotosTabContentProps) => {
+const PhotosTabContent = ({ building, selectedProperty }: PhotosTabContentProps) => {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
 
   // Support both building and unit contexts
   const defaultName = t('header.title');
-  const entity = building || selectedUnit || { id: 'placeholder', name: defaultName };
+  const entity = building || selectedProperty || { id: 'placeholder', name: defaultName };
 
   return (
     <PhotosTabBase

@@ -72,7 +72,7 @@ describe('CustomerHandler', () => {
     it('should reject when no contactMeta (unrecognized user)', async () => {
       const result = await handler.execute(
         'create_complaint_task',
-        { title: 'Test', description: 'Desc', severity: 'normal', unitId: 'u1' },
+        { title: 'Test', description: 'Desc', severity: 'normal', propertyId: 'u1' },
         customerCtx({ contactMeta: null }),
       );
       expect(result.success).toBe(false);
@@ -81,7 +81,7 @@ describe('CustomerHandler', () => {
     it('should reject when no linked units', async () => {
       const result = await handler.execute(
         'create_complaint_task',
-        { title: 'Test', description: 'Desc', severity: 'normal', unitId: 'u1' },
+        { title: 'Test', description: 'Desc', severity: 'normal', propertyId: 'u1' },
         customerCtx({
           contactMeta: {
             contactId: 'cont_001',
@@ -99,7 +99,7 @@ describe('CustomerHandler', () => {
     it('should reject missing title or description', async () => {
       const result = await handler.execute(
         'create_complaint_task',
-        { title: '', description: 'Desc', severity: 'normal', unitId: 'unit_001' },
+        { title: '', description: 'Desc', severity: 'normal', propertyId: 'unit_001' },
         customerCtx(),
       );
       expect(result.success).toBe(false);
@@ -109,7 +109,7 @@ describe('CustomerHandler', () => {
     it('should reject invalid severity', async () => {
       const result = await handler.execute(
         'create_complaint_task',
-        { title: 'Test', description: 'Desc', severity: 'extreme', unitId: 'unit_001' },
+        { title: 'Test', description: 'Desc', severity: 'extreme', propertyId: 'unit_001' },
         customerCtx(),
       );
       expect(result.success).toBe(false);
@@ -119,7 +119,7 @@ describe('CustomerHandler', () => {
     it('should reject unit not in linkedUnitIds', async () => {
       const result = await handler.execute(
         'create_complaint_task',
-        { title: 'Test', description: 'Desc', severity: 'normal', unitId: 'unit_999' },
+        { title: 'Test', description: 'Desc', severity: 'normal', propertyId: 'unit_999' },
         customerCtx(),
       );
       expect(result.success).toBe(false);
@@ -138,7 +138,7 @@ describe('CustomerHandler', () => {
           title: 'Πρόβλημα υδραυλικά',
           description: 'Τρέχει νερό από τον τοίχο',
           severity: 'normal',
-          unitId: 'unit_001',
+          propertyId: 'unit_001',
         },
         customerCtx(),
       );
@@ -158,7 +158,7 @@ describe('CustomerHandler', () => {
       const task = allTasks[taskIds[0]];
       expect(task.type).toBe('complaint');
       expect(task.title).toContain('Πρόβλημα υδραυλικά');
-      expect(task.unitId).toBe('unit_001');
+      expect(task.propertyId).toBe('unit_001');
       expect(task.projectId).toBe('proj_001');
     });
 
@@ -170,14 +170,14 @@ describe('CustomerHandler', () => {
 
       const urgentResult = await handler.execute(
         'create_complaint_task',
-        { title: 'Urgent', description: 'Fire!', severity: 'urgent', unitId: 'unit_001' },
+        { title: 'Urgent', description: 'Fire!', severity: 'urgent', propertyId: 'unit_001' },
         customerCtx(),
       );
       expect((urgentResult.data as Record<string, unknown>)?.priority).toBe('urgent');
 
       const lowResult = await handler.execute(
         'create_complaint_task',
-        { title: 'Low', description: 'Minor', severity: 'low', unitId: 'unit_001' },
+        { title: 'Low', description: 'Minor', severity: 'low', propertyId: 'unit_001' },
         customerCtx(),
       );
       expect((lowResult.data as Record<string, unknown>)?.priority).toBe('low');

@@ -48,7 +48,7 @@ export type AuthenticatedHandler<T = unknown> = (
 export interface WithAuthOptions {
   /** Required permission(s) - all must be granted */
   permissions?: PermissionId | PermissionId[];
-  /** Permission check options (projectId, unitId, etc.) */
+  /** Permission check options (projectId, propertyId, etc.) */
   permissionOptions?: PermissionCheckOptions | ((request: NextRequest) => PermissionCheckOptions);
   /** Required global role(s) - user must have at least one of these roles */
   requiredGlobalRoles?: GlobalRole | GlobalRole[];

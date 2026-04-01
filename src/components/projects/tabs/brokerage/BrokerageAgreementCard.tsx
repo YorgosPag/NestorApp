@@ -26,7 +26,7 @@ import '@/lib/design-system';
 interface BrokerageAgreementCardProps {
   agreement: BrokerageAgreement;
   t: (key: string) => string;
-  unitName: string | null;
+  propertyName: string | null;
   onEdit: () => void;
   onTerminate: () => void;
   onRenew: () => void;
@@ -53,7 +53,7 @@ interface BrokerageAgreementCardProps {
 export function BrokerageAgreementCard({
   agreement,
   t,
-  unitName,
+  propertyName,
   onEdit,
   onTerminate,
   onRenew,
@@ -122,7 +122,7 @@ export function BrokerageAgreementCard({
           {t('sales.legal.endDate')}:{' '}
           {agreement.endDate ? agreement.endDate.split('T')[0] : t('sales.legal.indefinite')}
         </span>
-        {unitName && <span>{unitName}</span>}
+        {propertyName && <span>{propertyName}</span>}
       </nav>
 
       {agreement.notes && (

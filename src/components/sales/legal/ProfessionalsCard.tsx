@@ -44,7 +44,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ProfessionalsCardProps {
   /** Unit ID — used for email notification on assignment */
-  unitId: string;
+  propertyId: string;
   /** All contact links for this unit */
   associations: EntityAssociationLink[];
   /** Draft contracts — to sync professional snapshots */
@@ -158,7 +158,7 @@ function getRoleLabel(role: LegalProfessionalRole): string {
 // ============================================================================
 
 export function ProfessionalsCard({
-  unitId,
+  propertyId,
   associations,
   contracts,
   onAssign,
@@ -183,14 +183,14 @@ export function ProfessionalsCard({
         body: JSON.stringify({
           contactId: notification.contactId,
           role: notification.role,
-          unitId,
+          propertyId,
           type: notification.type,
         }),
       })
         .then(() => toast.success(t('sales.legal.emailSent', { defaultValue: 'Το email στάλθηκε' })))
         .catch(() => toast.error(t('sales.legal.emailFailed', { defaultValue: 'Αποτυχία αποστολής email' })));
     },
-    [unitId, t]
+    [propertyId, t]
   );
 
   // Execute the actual assignment (after validation/confirmation)
@@ -215,7 +215,7 @@ export function ProfessionalsCard({
 
         // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
-        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('unit', unitId), {
+        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('unit', propertyId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -315,7 +315,7 @@ export function ProfessionalsCard({
 
         // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
-        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('unit', unitId), {
+        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('unit', propertyId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -64,8 +64,8 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
         return null; // Avoid hydration mismatch by rendering nothing during initial load
     }
     
-    const handleViewUnit = (unitId: string) => {
-        router.push(ENTITY_ROUTES.properties.withId(unitId));
+    const handleViewUnit = (propertyId: string) => {
+        router.push(ENTITY_ROUTES.properties.withId(propertyId));
     };
 
     return (

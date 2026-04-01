@@ -32,14 +32,14 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // =============================================================================
 
 interface PropertyHierarchyCardProps {
-  unitId: string;
+  propertyId: string;
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function PropertyHierarchyCard({ unitId }: PropertyHierarchyCardProps) {
+export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -53,7 +53,7 @@ export function PropertyHierarchyCard({ unitId }: PropertyHierarchyCardProps) {
     async function fetchHierarchy() {
       try {
         const data = await apiClient.get<PropertyHierarchyResponse>(
-          API_ROUTES.PROPERTIES.HIERARCHY(encodeURIComponent(unitId))
+          API_ROUTES.PROPERTIES.HIERARCHY(encodeURIComponent(propertyId))
         );
         if (!cancelled) {
           setHierarchy(data);
@@ -80,7 +80,7 @@ export function PropertyHierarchyCard({ unitId }: PropertyHierarchyCardProps) {
 
     fetchHierarchy();
     return () => { cancelled = true; };
-  }, [unitId, syncBreadcrumb]);
+  }, [propertyId, syncBreadcrumb]);
 
   if (loading || !hierarchy) return null;
 

@@ -3,7 +3,7 @@
  * 🏢 ENTERPRISE: Entity Code Suggestion API (ADR-233)
  * =============================================================================
  *
- * GET /api/entity-code/suggest?entityType=unit&buildingId=xxx&floorLevel=1&unitType=apartment
+ * GET /api/entity-code/suggest?entityType=unit&buildingId=xxx&floorLevel=1&propertyType=apartment
  *
  * Returns the next suggested entity code based on existing entities
  * in the same building, floor, and type combination.
@@ -60,7 +60,7 @@ export const GET = withStandardRateLimit(
       const entityType = searchParams.get('entityType') as 'unit' | 'parking' | 'storage';
       const buildingId = searchParams.get('buildingId');
       const floorLevelStr = searchParams.get('floorLevel');
-      const unitType = searchParams.get('unitType') as PropertyType | null;
+      const propertyType = searchParams.get('propertyType') as PropertyType | null;
       const locationZone = searchParams.get('locationZone') as ParkingLocationZone | null;
 
       // Validation
@@ -76,7 +76,7 @@ export const GET = withStandardRateLimit(
       // Resolve type code
       const typeCode = resolveTypeCode(
         entityType,
-        unitType ?? undefined,
+        propertyType ?? undefined,
         locationZone ?? undefined
       );
       if (!typeCode) {

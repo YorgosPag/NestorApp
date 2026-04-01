@@ -42,8 +42,8 @@ export interface BrokerageAgreement {
   scope: 'project' | 'unit';
   /** Project ID (πάντα παρόν) */
   projectId: string;
-  /** Unit ID (μόνο αν scope === 'unit') */
-  unitId: string | null;
+  /** Property ID (μόνο αν scope === 'unit') */
+  propertyId: string | null;
 
   // === Όροι ===
   exclusivity: ExclusivityType;
@@ -93,7 +93,7 @@ export interface CommissionRecord {
   brokerageAgreementId: string;
   agentContactId: string;
   agentName: string;
-  unitId: string;
+  propertyId: string;
   projectId: string;
   /** Primary buyer contact ID (snapshot at commission time) */
   primaryBuyerContactId: string;
@@ -156,7 +156,7 @@ export interface CreateBrokerageAgreementInput {
   agentName: string;
   scope: 'project' | 'unit';
   projectId: string;
-  unitId?: string | null;
+  propertyId?: string | null;
   exclusivity: ExclusivityType;
   commissionType: CommissionType;
   commissionPercentage?: number | null;
@@ -171,7 +171,7 @@ export interface RecordCommissionInput {
   brokerageAgreementId: string;
   agentContactId: string;
   agentName: string;
-  unitId: string;
+  propertyId: string;
   projectId: string;
   primaryBuyerContactId: string;
   salePrice: number;
@@ -201,7 +201,7 @@ export interface ExclusivityValidationIssue {
 /** Input για τον έλεγχο αποκλειστικότητας */
 export interface ExclusivityValidationInput {
   projectId: string;
-  unitId: string | null;
+  propertyId: string | null;
   scope: 'project' | 'unit';
   exclusivity: ExclusivityType;
   /** Εξαίρεση εαυτού κατά update — δεν ελέγχει τη σύμβαση με αυτό το ID */
@@ -214,8 +214,8 @@ export interface ExclusivityValidationResult {
   canProceed: boolean;
   /** Λίστα errors + warnings */
   issues: ExclusivityValidationIssue[];
-  /** Rule 3: units που εξαιρούνται (project exclusive + existing unit agreements) */
-  excludedUnitIds: string[];
+  /** Rule 3: properties που εξαιρούνται (project exclusive + existing property agreements) */
+  excludedPropertyIds: string[];
   // --- backward compat (deprecated) ---
   /** @deprecated Χρησιμοποίησε canProceed */
   valid: boolean;

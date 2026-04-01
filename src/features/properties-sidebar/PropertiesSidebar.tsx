@@ -37,17 +37,17 @@ import '@/lib/design-system';
 
 export function PropertiesSidebar({
   units,
-  selectedUnit,
+  selectedProperty,
   viewerProps,
   setShowHistoryPanel,
   floors = [],
-  onSelectUnit,
-  selectedUnitIds,
+  onSelectProperty,
+  selectedPropertyIds,
   onAssignmentSuccess,
-  onNewUnit,
-  onDeleteUnit,
+  onNewProperty,
+  onDeleteProperty,
   isCreatingNewUnit = false,
-  onUnitCreated,
+  onPropertyCreated,
   onCancelCreate,
   defaultTab,
 }: PropertiesSidebarProps) {
@@ -92,24 +92,24 @@ export function PropertiesSidebar({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const handleDeleteUnit = useCallback(async () => {
-    if (!selectedUnit || !onDeleteUnit) return;
-    const allowed = await checkBeforeDelete(selectedUnit.id);
+  const handleDeleteProperty = useCallback(async () => {
+    if (!selectedProperty || !onDeleteProperty) return;
+    const allowed = await checkBeforeDelete(selectedProperty.id);
     if (allowed) {
       setConfirmDelete(true);
     }
-  }, [selectedUnit, onDeleteUnit, checkBeforeDelete]);
+  }, [selectedProperty, onDeleteProperty, checkBeforeDelete]);
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!selectedUnit || !onDeleteUnit) return;
+    if (!selectedProperty || !onDeleteProperty) return;
     setDeleteLoading(true);
     try {
-      await onDeleteUnit(selectedUnit.id);
+      await onDeleteProperty(selectedProperty.id);
     } finally {
       setDeleteLoading(false);
       setConfirmDelete(false);
     }
-  }, [selectedUnit, onDeleteUnit]);
+  }, [selectedProperty, onDeleteProperty]);
 
   // Get units tabs from centralized config
   const propertiesTabs = getSortedPropertiesTabs();
@@ -117,12 +117,12 @@ export function PropertiesSidebar({
   // Details content component using centralized DetailsContainer
   const detailsContent = (
     <DetailsContainer
-      selectedItem={selectedUnit}
-      header={<PropertyDetailsHeader unit={selectedUnit} isEditMode={effectiveEditMode} isCreatingNewUnit={isCreatingNewUnit} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewUnit={onNewUnit} onDeleteUnit={handleDeleteUnit} />}
+      selectedItem={selectedProperty}
+      header={<PropertyDetailsHeader unit={selectedProperty} isEditMode={effectiveEditMode} isCreatingNewUnit={isCreatingNewUnit} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewProperty={onNewProperty} onDeleteProperty={handleDeleteProperty} />}
       tabsRenderer={
         <UniversalTabsRenderer
           tabs={propertiesTabs.map(convertToUniversalConfig)}
-          data={selectedUnit}
+          data={selectedProperty}
           componentMapping={PROPERTIES_COMPONENT_MAPPING}
           defaultTab={defaultTab || "info"}
           theme="default"
@@ -144,14 +144,14 @@ export function PropertiesSidebar({
             onExitEditMode: handleExitEditMode,
             // 🏢 ENTERPRISE: Inline new unit creation props
             isCreatingNewUnit,
-            onUnitCreated,
+            onPropertyCreated,
           }}
           globalProps={{
-            unitId: selectedUnit?.id
+            propertyId: selectedProperty?.id
           }}
         />
       }
-      onCreateAction={onNewUnit}
+      onCreateAction={onNewProperty}
       emptyStateProps={{
         icon: NAVIGATION_ENTITIES.unit.icon,
         ...emptyStateMessages.unit
@@ -165,36 +165,36 @@ export function PropertiesSidebar({
       <div className={`hidden md:flex flex-1 ${layout.listItemsGap} min-h-0 min-w-0 overflow-hidden`}>
         <PropertiesList
           units={units}
-          selectedUnitIds={selectedUnitIds}
-          onSelectUnit={onSelectUnit}
+          selectedPropertyIds={selectedPropertyIds}
+          onSelectProperty={onSelectProperty}
           onAssignmentSuccess={onAssignmentSuccess}
-          onNewUnit={onNewUnit}
-          onEditUnit={handleToggleEditMode}
-          onDeleteUnit={handleDeleteUnit}
+          onNewProperty={onNewProperty}
+          onEditProperty={handleToggleEditMode}
+          onDeleteProperty={handleDeleteProperty}
         />
         {/* 🏢 ENTERPRISE: Render details on desktop — DetailsContainer handles empty state */}
         {!isMobile && detailsContent}
       </div>
 
       {/* 📱 MOBILE: Show only UnitsList when no unit is selected */}
-      <div className={`md:hidden w-full ${selectedUnit ? 'hidden' : 'block'}`}>
+      <div className={`md:hidden w-full ${selectedProperty ? 'hidden' : 'block'}`}>
         <PropertiesList
           units={units}
-          selectedUnitIds={selectedUnitIds}
-          onSelectUnit={onSelectUnit}
+          selectedPropertyIds={selectedPropertyIds}
+          onSelectProperty={onSelectProperty}
           onAssignmentSuccess={onAssignmentSuccess}
-          onNewUnit={onNewUnit}
-          onEditUnit={handleToggleEditMode}
-          onDeleteUnit={handleDeleteUnit}
+          onNewProperty={onNewProperty}
+          onEditProperty={handleToggleEditMode}
+          onDeleteProperty={handleDeleteProperty}
         />
       </div>
 
       {/* 📱 MOBILE: Slide-in UnitDetails when unit is selected */}
       {/* 🏢 ENTERPRISE: Render details ONLY on mobile — prevents duplicate mount */}
       <MobileDetailsSlideIn
-        isOpen={isMobile && !!selectedUnit}
-        onClose={() => onSelectUnit('__none__', false)}
-        title={selectedUnit?.name || t('mobile.unitDetails')}
+        isOpen={isMobile && !!selectedProperty}
+        onClose={() => onSelectProperty('__none__', false)}
+        title={selectedProperty?.name || t('mobile.unitDetails')}
         actionButtons={
           <>
             <button
@@ -214,7 +214,7 @@ export function PropertiesSidebar({
           </>
         }
       >
-        {isMobile && selectedUnit && detailsContent}
+        {isMobile && selectedProperty && detailsContent}
       </MobileDetailsSlideIn>
 
       {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
@@ -227,7 +227,7 @@ export function PropertiesSidebar({
         title={t('navigation.actions.delete.confirmTitle', { defaultValue: 'Διαγραφή Μονάδας' })}
         description={
           <>
-            {t('navigation.actions.delete.confirmMessage', { name: selectedUnit?.name })}{' '}
+            {t('navigation.actions.delete.confirmMessage', { name: selectedProperty?.name })}{' '}
             <br /><br />
             {t('navigation.actions.delete.confirmWarning', { defaultValue: 'Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.' })}
           </>

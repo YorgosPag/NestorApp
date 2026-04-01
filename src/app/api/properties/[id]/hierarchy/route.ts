@@ -12,7 +12,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 
 const logger = createModuleLogger('PropertyHierarchyRoute');
 
@@ -77,7 +77,7 @@ export const GET = withStandardRateLimit(
         throw new ApiError(400, 'Property ID is required');
       }
 
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/hierarchy' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/hierarchy' });
 
       // 1. Fetch property
       const propertyDoc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();

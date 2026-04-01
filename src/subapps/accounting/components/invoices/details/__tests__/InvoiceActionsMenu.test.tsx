@@ -89,7 +89,7 @@ function createMockInvoice(status: string): Invoice {
       submittedAt: null, respondedAt: null, errorMessage: null,
     },
     projectId: null,
-    unitId: null,
+    propertyId: null,
     relatedInvoiceId: null,
     journalEntryId: null,
     notes: null,

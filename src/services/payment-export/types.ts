@@ -14,8 +14,8 @@ import type { LoanTrackingStatus } from '@/types/loan-tracking';
 // =============================================================================
 
 export interface PaymentReportRow {
-  unitId: string;
-  unitLabel: string;
+  propertyId: string;
+  propertyLabel: string;
   buildingName: string;
   buyerName: string;
   planStatus: PaymentPlanStatus;

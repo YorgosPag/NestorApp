@@ -11,7 +11,7 @@
  *
  * Canonical patterns:
  * - contact_links: Link contact από office_directory → company/project/unit
- * - file_links: Link fileRecord → (projectId/unitId/contactId/etc.)
+ * - file_links: Link fileRecord → (projectId/propertyId/contactId/etc.)
  *
  * @example
  * ```typescript

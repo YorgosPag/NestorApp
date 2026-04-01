@@ -199,15 +199,15 @@ export async function enrichRowsWithLinkedSpaces(
   if (!needsEnrichment || buildingIds.length === 0) return rows;
 
   const { parking, storage, units, spaceLookup } = await getBuildingSpaces(buildingIds);
-  const unitDataMap = new Map(units.map(u => [u.id, u.data]));
+  const propertyDataMap = new Map(units.map(u => [u.id, u.data]));
 
   return rows.map(row => {
     if (row.entityRef.collection !== 'units' || row.linkedSpacesSummary !== null) return row;
 
-    const unitData = unitDataMap.get(row.entityRef.id);
-    if (!unitData) return row;
+    const propertyData = propertyDataMap.get(row.entityRef.id);
+    if (!propertyData) return row;
 
-    const rawLinked = (unitData.linkedSpaces as Array<{
+    const rawLinked = (propertyData.linkedSpaces as Array<{
       spaceId: string; spaceType: string; allocationCode?: string;
     }>) ?? [];
 

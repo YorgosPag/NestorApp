@@ -16,7 +16,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { logFinancialTransition } from '@/lib/auth/audit';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { LOAN_TRACKING_STATUSES } from '@/types/loan-tracking';
@@ -39,7 +39,7 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payment-plan/loans/[loanId]/transition' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loans/[loanId]/transition' });
 
       try {
         const parsed = safeParseBody(LoanTransitionSchema, await req.json());

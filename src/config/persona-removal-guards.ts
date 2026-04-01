@@ -37,8 +37,8 @@ async function brokerageGuard(contactId: string): Promise<PersonaRemovalGuardRes
 
 /** Wraps ClientService.hasActiveUnits → normalized result */
 async function clientGuard(contactId: string): Promise<PersonaRemovalGuardResult> {
-  const { hasUnits, hasParking, hasStorage } = await ClientService.hasActiveUnits(contactId);
-  if (hasUnits || hasParking || hasStorage) {
+  const { hasProperties, hasParking, hasStorage } = await ClientService.hasActiveUnits(contactId);
+  if (hasProperties || hasParking || hasStorage) {
     return { blocked: true, reasonKey: 'persona.guards.client.blocked' };
   }
   return PASS;

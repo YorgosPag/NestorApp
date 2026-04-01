@@ -185,7 +185,7 @@ export async function createCreditNoteForInvoice(
       errorMessage: null,
     },
     projectId: originalInvoice.projectId,
-    unitId: originalInvoice.unitId,
+    propertyId: originalInvoice.propertyId,
     relatedInvoiceId: originalInvoice.invoiceId,
     journalEntryId: null,
     notes: buildReversalNotes(reasonCode, reasonNotes),

@@ -20,7 +20,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { extractNestedIdFromUrl } from '@/lib/api/route-helpers';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditAction } from '@/types/audit-trail';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 
 // ============================================================================
 // TYPES
@@ -54,7 +54,7 @@ export const POST = withStandardRateLimit(
       const id = extractNestedIdFromUrl(request.url, 'properties');
       if (!id) throw new ApiError(400, 'Property ID is required');
 
-      await requireUnitInTenant({ ctx, unitId: id, path: '/api/properties/[id]/activity' });
+      await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]/activity' });
 
       // Validate property exists
       const docRef = db.collection(COLLECTIONS.PROPERTIES).doc(id);

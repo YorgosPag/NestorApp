@@ -26,7 +26,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import {
-  resolveUnitHierarchy,
+  resolvePropertyHierarchy,
   extractPrimaryEmail,
   ROLE_LABELS,
 } from './hierarchy-resolver';
@@ -40,7 +40,9 @@ const logger = createModuleLogger('api/notifications/professional-assigned');
 interface AssignmentNotificationRequest {
   contactId: string;
   role: string;
-  unitId: string;
+  propertyId: string;
+  /** @deprecated Use propertyId — kept for backward compat */
+  unitId?: string;
   /** 'assignment' (default) or 'removal' */
   type?: 'assignment' | 'removal';
 }
@@ -58,7 +60,7 @@ interface AssignmentNotificationResponse {
 function validateRequest(body: unknown): body is AssignmentNotificationRequest {
   if (!body || typeof body !== 'object') return false;
   const req = body as Partial<AssignmentNotificationRequest>;
-  return !!(req.contactId && req.role && req.unitId);
+  return !!(req.contactId && req.role && (req.propertyId || req.unitId));
 }
 
 // ============================================================================
@@ -74,15 +76,16 @@ async function handleAssignmentNotification(
 
     if (!validateRequest(body)) {
       return NextResponse.json(
-        { success: false, emailSent: false, error: 'Invalid request: contactId, role, unitId required' },
+        { success: false, emailSent: false, error: 'Invalid request: contactId, role, propertyId required' },
         { status: 400 }
       );
     }
 
-    const { contactId, role, unitId, type = 'assignment' } = body;
+    const { contactId, role, type = 'assignment' } = body;
+    const propertyId = body.propertyId || body.unitId!;
     const isRemoval = type === 'removal';
 
-    logger.info('Professional notification', { contactId, role, unitId, type, userId: ctx.uid });
+    logger.info('Professional notification', { contactId, role, propertyId, type, userId: ctx.uid });
 
     // 1. Fetch contact — get primary email
     const db = getAdminFirestore();
@@ -105,10 +108,10 @@ async function handleAssignmentNotification(
       ?? ([contactData.firstName, contactData.lastName].filter(Boolean).join(' ')
       || 'Κύριε/Κυρία');
 
-    // 3. Resolve unit hierarchy
-    const hierarchy = await resolveUnitHierarchy(unitId);
+    // 3. Resolve property hierarchy
+    const hierarchy = await resolvePropertyHierarchy(propertyId);
     if (!hierarchy) {
-      logger.warn('Unit not found — skipping notification', { unitId });
+      logger.warn('Property not found — skipping notification', { propertyId });
       return NextResponse.json({ success: true, emailSent: false });
     }
 
@@ -117,9 +120,9 @@ async function handleAssignmentNotification(
     const templateData = {
       professionalName: displayName,
       roleName,
-      unitName: hierarchy.unitName,
-      unitCode: hierarchy.unitCode,
-      unitFloor: hierarchy.unitFloor,
+      propertyName: hierarchy.propertyName,
+      propertyCode: hierarchy.propertyCode,
+      propertyFloor: hierarchy.propertyFloor,
       buildingName: hierarchy.buildingName,
       projectName: hierarchy.projectName,
       projectAddress: hierarchy.projectAddress,
@@ -153,14 +156,14 @@ async function handleAssignmentNotification(
     }
 
     logger.info('Professional assignment email sent', {
-      contactId, email, role, unitId, messageId: result.messageId,
+      contactId, email, role, propertyId, messageId: result.messageId,
     });
 
     // Audit trail: email sent
     safeFireAndForget(EntityAuditService.recordChange({
-      entityType: 'unit',
-      entityId: unitId,
-      entityName: hierarchy.unitName,
+      entityType: 'property',
+      entityId: propertyId,
+      entityName: hierarchy.propertyName,
       action: 'email_sent',
       changes: [{
         field: 'notification',

@@ -34,8 +34,8 @@ import '@/lib/design-system';
 interface StepPropertySelectorProps {
   unitItems: EntityOption[];
   unitLoading: boolean;
-  selectedUnitId: string | null;
-  onSelectUnit: (id: string) => void;
+  selectedPropertyId: string | null;
+  onSelectProperty: (id: string) => void;
   /** Multi-level unit support (ADR-236) */
   isMultiLevel: boolean;
   levelItems: EntityOption[];
@@ -50,8 +50,8 @@ interface StepPropertySelectorProps {
 export function StepPropertySelector({
   unitItems,
   unitLoading,
-  selectedUnitId,
-  onSelectUnit,
+  selectedPropertyId,
+  onSelectProperty,
   isMultiLevel,
   levelItems,
   selectedLevelId,
@@ -76,7 +76,7 @@ export function StepPropertySelector({
             {t('floorplanImport.noItems')}
           </p>
         ) : (
-          <Select value={selectedUnitId ?? ''} onValueChange={onSelectUnit}>
+          <Select value={selectedPropertyId ?? ''} onValueChange={onSelectProperty}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder={t('floorplanImport.select.unit')} />
             </SelectTrigger>
@@ -92,7 +92,7 @@ export function StepPropertySelector({
       </section>
 
       {/* ── Level selector for multi-level units (ADR-236) ── */}
-      {selectedUnitId && isMultiLevel && levelItems.length >= 2 && (
+      {selectedPropertyId && isMultiLevel && levelItems.length >= 2 && (
         <section className="space-y-2">
           <p className={`text-sm font-medium ${colors.text.secondary}`}>
             {t('floorplanImport.select.level')}

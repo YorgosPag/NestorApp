@@ -51,13 +51,13 @@ interface GlobalTabProps {
 }
 
 export interface PropertyCustomerTabProps {
-  selectedUnit: Property;
+  selectedProperty: Property;
   additionalData?: AdditionalTabData;
   globalProps?: GlobalTabProps;
 }
 
 export function PropertyCustomerTab({
-  selectedUnit,
+  selectedProperty,
   additionalData: _additionalData,
   globalProps: _globalProps
 }: PropertyCustomerTabProps) {
@@ -66,13 +66,13 @@ export function PropertyCustomerTab({
   const colors = useSemanticColors();
   const { t } = useTranslation('properties');
 
-  const hasSoldStatus = selectedUnit?.status === 'sold' ||
-                       selectedUnit?.status === 'reserved' ||
-                       selectedUnit?.status === 'rented';
+  const hasSoldStatus = selectedProperty?.status === 'sold' ||
+                       selectedProperty?.status === 'reserved' ||
+                       selectedProperty?.status === 'rented';
 
-  const hasCustomerLink = Boolean(selectedUnit?.soldTo);
+  const hasCustomerLink = Boolean(selectedProperty?.soldTo);
 
-  if (!selectedUnit) {
+  if (!selectedProperty) {
     return (
       <div className="p-6 text-center">
         <User className={`${iconSizes.xl3} mx-auto ${colors.text.muted} mb-4`} />
@@ -98,10 +98,10 @@ export function PropertyCustomerTab({
               <UnitIcon className={`${iconSizes.xl} ${unitColor}`} />
             </div>
             <h3 className="font-semibold text-lg mb-2">
-              {t('customerTab.unitAvailable', { name: selectedUnit.name })}
+              {t('customerTab.unitAvailable', { name: selectedProperty.name })}
             </h3>
             <p className={cn("mb-4", colors.text.muted)}>
-              {t('customerTab.statusLabel')}: <Badge variant="outline">{selectedUnit.status}</Badge>
+              {t('customerTab.statusLabel')}: <Badge variant="outline">{selectedProperty.status}</Badge>
             </p>
             <Button variant="outline" asChild>
               <a href="/crm/calendar">
@@ -128,23 +128,23 @@ export function PropertyCustomerTab({
           <Alert>
             <AlertTriangle className={iconSizes.sm} />
             <AlertDescription>
-              {t('customerTab.soldWithoutCustomerWarning', { status: selectedUnit.status })}
+              {t('customerTab.soldWithoutCustomerWarning', { status: selectedProperty.status })}
             </AlertDescription>
           </Alert>
 
           <div className="mt-6 space-y-2">
             <p className={cn("text-sm", colors.text.muted)}>
-              <strong>{t('customerTab.unitStatus')}:</strong> {selectedUnit.status}
+              <strong>{t('customerTab.propertyStatus')}:</strong> {selectedProperty.status}
             </p>
             <p className={cn("text-sm", colors.text.muted)}>
               <strong>{t('customerTab.transactionDate')}:</strong> {
-                selectedUnit.saleDate
-                  ? formatDate(selectedUnit.saleDate)
+                selectedProperty.saleDate
+                  ? formatDate(selectedProperty.saleDate)
                   : t('customerTab.unknownDate')
               }
             </p>
             <p className={cn("text-sm", colors.text.muted)}>
-              <strong>{t('customerTab.customerId')}:</strong> {selectedUnit.soldTo || t('customerTab.customerIdMissing')}
+              <strong>{t('customerTab.customerId')}:</strong> {selectedProperty.soldTo || t('customerTab.customerIdMissing')}
             </p>
           </div>
 
@@ -174,19 +174,19 @@ export function PropertyCustomerTab({
             <div>
               <p className={cn("text-sm", colors.text.muted)}>{t('customerTab.unitStatusLabel')}</p>
               <Badge
-                variant={selectedUnit.status === 'sold' ? 'destructive' : 'secondary'}
+                variant={selectedProperty.status === 'sold' ? 'destructive' : 'secondary'}
                 className="mt-1"
               >
-                {selectedUnit.status === 'sold' ? t('customerTab.statusSold') :
-                 selectedUnit.status === 'reserved' ? t('customerTab.statusReserved') : t('customerTab.statusRented')}
+                {selectedProperty.status === 'sold' ? t('customerTab.statusSold') :
+                 selectedProperty.status === 'reserved' ? t('customerTab.statusReserved') : t('customerTab.statusRented')}
               </Badge>
             </div>
 
             <div>
               <p className={cn("text-sm", colors.text.muted)}>{t('customerTab.transactionDateLabel')}</p>
               <p className="font-medium">
-                {selectedUnit.saleDate
-                  ? formatDate(selectedUnit.saleDate, {
+                {selectedProperty.saleDate
+                  ? formatDate(selectedProperty.saleDate, {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
@@ -199,8 +199,8 @@ export function PropertyCustomerTab({
             <div>
               <p className={cn("text-sm", colors.text.muted)}>{t('customerTab.transactionValueLabel')}</p>
               <p className={`font-medium ${colors.text.success}`}>
-                {selectedUnit.price
-                  ? formatCurrency(selectedUnit.price)
+                {selectedProperty.price
+                  ? formatCurrency(selectedProperty.price)
                   : t('customerTab.notAvailable')
                 }
               </p>
@@ -213,8 +213,8 @@ export function PropertyCustomerTab({
 
       {/* Full Customer Profile Display */}
       <CustomerProfileSection
-        customerId={selectedUnit.soldTo!}
-        unitPrice={selectedUnit.price}
+        customerId={selectedProperty.soldTo!}
+        unitPrice={selectedProperty.price}
       />
 
       {/* Property Relationship Management */}
@@ -282,7 +282,7 @@ export function PropertyCustomerTab({
           <div className="flex flex-wrap gap-3">
             <Button
               variant="default"
-              onClick={() => window.open(`tel:${selectedUnit.soldTo}`, '_self')}
+              onClick={() => window.open(`tel:${selectedProperty.soldTo}`, '_self')}
             >
               <Phone className={`${iconSizes.sm} mr-2`} />
               {t('customerTab.directCall')}
@@ -290,7 +290,7 @@ export function PropertyCustomerTab({
 
             <Button
               variant="outline"
-              onClick={() => window.open(`/contacts?contactId=${selectedUnit.soldTo}`, '_blank')}
+              onClick={() => window.open(`/contacts?contactId=${selectedProperty.soldTo}`, '_blank')}
             >
               <User className={`${iconSizes.sm} mr-2`} />
               {t('customerTab.fullProfile')}
@@ -299,7 +299,7 @@ export function PropertyCustomerTab({
             <Button
               variant="outline"
               onClick={() => {
-                logger.info('Schedule follow-up for customer', { soldTo: selectedUnit.soldTo });
+                logger.info('Schedule follow-up for customer', { soldTo: selectedProperty.soldTo });
               }}
             >
               <Calendar className={`${iconSizes.sm} mr-2`} />
@@ -309,7 +309,7 @@ export function PropertyCustomerTab({
             <Button
               variant="outline"
               onClick={() => {
-                logger.info('Generate customer report', { soldTo: selectedUnit.soldTo });
+                logger.info('Generate customer report', { soldTo: selectedProperty.soldTo });
               }}
             >
               <FileText className={`${iconSizes.sm} mr-2`} />

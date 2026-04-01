@@ -20,7 +20,7 @@ import type { PropertyHierarchyResponse } from '@/app/api/properties/[id]/hierar
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
 import { CoverageCard } from '@/components/property-management/dashboard/CoverageCard';
-import { AdvancedFiltersPanel, unitFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
+import { AdvancedFiltersPanel, propertyListFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { PropertiesSidebar } from '@/components/properties/PropertiesSidebar';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
@@ -38,7 +38,7 @@ function UnitsPageContent() {
   const { t } = useTranslation('properties');
   const _colors = useSemanticColors();
   const searchParams = useSearchParams();
-  const urlUnitId = searchParams.get('unitId');
+  const urlPropertyId = searchParams.get('propertyId') ?? searchParams.get('unitId');
   const urlTab = searchParams.get('tab');
 
   // 🏢 ENTERPRISE: Create label getters with translation support
@@ -95,8 +95,8 @@ function UnitsPageContent() {
     handleFiltersChange,
     filteredProperties,
     dashboardStats,
-    selectedUnit,
-    handleSelectUnit: _handleSelectUnit,
+    selectedProperty,
+    handleSelectProperty: _handleSelectProperty,
     handlePolygonSelect,
     handlePolygonCreated,
     handlePolygonUpdated,
@@ -135,12 +135,12 @@ function UnitsPageContent() {
   }, [handlePolygonSelect]);
 
   // 🏢 ENTERPRISE: Callback when new unit is successfully created
-  const handleUnitCreated = useCallback((unitId: string) => {
+  const handleUnitCreated = useCallback((propertyId: string) => {
     setIsCreatingNewUnit(false);
     setNewUnitTemplate(null);
     forceDataRefresh();
-    // Select the newly created unit
-    handlePolygonSelect(unitId, false);
+    // Select the newly created property
+    handlePolygonSelect(propertyId, false);
   }, [forceDataRefresh, handlePolygonSelect]);
 
   // 🏢 ENTERPRISE: Cancel new unit creation
@@ -151,11 +151,11 @@ function UnitsPageContent() {
   }, [handlePolygonSelect]);
 
   // 🏢 ENTERPRISE: Delete unit handler — Firestore + local state sync
-  const handleDeleteUnit = useCallback(async (unitId: string) => {
+  const handleDeleteUnit = useCallback(async (propertyId: string) => {
     try {
       const { deleteProperty } = await import('@/services/properties.service');
-      await deleteProperty(unitId);
-      handleDelete(unitId);
+      await deleteProperty(propertyId);
+      handleDelete(propertyId);
       // Deselect the deleted unit
       handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
     } catch {
@@ -172,25 +172,25 @@ function UnitsPageContent() {
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
 
-  // 🏢 ENTERPRISE: Auto-select unit from URL query param (?unitId=xxx&tab=yyy)
+  // 🏢 ENTERPRISE: Auto-select property from URL query param (?propertyId=xxx&tab=yyy)
   useEffect(() => {
-    if (urlUnitId && properties.length > 0 && !selectedUnit) {
-      const found = properties.find(p => p.id === urlUnitId);
+    if (urlPropertyId && properties.length > 0 && !selectedProperty) {
+      const found = properties.find(p => p.id === urlPropertyId);
       if (found) {
-        handlePolygonSelect(urlUnitId, false);
+        handlePolygonSelect(urlPropertyId, false);
       }
     }
-  }, [urlUnitId, properties, selectedUnit, handlePolygonSelect]);
+  }, [urlPropertyId, properties, selectedProperty, handlePolygonSelect]);
 
   // 🏢 ENTERPRISE: Sync breadcrumb via hierarchy API (robust — no multi-source chain lookup)
   React.useEffect(() => {
-    if (!selectedUnit) return;
+    if (!selectedProperty) return;
     let cancelled = false;
 
     async function syncFromHierarchy() {
       try {
         const data = await apiClient.get<PropertyHierarchyResponse>(
-          API_ROUTES.PROPERTIES.HIERARCHY(encodeURIComponent(selectedUnit!.id))
+          API_ROUTES.PROPERTIES.HIERARCHY(encodeURIComponent(selectedProperty!.id))
         );
         if (cancelled || !data.company || !data.project) return;
         syncBreadcrumb({
@@ -209,7 +209,7 @@ function UnitsPageContent() {
 
     syncFromHierarchy();
     return () => { cancelled = true; };
-  }, [selectedUnit?.id, syncBreadcrumb]);
+  }, [selectedProperty?.id, syncBreadcrumb]);
 
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
@@ -420,7 +420,7 @@ function UnitsPageContent() {
         {/* Desktop: Always visible filters */}
         <div className="hidden md:block -mt-1">
           <AdvancedFiltersPanel
-            config={unitFiltersConfig}
+            config={propertyListFiltersConfig}
             filters={filters as unknown as UnitFilterState}
             onFiltersChange={handleFiltersChange}
           />
@@ -430,7 +430,7 @@ function UnitsPageContent() {
         {showFilters && (
           <div className="md:hidden"> {/* eslint-disable-line custom/no-hardcoded-strings */}
             <AdvancedFiltersPanel
-              config={unitFiltersConfig}
+              config={propertyListFiltersConfig}
               filters={filters as unknown as UnitFilterState}
               onFiltersChange={handleFiltersChange}
               defaultOpen
@@ -442,9 +442,9 @@ function UnitsPageContent() {
           {viewMode === 'list' ? (
             <PropertiesSidebar
               units={searchFilteredProperties}
-              selectedUnit={isCreatingNewUnit ? newUnitTemplate : (selectedUnit || null)}
+              selectedProperty={isCreatingNewUnit ? newUnitTemplate : (selectedProperty || null)}
               onSelectUnit={handlePolygonSelect}
-              selectedUnitIds={selectedPropertyIds}
+              selectedPropertyIds={selectedPropertyIds}
               viewerProps={viewerProps}
               floors={safeFloors}
               setShowHistoryPanel={setShowHistoryPanel}

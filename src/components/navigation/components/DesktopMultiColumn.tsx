@@ -70,10 +70,10 @@ export function DesktopMultiColumn({
     selectedCompany,
     selectedProject,
     selectedBuilding,
-    selectedUnit,
+    selectedProperty,
     projectsLoading,
     loadCompanies,
-    selectUnit,
+    selectProperty,
     getBuildingCount,
     getPropertyCount,
   } = useNavigation();
@@ -96,13 +96,13 @@ export function DesktopMultiColumn({
   const [pendingUnlinkProject, setPendingUnlinkProject] = useState<PendingEntity | null>(null);
   const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
   const [pendingUnlinkBuilding, setPendingUnlinkBuilding] = useState<PendingEntity | null>(null);
-  const [unitDialogOpen, setUnitDialogOpen] = useState(false);
-  const [pendingUnlinkUnit, setPendingUnlinkUnit] = useState<PendingEntity | null>(null);
+  const [propertyDialogOpen, setPropertyDialogOpen] = useState(false);
+  const [pendingUnlinkProperty, setPendingUnlinkProperty] = useState<PendingEntity | null>(null);
 
   // Modal states
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isBuildingModalOpen, setIsBuildingModalOpen] = useState(false);
-  const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
+  const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
 
   // ── Extracted data hook ──
   const {
@@ -112,7 +112,7 @@ export function DesktopMultiColumn({
     buildingStorages,
     buildingParkingSpots,
     selectedBuildingSpace,
-    handleUnitSelectFromTabs,
+    handlePropertySelectFromTabs,
     handleStorageSelectFromTabs,
     handleParkingSelectFromTabs,
   } = useDesktopNavData(isBuildingModalOpen);
@@ -192,21 +192,21 @@ export function DesktopMultiColumn({
     setPendingUnlinkBuilding(null);
   };
 
-  const handleDeleteUnit = () => {
-    if (!selectedUnit) return;
-    setPendingUnlinkUnit({ id: selectedUnit.id, name: selectedUnit.name });
-    setUnitDialogOpen(true);
+  const handleDeleteProperty = () => {
+    if (!selectedProperty) return;
+    setPendingUnlinkProperty({ id: selectedProperty.id, name: selectedProperty.name });
+    setPropertyDialogOpen(true);
   };
 
-  const handleConfirmedUnitUnlink = async () => {
-    if (!pendingUnlinkUnit) return;
+  const handleConfirmedPropertyUnlink = async () => {
+    if (!pendingUnlinkProperty) return;
     await executeEntityUnlink({
-      pending: pendingUnlinkUnit, entityType: 'unit',
-      clearSelection: () => selectUnit(null),
-      warning, t, dialogKey: 'dialogs.unit', nameParam: 'unitName',
+      pending: pendingUnlinkProperty, entityType: 'unit',
+      clearSelection: () => selectProperty(null),
+      warning, t, dialogKey: 'dialogs.unit', nameParam: 'propertyName',
     });
-    setUnitDialogOpen(false);
-    setPendingUnlinkUnit(null);
+    setPropertyDialogOpen(false);
+    setPendingUnlinkProperty(null);
   };
 
   const handleProjectSelected = (_project: { id: string; name: string }) => {
@@ -224,7 +224,7 @@ export function DesktopMultiColumn({
     });
   };
 
-  const handleUnitSelected = (_unit: { id: string; name: string }) => {
+  const handlePropertySelected = (_unit: { id: string; name: string }) => {
     // TODO: Implement actual connection logic
   };
 
@@ -358,8 +358,8 @@ export function DesktopMultiColumn({
             <ul className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto" role="list"
                 aria-label={t('columns.buildings.listLabel')} data-navigation-scroll="true">
               {filteredProjectBuildings.map(building => {
-                const unitCount = getPropertyCount(building.id);
-                const hasUnits = unitCount > 0;
+                const propertyCount = getPropertyCount(building.id);
+                const hasProperties = propertyCount > 0;
                 return (
                   <li key={building.id}>
                     <NavigationButton
@@ -367,11 +367,11 @@ export function DesktopMultiColumn({
                       icon={NAVIGATION_ENTITIES.building.icon}
                       iconColor={NAVIGATION_ENTITIES.building.color}
                       title={building.name}
-                      subtitle={t('columns.buildings.unitCount', { count: unitCount })}
+                      subtitle={t('columns.buildings.propertyCount', { count: propertyCount })}
                       isSelected={selectedBuilding?.id === building.id}
                       variant="compact"
-                      badgeStatus={!hasUnits ? 'no_projects' : undefined}
-                      badgeText={!hasUnits ? t(getNavigationFilterCategories().building_without_units) : undefined}
+                      badgeStatus={!hasProperties ? 'no_projects' : undefined}
+                      badgeText={!hasProperties ? t(getNavigationFilterCategories().building_without_units) : undefined}
                       navigationHref={ContextualNavigationService.generateRoute('building', building.id, { action: 'select' })}
                       navigationTooltip={t('columns.buildings.openTooltip')}
                     />
@@ -389,14 +389,14 @@ export function DesktopMultiColumn({
             storages={buildingStorages}
             parkingSpots={buildingParkingSpots}
             selectedItem={selectedBuildingSpace}
-            onUnitSelect={handleUnitSelectFromTabs}
+            onPropertySelect={handlePropertySelectFromTabs}
             onStorageSelect={handleStorageSelectFromTabs}
             onParkingSelect={handleParkingSelectFromTabs}
             onAddItem={(tab) => {
-              if (tab === 'units') setIsUnitModalOpen(true);
+              if (tab === 'units') setIsPropertyModalOpen(true);
             }}
             onUnlinkItem={(tab) => {
-              if (tab === 'units') handleDeleteUnit();
+              if (tab === 'units') handleDeleteProperty();
             }}
             defaultTab="units"
           />
@@ -417,7 +417,7 @@ export function DesktopMultiColumn({
                   icon={NAVIGATION_ENTITIES.unit.icon}
                   iconColor={NAVIGATION_ENTITIES.unit.color}
                   title={t('columns.actions.viewUnits')}
-                  subtitle={t('columns.actions.unitsCount', { count: buildingUnits.length })}
+                  subtitle={t('columns.actions.propertiesCount', { count: buildingUnits.length })}
                   variant="compact"
                 />
               </li>
@@ -466,11 +466,11 @@ export function DesktopMultiColumn({
         pendingUnlinkBuilding={pendingUnlinkBuilding}
         onClearPendingBuilding={() => setPendingUnlinkBuilding(null)}
         onConfirmBuildingUnlink={handleConfirmedBuildingUnlink}
-        unitDialogOpen={unitDialogOpen}
-        onUnitDialogChange={setUnitDialogOpen}
-        pendingUnlinkUnit={pendingUnlinkUnit}
-        onClearPendingUnit={() => setPendingUnlinkUnit(null)}
-        onConfirmUnitUnlink={handleConfirmedUnitUnlink}
+        propertyDialogOpen={propertyDialogOpen}
+        onPropertyDialogChange={setPropertyDialogOpen}
+        pendingUnlinkProperty={pendingUnlinkProperty}
+        onClearPendingProperty={() => setPendingUnlinkProperty(null)}
+        onConfirmPropertyUnlink={handleConfirmedPropertyUnlink}
         isProjectModalOpen={isProjectModalOpen}
         onProjectModalChange={setIsProjectModalOpen}
         onProjectSelected={handleProjectSelected}
@@ -481,9 +481,9 @@ export function DesktopMultiColumn({
         onBuildingSelected={handleBuildingSelected}
         availableBuildings={availableBuildings}
         selectedProjectName={selectedProject?.name}
-        isUnitModalOpen={isUnitModalOpen}
-        onUnitModalChange={setIsUnitModalOpen}
-        onUnitSelected={handleUnitSelected}
+        isPropertyModalOpen={isPropertyModalOpen}
+        onPropertyModalChange={setIsPropertyModalOpen}
+        onPropertySelected={handlePropertySelected}
         availableUnits={AVAILABLE_UNITS}
         selectedBuildingName={selectedBuilding?.name}
       />

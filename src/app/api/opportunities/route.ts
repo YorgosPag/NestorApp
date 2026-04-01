@@ -26,7 +26,7 @@ const CreateOpportunitySchema = z.object({
   contactId: z.string().max(128).optional(),
   contactName: z.string().max(200).optional(),
   projectId: z.string().max(128).optional(),
-  unitId: z.string().max(128).optional(),
+  propertyId: z.string().max(128).optional(),
   stage: z.string().max(50).optional(),
   value: z.number().min(0).max(999_999_999).optional(),
   probability: z.number().min(0).max(100).optional(),

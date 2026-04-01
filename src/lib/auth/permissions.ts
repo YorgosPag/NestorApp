@@ -23,7 +23,7 @@ import type {
   PermissionId,
   ProjectMember,
   GrantScope,
-  UnitGrant,
+  PropertyGrant,
 } from './types';
 import { isValidPermission, isValidGrantScope } from './types';
 import { isRoleBypass, getRolePermissions } from './roles';
@@ -41,7 +41,9 @@ const logger = createModuleLogger('permissions');
 export interface PermissionCheckOptions {
   /** Project ID for project-scoped permissions */
   projectId?: string;
-  /** Unit ID for unit-scoped grants */
+  /** Property ID for property-scoped grants */
+  propertyId?: string;
+  /** @deprecated Use propertyId */
   unitId?: string;
   /** Require MFA verification for this check */
   requireMfa?: boolean;
@@ -84,8 +86,8 @@ export type PermissionSource =
 export interface PermissionCache {
   /** Cached project memberships by projectId */
   memberships: Map<string, ProjectMember | null>;
-  /** Cached unit grants by unitId */
-  grants: Map<string, UnitGrant | null>;
+  /** Cached property grants by propertyId */
+  grants: Map<string, PropertyGrant | null>;
 }
 
 // =============================================================================
@@ -187,19 +189,19 @@ async function getProjectMembership(
 // =============================================================================
 
 /**
- * Get unit grant for a user.
+ * Get property grant for a user.
  *
  * @param ctx - Auth context
- * @param unitId - Unit ID
+ * @param propertyId - Property ID
  * @param cache - Permission cache
- * @returns UnitGrant or null
+ * @returns PropertyGrant or null
  */
-async function getUnitGrant(
+async function getPropertyGrant(
   ctx: AuthContext,
-  unitId: string,
+  propertyId: string,
   cache: PermissionCache
-): Promise<UnitGrant | null> {
-  const cacheKey = `${unitId}:${ctx.uid}`;
+): Promise<PropertyGrant | null> {
+  const cacheKey = `${propertyId}:${ctx.uid}`;
 
   // Check cache first
   if (cache.grants.has(cacheKey)) {
@@ -213,12 +215,12 @@ async function getUnitGrant(
   }
 
   try {
-    // Path: /companies/{companyId}/units/{unitId}/grants/{uid}
+    // Path: /companies/{companyId}/properties/{propertyId}/grants/{uid}
     const grantDoc = await db
       .collection(COLLECTIONS.COMPANIES)
       .doc(ctx.companyId)
       .collection(SUBCOLLECTIONS.COMPANY_PROPERTIES)
-      .doc(unitId)
+      .doc(propertyId)
       .collection(SUBCOLLECTIONS.PROPERTY_GRANTS)
       .doc(ctx.uid)
       .get();
@@ -228,11 +230,11 @@ async function getUnitGrant(
       return null;
     }
 
-    const grant = grantDoc.data() as UnitGrant;
+    const grant = grantDoc.data() as PropertyGrant;
     cache.grants.set(cacheKey, grant);
     return grant;
   } catch (error) {
-    logger.error('[PERMISSIONS] Failed to get unit grant', { error });
+    logger.error('[PERMISSIONS] Failed to get property grant', { error });
     cache.grants.set(cacheKey, null);
     return null;
   }
@@ -321,9 +323,10 @@ export async function checkPermission(
     return { granted: false, reason: 'no_project_membership' };
   }
 
-  // Check 3: Unit grant (for external users)
-  if (options.unitId) {
-    const grant = await getUnitGrant(ctx, options.unitId, cache);
+  // Check 3: Property grant (for external users)
+  const effectivePropertyId = options.propertyId ?? options.unitId;
+  if (effectivePropertyId) {
+    const grant = await getPropertyGrant(ctx, effectivePropertyId, cache);
 
     if (!grant) {
       return { granted: false, reason: 'grant_not_found' };

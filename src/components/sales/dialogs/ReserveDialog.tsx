@@ -101,17 +101,17 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
       // Fire-and-forget: email + invoice
       const depositAmount = Number(deposit);
-      const unitName = unit.name ?? unit.unitName ?? '';
+      const propertyName = unit.name ?? unit.propertyName ?? '';
       const selectedSpaces = linkedSpaces.getSelectedSpaces();
       const lineItems = selectedSpaces.length > 0
-        ? linkedSpaces.buildLineItems(depositAmount, unitName)
+        ? linkedSpaces.buildLineItems(depositAmount, propertyName)
         : undefined;
 
       if (buyerContactId) {
         apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
           eventType: 'reservation_notify',
-          unitId: unit.id,
-          unitName,
+          propertyId: unit.id,
+          propertyName,
           projectId: resolveProjectId(unit) ?? null,
           buyerContactId,
           buyerName: buyerName || null,
@@ -132,8 +132,8 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       if (depositAmount > 0) {
         apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
           eventType: 'deposit_invoice',
-          unitId: unit.id,
-          unitName,
+          propertyId: unit.id,
+          propertyName,
           projectId: resolveProjectId(unit) ?? null,
           buyerContactId: buyerContactId || null,
           buyerName: buyerName || null,

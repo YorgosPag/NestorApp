@@ -63,7 +63,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 // HOOK
 // ============================================================================
 
-export function useLegalContracts(unitId: string | null, projectId?: string): UseLegalContractsReturn {
+export function useLegalContracts(propertyId: string | null, projectId?: string): UseLegalContractsReturn {
   const [contracts, setContracts] = useState<LegalContract[]>([]);
   const [agreements, setAgreements] = useState<BrokerageAgreement[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,14 +88,14 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
 
   // Fetch contracts
   const fetchContracts = useCallback(async () => {
-    if (!unitId) return;
+    if (!propertyId) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
       const data = await fetchJson<{ success: boolean; data: LegalContract[] }>(
-        `${API_ROUTES.CONTRACTS.LIST}?unitId=${unitId}`
+        `${API_ROUTES.CONTRACTS.LIST}?propertyId=${propertyId}`
       );
       setContracts(data.data ?? []);
     } catch (err) {
@@ -103,7 +103,7 @@ export function useLegalContracts(unitId: string | null, projectId?: string): Us
     } finally {
       setIsLoading(false);
     }
-  }, [unitId]);
+  }, [propertyId]);
 
   // Initial fetch for contracts
   useEffect(() => {

@@ -72,7 +72,7 @@ interface BuildingSpacesTabsProps {
   /** Currently selected item (any type) */
   selectedItem: SelectedBuildingSpace | null;
   /** Callback when a unit is selected */
-  onUnitSelect: (unit: NavigationUnit) => void;
+  onPropertySelect: (unit: NavigationUnit) => void;
   /** Callback when a storage is selected */
   onStorageSelect: (storage: StorageUnit) => void;
   /** Callback when a parking spot is selected */
@@ -105,7 +105,7 @@ export function BuildingSpacesTabs({
   storages,
   parkingSpots,
   selectedItem,
-  onUnitSelect,
+  onPropertySelect,
   onStorageSelect,
   onParkingSelect,
   onAddItem,
@@ -253,7 +253,7 @@ export function BuildingSpacesTabs({
               filteredUnits.map(unit => (
                 <li key={unit.id}>
                   <NavigationButton
-                    onClick={() => onUnitSelect(unit)}
+                    onClick={() => onPropertySelect(unit)}
                     icon={NAVIGATION_ENTITIES.unit.icon}
                     iconColor={NAVIGATION_ENTITIES.unit.color}
                     title={unit.name}

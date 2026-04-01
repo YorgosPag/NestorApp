@@ -51,7 +51,7 @@ export interface ResolvableOverlay {
   readonly kind: OverlayKind;
   readonly status?: PropertyStatus;
   readonly linked?: {
-    readonly unitId?: string;
+    readonly propertyId?: string;
     readonly parkingId?: string;
     readonly storageId?: string;
   };
@@ -76,7 +76,7 @@ interface CollectionSubscription {
  */
 function getLinkedEntityId(overlay: ResolvableOverlay): string | undefined {
   switch (overlay.kind) {
-    case 'unit': return overlay.linked?.unitId;
+    case 'unit': return overlay.linked?.propertyId;
     case 'parking': return overlay.linked?.parkingId;
     case 'storage': return overlay.linked?.storageId;
     default: return undefined;
@@ -108,13 +108,13 @@ export function useEntityStatusResolver(
 
   // ── Step A: Extract + deduplicate entity IDs per collection ────────────
   const entityGroups = useMemo(() => {
-    const unitIds = new Set<string>();
+    const propertyIds = new Set<string>();
     const parkingIds = new Set<string>();
     const storageIds = new Set<string>();
 
     for (const overlay of overlays) {
-      if (overlay.kind === 'unit' && overlay.linked?.unitId) {
-        unitIds.add(overlay.linked.unitId);
+      if (overlay.kind === 'unit' && overlay.linked?.propertyId) {
+        propertyIds.add(overlay.linked.propertyId);
       }
       if (overlay.kind === 'parking' && overlay.linked?.parkingId) {
         parkingIds.add(overlay.linked.parkingId);
@@ -125,7 +125,7 @@ export function useEntityStatusResolver(
     }
 
     return {
-      units: Array.from(unitIds).sort(),
+      units: Array.from(propertyIds).sort(),
       parking: Array.from(parkingIds).sort(),
       storage: Array.from(storageIds).sort(),
     };

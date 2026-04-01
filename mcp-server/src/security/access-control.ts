@@ -37,7 +37,7 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'contacts',
   'projects',
   'buildings',
-  'units',
+  'properties',
   'floors',
   'tasks',
   'leads',

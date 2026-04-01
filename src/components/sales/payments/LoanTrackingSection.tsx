@@ -25,12 +25,12 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // ============================================================================
 
 interface LoanTrackingSectionProps {
-  unitId: string;
+  propertyId: string;
 }
 
 const MAX_LOANS = 3;
 
-export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
+export function LoanTrackingSection({ propertyId }: LoanTrackingSectionProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('payments');
   const {
@@ -42,7 +42,7 @@ export function LoanTrackingSection({ unitId }: LoanTrackingSectionProps) {
     transitionStatus,
     recordDisbursement,
     addCommLog,
-  } = useLoanTracking(unitId);
+  } = useLoanTracking(propertyId);
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailLoan, setDetailLoan] = useState<LoanTracking | null>(null);

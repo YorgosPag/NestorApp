@@ -37,7 +37,7 @@ export const FIELDS = {
   BUILDING_ID: 'buildingId',
   PROJECT_ID: 'projectId',
   CONTACT_ID: 'contactId',
-  UNIT_ID: 'unitId',
+  PROPERTY_ID: 'propertyId',
   FLOOR_ID: 'floorId',
   ENTITY_TYPE: 'entityType',
   ENTITY_ID: 'entityId',

@@ -33,12 +33,12 @@ export function getDb() {
   return db;
 }
 
-export function planCollectionPath(unitId: string): string {
-  return `${COLLECTIONS.PROPERTIES}/${unitId}/${SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS}`;
+export function planCollectionPath(propertyId: string): string {
+  return `${COLLECTIONS.PROPERTIES}/${propertyId}/${SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS}`;
 }
 
-export function paymentCollectionPath(unitId: string): string {
-  return `${COLLECTIONS.PROPERTIES}/${unitId}/${SUBCOLLECTIONS.PROPERTY_PAYMENTS}`;
+export function paymentCollectionPath(propertyId: string): string {
+  return `${COLLECTIONS.PROPERTIES}/${propertyId}/${SUBCOLLECTIONS.PROPERTY_PAYMENTS}`;
 }
 
 // ============================================================================
@@ -111,11 +111,11 @@ export function computeSummaryFromPlan(plan: PaymentPlan, planId: string): Payme
 // ============================================================================
 
 /** Ανάκτηση ενεργού payment plan (non-cancelled). */
-export async function getActivePaymentPlan(unitId: string): Promise<PaymentPlan | null> {
+export async function getActivePaymentPlan(propertyId: string): Promise<PaymentPlan | null> {
   try {
     const db = getDb();
     const snapshot = await db
-      .collection(planCollectionPath(unitId))
+      .collection(planCollectionPath(propertyId))
       .where(FIELDS.STATUS, 'in', ['negotiation', 'draft', 'active', 'completed'])
       .limit(1)
       .get();
@@ -129,11 +129,11 @@ export async function getActivePaymentPlan(unitId: string): Promise<PaymentPlan 
 }
 
 /** ADR-244: Ανάκτηση ΟΛΩΝ των non-cancelled payment plans. */
-export async function getPaymentPlans(unitId: string): Promise<PaymentPlan[]> {
+export async function getPaymentPlans(propertyId: string): Promise<PaymentPlan[]> {
   try {
     const db = getDb();
     const snapshot = await db
-      .collection(planCollectionPath(unitId))
+      .collection(planCollectionPath(propertyId))
       .where(FIELDS.STATUS, 'in', ['negotiation', 'draft', 'active', 'completed'])
       .get();
     if (snapshot.empty) return [];
@@ -145,10 +145,10 @@ export async function getPaymentPlans(unitId: string): Promise<PaymentPlan[]> {
 }
 
 /** Ανάκτηση μεμονωμένου plan by ID. */
-export async function getPaymentPlan(unitId: string, planId: string): Promise<PaymentPlan | null> {
+export async function getPaymentPlan(propertyId: string, planId: string): Promise<PaymentPlan | null> {
   try {
     const db = getDb();
-    const doc = await db.collection(planCollectionPath(unitId)).doc(planId).get();
+    const doc = await db.collection(planCollectionPath(propertyId)).doc(planId).get();
     if (!doc.exists) return null;
     return { id: doc.id, ...doc.data() } as PaymentPlan;
   } catch (error) {

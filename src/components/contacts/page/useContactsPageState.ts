@@ -28,7 +28,7 @@ const INITIAL_FILTERS: ContactFilterState = {
   company: [],
   status: [],
   contactType: 'all',
-  unitsCount: 'all',
+  propertiesCount: 'all',
   totalArea: 'all',
   hasProperties: false,
   isFavorite: false,

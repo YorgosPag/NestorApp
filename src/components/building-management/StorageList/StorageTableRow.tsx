@@ -22,9 +22,9 @@ import '@/lib/design-system';
 interface StorageTableRowProps {
   unit: StorageUnit;
   isSelected: boolean;
-  onSelectUnit: (unitId: string) => void;
+  onSelectProperty: (propertyId: string) => void;
   onEdit: (unit: StorageUnit) => void;
-  onDelete: (unitId: string) => void;
+  onDelete: (propertyId: string) => void;
   getStatusColor: (status: StorageUnitStatus) => string;
   getStatusLabel: (status: StorageUnitStatus) => string;
   getTypeIcon: (type: StorageUnitType) => React.ElementType;
@@ -34,7 +34,7 @@ interface StorageTableRowProps {
 export function StorageTableRow({
   unit,
   isSelected,
-  onSelectUnit,
+  onSelectProperty,
   onEdit,
   onDelete,
   getStatusColor,
@@ -51,7 +51,7 @@ export function StorageTableRow({
       <TableCell>
         <Checkbox
           checked={isSelected}
-          onCheckedChange={() => onSelectUnit(unit.id)}
+          onCheckedChange={() => onSelectProperty(unit.id)}
           aria-label={`Select row ${unit.code}`}
         />
       </TableCell>

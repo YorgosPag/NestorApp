@@ -36,7 +36,7 @@ import { ENTITY_ROUTES } from '@/lib/routes';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import {
   UNIT_TYPES_FOR_FILTER, UNIT_STATUSES_FOR_FILTER,
-  UNIT_STATUS_COLOR_MAP, getUnitTypeLabel, getUnitStatusLabel,
+  UNIT_STATUS_COLOR_MAP, getPropertyTypeLabel, getPropertyStatusLabel,
 } from './property-tab-constants';
 import type { FloorRecord } from './property-tab-constants';
 import { usePropertyInlineEdit } from './usePropertyInlineEdit';
@@ -108,7 +108,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     }
   }, [building.id]);
 
-  const fetchUnits = useCallback(async () => {
+  const fetchProperties = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -126,11 +126,11 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   }, [building.id]);
 
   useEffect(() => {
-    fetchUnits();
+    fetchProperties();
     fetchFloors();
-  }, [fetchUnits, fetchFloors]);
+  }, [fetchProperties, fetchFloors]);
 
-  const edit = usePropertyInlineEdit(fetchUnits);
+  const edit = usePropertyInlineEdit(fetchProperties);
 
   const stats = useMemo(() => ({
     total: units.length,
@@ -144,7 +144,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
       const matchesSearch = !searchTerm ||
         unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (unit.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getUnitTypeLabel(unit.type, tUnits).toLowerCase().includes(searchTerm.toLowerCase());
+        getPropertyTypeLabel(unit.type, tUnits).toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || unit.type === filterType;
       const matchesStatus = filterStatus === 'all' || unit.status === filterStatus;
       return matchesSearch && matchesType && matchesStatus;
@@ -160,8 +160,8 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
 
   const handleCreateSuccess = useCallback(async () => {
     setShowCreateForm(false);
-    await fetchUnits();
-  }, [fetchUnits]);
+    await fetchProperties();
+  }, [fetchProperties]);
 
   const handleDeleteClick = async (unit: Property) => {
     const allowed = await checkBeforeDelete(unit.id);
@@ -190,7 +190,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
         await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(item.id), { buildingId: null });
         success(t('unitStats.unlinked'));
       }
-      await fetchUnits();
+      await fetchProperties();
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('unitStats.error');
       notifyError(msg);
@@ -210,32 +210,32 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
       .map((u) => ({
         id: u.id,
         label: u.name,
-        sublabel: `${getUnitTypeLabel(u.type, tUnits)} · ${u.floor || '—'}`,
+        sublabel: `${getPropertyTypeLabel(u.type, tUnits)} · ${u.floor || '—'}`,
       }));
   }, [tUnits]);
 
   const handleLinkUnit = useCallback(async (itemId: string) => {
     await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(itemId), { buildingId: building.id });
     success(t('unitStats.linked'));
-    await fetchUnits();
-  }, [building.id, fetchUnits]);
+    await fetchProperties();
+  }, [building.id, fetchProperties]);
 
   const getStatusBadge = (status: string) => (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${UNIT_STATUS_COLOR_MAP[status] || UNIT_STATUS_COLOR_MAP.unavailable}`}>
-      {getUnitStatusLabel(status, tUnits)}
+      {getPropertyStatusLabel(status, tUnits)}
     </span>
   );
 
   const unitColumns: SpaceColumn<Property>[] = useMemo(() => [
     { key: 'name', label: t('tabs.floors.name'), sortValue: (u) => u.name, render: (u) => <span className="font-medium">{u.name}</span> },
-    { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{getUnitTypeLabel(u.type, tUnits)}</span> },
+    { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{getPropertyTypeLabel(u.type, tUnits)}</span> },
     { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className={cn("font-mono text-sm", colors.text.muted)}>{u.floor}</span> },
     { key: 'area', label: 'm²', width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
     { key: 'status', label: t('tabs.labels.details'), width: 'w-28', sortValue: (u) => u.status, render: (u) => getStatusBadge(u.status) },
   ], [t, tUnits]);
 
   const unitCardFields: SpaceCardField<Property>[] = useMemo(() => [
-    { label: tUnits('card.stats.type'), render: (u) => getUnitTypeLabel(u.type, tUnits) },
+    { label: tUnits('card.stats.type'), render: (u) => getPropertyTypeLabel(u.type, tUnits) },
     { label: tUnits('card.stats.floor'), render: (u) => u.floor || '—' },
     { label: 'm²', render: (u) => u.area || '—' },
     { label: tUnits('table.price'), render: (u) => formatCurrencyWhole(u.price) },
@@ -253,7 +253,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     return (
       <section className="flex flex-col items-center gap-2 py-2">
         <p className="text-sm text-destructive">{error}</p>
-        <Button variant="outline" size="sm" onClick={fetchUnits}>
+        <Button variant="outline" size="sm" onClick={fetchProperties}>
           {t('unitStats.retry')}
         </Button>
       </section>
@@ -305,7 +305,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
               <SelectContent>
                 <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
                 {UNIT_TYPES_FOR_FILTER.map(ut => (
-                  <SelectItem key={ut} value={ut}>{getUnitTypeLabel(ut, tUnits)}</SelectItem>
+                  <SelectItem key={ut} value={ut}>{getPropertyTypeLabel(ut, tUnits)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -317,7 +317,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
               <SelectContent>
                 <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
                 {UNIT_STATUSES_FOR_FILTER.map(us => (
-                  <SelectItem key={us} value={us}>{getUnitStatusLabel(us, tUnits)}</SelectItem>
+                  <SelectItem key={us} value={us}>{getPropertyStatusLabel(us, tUnits)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -404,7 +404,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {UNIT_TYPES_FOR_FILTER.map(ut => (<SelectItem key={ut} value={ut}>{getUnitTypeLabel(ut, tUnits)}</SelectItem>))}
+                      {UNIT_TYPES_FOR_FILTER.map(ut => (<SelectItem key={ut} value={ut}>{getPropertyTypeLabel(ut, tUnits)}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -420,7 +420,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {UNIT_STATUSES_FOR_FILTER.map(us => (<SelectItem key={us} value={us}>{getUnitStatusLabel(us, tUnits)}</SelectItem>))}
+                      {UNIT_STATUSES_FOR_FILTER.map(us => (<SelectItem key={us} value={us}>{getPropertyStatusLabel(us, tUnits)}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </TableCell>

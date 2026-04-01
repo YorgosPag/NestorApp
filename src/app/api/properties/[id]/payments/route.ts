@@ -20,7 +20,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreatePaymentInput } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreatePaymentSchema = z.object({
@@ -47,7 +47,7 @@ async function handleGet(
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payments' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payments' });
       try {
         const payments = await PaymentPlanService.getPayments(propertyId);
         return NextResponse.json({ success: true, data: payments });
@@ -75,7 +75,7 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payments' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payments' });
       try {
         const parsed = safeParseBody(CreatePaymentSchema, await req.json());
         if (parsed.error) return parsed.error;

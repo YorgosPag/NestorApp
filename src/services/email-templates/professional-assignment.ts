@@ -23,12 +23,12 @@ export interface ProfessionalAssignmentEmailData {
   professionalName: string;
   /** Role label in Greek (e.g. "Δικηγόρος Πωλητή") */
   roleName: string;
-  /** Unit name (e.g. "Διαμέρισμα Α1") */
-  unitName: string;
-  /** Unit code (e.g. "Α-101") — distinct identifier */
-  unitCode: string | null;
+  /** Property name (e.g. "Διαμέρισμα Α1") */
+  propertyName: string;
+  /** Property code (e.g. "Α-101") — distinct identifier */
+  propertyCode: string | null;
   /** Floor number (0 = Ισόγειο) */
-  unitFloor: number | null;
+  propertyFloor: number | null;
   /** Building name */
   buildingName: string | null;
   /** Project name */
@@ -73,8 +73,8 @@ export function buildProfessionalAssignmentEmail(data: ProfessionalAssignmentEma
   html: string;
   text: string;
 } {
-  const unitLabel = data.unitCode ?? data.unitName;
-  const subject = `Ανάθεση ρόλου: ${data.roleName} — ${unitLabel}`;
+  const propertyLabel = data.propertyCode ?? data.propertyName;
+  const subject = `Ανάθεση ρόλου: ${data.roleName} — ${propertyLabel}`;
 
   const contentHtml = buildContentSection(data);
 
@@ -97,8 +97,8 @@ export function buildProfessionalAssignmentEmail(data: ProfessionalAssignmentEma
 // ============================================================================
 
 function buildContentSection(data: ProfessionalAssignmentEmailData): string {
-  const floorText = data.unitFloor !== null && data.unitFloor !== undefined
-    ? formatFloor(data.unitFloor)
+  const floorText = data.propertyFloor !== null && data.propertyFloor !== undefined
+    ? formatFloor(data.propertyFloor)
     : null;
 
   return `
@@ -124,8 +124,8 @@ function buildContentSection(data: ProfessionalAssignmentEmailData): string {
       </tr>
       <tr>
         <td style="padding:16px;">
-          ${data.unitCode ? buildInfoRow('Κωδικός', escapeHtml(data.unitCode)) : ''}
-          ${buildInfoRow('Ακίνητο', escapeHtml(data.unitName))}
+          ${data.propertyCode ? buildInfoRow('Κωδικός', escapeHtml(data.propertyCode)) : ''}
+          ${buildInfoRow('Ακίνητο', escapeHtml(data.propertyName))}
           ${floorText ? buildInfoRow('Όροφος', floorText) : ''}
           ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
           ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
@@ -197,8 +197,8 @@ export function buildProfessionalRemovalEmail(data: ProfessionalAssignmentEmailD
   html: string;
   text: string;
 } {
-  const unitLabel = data.unitCode ?? data.unitName;
-  const subject = `Ακύρωση ανάθεσης: ${data.roleName} — ${unitLabel}`;
+  const propertyLabel = data.propertyCode ?? data.propertyName;
+  const subject = `Ακύρωση ανάθεσης: ${data.roleName} — ${propertyLabel}`;
 
   const contentHtml = buildRemovalContentSection(data);
 
@@ -217,8 +217,8 @@ export function buildProfessionalRemovalEmail(data: ProfessionalAssignmentEmailD
 }
 
 function buildRemovalContentSection(data: ProfessionalAssignmentEmailData): string {
-  const floorText = data.unitFloor !== null && data.unitFloor !== undefined
-    ? formatFloor(data.unitFloor)
+  const floorText = data.propertyFloor !== null && data.propertyFloor !== undefined
+    ? formatFloor(data.propertyFloor)
     : null;
 
   return `
@@ -243,8 +243,8 @@ function buildRemovalContentSection(data: ProfessionalAssignmentEmailData): stri
       </tr>
       <tr>
         <td style="padding:16px;">
-          ${data.unitCode ? buildInfoRow('Κωδικός', escapeHtml(data.unitCode)) : ''}
-          ${buildInfoRow('Ακίνητο', escapeHtml(data.unitName))}
+          ${data.propertyCode ? buildInfoRow('Κωδικός', escapeHtml(data.propertyCode)) : ''}
+          ${buildInfoRow('Ακίνητο', escapeHtml(data.propertyName))}
           ${floorText ? buildInfoRow('Όροφος', floorText) : ''}
           ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
           ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
@@ -297,9 +297,9 @@ function buildRemovalPlainText(data: ProfessionalAssignmentEmailData): string {
     `═══ ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ ═══`,
   ];
 
-  if (data.unitCode) lines.push(`Κωδικός: ${data.unitCode}`);
-  lines.push(`Ακίνητο: ${data.unitName}`);
-  if (data.unitFloor !== null) lines.push(`Όροφος: ${formatFloor(data.unitFloor)}`);
+  if (data.propertyCode) lines.push(`Κωδικός: ${data.propertyCode}`);
+  lines.push(`Ακίνητο: ${data.propertyName}`);
+  if (data.propertyFloor !== null) lines.push(`Όροφος: ${formatFloor(data.propertyFloor)}`);
   if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
   if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
   if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
@@ -366,9 +366,9 @@ function buildPlainText(data: ProfessionalAssignmentEmailData): string {
     `═══ ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ ═══`,
   ];
 
-  if (data.unitCode) lines.push(`Κωδικός: ${data.unitCode}`);
-  lines.push(`Ακίνητο: ${data.unitName}`);
-  if (data.unitFloor !== null) lines.push(`Όροφος: ${formatFloor(data.unitFloor)}`);
+  if (data.propertyCode) lines.push(`Κωδικός: ${data.propertyCode}`);
+  lines.push(`Ακίνητο: ${data.propertyName}`);
+  if (data.propertyFloor !== null) lines.push(`Όροφος: ${formatFloor(data.propertyFloor)}`);
   if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
   if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
   if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);

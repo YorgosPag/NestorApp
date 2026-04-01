@@ -21,7 +21,7 @@ import type {
 export interface InterestCostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  unitId: string;
+  propertyId: string;
   salePrice: number;
   installments?: Installment[];
   rates: EuriborRatesCache | null;

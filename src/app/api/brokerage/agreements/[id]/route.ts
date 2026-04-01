@@ -28,7 +28,7 @@ const UpdateAgreementSchema = z.object({
   endDate: z.string().max(30).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
   scope: z.enum(['project', 'unit']).optional(),
-  unitId: z.string().max(128).nullable().optional(),
+  propertyId: z.string().max(128).nullable().optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };

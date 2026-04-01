@@ -23,7 +23,7 @@ import { validatePropertyFieldLocking } from '@/lib/firestore/property-field-loc
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PropertyOwnerRole } from '@/types/ownership-table';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -64,7 +64,7 @@ export const PATCH = withStandardRateLimit(
         const doc = await docRef.get();
         if (!doc.exists) throw new ApiError(404, 'Property not found');
 
-        await requireUnitInTenant({ ctx, unitId: id, path: '/api/properties/[id]' });
+        await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
         const existing = doc.data() as Record<string, unknown>;
 
         const parsed = safeParseBody(PropertyPatchSchema, await request.json());
@@ -249,7 +249,7 @@ export const DELETE = withStandardRateLimit(
         const doc = await docRef.get();
         if (!doc.exists) throw new ApiError(404, 'Property not found');
 
-        await requireUnitInTenant({ ctx, unitId: id, path: '/api/properties/[id]' });
+        await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
         const existing = doc.data() as Record<string, unknown>;
 
         // 🛡️ ADR-226: Guarded deletion (checks dependencies → blocks or deletes + audit)
@@ -286,7 +286,7 @@ export const GET = withStandardRateLimit(
       const id = extractIdFromUrl(request.url);
       if (!id) throw new ApiError(400, 'Property ID is required');
 
-      await requireUnitInTenant({ ctx, unitId: id, path: '/api/properties/[id]' });
+      await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
 
       const docRef = adminDb.collection(COLLECTIONS.PROPERTIES).doc(id);
       const doc = await docRef.get();

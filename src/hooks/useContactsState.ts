@@ -27,11 +27,11 @@ const logger = createModuleLogger('useContactsState');
 
 export type ViewMode = 'list' | 'grid';
 export type ContactTypeFilter = 'all' | 'individual' | 'company' | 'service';
-export type UnitsCountFilter = 'all' | '1-2' | '3-5' | '6+';
+export type PropertiesCountFilter = 'all' | '1-2' | '3-5' | '6+';
 export type AreaFilter = 'all' | '0-100' | '101-300' | '301+';
 
 interface ContactStats {
-    unitsCount: number;
+    propertiesCount: number;
     totalArea: number;
 }
 
@@ -52,7 +52,7 @@ export function useContactsState() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<ContactTypeFilter>('all');
   const [showOnlyOwners, setShowOnlyOwners] = useState(false);
-  const [unitsCountFilter, setUnitsCountFilter] = useState<UnitsCountFilter>('all');
+  const [propertiesCountFilter, setPropertiesCountFilter] = useState<PropertiesCountFilter>('all');
   const [areaFilter, setAreaFilter] = useState<AreaFilter>('all');
   
   const ownerContactIds = useMemo(() => {
@@ -229,8 +229,8 @@ export function useContactsState() {
     const stats = new Map<string, ContactStats>();
     allUnits.forEach(unit => {
       if (unit.soldTo) {
-        const currentStats = stats.get(unit.soldTo) || { unitsCount: 0, totalArea: 0 };
-        currentStats.unitsCount += 1;
+        const currentStats = stats.get(unit.soldTo) || { propertiesCount: 0, totalArea: 0 };
+        currentStats.propertiesCount += 1;
         currentStats.totalArea += unit.area || 0;
         stats.set(unit.soldTo, currentStats);
       }
@@ -243,26 +243,26 @@ export function useContactsState() {
   const filteredContacts = useMemo(() => {
     return allContacts.filter(contact => {
         const contactStats = contact.id ? contactStatsMap.get(contact.id) : undefined;
-        const unitsCount = contactStats?.unitsCount || 0;
+        const propertiesCount = contactStats?.propertiesCount || 0;
         const totalArea = contactStats?.totalArea || 0;
 
         const matchesType = filterType === 'all' || contact.type === filterType;
         const matchesSearch = searchTerm === '' || getContactDisplayName(contact).toLowerCase().includes(searchTerm.toLowerCase());
         const matchesOwnership = !showOnlyOwners || (contact.id && ownerContactIds.includes(contact.id));
         
-        const matchesUnitsCount = unitsCountFilter === 'all' ||
-            (unitsCountFilter === '1-2' && unitsCount >= 1 && unitsCount <= 2) ||
-            (unitsCountFilter === '3-5' && unitsCount >= 3 && unitsCount <= 5) ||
-            (unitsCountFilter === '6+' && unitsCount >= 6);
+        const matchesPropertiesCount = propertiesCountFilter === 'all' ||
+            (propertiesCountFilter === '1-2' && propertiesCount >= 1 && propertiesCount <= 2) ||
+            (propertiesCountFilter === '3-5' && propertiesCount >= 3 && propertiesCount <= 5) ||
+            (propertiesCountFilter === '6+' && propertiesCount >= 6);
 
         const matchesArea = areaFilter === 'all' ||
             (areaFilter === '0-100' && totalArea > 0 && totalArea <= 100) ||
             (areaFilter === '101-300' && totalArea >= 101 && totalArea <= 300) ||
             (areaFilter === '301+' && totalArea > 300);
 
-        return matchesType && matchesSearch && matchesOwnership && matchesUnitsCount && matchesArea;
+        return matchesType && matchesSearch && matchesOwnership && matchesPropertiesCount && matchesArea;
     });
-  }, [allContacts, filterType, searchTerm, showOnlyOwners, ownerContactIds, unitsCountFilter, areaFilter, contactStatsMap]);
+  }, [allContacts, filterType, searchTerm, showOnlyOwners, ownerContactIds, propertiesCountFilter, areaFilter, contactStatsMap]);
 
   // Stats calculation for dashboard
   const oneMonthAgo = useMemo(() => {
@@ -303,8 +303,8 @@ export function useContactsState() {
     setFilterType,
     showOnlyOwners,
     setShowOnlyOwners,
-    unitsCountFilter,
-    setUnitsCountFilter,
+    propertiesCountFilter,
+    setPropertiesCountFilter,
     areaFilter,
     setAreaFilter,
     forceDataRefresh,

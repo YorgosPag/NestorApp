@@ -231,7 +231,7 @@ export async function listInvoices(
     if (filters.fiscalYear) query = query.where('fiscalYear', '==', filters.fiscalYear);
     if (filters.customerId) query = query.where('customer.contactId', '==', filters.customerId);
     if (filters.projectId) query = query.where(FIELDS.PROJECT_ID, '==', filters.projectId);
-    if (filters.unitId) query = query.where(FIELDS.UNIT_ID, '==', filters.unitId);
+    if (filters.propertyId) query = query.where(FIELDS.PROPERTY_ID, '==', filters.propertyId);
 
     query = query.orderBy('issueDate', 'desc').limit(pageSize);
 

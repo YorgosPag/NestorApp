@@ -153,7 +153,7 @@ function createMockInvoice(overrides: Partial<Invoice> = {}): Invoice {
       errorMessage: null,
     },
     projectId: null,
-    unitId: null,
+    propertyId: null,
     relatedInvoiceId: null,
     journalEntryId: null,
     notes: null,

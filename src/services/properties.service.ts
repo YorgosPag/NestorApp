@@ -85,8 +85,8 @@ export async function createProperty(
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatch('UNIT_CREATED',{
-      unitId: propertyId,
-      unit: {
+      propertyId,
+      property: {
         name: propertyData.name as string,
         type: propertyData.type as string,
         buildingId: (propertyData.buildingId as string) ?? null,
@@ -154,7 +154,7 @@ export async function updateProperty(propertyId: string, updates: Partial<Proper
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
   // Dispatch event for all components to update their local state
   RealtimeService.dispatch('UNIT_UPDATED',{
-    unitId: propertyId,
+    propertyId,
     updates: {
       name: updates.name,
       type: updates.type,
@@ -195,7 +195,7 @@ export async function deleteProperty(propertyId: string): Promise<{ success: boo
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
   RealtimeService.dispatch('UNIT_DELETED', {
-    unitId: propertyId,
+    propertyId,
     timestamp: Date.now()
   });
 

@@ -85,9 +85,9 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           filters.projectId = projectId;
         }
 
-        const unitId = searchParams.get('unitId');
-        if (unitId) {
-          filters.unitId = unitId;
+        const propertyId = searchParams.get('propertyId');
+        if (propertyId) {
+          filters.propertyId = propertyId;
         }
 
         const pageSize = searchParams.get('pageSize');

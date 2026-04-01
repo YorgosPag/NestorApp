@@ -212,7 +212,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       name: 'string',
       contactId: 'string? (->contacts)',
       companyId: 'string',
-      unitId: 'string? (->properties)',
+      propertyId: 'string? (->properties)',
       status: 'string?',
       value: 'number?',
       probability: 'number?',
@@ -256,7 +256,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
     fields: {
       contactId: 'string (->contacts)',
       companyId: 'string',
-      unitId: 'string? (->properties)',
+      propertyId: 'string? (->properties)',
       amount: 'number',
       status: 'pending|paid|overdue?',
       dueDate: 'Timestamp?',

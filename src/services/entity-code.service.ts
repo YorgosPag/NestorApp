@@ -41,7 +41,7 @@ export interface EntityCodeSuggestionParams {
   entityType: 'unit' | 'parking' | 'storage';
   buildingName: string;
   floorLevel: number;
-  unitType?: PropertyType;
+  propertyType?: PropertyType;
   locationZone?: ParkingLocationZone;
 }
 
@@ -137,13 +137,13 @@ export function isStandardEntityCode(code: string): boolean {
  */
 export function resolveTypeCode(
   entityType: 'unit' | 'parking' | 'storage',
-  unitType?: PropertyType,
+  propertyType?: PropertyType,
   locationZone?: ParkingLocationZone
 ): string | null {
   switch (entityType) {
     case 'unit':
-      if (!unitType) return null;
-      return PROPERTY_TYPE_TO_CODE[unitType] ?? null;
+      if (!propertyType) return null;
+      return PROPERTY_TYPE_TO_CODE[propertyType] ?? null;
     case 'parking':
       if (!locationZone) return 'PK'; // default: closed parking
       return PARKING_ZONE_TO_CODE[locationZone] ?? 'PK';
@@ -160,7 +160,7 @@ export function resolveTypeCode(
  */
 export function buildSuggestedCode(params: EntityCodeSuggestionParams, sequence: number): string {
   const building = extractBuildingLetter(params.buildingName);
-  const typeCode = resolveTypeCode(params.entityType, params.unitType, params.locationZone);
+  const typeCode = resolveTypeCode(params.entityType, params.propertyType, params.locationZone);
   if (!typeCode) return '';
 
   const floorCode = formatFloorCode(params.floorLevel);

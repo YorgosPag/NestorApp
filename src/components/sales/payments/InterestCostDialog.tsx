@@ -99,7 +99,7 @@ export {
 export function InterestCostDialog({
   open,
   onOpenChange,
-  unitId: _unitId,
+  propertyId: _propertyId,
   salePrice,
   installments,
   rates,

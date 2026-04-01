@@ -146,7 +146,7 @@ async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExt
     // 🏢 ENTERPRISE: Type-safe API response
     interface UnitsApiResponse {
       units: Array<{ id: string }>;
-      unitsCount?: number;
+      propertiesCount?: number;
       totalValue?: number;
       contactInfo?: {
         profession?: string;
@@ -165,8 +165,8 @@ async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExt
 
     return {
       ...basicInfo,
-      unitsCount: unitsData?.unitsCount || units.length,
-      unitIds: units.map((unit) => unit.id),
+      propertiesCount: unitsData?.propertiesCount || units.length,
+      propertyIds: units.map((unit) => unit.id),
       totalValue: unitsData?.totalValue || 0,
       profession: unitsData?.contactInfo?.profession ?? undefined,
       city: unitsData?.contactInfo?.city ?? undefined,

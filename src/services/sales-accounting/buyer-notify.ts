@@ -44,7 +44,7 @@ export async function notifyBuyerReservation(
     const invoiceRef = result?.invoiceNumber ? `A-${result.invoiceNumber}` : null;
     const { subject, html, text } = buildReservationConfirmationEmail({
       buyerName,
-      unitName: event.propertyName,
+      propertyName: event.propertyName,
       unitFloor: event.unitFloor,
       buildingName: event.buildingName,
       projectName: event.projectName,
@@ -100,7 +100,7 @@ export async function notifyBuyerCancellation(
     const creditNoteRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : null;
     const { subject, html, text } = buildCancellationConfirmationEmail({
       buyerName,
-      unitName: event.propertyName,
+      propertyName: event.propertyName,
       unitFloor: event.unitFloor,
       buildingName: event.buildingName,
       projectName: event.projectName,
@@ -157,7 +157,7 @@ export async function notifyBuyerSale(
     const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : null;
     const { subject, html, text } = buildSaleConfirmationEmail({
       buyerName,
-      unitName: event.propertyName,
+      propertyName: event.propertyName,
       unitFloor: event.unitFloor,
       buildingName: event.buildingName,
       projectName: event.projectName,

@@ -225,7 +225,7 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(fun
 
     // Linked entity indicator
     const hasLink = overlay.linked && (
-      overlay.linked.unitId ||
+      overlay.linked.propertyId ||
       overlay.linked.parkingId ||
       overlay.linked.storageId
     );

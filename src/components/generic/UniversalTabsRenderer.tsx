@@ -87,7 +87,7 @@ export interface TabComponentProps {
   storage?: unknown;
   parking?: unknown;
   unit?: unknown;
-  selectedUnit?: unknown;
+  selectedProperty?: unknown;
   icon?: React.ComponentType | null;
   /** Injected by UniversalTabsRenderer — navigate to a sibling tab by ID */
   onNavigateToTab?: (tabId: string) => void;
@@ -282,7 +282,7 @@ export function UniversalTabsRenderer<TData = unknown>({
           storage={data} // For backward compatibility με storage components
           parking={data} // For backward compatibility με parking components
           unit={data} // For backward compatibility με unit components
-          selectedUnit={data} // For backward compatibility με unit components
+          selectedProperty={data} // For backward compatibility με unit components
           // For PlaceholderTab compatibility
           icon={getIconComponent(tabConfig.icon ?? '')}
           // 🏢 ENTERPRISE: Inject tab navigation — lets any child switch sibling tabs

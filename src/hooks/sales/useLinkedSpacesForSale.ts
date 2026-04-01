@@ -48,7 +48,7 @@ interface UseLinkedSpacesForSaleResult {
   toggleSpace: (spaceId: string) => void;
   setSpacePrice: (spaceId: string, price: number) => void;
   getSelectedSpaces: () => ResolvedLinkedSpace[];
-  buildLineItems: (unitPrice: number, unitName: string) => SaleLineItem[];
+  buildLineItems: (propertyPrice: number, propertyName: string) => SaleLineItem[];
   buildSyncPayload: (action: 'reserve' | 'sell' | 'revert') => SyncSpacePayload[];
 }
 
@@ -174,13 +174,13 @@ export function useLinkedSpacesForSale(unit: Property): UseLinkedSpacesForSaleRe
   const hasSpaces = spaces.length > 0;
 
   const buildLineItems = useCallback(
-    (unitPrice: number, unitName: string): SaleLineItem[] => {
+    (propertyPrice: number, propertyName: string): SaleLineItem[] => {
       const items: SaleLineItem[] = [
         {
           assetId: unit.id,
           assetType: 'unit',
-          assetName: unitName,
-          grossAmount: unitPrice,
+          assetName: propertyName,
+          grossAmount: propertyPrice,
         },
       ];
 

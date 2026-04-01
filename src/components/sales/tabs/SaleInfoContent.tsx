@@ -101,7 +101,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
   return (
     <section className="flex flex-col gap-2 p-2" aria-label={t('sales.tabs.saleInfo')}>
       {/* Ιεραρχία Ακινήτου: Εταιρεία → Έργο → Κτίριο → Μονάδα */}
-      <PropertyHierarchyCard unitId={unit.id} />
+      <PropertyHierarchyCard propertyId={unit.id} />
 
       {/* Εμπορικά Στοιχεία */}
       <Card>
@@ -178,7 +178,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
 
       {/* ADR-198: Παραστατικά πώλησης — εμφάνιση αν υπάρχει deposit ή πώληση */}
       {(commercial?.reservationDeposit || commercial?.transactionChainId || unit.status === 'sold') && (
-        <TransactionChainCard unitId={unit.id} />
+        <TransactionChainCard propertyId={unit.id} />
       )}
 
       {/* Ημερομηνίες */}

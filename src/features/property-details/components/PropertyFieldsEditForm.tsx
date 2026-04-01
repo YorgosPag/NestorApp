@@ -44,7 +44,7 @@ import type { CommercialStatus, OperationalStatus } from '@/types/property';
 import { isValidEntityCodeFormat } from '@/services/entity-code.service';
 import { LevelTabStrip } from './PropertyFieldsReadOnly';
 import {
-  UNIT_TYPE_OPTIONS, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
+  PROPERTY_TYPE_OPTIONS, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
 } from './property-fields-constants';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 import { PropertyFieldsDetailCards } from './PropertyFieldsDetailCards';
@@ -220,9 +220,9 @@ export function PropertyFieldsEditForm({
                   <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
                 </SelectTrigger>
                 <SelectContent>
-                  {UNIT_TYPE_OPTIONS.map((unitType) => (
-                    <SelectItem key={unitType} value={unitType} className="text-xs">
-                      {t(`types.${unitType}`, { defaultValue: unitType })}
+                  {PROPERTY_TYPE_OPTIONS.map((propertyType) => (
+                    <SelectItem key={propertyType} value={propertyType} className="text-xs">
+                      {t(`types.${propertyType}`, { defaultValue: propertyType })}
                     </SelectItem>
                   ))}
                 </SelectContent>

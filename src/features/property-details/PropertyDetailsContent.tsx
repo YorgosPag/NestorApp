@@ -54,7 +54,7 @@ export function PropertyDetailsContent({
   onExitEditMode: externalExitEditMode,
   // 🏢 ENTERPRISE: Inline new unit creation props
   isCreatingNewUnit,
-  onUnitCreated,
+  onPropertyCreated,
 }: Partial<PropertyDetailsContentProps> & {
   property?: ExtendedPropertyDetails & { buyerMismatch?: boolean };
   unit?: ExtendedPropertyDetails;
@@ -68,7 +68,7 @@ export function PropertyDetailsContent({
   onExitEditMode?: () => void;
   // 🏢 ENTERPRISE: Inline new unit creation
   isCreatingNewUnit?: boolean;
-  onUnitCreated?: (unitId: string) => void;
+  onPropertyCreated?: (propertyId: string) => void;
 }) {
   const { t } = useTranslation(['common', 'properties', 'units']);
   const { quick } = useBorderTokens();
@@ -180,7 +180,7 @@ export function PropertyDetailsContent({
       {!isReadOnly && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <PropertyEntityLinks
-            unitId={resolvedProperty?.id ?? ''}
+            propertyId={resolvedProperty?.id ?? ''}
             currentBuildingId={resolvedProperty?.buildingId}
             isEditing={isEditMode && !isSoldOrRented}
           />
@@ -242,7 +242,7 @@ export function PropertyDetailsContent({
           {resolvedProperty?.buildingId && (
             <LinkedSpacesCard
               key={resolvedProperty.id}
-              unitId={resolvedProperty.id ?? ''}
+              propertyId={resolvedProperty.id ?? ''}
               buildingId={resolvedProperty.buildingId}
               currentLinkedSpaces={resolvedProperty.linkedSpaces ?? []}
               isEditing={isEditMode && !isSoldOrRented}
@@ -259,7 +259,7 @@ export function PropertyDetailsContent({
         isEditMode={isEditMode}
         onExitEditMode={handleExitEditMode}
         isCreatingNewUnit={isCreatingNewUnit}
-        onUnitCreated={onUnitCreated}
+        onPropertyCreated={onPropertyCreated}
         activeLevelId={activeLevelId}
         onActiveLevelChange={setActiveLevelId}
       />

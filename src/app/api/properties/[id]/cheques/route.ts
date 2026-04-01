@@ -16,7 +16,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ChequeRegistryService } from '@/services/cheque-registry.service';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateChequeSchema = z.object({
@@ -51,9 +51,9 @@ async function handleGet(
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/cheques' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/cheques' });
       try {
-        const result = await ChequeRegistryService.getChequesByUnit(propertyId);
+        const result = await ChequeRegistryService.getChequesByProperty(propertyId);
         if (!result.success) {
           return NextResponse.json({ success: false, error: result.error }, { status: 500 });
         }
@@ -82,7 +82,7 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/cheques' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/cheques' });
       try {
         const parsed = safeParseBody(CreateChequeSchema, await req.json());
         if (parsed.error) return parsed.error;

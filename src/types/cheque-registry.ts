@@ -59,7 +59,7 @@ export interface ChequeContext {
   type: ChequeContextType;
   entityId: string | null;
   projectId: string;
-  unitId: string | null;
+  propertyId: string | null;
   paymentPlanId: string | null;
   contactId: string | null;
   direction: ChequeDirection;
@@ -269,7 +269,7 @@ export interface BounceInput {
 export function createDefaultChequeRecord(
   chequeId: string,
   input: CreateChequeInput,
-  unitId: string,
+  propertyId: string,
   createdBy: string
 ): ChequeRecord {
   const now = new Date().toISOString();
@@ -308,9 +308,9 @@ export function createDefaultChequeRecord(
     replacesChequeId: null,
     context: {
       type: 'unit_sale',
-      entityId: unitId,
+      entityId: propertyId,
       projectId: input.projectId,
-      unitId,
+      propertyId,
       paymentPlanId: input.paymentPlanId ?? null,
       contactId: input.contactId ?? null,
       direction: 'incoming',

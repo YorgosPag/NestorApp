@@ -23,7 +23,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // =============================================================================
 
 interface TransactionChainCardProps {
-  unitId: string;
+  propertyId: string;
 }
 
 interface InvoiceSummary {
@@ -79,7 +79,7 @@ function getPaymentBadgeClass(status: string): string {
 // COMPONENT
 // =============================================================================
 
-export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
+export function TransactionChainCard({ propertyId }: TransactionChainCardProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -92,7 +92,7 @@ export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
     async function fetchInvoices() {
       try {
         const response = await apiClient.get<InvoiceListResponse>(
-          `${API_ROUTES.ACCOUNTING.INVOICES.LIST}?unitId=${encodeURIComponent(unitId)}`
+          `${API_ROUTES.ACCOUNTING.INVOICES.LIST}?propertyId=${encodeURIComponent(propertyId)}`
         );
         if (!cancelled && response.items) {
           setInvoices(response.items);
@@ -106,7 +106,7 @@ export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
 
     fetchInvoices();
     return () => { cancelled = true; };
-  }, [unitId]);
+  }, [propertyId]);
 
   // Μην εμφανίζεις τίποτα αν δεν υπάρχουν invoices
   if (loading || invoices.length === 0) return null;

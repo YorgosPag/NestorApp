@@ -87,8 +87,8 @@ export class FileDeliveryHandler implements ToolHandler {
 
     let mediaUrls: Array<{ url: string; mediaType: 'photo' | 'document'; filename: string; contentType: string }> = [];
 
-    if (sourceType === 'unit_photo') {
-      const resolved = await this.resolveUnitPhotos(db, sourceId, ctx.isAdmin, contact);
+    if (sourceType === 'property_photo') {
+      const resolved = await this.resolvePropertyPhotos(db, sourceId, ctx.isAdmin, contact);
       if (!Array.isArray(resolved)) return resolved;
       mediaUrls = resolved;
     } else if (sourceType === 'file') {
@@ -108,7 +108,7 @@ export class FileDeliveryHandler implements ToolHandler {
   // Source type resolvers
   // --------------------------------------------------------------------------
 
-  private async resolveUnitPhotos(
+  private async resolvePropertyPhotos(
     db: FirebaseFirestore.Firestore,
     sourceId: string,
     isAdmin: boolean,

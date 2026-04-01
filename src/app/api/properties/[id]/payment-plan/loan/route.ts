@@ -18,7 +18,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { LoanInfo } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -34,7 +34,7 @@ async function handlePatch(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payment-plan/loan' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loan' });
 
       try {
         const body = (await req.json()) as Partial<LoanInfo> & { planId: string };

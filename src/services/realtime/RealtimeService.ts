@@ -28,7 +28,7 @@ import {
   type RealtimeEventMap,
   REALTIME_EVENTS,
   type BuildingProjectLinkPayload,
-  type UnitBuildingLinkPayload,
+  type PropertyBuildingLinkPayload,
 } from './types';
 
 const logger = createModuleLogger('RealtimeService');
@@ -289,7 +289,7 @@ class RealtimeServiceCore {
     );
   }
 
-  dispatchUnitBuildingLinked(payload: UnitBuildingLinkPayload): void {
+  dispatchPropertyBuildingLinked(payload: PropertyBuildingLinkPayload): void {
     const event = new CustomEvent(REALTIME_EVENTS.UNIT_BUILDING_LINKED, {
       detail: payload,
       bubbles: true,

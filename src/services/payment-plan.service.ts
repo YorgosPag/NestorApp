@@ -127,7 +127,7 @@ export class PaymentPlanService {
         await syncPaymentSummary(input.propertyId, id);
       }
 
-      logger.info(`[PaymentPlanService] Created plan ${id} for unit ${input.propertyId}`);
+      logger.info(`[PaymentPlanService] Created plan ${id} for property ${input.propertyId}`);
       return { success: true, plan };
     } catch (error) {
       logger.error('[PaymentPlanService] Failed to create plan:', error);
@@ -141,7 +141,7 @@ export class PaymentPlanService {
   static getPaymentPlan = getPaymentPlan;
 
   static async createSplitPaymentPlans(
-    unitId: string,
+    propertyId: string,
     owners: Array<{ contactId: string; name: string; ownershipPct: number }>,
     baseInput: {
       buildingId: string;
@@ -175,7 +175,7 @@ export class PaymentPlanService {
         const result = await this.createPaymentPlan(
           {
             ...baseInput,
-            propertyId: unitId,
+            propertyId,
             ownerContactId: owner.contactId,
             ownerName: owner.name,
             totalAmount: ownerAmount,
@@ -192,9 +192,9 @@ export class PaymentPlanService {
         if (result.plan) createdPlans.push(result.plan);
       }
 
-      await syncAggregatedPaymentSummary(unitId);
+      await syncAggregatedPaymentSummary(propertyId);
 
-      logger.info(`[PaymentPlanService] Created ${createdPlans.length} split plans for unit ${unitId}`);
+      logger.info(`[PaymentPlanService] Created ${createdPlans.length} split plans for property ${propertyId}`);
       return { success: true, plans: createdPlans };
     } catch (error) {
       logger.error('[PaymentPlanService] Failed to create split plans:', error);
@@ -203,10 +203,10 @@ export class PaymentPlanService {
   }
 
   static async updatePaymentPlan(
-    unitId: string, planId: string, input: UpdatePaymentPlanInput, updatedBy: string
+    propertyId: string, planId: string, input: UpdatePaymentPlanInput, updatedBy: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const plan = await getPaymentPlan(unitId, planId);
+      const plan = await getPaymentPlan(propertyId, planId);
       if (!plan) return { success: false, error: 'Payment plan not found' };
 
       if (plan.status !== 'negotiation' && plan.status !== 'draft') {
@@ -223,7 +223,7 @@ export class PaymentPlanService {
       if (input.config !== undefined) updates.config = { ...plan.config, ...input.config };
 
       const db = getDb();
-      await db.collection(planCollectionPath(unitId)).doc(planId).update(updates);
+      await db.collection(planCollectionPath(propertyId)).doc(planId).update(updates);
 
       logger.info(`[PaymentPlanService] Updated plan ${planId}`);
       return { success: true };

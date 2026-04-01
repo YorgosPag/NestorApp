@@ -336,7 +336,7 @@ export default function TaskDetailPage() {
                 )}
               </section>
 
-              {(task.contactId || task.projectId || task.unitId) && (
+              {(task.contactId || task.projectId || task.propertyId) && (
                 <section className={`${quick.card} ${colors.bg.primary} ${spacing.padding.lg}`}>
                   <h2 className={`${typography.heading.md} ${colors.text.primary} ${spacing.margin.bottom.md}`}>{t('detail.sections.related')}</h2>
                   <dl className={spacing.spaceBetween.sm}>
@@ -360,12 +360,12 @@ export default function TaskDetailPage() {
                         </div>
                       </div>
                     )}
-                    {task.unitId && (
+                    {task.propertyId && (
                       <div className={layout.flexCenterGap2}>
                         <Home className={`${iconSizes.sm} ${colors.text.muted}`} />
                         <div>
-                          <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.unitId')}</dt>
-                          <dd className={`${typography.body.sm} ${colors.text.primary}`}>{task.unitId}</dd>
+                          <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.propertyId')}</dt>
+                          <dd className={`${typography.body.sm} ${colors.text.primary}`}>{task.propertyId}</dd>
                         </div>
                       </div>
                     )}

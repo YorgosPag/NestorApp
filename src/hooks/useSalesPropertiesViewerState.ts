@@ -18,7 +18,7 @@ import type { Property, CommercialStatus } from '@/types/property';
 export interface SalesFilterState {
   searchTerm: string;
   commercialStatus: CommercialStatus | 'all';
-  unitType: string;
+  propertyType: string;
   building: string;
   floor: string;
   priceRange: { min: number | null; max: number | null };
@@ -37,7 +37,7 @@ export type SalesViewMode = 'list' | 'grid';
 const DEFAULT_FILTERS: SalesFilterState = {
   searchTerm: '',
   commercialStatus: 'all',
-  unitType: 'all',
+  propertyType: 'all',
   building: 'all',
   floor: 'all',
   priceRange: { min: null, max: null },
@@ -56,12 +56,12 @@ export function useSalesPropertiesViewerState() {
   const [viewMode, setViewMode] = useState<SalesViewMode>('list');
   const [showDashboard, setShowDashboard] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [filters, setFilters] = useState<SalesFilterState>(DEFAULT_FILTERS);
 
   // Quick filters (dual row)
   const [selectedCommercialStatus, setSelectedCommercialStatus] = useState<string>('all');
-  const [selectedUnitType, setSelectedUnitType] = useState<string>('all');
+  const [selectedPropertyType, setSelectedPropertyType] = useState<string>('all');
 
   // =========================================================================
   // ALL UNITS — no pre-filtering; quick/advanced filters handle visibility
@@ -82,9 +82,9 @@ export function useSalesPropertiesViewerState() {
       result = result.filter(u => u.commercialStatus === selectedCommercialStatus);
     }
 
-    // Quick filter: unit type
-    if (selectedUnitType !== 'all') {
-      result = result.filter(u => u.type === selectedUnitType);
+    // Quick filter: property type
+    if (selectedPropertyType !== 'all') {
+      result = result.filter(u => u.type === selectedPropertyType);
     }
 
     // Advanced filter: commercial status (from AdvancedFiltersPanel)
@@ -92,9 +92,9 @@ export function useSalesPropertiesViewerState() {
       result = result.filter(u => u.commercialStatus === filters.commercialStatus);
     }
 
-    // Advanced filter: unit type
-    if (filters.unitType !== 'all') {
-      result = result.filter(u => u.type === filters.unitType);
+    // Advanced filter: property type
+    if (filters.propertyType !== 'all') {
+      result = result.filter(u => u.type === filters.propertyType);
     }
 
     // Advanced filter: building
@@ -135,7 +135,7 @@ export function useSalesPropertiesViewerState() {
     }
 
     return result;
-  }, [salesUnits, filters, selectedCommercialStatus, selectedUnitType]);
+  }, [salesUnits, filters, selectedCommercialStatus, selectedPropertyType]);
 
   // =========================================================================
   // DASHBOARD STATS (computed from salesUnits — not filtered)
@@ -167,13 +167,13 @@ export function useSalesPropertiesViewerState() {
   // =========================================================================
   // SELECTION
   // =========================================================================
-  const selectedUnit = useMemo(() => {
-    if (!selectedUnitId) return null;
-    return filteredUnits.find(u => u.id === selectedUnitId) ?? null;
-  }, [selectedUnitId, filteredUnits]);
+  const selectedProperty = useMemo(() => {
+    if (!selectedPropertyId) return null;
+    return filteredUnits.find(u => u.id === selectedPropertyId) ?? null;
+  }, [selectedPropertyId, filteredUnits]);
 
-  const handleSelectUnit = useCallback((unitId: string) => {
-    setSelectedUnitId(prev => prev === unitId ? null : unitId);
+  const handleSelectProperty = useCallback((propertyId: string) => {
+    setSelectedPropertyId(prev => prev === propertyId ? null : propertyId);
   }, []);
 
   // =========================================================================
@@ -186,7 +186,7 @@ export function useSalesPropertiesViewerState() {
   const clearAllFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
     setSelectedCommercialStatus('all');
-    setSelectedUnitType('all');
+    setSelectedPropertyType('all');
   }, []);
 
   return {
@@ -205,9 +205,9 @@ export function useSalesPropertiesViewerState() {
     setShowFilters,
 
     // Selection
-    selectedUnit,
-    selectedUnitId,
-    handleSelectUnit,
+    selectedProperty,
+    selectedPropertyId,
+    handleSelectProperty,
 
     // Filters
     filters,
@@ -217,8 +217,8 @@ export function useSalesPropertiesViewerState() {
     // Quick filters (dual row)
     selectedCommercialStatus,
     setSelectedCommercialStatus,
-    selectedUnitType,
-    setSelectedUnitType,
+    selectedPropertyType,
+    setSelectedPropertyType,
 
     // Dashboard
     dashboardStats,

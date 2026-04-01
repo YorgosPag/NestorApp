@@ -15,7 +15,7 @@ import { useSalesPropertiesViewerState } from '@/hooks/useSalesPropertiesViewerS
 import { SalesAvailableHeader } from '@/components/sales/page/SalesAvailableHeader';
 import { SalesSidebar } from '@/components/sales/sidebar/SalesSidebar';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import { AdvancedFiltersPanel, unitFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
+import { AdvancedFiltersPanel, propertyListFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import {
   ShoppingBag,
   DollarSign,
@@ -49,15 +49,15 @@ function SalesAvailableContent() {
     setShowDashboard,
     showFilters,
     setShowFilters,
-    selectedUnit,
-    selectedUnitId,
-    handleSelectUnit,
+    selectedProperty,
+    selectedPropertyId,
+    handleSelectProperty,
     filters,
     handleFiltersChange,
     selectedCommercialStatus,
     setSelectedCommercialStatus,
-    selectedUnitType,
-    setSelectedUnitType,
+    selectedPropertyType,
+    setSelectedPropertyType,
     dashboardStats,
     refetch,
   } = useSalesPropertiesViewerState();
@@ -154,7 +154,7 @@ function SalesAvailableContent() {
       {/* LAYER 3: Advanced Filters (mirrors /units page pattern) */}
       <div className="hidden md:block -mt-1">
         <AdvancedFiltersPanel
-          config={unitFiltersConfig}
+          config={propertyListFiltersConfig}
           filters={filters as unknown as UnitFilterState}
           onFiltersChange={handleAdvancedFiltersChange}
         />
@@ -164,7 +164,7 @@ function SalesAvailableContent() {
       {showFilters && (
         <div className="md:hidden"> {/* eslint-disable-line custom/no-hardcoded-strings */}
           <AdvancedFiltersPanel
-            config={unitFiltersConfig}
+            config={propertyListFiltersConfig}
             filters={filters as unknown as UnitFilterState}
             onFiltersChange={handleAdvancedFiltersChange}
             defaultOpen
@@ -177,13 +177,13 @@ function SalesAvailableContent() {
         {viewMode === 'list' ? (
           <SalesSidebar
             units={filteredUnits as Property[]}
-            selectedUnit={selectedUnit as Property | null}
-            onSelectUnit={handleSelectUnit}
-            selectedUnitId={selectedUnitId}
+            selectedProperty={selectedProperty as Property | null}
+            onSelectProperty={handleSelectProperty}
+            selectedPropertyId={selectedPropertyId}
             selectedCommercialStatus={selectedCommercialStatus}
             onCommercialStatusChange={setSelectedCommercialStatus}
-            selectedUnitType={selectedUnitType}
-            onUnitTypeChange={setSelectedUnitType}
+            selectedPropertyType={selectedPropertyType}
+            onPropertyTypeChange={setSelectedPropertyType}
             onDataMutated={refetch}
           />
         ) : (

@@ -183,7 +183,7 @@ export function usePublicPropertyViewer() {
   }, [publicProperties]);
 
   // Find selected unit
-  const selectedUnit = useMemo(() => {
+  const selectedProperty = useMemo(() => {
     if (selectedPropertyIds.length === 1) {
       return publicProperties.find(p => p.id === selectedPropertyIds[0]) || null;
     }
@@ -272,7 +272,7 @@ export function usePublicPropertyViewer() {
     selectedPropertyIds,
     hoveredPropertyId,
     selectedFloorId,
-    selectedUnit,
+    selectedProperty,
     currentFloor,
     
     // UI State

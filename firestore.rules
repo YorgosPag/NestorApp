@@ -610,7 +610,7 @@ service cloud.firestore {
     //    - CREATE/DELETE: Admin/server only (via Firebase Admin SDK)
     // 🔐 Invariants: project, buildingId, floorId, name, id cannot be changed by client
     // 📅 Implemented: 2026-01-24
-    match /units/{unitId} {
+    match /properties/{propertyId} {
       // 📖 READ: Tenant-scoped - only users from the project's company
       // 🔒 SECURITY: Prevents cross-tenant data leak
       allow read: if isAuthenticated()
@@ -628,7 +628,7 @@ service cloud.firestore {
       // 🔒 SECURITY LAYERS:
       //    1. Role gate: Must be company_admin or super_admin
       //    2. Tenant gate: Must belong to project's company
-      //    3. Field allowlist: Only unit fields can be updated (not structural fields)
+      //    3. Field allowlist: Only property fields can be updated (not structural fields)
       //    4. Invariants: Structural fields (project, buildingId, floorId, name, id) unchanged
       allow update: if isAuthenticated()
                     && (
@@ -637,8 +637,8 @@ service cloud.firestore {
                          // OR company admin of project's company with allowlist + invariants
                          || (
                               isCompanyAdminOfProject(resource.data.project)
-                              && isAllowedUnitFieldUpdate()
-                              && unitStructuralFieldsUnchanged()
+                              && isAllowedPropertyFieldUpdate()
+                              && propertyStructuralFieldsUnchanged()
                             )
                        );
 
@@ -650,8 +650,8 @@ service cloud.firestore {
     // 📦 STORAGE_UNITS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
-    // 🏢 ENTERPRISE: Storage units are a PARALLEL category to Units, not nested
-    // Architecture: Building → [Units | Storage | Parking] (parallel)
+    // 🏢 ENTERPRISE: Storage units are a PARALLEL category to Properties, not nested
+    // Architecture: Building → [Properties | Storage | Parking] (parallel)
     //
     // Security Model:
     //   - READ: Only users from the building's company (tenant-scoped)
@@ -3401,10 +3401,10 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🏠 UNIT FIELDS SECURITY HELPERS (2026-01-24)
+    // 🏠 PROPERTY FIELDS SECURITY HELPERS (2026-01-24, renamed 2026-04-01)
     // =========================================================================
-    // These helpers enable tenant-scoped access for units via project→company lookup
-    // Units don't have companyId directly - must lookup via project reference
+    // These helpers enable tenant-scoped access for properties via project→company lookup
+    // Properties don't have companyId directly - must lookup via project reference
 
     // Get companyId from a project document (for tenant isolation)
     // Usage: getProjectCompanyId(resource.data.project) where project is the project ID string
@@ -3444,11 +3444,11 @@ service cloud.firestore {
       return isSuperAdminOnly() || belongsToCompany(getBuildingCompanyId(buildingId));
     }
 
-    // Unit Fields allowlist - only these fields can be updated by non-super-admin users
+    // Property Fields allowlist - only these fields can be updated by non-super-admin users
     // 🏢 ENTERPRISE: Prevents modification of structural fields (project, id)
     // 📅 Updated 2026-01-24: Added 'name' to allowlist (rename is allowed for company admins)
-    // 📅 Updated 2026-01-24: Added buildingId, floorId, linkedSpaces for Unit Linking System
-    function isAllowedUnitFieldUpdate() {
+    // 📅 Updated 2026-01-24: Added buildingId, floorId, linkedSpaces for Property Linking System
+    function isAllowedPropertyFieldUpdate() {
       let allowedFields = [
         // Identity (editable by company admins)
         'name', 'description',
@@ -3472,12 +3472,12 @@ service cloud.firestore {
     }
 
     // Check that structural fields are not being modified (invariants)
-    // 🏢 ENTERPRISE: Prevents "re-tenanting" units via client update
+    // 🏢 ENTERPRISE: Prevents "re-tenanting" properties via client update
     // 📅 Updated 2026-01-24: Removed 'name' from invariants (rename is now allowed)
-    // 📅 Updated 2026-01-24: Removed buildingId/floorId from invariants (Unit Linking System)
-    //    - Units CAN be moved between buildings/floors within the SAME project
-    //    - Units CANNOT be moved to a different project (tenant isolation)
-    function unitStructuralFieldsUnchanged() {
+    // 📅 Updated 2026-01-24: Removed buildingId/floorId from invariants (Property Linking System)
+    //    - Properties CAN be moved between buildings/floors within the SAME project
+    //    - Properties CANNOT be moved to a different project (tenant isolation)
+    function propertyStructuralFieldsUnchanged() {
       return request.resource.data.project == resource.data.project
              && request.resource.data.id == resource.data.id;
     }

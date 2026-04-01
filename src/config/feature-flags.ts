@@ -18,7 +18,7 @@
  * ```typescript
  * import { isAppFeatureEnabled } from '@/config/feature-flags';
  *
- * if (isAppFeatureEnabled('UNIT_LINKING')) {
+ * if (isAppFeatureEnabled('PROPERTY_LINKING')) {
  *   // render unit linking UI
  * }
  * ```
@@ -34,7 +34,7 @@ export interface AppFeatureFlags {
    * @status ENABLED
    * @see ADR-025 Unit Linking System
    */
-  UNIT_LINKING: boolean;
+  PROPERTY_LINKING: boolean;
 
   /**
    * CRM Communications Module
@@ -80,7 +80,7 @@ export const APP_FEATURE_FLAGS: Readonly<AppFeatureFlags> = Object.freeze({
    *
    * @enabled 2026-01-24
    */
-  UNIT_LINKING: true,
+  PROPERTY_LINKING: true,
 
   /**
    * ✅ CRM Communications - Active
@@ -105,7 +105,7 @@ export const APP_FEATURE_FLAGS: Readonly<AppFeatureFlags> = Object.freeze({
  *
  * @example
  * ```tsx
- * if (isAppFeatureEnabled('UNIT_LINKING')) {
+ * if (isAppFeatureEnabled('PROPERTY_LINKING')) {
  *   return <BuildingSelectorCard />;
  * }
  * ```

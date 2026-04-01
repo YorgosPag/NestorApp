@@ -13,7 +13,7 @@ import '@/lib/design-system';
 interface StorageListProps {
   units: StorageUnit[];
   onEdit: (unit: StorageUnit) => void;
-  onDelete: (unitId: string) => void;
+  onDelete: (propertyId: string) => void;
   getStatusColor: (status: StorageStatus) => string;
   getStatusLabel: (status: StorageStatus) => string;
   getTypeIcon: (type: StorageType) => React.ElementType;
@@ -30,28 +30,28 @@ export function StorageList({
   getTypeLabel
 }: StorageListProps) {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+  const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
 
-  const handleSelectUnit = (unitId: string) => {
-    setSelectedUnits(prev => 
-      prev.includes(unitId) 
-        ? prev.filter(id => id !== unitId)
-        : [...prev, unitId]
+  const handleSelectProperty = (propertyId: string) => {
+    setSelectedProperties(prev => 
+      prev.includes(propertyId) 
+        ? prev.filter(id => id !== propertyId)
+        : [...prev, propertyId]
     );
   };
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-      setSelectedUnits(units.map(u => u.id));
+      setSelectedProperties(units.map(u => u.id));
     } else {
-      setSelectedUnits([]);
+      setSelectedProperties([]);
     }
   };
 
   const handleBulkDelete = () => {
     // A confirmation dialog would be ideal here in a real app
-    selectedUnits.forEach(unitId => onDelete(unitId));
-    setSelectedUnits([]);
+    selectedProperties.forEach(propertyId => onDelete(propertyId));
+    setSelectedProperties([]);
   };
 
   if (units.length === 0) {
@@ -62,7 +62,7 @@ export function StorageList({
     <div className="space-y-2">
       <StorageListHeader
         totalCount={units.length}
-        selectedCount={selectedUnits.length}
+        selectedCount={selectedProperties.length}
         onBulkDelete={handleBulkDelete}
         viewMode={viewMode}
         setViewMode={setViewMode}
@@ -71,8 +71,8 @@ export function StorageList({
       {viewMode === 'cards' ? (
         <StorageCardsView
           units={units}
-          selectedUnits={selectedUnits}
-          onSelectUnit={handleSelectUnit}
+          selectedProperties={selectedProperties}
+          onSelectProperty={handleSelectProperty}
           onEdit={onEdit}
           onDelete={onDelete}
           getStatusColor={getStatusColor}
@@ -83,8 +83,8 @@ export function StorageList({
       ) : (
         <StorageTableView
           units={units}
-          selectedUnits={selectedUnits}
-          onSelectUnit={handleSelectUnit}
+          selectedProperties={selectedProperties}
+          onSelectProperty={handleSelectProperty}
           onSelectAll={handleSelectAll}
           onEdit={onEdit}
           onDelete={onDelete}

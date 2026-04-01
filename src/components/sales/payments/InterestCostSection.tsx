@@ -26,7 +26,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // =============================================================================
 
 interface InterestCostSectionProps {
-  unitId: string;
+  propertyId: string;
   planInstallments?: Installment[];
   salePrice: number;
 }
@@ -52,7 +52,7 @@ function formatPercent(value: number): string {
 // =============================================================================
 
 export function InterestCostSection({
-  unitId,
+  propertyId,
   planInstallments,
   salePrice,
 }: InterestCostSectionProps) {
@@ -190,7 +190,7 @@ export function InterestCostSection({
       <InterestCostDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        unitId={unitId}
+        propertyId={propertyId}
         salePrice={salePrice}
         installments={planInstallments}
         rates={rates}

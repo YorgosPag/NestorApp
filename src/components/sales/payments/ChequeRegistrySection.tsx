@@ -27,14 +27,14 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // ============================================================================
 
 interface ChequeRegistrySectionProps {
-  unitId: string;
+  propertyId: string;
   projectId?: string;
   paymentPlanId?: string;
   contactId?: string;
 }
 
 export function ChequeRegistrySection({
-  unitId,
+  propertyId,
   projectId,
   paymentPlanId,
   contactId,
@@ -50,7 +50,7 @@ export function ChequeRegistrySection({
     transitionStatus,
     endorseCheque,
     bounceCheque,
-  } = useChequeRegistry(unitId);
+  } = useChequeRegistry(propertyId);
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailCheque, setDetailCheque] = useState<ChequeRecord | null>(null);

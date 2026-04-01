@@ -281,10 +281,10 @@ export async function validateLinkedSpacesUniqueness(
     .select('linkedSpaces')
     .get();
 
-  for (const unitDoc of snapshot.docs) {
-    if (unitDoc.id === currentUnitId) continue;
+  for (const propertyDoc of snapshot.docs) {
+    if (propertyDoc.id === currentUnitId) continue;
 
-    const linkedSpaces = unitDoc.data().linkedSpaces as
+    const linkedSpaces = propertyDoc.data().linkedSpaces as
       | Array<{ spaceId: string }> | undefined;
     if (!Array.isArray(linkedSpaces)) continue;
 
@@ -292,7 +292,7 @@ export async function validateLinkedSpacesUniqueness(
       if (spaceIds.has(space.spaceId)) {
         throw new ApiError(
           409,
-          `Space ${space.spaceId} is already linked to unit ${unitDoc.id}`
+          `Space ${space.spaceId} is already linked to property ${propertyDoc.id}`
         );
       }
     }

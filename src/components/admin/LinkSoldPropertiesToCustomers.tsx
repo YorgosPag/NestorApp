@@ -23,7 +23,7 @@ interface LinkingResult {
   message: string;
   linkedUnits: number;
   updates?: Array<{
-    unitId: string;
+    propertyId: string;
     contactId: string;
     contactName: string;
   }>;
@@ -143,7 +143,7 @@ export function LinkSoldPropertiesToCustomers() {
                     <div className="flex items-center gap-2">
                       <CheckCircle className={`${iconSizes.sm} text-green-600`} />
                       <span className="text-sm">
-                        <strong>{t('link.unitLabel')}:</strong> {update.unitId}
+                        <strong>{t('link.unitLabel')}:</strong> {update.propertyId}
                       </span>
                     </div>
                     <div className={cn("text-sm", colors.text.muted)}>

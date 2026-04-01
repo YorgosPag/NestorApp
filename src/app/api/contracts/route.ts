@@ -3,7 +3,7 @@
  * GET + POST /api/contracts — List & Create Legal Contracts
  * =============================================================================
  *
- * GET:  List contracts for a unit (?unitId=X)
+ * GET:  List contracts for a property (?propertyId=X)
  * POST: Create a new legal contract (preliminary/final/payoff)
  *
  * @module api/contracts
@@ -21,7 +21,7 @@ import type { CreateContractInput, ContractPhase } from '@/types/legal-contracts
 import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
-// GET — List Contracts for Unit
+// GET — List Contracts for Property
 // =============================================================================
 
 async function handleGet(request: NextRequest): Promise<NextResponse> {
@@ -29,16 +29,16 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { searchParams } = new URL(req.url);
-        const unitId = searchParams.get('unitId');
+        const propertyId = searchParams.get('propertyId');
 
-        if (!unitId) {
+        if (!propertyId) {
           return NextResponse.json(
-            { success: false, error: 'unitId query parameter is required' },
+            { success: false, error: 'propertyId query parameter is required' },
             { status: 400 }
           );
         }
 
-        const contracts = await LegalContractService.getContractsForUnit(unitId);
+        const contracts = await LegalContractService.getContractsForProperty(propertyId);
         return NextResponse.json({ success: true, data: contracts });
       } catch (error) {
         const message = getErrorMessage(error, 'Failed to list contracts');
@@ -67,9 +67,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       try {
         const body = (await req.json()) as CreateContractInput;
 
-        if (!body.unitId || !body.projectId || !body.buildingId || !body.primaryBuyerContactId) {
+        if (!body.propertyId || !body.projectId || !body.buildingId || !body.primaryBuyerContactId) {
           return NextResponse.json(
-            { success: false, error: 'unitId, projectId, buildingId, and primaryBuyerContactId are required' },
+            { success: false, error: 'propertyId, projectId, buildingId, and primaryBuyerContactId are required' },
             { status: 400 }
           );
         }

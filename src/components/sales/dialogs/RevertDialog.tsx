@@ -83,15 +83,15 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
         ? t('sales.dialogs.revert.creditReasonSale', { defaultValue: 'Ακύρωση πώλησης' })
         : t('sales.dialogs.revert.creditReasonReservation', { defaultValue: 'Ακύρωση κράτησης' });
 
-      const unitName = unit.name ?? unit.unitName ?? '';
+      const propertyName = unit.name ?? unit.propertyName ?? '';
       const lineItems = linkedSpaces.hasSpaces
-        ? linkedSpaces.buildLineItems(creditAmount, unitName)
+        ? linkedSpaces.buildLineItems(creditAmount, propertyName)
         : undefined;
 
       if (creditAmount > 0) {
         apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
           eventType: 'credit_invoice',
-          unitId: unit.id, unitName,
+          propertyId: unit.id, propertyName,
           projectId: resolveProjectId(unit) ?? null,
           buyerContactId: refundBuyerContactId,
           buyerName: refundBuyerName,

@@ -32,13 +32,13 @@ import { syncPaymentSummary } from './payment-plan-recording.service';
 // ============================================================================
 
 export async function resyncTotalAmount(
-  unitId: string,
+  propertyId: string,
   newSalePrice: number,
   updatedBy: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const db = getDb();
-    const activePlan = await getActivePaymentPlan(unitId);
+    const activePlan = await getActivePaymentPlan(propertyId);
     if (!activePlan) return { success: true };
     if (newSalePrice === activePlan.totalAmount) return { success: true };
     if (activePlan.status !== 'negotiation' && activePlan.status !== 'draft') {
@@ -46,8 +46,8 @@ export async function resyncTotalAmount(
       return { success: true };
     }
 
-    const planRef = db.collection(planCollectionPath(unitId)).doc(activePlan.id);
-    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
+    const planRef = db.collection(planCollectionPath(propertyId)).doc(activePlan.id);
+    const propertyRef = db.collection(COLLECTIONS.PROPERTIES).doc(propertyId);
 
     await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);
@@ -109,7 +109,7 @@ export async function resyncTotalAmount(
         updatedAt: new Date().toISOString(),
         updatedBy,
       });
-      tx.update(unitRef, { 'commercial.paymentSummary': summary });
+      tx.update(propertyRef, { 'commercial.paymentSummary': summary });
 
       logger.info(`[PaymentPlanService] Resynced plan ${plan.id}: ${oldTotal} → ${newTotal} (delta: ${delta})`);
     });
@@ -126,12 +126,12 @@ export async function resyncTotalAmount(
 // ============================================================================
 
 export async function deletePlan(
-  unitId: string,
+  propertyId: string,
   planId: string,
   deletedBy: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const plan = await getPaymentPlan(unitId, planId);
+    const plan = await getPaymentPlan(propertyId, planId);
     if (!plan) return { success: false, error: 'Payment plan not found' };
 
     if (plan.status !== 'negotiation' && plan.status !== 'draft') {
@@ -142,8 +142,8 @@ export async function deletePlan(
     }
 
     const db = getDb();
-    await db.collection(planCollectionPath(unitId)).doc(planId).delete();
-    await db.collection(COLLECTIONS.PROPERTIES).doc(unitId).update({
+    await db.collection(planCollectionPath(propertyId)).doc(planId).delete();
+    await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
       'commercial.paymentSummary': null,
       updatedAt: new Date().toISOString(),
     });
@@ -157,22 +157,22 @@ export async function deletePlan(
 }
 
 export async function activatePlan(
-  unitId: string, planId: string, updatedBy: string
+  propertyId: string, planId: string, updatedBy: string
 ): Promise<{ success: boolean; error?: string }> {
-  return transitionPlanStatus(unitId, planId, 'active', updatedBy);
+  return transitionPlanStatus(propertyId, planId, 'active', updatedBy);
 }
 
 export async function cancelPlan(
-  unitId: string, planId: string, updatedBy: string
+  propertyId: string, planId: string, updatedBy: string
 ): Promise<{ success: boolean; error?: string }> {
-  return transitionPlanStatus(unitId, planId, 'cancelled', updatedBy);
+  return transitionPlanStatus(propertyId, planId, 'cancelled', updatedBy);
 }
 
 async function transitionPlanStatus(
-  unitId: string, planId: string, targetStatus: PaymentPlanStatus, updatedBy: string
+  propertyId: string, planId: string, targetStatus: PaymentPlanStatus, updatedBy: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const plan = await getPaymentPlan(unitId, planId);
+    const plan = await getPaymentPlan(propertyId, planId);
     if (!plan) return { success: false, error: 'Payment plan not found' };
 
     if (!isValidPlanTransition(plan.status, targetStatus)) {
@@ -180,13 +180,13 @@ async function transitionPlanStatus(
     }
 
     const db = getDb();
-    await db.collection(planCollectionPath(unitId)).doc(planId).update({
+    await db.collection(planCollectionPath(propertyId)).doc(planId).update({
       status: targetStatus,
       updatedAt: new Date().toISOString(),
       updatedBy,
     });
 
-    await syncPaymentSummary(unitId, planId);
+    await syncPaymentSummary(propertyId, planId);
 
     logger.info(`[PaymentPlanService] Plan ${planId}: ${plan.status} → ${targetStatus}`);
     return { success: true };
@@ -201,13 +201,13 @@ async function transitionPlanStatus(
 // ============================================================================
 
 export async function addInstallment(
-  unitId: string, planId: string, input: CreateInstallmentInput,
+  propertyId: string, planId: string, input: CreateInstallmentInput,
   updatedBy: string, insertAtIndex?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const db = getDb();
-    const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
-    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
+    const planRef = db.collection(planCollectionPath(propertyId)).doc(planId);
+    const propertyRef = db.collection(COLLECTIONS.PROPERTIES).doc(propertyId);
 
     await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);
@@ -270,7 +270,7 @@ export async function addInstallment(
       const summary = computeSummaryFromPlan(updatedPlan, planId);
 
       tx.update(planRef, { installments: updatedInstallments, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: new Date().toISOString(), updatedBy });
-      tx.update(unitRef, { 'commercial.paymentSummary': summary });
+      tx.update(propertyRef, { 'commercial.paymentSummary': summary });
     });
 
     logger.info(`[PaymentPlanService] Added installment to plan ${planId}`);
@@ -282,13 +282,13 @@ export async function addInstallment(
 }
 
 export async function updateInstallment(
-  unitId: string, planId: string, index: number,
+  propertyId: string, planId: string, index: number,
   input: UpdateInstallmentInput, updatedBy: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const db = getDb();
-    const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
-    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
+    const planRef = db.collection(planCollectionPath(propertyId)).doc(planId);
+    const propertyRef = db.collection(COLLECTIONS.PROPERTIES).doc(propertyId);
 
     await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);
@@ -359,7 +359,7 @@ export async function updateInstallment(
       const summary = computeSummaryFromPlan(updatedPlan, planId);
 
       tx.update(planRef, { installments: updated, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: new Date().toISOString(), updatedBy });
-      tx.update(unitRef, { 'commercial.paymentSummary': summary });
+      tx.update(propertyRef, { 'commercial.paymentSummary': summary });
     });
 
     logger.info(`[PaymentPlanService] Updated installment #${index} in plan ${planId}`);
@@ -371,12 +371,12 @@ export async function updateInstallment(
 }
 
 export async function removeInstallment(
-  unitId: string, planId: string, index: number, updatedBy: string
+  propertyId: string, planId: string, index: number, updatedBy: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const db = getDb();
-    const planRef = db.collection(planCollectionPath(unitId)).doc(planId);
-    const unitRef = db.collection(COLLECTIONS.PROPERTIES).doc(unitId);
+    const planRef = db.collection(planCollectionPath(propertyId)).doc(planId);
+    const propertyRef = db.collection(COLLECTIONS.PROPERTIES).doc(propertyId);
 
     await db.runTransaction(async (tx) => {
       const planSnap = await tx.get(planRef);
@@ -432,7 +432,7 @@ export async function removeInstallment(
       const summary = computeSummaryFromPlan(updatedPlan, planId);
 
       tx.update(planRef, { installments: updated, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: new Date().toISOString(), updatedBy });
-      tx.update(unitRef, { 'commercial.paymentSummary': summary });
+      tx.update(propertyRef, { 'commercial.paymentSummary': summary });
     });
 
     logger.info(`[PaymentPlanService] Removed installment #${index} from plan ${planId}`);

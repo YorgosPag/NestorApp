@@ -30,7 +30,7 @@ jest.mock('@/config/firestore-collections', () => ({
   COLLECTIONS: {
     CONTACTS: 'contacts',
     APPOINTMENTS: 'appointments',
-    UNITS: 'units',
+    PROPERTIES: 'properties',
     BUILDINGS: 'buildings',
     AI_PIPELINE_AUDIT: 'ai_pipeline_audit',
   },
@@ -237,12 +237,12 @@ describe('UC-003 PropertySearchModule', () => {
     const result = await mod.lookup(ctx);
 
     const units = (result as Record<string, unknown>).matchingUnits as { id: string }[];
-    const unitIds = units.map(u => u.id);
+    const propertyIds = units.map(u => u.id);
 
     // sold and reserved should be excluded
-    expect(unitIds).toContain('unit_01');
-    expect(unitIds).not.toContain('unit_02');
-    expect(unitIds).not.toContain('unit_03');
+    expect(propertyIds).toContain('unit_01');
+    expect(propertyIds).not.toContain('unit_02');
+    expect(propertyIds).not.toContain('unit_03');
   });
 
   // ── PROPOSE ───────────────────────────────────────────────────────────────

@@ -191,12 +191,15 @@ export async function requireBuildingInTenant(params: {
 // ADR-255 SPEC-255B — Additional Entity Tenant Isolation
 // =============================================================================
 
-/** Minimal unit data required for tenant verification. */
-export interface TenantUnit {
+/** Minimal property data required for tenant verification. */
+export interface TenantProperty {
   companyId: string;
   name?: string;
   buildingId?: string;
 }
+
+/** @deprecated Use TenantProperty — kept for backward compatibility */
+export type TenantUnit = TenantProperty;
 
 /** Minimal storage data required for tenant verification. */
 export interface TenantStorage {
@@ -220,34 +223,34 @@ export interface TenantOpportunity {
 }
 
 /**
- * 🔒 Require unit to belong to authenticated user's tenant.
+ * 🔒 Require property to belong to authenticated user's tenant.
  */
-export async function requireUnitInTenant(params: {
+export async function requirePropertyInTenantScope(params: {
   ctx: AuthContext;
-  unitId: string;
+  propertyId: string;
   path: string;
-}): Promise<TenantUnit> {
-  const { ctx, unitId, path } = params;
+}): Promise<TenantProperty> {
+  const { ctx, propertyId, path } = params;
 
   if (!getAdminFirestore()) {
     throw new Error('Firebase Admin not initialized');
   }
 
-  const doc = await getAdminFirestore().collection(COLLECTIONS.PROPERTIES).doc(unitId).get();
+  const doc = await getAdminFirestore().collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
 
   if (!doc.exists) {
-    await logAuditEvent(ctx, 'access_denied', unitId, 'unit', {
-      metadata: { path, reason: 'Unit not found' },
+    await logAuditEvent(ctx, 'access_denied', propertyId, 'property', {
+      metadata: { path, reason: 'Property not found' },
     });
-    throw new TenantIsolationError('Unit not found', 404, 'NOT_FOUND');
+    throw new TenantIsolationError('Property not found', 404, 'NOT_FOUND');
   }
 
-  const data = doc.data() as TenantUnit | undefined;
+  const data = doc.data() as TenantProperty | undefined;
   const isSuperAdmin = isRoleBypass(ctx.globalRole);
 
   if (!isSuperAdmin) {
     if (!data?.companyId || data.companyId !== ctx.companyId) {
-      await logAuditEvent(ctx, 'access_denied', unitId, 'unit', {
+      await logAuditEvent(ctx, 'access_denied', propertyId, 'property', {
         metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
       });
       throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
@@ -255,6 +258,21 @@ export async function requireUnitInTenant(params: {
   }
 
   return data!;
+}
+
+/**
+ * @deprecated Use requirePropertyInTenantScope — kept for backward compatibility
+ */
+export async function requireUnitInTenant(params: {
+  ctx: AuthContext;
+  unitId: string;
+  path: string;
+}): Promise<TenantProperty> {
+  return requirePropertyInTenantScope({
+    ctx: params.ctx,
+    propertyId: params.unitId,
+    path: params.path,
+  });
 }
 
 /**
@@ -418,7 +436,7 @@ export async function filterSnapshotsByTenant(
 
   // Audit log denied access attempts (batch — one event for all denials)
   if (denied.length > 0) {
-    await logAuditEvent(ctx, 'access_denied', denied.join(','), 'unit', {
+    await logAuditEvent(ctx, 'access_denied', denied.join(','), 'property', {
       metadata: {
         path,
         reason: `Tenant isolation violation - ${denied.length} document(s) denied: ${denied.join(', ')}`,

@@ -78,7 +78,7 @@ export async function fetchInstallments(
     const data = doc.data();
     const projectId = (data.projectId as string) ?? '';
     const buildingId = (data.buildingId as string) ?? '';
-    const unitId = (data.unitId as string) ?? '';
+    const propertyId = (data.propertyId as string) ?? '';
 
     if (filter.projectId && projectId !== filter.projectId) continue;
     if (filter.buildingId && buildingId !== filter.buildingId) continue;
@@ -90,7 +90,7 @@ export async function fetchInstallments(
 
       installments.push({
         paymentPlanId: doc.id,
-        unitId,
+        propertyId,
         projectId,
         buildingId,
         amount: (inst.amount as number) ?? 0,

@@ -31,7 +31,7 @@ export type ContractPhase = 'preliminary' | 'final' | 'payoff';
 export type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'completed';
 
 /**
- * Νομική φάση μονάδας (denormalized στο Unit.commercial)
+ * Νομική φάση ακινήτου (denormalized στο Property.commercial)
  * Αντικατοπτρίζει τη σύνθεση phase + status στο υψηλότερο contract.
  */
 export type LegalPhase =
@@ -85,7 +85,7 @@ export const CONTRACT_PHASE_PREREQUISITES: Record<ContractPhase, ContractPhase |
 
 /**
  * Υπολογίζει τη LegalPhase από ContractPhase + ContractStatus.
- * Χρησιμοποιείται για denormalization στο unit.commercial.legalPhase.
+ * Χρησιμοποιείται για denormalization στο property.commercial.legalPhase.
  */
 export const LEGAL_PHASE_MAP: Record<ContractPhase, Partial<Record<ContractStatus, LegalPhase>>> = {
   preliminary: {
@@ -169,7 +169,7 @@ export interface LegalContract {
   id: string;
 
   // === Αναφορές ===
-  unitId: string;
+  propertyId: string;
   projectId: string;
   buildingId: string;
   /** Primary buyer contact ID (extracted from unit owners) */
@@ -211,7 +211,7 @@ export interface LegalContract {
  * Input για δημιουργία νέου contract.
  */
 export interface CreateContractInput {
-  unitId: string;
+  propertyId: string;
   projectId: string;
   buildingId: string;
   primaryBuyerContactId: string;

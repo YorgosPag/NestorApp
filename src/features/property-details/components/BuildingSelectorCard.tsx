@@ -58,7 +58,7 @@ interface FloorOption {
 
 interface BuildingSelectorCardProps {
   /** Unit ID για update */
-  unitId: string;
+  propertyId: string;
   /** Τρέχον buildingId (αν υπάρχει) */
   currentBuildingId?: string;
   /** Τρέχον floorId (αν υπάρχει) */
@@ -84,7 +84,7 @@ interface BuildingSelectorCardProps {
  * Χρησιμοποιεί Radix Select (ADR-001 canonical) και Firestore για persistence.
  */
 export function BuildingSelectorCard({
-  unitId,
+  propertyId,
   currentBuildingId,
   currentFloorId,
   onBuildingChanged,
@@ -255,8 +255,8 @@ export function BuildingSelectorCard({
 
   // 🏢 ENTERPRISE: Save to Firestore (Building + Floor)
   const handleSave = useCallback(async () => {
-    if (!unitId) {
-      logger.error('[BuildingSelectorCard] No unitId provided');
+    if (!propertyId) {
+      logger.error('[BuildingSelectorCard] No propertyId provided');
       return;
     }
 
@@ -271,17 +271,17 @@ export function BuildingSelectorCard({
       // 🔒 ADR-232: Use Admin SDK PATCH (Client SDK blocked by Firestore rules
       // which treat buildingId/floorId as structural invariants)
       const { updateProperty } = await import('@/services/properties.service');
-      await updateProperty(unitId, {
+      await updateProperty(propertyId, {
         buildingId: buildingIdToSave,
         floorId: floorIdToSave,
       } as Record<string, unknown>);
 
-      logger.info(`[BuildingSelectorCard] Unit ${unitId} linked to building ${buildingIdToSave}, floor ${floorIdToSave}`);
+      logger.info(`[BuildingSelectorCard] Unit ${propertyId} linked to building ${buildingIdToSave}, floor ${floorIdToSave}`);
       setSaveStatus('success');
 
       // 🏢 ENTERPRISE: Dispatch real-time event for Navigation updates
-      RealtimeService.dispatchUnitBuildingLinked({
-        unitId,
+      RealtimeService.dispatchPropertyBuildingLinked({
+        propertyId: propertyId,
         previousBuildingId: currentBuildingId || null,
         newBuildingId: buildingIdToSave,
         timestamp: Date.now(),
@@ -299,7 +299,7 @@ export function BuildingSelectorCard({
     } finally {
       setSaving(false);
     }
-  }, [unitId, draftBuildingId, draftFloorId, currentBuildingId, onBuildingChanged]);
+  }, [propertyId, draftBuildingId, draftFloorId, currentBuildingId, onBuildingChanged]);
 
   // 🏢 ENTERPRISE: Check if draft differs from props (no magic strings)
   const hasBuildingChanges = draftBuildingId !== currentBuildingId;

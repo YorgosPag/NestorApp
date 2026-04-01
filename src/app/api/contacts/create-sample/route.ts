@@ -150,7 +150,7 @@ interface CreateSampleSuccessResponse {
     readonly profession: string;
   }>;
   contactsCount: number;
-  updatedUnits: number;
+  updatedProperties: number;
   mapping: Record<string, string>;
 }
 
@@ -305,11 +305,11 @@ export const POST = withStandardRateLimit(
     logger.info('Updating units with new contact IDs');
 
     // Get all sold units that currently use old customer_xxx IDs
-    const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS)
+    const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.PROPERTIES)
       .where(FIELDS.STATUS, '==', 'sold')
       .get();
 
-    let updatedUnits = 0;
+    let updatedProperties = 0;
     const oldToNewMapping: { [oldId: string]: string } = {};
 
     // Create mapping from old IDs to new IDs
@@ -317,36 +317,36 @@ export const POST = withStandardRateLimit(
       oldToNewMapping[oldContactIds[i]] = contactIds[i];
     }
 
-    for (const unitDoc of unitsSnapshot.docs) {
-      const unitData = unitDoc.data();
-      const currentSoldTo = unitData.soldTo;
+    for (const propertyDoc of unitsSnapshot.docs) {
+      const propertyData = propertyDoc.data();
+      const currentSoldTo = propertyData.soldTo;
 
-      // If unit uses old customer_xxx ID, update it to new random ID
+      // If property uses old customer_xxx ID, update it to new random ID
       if (currentSoldTo && oldToNewMapping[currentSoldTo]) {
         const newContactId = oldToNewMapping[currentSoldTo];
 
         try {
-          await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unitDoc.id).update({
+          await getAdminFirestore().collection(COLLECTIONS.PROPERTIES).doc(propertyDoc.id).update({
             soldTo: newContactId
           });
 
-          logger.info('Updated unit contact reference', { unitId: unitDoc.id, from: currentSoldTo, to: newContactId });
-          updatedUnits++;
+          logger.info('Updated property contact reference', { propertyId: propertyDoc.id, from: currentSoldTo, to: newContactId });
+          updatedProperties++;
         } catch (error) {
-          logger.error('Failed to update unit', { unitId: unitDoc.id, error });
+          logger.error('Failed to update property', { propertyId: propertyDoc.id, error });
         }
       }
     }
 
-    logger.info('Updated units with new contact IDs', { updatedUnits });
+    logger.info('Updated properties with new contact IDs', { updatedProperties });
     logger.info('Successfully created contacts with proper random IDs', { count: createdContacts.length });
 
     return NextResponse.json({
       success: true,
-      message: `Successfully created ${createdContacts.length} real contacts with proper IDs and updated ${updatedUnits} units`,
+      message: `Successfully created ${createdContacts.length} real contacts with proper IDs and updated ${updatedProperties} properties`,
       contacts: createdContacts,
       contactsCount: createdContacts.length,
-      updatedUnits: updatedUnits,
+      updatedProperties: updatedProperties,
       mapping: oldToNewMapping
     });
 

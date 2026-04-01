@@ -47,20 +47,20 @@ interface ProjectCustomer {
   phone: string;
   mobile: string;
   contactType: 'individual' | 'company' | 'service';
-  unitsCount: number;
+  propertiesCount: number;
   totalValue: number;
-  averageUnitValue: number;
+  averagePropertyValue: number;
   purchaseDate: string;
   deliveryStatus: string;
-  unitsDetails: UnitSummary[];
+  propertiesDetails: PropertySummary[];
 }
 
-interface UnitSummary {
-  unitId: string;
-  unitNumber: string;
+interface PropertySummary {
+  propertyId: string;
+  propertyNumber: string;
   floor: number;
   areaSqm: number;
-  unitType: string;
+  propertyType: string;
   salePrice: number;
   saleDate: string;
   deliveryDate: string | null;
@@ -186,14 +186,14 @@ async function handleGetCustomers(
           COUNT(CASE WHEN u.delivery_date IS NOT NULL THEN 1 END) as delivered_units,
           COUNT(CASE WHEN u.delivery_date IS NULL AND u.status = 'sold' THEN 1 END) as pending_units,
 
-          -- Unit Details JSON Aggregation
+          -- Property Details JSON Aggregation
           JSON_AGG(
             JSON_BUILD_OBJECT(
-              'unitId', u.id,
-              'unitNumber', u.unit_number,
+              'propertyId', u.id,
+              'propertyNumber', u.unit_number,
               'floor', u.floor,
               'areaSqm', u.area_sqm,
-              'unitType', u.unit_type,
+              'propertyType', u.unit_type,
               'salePrice', u.sale_price,
               'saleDate', u.sale_date,
               'deliveryDate', u.delivery_date,
@@ -358,8 +358,8 @@ export async function getCustomerDetails(projectId: string, customerId: string) 
       c.*,
       JSON_AGG(
         JSON_BUILD_OBJECT(
-          'unitId', u.id,
-          'unitNumber', u.unit_number,
+          'propertyId', u.id,
+          'propertyNumber', u.unit_number,
           'buildingName', b.name,
           'floor', u.floor,
           'areaSqm', u.area_sqm,

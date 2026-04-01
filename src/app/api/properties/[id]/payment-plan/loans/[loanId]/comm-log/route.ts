@@ -16,7 +16,7 @@ import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import type { AddCommunicationLogInput } from '@/types/loan-tracking';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 
 type SegmentData = { params: Promise<{ id: string; loanId: string }> };
 
@@ -28,7 +28,7 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payment-plan/loans/[loanId]/comm-log' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loans/[loanId]/comm-log' });
 
       try {
         const body = (await req.json()) as AddCommunicationLogInput & { planId?: string };

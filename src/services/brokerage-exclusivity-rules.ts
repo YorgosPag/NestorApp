@@ -28,7 +28,7 @@ export function evaluateExclusivityRules(
   allAgreements: BrokerageAgreement[],
 ): ExclusivityValidationResult {
   try {
-    const { unitId, scope, exclusivity, excludeAgreementId } = input;
+    const { propertyId, scope, exclusivity, excludeAgreementId } = input;
     const today = new Date().toISOString().split('T')[0];
 
     const active = allAgreements.filter((a) => {
@@ -39,7 +39,7 @@ export function evaluateExclusivityRules(
     });
 
     const issues: ExclusivityValidationIssue[] = [];
-    const excludedUnitIds: string[] = [];
+    const excludedPropertyIds: string[] = [];
 
     const exclusiveProject = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'project');
     const exclusiveUnits = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'unit');
@@ -57,24 +57,24 @@ export function evaluateExclusivityRules(
       for (const c of exclusiveUnits) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityConflictUnitExclusive',
-          messageParams: { agentName: c.agentName, unitName: c.unitId ?? '' },
+          messageParams: { agentName: c.agentName, propertyName: c.propertyId ?? '' },
           conflictingAgreementId: c.id, conflictingAgentName: c.agentName,
         });
       }
       for (const existing of nonExclusiveUnits) {
-        if (existing.unitId) excludedUnitIds.push(existing.unitId);
+        if (existing.propertyId) excludedPropertyIds.push(existing.propertyId);
       }
-      if (excludedUnitIds.length > 0) {
+      if (excludedPropertyIds.length > 0) {
         issues.push({
           severity: 'warning', messageKey: 'sales.legal.exclusivityWarningExcludedUnits',
-          messageParams: { unitNames: excludedUnitIds.join(', ') },
+          messageParams: { propertyNames: excludedPropertyIds.join(', ') },
           conflictingAgreementId: null, conflictingAgentName: null,
         });
       }
     }
 
     // EXCLUSIVE + UNIT scope
-    if (exclusivity === 'exclusive' && scope === 'unit' && unitId) {
+    if (exclusivity === 'exclusive' && scope === 'unit' && propertyId) {
       for (const c of exclusiveProject) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityBlockedByProjectExclusive',
@@ -82,17 +82,17 @@ export function evaluateExclusivityRules(
           conflictingAgreementId: c.id, conflictingAgentName: c.agentName,
         });
       }
-      for (const c of exclusiveUnits.filter((a) => a.unitId === unitId)) {
+      for (const c of exclusiveUnits.filter((a) => a.propertyId === propertyId)) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityConflictSameUnit',
-          messageParams: { agentName: c.agentName, unitName: unitId },
+          messageParams: { agentName: c.agentName, propertyName: propertyId },
           conflictingAgreementId: c.id, conflictingAgentName: c.agentName,
         });
       }
-      for (const c of nonExclusiveUnits.filter((a) => a.unitId === unitId)) {
+      for (const c of nonExclusiveUnits.filter((a) => a.propertyId === propertyId)) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityBlockedByExistingUnit',
-          messageParams: { agentName: c.agentName, unitName: unitId },
+          messageParams: { agentName: c.agentName, propertyName: propertyId },
           conflictingAgreementId: c.id, conflictingAgentName: c.agentName,
         });
       }
@@ -110,7 +110,7 @@ export function evaluateExclusivityRules(
     }
 
     // NON-EXCLUSIVE + UNIT scope
-    if (exclusivity === 'non_exclusive' && scope === 'unit' && unitId) {
+    if (exclusivity === 'non_exclusive' && scope === 'unit' && propertyId) {
       for (const c of exclusiveProject) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.nonExclusiveBlockedByProjectExclusive',
@@ -118,10 +118,10 @@ export function evaluateExclusivityRules(
           conflictingAgreementId: c.id, conflictingAgentName: c.agentName,
         });
       }
-      for (const c of exclusiveUnits.filter((a) => a.unitId === unitId)) {
+      for (const c of exclusiveUnits.filter((a) => a.propertyId === propertyId)) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.nonExclusiveBlockedByUnitExclusive',
-          messageParams: { agentName: c.agentName, unitName: unitId },
+          messageParams: { agentName: c.agentName, propertyName: propertyId },
           conflictingAgreementId: c.id, conflictingAgentName: c.agentName,
         });
       }
@@ -131,7 +131,7 @@ export function evaluateExclusivityRules(
     const firstIssue = issues[0] ?? null;
 
     return {
-      canProceed: !hasErrors, issues, excludedUnitIds,
+      canProceed: !hasErrors, issues, excludedPropertyIds,
       valid: !hasErrors,
       conflictingAgreementId: firstIssue?.conflictingAgreementId ?? null,
       reason: firstIssue?.messageKey ?? null,
@@ -144,7 +144,7 @@ export function evaluateExclusivityRules(
         severity: 'error', messageKey: 'sales.legal.saveError', messageParams: {},
         conflictingAgreementId: null, conflictingAgentName: null,
       }],
-      excludedUnitIds: [], valid: false,
+      excludedPropertyIds: [], valid: false,
       conflictingAgreementId: null, reason: 'sales.legal.saveError',
     };
   }

@@ -145,7 +145,7 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
               size="sm"
               className="w-full justify-center gap-2 text-sm"
               onClick={() => {
-                window.location.href = `/properties?unitId=${unit.id}`;
+                window.location.href = `/properties?propertyId=${unit.id}`;
               }}
             >
               <ExternalLink className={iconSizes.sm} />

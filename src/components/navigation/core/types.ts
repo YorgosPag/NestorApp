@@ -116,7 +116,7 @@ export interface BreadcrumbSyncParams {
  * 🏢 ENTERPRISE: Navigation State
  *
  * ⚠️ CRITICAL CONTRACT FOR selected* FIELDS:
- * The `selectedCompany`, `selectedProject`, `selectedBuilding`, and `selectedUnit` fields
+ * The `selectedCompany`, `selectedProject`, `selectedBuilding`, and `selectedProperty` fields
  * are **DISPLAY-ONLY navigation selections** for breadcrumb/UI context.
  *
  * When populated via `syncBreadcrumb()`:
@@ -160,7 +160,7 @@ export interface NavigationState {
    * 🏢 ENTERPRISE: Selected unit/space for breadcrumb display.
    * ⚠️ DISPLAY-ONLY - contains only id, name, and optional type
    */
-  selectedUnit: NavigationSelectedUnit | null;
+  selectedProperty: NavigationSelectedUnit | null;
   /**
    * @deprecated 🏢 ENTERPRISE (Επιλογή Α): Floors αφαιρέθηκαν από navigation.
    * Παραμένει για backward compatibility - θα αφαιρεθεί σε μελλοντική έκδοση.
@@ -187,7 +187,7 @@ export interface NavigationActions {
   selectProject: (projectId: string) => void;
   selectBuilding: (buildingId: string) => void;
   /** 🏢 ENTERPRISE: Select unit for breadcrumb display */
-  selectUnit: (unit: NavigationSelectedUnit | null) => void;
+  selectProperty: (unit: NavigationSelectedUnit | null) => void;
   /**
    * 🏢 ENTERPRISE: Atomic breadcrumb sync from entity pages
    *

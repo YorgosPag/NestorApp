@@ -28,7 +28,7 @@ interface UseNavigationHandlersReturn {
   handleBuildingSelect: (buildingId: string) => void;
   /** @deprecated 🏢 ENTERPRISE: Floors αφαιρέθηκαν από navigation (Επιλογή Α) */
   handleFloorSelect: (floorId: string) => void;
-  handleUnitSelect: (unitId: string) => void;
+  handlePropertySelect: (propertyId: string) => void;
   handleNavigateToPage: (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => void;
 
   // Mobile navigation
@@ -89,7 +89,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     // No-op for mobile level change - floors removed from navigation
   };
 
-  const handleUnitSelect = (unitId: string) => {
+  const handlePropertySelect = (propertyId: string) => {
     if (isMobile) setMobileLevel('actions');
   };
 
@@ -139,7 +139,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     handleProjectSelect,
     handleBuildingSelect,
     handleFloorSelect,
-    handleUnitSelect,
+    handlePropertySelect,
     handleNavigateToPage,
     handleMobileBack,
     getMobileTitle,

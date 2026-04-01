@@ -36,7 +36,7 @@ export function TopOverdueCard({ data, loading }: TopOverdueCardProps) {
 
   const columns: ReportColumnDef<OverdueItem>[] = [
     {
-      key: 'unitName',
+      key: 'propertyName',
       header: t('executive.overdue.unit'),
       sortable: true,
     },

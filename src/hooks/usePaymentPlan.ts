@@ -86,7 +86,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 // HOOK
 // ============================================================================
 
-export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
+export function usePaymentPlan(propertyId: string | null): UsePaymentPlanReturn {
   const [plans, setPlans] = useState<PaymentPlan[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -101,7 +101,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
 
   // Fetch plan + payments
   const fetchData = useCallback(async () => {
-    if (!unitId) return;
+    if (!propertyId) return;
 
     setIsLoading(true);
     setError(null);
@@ -109,10 +109,10 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     try {
       const [planRes, paymentsRes] = await Promise.all([
         fetchJson<{ success: boolean; data: PaymentPlan | PaymentPlan[] | null }>(
-          API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId)
+          API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId)
         ),
         fetchJson<{ success: boolean; data: PaymentRecord[] }>(
-          API_ROUTES.PROPERTIES.PAYMENTS(unitId)
+          API_ROUTES.PROPERTIES.PAYMENTS(propertyId)
         ),
       ]);
 
@@ -129,7 +129,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [unitId]);
+  }, [propertyId]);
 
   useEffect(() => {
     fetchData();
@@ -138,10 +138,10 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
   // Create payment plan
   const createPlan = useCallback(
     async (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => {
-      if (!unitId) return { success: false, error: 'No unit selected' };
+      if (!propertyId) return { success: false, error: 'No property selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId),
+          API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -154,16 +154,16 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   // ADR-244: Create split plans (1 per owner)
   const createSplitPlans = useCallback(
     async (input: CreateSplitPlansInput) => {
-      if (!unitId) return { success: false, error: 'No unit selected' };
+      if (!propertyId) return { success: false, error: 'No property selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId),
+          API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -176,16 +176,16 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   // Update payment plan
   const updatePlan = useCallback(
     async (planId: string, updates: UpdatePaymentPlanInput) => {
-      if (!unitId) return { success: false, error: 'No unit selected' };
+      if (!propertyId) return { success: false, error: 'No property selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId),
+          API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -198,16 +198,16 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   // Record payment
   const recordPayment = useCallback(
     async (input: CreatePaymentInput) => {
-      if (!unitId) return { success: false, error: 'No unit selected' };
+      if (!propertyId) return { success: false, error: 'No property selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.PROPERTIES.PAYMENTS(unitId),
+          API_ROUTES.PROPERTIES.PAYMENTS(propertyId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -220,16 +220,16 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   // Add installment
   const addInstallment = useCallback(
     async (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) => {
-      if (!unitId) return { success: false, error: 'No unit selected' };
+      if (!propertyId) return { success: false, error: 'No property selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.PROPERTIES.INSTALLMENTS(unitId),
+          API_ROUTES.PROPERTIES.INSTALLMENTS(propertyId),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -242,16 +242,16 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   // Update installment
   const updateInstallment = useCallback(
     async (planId: string, index: number, updates: UpdateInstallmentInput) => {
-      if (!unitId) return { success: false, error: 'No unit selected' };
+      if (!propertyId) return { success: false, error: 'No property selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.PROPERTIES.INSTALLMENTS(unitId),
+          API_ROUTES.PROPERTIES.INSTALLMENTS(propertyId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -264,16 +264,16 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   // Remove installment
   const removeInstallment = useCallback(
     async (planId: string, index: number) => {
-      if (!unitId) return { success: false, error: 'No unit selected' };
+      if (!propertyId) return { success: false, error: 'No property selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.PROPERTIES.INSTALLMENTS(unitId),
+          API_ROUTES.PROPERTIES.INSTALLMENTS(propertyId),
           {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -286,16 +286,16 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   // Update loan info
   const updateLoan = useCallback(
     async (planId: string, loan: Partial<LoanInfo>) => {
-      if (!unitId) return { success: false, error: 'No unit selected' };
+      if (!propertyId) return { success: false, error: 'No property selected' };
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          API_ROUTES.PROPERTIES.LOAN(unitId),
+          API_ROUTES.PROPERTIES.LOAN(propertyId),
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -308,14 +308,14 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   const deletePlan = useCallback(
     async (planId: string) => {
       try {
         const data = await fetchJson<{ success: boolean; error?: string }>(
-          `${API_ROUTES.PROPERTIES.PAYMENT_PLAN(unitId!)}?planId=${encodeURIComponent(planId)}`,
+          `${API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId!)}?planId=${encodeURIComponent(planId)}`,
           { method: 'DELETE' }
         );
         if (data.success) await fetchData();
@@ -324,7 +324,7 @@ export function usePaymentPlan(unitId: string | null): UsePaymentPlanReturn {
         return { success: false, error: getErrorMessage(err) };
       }
     },
-    [unitId, fetchData]
+    [propertyId, fetchData]
   );
 
   return {

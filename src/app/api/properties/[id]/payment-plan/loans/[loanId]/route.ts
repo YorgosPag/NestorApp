@@ -16,7 +16,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import { LoanTrackingService } from '@/services/loan-tracking.service';
 import { getErrorMessage } from '@/lib/error-utils';
-import { requireUnitInTenant } from '@/lib/auth/tenant-isolation';
+import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { DISBURSEMENT_TYPES, COLLATERAL_TYPES, INTEREST_RATE_TYPES } from '@/types/loan-tracking';
 
@@ -65,7 +65,7 @@ async function handlePatch(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      await requireUnitInTenant({ ctx, unitId: propertyId, path: '/api/properties/[id]/payment-plan/loans/[loanId]' });
+      await requirePropertyInTenantScope({ ctx, propertyId: propertyId, path: '/api/properties/[id]/payment-plan/loans/[loanId]' });
 
       try {
         const parsed = safeParseBody(UpdateLoanSchema, await req.json());

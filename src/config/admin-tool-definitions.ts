@@ -97,8 +97,8 @@ FIELD NAMES ΓΙΑ update/remove:
 - phone, email, vatNumber, profession, birthDate, fatherName, taxOffice, address, registrationNumber, legalForm, employer, position, idNumber
 
 STATS TYPES ΓΙΑ get_business_stats:
-- unit_status: πόσα ακίνητα πωλημένα/διαθέσιμα/κρατημένα
-- unit_categories: κατηγορίες/τύποι ακινήτων (στούντιο, διαμέρισμα κλπ)
+- property_status: πόσα ακίνητα πωλημένα/διαθέσιμα/κρατημένα
+- property_categories: κατηγορίες/τύποι ακινήτων (στούντιο, διαμέρισμα κλπ)
 - contacts: στατιστικά επαφών (φυσικά πρόσωπα, εταιρείες)
 - projects: στατιστικά έργων
 - all: όλα μαζί`;
@@ -186,7 +186,7 @@ export const ADMIN_TOOL_DEFINITIONS: ToolFunctionDefinition[] = [
         statsType: {
           type: 'string',
           description: 'Τύπος στατιστικών.',
-          enum: ['unit_status', 'unit_categories', 'contacts', 'projects', 'all'] as const,
+          enum: ['property_status', 'property_categories', 'contacts', 'projects', 'all'] as const,
         },
         projectName: {
           type: ['string', 'null'] as const,
@@ -315,8 +315,8 @@ export function mapToolCallToAnalysisResult(
 
   // Special handling: get_business_stats → map statsType for UC-013
   // UC-013 uses 'units' internally, tool uses 'unit_status'
-  if (toolName === 'get_business_stats' && entities.statsType === 'unit_status') {
-    entities.statsType = 'units';
+  if (toolName === 'get_business_stats' && entities.statsType === 'property_status') {
+    entities.statsType = 'properties';
   }
 
   const timestamp = new Date().toISOString();

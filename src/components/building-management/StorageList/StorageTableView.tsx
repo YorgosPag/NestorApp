@@ -18,11 +18,11 @@ import '@/lib/design-system';
 
 interface StorageTableViewProps {
   units: StorageUnit[];
-  selectedUnits: string[];
-  onSelectUnit: (unitId: string) => void;
+  selectedProperties: string[];
+  onSelectProperty: (propertyId: string) => void;
   onSelectAll: (checked: boolean | 'indeterminate') => void;
   onEdit: (unit: StorageUnit) => void;
-  onDelete: (unitId: string) => void;
+  onDelete: (propertyId: string) => void;
   getStatusColor: (status: StorageStatus) => string;
   getStatusLabel: (status: StorageStatus) => string;
   getTypeIcon: (type: StorageType) => React.ElementType;
@@ -31,8 +31,8 @@ interface StorageTableViewProps {
 
 export function StorageTableView({
   units,
-  selectedUnits,
-  onSelectUnit,
+  selectedProperties,
+  onSelectProperty,
   onSelectAll,
   onEdit,
   onDelete,
@@ -43,8 +43,8 @@ export function StorageTableView({
 }: StorageTableViewProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
-  const allSelected = selectedUnits.length === units.length && units.length > 0;
-  const isIndeterminate = selectedUnits.length > 0 && !allSelected;
+  const allSelected = selectedProperties.length === units.length && units.length > 0;
+  const isIndeterminate = selectedProperties.length > 0 && !allSelected;
 
   return (
     <Card>
@@ -76,8 +76,8 @@ export function StorageTableView({
                 <StorageTableRow
                   key={unit.id}
                   unit={unit}
-                  isSelected={selectedUnits.includes(unit.id)}
-                  onSelectUnit={onSelectUnit}
+                  isSelected={selectedProperties.includes(unit.id)}
+                  onSelectProperty={onSelectProperty}
                   onEdit={onEdit}
                   onDelete={onDelete}
                   getStatusColor={getStatusColor}

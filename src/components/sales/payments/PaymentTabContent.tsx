@@ -211,7 +211,7 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
         <CreatePaymentPlanWizard
           open={wizardOpen}
           onOpenChange={setWizardOpen}
-          unitId={unit.id}
+          propertyId={unit.id}
           buildingId={unit.buildingId}
           projectId={resolvedProjectId}
           ownerContactId={buyerContactId}
@@ -331,18 +331,18 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
       )}
 
       {/* Loan Tracking (Phase 2 — SPEC-234C) */}
-      <LoanTrackingSection unitId={unit.id} />
+      <LoanTrackingSection propertyId={unit.id} />
 
       {/* Interest Cost Calculator (Phase 4 — SPEC-234E) */}
       <InterestCostSection
-        unitId={unit.id}
+        propertyId={unit.id}
         planInstallments={plan.installments}
         salePrice={plan.totalAmount}
       />
 
       {/* Cheque Registry (Phase 3 — SPEC-234A) */}
       <ChequeRegistrySection
-        unitId={unit.id}
+        propertyId={unit.id}
         projectId={resolvedProjectId}
         paymentPlanId={plan.id}
         contactId={buyerContactId}

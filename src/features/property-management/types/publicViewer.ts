@@ -124,7 +124,7 @@ export type PublicViewerHookShape = {
   selectedPropertyIds: string[];
   hoveredPropertyId: string | null;
   selectedFloorId: string | null;
-  selectedUnit: Property | null;
+  selectedProperty: Property | null;
   currentFloor: PublicFloorView | null;
 
   // display modes
@@ -148,7 +148,7 @@ export type PublicViewerHookShape = {
   // handlers (read-only)
   onHoverProperty: (propertyId: string | null) => void;
   onSelectFloor: (floorId: string | null) => void;
-  handleSelectUnit: (unit: Property) => void;
+  handleSelectProperty: (unit: Property) => void;
   handlePolygonSelect: (propertyId: string, isShiftClick: boolean) => void;
   setSelectedProperties: (ids: string[]) => void;
 

@@ -24,7 +24,7 @@ const CreateAgreementSchema = z.object({
   agentName: z.string().min(1).max(200),
   scope: z.enum(['project', 'unit']),
   projectId: z.string().min(1).max(128),
-  unitId: z.string().max(128).nullable().optional(),
+  propertyId: z.string().max(128).nullable().optional(),
   exclusivity: z.enum(['exclusive', 'non_exclusive', 'semi_exclusive']),
   commissionType: z.enum(['percentage', 'fixed', 'tiered']),
   commissionPercentage: z.number().min(0).max(100).nullable().optional(),

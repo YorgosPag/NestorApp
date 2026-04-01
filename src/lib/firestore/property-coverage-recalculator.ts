@@ -68,7 +68,7 @@ export async function recalculatePropertyCoverageFlag(
     // Check if any files still reference this property
     const snapshot = await db
       .collection(collection)
-      .where('unitId', '==', propertyId)
+      .where('propertyId', '==', propertyId)
       .select() // Only need existence check, not data
       .limit(1)
       .get();

@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import type { FilterFieldConfig } from './types';
-import { UNIT_AREA_RANGE_PRESETS } from './configs';
+import { PROPERTY_AREA_RANGE_PRESETS } from './configs';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -107,8 +107,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
 
         // 🏢 ENTERPRISE: Dropdown mode με predefined area values + custom input
         if (config.dropdownMode && config.id === 'areaRange') {
-          type AreaPresetId = (typeof UNIT_AREA_RANGE_PRESETS)[number]['id'];
-          const areaPresets = UNIT_AREA_RANGE_PRESETS.map((preset) => ({
+          type AreaPresetId = (typeof PROPERTY_AREA_RANGE_PRESETS)[number]['id'];
+          const areaPresets = PROPERTY_AREA_RANGE_PRESETS.map((preset) => ({
             ...preset,
             min: preset.min === null ? undefined : preset.min,
             max: preset.max === null ? undefined : preset.max,

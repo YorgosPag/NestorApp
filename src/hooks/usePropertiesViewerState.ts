@@ -18,7 +18,7 @@ const noop = () => {};
 
 export function usePropertiesViewerState() {
   const searchParams = useSearchParams();
-  const unitIdFromUrl = searchParams.get('unitId');
+  const propertyIdFromUrl = searchParams.get('propertyId');
   
   const {
     properties,
@@ -84,43 +84,43 @@ export function usePropertiesViewerState() {
 
   // 🏢 ENTERPRISE: Auto-selection from URL parameter (contextual navigation)
   useEffect(() => {
-    if (unitIdFromUrl && properties.length > 0 && setSelectedProperties) {
-      const unitExists = properties.some(p => p.id === unitIdFromUrl);
-      if (unitExists) {
-        setSelectedProperties([unitIdFromUrl]);
+    if (propertyIdFromUrl && properties.length > 0 && setSelectedProperties) {
+      const propertyExists = properties.some(p => p.id === propertyIdFromUrl);
+      if (propertyExists) {
+        setSelectedProperties([propertyIdFromUrl]);
         // Also select the correct floor
-        const unit = properties.find(p => p.id === unitIdFromUrl);
-        if (unit?.floorId && onSelectFloor) {
-            onSelectFloor(unit.floorId);
+        const property = properties.find(p => p.id === propertyIdFromUrl);
+        if (property?.floorId && onSelectFloor) {
+            onSelectFloor(property.floorId);
         }
       } else {
-        logger.warn('Unit not found in properties', { unitId: unitIdFromUrl });
+        logger.warn('Property not found in properties', { propertyId: propertyIdFromUrl });
       }
     }
-  }, [unitIdFromUrl, properties, setSelectedProperties, onSelectFloor]);
+  }, [propertyIdFromUrl, properties, setSelectedProperties, onSelectFloor]);
 
   const safeProperties = Array.isArray(properties) ? properties : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
   const safeFloors = Array.isArray(floors) ? floors : [];
 
-  const selectedUnit = useMemo(() => {
+  const selectedProperty = useMemo(() => {
     const safeSelectedPropertyIds = Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [];
     if (safeSelectedPropertyIds.length === 1) {
-      const unit = safeProperties.find(p => p.id === safeSelectedPropertyIds[0]);
-      if (unit && unit.soldTo && allContactIds.length > 0) {
+      const property = safeProperties.find(p => p.id === safeSelectedPropertyIds[0]);
+      if (property && property.soldTo && allContactIds.length > 0) {
         return {
-          ...unit,
-          buyerMismatch: !allContactIds.includes(unit.soldTo),
+          ...property,
+          buyerMismatch: !allContactIds.includes(property.soldTo),
         };
       }
-      return unit;
+      return property;
     }
     return null;
   }, [selectedPropertyIds, safeProperties, allContactIds]);
 
-  const handleSelectUnit = (unit: Property) => {
+  const handleSelectProperty = (property: Property) => {
     if (setSelectedProperties) {
-      setSelectedProperties([unit.id]);
+      setSelectedProperties([property.id]);
     }
   };
   
@@ -337,8 +337,8 @@ export function usePropertiesViewerState() {
     handleFiltersChange,
     filteredProperties: safeFilteredProperties,
     dashboardStats,
-    selectedUnit,
-    handleSelectUnit,
+    selectedProperty,
+    handleSelectProperty,
     handlePolygonSelect,
     handlePolygonCreated,
     handlePolygonUpdated,

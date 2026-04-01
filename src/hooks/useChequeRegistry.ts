@@ -63,12 +63,12 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 // HOOK
 // ============================================================================
 
-export function useChequeRegistry(unitId: string | null): UseChequeRegistryReturn {
+export function useChequeRegistry(propertyId: string | null): UseChequeRegistryReturn {
   const [cheques, setCheques] = useState<ChequeRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const basePath = unitId ? API_ROUTES.PROPERTIES.CHEQUES(unitId) : null;
+  const basePath = propertyId ? API_ROUTES.PROPERTIES.CHEQUES(propertyId) : null;
 
   // Fetch cheques
   const fetchData = useCallback(async () => {
@@ -94,7 +94,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
   // Create cheque
   const createCheque = useCallback(
     async (input: CreateChequeInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
+      if (!basePath) return { success: false, error: 'No property selected' };
       try {
         const res = await fetchJson<{ success: boolean; error?: string }>(basePath, {
           method: 'POST',
@@ -113,7 +113,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
   // Update cheque
   const updateCheque = useCallback(
     async (chequeId: string, input: UpdateChequeInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
+      if (!basePath) return { success: false, error: 'No property selected' };
       try {
         const res = await fetchJson<{ success: boolean; error?: string }>(
           `${basePath}/${chequeId}`,
@@ -135,7 +135,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
   // Transition status
   const transitionStatus = useCallback(
     async (chequeId: string, input: ChequeTransitionInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
+      if (!basePath) return { success: false, error: 'No property selected' };
       try {
         const res = await fetchJson<{ success: boolean; error?: string }>(
           `${basePath}/${chequeId}/transition`,
@@ -157,7 +157,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
   // Endorse cheque
   const endorseCheque = useCallback(
     async (chequeId: string, input: EndorseInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
+      if (!basePath) return { success: false, error: 'No property selected' };
       try {
         const res = await fetchJson<{ success: boolean; error?: string }>(
           `${basePath}/${chequeId}/endorse`,
@@ -179,7 +179,7 @@ export function useChequeRegistry(unitId: string | null): UseChequeRegistryRetur
   // Bounce cheque
   const bounceCheque = useCallback(
     async (chequeId: string, input: BounceInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
+      if (!basePath) return { success: false, error: 'No property selected' };
       try {
         const res = await fetchJson<{ success: boolean; error?: string }>(
           `${basePath}/${chequeId}/bounce`,

@@ -26,7 +26,7 @@ interface UseEntityCodeSuggestionParams {
   entityType: 'unit' | 'parking' | 'storage';
   buildingId: string;
   floorLevel: number | '';
-  unitType?: PropertyType | '';
+  propertyType?: PropertyType | '';
   locationZone?: ParkingLocationZone | '';
   /** If true, the hook will not auto-fetch (user has overridden the code) */
   disabled?: boolean;
@@ -55,7 +55,7 @@ export function useEntityCodeSuggestion({
   entityType,
   buildingId,
   floorLevel,
-  unitType,
+  propertyType,
   locationZone,
   disabled = false,
 }: UseEntityCodeSuggestionParams): UseEntityCodeSuggestionReturn {
@@ -76,8 +76,8 @@ export function useEntityCodeSuggestion({
       return;
     }
 
-    // For units, need unitType; for parking, locationZone is optional
-    if (entityType === 'unit' && !unitType) {
+    // For units, need propertyType; for parking, locationZone is optional
+    if (entityType === 'unit' && !propertyType) {
       setSuggestedCode(null);
       return;
     }
@@ -94,7 +94,7 @@ export function useEntityCodeSuggestion({
         floorLevel: String(floorLevel === '' ? 0 : floorLevel),
       });
 
-      if (unitType) params.set('unitType', unitType);
+      if (propertyType) params.set('propertyType', propertyType);
       if (locationZone) params.set('locationZone', locationZone);
 
       const result = await apiClient.get<SuggestApiResponse>(
@@ -115,7 +115,7 @@ export function useEntityCodeSuggestion({
         setIsLoading(false);
       }
     }
-  }, [entityType, buildingId, floorLevel, unitType, locationZone]);
+  }, [entityType, buildingId, floorLevel, propertyType, locationZone]);
 
   // Debounced effect — triggers on dependency changes
   useEffect(() => {

@@ -178,7 +178,8 @@ See implementation plan for full file list (~100 files).
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-31 | ADR created | Claude Code |
-| 2026-04-01 | Implementation complete — all 8 phases executed, ~200 files renamed. 21 pre-existing oversized files have changes on disk but pending commit. | Claude Code |
+| 2026-04-01 | Phase 1: Implementation complete — all 8 phases executed, ~200 files renamed (types, services, routes, components, i18n, navigation, AI pipeline). | Claude Code |
+| 2026-04-01 | Phase 2: Cross-reference fields rename — unitId→propertyId, unitName→propertyName, selectedUnit→selectedProperty, UNIT_*→PROPERTY_* constants, and ~30 other patterns across ~150 files. Clean rename (no backward-compat mapping — dev data only). Remaining `unitId` refs are: dxf-viewer (measurement units), database migrations (historical), auth layer (deprecated aliases), booking-codec (deprecated alias). | Claude Code |
 
 ---
 

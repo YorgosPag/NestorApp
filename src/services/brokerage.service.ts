@@ -96,7 +96,7 @@ export class BrokerageService {
         agentName: input.agentName,
         scope: input.scope,
         projectId: input.projectId,
-        unitId: input.unitId ?? null,
+        propertyId: input.propertyId ?? null,
         exclusivity: input.exclusivity,
         commissionType: input.commissionType,
         commissionPercentage: input.commissionPercentage ?? null,
@@ -131,7 +131,7 @@ export class BrokerageService {
     id: string,
     updates: Partial<Pick<BrokerageAgreement,
       'exclusivity' | 'commissionType' | 'commissionPercentage' |
-      'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'unitId'
+      'commissionFixedAmount' | 'startDate' | 'endDate' | 'notes' | 'scope' | 'propertyId'
     >>,
     _updatedBy: string
   ): Promise<{ success: boolean; error?: string; validation?: ExclusivityValidationResult }> {
@@ -185,11 +185,11 @@ export class BrokerageService {
   // ==========================================================================
 
   /**
-   * Λίστα μεσιτικών συμβάσεων για project/unit.
+   * Λίστα μεσιτικών συμβάσεων για project/property.
    */
   static async getAgreements(
     projectId: string,
-    unitId?: string | null,
+    propertyId?: string | null,
     status?: BrokerageStatus
   ): Promise<BrokerageAgreement[]> {
     try {
@@ -198,8 +198,8 @@ export class BrokerageService {
         where('projectId', '==', projectId)
       );
 
-      if (unitId) {
-        q = query(q, where('unitId', '==', unitId));
+      if (propertyId) {
+        q = query(q, where('propertyId', '==', propertyId));
       }
 
       if (status) {
@@ -267,7 +267,7 @@ export class BrokerageService {
         brokerageAgreementId: input.brokerageAgreementId,
         agentContactId: input.agentContactId,
         agentName: input.agentName,
-        unitId: input.unitId,
+        propertyId: input.propertyId,
         projectId: input.projectId,
         primaryBuyerContactId: input.primaryBuyerContactId,
         salePrice: input.salePrice,
@@ -295,13 +295,13 @@ export class BrokerageService {
   // ==========================================================================
 
   /**
-   * Ανάκτηση commission records για unit.
+   * Ανάκτηση commission records για property.
    */
-  static async getCommissions(unitId: string): Promise<CommissionRecord[]> {
+  static async getCommissions(propertyId: string): Promise<CommissionRecord[]> {
     try {
       const q = query(
         collection(db, COLLECTIONS.COMMISSION_RECORDS),
-        where('unitId', '==', unitId)
+        where('propertyId', '==', propertyId)
       );
       const snapshot = await getDocs(q);
       return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as CommissionRecord);

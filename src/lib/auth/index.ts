@@ -42,7 +42,9 @@ export type {
 
   // Document types
   ProjectMember,
+  PropertyOwner,
   UnitOwner,
+  PropertyGrant,
   UnitGrant,
   AuditLogEntry,
   AuditChangeValue,
@@ -183,6 +185,7 @@ export {
 export type {
   TenantProject,
   TenantBuilding,
+  TenantProperty,
   TenantUnit,
   TenantStorage,
   TenantParking,
@@ -193,6 +196,7 @@ export {
   TenantIsolationError,
   requireProjectInTenant,
   requireBuildingInTenant,
+  requirePropertyInTenantScope,
   requireUnitInTenant,
   requireStorageInTenant,
   requireParkingInTenant,

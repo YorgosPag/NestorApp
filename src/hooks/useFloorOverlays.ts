@@ -45,7 +45,7 @@ interface RawFloorOverlayItem {
   status?: PropertyStatus;
   label?: string;
   linked?: {
-    unitId?: string;
+    propertyId?: string;
     parkingId?: string;
     storageId?: string;
   };

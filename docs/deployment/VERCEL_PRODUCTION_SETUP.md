@@ -251,7 +251,7 @@ export function ensureAdminInitialized(): void {
 ### Step 1: Check Vercel Function Logs
 
 1. **Vercel Dashboard → Project → Logs**
-2. **Filter by Function**: Select `/api/audit/bootstrap`
+2. **Filter by Function**: Select `/api/projects/bootstrap`
 3. **Look for initialization logs**:
    - ✅ `✅ [Firebase Admin] SDK initialized successfully`
    - ❌ `❌ [Firebase Admin] CRITICAL: FIREBASE_SERVICE_ACCOUNT_KEY not found`
@@ -260,7 +260,7 @@ export function ensureAdminInitialized(): void {
 
 Open browser and navigate to:
 ```
-https://nestor-app.vercel.app/api/audit/bootstrap
+https://nestor-app.vercel.app/api/projects/bootstrap
 ```
 
 **Expected Response (Success):**
@@ -289,7 +289,7 @@ https://nestor-app.vercel.app/api/audit/bootstrap
 
 ### Step 3: Test UI Navigation
 
-1. **Navigate to**: https://nestor-app.vercel.app/audit
+1. **Navigate to**: https://nestor-app.vercel.app/projects
 2. **Check Console** for errors
 3. **Verify**: Companies and projects load without HTTP 500 errors
 
@@ -445,7 +445,7 @@ Our centralized configuration (`src/config/environment-security-config.ts`):
 - **Local Development Setup**: [ENV_SETUP_INSTRUCTIONS.md](../../ENV_SETUP_INSTRUCTIONS.md)
 - **Environment Security Config**: [src/config/environment-security-config.ts](../../src/config/environment-security-config.ts)
 - **Firebase Admin SDK**: [src/lib/firebaseAdmin.ts](../../src/lib/firebaseAdmin.ts)
-- **Bootstrap API**: [src/app/api/audit/bootstrap/route.ts](../../src/app/api/audit/bootstrap/route.ts)
+- **Bootstrap API**: [src/app/api/projects/bootstrap/route.ts](../../src/app/api/projects/bootstrap/route.ts)
 - **ADR-024**: Environment Security Configuration System
 - **Vercel Documentation**: https://vercel.com/docs/environment-variables
 
@@ -469,10 +469,10 @@ vercel --prod
 vercel logs --prod
 
 # Test Bootstrap API locally
-curl http://localhost:3000/api/audit/bootstrap
+curl http://localhost:3000/api/projects/bootstrap
 
 # Test Bootstrap API production
-curl https://nestor-app.vercel.app/api/audit/bootstrap
+curl https://nestor-app.vercel.app/api/projects/bootstrap
 ```
 
 ### Vercel CLI Setup (Optional)

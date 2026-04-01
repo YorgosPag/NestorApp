@@ -201,7 +201,7 @@ export interface Conversation {
     contactId?: string;
     leadId?: string;
     projectId?: string;
-    unitId?: string;
+    propertyId?: string;
   };
 
   /** Audit trail */

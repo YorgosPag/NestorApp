@@ -191,7 +191,7 @@ export function TaskCard({
         },
         
         // Related entities
-        (task.contactId || task.projectId || task.unitId) && {
+        (task.contactId || task.projectId || task.propertyId) && {
           title: t('card.sections.related'),
           content: (
             <div className="space-y-1 text-sm">
@@ -207,10 +207,10 @@ export function TaskCard({
                   <span className="text-xs">Project: {task.projectId}</span>
                 </div>
               )}
-              {task.unitId && (
+              {task.propertyId && (
                 <div className="flex items-center gap-2">
                   <MapPin className={`${iconSizes.xs} ${colors.text.muted}`} />
-                  <span className="text-xs">Unit: {task.unitId}</span>
+                  <span className="text-xs">Unit: {task.propertyId}</span>
                 </div>
               )}
             </div>

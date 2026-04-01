@@ -183,7 +183,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
 
   // =========================================================================
   // 🏢 ENTERPRISE RBAC: Unified authorization logic
-  // Same pattern as /api/audit/bootstrap (SAP/Salesforce standard)
+  // Same pattern as /api/projects/bootstrap (SAP/Salesforce standard)
   // =========================================================================
   const isAdmin = ctx.globalRole === 'super_admin' || ctx.globalRole === 'company_admin';
 
@@ -236,7 +236,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
     } else {
       // =====================================================================
       // 🔒 TENANT ISOLATION: Internal user sees only their company
-      // Same logic as /api/audit/bootstrap for non-admins
+      // Same logic as /api/projects/bootstrap for non-admins
       // =====================================================================
       logger.info('API: Tenant isolation mode - Loading user company only', { globalRole: ctx.globalRole });
 

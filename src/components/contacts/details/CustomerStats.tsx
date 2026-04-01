@@ -20,7 +20,7 @@ interface CustomerStatsProps {
 }
 
 interface Stats {
-  unitsCount: number;
+  propertiesCount: number;
   totalArea: number;
   totalValue: number;
 }
@@ -42,10 +42,10 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
       try {
         const units = await getPropertiesByOwner(contactId);
         if (units.length > 0) {
-            const unitsCount = units.length;
+            const propertiesCount = units.length;
             const totalArea = units.reduce((sum, unit) => sum + (unit.area || 0), 0);
             const totalValue = units.reduce((sum, unit) => sum + (unit.price || 0), 0);
-            setStats({ unitsCount, totalArea, totalValue });
+            setStats({ propertiesCount, totalArea, totalValue });
         } else {
             setStats(null);
         }
@@ -70,8 +70,8 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
 
   const dashboardStats: DashboardStat[] = [
     {
-      title: t('stats.unitsCount'),
-      value: stats.unitsCount,
+      title: t('stats.propertiesCount'),
+      value: stats.propertiesCount,
       icon: UnitIcon,
       color: 'blue',
     },

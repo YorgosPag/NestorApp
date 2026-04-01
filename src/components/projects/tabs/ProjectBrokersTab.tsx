@@ -56,7 +56,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
 
   const hook = useBrokerageAgreements(projectId, t);
 
-  const unitNameMap = useMemo(
+  const propertyNameMap = useMemo(
     () => new Map(hook.units.map((u) => [u.id, u.name])),
     [hook.units]
   );
@@ -97,7 +97,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
           isEditMode={hook.isEditMode}
           projectName={projectName}
           units={hook.units}
-          unitNameMap={unitNameMap}
+          propertyNameMap={propertyNameMap}
           saving={hook.saving}
           canSave={hook.canSave}
           formError={hook.formError}
@@ -142,7 +142,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
                 key={a.id}
                 agreement={a}
                 t={t}
-                unitName={null}
+                propertyName={null}
                 onEdit={() => hook.handleEdit(a)}
                 onTerminate={() => hook.setTerminatingId(a.id)}
                 onRenew={() => { hook.setRenewingId(a.id); hook.setRenewDate(''); }}
@@ -178,7 +178,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
                 key={a.id}
                 agreement={a}
                 t={t}
-                unitName={a.unitId ? unitNameMap.get(a.unitId) ?? a.unitId : null}
+                propertyName={a.propertyId ? propertyNameMap.get(a.propertyId) ?? a.propertyId : null}
                 onEdit={() => hook.handleEdit(a)}
                 onTerminate={() => hook.setTerminatingId(a.id)}
                 onRenew={() => { hook.setRenewingId(a.id); hook.setRenewDate(''); }}

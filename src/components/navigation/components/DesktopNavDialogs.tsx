@@ -57,11 +57,11 @@ interface DesktopNavDialogsProps {
   onConfirmBuildingUnlink: () => void;
 
   // Unit unlink dialog
-  unitDialogOpen: boolean;
-  onUnitDialogChange: (open: boolean) => void;
-  pendingUnlinkUnit: PendingEntity | null;
-  onClearPendingUnit: () => void;
-  onConfirmUnitUnlink: () => void;
+  propertyDialogOpen: boolean;
+  onPropertyDialogChange: (open: boolean) => void;
+  pendingUnlinkProperty: PendingEntity | null;
+  onClearPendingProperty: () => void;
+  onConfirmPropertyUnlink: () => void;
 
   // Connection modals
   isProjectModalOpen: boolean;
@@ -76,9 +76,9 @@ interface DesktopNavDialogsProps {
   availableBuildings: ModalItem[];
   selectedProjectName: string | undefined;
 
-  isUnitModalOpen: boolean;
-  onUnitModalChange: (open: boolean) => void;
-  onUnitSelected: (item: { id: string; name: string }) => void;
+  isPropertyModalOpen: boolean;
+  onPropertyModalChange: (open: boolean) => void;
+  onPropertySelected: (item: { id: string; name: string }) => void;
   availableUnits: ModalItem[];
   selectedBuildingName: string | undefined;
 }
@@ -178,9 +178,9 @@ export function DesktopNavDialogs(props: DesktopNavDialogsProps) {
       />
 
       <SelectItemModal
-        open={props.isUnitModalOpen}
-        onOpenChange={props.onUnitModalChange}
-        onItemSelected={props.onUnitSelected}
+        open={props.isPropertyModalOpen}
+        onOpenChange={props.onPropertyModalChange}
+        onItemSelected={props.onPropertySelected}
         items={props.availableUnits}
         title={t('modals.linkUnit.title')}
         description={t('modals.linkUnit.description', { buildingName: props.selectedBuildingName })}
@@ -258,13 +258,13 @@ export function DesktopNavDialogs(props: DesktopNavDialogsProps) {
 
       {/* Unit Unlink Dialog */}
       <UnlinkDialog
-        open={props.unitDialogOpen}
-        onOpenChange={props.onUnitDialogChange}
-        pending={props.pendingUnlinkUnit}
-        onClear={props.onClearPendingUnit}
-        onConfirm={props.onConfirmUnitUnlink}
+        open={props.propertyDialogOpen}
+        onOpenChange={props.onPropertyDialogChange}
+        pending={props.pendingUnlinkProperty}
+        onClear={props.onClearPendingProperty}
+        onConfirm={props.onConfirmPropertyUnlink}
         i18nPrefix="dialogs.unit"
-        nameParam="unitName"
+        nameParam="propertyName"
       />
     </>
   );
