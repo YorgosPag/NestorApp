@@ -17,8 +17,7 @@ import {
 } from '@/utils/contactForm/contact-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createGuardHandlers } from '@/utils/contactForm/guard-confirm-factory';
-import type { IdentityFieldChange } from '@/utils/contactForm/company-identity-guard';
-import type { CommunicationFieldChange } from '@/utils/contactForm/communication-impact-guard';
+import type { NameCascadeDialogState, AddressImpactDialogState, CompanyIdentityDialogState, CommunicationImpactDialogState } from '@/types/contact-submission-dialog.types';
 
 const logger = createModuleLogger('useContactSubmission');
 
@@ -79,42 +78,8 @@ export interface UseContactSubmissionReturn {
   cancelCommunicationImpact: () => void;
 }
 
-/** State for the name cascade confirmation dialog */
-export interface NameCascadeDialogState {
-  oldName: string;
-  newName: string;
-  properties: number;
-  paymentPlans: number;
-}
-
-/** State for the address impact confirmation dialog (ADR-277) */
-export interface AddressImpactDialogState {
-  addressLabel: string;
-  properties: number;
-  paymentPlans: number;
-  invoices: number;
-  apyCertificates: number;
-}
-
-/** State for the company identity impact confirmation dialog (ADR-278) */
-export interface CompanyIdentityDialogState {
-  changes: ReadonlyArray<IdentityFieldChange>;
-  projects: number;
-  properties: number;
-  obligations: number;
-  invoices: number;
-  apyCertificates: number;
-}
-
-/** State for the communication impact confirmation dialog (ADR-280) */
-export interface CommunicationImpactDialogState {
-  changes: ReadonlyArray<CommunicationFieldChange>;
-  properties: number;
-  paymentPlans: number;
-  projects: number;
-  invoices: number;
-  apyCertificates: number;
-}
+// Re-export dialog state types for backward compatibility
+export type { NameCascadeDialogState, AddressImpactDialogState, CompanyIdentityDialogState, CommunicationImpactDialogState } from '@/types/contact-submission-dialog.types';
 
 // ============================================================================
 // MAIN HOOK

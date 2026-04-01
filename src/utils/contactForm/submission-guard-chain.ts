@@ -23,7 +23,7 @@ import { extractHeadquartersAddress, hasHQAddressChanged } from './address-impac
 import { detectCompanyIdentityChanges } from './company-identity-guard';
 import { detectCommunicationChanges } from './communication-impact-guard';
 
-import type { NameCascadeDialogState, AddressImpactDialogState, CompanyIdentityDialogState, CommunicationImpactDialogState } from '@/hooks/useContactSubmission';
+import type { NameCascadeDialogState, AddressImpactDialogState, CompanyIdentityDialogState, CommunicationImpactDialogState } from '@/types/contact-submission-dialog.types';
 
 const logger = createModuleLogger('SubmissionGuardChain');
 
