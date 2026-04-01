@@ -428,7 +428,7 @@ export interface FileRecord {
    */
   ingestion?: {
     /** Current ingestion state */
-    state: 'received' | 'scanned' | 'classified';
+    state: 'received' | 'scanned' | 'classifying' | 'classified' | 'classification_failed';
     /** When state last changed */
     stateChangedAt?: Date | string;
     /** Security scan result (if scanned) */

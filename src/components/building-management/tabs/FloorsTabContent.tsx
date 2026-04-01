@@ -13,14 +13,14 @@ import { Fragment } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FloorFloorplanInline } from './FloorFloorplanInline';
 import type { Building } from '@/types/building/contracts';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import '@/lib/design-system';
+import { getStatusColor } from '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted state hook
 import { useFloorsTabState } from './useFloorsTabState';
@@ -41,12 +41,15 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   const {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
     showCreateForm, setShowCreateForm,
-    createNumber, setCreateNumber, createName, setCreateName,
+    createNumber, handleCreateNumberChange, createName, handleCreateNameChange,
     createElevation, setCreateElevation, creating, handleCreate,
-    editingId, editNumber, setEditNumber, editName, setEditName,
+    createNameMismatch,
+    editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
     editElevation, setEditElevation, saving,
+    editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
+    floorGaps,
     dialogProps, BlockedDialog,
   } = useFloorsTabState(building.id, building.projectId);
 
@@ -85,29 +88,37 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
 
       {showCreateForm && (
         <form
-          className="grid grid-cols-[80px_1fr_120px_auto] items-end gap-2 rounded-lg border border-border bg-muted/30 p-2"
+          className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2"
           onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
         >
-          <fieldset className="flex flex-col gap-1">
-            <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.number')}</label>
-            <Input type="number" value={createNumber} onChange={(e) => setCreateNumber(e.target.value)} placeholder={t('tabs.floors.numberPlaceholder')} className="h-9" disabled={creating} />
-          </fieldset>
-          <fieldset className="flex flex-col gap-1">
-            <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.name')}</label>
-            <Input value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder={t('tabs.floors.namePlaceholder')} className="h-9" disabled={creating} autoFocus />
-          </fieldset>
-          <fieldset className="flex flex-col gap-1">
-            <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.elevation')}</label>
-            <Input type="number" step="0.01" value={createElevation} onChange={(e) => setCreateElevation(e.target.value)} placeholder={t('tabs.floors.elevationPlaceholder')} className="h-9" disabled={creating} />
-          </fieldset>
-          <nav className="flex gap-1">
-            <Button type="submit" size="sm" disabled={!createName.trim() || creating} className="h-9">
-              {creating ? <Spinner size="small" color="inherit" /> : <Check className="h-4 w-4" />}
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setShowCreateForm(false)} disabled={creating} className="h-9">
-              <X className="h-4 w-4" />
-            </Button>
-          </nav>
+          <section className="grid grid-cols-[80px_1fr_120px_auto] items-end gap-2">
+            <fieldset className="flex flex-col gap-1">
+              <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.number')}</label>
+              <Input type="number" value={createNumber} onChange={(e) => handleCreateNumberChange(e.target.value)} placeholder={t('tabs.floors.numberPlaceholder')} className="h-9" disabled={creating} autoFocus />
+            </fieldset>
+            <fieldset className="flex flex-col gap-1">
+              <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.name')}</label>
+              <Input value={createName} onChange={(e) => handleCreateNameChange(e.target.value)} placeholder={t('tabs.floors.namePlaceholder')} className="h-9" disabled={creating} />
+            </fieldset>
+            <fieldset className="flex flex-col gap-1">
+              <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.elevation')}</label>
+              <Input type="number" step="0.01" value={createElevation} onChange={(e) => setCreateElevation(e.target.value)} placeholder={t('tabs.floors.elevationPlaceholder')} className="h-9" disabled={creating} />
+            </fieldset>
+            <nav className="flex gap-1">
+              <Button type="submit" size="sm" disabled={!createName.trim() || creating} className="h-9">
+                {creating ? <Spinner size="small" color="inherit" /> : <Check className="h-4 w-4" />}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowCreateForm(false)} disabled={creating} className="h-9">
+                <X className="h-4 w-4" />
+              </Button>
+            </nav>
+          </section>
+          {createNameMismatch && (
+            <p className={cn("flex items-center gap-1.5 text-xs", getStatusColor('warning', 'text'))}>
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {t('tabs.floors.mismatchWarning')}
+            </p>
+          )}
         </form>
       )}
 
@@ -142,8 +153,16 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
 
                       {isEditing ? (
                         <>
-                          <td className="px-2 py-2"><Input type="number" value={editNumber} onChange={(e) => setEditNumber(e.target.value)} className="h-8 w-16" disabled={saving} /></td>
-                          <td className="px-2 py-2"><Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8" disabled={saving} /></td>
+                          <td className="px-2 py-2"><Input type="number" value={editNumber} onChange={(e) => handleEditNumberChange(e.target.value)} className="h-8 w-16" disabled={saving} /></td>
+                          <td className="px-2 py-2">
+                            <Input value={editName} onChange={(e) => handleEditNameChange(e.target.value)} className={cn("h-8", editNameMismatch && getStatusColor('warning', 'border'))} disabled={saving} />
+                            {editNameMismatch && (
+                              <p className={cn("mt-0.5 flex items-center gap-1 text-[10px]", getStatusColor('warning', 'text'))}>
+                                <AlertTriangle className="h-3 w-3 shrink-0" />
+                                {t('tabs.floors.mismatchWarning')}
+                              </p>
+                            )}
+                          </td>
                           <td className="px-2 py-2"><Input type="number" step="0.01" value={editElevation} onChange={(e) => setEditElevation(e.target.value)} placeholder="—" className="h-8 w-24" disabled={saving} /></td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
@@ -187,6 +206,12 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
               })}
             </tbody>
           </table>
+          {floorGaps.length > 0 && (
+            <p className={cn("flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs", getStatusColor('warning', 'border'), getStatusColor('warning', 'text'))}>
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {t('tabs.floors.gapWarning', { levels: floorGaps.join(', ') })}
+            </p>
+          )}
           <footer className={cn("text-xs", colors.text.muted)}>{t('tabs.floors.total', { count: floors.length })}</footer>
         </>
       )}

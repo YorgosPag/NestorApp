@@ -6,13 +6,14 @@
  * @see ADR-180 (IFC Floor Management System)
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { toast } from 'sonner';
+import { formatFloorLabel } from '@/lib/intl-domain';
 
 // ============================================================================
 // TYPES
@@ -63,6 +64,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createNumber, setCreateNumber] = useState('0');
   const [createName, setCreateName] = useState('');
+  const [createNameManuallyEdited, setCreateNameManuallyEdited] = useState(false);
   const [createElevation, setCreateElevation] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -70,6 +72,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNumber, setEditNumber] = useState('');
   const [editName, setEditName] = useState('');
+  const [editNameManuallyEdited, setEditNameManuallyEdited] = useState(false);
   const [editElevation, setEditElevation] = useState('');
   const [editVersion, setEditVersion] = useState<number | undefined>(undefined);
   const [saving, setSaving] = useState(false);
@@ -80,6 +83,75 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const toggleFloorExpand = (floorId: string) => {
     setExpandedFloorId((prev) => (prev === floorId ? null : floorId));
   };
+
+  // =========================================================================
+  // AUTO-SUGGEST: Number → Name (Google/IFC Pattern)
+  // =========================================================================
+
+  /** Update create number and auto-suggest name if user hasn't manually edited it */
+  const handleCreateNumberChange = useCallback((value: string) => {
+    setCreateNumber(value);
+    if (!createNameManuallyEdited) {
+      const num = parseInt(value, 10);
+      setCreateName(isNaN(num) ? '' : formatFloorLabel(num));
+    }
+  }, [createNameManuallyEdited]);
+
+  /** Mark name as manually edited when user types in the name field */
+  const handleCreateNameChange = useCallback((value: string) => {
+    setCreateName(value);
+    setCreateNameManuallyEdited(true);
+  }, []);
+
+  /** Update edit number and auto-suggest name if user hasn't manually edited it */
+  const handleEditNumberChange = useCallback((value: string) => {
+    setEditNumber(value);
+    if (!editNameManuallyEdited) {
+      const num = parseInt(value, 10);
+      setEditName(isNaN(num) ? '' : formatFloorLabel(num));
+    }
+  }, [editNameManuallyEdited]);
+
+  /** Mark edit name as manually edited */
+  const handleEditNameChange = useCallback((value: string) => {
+    setEditName(value);
+    setEditNameManuallyEdited(true);
+  }, []);
+
+  // =========================================================================
+  // WARNINGS: Mismatch + Gap Detection
+  // =========================================================================
+
+  /** Check if manually-entered name mismatches the auto-suggested name */
+  const createNameMismatch = useMemo((): boolean => {
+    if (!createNameManuallyEdited || !createName.trim()) return false;
+    const num = parseInt(createNumber, 10);
+    if (isNaN(num)) return false;
+    return createName.trim() !== formatFloorLabel(num);
+  }, [createNumber, createName, createNameManuallyEdited]);
+
+  const editNameMismatch = useMemo((): boolean => {
+    if (!editNameManuallyEdited || !editName.trim()) return false;
+    const num = parseInt(editNumber, 10);
+    if (isNaN(num)) return false;
+    return editName.trim() !== formatFloorLabel(num);
+  }, [editNumber, editName, editNameManuallyEdited]);
+
+  /** Detect gaps in floor numbering sequence */
+  const floorGaps = useMemo((): number[] => {
+    if (floors.length < 2) return [];
+    const numbers = floors.map((f) => f.number).sort((a, b) => a - b);
+    const gaps: number[] = [];
+    for (let i = 0; i < numbers.length - 1; i++) {
+      const diff = numbers[i + 1] - numbers[i];
+      if (diff > 1) {
+        for (let g = numbers[i] + 1; g < numbers[i + 1]; g++) {
+          gaps.push(g);
+        }
+      }
+    }
+    return gaps;
+  }, [floors]);
 
   const fetchFloors = useCallback(async () => {
     setLoading(true);
@@ -114,6 +186,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
       setShowCreateForm(false);
       setCreateNumber('0');
       setCreateName('');
+      setCreateNameManuallyEdited(false);
       setCreateElevation('');
       toast.success(t('tabs.floors.createSuccess'));
       await fetchFloors();
@@ -129,6 +202,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     setEditingId(floor.id);
     setEditNumber(String(floor.number));
     setEditName(floor.name);
+    setEditNameManuallyEdited(false);
     setEditElevation(floor.elevation != null ? String(floor.elevation) : '');
     setEditVersion(floor._v);
   };
@@ -205,12 +279,15 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   return {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
     showCreateForm, setShowCreateForm,
-    createNumber, setCreateNumber, createName, setCreateName,
+    createNumber, handleCreateNumberChange, createName, handleCreateNameChange,
     createElevation, setCreateElevation, creating, handleCreate,
-    editingId, editNumber, setEditNumber, editName, setEditName,
+    createNameMismatch,
+    editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
     editElevation, setEditElevation, saving,
+    editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
+    floorGaps,
     dialogProps, BlockedDialog, confirm,
   };
 }

@@ -238,7 +238,17 @@ export function FilesList({
                   </span>
                 )}
 
-                {/* AI document type badge */}
+                {/* AI classification state badge */}
+                {file.ingestion?.state === 'classifying' && (
+                  <span className={`animate-pulse px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('pending', 'bg')}/15 ${getStatusColor('pending', 'text')}`}>
+                    {t('list.classifying', 'Ανάλυση...')}
+                  </span>
+                )}
+                {file.ingestion?.state === 'classification_failed' && (
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('error', 'bg')}/15 ${getStatusColor('error', 'text')}`}>
+                    {t('list.classificationFailed', 'Αποτυχία')}
+                  </span>
+                )}
                 {file.ingestion?.analysis?.documentType && (
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-medium leading-none bg-violet-500/15 text-violet-700 dark:text-violet-400">
                     {t(`documentType.${file.ingestion.analysis.documentType}`, file.ingestion.analysis.documentType)}

@@ -22,6 +22,7 @@ export const getStatusColor = (status: string, variant: 'bg' | 'text' | 'border'
     'reserved': 'status-warning',
     'construction': 'status-warning',
     'in_progress': 'status-warning',
+    'warning': 'status-warning',
     
     'sold': 'status-error',
     'cancelled': 'status-error',

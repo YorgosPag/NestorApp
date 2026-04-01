@@ -873,7 +873,9 @@
       "noFloorplan": "No floor plan",
       "uploadFloorplan": "Upload floor plan",
       "expandFloor": "Show floor plan",
-      "collapseFloor": "Hide floor plan"
+      "collapseFloor": "Hide floor plan",
+      "mismatchWarning": "Name doesn't match the level number. Are you sure you want this name?",
+      "gapWarning": "Missing levels: {levels}. Check if you need to add them."
     },
     "measurements": {
       "title": "Measurements",
