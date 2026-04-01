@@ -93,7 +93,7 @@
       "totalRevenue": "Total Revenue",
       "pipelineValue": "Pipeline Value",
       "soldProperties": "Sold Properties",
-      "forSaleUnits": "Available Units",
+      "forSaleProperties": "Available Properties",
       "conversionRate": "Conversion Rate",
       "paymentCoverage": "Payment Coverage",
       "overdueInstallments": "Overdue Installments",

@@ -141,15 +141,15 @@ export function useSalesPropertiesViewerState() {
   // DASHBOARD STATS (computed from salesUnits — not filtered)
   // =========================================================================
   const dashboardStats = useMemo<SalesDashboardStats>(() => {
-    const forSaleUnits = salesUnits.filter(u =>
+    const forSaleProperties = salesUnits.filter(u =>
       u.commercialStatus === 'for-sale' || u.commercialStatus === 'for-sale-and-rent'
     );
 
-    const prices = forSaleUnits
+    const prices = forSaleProperties
       .map(u => u.commercial?.askingPrice)
       .filter((p): p is number => p !== null && p !== undefined && p > 0);
 
-    const areas = forSaleUnits
+    const areas = forSaleProperties
       .map(u => u.areas?.gross ?? u.area ?? 0)
       .filter(a => a > 0);
 
@@ -157,7 +157,7 @@ export function useSalesPropertiesViewerState() {
     const totalArea = areas.reduce((sum, a) => sum + a, 0);
 
     return {
-      availableCount: forSaleUnits.length,
+      availableCount: forSaleProperties.length,
       averagePrice: prices.length > 0 ? totalPrice / prices.length : 0,
       totalValue: totalPrice,
       averagePricePerSqm: totalArea > 0 ? totalPrice / totalArea : 0,
