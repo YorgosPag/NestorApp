@@ -19,163 +19,35 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { useFirestoreUnits } from '@/hooks/useFirestoreUnits';
+import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
-import { FLOORPLAN_PURPOSES, API_ROUTES } from '@/config/domain-constants';
-import type { EntityType, FileDomain, FileCategory, FloorplanPurpose } from '@/config/domain-constants';
-import type { UnitLevel } from '@/types/unit';
+import { API_ROUTES } from '@/config/domain-constants';
+import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
+import {
+  type FloorplanType,
+  type FloorplanImportSelection,
+  type EntityOption,
+  type UseFloorplanImportStateReturn,
+  type UseFloorplanImportStateOptions,
+  type CompaniesApiResponse,
+  type CompanyItem,
+  type ProjectsByCompanyResponse,
+  type ProjectItem,
+  type BuildingItem,
+  type FloorsApiResponse,
+  type FloorItem,
+  type UnitItem,
+  INITIAL_SELECTION,
+  TOTAL_STEPS,
+  FLOORPLAN_PURPOSE_BY_TYPE,
+} from './floorplan-import-types';
+
+// Re-export types for backward compatibility
+export type { FloorplanType, FloorplanImportSelection, EntityOption, UseFloorplanImportStateReturn };
+
 const logger = createModuleLogger('useFloorplanImportState');
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-export type FloorplanType = 'project' | 'building' | 'floor' | 'unit';
-
-export interface FloorplanImportSelection {
-  companyId: string | null;
-  companyName: string | null;
-  projectId: string | null;
-  projectName: string | null;
-  buildingId: string | null;
-  buildingName: string | null;
-  floorId: string | null;
-  floorName: string | null;
-  floorplanType: FloorplanType | null;
-  unitId: string | null;
-  unitName: string | null;
-  /** For multi-level units: which level's floorplan to upload */
-  levelFloorId: string | null;
-  levelName: string | null;
-}
-
-export interface EntityOption {
-  id: string;
-  label: string;
-}
-
-export interface UseFloorplanImportStateReturn {
-  step: number;
-  handleNext: () => void;
-  handleBack: () => void;
-  /** Navigate to a completed step (click on step number) */
-  goToStep: (step: number) => void;
-  canProceed: boolean;
-
-  selection: FloorplanImportSelection;
-  selectEntity: (id: string) => void;
-  selectUnit: (id: string) => void;
-
-  /** Shortcut: set floorplanType and jump to upload (step 6) */
-  jumpToUpload: (type: FloorplanType) => void;
-
-  currentStepItems: EntityOption[];
-  currentStepLoading: boolean;
-  currentStepEmpty: boolean;
-
-  uploadConfig: FloorplanUploadConfig | null;
-  reset: () => void;
-
-  unitItems: EntityOption[];
-  unitLoading: boolean;
-
-  /** Multi-level unit support (ADR-236) */
-  selectedUnitIsMultiLevel: boolean;
-  unitLevelItems: EntityOption[];
-  selectLevel: (floorId: string) => void;
-}
-
-// =============================================================================
-// API RESPONSE TYPES
-// =============================================================================
-
-interface CompanyItem {
-  id: string;
-  companyName?: string;
-  tradeName?: string;
-  legalName?: string;
-}
-
-interface CompaniesApiResponse {
-  companies: CompanyItem[];
-}
-
-interface BuildingItem {
-  id: string;
-  name: string;
-  projectId?: string;
-}
-
-interface ProjectItem {
-  id: string;
-  name: string;
-  title?: string;
-  companyId?: string;
-  linkedCompanyId?: string;
-}
-
-interface ProjectsByCompanyResponse {
-  projects: ProjectItem[];
-}
-
-interface FloorItem {
-  id: string;
-  number: number;
-  name: string;
-  buildingId?: string;
-}
-
-interface FloorsApiResponse {
-  floors: FloorItem[];
-}
-
-interface UnitItem {
-  id: string;
-  name: string;
-  isMultiLevel?: boolean;
-  levels?: UnitLevel[];
-}
-
-// =============================================================================
-// INITIAL STATE
-// =============================================================================
-
-const INITIAL_SELECTION: FloorplanImportSelection = {
-  companyId: null,
-  companyName: null,
-  projectId: null,
-  projectName: null,
-  buildingId: null,
-  buildingName: null,
-  floorId: null,
-  floorName: null,
-  floorplanType: null,
-  unitId: null,
-  unitName: null,
-  levelFloorId: null,
-  levelName: null,
-};
-
-const TOTAL_STEPS = 6;
-
-/** Maps wizard floorplanType → centralized FLOORPLAN_PURPOSES constant */
-const FLOORPLAN_PURPOSE_BY_TYPE: Record<FloorplanType, FloorplanPurpose> = {
-  project: FLOORPLAN_PURPOSES.PROJECT,
-  building: FLOORPLAN_PURPOSES.BUILDING,
-  floor: FLOORPLAN_PURPOSES.FLOOR,
-  unit: FLOORPLAN_PURPOSES.UNIT,
-};
-
-// =============================================================================
-// OPTIONS
-// =============================================================================
-
-interface UseFloorplanImportStateOptions {
-  /** Whether the wizard dialog is currently open */
-  isOpen: boolean;
-}
 
 // =============================================================================
 // HOOK
@@ -222,7 +94,7 @@ export function useFloorplanImportState(
   }, [isOpen]);
 
   // ── Units via existing hook (step 5) ──
-  const { units: rawUnits, loading: unitLoading } = useFirestoreUnits({
+  const { properties: rawUnits, loading: unitLoading } = useFirestoreProperties({
     buildingId: selection.buildingId ?? undefined,
     floorId: selection.floorId ?? undefined,
     autoFetch: !!selection.buildingId && step === 5,
@@ -234,18 +106,18 @@ export function useFloorplanImportState(
   }));
 
   // ── Multi-level unit detection (ADR-236) ──
-  const selectedUnit = rawUnits.find((u: UnitItem) => u.id === selection.unitId) as UnitItem | undefined;
-  const selectedUnitIsMultiLevel = !!(selectedUnit?.isMultiLevel && selectedUnit.levels && selectedUnit.levels.length >= 2);
+  const selectedProperty = rawUnits.find((u: UnitItem) => u.id === selection.propertyId) as UnitItem | undefined;
+  const selectedPropertyIsMultiLevel = !!(selectedProperty?.isMultiLevel && selectedProperty.levels && selectedProperty.levels.length >= 2);
 
   const unitLevelItems: EntityOption[] = useMemo(() => {
-    if (!selectedUnitIsMultiLevel || !selectedUnit?.levels) return [];
-    return [...selectedUnit.levels]
+    if (!selectedPropertyIsMultiLevel || !selectedProperty?.levels) return [];
+    return [...selectedProperty.levels]
       .sort((a, b) => a.floorNumber - b.floorNumber)
       .map((level) => ({
         id: level.floorId,
         label: level.name,
       }));
-  }, [selectedUnitIsMultiLevel, selectedUnit?.levels]);
+  }, [selectedPropertyIsMultiLevel, selectedProperty?.levels]);
 
   // ===========================================================================
   // AUTH + OPEN GUARDS
@@ -418,7 +290,7 @@ export function useFloorplanImportState(
           return {
             ...prev, projectId: id, projectName: label,
             buildingId: null, buildingName: null, floorId: null, floorName: null,
-            floorplanType: null, unitId: null, unitName: null, levelFloorId: null, levelName: null,
+            floorplanType: null, propertyId: null, propertyName: null, levelFloorId: null, levelName: null,
           };
         }
         case 3: {
@@ -426,14 +298,14 @@ export function useFloorplanImportState(
           return {
             ...prev, buildingId: id, buildingName: label,
             floorId: null, floorName: null, floorplanType: null,
-            unitId: null, unitName: null, levelFloorId: null, levelName: null,
+            propertyId: null, propertyName: null, levelFloorId: null, levelName: null,
           };
         }
         case 4: {
           const label = floors.find((f) => f.id === id)?.label ?? null;
           return {
             ...prev, floorId: id, floorName: label,
-            floorplanType: null, unitId: null, unitName: null, levelFloorId: null, levelName: null,
+            floorplanType: null, propertyId: null, propertyName: null, levelFloorId: null, levelName: null,
           };
         }
         default:
@@ -442,10 +314,10 @@ export function useFloorplanImportState(
     });
   }, [step, companies, projects, buildings, floors]);
 
-  const selectUnit = useCallback((id: string) => {
+  const selectProperty = useCallback((id: string) => {
     const label = unitItems.find((u) => u.id === id)?.label ?? null;
     setSelection((prev) => ({
-      ...prev, unitId: id, unitName: label,
+      ...prev, propertyId: id, propertyName: label,
       floorplanType: 'unit', levelFloorId: null, levelName: null,
     }));
   }, [unitItems]);
@@ -463,10 +335,9 @@ export function useFloorplanImportState(
     setSelection((prev) => ({
       ...prev,
       floorplanType: type,
-      // Clear downstream selections not needed for this type
-      ...(type === 'project' ? { buildingId: null, buildingName: null, floorId: null, floorName: null, unitId: null, unitName: null } : {}),
-      ...(type === 'building' ? { floorId: null, floorName: null, unitId: null, unitName: null } : {}),
-      ...(type === 'floor' ? { unitId: null, unitName: null } : {}),
+      ...(type === 'project' ? { buildingId: null, buildingName: null, floorId: null, floorName: null, propertyId: null, propertyName: null } : {}),
+      ...(type === 'building' ? { floorId: null, floorName: null, propertyId: null, propertyName: null } : {}),
+      ...(type === 'floor' ? { propertyId: null, propertyName: null } : {}),
       levelFloorId: null, levelName: null,
     }));
     setStep(6);
@@ -483,8 +354,8 @@ export function useFloorplanImportState(
       case 3: return !!selection.buildingId;
       case 4: return !!selection.floorId;
       case 5: {
-        if (!selection.unitId) return false;
-        if (selectedUnitIsMultiLevel && !selection.levelFloorId) return false;
+        if (!selection.propertyId) return false;
+        if (selectedPropertyIsMultiLevel && !selection.levelFloorId) return false;
         return true;
       }
       case 6: return true;
@@ -494,7 +365,6 @@ export function useFloorplanImportState(
 
   const handleNext = useCallback(() => {
     if (canProceed && step < TOTAL_STEPS) {
-      // Step 5 → 6: auto-set floorplanType to 'unit'
       if (step === 5) {
         setSelection((prev) => ({ ...prev, floorplanType: 'unit' }));
       }
@@ -504,7 +374,6 @@ export function useFloorplanImportState(
 
   const handleBack = useCallback(() => {
     if (step > 1) {
-      // If we jumped to step 6 from a shortcut, go back to where we came from
       if (step === 6 && selection.floorplanType === 'project') {
         setStep(2);
       } else if (step === 6 && selection.floorplanType === 'building') {
@@ -552,16 +421,15 @@ export function useFloorplanImportState(
         break;
       case 'unit':
         entityType = 'unit' as EntityType;
-        entityId = selection.unitId!;
+        entityId = selection.propertyId!;
         entityLabel = selection.levelName
-          ? `${selection.unitName} — ${selection.levelName}`
-          : selection.unitName ?? undefined;
+          ? `${selection.propertyName} — ${selection.levelName}`
+          : selection.propertyName ?? undefined;
         break;
       default:
         return null;
     }
 
-    // Build parent entity links for cross-entity visibility
     const linkedTo: string[] = [];
     if (selection.floorplanType === 'unit') {
       if (selection.floorId) linkedTo.push(`floor:${selection.floorId}`);
@@ -571,9 +439,6 @@ export function useFloorplanImportState(
     }
 
     return {
-      // 🏢 ADR-240: Use JWT-verified companyId (user.companyId) — NOT the entity ID
-      // from the company dropdown (selection.companyId). The dropdown may return
-      // contact-type entity IDs (cont_xxx) which don't match the tenant filter.
       companyId: user?.companyId ?? selection.companyId,
       projectId: selection.projectId ?? undefined,
       entityType,
@@ -589,7 +454,7 @@ export function useFloorplanImportState(
   })();
 
   // ===========================================================================
-  // RESET (called externally on dialog close)
+  // RESET
   // ===========================================================================
 
   const reset = useCallback(() => {
@@ -614,7 +479,7 @@ export function useFloorplanImportState(
 
     selection,
     selectEntity: handleSelectEntity,
-    selectUnit,
+    selectProperty,
     jumpToUpload,
 
     currentStepItems: getCurrentItems(),
@@ -627,7 +492,7 @@ export function useFloorplanImportState(
     unitItems,
     unitLoading,
 
-    selectedUnitIsMultiLevel,
+    selectedPropertyIsMultiLevel,
     unitLevelItems,
     selectLevel,
   };
