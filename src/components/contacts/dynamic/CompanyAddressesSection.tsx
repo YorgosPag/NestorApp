@@ -12,12 +12,13 @@
  * @module components/contacts/dynamic/CompanyAddressesSection
  */
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2 } from 'lucide-react';
+import { BranchDeleteConfirmDialog } from '@/components/contacts/dialogs/BranchDeleteConfirmDialog';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
@@ -102,6 +103,7 @@ export function CompanyAddressesSection({
 }: CompanyAddressesSectionProps) {
   const { t } = useTranslation('contacts');
   const colors = useSemanticColors();
+  const [branchDeleteIndex, setBranchDeleteIndex] = useState<number | null>(null);
   // Headquarters = first entry with type 'headquarters', or first entry
   const hqIndex = addresses.findIndex((a) => a.type === 'headquarters');
   const effectiveHqIndex = hqIndex >= 0 ? hqIndex : 0;
@@ -183,7 +185,7 @@ export function CompanyAddressesSection({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => removeBranch(i)}
+                    onClick={() => setBranchDeleteIndex(i)}
                     disabled={disabled}
                     aria-label="Αφαίρεση Διεύθυνσης"
                     className="text-destructive hover:text-destructive"
@@ -202,6 +204,18 @@ export function CompanyAddressesSection({
           </ul>
         )}
       </section>
+
+      {/* 📍 Branch delete confirmation (ADR-277 Safety) */}
+      <BranchDeleteConfirmDialog
+        open={branchDeleteIndex !== null}
+        onOpenChange={(open) => { if (!open) setBranchDeleteIndex(null); }}
+        onConfirm={() => {
+          if (branchDeleteIndex !== null) {
+            removeBranch(branchDeleteIndex);
+            setBranchDeleteIndex(null);
+          }
+        }}
+      />
     </div>
   );
 }

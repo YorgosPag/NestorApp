@@ -9,10 +9,20 @@
  * @enterprise ADR-241 (Fullscreen centralization)
  */
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
@@ -40,8 +50,46 @@ export function AddressesSectionWithFullscreen({
   setFormData,
   disabled,
 }: AddressesSectionWithFullscreenProps) {
-  const { t } = useTranslation('contacts');
+  const { t: tContacts } = useTranslation('contacts');
+  const { t: tCommon } = useTranslation('common');
   const fullscreen = useFullscreen();
+
+  // 📍 ADR-277: Pending drag resolve state (map drag may clear hierarchy)
+  const [pendingDrag, setPendingDrag] = useState<{ addr: DragResolvedAddress; index: number } | null>(null);
+
+  /** Apply drag-resolved address to form state (clears hierarchy fields) */
+  const applyDragResolve = useCallback((addr: DragResolvedAddress, addressIndex: number) => {
+    if (!setFormData) return;
+    const updatedAddresses = [...(formData.companyAddresses ?? [])];
+    if (addressIndex >= 0 && addressIndex < updatedAddresses.length) {
+      updatedAddresses[addressIndex] = {
+        ...updatedAddresses[addressIndex],
+        street: addr.street,
+        number: addr.number,
+        postalCode: addr.postalCode,
+        city: addr.city,
+      };
+    }
+    const hq = updatedAddresses.find(a => a.type === 'headquarters') ?? updatedAddresses[0];
+    setFormData({
+      ...formData,
+      companyAddresses: updatedAddresses,
+      street: hq?.street ?? '',
+      streetNumber: hq?.number ?? '',
+      postalCode: hq?.postalCode ?? '',
+      city: hq?.city ?? '',
+      settlement: hq?.city ?? '',
+      settlementId: null,
+      community: '',
+      municipalUnit: '',
+      municipality: '',
+      municipalityId: null,
+      regionalUnit: '',
+      region: '',
+      decentAdmin: '',
+      majorGeo: '',
+    });
+  }, [formData, setFormData]);
 
   const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
   const effectiveAddresses: CompanyAddress[] = currentAddresses.length > 0
@@ -62,7 +110,7 @@ export function AddressesSectionWithFullscreen({
       <div className="space-y-2">
         {/* HQ address with hierarchy + fullscreen toggle */}
         <header className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">{t('addressesSection.headquarters')}</h3>
+          <h3 className="text-sm font-semibold text-foreground">{tContacts('addressesSection.headquarters')}</h3>
           <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
         </header>
 
@@ -159,38 +207,40 @@ export function AddressesSectionWithFullscreen({
           companyAddresses={formData.companyAddresses}
           draggable={!disabled}
           onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
-            const currentAddr = [...(formData.companyAddresses ?? [])];
-            if (addressIndex >= 0 && addressIndex < currentAddr.length) {
-              currentAddr[addressIndex] = {
-                ...currentAddr[addressIndex],
-                street: addr.street,
-                number: addr.number,
-                postalCode: addr.postalCode,
-                city: addr.city,
-              };
+            // 📍 ADR-277: Check if HQ has hierarchy that would be cleared
+            const targetAddr = effectiveAddresses[addressIndex];
+            const isHQ = addressIndex === 0 || targetAddr?.type === 'headquarters';
+            const hasHierarchy = isHQ && targetAddr?.settlementId;
+
+            if (hasHierarchy) {
+              setPendingDrag({ addr, index: addressIndex });
+              return;
             }
-            const hq = currentAddr.find(a => a.type === 'headquarters') ?? currentAddr[0];
-            setFormData({
-              ...formData,
-              companyAddresses: currentAddr,
-              street: hq?.street ?? '',
-              streetNumber: hq?.number ?? '',
-              postalCode: hq?.postalCode ?? '',
-              city: hq?.city ?? '',
-              settlement: hq?.city ?? '',
-              settlementId: null,
-              community: '',
-              municipalUnit: '',
-              municipality: '',
-              municipalityId: null,
-              regionalUnit: '',
-              region: '',
-              decentAdmin: '',
-              majorGeo: '',
-            });
+            applyDragResolve(addr, addressIndex);
           } : undefined}
         />
       </aside>
+
+      {/* 📍 ADR-277: Map drag hierarchy warning */}
+      <AlertDialog open={pendingDrag !== null} onOpenChange={(open) => { if (!open) setPendingDrag(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tCommon('contacts.addressImpact.mapDragWarning.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{tCommon('contacts.addressImpact.mapDragWarning.body')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon('contacts.addressImpact.mapDragWarning.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (pendingDrag) {
+                applyDragResolve(pendingDrag.addr, pendingDrag.index);
+                setPendingDrag(null);
+              }
+            }}>
+              {tCommon('contacts.addressImpact.mapDragWarning.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FullscreenOverlay>
   );
 }

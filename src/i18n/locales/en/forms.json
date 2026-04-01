@@ -319,6 +319,8 @@
       "secondaryRowAdded": "A new secondary KAD row was added.",
       "secondaryAdded": "Secondary KAD {code} was added to the form.",
       "secondaryUpdated": "Secondary KAD changed from {oldCode} to {newCode}.",
+      "duplicateCode": "KAD {code} already exists in this contact's activities.",
+      "completeExistingSecondary": "Complete the existing secondary KAD before adding a new one.",
       "secondaryRemoved": "Secondary KAD {code} was removed from the form."
     }
   },

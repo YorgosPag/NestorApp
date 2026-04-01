@@ -126,3 +126,56 @@ export async function propagateContactNameChange(
     return { success: false, totalUpdated, collections, error: message };
   }
 }
+
+// ============================================================================
+// PREVIEW (DRY-RUN) — Counts only, no writes
+// ============================================================================
+
+export interface NameCascadePreview {
+  readonly totalAffected: number;
+  readonly properties: number;
+  readonly paymentPlans: number;
+}
+
+/**
+ * Preview how many records would be affected by a name change.
+ * Read-only — no Firestore writes. Used for confirmation dialogs.
+ */
+export async function previewContactNameCascade(
+  contactId: string
+): Promise<NameCascadePreview> {
+  const db = getAdminFirestore();
+
+  try {
+    const unitsSnapshot = await db
+      .collection(COLLECTIONS.PROPERTIES)
+      .where('commercial.ownerContactIds', 'array-contains', contactId)
+      .select()
+      .get();
+
+    const properties = unitsSnapshot.size;
+    let paymentPlans = 0;
+
+    // Count payment plans in affected properties
+    for (const unitDoc of unitsSnapshot.docs) {
+      const plansSnapshot = await db
+        .collection(COLLECTIONS.PROPERTIES)
+        .doc(unitDoc.id)
+        .collection('payment_plans')
+        .where('ownerContactId', '==', contactId)
+        .select()
+        .get();
+
+      paymentPlans += plansSnapshot.size;
+    }
+
+    return {
+      totalAffected: properties + paymentPlans,
+      properties,
+      paymentPlans,
+    };
+  } catch (error) {
+    logger.warn('Name cascade preview failed:', error);
+    return { totalAffected: 0, properties: 0, paymentPlans: 0 };
+  }
+}
