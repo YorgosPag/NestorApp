@@ -19,7 +19,7 @@ import type { Building } from '@/types/building/contracts';
 export type RealtimeCollection =
   | 'buildings'
   | 'projects'
-  | 'units'
+  | 'properties'
   | 'floors'
   | 'contacts'
   | 'project_floorplans'
@@ -246,7 +246,7 @@ export const REALTIME_EVENTS = {
   STORAGE_DELETED: 'realtime:storage-deleted',
   // Link events
   BUILDING_PROJECT_LINKED: 'realtime:building-project-linked',
-  UNIT_BUILDING_LINKED: 'realtime:unit-building-linked',
+  PROPERTY_BUILDING_LINKED: 'realtime:property-building-linked',
   NAVIGATION_REFRESH: 'realtime:navigation-refresh',
   // Legal contract events (ADR-230)
   CONTRACT_CREATED: 'realtime:contract-created',
@@ -280,7 +280,7 @@ export interface BuildingProjectLinkPayload {
 }
 
 /**
- * 🏢 ENTERPRISE: Event payload for unit-building link
+ * 🏢 ENTERPRISE: Event payload for property-building link
  */
 export interface PropertyBuildingLinkPayload {
   propertyId: string;
@@ -1060,8 +1060,8 @@ export interface EntityUnlinkedPayload {
  * Dispatched client-side after API confirms a link change
  */
 export interface CascadePropagatedPayload {
-  /** The entity that was linked/unlinked (e.g. building, unit) */
-  sourceEntityType: 'building' | 'project' | 'unit';
+  /** The entity that was linked/unlinked (e.g. building, property) */
+  sourceEntityType: 'building' | 'project' | 'property';
   sourceEntityId: string;
   /** Which field changed (e.g. projectId, companyId, buildingId) */
   changedField: string;
@@ -1182,7 +1182,7 @@ export interface RealtimeEventMap {
   FILE_LINK_DELETED: FileLinkDeletedPayload;
   // Specific link events (legacy — kept for backward compat)
   BUILDING_PROJECT_LINKED: BuildingProjectLinkPayload;
-  UNIT_BUILDING_LINKED: PropertyBuildingLinkPayload;
+  PROPERTY_BUILDING_LINKED: PropertyBuildingLinkPayload;
   NAVIGATION_REFRESH: { timestamp: number };
   // Entity linking (2)
   ENTITY_LINKED: EntityLinkedPayload;

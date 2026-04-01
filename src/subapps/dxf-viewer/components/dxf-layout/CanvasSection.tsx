@@ -80,7 +80,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     overlayMode = 'select',
     setOverlayMode,
     currentStatus = 'for-sale',
-    currentKind = 'unit',
+    currentKind = 'property',
     ...restProps
   } = props;
 
@@ -875,7 +875,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     } else if (activeTool === 'guide-from-selection') {
       handleGuideFromSelection();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line
   }, [activeTool]);
 
   // ADR-189 B14: Multi-select guides
@@ -946,7 +946,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (activeTool === 'guide-copy-pattern') {
       handleCopyPatternTrigger();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line
   }, [activeTool]);
 
   // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)

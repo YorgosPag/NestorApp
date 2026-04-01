@@ -39,9 +39,9 @@ const logger = createModuleLogger('VideosTab');
 // PROPS
 // =============================================================================
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 /** Viewer props structure */
 interface ViewerProps {
@@ -117,7 +117,7 @@ export function VideosTab({
   if (!selectedProperty) {
     return (
       <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
-        <UnitIcon className={`${iconSizes['2xl']} ${unitColor} mb-4 opacity-50`} />
+        <PropertyIcon className={`${iconSizes['2xl']} ${propertyColor} mb-4 opacity-50`} />
         <h3 className="text-xl font-semibold mb-2">{t('videos.selectProperty', 'Επιλέξτε Μονάδα')}</h3>
         <p className="text-sm max-w-sm">
           {t('videos.selectUnitDescription', 'Επιλέξτε μια μονάδα από τη λίστα για να δείτε τα βίντεο της.')}

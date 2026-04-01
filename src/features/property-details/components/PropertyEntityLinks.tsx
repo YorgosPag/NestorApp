@@ -49,14 +49,14 @@ export function PropertyEntityLinks({
 
   // ADR-200: Centralized entity linking via useEntityLink
   const buildingLink = useEntityLink({
-    relation: 'unit-building',
+    relation: 'property-building',
     entityId: propertyId,
     initialParentId: currentBuildingId ?? null,
     loadOptions: loadBuildings,
     saveMode: 'immediate',
     onSave: saveBuilding,
     icon: Building,
-    cardId: 'unit-building-link',
+    cardId: 'property-building-link',
     labels: {
       title: t('entityLinks.building.title'),
       label: t('entityLinks.building.label'),

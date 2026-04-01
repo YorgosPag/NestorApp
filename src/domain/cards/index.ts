@@ -23,10 +23,6 @@ export { ParkingGridCard, type ParkingGridCardProps } from './parking';
 
 export { PropertyListCard, type PropertyListCardProps } from './property';
 export { PropertyGridCard, type PropertyGridCardProps } from './property';
-/** @deprecated Use PropertyGridCard */
-export { PropertyGridCard as UnitGridCard, type PropertyGridCardProps as UnitGridCardProps } from './property';
-/** @deprecated Use PropertyListCard */
-export { PropertyListCard as UnitListCard, type PropertyListCardProps as UnitListCardProps } from './property';
 
 // =============================================================================
 // 📦 STORAGE

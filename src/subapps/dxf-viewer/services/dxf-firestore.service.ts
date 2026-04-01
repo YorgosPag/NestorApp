@@ -66,7 +66,7 @@ export interface DxfSaveContext {
    * When absent, defaults to 'building' (backward compatibility).
    * Set to 'floor' when saving a floor-level DXF (e.g. Wizard import).
    */
-  entityType?: 'building' | 'floor' | 'unit';
+  entityType?: 'building' | 'floor' | 'property';
   /**
    * 🏢 ADR-240: File category for the `files` collection dual-write record.
    * When absent, defaults to 'drawings'. Set to 'floorplans' for floor plans.
@@ -472,7 +472,7 @@ export class DxfFirestoreService {
     const resolvedEntityType = context?.entityType ?? 'building';
     const resolvedEntityId = (() => {
       if (resolvedEntityType === 'floor') return context?.floorId ?? 'standalone';
-      if (resolvedEntityType === 'unit') return context?.floorId ?? context?.buildingId ?? 'standalone';
+      if (resolvedEntityType === 'property') return context?.floorId ?? context?.buildingId ?? 'standalone';
       return context?.buildingId ?? 'standalone';
     })();
     const resolvedCategory = context?.filesCategory ?? 'drawings';

@@ -98,7 +98,7 @@ const STATUS_BADGE_VARIANTS: Record<Status, ListCardBadgeVariant> = {
  * Maps OverlayKind to NavigationEntityType for icon/color resolution
  */
 const KIND_TO_ENTITY: Record<OverlayKind, NavigationEntityType> = {
-  'unit': 'unit',
+  'property': 'unit',
   'parking': 'parking',
   'storage': 'storage',
   'footprint': 'building', // Use building icon for footprint

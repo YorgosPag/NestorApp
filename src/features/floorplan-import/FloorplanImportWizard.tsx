@@ -46,7 +46,7 @@ import '@/lib/design-system';
 export interface WizardCompleteMeta {
   companyId: string;
   projectId?: string;
-  entityType: 'project' | 'building' | 'floor' | 'unit';
+  entityType: 'project' | 'building' | 'floor' | 'property';
   entityId: string;
   purpose: string;
   /** Human-readable entity label (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") for displayName generation */

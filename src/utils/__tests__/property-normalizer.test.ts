@@ -1,5 +1,5 @@
 /**
- * 🧪 ENTERPRISE: Unit Tests for Property Normalizer
+ * 🧪 ENTERPRISE: Tests for Property Normalizer
  *
  * Comprehensive test suite for property normalization functions.
  * Tests all edge cases, error conditions, and business logic.
@@ -29,8 +29,8 @@ import type {
 const mockTimestamp = Timestamp.fromDate(new Date('2024-01-23T00:00:00Z'));
 
 const minimalPropertyDoc: PropertyDoc = {
-  id: 'unit-001',
-  name: 'Unit 001',
+  id: 'property-001',
+  name: 'Property 001',
   type: 'apartment',
   building: 'Building A',
   buildingId: 'building-a-id',
@@ -38,7 +38,7 @@ const minimalPropertyDoc: PropertyDoc = {
   floorId: 'floor-01',
   floor: 1,
   status: 'for-sale',
-  unitCoverage: {
+  propertyCoverage: {
     hasPhotos: false,
     hasFloorplans: false,
     hasDocuments: false,
@@ -56,7 +56,7 @@ const completePropertyDoc: PropertyDoc = {
   description: 'Modern apartment with sea view',
   soldTo: 'contact-123',
   saleDate: mockTimestamp.toDate().toISOString(),
-  unitName: 'Sea View Apartment',
+  propertyName: 'Sea View Apartment',
   areas: {
     gross: 100,
     net: 85,
@@ -97,7 +97,7 @@ const completePropertyDoc: PropertyDoc = {
   },
   interiorFeatures: ['fireplace', 'smart-home'],
   securityFeatures: ['alarm', 'security-door', 'cctv'],
-  unitAmenities: ['garden', 'pool'],
+  propertyAmenities: ['garden', 'pool'],
   linkedSpaces: [
     {
       spaceType: 'parking' as const,
@@ -114,7 +114,7 @@ const completePropertyDoc: PropertyDoc = {
       metadata: { level: 'B1', size: '5sqm' }
     }
   ],
-  unitCoverage: {
+  propertyCoverage: {
     hasPhotos: true,
     hasFloorplans: true,
     hasDocuments: true,
@@ -125,7 +125,7 @@ const completePropertyDoc: PropertyDoc = {
 const backfillDefaults: BackfillDefaults = {
   // Identity fields
   id: 'default-id',
-  name: 'Default Unit',
+  name: 'Default Property',
   type: 'apartment',
 
   // Hierarchy fields
@@ -148,21 +148,21 @@ const backfillDefaults: BackfillDefaults = {
 
 describe('normalizeProperty', () => {
   describe('Post-backfill validation (no backfillData)', () => {
-    test('should accept complete valid unit document', () => {
+    test('should accept complete valid property document', () => {
       const result = normalizeProperty(completePropertyDoc);
-      
-      expect(result.id).toBe('unit-001');
-      expect(result.name).toBe('Unit 001');
+
+      expect(result.id).toBe('property-001');
+      expect(result.name).toBe('Property 001');
       expect(result.type).toBe('apartment');
       expect(result.orientations).toEqual(['north', 'east']);
       expect(result.views).toHaveLength(2);
       expect(result.linkedSpaces).toHaveLength(2);
     });
 
-    test('should accept minimal valid unit document', () => {
+    test('should accept minimal valid property document', () => {
       const result = normalizeProperty(minimalPropertyDoc);
-      
-      expect(result.id).toBe('unit-001');
+
+      expect(result.id).toBe('property-001');
       expect(result.orientations).toEqual([]);
       expect(result.views).toEqual([]);
       expect(result.interiorFeatures).toEqual([]);
@@ -192,10 +192,10 @@ describe('normalizeProperty', () => {
       );
     });
 
-    test('should throw error for missing unitCoverage.updatedAt', () => {
+    test('should throw error for missing propertyCoverage.updatedAt', () => {
       const invalidDoc = {
         ...minimalPropertyDoc,
-        unitCoverage: {
+        propertyCoverage: {
           hasPhotos: false,
           hasFloorplans: false,
           hasDocuments: false,
@@ -204,7 +204,7 @@ describe('normalizeProperty', () => {
       } as unknown as PropertyDoc;
       
       expect(() => normalizeProperty(invalidDoc)).toThrow(
-        'unitCoverage.updatedAt is required post-backfill'
+        'propertyCoverage.updatedAt is required post-backfill'
       );
     });
 
@@ -222,13 +222,13 @@ describe('normalizeProperty', () => {
       expect(result.views).toEqual([]);
       expect(result.interiorFeatures).toEqual([]);
       expect(result.securityFeatures).toEqual([]);
-      expect(result.unitAmenities).toEqual([]);
+      expect(result.propertyAmenities).toEqual([]);
       expect(result.linkedSpaces).toEqual([]);
 
       // Coverage should have proper defaults
-      expect(result.unitCoverage.hasPhotos).toBe(false);
-      expect(result.unitCoverage.hasFloorplans).toBe(false);
-      expect(result.unitCoverage.hasDocuments).toBe(false);
+      expect(result.propertyCoverage.hasPhotos).toBe(false);
+      expect(result.propertyCoverage.hasFloorplans).toBe(false);
+      expect(result.propertyCoverage.hasDocuments).toBe(false);
     });
 
     test('should throw error for missing hierarchy fields', () => {
@@ -243,7 +243,7 @@ describe('normalizeProperty', () => {
   describe('Pre-backfill migration (with backfillData)', () => {
     test('should use backfill defaults for missing required fields', () => {
       const incompleteDoc = {
-        unitCoverage: {
+        propertyCoverage: {
           hasPhotos: false,
           hasFloorplans: false,
           hasDocuments: false
@@ -253,15 +253,15 @@ describe('normalizeProperty', () => {
       const result = normalizeProperty(incompleteDoc, backfillDefaults);
       
       expect(result.id).toBe('default-id');
-      expect(result.name).toBe('Default Unit');
+      expect(result.name).toBe('Default Property');
       expect(result.type).toBe('apartment');
-      expect(result.unitCoverage.updatedAt).toBe(mockTimestamp);
+      expect(result.propertyCoverage.updatedAt).toBe(mockTimestamp);
     });
 
     test('should prefer document values over backfill defaults', () => {
       const partialDoc = {
         id: 'custom-id',
-        unitCoverage: {
+        propertyCoverage: {
           hasPhotos: true,
           hasFloorplans: false,
           hasDocuments: false
@@ -271,7 +271,7 @@ describe('normalizeProperty', () => {
       const result = normalizeProperty(partialDoc, backfillDefaults);
       
       expect(result.id).toBe('custom-id'); // Document value
-      expect(result.name).toBe('Default Unit'); // Backfill value
+      expect(result.name).toBe('Default Property'); // Backfill value
       expect(result.type).toBe('apartment'); // Backfill value
     });
 
@@ -288,7 +288,7 @@ describe('normalizeProperty', () => {
       expect(result.finishes).toEqual(completePropertyDoc.finishes);
       expect(result.interiorFeatures).toEqual(completePropertyDoc.interiorFeatures);
       expect(result.securityFeatures).toEqual(completePropertyDoc.securityFeatures);
-      expect(result.unitAmenities).toEqual(completePropertyDoc.unitAmenities);
+      expect(result.propertyAmenities).toEqual(completePropertyDoc.propertyAmenities);
       expect(result.linkedSpaces).toEqual(completePropertyDoc.linkedSpaces);
     });
   });
@@ -301,7 +301,7 @@ describe('normalizeProperty', () => {
         views: [],
         interiorFeatures: [],
         securityFeatures: [],
-        unitAmenities: [],
+        propertyAmenities: [],
         linkedSpaces: []
       };
       
@@ -311,7 +311,7 @@ describe('normalizeProperty', () => {
       expect(result.views).toEqual([]);
       expect(result.interiorFeatures).toEqual([]);
       expect(result.securityFeatures).toEqual([]);
-      expect(result.unitAmenities).toEqual([]);
+      expect(result.propertyAmenities).toEqual([]);
       expect(result.linkedSpaces).toEqual([]);
     });
 
@@ -355,28 +355,28 @@ describe('normalizeProperty', () => {
 // ============================================================================
 
 describe('validatePropertyCompleteness', () => {
-  test('should return 100% for complete unit', () => {
-    const unit = normalizeProperty(completePropertyDoc);
-    const result = validatePropertyCompleteness(unit);
+  test('should return 100% for complete property', () => {
+    const property = normalizeProperty(completePropertyDoc);
+    const result = validatePropertyCompleteness(property);
     
     expect(result.isComplete).toBe(true);
     expect(result.completenessPercentage).toBe(100);
     expect(result.missingItems).toEqual([]);
   });
 
-  test('should return 0% for unit with no documentation', () => {
-    const unit = normalizeProperty(minimalPropertyDoc);
-    const result = validatePropertyCompleteness(unit);
+  test('should return 0% for property with no documentation', () => {
+    const property = normalizeProperty(minimalPropertyDoc);
+    const result = validatePropertyCompleteness(property);
     
     expect(result.isComplete).toBe(false);
     expect(result.completenessPercentage).toBe(0);
-    expect(result.missingItems).toEqual(['unit.coverage.photos', 'unit.coverage.floorplans', 'unit.coverage.documents']);
+    expect(result.missingItems).toEqual(['property.coverage.photos', 'property.coverage.floorplans', 'property.coverage.documents']);
   });
 
-  test('should return 33.33% for unit with only photos', () => {
-    const unitDoc: PropertyDoc = {
+  test('should return 33.33% for property with only photos', () => {
+    const propertyDoc: PropertyDoc = {
       ...minimalPropertyDoc,
-      unitCoverage: {
+      propertyCoverage: {
         hasPhotos: true,
         hasFloorplans: false,
         hasDocuments: false,
@@ -384,58 +384,58 @@ describe('validatePropertyCompleteness', () => {
       }
     };
     
-    const unit = normalizeProperty(unitDoc);
-    const result = validatePropertyCompleteness(unit);
-    
+    const property = normalizeProperty(propertyDoc);
+    const result = validatePropertyCompleteness(property);
+
     expect(result.isComplete).toBe(false);
     expect(result.completenessPercentage).toBeCloseTo(33.33, 1);
-    expect(result.missingItems).toEqual(['unit.coverage.floorplans', 'unit.coverage.documents']);
+    expect(result.missingItems).toEqual(['property.coverage.floorplans', 'property.coverage.documents']);
   });
 
-  test('should return 66.67% for unit with photos and floorplans', () => {
-    const unitDoc: PropertyDoc = {
+  test('should return 66.67% for property with photos and floorplans', () => {
+    const propertyDoc: PropertyDoc = {
       ...minimalPropertyDoc,
-      unitCoverage: {
+      propertyCoverage: {
         hasPhotos: true,
         hasFloorplans: true,
         hasDocuments: false,
         updatedAt: mockTimestamp
       }
     };
-    
-    const unit = normalizeProperty(unitDoc);
-    const result = validatePropertyCompleteness(unit);
+
+    const property = normalizeProperty(propertyDoc);
+    const result = validatePropertyCompleteness(property);
     
     expect(result.isComplete).toBe(false);
     expect(result.completenessPercentage).toBeCloseTo(66.67, 1);
-    expect(result.missingItems).toEqual(['unit.coverage.documents']);
+    expect(result.missingItems).toEqual(['property.coverage.documents']);
   });
 
   test('should handle all missing items correctly', () => {
     const testCases = [
-      { photos: false, floorplans: false, documents: false, expected: ['unit.coverage.photos', 'unit.coverage.floorplans', 'unit.coverage.documents'] },
-      { photos: true, floorplans: false, documents: false, expected: ['unit.coverage.floorplans', 'unit.coverage.documents'] },
-      { photos: false, floorplans: true, documents: false, expected: ['unit.coverage.photos', 'unit.coverage.documents'] },
-      { photos: false, floorplans: false, documents: true, expected: ['unit.coverage.photos', 'unit.coverage.floorplans'] },
-      { photos: true, floorplans: true, documents: false, expected: ['unit.coverage.documents'] },
-      { photos: true, floorplans: false, documents: true, expected: ['unit.coverage.floorplans'] },
-      { photos: false, floorplans: true, documents: true, expected: ['unit.coverage.photos'] },
+      { photos: false, floorplans: false, documents: false, expected: ['property.coverage.photos', 'property.coverage.floorplans', 'property.coverage.documents'] },
+      { photos: true, floorplans: false, documents: false, expected: ['property.coverage.floorplans', 'property.coverage.documents'] },
+      { photos: false, floorplans: true, documents: false, expected: ['property.coverage.photos', 'property.coverage.documents'] },
+      { photos: false, floorplans: false, documents: true, expected: ['property.coverage.photos', 'property.coverage.floorplans'] },
+      { photos: true, floorplans: true, documents: false, expected: ['property.coverage.documents'] },
+      { photos: true, floorplans: false, documents: true, expected: ['property.coverage.floorplans'] },
+      { photos: false, floorplans: true, documents: true, expected: ['property.coverage.photos'] },
       { photos: true, floorplans: true, documents: true, expected: [] }
     ];
     
     testCases.forEach(({ photos, floorplans, documents, expected }) => {
-      const unitDoc: PropertyDoc = {
+      const propDoc: PropertyDoc = {
         ...minimalPropertyDoc,
-        unitCoverage: {
+        propertyCoverage: {
           hasPhotos: photos,
           hasFloorplans: floorplans,
           hasDocuments: documents,
           updatedAt: mockTimestamp
         }
       };
-      
-      const unit = normalizeProperty(unitDoc);
-      const result = validatePropertyCompleteness(unit);
+
+      const property = normalizeProperty(propDoc);
+      const result = validatePropertyCompleteness(property);
       
       expect(result.missingItems).toEqual(expected);
       expect(result.isComplete).toBe(expected.length === 0);
@@ -449,12 +449,12 @@ describe('validatePropertyCompleteness', () => {
 
 describe('preparePropertyForFirestore', () => {
   test('should include all required fields', () => {
-    const unit = normalizeProperty(minimalPropertyDoc);
-    const doc = preparePropertyForFirestore(unit);
-    
+    const property = normalizeProperty(minimalPropertyDoc);
+    const doc = preparePropertyForFirestore(property);
+
     // All required fields must be present
-    expect(doc.id).toBe('unit-001');
-    expect(doc.name).toBe('Unit 001');
+    expect(doc.id).toBe('property-001');
+    expect(doc.name).toBe('Property 001');
     expect(doc.type).toBe('apartment');
     expect(doc.building).toBe('Building A');
     expect(doc.buildingId).toBe('building-a-id');
@@ -462,13 +462,13 @@ describe('preparePropertyForFirestore', () => {
     expect(doc.floorId).toBe('floor-01');
     expect(doc.floor).toBe(1);
     expect(doc.status).toBe('for-sale');
-    expect(doc.unitCoverage).toBeDefined();
+    expect(doc.propertyCoverage).toBeDefined();
   });
 
   test('should exclude undefined optional fields', () => {
-    const unit = normalizeProperty(minimalPropertyDoc);
-    const doc = preparePropertyForFirestore(unit);
-    
+    const property = normalizeProperty(minimalPropertyDoc);
+    const doc = preparePropertyForFirestore(property);
+
     // Undefined fields should not be in the document
     expect('code' in doc).toBe(false);
     expect('useCategory' in doc).toBe(false);
@@ -479,9 +479,9 @@ describe('preparePropertyForFirestore', () => {
   });
 
   test('should include defined optional fields', () => {
-    const unit = normalizeProperty(completePropertyDoc);
-    const doc = preparePropertyForFirestore(unit);
-    
+    const property = normalizeProperty(completePropertyDoc);
+    const doc = preparePropertyForFirestore(property);
+
     // All defined fields should be present
     expect(doc.code).toBe('U001');
     expect(doc.useCategory).toBe('residential');
@@ -492,42 +492,42 @@ describe('preparePropertyForFirestore', () => {
   });
 
   test('should exclude empty arrays', () => {
-    const unit = normalizeProperty(minimalPropertyDoc);
-    const doc = preparePropertyForFirestore(unit);
-    
+    const property = normalizeProperty(minimalPropertyDoc);
+    const doc = preparePropertyForFirestore(property);
+
     // Empty arrays should not be in the document
     expect('orientations' in doc).toBe(false);
     expect('views' in doc).toBe(false);
     expect('interiorFeatures' in doc).toBe(false);
     expect('securityFeatures' in doc).toBe(false);
-    expect('unitAmenities' in doc).toBe(false);
+    expect('propertyAmenities' in doc).toBe(false);
     expect('linkedSpaces' in doc).toBe(false);
   });
 
   test('should include non-empty arrays', () => {
-    const unit = normalizeProperty(completePropertyDoc);
-    const doc = preparePropertyForFirestore(unit);
-    
+    const property = normalizeProperty(completePropertyDoc);
+    const doc = preparePropertyForFirestore(property);
+
     // Non-empty arrays should be present
     expect(doc.orientations).toEqual(['north', 'east']);
     expect(doc.views).toHaveLength(2);
     expect(doc.interiorFeatures).toEqual(['fireplace', 'smart-home']);
     expect(doc.securityFeatures).toEqual(['alarm', 'security-door', 'cctv']);
-    expect(doc.unitAmenities).toEqual(['garden', 'pool']);
+    expect(doc.propertyAmenities).toEqual(['garden', 'pool']);
     expect(doc.linkedSpaces).toHaveLength(2);
   });
 
   test('should handle zero values correctly', () => {
-    const unitDoc: PropertyDoc = {
+    const propDoc: PropertyDoc = {
       ...minimalPropertyDoc,
       price: 0,
       area: 0,
       floor: 0
     };
-    
-    const unit = normalizeProperty(unitDoc);
-    const doc = preparePropertyForFirestore(unit);
-    
+
+    const property = normalizeProperty(propDoc);
+    const doc = preparePropertyForFirestore(property);
+
     // Zero values should be preserved
     expect(doc.price).toBe(0);
     expect(doc.area).toBe(0);
@@ -535,9 +535,9 @@ describe('preparePropertyForFirestore', () => {
   });
 
   test('should preserve complex nested structures', () => {
-    const unit = normalizeProperty(completePropertyDoc);
-    const doc = preparePropertyForFirestore(unit);
-    
+    const property = normalizeProperty(completePropertyDoc);
+    const doc = preparePropertyForFirestore(property);
+
     expect(doc.areas).toEqual(completePropertyDoc.areas);
     expect(doc.layout).toEqual(completePropertyDoc.layout);
     expect(doc.condition).toEqual(completePropertyDoc.condition);
@@ -553,12 +553,12 @@ describe('preparePropertyForFirestore', () => {
 
 describe('getPropertyDisplaySummary', () => {
   test('should generate correct title and subtitle with i18n', () => {
-    const unit = normalizeProperty(minimalPropertyDoc);
-    const summary = getPropertyDisplaySummary(unit);
+    const property = normalizeProperty(minimalPropertyDoc);
+    const summary = getPropertyDisplaySummary(property);
 
-    expect(summary.title).toBe('Unit 001');
+    expect(summary.title).toBe('Property 001');
     expect(summary.subtitle).toEqual({
-      key: 'unit.subtitle.format',
+      key: 'property.subtitle.format',
       params: {
         type: 'apartment',
         building: 'Building A',
@@ -567,39 +567,39 @@ describe('getPropertyDisplaySummary', () => {
     });
   });
 
-  test('should use unit ID as fallback title', () => {
-    const unitDoc: PropertyDoc = { ...minimalPropertyDoc, name: '' };
-    const unit = normalizeProperty(unitDoc, backfillDefaults);
-    unit.name = ''; // Override after normalization
-    const summary = getPropertyDisplaySummary(unit);
-    
-    expect(summary.title).toBe('Property unit-001');
+  test('should use property ID as fallback title', () => {
+    const propDoc: PropertyDoc = { ...minimalPropertyDoc, name: '' };
+    const property = normalizeProperty(propDoc, backfillDefaults);
+    property.name = ''; // Override after normalization
+    const summary = getPropertyDisplaySummary(property);
+
+    expect(summary.title).toBe('Property property-001');
   });
 
   test('should generate correct badges with i18n keys', () => {
-    const unit = normalizeProperty(completePropertyDoc);
-    const summary = getPropertyDisplaySummary(unit);
+    const property = normalizeProperty(completePropertyDoc);
+    const summary = getPropertyDisplaySummary(property);
 
-    expect(summary.badges).toContainEqual({ key: 'unit.status.ready' });
-    expect(summary.badges).toContainEqual({ key: 'unit.features.views', params: { count: 2 } });
-    expect(summary.badges).toContainEqual({ key: 'unit.spaces.parking', params: { count: 1 } });
-    expect(summary.badges).toContainEqual({ key: 'unit.spaces.storage', params: { count: 1 } });
+    expect(summary.badges).toContainEqual({ key: 'property.status.ready' });
+    expect(summary.badges).toContainEqual({ key: 'property.features.views', params: { count: 2 } });
+    expect(summary.badges).toContainEqual({ key: 'property.spaces.parking', params: { count: 1 } });
+    expect(summary.badges).toContainEqual({ key: 'property.spaces.storage', params: { count: 1 } });
   });
 
   test('should handle single view correctly with i18n', () => {
-    const unitDoc: PropertyDoc = {
+    const propDoc: PropertyDoc = {
       ...minimalPropertyDoc,
       views: [{ type: 'sea' as const, quality: 'full' as const }]
     };
 
-    const unit = normalizeProperty(unitDoc);
-    const summary = getPropertyDisplaySummary(unit);
+    const property = normalizeProperty(propDoc);
+    const summary = getPropertyDisplaySummary(property);
 
-    expect(summary.badges).toContainEqual({ key: 'unit.features.views', params: { count: 1 } });
+    expect(summary.badges).toContainEqual({ key: 'property.features.views', params: { count: 1 } });
   });
 
   test('should handle multiple parking spaces with i18n', () => {
-    const unitDoc: PropertyDoc = {
+    const propDoc: PropertyDoc = {
       ...minimalPropertyDoc,
       linkedSpaces: [
         { spaceType: 'parking' as const, spaceId: 'p1', quantity: 1, inclusion: 'included' as const, metadata: {} },
@@ -608,38 +608,38 @@ describe('getPropertyDisplaySummary', () => {
       ]
     };
 
-    const unit = normalizeProperty(unitDoc);
-    const summary = getPropertyDisplaySummary(unit);
+    const property = normalizeProperty(propDoc);
+    const summary = getPropertyDisplaySummary(property);
 
-    expect(summary.badges).toContainEqual({ key: 'unit.spaces.parking', params: { count: 3 } });
+    expect(summary.badges).toContainEqual({ key: 'property.spaces.parking', params: { count: 3 } });
   });
 
-  test('should return empty badges for minimal unit', () => {
-    const unit = normalizeProperty(minimalPropertyDoc);
-    const summary = getPropertyDisplaySummary(unit);
-    
+  test('should return empty badges for minimal property', () => {
+    const property = normalizeProperty(minimalPropertyDoc);
+    const summary = getPropertyDisplaySummary(property);
+
     expect(summary.badges).toEqual([]);
   });
 
-  test('should not include Ready badge for non-ready units', () => {
-    const unitDoc: PropertyDoc = {
+  test('should not include Ready badge for non-ready properties', () => {
+    const propDoc: PropertyDoc = {
       ...completePropertyDoc,
       operationalStatus: 'under-construction' as const
     };
 
-    const unit = normalizeProperty(unitDoc);
-    const summary = getPropertyDisplaySummary(unit);
+    const property = normalizeProperty(propDoc);
+    const summary = getPropertyDisplaySummary(property);
 
-    expect(summary.badges).not.toContainEqual({ key: 'unit.status.ready' });
+    expect(summary.badges).not.toContainEqual({ key: 'property.status.ready' });
   });
 
   test('should calculate correct completeness percentage', () => {
-    const completeUnit = normalizeProperty(completePropertyDoc);
-    const completeSummary = getPropertyDisplaySummary(completeUnit);
+    const completeProperty = normalizeProperty(completePropertyDoc);
+    const completeSummary = getPropertyDisplaySummary(completeProperty);
     expect(completeSummary.completeness).toBe(100);
-    
-    const incompleteUnit = normalizeProperty(minimalPropertyDoc);
-    const incompleteSummary = getPropertyDisplaySummary(incompleteUnit);
+
+    const incompleteProperty = normalizeProperty(minimalPropertyDoc);
+    const incompleteSummary = getPropertyDisplaySummary(incompleteProperty);
     expect(incompleteSummary.completeness).toBe(0);
   });
 });
@@ -663,11 +663,11 @@ describe('Performance tests', () => {
     };
     
     const start = performance.now();
-    const unit = normalizeProperty(largeDoc);
+    const property = normalizeProperty(largeDoc);
     const duration = performance.now() - start;
-    
-    expect(unit.interiorFeatures).toHaveLength(100);
-    expect(unit.linkedSpaces).toHaveLength(50);
+
+    expect(property.interiorFeatures).toHaveLength(100);
+    expect(property.linkedSpaces).toHaveLength(50);
     expect(duration).toBeLessThan(10); // Should complete in less than 10ms
   });
 
@@ -683,8 +683,8 @@ describe('Performance tests', () => {
       }]
     };
     
-    const unit = normalizeProperty(deepDoc);
-    const doc = preparePropertyForFirestore(unit);
+    const property = normalizeProperty(deepDoc);
+    const doc = preparePropertyForFirestore(property);
     
     expect(doc.linkedSpaces?.[0].metadata).toBeDefined();
     const metadata = doc.linkedSpaces?.[0].metadata as Record<string, string | number | boolean> | undefined;
@@ -721,11 +721,11 @@ describe('Type safety tests', () => {
       price: '250000' as unknown as number // String instead of number
     };
     
-    const unit = normalizeProperty(docWithWrongTypes);
-    
+    const property = normalizeProperty(docWithWrongTypes);
+
     // Values should be passed through without coercion
-    expect(typeof unit.floor).toBe('string');
-    expect(typeof unit.price).toBe('string');
+    expect(typeof property.floor).toBe('string');
+    expect(typeof property.price).toBe('string');
   });
 });
 

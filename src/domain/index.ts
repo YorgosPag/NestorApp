@@ -18,8 +18,6 @@ export {
   ParkingListCard,
   type ParkingListCardProps,
   // Property (formerly Unit)
-  /** @deprecated */ UnitListCard,
-  /** @deprecated */ type UnitListCardProps,
   // Storage
   StorageListCard,
   type StorageListCardProps,
@@ -48,8 +46,6 @@ export {
   // Property (formerly Unit)
   PropertyGridCard,
   type PropertyGridCardProps,
-  /** @deprecated */ UnitGridCard,
-  /** @deprecated */ type UnitGridCardProps,
   // Building
   BuildingGridCard,
   type BuildingGridCardProps,

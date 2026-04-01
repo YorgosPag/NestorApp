@@ -70,7 +70,7 @@ export function PropertyDetailsContent({
   isCreatingNewUnit?: boolean;
   onPropertyCreated?: (propertyId: string) => void;
 }) {
-  const { t } = useTranslation(['common', 'properties', 'units']);
+  const { t } = useTranslation(['common', 'properties']);
   const { quick } = useBorderTokens();
   const spacing = useSpacingTokens();
   const iconSizes = useIconSizes();
@@ -270,7 +270,7 @@ export function PropertyDetailsContent({
       {resolvedProperty.soldTo && !isReadOnly && (
         <UnifiedCustomerCard
           contactId={resolvedProperty.soldTo}
-          context="unit"
+          context="property"
           variant="compact"
           size="md"
           showUnitsCount={false}

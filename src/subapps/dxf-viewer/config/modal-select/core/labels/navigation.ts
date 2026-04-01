@@ -211,7 +211,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
   buildings: 'placeholders.searchBuildings',
   projects: 'placeholders.searchProjects',
   contacts: 'placeholders.searchContacts',
-  units: 'placeholders.searchUnits',
+  properties: 'placeholders.searchUnits',
   storages: 'placeholders.searchStorages',
   parking: 'placeholders.searchParking',
   communications: 'placeholders.searchCommunications'

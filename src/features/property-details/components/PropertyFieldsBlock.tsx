@@ -103,7 +103,7 @@ export function PropertyFieldsBlock({
 
   // ADR-233: Auto-suggest entity code when code is empty and editing
   const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
-    entityType: 'unit',
+    entityType: 'property',
     buildingId: property.buildingId ?? '',
     floorLevel: property.floor ?? 0,
     propertyType: (property.type as PropertyType) || undefined,

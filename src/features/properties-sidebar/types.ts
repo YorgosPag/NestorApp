@@ -28,16 +28,18 @@ export interface PropertiesSidebarProps {
   onSelectProperty: (id: string, isShift: boolean) => void;
   selectedPropertyIds: string[];
   onAssignmentSuccess: () => void;
-  /** Callback to start inline new unit creation */
+  /** Callback to start inline property creation */
   onNewProperty?: () => void;
-  /** Callback to delete the selected unit */
+  /** Callback to delete the selected property */
   onDeleteProperty?: (propertyId: string) => void;
-  /** Whether we are in "create new unit" mode (inline form) */
+  /** Whether we are in "create new property" mode (inline form) */
   isCreatingNewUnit?: boolean;
-  /** Callback when new unit is successfully created */
+  /** Callback when a new property is successfully created */
   onPropertyCreated?: (propertyId: string) => void;
-  /** Callback to cancel new unit creation */
+  /** Callback to cancel new property creation */
   onCancelCreate?: () => void;
   /** Default tab to open (from URL query param) */
   defaultTab?: string;
 }
+
+

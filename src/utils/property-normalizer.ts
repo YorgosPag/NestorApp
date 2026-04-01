@@ -54,8 +54,8 @@ export function normalizeProperty(doc: PropertyDoc, backfillData?: BackfillDefau
       );
     }
 
-    if (!doc.unitCoverage?.updatedAt) {
-      throw new Error('unitCoverage.updatedAt is required post-backfill');
+    if (!doc.propertyCoverage?.updatedAt) {
+      throw new Error('propertyCoverage.updatedAt is required post-backfill');
     }
 
     // Return strictly typed model (all fields guaranteed to exist - NO DEFAULTS!)
@@ -84,7 +84,7 @@ export function normalizeProperty(doc: PropertyDoc, backfillData?: BackfillDefau
       description: doc.description,
       soldTo: doc.soldTo,
       saleDate: doc.saleDate,
-      unitName: doc.unitName,
+      propertyName: doc.propertyName,
 
       // Extended fields - arrays default to empty
       areas: doc.areas,
@@ -99,15 +99,15 @@ export function normalizeProperty(doc: PropertyDoc, backfillData?: BackfillDefau
       finishes: doc.finishes,
       interiorFeatures: doc.interiorFeatures || [],
       securityFeatures: doc.securityFeatures || [],
-      unitAmenities: doc.unitAmenities || [],
+      propertyAmenities: doc.propertyAmenities || [],
       linkedSpaces: doc.linkedSpaces || [],
 
       // Coverage with strict requirements
-      unitCoverage: {
-        hasPhotos: doc.unitCoverage?.hasPhotos ?? false,
-        hasFloorplans: doc.unitCoverage?.hasFloorplans ?? false,
-        hasDocuments: doc.unitCoverage?.hasDocuments ?? false,
-        updatedAt: doc.unitCoverage.updatedAt
+      propertyCoverage: {
+        hasPhotos: doc.propertyCoverage?.hasPhotos ?? false,
+        hasFloorplans: doc.propertyCoverage?.hasFloorplans ?? false,
+        hasDocuments: doc.propertyCoverage?.hasDocuments ?? false,
+        updatedAt: doc.propertyCoverage.updatedAt
       }
     } as PropertyModel;
   }
@@ -138,7 +138,7 @@ export function normalizeProperty(doc: PropertyDoc, backfillData?: BackfillDefau
     description: doc.description,
     soldTo: doc.soldTo,
     saleDate: doc.saleDate,
-    unitName: doc.unitName,
+    propertyName: doc.propertyName,
 
     // Extended fields
     areas: doc.areas,
@@ -153,14 +153,14 @@ export function normalizeProperty(doc: PropertyDoc, backfillData?: BackfillDefau
     finishes: doc.finishes,
     interiorFeatures: doc.interiorFeatures || [],
     securityFeatures: doc.securityFeatures || [],
-    unitAmenities: doc.unitAmenities || [],
+    propertyAmenities: doc.propertyAmenities || [],
     linkedSpaces: doc.linkedSpaces || [],
 
     // Coverage with server timestamp
-    unitCoverage: {
-      hasPhotos: doc.unitCoverage?.hasPhotos ?? false,
-      hasFloorplans: doc.unitCoverage?.hasFloorplans ?? false,
-      hasDocuments: doc.unitCoverage?.hasDocuments ?? false,
+    propertyCoverage: {
+      hasPhotos: doc.propertyCoverage?.hasPhotos ?? false,
+      hasFloorplans: doc.propertyCoverage?.hasFloorplans ?? false,
+      hasDocuments: doc.propertyCoverage?.hasDocuments ?? false,
       updatedAt: backfillData.updatedAt // Server-provided timestamp
     }
   } as PropertyModel;
@@ -182,22 +182,22 @@ export function validatePropertyCompleteness(property: PropertyModel): {
   const totalItems = 3; // photos, floorplans, documents
 
   // Check documentation coverage - return i18n keys
-  if (property.unitCoverage.hasPhotos) {
+  if (property.propertyCoverage.hasPhotos) {
     score++;
   } else {
-    missingItems.push('unit.coverage.photos');
+    missingItems.push('property.coverage.photos');
   }
 
-  if (property.unitCoverage.hasFloorplans) {
+  if (property.propertyCoverage.hasFloorplans) {
     score++;
   } else {
-    missingItems.push('unit.coverage.floorplans');
+    missingItems.push('property.coverage.floorplans');
   }
 
-  if (property.unitCoverage.hasDocuments) {
+  if (property.propertyCoverage.hasDocuments) {
     score++;
   } else {
-    missingItems.push('unit.coverage.documents');
+    missingItems.push('property.coverage.documents');
   }
 
   return {
@@ -228,7 +228,7 @@ export function preparePropertyForFirestore(property: PropertyModel): PropertyDo
     floorId: property.floorId,
     floor: property.floor,
     status: property.status,
-    unitCoverage: property.unitCoverage
+    propertyCoverage: property.propertyCoverage
   };
 
   // Add optional fields only if they have values
@@ -240,7 +240,7 @@ export function preparePropertyForFirestore(property: PropertyModel): PropertyDo
   if (property.description) doc.description = property.description;
   if (property.soldTo !== undefined) doc.soldTo = property.soldTo;
   if (property.saleDate) doc.saleDate = property.saleDate;
-  if (property.unitName) doc.unitName = property.unitName;
+  if (property.propertyName) doc.propertyName = property.propertyName;
 
   // Extended fields
   if (property.areas) doc.areas = property.areas;
@@ -259,8 +259,8 @@ export function preparePropertyForFirestore(property: PropertyModel): PropertyDo
   if (property.securityFeatures && property.securityFeatures.length > 0) {
     doc.securityFeatures = property.securityFeatures;
   }
-  if (property.unitAmenities && property.unitAmenities.length > 0) {
-    doc.unitAmenities = property.unitAmenities;
+  if (property.propertyAmenities && property.propertyAmenities.length > 0) {
+    doc.propertyAmenities = property.propertyAmenities;
   }
   if (property.linkedSpaces && property.linkedSpaces.length > 0) {
     doc.linkedSpaces = property.linkedSpaces;
@@ -297,13 +297,13 @@ export function getPropertyDisplaySummary(property: PropertyModel): {
 
   // Add status badges with i18n keys
   if (property.operationalStatus === 'ready') {
-    badges.push({ key: 'unit.status.ready' });
+    badges.push({ key: 'property.status.ready' });
   }
 
   // Add feature badges with i18n keys and params
   if (property.views && property.views.length > 0) {
     badges.push({
-      key: 'unit.features.views',
+      key: 'property.features.views',
       params: { count: property.views.length }
     });
   }
@@ -314,14 +314,14 @@ export function getPropertyDisplaySummary(property: PropertyModel): {
 
     if (parking > 0) {
       badges.push({
-        key: 'unit.spaces.parking',
+        key: 'property.spaces.parking',
         params: { count: parking }
       });
     }
 
     if (storage > 0) {
       badges.push({
-        key: 'unit.spaces.storage',
+        key: 'property.spaces.storage',
         params: { count: storage }
       });
     }
@@ -330,7 +330,7 @@ export function getPropertyDisplaySummary(property: PropertyModel): {
   return {
     title: property.name || `Property ${property.id}`,
     subtitle: {
-      key: 'unit.subtitle.format',
+      key: 'property.subtitle.format',
       params: {
         type: property.type,
         building: property.building,

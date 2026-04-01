@@ -74,12 +74,13 @@ export function PropertiesSidebar({
 
   // 🏢 ENTERPRISE: Edit mode state - lifted to sidebar level (Pattern A)
   const [isEditMode, setIsEditMode] = useState(false);
-  // Auto-enter edit mode when creating new unit
+  const properties = units;
+  // Auto-enter edit mode when creating a new property
   const effectiveEditMode = isEditMode || isCreatingNewUnit;
   const handleToggleEditMode = useCallback(() => setIsEditMode(prev => !prev), []);
   const handleExitEditMode = useCallback(() => {
     setIsEditMode(false);
-    // If we were creating, cancel the creation
+    // If we were creating a property, cancel the draft flow
     if (isCreatingNewUnit && onCancelCreate) {
       onCancelCreate();
     }
@@ -111,14 +112,14 @@ export function PropertiesSidebar({
     }
   }, [selectedProperty, onDeleteProperty]);
 
-  // Get units tabs from centralized config
+  // Get property tabs from centralized config
   const propertiesTabs = getSortedPropertiesTabs();
 
   // Details content component using centralized DetailsContainer
   const detailsContent = (
     <DetailsContainer
       selectedItem={selectedProperty}
-      header={<PropertyDetailsHeader unit={selectedProperty} isEditMode={effectiveEditMode} isCreatingNewUnit={isCreatingNewUnit} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewProperty={onNewProperty} onDeleteProperty={handleDeleteProperty} />}
+      header={<PropertyDetailsHeader property={selectedProperty} isEditMode={effectiveEditMode} isCreatingNewUnit={isCreatingNewUnit} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewProperty={onNewProperty} onDeleteProperty={handleDeleteProperty} />}
       tabsRenderer={
         <UniversalTabsRenderer
           tabs={propertiesTabs.map(convertToUniversalConfig)}
@@ -142,7 +143,7 @@ export function PropertiesSidebar({
             isEditMode: effectiveEditMode,
             onToggleEditMode: handleToggleEditMode,
             onExitEditMode: handleExitEditMode,
-            // 🏢 ENTERPRISE: Inline new unit creation props
+            // 🏢 ENTERPRISE: Inline new property creation props
             isCreatingNewUnit,
             onPropertyCreated,
           }}
@@ -153,7 +154,7 @@ export function PropertiesSidebar({
       }
       onCreateAction={onNewProperty}
       emptyStateProps={{
-        icon: NAVIGATION_ENTITIES.unit.icon,
+        icon: NAVIGATION_ENTITIES.property.icon,
         ...emptyStateMessages.unit
       }}
     />
@@ -164,7 +165,7 @@ export function PropertiesSidebar({
       {/* 🖥️ DESKTOP: Standard split layout */}
       <div className={`hidden md:flex flex-1 ${layout.listItemsGap} min-h-0 min-w-0 overflow-hidden`}>
         <PropertiesList
-          units={units}
+          units={properties}
           selectedPropertyIds={selectedPropertyIds}
           onSelectProperty={onSelectProperty}
           onAssignmentSuccess={onAssignmentSuccess}
@@ -176,10 +177,10 @@ export function PropertiesSidebar({
         {!isMobile && detailsContent}
       </div>
 
-      {/* 📱 MOBILE: Show only UnitsList when no unit is selected */}
+      {/* 📱 MOBILE: Show only the property list when no property is selected */}
       <div className={`md:hidden w-full ${selectedProperty ? 'hidden' : 'block'}`}>
         <PropertiesList
-          units={units}
+          units={properties}
           selectedPropertyIds={selectedPropertyIds}
           onSelectProperty={onSelectProperty}
           onAssignmentSuccess={onAssignmentSuccess}
@@ -189,25 +190,25 @@ export function PropertiesSidebar({
         />
       </div>
 
-      {/* 📱 MOBILE: Slide-in UnitDetails when unit is selected */}
+      {/* 📱 MOBILE: Slide-in property details when a property is selected */}
       {/* 🏢 ENTERPRISE: Render details ONLY on mobile — prevents duplicate mount */}
       <MobileDetailsSlideIn
         isOpen={isMobile && !!selectedProperty}
         onClose={() => onSelectProperty('__none__', false)}
-        title={selectedProperty?.name || t('mobile.unitDetails')}
+        title={selectedProperty?.name || t('mobile.unitDetails', { defaultValue: 'Στοιχεία Ακινήτου' })}
         actionButtons={
           <>
             <button
-              onClick={() => {/* TODO: Edit unit handler */}}
+              onClick={() => {/* TODO: Edit property handler */}}
               className={`${spacing.padding.sm} rounded-md ${quick.input} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label={t('mobile.editUnit')}
+              aria-label={t('mobile.editUnit', { defaultValue: 'Επεξεργασία ακινήτου' })}
             >
               <Edit className={iconSizes.sm} />
             </button>
             <button
-              onClick={() => {/* TODO: Delete unit handler */}}
+              onClick={() => {/* TODO: Delete property handler */}}
               className={`${spacing.padding.sm} rounded-md ${quick.error} ${colors.bg.primary} text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label={t('mobile.deleteUnit')}
+              aria-label={t('mobile.deleteUnit', { defaultValue: 'Διαγραφή ακινήτου' })}
             >
               <Trash2 className={iconSizes.sm} />
             </button>
@@ -224,7 +225,7 @@ export function PropertiesSidebar({
       <BuildingSpaceConfirmDialog
         open={confirmDelete}
         onOpenChange={(open) => { if (!open) setConfirmDelete(false); }}
-        title={t('navigation.actions.delete.confirmTitle', { defaultValue: 'Διαγραφή Μονάδας' })}
+        title={t('navigation.actions.delete.confirmTitle', { defaultValue: 'Διαγραφή Ακινήτου' })}
         description={
           <>
             {t('navigation.actions.delete.confirmMessage', { name: selectedProperty?.name })}{' '}
@@ -240,4 +241,6 @@ export function PropertiesSidebar({
     </>
   );
 }
+
+
 

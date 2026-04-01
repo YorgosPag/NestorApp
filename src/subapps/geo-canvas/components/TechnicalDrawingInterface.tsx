@@ -463,7 +463,7 @@ export function TechnicalDrawingInterface({
 
               <div className="space-y-2">
                 {[
-                  { id: 'spitogatos', name: t('hardcodedTexts.values.spitogatosGr'), icon: NAVIGATION_ENTITIES.unit.icon },
+                  { id: 'spitogatos', name: t('hardcodedTexts.values.spitogatosGr'), icon: NAVIGATION_ENTITIES.property.icon },
                   { id: 'xe', name: t('hardcodedTexts.values.xeGr'), icon: Building },
                   { id: 'future-platform', name: t('drawingInterfaces.technical.automatedAlerts.morePlatforms'), icon: Sparkles, disabled: true }
                 ].map((platform) => (

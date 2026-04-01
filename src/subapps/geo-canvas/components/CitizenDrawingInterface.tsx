@@ -531,7 +531,7 @@ export function CitizenDrawingInterface({
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
           `}
         >
-          <NAVIGATION_ENTITIES.unit.icon className={`${iconSizes.xl} mb-2 ${NAVIGATION_ENTITIES.unit.color}`} />
+          <NAVIGATION_ENTITIES.property.icon className={`${iconSizes.xl} mb-2 ${NAVIGATION_ENTITIES.property.color}`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.realEstate')}</span>
           <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.realEstateDescription')}</span>
         </button>

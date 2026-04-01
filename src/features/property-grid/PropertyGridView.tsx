@@ -130,7 +130,7 @@ export function PropertyGridView() {
           layout="compact"
           spacing="compact"
           title={{
-            icon: NAVIGATION_ENTITIES.unit.icon,
+            icon: NAVIGATION_ENTITIES.property.icon,
             title: t('grid.header.title'),
             subtitle: t('grid.header.found', { count: filteredProperties.length })
           }}
@@ -206,7 +206,7 @@ export function PropertyGridView() {
             </ul>
           ) : (
             <div className="text-center py-12 px-4 sm:px-0" role="status" aria-live="polite">
-              {React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: `${iconSizes.xl} ${colors.text.muted} mx-auto mb-4`, 'aria-hidden': true })}
+              {React.createElement(NAVIGATION_ENTITIES.property.icon, { className: `${iconSizes.xl} ${colors.text.muted} mx-auto mb-4`, 'aria-hidden': true })}
               <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>{t('grid.emptyState.title')}</h3>
               <p className={colors.text.muted}>{t('grid.emptyState.subtitle')}</p>
             </div>

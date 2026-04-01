@@ -138,8 +138,8 @@ export const BuildingListCard = React.memo(function BuildingListCard({
     // Units - 🏢 ENTERPRISE: Using i18n
     if (building.units) {
       items.push({
-        icon: NAVIGATION_ENTITIES.unit.icon,
-        iconColor: NAVIGATION_ENTITIES.unit.color,
+        icon: NAVIGATION_ENTITIES.property.icon,
+        iconColor: NAVIGATION_ENTITIES.property.color,
         label: t('card.metrics.units'),
         value: String(building.units),
       });

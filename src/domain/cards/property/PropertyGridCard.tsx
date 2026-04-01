@@ -232,7 +232,7 @@ export function PropertyGridCard({
 
   return (
     <GridCard
-      entityType="unit"
+      entityType="property"
       title={property.name || property.code || property.id}
       subtitle={t(`types.${property.type}`, { defaultValue: property.type })}
       badges={badges}

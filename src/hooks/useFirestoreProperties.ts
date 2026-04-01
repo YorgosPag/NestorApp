@@ -62,10 +62,11 @@ export function useFirestoreProperties(
       const url = queryString ? `${API_ROUTES.PROPERTIES.LIST}?${queryString}` : API_ROUTES.PROPERTIES.LIST;
 
       logger.info('Fetching properties', { buildingId, floorId });
-      const result = await apiClient.get<PropertiesApiResponse>(url);
-      logger.info(`Loaded ${result?.units?.length || 0} properties`, { buildingId });
+      const response = await apiClient.get<PropertiesApiResponse>(url);
+      const properties = response?.units || [];
+      logger.info(`Loaded ${properties.length} properties`, { buildingId });
 
-      return result?.units || [];
+      return properties;
     },
     deps: [buildingId, floorId, user?.uid],
     enabled: autoFetch && !authLoading && !!user,
@@ -91,3 +92,6 @@ export function useBuildingProperties(buildingId: string): UseFirestorePropertie
 }
 
 export default useFirestoreProperties;
+
+
+

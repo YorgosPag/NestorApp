@@ -473,8 +473,6 @@ export interface PropertyOwner {
   notes?: string;
 }
 
-/** @deprecated Use PropertyOwner */
-export type UnitOwner = PropertyOwner;
 
 /**
  * Property grant document structure.
@@ -500,8 +498,6 @@ export interface PropertyGrant {
   revokedBy?: string;
 }
 
-/** @deprecated Use PropertyGrant */
-export type UnitGrant = PropertyGrant;
 
 // =============================================================================
 // TYPE GUARDS

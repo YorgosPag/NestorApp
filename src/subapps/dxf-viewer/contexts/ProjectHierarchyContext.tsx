@@ -87,7 +87,7 @@ export interface ProjectHierarchyActions {
 export interface DestinationOption {
   id: string;
   label: string;
-  type: 'project' | 'building' | 'floor' | 'unit' | 'storage' | 'parking';
+  type: 'project' | 'building' | 'floor' | 'property' | 'storage' | 'parking';
   parentId?: string;
   metadata?: {
     floorNumber?: number;

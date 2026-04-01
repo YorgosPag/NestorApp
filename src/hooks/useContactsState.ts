@@ -41,7 +41,7 @@ export function useContactsState() {
   const { user, loading: authLoading } = useAuth();
 
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
-  const [allUnits, setAllUnits] = useState<Property[]>([]);
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showDashboard, setShowDashboard] = useState(false);
@@ -58,12 +58,12 @@ export function useContactsState() {
   const ownerContactIds = useMemo(() => {
     return Array.from(
       new Set(
-        allUnits
+        allProperties
           .map(u => u.soldTo)
           .filter((v): v is string => Boolean(v))
       )
     );
-  }, [allUnits]);
+  }, [allProperties]);
 
   // Function to force data refresh
   const forceDataRefresh = useCallback(() => {
@@ -88,8 +88,8 @@ export function useContactsState() {
     const setup = async () => {
       try {
         // Units: one-time fetch (no real-time needed)
-        const units = await getProperties();
-        setAllUnits(units);
+        const properties = await getProperties();
+        setAllProperties(properties);
 
         // Contacts: real-time subscription (ADR-227 Phase 2: canonical pattern)
         unsubContacts = ContactsService.subscribeToContacts(
@@ -227,16 +227,16 @@ export function useContactsState() {
   // Create a map of contact stats
   const contactStatsMap = useMemo(() => {
     const stats = new Map<string, ContactStats>();
-    allUnits.forEach(unit => {
-      if (unit.soldTo) {
-        const currentStats = stats.get(unit.soldTo) || { propertiesCount: 0, totalArea: 0 };
+    allProperties.forEach(property => {
+      if (property.soldTo) {
+        const currentStats = stats.get(property.soldTo) || { propertiesCount: 0, totalArea: 0 };
         currentStats.propertiesCount += 1;
-        currentStats.totalArea += unit.area || 0;
-        stats.set(unit.soldTo, currentStats);
+        currentStats.totalArea += property.area || 0;
+        stats.set(property.soldTo, currentStats);
       }
     });
     return stats;
-  }, [allUnits]);
+  }, [allProperties]);
 
 
   // Filtered contacts logic
@@ -310,4 +310,7 @@ export function useContactsState() {
     forceDataRefresh,
   };
 }
+
+
+
 

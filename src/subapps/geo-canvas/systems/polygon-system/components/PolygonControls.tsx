@@ -189,7 +189,7 @@ export function PolygonControls({
                 state.currentTool === 'real-estate' ? styles.primary : styles.secondary
               }`}
             >
-              <NAVIGATION_ENTITIES.unit.icon className={`${iconSizes.sm} ${NAVIGATION_ENTITIES.unit.color}`} />
+              <NAVIGATION_ENTITIES.property.icon className={`${iconSizes.sm} ${NAVIGATION_ENTITIES.property.color}`} />
               Ακίνητο
             </button>
           </>

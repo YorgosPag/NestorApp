@@ -95,7 +95,7 @@ export function BoundaryLayerControlPanel({
   // ============================================================================
 
   // 🏢 ENTERPRISE: Use centralized navigation entity icons
-  const CommunityIcon = NAVIGATION_ENTITIES.unit.icon;
+  const CommunityIcon = NAVIGATION_ENTITIES.property.icon;
 
   const getBoundaryTypeIcon = (type: BoundaryLayer['type']) => {
     const iconProps = { className: iconSizes.sm };
@@ -341,6 +341,7 @@ export function BoundaryLayerControlPanel({
       )}
 
       {/* CSS για custom slider styling */}
+      {/* eslint-disable-next-line react/no-unknown-property */}
       <style jsx>{`
         .slider::-webkit-slider-thumb {
           appearance: none;

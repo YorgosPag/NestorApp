@@ -8,27 +8,27 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 interface PropertyDetailsHeaderProps {
-  unit: Property | null;
+  property: Property | null;
   /** 🏢 ENTERPRISE: Edit mode state - Pattern A (entity header) */
   isEditMode?: boolean;
-  /** Whether we are creating a new unit (inline form) */
+  /** Whether we are creating a new property (inline form) */
   isCreatingNewUnit?: boolean;
   /** 🏢 ENTERPRISE: Toggle edit mode callback (enters edit mode) */
   onToggleEditMode?: () => void;
   /** 🏢 ENTERPRISE: Exit edit mode callback (cancel without save) */
   onExitEditMode?: () => void;
-  /** Callback for creating a new unit */
+  /** Callback for creating a new property */
   onNewProperty?: () => void;
-  /** Callback for deleting the current unit */
+  /** Callback for deleting the current property */
   onDeleteProperty?: () => void;
 }
 
 export function PropertyDetailsHeader({
-  unit,
+  property,
   isEditMode = false,
   isCreatingNewUnit = false,
   onToggleEditMode,
@@ -38,30 +38,26 @@ export function PropertyDetailsHeader({
 }: PropertyDetailsHeaderProps) {
   const { t } = useTranslation('properties');
 
-  // 🏢 ENTERPRISE: Header Save — programmatically submits the PropertyFieldsBlock form
   const handleHeaderSave = useCallback(() => {
     const form = document.getElementById('property-fields-form') as HTMLFormElement | null;
     if (form) {
       form.requestSubmit();
     } else {
-      // Fallback: just exit edit mode if form not found
       onExitEditMode?.();
     }
   }, [onExitEditMode]);
 
-  // 🏢 ENTERPRISE: Header Cancel — exits edit mode (form resets via onExitEditMode)
   const handleHeaderCancel = useCallback(() => {
     onExitEditMode?.();
   }, [onExitEditMode]);
 
-  // Empty State - No unit selected
-  if (!unit) {
+  if (!property) {
     return (
       <div className="hidden md:block">
         <EntityDetailsHeader
-          icon={UnitIcon}
+          icon={PropertyIcon}
           title={t('details.selectProperty')}
-          subtitle={t('details.noUnitSelected')}
+          subtitle={t('details.noUnitSelected', { defaultValue: 'Δεν έχει επιλεγεί ακίνητο' })}
           variant="detailed"
           className="h-[81px] flex items-center"
         />
@@ -69,10 +65,6 @@ export function PropertyDetailsHeader({
     );
   }
 
-  // 🏢 ENTERPRISE: Actions via centralized presets
-  // Creating mode: Δημιουργία (🟢), Cancel (⚪)
-  // Edit mode: Save (🟢), Cancel (⚪)
-  // Normal mode: Edit (🔵), Νέα Μονάδα (🟢), Διαγραφή (🔴)
   const actions = isEditMode
     ? [
         createEntityAction(
@@ -86,28 +78,24 @@ export function PropertyDetailsHeader({
       ]
     : [
         createEntityAction('edit', t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }), () => onToggleEditMode?.()),
-        createEntityAction('new', t('navigation.actions.newUnit.label', { defaultValue: 'Νέα Μονάδα' }), () => onNewProperty?.()),
+        createEntityAction('new', t('navigation.actions.newUnit.label', { defaultValue: 'Νέο Ακίνητο' }), () => onNewProperty?.()),
         createEntityAction('delete', t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }), () => onDeleteProperty?.()),
       ];
 
-  // Selected State - Unit is selected (or creating new)
   const headerTitle = isCreatingNewUnit
-    ? t('navigation.actions.newUnit.label', { defaultValue: 'Νέα Μονάδα' })
-    : unit.name;
+    ? t('navigation.actions.newUnit.label', { defaultValue: 'Νέο Ακίνητο' })
+    : property.name;
 
   return (
     <>
-      {/* 🖥️ DESKTOP: Show full header with actions */}
       <div className="hidden md:block">
         <EntityDetailsHeader
-          icon={UnitIcon}
+          icon={PropertyIcon}
           title={headerTitle}
           actions={actions}
           variant="detailed"
         />
       </div>
-
-      {/* 📱 MOBILE: Hidden (no header duplication) */}
     </>
   );
 }

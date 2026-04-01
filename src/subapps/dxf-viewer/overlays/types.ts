@@ -27,7 +27,7 @@ export interface OverlayStyle {
 export interface Overlay {
   id: string;
   levelId: string;            // τρέχον Level ως «plan holder» (προς το παρόν)
-  kind: OverlayKind;          // unit/parking/storage/footprint
+  kind: OverlayKind;          // property/parking/storage/footprint
   polygon: Array<[number, number]>; // world coords, κλειστό polyline
   /** @deprecated ADR-258: Χρωματισμός γίνεται δυναμικά βάσει linked entity → commercialStatus */
   status?: Status;
@@ -87,7 +87,7 @@ export const STATUS_LABELS = PROPERTY_STATUS_LABELS;
  * 🌐 i18n: Uses keys from dxf-viewer:overlayProperties.kindLabels namespace
  */
 export const KIND_LABELS: Record<OverlayKind, string> = {
-  unit:      'dxf-viewer:overlayProperties.kindLabels.unit',
+  property:  'dxf-viewer:overlayProperties.kindLabels.property',
   parking:   'dxf-viewer:overlayProperties.kindLabels.parking',
   storage:   'dxf-viewer:overlayProperties.kindLabels.storage',
   footprint: 'dxf-viewer:overlayProperties.kindLabels.footprint',

@@ -2,7 +2,7 @@
 import * as React from 'react';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData, ViewerPassthroughProps } from '../types';
-// 🏢 ENTERPRISE: Firestore persistence for unit updates
+// 🏢 ENTERPRISE: Firestore persistence for property updates
 import { updateProperty } from '@/services/properties.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('usePropertiesSidebar');
@@ -17,14 +17,14 @@ export function usePropertiesSidebar(floors: FloorData[]|undefined, viewerProps:
     [safeFloors, safeSelectedFloorId]
   );
 
-  // 🏢 ENTERPRISE: Firestore persistence handler for unit field updates
+  // 🏢 ENTERPRISE: Firestore persistence handler for property field updates
   const handleUpdateProperty = React.useCallback(async (propertyId: string, updates: Partial<Property>) => {
     try {
       logger.info(`[DEBUG ADR-232] handleUpdateProperty CALLED`, { propertyId, updateKeys: Object.keys(updates), hasFloorId: 'floorId' in updates });
       await updateProperty(propertyId, updates);
-      logger.info(`Unit ${propertyId} updated in Firestore:`, { data: Object.keys(updates) });
+      logger.info(`Property ${propertyId} updated in Firestore:`, { data: Object.keys(updates) });
     } catch (error) {
-      logger.error(`Failed to persist unit update to Firestore: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`Failed to persist property update to Firestore: ${error instanceof Error ? error.message : String(error)}`);
       throw error; // Re-throw so UI can handle error state
     }
   }, []);
@@ -38,3 +38,5 @@ export function usePropertiesSidebar(floors: FloorData[]|undefined, viewerProps:
 
   return { safeFloors, currentFloor, safeViewerPropsWithFloors, safeViewerProps, handleUpdateProperty };
 }
+
+

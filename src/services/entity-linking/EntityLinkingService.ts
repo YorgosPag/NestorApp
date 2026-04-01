@@ -511,12 +511,12 @@ export class EntityLinkingService {
   }
 
   /**
-   * 🏠 Link a unit to a building (convenience method)
+   * 🏠 Link a property to a building (convenience method)
    */
-  static async linkUnitToBuilding(propertyId: string, buildingId: string): Promise<LinkResult> {
+  static async linkPropertyToBuilding(propertyId: string, buildingId: string): Promise<LinkResult> {
     return this.linkEntity({
       entityId: propertyId,
-      entityType: 'unit',
+      entityType: 'property',
       parentId: buildingId,
       parentType: 'building',
     });
@@ -547,11 +547,11 @@ export class EntityLinkingService {
   }
 
   /**
-   * 🏠 Get available units for a building
+   * 🏠 Get available properties for a building
    */
-  static async getAvailableUnitsForBuilding(buildingId: string): Promise<GetAvailableEntitiesResult> {
+  static async getAvailablePropertiesForBuilding(buildingId: string): Promise<GetAvailableEntitiesResult> {
     return this.getAvailableEntities({
-      entityType: 'unit',
+      entityType: 'property',
       parentId: buildingId,
       parentType: 'building',
       includeLinkedToOthers: false,

@@ -319,7 +319,7 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
       parking: t('wizard.floorplanTypes.parking'),
       building: t('wizard.floorplanTypes.building'),
       storage: t('wizard.floorplanTypes.storage'),
-      unit: t('wizard.floorplanTypes.unit'),
+      property: t('wizard.floorplanTypes.property'),
       floor: t('wizard.floorplanTypes.floor'),
     };
     return labels[type];

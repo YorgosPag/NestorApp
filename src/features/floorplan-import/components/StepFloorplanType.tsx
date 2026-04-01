@@ -59,7 +59,7 @@ interface TypeCardConfig {
 const TYPE_CARDS: TypeCardConfig[] = [
   { type: 'building', icon: Building2, labelKey: 'floorplanImport.types.building' },
   { type: 'floor', icon: Layers, labelKey: 'floorplanImport.types.floor' },
-  { type: 'unit', icon: Home, labelKey: 'floorplanImport.types.unit' },
+  { type: 'property', icon: Home, labelKey: 'floorplanImport.types.unit' },
 ];
 
 // =============================================================================
@@ -119,7 +119,7 @@ export function StepFloorplanType({
       </fieldset>
 
       {/* ── Unit selector (conditional) ── */}
-      {selectedType === 'unit' && (
+      {selectedType === 'property' && (
         <section className="space-y-2">
           <p className={`text-sm font-medium ${colors.text.secondary}`}>
             {t('floorplanImport.select.unit')}
@@ -150,7 +150,7 @@ export function StepFloorplanType({
       )}
 
       {/* ── Level selector for multi-level units (ADR-236) ── */}
-      {selectedType === 'unit' && selectedPropertyId && isMultiLevel && levelItems.length >= 2 && (
+      {selectedType === 'property' && selectedPropertyId && isMultiLevel && levelItems.length >= 2 && (
         <section className="space-y-2">
           <p className={`text-sm font-medium ${colors.text.secondary}`}>
             {t('floorplanImport.select.level')}

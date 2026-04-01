@@ -22,9 +22,9 @@ import { useTranslation } from 'react-i18next';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// 🏢 ENTERPRISE: Centralized Property Icon & Color
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 // Import components
 import { ReadOnlyLayerViewer } from '@/components/property-viewer/ReadOnlyLayerViewer';
@@ -157,7 +157,7 @@ export function PropertyViewerWithLayers({
     return (
       <Card className={className}>
         <CardContent className={cn("flex flex-col items-center justify-center h-96 text-center", colors.text.muted)}>
-          <UnitIcon className={`${iconSizes.xl6} mb-4 opacity-50 ${unitColor}`} />
+          <PropertyIcon className={`${iconSizes.xl6} mb-4 opacity-50 ${propertyColor}`} />
           <h3 className="text-xl font-semibold mb-2">{t('viewer.emptyState.noFloorplan')}</h3>
           <p className="text-sm max-w-sm">
             {t('viewer.emptyState.noFloorplanDescription')}
