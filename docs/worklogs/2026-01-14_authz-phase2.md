@@ -126,7 +126,7 @@ export const POST = withAuth<PopulateResponse>(
 
 **Problem**: `FIRESTORE_IN_LIMIT = 10` was duplicated in 2 files:
 - `buildings/[buildingId]/customers/route.ts`
-- `audit/bootstrap/route.ts`
+- `projects/bootstrap/route.ts`
 
 **Solution**: Centralized in `config/firestore-collections.ts`
 
@@ -143,7 +143,7 @@ export const FIRESTORE_LIMITS = {
 **Files Updated**:
 - `config/firestore-collections.ts` - Added FIRESTORE_LIMITS constant
 - `buildings/[buildingId]/customers/route.ts` - Replaced local constant
-- `audit/bootstrap/route.ts` - Replaced local constant
+- `projects/bootstrap/route.ts` - Replaced local constant
 
 ---
 

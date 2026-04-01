@@ -19,7 +19,7 @@
 ### The Problem
 
 - ❌ **Spread + Cast Anti-Pattern σε 15+ σημεία**: `{ id: doc.id, ...doc.data() } as Type` — zero type checking, silently passes invalid data
-- ❌ **Named-but-inline mappers**: Αρχεία ορίζουν τον δικό τους `mapFirestoreToX()` αντί να χρησιμοποιούν κεντρικό mapper (π.χ. `companies/route.ts`, `audit/bootstrap/route.ts`)
+- ❌ **Named-but-inline mappers**: Αρχεία ορίζουν τον δικό τους `mapFirestoreToX()` αντί να χρησιμοποιούν κεντρικό mapper (π.χ. `companies/route.ts`, `projects/bootstrap/route.ts`)
 - ❌ **Μη-type-safe field extraction**: `doc.data().fieldName` χωρίς validation σε πολλά routes
 - ❌ **7+ entity types χωρίς centralized mapper**: Contact, Project, Building, Unit, Floor, Conversation, Message
 - ❌ **Ασυνέπεια**: Κάθε API route ορίζει τα δικά του response interfaces αντί για shared DTOs

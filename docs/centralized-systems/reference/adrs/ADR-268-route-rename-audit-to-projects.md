@@ -69,6 +69,20 @@ Rename `/audit` → `/projects` σε όλα τα σημεία: folder structure,
 | `useFirestoreProjects.ts` | Updated comments |
 | `projectMappings.ts` | Updated comments |
 
+### 6. Bootstrap SRP Split (Commit: a1bc52eb)
+
+Το `bootstrap/route.ts` (513 γραμμές) χωρίστηκε σε 3 modules:
+
+| Αρχείο | Ευθύνη | Γραμμές |
+|--------|--------|---------|
+| `route.ts` | HTTP handler, caching, response assembly | 176 |
+| `bootstrap-helpers.ts` | Types (BootstrapCompany, BootstrapProject, BootstrapResponse) + document mapper | 74 |
+| `bootstrap-queries.ts` | Firestore data-fetching (companies, projects, building counts) | 235 |
+
+Επιπλέον:
+- Comment fix: `audit:data:view` → `projects:projects:view` (line 14)
+- Dead permission `audit:data:view` αφαιρέθηκε από `types.ts` + `roles.ts` (pending commit — types.ts >500 lines)
+
 ---
 
 ## What Did NOT Change (and MUST NOT change)
