@@ -106,13 +106,13 @@ export function usePropertyFilters(
           return true;
         }
 
-        // ⚠️ BACKWARD COMPATIBILITY: Handle units without unitCoverage (treat as "missing")
-        const unitCoverage = property.unitCoverage;
+        // ⚠️ BACKWARD COMPATIBILITY: Handle units without propertyCoverage (treat as "missing")
+        const propertyCoverage = property.propertyCoverage;
 
         // Check each filter condition
-        const photosCondition = !missingPhotos || (unitCoverage?.hasPhotos !== true);
-        const floorplansCondition = !missingFloorplans || (unitCoverage?.hasFloorplans !== true);
-        const documentsCondition = !missingDocuments || (unitCoverage?.hasDocuments !== true);
+        const photosCondition = !missingPhotos || (propertyCoverage?.hasPhotos !== true);
+        const floorplansCondition = !missingFloorplans || (propertyCoverage?.hasFloorplans !== true);
+        const documentsCondition = !missingDocuments || (propertyCoverage?.hasDocuments !== true);
 
         return photosCondition && floorplansCondition && documentsCondition;
       })();

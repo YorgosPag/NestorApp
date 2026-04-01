@@ -144,7 +144,7 @@ export interface UseEnterpriseMessagesReturn {
   };
 
   // 🔧 Utility methods
-  readonly getEmptyStateFor: (entityType: 'contact' | 'project' | 'building' | 'storage' | 'unit' | 'parking' | 'property' | 'generic') => { title: string; description: string };
+  readonly getEmptyStateFor: (entityType: 'contact' | 'project' | 'building' | 'storage' | 'parking' | 'property' | 'generic') => { title: string; description: string };
   readonly getActionButton: (action: 'save' | 'cancel' | 'delete' | 'edit' | 'create' | 'close' | 'confirm' | 'back' | 'next' | 'finish') => string;
 }
 

@@ -46,7 +46,7 @@ export class EnterpriseAPICache {
     storages: 2 * 60 * 1000,         // 2 minutes για storages
     parking: 2 * 60 * 1000,          // 🅿️ 2 minutes για parking (parallel to storages per local_4.log)
     floors: 1 * 60 * 1000,           // 1 minute για floors
-    units: 30 * 1000,                // 30 seconds για units
+    properties: 30 * 1000,            // 30 seconds για properties
     navigation: 10 * 60 * 1000,      // 10 minutes για navigation
     default: 1 * 60 * 1000           // 1 minute default
   };
@@ -195,7 +195,7 @@ export class EnterpriseAPICache {
     if (key.includes('storages')) return this.TTL_CONFIG.storages;
     if (key.includes('parking')) return this.TTL_CONFIG.parking;  // 🅿️ ENTERPRISE: Parking spaces
     if (key.includes('floors')) return this.TTL_CONFIG.floors;
-    if (key.includes('units')) return this.TTL_CONFIG.units;
+    if (key.includes('properties')) return this.TTL_CONFIG.properties;
     if (key.includes('navigation')) return this.TTL_CONFIG.navigation;
     return this.TTL_CONFIG.default;
   }

@@ -253,12 +253,12 @@ export function usePropertiesViewerState() {
     availableStorageUnits: 0, // Storage units with operationalStatus='ready'
 
     // ✅ ENTERPRISE: Coverage stats for Πληρότητα card (PR1.2)
-    // ⚠️ BACKWARD COMPATIBILITY: Handle missing unitCoverage until backfill completes
+    // ⚠️ BACKWARD COMPATIBILITY: Handle missing propertyCoverage until backfill completes
     coverage: (() => {
       const totalProperties = safeProperties.length;
-      const propertiesWithPhotos = safeProperties.filter(p => p.unitCoverage?.hasPhotos === true).length;
-      const propertiesWithFloorplans = safeProperties.filter(p => p.unitCoverage?.hasFloorplans === true).length;
-      const propertiesWithDocuments = safeProperties.filter(p => p.unitCoverage?.hasDocuments === true).length;
+      const propertiesWithPhotos = safeProperties.filter(p => p.propertyCoverage?.hasPhotos === true).length;
+      const propertiesWithFloorplans = safeProperties.filter(p => p.propertyCoverage?.hasFloorplans === true).length;
+      const propertiesWithDocuments = safeProperties.filter(p => p.propertyCoverage?.hasDocuments === true).length;
       return {
         totalProperties,
         propertiesWithPhotos,

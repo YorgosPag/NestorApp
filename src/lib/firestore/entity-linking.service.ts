@@ -33,7 +33,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
   propagateChildBuildingLink,
-  propagateUnitBuildingLink,
+  propagatePropertyBuildingLink,
   propagateBuildingProjectLink,
   propagateProjectCompanyLink,
   type CascadeResult,
@@ -68,8 +68,8 @@ function dispatchCascade(
     case 'child-building':
       cascadePromise = propagateChildBuildingLink(collection, entityId, newLinkValue);
       break;
-    case 'unit-building':
-      cascadePromise = propagateUnitBuildingLink(entityId, newLinkValue);
+    case 'property-building':
+      cascadePromise = propagatePropertyBuildingLink(entityId, newLinkValue);
       break;
     case 'building-project':
       cascadePromise = propagateBuildingProjectLink(entityId, newLinkValue);

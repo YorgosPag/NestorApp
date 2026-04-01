@@ -36,7 +36,7 @@ export interface UseFloorplanFilesConfig {
   /** Company ID */
   companyId: string | undefined;
   /** Entity type (usually 'project') */
-  entityType: 'project' | 'building' | 'unit';
+  entityType: 'project' | 'building' | 'property';
   /** Entity ID */
   entityId: string | undefined;
   /** Filter by purpose (e.g., 'project-floorplan', 'parking-floorplan') */

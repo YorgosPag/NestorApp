@@ -27,7 +27,7 @@ import type { RealtimeEventMap } from '@/services/realtime';
 export type EntityLinkRelation =
   | 'storage-building'
   | 'parking-building'
-  | 'unit-building'
+  | 'property-building'
   | 'building-project'
   | 'project-company';
 
@@ -95,7 +95,7 @@ export interface UseEntityLinkReturn {
 const FOREIGN_KEY_MAP: Record<EntityLinkRelation, string> = {
   'storage-building': 'buildingId',
   'parking-building': 'buildingId',
-  'unit-building': 'buildingId',
+  'property-building': 'buildingId',
   'building-project': 'projectId',
   'project-company': 'linkedCompanyId',
 };
@@ -109,13 +109,13 @@ const FOREIGN_KEY_MAP: Record<EntityLinkRelation, string> = {
  * When that parent entity type is created, updated (name change), or deleted,
  * the dropdown options must refresh.
  *
- * Example: relation 'unit-building' means the dropdown shows buildings.
+ * Example: relation 'property-building' means the dropdown shows buildings.
  * → subscribe to BUILDING_CREATED, BUILDING_UPDATED, BUILDING_DELETED
  */
 const RELATION_REALTIME_EVENTS: Record<EntityLinkRelation, Array<keyof RealtimeEventMap>> = {
   'storage-building': ['BUILDING_CREATED', 'BUILDING_UPDATED', 'BUILDING_DELETED'],
   'parking-building': ['BUILDING_CREATED', 'BUILDING_UPDATED', 'BUILDING_DELETED'],
-  'unit-building':    ['BUILDING_CREATED', 'BUILDING_UPDATED', 'BUILDING_DELETED'],
+  'property-building':    ['BUILDING_CREATED', 'BUILDING_UPDATED', 'BUILDING_DELETED'],
   'building-project': ['PROJECT_CREATED', 'PROJECT_UPDATED', 'PROJECT_DELETED'],
   'project-company':  ['CONTACT_CREATED', 'CONTACT_UPDATED', 'CONTACT_DELETED'],
 };

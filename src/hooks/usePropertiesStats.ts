@@ -15,7 +15,7 @@ interface PropertyStatsInput {
   price?: number;
   status?: string;
   type?: string;
-  unitCoverage?: { hasPhotos?: boolean; hasFloorplans?: boolean; hasDocuments?: boolean };
+  propertyCoverage?: { hasPhotos?: boolean; hasFloorplans?: boolean; hasDocuments?: boolean };
 }
 
 /**
@@ -85,10 +85,10 @@ export function usePropertiesStats(properties: PropertyStatsInput[]): Properties
     const availableProperties = countBy(properties, u => !!u.status && AVAILABLE_STATUSES.includes(u.status));
     const soldProperties = countBy(properties, u => !!u.status && SOLD_STATUSES.includes(u.status));
 
-    // Coverage stats (backward compatible: missing unitCoverage → false)
-    const propertiesWithPhotos = countBy(properties, u => u.unitCoverage?.hasPhotos === true);
-    const propertiesWithFloorplans = countBy(properties, u => u.unitCoverage?.hasFloorplans === true);
-    const propertiesWithDocuments = countBy(properties, u => u.unitCoverage?.hasDocuments === true);
+    // Coverage stats (backward compatible: missing propertyCoverage → false)
+    const propertiesWithPhotos = countBy(properties, u => u.propertyCoverage?.hasPhotos === true);
+    const propertiesWithFloorplans = countBy(properties, u => u.propertyCoverage?.hasFloorplans === true);
+    const propertiesWithDocuments = countBy(properties, u => u.propertyCoverage?.hasDocuments === true);
 
     return {
       totalProperties: total,

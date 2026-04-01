@@ -33,7 +33,7 @@ interface TemplateMessageInput {
   from?: string;
   subject?: string;
   metadata?: Record<string, unknown>;
-  entityType?: 'lead' | 'contact' | 'unit';
+  entityType?: 'lead' | 'contact' | 'property';
   entityId?: string;
   threadId?: string | null;
 }

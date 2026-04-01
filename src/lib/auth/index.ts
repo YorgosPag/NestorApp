@@ -43,9 +43,7 @@ export type {
   // Document types
   ProjectMember,
   PropertyOwner,
-  UnitOwner,
   PropertyGrant,
-  UnitGrant,
   AuditLogEntry,
   AuditChangeValue,
   AuditMetadata,

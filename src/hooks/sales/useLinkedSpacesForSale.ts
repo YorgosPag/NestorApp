@@ -178,7 +178,7 @@ export function useLinkedSpacesForSale(unit: Property): UseLinkedSpacesForSaleRe
       const items: SaleLineItem[] = [
         {
           assetId: unit.id,
-          assetType: 'unit',
+          assetType: 'property',
           assetName: propertyName,
           grossAmount: propertyPrice,
         },

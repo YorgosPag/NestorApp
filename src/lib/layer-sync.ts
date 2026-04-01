@@ -172,7 +172,7 @@ export class LayerSyncManager {
         isReadOnly: true,
         // Add sync metadata
         syncedAt: new Date().toISOString(),
-        syncedFrom: 'units'
+        syncedFrom: 'properties'
       };
 
       await updateDoc(propertyLayerDoc, readOnlyLayer);
@@ -209,7 +209,7 @@ export class LayerSyncManager {
             createdBy: undefined,
             isReadOnly: true,
             syncedAt: new Date().toISOString(),
-            syncedFrom: 'units'
+            syncedFrom: 'properties'
           };
           
           batch.set(propertyLayerDoc, readOnlyLayer);
@@ -431,9 +431,6 @@ export async function forceSyncLayers(
     await syncManager.syncLayersBatch(layers);
     // Debug logging removed
     
-  } catch (error) {
-    // Error logging removed
-    throw error;
   } finally {
     syncManager.destroy();
   }

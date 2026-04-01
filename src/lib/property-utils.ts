@@ -8,7 +8,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import i18n from '@/i18n/config';
 
 // 🏢 ENTERPRISE: Centralized Icons
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 const BuildingIcon = NAVIGATION_ENTITIES.building.icon;
 const StorageIcon = NAVIGATION_ENTITIES.storage.icon;
 
@@ -83,12 +83,12 @@ export const PROPERTY_STATUS_CONFIG = getPropertyStatusConfig();
 
 // 🏢 ENTERPRISE: Centralized Property Type Icons - ZERO HARDCODED VALUES
 export const PROPERTY_TYPE_ICONS: { [key: string]: React.ElementType } = {
-  'Στούντιο': UnitIcon,
-  'Γκαρσονιέρα': UnitIcon,
-  'Διαμέρισμα 2Δ': UnitIcon,
-  'Διαμέρισμα 3Δ': UnitIcon,
+  'Στούντιο': PropertyIcon,
+  'Γκαρσονιέρα': PropertyIcon,
+  'Διαμέρισμα 2Δ': PropertyIcon,
+  'Διαμέρισμα 3Δ': PropertyIcon,
   'Μεζονέτα': BuildingIcon,
   'Κατάστημα': BuildingIcon,
   'Αποθήκη': StorageIcon,
-  'default': UnitIcon,
+  'default': PropertyIcon,
 };

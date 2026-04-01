@@ -33,7 +33,7 @@ const logger = createModuleLogger('useBOQItems');
 // ============================================================================
 
 export interface BOQUIFilters {
-  scope: 'all' | 'building' | 'unit';
+  scope: 'all' | 'building' | 'property';
   status: BOQItemStatus | 'all';
   categoryCode: string; // '' = all
   searchQuery: string;

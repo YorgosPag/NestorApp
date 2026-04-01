@@ -17,7 +17,7 @@
  * Generate a deterministic contact link document ID.
  *
  * @param contactId - Source contact ID
- * @param targetEntityType - Target entity type ('project', 'building', 'unit')
+ * @param targetEntityType - Target entity type ('project', 'building', 'property')
  * @param targetEntityId - Target entity document ID
  * @param role - Optional association role ('buyer', 'owner', 'tenant', etc.)
  * @returns Deterministic link ID (e.g. `cl_cont_xyz_unit_unit_abc_buyer`)

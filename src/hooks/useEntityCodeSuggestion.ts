@@ -23,7 +23,7 @@ import type { ParkingLocationZone } from '@/types/parking';
 // =============================================================================
 
 interface UseEntityCodeSuggestionParams {
-  entityType: 'unit' | 'parking' | 'storage';
+  entityType: 'property' | 'parking' | 'storage';
   buildingId: string;
   floorLevel: number | '';
   propertyType?: PropertyType | '';
@@ -77,7 +77,7 @@ export function useEntityCodeSuggestion({
     }
 
     // For units, need propertyType; for parking, locationZone is optional
-    if (entityType === 'unit' && !propertyType) {
+    if (entityType === 'property' && !propertyType) {
       setSuggestedCode(null);
       return;
     }

@@ -132,7 +132,7 @@ export function useOwnershipRowMutations({
         ordinal: prev.rows.length + 1,
         buildingId: prev.buildingIds?.[0] ?? '',
         buildingName: '',
-        entityRef: { collection: 'units', id: `air_rights_${Date.now()}` },
+        entityRef: { collection: 'properties', id: `air_rights_${Date.now()}` },
         entityCode: `ΔΥ-${String(existingAirRights + 1).padStart(2, '0')}`,
         description: 'Δικαίωμα υψούν / αέρας',
         category: 'air_rights',

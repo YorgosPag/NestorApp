@@ -227,7 +227,7 @@ export async function propagateProjectCompanyLink(
  * When buildingId is null (unlink):
  * - Property loses projectId and companyId (set to null)
  */
-export async function propagateUnitBuildingLink(
+export async function propagatePropertyBuildingLink(
   propertyId: string,
   newBuildingId: string | null
 ): Promise<CascadeResult> {
@@ -300,7 +300,7 @@ export async function propagateUnitBuildingLink(
  * Resolves: projectId, companyId, linkedCompanyId from the building→project chain.
  *
  * Used by: storages PATCH, parking PATCH (and any future building-child entity).
- * Units have their own specialized `propagateUnitBuildingLink` for backward compat.
+ * Properties have their own specialized `propagatePropertyBuildingLink` for backward compat.
  *
  * @param collection - Firestore collection name (COLLECTIONS.STORAGE, COLLECTIONS.PARKING_SPACES)
  * @param docId - Document ID of the child entity

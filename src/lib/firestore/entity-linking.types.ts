@@ -25,7 +25,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
  */
 export type LinkCascadeType =
   | 'child-building'    // Storage/Parking → Building (propagateChildBuildingLink)
-  | 'unit-building'     // Unit → Building (propagateUnitBuildingLink)
+  | 'property-building'  // Property → Building (propagatePropertyBuildingLink)
   | 'building-project'  // Building → Project (propagateBuildingProjectLink)
   | 'project-company';  // Project → Company (propagateProjectCompanyLink)
 
@@ -52,7 +52,7 @@ export interface LinkRegistryEntry {
   /**
    * When true, skip EntityAuditService.recordChange() for this link.
    * Set for entities whose PATCH handler already runs a full diffFieldsWithResolution audit
-   * (currently: unit:buildingId — would produce a duplicate audit entry).
+   * (currently: property:buildingId — would produce a duplicate audit entry).
    */
   readonly skipAudit: boolean;
 }
@@ -82,12 +82,12 @@ export const LINK_REGISTRY: Record<string, LinkRegistryEntry> = {
     lockedStatusField: 'status',
     skipAudit: false,
   },
-  'unit:buildingId': {
+  'property:buildingId': {
     collection: COLLECTIONS.PROPERTIES,
     linkField: 'buildingId',
-    cascadeType: 'unit-building',
-    auditEntityType: 'unit',
-    auditTargetType: 'unit',
+    cascadeType: 'property-building',
+    auditEntityType: 'property',
+    auditTargetType: 'property',
     lockedStatuses: ['sold', 'rented'],
     lockedStatusField: 'commercialStatus',
     // units/[id] PATCH already runs EntityAuditService.diffFieldsWithResolution for buildingId

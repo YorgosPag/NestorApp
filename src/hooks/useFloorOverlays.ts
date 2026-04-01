@@ -210,7 +210,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
                 items.push({
                   id: doc.id,
                   polygon,
-                  kind: kind ?? 'unit',
+                  kind: kind ?? 'property',
                   status: data.status as PropertyStatus | undefined,
                   label: data.label as string | undefined,
                   linked: data.linked as FloorOverlayItem['linked'] | undefined,

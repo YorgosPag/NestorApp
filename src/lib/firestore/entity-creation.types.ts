@@ -35,7 +35,7 @@ export type EntityIdGeneratorName =
   | 'generateParkingId';
 
 /** Entity types that support ADR-233 code generation */
-export type EntityCodeType = 'unit' | 'parking' | 'storage';
+export type EntityCodeType = 'property' | 'parking' | 'storage';
 
 // =============================================================================
 // REGISTRY
@@ -92,17 +92,17 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     hierarchy: 'building-child',
     parentField: 'buildingId',
     idGenerator: 'generatePropertyId',
-    codeType: 'unit',
+    codeType: 'property',
     codeField: 'code',
     tenantCheck: true,
-    auditTargetType: 'unit',
+    auditTargetType: 'property',
   },
   property: {
     collection: COLLECTIONS.PROPERTIES,
     hierarchy: 'building-child',
     parentField: 'buildingId',
     idGenerator: 'generatePropertyId',
-    codeType: 'unit',
+    codeType: 'property',
     codeField: 'code',
     tenantCheck: true,
     auditTargetType: 'property',
