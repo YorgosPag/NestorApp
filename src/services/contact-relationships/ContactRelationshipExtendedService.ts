@@ -149,7 +149,7 @@ export class ContactRelationshipExtendedService {
   static async buildOrganizationHierarchy(organizationId: string): Promise<OrganizationTree> {
     try {
       const cacheKey = { type: 'organization' as const, id: organizationId, params: { hierarchy: true } };
-      const cached = RelationshipCacheAdapter.get(cacheKey);
+      const cached = RelationshipCacheAdapter.get<OrganizationTree>(cacheKey);
       if (cached) return cached;
 
       const hierarchy = await OrganizationHierarchyService.buildOrganizationHierarchy(organizationId);
