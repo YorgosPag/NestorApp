@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors -- config file: defines entity color mapping */
 /**
  * 🏢 ENTERPRISE: Navigation Entity Configuration
  * Single Source of Truth for navigation entity icons, colors, and labels
@@ -67,7 +68,7 @@ export type NavigationEntityType =
   | 'company'
   | 'project'
   | 'building'
-  | 'unit'
+  | 'property'
   | 'floor'
   | 'parking'
   | 'storage'
@@ -183,12 +184,12 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
     pluralLabel: 'navigation.entities.building.plural',
     description: 'navigation.entities.building.description'
   },
-  unit: {
+  property: {
     icon: Home,
     color: 'text-teal-600',
-    label: 'navigation.entities.unit.label',
-    pluralLabel: 'navigation.entities.unit.plural',
-    description: 'navigation.entities.unit.description'
+    label: 'navigation.entities.property.label',
+    pluralLabel: 'navigation.entities.property.plural',
+    description: 'navigation.entities.property.description'
   },
   floor: {
     icon: Layers,

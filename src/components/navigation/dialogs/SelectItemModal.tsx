@@ -38,7 +38,7 @@ interface SelectItemModalProps {
   title: string;
   description: string;
   searchPlaceholder: string;
-  itemType: 'project' | 'building' | 'floor' | 'unit';
+  itemType: 'project' | 'building' | 'floor' | 'property';
   isLoading?: boolean;
 }
 
@@ -51,7 +51,7 @@ const getEntityIcon = (itemType: string) => {
     project: 'project',
     building: 'building',
     floor: 'floor',
-    unit: 'unit'
+    property: 'property'
   };
   const entityType = entityMap[itemType] || 'building';
   return NAVIGATION_ENTITIES[entityType].icon;
@@ -62,7 +62,7 @@ const getEntityColor = (itemType: string) => {
     project: 'project',
     building: 'building',
     floor: 'floor',
-    unit: 'unit'
+    property: 'property'
   };
   const entityType = entityMap[itemType] || 'building';
   return NAVIGATION_ENTITIES[entityType].color;

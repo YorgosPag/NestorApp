@@ -12,7 +12,7 @@ import { EntityLinkingService } from '@/services/entity-linking';
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { NavigationUnit, NavigationParkingSpot } from '@/components/navigation/core/types';
+import type { NavigationProperty, NavigationParkingSpot } from '@/components/navigation/core/types';
 import type { StorageUnit, SelectedBuildingSpace } from '@/components/navigation/components/BuildingSpacesTabs';
 
 const logger = createModuleLogger('useDesktopNavData');
@@ -128,9 +128,9 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
   }, [isBuildingModalOpen, loadAvailableBuildings]);
 
   // ── Storage type check ──
-  const isStorageType = useCallback((unit: NavigationUnit): boolean => {
-    const type = (unit.type || '').toLowerCase();
-    const name = (unit.name || '').toLowerCase();
+  const isStorageType = useCallback((item: NavigationProperty): boolean => {
+    const type = (item.type || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
     return (
       type.includes('storage') ||
       type.includes('αποθήκη') ||
@@ -140,19 +140,19 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
     );
   }, []);
 
-  // ── Building units (excluding storages) ──
-  const buildingUnits = useMemo((): NavigationUnit[] => {
+  // ── Building properties (excluding storages) ──
+  const buildingProperties = useMemo((): NavigationProperty[] => {
     if (!selectedBuilding) return [];
-    const realtimeUnits = getPropertiesForBuilding(selectedBuilding.id);
-    return realtimeUnits
-      .filter(unit => !isStorageType(unit as unknown as NavigationUnit))
-      .map(unit => ({
-        id: unit.id,
-        name: unit.name,
-        type: (unit.type || 'apartment') as NavigationUnit['type'],
-        floor: unit.floor || 0,
-        area: unit.area || 0,
-        status: (unit.status || 'owner') as NavigationUnit['status'],
+    const realtimeProperties = getPropertiesForBuilding(selectedBuilding.id);
+    return realtimeProperties
+      .filter(prop => !isStorageType(prop as unknown as NavigationProperty))
+      .map(prop => ({
+        id: prop.id,
+        name: prop.name,
+        type: (prop.type || 'apartment') as NavigationProperty['type'],
+        floor: prop.floor || 0,
+        area: prop.area || 0,
+        status: (prop.status || 'owner') as NavigationProperty['status'],
       }));
   }, [selectedBuilding, getPropertiesForBuilding, isStorageType]);
 
@@ -173,15 +173,15 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
         status: storage.status as StorageUnit['status'],
       }));
 
-    const realtimeUnits = getPropertiesForBuilding(selectedBuilding.id);
-    const legacyStorages: StorageUnit[] = realtimeUnits
-      .filter(unit => isStorageType(unit as unknown as NavigationUnit))
-      .map(unit => ({
-        id: unit.id,
-        name: unit.name,
+    const realtimeProperties = getPropertiesForBuilding(selectedBuilding.id);
+    const legacyStorages: StorageUnit[] = realtimeProperties
+      .filter(prop => isStorageType(prop as unknown as NavigationProperty))
+      .map(prop => ({
+        id: prop.id,
+        name: prop.name,
         type: 'basement' as const,
-        area: unit.area,
-        status: (unit.status || 'owner') as StorageUnit['status'],
+        area: prop.area,
+        status: (prop.status || 'owner') as StorageUnit['status'],
       }));
 
     const allStorages = [...apiStorages];
@@ -207,9 +207,9 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
 
   // ── Tab selection callbacks ──
   const handlePropertySelectFromTabs = useCallback(
-    (unit: NavigationUnit) => {
-      selectProperty({ id: unit.id, name: unit.name, type: unit.type });
-      setSelectedBuildingSpace({ id: unit.id, name: unit.name, type: 'units' });
+    (property: NavigationProperty) => {
+      selectProperty({ id: property.id, name: property.name, type: property.type });
+      setSelectedBuildingSpace({ id: property.id, name: property.name, type: 'properties' });
     },
     [selectProperty]
   );
@@ -225,7 +225,7 @@ export function useDesktopNavData(isBuildingModalOpen: boolean) {
   return {
     projectBuildings,
     availableBuildings,
-    buildingUnits,
+    buildingProperties,
     buildingStorages,
     buildingParkingSpots,
     selectedBuildingSpace,

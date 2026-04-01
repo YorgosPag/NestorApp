@@ -12,7 +12,7 @@ export type {
   NavigationProject,
   NavigationBuilding,
   NavigationFloor,
-  NavigationUnit,
+  NavigationProperty,
   NavigationParkingSpot,
   NavigationLevel,
   NavigationOption,

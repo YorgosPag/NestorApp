@@ -29,19 +29,19 @@ export interface NavigationBuilding {
   id: string;
   name: string;
   floors: NavigationFloor[];
-  storageAreas?: NavigationUnit[];
-  /** 🏢 ENTERPRISE: Direct units for buildings without floors */
-  units?: NavigationUnit[];
+  storageAreas?: NavigationProperty[];
+  /** 🏢 ENTERPRISE: Direct properties for buildings without floors */
+  properties?: NavigationProperty[];
 }
 
 export interface NavigationFloor {
   id: string;
   number: number;
   name: string;
-  units: NavigationUnit[];
+  properties: NavigationProperty[];
 }
 
-export interface NavigationUnit {
+export interface NavigationProperty {
   id: string;
   name: string;
   type: 'studio' | 'apartment' | 'maisonette' | 'commercial';
@@ -58,8 +58,8 @@ export interface NavigationParkingSpot {
   location: 'ground' | 'basement' | 'pilotis';
 }
 
-/** 🏢 ENTERPRISE: Selected unit for breadcrumb navigation */
-export interface NavigationSelectedUnit {
+/** 🏢 ENTERPRISE: Selected property for breadcrumb navigation */
+export interface NavigationSelectedProperty {
   id: string;
   name: string;
   type?: string;
@@ -104,8 +104,8 @@ export interface BreadcrumbSyncParams {
   project: BreadcrumbEntityRef;
   /** Optional: Building info (for /buildings, /units pages) */
   building?: BreadcrumbEntityRef;
-  /** Optional: Unit info (for /units page) */
-  unit?: BreadcrumbEntityRef & { type?: string };
+  /** Optional: Property info (for /properties page) */
+  property?: BreadcrumbEntityRef & { type?: string };
   /** Optional: Space info for parking/storage (for /parking, /storage pages) */
   space?: BreadcrumbEntityRef & { type: 'parking' | 'storage' };
   /** The navigation level to set */
@@ -157,10 +157,10 @@ export interface NavigationState {
    */
   selectedBuilding: NavigationBuilding | null;
   /**
-   * 🏢 ENTERPRISE: Selected unit/space for breadcrumb display.
+   * 🏢 ENTERPRISE: Selected property/space for breadcrumb display.
    * ⚠️ DISPLAY-ONLY - contains only id, name, and optional type
    */
-  selectedProperty: NavigationSelectedUnit | null;
+  selectedProperty: NavigationSelectedProperty | null;
   /**
    * @deprecated 🏢 ENTERPRISE (Επιλογή Α): Floors αφαιρέθηκαν από navigation.
    * Παραμένει για backward compatibility - θα αφαιρεθεί σε μελλοντική έκδοση.
@@ -176,9 +176,9 @@ export interface NavigationState {
  * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
  * 'floors' αφαιρέθηκε από navigation levels.
  * Οι όροφοι είναι δομικοί κόμβοι - εμφανίζονται μόνο στο Building Detail View.
- * Ιεραρχία: Companies → Projects → Buildings → Units
+ * Ιεραρχία: Companies → Projects → Buildings → Properties
  */
-export type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'units' | 'spaces';
+export type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'properties' | 'spaces';
 
 export interface NavigationActions {
   loadCompanies: () => Promise<void>;
@@ -186,8 +186,8 @@ export interface NavigationActions {
   loadProjectsForCompany: (companyId: string) => Promise<void>;
   selectProject: (projectId: string) => void;
   selectBuilding: (buildingId: string) => void;
-  /** 🏢 ENTERPRISE: Select unit for breadcrumb display */
-  selectProperty: (unit: NavigationSelectedUnit | null) => void;
+  /** 🏢 ENTERPRISE: Select property for breadcrumb display */
+  selectProperty: (property: NavigationSelectedProperty | null) => void;
   /**
    * 🏢 ENTERPRISE: Atomic breadcrumb sync from entity pages
    *
@@ -197,7 +197,7 @@ export interface NavigationActions {
    * ⚠️ CRITICAL CONTRACT:
    * - Updates DISPLAY-ONLY navigation selection for breadcrumb/UI context
    * - The resulting selected* objects are NOT full domain entities
-   * - Nested arrays (`buildings`, `floors`) will be EMPTY
+   * - Nested arrays (`buildings`, `properties`) will be EMPTY
    * - MUST NOT be used for business logic or data fetching
    *
    * ✅ CORRECT USAGE:
@@ -238,7 +238,7 @@ export interface NavigationActions {
   /** 🏢 ENTERPRISE: Get real-time property count for a building */
   getPropertyCount: (buildingId: string) => number;
   /** 🏢 ENTERPRISE: Get all properties for a building in real-time */
-  getPropertiesForBuilding: (buildingId: string) => RealtimeUnitRef[];
+  getPropertiesForBuilding: (buildingId: string) => RealtimePropertyRef[];
 }
 
 /** 🏢 ENTERPRISE: Reference to a building from real-time system */
@@ -248,8 +248,8 @@ export interface RealtimeBuildingRef {
   projectId: string | null;
 }
 
-/** 🏢 ENTERPRISE: Reference to a unit from real-time system */
-export interface RealtimeUnitRef {
+/** 🏢 ENTERPRISE: Reference to a property from real-time system */
+export interface RealtimePropertyRef {
   id: string;
   name: string;
   buildingId: string | null;
@@ -270,7 +270,7 @@ export interface NavigationFilters {
 export interface NavigationOption {
   id: string;
   label: string;
-  type: 'company' | 'project' | 'building' | 'floor' | 'unit' | 'storage' | 'parking';
+  type: 'company' | 'project' | 'building' | 'floor' | 'property' | 'storage' | 'parking';
   icon: string;
   subtitle?: string;
   extraInfo?: string;

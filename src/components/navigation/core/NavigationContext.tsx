@@ -23,7 +23,7 @@ import type {
   NavigationLevel,
   NavigationFilters,
   RealtimeBuildingRef,
-  NavigationSelectedUnit
+  NavigationSelectedProperty
 } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -197,7 +197,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
     if (!realtimeBuildingRef) {
       logger.warn('Building not found in realtime data', { buildingId });
-      updateState({ selectedBuilding: null, selectedFloor: null, selectedProperty: null, currentLevel: 'units' });
+      updateState({ selectedBuilding: null, selectedFloor: null, selectedProperty: null, currentLevel: 'properties' });
       return;
     }
 
@@ -205,19 +205,19 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       id: realtimeBuildingRef.id,
       name: realtimeBuildingRef.name,
       floors: [],
-      units: []
+      properties: []
     };
 
     logger.info('Building selected', { name: building.name, buildingId });
-    updateState({ selectedBuilding: building, selectedFloor: null, selectedProperty: null, currentLevel: 'units' });
+    updateState({ selectedBuilding: building, selectedFloor: null, selectedProperty: null, currentLevel: 'properties' });
   };
 
-  const selectProperty = (unit: NavigationSelectedUnit | null) => {
-    updateState({ selectedProperty: unit, currentLevel: 'units' });
+  const selectProperty = (property: NavigationSelectedProperty | null) => {
+    updateState({ selectedProperty: property, currentLevel: 'properties' });
   };
 
   const syncBreadcrumb = useCallback((params: import('./types').BreadcrumbSyncParams) => {
-    const { company, project, building, unit, space, currentLevel } = params;
+    const { company, project, building, property, space, currentLevel } = params;
 
     const selectedCompany: NavigationCompany = { id: company.id, companyName: company.name };
     const selectedProject: NavigationProject = {
@@ -227,8 +227,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     const selectedBuilding: NavigationBuilding | null = building
       ? { id: building.id, name: building.name, floors: [] }
       : null;
-    const selectedProperty: NavigationSelectedUnit | null = unit
-      ? { id: unit.id, name: unit.name, type: unit.type }
+    const selectedProperty: NavigationSelectedProperty | null = property
+      ? { id: property.id, name: property.name, type: property.type }
       : space
         ? { id: space.id, name: space.name, type: space.type }
         : null;

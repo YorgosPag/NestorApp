@@ -113,7 +113,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       // Supports: 'parking', 'storage', or defaults to 'unit'
       const entityType = selectedProperty.type && isNavigationEntityType(selectedProperty.type)
         ? selectedProperty.type
-        : 'unit';
+        : 'property';
       const entityConfig = NAVIGATION_ENTITIES[entityType];
 
       // Map navigation entity type to NavigableEntityType for route generation
@@ -124,7 +124,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         label: selectedProperty.name,
         icon: entityConfig.icon,
         color: entityConfig.color,
-        level: 'units',
+        level: 'properties',
         entityType: navigableType,
         href: ContextualNavigationService.generateRoute(navigableType, selectedProperty.id, { action: 'select' }),
         onClick: () => {} // Legacy - not used with Link

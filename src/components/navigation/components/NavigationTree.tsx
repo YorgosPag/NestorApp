@@ -90,14 +90,14 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
    * 2. Απευθείας από το building (αν δεν έχει ορόφους)
    * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
    */
-  const buildingUnits = useMemo(() => {
+  const buildingProperties = useMemo(() => {
     if (!selectedBuilding) return [];
 
-    // 🏢 ENTERPRISE: Combine units from floors AND direct building units
-    const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
-    const directUnits = selectedBuilding.units || [];
+    // 🏢 ENTERPRISE: Combine properties from floors AND direct building properties
+    const floorProperties = selectedBuilding.floors?.flatMap(floor => floor.properties) || [];
+    const directProperties = selectedBuilding.properties || [];
 
-    return [...floorUnits, ...directUnits];
+    return [...floorProperties, ...directProperties];
   }, [selectedBuilding]);
 
   if (loading) {
@@ -220,7 +220,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
          */}
 
         {/* Final Destinations - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
-        {currentLevel === 'units' && selectedBuilding && (
+        {currentLevel === 'properties' && selectedBuilding && (
           <nav className="space-y-3" aria-label={t('tree.steps.units')}>
             <p className="text-sm font-medium text-gray-900 dark:text-foreground mb-3">
               {t('tree.destinations.navigateTo')}
@@ -228,10 +228,10 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
 
             <NavigationButton
               onClick={() => handleNavigateToPage('properties')}
-              icon={NAVIGATION_ENTITIES.unit.icon}
-              iconColor={NAVIGATION_ENTITIES.unit.color}
+              icon={NAVIGATION_ENTITIES.property.icon}
+              iconColor={NAVIGATION_ENTITIES.property.color}
               title={t('tree.destinations.viewProperties')}
-              subtitle={t('tree.destinations.propertiesInBuilding', { count: buildingUnits.length })}
+              subtitle={t('tree.destinations.propertiesInBuilding', { count: buildingProperties.length })}
               variant="compact"
             />
 

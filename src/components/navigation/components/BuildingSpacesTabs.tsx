@@ -23,7 +23,7 @@ import { NavigationButton } from './NavigationButton';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { NAVIGATION_ENTITIES } from '../config';
 import { ContextualNavigationService } from '@/services/navigation/ContextualNavigationService';
-import type { NavigationUnit, NavigationParkingSpot } from '../core/types';
+import type { NavigationProperty, NavigationParkingSpot } from '../core/types';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -48,7 +48,7 @@ export interface StorageUnit {
 /**
  * Tab identifiers for building spaces
  */
-export type BuildingSpaceTab = 'units' | 'storage' | 'parking';
+export type BuildingSpaceTab = 'properties' | 'storage' | 'parking';
 
 /**
  * Selected item state - can be any of the three types
@@ -64,7 +64,7 @@ export interface SelectedBuildingSpace {
  */
 interface BuildingSpacesTabsProps {
   /** List of units in the building */
-  units: NavigationUnit[];
+  units: NavigationProperty[];
   /** List of storage areas in the building */
   storages: StorageUnit[];
   /** List of parking spots in the building */
@@ -72,7 +72,7 @@ interface BuildingSpacesTabsProps {
   /** Currently selected item (any type) */
   selectedItem: SelectedBuildingSpace | null;
   /** Callback when a unit is selected */
-  onPropertySelect: (unit: NavigationUnit) => void;
+  onPropertySelect: (property: NavigationProperty) => void;
   /** Callback when a storage is selected */
   onStorageSelect: (storage: StorageUnit) => void;
   /** Callback when a parking spot is selected */
@@ -110,7 +110,7 @@ export function BuildingSpacesTabs({
   onParkingSelect,
   onAddItem,
   onUnlinkItem,
-  defaultTab = 'units',
+  defaultTab = 'properties',
   className
 }: BuildingSpacesTabsProps) {
   // ==========================================================================
@@ -177,10 +177,10 @@ export function BuildingSpacesTabs({
   // 🏢 ENTERPRISE: Labels χρησιμοποιούν i18n keys για πλήρη μετάφραση
   const tabs: TabDefinition[] = [
     {
-      id: 'units',
+      id: 'properties',
       label: t('buildingSpaces.units.title'),
-      icon: NAVIGATION_ENTITIES.unit.icon,
-      iconColor: NAVIGATION_ENTITIES.unit.color, // 🟠 text-orange-600
+      icon: NAVIGATION_ENTITIES.property.icon,
+      iconColor: NAVIGATION_ENTITIES.property.color, // 🟠 text-orange-600
       content: null // Content rendered separately via TabsContent
     },
     {
@@ -226,17 +226,17 @@ export function BuildingSpacesTabs({
         {/* ================================================================= */}
         {/* TAB 1: UNITS (Μονάδες) */}
         {/* ================================================================= */}
-        <TabsContent value="units" className="mt-3">
+        <TabsContent value="properties" className="mt-3">
           <NavigationCardToolbar
-            level="units"
+            level="properties"
             searchTerm={unitsSearch}
             onSearchChange={setUnitsSearch}
             activeFilters={unitsFilters}
             onFiltersChange={setUnitsFilters}
-            hasSelectedItems={selectedItem?.type === 'units'}
+            hasSelectedItems={selectedItem?.type === 'properties'}
             itemCount={filteredUnits.length}
-            onNewItem={onAddItem ? () => onAddItem('units') : undefined}
-            onDeleteItem={onUnlinkItem ? () => onUnlinkItem('units') : undefined}
+            onNewItem={onAddItem ? () => onAddItem('properties') : undefined}
+            onDeleteItem={onUnlinkItem ? () => onUnlinkItem('properties') : undefined}
           />
 
           <ul
@@ -254,14 +254,14 @@ export function BuildingSpacesTabs({
                 <li key={unit.id}>
                   <NavigationButton
                     onClick={() => onPropertySelect(unit)}
-                    icon={NAVIGATION_ENTITIES.unit.icon}
-                    iconColor={NAVIGATION_ENTITIES.unit.color}
+                    icon={NAVIGATION_ENTITIES.property.icon}
+                    iconColor={NAVIGATION_ENTITIES.property.color}
                     title={unit.name}
                     subtitle={unit.type || t('buildingSpaces.units.defaultSubtitle')}
-                    isSelected={isItemSelected(unit.id, 'units')}
+                    isSelected={isItemSelected(unit.id, 'properties')}
                     variant="compact"
                     // 🔗 ENTERPRISE: Navigation to Units page
-                    navigationHref={ContextualNavigationService.generateRoute('unit', unit.id, { action: 'select' })}
+                    navigationHref={ContextualNavigationService.generateRoute('property', unit.id, { action: 'select' })}
                     navigationTooltip={t('buildingSpaces.units.openTooltip')}
                   />
                 </li>

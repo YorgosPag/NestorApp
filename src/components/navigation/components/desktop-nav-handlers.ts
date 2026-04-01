@@ -89,7 +89,7 @@ export async function executeCompanyDeletion(deps: CompanyDeletionDeps): Promise
 
 interface UnlinkDeps {
   pending: PendingEntity;
-  entityType: 'project' | 'building' | 'unit';
+  entityType: 'project' | 'building' | 'property';
   clearSelection: () => void;
   warning: (msg: string, opts?: { duration: number }) => void;
   t: (key: string, params?: Record<string, unknown>) => string;

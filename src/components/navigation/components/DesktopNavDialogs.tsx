@@ -182,10 +182,10 @@ export function DesktopNavDialogs(props: DesktopNavDialogsProps) {
         onOpenChange={props.onPropertyModalChange}
         onItemSelected={props.onPropertySelected}
         items={props.availableUnits}
-        title={t('modals.linkUnit.title')}
-        description={t('modals.linkUnit.description', { buildingName: props.selectedBuildingName })}
-        searchPlaceholder={t('modals.linkUnit.searchPlaceholder')}
-        itemType="unit"
+        title={t('modals.linkProperty.title')}
+        description={t('modals.linkProperty.description', { buildingName: props.selectedBuildingName })}
+        searchPlaceholder={t('modals.linkProperty.searchPlaceholder')}
+        itemType="property"
       />
 
       {/* Company Delete Dialog */}

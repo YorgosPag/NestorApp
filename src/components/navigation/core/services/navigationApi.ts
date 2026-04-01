@@ -12,7 +12,7 @@ import type {
   NavigationProject,
   NavigationBuilding,
   NavigationFloor,
-  NavigationUnit
+  NavigationProperty
 } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -81,8 +81,8 @@ export class NavigationApiService {
   /**
    * 🚀 ENTERPRISE PHASE 2: Load projects for a specific company
    *
-   * PERFORMANCE FIX: No longer loads buildings/floors/units cascade
-   * Buildings/floors/units are loaded ON-DEMAND when user navigates
+   * PERFORMANCE FIX: No longer loads buildings/floors/properties cascade
+   * Buildings/floors/properties are loaded ON-DEMAND when user navigates
    *
    * This eliminates the N+1 cascade that caused 85+ API calls
    */
@@ -110,8 +110,8 @@ export class NavigationApiService {
         return [];
       }
 
-      // 🚀 ENTERPRISE PHASE 2: Return projects WITHOUT buildings/floors/units
-      // Buildings/floors/units will be loaded ON-DEMAND (Phase 3: Lazy Loading)
+      // 🚀 ENTERPRISE PHASE 2: Return projects WITHOUT buildings/floors/properties
+      // Buildings/floors/properties will be loaded ON-DEMAND (Phase 3: Lazy Loading)
       const projects: NavigationProject[] = projectsResult.projects.map(
         (project) => ({
           id: project.id,
@@ -193,7 +193,7 @@ export class NavigationApiService {
         id: floor.id,
         name: floor.name || 'Unnamed Floor',
         number: floor.number || 0,
-        units: [] // Loaded on-demand
+        properties: [] // Loaded on-demand
       }));
 
     } catch (error) {
@@ -203,10 +203,10 @@ export class NavigationApiService {
   }
 
   /**
-   * 🏢 ENTERPRISE: Load units for a specific floor (ON-DEMAND)
+   * 🏢 ENTERPRISE: Load properties for a specific floor (ON-DEMAND)
    * Called when user expands/selects a floor in navigation
    */
-  static async loadUnitsForFloor(floorId: string, buildingId: string): Promise<NavigationUnit[]> {
+  static async loadPropertiesForFloor(floorId: string, buildingId: string): Promise<NavigationProperty[]> {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       interface PropertiesApiResponse {
@@ -220,28 +220,28 @@ export class NavigationApiService {
         }>;
       }
 
-      const unitsResult = await apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
+      const propertiesResult = await apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
 
-      // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
-      return (unitsResult?.units || []).map((unit): NavigationUnit => ({
-        id: unit.id,
-        name: unit.name || 'Unnamed Unit',
-        type: (unit.type as NavigationUnit['type']) || 'apartment',
+      // 🏢 ENTERPRISE: Map to NavigationProperty with all required fields
+      return (propertiesResult?.units || []).map((property): NavigationProperty => ({
+        id: property.id,
+        name: property.name || 'Unnamed Property',
+        type: (property.type as NavigationProperty['type']) || 'apartment',
         floor: 0, // Default floor - actual value loaded on-demand
         area: 0,  // Default area - actual value loaded on-demand
         status: 'forSale' // Default status - actual value loaded on-demand
       }));
 
     } catch (error) {
-      logger.error('Failed to load units for floor', { floorId, error });
+      logger.error('Failed to load properties for floor', { floorId, error });
       return [];
     }
   }
 
   /**
-   * 🏢 ENTERPRISE: Load units directly by building (for buildings without floors)
+   * 🏢 ENTERPRISE: Load properties directly by building (for buildings without floors)
    */
-  static async loadUnitsForBuilding(buildingId: string): Promise<NavigationUnit[]> {
+  static async loadPropertiesForBuilding(buildingId: string): Promise<NavigationProperty[]> {
     try {
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       interface PropertiesApiResponse {
@@ -255,20 +255,20 @@ export class NavigationApiService {
         }>;
       }
 
-      const unitsResult = await apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`);
+      const propertiesResult = await apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`);
 
-      // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
-      return (unitsResult?.units || []).map((unit): NavigationUnit => ({
-        id: unit.id,
-        name: unit.name || 'Unnamed Unit',
-        type: (unit.type as NavigationUnit['type']) || 'apartment',
-        floor: unit.floor ?? 0,
-        area: unit.area ?? 0,
-        status: (unit.status as NavigationUnit['status']) || 'forSale'
+      // 🏢 ENTERPRISE: Map to NavigationProperty with all required fields
+      return (propertiesResult?.units || []).map((property): NavigationProperty => ({
+        id: property.id,
+        name: property.name || 'Unnamed Property',
+        type: (property.type as NavigationProperty['type']) || 'apartment',
+        floor: property.floor ?? 0,
+        area: property.area ?? 0,
+        status: (property.status as NavigationProperty['status']) || 'forSale'
       }));
 
     } catch (error) {
-      logger.error('Failed to load units for building', { buildingId, error });
+      logger.error('Failed to load properties for building', { buildingId, error });
       return [];
     }
   }

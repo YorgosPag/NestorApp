@@ -96,7 +96,7 @@ export function useNavigationActions(): UseNavigationActionsReturn {
     setState({
       selectedBuilding: building || null,
       selectedFloor: null,
-      currentLevel: 'units'
+      currentLevel: 'properties'
     });
 
   };
@@ -112,7 +112,7 @@ export function useNavigationActions(): UseNavigationActionsReturn {
 
     setState({
       selectedFloor: floor || null,
-      currentLevel: 'units'
+      currentLevel: 'properties'
     });
 
   };

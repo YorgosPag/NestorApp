@@ -38,7 +38,7 @@ export function buildNavigationUrl(
 /**
  * Reset navigation state to initial values
  */
-export function resetNavigationState(state: NavigationState): Partial<NavigationState> {
+export function resetNavigationState(_state: NavigationState): Partial<NavigationState> {
   return {
     selectedCompany: null,
     selectedProject: null,
@@ -77,7 +77,7 @@ export function updateNavigationLevel(
       updates.selectedFloor = null;
       break;
     // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
-    // 'units' level doesn't clear anything
+    // 'properties' level doesn't clear anything
   }
 
   return updates;
@@ -87,7 +87,7 @@ export function updateNavigationLevel(
  * Company ID mapping compatibility function
  * @deprecated Use direct Firebase IDs instead
  */
-export function getProjectCompatibleCompanyId(firestoreCompanyId: string, companyName: string): string {
+export function getProjectCompatibleCompanyId(firestoreCompanyId: string, _companyName: string): string {
   // Now that we've updated the Firestore projects to use the correct Firebase IDs,
   // we directly return the Firebase company ID (no more hardcoded mapping)
   return firestoreCompanyId;

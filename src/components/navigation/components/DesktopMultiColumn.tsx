@@ -108,7 +108,7 @@ export function DesktopMultiColumn({
   const {
     projectBuildings,
     availableBuildings,
-    buildingUnits,
+    buildingProperties,
     buildingStorages,
     buildingParkingSpots,
     selectedBuildingSpace,
@@ -201,9 +201,9 @@ export function DesktopMultiColumn({
   const handleConfirmedPropertyUnlink = async () => {
     if (!pendingUnlinkProperty) return;
     await executeEntityUnlink({
-      pending: pendingUnlinkProperty, entityType: 'unit',
+      pending: pendingUnlinkProperty, entityType: 'property',
       clearSelection: () => selectProperty(null),
-      warning, t, dialogKey: 'dialogs.unit', nameParam: 'propertyName',
+      warning, t, dialogKey: 'dialogs.property', nameParam: 'propertyName',
     });
     setPropertyDialogOpen(false);
     setPendingUnlinkProperty(null);
@@ -385,7 +385,7 @@ export function DesktopMultiColumn({
         {/* Column 4: Building Spaces (Units / Storage / Parking) */}
         {selectedBuilding && (
           <BuildingSpacesTabs
-            units={buildingUnits}
+            units={buildingProperties}
             storages={buildingStorages}
             parkingSpots={buildingParkingSpots}
             selectedItem={selectedBuildingSpace}
@@ -393,12 +393,12 @@ export function DesktopMultiColumn({
             onStorageSelect={handleStorageSelectFromTabs}
             onParkingSelect={handleParkingSelectFromTabs}
             onAddItem={(tab) => {
-              if (tab === 'units') setIsPropertyModalOpen(true);
+              if (tab === 'properties') setIsPropertyModalOpen(true);
             }}
             onUnlinkItem={(tab) => {
-              if (tab === 'units') handleDeleteProperty();
+              if (tab === 'properties') handleDeleteProperty();
             }}
-            defaultTab="units"
+            defaultTab="properties"
           />
         )}
 
@@ -414,10 +414,10 @@ export function DesktopMultiColumn({
               <li>
                 <NavigationButton
                   onClick={() => onNavigateToPage('properties')}
-                  icon={NAVIGATION_ENTITIES.unit.icon}
-                  iconColor={NAVIGATION_ENTITIES.unit.color}
+                  icon={NAVIGATION_ENTITIES.property.icon}
+                  iconColor={NAVIGATION_ENTITIES.property.color}
                   title={t('columns.actions.viewProperties')}
-                  subtitle={t('columns.actions.propertiesCount', { count: buildingUnits.length })}
+                  subtitle={t('columns.actions.propertiesCount', { count: buildingProperties.length })}
                   variant="compact"
                 />
               </li>

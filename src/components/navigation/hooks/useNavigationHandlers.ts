@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { useNavigation } from '../core/NavigationContext';
 
 /** 🏢 ENTERPRISE: Mobile Level type χωρίς 'floors' (Επιλογή Α) */
-type MobileLevel = 'companies' | 'projects' | 'buildings' | 'units' | 'actions' | 'extras';
+type MobileLevel = 'companies' | 'projects' | 'buildings' | 'properties' | 'actions' | 'extras';
 
 interface UseNavigationHandlersProps {
   onMobileLevelChange?: (level: MobileLevel) => void;
@@ -80,7 +80,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
   // 🏢 ENTERPRISE (Επιλογή Α): Building → Units (skip Floors)
   const handleBuildingSelect = (buildingId: string) => {
     selectBuilding(buildingId);
-    if (isMobile) setMobileLevel('units');
+    if (isMobile) setMobileLevel('properties');
   };
 
   // 🏢 ENTERPRISE: Deprecated - Floors δεν είναι navigation level
@@ -89,7 +89,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     // No-op for mobile level change - floors removed from navigation
   };
 
-  const handlePropertySelect = (propertyId: string) => {
+  const handlePropertySelect = (_propertyId: string) => {
     if (isMobile) setMobileLevel('actions');
   };
 
@@ -107,11 +107,11 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
         setMobileLevel('projects');
         break;
       // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
-      case 'units':
+      case 'properties':
         setMobileLevel('buildings'); // Back to buildings (skip floors)
         break;
       case 'actions':
-        setMobileLevel('units');
+        setMobileLevel('properties');
         break;
       case 'extras':
         setMobileLevel('actions');
@@ -126,7 +126,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
       case 'projects': return selectedCompany?.companyName || 'Έργα';
       case 'buildings': return selectedProject?.name || 'Κτίρια';
       // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
-      case 'units': return selectedBuilding?.name || 'Μονάδες';
+      case 'properties': return selectedBuilding?.name || 'Μονάδες';
       case 'actions': return 'Ενέργειες';
       case 'extras': return 'Παρκινγκ & Αποθήκες';
     }

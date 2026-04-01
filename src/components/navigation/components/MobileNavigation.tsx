@@ -25,7 +25,7 @@ import '@/lib/design-system';
 
 interface MobileNavigationProps {
   /** 🏢 ENTERPRISE: 'floors' αφαιρέθηκε από navigation levels (Επιλογή Α) */
-  mobileLevel: 'companies' | 'projects' | 'buildings' | 'units' | 'actions' | 'extras';
+  mobileLevel: 'companies' | 'projects' | 'buildings' | 'properties' | 'actions' | 'extras';
   onBack: () => void;
   getTitle: () => string;
   onCompanySelect: (companyId: string) => void;
@@ -88,14 +88,14 @@ export function MobileNavigation({
    * 2. Απευθείας από το building (αν δεν έχει ορόφους)
    * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
    */
-  const buildingUnits = useMemo(() => {
+  const buildingProperties = useMemo(() => {
     if (!selectedBuilding) return [];
 
-    // 🏢 ENTERPRISE: Combine units from floors AND direct building units
-    const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
-    const directUnits = selectedBuilding.units || [];
+    // 🏢 ENTERPRISE: Combine properties from floors AND direct building properties
+    const floorProperties = selectedBuilding.floors?.flatMap(floor => floor.properties) || [];
+    const directProperties = selectedBuilding.properties || [];
 
-    return [...floorUnits, ...directUnits];
+    return [...floorProperties, ...directProperties];
   }, [selectedBuilding]);
 
   return (
@@ -213,9 +213,9 @@ export function MobileNavigation({
          */}
 
         {/* Units - 🏢 ENTERPRISE: Απευθείας από Building (skip Floors) */}
-        {mobileLevel === 'units' && selectedBuilding && (
+        {mobileLevel === 'properties' && selectedBuilding && (
           <>
-            {buildingUnits.map(unit => (
+            {buildingProperties.map(unit => (
               <NavigationButton
                 key={unit.id}
                 onClick={() => {
@@ -223,10 +223,10 @@ export function MobileNavigation({
                   selectProperty({ id: unit.id, name: unit.name, type: unit.type });
                   onPropertySelect?.(unit.id);
                 }}
-                icon={NAVIGATION_ENTITIES.unit.icon}
-                iconColor={NAVIGATION_ENTITIES.unit.color}
+                icon={NAVIGATION_ENTITIES.property.icon}
+                iconColor={NAVIGATION_ENTITIES.property.color}
                 title={unit.name}
-                subtitle={unit.type || NAVIGATION_ENTITIES.unit.label}
+                subtitle={unit.type || NAVIGATION_ENTITIES.property.label}
                 isSelected={selectedProperty?.id === unit.id}
               />
             ))}
@@ -238,10 +238,10 @@ export function MobileNavigation({
           <nav className="space-y-3" aria-label={t('mobile.actionsLabel')}>
             <NavigationButton
               onClick={() => onNavigateToPage('properties')}
-              icon={NAVIGATION_ENTITIES.unit.icon}
-              iconColor={NAVIGATION_ENTITIES.unit.color}
+              icon={NAVIGATION_ENTITIES.property.icon}
+              iconColor={NAVIGATION_ENTITIES.property.color}
               title={t('columns.actions.viewProperties')}
-              subtitle={t('columns.actions.propertiesCount', { count: buildingUnits.length })}
+              subtitle={t('columns.actions.propertiesCount', { count: buildingProperties.length })}
               variant="compact"
             />
 
