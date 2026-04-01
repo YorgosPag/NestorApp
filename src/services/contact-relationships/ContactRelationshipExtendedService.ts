@@ -17,9 +17,9 @@ import { ImportExportService } from './bulk/ImportExportService';
 import { DepartmentMetrics as ServiceDepartmentMetrics } from './hierarchy/DepartmentManagementService';
 import type { CacheStats } from './adapters/RelationshipCacheAdapter';
 import type { ExportResult } from './bulk/ImportExportService';
+import { RelationshipCRUDService } from './core/RelationshipCRUDService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { ContactRelationshipService } from './ContactRelationshipService';
 
 const logger = createModuleLogger('ContactRelationshipExtendedService');
 
@@ -120,7 +120,7 @@ export class ContactRelationshipExtendedService {
 
   static async getPersonEmployer(personId: string): Promise<ContactWithRelationship | null> {
     try {
-      const relationships = await ContactRelationshipService.getContactRelationships(personId);
+      const relationships = await RelationshipCRUDService.getContactRelationships(personId);
 
       const employmentRel = relationships.find(rel =>
         rel.sourceContactId === personId &&
@@ -247,7 +247,7 @@ export class ContactRelationshipExtendedService {
 
     for (let i = 0; i < relationships.length; i++) {
       try {
-        const relationship = await ContactRelationshipService.createRelationship(relationships[i]);
+        const relationship = await RelationshipCRUDService.createRelationship(relationships[i]);
         results.push(relationship);
       } catch (error) {
         errors.push({ index: i, error: (error as Error).message });
@@ -368,7 +368,7 @@ export class ContactRelationshipExtendedService {
 
     try {
       if (sqlQuery.includes('source_contact_id = ?') && params.length >= 1) {
-        return await ContactRelationshipService.getContactRelationships(params[0]);
+        return await RelationshipCRUDService.getContactRelationships(params[0]);
       }
 
       if (sqlQuery.includes('target_contact_id = ?') && params.length >= 1) {
