@@ -306,7 +306,7 @@ export class SalesAccountingBridge {
       const invoiceTypeLabel = invoiceInput.type === 'credit_invoice' ? 'Πιστωτικό' : 'Τιμολόγιο';
       const companyId = await resolvePropertyCompanyId(propertyId);
       safeFireAndForget(EntityAuditService.recordChange({
-        entityType: 'unit',
+        entityType: 'property',
         entityId: propertyId,
         entityName: null,
         action: 'invoice_created',

@@ -59,7 +59,7 @@ interface DxfSceneData {
 
 export interface PropertyFloorplanData {
   propertyId: string;
-  type: 'unit';
+  type: 'property';
   scene: DxfSceneData;
   fileName: string;
   timestamp: number;
@@ -242,7 +242,7 @@ export class PropertyFloorplanService {
 
         return {
           propertyId,
-          type: 'unit',
+          type: 'property',
           scene,
           fileName: fileRecord.originalFilename,
           timestamp: typeof fileRecord.createdAt === 'string'

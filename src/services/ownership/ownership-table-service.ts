@@ -290,7 +290,7 @@ export async function finalizeTable(
 
     for (const row of rows) {
       // Units — write millesimalShares
-      if (row.entityRef.collection === 'units') {
+      if (row.entityRef.collection === 'properties') {
         writes.push(
           setDoc(
             doc(db, COLLECTIONS.PROPERTIES, row.entityRef.id),

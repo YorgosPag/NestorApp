@@ -161,7 +161,7 @@ export async function autoPopulateRows(
 
     rows.push({
       ordinal, buildingId, buildingName,
-      entityRef: { collection: 'units', id },
+      entityRef: { collection: 'properties', id },
       entityCode: (data.entityCode as string) ?? (data.code as string) ?? (data.unitCode as string) ?? `U-${ordinal}`,
       description: (data.name as string) ?? (data.description as string) ?? '',
       category: 'main',
@@ -193,7 +193,7 @@ export async function enrichRowsWithLinkedSpaces(
   buildingIds: string[],
 ): Promise<MutableOwnershipTableRow[]> {
   const needsEnrichment = rows.some(
-    r => r.entityRef.collection === 'units' && r.linkedSpacesSummary === null,
+    r => r.entityRef.collection === 'properties' && r.linkedSpacesSummary === null,
   );
 
   if (!needsEnrichment || buildingIds.length === 0) return rows;
@@ -202,7 +202,7 @@ export async function enrichRowsWithLinkedSpaces(
   const propertyDataMap = new Map(units.map(u => [u.id, u.data]));
 
   return rows.map(row => {
-    if (row.entityRef.collection !== 'units' || row.linkedSpacesSummary !== null) return row;
+    if (row.entityRef.collection !== 'properties' || row.linkedSpacesSummary !== null) return row;
 
     const propertyData = propertyDataMap.get(row.entityRef.id);
     if (!propertyData) return row;

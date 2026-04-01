@@ -30,7 +30,7 @@ export interface SaleLineItem {
   /** Firestore document ID of the asset */
   assetId: string;
   /** Type of asset being sold */
-  assetType: 'unit' | 'parking' | 'storage';
+  assetType: 'property' | 'parking' | 'storage';
   /** Human-readable name (e.g. "Α-101", "P-05", "S-12") */
   assetName: string;
   /** Gross amount including VAT */

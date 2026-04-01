@@ -1,4 +1,4 @@
-import type { IProjectsService, IProjectsRepository, ProjectStructure, ProjectBuilding, ProjectUnit } from '../contracts';
+import type { IProjectsService, IProjectsRepository, ProjectStructure, ProjectBuilding, ProjectProperty } from '../contracts';
 import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -39,24 +39,24 @@ export class ProjectsService implements IProjectsService {
     for (const building of buildingsData) {
         // 🏢 ENTERPRISE: Use configurable building ID pattern
         const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
-        const units: ProjectUnit[] = (await this.firestoreRepo.getUnitsByBuildingId(`${buildingIdPattern}${building.id}`))
-          .map(unit => ({ ...unit }));
+        const properties: ProjectProperty[] = (await this.firestoreRepo.getPropertiesByBuildingId(`${buildingIdPattern}${building.id}`))
+          .map(prop => ({ ...prop }));
 
-        units.forEach(u => {
-            if (u.soldTo) allUnitOwnerIds.add(u.soldTo);
+        properties.forEach(p => {
+            if (p.soldTo) allUnitOwnerIds.add(p.soldTo);
         });
 
         // ✅ ENTERPRISE: Proper typing with customerName property
-        const unitsWithCustomerName: ProjectUnit[] = units.map(unit => ({
-            ...unit,
+        const propertiesWithCustomerName: ProjectProperty[] = properties.map(prop => ({
+            ...prop,
             customerName: null as string | null
         }));
 
-        // ✅ ENTERPRISE: Proper type intersection - remove units property conflict
-        const { units: _, ...buildingWithoutUnits } = building;
+        // ✅ ENTERPRISE: Proper type intersection - remove properties conflict
+        const { properties: _, ...buildingWithoutProperties } = building;
         structureBuildings.push({
-            ...buildingWithoutUnits,
-            units: unitsWithCustomerName,
+            ...buildingWithoutProperties,
+            properties: propertiesWithCustomerName,
             storages: [],
             parkingSpots: []
         } as ProjectBuilding);
@@ -73,9 +73,9 @@ export class ProjectsService implements IProjectsService {
     }
 
     for (const building of structureBuildings) {
-        for (const unit of building.units) {
-            if (unit.soldTo) {
-                unit.customerName = contactsMap.get(unit.soldTo) || null;
+        for (const prop of building.properties) {
+            if (prop.soldTo) {
+                prop.customerName = contactsMap.get(prop.soldTo) || null;
             }
         }
     }
@@ -91,18 +91,18 @@ export class ProjectsService implements IProjectsService {
     const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
     const buildingIds = buildings.map(b => `${buildingIdPattern}${b.id}`);
 
-    const allUnits = (await Promise.all(
-        buildingIds.map(id => this.firestoreRepo.getUnitsByBuildingId(id))
+    const allProperties = (await Promise.all(
+        buildingIds.map(id => this.firestoreRepo.getPropertiesByBuildingId(id))
     )).flat();
 
-    const soldProperties = allUnits.filter(u => u.status === 'sold' && u.soldTo);
+    const soldProperties = allProperties.filter(p => p.status === 'sold' && p.soldTo);
 
-    const customerUnitCount: { [contactId: string]: number } = {};
-    soldProperties.forEach(unit => {
-        customerUnitCount[unit.soldTo!] = (customerUnitCount[unit.soldTo!] || 0) + 1;
+    const customerPropertyCount: { [contactId: string]: number } = {};
+    soldProperties.forEach(prop => {
+        customerPropertyCount[prop.soldTo!] = (customerPropertyCount[prop.soldTo!] || 0) + 1;
     });
 
-    const customerIds = Object.keys(customerUnitCount);
+    const customerIds = Object.keys(customerPropertyCount);
     if (customerIds.length === 0) return [];
 
     const contacts = await this.firestoreRepo.getContactsByIds(customerIds);
@@ -111,7 +111,7 @@ export class ProjectsService implements IProjectsService {
       contactId: contact.id!,
       name: getContactDisplayName(contact),
       phone: getPrimaryPhone(contact) || null,
-      propertiesCount: customerUnitCount[contact.id!] || 0,
+      propertiesCount: customerPropertyCount[contact.id!] || 0,
     }));
   }
 
@@ -130,14 +130,14 @@ export class ProjectsService implements IProjectsService {
         for (const building of buildings) {
             // 🏢 ENTERPRISE: Use configurable building ID pattern
             const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
-            const units = await this.firestoreRepo.getUnitsByBuildingId(`${buildingIdPattern}${building.id}`);
+            const properties = await this.firestoreRepo.getPropertiesByBuildingId(`${buildingIdPattern}${building.id}`);
 
-            units.forEach(unit => {
+            properties.forEach(prop => {
                 totalProperties++;
-                const isSold = unit.status === 'sold' || (unit.soldTo && unit.soldTo.trim() !== '');
+                const isSold = prop.status === 'sold' || (prop.soldTo && prop.soldTo.trim() !== '');
                 if (isSold) {
                     soldProperties++;
-                    totalSoldArea += parseFloat(String(unit.area)) || 0;
+                    totalSoldArea += parseFloat(String(prop.area)) || 0;
                 }
             });
         }
@@ -168,19 +168,19 @@ export class ProjectsService implements IProjectsService {
         for (const building of buildings.docs) {
             // 🏢 ENTERPRISE: Use configurable building ID pattern
             const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
-            const unitsQuery = database.collection(COLLECTIONS.PROPERTIES).where(FIELDS.BUILDING_ID, '==', `${buildingIdPattern}${building.id}`);
-            const units = await unitsQuery.get();
-            units.docs.forEach(doc => {
+            const propertiesQuery = database.collection(COLLECTIONS.PROPERTIES).where(FIELDS.BUILDING_ID, '==', `${buildingIdPattern}${building.id}`);
+            const propertiesSnap = await propertiesQuery.get();
+            propertiesSnap.docs.forEach(doc => {
                 const data = doc.data();
-                // Process unit
+                // Process property
             });
         }
 
         try {
-            const directUnitsQuery = database.collection(COLLECTIONS.PROPERTIES).where(FIELDS.PROJECT_ID, '==', projectId);
-            const directUnits = await directUnitsQuery.get();
-            if (!directUnits.empty) {
-                // Has direct units
+            const directPropertiesQuery = database.collection(COLLECTIONS.PROPERTIES).where(FIELDS.PROJECT_ID, '==', projectId);
+            const directProperties = await directPropertiesQuery.get();
+            if (!directProperties.empty) {
+                // Has direct properties
             }
         } catch (e) {
             // Query failed

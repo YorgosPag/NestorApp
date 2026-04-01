@@ -21,7 +21,7 @@ export {
 export type {
     ProjectStructure,
     ProjectBuilding,
-    ProjectUnit,
+    ProjectProperty,
     ProjectStorage,
     ProjectParking
 } from './contracts';

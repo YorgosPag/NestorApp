@@ -55,8 +55,8 @@ export interface ResolvedContact {
   email: string | null;
   /** Project/entity roles from contact_links (RBAC) */
   projectRoles: ProjectRoleLink[];
-  /** Unit IDs from contact_links where targetEntityType='unit' (SPEC-257B) */
-  linkedUnitIds: string[];
+  /** Property IDs from contact_links where targetEntityType='property' (SPEC-257B) */
+  linkedPropertyIds: string[];
 }
 
 // ============================================================================
@@ -194,10 +194,10 @@ export async function resolveContactFromTelegram(
       // Non-fatal: if contact_links query fails, proceed without roles
     }
 
-    // SPEC-257B: Derive linked unit IDs from contact_links
-    const linkedUnitIds = [...new Set(
+    // SPEC-257B: Derive linked property IDs from contact_links
+    const linkedPropertyIds = [...new Set(
       projectRoles
-        .filter(r => r.entityType === 'unit')
+        .filter(r => r.entityType === 'property')
         .map(r => r.entityId)
         .filter(Boolean),
     )];
@@ -211,7 +211,7 @@ export async function resolveContactFromTelegram(
       phone: phones.find(p => p.isPrimary)?.number ?? phones[0]?.number ?? null,
       email: emails.find(e => e.isPrimary)?.email ?? emails[0]?.email ?? null,
       projectRoles,
-      linkedUnitIds,
+      linkedPropertyIds,
     };
 
     setCache(cacheKey, result);

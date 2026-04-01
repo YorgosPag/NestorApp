@@ -40,7 +40,7 @@ export function validateAgreementFields(input: CreateBrokerageAgreementInput): A
   if (!input.scope) return { valid: false, error: 'scope is required' };
   if (!input.exclusivity) return { valid: false, error: 'exclusivity is required' };
   if (!input.commissionType) return { valid: false, error: 'commissionType is required' };
-  if (input.scope === 'unit' && !input.propertyId) return { valid: false, error: 'propertyId is required for unit scope' };
+  if (input.scope === 'property' && !input.propertyId) return { valid: false, error: 'propertyId is required for unit scope' };
   if (input.commissionType === 'percentage' && (input.commissionPercentage == null || input.commissionPercentage <= 0)) {
     return { valid: false, error: 'commissionPercentage must be > 0 for percentage type' };
   }
@@ -110,8 +110,8 @@ export async function validateExclusivityServer(
     const excludedPropertyIds: string[] = [];
 
     const exclusiveProject = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'project');
-    const exclusiveUnits = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'unit');
-    const nonExclusiveUnits = active.filter((a) => a.exclusivity === 'non_exclusive' && a.scope === 'unit');
+    const exclusiveUnits = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'property');
+    const nonExclusiveUnits = active.filter((a) => a.exclusivity === 'non_exclusive' && a.scope === 'property');
 
     // NEW agreement is EXCLUSIVE + PROJECT scope
     if (exclusivity === 'exclusive' && scope === 'project') {
@@ -142,7 +142,7 @@ export async function validateExclusivityServer(
     }
 
     // NEW agreement is EXCLUSIVE + UNIT scope
-    if (exclusivity === 'exclusive' && scope === 'unit' && propertyId) {
+    if (exclusivity === 'exclusive' && scope === 'property' && propertyId) {
       for (const conflict of exclusiveProject) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityBlockedByProjectExclusive',
@@ -178,7 +178,7 @@ export async function validateExclusivityServer(
     }
 
     // NEW agreement is NON-EXCLUSIVE + UNIT scope
-    if (exclusivity === 'non_exclusive' && scope === 'unit' && propertyId) {
+    if (exclusivity === 'non_exclusive' && scope === 'property' && propertyId) {
       for (const conflict of exclusiveProject) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.nonExclusiveBlockedByProjectExclusive',

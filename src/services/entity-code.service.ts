@@ -38,7 +38,7 @@ export interface ParsedEntityCode {
 }
 
 export interface EntityCodeSuggestionParams {
-  entityType: 'unit' | 'parking' | 'storage';
+  entityType: 'property' | 'parking' | 'storage';
   buildingName: string;
   floorLevel: number;
   propertyType?: PropertyType;
@@ -136,12 +136,12 @@ export function isStandardEntityCode(code: string): boolean {
  * Resolves the 2-character type code for a given entity type.
  */
 export function resolveTypeCode(
-  entityType: 'unit' | 'parking' | 'storage',
+  entityType: 'property' | 'parking' | 'storage',
   propertyType?: PropertyType,
   locationZone?: ParkingLocationZone
 ): string | null {
   switch (entityType) {
-    case 'unit':
+    case 'property':
       if (!propertyType) return null;
       return PROPERTY_TYPE_TO_CODE[propertyType] ?? null;
     case 'parking':

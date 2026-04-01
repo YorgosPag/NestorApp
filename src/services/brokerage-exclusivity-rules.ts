@@ -42,8 +42,8 @@ export function evaluateExclusivityRules(
     const excludedPropertyIds: string[] = [];
 
     const exclusiveProject = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'project');
-    const exclusiveUnits = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'unit');
-    const nonExclusiveUnits = active.filter((a) => a.exclusivity === 'non_exclusive' && a.scope === 'unit');
+    const exclusiveUnits = active.filter((a) => a.exclusivity === 'exclusive' && a.scope === 'property');
+    const nonExclusiveUnits = active.filter((a) => a.exclusivity === 'non_exclusive' && a.scope === 'property');
 
     // EXCLUSIVE + PROJECT scope
     if (exclusivity === 'exclusive' && scope === 'project') {
@@ -74,7 +74,7 @@ export function evaluateExclusivityRules(
     }
 
     // EXCLUSIVE + UNIT scope
-    if (exclusivity === 'exclusive' && scope === 'unit' && propertyId) {
+    if (exclusivity === 'exclusive' && scope === 'property' && propertyId) {
       for (const c of exclusiveProject) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.exclusivityBlockedByProjectExclusive',
@@ -110,7 +110,7 @@ export function evaluateExclusivityRules(
     }
 
     // NON-EXCLUSIVE + UNIT scope
-    if (exclusivity === 'non_exclusive' && scope === 'unit' && propertyId) {
+    if (exclusivity === 'non_exclusive' && scope === 'property' && propertyId) {
       for (const c of exclusiveProject) {
         issues.push({
           severity: 'error', messageKey: 'sales.legal.nonExclusiveBlockedByProjectExclusive',

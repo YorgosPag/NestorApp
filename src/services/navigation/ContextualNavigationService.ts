@@ -27,7 +27,7 @@ export type NavigableEntityType =
   | 'company'
   | 'project'
   | 'building'
-  | 'unit'
+  | 'property'
   | 'storage'
   | 'parking';
 

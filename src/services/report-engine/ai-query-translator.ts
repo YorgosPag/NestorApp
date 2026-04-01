@@ -49,7 +49,7 @@ function getProvider(): ReturnType<typeof createOpenAI> {
 // ============================================================================
 
 const translatedQuerySchema = z.object({
-  domain: z.enum(['projects', 'buildings', 'floors', 'units']),
+  domain: z.enum(['projects', 'buildings', 'floors', 'properties']),
   filters: z.array(z.object({
     fieldKey: z.string(),
     operator: z.string(),

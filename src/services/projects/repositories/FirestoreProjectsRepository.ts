@@ -16,7 +16,7 @@ const logger = createModuleLogger('FirestoreProjectsRepository');
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const PROJECTS_COLLECTION = COLLECTIONS.PROJECTS;
 const BUILDINGS_COLLECTION = COLLECTIONS.BUILDINGS;
-const UNITS_COLLECTION = COLLECTIONS.PROPERTIES;
+const PROPERTIES_COLLECTION = COLLECTIONS.PROPERTIES;
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
 export class FirestoreProjectsRepository implements IProjectsRepository {
@@ -61,11 +61,11 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
     }, []);
   }
 
-  async getUnitsByBuildingId(buildingId: string): Promise<Property[]> {
+  async getPropertiesByBuildingId(buildingId: string): Promise<Property[]> {
     return await safeFirestoreOperation(async (database) => {
       // Using Firestore admin SDK methods correctly
-      const unitsCollection = database.collection(COLLECTIONS.PROPERTIES);
-      const snapshot = await unitsCollection.where(FIELDS.BUILDING_ID, '==', buildingId).get();
+      const propertiesCollection = database.collection(COLLECTIONS.PROPERTIES);
+      const snapshot = await propertiesCollection.where(FIELDS.BUILDING_ID, '==', buildingId).get();
 
       return snapshot.docs.map(doc => ({
         id: doc.id,

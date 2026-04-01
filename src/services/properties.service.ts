@@ -237,9 +237,9 @@ export async function getPropertiesByOperationalStatus(status: string): Promise<
  */
 export async function getIncompleteProperties(): Promise<PropertyModel[]> {
   const queries: QueryConstraint[][] = [
-      [where('unitCoverage.hasPhotos', '==', false)],
-      [where('unitCoverage.hasFloorplans', '==', false)],
-      [where('unitCoverage.hasDocuments', '==', false)],
+      [where('propertyCoverage.hasPhotos', '==', false)],
+      [where('propertyCoverage.hasFloorplans', '==', false)],
+      [where('propertyCoverage.hasDocuments', '==', false)],
     ];
 
     const results = await Promise.all(
@@ -331,10 +331,10 @@ export async function updatePropertyCoverage(
 ): Promise<{ success: boolean }> {
   const propertyRef = doc(db, PROPERTIES_COLLECTION, propertyId);
   await updateDoc(propertyRef, {
-    'unitCoverage.hasPhotos': coverage.hasPhotos,
-    'unitCoverage.hasFloorplans': coverage.hasFloorplans,
-    'unitCoverage.hasDocuments': coverage.hasDocuments,
-    'unitCoverage.updatedAt': serverTimestamp()
+    'propertyCoverage.hasPhotos': coverage.hasPhotos,
+    'propertyCoverage.hasFloorplans': coverage.hasFloorplans,
+    'propertyCoverage.hasDocuments': coverage.hasDocuments,
+    'propertyCoverage.updatedAt': serverTimestamp()
   });
   return { success: true };
 }

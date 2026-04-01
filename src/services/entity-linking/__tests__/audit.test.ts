@@ -226,7 +226,7 @@ describe('AuditLogger Buffer Operations', () => {
     AuditLogger.logSuccess('LINK_ENTITY', 'building', 'b1');
     AuditLogger.logSuccess('LINK_ENTITY', 'building', 'b2');
     AuditLogger.logError('UNLINK_ENTITY', 'building', 'b3', 'Error');
-    AuditLogger.logSuccess('GET_AVAILABLE_ENTITIES', 'unit', 'u1');
+    AuditLogger.logSuccess('GET_AVAILABLE_ENTITIES', 'property', 'u1');
   });
 
   describe('getRecentLogs', () => {

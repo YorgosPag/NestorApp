@@ -290,7 +290,7 @@ class RealtimeServiceCore {
   }
 
   dispatchPropertyBuildingLinked(payload: PropertyBuildingLinkPayload): void {
-    const event = new CustomEvent(REALTIME_EVENTS.UNIT_BUILDING_LINKED, {
+    const event = new CustomEvent(REALTIME_EVENTS.PROPERTY_BUILDING_LINKED, {
       detail: payload,
       bubbles: true,
     });

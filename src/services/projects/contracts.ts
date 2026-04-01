@@ -8,9 +8,9 @@ import type { Storage } from '@/types/storage/contracts';
 import type { ParkingSpot } from '@/types/parking';
 
 /**
- * 🏢 ENTERPRISE: Unit with customer info for project structure
+ * 🏢 ENTERPRISE: Property with customer info for project structure
  */
-export type ProjectUnit = Property & { customerName?: string | null };
+export type ProjectProperty = Property & { customerName?: string | null };
 
 /**
  * 🏢 ENTERPRISE: Storage summary for project structure (minimal fields)
@@ -26,14 +26,14 @@ export type ProjectParking = Pick<ParkingSpot, 'id' | 'number' | 'type' | 'statu
  * 🏢 ENTERPRISE: Building with full hierarchy (Units, Storage, Parking)
  *
  * Architecture decision (from BuildingSpacesTabs):
- * ❌ NO: Parking/Storage as "attachments" or children of Units
- * ✅ YES: Parking/Storage/Units as equal parallel categories in Building context
+ * ❌ NO: Parking/Storage as "attachments" or children of Properties
+ * ✅ YES: Parking/Storage/Properties as equal parallel categories in Building context
  *
  * NOTE: Using intersection type (&) instead of extends to avoid conflict with Building's index signature
  */
-export type ProjectBuilding = Omit<Building, 'units'> & {
-  /** Units in this building */
-  units: ProjectUnit[];
+export type ProjectBuilding = Omit<Building, 'properties'> & {
+  /** Properties in this building */
+  properties: ProjectProperty[];
   /** Storage areas in this building */
   storages: ProjectStorage[];
   /** Parking spots in this building */
@@ -43,7 +43,7 @@ export type ProjectBuilding = Omit<Building, 'units'> & {
 /**
  * 🏢 ENTERPRISE: Complete project structure with hierarchical data
  *
- * Hierarchy: Project → Buildings → (Units | Storage | Parking)
+ * Hierarchy: Project → Buildings → (Properties | Storage | Parking)
  */
 export interface ProjectStructure {
   project: Project;
@@ -54,7 +54,7 @@ export interface IProjectsRepository {
   getProjectsByCompanyId(companyId: string): Promise<Project[]>;
   getProjectById(projectId: string): Promise<Project | null>;
   getBuildingsByProjectId(projectId: string): Promise<Building[]>;
-  getUnitsByBuildingId(buildingId: string): Promise<Property[]>;
+  getPropertiesByBuildingId(buildingId: string): Promise<Property[]>;
   getContactsByIds(ids: string[]): Promise<Contact[]>;
   /** 🏢 ENTERPRISE: Update project in Firestore */
   updateProject?(projectId: string, updates: ProjectUpdatePayload): Promise<void>;

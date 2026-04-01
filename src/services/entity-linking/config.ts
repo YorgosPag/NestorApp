@@ -52,15 +52,15 @@ export const ENTITY_LINKING_CONFIG: EntityLinkingConfig = {
     },
   },
 
-  'unit-building': {
+  'property-building': {
     collection: COLLECTIONS.PROPERTIES,
     foreignKey: 'buildingId',
-    successEvent: REALTIME_EVENTS.UNIT_BUILDING_LINKED,
+    successEvent: REALTIME_EVENTS.PROPERTY_BUILDING_LINKED,
     labels: {
-      linkAction: 'entityLinking.unitBuilding.linkAction',
-      unlinkAction: 'entityLinking.unitBuilding.unlinkAction',
-      successMessage: 'entityLinking.unitBuilding.successMessage',
-      errorMessage: 'entityLinking.unitBuilding.errorMessage',
+      linkAction: 'entityLinking.propertyBuilding.linkAction',
+      unlinkAction: 'entityLinking.propertyBuilding.unlinkAction',
+      successMessage: 'entityLinking.propertyBuilding.successMessage',
+      errorMessage: 'entityLinking.propertyBuilding.errorMessage',
     },
   },
 

@@ -16,7 +16,7 @@
 /**
  * Supported entity types in the system
  */
-export type EntityType = 'company' | 'project' | 'building' | 'unit' | 'floor';
+export type EntityType = 'company' | 'project' | 'building' | 'property' | 'floor';
 
 /**
  * Entity relationship pairs - defines valid parent-child relationships
@@ -24,7 +24,7 @@ export type EntityType = 'company' | 'project' | 'building' | 'unit' | 'floor';
 export type EntityRelationship =
   | 'project-company'
   | 'building-project'
-  | 'unit-building'
+  | 'property-building'
   | 'floor-building';
 
 /**
