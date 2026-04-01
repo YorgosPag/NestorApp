@@ -4,7 +4,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { ContactsService } from '@/services/contacts.service';
-import { mapFormDataToContact } from '@/utils/contactForm/formDataMapper';
+import { mapFormDataToContact, validateUploadState } from '@/utils/contactForm/formDataMapper';
 import { calculateSubmissionState } from '@/utils/contactForm/submission-state';
 import { cleanupOrphanedPhotos } from '@/utils/contactForm/photo-cleanup';
 import { runGuardChain } from '@/utils/contactForm/submission-guard-chain';
