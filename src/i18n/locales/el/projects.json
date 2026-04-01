@@ -218,8 +218,8 @@
     "toggleFilters": "Εναλλαγή φίλτρων"
   },
   "stats": {
-    "totalUnits": "Σύνολο Μονάδων",
-    "soldUnits": "Πωλημένες Μονάδες",
+    "totalProperties": "Σύνολο Ακινήτων",
+    "soldProperties": "Πωλημένα Ακίνητα",
     "totalAreaSold": "Συνολικό Εμβαδόν Πωληθέντων"
   },
   "toolbarGroups": {
@@ -253,11 +253,11 @@
     "units": "μονάδες",
     "storages": "αποθήκες",
     "parkingSpots": "θέσεις",
-    "soldUnits": "πωλημένες",
+    "soldProperties": "πωλημένα",
     "totalArea": "Συνολική Επιφάνεια",
     "salesPercentage": "πωλήσεις",
     "soldArea": "πωληθέντα",
-    "totalUnitsLabel": "Σύνολο Μονάδων",
+    "totalPropertiesLabel": "Σύνολο Ακινήτων",
     "soldLabel": "Πωλημένες",
     "salesPctLabel": "% Πωλήσεων",
     "stats": {
@@ -276,7 +276,7 @@
     "notFound": "Δεν βρέθηκε η δομή του έργου.",
     "buildings": "κτίρια",
     "buildingsCount": "{count} κτίρια",
-    "unitsCount": "{count} μονάδες",
+    "propertiesCount": "{count} ακίνητα",
     "tabs": {
       "units": "Μονάδες",
       "storage": "Αποθήκες",
@@ -878,8 +878,8 @@
   },
   "generalTab": {
     "defaultDescription": "Πρόκειται για ένα συγκρότημα τριών πενταόροφων κτιρίων...",
-    "totalUnits": "Σύνολο Μονάδων",
-    "soldUnits": "Πωλημένες Μονάδες",
+    "totalProperties": "Σύνολο Ακινήτων",
+    "soldProperties": "Πωλημένα Ακίνητα",
     "totalSoldArea": "Συνολικό Εμβαδόν Πωληθέντων",
     "salesPercentage": "Ποσοστό Πωλήσεων",
     "availableUnits": "{count} διαθέσιμες",

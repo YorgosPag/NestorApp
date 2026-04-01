@@ -64,8 +64,8 @@ export class PaymentReportService {
       .get();
 
     const rows: PaymentReportRow[] = [];
-    let totalUnitsWithPlan = 0;
-    let totalUnitsWithoutPlan = 0;
+    let totalPropertiesWithPlan = 0;
+    let totalPropertiesWithoutPlan = 0;
     let totalAmount = 0;
     let totalPaid = 0;
     let totalRemaining = 0;
@@ -76,11 +76,11 @@ export class PaymentReportService {
       const summary = unit.commercial?.paymentSummary;
 
       if (!summary) {
-        totalUnitsWithoutPlan++;
+        totalPropertiesWithoutPlan++;
         continue;
       }
 
-      totalUnitsWithPlan++;
+      totalPropertiesWithPlan++;
       totalAmount += summary.totalAmount;
       totalPaid += summary.paidAmount;
       totalRemaining += summary.remainingAmount;
@@ -120,8 +120,8 @@ export class PaymentReportService {
 
     logger.info('Payment report generated', {
       projectId,
-      totalUnits: unitsSnap.size,
-      withPlan: totalUnitsWithPlan,
+      totalProperties: unitsSnap.size,
+      withPlan: totalPropertiesWithPlan,
       overdue: totalOverdueCount,
     });
 
@@ -132,8 +132,8 @@ export class PaymentReportService {
       currency: 'EUR',
       rows,
       summary: {
-        totalUnitsWithPlan,
-        totalUnitsWithoutPlan,
+        totalPropertiesWithPlan,
+        totalPropertiesWithoutPlan,
         totalAmount,
         totalPaid,
         totalRemaining,

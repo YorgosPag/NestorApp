@@ -676,7 +676,7 @@ interface I18n_Dxfviewer_Panels_Hierarchy {
   availableDestinations: string;
   buildingsCount: string;
   floorsCount: string;
-  unitsCount: string;
+  propertiesCount: string;
   parkingSpots: string;
   storageAreas: string;
 }

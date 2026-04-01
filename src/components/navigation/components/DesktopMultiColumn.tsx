@@ -175,8 +175,8 @@ export function DesktopMultiColumn({
 
   const handleDeleteBuilding = () => {
     if (!selectedBuilding) return;
-    const totalUnits = getPropertyCount(selectedBuilding.id);
-    if (totalUnits > 0) { showDeleteWarning('building', totalUnits); return; }
+    const totalProperties = getPropertyCount(selectedBuilding.id);
+    if (totalProperties > 0) { showDeleteWarning('building', totalProperties); return; }
     setPendingUnlinkBuilding({ id: selectedBuilding.id, name: selectedBuilding.name });
     setBuildingDialogOpen(true);
   };
@@ -416,7 +416,7 @@ export function DesktopMultiColumn({
                   onClick={() => onNavigateToPage('properties')}
                   icon={NAVIGATION_ENTITIES.unit.icon}
                   iconColor={NAVIGATION_ENTITIES.unit.color}
-                  title={t('columns.actions.viewUnits')}
+                  title={t('columns.actions.viewProperties')}
                   subtitle={t('columns.actions.propertiesCount', { count: buildingUnits.length })}
                   variant="compact"
                 />

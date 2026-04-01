@@ -248,7 +248,7 @@ export function PortfolioDashboard() {
           format="currency"
           status={portfolioHealth}
           icon={DollarSign}
-          subtitle={`${portfolio.activeProjects} ${t('portfolio.projects')} · ${portfolio.totalUnits} ${t('portfolio.units')}`}
+          subtitle={`${portfolio.activeProjects} ${t('portfolio.projects')} · ${portfolio.totalProperties} ${t('portfolio.units')}`}
         />
         <KPIAlertCard
           title={t('portfolio.collected')}
@@ -282,7 +282,7 @@ export function PortfolioDashboard() {
               : 'critical'
           }
           icon={Clock}
-          subtitle={`${portfolio.soldUnits}/${portfolio.totalUnits} ${t('portfolio.unitsSold')}`}
+          subtitle={`${portfolio.soldProperties}/${portfolio.totalProperties} ${t('portfolio.unitsSold')}`}
         />
       </div>
 
@@ -306,8 +306,8 @@ export function PortfolioDashboard() {
               {projects.map(proj => (
                 <TableRow key={proj.projectId}>
                   <TableCell className="font-medium">{proj.projectName}</TableCell>
-                  <TableCell className="text-right">{proj.totalUnits}</TableCell>
-                  <TableCell className="text-right">{proj.soldUnits}</TableCell>
+                  <TableCell className="text-right">{proj.totalProperties}</TableCell>
+                  <TableCell className="text-right">{proj.soldProperties}</TableCell>
                   <TableCell className="text-right">{fmtEuro(proj.totalValue)}</TableCell>
                   <TableCell className="text-right">{fmtEuro(proj.collected)}</TableCell>
                   <TableCell className="text-right">{proj.costOfMoney.toFixed(2)}%</TableCell>

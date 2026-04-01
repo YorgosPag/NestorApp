@@ -201,7 +201,7 @@ export const MODAL_SELECT_FIELD_LABELS = {
 
   // Contact-specific Labels - i18n keys
   contact_type: 'filters.contactType',
-  units_count: 'filters.unitsCount',
+  units_count: 'filters.propertiesCount',
   total_area: 'filters.totalArea',
   has_properties: 'filters.hasProperties',
   is_favorite: 'filters.isFavorite',

@@ -128,7 +128,7 @@
   },
   "stats": {
     "title": "Property Statistics",
-    "unitsCount": "Number of Units",
+    "propertiesCount": "Number of Properties",
     "totalArea": "Total Area",
     "totalValue": "Total Value"
   },

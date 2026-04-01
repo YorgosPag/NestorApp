@@ -240,7 +240,7 @@ export function MobileNavigation({
               onClick={() => onNavigateToPage('properties')}
               icon={NAVIGATION_ENTITIES.unit.icon}
               iconColor={NAVIGATION_ENTITIES.unit.color}
-              title={t('columns.actions.viewUnits')}
+              title={t('columns.actions.viewProperties')}
               subtitle={t('columns.actions.propertiesCount', { count: buildingUnits.length })}
               variant="compact"
             />

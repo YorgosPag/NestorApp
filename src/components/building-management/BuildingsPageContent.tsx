@@ -217,8 +217,8 @@ export function BuildingsPageContent() {
       color: "cyan"
     },
     {
-      title: t('pages.buildings.dashboard.totalUnits'),
-      value: buildingsStats.totalUnits,
+      title: t('pages.buildings.dashboard.totalProperties'),
+      value: buildingsStats.totalProperties,
       icon: NAVIGATION_ENTITIES.unit.icon,
       color: "pink"
     }

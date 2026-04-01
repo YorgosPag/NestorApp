@@ -24,8 +24,8 @@ import '@/lib/design-system';
 type StatsOverviewProps = ProjectTotals;
 
 export function StatsOverview({
-  totalUnits,
-  soldUnits,
+  totalProperties,
+  soldProperties,
   unitsArea,
   totalStorages,
   soldStorages,
@@ -42,8 +42,8 @@ export function StatsOverview({
   const dashboardStats: DashboardStat[] = [
     {
       title: t('structure.stats.units'),
-      value: totalUnits,
-      description: `${soldUnits} ${t('structure.stats.sold')} • ${unitsArea.toFixed(0)} m²`,
+      value: totalProperties,
+      description: `${soldProperties} ${t('structure.stats.sold')} • ${unitsArea.toFixed(0)} m²`,
       icon: NAVIGATION_ENTITIES.unit.icon,
       color: 'blue',
     },

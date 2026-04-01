@@ -156,7 +156,7 @@
     "areaRange": "Area Range (m²)",
     "propertyType": "Property Type",
     "contactType": "Contact Type",
-    "unitsCount": "Number of Units",
+    "propertiesCount": "Number of Properties",
     "totalArea": "Total Area",
     "hasProperties": "With properties only",
     "isFavorite": "Favorites",

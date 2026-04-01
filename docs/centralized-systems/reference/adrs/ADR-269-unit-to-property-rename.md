@@ -147,8 +147,50 @@ src/config/firestore-collections.ts — COLLECTIONS.PROPERTIES
 | `src/services/enterprise-id.service.ts` | Pending | generatePropertyId |
 | + 12 more config files | Pending | |
 
-### Phase 3-8: Hooks, API, UI, Components, Nav, AI
-See implementation plan for full file list (~100 files).
+### Phase 3-8: Hooks, API, UI, Components, Nav, AI — ✅ COMPLETE
+All phases executed. ~200 files renamed (types, services, routes, components, i18n, navigation, AI pipeline).
+
+### Phase 9: Cross-reference Fields Rename — ✅ COMPLETE (2026-04-01)
+Renamed all unit cross-reference fields across ~150 files:
+
+| Pattern | Occurrences | Renamed To |
+|---------|------------|------------|
+| `unitId` (cross-ref field) | ~709 | `propertyId` |
+| `selectedUnit` | ~200+ | `selectedProperty` |
+| `UNIT_*` constants | ~189 | `PROPERTY_*` |
+| `unitName` | ~114 | `propertyName` (where applicable) |
+| `unitData/unitDoc` | ~106 | `propertyData/propertyDoc` |
+| `linkedUnitIds` | ~50 | `linkedPropertyIds` |
+| `SEARCH_ENTITY_TYPES.UNIT` | ~15 | `.PROPERTY` |
+| `unitLabel` | ~5 | `propertyLabel` |
+
+**Excluded from rename** (legitimate uses):
+- `src/subapps/dxf-viewer/` — measurement units (different concept)
+- `src/database/migrations/` — historical migration scripts
+- `src/auth/` — deprecated backward-compat aliases
+- `src/services/booking-codec.ts` — deprecated alias
+- BOQ/procurement units — different concept
+
+### Phase 10: Remaining Type Field Renames — ✅ COMPLETE (2026-04-01)
+Renamed all remaining "unit" type fields across ~70 files:
+
+| Field | Rename To | Files Affected |
+|-------|-----------|----------------|
+| `ProjectCustomer.unitsCount` | `propertiesCount` | ~10 files |
+| `ProjectStats.totalUnits` | `totalProperties` | ~40 files |
+| `ProjectStats.soldUnits` | `soldProperties` | ~30 files |
+| `BuildingStats.totalUnits` | `totalProperties` | ~10 files |
+| `BuildingStats.soldUnits` | `soldProperties` | ~10 files |
+| `totalUnitsWithPlan` | `totalPropertiesWithPlan` | 3 files |
+| `totalUnitsWithoutPlan` | `totalPropertiesWithoutPlan` | 3 files |
+| `totalUnitsSold` | `totalPropertiesSold` | 1 file |
+| `soldUnitsCount` | `soldPropertiesCount` | 1 file |
+| i18n keys (`totalUnits`, `soldUnits`, `unitsCount`) | `totalProperties`, `soldProperties`, `propertiesCount` | 18 JSON + 12 TS files |
+
+**Excluded from rename** (same as Phase 9):
+- `src/subapps/dxf-viewer/` — measurement units (different concept)
+- `ProjectsService-broken.ts` — broken backup file
+- `Property.unitName` — kept as legacy fallback
 
 ---
 
@@ -180,6 +222,8 @@ See implementation plan for full file list (~100 files).
 | 2026-03-31 | ADR created | Claude Code |
 | 2026-04-01 | Phase 1: Implementation complete — all 8 phases executed, ~200 files renamed (types, services, routes, components, i18n, navigation, AI pipeline). | Claude Code |
 | 2026-04-01 | Phase 2: Cross-reference fields rename — unitId→propertyId, unitName→propertyName, selectedUnit→selectedProperty, UNIT_*→PROPERTY_* constants, and ~30 other patterns across ~150 files. Clean rename (no backward-compat mapping — dev data only). Remaining `unitId` refs are: dxf-viewer (measurement units), database migrations (historical), auth layer (deprecated aliases), booking-codec (deprecated alias). | Claude Code |
+| 2026-04-01 | Phase 2 fix: Fixed ~15 remaining TS errors from rename — linkedUnitIds→linkedPropertyIds in AI pipeline (14 files), SEARCH_ENTITY_TYPES.UNIT→.PROPERTY, onSelectUnit→onSelectProperty, unitLabel→propertyLabel, OverlayEntity.linked.unitId→propertyId, ResolvedContact.linkedUnitIds→linkedPropertyIds. Documented Phase 10 (pending 70-file type field renames). | Claude Code |
+| 2026-04-01 | Phase 10: Renamed remaining type fields — unitsCount→propertiesCount, totalUnits→totalProperties, soldUnits→soldProperties, BuildingStats fields, payment report fields, i18n keys+values across ~70 files (types, services, API routes, components, hooks, 18 JSON locale files). All phases complete. | Claude Code |
 
 ---
 

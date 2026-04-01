@@ -63,7 +63,7 @@
         "totalArea": "Συνολικό Εμβαδόν (τ.μ.)",
         "totalValue": "Συνολική Αξία",
         "floorCount": "Όροφοι",
-        "totalUnits": "Σύνολο Μονάδων",
+        "totalProperties": "Σύνολο Ακινήτων",
         "energyClass": "Ενεργειακή Κλάση",
         "city": "Πόλη",
         "createdAt": "Δημιουργία"

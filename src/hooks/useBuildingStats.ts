@@ -24,7 +24,7 @@ export function useBuildingStats(buildings: Building[]) {
       sumBy(buildings, b => b.progress ?? 0),
       base.total,
     ),
-    totalUnits: sumBy(buildings, b => b.units || 0),
+    totalProperties: sumBy(buildings, b => b.units || 0),
   }), [base, buildings]);
 
   return stats;

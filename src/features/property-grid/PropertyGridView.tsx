@@ -88,7 +88,7 @@ export function PropertyGridView() {
   // 🏢 ENTERPRISE: Dashboard stats
   const dashboardStatsFormatted: DashboardStat[] = useMemo(() => [
     {
-      title: t('dashboard.stats.totalUnits'),
+      title: t('dashboard.stats.totalProperties'),
       value: dashboardStats?.totalProperties ?? availableProperties.length,
       icon: Building2,
       color: 'blue' as const,

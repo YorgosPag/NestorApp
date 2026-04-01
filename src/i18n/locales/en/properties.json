@@ -711,7 +711,7 @@
   },
   "dashboard": {
     "stats": {
-      "totalUnits": "Total Units",
+      "totalProperties": "Total Properties",
       "totalValue": "Total Value",
       "totalArea": "Total Area",
       "averagePrice": "Average Price"

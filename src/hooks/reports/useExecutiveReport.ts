@@ -195,11 +195,11 @@ function buildRevenueTrend(units: Property[]): RevenueTrendPoint[] {
 
 function buildTopOverdue(units: Property[]): OverdueItem[] {
   // Simplified: units sold without sale date or recent sale
-  const soldUnits = units.filter(
+  const soldProperties = units.filter(
     u => (u.status === 'sold' || u.commercialStatus === 'sold') && u.price,
   );
 
-  return soldUnits
+  return soldProperties
     .slice(0, 5)
     .map(u => ({
       propertyId: u.id,

@@ -705,7 +705,7 @@
   },
   "dashboard": {
     "stats": {
-      "totalUnits": "Συνολικές Μονάδες",
+      "totalProperties": "Σύνολο Ακινήτων",
       "totalValue": "Συνολική Αξία",
       "totalArea": "Συνολικό Εμβαδόν",
       "averagePrice": "Μέση Τιμή"

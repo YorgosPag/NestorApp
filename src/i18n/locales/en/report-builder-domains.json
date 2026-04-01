@@ -63,7 +63,7 @@
         "totalArea": "Total Area (m²)",
         "totalValue": "Total Value",
         "floorCount": "Floors",
-        "totalUnits": "Total Units",
+        "totalProperties": "Total Properties",
         "energyClass": "Energy Class",
         "city": "City",
         "createdAt": "Created"

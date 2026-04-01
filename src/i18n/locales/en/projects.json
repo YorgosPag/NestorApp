@@ -218,8 +218,8 @@
     "toggleFilters": "Toggle filters"
   },
   "stats": {
-    "totalUnits": "Total Units",
-    "soldUnits": "Sold Units",
+    "totalProperties": "Total Properties",
+    "soldProperties": "Sold Properties",
     "totalAreaSold": "Total Area Sold"
   },
   "toolbarGroups": {
@@ -253,11 +253,11 @@
     "units": "units",
     "storages": "storage",
     "parkingSpots": "spots",
-    "soldUnits": "sold",
+    "soldProperties": "sold",
     "totalArea": "Total Area",
     "salesPercentage": "sales",
     "soldArea": "sold",
-    "totalUnitsLabel": "Total Units",
+    "totalPropertiesLabel": "Total Properties",
     "soldLabel": "Sold",
     "salesPctLabel": "% Sales",
     "stats": {
@@ -276,7 +276,7 @@
     "notFound": "Project structure not found.",
     "buildings": "buildings",
     "buildingsCount": "{count} buildings",
-    "unitsCount": "{count} units",
+    "propertiesCount": "{count} properties",
     "tabs": {
       "units": "Units",
       "storage": "Storage",
@@ -878,8 +878,8 @@
   },
   "generalTab": {
     "defaultDescription": "This is a complex of three five-storey buildings...",
-    "totalUnits": "Total Units",
-    "soldUnits": "Sold Units",
+    "totalProperties": "Total Properties",
+    "soldProperties": "Sold Properties",
     "totalSoldArea": "Total Sold Area",
     "salesPercentage": "Sales Percentage",
     "availableUnits": "{count} available",

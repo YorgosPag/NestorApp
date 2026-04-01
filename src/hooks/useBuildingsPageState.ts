@@ -59,8 +59,8 @@ function filterBuildings(buildings: Building[], filters: BuildingFilterState): B
     if (areaRange?.max !== undefined && building.totalArea && building.totalArea > areaRange.max) return false;
 
     const unitsRange = ranges?.unitsRange;
-    if (unitsRange?.min !== undefined && building.totalUnits && building.totalUnits < unitsRange.min) return false;
-    if (unitsRange?.max !== undefined && building.totalUnits && building.totalUnits > unitsRange.max) return false;
+    if (unitsRange?.min !== undefined && building.totalProperties && building.totalProperties < unitsRange.min) return false;
+    if (unitsRange?.max !== undefined && building.totalProperties && building.totalProperties > unitsRange.max) return false;
 
     const yearRange = ranges?.yearRange;
     if (yearRange?.min !== undefined && building.constructionYear && building.constructionYear < yearRange.min) return false;

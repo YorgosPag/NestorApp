@@ -111,7 +111,7 @@ function buildDetailSheet(workbook: ExcelJS.Workbook, data: PaymentReportData): 
       : STATUS_LABELS[row.loanStatus] ?? row.loanStatus;
 
     const excelRow = sheet.addRow({
-      unit: row.unitLabel,
+      unit: row.propertyLabel,
       building: row.buildingName,
       buyer: row.buyerName,
       status: STATUS_LABELS[row.planStatus] ?? row.planStatus,
@@ -178,8 +178,8 @@ function buildSummarySheet(workbook: ExcelJS.Workbook, data: PaymentReportData):
     { metric: 'Έργο', value: data.projectName },
     { metric: 'Ημερομηνία Αναφοράς', value: formatDateShort(data.generatedAt) },
     { metric: '', value: '' },
-    { metric: 'Μονάδες με Πρόγραμμα', value: data.summary.totalUnitsWithPlan },
-    { metric: 'Μονάδες χωρίς Πρόγραμμα', value: data.summary.totalUnitsWithoutPlan },
+    { metric: 'Μονάδες με Πρόγραμμα', value: data.summary.totalPropertiesWithPlan },
+    { metric: 'Μονάδες χωρίς Πρόγραμμα', value: data.summary.totalPropertiesWithoutPlan },
     { metric: '', value: '' },
     { metric: 'Συνολικό Ποσό (€)', value: data.summary.totalAmount },
     { metric: 'Πληρωμένο (€)', value: data.summary.totalPaid },

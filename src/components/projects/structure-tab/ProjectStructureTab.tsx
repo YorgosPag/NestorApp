@@ -47,7 +47,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
       <ProjectHeader
         name={structure.project.name}
         buildingsCount={structure.buildings.length}
-        totalUnits={totals.totalUnits}
+        totalProperties={totals.totalProperties}
       />
 
       {/* 🏢 ENTERPRISE: Buildings list - 8px unified spacing */}

@@ -11,10 +11,10 @@ import type { ProjectStructure } from "@/services/projects/contracts";
  */
 export interface ProjectTotals {
   // Units stats
-  totalUnits: number;
-  soldUnits: number;
-  availableUnits: number;
-  reservedUnits: number;
+  totalProperties: number;
+  soldProperties: number;
+  availableProperties: number;
+  reservedProperties: number;
   unitsArea: number;
 
   // Storage stats
@@ -39,15 +39,15 @@ export const getTotals = (structure: ProjectStructure): ProjectTotals => {
   // ==========================================================================
   // UNITS STATS
   // ==========================================================================
-  const totalUnits = structure.buildings.reduce((s, b) => s + (b.units?.length || 0), 0);
-  const soldUnits = structure.buildings.reduce(
+  const totalProperties = structure.buildings.reduce((s, b) => s + (b.units?.length || 0), 0);
+  const soldProperties = structure.buildings.reduce(
     (s, b) => s + (b.units?.filter(u => u.status === "sold").length || 0), 0
   );
   // 🏢 ENTERPRISE: "for-sale" and "for-rent" are the "available" states in property-viewer
-  const availableUnits = structure.buildings.reduce(
+  const availableProperties = structure.buildings.reduce(
     (s, b) => s + (b.units?.filter(u => u.status === "for-sale" || u.status === "for-rent").length || 0), 0
   );
-  const reservedUnits = structure.buildings.reduce(
+  const reservedProperties = structure.buildings.reduce(
     (s, b) => s + (b.units?.filter(u => u.status === "reserved").length || 0), 0
   );
   const unitsArea = structure.buildings.reduce(
@@ -85,17 +85,17 @@ export const getTotals = (structure: ProjectStructure): ProjectTotals => {
   // ==========================================================================
   // COMBINED STATS
   // ==========================================================================
-  const totalSpaces = totalUnits + totalStorages + totalParkingSpots;
+  const totalSpaces = totalProperties + totalStorages + totalParkingSpots;
   const totalArea = unitsArea + storagesArea + parkingArea;
-  const totalSold = soldUnits + soldStorages + soldParkingSpots;
+  const totalSold = soldProperties + soldStorages + soldParkingSpots;
   const soldPct = totalSpaces > 0 ? (totalSold / totalSpaces) * 100 : 0;
 
   return {
     // Units
-    totalUnits,
-    soldUnits,
-    availableUnits,
-    reservedUnits,
+    totalProperties,
+    soldProperties,
+    availableProperties,
+    reservedProperties,
     unitsArea,
     // Storage
     totalStorages,

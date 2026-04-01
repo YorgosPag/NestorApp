@@ -230,8 +230,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
               onClick={() => handleNavigateToPage('properties')}
               icon={NAVIGATION_ENTITIES.unit.icon}
               iconColor={NAVIGATION_ENTITIES.unit.color}
-              title={t('tree.destinations.viewUnits')}
-              subtitle={t('tree.destinations.unitsInBuilding', { count: buildingUnits.length })}
+              title={t('tree.destinations.viewProperties')}
+              subtitle={t('tree.destinations.propertiesInBuilding', { count: buildingUnits.length })}
               variant="compact"
             />
 

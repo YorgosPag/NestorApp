@@ -15,10 +15,10 @@ import '@/lib/design-system';
 interface ProjectHeaderProps {
   name: string;
   buildingsCount: number;
-  totalUnits: number;
+  totalProperties: number;
 }
 
-export function ProjectHeader({ name, buildingsCount, totalUnits }: ProjectHeaderProps) {
+export function ProjectHeader({ name, buildingsCount, totalProperties }: ProjectHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const colors = useSemanticColors();
@@ -32,7 +32,7 @@ export function ProjectHeader({ name, buildingsCount, totalUnits }: ProjectHeade
       <div>
         <div className={cn(typography.heading.sm, colors.text.foreground)}>{name}</div>
         <div className={cn(typography.body.sm, colors.text.muted)}>
-          {t('structure.buildingsCount', { count: buildingsCount })} • {t('structure.propertiesCount', { count: totalUnits })}
+          {t('structure.buildingsCount', { count: buildingsCount })} • {t('structure.propertiesCount', { count: totalProperties })}
         </div>
       </div>
     </div>

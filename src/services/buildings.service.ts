@@ -19,20 +19,20 @@ export async function getBuildingStats(buildingId: string): Promise<BuildingStat
 
     const unitsSnapshot = await getDocs(unitsQuery);
 
-    let totalUnits = 0;
-    let soldUnits = 0;
+    let totalProperties = 0;
+    let soldProperties = 0;
     let totalSoldArea = 0;
 
     unitsSnapshot.forEach(doc => {
       const unit = doc.data();
-      totalUnits++;
+      totalProperties++;
       if (unit.status === 'sold') {
-        soldUnits++;
+        soldProperties++;
         totalSoldArea += unit.area || 0;
       }
     });
 
-    return { totalUnits, soldUnits, totalSoldArea };
+    return { totalProperties, soldProperties, totalSoldArea };
   } catch (error) {
     logger.error(`Error fetching stats for building ${buildingId}`, { error });
     throw new Error(`Failed to calculate building statistics: ${getErrorMessage(error)}`);

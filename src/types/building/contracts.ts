@@ -72,8 +72,8 @@ import type { BuildingAddressReference, ProjectAddress } from '../project/addres
     energyClass?: EnergyClass;
     /** Renovation status */
     renovation?: RenovationStatus;
-    /** Total number of units */
-    totalUnits?: number;
+    /** Total number of properties */
+    totalProperties?: number;
     /** Year of construction */
     constructionYear?: number;
 

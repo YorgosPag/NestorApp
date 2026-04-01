@@ -651,7 +651,7 @@
         "totalValue": "Συνολική Αξία",
         "totalArea": "Συνολική Επιφάνεια",
         "averageProgress": "Μέση Πρόοδος",
-        "totalUnits": "Σύνολο Μονάδων"
+        "totalProperties": "Σύνολο Ακινήτων"
       },
       "filters": {
         "desktop": "Φίλτρα Κτιρίων",
@@ -765,8 +765,8 @@
     "searchPlaceholder": "Αναζήτηση κτιρίων..."
   },
   "stats": {
-    "totalUnits": "Σύνολο Μονάδων",
-    "soldUnits": "Πωλημένες Μονάδες",
+    "totalProperties": "Σύνολο Ακινήτων",
+    "soldProperties": "Πωλημένα Ακίνητα",
     "totalSoldArea": "Συνολικό Εμβαδόν Πωληθέντων"
   },
   "tabs": {

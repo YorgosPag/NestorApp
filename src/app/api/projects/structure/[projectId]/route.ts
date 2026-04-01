@@ -49,7 +49,7 @@ type StructureSuccess = {
   projectId: string;
   summary: {
     buildingsCount: number;
-    totalUnits: number;
+    totalProperties: number;
     totalStorages: number;
     totalParkingSpots: number;
   };
@@ -189,7 +189,7 @@ export const GET = withStandardRateLimit(async function GET(
             };
           });
 
-          logger.info('Building summary', { buildingId: building.id, unitsCount: units.length, storagesCount: storages.length, parkingCount: parkingSpots.length });
+          logger.info('Building summary', { buildingId: building.id, propertiesCount: units.length, storagesCount: storages.length, parkingCount: parkingSpots.length });
           buildings.push({ ...building, units, storages, parkingSpots });
         }
 
@@ -198,10 +198,10 @@ export const GET = withStandardRateLimit(async function GET(
           buildings
         };
 
-        const totalUnits = buildings.reduce((sum, b) => sum + b.units.length, 0);
+        const totalProperties = buildings.reduce((sum, b) => sum + b.units.length, 0);
         const totalStorages = buildings.reduce((sum, b) => sum + b.storages.length, 0);
         const totalParkingSpots = buildings.reduce((sum, b) => sum + b.parkingSpots.length, 0);
-        logger.info('[Projects/Structure] Complete', { buildingsCount: buildings.length, totalUnits, totalStorages, totalParkingSpots });
+        logger.info('[Projects/Structure] Complete', { buildingsCount: buildings.length, totalProperties, totalStorages, totalParkingSpots });
 
         return NextResponse.json({
           success: true,
@@ -209,7 +209,7 @@ export const GET = withStandardRateLimit(async function GET(
           projectId,
           summary: {
             buildingsCount: buildings.length,
-            totalUnits,
+            totalProperties,
             totalStorages,
             totalParkingSpots
           }

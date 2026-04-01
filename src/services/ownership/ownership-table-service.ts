@@ -101,7 +101,7 @@ export async function getBuildingIdsByProject(projectId: string): Promise<string
 /** Validation result for building data before auto-populate */
 export interface BuildingDataValidation {
   readonly totalFloors: number;
-  readonly totalUnits: number;
+  readonly totalProperties: number;
   readonly unitsWithoutArea: number;
   readonly unitsWithoutFloor: number;
 }
@@ -114,7 +114,7 @@ export async function validateBuildingData(
   buildingIds: string[],
 ): Promise<BuildingDataValidation> {
   let totalFloors = 0;
-  let totalUnits = 0;
+  let totalProperties = 0;
   let unitsWithoutArea = 0;
   let unitsWithoutFloor = 0;
 
@@ -127,7 +127,7 @@ export async function validateBuildingData(
     const unitsSnap = await getDocs(
       query(collection(db, COLLECTIONS.PROPERTIES), where('buildingId', '==', bId)),
     );
-    totalUnits += unitsSnap.size;
+    totalProperties += unitsSnap.size;
 
     for (const unitDoc of unitsSnap.docs) {
       const data = unitDoc.data();
@@ -137,7 +137,7 @@ export async function validateBuildingData(
     }
   }
 
-  return { totalFloors, totalUnits, unitsWithoutArea, unitsWithoutFloor };
+  return { totalFloors, totalProperties, unitsWithoutArea, unitsWithoutFloor };
 }
 
 // ============================================================================

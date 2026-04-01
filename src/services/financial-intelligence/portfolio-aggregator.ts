@@ -216,8 +216,8 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
       projectSummaries.push({
         projectId,
         projectName,
-        totalUnits: projectTotalProperties,
-        soldUnits: projectSoldProperties,
+        totalProperties: projectTotalProperties,
+        soldProperties: projectSoldProperties,
         totalValue: Math.round(projectTotalValue * 100) / 100,
         collected: Math.round(projectCollected * 100) / 100,
         costOfMoney: Math.round(avgCostOfMoney * 100) / 100,
@@ -255,8 +255,8 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
 
   const portfolio: PortfolioSummary = {
     activeProjects: projectsSnap.size,
-    totalUnits: totalPropertiesAll,
-    soldUnits: soldPropertiesAll,
+    totalProperties: totalPropertiesAll,
+    soldProperties: soldPropertiesAll,
     totalPortfolioValue: Math.round(totalPortfolioValue * 100) / 100,
     totalCollected: Math.round(totalCollected * 100) / 100,
     totalOutstanding: Math.round(totalOutstanding * 100) / 100,
@@ -270,7 +270,7 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
   const duration = Date.now() - startTime;
   logger.info(`[Portfolio] Aggregation complete in ${duration}ms`, {
     projects: projectsSnap.size,
-    totalUnits: totalPropertiesAll,
+    totalProperties: totalPropertiesAll,
   });
 
   return { portfolio, projects: projectSummaries };

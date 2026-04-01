@@ -44,15 +44,15 @@ export function ProjectStats({ projectId }: ProjectStatsProps) {
 
   const dashboardStats: DashboardStat[] = [
     {
-      title: t('stats.totalUnits'),
-      value: loading ? '...' : stats?.totalUnits ?? 0,
+      title: t('stats.totalProperties'),
+      value: loading ? '...' : stats?.totalProperties ?? 0,
       icon: UnitIcon,
       color: 'blue',
       loading,
     },
     {
-      title: t('stats.soldUnits'),
-      value: loading ? '...' : stats?.soldUnits ?? 0,
+      title: t('stats.soldProperties'),
+      value: loading ? '...' : stats?.soldProperties ?? 0,
       icon: CheckCircle,
       color: 'green',
       loading,

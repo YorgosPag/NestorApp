@@ -38,8 +38,8 @@ export interface PaymentReportRow {
 // =============================================================================
 
 export interface PaymentReportSummary {
-  totalUnitsWithPlan: number;
-  totalUnitsWithoutPlan: number;
+  totalPropertiesWithPlan: number;
+  totalPropertiesWithoutPlan: number;
   totalAmount: number;
   totalPaid: number;
   totalRemaining: number;

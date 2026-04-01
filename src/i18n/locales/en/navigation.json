@@ -48,8 +48,8 @@
     "buildingCount": "{count} buildings",
     "destinations": {
       "navigateTo": "Navigate to:",
-      "viewUnits": "View Units",
-      "unitsInBuilding": "{count} units in building",
+      "viewProperties": "View Properties",
+      "propertiesInBuilding": "{count} properties in building",
       "buildingDetails": "Building Details",
       "projectDetails": "Project Details"
     }
@@ -83,8 +83,8 @@
       "title": "Actions",
       "listLabel": "Actions List",
       "sectionLabel": "Actions",
-      "viewUnits": "View Units",
-      "unitsCount": "{count} units",
+      "viewProperties": "View Properties",
+      "propertiesCount": "{count} properties",
       "buildingDetails": "Building Details",
       "projectDetails": "Project Details"
     }

@@ -65,8 +65,8 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   const parkingSpots = (building.parkingSpots || []) as ParkingModel[];
 
   // Unit stats
-  const soldUnits = units.filter((u) => u.status === 'sold').length;
-  const totalUnits = units.length;
+  const soldProperties = units.filter((u) => u.status === 'sold').length;
+  const totalProperties = units.length;
   const _totalArea = units.reduce((sum: number, u) => sum + (u.area || 0), 0);
   const soldArea = units.filter((u) => u.status === 'sold').reduce((sum: number, u) => sum + (u.area || 0), 0);
 
@@ -84,7 +84,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
       label: t('structure.tabs.units'),
       icon: NAVIGATION_ENTITIES.unit.icon,
       iconColor: NAVIGATION_ENTITIES.unit.color,
-      count: totalUnits
+      count: totalProperties
     },
     {
       id: 'storage' as SpaceTab,
@@ -100,7 +100,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
       iconColor: NAVIGATION_ENTITIES.parking.color,
       count: totalParkingSpots
     }
-  ], [t, totalUnits, totalStorages, totalParkingSpots]);
+  ], [t, totalProperties, totalStorages, totalParkingSpots]);
 
   // ==========================================================================
   // RENDER
@@ -123,12 +123,12 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
         <div className="flex-1">
           <div className={cn(typography.heading.sm, colors.text.foreground)}>{buildingName}</div>
           <div className={cn(typography.body.sm, colors.text.muted)}>
-            {totalUnits} {t('structure.units')} • {totalStorages} {t('structure.storages')} • {totalParkingSpots} {t('structure.parkingSpots')}
+            {totalProperties} {t('structure.units')} • {totalStorages} {t('structure.storages')} • {totalParkingSpots} {t('structure.parkingSpots')}
           </div>
         </div>
         <div className={cn("text-right", typography.body.sm)}>
           <div className={cn(typography.heading.sm, colors.text.success)}>
-            {totalUnits > 0 ? ((soldUnits / totalUnits) * 100).toFixed(1) : 0}% {t('structure.salesPercentage')}
+            {totalProperties > 0 ? ((soldProperties / totalProperties) * 100).toFixed(1) : 0}% {t('structure.salesPercentage')}
           </div>
           <div className={colors.text.muted}>
             {soldArea.toFixed(1)} m² {t('structure.soldArea', 'πωλημένα')}

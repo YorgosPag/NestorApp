@@ -67,8 +67,8 @@ function buildKPIs(
       icon: TrendingUp, color: 'blue' as const,
     },
     {
-      title: t('sales.kpis.soldUnits'),
-      value: data.soldUnits,
+      title: t('sales.kpis.soldProperties'),
+      value: data.soldProperties,
       icon: ShoppingCart, color: 'purple' as const,
     },
     {
@@ -205,12 +205,12 @@ export function useSalesReport(): UseSalesReportReturn {
   // Funnel: use sold + forSale as simple conversion stages
   const funnelStages = useMemo<FunnelStage[]>(() => {
     if (!payload) return [];
-    const total = payload.soldUnits + payload.forSaleUnits;
+    const total = payload.soldProperties + payload.forSaleUnits;
     if (total === 0) return [];
     return [
       { name: t('sales.funnel.total'), value: total },
       { name: t('sales.funnel.forSale'), value: payload.forSaleUnits },
-      { name: t('sales.funnel.sold'), value: payload.soldUnits },
+      { name: t('sales.funnel.sold'), value: payload.soldProperties },
     ];
   }, [payload, t]);
 

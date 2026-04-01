@@ -37,8 +37,8 @@ interface BootstrapProject {
   status: string;
   updatedAt: string | null;
   createdAt: string | null;
-  totalUnits?: number;
-  soldUnits?: number;
+  totalProperties?: number;
+  soldProperties?: number;
   soldAreaM2?: number;
   // 🏢 PERF-001: Building count from bootstrap (eliminates realtime listener)
   buildingCount: number;

@@ -38,7 +38,7 @@ type TestConnectionSuccess = {
     building: unknown;
     project: unknown;
   }>;
-  totalUnits: number;
+  totalProperties: number;
   unitsWithBuildingId: number;
   unitsWithLegacyBuilding1: number;
   unitsWithLegacyBuilding2: number;
@@ -105,20 +105,20 @@ const getHandler = async (request: NextRequest) => {
         // ============================================================================
 
         const stats = {
-          totalUnits: allUnits.length,
+          totalProperties: allUnits.length,
           unitsWithBuildingId: allUnits.filter(u => u.buildingId).length,
           unitsWithLegacyBuilding1: allUnits.filter(u => u.buildingId === BUILDING_IDS.LEGACY_BUILDING_1).length,
           unitsWithLegacyBuilding2: allUnits.filter(u => u.buildingId === BUILDING_IDS.LEGACY_BUILDING_2).length,
           unitsWithLegacyIds: allUnits.filter(u => BuildingIdUtils.isLegacyBuildingId(u.buildingId)).length
         };
 
-        logger.info('[Properties/TestConnection] Complete', { totalUnits: stats.totalUnits });
+        logger.info('[Properties/TestConnection] Complete', { totalProperties: stats.totalProperties });
 
         return NextResponse.json({
           success: true,
           buildings: buildings,
           sampleUnits: sampleUnits,
-          totalUnits: stats.totalUnits,
+          totalProperties: stats.totalProperties,
           unitsWithBuildingId: stats.unitsWithBuildingId,
           unitsWithLegacyBuilding1: stats.unitsWithLegacyBuilding1,
           unitsWithLegacyBuilding2: stats.unitsWithLegacyBuilding2,

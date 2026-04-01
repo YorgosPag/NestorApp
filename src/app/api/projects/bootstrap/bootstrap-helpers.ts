@@ -29,8 +29,8 @@ export interface BootstrapProject {
   updatedAt: string | null; // ISO string (enterprise requirement)
   createdAt: string | null; // ISO string
   // Precomputed aggregates (if available)
-  totalUnits?: number;
-  soldUnits?: number;
+  totalProperties?: number;
+  soldProperties?: number;
   soldAreaM2?: number;
   // 🏢 PERF-001: Building count from bootstrap (eliminates realtime listener)
   buildingCount: number;
@@ -67,9 +67,9 @@ export function mapProjectDocument(
     updatedAt: normalizeToISO(data.updatedAt),
     createdAt: normalizeToISO(data.createdAt),
     // Precomputed aggregates (if available in document)
-    totalUnits:
-      typeof data.totalUnits === "number" ? data.totalUnits : undefined,
-    soldUnits: typeof data.soldUnits === "number" ? data.soldUnits : undefined,
+    totalProperties:
+      typeof data.totalProperties === "number" ? data.totalProperties : undefined,
+    soldProperties: typeof data.soldProperties === "number" ? data.soldProperties : undefined,
     soldAreaM2:
       typeof data.soldAreaM2 === "number" ? data.soldAreaM2 : undefined,
     // 🏢 PERF-001: Building count (will be populated after buildings query)

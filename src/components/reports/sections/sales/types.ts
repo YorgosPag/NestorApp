@@ -9,8 +9,8 @@ import type { FunnelStage } from '@/components/reports/core';
 export interface SalesReportPayload {
   totalRevenue: number;
   pipelineValue: number;
-  soldUnits: number;
-  forSaleUnits: number;
+  soldProperties: number;
+  forSaleProperties: number;
   conversionRate: number;
   averagePaymentCoverage: number;
   totalOverdueInstallments: number;

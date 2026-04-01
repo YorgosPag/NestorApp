@@ -74,7 +74,7 @@ export interface ProjectsReportData {
   byType: Record<string, number>;
   totalPortfolioValue: number;
   averageProgress: number;
-  totalUnits: number;
+  totalProperties: number;
   unitsByCommercialStatus: Record<string, number>;
   revenueByProject: Record<string, number>;
   projectNames: Record<string, string>;
@@ -92,8 +92,8 @@ export interface ProjectsReportData {
 export interface SalesReportData {
   totalRevenue: number;
   pipelineValue: number;
-  soldUnits: number;
-  forSaleUnits: number;
+  soldProperties: number;
+  forSaleProperties: number;
   conversionRate: number;
   averagePaymentCoverage: number;
   totalOverdueInstallments: number;

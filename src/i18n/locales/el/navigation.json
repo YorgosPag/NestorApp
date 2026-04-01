@@ -48,8 +48,8 @@
     "buildingCount": "{count} κτίρια",
     "destinations": {
       "navigateTo": "Μετάβαση σε:",
-      "viewUnits": "Προβολή Μονάδων",
-      "unitsInBuilding": "{count} μονάδες στο κτίριο",
+      "viewProperties": "Προβολή Ακινήτων",
+      "propertiesInBuilding": "{count} ακίνητα στο κτίριο",
       "buildingDetails": "Λεπτομέρειες Κτιρίου",
       "projectDetails": "Λεπτομέρειες Έργου"
     }
@@ -83,8 +83,8 @@
       "title": "Ενέργειες",
       "listLabel": "Λίστα Ενεργειών",
       "sectionLabel": "Ενέργειες",
-      "viewUnits": "Προβολή Μονάδων",
-      "unitsCount": "{count} μονάδες",
+      "viewProperties": "Προβολή Ακινήτων",
+      "propertiesCount": "{count} ακίνητα",
       "buildingDetails": "Λεπτομέρειες Κτιρίου",
       "projectDetails": "Λεπτομέρειες Έργου"
     }

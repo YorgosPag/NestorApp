@@ -451,10 +451,10 @@ export type HealthStatus = 'excellent' | 'good' | 'warning' | 'critical';
 export interface PortfolioSummary {
   /** Number of active projects */
   activeProjects: number;
-  /** Total units across all projects */
-  totalUnits: number;
-  /** Total sold units across all projects */
-  soldUnits: number;
+  /** Total properties across all projects */
+  totalProperties: number;
+  /** Total sold properties across all projects */
+  soldProperties: number;
   /** Total portfolio value (€) — sum of all unit sale prices */
   totalPortfolioValue: number;
   /** Total collected amount (€) */
@@ -479,10 +479,10 @@ export interface ProjectFinancialSummary {
   projectId: string;
   /** Project display name */
   projectName: string;
-  /** Total units in project */
-  totalUnits: number;
-  /** Sold units in project */
-  soldUnits: number;
+  /** Total properties in project */
+  totalProperties: number;
+  /** Sold properties in project */
+  soldProperties: number;
   /** Total value of all units (€) */
   totalValue: number;
   /** Total collected (€) */

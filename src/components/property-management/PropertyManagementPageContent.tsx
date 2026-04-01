@@ -65,7 +65,7 @@ export function PropertyManagementPageContent() {
   // 🏢 ENTERPRISE: Transform dashboard stats to UnifiedDashboard format
   const dashboardStatsFormatted: DashboardStat[] = useMemo(() => [
     {
-      title: t('dashboard.stats.totalUnits'),
+      title: t('dashboard.stats.totalProperties'),
       value: hookState.dashboardStats.totalProperties,
       icon: Building2,
       color: 'blue' as const,

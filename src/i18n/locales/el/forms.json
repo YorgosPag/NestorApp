@@ -156,7 +156,7 @@
     "areaRange": "Εύρος Εμβαδού (m²)",
     "propertyType": "Τύπος Ακινήτου",
     "contactType": "Τύπος Επαφής",
-    "unitsCount": "Πλήθος Μονάδων",
+    "propertiesCount": "Πλήθος Ακινήτων",
     "totalArea": "Συνολικό Εμβαδόν",
     "hasProperties": "Μόνο με ιδιοκτησίες",
     "isFavorite": "Αγαπημένα",

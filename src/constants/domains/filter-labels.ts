@@ -61,7 +61,7 @@ export const PROPERTY_FILTER_LABELS = {
   year_built: 'filters.fields.yearBuilt',
   property_type: 'filters.fields.propertyType',
   contact_type: 'filters.fields.contactType',
-  units_count: 'filters.fields.unitsCount',
+  properties_count: 'filters.fields.propertiesCount',
   total_area: 'filters.fields.totalArea',
   year_range: 'filters.fields.yearRange',
   progress_range: 'filters.fields.progressRange',

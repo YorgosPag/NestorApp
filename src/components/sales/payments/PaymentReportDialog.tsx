@@ -117,7 +117,7 @@ export function PaymentReportDialog({
             <nav className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <SummaryCard
                 label={t('report.totalWithPlan')}
-                value={String(report.summary.totalUnitsWithPlan)}
+                value={String(report.summary.totalPropertiesWithPlan)}
                 icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
               />
               <SummaryCard
@@ -179,7 +179,7 @@ export function PaymentReportDialog({
                         key={row.propertyId}
                         className={row.overdueInstallments > 0 ? 'bg-red-50' : undefined}
                       >
-                        <TableCell className="font-medium">{row.unitLabel}</TableCell>
+                        <TableCell className="font-medium">{row.propertyLabel}</TableCell>
                         <TableCell>{row.buildingName}</TableCell>
                         <TableCell>{row.buyerName}</TableCell>
                         <TableCell className="text-right tabular-nums">

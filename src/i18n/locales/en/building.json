@@ -651,7 +651,7 @@
         "totalValue": "Total Value",
         "totalArea": "Total Area",
         "averageProgress": "Average Progress",
-        "totalUnits": "Total Units"
+        "totalProperties": "Total Properties"
       },
       "filters": {
         "desktop": "Building Filters",
@@ -765,8 +765,8 @@
     "searchPlaceholder": "Search buildings..."
   },
   "stats": {
-    "totalUnits": "Total Units",
-    "soldUnits": "Sold Units",
+    "totalProperties": "Total Properties",
+    "soldProperties": "Sold Properties",
     "totalSoldArea": "Total Sold Area"
   },
   "tabs": {

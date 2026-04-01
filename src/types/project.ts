@@ -134,12 +134,12 @@ export interface ProjectCustomer {
   phone: string | null;
   /** Email address for customer communication */
   email?: string;
-  unitsCount: number;
+  propertiesCount: number;
 }
 
 export interface ProjectStats {
-  totalUnits: number;
-  soldUnits: number;
+  totalProperties: number;
+  soldProperties: number;
   totalSoldArea: number;
 }
 

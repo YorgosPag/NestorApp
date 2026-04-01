@@ -95,10 +95,10 @@ export class ProjectsService implements IProjectsService {
         buildingIds.map(id => this.firestoreRepo.getUnitsByBuildingId(id))
     )).flat();
 
-    const soldUnits = allUnits.filter(u => u.status === 'sold' && u.soldTo);
+    const soldProperties = allUnits.filter(u => u.status === 'sold' && u.soldTo);
 
     const customerUnitCount: { [contactId: string]: number } = {};
-    soldUnits.forEach(unit => {
+    soldProperties.forEach(unit => {
         customerUnitCount[unit.soldTo!] = (customerUnitCount[unit.soldTo!] || 0) + 1;
     });
 
@@ -111,7 +111,7 @@ export class ProjectsService implements IProjectsService {
       contactId: contact.id!,
       name: getContactDisplayName(contact),
       phone: getPrimaryPhone(contact) || null,
-      unitsCount: customerUnitCount[contact.id!] || 0,
+      propertiesCount: customerUnitCount[contact.id!] || 0,
     }));
   }
 
@@ -120,11 +120,11 @@ export class ProjectsService implements IProjectsService {
         const buildings = await this.firestoreRepo.getBuildingsByProjectId(projectId);
 
         if (buildings.length === 0) {
-            return { totalUnits: 0, soldUnits: 0, totalSoldArea: 0 };
+            return { totalProperties: 0, soldProperties: 0, totalSoldArea: 0 };
         }
 
-        let totalUnits = 0;
-        let soldUnits = 0;
+        let totalProperties = 0;
+        let soldProperties = 0;
         let totalSoldArea = 0;
 
         for (const building of buildings) {
@@ -133,20 +133,20 @@ export class ProjectsService implements IProjectsService {
             const units = await this.firestoreRepo.getUnitsByBuildingId(`${buildingIdPattern}${building.id}`);
 
             units.forEach(unit => {
-                totalUnits++;
+                totalProperties++;
                 const isSold = unit.status === 'sold' || (unit.soldTo && unit.soldTo.trim() !== '');
                 if (isSold) {
-                    soldUnits++;
+                    soldProperties++;
                     totalSoldArea += parseFloat(String(unit.area)) || 0;
                 }
             });
         }
 
-        const stats = { totalUnits, soldUnits, totalSoldArea };
+        const stats = { totalProperties, soldProperties, totalSoldArea };
         return stats;
 
     } catch (error) {
-        return { totalUnits: 0, soldUnits: 0, totalSoldArea: 0 };
+        return { totalProperties: 0, soldProperties: 0, totalSoldArea: 0 };
     }
   }
 

@@ -98,7 +98,7 @@ export function useOwnershipTableHandlers(deps: HandlerDeps): OwnershipTableHand
       const issues: string[] = [];
 
       if (validation.totalFloors === 0) issues.push(t('common:ownership.messages.noFloors'));
-      if (validation.totalUnits === 0) issues.push(t('common:ownership.messages.noUnits'));
+      if (validation.totalProperties === 0) issues.push(t('common:ownership.messages.noUnits'));
       if (validation.unitsWithoutArea > 0) {
         issues.push(t('common:ownership.messages.unitsWithoutArea', { count: validation.unitsWithoutArea }));
       }
@@ -106,7 +106,7 @@ export function useOwnershipTableHandlers(deps: HandlerDeps): OwnershipTableHand
         issues.push(t('common:ownership.messages.unitsWithoutFloor', { count: validation.unitsWithoutFloor }));
       }
 
-      if (validation.totalUnits === 0) {
+      if (validation.totalProperties === 0) {
         showError(issues.join('\n'));
         return;
       }

@@ -17,7 +17,7 @@ interface CustomerInfo {
   name: string;
   phone: string | null;
   email: string | null;
-  unitsCount: number;
+  propertiesCount: number;
 }
 
 /** Response type for building customers API */
@@ -27,7 +27,7 @@ interface BuildingCustomersResponse {
   buildingId: string;
   summary: {
     customersCount: number;
-    soldUnitsCount: number;
+    soldPropertiesCount: number;
   };
   warning?: string;
   error?: string;
@@ -53,7 +53,7 @@ export async function GET(
             success: true,
             customers: [],
             buildingId,
-            summary: { customersCount: 0, soldUnitsCount: 0 },
+            summary: { customersCount: 0, soldPropertiesCount: 0 },
             warning: 'Database connection not available'
           });
         }
@@ -72,7 +72,7 @@ export async function GET(
               success: false,
               customers: [],
               buildingId,
-              summary: { customersCount: 0, soldUnitsCount: 0 },
+              summary: { customersCount: 0, soldPropertiesCount: 0 },
               error: error.message
             }, { status: error.status });
           }
@@ -95,24 +95,24 @@ export async function GET(
 
         // Filter sold units
         type UnitWithSoldTo = { id: string; status?: string; soldTo?: string };
-        const soldUnits = units.filter((u): u is UnitWithSoldTo & { status: 'sold'; soldTo: string } =>
+        const soldProperties = units.filter((u): u is UnitWithSoldTo & { status: 'sold'; soldTo: string } =>
           (u as UnitWithSoldTo).status === 'sold' && !!(u as UnitWithSoldTo).soldTo
         );
-        logger.info('Sold units', { count: soldUnits.length });
+        logger.info('Sold properties', { count: soldProperties.length });
 
-        if (soldUnits.length === 0) {
-          logger.info('No sold units found for building', { buildingId });
+        if (soldProperties.length === 0) {
+          logger.info('No sold properties found for building', { buildingId });
           return NextResponse.json({
             success: true,
             customers: [],
             buildingId,
-            summary: { customersCount: 0, soldUnitsCount: 0 }
+            summary: { customersCount: 0, soldPropertiesCount: 0 }
           });
         }
 
         // Count units per customer
         const customerUnitCount: { [contactId: string]: number } = {};
-        soldUnits.forEach(unit => {
+        soldProperties.forEach(unit => {
           customerUnitCount[unit.soldTo] = (customerUnitCount[unit.soldTo] || 0) + 1;
         });
 
@@ -124,7 +124,7 @@ export async function GET(
             success: true,
             customers: [],
             buildingId,
-            summary: { customersCount: 0, soldUnitsCount: 0 }
+            summary: { customersCount: 0, soldPropertiesCount: 0 }
           });
         }
 
@@ -153,7 +153,7 @@ export async function GET(
             name: getContactDisplayName(contact),
             phone: getPrimaryPhone(contact) || null,
             email: getPrimaryEmail(contact) || null,
-            unitsCount: customerUnitCount[doc.id] || 0,
+            propertiesCount: customerUnitCount[doc.id] || 0,
           };
         });
 
@@ -165,7 +165,7 @@ export async function GET(
           buildingId,
           summary: {
             customersCount: customers.length,
-            soldUnitsCount: soldUnits.length
+            soldPropertiesCount: soldProperties.length
           }
         });
 
@@ -176,7 +176,7 @@ export async function GET(
           success: false,
           customers: [],
           buildingId,
-          summary: { customersCount: 0, soldUnitsCount: 0 },
+          summary: { customersCount: 0, soldPropertiesCount: 0 },
           error: getErrorMessage(error)
         }, { status: 500 });
       }

@@ -138,12 +138,12 @@ export function SoldPropertiesPreview() {
   }, []);
 
   // Filter sold units without soldTo
-  const soldUnitsWithoutCustomer = units.filter(unit =>
+  const soldPropertiesWithoutCustomer = units.filter(unit =>
     unit.status === 'sold' && (!unit.soldTo || unit.soldTo === UNIT_SALE_STATUS.NOT_SOLD)
   );
 
   // Filter sold units with soldTo
-  const soldUnitsWithCustomer = units.filter(unit =>
+  const soldPropertiesWithCustomer = units.filter(unit =>
     unit.status === 'sold' && unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD
   );
 
@@ -176,13 +176,13 @@ export function SoldPropertiesPreview() {
           },
           {
             title: t('units.soldNoCustomer'),
-            value: soldUnitsWithoutCustomer.length,
+            value: soldPropertiesWithoutCustomer.length,
             icon: AlertCircle,
             color: 'red',
           },
           {
             title: t('units.soldWithCustomer'),
-            value: soldUnitsWithCustomer.length,
+            value: soldPropertiesWithCustomer.length,
             icon: CheckCircle,
             color: 'green',
           },

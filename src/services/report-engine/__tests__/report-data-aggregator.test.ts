@@ -258,7 +258,7 @@ describe('ReportDataAggregator', () => {
       expect(result.byStatus).toEqual({ active: 1, planning: 1 });
       expect(result.totalPortfolioValue).toBe(1300000);
       expect(result.averageProgress).toBe(40); // (60+20)/2
-      expect(result.totalUnits).toBe(2);
+      expect(result.totalProperties).toBe(2);
       expect(result.generatedAt).toBeDefined();
     });
 
@@ -298,8 +298,8 @@ describe('ReportDataAggregator', () => {
 
       const result = await ReportDataAggregator.getSalesReport(baseFilter);
 
-      expect(result.soldUnits).toBe(1);
-      expect(result.forSaleUnits).toBe(1);
+      expect(result.soldProperties).toBe(1);
+      expect(result.forSaleProperties).toBe(1);
       expect(result.totalRevenue).toBe(150000);
       expect(result.pipelineValue).toBe(200000);
       expect(result.chequesByStatus).toEqual({ pending: 1, cleared: 1 });
@@ -311,7 +311,7 @@ describe('ReportDataAggregator', () => {
 
       const result = await ReportDataAggregator.getSalesReport(baseFilter);
 
-      expect(result.soldUnits).toBe(0);
+      expect(result.soldProperties).toBe(0);
       expect(result.totalRevenue).toBe(0);
       expect(result.pipelineValue).toBe(0);
     });

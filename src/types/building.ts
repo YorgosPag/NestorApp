@@ -1,6 +1,6 @@
 
 export interface BuildingStats {
-  totalUnits: number;
-  soldUnits: number;
+  totalProperties: number;
+  soldProperties: number;
   totalSoldArea: number;
 }

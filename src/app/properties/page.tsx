@@ -231,7 +231,7 @@ function UnitsPageContent() {
   // 🎯 DOMAIN SEPARATION: Units = Physical Truth - NO SALES METRICS!
   const unifiedDashboardStats: DashboardStat[] = [
     {
-      title: t('page.dashboard.totalUnits'),
+      title: t('dashboard.stats.totalProperties'),
       value: dashboardStats.totalProperties,
       icon: NAVIGATION_ENTITIES.unit.icon,
       color: "blue"
@@ -285,7 +285,7 @@ function UnitsPageContent() {
   // 🎯 DOMAIN SEPARATION: Units = Physical Truth - Operational status filters only!
   const handleCardClick = (stat: DashboardStat, _index: number) => {
     const cardTitle = stat.title;
-    const totalUnitsTitle = t('page.dashboard.totalUnits');
+    const totalPropertiesTitle = t('dashboard.stats.totalProperties');
     const readyTitle = t('operationalStatus.ready');
 
     // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
@@ -298,7 +298,7 @@ function UnitsPageContent() {
 
       // Apply filter based on card type - OPERATIONAL STATUS ONLY
       switch (cardTitle) {
-        case totalUnitsTitle:
+        case totalPropertiesTitle:
           // Show all units - reset filters
           handleFiltersChange({ ...filters, status: [] });
           break;
@@ -443,16 +443,16 @@ function UnitsPageContent() {
             <PropertiesSidebar
               units={searchFilteredProperties}
               selectedProperty={isCreatingNewUnit ? newUnitTemplate : (selectedProperty || null)}
-              onSelectUnit={handlePolygonSelect}
+              onSelectProperty={handlePolygonSelect}
               selectedPropertyIds={selectedPropertyIds}
               viewerProps={viewerProps}
               floors={safeFloors}
               setShowHistoryPanel={setShowHistoryPanel}
               onAssignmentSuccess={handleAssignmentSuccess}
-              onNewUnit={handleNewUnitInline}
-              onDeleteUnit={handleDeleteUnit}
+              onNewProperty={handleNewUnitInline}
+              onDeleteProperty={handleDeleteUnit}
               isCreatingNewUnit={isCreatingNewUnit}
-              onUnitCreated={handleUnitCreated}
+              onPropertyCreated={handleUnitCreated}
               onCancelCreate={handleCancelCreate}
               defaultTab={urlTab || undefined}
             />
