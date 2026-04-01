@@ -4,7 +4,7 @@
  * Tests the core orchestrator for AI agent requests (admin + messaging channels).
  * This is the most critical untested file — every AI request flows through here.
  *
- * Covers: happy path, daily cap, empty linkedUnitIds, chat history,
+ * Covers: happy path, daily cap, empty linkedPropertyIds, chat history,
  * token usage recording, error handling, state transitions.
  *
  * @see ADR-171 (Autonomous AI Agent)
@@ -190,7 +190,7 @@ describe('executeAgenticPath', () => {
         adminCommandMeta: null,
         contactMeta: {
           contactId: 'cont_001',
-          linkedUnitIds: ['unit_001'],
+          linkedPropertyIds: ['unit_001'],
         },
       } as Partial<PipelineContext>);
 
@@ -257,7 +257,7 @@ describe('executeAgenticPath', () => {
         adminCommandMeta: null,
         contactMeta: {
           contactId: 'cont_001',
-          linkedUnitIds: ['unit_001'],
+          linkedPropertyIds: ['unit_001'],
         },
       } as Partial<PipelineContext>);
 
@@ -284,8 +284,8 @@ describe('executeAgenticPath', () => {
   // EMPTY LINKED UNITS (ADR-259C)
   // ──────────────────────────────────────────────────────────────────────────
 
-  describe('empty linkedUnitIds (ADR-259C)', () => {
-    it('exits early for customer with empty linkedUnitIds', async () => {
+  describe('empty linkedPropertyIds (ADR-259C)', () => {
+    it('exits early for customer with empty linkedPropertyIds', async () => {
       const ctx = createPipelineContext({
         adminCommandMeta: null,
         contactMeta: {
@@ -294,7 +294,7 @@ describe('executeAgenticPath', () => {
           firstName: 'Test',
           primaryPersona: null,
           projectRoles: [],
-          linkedUnitIds: [],
+          linkedPropertyIds: [],
         },
       } as Partial<PipelineContext>);
 
@@ -304,7 +304,7 @@ describe('executeAgenticPath', () => {
       expect(executeAgenticLoop).not.toHaveBeenCalled();
     });
 
-    it('does NOT check linkedUnitIds for admin', async () => {
+    it('does NOT check linkedPropertyIds for admin', async () => {
       const ctx = createPipelineContext({
         contactMeta: {
           contactId: 'cont_001',
@@ -312,13 +312,13 @@ describe('executeAgenticPath', () => {
           firstName: 'Test',
           primaryPersona: null,
           projectRoles: [],
-          linkedUnitIds: [],
+          linkedPropertyIds: [],
         },
       } as Partial<PipelineContext>);
 
       const result = await executeAgenticPath(ctx, deps);
 
-      // Admin should proceed to agentic loop despite empty linkedUnitIds
+      // Admin should proceed to agentic loop despite empty linkedPropertyIds
       expect(result.success).toBe(true);
       expect(executeAgenticLoop).toHaveBeenCalled();
     });
@@ -446,7 +446,7 @@ describe('executeAgenticPath', () => {
         adminCommandMeta: null,
         contactMeta: {
           contactId: 'cont_001',
-          linkedUnitIds: ['unit_001'],
+          linkedPropertyIds: ['unit_001'],
         },
       } as Partial<PipelineContext>);
 

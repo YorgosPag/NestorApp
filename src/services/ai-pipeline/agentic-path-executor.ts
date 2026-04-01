@@ -143,8 +143,8 @@ export async function executeAgenticPath(
       }
     }
 
-    // 2c. ADR-259C: Empty linkedUnitIds early-exit (customers only)
-    if (!agenticCtx.isAdmin && agenticCtx.contactMeta?.linkedUnitIds?.length === 0) {
+    // 2c. ADR-259C: Empty linkedPropertyIds early-exit (customers only)
+    if (!agenticCtx.isAdmin && agenticCtx.contactMeta?.linkedPropertyIds?.length === 0) {
       agenticLogger.info('No linked units — early exit', {
         requestId: ctx.requestId,
         channelSenderId,

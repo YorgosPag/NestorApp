@@ -360,7 +360,7 @@ export class AdminPropertyStatsModule implements IUCModule {
       }
 
       const params = action.params;
-      const statsType = (params.statsType as StatsType) ?? 'units';
+      const statsType = (params.statsType as StatsType) ?? 'properties';
       const totalStats = params.totalStats as AggregatePropertyStats | null;
       const projectBreakdown = (params.projectBreakdown as ProjectPropertyBreakdown[]) ?? [];
       const projectFilter = params.projectFilter as string | null;

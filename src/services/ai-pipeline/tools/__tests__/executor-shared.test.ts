@@ -315,7 +315,7 @@ describe('redactRoleBlockedFields', () => {
     const { deriveBlockedFieldSet } = jest.requireMock('@/config/ai-role-access-matrix');
     const { resolveAccessConfig } = jest.requireMock('@/config/ai-role-access-matrix');
     resolveAccessConfig.mockReturnValueOnce({
-      allowedCollections: ['units'],
+      allowedCollections: ['properties'],
       blockedFields: ['salary'],
       scopeLevel: 'project',
     });
@@ -337,7 +337,7 @@ describe('redactRoleBlockedFields', () => {
     const { deriveBlockedFieldSet, resolveAccessConfig } =
       jest.requireMock('@/config/ai-role-access-matrix');
     resolveAccessConfig.mockReturnValueOnce({
-      allowedCollections: ['units'],
+      allowedCollections: ['properties'],
       blockedFields: ['commercial.askingPrice'],
       scopeLevel: 'project',
     });
@@ -359,7 +359,7 @@ describe('redactRoleBlockedFields', () => {
   it('passes through when blockedFields is empty', () => {
     const { resolveAccessConfig } = jest.requireMock('@/config/ai-role-access-matrix');
     resolveAccessConfig.mockReturnValueOnce({
-      allowedCollections: ['units'],
+      allowedCollections: ['properties'],
       blockedFields: [],
       scopeLevel: 'project',
     });
@@ -503,12 +503,12 @@ describe('enforceRoleAccess', () => {
     expect(result.allowed).toBe(false);
   });
 
-  it('returns error when unit-scoped with no linkedUnits on sensitive collection', () => {
+  it('returns error when property-scoped with no linkedProperties on sensitive collection', () => {
     const { resolveAccessConfig } = jest.requireMock('@/config/ai-role-access-matrix');
     resolveAccessConfig.mockReturnValueOnce({
       allowedCollections: ['properties', 'files', 'payments'],
       blockedFields: [],
-      scopeLevel: 'unit',
+      scopeLevel: 'property',
     });
 
     const ctx = createCtx({
@@ -516,7 +516,7 @@ describe('enforceRoleAccess', () => {
       contactMeta: {
         displayName: 'Buyer',
         projectRoles: [{ projectId: 'p1', role: 'buyer' }],
-        linkedUnitIds: [],
+        linkedPropertyIds: [],
       } as unknown as AgenticContext['contactMeta'],
     });
     const result = enforceRoleAccess('properties', [], ctx);
@@ -526,12 +526,12 @@ describe('enforceRoleAccess', () => {
     }
   });
 
-  it('injects id filter for units when unit-scoped with linkedUnits', () => {
+  it('injects id filter for properties when property-scoped with linkedProperties', () => {
     const { resolveAccessConfig } = jest.requireMock('@/config/ai-role-access-matrix');
     resolveAccessConfig.mockReturnValueOnce({
       allowedCollections: ['properties'],
       blockedFields: [],
-      scopeLevel: 'unit',
+      scopeLevel: 'property',
     });
 
     const ctx = createCtx({
@@ -539,7 +539,7 @@ describe('enforceRoleAccess', () => {
       contactMeta: {
         displayName: 'Buyer',
         projectRoles: [{ projectId: 'p1', role: 'buyer' }],
-        linkedUnitIds: ['unit_1', 'unit_2'],
+        linkedPropertyIds: ['prop_1', 'prop_2'],
       } as unknown as AgenticContext['contactMeta'],
     });
     const result = enforceRoleAccess('properties', [], ctx);
@@ -548,7 +548,7 @@ describe('enforceRoleAccess', () => {
       const idFilter = result.filters.find(f => f.field === 'id');
       expect(idFilter).toBeDefined();
       expect(idFilter!.operator).toBe('in');
-      expect(idFilter!.value).toEqual(['unit_1', 'unit_2']);
+      expect(idFilter!.value).toEqual(['prop_1', 'prop_2']);
     }
   });
 
@@ -565,7 +565,7 @@ describe('enforceRoleAccess', () => {
       contactMeta: {
         displayName: 'User',
         projectRoles: [{ projectId: 'proj_1', role: 'buyer' }],
-        linkedUnitIds: [],
+        linkedPropertyIds: [],
       } as unknown as AgenticContext['contactMeta'],
     });
     const result = enforceRoleAccess('buildings', [], ctx);

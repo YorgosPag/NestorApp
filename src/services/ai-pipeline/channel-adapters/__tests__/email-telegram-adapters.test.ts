@@ -344,7 +344,7 @@ describe('TelegramChannelAdapter', () => {
         displayName: 'Nikos',
         firstName: 'Nikos',
         primaryPersona: null,
-        linkedUnitIds: [],
+        linkedPropertyIds: [],
         projectRoles: [{ projectId: 'prj_001', role: 'owner', entityType: 'project', entityId: 'prj_001' }],
       };
 

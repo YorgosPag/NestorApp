@@ -50,9 +50,9 @@ export function buildRoleDescription(ctx: AgenticContext): string {
   const accessConfig = resolveAccessConfig(roles);
 
   // SPEC-257B: Unit-scoped roles show linked units instead of projects
-  const linkedUnitIds = contact.linkedUnitIds ?? [];
-  if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length > 0) {
-    const propertyIdList = linkedUnitIds.join(', ');
+  const linkedPropertyIds = contact.linkedPropertyIds ?? [];
+  if (accessConfig.scopeLevel === 'property' && linkedPropertyIds.length > 0) {
+    const propertyIdList = linkedPropertyIds.join(', ');
     return `Ο χρήστης είναι ο/η ${contact.displayName} (${contact.primaryPersona ?? 'επαφή'}).
 Συνδεδεμένα properties: ${propertyIdList}
 

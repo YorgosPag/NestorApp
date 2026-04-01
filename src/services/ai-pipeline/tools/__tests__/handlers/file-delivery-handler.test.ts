@@ -99,7 +99,7 @@ describe('FileDeliveryHandler', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should reject property_photo when unit not in linkedUnitIds', async () => {
+    it('should reject property_photo when unit not in linkedPropertyIds', async () => {
       setupFirestore({
         properties: { unit_999: { photoURL: 'https://example.com/photo.jpg' } },
       });

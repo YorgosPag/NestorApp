@@ -158,8 +158,8 @@ describe('KnowledgeBaseHandler', () => {
         displayName: 'Test User',
         firstName: 'Test',
         primaryPersona: 'tenant',
-        linkedUnitIds: ['unit_001'],
-        projectRoles: [{ projectId: 'proj_001', role: 'tenant', entityType: 'unit', entityId: 'unit_001' }],
+        linkedPropertyIds: ['unit_001'],
+        projectRoles: [{ projectId: 'proj_001', role: 'tenant', entityType: 'property', entityId: 'unit_001' }],
       },
     });
 
@@ -200,7 +200,7 @@ describe('KnowledgeBaseHandler', () => {
         displayName: 'Test User',
         firstName: 'Test',
         primaryPersona: 'tenant',
-        linkedUnitIds: ['unit_001'],
+        linkedPropertyIds: ['unit_001'],
         projectRoles: [],
       },
     });

@@ -30,7 +30,7 @@ jest.mock('@/config/firestore-collections', () => ({
   COLLECTIONS: {
     CONTACTS: 'contacts',
     APPOINTMENTS: 'appointments',
-    UNITS: 'units',
+    PROPERTIES: 'properties',
     BUILDINGS: 'buildings',
     AI_PIPELINE_AUDIT: 'ai_pipeline_audit',
   },

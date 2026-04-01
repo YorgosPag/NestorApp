@@ -186,7 +186,7 @@ describe('ContactHandler', () => {
 
     test('should reject customer append when contactMeta missing', async () => {
       const ctx = createCustomerContext({
-        contactMeta: { contactId: '', displayName: '', firstName: '', primaryPersona: null, linkedUnitIds: [], projectRoles: [] },
+        contactMeta: { contactId: '', displayName: '', firstName: '', primaryPersona: null, linkedPropertyIds: [], projectRoles: [] },
       });
 
       const result = await handler.execute('append_contact_info', {

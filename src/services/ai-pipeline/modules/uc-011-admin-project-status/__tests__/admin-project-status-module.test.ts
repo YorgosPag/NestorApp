@@ -7,7 +7,7 @@
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/telemetry/Logger', () => ({ createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }) }));
 jest.mock('@/lib/error-utils', () => ({ getErrorMessage: jest.fn((e: unknown) => e instanceof Error ? e.message : String(e)) }));
-jest.mock('@/config/firestore-collections', () => ({ COLLECTIONS: { CONTACTS: 'contacts', AI_PIPELINE_AUDIT: 'ai_pipeline_audit', UNITS: 'units', BUILDINGS: 'buildings', PROJECTS: 'projects', CONSTRUCTION_PHASES: 'construction_phases' } }));
+jest.mock('@/config/firestore-collections', () => ({ COLLECTIONS: { CONTACTS: 'contacts', AI_PIPELINE_AUDIT: 'ai_pipeline_audit', PROPERTIES: 'properties', BUILDINGS: 'buildings', PROJECTS: 'projects', CONSTRUCTION_PHASES: 'construction_phases' } }));
 jest.mock('@/config/firestore-field-constants', () => ({ FIELDS: { COMPANY_ID: 'companyId', CREATED_AT: 'createdAt', STATUS: 'status', BUILDING_ID: 'buildingId', PROJECT_ID: 'projectId' } }));
 jest.mock('@/config/tenant', () => ({ getCompanyId: () => 'comp_pagonis' }));
 jest.mock('@/config/ai-pipeline-config', () => ({ PIPELINE_PROTOCOL_CONFIG: { SCHEMA_VERSION: 1 } }));
@@ -50,7 +50,7 @@ const mockCollection = jest.fn((collectionName: string) => {
     chain.get.mockResolvedValue({ empty: false, docs: mockProjectsDocs, size: mockProjectsDocs.length });
   } else if (collectionName === 'construction_phases') {
     chain.get.mockResolvedValue({ empty: false, docs: mockPhasesDocs, size: mockPhasesDocs.length });
-  } else if (collectionName === 'units') {
+  } else if (collectionName === 'properties') {
     chain.get.mockResolvedValue({ empty: false, docs: mockUnitsDocs, size: mockUnitsDocs.length });
   }
 

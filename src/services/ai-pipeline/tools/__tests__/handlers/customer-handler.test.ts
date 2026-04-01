@@ -88,7 +88,7 @@ describe('CustomerHandler', () => {
             displayName: 'Δημήτρης',
             firstName: 'Δημήτρης',
             primaryPersona: null,
-            linkedUnitIds: [],
+            linkedPropertyIds: [],
             projectRoles: [],
           },
         }),
@@ -116,7 +116,7 @@ describe('CustomerHandler', () => {
       expect(result.error).toContain('severity');
     });
 
-    it('should reject unit not in linkedUnitIds', async () => {
+    it('should reject unit not in linkedPropertyIds', async () => {
       const result = await handler.execute(
         'create_complaint_task',
         { title: 'Test', description: 'Desc', severity: 'normal', propertyId: 'unit_999' },

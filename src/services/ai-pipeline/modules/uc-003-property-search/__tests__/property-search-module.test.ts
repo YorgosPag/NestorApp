@@ -145,7 +145,7 @@ function createMockCtx(overrides?: Record<string, unknown>): PipelineContext {
 }
 
 /** Creates a Firestore doc snapshot stub */
-function createUnitDoc(id: string, data: Record<string, unknown>) {
+function createPropertyDoc(id: string, data: Record<string, unknown>) {
   return { id, data: () => data };
 }
 
@@ -172,7 +172,7 @@ describe('UC-003 PropertySearchModule', () => {
   it('lookup extracts search criteria and queries units', async () => {
     mockCollGet.mockResolvedValueOnce({
       docs: [
-        createUnitDoc('unit_01', {
+        createPropertyDoc('prop_01', {
           name: 'Α1',
           type: 'apartment',
           area: 75,
@@ -200,7 +200,7 @@ describe('UC-003 PropertySearchModule', () => {
   it('lookup filters units by status (excludes sold/reserved)', async () => {
     mockCollGet.mockResolvedValueOnce({
       docs: [
-        createUnitDoc('unit_01', {
+        createPropertyDoc('prop_01', {
           name: 'Available',
           type: 'apartment',
           area: 75,
@@ -210,7 +210,7 @@ describe('UC-003 PropertySearchModule', () => {
           price: 100000,
           status: 'available',
         }),
-        createUnitDoc('unit_02', {
+        createPropertyDoc('prop_02', {
           name: 'Sold',
           type: 'apartment',
           area: 80,
@@ -220,7 +220,7 @@ describe('UC-003 PropertySearchModule', () => {
           price: 110000,
           status: 'sold',
         }),
-        createUnitDoc('unit_03', {
+        createPropertyDoc('prop_03', {
           name: 'Reserved',
           type: 'apartment',
           area: 60,
@@ -240,9 +240,9 @@ describe('UC-003 PropertySearchModule', () => {
     const propertyIds = units.map(u => u.id);
 
     // sold and reserved should be excluded
-    expect(propertyIds).toContain('unit_01');
-    expect(propertyIds).not.toContain('unit_02');
-    expect(propertyIds).not.toContain('unit_03');
+    expect(propertyIds).toContain('prop_01');
+    expect(propertyIds).not.toContain('prop_02');
+    expect(propertyIds).not.toContain('prop_03');
   });
 
   // ── PROPOSE ───────────────────────────────────────────────────────────────

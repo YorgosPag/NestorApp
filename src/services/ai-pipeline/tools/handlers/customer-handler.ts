@@ -60,8 +60,8 @@ export class CustomerHandler implements ToolHandler {
       return { success: false, error: AI_ERRORS.UNRECOGNIZED_USER };
     }
 
-    const linkedUnitIds = contact.linkedUnitIds ?? [];
-    if (linkedUnitIds.length === 0) {
+    const linkedPropertyIds = contact.linkedPropertyIds ?? [];
+    if (linkedPropertyIds.length === 0) {
       return { success: false, error: AI_ERRORS.NO_LINKED_UNITS };
     }
 
@@ -78,7 +78,7 @@ export class CustomerHandler implements ToolHandler {
       return { success: false, error: `severity must be one of: ${COMPLAINT_SEVERITIES.join(', ')}` };
     }
 
-    if (!linkedUnitIds.includes(propertyId)) {
+    if (!linkedPropertyIds.includes(propertyId)) {
       return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το ακίνητο.' };
     }
 

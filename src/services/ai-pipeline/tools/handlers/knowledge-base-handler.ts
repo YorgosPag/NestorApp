@@ -73,7 +73,7 @@ export class KnowledgeBaseHandler implements ToolHandler {
     }
 
     const db = getAdminFirestore();
-    const linkedUnitIds = ctx.contactMeta?.linkedUnitIds ?? [];
+    const linkedPropertyIds = ctx.contactMeta?.linkedPropertyIds ?? [];
     const linkedProjectIds = [...new Set(
       (ctx.contactMeta?.projectRoles ?? []).map(r => r.projectId).filter(Boolean),
     )];
@@ -93,7 +93,7 @@ export class KnowledgeBaseHandler implements ToolHandler {
 
     const availableDocNames = new Set<string>();
 
-    if (termToDocNames.size > 0 && (linkedUnitIds.length > 0 || linkedProjectIds.length > 0)) {
+    if (termToDocNames.size > 0 && (linkedPropertyIds.length > 0 || linkedProjectIds.length > 0)) {
       try {
         const filesQuery = db.collection(COLLECTIONS.FILES)
           .where('companyId', '==', ctx.companyId)
@@ -111,7 +111,7 @@ export class KnowledgeBaseHandler implements ToolHandler {
           const fileProjectId = String(data.projectId ?? '');
 
           const isAccessible =
-            linkedUnitIds.includes(entityId) ||
+            linkedPropertyIds.includes(entityId) ||
             linkedProjectIds.includes(fileProjectId) ||
             linkedProjectIds.includes(entityId);
 

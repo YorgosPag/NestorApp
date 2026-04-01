@@ -244,22 +244,22 @@ export function enforceRoleAccess(
   }
 
   // SPEC-257B: Unit-level scoping for buyer/owner/tenant
-  const linkedUnitIds = ctx.contactMeta?.linkedUnitIds ?? [];
-  if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length === 0) {
+  const linkedPropertyIds = ctx.contactMeta?.linkedPropertyIds ?? [];
+  if (accessConfig.scopeLevel === 'property' && linkedPropertyIds.length === 0) {
     const unitSensitive = new Set([COLLECTIONS.PROPERTIES, COLLECTIONS.FILES, COLLECTIONS.PAYMENTS]);
     if (unitSensitive.has(collection)) {
       return { allowed: false, result: { success: false, error: AI_ERRORS.NO_LINKED_UNITS } };
     }
     return { allowed: true, filters };
   }
-  if (accessConfig.scopeLevel === 'unit' && linkedUnitIds.length > 0) {
+  if (accessConfig.scopeLevel === 'property' && linkedPropertyIds.length > 0) {
     if (collection === COLLECTIONS.PROPERTIES) {
       const hasIdFilter = filters.some(f => f.field === 'id');
       if (!hasIdFilter) {
         filters = [...filters, {
           field: 'id',
           operator: 'in',
-          value: linkedUnitIds.slice(0, 30),
+          value: linkedPropertyIds.slice(0, 30),
         }];
       }
     }
@@ -270,7 +270,7 @@ export function enforceRoleAccess(
         filters = [...filters, {
           field: 'propertyId',
           operator: 'in',
-          value: linkedUnitIds.slice(0, 30),
+          value: linkedPropertyIds.slice(0, 30),
         }];
       }
     }

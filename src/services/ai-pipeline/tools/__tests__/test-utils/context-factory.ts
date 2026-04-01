@@ -38,7 +38,7 @@ export function createCustomerContext(overrides?: Partial<AgenticContext>): Agen
       displayName: 'Δημήτριος Οικονόμου',
       firstName: 'Δημήτριος',
       primaryPersona: null,
-      linkedUnitIds: ['unit_001'],
+      linkedPropertyIds: ['unit_001'],
       projectRoles: [{ projectId: 'proj_001', role: 'buyer', entityType: 'project', entityId: 'proj_001' }],
     },
     ...overrides,

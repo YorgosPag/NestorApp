@@ -7,7 +7,7 @@
  *
  * Supports dual-path access control:
  * - Admin: unrestricted access to all files
- * - Customer: scoped to linkedUnitIds / projectRoles
+ * - Customer: scoped to linkedPropertyIds / projectRoles
  *
  * @module services/ai-pipeline/tools/handlers/file-delivery-handler
  * @see SPEC-257F (File Delivery)
@@ -71,14 +71,14 @@ export class FileDeliveryHandler implements ToolHandler {
       return { success: false, error: 'sourceId is required' };
     }
 
-    // Customer path: require contactMeta + linkedUnitIds for access control
+    // Customer path: require contactMeta + linkedPropertyIds for access control
     const contact = ctx.isAdmin ? null : ctx.contactMeta;
     if (!ctx.isAdmin) {
       if (!contact) {
         return { success: false, error: AI_ERRORS.UNRECOGNIZED_USER };
       }
-      const linkedUnitIds = contact.linkedUnitIds ?? [];
-      if (linkedUnitIds.length === 0) {
+      const linkedPropertyIds = contact.linkedPropertyIds ?? [];
+      if (linkedPropertyIds.length === 0) {
         return { success: false, error: AI_ERRORS.NO_LINKED_UNITS };
       }
     }
@@ -115,8 +115,8 @@ export class FileDeliveryHandler implements ToolHandler {
     contact: AgenticContext['contactMeta']
   ): Promise<Array<{ url: string; mediaType: 'photo' | 'document'; filename: string; contentType: string }> | ToolResult> {
     if (!isAdmin) {
-      const linkedUnitIds = contact?.linkedUnitIds ?? [];
-      if (!linkedUnitIds.includes(sourceId)) {
+      const linkedPropertyIds = contact?.linkedPropertyIds ?? [];
+      if (!linkedPropertyIds.includes(sourceId)) {
         return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το ακίνητο.' };
       }
     }
@@ -173,15 +173,15 @@ export class FileDeliveryHandler implements ToolHandler {
       const entityType = String(fileData.entityType ?? '');
       const entityId = String(fileData.entityId ?? '');
       const fileProjectId = String(fileData.projectId ?? '');
-      const linkedUnitIds = contact.linkedUnitIds ?? [];
+      const linkedPropertyIds = contact.linkedPropertyIds ?? [];
 
       const linkedProjectIds = [...new Set(
         (contact.projectRoles ?? []).map(r => r.projectId).filter(Boolean),
       )];
 
       let hasAccess = false;
-      if (entityType === 'unit') {
-        hasAccess = linkedUnitIds.includes(entityId);
+      if (entityType === 'property') {
+        hasAccess = linkedPropertyIds.includes(entityId);
       } else if (entityType === 'building' || entityType === 'project') {
         hasAccess = linkedProjectIds.includes(fileProjectId);
       } else {
