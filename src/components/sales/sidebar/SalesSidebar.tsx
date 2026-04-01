@@ -17,12 +17,12 @@ import { SalesDetailsHeader } from '@/components/sales/sidebar/SalesDetailsHeade
 import { SaleInfoContent } from '@/components/sales/tabs/SaleInfoContent';
 import { PropertySummaryContent } from '@/components/sales/tabs/PropertySummaryContent';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
-import {
-  ChangePriceDialog,
-  ReserveDialog,
-  SellDialog,
-  RevertDialog,
-} from '@/components/sales/dialogs/SalesActionDialogs';
+import dynamic from 'next/dynamic';
+
+const ChangePriceDialog = dynamic(() => import('@/components/sales/dialogs/ChangePriceDialog').then(m => ({ default: m.ChangePriceDialog })), { ssr: false });
+const ReserveDialog = dynamic(() => import('@/components/sales/dialogs/ReserveDialog').then(m => ({ default: m.ReserveDialog })), { ssr: false });
+const SellDialog = dynamic(() => import('@/components/sales/dialogs/SellDialog').then(m => ({ default: m.SellDialog })), { ssr: false });
+const RevertDialog = dynamic(() => import('@/components/sales/dialogs/RevertDialog').then(m => ({ default: m.RevertDialog })), { ssr: false });
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
 import { MobileDetailsSlideIn } from '@/core/layouts';
