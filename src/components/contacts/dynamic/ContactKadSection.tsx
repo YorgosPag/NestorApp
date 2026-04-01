@@ -53,6 +53,28 @@ function createEmptySecondary(): KadActivity {
   };
 }
 
+function hasDuplicateCode(
+  primaryCode: string,
+  secondaries: KadActivity[],
+  nextCode: string,
+  excludedSecondaryIndex?: number,
+): boolean {
+  if (!nextCode) {
+    return false;
+  }
+
+  if (primaryCode === nextCode) {
+    return true;
+  }
+
+  return secondaries.some((activity, index) => {
+    if (excludedSecondaryIndex !== undefined && index === excludedSecondaryIndex) {
+      return false;
+    }
+    return activity.code.trim() === nextCode;
+  });
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -88,6 +110,11 @@ export function ContactKadSection({
 
       if (!nextCode) {
         warning(t('kad.notifications.primaryRequired'));
+        return;
+      }
+
+      if (hasDuplicateCode('', secondaries, nextCode)) {
+        warning(t('kad.notifications.duplicateCode', { code: nextCode }));
         return;
       }
 
@@ -148,6 +175,11 @@ export function ContactKadSection({
         return;
       }
 
+      if (hasDuplicateCode(primary.code.trim(), secondaries, nextCode, index)) {
+        warning(t('kad.notifications.duplicateCode', { code: nextCode }));
+        return;
+      }
+
       const updated = [...secondaries];
       updated[index] = { ...updated[index], code: val.code, description: val.description };
       onChange({ activities: rebuildActivities(primary, updated), chamber });
@@ -166,16 +198,22 @@ export function ContactKadSection({
         );
       }
     },
-    [primary, secondaries, chamber, onChange, rebuildActivities, success, info, t],
+    [primary, secondaries, chamber, onChange, rebuildActivities, success, info, warning, t],
   );
 
   const addSecondary = useCallback(() => {
+    const hasBlankSecondary = secondaries.some((activity) => activity.code.trim().length === 0);
+    if (hasBlankSecondary) {
+      warning(t('kad.notifications.completeExistingSecondary'));
+      return;
+    }
+
     onChange({
       activities: rebuildActivities(primary, [...secondaries, createEmptySecondary()]),
       chamber,
     });
     info(t('kad.notifications.secondaryRowAdded'));
-  }, [primary, secondaries, chamber, onChange, rebuildActivities, info, t]);
+  }, [primary, secondaries, chamber, onChange, rebuildActivities, info, warning, t]);
 
   const removeSecondary = useCallback(
     async (index: number) => {

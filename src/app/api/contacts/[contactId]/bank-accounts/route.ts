@@ -16,9 +16,11 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { BankAccountsServerService } from '@/services/banking/bank-accounts-server.service';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isCurrencyCode, isAccountType } from '@/types/contacts/banking';
 import type { BankAccountInput, AccountType, CurrencyCode } from '@/types/contacts/banking';
+import type { AuditFieldChange } from '@/types/audit-trail';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BankAccountsPostRoute');
@@ -48,6 +50,23 @@ interface CreateBankAccountBody {
   isActive: boolean;
 }
 
+function buildCreateAuditChanges(accountInput: BankAccountInput): AuditFieldChange[] {
+  return [
+    {
+      field: 'bankAccounts',
+      oldValue: null,
+      newValue: `${accountInput.bankName} (${accountInput.iban})`,
+      label: 'Τραπεζικός λογαριασμός',
+    },
+    {
+      field: 'bankAccounts.isPrimary',
+      oldValue: null,
+      newValue: accountInput.isPrimary,
+      label: 'Κύριος λογαριασμός',
+    },
+  ];
+}
+
 // ============================================================================
 // ROUTE CONTEXT
 // ============================================================================
@@ -60,13 +79,13 @@ type RouteContext = { params: Promise<{ contactId: string }> };
 
 async function handlePost(
   request: NextRequest,
-  segmentData?: RouteContext
+  segmentData?: RouteContext,
 ): Promise<NextResponse> {
   const handler = withAuth(
     async (
       req: NextRequest,
       ctx: AuthContext,
-      _cache: PermissionCache
+      _cache: PermissionCache,
     ): Promise<NextResponse> => {
       try {
         const { contactId } = await segmentData!.params;
@@ -75,7 +94,7 @@ async function handlePost(
         if (!contactId || typeof contactId !== 'string' || contactId.trim().length === 0) {
           return NextResponse.json(
             { success: false, error: 'Contact ID is required' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
@@ -85,7 +104,7 @@ async function handlePost(
         if (!body || typeof body !== 'object') {
           return NextResponse.json(
             { success: false, error: 'Request body is required' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
@@ -95,14 +114,14 @@ async function handlePost(
         if (!rawBody.bankName || typeof rawBody.bankName !== 'string') {
           return NextResponse.json(
             { success: false, error: 'bankName is required' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
         if (!rawBody.iban || typeof rawBody.iban !== 'string') {
           return NextResponse.json(
             { success: false, error: 'iban is required' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
@@ -111,7 +130,7 @@ async function handlePost(
         if (!isAccountType(accountType)) {
           return NextResponse.json(
             { success: false, error: 'Invalid accountType' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
@@ -120,7 +139,7 @@ async function handlePost(
         if (!isCurrencyCode(currency)) {
           return NextResponse.json(
             { success: false, error: 'Invalid currency' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
@@ -136,7 +155,7 @@ async function handlePost(
           isPrimary: rawBody.isPrimary === true,
           holderName: typeof rawBody.holderName === 'string' ? rawBody.holderName : undefined,
           notes: typeof rawBody.notes === 'string' ? rawBody.notes : undefined,
-          isActive: rawBody.isActive !== false, // default true
+          isActive: rawBody.isActive !== false,
         };
 
         // Call server service
@@ -144,18 +163,29 @@ async function handlePost(
           contactId,
           accountInput,
           ctx.companyId,
-          ctx.uid
+          ctx.uid,
         );
 
         if (!result.success) {
           const status = result.error === 'Access denied' ? 403
             : result.error === 'Contact not found' ? 404
-            : 400;
+              : 400;
           return NextResponse.json(
             { success: false, error: result.error },
-            { status }
+            { status },
           );
         }
+
+        await EntityAuditService.recordChange({
+          entityType: 'contact',
+          entityId: contactId,
+          entityName: null,
+          action: 'updated',
+          changes: buildCreateAuditChanges(accountInput),
+          performedBy: ctx.uid,
+          performedByName: ctx.email,
+          companyId: ctx.companyId,
+        });
 
         logger.info('Bank account created via API', {
           contactId,
@@ -168,17 +198,17 @@ async function handlePost(
             success: true,
             accountId: result.data.accountId,
           },
-          { status: 201 }
+          { status: 201 },
         );
       } catch (error) {
         const msg = getErrorMessage(error, 'Failed to create bank account');
         logger.error('POST /api/contacts/[id]/bank-accounts error', { error: msg });
         return NextResponse.json(
           { success: false, error: msg },
-          { status: 500 }
+          { status: 500 },
         );
       }
-    }
+    },
   );
 
   return handler(request);

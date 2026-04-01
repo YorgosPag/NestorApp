@@ -88,6 +88,11 @@ export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
   legalForm: 'Νομική Μορφή',
   companyType: 'Τύπος Εταιρείας',
   industry: 'Κλάδος',
+  'customFields.activities': 'Δραστηριότητες ΚΑΔ',
+  'customFields.chamber': 'Επιμελητήριο / Τ.Υ. ΓΕΜΗ',
+  'customFields.activityCodeKAD': 'Κύριος ΚΑΔ',
+  'customFields.activityDescription': 'Περιγραφή ΚΑΔ',
+  'customFields.activityType': 'Τύπος δραστηριότητας',
 
   // Personas (ADR-121)
   personas: 'Ρόλοι (Personas)',

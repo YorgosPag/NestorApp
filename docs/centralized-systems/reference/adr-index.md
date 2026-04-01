@@ -249,7 +249,7 @@
 | **ADR-223** | useAsyncData — Data Fetching Centralization | ✅ ✅ Implemented (Phase 1) | 2026-03-13 | Centralization / React Hooks | [📄](./adrs/ADR-223-use-async-data-centralization.md) |
 | **ADR-224** | Safe JSON Parse Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-224-safe-json-parse-centralization.md) |
 | **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-225-type-guards-centralization.md) |
-| **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | ✅ IN PROGRESS (Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅ IMPLEMENTED) | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
+| **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | ✅ IN PROGRESS (Phase 0-7 ✅, Phase 8 ✅ Company Identity Guard) | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
 | **ADR-227** | Real-Time Subscription Consolidation & Coverage Expansion | ✅ 🟢 Phases 1-3 Implemented — Phase 2 complete (10/10 hooks migrated) | 2026-03-13 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-227-realtime-subscription-consolidation.md) |
 | **ADR-228** | Real-Time Event Bus Coverage Gap Analysis & Implementation Roadmap | ✅ ✅ All Tiers Implemented (100% Coverage) | 2026-03-14 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-228-realtime-event-coverage-gap-analysis.md) |
 | **ADR-229** | Centralized Page Loading & Error States | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-229-centralized-page-loading-states.md) |
@@ -294,6 +294,9 @@
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-269** | Unit to Property Rename — Naming Standardization | ✅ APPROVED | 2026-03-31 | Entity Systems | [📄](./adrs/ADR-269-unit-to-property-rename.md) |
+| **ADR-277** | Address Impact Guard — Company Address Change/Delete Safety | ✅ IMPLEMENTED | 2026-04-01 | Backend Systems / Data Safety | [📄](./adrs/ADR-277-address-impact-guard.md) |
+| **ADR-278** | Company Identity Field Guard — Master Data Edit Safety | ✅ IMPLEMENTED | 2026-04-01 | Backend Systems / Data Safety | [📄](./adrs/ADR-278-company-identity-field-guard.md) |
+| **ADR-280** | Communication Field Impact Detection — Primary Email/Phone/Website Change Safety | ✅ IMPLEMENTED | 2026-04-01 | Backend Systems / Data Safety | — |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
