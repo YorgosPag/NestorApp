@@ -39,12 +39,18 @@ export type DialogOperationType =
   | 'preview'
   | 'approve';
 
+export type DialogCopyVariant =
+  | 'default'
+  | 'contactSoftDelete'
+  | 'contactPermanentDelete';
+
 /**
  * Smart Dialog Configuration - Enterprise Architecture
  */
 export interface SmartDialogConfiguration {
   readonly entityType: DialogEntityType;
   readonly operationType: DialogOperationType;
+  readonly body?: string;
 
   readonly header: {
     readonly title: string;

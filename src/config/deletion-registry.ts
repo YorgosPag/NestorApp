@@ -30,6 +30,8 @@ export interface DependencyDef {
   foreignKey: string;
   /** Human-readable label (Greek) for UI display */
   label: string;
+  /** Recommended remediation shown to the user */
+  remediation?: string;
   /** Query strategy */
   queryType: QueryType;
   /** Skip companyId filter — for collections without tenant isolation (e.g. accounting_invoices) */
@@ -84,6 +86,7 @@ export interface CompoundDependencyDef {
   scopeField: string;
   scopeQueryType: QueryType;
   label: string;
+  remediation?: string;
   skipCompanyFilter?: boolean;
 }
 
@@ -96,6 +99,7 @@ export interface DependencyCheckResult {
     label: string;
     collection: string;
     count: number;
+    remediation?: string;
     /** Up to 10 document IDs for preview/linking */
     documentIds: string[];
   }>;
@@ -108,6 +112,26 @@ export interface DependencyCheckResult {
 // ============================================================================
 // REGISTRY
 // ============================================================================
+
+// ============================================================================
+// REMEDIATION SSOT
+// ============================================================================
+
+export const DEPENDENCY_REMEDIATIONS = {
+  attendanceEvents: 'Υπάρχουν καταγεγραμμένες παρουσίες. Πρέπει πρώτα να γίνει διοικητική διόρθωση ή αντιλογισμός παρουσιών και μετά επανέλεγχος.',
+  employmentRecords: 'Υπάρχουν εγγραφές απασχόλησης, ένσημα ή εισφορές. Διορθώστε πρώτα τις σχετικές περιόδους ΑΠΔ/ΕΦΚΑ και μετά επιχειρήστε ξανά.',
+  communications: 'Μεταφέρετε, αποσυνδέστε ή διαγράψτε πρώτα τις σχετικές επικοινωνίες.',
+  opportunities: 'Κλείστε ή αποσυνδέστε πρώτα τις σχετικές ευκαιρίες πώλησης.',
+  propertiesOwnership: 'Αφαιρέστε πρώτα την ιδιοκτησιακή σχέση από τα σχετικά ακίνητα ή μεταβιβάστε την σε άλλο πρόσωπο.',
+  contactLinks: 'Αποσυνδέστε πρώτα τις σχετικές συνδέσεις με άλλα entities.',
+  obligations: 'Κλείστε, μεταφέρετε ή διαγράψτε πρώτα τις σχετικές υποχρεώσεις.',
+  constructionChildren: 'Διαγράψτε πρώτα τα εξαρτώμενα στοιχεία κατασκευής που ανήκουν σε αυτό το entity.',
+  accountingDocs: 'Διαγράψτε ή επανασυνδέστε πρώτα τα σχετιζόμενα οικονομικά παραστατικά.',
+  projectsAsCompany: 'Μεταφέρετε πρώτα τα έργα σε άλλη εταιρεία ή διαγράψτε τα έργα που εξαρτώνται από αυτήν.',
+  landowners: 'Αφαιρέστε πρώτα τον οικοπεδούχο από τα έργα ή τις ιδιοκτησίες όπου χρησιμοποιείται.',
+  generic: 'Αφαιρέστε ή επανασυνδέστε πρώτα τις εξαρτώμενες εγγραφές που εμφανίζονται παρακάτω.',
+  guardUnavailable: 'Ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά και, αν επιμείνει, επικοινωνήστε με διαχειριστή.',
+} as const;
 
 export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   // ─── CONTACT ────────────────────────────────────────────────────────
@@ -198,10 +222,9 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
       },
       {
         collection: COLLECTIONS.ATTENDANCE_EVENTS,
-        foreignKey: 'employeeId',
+        foreignKey: 'contactId',
         label: 'Συμβάντα παρουσίας',
         queryType: 'equals',
-        skipCompanyFilter: true,
       },
       // 🛡️ ADR-247 F-2: Block deletion of contact used as linkedCompanyId in projects
       {
@@ -493,6 +516,8 @@ export const LINK_REMOVAL_REGISTRY: Partial<Record<EntityType, readonly Compound
     { collection: COLLECTIONS.PROPERTIES, contactField: 'commercial.ownerContactIds', contactQueryType: 'array-contains', scopeField: 'projectId', scopeQueryType: 'equals', label: 'Ιδιοκτησία ακινήτου' },
     { collection: COLLECTIONS.OPPORTUNITIES, contactField: 'contactId', contactQueryType: 'equals', scopeField: 'projectIds', scopeQueryType: 'array-contains', label: 'Ευκαιρίες πώλησης' },
     { collection: COLLECTIONS.COMMUNICATIONS, contactField: 'contactId', contactQueryType: 'equals', scopeField: 'projectId', scopeQueryType: 'equals', label: 'Επικοινωνίες' },
+    { collection: COLLECTIONS.ATTENDANCE_EVENTS, contactField: 'contactId', contactQueryType: 'equals', scopeField: 'projectId', scopeQueryType: 'equals', label: 'Συμβάντα παρουσίας εργατοτεχνίτη' },
+    { collection: COLLECTIONS.EMPLOYMENT_RECORDS, contactField: 'contactId', contactQueryType: 'equals', scopeField: 'projectId', scopeQueryType: 'equals', label: 'Εγγραφές απασχόλησης / ένσημα / εισφορές' },
   ],
   building: [
     { collection: COLLECTIONS.PARKING_SPACES, contactField: 'commercial.ownerContactIds', contactQueryType: 'array-contains', scopeField: 'buildingId', scopeQueryType: 'equals', label: 'Θέσεις parking' },

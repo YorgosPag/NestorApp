@@ -13,6 +13,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
@@ -34,7 +35,7 @@ interface UseDeletionGuardReturn {
   /** Reset state (closes blocked dialog) */
   resetCheck: () => void;
   /** Ready-to-render blocked dialog — place in JSX */
-  BlockedDialog: React.ReactNode;
+  BlockedDialog: ReactNode;
 }
 
 // ============================================================================
@@ -50,6 +51,13 @@ export function useDeletionGuard(entityType: EntityType): UseDeletionGuardReturn
     setBlocked(false);
     setCheckResult(null);
   }, []);
+
+  const buildGuardUnavailableResult = useCallback((): DependencyCheckResult => ({
+    allowed: false,
+    dependencies: [],
+    totalDependents: 0,
+    message: 'Η διαγραφή μπλοκαρίστηκε γιατί ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά ή επικοινωνήστε με διαχειριστή.',
+  }), []);
 
   const checkBeforeDelete = useCallback(async (entityId: string): Promise<boolean> => {
     setChecking(true);
@@ -73,17 +81,18 @@ export function useDeletionGuard(entityType: EntityType): UseDeletionGuardReturn
       setChecking(false);
       return false;
     } catch (err) {
-      // On network/server error, allow deletion to proceed
-      // (the server DELETE endpoint has its own guard as fallback)
       if (ApiClientError.isApiClientError(err)) {
         console.error(`[useDeletionGuard] Pre-check failed (${err.statusCode}):`, err.message);
       } else {
         console.error('[useDeletionGuard] Pre-check failed:', err);
       }
+      const fallbackResult = buildGuardUnavailableResult();
+      setCheckResult(fallbackResult);
+      setBlocked(true);
       setChecking(false);
-      return true;
+      return false;
     }
-  }, [entityType]);
+  }, [buildGuardUnavailableResult, entityType]);
 
   const BlockedDialog = useMemo(() => (
     <DeletionBlockedDialog

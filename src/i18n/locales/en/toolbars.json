@@ -112,7 +112,7 @@
     "actions": {
       "newContact": "New Contact",
       "editContact": "Edit Contact",
-      "deleteContact": "Delete Contact",
+      "deleteContact": "Move to Trash",
       "call": "Call",
       "email": "Email"
     },

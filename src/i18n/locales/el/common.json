@@ -400,6 +400,7 @@
       "depProperties": "Ακίνητα (ιδιοκτησίες)",
       "depPaymentPlans": "Πλάνα πληρωμών",
       "count": "{count, plural, one {# εγγραφή} other {# εγγραφές}}",
+    "unavailableCount": "Μη διαθέσιμος αριθμός",
       "warning": "Θα ενημερωθούν αυτόματα {count} εγγραφές σε όλα τα έργα.",
       "confirm": "Αποθήκευση & Ενημέρωση",
       "cancel": "Ακύρωση"
@@ -629,7 +630,7 @@
     "newMessageShortcut": "Νέο Μήνυμα (Ctrl+N)",
     "editContact": "Επεξεργασία επιλεγμένης επαφής",
     "editSelected": "Επεξεργασία επιλεγμένου στοιχείου",
-    "deleteContact": "Διαγραφή επιλεγμένης επαφής",
+    "deleteContact": "Μεταφορά επιλεγμένης επαφής στον κάδο",
     "deleteSelected": "Διαγραφή επιλεγμένων στοιχείων",
     "shareBuilding": "Κοινοποίηση κτιρίου",
     "shareProject": "Κοινοποίηση έργου",

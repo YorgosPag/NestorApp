@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { ConfirmDialogVariant, ConfirmDialogProps } from '@/components/ui/ConfirmDialog';
 
 interface ConfirmOptions {
   title: string;
-  description: string;
+  description: string | React.ReactNode;
   variant?: ConfirmDialogVariant;
   confirmText?: string;
   cancelText?: string;

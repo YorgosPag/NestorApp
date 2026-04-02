@@ -23,6 +23,7 @@ import {
   type CompoundDependencyDef,
   type CascadeDependencyDef,
   type DependencyCheckResult,
+  DEPENDENCY_REMEDIATIONS,
 } from '@/config/deletion-registry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
@@ -363,7 +364,7 @@ async function checkCompoundDependency(
   contactId: string,
   scopeEntityId: string,
   companyId: string
-): Promise<{ label: string; collection: string; count: number; documentIds: string[] }> {
+): Promise<DependencyCheckResult['dependencies'][number]> {
   try {
     let query: FirebaseFirestore.Query = db.collection(dep.collection);
 
@@ -382,18 +383,63 @@ async function checkCompoundDependency(
     const snapshot = await query.limit(MAX_PREVIEW_IDS + 1).get();
     const documentIds = snapshot.docs.slice(0, MAX_PREVIEW_IDS).map((doc) => doc.id);
 
-    return { label: dep.label, collection: dep.collection, count: snapshot.size, documentIds };
+    return {
+      label: dep.label,
+      collection: dep.collection,
+      count: snapshot.size,
+      remediation: dep.remediation ?? getDefaultRemediation(dep.collection),
+      documentIds,
+    };
   } catch (err) {
     logger.error(`[LinkRemovalGuard] Failed to check ${dep.collection}`, {
       error: getErrorMessage(err), contactId, scopeEntityId,
     });
-    return { label: dep.label, collection: dep.collection, count: -1, documentIds: [] };
+    return {
+      label: dep.label,
+      collection: dep.collection,
+      count: -1,
+      remediation: DEPENDENCY_REMEDIATIONS.guardUnavailable,
+      documentIds: [],
+    };
   }
 }
 
 // ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
+
+function getDefaultRemediation(collection: string): string {
+  switch (collection) {
+    case 'attendance_events':
+      return DEPENDENCY_REMEDIATIONS.attendanceEvents;
+    case 'employment_records':
+      return DEPENDENCY_REMEDIATIONS.employmentRecords;
+    case 'communications':
+      return DEPENDENCY_REMEDIATIONS.communications;
+    case 'opportunities':
+      return DEPENDENCY_REMEDIATIONS.opportunities;
+    case 'properties':
+    case 'parking_spaces':
+    case 'storage':
+      return DEPENDENCY_REMEDIATIONS.propertiesOwnership;
+    case 'contact_links':
+      return DEPENDENCY_REMEDIATIONS.contactLinks;
+    case 'obligations':
+      return DEPENDENCY_REMEDIATIONS.obligations;
+    case 'construction_phases':
+    case 'building_milestones':
+    case 'floors':
+    case 'buildings':
+      return DEPENDENCY_REMEDIATIONS.constructionChildren;
+    case 'accounting_invoices':
+      return DEPENDENCY_REMEDIATIONS.accountingDocs;
+    case 'projects':
+      return DEPENDENCY_REMEDIATIONS.projectsAsCompany;
+    default:
+      return DEPENDENCY_REMEDIATIONS.generic;
+  }
+}
+
 
 /**
  * Query a single dependency collection for blocking records.
@@ -403,12 +449,7 @@ async function checkSingleDependency(
   dep: DependencyDef,
   entityId: string,
   companyId: string
-): Promise<{
-  label: string;
-  collection: string;
-  count: number;
-  documentIds: string[];
-}> {
+): Promise<DependencyCheckResult['dependencies'][number]> {
   try {
     let query: FirebaseFirestore.Query = db.collection(dep.collection);
 
@@ -434,6 +475,7 @@ async function checkSingleDependency(
       label: dep.label,
       collection: dep.collection,
       count: snapshot.size,
+      remediation: dep.remediation ?? getDefaultRemediation(dep.collection),
       documentIds,
     };
   } catch (err) {
@@ -447,6 +489,7 @@ async function checkSingleDependency(
       label: dep.label,
       collection: dep.collection,
       count: -1,
+      remediation: DEPENDENCY_REMEDIATIONS.guardUnavailable,
       documentIds: [],
     };
   }

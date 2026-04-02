@@ -11,6 +11,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
@@ -28,7 +29,7 @@ interface UseLinkRemovalGuardReturn {
   /** Run pre-check. Returns true if removal is allowed. */
   checkBeforeRemove: (linkId: string) => Promise<boolean>;
   /** Ready-to-render blocked dialog — place in JSX */
-  BlockedDialog: React.ReactNode;
+  BlockedDialog: ReactNode;
 }
 
 // ============================================================================
@@ -44,6 +45,13 @@ export function useLinkRemovalGuard(): UseLinkRemovalGuardReturn {
     setBlocked(false);
     setCheckResult(null);
   }, []);
+
+  const buildGuardUnavailableResult = useCallback((): DependencyCheckResult => ({
+    allowed: false,
+    dependencies: [],
+    totalDependents: 0,
+    message: 'Η αποσύνδεση μπλοκαρίστηκε γιατί ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά ή επικοινωνήστε με διαχειριστή.',
+  }), []);
 
   const checkBeforeRemove = useCallback(async (linkId: string): Promise<boolean> => {
     setChecking(true);
@@ -66,17 +74,19 @@ export function useLinkRemovalGuard(): UseLinkRemovalGuardReturn {
       setChecking(false);
       return false;
     } catch (err) {
-      // On error, allow removal (server-side has no fallback guard for link removal,
-      // but soft-delete is reversible so erring on the side of allowing is acceptable)
       if (ApiClientError.isApiClientError(err)) {
         console.error(`[useLinkRemovalGuard] Pre-check failed (${err.statusCode}):`, err.message);
       } else {
         console.error('[useLinkRemovalGuard] Pre-check failed:', err);
       }
+
+      const fallbackResult = buildGuardUnavailableResult();
+      setCheckResult(fallbackResult);
+      setBlocked(true);
       setChecking(false);
-      return true;
+      return false;
     }
-  }, []);
+  }, [buildGuardUnavailableResult]);
 
   const BlockedDialog = useMemo(() => (
     <DeletionBlockedDialog

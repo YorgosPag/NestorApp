@@ -112,7 +112,7 @@
     "actions": {
       "newContact": "Νέα Επαφή",
       "editContact": "Επεξεργασία Επαφής",
-      "deleteContact": "Διαγραφή Επαφής",
+      "deleteContact": "Μεταφορά στον κάδο",
       "call": "Κλήση",
       "email": "Email"
     },

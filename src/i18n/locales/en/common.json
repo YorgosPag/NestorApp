@@ -400,6 +400,7 @@
       "depProperties": "Properties (ownerships)",
       "depPaymentPlans": "Payment plans",
       "count": "{count, plural, one {# record} other {# records}}",
+    "unavailableCount": "Unavailable count",
       "warning": "{count} records will be automatically updated across all projects.",
       "confirm": "Save & Update",
       "cancel": "Cancel"
@@ -629,7 +630,7 @@
     "newMessageShortcut": "New Message (Ctrl+N)",
     "editContact": "Edit selected contact",
     "editSelected": "Edit selected item",
-    "deleteContact": "Delete selected contact",
+    "deleteContact": "Move selected contact to trash",
     "deleteSelected": "Delete selected items",
     "shareBuilding": "Share building",
     "shareProject": "Share project",

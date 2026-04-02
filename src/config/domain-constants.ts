@@ -566,6 +566,7 @@ export const API_ROUTES = {
     CUSTOMERS: (projectId: string) => `/api/projects/${projectId}/customers` as const,
     STRUCTURE: (projectId: string) => `/api/projects/structure/${projectId}` as const,
     PAYMENT_REPORT: (projectId: string) => `/api/projects/${projectId}/payment-report` as const,
+    IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/impact-preview` as const,
   },
 
   // ── Buildings ─────────────────────────────────────────────────────────

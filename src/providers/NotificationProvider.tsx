@@ -131,6 +131,12 @@ export function NotificationProvider({
       return i18n.t(message);
     }
 
+    // Contacts namespace direct lookup for canonical validation keys like
+    // "validation.individual.birthDateFuture"
+    if (i18n.exists(message, { ns: 'contacts' })) {
+      return i18n.t(message, { ns: 'contacts' });
+    }
+
     // Try every possible namespace split in dotted keys.
     // Example:
     // - "contacts.submission.createSuccess" -> ns=contacts, key=submission.createSuccess

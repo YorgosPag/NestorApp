@@ -80,12 +80,21 @@ export function DeletionBlockedDialog({
                     {dependencies.map((dep) => (
                       <li
                         key={dep.collection}
-                        className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm"
+                        className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm"
                       >
-                        <span className="font-medium text-foreground">{dep.label}</span>
-                        <span className={colors.text.muted}>
-                          {t('deletionGuard.count', { count: dep.count })}
-                        </span>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-medium text-foreground">{dep.label}</span>
+                          <span className={colors.text.muted}>
+                            {dep.count >= 0
+                              ? t('deletionGuard.count', { count: dep.count })
+                              : t('deletionGuard.unavailableCount')}
+                          </span>
+                        </div>
+                        {dep.remediation && (
+                          <p className={"mt-1 text-xs " + colors.text.muted}>
+                            {dep.remediation}
+                          </p>
+                        )}
                       </li>
                     ))}
                   </ul>

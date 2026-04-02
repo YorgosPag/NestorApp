@@ -24,6 +24,7 @@ import {
 } from '../../subapps/dxf-viewer/config/modal-select';
 import { DROPDOWN_PLACEHOLDERS } from '../../constants/property-statuses-enterprise';
 import type {
+  DialogCopyVariant,
   DialogEntityType,
   DialogOperationType,
   SmartDialogAction,
@@ -233,6 +234,65 @@ export function getActionLabels(operationType: DialogOperationType) {
     ? i18n.t('dialogs.actionButtons.reject', { ns: 'common' })
     : i18n.t('dialogs.actionButtons.cancel', { ns: 'common' });
   return { primary, secondary };
+}
+
+
+type DialogCopyOverrides = {
+  header?: Partial<SmartDialogConfiguration['header']>;
+  actions?: Partial<SmartDialogConfiguration['actions']>;
+  body?: string;
+};
+
+export function getDialogCopyOverrides(
+  entityType: DialogEntityType,
+  operationType: DialogOperationType,
+  copyVariant: DialogCopyVariant = 'default'
+): DialogCopyOverrides {
+  if (copyVariant === 'contactSoftDelete' && entityType === 'contact' && operationType === 'delete') {
+    return {
+      header: {
+        title: i18n.t('trash.softDeleteDialog.title', { ns: 'contacts' }),
+        description: i18n.t('trash.softDeleteDialog.description', { ns: 'contacts' }),
+      },
+      actions: {
+        primary: {
+          key: 'submit',
+          label: i18n.t('trash.moveToTrash', { ns: 'contacts' }),
+          variant: 'destructive',
+        },
+        secondary: {
+          key: 'cancel',
+          label: i18n.t('dialog.cancel', { ns: 'contacts' }),
+          variant: 'outline',
+        },
+      },
+      body: i18n.t('trash.softDeleteDialog.body', { ns: 'contacts' }),
+    };
+  }
+
+  if (copyVariant === 'contactPermanentDelete' && entityType === 'contact' && operationType === 'delete') {
+    return {
+      header: {
+        title: i18n.t('trash.permanentDeleteDialog.title', { ns: 'contacts' }),
+        description: i18n.t('trash.permanentDeleteDialog.description', { ns: 'contacts' }),
+      },
+      actions: {
+        primary: {
+          key: 'submit',
+          label: i18n.t('trash.permanentDelete', { ns: 'contacts' }),
+          variant: 'destructive',
+        },
+        secondary: {
+          key: 'cancel',
+          label: i18n.t('dialog.cancel', { ns: 'contacts' }),
+          variant: 'outline',
+        },
+      },
+      body: i18n.t('trash.permanentDeleteDialog.body', { ns: 'contacts' }),
+    };
+  }
+
+  return {};
 }
 
 // =============================================================================

@@ -15,6 +15,7 @@ export const AlertDialogCancel = React.forwardRef<
   return (
     <Comp
       ref={ref}
+      type={props.type ?? "button"}
       className={cn(buttonVariants({ variant: "outline" }), cancelExtra, className)}
       {...props}
     />

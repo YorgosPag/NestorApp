@@ -21,9 +21,11 @@ import {
 } from '../../components/ui/dialog';
 import { createModuleLogger } from '@/lib/telemetry';
 import type {
+  DialogCopyVariant,
   DialogEntityType,
   DialogOperationType,
   DialogEntityProps,
+  SmartDialogConfiguration,
   SmartDialogProps,
 } from './smart-dialog-types';
 import { smartDialogEngine } from './SmartDialogEngine';
@@ -38,10 +40,23 @@ const logger = createModuleLogger('SmartDialogFactory');
 export function createSmartDialog(config: {
   entityType: DialogEntityType;
   operationType: DialogOperationType;
+  copyVariant?: DialogCopyVariant;
+  configurationOverrides?: Partial<SmartDialogConfiguration>;
   props?: SmartDialogProps;
 }): React.ReactElement {
-  const { entityType, operationType, props = {} } = config;
-  const dialogConfig = smartDialogEngine.createDialogConfiguration(entityType, operationType);
+  const {
+    entityType,
+    operationType,
+    copyVariant = 'default',
+    configurationOverrides,
+    props = {},
+  } = config;
+  const dialogConfig = smartDialogEngine.createDialogConfiguration(
+    entityType,
+    operationType,
+    configurationOverrides,
+    copyVariant
+  );
 
   return React.createElement(
     Dialog,
@@ -64,7 +79,7 @@ export function createSmartDialog(config: {
         React.createElement(
           'div',
           { key: 'content', className: 'space-y-4' },
-          getContentForEntity(entityType, operationType, props)
+          getContentForEntity(entityType, operationType, props, dialogConfig)
         ),
 
         // Footer
@@ -100,8 +115,17 @@ export function createSmartDialog(config: {
 function getContentForEntity(
   entityType: DialogEntityType,
   operationType: DialogOperationType,
-  props: DialogEntityProps
+  props: DialogEntityProps,
+  dialogConfig: SmartDialogConfiguration
 ): React.ReactElement {
+  if (dialogConfig.body) {
+    return React.createElement(
+      'div',
+      { className: 'py-4 text-center text-sm text-muted-foreground' },
+      dialogConfig.body
+    );
+  }
+
   if (operationType === 'delete' || operationType === 'archive') {
     const operationTitle = i18n.t(`dialogs.operations.${operationType}.title`, { ns: 'common' });
     const entitySingular = i18n.t(`dialogs.entities.${entityType}.singular`, { ns: 'common' });

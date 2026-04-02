@@ -13,6 +13,7 @@
 import type * as React from 'react';
 import { i18n } from '@/i18n';
 import type {
+  DialogCopyVariant,
   DialogEntityType,
   DialogOperationType,
   SmartDialogConfiguration,
@@ -31,6 +32,7 @@ import {
   getFieldOptions,
   getPrimaryActionVariant,
   getActionLabels,
+  getDialogCopyOverrides,
   getThemeForEntity,
 } from './smart-dialog-config';
 
@@ -39,6 +41,7 @@ import {
 // =============================================================================
 
 export type {
+  DialogCopyVariant,
   DialogEntityType,
   DialogOperationType,
   SmartDialogConfiguration,
@@ -68,11 +71,16 @@ export class SmartDialogEngine {
   public createDialogConfiguration(
     entityType: DialogEntityType,
     operationType: DialogOperationType,
-    options?: Partial<SmartDialogConfiguration>
+    options?: Partial<SmartDialogConfiguration>,
+    copyVariant: DialogCopyVariant = 'default'
   ): SmartDialogConfiguration {
     const baseConfig = this.generateBaseConfiguration(entityType, operationType);
     const customizedConfig = this.applyIntelligentCustomizations(baseConfig, operationType);
-    return this.mergeConfigurations(customizedConfig, options || {});
+    const copyAdjustedConfig = this.applyCopyOverrides(
+      customizedConfig,
+      getDialogCopyOverrides(entityType, operationType, copyVariant)
+    );
+    return this.mergeConfigurations(copyAdjustedConfig, options || {});
   }
 
   // ==========================================================================
@@ -198,7 +206,6 @@ export class SmartDialogEngine {
           primary: {
             ...baseConfig.actions.primary,
             variant: 'destructive',
-            label: 'Διαγραφή',
           },
         },
       };
@@ -221,6 +228,36 @@ export class SmartDialogEngine {
     }
 
     return baseConfig;
+  }
+
+  private applyCopyOverrides(
+    baseConfig: SmartDialogConfiguration,
+    overrides: {
+      header?: Partial<SmartDialogConfiguration['header']>;
+      actions?: Partial<SmartDialogConfiguration['actions']>;
+      body?: string;
+    }
+  ): SmartDialogConfiguration {
+    return {
+      ...baseConfig,
+      body: overrides.body ?? baseConfig.body,
+      header: {
+        ...baseConfig.header,
+        ...overrides.header,
+      },
+      actions: {
+        ...baseConfig.actions,
+        ...overrides.actions,
+        primary: {
+          ...baseConfig.actions.primary,
+          ...overrides.actions?.primary,
+        },
+        secondary: {
+          ...baseConfig.actions.secondary,
+          ...overrides.actions?.secondary,
+        },
+      },
+    };
   }
 
   // ==========================================================================

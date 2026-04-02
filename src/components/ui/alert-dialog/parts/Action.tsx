@@ -11,6 +11,6 @@ export const AlertDialogAction = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof PrimitiveAction> & { asChild?: boolean }
 >(({ className, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : PrimitiveAction;
-  return <Comp ref={ref} className={cn(buttonVariants(), className)} {...props} />;
+  return <Comp ref={ref} type={props.type ?? "button"} className={cn(buttonVariants(), className)} {...props} />;
 });
 AlertDialogAction.displayName = PrimitiveAction.displayName;
