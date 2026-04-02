@@ -63,6 +63,8 @@ export interface ServiceFormTabRendererProps {
   customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>;
   /** Optional section footer renderers (rendered below section fields) */
   sectionFooterRenderers?: Record<string, CustomRendererFn>;
+  fieldErrors?: Record<string, string>;
+  onFieldBlur?: (fieldName: string) => void;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
   initialTab?: string;
@@ -85,7 +87,9 @@ function createServiceFormTabsFromConfig(
   t: (key: string) => string,
   onPhotosChange?: (photos: PhotoSlot[]) => void,
   customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>,
-  sectionFooterRenderers?: Record<string, CustomRendererFn>
+  sectionFooterRenderers?: Record<string, CustomRendererFn>,
+  fieldErrors?: Record<string, string>,
+  onFieldBlur?: (fieldName: string) => void
 ) {
   return sections.map(section => {
     // ========================================================================
@@ -176,6 +180,8 @@ function createServiceFormTabsFromConfig(
             onPhotosChange={onPhotosChange as ((photos: PhotoData[]) => void) | undefined} // 🏢 ENTERPRISE: Type assertion
             customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
             sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
+            fieldErrors={fieldErrors}
+            onFieldBlur={onFieldBlur}
           />
         </div>
       );
@@ -222,6 +228,8 @@ export function ServiceFormTabRenderer({
   onPhotosChange,
   customRenderers,
   sectionFooterRenderers,
+  fieldErrors,
+  onFieldBlur,
   onActiveTabChange,
   initialTab
 }: ServiceFormTabRendererProps) {
@@ -243,7 +251,9 @@ export function ServiceFormTabRenderer({
     t,
     onPhotosChange,
     customRenderers,
-    sectionFooterRenderers
+    sectionFooterRenderers,
+    fieldErrors,
+    onFieldBlur
   );
 
   return (

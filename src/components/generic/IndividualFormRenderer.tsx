@@ -27,6 +27,9 @@ export type InputChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTe
 /** Select change handler type */
 export type SelectChangeHandler = (name: string, value: string) => void;
 
+/** Field blur handler type */
+export type FieldBlurHandler = (fieldName: string) => void;
+
 /** Custom field renderer function type */
 export type CustomFieldRenderer = (
   field: IndividualFieldConfig,
@@ -55,6 +58,10 @@ export interface IndividualFormRendererProps {
   customRenderers?: Record<string, CustomFieldRenderer>;
   /** Optional section footer renderers (rendered below section fields) */
   sectionFooterRenderers?: Record<string, CustomFieldRenderer>;
+  /** Field-level validation errors */
+  fieldErrors?: Record<string, string>;
+  /** Field blur handler */
+  onFieldBlur?: FieldBlurHandler;
 }
 
 // ============================================================================
@@ -85,7 +92,9 @@ function renderInputField(
   formData: IndividualFormData,
   onChange: InputChangeHandler,
   disabled: boolean,
-  t: TFunction // 🏢 ENTERPRISE: i18n translation function
+  t: TFunction, // 🏢 ENTERPRISE: i18n translation function
+  fieldError?: string,
+  onFieldBlur?: FieldBlurHandler
 ): React.ReactNode {
   const value = toStringValue(formData[field.id]);
 
@@ -102,6 +111,8 @@ function renderInputField(
       placeholder={field.placeholder ? t(field.placeholder) : undefined} // 🏢 ENTERPRISE: Translate placeholder if exists
       maxLength={field.maxLength}
       className={field.className}
+      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
+      error={fieldError}
     />
   );
 }
@@ -175,7 +186,9 @@ function renderField(
   onSelectChange: SelectChangeHandler,
   disabled: boolean,
   t: TFunction, // 🏢 ENTERPRISE: i18n translation function
-  customRenderers?: Record<string, CustomFieldRenderer>
+  customRenderers?: Record<string, CustomFieldRenderer>,
+  fieldErrors?: Record<string, string>,
+  onFieldBlur?: FieldBlurHandler
 ): React.ReactNode {
   // Check for custom renderer first
   if (customRenderers && customRenderers[field.id]) {
@@ -189,14 +202,14 @@ function renderField(
     case 'tel':
     case 'date':
     case 'number':
-      return renderInputField(field, formData, onChange, disabled, t);
+      return renderInputField(field, formData, onChange, disabled, t, fieldErrors?.[field.id], onFieldBlur);
     case 'textarea':
       return renderTextareaField(field, formData, onChange, disabled);
     case 'select':
       return renderSelectField(field, formData, onSelectChange, disabled, t);
     default:
       logger.warn('Unknown field type', { fieldType: field.type, fieldId: field.id });
-      return renderInputField(field, formData, onChange, disabled, t);
+      return renderInputField(field, formData, onChange, disabled, t, fieldErrors?.[field.id], onFieldBlur);
   }
 }
 
@@ -217,7 +230,9 @@ export function IndividualFormRenderer({
   onSelectChange,
   disabled = false,
   customRenderers,
-  sectionFooterRenderers
+  sectionFooterRenderers,
+  fieldErrors,
+  onFieldBlur
 }: IndividualFormRendererProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -251,11 +266,12 @@ export function IndividualFormRenderer({
                   htmlFor={field.id}
                   required={field.required}
                   helpText={field.helpText ? t(field.helpText) : undefined} // 🏢 ENTERPRISE: Translate helpText if exists
+                  errorText={fieldErrors?.[field.id] ? t(fieldErrors[field.id]) : undefined}
                   tooltip={field.tooltip ? t(field.tooltip) : undefined} // 🏢 ENTERPRISE: InfoLabel tooltip (ADR-242)
                   className={section.id === 'communication' ? "w-full max-w-none block" : "w-full"}
                 >
                   <FormInput>
-                    {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers)}
+                    {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers, fieldErrors, onFieldBlur)}
                   </FormInput>
                 </FormField>
               ))

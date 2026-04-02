@@ -49,6 +49,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     formData,
     setFormData,
     loading,
+    validationErrors,
     handleSubmit,
     handleChange,
     handleSelectChange,
@@ -59,6 +60,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     handleMultiplePhotosChange,
     handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection,
+    handleFieldBlur,
     nameCascadeDialog,
     confirmNameCascade,
     cancelNameCascade,
@@ -71,6 +73,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     communicationImpactDialog,
     confirmCommunicationImpact,
     cancelCommunicationImpact,
+    individualIdentityImpactDialog,
   } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open, onLiveChange });
 
   // 🔧 TypeScript safety με fallback
@@ -229,6 +232,8 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                 setFormData={setFormData}
                 disabled={loading}
                 canonicalUploadContext={canonicalUploadContext}
+                validationErrors={validationErrors}
+                onFieldBlur={handleFieldBlur}
               />
             </RelationshipProvider>
 

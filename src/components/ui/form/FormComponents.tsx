@@ -42,11 +42,12 @@ interface FormFieldProps {
   children: React.ReactNode;
   className?: string;
   helpText?: string;
+  errorText?: string;
   /** Tooltip text — when provided, renders InfoLabel with HelpCircle hover icon (ADR-242) */
   tooltip?: string;
 }
 
-export function FormField({ label, htmlFor, required = false, children, className, helpText, tooltip }: FormFieldProps) {
+export function FormField({ label, htmlFor, required = false, children, className, helpText, errorText, tooltip }: FormFieldProps) {
   return (
     <div className={cn("w-full space-y-2", className)}>
       {tooltip ? (
@@ -63,6 +64,9 @@ export function FormField({ label, htmlFor, required = false, children, classNam
         {children}
         {helpText && (
           <p className="text-xs text-muted-foreground mt-1">{helpText}</p>
+        )}
+        {errorText && (
+          <p id={htmlFor ? `${htmlFor}-error` : undefined} className="mt-1 text-xs font-medium text-destructive" role="alert">{errorText}</p>
         )}
       </div>
     </div>

@@ -6,6 +6,7 @@ import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatDateForDisplay } from '@/lib/intl-utils';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -53,6 +54,10 @@ export interface UniversalClickableFieldProps {
   className?: string;
   /** Change handler */
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  /** Blur handler for field-level validation */
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  /** Validation error state */
+  error?: string;
 }
 
 /**
@@ -74,14 +79,19 @@ export function UniversalClickableField({
   readonly = false,
   maxLength,
   className,
-  onChange
+  onChange,
+  onBlur,
+  error
 }: UniversalClickableFieldProps) {
+  const { t } = useTranslation('common');
+  const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // 🎯 CLICKABLE LOGIC: Only when disabled AND has value
   const shouldBeClickable = disabled && value && value.trim() !== '';
 
   if (shouldBeClickable) {
-    return renderClickableLink(type, value, id);
+    return renderClickableLink(type, value, id, t, quick.input, colors.bg.disabled);
   }
 
   // 📝 NORMAL INPUT: For edit mode or empty values
@@ -98,6 +108,9 @@ export function UniversalClickableField({
       placeholder={placeholder}
       maxLength={maxLength}
       className={className}
+      onBlur={onBlur}
+      aria-invalid={Boolean(error)}
+      aria-describedby={error ? `${id}-error` : undefined}
     />
   );
 }
@@ -109,14 +122,17 @@ export function UniversalClickableField({
 /**
  * 🔗 Render clickable link based on field type
  */
-function renderClickableLink(type: string, value: string, fieldId: string): React.ReactNode {
-  const { t } = useTranslation('common');
-  const { quick } = useBorderTokens();
-  const colors = useSemanticColors();
-
+function renderClickableLink(
+  type: string,
+  value: string,
+  fieldId: string,
+  t: ReturnType<typeof useTranslation>['t'],
+  inputBorderClassName: string,
+  disabledBackgroundClassName: string,
+): React.ReactNode {
   // 🎨 ENTERPRISE DISABLED INPUT STYLING - Centralized pattern
   // Uses bg-muted/50 to match disabled Input/Select/Combobox across the app
-  const disabledInputClasses = `min-h-10 flex items-center px-3 py-2 ${quick.input} ${colors.bg.disabled} text-sm`;
+  const disabledInputClasses = `min-h-10 flex items-center px-3 py-2 ${inputBorderClassName} ${disabledBackgroundClassName} text-sm`;
   // 📧 EMAIL LINK - Always use Gmail web interface
   if (type === 'email') {
     return (
@@ -138,6 +154,15 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
   }
 
   // 📞 PHONE LINK - Use tel: protocol
+  // 📅 DATE DISPLAY - European format in read-only mode
+  if (type === 'date') {
+    return (
+      <div className={`${disabledInputClasses} text-muted-foreground`}>
+        {formatDateForDisplay(value)}
+      </div>
+    );
+  }
+
   if (type === 'tel') {
     return (
       <div className={disabledInputClasses}>

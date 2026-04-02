@@ -21,9 +21,13 @@ interface MultiplePhotoUploadResult {
 export interface UseContactFormStateReturn {
   // State
   formData: ContactFormData;
+  validationErrors: Record<string, string>;
+  touchedFields: Record<string, boolean>;
 
   // Basic setters
   setFormData: React.Dispatch<React.SetStateAction<ContactFormData>>;
+  setValidationErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setTouchedFields: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 
   // Field handlers
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -75,6 +79,8 @@ export function useContactFormState(): UseContactFormStateReturn {
   // ========================================================================
 
   const [formData, setFormData] = useState<ContactFormData>(initialFormData);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
 
 
   // ========================================================================
@@ -101,6 +107,15 @@ export function useContactFormState(): UseContactFormStateReturn {
 
       return newFormData;
     });
+
+    setValidationErrors(prev => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      if (name === 'serviceName') delete next.name;
+      if (name === 'name') delete next.serviceName;
+      return next;
+    });
   }, []);
 
   /**
@@ -112,6 +127,13 @@ export function useContactFormState(): UseContactFormStateReturn {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+
+    setValidationErrors(prev => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   }, []);
 
   /**
@@ -419,6 +441,8 @@ export function useContactFormState(): UseContactFormStateReturn {
       return initialFormData;
     });
 
+    setValidationErrors({});
+    setTouchedFields({});
   }, []); // 🔧 FIX: Empty dependencies - prevents infinite loop
 
   // ========================================================================
@@ -428,9 +452,13 @@ export function useContactFormState(): UseContactFormStateReturn {
   return {
     // State
     formData,
+    validationErrors,
+    touchedFields,
 
     // Basic setters
     setFormData,
+    setValidationErrors,
+    setTouchedFields,
 
     // Field handlers
     handleChange,

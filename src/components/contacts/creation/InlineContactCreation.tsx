@@ -40,6 +40,7 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
     formData,
     setFormData,
     loading,
+    validationErrors,
     handleSubmit,
     handleChange,
     handleSelectChange,
@@ -50,6 +51,7 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
     handleMultiplePhotosChange,
     handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection,
+    handleFieldBlur,
   } = useContactForm({
     onContactAdded,
     onOpenChange: handleOpenChange,
@@ -141,6 +143,8 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
               setFormData={setFormData}
               disabled={loading}
               canonicalUploadContext={canonicalUploadContext}
+              validationErrors={validationErrors}
+              onFieldBlur={handleFieldBlur}
             />
           </RelationshipProvider>
         </div>

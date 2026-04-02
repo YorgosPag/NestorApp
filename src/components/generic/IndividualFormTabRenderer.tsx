@@ -65,6 +65,8 @@ export interface IndividualFormTabRendererProps {
   customRenderers?: Record<string, IndividualCustomRendererFn>;
   /** Optional section footer renderers (rendered below section fields) */
   sectionFooterRenderers?: Record<string, IndividualCustomRendererFn>;
+  fieldErrors?: Record<string, string>;
+  onFieldBlur?: (fieldName: string) => void;
   /** Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
@@ -94,7 +96,9 @@ function createIndividualFormTabsFromConfig(
   // handleEnterpriseMultiplePhotoUpload removed - using centralized handler
   customRenderers?: Record<string, IndividualCustomRendererFn>,
   sectionFooterRenderers?: Record<string, IndividualCustomRendererFn>,
-  onPhotoClick?: (index: number) => void
+  onPhotoClick?: (index: number) => void,
+  fieldErrors?: Record<string, string>,
+  onFieldBlur?: (fieldName: string) => void
 ) {
   return sections.map(section => ({
     id: section.id,
@@ -135,6 +139,8 @@ function createIndividualFormTabsFromConfig(
             disabled={disabled}
             customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
             sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
+            fieldErrors={fieldErrors}
+            onFieldBlur={onFieldBlur}
           />
         </FormGrid>
       </div>
@@ -149,6 +155,8 @@ function createIndividualFormTabsFromConfig(
           disabled={disabled}
           customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
           sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
+          fieldErrors={fieldErrors}
+          onFieldBlur={onFieldBlur}
         />
       </FormGrid>
     )
@@ -199,6 +207,8 @@ export function IndividualFormTabRenderer({
   onProfilePhotoSelection,
   customRenderers,
   sectionFooterRenderers,
+  fieldErrors,
+  onFieldBlur,
   onPhotoClick,
   onActiveTabChange,
   initialTab
@@ -229,7 +239,9 @@ export function IndividualFormTabRenderer({
     // handleEnterpriseMultiplePhotoUpload removed
     customRenderers,
     sectionFooterRenderers,
-    onPhotoClick
+    onPhotoClick,
+    fieldErrors,
+    onFieldBlur
   );
 
   return (

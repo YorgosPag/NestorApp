@@ -624,6 +624,7 @@ export const API_ROUTES = {
     BY_ID: (id: string) => `/api/contacts/${id}` as const,
     PROPERTIES: (contactId: string) => `/api/contacts/${contactId}/properties` as const,
     SEARCH_INDIVIDUALS: '/api/contacts/search-individuals',
+    IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/identity-impact-preview` as const,
     RESTORE: (id: string) => `/api/contacts/${id}/restore` as const,
     PERMANENT_DELETE: (id: string) => `/api/contacts/${id}/permanent-delete` as const,
   },

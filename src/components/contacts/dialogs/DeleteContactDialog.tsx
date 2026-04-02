@@ -38,6 +38,7 @@ export function DeleteContactDialog(props: DeleteContactDialogProps) {
   return createSmartDialog({
     entityType: 'contact',
     operationType: 'delete',
+    copyVariant: 'contactSoftDelete',
     props: {
       ...props,
       onSubmit: async () => {

@@ -43,7 +43,7 @@ export function validateEmailsArray(emails: ReadonlyArray<EmailInfo>): ArrayVali
   // Check each email is valid
   for (const entry of emails) {
     if (!entry.email || !isValidEmail(entry.email)) {
-      return { valid: false, errorKey: 'validation.contacts.arrayValidation.invalidEmail' };
+      return { valid: false, errorKey: 'validation.arrayValidation.invalidEmail' };
     }
   }
 
@@ -52,7 +52,7 @@ export function validateEmailsArray(emails: ReadonlyArray<EmailInfo>): ArrayVali
   for (const entry of emails) {
     const normalized = entry.email.trim().toLowerCase();
     if (seen.has(normalized)) {
-      return { valid: false, errorKey: 'validation.contacts.arrayValidation.duplicateEmail' };
+      return { valid: false, errorKey: 'validation.arrayValidation.duplicateEmail' };
     }
     seen.add(normalized);
   }
@@ -60,10 +60,10 @@ export function validateEmailsArray(emails: ReadonlyArray<EmailInfo>): ArrayVali
   // Check primary constraints
   const primaryCount = emails.filter((e) => e.isPrimary).length;
   if (primaryCount === 0) {
-    return { valid: false, errorKey: 'validation.contacts.arrayValidation.missingPrimaryEmail' };
+    return { valid: false, errorKey: 'validation.arrayValidation.missingPrimaryEmail' };
   }
   if (primaryCount > 1) {
-    return { valid: false, errorKey: 'validation.contacts.arrayValidation.multiplePrimaryEmails' };
+    return { valid: false, errorKey: 'validation.arrayValidation.multiplePrimaryEmails' };
   }
 
   return VALID;
@@ -85,7 +85,7 @@ export function validatePhonesArray(phones: ReadonlyArray<PhoneInfo>): ArrayVali
   // Check each phone is valid
   for (const entry of phones) {
     if (!entry.number || !isValidPhone(entry.number)) {
-      return { valid: false, errorKey: 'validation.contacts.arrayValidation.invalidPhone' };
+      return { valid: false, errorKey: 'validation.arrayValidation.invalidPhone' };
     }
   }
 
@@ -94,7 +94,7 @@ export function validatePhonesArray(phones: ReadonlyArray<PhoneInfo>): ArrayVali
   for (const entry of phones) {
     const normalized = cleanPhoneNumber(entry.number);
     if (seen.has(normalized)) {
-      return { valid: false, errorKey: 'validation.contacts.arrayValidation.duplicatePhone' };
+      return { valid: false, errorKey: 'validation.arrayValidation.duplicatePhone' };
     }
     seen.add(normalized);
   }
@@ -102,10 +102,10 @@ export function validatePhonesArray(phones: ReadonlyArray<PhoneInfo>): ArrayVali
   // Check primary constraints
   const primaryCount = phones.filter((p) => p.isPrimary).length;
   if (primaryCount === 0) {
-    return { valid: false, errorKey: 'validation.contacts.arrayValidation.missingPrimaryPhone' };
+    return { valid: false, errorKey: 'validation.arrayValidation.missingPrimaryPhone' };
   }
   if (primaryCount > 1) {
-    return { valid: false, errorKey: 'validation.contacts.arrayValidation.multiplePrimaryPhones' };
+    return { valid: false, errorKey: 'validation.arrayValidation.multiplePrimaryPhones' };
   }
 
   return VALID;
@@ -126,7 +126,7 @@ export function validateWebsitesArray(websites: ReadonlyArray<WebsiteInfo>): Arr
   // Check each URL is valid
   for (const entry of websites) {
     if (!entry.url || !isValidUrl(entry.url)) {
-      return { valid: false, errorKey: 'validation.contacts.arrayValidation.invalidUrl' };
+      return { valid: false, errorKey: 'validation.arrayValidation.invalidUrl' };
     }
   }
 
@@ -135,7 +135,7 @@ export function validateWebsitesArray(websites: ReadonlyArray<WebsiteInfo>): Arr
   for (const entry of websites) {
     const normalized = entry.url.trim().toLowerCase();
     if (seen.has(normalized)) {
-      return { valid: false, errorKey: 'validation.contacts.arrayValidation.duplicateUrl' };
+      return { valid: false, errorKey: 'validation.arrayValidation.duplicateUrl' };
     }
     seen.add(normalized);
   }

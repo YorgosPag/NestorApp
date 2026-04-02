@@ -40,7 +40,7 @@ export function calculateSubmissionState(
     editContact?: Contact | null;
   }
 ): SubmissionState {
-  const uploadValidation = validateUploadState(formData as unknown as Record<string, unknown>);
+  const uploadValidation = validateUploadState(formData);
 
   const isUploading = uploadValidation.pendingUploads > 0;
   const hasFailed = uploadValidation.failedUploads > 0;

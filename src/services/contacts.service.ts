@@ -227,6 +227,11 @@ export class ContactsService {
 
     const enterpriseData = EnterpriseContactSaver.updateExistingContact(existingContact, formData);
 
+    const validationResult = validateContactData(enterpriseData as ContactDataRecord);
+    if (!validationResult.isValid) {
+      throw new Error(`VALIDATION_ERROR: ${validationResult.errors.join(', ')}`);
+    }
+
     // Preserve companyId for Firestore rules
     if (existingContact.companyId && !enterpriseData.companyId) {
       enterpriseData.companyId = existingContact.companyId;

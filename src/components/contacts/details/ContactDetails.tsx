@@ -34,6 +34,14 @@ import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { useContactIdentityImpactGuard } from '@/hooks/useContactIdentityImpactGuard';
+import {
+  validateIndividualContact,
+  validateCompanyContact,
+  validateServiceContact,
+  validateContactField,
+} from '@/utils/contactForm/contact-validation';
 
 const logger = createModuleLogger('ContactDetails');
 
@@ -53,6 +61,8 @@ export function ContactDetails({ contact, onEditContact: _onEditContact, onDelet
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const notifications = useNotifications();
   // Optimistic persona state for instant UI response in view mode
   const [optimisticPersonas, setOptimisticPersonas] = useState<{
     activePersonas: PersonaType[];
@@ -85,6 +95,7 @@ export function ContactDetails({ contact, onEditContact: _onEditContact, onDelet
   useEffect(() => {
     setIsEditing(false);
     setEditedData({});
+    setValidationErrors({});
     setSavedPhotoURLs({});
     setOptimisticPersonas(null);
   }, [contact?.id]);
@@ -209,6 +220,7 @@ export function ContactDetails({ contact, onEditContact: _onEditContact, onDelet
       // Use mapper for consistent data structure in edit mode
       const mappingResult = mapContactToFormData(contact);
       setEditedData(mappingResult.formData);
+      setValidationErrors({});
       setIsEditing(true);
     }
   }, [contact]);
@@ -216,74 +228,163 @@ export function ContactDetails({ contact, onEditContact: _onEditContact, onDelet
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
     setEditedData({});
+    setValidationErrors({});
   }, []);
+
+  const getEditedFormData = useCallback((): ContactFormData | null => {
+    if (!contact) return null;
+    return {
+      ...(enhancedFormData as ContactFormData),
+      ...(editedData as Partial<ContactFormData>),
+    };
+  }, [contact, enhancedFormData, editedData]);
+
+  const {
+    previewBeforeMutate: previewIdentityImpactBeforeMutate,
+    ImpactDialog: individualIdentityImpactDialog,
+  } = useContactIdentityImpactGuard(contact);
+
+  const getValidationResult = useCallback((formData: ContactFormData) => {
+    switch (formData.type) {
+      case 'individual':
+        return validateIndividualContact(formData);
+      case 'company':
+        return validateCompanyContact(formData);
+      case 'service':
+        return validateServiceContact(formData);
+      default:
+        return null;
+    }
+  }, []);
+
+  const focusField = useCallback((fieldName?: string) => {
+    if (!fieldName || typeof document === 'undefined') return;
+    window.setTimeout(() => {
+      const selector = `[name="${fieldName}"], #${fieldName}`;
+      const element = document.querySelector(selector);
+      if (!(element instanceof HTMLElement)) return;
+      element.focus();
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+  }, []);
+
+  const handleFieldBlur = useCallback((fieldName: string) => {
+    const formData = getEditedFormData();
+    if (!formData) return;
+
+    const errorKey = validateContactField(formData, fieldName);
+    setValidationErrors(prev => {
+      const next = { ...prev };
+      if (errorKey) {
+        next[fieldName] = errorKey;
+      } else {
+        delete next[fieldName];
+      }
+      return next;
+    });
+  }, [getEditedFormData]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!contact?.id) return;
 
+    const mergedFormData = getEditedFormData();
+    if (!mergedFormData) return;
+
+    const validationResult = getValidationResult(mergedFormData);
+    if (!validationResult) {
+      notifications.error('validation.unknownType');
+      return;
+    }
+
+    setValidationErrors(validationResult.fieldErrors);
+    if (!validationResult.isValid) {
+      notifications.error('validation.individual.reviewHighlightedFields');
+      focusField(validationResult.firstErrorField);
+      return;
+    }
+
     try {
-      // 🛡️ ENTERPRISE: Auto-submit pending relationship form before saving contact
       if (PendingRelationshipGuard.hasPendingData) {
         logger.info('Auto-submitting pending relationship before contact save');
         await PendingRelationshipGuard.submitPending();
       }
 
-      // 🏢 ENTERPRISE: Use new form-to-arrays conversion method
       const editedFormData = editedData as Partial<ContactFormData>;
 
-      // 🔍 DIAGNOSTIC: Log persona data before save
       console.log('🎭 PERSONA SAVE DEBUG', {
         activePersonas: editedFormData.activePersonas,
         personaDataKeys: editedFormData.personaData ? Object.keys(editedFormData.personaData) : [],
         editedDataKeys: Object.keys(editedData),
       });
 
-      await ContactsService.updateContactFromForm(contact.id, editedData);
+      const performUpdate = async () => {
+        await ContactsService.updateContactFromForm(contact.id, mergedFormData);
 
-      // 🖼️ OPTIMISTIC: Preserve photo URLs so they remain visible while async refresh loads
-      const newSavedPhotos: { logoURL?: string; photoURL?: string } = {};
-      if (editedFormData.logoURL) newSavedPhotos.logoURL = editedFormData.logoURL;
-      if (editedFormData.photoURL) newSavedPhotos.photoURL = editedFormData.photoURL;
-      if (newSavedPhotos.logoURL || newSavedPhotos.photoURL) {
-        setSavedPhotoURLs(newSavedPhotos);
-      }
+        const newSavedPhotos: { logoURL?: string; photoURL?: string } = {};
+        if (editedFormData.logoURL) newSavedPhotos.logoURL = editedFormData.logoURL;
+        if (editedFormData.photoURL) newSavedPhotos.photoURL = editedFormData.photoURL;
+        if (newSavedPhotos.logoURL || newSavedPhotos.photoURL) {
+          setSavedPhotoURLs(newSavedPhotos);
+        }
 
-      // Preserve persona state across edit→view transition (same pattern as photo URLs)
-      const savedPersonas = editedFormData.activePersonas;
-      console.log('🎭 PERSONA OPTIMISTIC DEBUG', {
-        savedPersonas,
-        willSetOptimistic: !!(savedPersonas && savedPersonas.length > 0),
-      });
-
-      if (savedPersonas && savedPersonas.length > 0) {
-        setOptimisticPersonas({
-          activePersonas: savedPersonas,
-          personaData: (editedFormData.personaData ?? {}) as Record<string, Record<string, string | number | null>>,
+        const savedPersonas = editedFormData.activePersonas;
+        console.log('🎭 PERSONA OPTIMISTIC DEBUG', {
+          savedPersonas,
+          willSetOptimistic: !!(savedPersonas && savedPersonas.length > 0),
         });
-      }
 
-      setIsEditing(false);
-      setEditedData({});
+        if (savedPersonas && savedPersonas.length > 0) {
+          setOptimisticPersonas({
+            activePersonas: savedPersonas,
+            personaData: (editedFormData.personaData ?? {}) as Record<string, Record<string, string | number | null>>,
+          });
+        }
 
-      // 🔄 TRIGGER REFRESH: Notify parent component to refresh data
-      logger.info('Contact updated successfully with enterprise structure');
-      if (onContactUpdated) {
-        logger.info('Triggering parent refresh after save');
-        onContactUpdated();
+        setValidationErrors({});
+        setIsEditing(false);
+        setEditedData({});
+
+        logger.info('Contact updated successfully with enterprise structure');
+        if (onContactUpdated) {
+          logger.info('Triggering parent refresh after save');
+          onContactUpdated();
+        }
+      };
+
+      const completed = await previewIdentityImpactBeforeMutate(mergedFormData, performUpdate);
+      if (!completed) {
+        return;
       }
     } catch (error) {
-      logger.error('Failed to update contact', { error });
-      // TODO: Show error toast
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to update contact', error instanceof Error ? error : { error });
+      if (message.startsWith('VALIDATION_ERROR:')) {
+        notifications.error('validation.individual.reviewHighlightedFields');
+      } else {
+        notifications.error('contacts.submission.updateError');
+      }
     }
-  }, [contact?.id, editedData, onContactUpdated]);
+  }, [contact?.id, editedData, focusField, getEditedFormData, getValidationResult, notifications, onContactUpdated, contact]);
 
   const handleFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditedData((prev) => ({ ...prev, [name]: value }));
+    setValidationErrors(prev => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   }, []);
 
   const handleSelectChange = useCallback((name: string, value: string) => {
     setEditedData((prev) => ({ ...prev, [name]: value }));
+    setValidationErrors(prev => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   }, []);
 
   // 🖼️ PHOTO HANDLERS: Extracted to useContactPhotoHandlers (SRP — ADR-233)
@@ -444,6 +545,8 @@ export function ContactDetails({ contact, onEditContact: _onEditContact, onDelet
           handleFileChange={isEditing ? handleFileChange : undefined}
           handleLogoChange={isEditing ? handleLogoChange : undefined}
           onPersonaToggle={handlePersonaToggle}
+          validationErrors={isEditing ? validationErrors : undefined}
+          onFieldBlur={isEditing ? handleFieldBlur : undefined}
         />
       </DetailsContainer>
 
@@ -457,6 +560,7 @@ export function ContactDetails({ contact, onEditContact: _onEditContact, onDelet
       )}
 
       {/* ✅ PhotoPreviewModal τώρα global - δεν χρειάζεται εδώ */}
+      {individualIdentityImpactDialog}
     </>
   );
 }

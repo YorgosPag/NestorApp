@@ -64,6 +64,7 @@ export function PermanentDeleteDialog(props: PermanentDeleteDialogProps) {
       {createSmartDialog({
         entityType: 'contact',
         operationType: 'delete',
+        copyVariant: 'contactPermanentDelete',
         props: {
           ...props,
           open: props.open && !blocked,

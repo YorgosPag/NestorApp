@@ -35,6 +35,9 @@ export type InputChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTe
 /** Select change handler type */
 export type SelectChangeHandler = (name: string, value: string) => void;
 
+/** Field blur handler type */
+export type FieldBlurHandler = (fieldName: string) => void;
+
 /** Custom field renderer function type */
 export type CustomFieldRenderer = (
   field: ServiceFieldConfig,
@@ -81,6 +84,10 @@ export interface ServiceFormRendererProps {
   customRenderers?: Record<string, CustomFieldRenderer>;
   /** Optional section footer renderers (rendered below section fields) */
   sectionFooterRenderers?: Record<string, CustomFieldRenderer>;
+  /** Field-level validation errors */
+  fieldErrors?: Record<string, string>;
+  /** Field blur handler */
+  onFieldBlur?: FieldBlurHandler;
 }
 
 // ============================================================================
@@ -131,7 +138,9 @@ function renderInputField(
   field: ServiceFieldConfig,
   formData: ServiceFormData,
   onChange: InputChangeHandler,
-  disabled: boolean
+  disabled: boolean,
+  fieldError?: string,
+  onFieldBlur?: FieldBlurHandler
 ): React.ReactNode {
   const value = toStringValue(formData[field.id]);
 
@@ -153,6 +162,8 @@ function renderInputField(
       placeholder={field.placeholder}
       maxLength={field.maxLength}
       className={field.className}
+      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
+      error={fieldError}
     />
   );
 }
@@ -164,7 +175,9 @@ function renderTextareaField(
   field: ServiceFieldConfig,
   formData: ServiceFormData,
   onChange: InputChangeHandler,
-  disabled: boolean
+  disabled: boolean,
+  fieldError?: string,
+  onFieldBlur?: FieldBlurHandler
 ): React.ReactNode {
   return (
     <Textarea
@@ -236,7 +249,9 @@ function renderField(
   onSelectChange: SelectChangeHandler,
   disabled: boolean,
   t: (key: string) => string,
-  customRenderers?: Record<string, CustomFieldRenderer>
+  customRenderers?: Record<string, CustomFieldRenderer>,
+  fieldErrors?: Record<string, string>,
+  onFieldBlur?: FieldBlurHandler
 ): React.ReactNode {
   // Check for custom renderer first
   if (customRenderers && customRenderers[field.id]) {
@@ -251,13 +266,13 @@ function renderField(
     case 'date':
     case 'number':
     case 'url':
-      return renderInputField(field, formData, onChange, disabled);
+      return renderInputField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
     case 'textarea':
       return renderTextareaField(field, formData, onChange, disabled);
     case 'select':
       return renderSelectField(field, formData, onSelectChange, disabled, t);
     default:
-      return renderInputField(field, formData, onChange, disabled);
+      return renderInputField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
   }
 }
 
@@ -281,7 +296,9 @@ export function ServiceFormRenderer({
   disabled = false,
   onPhotosChange: _onPhotosChange,
   customRenderers,
-  sectionFooterRenderers
+  sectionFooterRenderers,
+  fieldErrors,
+  onFieldBlur
 }: ServiceFormRendererProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n support for service form translations
@@ -337,9 +354,10 @@ export function ServiceFormRenderer({
                     htmlFor={field.id}
                     required={field.required}
                     helpText={translatedHelpText}
+                    errorText={fieldErrors?.[field.id] ? t(fieldErrors[field.id]) : undefined}
                   >
                     <FormInput>
-                      {renderField(translatedField, formData, onChange, onSelectChange, disabled, t, customRenderers)}
+                      {renderField(translatedField, formData, onChange, onSelectChange, disabled, t, customRenderers, fieldErrors, onFieldBlur)}
                     </FormInput>
                   </FormField>
                 );

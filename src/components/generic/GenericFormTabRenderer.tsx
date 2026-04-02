@@ -59,6 +59,8 @@ export interface GenericFormTabRendererProps {
   customRenderers?: Record<string, FieldRendererFn | LocalCustomRendererFn>;
   /** Optional section footer renderers (rendered below section fields) */
   sectionFooterRenderers?: Record<string, FieldRendererFn>;
+  fieldErrors?: Record<string, string>;
+  onFieldBlur?: (fieldName: string) => void;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
   initialTab?: string;
@@ -100,7 +102,9 @@ function createFormTabsFromConfig(
   t: (key: string) => string,
   onPhotosChange?: (photos: PhotoSlotData[]) => void,
   customRenderers?: Record<string, FieldRendererFn | CustomRendererFn>,
-  sectionFooterRenderers?: Record<string, FieldRendererFn>
+  sectionFooterRenderers?: Record<string, FieldRendererFn>,
+  fieldErrors?: Record<string, string>,
+  onFieldBlur?: (fieldName: string) => void
 ) {
   return sections.map(section => {
     // ========================================================================
@@ -188,6 +192,8 @@ function createFormTabsFromConfig(
             onPhotosChange={onPhotosChange as ((photos: PhotoData[]) => void) | undefined} // 🏢 ENTERPRISE: Type assertion
             customRenderers={customRenderers as Record<string, CustomRendererFn> | undefined} // 🏢 ENTERPRISE: Type assertion
             sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomRendererFn> | undefined}
+            fieldErrors={fieldErrors}
+            onFieldBlur={onFieldBlur}
           />
         </FormGrid>
       );
@@ -231,6 +237,8 @@ export function GenericFormTabRenderer({
   onPhotosChange,
   customRenderers,
   sectionFooterRenderers,
+  fieldErrors,
+  onFieldBlur,
   onActiveTabChange,
   initialTab
 }: GenericFormTabRendererProps) {
@@ -252,7 +260,9 @@ export function GenericFormTabRenderer({
     t,
     onPhotosChange,
     customRenderers,
-    sectionFooterRenderers
+    sectionFooterRenderers,
+    fieldErrors,
+    onFieldBlur
   );
 
   return (

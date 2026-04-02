@@ -17,6 +17,7 @@ import {
 } from '@/utils/contactForm/contact-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createGuardHandlers } from '@/utils/contactForm/guard-confirm-factory';
+import { useContactIdentityImpactGuard } from '@/hooks/useContactIdentityImpactGuard';
 import type { NameCascadeDialogState, AddressImpactDialogState, CompanyIdentityDialogState, CommunicationImpactDialogState } from '@/types/contact-submission-dialog.types';
 
 const logger = createModuleLogger('useContactSubmission');
@@ -30,6 +31,8 @@ export interface UseContactSubmissionProps {
   onContactAdded: () => void;
   onOpenChange: (open: boolean) => void;
   resetForm: () => void;
+  setValidationErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setTouchedFields: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   formDataRef?: React.MutableRefObject<ContactFormData>; // 🔥 CRITICAL FIX: Fresh formData access
 }
 
@@ -76,6 +79,9 @@ export interface UseContactSubmissionReturn {
   communicationImpactDialog: CommunicationImpactDialogState | null;
   confirmCommunicationImpact: () => void;
   cancelCommunicationImpact: () => void;
+
+  // 👤 Individual identity impact confirmation
+  individualIdentityImpactDialog: React.ReactNode;
 }
 
 // Re-export dialog state types for backward compatibility
@@ -91,6 +97,8 @@ export function useContactSubmission({
   onContactAdded,
   onOpenChange,
   resetForm,
+  setValidationErrors,
+  setTouchedFields,
   formDataRef
 }: UseContactSubmissionProps): UseContactSubmissionReturn {
 
@@ -127,6 +135,24 @@ export function useContactSubmission({
   const deferredCommunicationSubmitRef = useRef<(() => Promise<void>) | null>(null);
   const communicationImpactConfirmedRef = useRef(false);
 
+  const {
+    previewBeforeMutate: previewIdentityImpactBeforeMutate,
+    ImpactDialog: individualIdentityImpactDialog,
+  } = useContactIdentityImpactGuard(editContact);
+
+  const focusField = useCallback((fieldName?: string) => {
+    if (!fieldName || typeof document === 'undefined') return;
+
+    window.setTimeout(() => {
+      const selector = `[name="${fieldName}"], #${fieldName}`;
+      const element = document.querySelector(selector);
+      if (!(element instanceof HTMLElement)) return;
+
+      element.focus();
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+  }, []);
+
   // ========================================================================
   // VALIDATION
   // ========================================================================
@@ -137,24 +163,44 @@ export function useContactSubmission({
    * @param formData - Form data to validate
    * @returns true if valid, false if invalid
    */
-  const validateFormData = useCallback((formData: ContactFormData): boolean => {
-
+  const getValidationResult = useCallback((formData: ContactFormData) => {
     switch (formData.type) {
       case 'individual':
-        return validateIndividualContact(formData, notifications);
+        return validateIndividualContact(formData);
 
       case 'company':
-        return validateCompanyContact(formData, notifications);
+        return validateCompanyContact(formData);
 
       case 'service':
-        return validateServiceContact(formData, notifications);
+        return validateServiceContact(formData);
 
       default:
-        notifications.error("validation.contacts.unknownType");
         logger.error('SUBMISSION: Unknown contact type', { type: formData.type });
-        return false;
+        return null;
     }
-  }, [notifications]);
+  }, []);
+
+  const validateFormData = useCallback((formData: ContactFormData): boolean => {
+    const validationResult = getValidationResult(formData);
+    if (!validationResult) {
+      notifications.error("validation.unknownType");
+      return false;
+    }
+
+    setValidationErrors(validationResult.fieldErrors);
+    setTouchedFields(prev => ({
+      ...prev,
+      ...Object.fromEntries(Object.keys(validationResult.fieldErrors).map((fieldName) => [fieldName, true])),
+    }));
+
+    if (!validationResult.isValid) {
+      notifications.error('validation.individual.reviewHighlightedFields');
+      focusField(validationResult.firstErrorField);
+      return false;
+    }
+
+    return true;
+  }, [focusField, getValidationResult, notifications, setTouchedFields, setValidationErrors]);
 
   // ========================================================================
   // SUBMISSION LOGIC
@@ -179,7 +225,7 @@ export function useContactSubmission({
     }
 
     // 🔥 ENTERPRISE UPLOAD SYNCHRONIZATION: Block submission until all uploads complete
-    const uploadValidation = validateUploadState(formData as unknown as Record<string, unknown>);
+    const uploadValidation = validateUploadState(formData);
 
     if (!uploadValidation.isValid) {
       logger.info('SUBMISSION: Upload validation failed', { uploadValidation });
@@ -238,37 +284,42 @@ export function useContactSubmission({
 
       // Submit to API
       if (editContact) {
-        // 📸 Enterprise photo cleanup (non-blocking)
-        await cleanupOrphanedPhotos(editContact, contactData);
-
         const editContactId = editContact?.id;
         if (!editContactId) return;
 
-        // 🛡️ Run guard chain (ADR-249, ADR-277, ADR-278, ADR-280)
-        const guardResult = await runGuardChain({
-          editContact, editContactId, contactData, formData,
-          nameCascadeConfirmedRef, addressImpactConfirmedRef,
-          companyIdentityConfirmedRef, communicationImpactConfirmedRef,
-          deferredSubmitRef, deferredAddressSubmitRef,
-          deferredIdentitySubmitRef, deferredCommunicationSubmitRef,
-          setNameCascadeDialog, setAddressImpactDialog,
-          setCompanyIdentityDialog, setCommunicationImpactDialog,
-          notifications,
-        });
+        const performUpdate = async () => {
+          // 📸 Enterprise photo cleanup (non-blocking)
+          await cleanupOrphanedPhotos(editContact, contactData);
 
-        if (guardResult.blocked) {
-          notifications.error(guardResult.errorKey);
+          // 🛡️ Run guard chain (ADR-249, ADR-277, ADR-278, ADR-280)
+          const guardResult = await runGuardChain({
+            editContact, editContactId, contactData, formData,
+            nameCascadeConfirmedRef, addressImpactConfirmedRef,
+            companyIdentityConfirmedRef, communicationImpactConfirmedRef,
+            deferredSubmitRef, deferredAddressSubmitRef,
+            deferredIdentitySubmitRef, deferredCommunicationSubmitRef,
+            setNameCascadeDialog, setAddressImpactDialog,
+            setCompanyIdentityDialog, setCommunicationImpactDialog,
+            notifications,
+          });
+
+          if (guardResult.blocked) {
+            notifications.error(guardResult.errorKey);
+            return;
+          }
+          if (guardResult.deferred) {
+            return;
+          }
+
+          await ContactsService.updateContact(editContactId, contactData);
+          notifications.success("contacts.submission.updateSuccess");
+        };
+
+        const completed = await previewIdentityImpactBeforeMutate(formData, performUpdate);
+        if (!completed) {
           setLoading(false);
           return;
         }
-        if (guardResult.deferred) {
-          setLoading(false);
-          return; // Dialog handles the rest
-        }
-
-        await ContactsService.updateContact(editContactId, contactData);
-        notifications.success("contacts.submission.updateSuccess");
-
       } else {
         // Create new contact
         logger.info('SUBMISSION: Creating new contact');
@@ -277,6 +328,7 @@ export function useContactSubmission({
       }
 
       // Success callbacks
+      setValidationErrors({});
       onContactAdded();
 
       // 🔥 ENTERPRISE CACHE INVALIDATION: Forced component refresh
@@ -323,7 +375,7 @@ export function useContactSubmission({
   const attemptPendingSave = useCallback((formData: ContactFormData) => {
     if (!pendingSave || loading) return;
 
-    const uploadValidation = validateUploadState(formData as unknown as Record<string, unknown>);
+    const uploadValidation = validateUploadState(formData);
 
     // If uploads failed, cancel the deferred save
     if (uploadValidation.failedUploads > 0) {
@@ -355,13 +407,14 @@ export function useContactSubmission({
 
   /** 🏢 Enterprise Layer 3: Get submission state for UI coordination */
   const getSubmissionState = useCallback((formData: ContactFormData) => {
+    const validationResult = getValidationResult(formData);
     return calculateSubmissionState(formData, {
       loading,
       pendingSave,
-      isValidForm: validateFormData(formData),
+      isValidForm: validationResult?.isValid ?? false,
       editContact,
     });
-  }, [loading, pendingSave, validateFormData, editContact]);
+  }, [loading, pendingSave, getValidationResult, editContact]);
 
   // ========================================================================
   // RETURN API
@@ -428,6 +481,9 @@ export function useContactSubmission({
       });
       return { confirmCommunicationImpact: h.confirm, cancelCommunicationImpact: h.cancel };
     })(),
+
+    // 👤 Individual identity impact confirmation
+    individualIdentityImpactDialog,
   };
 }
 

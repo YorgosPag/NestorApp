@@ -51,6 +51,30 @@ export interface ValidationResult {
   warnings: string[];
 }
 
+
+function parseLocalDate(value: string): Date | null {
+  const trimmed = value.trim();
+  const isoDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (isoDateMatch) {
+    const year = Number(isoDateMatch[1]);
+    const monthIndex = Number(isoDateMatch[2]) - 1;
+    const day = Number(isoDateMatch[3]);
+    const date = new Date(year, monthIndex, day);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const date = new Date(trimmed);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isPastOrToday(value: string): boolean {
+  const date = parseLocalDate(value);
+  if (!date) return false;
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return date <= today;
+}
+
 /**
  * 🏢 ENTERPRISE: Detect if URL is Firebase Storage URL
  */
@@ -303,6 +327,27 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
         errors.push(t('service.typeRequired'));
       }
       break;
+  }
+
+  if (contactData.type === 'individual') {
+    const birthDate = typeof contactData.birthDate === 'string' ? contactData.birthDate.trim() : '';
+    if (birthDate && !isPastOrToday(birthDate)) {
+      errors.push(t('individual.birthDateFuture'));
+    }
+
+    const documentIssueDate = typeof contactData.documentIssueDate === 'string' ? contactData.documentIssueDate.trim() : '';
+    if (documentIssueDate && !isPastOrToday(documentIssueDate)) {
+      errors.push(t('individual.documentIssueDateFuture'));
+    }
+
+    const documentExpiryDate = typeof contactData.documentExpiryDate === 'string' ? contactData.documentExpiryDate.trim() : '';
+    if (documentIssueDate && documentExpiryDate) {
+      const issueDate = parseLocalDate(documentIssueDate);
+      const expiryDate = parseLocalDate(documentExpiryDate);
+      if (issueDate && expiryDate && expiryDate <= issueDate) {
+        errors.push(t('individual.documentDatesInvalid'));
+      }
+    }
   }
 
   // 📧 EMAIL VALIDATION — ADR-209: centralized

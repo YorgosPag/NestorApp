@@ -37,7 +37,7 @@
       "edit": "Edit",
       "save": "Save",
       "cancel": "Cancel",
-      "delete": "Delete Contact"
+      "delete": "Move to Trash"
     }
   },
   "page": {
@@ -74,7 +74,7 @@
     "details": {
       "title": "Details",
       "editContact": "Edit Contact",
-      "deleteContact": "Delete Contact"
+      "deleteContact": "Move to Trash"
     },
     "filterIndicator": {
       "viewingCustomer": "Viewing customer:",
@@ -218,10 +218,10 @@
         "newContactTooltip": "Add new contact",
         "edit": "Edit",
         "editTooltip": "Edit selected contact",
-        "delete": "Delete",
-        "deleteCount": "Delete {count} contact(s)",
-        "deleteSelected": "Delete selected contact",
-        "deleteSelectFirst": "Select a contact to delete",
+        "delete": "Move to Trash",
+        "deleteCount": "Move {count} contact(s) to trash",
+        "deleteSelected": "Move selected contact to trash",
+        "deleteSelectFirst": "Select a contact to move to trash",
         "refresh": "Refresh",
         "refreshTooltip": "Refresh contacts list"
       }
@@ -229,12 +229,12 @@
   },
   "dialog": {
     "deleteConfirmation": {
-      "title": "Delete Confirmation",
-      "message": "Are you sure you want to delete {count} contact(s)?",
-      "warning": "This action cannot be undone."
+      "title": "Move to Trash",
+      "message": "This contact will be moved to trash and can be restored later. Continue for {count} contact(s)?",
+      "warning": "Permanent deletion is only available from trash, after a separate confirmation."
     },
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Move to Trash"
   },
   "form": {
     "noName": "No name",
@@ -931,7 +931,8 @@
       "nameRequired": "First name and last name are required",
       "birthDateFuture": "Birth date cannot be in the future",
       "documentIssueDateFuture": "Document issue date cannot be in the future",
-      "documentDatesInvalid": "Expiry date must be after issue date"
+      "documentDatesInvalid": "Expiry date must be after issue date",
+      "reviewHighlightedFields": "Review the highlighted fields to continue"
     },
     "company": {
       "nameRequired": "Company name is required for legal entities",
@@ -1420,6 +1421,19 @@
     "trashCount_one": "1 in trash",
     "deleteSuccess": "Contact moved to trash",
     "deleteSuccessMultiple": "{{count}} contacts moved to trash",
+    "moveToTrash": "Move to Trash",
+    "softDeleteDialog": {
+      "title": "Move Contact to Trash",
+      "description": "The contact will be removed from active lists but will remain available for restoration from trash.",
+      "body": "This step does not permanently delete the contact. All data remains available for recovery, audit, and a safe permanent deletion later from trash when needed.",
+      "confirm": "Move to Trash"
+    },
+    "permanentDeleteDialog": {
+      "title": "Permanently Delete Contact",
+      "description": "The contact will be permanently removed from the system if no blocking dependencies exist.",
+      "body": "Permanent deletion cannot be undone. It should only be used from trash after confirming that the record and its history are no longer needed.",
+      "confirm": "Permanently Delete"
+    },
     "undo": "Undo",
     "undoSuccess": "Contact restored",
     "undoFailed": "Failed to undo",
@@ -1436,5 +1450,93 @@
     "autoDeleteWarning": "Contacts in trash are automatically deleted after 30 days.",
     "noTrashItems": "Trash is empty",
     "deletedAt": "Deleted"
+  },
+  "identityImpact": {
+    "titles": {
+      "allow": "No identity impact detected",
+      "warn": "Individual identity change impact",
+      "block": "Individual identity change blocked"
+    },
+    "messages": {
+      "allow": "No downstream dependencies were detected for the fields being changed.",
+      "warn": "Changing these fields will affect connected data and live displays. Review the impact before continuing.",
+      "block": "This change cannot continue while attendance or employment records still depend on these identity fields.",
+      "unavailable": "The dependency preview did not complete reliably. Saving was blocked until the check becomes available again."
+    },
+    "sections": {
+      "changes": "Fields being changed",
+      "dependencies": "Affected dependencies",
+      "affectedDomains": "Affected system areas"
+    },
+    "categories": {
+      "display": "Display",
+      "identity": "Identity",
+      "regulated": "Regulated"
+    },
+    "changeSummary": {
+      "updated": "From \"{from}\" to \"{to}\"",
+      "cleared": "This field will be cleared. Current value: \"{from}\"",
+      "emptyValue": "empty"
+    },
+    "dependencySeverity": {
+      "warn": "{count} records require review",
+      "block": "{count} records block this change"
+    },
+    "dependencies": {
+      "projectLinks": {
+        "label": "Project links",
+        "remediation": "Review the projects where this person participates so displayed names and roles remain consistent."
+      },
+      "attendanceEvents": {
+        "label": "Attendance events",
+        "remediation": "Review or correct attendance records before changing identity data used in worker resolution."
+      },
+      "employmentRecords": {
+        "label": "Employment records / stamps",
+        "remediation": "These fields affect EFKA/IKA historical records. Correct the related records first or use a controlled correction process."
+      }
+    },
+    "affectedDomains": {
+      "linkedProjects": {
+        "label": "Linked projects and roles",
+        "description": "Live displays of this person in project lists, selectors, and role views will update."
+      },
+      "searchAndReporting": {
+        "label": "Search and reporting",
+        "description": "The new value will appear in live search, exports, and report builder views that read contact data."
+      },
+      "ikaAttendance": {
+        "label": "IKA attendance / worker resolution",
+        "description": "AMKA is used to resolve workers in attendance flows and QR check-ins."
+      },
+      "employmentCompliance": {
+        "label": "Employment and compliance",
+        "description": "Employment records and compliance calculations may require a coordinated correction flow."
+      },
+      "documentsAndIdentifiers": {
+        "label": "Documents and identifiers",
+        "description": "Changing numbers and issuing authorities affects future documents, identity checks, and administrative workflows."
+      }
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "fatherName": "Father Name",
+      "motherName": "Mother Name",
+      "birthDate": "Birth Date",
+      "birthCountry": "Country of Birth",
+      "gender": "Gender",
+      "amka": "AMKA",
+      "documentType": "Document Type",
+      "documentIssuer": "Issuing Authority",
+      "documentNumber": "Document Number",
+      "documentIssueDate": "Issue Date",
+      "documentExpiryDate": "Expiry Date"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "confirm": "Continue with impact awareness",
+      "understood": "Understood"
+    }
   }
 }

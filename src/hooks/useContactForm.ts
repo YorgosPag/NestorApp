@@ -9,6 +9,7 @@ import { useMultiplePhotosHandlers } from './useMultiplePhotosHandlers';
 import { useContactLivePreview } from './useContactLivePreview';
 import { useContactDataLoader } from './useContactDataLoader';
 import { useContactFormHandlers } from './useContactFormHandlers';
+import { validateContactField } from '@/utils/contactForm/contact-validation';
 
 const logger = createModuleLogger('useContactForm');
 
@@ -60,7 +61,11 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
   // 1️⃣ Core form state management
   const {
     formData,
+    validationErrors,
+    touchedFields,
     setFormData,
+    setValidationErrors,
+    setTouchedFields,
     handleChange,
     handleSelectChange,
     handleNestedChange,
@@ -106,11 +111,14 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     communicationImpactDialog,
     confirmCommunicationImpact,
     cancelCommunicationImpact,
+    individualIdentityImpactDialog,
   } = useContactSubmission({
     editContact,
     onContactAdded,
     onOpenChange,
     resetForm,
+    setValidationErrors,
+    setTouchedFields,
     formDataRef // 🔥 CRITICAL FIX: Pass formDataRef for fresh state access
   });
 
@@ -182,6 +190,21 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     await submitFormData(formDataRef.current); // 🔥 Use ref instead of closure variable!
   }, [submitFormData]); // 🔥 Remove formData from dependencies to prevent stale closure
 
+  const handleFieldBlur = useCallback((fieldName: string) => {
+    setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
+
+    const errorKey = validateContactField(formDataRef.current, fieldName);
+    setValidationErrors(prev => {
+      const next = { ...prev };
+      if (errorKey) {
+        next[fieldName] = errorKey;
+      } else {
+        delete next[fieldName];
+      }
+      return next;
+    });
+  }, [setTouchedFields, setValidationErrors]);
+
   // ========================================================================
   // ENTERPRISE UPLOAD WRAPPER
   // ========================================================================
@@ -201,6 +224,8 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
   return {
     // Core state
     formData,
+    validationErrors,
+    touchedFields,
     setFormData,
     loading,
 
@@ -232,6 +257,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     // Utilities
     validateFormData,
     resetForm,
+    handleFieldBlur,
 
     // 🏢 Enterprise Layer 3: UI/UX Coordination
     getSubmissionState,

@@ -28,6 +28,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 // 🛡️ ENTERPRISE: Auto-save guard for pending relationship data
 import { PendingRelationshipGuard } from '@/utils/pending-relationship-guard';
 
@@ -82,6 +84,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
+  const { confirm, dialogProps } = useConfirmDialog();
 
   // 📋 Relationship list management hook
   const {
@@ -212,27 +215,46 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const handleRelationshipRemoval = React.useCallback(async (relationship: ContactRelationship) => {
     const governance = getRelationshipGovernanceInfo(relationship);
     const impactMessages = buildImpactMessages(relationship);
-    const impactSuffix = impactMessages.length > 0
-      ? `\n\n${impactMessages.map(message => `• ${message}`).join('\n')}`
-      : '';
+    const description = impactMessages.length > 0 ? (
+      <div className="space-y-3">
+        <p>{governance.requiresTermination ? t('relationships.governance.confirmTerminateBody') : t('relationships.governance.confirmDeleteBody')}</p>
+        <ul className="list-disc pl-5 space-y-1">
+          {impactMessages.map((message) => (
+            <li key={message}>{message}</li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      governance.requiresTermination
+        ? t('relationships.governance.confirmTerminateBody')
+        : t('relationships.governance.confirmDeleteBody')
+    );
 
     try {
       if (governance.requiresTermination) {
-        const shouldTerminate = window.confirm(`${t('relationships.governance.confirmTerminateTitle')}\n\n${t('relationships.governance.confirmTerminateBody')}${impactSuffix}`);
+        const shouldTerminate = await confirm({
+          title: t('relationships.governance.confirmTerminateTitle'),
+          description,
+          variant: 'warning',
+        });
         if (!shouldTerminate) return;
         await terminateRelationship(relationship.id);
         setActionMessage(t('relationships.status.terminateSuccess'));
         return;
       }
 
-      const shouldDelete = window.confirm(`${t('relationships.governance.confirmDeleteTitle')}\n\n${t('relationships.governance.confirmDeleteBody')}${impactSuffix}`);
+      const shouldDelete = await confirm({
+        title: t('relationships.governance.confirmDeleteTitle'),
+        description,
+        variant: 'destructive',
+      });
       if (!shouldDelete) return;
       await deleteRelationship(relationship.id);
       setActionMessage(t('relationships.status.deleteSuccess'));
     } catch (err) {
       logger.error('Relationship removal flow failed:', { error: err });
     }
-  }, [buildImpactMessages, deleteRelationship, terminateRelationship, t]);
+  }, [buildImpactMessages, confirm, deleteRelationship, terminateRelationship, t]);
 
   /**
    * ✏️ Handle edit relationship (show form with data)
@@ -440,6 +462,8 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
             </CardContent>
           </Card>
         )}
+
+        <ConfirmDialog {...dialogProps} />
       </div>
   );
 };

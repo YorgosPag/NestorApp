@@ -2,6 +2,12 @@ import { z } from 'zod';
 import { validationRules } from '@/utils/validation';
 import { PROJECT_STATUSES as CENTRALIZED_PROJECT_STATUSES, BUILDING_STATUSES as CENTRALIZED_BUILDING_STATUSES } from '@/core/status/StatusConstants';
 import { PROJECT_ADDRESS_TYPES, BLOCK_SIDE_DIRECTIONS } from '@/types/project/addresses'; // Runtime enums (SSoT)
+import {
+  projectAddressSchema,
+  projectAddressCreateSchema,
+  projectAddressesSchema,
+  projectAddressesCreateSchema,
+} from '@/types/project/address-schemas';
 
 // 🏢 ENTERPRISE: Use centralized status constants (NO MORE DUPLICATES)
 const PROJECT_STATUSES = Object.keys(CENTRALIZED_PROJECT_STATUSES);
@@ -83,40 +89,7 @@ export const calculatedFinancialSchema = z.object({
   completionAmount: validationRules.number(),
 });
 
-// 🏢 ENTERPRISE: Project Address Schemas (ADR-167) - MUST be defined BEFORE buildingBaseSchema
-// Runtime enums imported from SSoT (addresses.ts) - NO MORE LOCAL DUPLICATES
-
-// BASE SCHEMA: Persisted type - allows empty strings for legacy migration compatibility
-export const projectAddressSchema = z.object({
-  id: z.string(),
-  street: z.string(), // Allows empty string for legacy migration
-  number: z.string().optional(),
-  city: z.string(), // Allows empty string for legacy migration
-  postalCode: z.string(), // Allows empty string for legacy migration
-  region: z.string().optional(),
-  country: z.string(), // Allows empty string for legacy migration
-  type: z.enum(PROJECT_ADDRESS_TYPES), // No type assertion - derived from SSoT
-  isPrimary: z.boolean(),
-  label: z.string().optional(),
-  blockSide: z.enum(BLOCK_SIDE_DIRECTIONS).optional(), // No type assertion - derived from SSoT
-  blockSideDescription: z.string().optional(),
-  cadastralCode: z.string().optional(),
-  municipality: z.string().optional(),
-  neighborhood: z.string().optional(),
-  coordinates: z.object({
-    lat: z.number(),
-    lng: z.number(),
-  }).optional(),
-  sortOrder: z.number().optional(),
-});
-
-// CREATE/EDIT SCHEMA: Enforces non-empty strings for user input
-export const projectAddressCreateSchema = projectAddressSchema.extend({
-  street: validationRules.required(), // MUST be non-empty when creating
-  city: validationRules.required(),   // MUST be non-empty when creating
-  postalCode: validationRules.required(), // MUST be non-empty when creating
-  country: validationRules.required(), // MUST be non-empty when creating
-});
+// 🏢 ENTERPRISE: Project Address Schemas (ADR-167) - centralized in @/types/project/address-schemas
 
 // Building address reference schema with invariants
 export const buildingAddressReferenceSchema = z.object({

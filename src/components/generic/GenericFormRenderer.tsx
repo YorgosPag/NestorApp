@@ -30,6 +30,9 @@ export type FormChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTex
 /** Select change handler type */
 export type SelectChangeHandler = (name: string, value: string) => void;
 
+/** Field blur handler type */
+export type FieldBlurHandler = (fieldName: string) => void;
+
 /** Photo data type */
 export interface PhotoData {
   url: string;
@@ -63,6 +66,10 @@ export interface GenericFormRendererProps {
   customRenderers?: Record<string, CustomRendererFn>;
   /** Optional section footer renderers (rendered below section fields) */
   sectionFooterRenderers?: Record<string, CustomRendererFn>;
+  /** Field-level validation errors */
+  fieldErrors?: Record<string, string>;
+  /** Field blur handler */
+  onFieldBlur?: FieldBlurHandler;
 }
 
 // ============================================================================
@@ -72,7 +79,7 @@ export interface GenericFormRendererProps {
 /**
  * Renders an input field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderInputField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
+function renderInputField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
   const value = formData[field.id] || '';
 
   // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
@@ -88,6 +95,8 @@ function renderInputField(field: FieldConfig, formData: FormDataRecord, onChange
       placeholder={field.placeholder}
       maxLength={field.maxLength}
       className={field.className}
+      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
+      error={fieldError}
     />
   );
 }
@@ -187,7 +196,7 @@ function renderTextareaField(field: FieldConfig, formData: FormDataRecord, onCha
 /**
  * Renders a date field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderDateField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
+function renderDateField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
   const value = toStringValue(formData[field.id]);
 
   return (
@@ -200,6 +209,8 @@ function renderDateField(field: FieldConfig, formData: FormDataRecord, onChange:
       disabled={disabled}
       required={field.required}
       className={field.className}
+      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
+      error={fieldError}
     />
   );
 }
@@ -207,7 +218,7 @@ function renderDateField(field: FieldConfig, formData: FormDataRecord, onChange:
 /**
  * Renders a number field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderNumberField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
+function renderNumberField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
   const value = toStringValue(formData[field.id]);
 
   return (
@@ -221,6 +232,8 @@ function renderNumberField(field: FieldConfig, formData: FormDataRecord, onChang
       required={field.required}
       placeholder={field.placeholder}
       className={field.className}
+      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
+      error={fieldError}
     />
   );
 }
@@ -228,7 +241,7 @@ function renderNumberField(field: FieldConfig, formData: FormDataRecord, onChang
 /**
  * Renders an email field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderEmailField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
+function renderEmailField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
   const value = toStringValue(formData[field.id]);
 
   return (
@@ -242,6 +255,8 @@ function renderEmailField(field: FieldConfig, formData: FormDataRecord, onChange
       required={field.required}
       placeholder={field.placeholder}
       className={field.className}
+      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
+      error={fieldError}
     />
   );
 }
@@ -249,7 +264,7 @@ function renderEmailField(field: FieldConfig, formData: FormDataRecord, onChange
 /**
  * Renders a tel field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderTelField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
+function renderTelField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
   const value = toStringValue(formData[field.id]);
 
   return (
@@ -264,6 +279,8 @@ function renderTelField(field: FieldConfig, formData: FormDataRecord, onChange: 
       placeholder={field.placeholder}
       maxLength={field.maxLength}
       className={field.className}
+      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
+      error={fieldError}
     />
   );
 }
@@ -279,7 +296,9 @@ function renderField(
   onSelectChange: SelectChangeHandler,
   disabled: boolean,
   t: (key: string) => string,
-  customRenderers?: Record<string, CustomRendererFn>
+  customRenderers?: Record<string, CustomRendererFn>,
+  fieldErrors?: Record<string, string>,
+  onFieldBlur?: FieldBlurHandler
 ): React.ReactNode {
   // Check for custom renderer first
   if (customRenderers && customRenderers[field.id]) {
@@ -289,22 +308,22 @@ function renderField(
   // Use built-in renderers based on field type
   switch (field.type) {
     case 'input':
-      return renderInputField(field, formData, onChange, disabled);
+      return renderInputField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
     case 'select':
       return renderSelectField(field, formData, onSelectChange, disabled, t);
     case 'textarea':
       return renderTextareaField(field, formData, onChange, disabled);
     case 'date':
-      return renderDateField(field, formData, onChange, disabled);
+      return renderDateField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
     case 'number':
-      return renderNumberField(field, formData, onChange, disabled);
+      return renderNumberField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
     case 'email':
-      return renderEmailField(field, formData, onChange, disabled);
+      return renderEmailField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
     case 'tel':
-      return renderTelField(field, formData, onChange, disabled);
+      return renderTelField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
     default:
       logger.warn('Unknown field type', { fieldType: field.type, fieldId: field.id });
-      return renderInputField(field, formData, onChange, disabled);
+      return renderInputField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
   }
 }
 
@@ -341,7 +360,9 @@ export function GenericFormRenderer({
   onSelectChange,
   disabled = false,
   customRenderers,
-  sectionFooterRenderers
+  sectionFooterRenderers,
+  fieldErrors,
+  onFieldBlur
 }: GenericFormRendererProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -416,9 +437,10 @@ export function GenericFormRenderer({
                   label={translate(field.label)}
                   htmlFor={field.id}
                   required={field.required}
+                  errorText={fieldErrors?.[field.id] ? t(fieldErrors[field.id]) : undefined}
                 >
                   <FormInput>
-                    {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers)}
+                    {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers, fieldErrors, onFieldBlur)}
                   </FormInput>
                   {field.helpText && (
                     <p className={cn("text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis", colors.text.muted)}>{translate(field.helpText)}</p>

@@ -158,6 +158,8 @@ interface RendererBaseProps {
   onSelectChange: (name: string, value: string) => void;
   disabled?: boolean;
   customRenderers?: Record<string, unknown>;
+  fieldErrors?: Record<string, string>;
+  onFieldBlur?: (fieldName: string) => void;
   [key: string]: unknown;
 }
 

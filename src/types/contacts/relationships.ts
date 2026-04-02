@@ -43,8 +43,8 @@ import { isEmploymentRelationship } from './relationships/utils';
 // BACKWARD COMPATIBILITY EXPORTS
 // ============================================================================
 
-// All exports from the new modular structure
-export * from './relationships';
+// Export only from the explicit directory index to avoid file/directory barrel recursion.
+export * from './relationships/index';
 
 // ============================================================================
 // DEPRECATION WARNING

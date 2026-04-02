@@ -22,6 +22,8 @@ interface FormTabRendererBaseProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSelectChange?: (name: string, value: string) => void;
   disabled?: boolean;
+  fieldErrors?: Record<string, string>;
+  onFieldBlur?: (fieldName: string) => void;
 }
 type FormTabRendererComponent = React.ComponentType<FormTabRendererBaseProps>;
 

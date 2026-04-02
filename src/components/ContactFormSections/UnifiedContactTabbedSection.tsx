@@ -46,6 +46,8 @@ interface UnifiedContactTabbedSectionProps {
   onActiveTabChange?: (tabId: string) => void;
   initialTab?: string;
   onPersonaToggle?: (personaType: PersonaType) => void;
+  validationErrors?: Record<string, string>;
+  onFieldBlur?: (fieldName: string) => void;
 }
 
 export function UnifiedContactTabbedSection({
@@ -57,6 +59,7 @@ export function UnifiedContactTabbedSection({
   setFormData, disabled = false, relationshipsMode = 'full',
   onPhotoClick, canonicalUploadContext,
   onActiveTabChange, initialTab, onPersonaToggle,
+  validationErrors, onFieldBlur,
 }: UnifiedContactTabbedSectionProps) {
   const { t } = useTranslation('contacts');
   const { user } = useAuth();
@@ -191,6 +194,8 @@ export function UnifiedContactTabbedSection({
       initialTab,
       customRenderers,
       sectionFooterRenderers: buildSectionFooterRenderers(ctx),
+      fieldErrors: validationErrors,
+      onFieldBlur,
     };
 
     return buildRendererPropsForContactType(contactType, baseProps, {
@@ -207,6 +212,7 @@ export function UnifiedContactTabbedSection({
     handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick,
     canonicalUploadContext, onActiveTabChange,
     companyDisplayName, user?.companyId,
+    validationErrors, onFieldBlur,
   ]);
 
   return (
