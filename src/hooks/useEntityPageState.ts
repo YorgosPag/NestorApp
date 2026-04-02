@@ -68,6 +68,12 @@ export interface EntityPageStateConfig<T extends IdentifiableEntity, F> {
    * If omitted, a referential-equality check on the found item is used.
    */
   syncCompareFields?: (keyof T)[];
+
+  /**
+   * Optional: auto-select the first item when no URL-selected item exists.
+   * Defaults to true to preserve the existing page behavior.
+   */
+  autoSelectFirstItem?: boolean;
 }
 
 /** The return type of useEntityPageState */
@@ -100,6 +106,7 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
     filterFn,
     extraUrlParams = [],
     syncCompareFields,
+    autoSelectFirstItem = true,
   } = config;
 
   const logger = createModuleLogger(loggerName);
@@ -147,11 +154,11 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
     }
 
     // Default: select first item if nothing selected
-    if (!selectedItem && items.length > 0) {
+    if (autoSelectFirstItem && !selectedItem && items.length > 0) {
       setSelectedItemRaw(items[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, entityIdFromUrl]);
+  }, [items, entityIdFromUrl, autoSelectFirstItem]);
 
   // ── Sync selected item with refreshed data ─────────────────────────
   useEffect(() => {

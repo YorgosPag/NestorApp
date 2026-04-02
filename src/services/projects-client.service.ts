@@ -88,8 +88,8 @@ export interface ProjectUpdatePayload {
   totalValue?: number;
   totalArea?: number;
   duration?: number;
-  startDate?: string;
-  completionDate?: string;
+  startDate?: string | null;
+  completionDate?: string | null;
   // 🏢 SPEC-256A: Optimistic versioning
   _v?: number;
   /** ADR-244: Οικοπεδούχοι — SSoT */

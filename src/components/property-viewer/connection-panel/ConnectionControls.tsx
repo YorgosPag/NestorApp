@@ -17,7 +17,7 @@ interface ConnectionControlsProps {
     isConnecting: boolean;
     toggleConnectionMode: () => void;
     selectedPropertyIds: string[];
-    createGroup: () => void;
+    createGroup: () => void | Promise<void>;
     connections: Connection[];
     clearConnections: () => void;
 }

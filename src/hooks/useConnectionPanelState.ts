@@ -4,6 +4,8 @@ import { useState } from 'react';
 import type { Connection, ConnectionType, PropertyGroup } from '@/types/connections';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { CONNECTION_DEFAULTS } from '@/config/connection-config';
+import { usePromptDialog } from '@/hooks/usePromptDialog';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface UseConnectionPanelStateProps {
     selectedPropertyIds: string[];
@@ -21,6 +23,8 @@ export function useConnectionPanelState({
     setIsConnecting,
 }: UseConnectionPanelStateProps) {
     const notifications = useNotifications();
+    const { t } = useTranslation('properties');
+    const { prompt, dialogProps } = usePromptDialog();
     const [connectionType, setConnectionType] = useState<ConnectionType>('related');
 
     const toggleConnectionMode = () => {
@@ -32,8 +36,12 @@ export function useConnectionPanelState({
         }
     };
 
-    const createGroup = () => {
-        const groupName = prompt('Εισάγετε όνομα για την ομάδα:');
+    const createGroup = async () => {
+        const groupName = await prompt({
+            title: t('connectionPanel.controls.createGroupTitle'),
+            label: t('connectionPanel.controls.groupNameLabel'),
+            placeholder: t('connectionPanel.controls.groupNamePlaceholder'),
+        });
         if (!groupName) return;
 
         if (selectedPropertyIds.length < 2) {
@@ -68,5 +76,6 @@ export function useConnectionPanelState({
         createGroup,
         clearConnections,
         deleteGroup,
+        promptDialogProps: dialogProps,
     };
 }

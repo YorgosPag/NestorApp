@@ -49,6 +49,8 @@ import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const logger = createModuleLogger('BuildingAddressesCard');
 
@@ -81,6 +83,7 @@ export function BuildingAddressesCard({
   const colors = useSemanticColors();
   const { success, error: notifyError } = useNotifications();
   const router = useRouter();
+  const { confirm, dialogProps } = useConfirmDialog();
 
   // ============================================================
   // STATE: Building's own addresses (selected or manual)
@@ -161,7 +164,7 @@ export function BuildingAddressesCard({
 
     notifyError(result.error || t('address.labels.saveError'));
     return false;
-  }, [buildingId, t]);
+  }, [buildingId, t, notifyError]);
 
   // ============================================================
   // HELPER: Check if a project address is selected for this building
@@ -243,7 +246,12 @@ export function BuildingAddressesCard({
       notifyError(t('address.labels.cannotDeleteLast'));
       return;
     }
-    if (!confirm(t('address.labels.confirmDelete'))) return;
+    const confirmed = await confirm({
+      title: t('address.labels.removeAddress'),
+      description: t('address.labels.confirmDelete'),
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
 
     const newAddresses = localAddresses.filter((_, i) => i !== index);
     if (localAddresses[index]?.isPrimary && newAddresses.length > 0) {
@@ -725,6 +733,7 @@ export function BuildingAddressesCard({
           )}
         </>
       )}
+      <ConfirmDialog {...dialogProps} />
     </section>
   );
 }

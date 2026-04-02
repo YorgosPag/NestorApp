@@ -267,7 +267,18 @@ export const validationRules = {
  */
 export const parseDate = (dateStr?: string): Date | null => {
   if (!dateStr || dateStr.trim() === '') return null;
-  const date = new Date(dateStr);
+
+  const trimmed = dateStr.trim();
+  const isoDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (isoDateMatch) {
+    const year = Number(isoDateMatch[1]);
+    const monthIndex = Number(isoDateMatch[2]) - 1;
+    const day = Number(isoDateMatch[3]);
+    const localDate = new Date(year, monthIndex, day);
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  const date = new Date(trimmed);
   return isNaN(date.getTime()) ? null : date;
 };
 

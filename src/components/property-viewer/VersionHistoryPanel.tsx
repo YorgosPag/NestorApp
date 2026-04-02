@@ -15,6 +15,10 @@ import { BUILDING_IDS } from '@/config/building-ids-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { normalizeToDate, normalizeToMillis } from '@/lib/date-local';
 import '@/lib/design-system';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { usePromptDialog } from '@/hooks/usePromptDialog';
+import { PromptDialog } from '@/components/ui/PromptDialog';
 
 // 🏢 ENTERPRISE: Version interface instead of any
 interface FloorplanVersion {
@@ -94,6 +98,8 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     const notifications = useNotifications();
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('properties');
+    const { confirm, dialogProps } = useConfirmDialog();
+    const { prompt, dialogProps: promptDialogProps } = usePromptDialog();
     // 🏢 ENTERPRISE: Proper types - using VersionHistoryItem for display compatibility
     const [versions, setVersions] = useState<VersionHistoryItem[]>([]);
     const [selectedVersion, setSelectedVersion] = useState<VersionHistoryItem | null>(null);
@@ -115,7 +121,12 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     }, [isOpen, buildingId]);
 
     const handleRestore = async (versionId: string) => {
-        if (!confirm(t('versionHistory.restoreConfirm'))) return;
+        const confirmed = await confirm({
+            title: t('versionHistory.title'),
+            description: t('versionHistory.restoreConfirm'),
+            variant: 'warning',
+        });
+        if (!confirmed) return;
         notifications.info(`💬 ${t('versionHistory.restoring', { versionId })}`);
         // In a real app, you would call the versioning system here.
         setTimeout(() => {
@@ -125,7 +136,11 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     };
 
     const handleCreateMilestone = async () => {
-        const name = prompt(t('versionHistory.milestoneName'));
+        const name = await prompt({
+            title: t('versionHistory.createMilestone'),
+            label: t('versionHistory.milestoneName'),
+            placeholder: t('versionHistory.milestoneName'),
+        });
         if (!name) return;
         notifications.info(`🚩 ${t('versionHistory.creatingMilestone', { name })}`);
     };
@@ -164,6 +179,8 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
                          <VersionDetails version={selectedVersion} onRestore={handleRestore} />
                     </ScrollArea>
                 </div>
+                <ConfirmDialog {...dialogProps} />
+                <PromptDialog {...promptDialogProps} />
             </div>
         </div>
     );

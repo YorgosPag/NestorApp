@@ -13,11 +13,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { AssociationService } from '@/services/association.service';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { RealtimeService } from '@/services/realtime';
+import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
 import type { ContactLinkCreatedPayload, ContactLinkDeletedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -39,6 +41,7 @@ interface UseEntityContactLinksReturn {
   removeLink: (linkId: string) => Promise<boolean>;
   updateRole: (linkId: string, newRole: string) => Promise<boolean>;
   refresh: () => void;
+  LinkRemovalBlockedDialog: ReactNode;
 }
 
 /**
@@ -65,6 +68,7 @@ export function useEntityContactLinks(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { checkBeforeRemove, BlockedDialog: LinkRemovalBlockedDialog } = useLinkRemovalGuard();
 
   const parentProjectId = options?.parentProjectId;
 
@@ -187,6 +191,9 @@ export function useEntityContactLinks(
   const removeLink = useCallback(async (linkId: string): Promise<boolean> => {
     if (!user) return false;
 
+    const allowed = await checkBeforeRemove(linkId);
+    if (!allowed) return false;
+
     const result = await AssociationService.unlinkContact(linkId, user.uid);
     if (result.success) {
       refresh();
@@ -195,7 +202,7 @@ export function useEntityContactLinks(
 
     logger.error('Failed to remove contact link', { error: result });
     return false;
-  }, [user, refresh]);
+  }, [user, refresh, checkBeforeRemove]);
 
   // Update role of a contact link
   const updateRole = useCallback(async (linkId: string, newRole: string): Promise<boolean> => {
@@ -211,7 +218,16 @@ export function useEntityContactLinks(
     return false;
   }, [user, refresh]);
 
-  return { links, isLoading, error, addLink, removeLink, updateRole, refresh };
+  return {
+    links,
+    isLoading,
+    error,
+    addLink,
+    removeLink,
+    updateRole,
+    refresh,
+    LinkRemovalBlockedDialog,
+  };
 }
 
 // ============================================================================

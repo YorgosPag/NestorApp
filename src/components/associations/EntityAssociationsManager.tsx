@@ -43,7 +43,6 @@ import {
 } from '@/components/ui/select';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import { useEntityContactLinks } from '@/hooks/useEntityAssociations';
-import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
 import { getRolesForEntityType } from '@/types/entity-associations';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -78,13 +77,11 @@ export function EntityAssociationsManager({
   const spacing = useSpacingTokens();
   const typography = useTypography();
   const colors = useSemanticColors();
-  const { links, isLoading, addLink, removeLink } = useEntityContactLinks(
+  const { links, isLoading, addLink, removeLink, LinkRemovalBlockedDialog } = useEntityContactLinks(
     entityType,
     entityId,
     parentProjectId ? { parentProjectId } : undefined
   );
-  const { checkBeforeRemove, BlockedDialog: LinkBlockedDialog } = useLinkRemovalGuard();
-
   // Dialog state
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactSummary | null>(null);
@@ -129,11 +126,6 @@ export function EntityAssociationsManager({
 
   const handleConfirmRemove = async () => {
     if (!removeLinkId) return;
-    const allowed = await checkBeforeRemove(removeLinkId);
-    if (!allowed) {
-      setRemoveLinkId(null);
-      return;
-    }
     await removeLink(removeLinkId);
     setRemoveLinkId(null);
   };
@@ -280,7 +272,7 @@ export function EntityAssociationsManager({
       </Dialog>
 
       {/* ============ LINK REMOVAL BLOCKED DIALOG ============ */}
-      {LinkBlockedDialog}
+      {LinkRemovalBlockedDialog}
 
       {/* ============ REMOVE CONFIRMATION ============ */}
       <AlertDialog

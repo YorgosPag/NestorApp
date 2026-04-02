@@ -30,11 +30,11 @@ import { WorkerCard } from './components/WorkerCard';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { AssociationService } from '@/services/association.service';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import type { ProjectWorker } from './contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
 
 const logger = createModuleLogger('WorkersTabContent');
 
@@ -50,6 +50,8 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   const spacing = useSpacingTokens();
 
   const { workers, isLoading, error, refetch } = useProjectWorkers(projectId);
+  const { confirm, dialogProps } = useConfirmDialog();
+  const { checkBeforeRemove, BlockedDialog: LinkRemovalBlockedDialog } = useLinkRemovalGuard();
   const [showSearch, setShowSearch] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactSummary | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -92,19 +94,29 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   }, [selectedContact, projectId, refetch]);
 
   const handleRemoveWorker = useCallback(async (worker: ProjectWorker) => {
-    if (!confirm(t('ika.workersTab.confirmRemove'))) return;
+    const confirmed = await confirm({
+      title: t('ika.workersTab.removeWorker'),
+      description: t('ika.workersTab.confirmRemove'),
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+
+    const allowed = await checkBeforeRemove(worker.linkId);
+    if (!allowed) return;
 
     try {
       setIsRemoving(worker.contactId);
-      const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, worker.linkId);
-      await updateDoc(linkRef, { status: 'inactive' });
+      const result = await AssociationService.unlinkContact(worker.linkId, 'current_user');
+      if (!result.success) {
+        throw new Error(result.error);
+      }
       refetch();
     } catch (err) {
       logger.error('Failed to remove worker', { error: err });
     } finally {
       setIsRemoving(null);
     }
-  }, [t, refetch]);
+  }, [checkBeforeRemove, confirm, t, refetch]);
 
   const handleCancelSearch = useCallback(() => {
     setShowSearch(false);
@@ -239,6 +251,8 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
           )}
         </CardContent>
       </Card>
+      <ConfirmDialog {...dialogProps} />
+      {LinkRemovalBlockedDialog}
     </section>
   );
 }

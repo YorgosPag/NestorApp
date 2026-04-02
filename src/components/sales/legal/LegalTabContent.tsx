@@ -72,7 +72,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
   } = useLegalContracts(unit.id, unit.project);
 
   // Self-contained: load associations directly (page.tsx does NOT pass them)
-  const { links, addLink, removeLink } = useEntityContactLinks('property', unit.id);
+  const { links, addLink, removeLink, LinkRemovalBlockedDialog } = useEntityContactLinks('property', unit.id);
 
   const [selectedPhase, setSelectedPhase] = useState<ContractPhase>('preliminary');
   const [creating, setCreating] = useState(false);
@@ -221,6 +221,8 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
 
       {/* Brokerage */}
       <BrokerageCard agreements={agreements} />
+
+      {LinkRemovalBlockedDialog}
     </FullscreenOverlay>
   );
 }

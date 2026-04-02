@@ -1118,5 +1118,112 @@
   "cards": {
     "area": "Area",
     "totalProjectValue": "Total project value"
+  },
+  "impactGuard": {
+    "titles": {
+      "allow": "No impact detected",
+      "warn": "Review downstream impact before saving",
+      "block": "Change blocked"
+    },
+    "sections": {
+      "changes": "Fields being changed",
+      "dependencies": "Affected dependencies"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "confirm": "Continue with risk acknowledgement",
+      "understood": "Understood"
+    },
+    "messages": {
+      "allow": "No downstream dependencies require a warning for this change.",
+      "warn": "The change is allowed, but it affects existing operational or compliance footprint for this project. Review the dependencies carefully before you continue.",
+      "block": "This change is not allowed while the project still has active dependencies that would lose their company or compliance context. Remove or migrate the records below first.",
+      "unavailable": "The impact check did not complete reliably. Saving has been blocked until the preview succeeds."
+    },
+    "changeSummary": {
+      "updated": "From \"{from}\" to \"{to}\"",
+      "created": "New value: \"{to}\"",
+      "emptyValue": "empty"
+    },
+    "kinds": {
+      "companyLink": "Company link",
+      "projectIdentity": "Project identity",
+      "permitMetadata": "Permit metadata",
+      "projectStatus": "Project status"
+    },
+    "fields": {
+      "linkedCompanyId": "Linked company",
+      "name": "Project title",
+      "title": "License title",
+      "description": "Project description",
+      "buildingBlock": "Building block",
+      "protocolNumber": "Protocol number",
+      "licenseNumber": "License number",
+      "issuingAuthority": "Issuing authority",
+      "issueDate": "Issue date",
+      "status": "Project status"
+    },
+    "severity": {
+      "warn": "Warning ({count})",
+      "block": "Blocking ({count})"
+    },
+    "dependencies": {
+      "buildings": {
+        "label": "Project buildings",
+        "remediation": "Unlink or reassign the buildings to a new project or company hierarchy first."
+      },
+      "properties": {
+        "label": "Units and properties",
+        "remediation": "Units inherit company context from the project. Re-home them or stabilize the hierarchy first."
+      },
+      "propertyPaymentPlans": {
+        "label": "Property payment plans",
+        "remediation": "Close or migrate payment plans before changing the linked company for this project."
+      },
+      "contactLinks": {
+        "label": "Project contact roles",
+        "remediation": "Reassign or remove workers, landowners, and other linked roles before proceeding."
+      },
+      "communications": {
+        "label": "Project communications",
+        "remediation": "Confirm the communications remain correctly linked after the metadata change."
+      },
+      "obligations": {
+        "label": "Project obligations",
+        "remediation": "Update or migrate obligations that depend on this project identity first."
+      },
+      "legalContracts": {
+        "label": "Legal contracts",
+        "remediation": "Contracts must be aligned with the new name or company before this change proceeds."
+      },
+      "ownershipTables": {
+        "label": "Ownership tables",
+        "remediation": "Ownership tables are treated as regulatory footprint. Complete the required revision first."
+      },
+      "purchaseOrders": {
+        "label": "Purchase orders",
+        "remediation": "Review open purchase orders and supplier references before changing project metadata."
+      },
+      "attendanceEvents": {
+        "label": "Worker attendance events",
+        "remediation": "The project has active labor-compliance footprint. Company reassignment is blocked until attendance is reconciled."
+      },
+      "employmentRecords": {
+        "label": "Employment and stamp records",
+        "remediation": "EFKA and stamp records exist. Close or migrate compliance history before changing the linked company."
+      },
+      "accountingInvoices": {
+        "label": "Accounting invoices",
+        "remediation": "Invoices already reference this project. Review whether accounting corrections or re-issuance are required first."
+      },
+      "files": {
+        "label": "Project files and documents",
+        "remediation": "Review permits, drawings, and documents carrying the current project context before changing metadata."
+      },
+      "boqItems": {
+        "label": "BOQ and measurements",
+        "remediation": "Measurements belong to the current project. Perform the required transfer or re-approval first."
+      }
+    }
   }
 }

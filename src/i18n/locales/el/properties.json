@@ -619,7 +619,10 @@
       "cancelConnection": "Ακύρωση Σύνδεσης",
       "newConnection": "Νέα Σύνδεση",
       "createGroup": "Δημιουργία Ομάδας ({count} επιλεγμένα)",
-      "clearConnections": "Καθαρισμός Συνδέσεων"
+      "clearConnections": "Καθαρισμός Συνδέσεων",
+      "createGroupTitle": "Δημιουργία Ομάδας",
+      "groupNameLabel": "Όνομα ομάδας",
+      "groupNamePlaceholder": "Εισάγετε όνομα ομάδας"
     },
     "connectionTypes": {
       "sameBuilding": "Ίδιο Κτίριο",

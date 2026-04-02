@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
@@ -11,34 +11,52 @@ import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
 import { useAutosave } from './hooks/useAutosave';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { updateProjectClient, createProject } from '@/services/projects-client.service';
-import { RealtimeService } from '@/services/realtime';
+import { updateProjectClient, createProject, type ProjectUpdatePayload } from '@/services/projects-client.service';
 import { createModuleLogger } from '@/lib/telemetry';
-// 🏢 SPEC-256A: Optimistic versioning — conflict detection
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { ConflictDialog } from '@/components/shared/ConflictDialog';
 import { useRouter } from 'next/navigation';
-// 🏢 ENTERPRISE: Company linking via EntityLinkCard (ADR-200)
 import { Building2 } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
+import { useProjectMutationImpactGuard } from '@/hooks/useProjectMutationImpactGuard';
 import '@/lib/design-system';
+
 const logger = createModuleLogger('GeneralProjectTab');
 
 interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
-  /** Lifted edit state from ProjectDetails header */
   isEditing?: boolean;
-  /** Callback to update lifted edit state */
   onSetEditing?: (editing: boolean) => void;
-  /** Register save callback with parent for header Save button */
   registerSaveCallback?: (saveFn: () => void) => void;
-  /** 🏢 ENTERPRISE: "Fill then Create" — project not yet in Firestore */
   isCreateMode?: boolean;
-  /** Callback after successful creation — receives real Firestore project ID */
   onProjectCreated?: (projectId: string) => void;
+}
+
+function normalizeGuardValue(value: string | number | null | undefined): string {
+  if (typeof value === 'number') return String(value);
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function hasImpactTrackedChanges(
+  project: ExtendedGeneralProjectTabProps['project'],
+  projectData: ProjectFormData,
+  linkedCompanyId: string | null,
+): boolean {
+  return (
+    normalizeGuardValue(project.name) !== normalizeGuardValue(projectData.name) ||
+    normalizeGuardValue(project.title) !== normalizeGuardValue(projectData.licenseTitle) ||
+    normalizeGuardValue(project.description) !== normalizeGuardValue(projectData.description) ||
+    normalizeGuardValue(project.buildingBlock) !== normalizeGuardValue(projectData.buildingBlock) ||
+    normalizeGuardValue(project.protocolNumber) !== normalizeGuardValue(projectData.protocolNumber) ||
+    normalizeGuardValue(project.licenseNumber) !== normalizeGuardValue(projectData.licenseNumber) ||
+    normalizeGuardValue(project.issuingAuthority) !== normalizeGuardValue(projectData.issuingAuthority) ||
+    normalizeGuardValue(project.issueDate) !== normalizeGuardValue(projectData.issueDate) ||
+    normalizeGuardValue(project.status) !== normalizeGuardValue(projectData.status) ||
+    normalizeGuardValue(project.linkedCompanyId) !== normalizeGuardValue(linkedCompanyId)
+  );
 }
 
 export function GeneralProjectTab({
@@ -51,10 +69,8 @@ export function GeneralProjectTab({
 }: ExtendedGeneralProjectTabProps) {
   const { t } = useTranslation('projects');
   const spacing = useSpacingTokens();
-  // 🏢 ADR-201: Centralized companyId fallback (project → user)
   const fallbackCompanyId = useCompanyId()?.companyId ?? '';
 
-  // Use lifted state if available, otherwise fallback to local state
   const [localIsEditing, setLocalIsEditing] = useState(false);
   const isEditing = externalIsEditing ?? localIsEditing;
   const setIsEditing = onSetEditing ?? setLocalIsEditing;
@@ -86,10 +102,47 @@ export function GeneralProjectTab({
   });
 
   const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { previewBeforeMutate, ImpactDialog } = useProjectMutationImpactGuard(project.id, {
+    onBlockDismiss: () => {
+      companyLink.reset();
+    },
+  });
 
-  // 🏢 SPEC-256A: Versioned save function (sends _v to API, returns new _v)
-  const versionedSaveFn = useCallback(async (data: ProjectFormData & { _v?: number }) => {
-    const result = await updateProjectClient(project.id, {
+  const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
+    const companies = await getAllCompaniesForSelect();
+    return companies
+      .filter(c => c.id)
+      .map(c => ({ id: c.id!, name: c.companyName || '' }));
+  }, []);
+
+  const companyLink = useEntityLink({
+    relation: 'project-company',
+    entityId: project.id,
+    initialParentId: project.linkedCompanyId || null,
+    loadOptions: loadCompanies,
+    saveMode: isCreateMode ? 'local' : 'form',
+    hideCurrentLabel: true,
+    icon: Building2,
+    cardId: 'project-company-link',
+    labels: {
+      title: t('basicInfo.companyLink.title'),
+      label: t('basicInfo.companyLink.label'),
+      placeholder: t('basicInfo.companyLink.placeholder'),
+      noSelection: t('basicInfo.companyLink.noSelection'),
+      loading: t('basicInfo.companyLink.loading'),
+      save: t('basicInfo.companyLink.save'),
+      saving: t('basicInfo.companyLink.saving'),
+      success: t('basicInfo.companyLink.success'),
+      error: t('basicInfo.companyLink.error'),
+      currentLabel: t('basicInfo.companyLink.currentLabel'),
+    },
+  }, isEditing);
+
+  const buildUpdatePayload = useCallback((data: ProjectFormData, version?: number): ProjectUpdatePayload => {
+    const companyPayload = companyLink.getPayload();
+    return {
       name: data.name,
       title: data.licenseTitle,
       status: data.status,
@@ -111,10 +164,16 @@ export function GeneralProjectTab({
       duration: typeof data.duration === 'number' ? data.duration : undefined,
       startDate: data.startDate || undefined,
       completionDate: data.completionDate || undefined,
-      _v: data._v,
-    });
-    return result;
-  }, [project.id]);
+      linkedCompanyId: Object.prototype.hasOwnProperty.call(companyPayload, 'linkedCompanyId')
+        ? companyPayload.linkedCompanyId
+        : undefined,
+      _v: version,
+    };
+  }, [companyLink]);
+
+  const versionedSaveFn = useCallback(async (data: ProjectFormData & { _v?: number }) => {
+    return updateProjectClient(project.id, buildUpdatePayload(data, data._v));
+  }, [buildUpdatePayload, project.id]);
 
   const versioned = useVersionedSave<ProjectFormData>({
     initialVersion: (project as unknown as { _v?: number })._v,
@@ -124,15 +183,18 @@ export function GeneralProjectTab({
     },
   });
 
-  // 🏢 ADR-248: Centralized auto-save with versioned persistence
+  const hasPendingImpactReview = useMemo(() => (
+    hasImpactTrackedChanges(project, projectData, companyLink.linkedId)
+  ), [companyLink.linkedId, project, projectData]);
+
   const autoSaveFn = useCallback(async (data: ProjectFormData) => {
-    if (isCreateMode) return;
+    if (isCreateMode || hasPendingImpactReview) return;
     await versioned.save(data);
-  }, [isCreateMode, versioned]);
+  }, [hasPendingImpactReview, isCreateMode, versioned]);
 
   const { autoSaving, lastSaved, status: autoSaveStatus, error: autoSaveError, retry: autoSaveRetry } = useAutosave(
     projectData,
-    isEditing && !isCreateMode && !versioned.isConflicted,
+    isEditing && !isCreateMode && !versioned.isConflicted && !hasPendingImpactReview,
     { saveFn: autoSaveFn }
   );
 
@@ -145,6 +207,11 @@ export function GeneralProjectTab({
       companyName: project.companyName,
       companyId: project.companyId || fallbackCompanyId,
       description: project.description || prev.description,
+      buildingBlock: project.buildingBlock || '',
+      protocolNumber: project.protocolNumber || '',
+      licenseNumber: project.licenseNumber || '',
+      issuingAuthority: project.issuingAuthority || '',
+      issueDate: project.issueDate || '',
       type: project.type || '',
       priority: project.priority || '',
       riskLevel: project.riskLevel || '',
@@ -158,68 +225,7 @@ export function GeneralProjectTab({
       client: project.client || '',
       location: project.location || '',
     }));
-  }, [project]);
-
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  // =========================================================================
-  // ADR-200: Centralized entity linking — Company
-  // (must be declared before handleSave which references companyLink)
-  // =========================================================================
-
-  const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
-    const companies = await getAllCompaniesForSelect();
-    return companies
-      .filter(c => c.id)
-      .map(c => ({ id: c.id!, name: c.companyName || '' }));
-  }, []);
-
-  const saveCompanyLink = useCallback(async (newId: string | null) => {
-    try {
-      // 🏢 ADR-232: Save to linkedCompanyId (NOT companyId — that's tenant isolation)
-      const result = await updateProjectClient(project.id, {
-        linkedCompanyId: newId ?? null,
-      });
-      if (result.success) {
-        // NOTE: Do NOT setProjectData here — it triggers auto-save which
-        // overwrites other fields (e.g., description) with stale form state
-        RealtimeService.dispatch('PROJECT_UPDATED', {
-          projectId: project.id,
-          updates: { linkedCompanyId: newId ?? undefined },
-          timestamp: Date.now(),
-        });
-        return { success: true };
-      }
-      return { success: false, error: result.error || 'Failed to update' };
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
-    }
-  }, [project.id]);
-
-  const companyLink = useEntityLink({
-    relation: 'project-company',
-    entityId: project.id,
-    initialParentId: project.linkedCompanyId || null,
-    loadOptions: loadCompanies,
-    saveMode: isCreateMode ? 'local' : 'immediate',
-    onSave: isCreateMode ? undefined : saveCompanyLink,
-    hideCurrentLabel: true,
-    icon: Building2,
-    cardId: 'project-company-link',
-    labels: {
-      title: t('basicInfo.companyLink.title'),
-      label: t('basicInfo.companyLink.label'),
-      placeholder: t('basicInfo.companyLink.placeholder'),
-      noSelection: t('basicInfo.companyLink.noSelection'),
-      loading: t('basicInfo.companyLink.loading'),
-      save: t('basicInfo.companyLink.save'),
-      saving: t('basicInfo.companyLink.saving'),
-      success: t('basicInfo.companyLink.success'),
-      error: t('basicInfo.companyLink.error'),
-      currentLabel: t('basicInfo.companyLink.currentLabel'),
-    },
-  }, isEditing);
+  }, [fallbackCompanyId, project]);
 
   const handleSave = useCallback(async () => {
     try {
@@ -227,7 +233,6 @@ export function GeneralProjectTab({
       setSaveError(null);
 
       if (isCreateMode) {
-        // ADR-232: linkedCompanyId from entity link hook, companyId from auth context
         const companyPayload = companyLink.getPayload();
         const effectiveLinkedCompanyId = companyPayload.linkedCompanyId ?? null;
         logger.info('Creating new project...', { data: projectData, linkedCompanyId: effectiveLinkedCompanyId });
@@ -237,8 +242,8 @@ export function GeneralProjectTab({
           title: projectData.licenseTitle,
           description: projectData.description,
           status: projectData.status || 'planning',
-          companyId: fallbackCompanyId, // Tenant isolation — always from auth
-          linkedCompanyId: effectiveLinkedCompanyId, // Business link — from user selection
+          companyId: fallbackCompanyId,
+          linkedCompanyId: effectiveLinkedCompanyId,
         });
 
         if (!result.success || !result.projectId) {
@@ -248,40 +253,53 @@ export function GeneralProjectTab({
         logger.info('Project created successfully', { projectId: result.projectId });
         setIsEditing(false);
         onProjectCreated?.(result.projectId);
-
-      } else {
-        // 🏢 ENTERPRISE: Standard update flow via versioned save
-        logger.info('Updating project...', { data: projectData });
-        // SPEC-256A: Use versioned.save for conflict detection on manual save too
-        await versioned.save(projectData);
-
-        logger.info('Project updated successfully');
-        setIsEditing(false);
+        return;
       }
 
+      const payload = buildUpdatePayload(projectData);
+      await previewBeforeMutate(payload, async () => {
+        setIsSaving(true);
+        try {
+          logger.info('Updating project...', { data: projectData, payload });
+          await versioned.save(projectData);
+          logger.info('Project updated successfully');
+          setIsEditing(false);
+        } finally {
+          setIsSaving(false);
+        }
+      });
     } catch (error) {
-      logger.error('Error saving project:', { error: error });
+      logger.error('Error saving project:', { error });
       setSaveError(error instanceof Error ? error.message : 'Failed to save project');
     } finally {
       setIsSaving(false);
     }
-  }, [projectData, project.id, project.companyId, setIsEditing, isCreateMode, onProjectCreated, companyLink]);
+  }, [
+    buildUpdatePayload,
+    companyLink,
+    fallbackCompanyId,
+    isCreateMode,
+    onProjectCreated,
+    previewBeforeMutate,
+    project.id,
+    projectData,
+    setIsEditing,
+    versioned,
+  ]);
 
-  // Register save callback with parent so header Save button works
   useEffect(() => {
     if (registerSaveCallback) {
       registerSaveCallback(handleSave);
     }
   }, [registerSaveCallback, handleSave]);
 
-  // 🏢 SPEC-256A: ConflictDialog handlers
   const handleConflictReload = useCallback(() => {
     router.refresh();
   }, [router]);
 
   const handleConflictForceSave = useCallback(async () => {
     await versioned.forceSave(projectData);
-  }, [versioned, projectData]);
+  }, [projectData, versioned]);
 
   const handleConflictClose = useCallback(() => {
     versioned.resetConflict();
@@ -289,7 +307,6 @@ export function GeneralProjectTab({
 
   return (
     <>
-      {/* 🏢 SPEC-256A: Version conflict dialog */}
       <ConflictDialog
         open={versioned.isConflicted}
         conflict={versioned.conflictData}
@@ -297,6 +314,9 @@ export function GeneralProjectTab({
         onForceSave={handleConflictForceSave}
         onClose={handleConflictClose}
       />
+
+      {ImpactDialog}
+
       <GeneralProjectHeader
         autoSaving={autoSaving}
         lastSaved={lastSaved}
@@ -311,7 +331,6 @@ export function GeneralProjectTab({
       />
 
       <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>
-        {/* ADR-200: Company linking via centralized useEntityLink hook */}
         <EntityLinkCard key={companyLink.linkCardKey} {...companyLink.linkCardProps} />
 
         <BasicProjectInfoTab
@@ -326,7 +345,6 @@ export function GeneralProjectTab({
           setData={setProjectData}
           isEditing={isEditing}
         />
-
       </section>
     </>
   );

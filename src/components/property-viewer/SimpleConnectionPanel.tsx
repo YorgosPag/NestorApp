@@ -11,6 +11,7 @@ import { ConnectionControls } from './connection-panel/ConnectionControls';
 import { GroupManager } from './connection-panel/GroupManager';
 import { Legend } from './connection-panel/Legend';
 import '@/lib/design-system';
+import { PromptDialog } from '@/components/ui/PromptDialog';
 
 interface SimpleConnectionPanelProps {
     properties: Property[];
@@ -30,7 +31,8 @@ export function SimpleConnectionPanel(props: SimpleConnectionPanelProps) {
         toggleConnectionMode,
         createGroup,
         clearConnections,
-        deleteGroup
+        deleteGroup,
+        promptDialogProps
     } = useConnectionPanelState(props);
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('properties');
@@ -56,6 +58,7 @@ export function SimpleConnectionPanel(props: SimpleConnectionPanelProps) {
             />
             
             <Legend />
+            <PromptDialog {...promptDialogProps} />
         </div>
     );
 }

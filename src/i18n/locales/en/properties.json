@@ -625,7 +625,10 @@
       "cancelConnection": "Cancel Connection",
       "newConnection": "New Connection",
       "createGroup": "Create Group ({count} selected)",
-      "clearConnections": "Clear Connections"
+      "clearConnections": "Clear Connections",
+      "createGroupTitle": "Create Group",
+      "groupNameLabel": "Group name",
+      "groupNamePlaceholder": "Enter group name"
     },
     "connectionTypes": {
       "sameBuilding": "Same Building",

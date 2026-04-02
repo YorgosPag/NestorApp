@@ -97,6 +97,8 @@ export function useProjectsPageState(initialProjects: Project[]) {
     filterFn: stableFilterFn,
     extraUrlParams: ['tab'],
     syncCompareFields: ['name', 'title', 'status'],
+    // Avoid mounting the full project details/tab graph on initial page load.
+    autoSelectFirstItem: false,
   };
 
   const {

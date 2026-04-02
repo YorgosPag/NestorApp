@@ -26,6 +26,8 @@ import type { LucideIcon } from 'lucide-react';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('ViewerTools');
@@ -94,6 +96,7 @@ export function ViewerTools({
 }: ViewerToolsProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('properties');
+  const { confirm, dialogProps } = useConfirmDialog();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -147,14 +150,19 @@ export function ViewerTools({
   };
 
   // Handle property actions
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (!selectedPropertyId || isReadOnly) return;
-    
-    if (confirm(t('viewer.confirm.deleteProperty'))) {
-      onPropertySelect?.(null);
-      // TODO: Implement actual deletion
-      logger.info('Delete property', { selectedPropertyId });
-    }
+
+    const confirmed = await confirm({
+      title: t('viewer.actions.deleteSelected'),
+      description: t('viewer.confirm.deleteProperty'),
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+
+    onPropertySelect?.(null);
+    // TODO: Implement actual deletion
+    logger.info('Delete property', { selectedPropertyId });
   };
 
   const handleCopySelected = () => {
@@ -273,6 +281,7 @@ export function ViewerTools({
         {selectedPropertyId && <span className={colors.text.success}>• {t('viewer.status.selected')}: {selectedPropertyId}</span>}
         {isReadOnly && <span className={colors.text.warning}>• {t('viewer.status.readOnly')}</span>}
       </div>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }
