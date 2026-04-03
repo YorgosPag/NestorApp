@@ -1,0 +1,699 @@
+{
+  "tabs": {
+    "timeline": {
+      "fullscreen": "Fullscreen",
+      "header": {
+        "title": "Building Timeline",
+        "subtitle": "Progress tracking and milestones",
+        "completedCount": "{completed} / {total} completed"
+      },
+      "overallProgress": {
+        "title": "Overall Progress",
+        "label": "Overall Building Progress",
+        "completed": "Completed",
+        "inProgress": "In Progress",
+        "pending": "Pending",
+        "daysRemaining": "Days Remaining"
+      },
+      "milestones": {
+        "title": "Detailed Milestones",
+        "projectStart": "Project Start",
+        "projectStartDesc": "Construction begins and first works on site",
+        "foundation": "Foundation",
+        "foundationDesc": "Excavation, concrete foundation and waterproofing",
+        "structure": "Structure",
+        "structureDesc": "Frame construction, slabs and columns",
+        "walls": "Masonry & Plastering",
+        "wallsDesc": "External and internal masonry, plaster works",
+        "systems": "M&E Installations",
+        "systemsDesc": "Electrical, plumbing, heating, air conditioning",
+        "finishing": "Finishing Works",
+        "finishingDesc": "Flooring, painting, windows, sanitary ware",
+        "delivery": "Delivery",
+        "deliveryDesc": "Final inspection and building handover"
+      },
+      "milestone": {
+        "progressLabel": "Milestone progress",
+        "nextSteps": "Next steps:",
+        "completedAt": "Completed on {date}"
+      },
+      "milestoneExport": {
+        "export": "Export",
+        "pdf": "PDF (Report)",
+        "excel": "Excel (Data)",
+        "exporting": "Exporting..."
+      },
+      "milestoneDialog": {
+        "addTitle": "New Milestone",
+        "editTitle": "Edit Milestone",
+        "addButton": "Add",
+        "fields": {
+          "title": "Title",
+          "titlePlaceholder": "e.g. Foundation",
+          "type": "Type",
+          "date": "Date",
+          "status": "Status",
+          "progress": "Progress",
+          "description": "Description",
+          "descriptionPlaceholder": "Optional description..."
+        },
+        "types": {
+          "start": "Start",
+          "construction": "Construction",
+          "systems": "M&E Installations",
+          "finishing": "Finishing",
+          "delivery": "Delivery"
+        },
+        "validation": {
+          "titleRequired": "Title is required",
+          "dateRequired": "Date is required"
+        }
+      },
+      "status": {
+        "completed": "Completed",
+        "inProgress": "In progress",
+        "pending": "Pending",
+        "delayed": "Delayed",
+        "unknown": "Unknown"
+      },
+      "forecast": {
+        "title": "Completion Forecast",
+        "originalSchedule": "Original schedule",
+        "currentForecast": "Current forecast",
+        "delay": "Delay",
+        "days": "+{days} days",
+        "tip": "Tip:",
+        "tipContent": "Speeding up M&E works could reduce delay to 2-3 days."
+      },
+      "criticalPath": {
+        "title": "Critical Path",
+        "noData": "No critical path data",
+        "noDataDesc": "Add task dependencies to compute the critical path.",
+        "noCriticalTasks": "No critical tasks identified",
+        "noCriticalDesc": "All tasks have float — no single chain determines the project end.",
+        "delayImpact": "+{days}d delay",
+        "floatDays": "{days}d float",
+        "critical": "Critical",
+        "cyclicWarning": "Circular dependency",
+        "viewAll": "View all in Dashboard",
+        "loading": "Computing critical path..."
+      },
+      "views": {
+        "milestones": "Milestones",
+        "gantt": "Gantt",
+        "dashboard": "Dashboard"
+      },
+      "dashboard": {
+        "title": "Schedule Dashboard",
+        "lastUpdated": "Last updated",
+        "refresh": "Refresh",
+        "export": "Export",
+        "exportPdf": "PDF",
+        "exportExcel": "Excel",
+        "kpis": {
+          "title": "Schedule Overview",
+          "overallProgress": "Overall Progress",
+          "spi": "SPI",
+          "spiDesc": "Schedule Performance Index",
+          "cpi": "CPI",
+          "cpiDesc": "Cost Performance Index",
+          "daysRemaining": "Days Remaining",
+          "phasesOnTrack": "Phases On Track",
+          "delayedTasks": "Delayed Tasks",
+          "criticalPathLength": "Critical Path",
+          "criticalPathDays": "{days} days",
+          "totalTasks": "tasks",
+          "vsPlan": "vs Plan"
+        },
+        "sCurve": {
+          "title": "S-Curve Analysis",
+          "pv": "Planned Value",
+          "ev": "Earned Value",
+          "ac": "Actual Cost",
+          "today": "Today",
+          "ariaLabel": "S-Curve chart showing Planned Value, Earned Value, and Actual Cost over time",
+          "colDate": "Date"
+        },
+        "variance": {
+          "title": "Schedule Variance",
+          "expandAll": "Expand all",
+          "collapseAll": "Collapse all",
+          "colName": "Name",
+          "colPlannedStart": "Planned Start",
+          "colPlannedEnd": "Planned End",
+          "colActualStart": "Actual Start",
+          "colActualEnd": "Actual End",
+          "colVariance": "Variance",
+          "colStatus": "Status",
+          "colProgress": "Progress",
+          "expandPhase": "Expand {{name}}",
+          "collapsePhase": "Collapse {{name}}"
+        },
+        "lookahead": {
+          "title": "Lookahead",
+          "weeks2": "2 Weeks",
+          "weeks4": "4 Weeks",
+          "empty": "No tasks scheduled in the next {{weeks}} weeks",
+          "colTask": "Task",
+          "colPhase": "Phase",
+          "colStart": "Start",
+          "colEnd": "End",
+          "colDuration": "Duration",
+          "colStatus": "Status"
+        },
+        "ganttCard": {
+          "title": "Gantt Chart",
+          "desc": "View interactive Gantt chart and export",
+          "cta": "View Gantt & Export"
+        },
+        "exportOwnerPdf": "Owner Report (PDF)",
+        "exportGanttTable": "Gantt Table (PDF)",
+        "criticalPath": {
+          "title": "Critical Path Analysis",
+          "description": "Tasks with zero float that determine project duration",
+          "colTask": "Task",
+          "colPhase": "Phase",
+          "colDuration": "Duration",
+          "colES": "ES",
+          "colEF": "EF",
+          "colLS": "LS",
+          "colLF": "LF",
+          "colFloat": "Float",
+          "colStatus": "Status",
+          "days": "{days}d",
+          "critical": "Critical",
+          "cyclicDep": "Circular dep.",
+          "pathLength": "Critical Path Length",
+          "empty": "No critical path — add dependencies between tasks"
+        },
+        "delayBreakdown": {
+          "title": "Delay Breakdown by Phase",
+          "delayed": "Delayed",
+          "blocked": "Blocked",
+          "tasks": "tasks",
+          "empty": "No delayed or blocked tasks",
+          "emptyDesc": "All tasks are on schedule.",
+          "weather": "Weather",
+          "materials": "Materials",
+          "permits": "Permits",
+          "subcontractor": "Subcontractor",
+          "other": "Other",
+          "unspecified": "Unspecified",
+          "ariaLabel": "Stacked bar chart showing delay reasons by construction phase"
+        },
+        "baseline": {
+          "title": "Baseline Snapshots",
+          "saveBaseline": "Save Baseline",
+          "saveDialog": {
+            "title": "Save Baseline Snapshot",
+            "description": "Capture the current schedule as a baseline for future comparison.",
+            "nameLabel": "Baseline Name",
+            "namePlaceholder": "e.g. Initial Schedule",
+            "descriptionLabel": "Description",
+            "descriptionPlaceholder": "Optional notes about this baseline...",
+            "save": "Save",
+            "cancel": "Cancel",
+            "saving": "Saving...",
+            "maxReached": "Maximum 10 baselines per building. Delete an old baseline first."
+          },
+          "list": {
+            "empty": "No baselines saved",
+            "emptyDesc": "Save a baseline to track schedule changes over time.",
+            "version": "v{{version}}",
+            "compare": "Compare",
+            "comparing": "Comparing",
+            "stopComparing": "Stop comparing",
+            "delete": "Delete",
+            "deleteConfirm": "Delete baseline \"{{name}}\"? This cannot be undone.",
+            "phases": "{{count}} phases",
+            "tasks": "{{count}} tasks"
+          },
+          "variance": {
+            "comparingTo": "Comparing to: {{name}}",
+            "clearComparison": "Clear",
+            "colBaselineStart": "Baseline Start",
+            "colBaselineEnd": "Baseline End",
+            "colBaselineVariance": "vs Baseline"
+          }
+        },
+        "resourceHistogram": {
+          "title": "Resource Loading",
+          "empty": "No resource assignments",
+          "emptyDesc": "Assign workers or equipment to tasks to see resource loading.",
+          "hoursPerWeek": "Hours / Week",
+          "capacity": "40h Capacity",
+          "total": "Total",
+          "ariaLabel": "Stacked bar chart showing resource hours per week",
+          "colWeek": "Week"
+        },
+        "resourceUtilization": {
+          "title": "Resource Utilization",
+          "totalResources": "Total Resources",
+          "avgUtilization": "Avg. Utilization",
+          "overAllocated": "Over-Allocated"
+        },
+        "ownerReport": {
+          "title": "Project Status Report",
+          "overallProgress": "Overall Project Progress",
+          "expectedCompletion": "Expected Completion",
+          "daysRemaining": "Days Remaining",
+          "milestonesTitle": "Milestones",
+          "phasesTitle": "Construction Phases",
+          "colTitle": "Title",
+          "colDate": "Date",
+          "colStatus": "Status",
+          "colProgress": "Progress",
+          "colPhase": "Phase",
+          "colPlannedEnd": "Planned End",
+          "colCode": "Code",
+          "statusOnTrack": "On Track",
+          "statusDelayed": "Delayed",
+          "statusBlocked": "Blocked",
+          "statusCompleted": "Completed"
+        },
+        "empty": {
+          "noPhases": "No construction phases defined",
+          "noPhasesDesc": "Create phases in the Gantt view to see schedule analytics.",
+          "goToGantt": "Go to Gantt",
+          "notStarted": "Construction has not started yet",
+          "noBOQ": "No BOQ cost data linked",
+          "noBOQDesc": "Link BOQ items to phases for cost analytics. S-curve shows progress only."
+        },
+        "tooltips": {
+          "overallProgress": "The weighted completion percentage of all construction phases.\nCalculated as: Σ(phase progress × phase weight) / Σ(weights).\nCompared against the expected progress based on elapsed time.",
+          "spi": "Schedule Performance Index — measures schedule efficiency.\nFormula: SPI = EV / PV (Earned Value ÷ Planned Value).\n• SPI = 1.0 → On schedule\n• SPI > 1.0 → Ahead of schedule\n• SPI < 1.0 → Behind schedule\nPMBOK standard (PMI). Traffic light: Green ≥ 0.95, Amber ≥ 0.85, Red < 0.85.",
+          "cpi": "Cost Performance Index — measures cost efficiency.\nFormula: CPI = EV / AC (Earned Value ÷ Actual Cost).\n• CPI = 1.0 → On budget\n• CPI > 1.0 → Under budget\n• CPI < 1.0 → Over budget\nPMBOK standard (PMI). Traffic light: Green ≥ 0.95, Amber ≥ 0.85, Red < 0.85.",
+          "daysRemaining": "Calendar days until the latest planned phase end date.\nCalculated as: max(phase planned end dates) − today.\nTraffic light: Green = 0 (complete), Amber ≤ 7 days, Gray > 7 days.",
+          "phasesOnTrack": "Number of construction phases with status 'In Progress' or 'Completed' without delay.\nTraffic light: Green > 80%, Amber ≥ 50%, Red < 50%.",
+          "delayedTasks": "Count of tasks with status 'Delayed' out of total tasks.\nTraffic light: Green = 0, Amber ≤ 3, Red > 3.",
+          "criticalPathLength": "Total duration (in days) of the longest path through the project network.\nThe critical path determines the minimum project duration.\nAny delay in a critical task delays the entire project.",
+          "sCurveTitle": "S-Curve (Earned Value Management) — shows cumulative cost/progress over time.\nThe 'S' shape is typical: slow start, rapid middle, slow finish.\nUsed for early detection of schedule and cost deviations.",
+          "pv": "Planned Value (PV) — the budgeted cost of work scheduled.\nAlso known as BCWS (Budgeted Cost of Work Scheduled).\nRepresents the baseline: how much work should have been done by now.",
+          "ev": "Earned Value (EV) — the budgeted cost of work actually performed.\nAlso known as BCWP (Budgeted Cost of Work Performed).\nMeasures actual progress in monetary terms.",
+          "ac": "Actual Cost (AC) — the total cost actually incurred.\nAlso known as ACWP (Actual Cost of Work Performed).\nRepresents real expenditure for work completed.",
+          "sv": "Schedule Variance (SV) = EV − PV.\n• SV > 0 → Ahead of schedule\n• SV = 0 → On schedule\n• SV < 0 → Behind schedule",
+          "svShort": "(Schedule Variance = EV − PV)",
+          "cv": "Cost Variance (CV) = EV − AC.\n• CV > 0 → Under budget\n• CV = 0 → On budget\n• CV < 0 → Over budget",
+          "cvShort": "(Cost Variance = EV − AC)",
+          "pvShort": "(Planned Value — BCWS)",
+          "evShort": "(Earned Value — BCWP)",
+          "acShort": "(Actual Cost — ACWP)",
+          "criticalPathTitle": "Critical Path Method (CPM) — identifies the longest sequence of dependent tasks.\nTasks on the critical path have zero float: any delay cascades to the project end date.\nNon-critical tasks have float (slack) that allows some delay without impact.",
+          "es": "Early Start (ES) — the earliest possible date a task can begin.\nDetermined by the forward pass of the CPM algorithm.\nDepends on predecessor task completion dates.",
+          "ef": "Early Finish (EF) — the earliest possible date a task can be completed.\nFormula: EF = ES + Duration.\nDetermined during the forward pass of CPM.",
+          "ls": "Late Start (LS) — the latest date a task can begin without delaying the project.\nDetermined by the backward pass of the CPM algorithm.\nFormula: LS = LF − Duration.",
+          "lf": "Late Finish (LF) — the latest date a task can finish without delaying the project.\nDetermined during the backward pass of CPM.\nDepends on successor task requirements.",
+          "float": "Total Float (Slack) — the maximum time a task can be delayed without delaying the project.\nFormula: Float = LS − ES = LF − EF.\n• Float = 0 → Critical task (on critical path)\n• Float > 0 → Non-critical (has scheduling flexibility)",
+          "duration": "Task duration in working days.\nThe time required to complete the task from start to finish.",
+          "varianceTitle": "Schedule Variance Analysis — compares planned vs actual dates per phase/task.\nPositive variance = delay (days behind schedule).\nNegative variance = ahead of schedule.",
+          "lookaheadTitle": "Lookahead Schedule — upcoming tasks within the selected time window (2 or 4 weeks).\nUsed in weekly coordination meetings to plan near-term work.",
+          "baselineTitle": "Baseline Snapshots — saved copies of the schedule at specific points in time.\nUsed to track schedule drift: compare current dates against the original plan.\nIndustry standard: save baseline before construction start, after major changes.",
+          "delayBreakdownTitle": "Delay Breakdown — categorizes delayed/blocked tasks by cause.\nHelps identify systemic issues (e.g., recurring permit delays, material shortages).",
+          "resourceHistogramTitle": "Resource Histogram — shows allocated hours per resource per week.\nThe 40h capacity line indicates full-time utilization.\nBars exceeding capacity indicate over-allocation.",
+          "resourceUtilizationTitle": "Resource Utilization KPIs — summary of resource allocation efficiency.\nAvg. Utilization = mean hours assigned / capacity across all resources.\nOver-Allocated = resources exceeding 40h/week capacity."
+        }
+      },
+      "gantt": {
+        "title": "Gantt Chart",
+        "toolbar": {
+          "zoom": "Zoom",
+          "day": "Day",
+          "week": "Week",
+          "month": "Month",
+          "quarter": "Quarter",
+          "year": "Year",
+          "today": "Today"
+        },
+        "status": {
+          "planning": "Planning",
+          "notStarted": "Not Started",
+          "inProgress": "In Progress",
+          "completed": "Completed",
+          "delayed": "Delayed",
+          "blocked": "Blocked",
+          "onHold": "On Hold"
+        },
+        "phases": {
+          "excavationFoundation": "Excavation & Foundation",
+          "structure": "Structure (Load-Bearing Frame)",
+          "masonryRoofing": "Masonry & Roofing",
+          "mecInstallations": "M&E Installations",
+          "insulationPlastering": "Insulation & Plastering",
+          "flooringPainting": "Flooring & Painting",
+          "fixturesFinishes": "Fixtures & Finishes",
+          "landscapingHandover": "Landscaping & Handover"
+        },
+        "tasks": {
+          "excavation": "Foundation excavation",
+          "reinforcement": "Foundation reinforcement",
+          "concretePour": "Foundation concrete pour",
+          "basementWalls": "Basement walls",
+          "columns": "Columns",
+          "beamsSlabs": "Beams & floor slabs",
+          "staircase": "Staircase",
+          "externalWalls": "External masonry",
+          "internalWalls": "Internal masonry",
+          "roofStructure": "Roof construction",
+          "plumbing": "Plumbing installations",
+          "electrical": "Electrical installations",
+          "hvac": "Heating/Air conditioning",
+          "elevator": "Elevator installation",
+          "thermalInsulation": "Thermal insulation",
+          "waterproofing": "Waterproofing",
+          "internalPlastering": "Internal plastering",
+          "externalPlastering": "External plastering",
+          "tiling": "Floor tiling",
+          "woodenFloors": "Wooden floors",
+          "internalPainting": "Internal painting",
+          "externalPainting": "External painting",
+          "doorsFitting": "Doors & windows fitting",
+          "kitchenBathroom": "Kitchen & bathroom",
+          "lighting": "Lighting",
+          "landscaping": "Landscaping",
+          "finalInspection": "Final inspection",
+          "handover": "Handover"
+        },
+        "summary": {
+          "totalPhases": "Total Phases",
+          "completedPhases": "Completed",
+          "delayedPhases": "Delayed",
+          "overallProgress": "Overall Progress"
+        },
+        "empty": "No construction tasks available.",
+        "emptyHint": "Click «New Phase» to create the first construction phase.",
+        "actionsAriaLabel": "Gantt actions",
+        "fullscreenActionsAriaLabel": "Gantt fullscreen actions",
+        "actions": {
+          "newPhase": "New Phase",
+          "newTask": "New Task",
+          "loadSamples": "Load Samples"
+        },
+        "contextMenu": {
+          "editPhase": "Edit Phase",
+          "editTask": "Edit Task",
+          "newPhase": "New Phase",
+          "newTask": "New Task",
+          "changeColor": "Change Color",
+          "colorPickerTitle": "Choose Bar Color",
+          "delete": "Delete"
+        },
+        "tooltip": {
+          "start": "Start",
+          "end": "End",
+          "duration": "Duration",
+          "progress": "Progress",
+          "days": "days"
+        },
+        "export": {
+          "export": "Export",
+          "pdf": "PDF (Document)",
+          "png": "PNG (Image)",
+          "svg": "SVG (Vector)",
+          "excel": "Excel (Data)",
+          "exporting": "Exporting...",
+          "success": "Export completed",
+          "error": "Export error"
+        },
+        "dialog": {
+          "createPhase": "Create Phase",
+          "editPhase": "Edit Phase",
+          "createTask": "Create Task",
+          "editTask": "Edit Task",
+          "name": "Name",
+          "code": "Code",
+          "status": "Status",
+          "startDate": "Start Date",
+          "endDate": "End Date",
+          "progress": "Progress",
+          "description": "Description",
+          "phaseNamePlaceholder": "e.g. Excavation & Foundation",
+          "taskNamePlaceholder": "e.g. Foundation concrete pour",
+          "descriptionPlaceholder": "Optional description...",
+          "phase": "Phase",
+          "selectPhase": "Select phase...",
+          "cancel": "Cancel",
+          "save": "Save",
+          "delayReason": "Delay Reason",
+          "delayReasonPlaceholder": "Select reason...",
+          "delayNote": "Delay Notes",
+          "delayNotePlaceholder": "Additional details about the delay...",
+          "resources": {
+            "title": "Assigned Resources",
+            "addWorker": "Add Worker",
+            "addEquipment": "Add Equipment",
+            "selectWorker": "Select worker...",
+            "equipmentPlaceholder": "e.g. Crane #2, Excavator...",
+            "hours": "hrs",
+            "add": "Add",
+            "remove": "Remove",
+            "noWorkers": "No workers available",
+            "maxReached": "Maximum 20 resources per task.",
+            "loading": "Loading resources...",
+            "overAllocated": "Over-allocated"
+          }
+        },
+        "delayReasons": {
+          "weather": "Weather",
+          "materials": "Materials",
+          "permits": "Permits",
+          "subcontractor": "Subcontractor",
+          "other": "Other"
+        },
+        "validation": {
+          "nameRequired": "Name is required",
+          "startDateRequired": "Start date is required",
+          "endDateRequired": "End date is required",
+          "endAfterStart": "End date must be after start date",
+          "phaseRequired": "Phase selection is required"
+        },
+        "templates": {
+          "phases": {
+            "sitePreparation": "Site Preparation",
+            "foundation": "Foundation / Excavation",
+            "structuralFrame": "Structural Frame",
+            "roofing": "Roofing",
+            "externalWalls": "External Walls / Masonry",
+            "plumbing": "Plumbing",
+            "electrical": "Electrical",
+            "hvac": "HVAC",
+            "insulation": "Insulation",
+            "plastering": "Plastering / Rendering",
+            "flooring": "Flooring / Tiling",
+            "painting": "Painting",
+            "joinery": "Joinery / Fixtures",
+            "landscaping": "Landscaping",
+            "inspection": "Final Inspection / Handover"
+          },
+          "tasks": {
+            "sitePreparation": {
+              "siteSurvey": "Site Survey",
+              "soilTesting": "Soil / Geotechnical Testing",
+              "demolition": "Demolition",
+              "siteClearing": "Site Clearing"
+            },
+            "foundation": {
+              "excavation": "Foundation Excavation",
+              "reinforcement": "Reinforcement Placement",
+              "concreting": "Foundation Concreting",
+              "waterproofing": "Foundation Waterproofing",
+              "backfill": "Backfill"
+            },
+            "structuralFrame": {
+              "columnConstruction": "Column Construction",
+              "beamConstruction": "Beam Construction",
+              "slabPouring": "Slab Pouring",
+              "structuralCuring": "Concrete Curing"
+            },
+            "roofing": {
+              "roofFraming": "Roof Framing",
+              "roofInsulation": "Roof Insulation",
+              "roofWaterproofing": "Roof Waterproofing",
+              "roofTiling": "Roof Tiling / Covering",
+              "gutters": "Gutters & Downpipes"
+            },
+            "externalWalls": {
+              "brickwork": "Brickwork / Masonry",
+              "externalInsulation": "External Insulation",
+              "externalRendering": "External Rendering",
+              "facadeCladding": "Facade Cladding"
+            },
+            "plumbing": {
+              "waterSupply": "Water Supply",
+              "drainage": "Drainage",
+              "hotWater": "Hot Water / Boiler",
+              "fixtureInstallation": "Sanitary Fixture Installation"
+            },
+            "electrical": {
+              "mainPanel": "Main Panel",
+              "wiring": "Wiring",
+              "switchesSockets": "Switches & Sockets",
+              "lighting": "Lighting",
+              "grounding": "Grounding"
+            },
+            "hvac": {
+              "ductwork": "Ductwork",
+              "unitInstallation": "Unit Installation",
+              "piping": "Piping",
+              "commissioning": "Commissioning"
+            },
+            "insulation": {
+              "thermalInsulation": "Thermal Insulation",
+              "soundInsulation": "Sound Insulation",
+              "moistureBarrier": "Moisture Barrier"
+            },
+            "plastering": {
+              "internalPlastering": "Internal Plastering",
+              "externalPlastering": "External Plastering",
+              "decorativePlaster": "Decorative Plaster"
+            },
+            "flooring": {
+              "screed": "Screed",
+              "tileInstallation": "Tile Installation",
+              "marbleInstallation": "Marble Installation",
+              "woodFlooring": "Wood Flooring"
+            },
+            "painting": {
+              "priming": "Priming",
+              "internalPainting": "Internal Painting",
+              "externalPainting": "External Painting",
+              "specialFinishes": "Special Finishes"
+            },
+            "joinery": {
+              "windowInstallation": "Window Installation",
+              "doorInstallation": "Door Installation",
+              "kitchenCabinets": "Kitchen Cabinets",
+              "wardrobes": "Wardrobes"
+            },
+            "landscaping": {
+              "outdoorPaving": "Outdoor Paving",
+              "fencing": "Fencing",
+              "gardenPlanting": "Garden Planting",
+              "irrigationSystem": "Irrigation System"
+            },
+            "inspection": {
+              "mechanicalInspection": "Mechanical Inspection",
+              "electricalInspection": "Electrical Inspection",
+              "fireInspection": "Fire Safety Inspection",
+              "finalHandover": "Final Handover"
+            }
+          },
+          "combobox": {
+            "searchPhase": "Search or type a new phase...",
+            "searchTask": "Search or type a new task...",
+            "predefined": "Predefined",
+            "custom": "Use: \"{value}\"",
+            "noResults": "No results found"
+          }
+        }
+      }
+    },
+    "analytics": {
+      "title": "Advanced Analytics",
+      "subtitle": "Advanced data analysis and KPIs",
+      "exportReport": "Export Report",
+      "timeRange": {
+        "placeholder": "Select time range",
+        "lastMonth": "Last month",
+        "last3Months": "Last 3 months",
+        "last6Months": "Last 6 months",
+        "lastYear": "Last year"
+      },
+      "views": {
+        "overview": "Overview",
+        "financial": "Financial",
+        "progress": "Progress",
+        "comparison": "Comparison"
+      },
+      "kpi": {
+        "costEfficiency": "Cost Efficiency",
+        "timeEfficiency": "Time Efficiency",
+        "qualityScore": "Quality Score",
+        "roi": "ROI",
+        "profitMargin": "Profit Margin",
+        "riskLevel": "Risk Level",
+        "excellent": "Excellent",
+        "good": "Good",
+        "needsImprovement": "Needs improvement",
+        "exceptional": "Exceptional",
+        "aboveTarget": "Above target",
+        "withinTarget": "Within target",
+        "underControl": "Under control"
+      },
+      "comparison": {
+        "title": "Comparison with Similar Projects",
+        "metrics": {
+          "costPerSqm": "Cost/m²",
+          "completionTime": "Completion Time",
+          "workQuality": "Work Quality",
+          "efficiency": "Efficiency"
+        },
+        "current": "Current:",
+        "average": "Average:",
+        "better": "Better",
+        "worse": "Worse"
+      },
+      "progress": {
+        "title": "Progress Analysis",
+        "totalProgress": "Total Progress",
+        "efficiency": "Efficiency",
+        "daysDelay": "Days Delay",
+        "withinAcceptableLimits": "Within acceptable limits",
+        "forecastsAndRecommendations": "Forecasts & Recommendations",
+        "positivePoints": "Positive Points:",
+        "positive1": "Work quality above standards",
+        "positive2": "Material costs within budget",
+        "positive3": "Work team efficient",
+        "suggestedImprovements": "Suggested Improvements:",
+        "improvement1": "Accelerate M&E installations",
+        "improvement2": "Pre-order finishing materials",
+        "improvement3": "Coordination with third parties (elevators)"
+      },
+      "financial": {
+        "totalBudget": "Total Budget",
+        "spentCost": "Spent Cost",
+        "remainingBudget": "Remaining Budget",
+        "costPerSqm": "Cost per m²",
+        "cashFlows": "Cash Flows",
+        "monthlyExpense": "Monthly expense:",
+        "cumulative": "Cumulative:",
+        "withinBudget": "Within budget",
+        "attention": "Attention"
+      },
+      "overview": {
+        "costAnalysis": "Cost Analysis",
+        "analysis": "Analysis",
+        "analysisText": "Material costs are 5% higher than market average. Renegotiation with suppliers is recommended.",
+        "progressVsPlanned": "Progress vs Planning",
+        "planned": "Planned:",
+        "actual": "Actual:"
+      }
+    }
+  },
+  "analytics": {
+    "costCategories": {
+      "materials": "Materials",
+      "labor": "Labor",
+      "equipment": "Equipment",
+      "other": "Other"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    },
+    "riskLevels": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "common": {
+    "confirm": "Επιβεβαίωση",
+    "cancel": "Ακύρωση"
+  },
+  "toolbar": {
+    "title": "Εργαλεία Σχεδίασης",
+    "select": "Επιλογή",
+    "pan": "Μετακίνηση Προβολής",
+    "line": "Γραμμή",
+    "rectangle": "Ορθογώνιο",
+    "circle": "Κύκλος",
+    "polyline": "Πολυγραμμή",
+    "draw": "Σχεδίαση",
+    "edit": "Επεξεργασία",
+    "status": "Κατάσταση:",
+    "type": "Τύπος:",
+    "duplicate": "Αντιγραφή ({key})",
+    "delete": "Διαγραφή ({key})",
+    "undo": "Αναίρεση ({key})",
+    "redo": "Επανάληψη ({key})",
+    "duplicateAction": "Αντιγραφή",
+    "deleteAction": "Διαγραφή",
+    "undoAction": "Αναίρεση",
+    "redoAction": "Επανάληψη",
+    "dragToMove": "Σύρετε για μετακίνηση",
+    "savePolygon": "Αποθήκευση πολυγώνου",
+    "needMorePoints": "Χρειάζονται τουλάχιστον 3 σημεία",
+    "cancelDrawing": "Ακύρωση σχεδίασης",
+    "ariaLabels": {
+      "drawingModes": "Λειτουργίες σχεδίασης",
+      "overlayType": "Τύπος επικάλυψης",
+      "overlayActions": "Ενέργειες επικάλυψης",
+      "historyControls": "Έλεγχοι ιστορικού"
+    }
+  },
+  "toolbarStatus": {
+    "tool": "Εργαλείο",
+    "zoom": "Ζουμ",
+    "snap": "Snap",
+    "on": "ΕΝΕΡΓΟ",
+    "off": "ΑΝΕΝΕΡΓΟ",
+    "commands": "Εντολές",
+    "coordinates": "Συντεταγμένες",
+    "shortcutsFallback": "D=Χάρακας | W=Παράθυρο Ζουμ | +/-=Ζουμ | F9=Πλέγμα | ESC=Άκυρο",
+    "unknownTool": "Άγνωστο"
+  },
+  "actionButtons": {
+    "showGrid": "Εμφάνιση Πλέγματος",
+    "hideGrid": "Απόκρυψη Πλέγματος",
+    "autoCropOn": "Auto-Crop ΟΝ",
+    "autoCropOff": "Auto-Crop OFF",
+    "showGuides": "Εμφάνιση Οδηγών",
+    "hideGuides": "Απόκρυψη Οδηγών",
+    "enterFullscreen": "Πλήρης Οθόνη",
+    "exitFullscreen": "Έξοδος Πλήρους Οθόνης"
+  },
+  "loadingStates": {
+    "retry": "Δοκιμή ξανά",
+    "loading": "Φόρτωση...",
+    "companies": {
+      "loading": "Φόρτωση εταιρειών...",
+      "error": "Σφάλμα φόρτωσης: {error}",
+      "retry": "Ξαναδοκιμή",
+      "empty": "Δεν βρέθηκαν εταιρείες στο σύστημα.",
+      "emptyHint": "Επικοινωνήστε με τη διαχείριση για προσθήκη εταιρειών."
+    },
+    "projects": {
+      "loading": "Φόρτωση έργων...",
+      "error": "Σφάλμα φόρτωσης έργων: {error}",
+      "empty": "Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.",
+      "emptyHint": "Επιλέξτε διαφορετική εταιρεία ή προσθέστε νέα έργα."
+    }
+  },
+  "autoSave": {
+    "title": "Αυτόματη αποθήκευση",
+    "saving": "Αποθήκευση...",
+    "error": "Σφάλμα αποθήκευσης",
+    "lastSaved": "Τελευταία:",
+    "waiting": "Αναμονή αλλαγών...",
+    "activeFor": "Αυτόματη αποθήκευση ενεργή για:",
+    "savingAllSettings": "Αποθήκευση όλων των ρυθμίσεων DXF...",
+    "errorSavingSettings": "Σφάλμα αποθήκευσης ρυθμίσεων"
+  },
+  "confirmations": {
+    "confirmed": "Ενέργεια επιβεβαιώθηκε",
+    "cancelled": "Ενέργεια ακυρώθηκε",
+    "irreversible": "⚠️ Αυτή η ενέργεια δεν μπορεί να αναιρεθεί!",
+    "delete": {
+      "confirm": "Διαγραφή",
+      "layer": {
+        "title": "Διαγραφή Layer",
+        "message": "Πρόκειται να διαγράψετε το layer \"{name}\".\n\n{count, plural, =0 {Το layer είναι κενό.} one {Θα διαγραφεί # οντότητα.} other {Θα διαγραφούν # οντότητες.}}\n\nΌλες οι οντότητες αυτού του layer θα χαθούν οριστικά."
+      },
+      "entity": {
+        "title": "Διαγραφή Οντότητας",
+        "message": "Πρόκειται να διαγράψετε την οντότητα \"{name}\".\n\nΗ οντότητα θα αφαιρεθεί οριστικά από το σχέδιο."
+      },
+      "colorGroup": {
+        "title": "Διαγραφή Color Group",
+        "message": "Πρόκειται να διαγράψετε το color group \"{name}\".\n\n{count, plural, =0 {Δεν υπάρχουν layers σε αυτό το group.} one {Θα διαγραφεί # layer.} other {Θα διαγραφούν # layers.}}\n\nΌλα τα layers και οι οντότητες αυτού του color group θα χαθούν οριστικά."
+      }
+    },
+    "merge": {
+      "confirm": "Συγχώνευση",
+      "entities": {
+        "title": "Συγχώνευση Οντοτήτων",
+        "message": "Πρόκειται να συγχωνεύσετε {count} οντότητες στην \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΟι πηγαίες οντότητες θα διαγραφούν και όλα τα χαρακτηριστικά τους θα μεταφερθούν στην οντότητα-στόχο."
+      },
+      "layers": {
+        "title": "Συγχώνευση Layers",
+        "message": "Πρόκειται να συγχωνεύσετε {count} layers στο \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΌλες οι οντότητες από τα πηγαία layers θα μεταφερθούν στο layer-στόχο και τα πηγαία layers θα διαγραφούν."
+      },
+      "colorGroups": {
+        "title": "Ιεραρχική Συγχώνευση Color Groups",
+        "message": "Πρόκειται να συγχωνεύσετε {count} color groups στο \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΌλα τα layers από τα πηγαία color groups θα μεταφερθούν στο color group-στόχο. Τα πηγαία color groups θα εξαφανιστούν αλλά τα layers και οι οντότητες θα διατηρηθούν."
+      }
+    }
+  },
+  "zoomControls": {
+    "zoomOut": "Σμίκρυνση (-{percentage}%) - Πληκτρολόγιο: -",
+    "zoomIn": "Μεγέθυνση (+{percentage}%) - Πληκτρολόγιο: +",
+    "inputTitle": "Ποσοστό zoom (1-99999%, δεκαδικά με . ή ,) - Πατήστε Enter ή κλικ εκτός για εφαρμογή",
+    "invalidInput": "Μη έγκυρη είσοδος zoom: \"{value}\". Επαναφορά σε {percentage}%"
+  },
+  "overlayToolbar": {
+    "objectSnap": "Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)",
+    "basicFunctions": "Ενεργοποίηση βασικών λειτουργιών"
+  },
+  "toolLabels": {
+    "line": "Γραμμή",
+    "rectangle": "Ορθογώνιο",
+    "circle": "Κύκλος",
+    "pan": "Μετακίνηση Προβολής",
+    "zoomWindow": "Παράθυρο Zoom",
+    "layering": "Επίπεδα"
+  },
+  "toolGroups": {
+    "selection": "Επιλογή",
+    "drawing": "Σχεδίαση",
+    "tools": "Εργαλεία",
+    "measurements": "Μετρήσεις",
+    "zoom": "Εστίαση",
+    "guides": "Οδηγοί"
+  },
+  "tools": {
+    "select": "Επιλογή",
+    "pan": "Μετακίνηση Προβολής",
+    "line": "Γραμμή",
+    "linePerpendicular": "Κάθετη Γραμμή",
+    "lineParallel": "Παράλληλη Γραμμή",
+    "rectangle": "Ορθογώνιο",
+    "circleRadius": "Κύκλος (Ακτίνα)",
+    "circleDiameter": "Κύκλος (Διάμετρος)",
+    "circle2pDiameter": "Κύκλος (2 Σημεία Διάμετρος)",
+    "circle3p": "Κύκλος (3 Σημεία)",
+    "circleChordSagitta": "Κύκλος (Χορδή-Βέλος)",
+    "circle2pRadius": "Κύκλος (2 Σημεία + Ακτίνα)",
+    "circleBestFit": "Κύκλος (Βέλτιστη Προσαρμογή)",
+    "circleTTT": "Κύκλος (Εφαπτόμενος σε 3 Γραμμές)",
+    "polyline": "Πολυγραμμή",
+    "polygon": "Πολύγωνο",
+    "arc": "Τόξο",
+    "arc3p": "Τόξο (3 Σημεία)",
+    "arcCenterStartEnd": "Τόξο (Κέντρο-Αρχή-Τέλος)",
+    "arcStartCenterEnd": "Τόξο (Αρχή-Κέντρο-Τέλος)",
+    "layering": "Επίπεδα",
+    "gripEdit": "Επεξεργασία Λαβών",
+    "move": "Μετακίνηση Αντικειμένων",
+    "rotate": "Περιστροφή",
+    "copy": "Αντιγραφή",
+    "delete": "Διαγραφή",
+    "measureDistance": "Μέτρηση Απόστασης",
+    "measureDistance2P": "Απόσταση 2 Σημείων",
+    "measureDistanceContinuous": "Συνεχόμενη Μέτρηση Απόστασης",
+    "measureArea": "Μέτρηση Εμβαδού",
+    "measureAngle": "Μέτρηση Γωνίας",
+    "measureAngleBasic": "Βασική Γωνία",
+    "measureAngleLineArc": "Γωνία Γραμμής-Τόξου",
+    "measureAngleTwoArcs": "Γωνία Δύο Τόξων",
+    "measureAngleMeasuregeom": "MeasureGeom",
+    "measureAngleConstraint": "Περιορισμός Γωνίας",
+    "zoomIn": "Μεγέθυνση",
+    "zoomOut": "Σμίκρυνση",
+    "zoomWindow": "Παράθυρο Zoom",
+    "zoomExtents": "Εστίαση Ορίων",
+    "undo": "Αναίρεση",
+    "redo": "Επανάληψη",
+    "cursorSettings": "Ρυθμίσεις Δρομέα",
+    "fitToView": "Προσαρμογή στην Προβολή",
+    "export": "Εξαγωγή",
+    "runTests": "Εκτέλεση Tests",
+    "togglePerf": "Παρακολούθηση Απόδοσης",
+    "pdfBackground": "PDF Υπόβαθρο",
+    "aiAssistant": "AI Σχεδίαση",
+    "guideAnalysis": "Ανάλυση Οδηγών",
+    "guideX": "Κάθετος Οδηγός",
+    "guideZ": "Οριζόντιος Οδηγός",
+    "guideXZ": "Λοξός Οδηγός",
+    "guideParallel": "Παράλληλος Οδηγός",
+    "guidePerpendicular": "Κάθετος Οδηγός",
+    "guideSegments": "Σε Τμήματα",
+    "guideDistance": "Ανά Απόσταση",
+    "guideAddPoint": "Προσθήκη Σημείου",
+    "guideDeletePoint": "Διαγραφή Σημείου",
+    "guideArcSegments": "Σε Τμήματα Τόξου",
+    "guideArcDistance": "Ανά Απόσταση Τόξου",
+    "guideArcLineIntersect": "Τομή Τόξου & Ευθείας",
+    "guideCircleIntersect": "Τομή Κύκλων",
+    "guideMove": "Μετακίνηση Οδηγού",
+    "guideDelete": "Διαγραφή Οδηγού",
+    "guideRectCenter": "Κέντρο Ορθογωνίου",
+    "guideLineMidpoint": "Μέσο Ευθυγράμμου",
+    "guideCircleCenter": "Κέντρο Κύκλου",
+    "guideGrid": "Αυτόματο Πλέγμα",
+    "guideRotate": "Περιστροφή Οδηγού",
+    "guideRotateAll": "Περιστροφή Κάνναβου",
+    "guideRotateGroup": "Περιστροφή Ομάδας",
+    "guideEqualize": "Ισαπόσταση Οδηγών",
+    "guidePolarArray": "Πολικός Πίνακας",
+    "guideScale": "Κλιμάκωση Κάνναβου",
+    "guideAngle": "Οδηγός σε Γωνία",
+    "guideMirror": "Αντικατοπτρισμός Οδηγών",
+    "guideFromEntity": "Οδηγός από Στοιχείο",
+    "guideSelect": "Επιλογή Οδηγών",
+    "guideCopyPattern": "Αντιγραφή/Μετατόπιση",
+    "guideOffsetEntity": "Μετατόπιση από Στοιχείο",
+    "guidePresetGrid": "Δομικός Κάνναβος",
+    "guideFromSelection": "Οδηγοί από Επιλογή",
+    "temporaryMode": "Προσωρινή Λειτουργία",
+    "temporaryModeActive": "Ενεργή λειτουργία — οι οδηγοί αφαιρούνται αυτόματα μετά τη σχεδίαση"
+  },
+  "snapModes": {
+    "labels": {
+      "auto": "Αυτόματο",
+      "endpoint": "Άκρο",
+      "midpoint": "Μέσο",
+      "center": "Κέντρο",
+      "intersection": "Τομή",
+      "grid": "Πλέγμα",
+      "perpendicular": "Κάθετος",
+      "tangent": "Εφαπτομένη",
+      "parallel": "Παράλληλος",
+      "quadrant": "Τεταρτημόριο",
+      "nearest": "Κοντινότερο",
+      "extension": "Επέκταση",
+      "node": "Κόμβος",
+      "insertion": "Εισαγωγή",
+      "near": "Πλησίον",
+      "ortho": "Ορθογώνιος",
+      "guide": "Οδηγός",
+      "constructionPoint": "Σημείο"
+    },
+    "tooltips": {
+      "auto": "Αυτόματο Snap - Ανιχνεύει αυτόματα τα καλύτερα σημεία (F11)",
+      "endpoint": "Άκρα Γραμμών - Snap στα τελικά σημεία γραμμών και τόξων (E)",
+      "midpoint": "Μέσα Σημεία - Snap στο μέσο γραμμών και τόξων (M)",
+      "center": "Κέντρα - Snap στο κέντρο κύκλων και τόξων (C)",
+      "intersection": "Τομές - Snap στις τομές δύο αντικειμένων (I)",
+      "grid": "Πλέγμα - Snap στα σημεία του πλέγματος (F9)",
+      "perpendicular": "Κάθετος - Snap κάθετα σε γραμμές (P)",
+      "tangent": "Εφαπτόμενη - Snap εφαπτόμενα σε κύκλους και τόξα (T)",
+      "parallel": "Παράλληλος - Snap παράλληλα με υπάρχουσες γραμμές (L)",
+      "quadrant": "Τεταρτημόρια - Snap στα τεταρτημόρια κύκλων (Q)",
+      "nearest": "Κοντινότερο - Snap στο πλησιέστερο σημείο αντικειμένου (N)",
+      "extension": "Επέκταση - Snap σε επεκτάσεις γραμμών (X)",
+      "node": "Κόμβοι - Snap σε κόμβους και σημεία (D)",
+      "insertion": "Εισαγωγή - Snap σε σημεία εισαγωγής (INS)",
+      "near": "Πλησίον - Snap κοντά σε αντικείμενα (R)",
+      "ortho": "Ορθογώνιος - Περιορισμός σε οριζόντιες/κάθετες γραμμές (F8)",
+      "guide": "Οδηγός - Snap σε οδηγούς κατασκευής (G)",
+      "constructionPoint": "Σημείο - Snap σε σημεία κατασκευής"
+    },
+    "ui": {
+      "showAdvanced": "Εμφάνιση προχωρημένων λειτουργιών",
+      "hideAdvanced": "Απόκρυψη προχωρημένων λειτουργιών"
+    }
+  }
+}

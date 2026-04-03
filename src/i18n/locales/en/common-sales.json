@@ -1,0 +1,503 @@
+{
+  "sales": {
+    "title": "Sales",
+    "subtitle": "Saleable properties - What is for sale and to whom",
+    "overview": "Sales Overview",
+    "stats": {
+      "totalSaleable": "Total Saleable",
+      "allAvailableProperties": "All available properties",
+      "available": "Available",
+      "forSale": "For sale",
+      "sold": "Sold",
+      "completedSales": "Completed sales",
+      "totalValue": "Total Value",
+      "portfolioValue": "Portfolio value",
+      "increase": "Increase",
+      "decrease": "Decrease"
+    },
+    "sections": {
+      "availableForSale": "Available for Sale",
+      "soldProperties": "Sold Properties"
+    },
+    "cards": {
+      "apartments": {
+        "title": "Available Properties",
+        "description": "Properties, maisonettes and studios for sale"
+      },
+      "storage": {
+        "title": "Available Storage",
+        "description": "Storage and warehouse spaces for sale"
+      },
+      "parking": {
+        "title": "Available Parking",
+        "description": "Underground and outdoor parking spaces"
+      },
+      "completedSales": {
+        "title": "Completed Sales",
+        "apartmentsSold": "{count} sold",
+        "storageSold": "{count} sold",
+        "parkingSold": "{count} sold",
+        "totalLabel": "Total",
+        "totalProperties": "{count} properties",
+        "totalValueLabel": "Total value"
+      }
+    },
+    "info": {
+      "title": "Saleable Properties",
+      "description": "Here you see all properties that have been activated for sale. Includes prices, buyers, contracts and sales history."
+    },
+    "sold": {
+      "title": "Sold Properties",
+      "subtitle": "Completed sales - History & statistics",
+      "overview": "Sold Properties - Overview",
+      "stats": {
+        "totalSales": "Total Sales",
+        "completedSales": "Completed sales",
+        "totalRevenue": "Total Revenue",
+        "totalSalesValue": "Total sales value",
+        "avgSaleTime": "Avg Sale Time",
+        "marketAverage": "Market average",
+        "salesThisYear": "Sales {year}",
+        "yearToDate": "Year to date",
+        "improvement": "Improvement"
+      },
+      "cards": {
+        "apartments": {
+          "title": "Properties",
+          "description": "Sold properties & maisonettes"
+        },
+        "storage": {
+          "title": "Storage",
+          "description": "Sold storage & basements"
+        },
+        "parking": {
+          "title": "Parking Spaces",
+          "description": "Sold parking spaces"
+        },
+        "totalRevenue": "Total revenue",
+        "avgPrice": "Average price",
+        "avgTime": "Average time"
+      },
+      "performance": {
+        "title": "Performance by Year",
+        "yearToDate": "{year} (year to date)",
+        "sales": "{count} sales",
+        "revenue": "Revenue",
+        "avgPrice": "Average price"
+      },
+      "marketInsights": {
+        "title": "Market Insights",
+        "topBuyerCategories": "Top Buyer Categories",
+        "privateInvestors": "Private investors",
+        "developmentCompanies": "Development companies",
+        "familiesOwnerOccupied": "Families (owner-occupied)",
+        "ofTotal": "{percent}% of total",
+        "performanceMetrics": "Performance Metrics",
+        "successRate": "Success Rate (listing → sale)",
+        "avgDiscount": "Average discount from initial price",
+        "fastestSale": "Fastest sale",
+        "slowestSale": "Slowest sale",
+        "days": "{count} days",
+        "months": "{count} months"
+      },
+      "info": {
+        "title": "Sold Properties",
+        "description": "Here you see all completed property sales. Includes sales statistics, revenue, buyer profiles and performance metrics."
+      }
+    },
+    "available": {
+      "title": "Available Properties",
+      "subtitle": "Properties for sale - Active listings",
+      "overview": "Available Properties - Overview",
+      "listTitle": "Available Properties",
+      "listLabel": "Available properties for sale list",
+      "noResults": "No properties found matching these criteria.",
+      "propertyDetails": "Property Details",
+      "stats": {
+        "availableApartments": "Available Properties",
+        "forSaleNow": "For sale now",
+        "avgPrice": "Average Price",
+        "avgPriceDesc": "Average price",
+        "interest": "Interest",
+        "activeViews": "Active views",
+        "avgTime": "Average Time",
+        "onMarket": "On market",
+        "totalValue": "Total Value",
+        "totalValueDesc": "Portfolio value",
+        "avgPricePerSqm": "Avg €/m²",
+        "avgPricePerSqmDesc": "Average price per sqm"
+      },
+      "types": {
+        "studios": {
+          "title": "Studios",
+          "description": "One-room apartments"
+        },
+        "oneBedroom": {
+          "title": "1-Bedroom",
+          "description": "Two-room apartments"
+        },
+        "twoBedroom": {
+          "title": "2-Bedroom+",
+          "description": "Three+ room apartments"
+        },
+        "avgPrice": "Average price",
+        "sqmRange": "Sq.m. range",
+        "activeViews": "Active views"
+      },
+      "priceRanges": {
+        "title": "Price Ranges",
+        "available": "{count} available",
+        "range1Desc": "Studios and small 1-bedrooms",
+        "range2Desc": "1-bedrooms and small 2-bedrooms",
+        "range3Desc": "Large 2-bedrooms, 3-bedrooms, maisonettes"
+      },
+      "activity": {
+        "title": "Interest & Activity",
+        "activeVisits": "Active visits",
+        "requests": "{count} requests",
+        "scheduledVisits": "Scheduled visits",
+        "appointments": "{count} appointments",
+        "offersUnderReview": "Offers under review",
+        "offers": "{count} offers",
+        "hotProperties": "Hot Properties (>{count} views/week)",
+        "properties": "{count} properties"
+      },
+      "info": {
+        "title": "Available Units",
+        "description": "Here you see all units that are actively for sale. Includes prices, buyer interest and sales statistics."
+      }
+    },
+    "tabs": {
+      "saleInfo": "Sale",
+      "propertySummary": "Property",
+      "photos": "Photos",
+      "videos": "Videos",
+      "documents": "Documents",
+      "history": "History",
+      "legal": "Legal",
+      "payments": "Payments",
+      "openInSpaces": "Open in Spaces",
+      "documentsHint": "Documents are managed in Spaces → Properties",
+      "photosHint": "Photos are managed in Spaces → Properties",
+      "videosHint": "Videos are managed in Spaces → Properties"
+    },
+    "actions": {
+      "changePrice": "Change Price",
+      "reserve": "Reserve",
+      "sell": "Sell",
+      "revert": "Revert"
+    },
+    "saleInfo": {
+      "pricing": "Commercial Data",
+      "askingPrice": "Asking Price",
+      "finalPrice": "Final Price",
+      "reservation": "Reservation",
+      "deposit": "Deposit",
+      "buyer": "Buyer",
+      "unknownBuyer": "Unknown",
+      "invoices": "Sale Invoices",
+      "invoiceType": {
+        "sales_invoice": "INV",
+        "credit_invoice": "Credit Note"
+      },
+      "paymentStatus": {
+        "paid": "Paid",
+        "partial": "Partial",
+        "unpaid": "Unpaid"
+      },
+      "dates": "Dates",
+      "listedDate": "On Market",
+      "reservationDate": "Reservation Date",
+      "saleDate": "Sale Date",
+      "cancellationDate": "Cancellation Date",
+      "daysOnMarket": "Days",
+      "hierarchy": "Property Hierarchy"
+    },
+    "hierarchy": {
+      "company": "Company",
+      "project": "Project",
+      "permit": "Permit Title",
+      "building": "Building",
+      "property": "Property"
+    },
+    "propertySummary": {
+      "physicalData": "Physical Data",
+      "type": "Type",
+      "area": "Area",
+      "floor": "Floor",
+      "building": "Building",
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "orientation": "Orientation",
+      "energy": "Energy Class",
+      "openInSpaces": "Open in Spaces"
+    },
+    "legal": {
+      "title": "Legal Process",
+      "preliminary": "Preliminary Contract",
+      "final": "Final Contract",
+      "payoff": "Payoff Certificate",
+      "draft": "Draft",
+      "pendingSig": "Pending Signature",
+      "signed": "Signed",
+      "completed": "Completed",
+      "sellerLawyer": "Seller's Lawyer",
+      "buyerLawyer": "Buyer's Lawyer",
+      "notary": "Notary",
+      "amount": "Amount",
+      "deposit": "Deposit",
+      "createdAt": "Created",
+      "signedAt": "Signed",
+      "professionals": "Professionals",
+      "professionalsTitle": "Legal Professionals",
+      "searchProfessional": "Search professional...",
+      "removeProfessional": "Remove",
+      "professionalAssigned": "Assigned successfully",
+      "professionalRemoved": "Removed",
+      "conflictBlockTitle": "Incompatible Roles",
+      "conflictBlockMessage": "«{{name}}» is already assigned as {{existingRole}}. They cannot simultaneously serve as {{targetRole}}.",
+      "conflictBlockLaw": "Law 2830/2000, Art.22§2: Appointment as notary automatically revokes the status of lawyer. Art.37§1: Notary duties are incompatible with any other professional activity.",
+      "conflictWarningTitle": "Conflict of Interest",
+      "conflictWarningMessage": "«{{name}}» is already assigned as {{existingRole}}. Are you sure you want them to also serve as {{targetRole}}?",
+      "conflictWarningLaw": "Lawyers' Code of Ethics, Art.37: Providing assistance to both parties is prohibited. Simultaneously representing seller and buyer constitutes a conflict of interest.",
+      "assignAnyway": "Assign anyway",
+      "assign": "Assign",
+      "emailSent": "Email sent",
+      "emailFailed": "Failed to send email",
+      "conflictBlockPre": "The person",
+      "conflictBlockAlready": "is already assigned as",
+      "conflictBlockCannot": "They cannot simultaneously serve as",
+      "conflictWarningSure": "Are you sure you want them to also serve as",
+      "emailNotifyAssignTitle": "Send notification email",
+      "emailNotifyRemoveTitle": "Send cancellation email",
+      "emailNotifyAssignBody": "Would you like to send a notification email to «{{contactName}}» about the assignment of the role {{roleLabel}}?",
+      "emailNotifyRemoveBody": "Would you like to send a cancellation email to «{{contactName}}» about their removal from the role {{roleLabel}}?",
+      "emailNotifyYes": "Yes, send",
+      "emailNotifyNo": "No",
+      "addBrokerHint": "Add a broker from the project's Brokers tab",
+      "unassigned": "Unassigned",
+      "brokerageTitle": "Brokerage Agreements",
+      "noBrokerage": "No brokerage agreements.",
+      "addAgreement": "Add Broker",
+      "editAgreement": "Edit Agreement",
+      "newBroker": "New broker",
+      "activeAgreement": "Active",
+      "expiredAgreement": "Expired",
+      "terminatedAgreement": "Terminated",
+      "exclusivity": "Type",
+      "exclusive": "Exclusive",
+      "nonExclusive": "Non-exclusive",
+      "scopeProject": "Project Level",
+      "scopeProperty": "Property Level",
+      "commission": "Commission",
+      "commissionPercentage": "Percentage (%)",
+      "commissionFixed": "Fixed amount (€)",
+      "commissionType": "Commission type",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "indefinite": "Indefinite",
+      "terminateAgreement": "Terminate",
+      "terminateConfirm": "Are you sure you want to terminate the agreement with {{name}}?",
+      "renewAgreement": "Renew",
+      "renewEndDate": "New end date",
+      "attachFiles": "Agreement attachments",
+      "selectAgent": "Select broker",
+      "selectScope": "Select scope",
+      "selectProperty": "Select property",
+      "selectExclusivity": "Select type",
+      "selectCommissionType": "Select commission type",
+      "notes": "Notes",
+      "exclusivityConflict": "Cannot create exclusive agreement",
+      "exclusivityConflictProjectExclusive": "Exclusive project-level agreement exists ({{agentName}})",
+      "exclusivityConflictPropertyExclusive": "Exclusive agreement on property {{propertyName}} ({{agentName}})",
+      "exclusivityConflictSameProperty": "Exclusive agreement on {{propertyName}} ({{agentName}})",
+      "exclusivityBlockedByProjectExclusive": "Project-level exclusive ({{agentName}}). No new agreements allowed",
+      "exclusivityBlockedByExistingProperty": "Existing agreement on {{propertyName}} ({{agentName}}) must be terminated",
+      "nonExclusiveBlockedByProjectExclusive": "Project-level exclusive ({{agentName}}). No new agreements allowed",
+      "nonExclusiveBlockedByPropertyExclusive": "Exclusive on {{propertyName}} ({{agentName}}). No new agreements allowed",
+      "exclusivityWarningExcludedProperties": "Properties with existing agreements excluded: {{propertyNames}}",
+      "duplicateAgent": "Agent {{agentName}} already has an active agreement in this project",
+      "validating": "Checking exclusivity...",
+      "saveSuccess": "Agreement saved",
+      "saveError": "Save failed",
+      "terminateSuccess": "Agreement terminated",
+      "renewSuccess": "Agreement renewed",
+      "create": "Create",
+      "created": "Created",
+      "createError": "Error",
+      "noContracts": "No contracts yet. Create the first one.",
+      "noBuyer": "No buyer assigned",
+      "noBuyerDesc": "You must assign a buyer first (Reserve/Sell)"
+    },
+    "errors": {
+      "noBuilding": "The property is not linked to a building. Go to Property Management → Info and link a building.",
+      "noFloor": "The property is not linked to a floor. Go to Property Management → Info and select a floor.",
+      "noProject": "The building is not linked to a project. Go to Buildings → General and link a project.",
+      "noCompany": "The project is not linked to a company. Go to Projects → General and link a company.",
+      "noAskingPrice": "The property has no asking price. Set a price before reservation or sale.",
+      "noArea": "The property has no area (sqm). Set net or gross area before reservation or sale.",
+      "noBuyer": "Buyer contact is required",
+      "buyerNotFound": "Buyer contact not found",
+      "buyerMissingFields": "Buyer missing required fields: {fields}",
+      "serviceNotBuyer": "Service contacts cannot be buyers"
+    },
+    "appurtenances": {
+      "title": "Appurtenances",
+      "activeRental": "Active rental",
+      "noArea": "No area (sqm) — cannot be included",
+      "pricePlaceholder": "Price €",
+      "grandTotal": "Total (property + appurtenances)"
+    },
+    "commercialStatus": {
+      "sold": "Sold",
+      "reserved": "Reserved"
+    },
+    "dialogs": {
+      "changePrice": {
+        "title": "Change Price",
+        "description": "Set the asking price for the property",
+        "askingPrice": "Asking price (€)",
+        "hint": "The property will automatically be set to «For Sale» status",
+        "placeholder": "e.g. 150000"
+      },
+      "reserve": {
+        "title": "Reserve Property",
+        "description": "Enter reservation details",
+        "deposit": "Deposit (€)",
+        "depositPlaceholder": "e.g. 5000",
+        "noEmailWarning": "The buyer has no email — no reservation confirmation will be sent. Please update their contact card.",
+        "newContact": "Create new contact",
+        "confirm": "Reserve",
+        "unknownError": "Error during reservation",
+        "ownerLabel": "Buyer",
+        "ownerRequired": "Buyer selection is required",
+        "ownerPlaceholder": "Search contact..."
+      },
+      "owners": {
+        "label": "Owners",
+        "addCoOwner": "Add Co-Owner",
+        "remove": "Remove",
+        "totalMustBe100": "must be 100%"
+      },
+      "sell": {
+        "title": "Sell Property",
+        "description": "Confirm the final sale price",
+        "askingWas": "Asking price",
+        "finalPrice": "Final sale price (€)",
+        "finalPricePlaceholder": "e.g. 145000",
+        "discount": "Discount",
+        "broker": "Broker (optional)",
+        "noBroker": "No broker",
+        "commissionPreview": "Commission",
+        "warning": "The property will be set to «Sold» status and will no longer appear in the available listings.",
+        "confirm": "Confirm Sale",
+        "unknownError": "Error during sale"
+      },
+      "revert": {
+        "title": "Revert Property",
+        "description": "Cancel sale or reservation — the property returns to «For Sale» status",
+        "currentStatus": "Current status",
+        "buyer": "Buyer",
+        "finalPrice": "Sale price",
+        "warning": "Buyer details, deposit and final price will be deleted. The asking price is preserved.",
+        "confirm": "Revert to For Sale",
+        "creditReasonSale": "Sale cancellation",
+        "creditReasonReservation": "Reservation cancellation"
+      }
+    },
+    "quickFilters": {
+      "allStatuses": "All",
+      "allStatusesTooltip": "Show all statuses",
+      "forSale": "For Sale",
+      "forSaleTooltip": "Available for sale",
+      "reserved": "Reserved",
+      "reservedTooltip": "Reserved by buyer",
+      "dualListing": "Sale & Rent",
+      "dualListingTooltip": "Listed for both sale and rent"
+    }
+  },
+  "salesStorage": {
+    "pageTitle": "Available Storage Units",
+    "pageSubtitle": "Storage units for sale - Active listings",
+    "searchPlaceholder": "Search storage...",
+    "loading": "Loading available storage units...",
+    "listLabel": "Sales storage list",
+    "listTitle": "Storage Units",
+    "noResults": "No storage units found matching your criteria.",
+    "gridLabel": "Storage units grid",
+    "stats": {
+      "available": "Available Storage",
+      "forSaleNow": "For sale now",
+      "avgPrice": "Avg Price",
+      "avgPriceDesc": "Average asking price",
+      "totalValue": "Total Value",
+      "totalValueDesc": "Portfolio value",
+      "avgPricePerSqm": "Avg €/m²",
+      "avgPricePerSqmDesc": "Average price per sqm"
+    },
+    "tabs": {
+      "info": "Info",
+      "floorPlan": "Floor Plan",
+      "documents": "Documents",
+      "photos": "Photos",
+      "videos": "Videos",
+      "history": "History",
+      "floorPlanHint": "Floor plan is managed in Spaces → Storage",
+      "documentsHint": "Documents are managed in Spaces → Storage",
+      "photosHint": "Photos are managed in Spaces → Storage",
+      "videosHint": "Videos are managed in Spaces → Storage",
+      "openInSpaces": "Open in Spaces"
+    },
+    "details": {
+      "title": "Storage Details",
+      "noSelection": "Select a storage unit for details.",
+      "millesimalShares": "Millesimal Shares",
+      "finalPrice": "Final Price"
+    },
+    "quickFilters": {
+      "statusAriaLabel": "Storage status filter",
+      "typeAriaLabel": "Storage type filter"
+    }
+  },
+  "salesParking": {
+    "pageTitle": "Available Parking Spots",
+    "pageSubtitle": "Parking spots for sale - Active listings",
+    "searchPlaceholder": "Search parking...",
+    "loading": "Loading available parking spots...",
+    "listLabel": "Sales parking list",
+    "listTitle": "Parking Spots",
+    "noResults": "No parking spots found matching your criteria.",
+    "gridLabel": "Parking spots grid",
+    "stats": {
+      "available": "Available Spots",
+      "forSaleNow": "For sale now",
+      "avgPrice": "Avg Price",
+      "avgPriceDesc": "Average asking price",
+      "totalValue": "Total Value",
+      "totalValueDesc": "Portfolio value",
+      "avgPricePerSqm": "Avg €/m²",
+      "avgPricePerSqmDesc": "Average price per sqm"
+    },
+    "tabs": {
+      "info": "Info",
+      "documents": "Documents",
+      "photos": "Photos",
+      "videos": "Videos",
+      "history": "History",
+      "documentsHint": "Documents are managed in Spaces → Parking",
+      "photosHint": "Photos are managed in Spaces → Parking",
+      "videosHint": "Videos are managed in Spaces → Parking",
+      "openInSpaces": "Open in Spaces"
+    },
+    "details": {
+      "title": "Parking Details",
+      "noSelection": "Select a parking spot for details.",
+      "millesimalShares": "Millesimal Shares",
+      "finalPrice": "Final Price"
+    },
+    "quickFilters": {
+      "statusAriaLabel": "Parking status filter",
+      "typeAriaLabel": "Parking type filter"
+    }
+  }
+}

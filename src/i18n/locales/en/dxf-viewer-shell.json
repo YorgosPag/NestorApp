@@ -1,0 +1,279 @@
+{
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "toolbar": {
+    "title": "Drawing Tools",
+    "select": "Select",
+    "pan": "Pan View",
+    "line": "Line",
+    "rectangle": "Rectangle",
+    "circle": "Circle",
+    "polyline": "Polyline",
+    "draw": "Draw",
+    "edit": "Edit",
+    "status": "Status:",
+    "type": "Type:",
+    "duplicate": "Duplicate ({key})",
+    "delete": "Delete ({key})",
+    "undo": "Undo ({key})",
+    "redo": "Redo ({key})",
+    "duplicateAction": "Duplicate",
+    "deleteAction": "Delete",
+    "undoAction": "Undo",
+    "redoAction": "Redo",
+    "dragToMove": "Drag to move",
+    "savePolygon": "Save polygon",
+    "needMorePoints": "Need at least 3 points",
+    "cancelDrawing": "Cancel drawing",
+    "ariaLabels": {
+      "drawingModes": "Drawing modes",
+      "overlayType": "Overlay type",
+      "overlayActions": "Overlay actions",
+      "historyControls": "History controls"
+    }
+  },
+  "toolbarStatus": {
+    "tool": "Tool",
+    "zoom": "Zoom",
+    "snap": "Snap",
+    "on": "ON",
+    "off": "OFF",
+    "commands": "Commands",
+    "coordinates": "Coordinates",
+    "shortcutsFallback": "D=Ruler | W=ZoomWindow | +/-=Zoom | F9=Grid | ESC=Cancel",
+    "unknownTool": "Unknown"
+  },
+  "actionButtons": {
+    "showGrid": "Show Grid",
+    "hideGrid": "Hide Grid",
+    "autoCropOn": "Auto-Crop ON",
+    "autoCropOff": "Auto-Crop OFF",
+    "showGuides": "Show Guides",
+    "hideGuides": "Hide Guides",
+    "enterFullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen"
+  },
+  "loadingStates": {
+    "retry": "Retry",
+    "loading": "Loading...",
+    "companies": {
+      "loading": "Loading companies...",
+      "error": "Loading error: {error}",
+      "retry": "Retry",
+      "empty": "No companies found in the system.",
+      "emptyHint": "Contact management to add companies."
+    },
+    "projects": {
+      "loading": "Loading projects...",
+      "error": "Projects loading error: {error}",
+      "empty": "No projects found for the selected company.",
+      "emptyHint": "Select a different company or add new projects."
+    }
+  },
+  "autoSave": {
+    "title": "Auto-save",
+    "saving": "Saving...",
+    "error": "Save error",
+    "lastSaved": "Last saved:",
+    "waiting": "Waiting for changes...",
+    "activeFor": "Auto-save active for:",
+    "savingAllSettings": "Saving all DXF settings...",
+    "errorSavingSettings": "Error saving settings"
+  },
+  "confirmations": {
+    "confirmed": "Action confirmed",
+    "cancelled": "Action cancelled",
+    "irreversible": "⚠️ This action cannot be undone!",
+    "delete": {
+      "confirm": "Delete",
+      "layer": {
+        "title": "Delete Layer",
+        "message": "You are about to delete layer \"{name}\".\n\n{count, plural, =0 {The layer is empty.} one {# entity will be deleted.} other {# entities will be deleted.}}\n\nAll entities in this layer will be permanently lost."
+      },
+      "entity": {
+        "title": "Delete Entity",
+        "message": "You are about to delete entity \"{name}\".\n\nThe entity will be permanently removed from the drawing."
+      },
+      "colorGroup": {
+        "title": "Delete Color Group",
+        "message": "You are about to delete color group \"{name}\".\n\n{count, plural, =0 {No layers exist in this group.} one {# layer will be deleted.} other {# layers will be deleted.}}\n\nAll layers and entities in this color group will be permanently lost."
+      }
+    },
+    "merge": {
+      "confirm": "Merge",
+      "entities": {
+        "title": "Merge Entities",
+        "message": "You are about to merge {count} entities into \"{target}\".\n\nSources for merging: {sources}\n\nThe source entities will be deleted and all their properties will be transferred to the target entity."
+      },
+      "layers": {
+        "title": "Merge Layers",
+        "message": "You are about to merge {count} layers into \"{target}\".\n\nSources for merging: {sources}\n\nAll entities from the source layers will be moved to the target layer and the source layers will be deleted."
+      },
+      "colorGroups": {
+        "title": "Hierarchical Color Groups Merge",
+        "message": "You are about to merge {count} color groups into \"{target}\".\n\nSources for merging: {sources}\n\nAll layers from the source color groups will be moved to the target color group. The source color groups will disappear but layers and entities will be preserved."
+      }
+    }
+  },
+  "zoomControls": {
+    "zoomOut": "Zoom Out (-{percentage}%) - Keyboard: -",
+    "zoomIn": "Zoom In (+{percentage}%) - Keyboard: +",
+    "inputTitle": "Zoom percentage (1-99999%, decimals with . or ,) - Press Enter or click away to apply",
+    "invalidInput": "Invalid zoom input: \"{value}\". Reverting to {percentage}%"
+  },
+  "overlayToolbar": {
+    "objectSnap": "Enable/Disable Object Snap (F3)",
+    "basicFunctions": "Enable basic functions"
+  },
+  "toolLabels": {
+    "line": "Line",
+    "rectangle": "Rectangle",
+    "circle": "Circle",
+    "pan": "Pan View",
+    "zoomWindow": "Zoom Window",
+    "layering": "Layers"
+  },
+  "toolGroups": {
+    "selection": "Selection",
+    "drawing": "Drawing",
+    "tools": "Tools",
+    "measurements": "Measurements",
+    "zoom": "Zoom",
+    "guides": "Guides"
+  },
+  "tools": {
+    "select": "Select",
+    "pan": "Pan View",
+    "line": "Line",
+    "linePerpendicular": "Perpendicular Line",
+    "lineParallel": "Parallel Line",
+    "rectangle": "Rectangle",
+    "circleRadius": "Circle (Radius)",
+    "circleDiameter": "Circle (Diameter)",
+    "circle2pDiameter": "Circle (2 Points Diameter)",
+    "circle3p": "Circle (3 Points)",
+    "circleChordSagitta": "Circle (Chord-Sagitta)",
+    "circle2pRadius": "Circle (2 Points + Radius)",
+    "circleBestFit": "Circle (Best Fit)",
+    "circleTTT": "Circle (Tangent to 3 Lines)",
+    "polyline": "Polyline",
+    "polygon": "Polygon",
+    "arc": "Arc",
+    "arc3p": "Arc (3 Points)",
+    "arcCenterStartEnd": "Arc (Center-Start-End)",
+    "arcStartCenterEnd": "Arc (Start-Center-End)",
+    "layering": "Layers",
+    "gripEdit": "Grip Edit",
+    "move": "Move Objects",
+    "rotate": "Rotate",
+    "copy": "Copy",
+    "delete": "Delete",
+    "measureDistance": "Measure Distance",
+    "measureDistance2P": "Distance Between 2 Points",
+    "measureDistanceContinuous": "Continuous Distance Measurement",
+    "measureArea": "Measure Area",
+    "measureAngle": "Measure Angle",
+    "measureAngleBasic": "Basic Angle",
+    "measureAngleLineArc": "Line-Arc Angle",
+    "measureAngleTwoArcs": "Two Arcs Angle",
+    "measureAngleMeasuregeom": "MeasureGeom",
+    "measureAngleConstraint": "Angle Constraint",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "zoomWindow": "Zoom Window",
+    "zoomExtents": "Zoom Extents",
+    "undo": "Undo",
+    "redo": "Redo",
+    "cursorSettings": "Cursor Settings",
+    "fitToView": "Fit to View",
+    "export": "Export",
+    "runTests": "Run Tests",
+    "togglePerf": "Performance Monitor",
+    "pdfBackground": "PDF Background",
+    "aiAssistant": "AI Drawing",
+    "guideAnalysis": "Guide Analysis",
+    "guideX": "Vertical Guide",
+    "guideZ": "Horizontal Guide",
+    "guideXZ": "Diagonal Guide",
+    "guideParallel": "Parallel Guide",
+    "guidePerpendicular": "Perpendicular Guide",
+    "guideSegments": "Segment Points",
+    "guideDistance": "Distance Points",
+    "guideAddPoint": "Add Point",
+    "guideDeletePoint": "Delete Point",
+    "guideArcSegments": "Arc Segments",
+    "guideArcDistance": "Arc Distance",
+    "guideArcLineIntersect": "Arc-Line Intersection",
+    "guideCircleIntersect": "Circle-Circle Intersection",
+    "guideMove": "Move Guide",
+    "guideDelete": "Delete Guide",
+    "guideRectCenter": "Rectangle Center",
+    "guideLineMidpoint": "Line Midpoint",
+    "guideCircleCenter": "Circle Center",
+    "guideGrid": "Auto Grid",
+    "guideRotate": "Rotate Guide",
+    "guideRotateAll": "Rotate All Guides",
+    "guideRotateGroup": "Rotate Guide Group",
+    "guideEqualize": "Equalize Guide Spacing",
+    "guidePolarArray": "Polar Array",
+    "guideScale": "Scale Grid",
+    "guideAngle": "Guide at Angle",
+    "guideMirror": "Mirror Guides",
+    "guideFromEntity": "Guide from Entity",
+    "guideSelect": "Select Guides",
+    "guideCopyPattern": "Copy/Offset Pattern",
+    "guideOffsetEntity": "Offset from Entity",
+    "guidePresetGrid": "Structural Preset Grid",
+    "guideFromSelection": "Guide from Selection",
+    "temporaryMode": "Temporary Mode",
+    "temporaryModeActive": "Temporary mode active — guides auto-removed on drawing completion"
+  },
+  "snapModes": {
+    "labels": {
+      "auto": "Auto",
+      "endpoint": "Endpoint",
+      "midpoint": "Midpoint",
+      "center": "Center",
+      "intersection": "Intersection",
+      "grid": "Grid",
+      "perpendicular": "Perpendicular",
+      "tangent": "Tangent",
+      "parallel": "Parallel",
+      "quadrant": "Quadrant",
+      "nearest": "Nearest",
+      "extension": "Extension",
+      "node": "Node",
+      "insertion": "Insertion",
+      "near": "Near",
+      "ortho": "Ortho",
+      "guide": "Guide",
+      "constructionPoint": "Point"
+    },
+    "tooltips": {
+      "auto": "Auto Snap - Automatically detects the best snap points (F11)",
+      "endpoint": "Endpoints - Snap to end points of lines and arcs (E)",
+      "midpoint": "Midpoints - Snap to the middle of lines and arcs (M)",
+      "center": "Centers - Snap to the center of circles and arcs (C)",
+      "intersection": "Intersections - Snap to intersections of two objects (I)",
+      "grid": "Grid - Snap to grid points (F9)",
+      "perpendicular": "Perpendicular - Snap perpendicular to lines (P)",
+      "tangent": "Tangent - Snap tangent to circles and arcs (T)",
+      "parallel": "Parallel - Snap parallel to existing lines (L)",
+      "quadrant": "Quadrants - Snap to quadrants of circles (Q)",
+      "nearest": "Nearest - Snap to the nearest point on an object (N)",
+      "extension": "Extension - Snap to line extensions (X)",
+      "node": "Nodes - Snap to nodes and points (D)",
+      "insertion": "Insertion - Snap to insertion points (INS)",
+      "near": "Near - Snap near objects (R)",
+      "ortho": "Ortho - Constrain to horizontal/vertical lines (F8)",
+      "guide": "Guide - Snap to construction guide lines (G)",
+      "constructionPoint": "Point - Snap to construction snap points"
+    },
+    "ui": {
+      "showAdvanced": "Show advanced features",
+      "hideAdvanced": "Hide advanced features"
+    }
+  }
+}

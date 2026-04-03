@@ -1,0 +1,692 @@
+{
+  "toolbar": {
+    "filters": {
+      "categories": {
+        "status": "Status",
+        "buildingType": "Building Type",
+        "contactType": "Contact Type",
+        "parkingType": "Parking Type",
+        "channel": "Channel"
+      }
+    },
+    "tooltips": {
+      "filters": "Filters",
+      "favorites": "Add to favorites",
+      "archive": "Archive",
+      "exportData": "Export data",
+      "importData": "Import data",
+      "refreshData": "Refresh data",
+      "preview": "Preview",
+      "copy": "Copy",
+      "reports": "Reports",
+      "settings": "Settings",
+      "help": "Help",
+      "sorting": "Sorting"
+    },
+    "labels": {
+      "favoritesManagement": "Manage favorites",
+      "share": "Share",
+      "sorting": "Sorting",
+      "exportTo": "Export to",
+      "excelFormat": "Excel (.xlsx)",
+      "pdfReport": "PDF Report"
+    },
+    "sort": {
+      "name": {
+        "asc": "Name ascending",
+        "desc": "Name descending"
+      },
+      "date": {
+        "asc": "Oldest first",
+        "desc": "Newest first"
+      },
+      "status": {
+        "asc": "Status (A-Z)",
+        "desc": "Status (Z-A)"
+      },
+      "channel": {
+        "asc": "Channel (A-Z)",
+        "desc": "Channel (Z-A)"
+      }
+    },
+    "ui": {
+      "itemsSelected": "{count} selected",
+      "clearAllCount": "Clear ({count})"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "filters": "Filters",
+      "favorites": "Favorites",
+      "archive": "Archive",
+      "export": "Export",
+      "import": "Import",
+      "refresh": "Refresh",
+      "preview": "Preview",
+      "copy": "Copy",
+      "share": "Share",
+      "reports": "Reports",
+      "settings": "Settings",
+      "favoritesManagement": "Manage favorites",
+      "help": "Help",
+      "sorting": "Sorting",
+      "buildings": {
+        "edit": "Edit building",
+        "delete": "Delete building"
+      },
+      "projects": {
+        "edit": "Edit project",
+        "delete": "Delete project"
+      },
+      "properties": {
+        "edit": "Edit property",
+        "delete": "Delete property"
+      },
+      "storage": {
+        "edit": "Edit storage",
+        "delete": "Delete storage"
+      }
+    },
+    "communications": {
+      "important": "Important",
+      "markAsImportant": "Mark as important",
+      "channels": {
+        "all": "All channels",
+        "email": "Email",
+        "sms": "SMS",
+        "telegram": "Telegram"
+      },
+      "status": {
+        "all": "All statuses",
+        "sent": "Sent",
+        "received": "Received",
+        "pending": "Pending",
+        "failed": "Failed"
+      }
+    },
+    "search": {
+      "placeholder": "Search..."
+    }
+  },
+  "filters": {
+    "title": "Filters",
+    "status": {
+      "available": "Available",
+      "sold": "Sold",
+      "reserved": "Reserved",
+      "maintenance": "Maintenance",
+      "occupied": "Occupied",
+      "planning": "Planning",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "onHold": "On Hold",
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived",
+      "lead": "Lead",
+      "pending": "Pending",
+      "construction": "Under Construction"
+    },
+    "searchFilters": "Search Filters",
+    "typeLabel": "Type:",
+    "typeAriaLabel": "Type filters",
+    "filterBy": "Filter by:",
+    "all": "All",
+    "showAll": "Show all",
+    "allTypes": "All Types",
+    "allStatuses": "All Statuses",
+    "allFloors": "All Floors",
+    "allProperties": "All Properties",
+    "allAreas": "All Areas",
+    "allProjects": "All Projects",
+    "allLocations": "All Locations",
+    "allCompanies": "All Companies",
+    "allClients": "All Clients",
+    "allPriorities": "All Priorities",
+    "allEnergyClasses": "All Energy Classes",
+    "allRenovations": "All Renovations",
+    "allRiskLevels": "All Risk Levels",
+    "allComplexities": "All Complexities",
+    "allBuildings": "All Buildings",
+    "types": {
+      "individual": "Individual",
+      "company": "Company",
+      "service": "Service",
+      "residential": "Residential",
+      "commercial": "Commercial",
+      "industrial": "Industrial",
+      "office": "Office",
+      "mixed": "Mixed Use",
+      "warehouse": "Warehouse",
+      "retail": "Retail",
+      "hotel": "Hotel",
+      "public": "Public",
+      "renovation": "Renovation",
+      "infrastructure": "Infrastructure"
+    },
+    "fields": {
+      "search": "Search",
+      "priceRange": "Price Range",
+      "areaRange": "Area Range",
+      "status": "Status",
+      "project": "Project",
+      "building": "Building",
+      "floor": "Floor",
+      "propertyType": "Property Type"
+    },
+    "placeholders": {
+      "general": "Search...",
+      "propertiesSearch": "Search properties...",
+      "contactsSearch": "Search contacts...",
+      "buildingsSearch": "Search buildings...",
+      "projectsSearch": "Search projects...",
+      "selectStatus": "Select status",
+      "selectProject": "Select project",
+      "selectBuilding": "Select building",
+      "selectFloor": "Select floor",
+      "selectType": "Select type",
+      "selectPriority": "Select priority",
+      "selectLocation": "Select location",
+      "selectCompany": "Select company",
+      "selectEnergyClass": "Select energy class",
+      "selectRenovation": "Select renovation",
+      "selectClient": "Select client",
+      "selectRiskLevel": "Select risk level",
+      "selectComplexity": "Select complexity"
+    },
+    "propertyTypes": {
+      "ariaLabel": "Property type filters",
+      "all": "All",
+      "allTooltip": "Show all types",
+      "studio": "Studio",
+      "studioTooltip": "Studio / Bedsit",
+      "apartment": "Apartment",
+      "apartmentTooltip": "Apartment",
+      "maisonette": "Maisonette",
+      "maisonetteTooltip": "Maisonette",
+      "shop": "Shop",
+      "shopTooltip": "Shop",
+      "office": "Office",
+      "officeTooltip": "Office"
+    },
+    "contactTypes": {
+      "ariaLabel": "Contact type filters",
+      "all": "All",
+      "allTooltip": "Show all contacts",
+      "individual": "Individual",
+      "company": "Company",
+      "service": "Service"
+    },
+    "channels": {
+      "ariaLabel": "Channel filters",
+      "all": "All",
+      "allTooltip": "Show all channels",
+      "email": "Email",
+      "emailTooltip": "Email messages",
+      "sms": "SMS",
+      "smsTooltip": "SMS messages",
+      "telegram": "Telegram",
+      "telegramTooltip": "Telegram messages"
+    },
+    "common": {
+      "search": "Search",
+      "status": "Status",
+      "selectStatus": "Select status",
+      "type": "Type",
+      "selectType": "Select type",
+      "building": "Building",
+      "selectBuilding": "Select building",
+      "level": "Level",
+      "selectLevel": "Select level",
+      "project": "Project",
+      "selectProject": "Select project",
+      "area": "Area",
+      "price": "Price",
+      "updateDate": "Update Date",
+      "from": "From",
+      "to": "To"
+    },
+    "parking": {
+      "title": "Parking Filters",
+      "searchPlaceholder": "Search parking spots...",
+      "ariaLabels": {
+        "search": "Search parking spots",
+        "status": "Filter by status",
+        "type": "Filter by type",
+        "building": "Filter by building",
+        "level": "Filter by level",
+        "project": "Filter by project",
+        "area": "Filter by area",
+        "price": "Filter by price",
+        "date": "Filter by date"
+      }
+    }
+  },
+  "contacts": {
+    "types": {
+      "individual": "Individual",
+      "company": "Company",
+      "service": "Public Service",
+      "organization": "Organization"
+    },
+    "nameCascade": {
+      "title": "Contact Name Change",
+      "body": "Changing the name from \"{oldName}\" to \"{newName}\" will automatically update the following:",
+      "depProperties": "Properties (ownerships)",
+      "depPaymentPlans": "Payment plans",
+      "count": "{count, plural, one {# record} other {# records}}",
+      "unavailableCount": "Unavailable count",
+      "warning": "{count} records will be automatically updated across all projects.",
+      "confirm": "Save & Update",
+      "cancel": "Cancel"
+    },
+    "addressImpact": {
+      "title": "Address Change Impact",
+      "body": "Changing the \"{addressLabel}\" address may affect the following records:",
+      "sectionLive": "Live references (will read the updated address)",
+      "depProperties": "Properties (ownerships)",
+      "depPaymentPlans": "Payment plans",
+      "sectionSnapshot": "Snapshots (frozen at creation — not affected)",
+      "depInvoices": "Invoices",
+      "depApyCertificates": "APY certificates",
+      "count": "{count, plural, one {# record} other {# records}}",
+      "warningLive": "{count} records reference this contact.",
+      "confirm": "Save & Continue",
+      "cancel": "Cancel",
+      "branchDelete": {
+        "title": "Remove Branch Address",
+        "body": "Are you sure you want to remove this branch address? This action cannot be undone.",
+        "confirm": "Remove",
+        "cancel": "Cancel"
+      },
+      "mapDragWarning": {
+        "title": "Administrative Hierarchy Reset",
+        "body": "Moving the pin will clear the administrative hierarchy fields (settlement, municipality, region). You will need to re-select from the hierarchy dropdown.",
+        "confirm": "Continue",
+        "cancel": "Cancel"
+      }
+    },
+    "companyIdentityImpact": {
+      "title": "Company Identity Change Impact",
+      "body": "The following identity fields are being modified:",
+      "fieldChanged": "\"{oldValue}\" → \"{newValue}\"",
+      "fieldCleared": "\"{oldValue}\" → (cleared)",
+      "sectionLive": "Live references (will read the updated data)",
+      "depProjects": "Projects",
+      "depProperties": "Properties (ownerships)",
+      "depObligations": "Obligations",
+      "sectionSnapshot": "Snapshots (frozen at creation — not affected)",
+      "depInvoices": "Invoices",
+      "depApyCertificates": "APY certificates",
+      "count": "{count, plural, one {# record} other {# records}}",
+      "warningLive": "{count} records reference this contact and will reflect the new identity data.",
+      "confirm": "Save & Continue",
+      "cancel": "Cancel",
+      "unsafeClear": "Cannot clear the field(s): {fields}. They are critical to company identity.",
+      "fields": {
+        "companyName": "Company Name",
+        "vatNumber": "VAT Number",
+        "gemiNumber": "GEMI Number",
+        "taxOffice": "Tax Office",
+        "legalForm": "Legal Form",
+        "tradeName": "Trade Name",
+        "gemiStatus": "GEMI Status"
+      },
+      "unavailableTitle": "Company identity change blocked",
+      "unavailableBody": "The impact preview for company identity fields could not complete reliably. Saving was blocked to protect linked records. Please try again or review the system state later.",
+      "understood": "Understood"
+    },
+    "communicationImpact": {
+      "title": "Communication Change Impact",
+      "body": "The following communication fields are being modified:",
+      "changeTypes": {
+        "primaryEmailChanged": "Primary Email",
+        "primaryPhoneChanged": "Primary Phone",
+        "corporateWebsiteChanged": "Corporate Website"
+      },
+      "fieldChanged": "\"{oldValue}\" → \"{newValue}\"",
+      "sectionLive": "Live references (will read the updated data)",
+      "depProperties": "Properties (ownerships)",
+      "depPaymentPlans": "Payment plans",
+      "depProjects": "Projects",
+      "sectionSnapshot": "Snapshots (frozen at creation — not affected)",
+      "depInvoices": "Invoices",
+      "depApyCertificates": "APY certificates",
+      "count": "{count, plural, one {# record} other {# records}}",
+      "warningLive": "{count} records reference this contact and will use the new communication details.",
+      "confirm": "Save & Continue",
+      "cancel": "Cancel",
+      "unsafeRemoval": "Cannot remove all emails or phones from a company contact. At least one is required for communication workflows."
+    }
+  },
+  "customerActions": {
+    "view": "View",
+    "viewCustomer": "View Customer",
+    "call": "Call",
+    "email": "Email",
+    "message": "Message",
+    "edit": "Edit",
+    "reassign": "Reassign",
+    "changeProperty": "Change Property",
+    "history": "History",
+    "documents": "Documents",
+    "notes": "Notes",
+    "sendEmail": "Send Email",
+    "tooltips": {
+      "viewDetails": "View details of {name}",
+      "callTo": "Call {phone}",
+      "noPhone": "No phone available",
+      "emailTo": "Email to {email}",
+      "noEmail": "No email available",
+      "smsTo": "SMS to {phone}",
+      "noPhoneForSms": "No phone available for SMS",
+      "editDetails": "Edit details of {name}",
+      "reassignFor": "Change assignment for {name}",
+      "viewHistory": "View history of {name}",
+      "viewDocuments": "View documents of {name}",
+      "viewNotes": "View notes for {name}"
+    },
+    "states": {
+      "unknownCustomer": "Unknown customer",
+      "loadingError": "Loading error",
+      "noCustomer": "No customer",
+      "customerNotFound": "Customer ID: {id} (not found)",
+      "unknownDate": "Unknown date"
+    },
+    "labels": {
+      "customer": "Customer"
+    },
+    "aria": {
+      "customerActions": "Customer actions",
+      "customerDetails": "Customer details: {name}"
+    }
+  },
+  "sharing": {
+    "shareOn": "Share on {platform}",
+    "iconAlt": "{platform} icon",
+    "selectPlatform": "Select social platform for sharing",
+    "noPlatforms": "No Platforms",
+    "noPlatformsMessage": "No sharing platforms available",
+    "socialPlatforms": "Social Sharing Platforms",
+    "devInfo": "Development Info",
+    "loadingPlatforms": "Loading Platforms"
+  },
+  "recipients": {
+    "managementLabel": "Email Recipients Management",
+    "emailRecipients": "Email Recipients",
+    "recipientLabel": "Email Recipient {number}",
+    "validationStatus": "Validation Status",
+    "add": "Add",
+    "addEmail": "Add Email",
+    "validFromTotal": "{valid} valid from {total} total",
+    "invalidCount": "({count} invalid)",
+    "available": "{count} available",
+    "helperText": "Press Enter to add new email • Backspace on empty field to delete",
+    "recipientsCount": "Recipients ({count})",
+    "valid": "valid",
+    "compactLabel": "Compact Recipients Management",
+    "compactEmailLabel": "Compact Email {number}",
+    "compactInputsLabel": "Compact Email Inputs"
+  },
+  "email": {
+    "template": "Email Template",
+    "templateIcon": "{name} icon",
+    "selected": "Selected",
+    "selectTemplate": "Select Email Template",
+    "availableTemplates": "Available Templates",
+    "selectAppropriate": "Select the appropriate template for sending"
+  },
+  "search": {
+    "placeholder": "Search projects, contacts, buildings...",
+    "globalSearch": "Global Search",
+    "noResults": "No results found",
+    "tryDifferent": "Try a different search",
+    "results": "Search results",
+    "resultsCount": "{count} results",
+    "resultsCount_one": "{count} result",
+    "resultsCount_other": "{count} results",
+    "navigate": "navigate",
+    "select": "select",
+    "hints": {
+      "startTyping": "Start typing to search...",
+      "minChars": "At least {count} characters",
+      "escKey": "ESC"
+    },
+    "entityTypes": {
+      "project": "Project",
+      "building": "Building",
+      "property": "Property",
+      "contact": "Contact",
+      "file": "File",
+      "parking": "Parking",
+      "storage": "Storage"
+    }
+  },
+  "ownership": {
+    "title": "Ownership Percentage Table",
+    "method": "Calculation Method",
+    "methodArea": "By Area",
+    "methodValue": "By Objective Value",
+    "methodVolume": "By Volume",
+    "zonePrice": "Zone Price (€/sq.m.)",
+    "commercialityCoefficient": "Commerciality Coefficient",
+    "status": "Status",
+    "statusDraft": "Draft",
+    "statusFinalized": "Finalized",
+    "statusRegistered": "Registered",
+    "columns": {
+      "ordinal": "#",
+      "entityCode": "Code",
+      "description": "Description",
+      "category": "Categ.",
+      "floor": "Floor",
+      "areaNet": "Net (sq.m.)",
+      "areaGross": "Gross",
+      "millesimalShares": "Shares (‰)",
+      "allocation": "Allocation",
+      "ownerParty": "Owner",
+      "preliminary": "Preliminary",
+      "final": "Final"
+    },
+    "categoryMain": "Main",
+    "categoryAuxiliary": "Auxiliary",
+    "categoryAirRights": "Air Rights",
+    "categoryInformational": "Informational",
+    "ownerContractor": "Contractor",
+    "ownerLandowner": "Landowner",
+    "ownerBuyer": "Buyer",
+    "ownerUnassigned": "Unassigned",
+    "actions": {
+      "autoPopulate": "Auto-Populate",
+      "calculate": "Calculate",
+      "finalize": "Finalize",
+      "unlock": "Unlock",
+      "exportPdf": "Export PDF",
+      "addRow": "Add Row",
+      "addAirRights": "Add Air Rights",
+      "removeRow": "Remove",
+      "refreshTable": "Refresh table",
+      "deleteTable": "Delete table",
+      "confirmDelete": "Yes, delete",
+      "confirmPrompt": "Are you sure?"
+    },
+    "messages": {
+      "noBuildings": "No buildings linked to this project. Link a building first (Building → General → Project).",
+      "noFloors": "No floors in buildings. Add floors first.",
+      "noProperties": "No properties in buildings. Add properties first.",
+      "propertiesWithoutArea": "{count} property(ies) without area — millesimal calculation will be incorrect.",
+      "propertiesWithoutFloor": "{count} property(ies) without floor link — floor coefficient will not be calculated.",
+      "populateSuccess": "Populated {count} entries. Click \"Calculate\" to compute millesimal shares.",
+      "populateWithWarnings": "Populated {count} entries, but:",
+      "dataCheckError": "Error checking data. Try again.",
+      "airRightsNoShares": "{count} air rights row(s) without millesimal shares. Enter air rights shares first.",
+      "tableDeleted": "Ownership table deleted.",
+      "deleteError": "Error deleting table",
+      "orphanedTitle": "Disconnected buildings in table",
+      "orphanedSingle": "One building referenced in the table is no longer linked to this project.",
+      "orphanedMultiple": "{count} buildings referenced in the table are no longer linked to this project.",
+      "orphanedAdvice": "You can re-link the buildings or delete the table and recreate it.",
+      "noAreaRows": "{count} propert{count, plural, one {y} other {ies}} ({codes}) without area. Enter sq.m. first to calculate millesimal shares.",
+      "spacesNoArea": "{count} linked space{count, plural, one {} other {s}} without area: {codes}",
+      "calculationNote": "Calculation: {method} — {date}",
+      "storageNoShares": "Storage unit(s) with own shares enabled but no value: {codes}. Enter millesimal shares."
+    },
+    "tooltips": {
+      "method": "Method A: By Area — distribution based on surface area. Method B: By Objective Value — weighted distribution based on zone price, floor coefficient (POL 1149/1994) and value coefficient. Method C: By Volume — distribution based on volume (area × floor height).",
+      "zonePrice": "Zone price (€/sq.m.) comes from the Ministry of Finance/AADE objective values table. Find the correct price at aades.gr → Objective Values → enter the property address. Used only in Method B (By Objective Value).",
+      "commerciality": "The Commerciality Coefficient determines whether Table A (< 1.5, residential) or Table B (≥ 1.5, commercial) from POL 1149/1994 is used for floor coefficients. Values: 0.6–3.0. Source: AADE objective property values. Used only in Method B."
+    },
+    "subtotal": "Subtotal",
+    "total": "GRAND TOTAL",
+    "bartex": {
+      "title": "Bartex (Land Exchange)",
+      "percentage": "Bartex Percentage (%)",
+      "contractor": "Contractor",
+      "landowners": "Landowners",
+      "shares": "shares"
+    },
+    "landownersTab": {
+      "title": "Project Landowners",
+      "addLandowner": "Add Landowner",
+      "removeLandowner": "Remove",
+      "ownershipPercentage": "Ownership Percentage (%)",
+      "totalPercentage": "Total Percentage",
+      "percentageMustBe100": "Total must be 100%",
+      "percentageValid": "Percentages sum to 100%",
+      "selectContact": "Select contact...",
+      "emptyState": "No landowners. Add the first landowner.",
+      "saved": "Changes saved",
+      "saveError": "Save error",
+      "save": "Save",
+      "noChanges": "No changes",
+      "removalGuard": {
+        "confirmTitle": "Remove Landowner",
+        "confirmBody": "You are about to remove \"{name}\" from the project landowners. The contact will not be deleted.",
+        "warningTitle": "Remove Landowner — Caution",
+        "warningBody": "\"{name}\" is referenced in the following:",
+        "warningNote": "You will need to manually update the ownership table after removal.",
+        "blockedTitle": "Removal not possible",
+        "blockedBody": "\"{name}\" is an owner of properties in this project. You must first remove the properties/spaces from this owner.",
+        "confirmRemove": "Remove",
+        "confirmRemoveAnyway": "Remove anyway",
+        "cancel": "Cancel",
+        "understood": "I understand",
+        "checking": "Checking dependencies...",
+        "count": "{count, plural, one {# record} other {# records}}"
+      }
+    },
+    "validation": {
+      "totalMismatch": "Total shares ≠ 1000‰",
+      "totalCorrect": "Total shares = 1000‰",
+      "belowMinimum": "Shares below minimum (1‰)"
+    },
+    "empty": "No properties found. Click \"Auto-Populate\" to start.",
+    "unlockReason": "Unlock reason",
+    "version": "Version",
+    "revisionHistory": "Revision History",
+    "noRevisions": "No previous revisions"
+  },
+  "workspace": {
+    "type": {
+      "company": "Company",
+      "officeDirectory": "Office Directory",
+      "personal": "Personal"
+    },
+    "title": "Workspaces",
+    "loading": "Loading workspaces...",
+    "noWorkspaces": "No workspace",
+    "selectWorkspace": "Select workspace",
+    "switchFailed": "Failed to switch workspace. Please try again.",
+    "selectLabel": "Select workspace",
+    "availableLabel": "Available workspaces",
+    "refreshLabel": "Refresh workspaces",
+    "settings": "Settings"
+  },
+  "productTour": {
+    "next": "Next",
+    "previous": "Previous",
+    "skip": "Skip",
+    "finish": "Finish",
+    "dontShowAgain": "Don't show again",
+    "stepIndicator": "Step {current} of {total}",
+    "errorDialog": {
+      "intro": {
+        "title": "Welcome to Error Management",
+        "description": "Let's explore your options when an error occurs. Each button has a different function."
+      },
+      "retry": {
+        "title": "Try Again",
+        "description": "Attempt to retry the action that caused the error. Useful for temporary network issues."
+      },
+      "back": {
+        "title": "Go Back",
+        "description": "Return to the previous page. Use this if you want to avoid the error."
+      },
+      "home": {
+        "title": "Go Home",
+        "description": "Navigate to the application's home page. A safe option for a fresh start."
+      },
+      "copy": {
+        "title": "Copy Details",
+        "description": "Copy the technical error details to your clipboard. Useful for sending to support."
+      },
+      "email": {
+        "title": "Send Email",
+        "description": "Send an email with the error details to the support team."
+      },
+      "notify": {
+        "title": "Notify Admin",
+        "description": "Send an automatic notification to the system administrator about the error."
+      },
+      "report": {
+        "title": "Anonymous Report",
+        "description": "Submit an anonymous error report to help improve the application."
+      }
+    }
+  },
+  "voiceAssistant": {
+    "tooltip": "Voice command",
+    "title": "Voice Command",
+    "description": "Press the button to start recording",
+    "recording": "Listening...",
+    "transcribing": "Transcribing...",
+    "processing": "Processing audio...",
+    "done": "Transcription complete",
+    "start": "Start recording",
+    "stop": "Stop recording",
+    "cancel": "Cancel",
+    "close": "Close",
+    "copy": "Copy text",
+    "copied": "Copied!",
+    "retry": "Retry",
+    "permissionDenied": "Microphone access denied. Please allow microphone access in your browser settings.",
+    "emptyRecording": "No audio was recorded. Please try again.",
+    "transcriptionFailed": "Transcription failed. Please try again.",
+    "genericError": "An error occurred. Please try again.",
+    "notSupported": "Voice recording is not supported in this browser.",
+    "sendCommand": "Send command",
+    "sending": "Sending...",
+    "panelTitle": "Voice AI Assistant",
+    "panelDescription": "AI responses to your voice commands",
+    "aiProcessing": "Processing your command...",
+    "emptyHistory": "No voice commands yet. Use the microphone button to start.",
+    "clearHistory": "Clear history",
+    "commandFailed": "Command failed",
+    "commandSent": "Command sent",
+    "openPanel": "Open AI panel",
+    "submitError": "Failed to submit command"
+  },
+  "voiceDictation": {
+    "title": "Voice dictation",
+    "description": "Speak to create a quick note. You can edit the text before saving.",
+    "placeholder": "Start speaking or type here...",
+    "start": "Start",
+    "stop": "Stop",
+    "save": "Save",
+    "cancel": "Cancel",
+    "notSupported": "Voice dictation is not supported in this browser.",
+    "error": "Voice dictation failed. Please try again.",
+    "empty": "Please enter or dictate some text first.",
+    "authRequired": "You must be signed in to save a note."
+  }
+}

@@ -2,12 +2,12 @@
 
 import React, { Suspense } from 'react';
 import { StaticPageLoading } from '@/core/states';
-import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
+import { PropertiesPageContent } from '@/components/properties/PropertiesPageContent';
 
 export default function PropertiesIndexPage() {
   return (
     <Suspense fallback={<StaticPageLoading />}>
-      <PropertyGridView />
+      <PropertiesPageContent />
     </Suspense>
   );
 }

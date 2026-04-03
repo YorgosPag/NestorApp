@@ -1,0 +1,159 @@
+{
+  "crm": {
+    "description": "Pipeline CRM, διαχείριση εργασιών, επικοινωνίες και απόδοση ομάδας",
+    "kpis": {
+      "title": "Επισκόπηση CRM",
+      "opportunities": "Ευκαιρίες",
+      "wonDeals": "Κερδισμένες",
+      "winRate": "Ποσοστό Κέρδους",
+      "avgDeal": "Μέση Αξία Συμφ.",
+      "totalTasks": "Σύνολο Εργασιών",
+      "overdueTasks": "Εκπρόθεσμες",
+      "communications": "Επικοινωνίες",
+      "lostDeals": "Χαμένες"
+    },
+    "pipeline": {
+      "title": "Pipeline ανά Στάδιο",
+      "description": "Πλήθος και αξία ευκαιριών ανά στάδιο pipeline",
+      "count": "Πλήθος",
+      "value": "Αξία"
+    },
+    "stages": {
+      "initial_contact": "Αρχική Επαφή",
+      "qualification": "Αξιολόγηση",
+      "viewing": "Επίσκεψη",
+      "proposal": "Πρόταση",
+      "negotiation": "Διαπραγμάτευση",
+      "contract": "Σύμβαση",
+      "closed_won": "Κλεισμένη (Κερδ.)",
+      "closed_lost": "Κλεισμένη (Χαμ.)",
+      "unknown": "Άγνωστο"
+    },
+    "tasks": {
+      "title": "Κατανομή Εργασιών",
+      "description": "Εργασίες ομαδοποιημένες ανά κατάσταση και προτεραιότητα"
+    },
+    "taskStatuses": {
+      "pending": "Εκκρεμεί",
+      "in_progress": "Σε Εξέλιξη",
+      "completed": "Ολοκληρωμένη",
+      "cancelled": "Ακυρωμένη",
+      "unknown": "Άγνωστο"
+    },
+    "priorities": {
+      "low": "Χαμηλή",
+      "medium": "Μεσαία",
+      "high": "Υψηλή",
+      "critical": "Κρίσιμη",
+      "unknown": "Άγνωστο"
+    },
+    "comms": {
+      "title": "Επικοινωνίες ανά Κανάλι",
+      "description": "Μηνύματα κατανεμημένα σε κανάλια επικοινωνίας",
+      "count": "Μηνύματα"
+    },
+    "channels": {
+      "email": "Email",
+      "phone": "Τηλέφωνο",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "meeting": "Συνάντηση",
+      "note": "Σημείωση",
+      "unknown": "Άγνωστο"
+    },
+    "leads": {
+      "title": "Leads ανά Πηγή",
+      "description": "Ανάλυση πηγών ευκαιριών"
+    },
+    "sources": {
+      "website": "Ιστοσελίδα",
+      "referral": "Σύσταση",
+      "social_media": "Κοινωνικά Δίκτυα",
+      "cold_call": "Cold Call",
+      "advertising": "Διαφήμιση",
+      "event": "Εκδήλωση",
+      "unknown": "Άγνωστο"
+    },
+    "team": {
+      "title": "Απόδοση Ομάδας",
+      "description": "Εργασίες ανατεθειμένες ανά μέλος ομάδας",
+      "tasks": "Εργασίες"
+    }
+  },
+  "spaces": {
+    "description": "Αναλυτικά στοιχεία θέσεων στάθμευσης και αποθηκών ανά κτίριο",
+    "kpis": {
+      "title": "Βασικοί Δείκτες",
+      "totalParking": "Σύνολο Parking",
+      "totalStorage": "Σύνολο Αποθηκών",
+      "parkingUtilization": "Χρήση Parking",
+      "storageUtilization": "Χρήση Αποθηκών",
+      "totalValue": "Συνολική Αξία",
+      "totalArea": "Εμβαδόν Αποθηκών",
+      "avgPricePerSqm": "Μέση Τιμή/m²",
+      "totalSold": "Πωληθέντα",
+      "linked": "Συνδεδεμένα με Κτίριο",
+      "unlinked": "Ασύνδετα"
+    },
+    "parking": {
+      "title": "Κατάληψη Parking",
+      "description": "Θέσεις στάθμευσης ανά κατάσταση και τύπο",
+      "zoneTitle": "Parking ανά Ζώνη Θέσης",
+      "zoneDescription": "Κατανομή θέσεων στάθμευσης ανά ζώνη τοποθεσίας",
+      "statuses": {
+        "available": "Διαθέσιμη",
+        "occupied": "Κατειλημμένη",
+        "reserved": "Δεσμευμένη",
+        "sold": "Πωλημένη",
+        "maintenance": "Συντήρηση"
+      },
+      "types": {
+        "standard": "Κανονική",
+        "handicapped": "ΑμεΑ",
+        "motorcycle": "Μοτοσικλέτα",
+        "electric": "Ηλεκτρικό",
+        "visitor": "Επισκέπτης",
+        "unknown": "Άγνωστο"
+      },
+      "zones": {
+        "pilotis": "Πιλοτή",
+        "underground": "Υπόγειο",
+        "open_space": "Ανοιχτός Χώρος",
+        "rooftop": "Ταράτσα",
+        "covered_outdoor": "Στεγασμένος Εξωτερικός",
+        "unknown": "Άγνωστο"
+      }
+    },
+    "storage": {
+      "title": "Χρήση Αποθηκών",
+      "description": "Αποθηκευτικοί χώροι ανά κατάσταση και τύπο",
+      "statuses": {
+        "available": "Διαθέσιμη",
+        "occupied": "Κατειλημμένη",
+        "maintenance": "Συντήρηση",
+        "reserved": "Δεσμευμένη",
+        "sold": "Πωλημένη",
+        "unavailable": "Μη Διαθέσιμη"
+      },
+      "types": {
+        "large": "Μεγάλη",
+        "small": "Μικρή",
+        "basement": "Υπόγειο",
+        "ground": "Ισόγειο",
+        "special": "Ειδική",
+        "storage": "Αποθήκη",
+        "parking": "Parking",
+        "garage": "Γκαράζ",
+        "warehouse": "Αποθήκη Μεγάλη",
+        "unknown": "Άγνωστο"
+      }
+    },
+    "byBuilding": {
+      "title": "Αξία ανά Κτίριο",
+      "description": "Κατανομή αξίας parking και αποθηκών ανά κτίριο",
+      "parkingValue": "Αξία Parking",
+      "storageValue": "Αξία Αποθηκών"
+    }
+  }
+}

@@ -39,6 +39,24 @@
         "warnOnly": false
       },
       "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "accounting-setup"
+      ]
+    },
+    {
+      "namespace": "accounting-setup",
+      "owner": "accounting-subapp",
+      "primarySurface": "accounting-setup-reconciliation",
+      "stringClasses": [
+        "forms",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
       "splitRequired": false,
       "targetNamespaces": []
     },
@@ -151,11 +169,92 @@
       "splitRequired": true,
       "targetNamespaces": [
         "building-core",
-        "building-floors",
         "building-filters",
-        "building-reports",
-        "building-help"
+        "building-tabs",
+        "building-timeline",
+        "building-storage",
+        "building-address"
       ]
+    },
+    {
+      "namespace": "building-address",
+      "owner": "building-domain",
+      "primarySurface": "building-address-associations",
+      "stringClasses": [
+        "forms",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "building-filters",
+      "owner": "building-domain",
+      "primarySurface": "building-filters",
+      "stringClasses": [
+        "forms",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "building-storage",
+      "owner": "building-domain",
+      "primarySurface": "building-storage-parking",
+      "stringClasses": [
+        "ui-chrome",
+        "forms"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "building-tabs",
+      "owner": "building-domain",
+      "primarySurface": "building-tab-content",
+      "stringClasses": [
+        "ui-chrome",
+        "forms"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "building-timeline",
+      "owner": "building-domain",
+      "primarySurface": "building-timeline-analytics",
+      "stringClasses": [
+        "ui-chrome",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     },
     {
       "namespace": "cash-flow",
@@ -198,8 +297,28 @@
         "common-navigation",
         "common-status",
         "common-validation",
-        "common-empty-states"
+        "common-empty-states",
+        "common-sales",
+        "common-account",
+        "common-photos",
+        "common-shared"
       ]
+    },
+    {
+      "namespace": "common-account",
+      "owner": "platform-core",
+      "primarySurface": "user-account-2fa",
+      "stringClasses": [
+        "ui-chrome",
+        "forms"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     },
     {
       "namespace": "common-actions",
@@ -242,6 +361,53 @@
       "budget": {
         "maxLines": 250,
         "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "common-photos",
+      "owner": "platform-core",
+      "primarySurface": "photo-management",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "common-sales",
+      "owner": "sales-domain",
+      "primarySurface": "sales-ecommerce",
+      "stringClasses": [
+        "ui-chrome",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "common-shared",
+      "owner": "platform-core",
+      "primarySurface": "cross-product-shared-ui",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
       },
       "status": "governed",
       "splitRequired": false,
@@ -330,12 +496,90 @@
       "status": "governed",
       "splitRequired": true,
       "targetNamespaces": [
+        "contacts-core",
         "contacts-form",
         "contacts-relationships",
-        "contacts-status",
-        "contacts-trash",
-        "contacts-help"
+        "contacts-banking",
+        "contacts-lifecycle"
       ]
+    },
+    {
+      "namespace": "contacts-banking",
+      "owner": "contacts-domain",
+      "primarySurface": "contacts-banking-tab",
+      "stringClasses": [
+        "forms",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "contacts-core",
+      "owner": "contacts-domain",
+      "primarySurface": "contacts-list-detail",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "contacts-form",
+      "owner": "contacts-domain",
+      "primarySurface": "contacts-create-edit",
+      "stringClasses": [
+        "forms",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "contacts-lifecycle",
+      "owner": "contacts-domain",
+      "primarySurface": "contacts-trash-impact",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "contacts-relationships",
+      "owner": "contacts-domain",
+      "primarySurface": "contacts-relationships-personas",
+      "stringClasses": [
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 800,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     },
     {
       "namespace": "crm",
@@ -347,6 +591,23 @@
         "domain-vocabulary",
         "notifications",
         "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "crm-inbox"
+      ]
+    },
+    {
+      "namespace": "crm-inbox",
+      "owner": "crm-domain",
+      "primarySurface": "crm-calendar-inbox",
+      "stringClasses": [
+        "ui-chrome"
       ],
       "budget": {
         "maxLines": 600,
@@ -392,11 +653,87 @@
       "splitRequired": true,
       "targetNamespaces": [
         "dxf-viewer-shell",
-        "dxf-viewer-tools",
         "dxf-viewer-panels",
-        "dxf-viewer-errors",
-        "dxf-viewer-hints"
+        "dxf-viewer-settings",
+        "dxf-viewer-wizard",
+        "dxf-viewer-guides"
       ]
+    },
+    {
+      "namespace": "dxf-viewer-guides",
+      "owner": "dxf-subapp",
+      "primarySurface": "dxf-viewer-guides-ai",
+      "stringClasses": [
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "dxf-viewer-panels",
+      "owner": "dxf-subapp",
+      "primarySurface": "dxf-viewer-panels-layers",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "dxf-viewer-settings",
+      "owner": "dxf-subapp",
+      "primarySurface": "dxf-viewer-settings",
+      "stringClasses": [
+        "forms"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "dxf-viewer-shell",
+      "owner": "dxf-subapp",
+      "primarySurface": "dxf-viewer-chrome-toolbar",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "dxf-viewer-wizard",
+      "owner": "dxf-subapp",
+      "primarySurface": "dxf-viewer-import-wizard",
+      "stringClasses": [
+        "ui-chrome",
+        "forms"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     },
     {
       "namespace": "errors",
@@ -421,6 +758,23 @@
         "ui-chrome",
         "notifications",
         "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "files-media"
+      ]
+    },
+    {
+      "namespace": "files-media",
+      "owner": "files-domain",
+      "primarySurface": "files-floorplan-media",
+      "stringClasses": [
+        "ui-chrome"
       ],
       "budget": {
         "maxLines": 600,
@@ -479,6 +833,23 @@
         "warnOnly": false
       },
       "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "geo-canvas-drawing"
+      ]
+    },
+    {
+      "namespace": "geo-canvas-drawing",
+      "owner": "geo-canvas-domain",
+      "primarySurface": "geo-canvas-drawing-interfaces",
+      "stringClasses": [
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
       "splitRequired": false,
       "targetNamespaces": []
     },
@@ -517,6 +888,23 @@
       "namespace": "navigation",
       "owner": "platform-navigation",
       "primarySurface": "global-navigation",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "navigation-entities"
+      ]
+    },
+    {
+      "namespace": "navigation-entities",
+      "owner": "platform-core",
+      "primarySurface": "navigation-entities-filters",
       "stringClasses": [
         "ui-chrome"
       ],
@@ -579,6 +967,40 @@
         "warnOnly": false
       },
       "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "payments-loans",
+        "payments-cost-calc"
+      ]
+    },
+    {
+      "namespace": "payments-cost-calc",
+      "owner": "finance-payments",
+      "primarySurface": "construction-cost-calculator",
+      "stringClasses": [
+        "domain-vocabulary",
+        "forms"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "payments-loans",
+      "owner": "finance-payments",
+      "primarySurface": "loan-tracking-cheques",
+      "stringClasses": [
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
       "splitRequired": false,
       "targetNamespaces": []
     },
@@ -610,6 +1032,41 @@
         "domain-vocabulary",
         "notifications",
         "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "projects-data",
+        "projects-ika"
+      ]
+    },
+    {
+      "namespace": "projects-data",
+      "owner": "projects-domain",
+      "primarySurface": "projects-detail-tabs",
+      "stringClasses": [
+        "forms",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "projects-ika",
+      "owner": "projects-domain",
+      "primarySurface": "projects-ika-compliance",
+      "stringClasses": [
+        "domain-vocabulary",
+        "forms"
       ],
       "budget": {
         "maxLines": 600,
@@ -739,6 +1196,23 @@
         "warnOnly": false
       },
       "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "reports-extended"
+      ]
+    },
+    {
+      "namespace": "reports-extended",
+      "owner": "reports-domain",
+      "primarySurface": "reports-crm-spaces",
+      "stringClasses": [
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
       "splitRequired": false,
       "targetNamespaces": []
     },
@@ -835,7 +1309,8 @@
       ],
       "budget": {
         "maxLines": 600,
-        "warnOnly": false
+        "warnOnly": false,
+        "budgetExempt": true
       },
       "status": "governed",
       "splitRequired": false,

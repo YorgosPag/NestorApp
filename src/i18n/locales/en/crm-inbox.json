@@ -1,0 +1,294 @@
+{
+  "calendarPage": {
+    "title": "Calendar",
+    "description": "View and manage your schedule",
+    "views": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "agenda": "Agenda"
+    },
+    "filters": {
+      "allUsers": "All Users",
+      "myCalendar": "My Calendar",
+      "allTypes": "All Types"
+    },
+    "newEvent": "New Event",
+    "noEvents": "No events for this period",
+    "today": "Today",
+    "eventTypes": {
+      "appointment": "Appointment",
+      "call": "Call",
+      "meeting": "Meeting",
+      "viewing": "Viewing",
+      "follow_up": "Follow Up",
+      "email": "Email",
+      "document": "Document",
+      "other": "Other"
+    },
+    "source": {
+      "task": "Task",
+      "appointment": "Appointment"
+    },
+    "dialog": {
+      "viewTitle": "Event Details",
+      "createTitle": "New Calendar Event",
+      "submitting": "Saving...",
+      "createError": "Error creating event",
+      "fields": {
+        "title": "Title",
+        "type": "Type",
+        "date": "Date",
+        "time": "Time",
+        "description": "Description",
+        "assignedTo": "Assigned To",
+        "endDate": "End Date",
+        "endDatePlaceholder": "Select end date (optional)",
+        "allDay": "All day",
+        "contact": "Contact",
+        "contactPlaceholder": "Contact ID (optional)",
+        "project": "Project",
+        "projectPlaceholder": "Project ID (optional)"
+      },
+      "actions": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "complete": "Complete",
+        "viewOriginal": "View Original"
+      }
+    },
+    "stats": {
+      "ariaLabel": "Event statistics",
+      "separator": "•",
+      "totalEvents": "Total Events"
+    },
+    "search": {
+      "placeholder": "Search events...",
+      "noResults": "No events found",
+      "resultsCount": "{{count}} events found"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "today": "T — Go to today",
+      "month": "M — Month view",
+      "week": "W — Week view",
+      "day": "D — Day view",
+      "agenda": "A — Agenda view",
+      "navigate": "← → — Navigate",
+      "newEvent": "N — New event"
+    },
+    "dragDrop": {
+      "moved": "Event moved successfully",
+      "resized": "Event resized successfully",
+      "appointmentReadOnly": "Appointments cannot be moved"
+    },
+    "conflicts": {
+      "title": "Scheduling Conflict",
+      "message": "This event overlaps with existing events:",
+      "continue": "Continue anyway",
+      "changeTime": "Change time"
+    },
+    "reminders": {
+      "label": "Reminder",
+      "none": "No reminder",
+      "15min": "15 minutes before",
+      "1hour": "1 hour before",
+      "1day": "1 day before"
+    },
+    "attendees": {
+      "label": "Attendees",
+      "add": "Add attendee",
+      "remove": "Remove"
+    },
+    "recurrence": {
+      "label": "Recurrence",
+      "none": "Does not repeat",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "every": "Every",
+      "endType": "End",
+      "never": "Never",
+      "onDate": "On date",
+      "afterCount": "After {{count}} occurrences"
+    },
+    "export": {
+      "print": "Print",
+      "pdf": "Export PDF"
+    },
+    "nlp": {
+      "badge": "Smart Input",
+      "placeholder": "e.g. \"Meeting tomorrow at 11am with John about project review\"",
+      "analyze": "Analyze",
+      "error": "Could not parse the event",
+      "toggle": "Smart input"
+    }
+  },
+  "inbox": {
+    "title": "Unified Inbox",
+    "historyTitle": "Communication History",
+    "selectContactTitle": "Select Contact",
+    "loading": "Loading messages...",
+    "loadingConversations": "Loading conversations...",
+    "messagesCount": "{count} messages",
+    "conversationsCount": "{count} conversations",
+    "noMessages": "No messages found",
+    "noConversations": "No conversations found",
+    "search": "Search messages...",
+    "dashboard": {
+      "total": "Total",
+      "active": "Active",
+      "unread": "Unread"
+    },
+    "filters": {
+      "title": "Filters",
+      "all": "All",
+      "channel": "Channel",
+      "direction": "Direction",
+      "status": "Status"
+    },
+    "direction": {
+      "inbound": "Inbound",
+      "outbound": "Outbound"
+    },
+    "time": {
+      "now": "Now",
+      "hoursAgo": "{hours}h",
+      "yesterday": "Yesterday"
+    },
+    "message": {
+      "from": "From",
+      "to": "To",
+      "attachments": "{count} attachments",
+      "pinned": "Pinned",
+      "edited": "Edited"
+    },
+    "tabs": {
+      "conversations": "Conversations",
+      "contactHistory": "Contact History"
+    },
+    "status": {
+      "active": "Active",
+      "closed": "Closed",
+      "archived": "Archived",
+      "spam": "Spam"
+    },
+    "thread": {
+      "title": "Conversation",
+      "loadEarlier": "Load earlier messages",
+      "noMessages": "No messages in this conversation",
+      "selectConversation": "Select a conversation to view messages",
+      "participants": "Participants",
+      "unread": "{count} unread"
+    },
+    "composer": {
+      "placeholder": "Type your message...",
+      "send": "Send",
+      "sending": "Sending...",
+      "error": "Failed to send",
+      "success": "Message sent",
+      "shortcutHint": "Ctrl+Enter to send",
+      "replyingTo": "Replying to",
+      "forwarding": "Forwarding",
+      "cancelReply": "Cancel",
+      "editing": "Editing message",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancelEdit": "Cancel edit"
+    },
+    "attachments": {
+      "add": "Add attachment",
+      "addFile": "Select file",
+      "remove": "Remove",
+      "removeAll": "Remove all",
+      "uploading": "Uploading...",
+      "uploadFailed": "Upload failed",
+      "downloadFailed": "Download failed",
+      "unsupportedType": "Unsupported file type",
+      "fileTooLarge": "File is too large",
+      "maxSize": "Max size: {size}",
+      "count": "{count} attachments",
+      "image": "Image",
+      "document": "Document",
+      "audio": "Audio",
+      "video": "Video",
+      "download": "Download",
+      "preview": "Preview",
+      "openInNewTab": "Open in new tab"
+    },
+    "selection": {
+      "selected": "{count} selected",
+      "selectAll": "Select all",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "contextMenu": {
+      "select": "Select",
+      "deselect": "Deselect",
+      "copy": "Copy",
+      "reply": "Reply",
+      "forward": "Forward",
+      "edit": "Edit",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "delete": "Delete"
+    },
+    "reactions": {
+      "pickReaction": "Pick a reaction",
+      "messageReactions": "Message reactions",
+      "reactedWith": "Reacted with {emoji}",
+      "thumbs_up": "Thumbs up",
+      "heart": "Heart",
+      "laughing": "Laughing",
+      "surprised": "Surprised",
+      "sad": "Sad",
+      "angry": "Angry"
+    },
+    "channels": {
+      "telegram": "Telegram",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS"
+    },
+    "pagination": {
+      "loadMore": "Load more",
+      "page": "Page {current} of {total}"
+    },
+    "errors": {
+      "loadFailed": "Failed to load",
+      "sendFailed": "Failed to send message",
+      "notAuthenticated": "Not authenticated"
+    },
+    "noActivity": "No activity history",
+    "activity": {
+      "overview": "Activity Overview",
+      "timeline": "Event Timeline",
+      "summary": "Conversation Summary",
+      "totalEvents": "Total",
+      "received": "Received",
+      "sent": "Sent",
+      "assignments": "Assignments",
+      "channel": "Channel",
+      "status": "Status",
+      "created": "Created",
+      "assignedTo": "Assigned To",
+      "lastUpdated": "Last Updated",
+      "participants": "Participants",
+      "conversationOpened": "Conversation Opened",
+      "conversationOpenedDesc": "New conversation started via {channel}",
+      "conversationClosed": "Conversation Closed",
+      "conversationClosedDesc": "The conversation was closed",
+      "messageReceived": "Message Received",
+      "messageSent": "Message Sent",
+      "agentAssigned": "Agent Assigned",
+      "agentAssignedDesc": "Conversation assigned to {agent}",
+      "system": "System",
+      "unknown": "Unknown",
+      "statusCompleted": "Completed",
+      "statusInProgress": "In Progress",
+      "statusPending": "Pending",
+      "statusFailed": "Failed"
+    }
+  }
+}

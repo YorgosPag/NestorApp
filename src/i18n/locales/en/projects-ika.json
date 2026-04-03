@@ -1,0 +1,371 @@
+{
+  "ika": {
+    "workers": "Workers",
+    "timesheet": "Timesheet",
+    "stampsCalculation": "Stamps Calculation",
+    "apdPayments": "APD & Payments",
+    "efkaDeclaration": "Project Declaration",
+    "efkaSettings": "EFKA Settings",
+    "efkaSettingsTab": {
+      "title": "EFKA Construction Workers Settings (KPK 781)",
+      "description": "Manage insurance classes and contribution rates",
+      "generalCard": "General Information",
+      "activeYear": "Active Year",
+      "sourceCircular": "EFKA Circular",
+      "sourceCircularPlaceholder": "e.g. EFKA Circular 39/2024",
+      "effectiveDate": "Effective Date",
+      "lastUpdated": "Last Updated",
+      "updatedBy": "Updated By",
+      "usingDefaults": "Using default values — not yet saved to the system.",
+      "insuranceClassesCard": "Insurance Classes",
+      "classNumber": "#",
+      "minDailyWage": "Min Daily Wage (€)",
+      "maxDailyWage": "Max Daily Wage (€)",
+      "imputedDailyWage": "Imputed Daily Wage (€)",
+      "contributionRatesCard": "Contribution Rates",
+      "category": "Category",
+      "employer": "Employer (%)",
+      "employee": "Employee (%)",
+      "mainPension": "Main Pension",
+      "health": "Health",
+      "supplementary": "Supplementary",
+      "unemployment": "Unemployment",
+      "iek": "IEK",
+      "oncePayment": "Lump Sum",
+      "seedDefaults": "Initialize Defaults",
+      "save": "Save",
+      "saving": "Saving...",
+      "seeding": "Initializing...",
+      "saveSuccess": "Settings saved successfully",
+      "seedSuccess": "Default values saved to the system",
+      "validationError": "Validation error",
+      "noProjectWarning": "Project ID is required"
+    },
+    "workersTab": {
+      "title": "Project Workers",
+      "description": "Manage workers assigned to this project",
+      "addWorker": "Add Worker",
+      "removeWorker": "Remove",
+      "confirmRemove": "Are you sure you want to remove this worker from the project?",
+      "noWorkers": "No workers assigned to this project",
+      "noWorkersHint": "Click \"Add Worker\" to get started",
+      "totalWorkers": "Total workers",
+      "columns": {
+        "name": "Full Name",
+        "specialty": "Specialty",
+        "company": "Company",
+        "insuranceClass": "Insurance Class",
+        "status": "Status",
+        "hireDate": "Hire Date",
+        "actions": "Actions"
+      },
+      "employmentStatus": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "on_leave": "On Leave",
+        "terminated": "Terminated"
+      },
+      "employmentType": {
+        "permanent": "Permanent",
+        "temporary": "Temporary",
+        "contract": "Contract",
+        "intern": "Intern"
+      },
+      "selected": "Selected:",
+      "amka": "AMKA:",
+      "noResults": "No results found",
+      "searchPlaceholder": "Search by name, specialty or AMKA...",
+      "searchError": "Error during search",
+      "noName": "No Name"
+    },
+    "efka": {
+      "title": "Project Declaration — EFKA",
+      "description": "Declaration details for e-EFKA & AMOE issuance",
+      "checklist": {
+        "title": "Required Information",
+        "completion": "Completion {completed}/{total}",
+        "allComplete": "All required information completed",
+        "employerVatNumber": "Employer VAT Number",
+        "projectAddress": "Project Address",
+        "projectDescription": "Project Description",
+        "startDate": "Start Date",
+        "estimatedEndDate": "Estimated End Date",
+        "estimatedWorkerCount": "Estimated Worker Count",
+        "projectCategory": "Project Category"
+      },
+      "status": {
+        "label": "Declaration Status",
+        "draft": "Draft",
+        "preparation": "In Preparation",
+        "submitted": "Submitted",
+        "active": "Active",
+        "amended": "Amended",
+        "closed": "Closed"
+      },
+      "amoe": {
+        "label": "AMOE",
+        "fullLabel": "Construction Project Registry Number",
+        "placeholder": "Will be assigned after submission",
+        "assigned": "AMOE: {number}"
+      },
+      "documents": {
+        "title": "EFKA Documents",
+        "e1": "E.1 — Employment Declaration",
+        "e3": "E.3 — Construction Project Declaration",
+        "e4": "E.4 — Personnel Table",
+        "status": {
+          "pending": "Pending",
+          "uploaded": "Uploaded",
+          "submitted": "Submitted",
+          "approved": "Approved"
+        }
+      },
+      "categories": {
+        "construction": "Construction",
+        "technical": "Technical"
+      },
+      "save": "Save",
+      "saved": "Saved",
+      "notes": "Notes",
+      "notesPlaceholder": "Add notes about the declaration..."
+    },
+    "timesheetTab": {
+      "title": "Site Attendance Log",
+      "description": "Record & monitor worker attendance",
+      "noProjectId": "No project ID found",
+      "noWorkers": "No workers assigned to this project",
+      "noWorkersHint": "Add workers from the \"Workers\" tab",
+      "noEvents": "No records for this day",
+      "addEvent": "New Record",
+      "today": "Today",
+      "viewMode": {
+        "daily": "Day",
+        "weekly": "Week",
+        "monthly": "Month"
+      },
+      "dashboard": {
+        "present": "Present",
+        "absent": "Absent",
+        "offSite": "Off-Site",
+        "hoursToday": "Hours Today",
+        "of": "of"
+      },
+      "columns": {
+        "worker": "Worker",
+        "status": "Status",
+        "checkIn": "Check-In",
+        "checkOut": "Check-Out",
+        "hours": "Hours",
+        "gaps": "Gaps",
+        "anomalies": "Anomalies",
+        "actions": "Actions"
+      },
+      "status": {
+        "present": "Present",
+        "absent": "Absent",
+        "offSite": "Off-Site",
+        "onBreak": "On Break",
+        "checkedOut": "Checked Out"
+      },
+      "eventTypes": {
+        "check_in": "Check-In",
+        "check_out": "Check-Out",
+        "break_start": "Break Start",
+        "break_end": "Break End",
+        "left_site": "Left Site",
+        "returned": "Returned",
+        "exit_permission": "Exit Permission"
+      },
+      "methods": {
+        "manual": "Manual",
+        "qr": "QR Code",
+        "geofence": "Geofencing",
+        "nfc": "NFC"
+      },
+      "dialog": {
+        "title": "New Attendance Record",
+        "selectWorker": "Select Worker",
+        "selectEventType": "Record Type",
+        "notes": "Notes (optional)",
+        "notesPlaceholder": "e.g. Went to pharmacy",
+        "submit": "Record",
+        "submitting": "Recording...",
+        "success": "Record saved successfully",
+        "error": "Error saving record"
+      },
+      "crews": {
+        "allCrews": "All Crews",
+        "independent": "Independent Workers",
+        "presentOf": "{present} of {total}"
+      },
+      "anomalies": {
+        "missingCheckout": "Missing check-out",
+        "missingCheckin": "Missing check-in",
+        "unauthorizedAbsence": "Unauthorized absence",
+        "overtimeUndeclared": "Undeclared overtime",
+        "longBreak": "Extended break",
+        "lateArrival": "Late arrival"
+      }
+    },
+    "attendance": {
+      "qr": {
+        "title": "Attendance QR Code",
+        "description": "Daily QR code for worker check-in/check-out",
+        "generate": "Generate QR",
+        "regenerate": "Regenerate QR",
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked",
+        "copyUrl": "Copy URL",
+        "copied": "Copied!",
+        "print": "Print",
+        "emptyState": "Click «Generate QR» to create the daily QR code",
+        "generateError": "Failed to generate QR code",
+        "networkError": "Connection error. Please try again."
+      },
+      "geofence": {
+        "title": "Site Geofence",
+        "description": "Configure geographic zone for worker location verification",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "radius": "Zone Radius",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "save": "Save",
+        "saved": "Geofence saved!",
+        "reset": "Reset",
+        "saveError": "Failed to save geofence",
+        "networkError": "Connection error. Please try again."
+      },
+      "checkIn": {
+        "title": "Worker Attendance",
+        "gpsLabel": "GPS Location",
+        "gpsRequesting": "Acquiring location...",
+        "amkaLabel": "AMKA",
+        "amkaPlaceholder": "Enter 11-digit AMKA",
+        "checkIn": "Check In",
+        "checkOut": "Check Out",
+        "submit": "Submit",
+        "submitting": "Submitting...",
+        "success": "Recorded!",
+        "error": "Check-in Failed",
+        "retry": "Try Again",
+        "insideGeofence": "inside zone",
+        "outsideGeofence": "outside zone",
+        "photoLabel": "Photo",
+        "photoOptional": "optional",
+        "takePhoto": "Take Photo",
+        "removePhoto": "Remove",
+        "privacyNotice": "Location is recorded only during check-in/check-out."
+      },
+      "eventTypes": {
+        "arrival": "Arrival",
+        "departure": "Departure",
+        "break": "Break",
+        "return": "Return",
+        "live": "LIVE"
+      },
+      "liveMap": {
+        "title": "Worker Map",
+        "description": "Real-time worker location tracking",
+        "inside": "inside zone",
+        "outside": "outside zone",
+        "checkedOut": "checked out",
+        "noEvents": "No attendance events today",
+        "outsideAlert": "outside site zone",
+        "popupEvent": "Event",
+        "popupTime": "Time",
+        "popupDistance": "Distance",
+        "statusInside": "Inside zone",
+        "statusOutside": "Outside zone",
+        "statusCheckedOut": "Checked out"
+      }
+    },
+    "stampsTab": {
+      "title": "Stamps Calculation",
+      "description": "Monthly stamps & insurance contribution calculation",
+      "noProjectId": "Project ID not found",
+      "noWorkers": "No workers in this project",
+      "noWorkersHint": "Add workers from the «Workers» tab",
+      "saveRecords": "Save Records",
+      "saving": "Saving...",
+      "saved": "Records saved successfully",
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "dashboard": {
+        "totalStamps": "Total Stamps",
+        "employerContribution": "Employer Contribution",
+        "employeeContribution": "Employee Contribution",
+        "totalContribution": "Total Contribution"
+      },
+      "columns": {
+        "worker": "Worker",
+        "insuranceClass": "Ins. Class",
+        "imputedWage": "Imputed (€/day)",
+        "daysWorked": "Days",
+        "stamps": "Stamps",
+        "employerContrib": "Employer",
+        "employeeContrib": "Employee",
+        "total": "Total",
+        "actions": "Actions"
+      },
+      "issues": {
+        "missingClass": "Insurance class not assigned",
+        "noDays": "No working days found",
+        "noConfig": "Insurance configuration not found"
+      },
+      "dialog": {
+        "title": "Set Insurance Class",
+        "selectClass": "Select Class",
+        "dailyWageOverride": "Imputed Daily Wage (optional)",
+        "notes": "Notes",
+        "save": "Save",
+        "classLabel": "Class {number} — €{wage}/day"
+      },
+      "noInsuranceClass": "No class",
+      "totalsRow": "TOTALS"
+    },
+    "apdTab": {
+      "title": "APD & Payments",
+      "description": "Periodic Declaration Tracking",
+      "noProjectId": "Project ID not found",
+      "noRecords": "No employment records found",
+      "noRecordsHint": "Calculate stamps first from the «Stamps Calculation» tab",
+      "columns": {
+        "period": "Period",
+        "status": "Status",
+        "workers": "Workers",
+        "contribution": "Contribution (€)",
+        "deadline": "Deadline",
+        "referenceNumber": "Reference No.",
+        "actions": "Actions"
+      },
+      "status": {
+        "pending": "Pending",
+        "submitted": "Submitted",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "corrected": "Corrected"
+      },
+      "actions": {
+        "markSubmitted": "Mark as Submitted",
+        "addReference": "Reference No.",
+        "viewDetails": "Details"
+      },
+      "deadlineWarning": "Deadline approaching!",
+      "deadlinePassed": "Deadline has passed!"
+    }
+  }
+}

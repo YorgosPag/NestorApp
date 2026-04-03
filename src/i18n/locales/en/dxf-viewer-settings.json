@@ -1,0 +1,686 @@
+{
+  "settings": {
+    "grip": {
+      "title": "Grip Settings",
+      "actionsAriaLabel": "Grip settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (CAD Standards)",
+      "enabled": "Show Grips",
+      "disabledWarning": "Grips are disabled and will not be displayed",
+      "sections": {
+        "basic": "Basic Settings",
+        "colors": "Grip Colors",
+        "types": "Grip Types",
+        "advanced": "Advanced Settings"
+      },
+      "labels": {
+        "size": "Grip Size",
+        "opacity": "Opacity",
+        "coldColor": "Cold Color",
+        "warmColor": "Warm Color (Hover)",
+        "hotColor": "Hot Color (Selected)",
+        "contourColor": "Contour Color",
+        "pickBoxSize": "Pick Box Size",
+        "apertureSize": "Aperture Size",
+        "maxGrips": "Max Grips per Entity"
+      },
+      "colorPicker": {
+        "cold": "Select Cold Grip Color",
+        "warm": "Select Warm Grip Color",
+        "hot": "Select Hot Grip Color",
+        "contour": "Select Contour Grip Color"
+      },
+      "checkboxes": {
+        "showMidpoints": "Show Midpoints",
+        "showCenters": "Show Centers",
+        "showQuadrants": "Show Quadrants",
+        "showAperture": "Show Aperture",
+        "multiGripEdit": "Multi-Grip Edit",
+        "snapToGrips": "Snap to Grips"
+      },
+      "presets": {
+        "title": "Quick Presets",
+        "small": "Small",
+        "normal": "Normal",
+        "large": "Large"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom grip settings",
+          "colors": "All colors you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to CAD standards (AutoCAD/BricsCAD)",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All grip settings returned to CAD standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Grip Settings"
+    },
+    "line": {
+      "title": "Line Settings",
+      "actionsAriaLabel": "Line settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (ISO 128 & AutoCAD 2024)",
+      "enabled": "Show line",
+      "disabledWarning": "Lines are disabled and will not be displayed in preview",
+      "sections": {
+        "templates": "Templates & Tools",
+        "basic": "Basic Settings",
+        "hover": "Hover Settings",
+        "final": "Final Line Settings",
+        "advanced": "Advanced Settings"
+      },
+      "labels": {
+        "color": "Color",
+        "width": "Line Width",
+        "widthValue": "Line Width: {value}px",
+        "opacity": "Opacity",
+        "opacityValue": "Opacity: {value}%",
+        "type": "Line Type",
+        "templates": "Predefined Templates",
+        "breakAtCenter": "Break line for text",
+        "breakAtCenterDescription": "The line will break in the middle to fit text",
+        "hoverColor": "Hover Color",
+        "hoverWidth": "Hover Width",
+        "hoverWidthValue": "Hover Width: {value}px",
+        "hoverOpacity": "Hover Opacity",
+        "hoverOpacityValue": "Hover Opacity: {value}%",
+        "finalColor": "Final Color",
+        "finalWidth": "Final Width",
+        "finalWidthValue": "Final Width: {value}px",
+        "finalOpacity": "Final Opacity",
+        "finalOpacityValue": "Final Opacity: {value}%",
+        "dashScale": "Dash Scale",
+        "dashScaleValue": "Dash Scale: {value}",
+        "dashOffset": "Dash Offset",
+        "dashOffsetValue": "Dash Offset: {value}px",
+        "lineCap": "Line Cap",
+        "lineJoin": "Line Join"
+      },
+      "colorPicker": {
+        "line": "Select Line Color",
+        "hover": "Select Hover Color",
+        "final": "Select Final Color"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom line settings",
+          "templates": "All templates you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to ISO 128 & AutoCAD 2024 standards",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All line settings returned to ISO 128 & AutoCAD 2024 standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Line Settings"
+    },
+    "text": {
+      "title": "Text Settings",
+      "actionsAriaLabel": "Text settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (ISO 3098)",
+      "enabled": "Show distance text",
+      "disabledWarning": "Distance text is disabled and will not be displayed in preview",
+      "sections": {
+        "basic": "Basic Text Settings",
+        "style": "Text Style",
+        "advanced": "Advanced Effects",
+        "preview": "Preview & Info"
+      },
+      "labels": {
+        "fontFamily": "Font Family",
+        "fontSize": "Font Size",
+        "color": "Text Color",
+        "textStyle": "Text Style",
+        "scriptStyle": "Superscript / Subscript",
+        "preview": "Preview",
+        "previewText": "Seize the day",
+        "searchFonts": "Search fonts...",
+        "searchSize": "Search size...",
+        "increaseFontSize": "Increase font size",
+        "decreaseFontSize": "Decrease font size"
+      },
+      "colorPicker": {
+        "text": "Select Text Color"
+      },
+      "styles": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "strikethrough": "Strikethrough",
+        "superscript": "Superscript",
+        "subscript": "Subscript",
+        "normal": "Normal"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom text settings",
+          "templates": "All templates you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to ISO 3098 standards",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All text settings returned to ISO 3098 standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Text Settings"
+    },
+    "general": "General Settings",
+    "specific": "Specific Settings",
+    "tabs": {
+      "drawing": "Drawing",
+      "measurements": "Measurements",
+      "draft": "Draft",
+      "completion": "Completion",
+      "hover": "Hover",
+      "selection": "Selection"
+    },
+    "generalTabs": {
+      "lines": "Lines",
+      "text": "Text",
+      "grips": "Grips"
+    },
+    "gridTabs": {
+      "grid": "Grid",
+      "rulers": "Rulers"
+    },
+    "subTabs": {
+      "lineAria": "Line Settings {label}",
+      "textAria": "Text Settings {label}",
+      "gripsAria": "Grips Settings {label}"
+    }
+  },
+  "lineSettings": {
+    "selectTemplate": "Select template",
+    "types": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted",
+      "dashDot": "Dash-Dot",
+      "dashDotDot": "Dash-Dot-Dot"
+    },
+    "caps": {
+      "butt": "Square",
+      "round": "Round",
+      "square": "Extended"
+    },
+    "joins": {
+      "miter": "Sharp",
+      "round": "Round",
+      "bevel": "Beveled"
+    },
+    "categories": {
+      "engineering": "Engineering Drawings",
+      "architectural": "Architectural",
+      "electrical": "Electrical",
+      "custom": "Custom"
+    },
+    "templates": {
+      "mainLine": {
+        "name": "Main Line",
+        "description": "Continuous line for main elements"
+      },
+      "centerLine": {
+        "name": "Center Line",
+        "description": "Dash-dot for symmetry axes"
+      },
+      "hiddenLine": {
+        "name": "Hidden Line",
+        "description": "Dashed line for hidden elements"
+      },
+      "dimensions": {
+        "name": "Dimensions",
+        "description": "Thin line for dimensions"
+      },
+      "wall": {
+        "name": "Wall",
+        "description": "Thick line for walls"
+      },
+      "furniture": {
+        "name": "Furniture",
+        "description": "Medium line for furniture"
+      },
+      "auxiliary": {
+        "name": "Auxiliary",
+        "description": "Dashed construction lines"
+      },
+      "cables": {
+        "name": "Cables",
+        "description": "Continuous lines for cables"
+      },
+      "signals": {
+        "name": "Signals",
+        "description": "Dash-dot for signals"
+      },
+      "grounding": {
+        "name": "Grounding",
+        "description": "Double dots for grounding"
+      }
+    }
+  },
+  "gridSettings": {
+    "visibility": {
+      "title": "Grid Visibility",
+      "description": "Show/hide the grid",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "size": {
+      "title": "Grid Size",
+      "description": "Distance between grid lines (COMMON for all)"
+    },
+    "style": {
+      "title": "Grid Style",
+      "description": "Grid line display type",
+      "lines": "Lines",
+      "dots": "Dots",
+      "crosses": "Crosses"
+    },
+    "lineTypes": {
+      "majorLines": "Major Lines",
+      "minorLines": "Minor Lines",
+      "majorDots": "Major Dots",
+      "minorDots": "Minor Dots",
+      "majorCrosses": "Major Crosses",
+      "minorCrosses": "Minor Crosses"
+    },
+    "color": {
+      "label": "{type} Color",
+      "description": "Color of the {type} grid",
+      "selectTitle": "Select {type} Color"
+    },
+    "weight": {
+      "label": "{type} Weight",
+      "description": "Weight of the {type} grid"
+    }
+  },
+  "selectionSettings": {
+    "tabs": {
+      "window": "Window Selection",
+      "crossing": "Crossing Selection"
+    },
+    "resetButton": "Reset Selection Settings (DEBUG)",
+    "resetDescription": "Resets all settings to make new borderStyle work",
+    "window": {
+      "title": "Window Selection Settings",
+      "description": "Settings for the blue selection box (left to right)",
+      "fillColor": "Select Window Fill Color",
+      "fillColorLabel": "Fill Color",
+      "borderColor": "Select Window Border Color",
+      "borderColorLabel": "Border Color"
+    },
+    "crossing": {
+      "title": "Crossing Selection Settings",
+      "description": "Settings for the green selection box (right to left)",
+      "fillColor": "Select Crossing Fill Color",
+      "fillColorLabel": "Fill Color",
+      "borderColor": "Select Crossing Border Color",
+      "borderColorLabel": "Border Color"
+    },
+    "common": {
+      "fillOpacity": "Fill Opacity",
+      "fillOpacityDesc": "Fill transparency level",
+      "borderOpacity": "Border Opacity",
+      "borderOpacityDesc": "Border transparency level",
+      "borderWidth": "Line Width",
+      "borderWidthDesc": "Border width in pixels",
+      "borderStyle": "Border Style",
+      "borderStyleDesc": "Border line type"
+    },
+    "borderStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted",
+      "dashDot": "Dash-Dot"
+    }
+  },
+  "cursorSettings": {
+    "colorPicker": "Select Cursor Color",
+    "title": "Cursor Settings",
+    "shape": {
+      "title": "Cursor Shape",
+      "description": "Choose between circle and square",
+      "circle": "Circle",
+      "square": "Square"
+    },
+    "color": {
+      "title": "Cursor Color",
+      "description": "Cursor border color"
+    },
+    "lineStyle": {
+      "title": "Line Type",
+      "description": "Cursor border style"
+    },
+    "lineWidth": {
+      "title": "Cursor Line Width",
+      "description": "Border thickness in pixels"
+    },
+    "size": {
+      "title": "Cursor Size",
+      "description": "Diameter/side in pixels"
+    },
+    "opacity": {
+      "title": "Cursor Opacity",
+      "description": "Cursor transparency level"
+    },
+    "display": {
+      "title": "Show Cursor",
+      "description": "Show/hide cursor circle",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "lineStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dots",
+      "dashDot": "Dash-Dot"
+    }
+  },
+  "crosshairSettings": {
+    "title": "Crosshair Settings",
+    "tabs": {
+      "appearance": "Appearance",
+      "behavior": "Behavior"
+    },
+    "colorPicker": "Select Crosshair Color",
+    "appearanceColorPicker": "Select Crosshair Appearance Color",
+    "appearance": {
+      "colorTitle": "Crosshair Color",
+      "colorDescription": "Crosshair lines color",
+      "lineStyleTitle": "Line Type",
+      "lineStyleDescription": "Line rendering style",
+      "lineWidthTitle": "Line Width",
+      "lineWidthDescription": "Width in pixels",
+      "sizeTitle": "Crosshair Size",
+      "sizeDescription": "Extension from center"
+    },
+    "behavior": {
+      "colorTitle": "Color",
+      "colorDescription": "Crosshair lines color",
+      "opacityTitle": "Crosshair Opacity",
+      "opacityDescription": "Crosshair transparency level",
+      "cursorGapTitle": "Cursor Gap",
+      "cursorGapDescription": "Lines start outside the cursor"
+    },
+    "lineStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dots",
+      "dashDot": "Dash-Dot"
+    },
+    "common": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "rulerSettings": {
+    "tabs": {
+      "background": "Background",
+      "lines": "Lines",
+      "text": "Text",
+      "units": "Units",
+      "majorLines": "Major Lines",
+      "minorLines": "Minor Lines"
+    },
+    "majorLines": {
+      "colorPicker": "Select Major Lines Color",
+      "display": {
+        "title": "Show Major Lines",
+        "description": "Show/hide ruler major lines"
+      },
+      "opacity": {
+        "title": "Major Lines Opacity",
+        "description": "Transparency level of major ruler lines"
+      },
+      "color": {
+        "title": "Major Lines Color",
+        "description": "Color of major ruler lines (ticks)"
+      },
+      "width": {
+        "title": "Major Lines Thickness",
+        "description": "Thickness of major ruler lines"
+      }
+    },
+    "minorLines": {
+      "colorPicker": "Select Minor Lines Color",
+      "display": {
+        "title": "Show Minor Lines",
+        "description": "Show/hide ruler minor lines"
+      },
+      "opacity": {
+        "title": "Minor Lines Opacity",
+        "description": "Transparency level of minor ruler lines"
+      },
+      "color": {
+        "title": "Minor Lines Color",
+        "description": "Color of minor ruler lines (ticks)"
+      },
+      "width": {
+        "title": "Minor Lines Thickness",
+        "description": "Thickness of minor ruler lines"
+      }
+    },
+    "background": {
+      "colorPicker": "Select Ruler Background Color",
+      "display": {
+        "title": "Show Background",
+        "description": "Show/hide ruler background"
+      },
+      "color": {
+        "title": "Background Color",
+        "description": "Ruler background color"
+      },
+      "opacity": {
+        "title": "Opacity",
+        "description": "Transparency level of rulers"
+      },
+      "width": {
+        "title": "Ruler Width",
+        "description": "Width of ruler in pixels"
+      },
+      "lines": {
+        "title": "Show Lines",
+        "description": "Show/hide measurement lines on rulers"
+      }
+    },
+    "text": {
+      "colorTitle": "Text Color",
+      "colorDescription": "Color of ruler numbers and text",
+      "sizeTitle": "Text Size",
+      "sizeDescription": "Size of numbers on rulers",
+      "displayTitle": "Show Text",
+      "displayDescription": "Show/hide ruler numbers and text"
+    },
+    "units": {
+      "measurementTitle": "Measurement Units",
+      "measurementDescription": "Unit of measurement for rulers",
+      "displayTitle": "Show Units",
+      "displayDescription": "Show/hide units on rulers",
+      "sizeTitle": "Units Size",
+      "sizeDescription": "Size of measurement units on rulers",
+      "colorTitle": "Units Color",
+      "colorDescription": "Color of measurement units on rulers"
+    },
+    "common": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "layersSettings": {
+    "tabs": {
+      "outlines": "Outlines",
+      "fills": "Fills"
+    },
+    "title": "Layers Settings",
+    "description": "Colors and appearance of drawing layers",
+    "preview": {
+      "title": "Layer Preview",
+      "description": "See how layers will look"
+    },
+    "outlines": {
+      "colorsTitle": "Outline Colors",
+      "displayTitle": "Show Outlines",
+      "displayDescription": "Enable/Disable outlines"
+    },
+    "fills": {
+      "colorsTitle": "Fill Colors",
+      "opacityTitle": "Fill Opacity",
+      "opacityDescription": "Opacity level for fills",
+      "displayTitle": "Show Fills",
+      "displayDescription": "Enable/Disable fills"
+    },
+    "reset": {
+      "title": "Reset",
+      "description": "Reset to default settings",
+      "button": "Reset Layers Settings"
+    },
+    "comingSoon": {
+      "title": "Coming Soon",
+      "items": {
+        "fillColors": "Layer fill colors",
+        "lineThickness": "Line thickness settings",
+        "lineStyles": "Line styles (dashed, etc.)",
+        "customPalettes": "Custom color palettes",
+        "importExport": "Import/Export color profiles"
+      }
+    }
+  },
+  "entitiesSettings": {
+    "moreOptions": "More options",
+    "overrideGlobalSettings": "Use specific settings",
+    "overrideDescriptions": {
+      "lineDraft": "Use specific line settings for draft",
+      "textDraft": "Use specific text settings for draft",
+      "gripsDraft": "Use specific grips settings for draft",
+      "lineHover": "Use specific line settings for hover",
+      "lineSelection": "Use specific line settings for selection",
+      "lineCompletion": "Use specific line settings for completion"
+    },
+    "statusLabels": {
+      "general": "General Settings",
+      "specificDraft": "Specific Draft Settings",
+      "specificHover": "Specific Hover Settings",
+      "specificSelection": "Specific Selection Settings",
+      "specificCompletion": "Specific Completion Settings",
+      "specific": "Specific Settings"
+    },
+    "toolSettings": {
+      "title": "Settings {tool}",
+      "toolSettingsTitle": "Tool Settings",
+      "comingSoon": "Settings for this tool will be added soon"
+    },
+    "selectTool": {
+      "title": "Select Tool",
+      "description": "Click on a tool to see its settings"
+    }
+  },
+  "dxfSettings": {
+    "title": "DXF Settings"
+  },
+  "currentSettings": {
+    "title": "Current Settings",
+    "line": "Line",
+    "text": "Text",
+    "grips": "Grips",
+    "selectTab": "Select a tab (Lines, Text or Grips) to view current settings",
+    "labels": {
+      "type": "Type:",
+      "color": "Color:",
+      "width": "Width:",
+      "opacity": "Opacity:",
+      "scale": "Scale:",
+      "offset": "Offset:",
+      "lineCap": "Line Cap:",
+      "lineJoin": "Line Join:",
+      "fontSize": "Font Size:",
+      "fontFamily": "Font Family:",
+      "style": "Style:",
+      "normal": "Normal",
+      "superscript": "Superscript:",
+      "subscript": "Subscript:",
+      "yes": "Yes",
+      "no": "No",
+      "visible": "Visible:",
+      "size": "Size:",
+      "shape": "Shape:",
+      "fill": "Fill:",
+      "coldColor": "Cold:",
+      "warmColor": "Warm:",
+      "hotColor": "Hot:"
+    }
+  },
+  "specificSettings": {
+    "loading": "Loading...",
+    "categories": {
+      "selection": {
+        "title": "Selection",
+        "description": "Object selection settings"
+      },
+      "cursor": {
+        "title": "Cursor",
+        "description": "Cursor and crosshair settings"
+      },
+      "grid": {
+        "title": "Grid & Rulers",
+        "description": "Grid and ruler settings"
+      },
+      "layers": {
+        "title": "Layers",
+        "description": "Layer settings"
+      },
+      "entities": {
+        "title": "Entities",
+        "description": "DXF entity settings"
+      },
+      "grips": {
+        "title": "Grips",
+        "description": "Grip settings (coming soon)"
+      },
+      "lighting": {
+        "title": "Lighting",
+        "description": "Lighting settings (coming soon)"
+      }
+    }
+  },
+  "dynamicInput": {
+    "placeholders": {
+      "xCoordinate": "e.g. -1000.56",
+      "yCoordinate": "e.g. +750.32",
+      "angle": "e.g. 45 or 90.5",
+      "length": "e.g. 100.0",
+      "width": "e.g. 50.0",
+      "height": "e.g. 100.0",
+      "radius": "e.g. 50.0",
+      "diameter": "e.g. 100.0"
+    },
+    "multiPoint": {
+      "distance": "Distance:",
+      "angle": "Angle:",
+      "segments": "Segments:",
+      "total": "Total:"
+    }
+  }
+}

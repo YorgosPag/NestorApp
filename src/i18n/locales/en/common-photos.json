@@ -1,0 +1,143 @@
+{
+  "photo": {
+    "preview": "Photo preview",
+    "logo": "Logo",
+    "photo": "Photo",
+    "remove": "Remove {name}",
+    "logoUploaded": "Logo uploaded successfully",
+    "photoUploaded": "Photo uploaded successfully",
+    "clickToChange": "Click to change"
+  },
+  "photos": {
+    "addPhoto": "Add Photo",
+    "galleryLabel": "Photo gallery",
+    "uploadPlaceholder": "Drag and drop photos or click to select",
+    "management": {
+      "title": "Photo Management",
+      "gallery": "Photo Gallery",
+      "logo": "Logo",
+      "photosCount": "Photos ({used}/{max})",
+      "photoNumber": "Photo {number}",
+      "addMore": "Add {count} more",
+      "addMorePhotos": "Add {count} more photos",
+      "profileSelection": "Profile Photo Selection",
+      "profileOptions": "Profile Photo Options",
+      "selectAsProfile": "Select photo {number} as profile",
+      "emptySlot": "Empty slot",
+      "emptySlotNumber": "Empty {number}"
+    }
+  },
+  "photoPreview": {
+    "toolbar": {
+      "ariaLabel": "Photo Tools"
+    },
+    "navigation": {
+      "previous": "Previous photo",
+      "previousAria": "Previous photo ({current}/{total})",
+      "next": "Next photo",
+      "nextAria": "Next photo ({current}/{total})"
+    },
+    "zoom": {
+      "out": "Zoom out",
+      "in": "Zoom in",
+      "fit": "Fit to view",
+      "label": "Zoom:"
+    },
+    "actions": {
+      "rotate": "Rotate",
+      "download": "Download",
+      "close": "Close"
+    },
+    "aria": {
+      "displayPhoto": "Display Photo",
+      "photoInfo": "Photo Information",
+      "contactType": "Contact Type",
+      "focusInfo": "Focus Information"
+    },
+    "titles": {
+      "profile": "Profile Photo",
+      "logo": "Logo",
+      "representative": "Representative Photo",
+      "photo": "Photo",
+      "photoWithIndex": "Photo {index}"
+    },
+    "contactType": {
+      "individual": "Individual",
+      "company": "Legal Entity",
+      "service": "Public Service",
+      "unknown": "Unknown Type"
+    },
+    "screenReader": {
+      "gallery": "Viewing photo {current} of {total}. {contactInfo}Use arrows to navigate.",
+      "single": "Viewing photo. {contactInfo}",
+      "photoFrom": "Photo from {name}."
+    },
+    "alt": {
+      "gallery": "{title} - Photo {current} of {total}",
+      "single": "{title}",
+      "companyLogo": "Company Logo",
+      "representativePhoto": "Representative Photo",
+      "serviceLogo": "Public Service Logo",
+      "photoWithIndex": "Photo {index}"
+    },
+    "clickToPreview": "Click to preview",
+    "dragOrClick": "Click or drag a file",
+    "empty": {
+      "logo": "No logo available",
+      "photo": "No photo available",
+      "generic": "Empty photo",
+      "noPhotos": "No photos saved"
+    },
+    "headers": {
+      "companyPhotos": "Company Photos ({count})",
+      "individualPhotos": "Photos ({count}/{max})",
+      "serviceLogo": "Public Service Logo"
+    },
+    "unsupportedType": "Unsupported contact type: {type}"
+  },
+  "photoCard": {
+    "company": {
+      "alt": "Company Logo",
+      "empty": "No logo available"
+    },
+    "representative": {
+      "alt": "Representative Photo",
+      "empty": "No photo available"
+    },
+    "individual": {
+      "alt": "Photo {index}",
+      "empty": "Empty photo"
+    },
+    "service": {
+      "alt": "Public Service Logo",
+      "empty": "No logo available"
+    }
+  },
+  "photoManager": {
+    "individualPhotos": "Face Photos ({count})",
+    "companyLogo": "Company Logo",
+    "representativePhoto": "Representative Photo",
+    "serviceLogo": "Public Service Logo",
+    "emailShareSimplified": "Email Share Form - Temporarily Simplified"
+  },
+  "upload": {
+    "addPhoto": "Add photo",
+    "addLogo": "Add logo",
+    "clickOrDrag": "Click or drag file",
+    "clickOrDragPhoto": "Click or drag photo here",
+    "clickOrDragLogo": "Click or drag logo here",
+    "supportedFormats": "Supported: JPG, PNG (max {size}MB)",
+    "phases": {
+      "uploading": "Uploading...",
+      "processing": "Processing...",
+      "complete": "Complete!"
+    },
+    "errors": {
+      "fileSelection": "File selection error"
+    },
+    "success": {
+      "photoUploaded": "Photo uploaded successfully!",
+      "logoUploaded": "Logo uploaded successfully!"
+    }
+  }
+}

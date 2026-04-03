@@ -33,7 +33,10 @@ import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
 import { createStatusLabelGetter, createTypeLabelGetter } from '@/app/properties/properties-page-helpers';
 
-export function UnitsPageContent() {
+/** @deprecated Alias — use PropertiesManagementContent (ADR-269) */
+export const UnitsPageContent = PropertiesManagementContent;
+
+export function PropertiesManagementContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('properties');
   const _colors = useSemanticColors();
@@ -471,7 +474,7 @@ export function UnitsPageContent() {
   );
 }
 
-export default UnitsPageContent;
+export default PropertiesManagementContent;
 
 
 

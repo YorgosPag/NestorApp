@@ -1,0 +1,145 @@
+{
+  "guidePanel": {
+    "title": "Guides & Points",
+    "toggleAll": "Toggle All",
+    "deleteAllGuides": "Delete All Guides",
+    "deleteAllPoints": "Delete All Points",
+    "snapToGuides": "Snap to Guides",
+    "xGuides": "Vertical (X)",
+    "yGuides": "Horizontal (Y)",
+    "xzGuides": "Diagonal (XZ)",
+    "individualPoints": "Individual Points",
+    "stats": "{guideCount} guides, {pointCount} points",
+    "empty": "No guides or points yet",
+    "editLabel": "Edit Label",
+    "editLabelMessage": "Guide label",
+    "noLabel": "Unlabeled",
+    "hide": "Hide",
+    "show": "Show",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "delete": "Delete",
+    "deleteGroup": "Delete Group"
+  },
+  "guideGroups": {
+    "create": "New Group",
+    "createTitle": "Create Guide Group",
+    "nameLabel": "Group name",
+    "rename": "Rename",
+    "deleteGroup": "Delete Group",
+    "ungrouped": "Ungrouped"
+  },
+  "guideMenuGroups": {
+    "create": "Create",
+    "points": "Construction Points",
+    "centers": "Centers & Midpoints",
+    "manage": "Management",
+    "transforms": "Transforms",
+    "grid": "Grid & Entities"
+  },
+  "guideContextMenu": {
+    "color": "Color",
+    "hideAll": "Hide All",
+    "showAll": "Show All",
+    "cancel": "Cancel",
+    "resetColor": "Reset to default"
+  },
+  "guides": {
+    "measureToGuide": "Create guides at measurement points?",
+    "createGuides": "Create Guides",
+    "equalizeRequiresSameAxis": "Equalize requires 3+ guides on the same axis (X or Y)"
+  },
+  "guideBatchMenu": {
+    "selectedCount": "{count} guides selected",
+    "deleteSelected": "Delete Selected",
+    "lockSelected": "Lock Selected",
+    "unlockSelected": "Unlock Selected",
+    "colorSelected": "Change Color",
+    "groupSelected": "Group Selected",
+    "cancel": "Cancel"
+  },
+  "guideAnalysis": {
+    "title": "Guide Analysis",
+    "tabs": {
+      "diagnostics": "Diagnostics",
+      "compliance": "Compliance",
+      "sustainability": "Sustainability",
+      "export": "Export"
+    },
+    "diagnostics": {
+      "runAnalysis": "Run Analysis",
+      "totalGuides": "Total Guides",
+      "byAxis": "By Axis",
+      "avgSpacing": "Average Spacing",
+      "density": "Density",
+      "complexity": "Complexity",
+      "anomalies": "Anomalies",
+      "noAnomalies": "No anomalies detected",
+      "suggestedFixes": "Suggested Fixes",
+      "empty": "Add guides to run analysis"
+    },
+    "compliance": {
+      "buildingCode": "Building Code",
+      "seismicZone": "Seismic Zone",
+      "check": "Check Compliance",
+      "passed": "All checks passed",
+      "failed": "Some checks failed",
+      "code": "Code",
+      "description": "Description",
+      "value": "Value",
+      "limit": "Limit",
+      "status": "Status",
+      "zoneI": "Zone I (PGA 0.12g)",
+      "zoneII": "Zone II (PGA 0.16g)",
+      "zoneIII": "Zone III (PGA 0.24g)",
+      "zoneIV": "Zone IV (PGA 0.36g)",
+      "generic": "Generic",
+      "empty": "Add guides and run compliance check"
+    },
+    "sustainability": {
+      "slabThickness": "Slab Thickness (m)",
+      "columnSize": "Column Size (m)",
+      "estimate": "Estimate",
+      "material": "Material Estimate",
+      "concrete": "Concrete",
+      "steel": "Steel",
+      "waste": "Waste Factor",
+      "cost": "Estimated Cost",
+      "carbon": "Carbon Footprint",
+      "totalCO2": "Total CO₂",
+      "rating": "Rating",
+      "greenDeal": "EU Green Deal",
+      "ecoPresets": "Eco Presets",
+      "applyPreset": "Apply",
+      "empty": "Add guides to estimate sustainability"
+    },
+    "export": {
+      "ifcExport": "IFC Export",
+      "exportIFC": "Export .IFC",
+      "quantityTakeoff": "Quantity Takeoff",
+      "calculate": "Calculate",
+      "columns": "Columns",
+      "beams": "Beams",
+      "slabArea": "Slab Area",
+      "estimatedCost": "Estimated Cost",
+      "nlpCommand": "NLP Command",
+      "nlpPlaceholder": "e.g. \"grid 5x5m 20x30\" or \"seismic zone 3\"",
+      "run": "Run",
+      "applyGrid": "Apply Grid",
+      "confidence": "Confidence",
+      "empty": "Add guides for export options"
+    }
+  },
+  "aiAssistant": {
+    "title": "AI Drawing",
+    "placeholder": "Type a drawing command, e.g. \"draw a line from 0,0 to 10,5\"",
+    "inputPlaceholder": "Type command...",
+    "send": "Send",
+    "clear": "Clear",
+    "thinking": "Thinking...",
+    "entityCreated": "{count, plural, one {# entity} other {# entities}} created",
+    "error": "Error during execution",
+    "toggleOpen": "Open AI assistant",
+    "toggleClose": "Close AI assistant"
+  }
+}

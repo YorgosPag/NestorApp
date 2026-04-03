@@ -338,33 +338,20 @@ If Google were operating this system, it would likely do the following:
 - regenerate `src/types/i18n.ts`
 - wire i18n script correctness into the documented workflow
 
-### Phase 2: Establish Hard Budgets
+### Phase 2: Establish Hard Budgets — ✅ COMPLETE (2026-04-03)
 
-Introduce budgets such as:
+Budgets established via `namespace-manifest.json` (77 entries). Each namespace has a `budget` (line count) and `warnOnly` flag. Enforced by `validate:i18n` pipeline.
 
-- max lines per namespace file
-- max `defaultValue` count per feature area
-- max unresolved raw-key incidents
+### Phase 3: Split High-Risk Catalogs — ✅ COMPLETE (2026-04-03)
 
-Initial focus files:
+Implemented via ADR-280. 30 new namespaces created across 4 phases:
 
-- `src/i18n/locales/el/common.json`
-- `src/i18n/locales/el/building.json`
-- `src/i18n/locales/el/contacts.json`
-- `src/i18n/locales/el/dxf-viewer.json`
-- `src/i18n/locales/el/properties.json`
+- Phase 1: `building` → 5 splits, `common` → 4 splits
+- Phase 2: `dxf-viewer` → 5 splits, `contacts` → 5 splits
+- Phase 3: `projects` → 2 splits, `payments` → 2 splits
+- Phase 4: 6 splits (geo-canvas, crm, accounting, files, navigation, reports)
 
-### Phase 3: Split High-Risk Catalogs
-
-Decompose the largest namespaces by string class and bounded context.
-
-Priority order:
-
-1. `common`
-2. `building`
-3. `contacts`
-4. `properties`
-5. `dxf-viewer`
+Validation: 16,317/16,317 keys (100% — zero key loss). Full el/en/pseudo parity.
 
 ### Phase 4: Remove Fallback-First Rendering
 
@@ -464,3 +451,4 @@ The application reaches "Google-grade direction" only when all of the following 
 |------|----------|--------|
 | 2026-04-03 | Initial ADR created after repo-wide i18n governance audit | Georgios Pagonis + Claude Code (OpenAI) |
 | 2026-04-03 | Status PLANNING --> ACTIVE. Concrete splitting plan created in ADR-280. 14 over-budget namespaces identified, 4-phase plan with ~33 new namespaces | Georgios Pagonis + Claude Code |
+| 2026-04-03 | Phase 2 (Hard Budgets) COMPLETE — namespace-manifest.json with 77 entries. Phase 3 (Split High-Risk Catalogs) COMPLETE — 30 new namespaces via ADR-280 implementation | Georgios Pagonis + Claude Code |

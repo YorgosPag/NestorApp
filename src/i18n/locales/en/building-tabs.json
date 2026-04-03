@@ -1,0 +1,423 @@
+{
+  "tabs": {
+    "labels": {
+      "general": "General",
+      "floorplan": "Floor Plan",
+      "timeline": "Timeline",
+      "analytics": "Analytics",
+      "storage": "Storages",
+      "contracts": "Documents",
+      "customerContracts": "Customer Contracts",
+      "protocols": "Protocols",
+      "photos": "Photos",
+      "customers": "Customers",
+      "videos": "Videos",
+      "details": "Details",
+      "properties": "Properties",
+      "units": "Units",
+      "floors": "Floors",
+      "amenities": "Amenities",
+      "documents": "Documents",
+      "unitDocuments": "Documents",
+      "banking": "Banking",
+      "notes": "Notes",
+      "history": "History",
+      "buildings": "Buildings",
+      "projects": "Projects",
+      "contacts": "Contacts",
+      "dashboard": "Dashboard",
+      "leads": "Leads",
+      "opportunities": "Opportunities",
+      "companies": "Companies",
+      "tasks": "Tasks",
+      "reports": "Reports",
+      "settings": "Settings",
+      "basicInfo": "Info",
+      "customer": "Customer",
+      "floorplans": "Floor Plan",
+      "statistics": "Statistics",
+      "projectGeneral": "General",
+      "projectFloorplan": "Floor Plan",
+      "parkingFloorplan": "Parking Spaces",
+      "projectStructure": "Project Structure",
+      "buildingData": "Building Data",
+      "parking": "Parking Spaces",
+      "contributors": "Associates",
+      "projectDocuments": "Documents",
+      "ika": "IKA",
+      "measurements": "Measurements",
+      "floorsManagement": "Floors",
+      "buildingContacts": "Associates",
+      "buildingLocations": "Addresses",
+      "brokers": "Brokers",
+      "ownershipTable": "Ownership Table",
+      "landowners": "Landowners",
+      "locations": "Addresses"
+    },
+    "descriptions": {
+      "projectGeneral": "Basic information and project details",
+      "projectFloorplan": "Architectural floor plan and project drawings",
+      "parkingFloorplan": "Floor plans and parking spaces list for the project",
+      "projectStructure": "Organizational structure and project hierarchy",
+      "timeline": "Project timeline and milestones",
+      "customers": "Project customers and buyers",
+      "buildingData": "Technical specifications and building parameters",
+      "parking": "Parking space management and allocation",
+      "contributors": "Associates and contacts for the project",
+      "projectDocuments": "Contracts, permits and legal documents",
+      "ika": "IKA data and insurance obligations",
+      "photos": "Progress and completed project photos",
+      "videos": "Presentation and documentation videos",
+      "measurements": "Quantity surveying and cost tracking per building",
+      "floorsManagement": "Building floor management — level number, elevation",
+      "history": "Change history",
+      "brokers": "Brokerage agreements and sales assignments",
+      "ownershipTable": "Ownership percentage table (millesimal shares) for each property",
+      "landowners": "Manage landowners and bartex percentage",
+      "locations": "Manage project addresses"
+    },
+    "floors": {
+      "title": "Building Floors",
+      "addFloor": "New Floor",
+      "number": "Level #",
+      "name": "Level Name",
+      "elevation": "Elevation (m)",
+      "elevationUnit": "m",
+      "units": "Units",
+      "actions": "Actions",
+      "empty": "No floors registered.",
+      "total": "Total: {count} floors",
+      "deleteConfirm": "Do you want to delete the floor \"{name}\"?",
+      "numberPlaceholder": "e.g. -1, 0, 1",
+      "namePlaceholder": "e.g. Basement, Ground, 1st",
+      "elevationPlaceholder": "e.g. 0.00",
+      "editSuccess": "Floor updated",
+      "deleteSuccess": "Floor deleted",
+      "createSuccess": "Floor created",
+      "createError": "Failed to create floor",
+      "editError": "Failed to update floor",
+      "deleteError": "Failed to delete floor",
+      "deleteConfirmTitle": "Delete Floor",
+      "deleteGuardError": "Unable to check floor dependencies. Please try again.",
+      "duplicateNumber": "This level number already exists in this building.",
+      "validationNameRequired": "Level name is required.",
+      "versionConflict": "Version conflict — someone else updated this floor. Please refresh.",
+      "floorplan": "Floor Plan",
+      "hasFloorplan": "Has floor plan",
+      "noFloorplan": "No floor plan",
+      "uploadFloorplan": "Upload floor plan",
+      "expandFloor": "Show floor plan",
+      "collapseFloor": "Hide floor plan",
+      "mismatchWarning": "Name doesn't match the level number. Are you sure you want this name?",
+      "gapWarning": "Missing levels: {levels}. Check if you need to add them."
+    },
+    "measurements": {
+      "title": "Measurements",
+      "summary": {
+        "materials": "Materials",
+        "labor": "Labor",
+        "equipment": "Equipment",
+        "total": "Total",
+        "estimated": "Estimated",
+        "actual": "Actual",
+        "variance": "Variance"
+      },
+      "filters": {
+        "scope": "Scope",
+        "scopeAll": "All",
+        "scopeBuilding": "Building",
+        "scopeUnit": "Unit",
+        "status": "Status",
+        "statusAll": "All",
+        "category": "Category",
+        "categoryAll": "All categories",
+        "search": "Search items..."
+      },
+      "status": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "approved": "Approved",
+        "certified": "Certified",
+        "locked": "Locked"
+      },
+      "table": {
+        "index": "#",
+        "description": "Description",
+        "unit": "Unit",
+        "estimatedQty": "Est.Qty",
+        "waste": "Waste%",
+        "grossQty": "Gross Qty",
+        "unitCost": "Unit Cost",
+        "totalCost": "Total",
+        "statusLabel": "Status",
+        "actions": "Actions",
+        "items": "items",
+        "categoryTotal": "Category total",
+        "subtotal": "Subtotal"
+      },
+      "editor": {
+        "createTitle": "New Item",
+        "editTitle": "Edit Item",
+        "sections": {
+          "basic": "Basic Info",
+          "scope": "Scope",
+          "quantities": "Quantities",
+          "costs": "Cost per Unit",
+          "totals": "Computed Totals",
+          "link": "Links & Notes"
+        },
+        "fields": {
+          "category": "ATOE Category",
+          "title": "Title",
+          "titlePlaceholder": "e.g. Reinforced concrete C20/25",
+          "specifications": "Specifications",
+          "specificationsPlaceholder": "Detailed work description...",
+          "scopeBuilding": "Entire Building",
+          "scopeUnit": "Individual Unit",
+          "linkedUnit": "Unit",
+          "measurementUnit": "Measurement Unit",
+          "estimatedQuantity": "Estimated Quantity",
+          "wasteFactor": "Waste Factor (%)",
+          "grossQuantity": "Gross Quantity",
+          "actualQuantity": "Actual Quantity",
+          "materialUnitCost": "Materials (€/unit)",
+          "laborUnitCost": "Labor (€/unit)",
+          "equipmentUnitCost": "Equipment (€/unit)",
+          "linkedPhase": "Construction Phase",
+          "linkedPhaseNone": "No link",
+          "notes": "Notes",
+          "notesPlaceholder": "Work notes...",
+          "statusLabel": "Status"
+        },
+        "save": "Save",
+        "cancel": "Cancel",
+        "saving": "Saving..."
+      },
+      "empty": {
+        "title": "No measurements",
+        "description": "No items have been added to this building.",
+        "cta": "New Item"
+      },
+      "actions": {
+        "newItem": "New Item",
+        "edit": "Edit",
+        "delete": "Delete",
+        "deleteConfirm": "Are you sure you want to delete this item?",
+        "duplicate": "Duplicate",
+        "expandAll": "Expand all",
+        "collapseAll": "Collapse all"
+      },
+      "units": {
+        "m": "m",
+        "m2": "sq.m",
+        "m3": "cu.m",
+        "kg": "kg",
+        "ton": "ton",
+        "pcs": "pcs",
+        "lt": "lt",
+        "set": "set",
+        "hr": "hr",
+        "day": "day",
+        "lump": "l.s."
+      },
+      "varianceLevel": {
+        "good": "Within limits",
+        "warning": "Warning",
+        "critical": "Overrun"
+      },
+      "toast": {
+        "created": "Item created",
+        "updated": "Item updated",
+        "deleted": "Item deleted",
+        "statusChanged": "Status changed",
+        "error": "Error: {message}"
+      }
+    },
+    "general": {
+      "errorLabel": "Error: ",
+      "header": {
+        "edit": "Edit",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving...",
+        "saved": "Saved"
+      },
+      "validation": {
+        "nameRequired": "Name is required",
+        "areaPositive": "Area must be greater than 0",
+        "builtAreaExceeds": "Built area cannot exceed total area",
+        "floorsMin": "Floors must be at least 1",
+        "unitsMin": "Units must be at least 1"
+      },
+      "basicInfo": {
+        "title": "Basic Information",
+        "buildingTitle": "Building Title *",
+        "description": "Building Description",
+        "descriptionPlaceholder": "Describe the building...",
+        "charactersCount": "{count}/500 characters"
+      },
+      "technicalSpecs": {
+        "title": "Technical Specifications",
+        "totalArea": "Total Area (m²) *",
+        "builtArea": "Built Area (m²) *",
+        "buildingRatio": "Building ratio: {ratio}%",
+        "numberOfFloors": "Number of Floors *",
+        "numberOfUnits": "Number of Units *",
+        "unitsPerFloor": "~{count} units/floor",
+        "autoCalculations": "Automatic Calculations",
+        "costPerSqm": "Cost/m²:",
+        "buildingRatioShort": "Building Ratio:",
+        "sqmPerUnit": "m²/Unit:",
+        "valuePerUnit": "Value/Unit:"
+      },
+      "legalInfo": {
+        "title": "Legal Information",
+        "contractNumber": "Contract Number",
+        "contractDate": "Contract Date",
+        "contractFile": "Contract File",
+        "notary": "Notary"
+      },
+      "settings": {
+        "title": "Settings",
+        "showOnWeb": "Show on website"
+      },
+      "files": {
+        "title": "Project Files",
+        "addFiles": "Add Files",
+        "newPhoto": "New Photo",
+        "clickToSelect": "Click to select files",
+        "orDragAndDrop": "or drag and drop here",
+        "fileTypes": "PNG, JPG, PDF, DOC, XLS up to 10MB",
+        "existingFiles": "Existing Files",
+        "uploadedOn": "Uploaded {date}",
+        "uploadedToday": "Uploaded today",
+        "view": "View",
+        "download": "Download",
+        "uploadInProgress": "Upload in progress...",
+        "filesCompleted": "{completed} of {total} files completed"
+      },
+      "location": {
+        "title": "Location Details",
+        "address": "Address",
+        "coordinates": "Coordinates",
+        "directions": "Get directions",
+        "shareLocation": "Share location",
+        "areaInfo": "Area Information",
+        "areaType": "Area type:",
+        "centralCommercial": "Central - Commercial",
+        "buildingRatio": "Building ratio:",
+        "maxHeight": "Max height:",
+        "floors": "{count} floors"
+      },
+      "progress": {
+        "title": "Building Progress",
+        "completionPercentage": "Completion Percentage",
+        "completed": "{percent}% Completed",
+        "phases": {
+          "foundations": "Foundations",
+          "construction": "Construction",
+          "finishing": "Finishing",
+          "delivery": "Delivery"
+        }
+      }
+    },
+    "floorplan": {
+      "title": "General Building Floor Plan",
+      "noBuilding": "Select a building to view its floor plans.",
+      "floorLevelBanner": "For per-floor plans, go to the Floors tab.",
+      "addFloorplan": "Add Floor Plan",
+      "editFloorplan": "Edit Floor Plan",
+      "loading": "Loading floor plan...",
+      "loadingScene": "Loading drawing...",
+      "processing": "Processing floor plan...",
+      "pdfAlt": "PDF Floor Plan: {fileName}",
+      "canvasAlt": "Technical DXF floor plan",
+      "uploadFirst": "Upload Floor Plan",
+      "noFloorplan": {
+        "title": "No floor plan available",
+        "description": "Click \"Add Floor Plan\" to upload a floor plan"
+      },
+      "noProject": "No project selected",
+      "processingInProgress": "Processing in progress...",
+      "loadError": "Failed to load floor plan",
+      "fileList": "Floor plan files",
+      "selectFile": "Select a file from the list",
+      "filesCount": "{count, plural, =1 {# file} other {# files}}"
+    },
+    "photos": {
+      "title": "Building Photos",
+      "noBuilding": "Select a building to view its photos."
+    },
+    "videos": {
+      "title": "Building Videos",
+      "noBuilding": "Select a building to view its videos."
+    },
+    "contracts": {
+      "title": "Building Documents",
+      "noBuilding": "Select a building to view its documents."
+    },
+    "map": {
+      "header": {
+        "title": "Map & Location",
+        "subtitle": "Interactive map with nearby projects",
+        "streetButton": "Street",
+        "satelliteButton": "Satellite",
+        "hybridButton": "Hybrid"
+      },
+      "analytics": {
+        "transportation": {
+          "title": "Transportation",
+          "metro": "Metro Evangelismos",
+          "busStop": "Bus stop",
+          "parking": "Parking"
+        },
+        "services": {
+          "title": "Services",
+          "hospital": "Hospital",
+          "schools": "Schools",
+          "supermarket": "Supermarket"
+        },
+        "areaRating": {
+          "title": "Area Rating",
+          "investmentIndex": "Investment index",
+          "areaQuality": "Area quality",
+          "propertyPrices": "Property prices"
+        }
+      },
+      "nearbyProjects": {
+        "title": "Nearby Projects",
+        "distance": "distance",
+        "types": {
+          "commercial": "Commercial",
+          "residential": "Residential",
+          "office": "Office"
+        },
+        "statuses": {
+          "active": "In Progress",
+          "completed": "Completed",
+          "planning": "Planning"
+        }
+      },
+      "controls": {
+        "showNearby": "Show nearby projects",
+        "filter": "Filter:",
+        "selectFilter": "Select filter",
+        "activeOnly": "Active only",
+        "completedOnly": "Completed only",
+        "measureDistance": "Measure distance",
+        "zoomIn": "Zoom In",
+        "zoomOut": "Zoom Out"
+      },
+      "views": {
+        "street": "Street map",
+        "satellite": "Satellite view",
+        "hybrid": "Hybrid view"
+      }
+    },
+    "storageTab": {
+      "searchPlaceholder": "Search code or description...",
+      "exportReport": "Export Report",
+      "loading": "Loading storage units..."
+    }
+  }
+}

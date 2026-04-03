@@ -1,0 +1,300 @@
+{
+  "panels": {
+    "properties": {
+      "title": "Ιδιότητες",
+      "description": "{selectedCount} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {layerCount} DXF layers}}"
+    },
+    "overlay": {
+      "title": "Overlay",
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}"
+    },
+    "levels": {
+      "title": "Επίπεδα",
+      "description": "Επίπεδα διαχείρισης",
+      "loading": "Φόρτωση επιπέδων...",
+      "projectLevels": "Επίπεδα Έργου",
+      "defaultLevelName": "Επίπεδο {number}",
+      "emptyNameWarning": "Το όνομα δεν μπορεί να είναι κενό.",
+      "selectLevel": "Επιλογή επιπέδου {name}",
+      "elementsCount": "{count} στοιχεία",
+      "emptyLevel": "Κενό επίπεδο",
+      "renameLevel": "Μετονομασία επιπέδου",
+      "deleteLevel": "Διαγραφή επιπέδου",
+      "noLevels": "Δεν υπάρχουν επίπεδα",
+      "newLevelPlaceholder": "Όνομα νέου επιπέδου..."
+    },
+    "hierarchy": {
+      "title": "Ιεραρχία",
+      "description": "Project Hierarchy & Destinations",
+      "projectHierarchy": "Ιεραρχία Έργων",
+      "loading": "Φόρτωση έργων...",
+      "error": "Ιεραρχία Έργων - Σφάλμα",
+      "retry": "Ξαναδοκιμή",
+      "companies": "Εταιρείες",
+      "noCompanies": "Δεν βρέθηκαν εταιρείες",
+      "projects": "Έργα",
+      "noProjects": "Δεν βρέθηκαν έργα",
+      "buildings": "Κτίρια",
+      "floors": "Όροφοι",
+      "availableDestinations": "Διαθέσιμοι Προορισμοί DXF",
+      "buildingsCount": "{count, plural, =0 {κτίρια} one {κτίριο} other {κτίρια}}",
+      "floorsCount": "{count, plural, =0 {ορόφους} one {όροφο} other {ορόφους}}",
+      "unitsCount": "{count, plural, =0 {μονάδες} one {μονάδα} other {μονάδες}}",
+      "parkingSpots": "{count} θέσεις στάθμευσης",
+      "storageAreas": "{count} αποθήκες"
+    },
+    "layers": {
+      "title": "Layers",
+      "description": "Layer Drawing & Status Management"
+    }
+  },
+  "layerActions": {
+    "changeColor": "Αλλαγή χρώματος",
+    "rename": "Μετονομασία layer",
+    "delete": "Διαγραφή",
+    "changeColorEntity": "Αλλαγή χρώματος entity",
+    "renameEntity": "Μετονομασία entity",
+    "changeColorGroup": "Αλλαγή χρώματος Color Group",
+    "renameGroup": "Μετονομασία Color Group",
+    "deleteGroup": "Διαγραφή Color Group",
+    "toggleVisibility": "Toggle ορατότητας",
+    "mergeEntities": "Συγχώνευση επιλεγμένων entities",
+    "mergeLayers": "Συγχώνευση επιλεγμένων layers",
+    "mergeColorGroups": "Συγχώνευση επιλεγμένων color groups",
+    "selectAllEntities": "Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection",
+    "expand": "Ανάπτυξη",
+    "collapse": "Σύμπτυξη",
+    "expandEntities": "Ανάπτυξη στοιχείων",
+    "collapseEntities": "Σύμπτυξη στοιχείων",
+    "show": "Εμφάνιση",
+    "hide": "Απόκρυψη",
+    "doubleClickToRename": "Double-click για μετονομασία"
+  },
+  "search": {
+    "layersAndEntities": "Αναζήτηση layers και entities..."
+  },
+  "mergePanel": {
+    "title": "🔗 Πολλαπλή Επιλογή Ενεργή",
+    "entitiesSelected": "{count} entities επιλεγμένες",
+    "layersSelected": "{count} layers επιλεγμένα",
+    "colorGroupsSelected": "{count} color groups επιλεγμένα",
+    "mergeEntitiesButton": "Συγχώνευση Entities",
+    "mergeLayersButton": "Συγχώνευση Layers",
+    "mergeColorGroupsButton": "Συγχώνευση Color Groups",
+    "tip": "Συμβουλή: Ctrl+Click για πολλαπλή επιλογή"
+  },
+  "levelPanel": {
+    "title": "Επίπεδα Έργου",
+    "defaultLevelName": "Επίπεδο {number}",
+    "selectLevel": "Επιλογή επιπέδου {name}",
+    "elements": "{count} στοιχεία",
+    "emptyLevel": "Κενό επίπεδο",
+    "rename": "Μετονομασία επιπέδου",
+    "deleteLevel": "Διαγραφή επιπέδου",
+    "noLevels": "Δεν υπάρχουν επίπεδα",
+    "newLevelPlaceholder": "Όνομα νέου επιπέδου...",
+    "emptyNameWarning": "Το όνομα δεν μπορεί να είναι κενό."
+  },
+  "sceneInfo": {
+    "title": "Πληροφορίες Σκηνής",
+    "noScene": "Δεν έχει φορτωθεί σκηνή",
+    "importHint": "Εισάγετε ένα αρχείο DXF για να δείτε πληροφορίες",
+    "elements": "Στοιχεία:",
+    "levels": "Επίπεδα:",
+    "units": "Μονάδες:",
+    "size": "Μέγεθος:",
+    "selected": "Επιλεγμένα:",
+    "selectedElements": "{count} στοιχεία",
+    "selectedSuffix": "({count} επιλεγμένα)",
+    "entityTypes": {
+      "title": "Τύποι Οντοτήτων",
+      "line": "Γραμμές",
+      "polyline": "Πολυγραμμές",
+      "circle": "Κύκλοι",
+      "arc": "Τόξα",
+      "text": "Κείμενο",
+      "block": "Blocks"
+    }
+  },
+  "overlayProperties": {
+    "title": "Ιδιότητες Overlay",
+    "selectOverlay": "Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.",
+    "label": "Ετικέτα",
+    "labelPlaceholder": "π.χ. Α-12, Π-034",
+    "status": "Κατάσταση",
+    "type": "Τύπος",
+    "linkedUnit": "Συνδεδεμένη Μονάδα",
+    "unitIdPlaceholder": "ID Μονάδας",
+    "linkedEntity": "Συνδεδεμένη Οντότητα",
+    "selectEntity": "Επιλέξτε οντότητα...",
+    "noEntity": "— Κανένα —",
+    "loadingEntities": "Φόρτωση...",
+    "unlink": "Αποσύνδεση",
+    "transferTitle": "Μεταφορά Σύνδεσης",
+    "transferDescription": "Αυτή η οντότητα είναι ήδη συνδεδεμένη σε άλλο polygon. Μεταφορά στο τρέχον;",
+    "transferConfirm": "Μεταφορά",
+    "statusLinkedHint": "Η κατάσταση καθορίζεται από τη συνδεδεμένη οντότητα",
+    "geometry": "Γεωμετρία",
+    "points": "Σημεία:",
+    "area": "Εμβαδόν:",
+    "perimeter": "Περίμετρος:",
+    "kindLabels": {
+      "property": "Ακίνητο",
+      "parking": "Θέση Στάθμευσης",
+      "storage": "Αποθήκη",
+      "footprint": "Αποτύπωμα"
+    }
+  },
+  "overlayCard": {
+    "stats": {
+      "kind": "Τύπος",
+      "area": "Εμβαδόν",
+      "linked": "Σύνδεση",
+      "linkedYes": "Συνδεδεμένο",
+      "linkedNo": "Μη συνδεδεμένο",
+      "vertices": "Κορυφές",
+      "perimeter": "Περίμετρος"
+    },
+    "ariaLabel": "Κάρτα περιοχής {name}"
+  },
+  "overlayList": {
+    "title": "Περιοχές",
+    "search": "Αναζήτηση...",
+    "deleteConfirm": "Διαγραφή overlay;",
+    "notFound": "Δεν βρέθηκαν overlays",
+    "empty": "Κανένα overlay",
+    "edit": "Επεξεργασία",
+    "delete": "Διαγραφή",
+    "hide": "Απόκρυψη",
+    "show": "Εμφάνιση"
+  },
+  "levelCard": {
+    "stats": {
+      "elements": "Στοιχεία"
+    },
+    "badges": {
+      "default": "Προεπιλογή"
+    },
+    "ariaLabel": "Κάρτα επιπέδου {name}"
+  },
+  "pdfPanel": {
+    "title": "Φόντο PDF",
+    "upload": "Μεταφόρτωση PDF",
+    "loading": "Φόρτωση...",
+    "selectFile": "Επιλέξτε ένα αρχείο PDF για χρήση ως φόντο",
+    "removePdf": "Αφαίρεση PDF",
+    "pageInfo": "Σελίδα {currentPage} από {numPages}",
+    "previousPage": "Προηγούμενη σελίδα",
+    "nextPage": "Επόμενη σελίδα",
+    "scale": "Κλίμακα",
+    "zoomOut": "Σμίκρυνση",
+    "zoomIn": "Μεγέθυνση",
+    "rotation": "Περιστροφή",
+    "rotateCcw": "Περιστροφή αριστερόστροφα",
+    "rotateCw": "Περιστροφή δεξιόστροφα",
+    "opacity": "Αδιαφάνεια",
+    "fitToView": "Προσαρμογή στην Προβολή",
+    "resetTransform": "Επαναφορά Μετασχηματισμού",
+    "hidePdf": "Απόκρυψη PDF",
+    "showPdf": "Εμφάνιση PDF"
+  },
+  "cadDock": {
+    "panels": {
+      "objectSnap": "Σημεία Πρόσδεσης",
+      "layers": "Επίπεδα",
+      "properties": "Ιδιότητες",
+      "commands": "Εντολές"
+    },
+    "snapModes": {
+      "title": "Σημεία Πρόσδεσης",
+      "description": "Κλικ για εναλλαγή λειτουργιών πρόσδεσης"
+    },
+    "layers": {
+      "default": "0 - Προεπιλογή",
+      "geometry": "Γεωμετρία",
+      "dimensions": "Διαστάσεις"
+    },
+    "properties": {
+      "layer": "Επίπεδο:",
+      "color": "Χρώμα:"
+    },
+    "history": {
+      "title": "Ιστορικό Εντολών",
+      "commands": {
+        "fit": "Εντολή: FIT",
+        "zoomWindow": "Εντολή: ZOOM Window",
+        "line": "Εντολή: LINE"
+      },
+      "ready": "Έτοιμο για εντολή..."
+    },
+    "accessibility": {
+      "layerList": "Λίστα επιπέδων"
+    }
+  },
+  "layerManager": {
+    "title": "Διαχείριση Layers",
+    "loading": "Φόρτωση layers...",
+    "createDialog": {
+      "title": "Δημιουργία νέου Layer",
+      "nameLabel": "Όνομα Layer",
+      "namePlaceholder": "π.χ. Ηλεκτρολογικά στοιχεία",
+      "descriptionLabel": "Περιγραφή (προαιρετικό)",
+      "descriptionPlaceholder": "Περιγραφή του layer...",
+      "categoryLabel": "Κατηγορία",
+      "colorLabel": "Χρώμα",
+      "cancel": "Ακύρωση",
+      "create": "Δημιουργία"
+    },
+    "actions": {
+      "hide": "Απόκρυψη",
+      "show": "Εμφάνιση",
+      "lock": "Κλείδωμα",
+      "unlock": "Ξεκλείδωμα",
+      "rename": "Μετονομασία",
+      "duplicate": "Αντιγραφή",
+      "exportLayer": "Export Layer",
+      "delete": "Διαγραφή",
+      "exportAll": "Export όλα τα Layers",
+      "importLayers": "Import Layers",
+      "hideSystemLayers": "Απόκρυψη System Layers",
+      "showSystemLayers": "Εμφάνιση System Layers"
+    },
+    "labels": {
+      "opacity": "Διαφάνεια:",
+      "moreElements": "+{count} περισσότερα στοιχεία",
+      "noLayersFound": "Δεν βρέθηκαν layers",
+      "createNewOrChangeFilters": "Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα",
+      "searchLayers": "Αναζήτηση layers...",
+      "other": "Άλλα"
+    },
+    "stats": {
+      "total": "Σύνολο:",
+      "visible": "Ορατά:",
+      "elements": "Στοιχεία:"
+    },
+    "sync": {
+      "status": "Κατάσταση Sync:",
+      "connected": "Συνδεδεμένο",
+      "disconnected": "Αποσυνδεδεμένο",
+      "lastSync": "Τελευταία Sync:",
+      "errors": "Σφάλματα:",
+      "connectedTooltip": "Συνδεδεμένο - Real-time sync ενεργό",
+      "disconnectedTooltip": "Αποσυνδεδεμένο"
+    },
+    "badges": {
+      "system": "Σύστημα"
+    },
+    "readOnly": {
+      "title": "Layers",
+      "viewModeOnly": "Λειτουργία προβολής μόνο",
+      "canOnlyChangeVisibility": "Μπορείτε να αλλάξετε μόνο την ορατότητα",
+      "connectedRealtime": "Συνδεδεμένο - Ενημερώσεις σε πραγματικό χρόνο",
+      "disconnectedNoUpdates": "Αποσυνδεδεμένο - Δεν υπάρχουν ενημερώσεις",
+      "lastUpdate": "Τελευταία ενημέρωση:",
+      "visibleHidden": "Ορατό|Κρυφό",
+      "waitForAdmins": "Περιμένετε να δημιουργηθούν layers από τους διαχειριστές",
+      "checkConnection": "Ελέγξτε τη σύνδεσή σας",
+      "dbConnectionError": "Σφάλμα σύνδεσης με τη βάση δεδομένων"
+    }
+  }
+}

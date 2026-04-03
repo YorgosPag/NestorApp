@@ -1,0 +1,350 @@
+{
+  "storages": {
+    "list": {
+      "ariaLabel": "Storages List",
+      "entityName": "Storages",
+      "searchPlaceholder": "Search storages..."
+    }
+  },
+  "parkings": {
+    "header": {
+      "title": "Parking Spaces",
+      "subtitle": "Manage and track parking spaces",
+      "searchPlaceholder": "Search parking spaces...",
+      "newParking": "New Parking"
+    },
+    "list": {
+      "ariaLabel": "Parking Spaces List",
+      "noResults": "No parking spaces found",
+      "noResultsForTerm": "for the term \"{term}\""
+    },
+    "accessibility": {
+      "toggleFilters": "Toggle filters"
+    }
+  },
+  "storage": {
+    "card": {
+      "labels": {
+        "floor": "Floor",
+        "area": "Area",
+        "price": "Price",
+        "pricePerSqm": "€/m²",
+        "linked": "Linked:"
+      },
+      "actions": {
+        "viewEdit": "View / Edit",
+        "addToFavorites": "Add to favorites",
+        "removeFromFavorites": "Remove from favorites",
+        "delete": "Delete"
+      }
+    },
+    "form": {
+      "basicInfo": "Basic Information",
+      "code": "Code",
+      "status": "Status",
+      "description": "Description",
+      "auto": "Auto",
+      "placeholders": {
+        "codeStorage": "e.g. A_B01",
+        "codeParking": "e.g. P_01",
+        "descriptionStorage": "Description for the storage...",
+        "descriptionParking": "Description for the parking space..."
+      },
+      "title": {
+        "newStorage": "New Storage",
+        "editStorage": "Edit Storage",
+        "newParking": "New Parking Spot",
+        "editParking": "Edit Parking Spot"
+      },
+      "footer": {
+        "requiredFields": "* Required fields",
+        "cancel": "Cancel",
+        "save": "Save",
+        "update": "Update"
+      },
+      "specs": {
+        "title": "Location & Specifications",
+        "labels": {
+          "floor": "Floor",
+          "area": "Area (m²)",
+          "price": "Price (€)",
+          "linkedProperty": "Linked Property",
+          "coordinates": "Coordinates (X, Y)"
+        },
+        "placeholders": {
+          "area": "0.00",
+          "price": "0.00",
+          "linkedProperty": "e.g. D2.1"
+        },
+        "helpers": {
+          "linkedProperty": "Property code that accompanies this unit",
+          "coordinates": "Position on the building map"
+        }
+      },
+      "features": {
+        "title": "Features",
+        "labels": {
+          "commonFeatures": "Common Features",
+          "addFeature": "Add Feature",
+          "selectedFeatures": "Selected Features"
+        },
+        "placeholders": {
+          "newFeature": "New feature..."
+        }
+      },
+      "floors": {
+        "basement2": "Basement 2",
+        "basement1": "Basement 1",
+        "basement": "Basement",
+        "ground": "Ground Floor",
+        "floor1": "1st Floor",
+        "floor2": "2nd Floor",
+        "floor3": "3rd Floor",
+        "floor4": "4th Floor",
+        "floor5": "5th Floor",
+        "floor6": "6th Floor",
+        "floor7": "7th Floor"
+      },
+      "storageFeatures": {
+        "electricity": "Electricity",
+        "naturalLight": "Natural Light",
+        "artificialLight": "Artificial Light",
+        "airChamber": "Air Chamber",
+        "security": "Security",
+        "elevatorAccess": "Elevator Access",
+        "plumbing": "Plumbing"
+      },
+      "parkingFeatures": {
+        "evCharging": "EV Charging",
+        "enclosed": "Enclosed",
+        "lighting": "Lighting",
+        "security": "Security",
+        "easyAccess": "Easy Access"
+      }
+    }
+  },
+  "storageMap": {
+    "title": "Storages & Parking Map",
+    "description": "Map of storages & parking spaces",
+    "comingSoon": "Coming soon"
+  },
+  "storageSummary": {
+    "available": "Available",
+    "totalValue": "Total Value",
+    "totalArea": "Total Area",
+    "avgPricePerSqm": "Average €/m²"
+  },
+  "storageActions": {
+    "openMenu": "Open menu",
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "spaceActions": {
+    "view": "View",
+    "edit": "Edit",
+    "unlink": "Unlink",
+    "delete": "Delete",
+    "actions": "Actions"
+  },
+  "spaceConfirm": {
+    "cancel": "Cancel",
+    "irreversible": "This action cannot be undone.",
+    "deleteProperty": "Delete Property",
+    "deletePropertyDesc": "Are you sure you want to delete the property",
+    "unlinkProperty": "Unlink Property",
+    "unlinkPropertyDesc": "The property will remain in the system but will not belong to a building.",
+    "deleteParking": "Delete Parking Spot",
+    "deleteParkingDesc": "Are you sure you want to delete the parking spot",
+    "unlinkParking": "Unlink Parking Spot",
+    "unlinkParkingDesc": "The spot will remain in the system but will not belong to a building.",
+    "deleteStorage": "Delete Storage",
+    "deleteStorageDesc": "Are you sure you want to delete the storage",
+    "unlinkStorage": "Unlink Storage",
+    "unlinkStorageDesc": "The storage will remain in the system but will not belong to a building. It can be sold independently."
+  },
+  "spaceLink": {
+    "link": "Link",
+    "linkExisting": "Link Existing",
+    "searchPlaceholder": "Search...",
+    "noUnlinked": "No unlinked items found.",
+    "noResults": "No results found.",
+    "available": "available",
+    "linkParking": "Link Parking Spot",
+    "linkParkingDesc": "Select an unlinked parking spot to link to this building.",
+    "linkProperty": "Link Property",
+    "linkPropertyDesc": "Select an unlinked property to link to this building.",
+    "linkStorage": "Link Storage",
+    "linkStorageDesc": "Select an unlinked storage to link to this building."
+  },
+  "storageListHeader": {
+    "results": "{count} results",
+    "selected": "{count} selected",
+    "deleteSelected": "Delete selected",
+    "cardsView": "Cards",
+    "tableView": "Table"
+  },
+  "storageTabHeader": {
+    "title": "Storages & Parking",
+    "description": "Manage storages and parking spaces for building {buildingName}",
+    "listView": "List",
+    "mapView": "Map",
+    "newStorage": "New Storage",
+    "newParking": "New Parking Space"
+  },
+  "storageTable": {
+    "selectAll": "Select all",
+    "columns": {
+      "code": "Code",
+      "type": "Type",
+      "floor": "Floor",
+      "area": "Area",
+      "price": "Price",
+      "status": "Status",
+      "linked": "Linked",
+      "actions": "Actions"
+    }
+  },
+  "storageNotifications": {
+    "created": "Storage created",
+    "updated": "Storage updated",
+    "deleted": "Storage deleted",
+    "unlinked": "Storage unlinked",
+    "linked": "Storage linked",
+    "failurePrefix": "Failure:",
+    "createError": "Create error",
+    "updateError": "Update error",
+    "deleteError": "Delete error",
+    "unlinkError": "Unlink error"
+  },
+  "storageView": {
+    "results": "results",
+    "total": "total",
+    "cards": "Cards",
+    "table": "Table",
+    "autoNamePrefix": "Storage"
+  },
+  "storageStats": {
+    "storages": "Storages",
+    "parkingSpaces": "Parking Spaces",
+    "available": "Available",
+    "totalValue": "Total Value",
+    "totalArea": "Total Area"
+  },
+  "parkingStats": {
+    "total": "Spots",
+    "available": "Available",
+    "totalValue": "Total Value",
+    "totalArea": "Total Area",
+    "searchPlaceholder": "Search by code or description...",
+    "exportReport": "Export Report",
+    "results": "results",
+    "cards": "Cards",
+    "table": "Table",
+    "total_summary": "total"
+  },
+  "unitStats": {
+    "total": "Units",
+    "available": "Available",
+    "totalValue": "Total Value",
+    "totalArea": "Total Area",
+    "searchPlaceholder": "Search by name or type...",
+    "exportReport": "Export Report",
+    "results": "results",
+    "cards": "Cards",
+    "table": "Table",
+    "totalSummary": "total",
+    "deleted": "Unit deleted",
+    "unlinked": "Unit unlinked",
+    "linked": "Unit linked",
+    "error": "Error",
+    "retry": "Retry"
+  },
+  "map": {
+    "interactiveMap": "Interactive Map"
+  },
+  "floorplan": {
+    "titles": {
+      "project": "Project Floorplan",
+      "parking": "Parking Floorplan"
+    }
+  },
+  "storageForm": {
+    "floors": {
+      "basement2": "Basement 2",
+      "basement1": "Basement 1",
+      "basement": "Basement",
+      "ground": "Ground Floor",
+      "floor1": "1st Floor",
+      "floor2": "2nd Floor",
+      "floor3": "3rd Floor",
+      "floor4": "4th Floor",
+      "floor5": "5th Floor",
+      "floor6": "6th Floor",
+      "floor7": "7th Floor"
+    },
+    "features": {
+      "storage": {
+        "electricity": "Electricity",
+        "naturalLight": "Natural Light",
+        "artificialLight": "Artificial Light",
+        "ventilation": "Ventilation",
+        "security": "Security",
+        "elevatorAccess": "Elevator Access",
+        "plumbing": "Plumbing"
+      },
+      "parking": {
+        "evCharging": "EV Charging",
+        "covered": "Covered",
+        "lighting": "Lighting",
+        "security": "Security",
+        "easyAccess": "Easy Access"
+      },
+      "building": {
+        "autonomousHeating": "Autonomous Heating",
+        "solarHeating": "Solar Heating",
+        "parkingSpaces": "Parking Spaces",
+        "elevator": "Elevator",
+        "balconiesWithView": "Balconies with View",
+        "energyClassAPlus": "Energy Class A+",
+        "shopWindows": "Shop Windows",
+        "vrvClimate": "VRV Climate System",
+        "fireSuppression": "Fire Suppression",
+        "disabilityAccess": "Disability Access",
+        "loadingAccess": "Loading Access",
+        "electricVehicleCharging": "Electric Vehicle Charging",
+        "securityCameras247": "24/7 Security Cameras",
+        "automaticVentilation": "Automatic Ventilation",
+        "carWash": "Car Wash",
+        "accessControl": "Access Control",
+        "craneBridge20Tons": "20-Ton Crane Bridge",
+        "powerSupply1000kw": "1000kW Power Supply",
+        "dustRemovalSystems": "Dust Removal Systems",
+        "naturalVentilation": "Natural Ventilation",
+        "gasFireSuppression": "Gas Fire Suppression",
+        "automationSystems": "Automation Systems",
+        "highShelving12m": "12m High Shelving",
+        "monitoringSystems": "Monitoring Systems",
+        "warehouseClimate": "Warehouse Climate Control",
+        "loadingRamps": "Loading Ramps",
+        "rfidTracking": "RFID Tracking System",
+        "videoConferencingAllRooms": "Video Conferencing in All Rooms",
+        "smartClimate": "Smart Climate Control",
+        "securitySystems": "Security Systems",
+        "highQualityAcoustics": "High-Quality Acoustics",
+        "staffCafeteria": "Staff Cafeteria",
+        "naturalLightingAtrium": "Natural Lighting Atrium",
+        "escalatorsAllFloors": "Escalators on All Floors",
+        "shopManagementSystem": "Shop Management System",
+        "foodCourt800Seats": "800-Seat Food Court",
+        "cinema8Rooms": "8-Room Cinema",
+        "playground300sqm": "300m² Playground",
+        "parkingGuidanceSystem": "Parking Guidance System",
+        "teslaVwCharging": "Tesla/VW Charging",
+        "carWashPlural": "Car Washes",
+        "mechanicalSecurity": "Mechanical Security",
+        "emergencyExits": "Emergency Exits"
+      }
+    }
+  }
+}

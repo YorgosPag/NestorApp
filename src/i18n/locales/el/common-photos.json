@@ -1,0 +1,143 @@
+{
+  "photo": {
+    "preview": "Προεπισκόπηση φωτογραφίας",
+    "logo": "Λογότυπο",
+    "photo": "Φωτογραφία",
+    "remove": "Αφαίρεση {name}",
+    "logoUploaded": "Το λογότυπο ανέβηκε επιτυχώς",
+    "photoUploaded": "Η φωτογραφία ανέβηκε επιτυχώς",
+    "clickToChange": "Κλικ για αλλαγή"
+  },
+  "photos": {
+    "addPhoto": "Προσθήκη Φωτογραφίας",
+    "galleryLabel": "Γκαλερί φωτογραφιών",
+    "uploadPlaceholder": "Σύρετε και αποθέστε φωτογραφίες ή κάντε κλικ για επιλογή",
+    "management": {
+      "title": "Διαχείριση Φωτογραφιών",
+      "gallery": "Γκαλερί Φωτογραφιών",
+      "logo": "Λογότυπο",
+      "photosCount": "Φωτογραφίες ({used}/{max})",
+      "photoNumber": "Φωτογραφία {number}",
+      "addMore": "Προσθήκη {count} ακόμη",
+      "addMorePhotos": "Προσθήκη {count} ακόμη φωτογραφίες",
+      "profileSelection": "Επιλογή Φωτογραφίας Προφίλ",
+      "profileOptions": "Επιλογές Φωτογραφίες Προφίλ",
+      "selectAsProfile": "Επιλογή φωτογραφίας {number} ως προφίλ",
+      "emptySlot": "Κενό σλοτ",
+      "emptySlotNumber": "Κενό {number}"
+    }
+  },
+  "photoPreview": {
+    "toolbar": {
+      "ariaLabel": "Εργαλεία Φωτογραφίας"
+    },
+    "navigation": {
+      "previous": "Προηγούμενη φωτογραφία",
+      "previousAria": "Προηγούμενη φωτογραφία ({current}/{total})",
+      "next": "Επόμενη φωτογραφία",
+      "nextAria": "Επόμενη φωτογραφία ({current}/{total})"
+    },
+    "zoom": {
+      "out": "Μικρότερο",
+      "in": "Μεγαλύτερο",
+      "fit": "Προσαρμογή στο πλαίσιο",
+      "label": "Zoom:"
+    },
+    "actions": {
+      "rotate": "Περιστροφή",
+      "download": "Λήψη",
+      "close": "Κλείσιμο"
+    },
+    "aria": {
+      "displayPhoto": "Εμφάνιση Φωτογραφίας",
+      "photoInfo": "Πληροφορίες Φωτογραφίας",
+      "contactType": "Τύπος Επαφής",
+      "focusInfo": "Πληροφορίες Εστίασης"
+    },
+    "titles": {
+      "profile": "Φωτογραφία Προφίλ",
+      "logo": "Λογότυπο",
+      "representative": "Φωτογραφία Εκπροσώπου",
+      "photo": "Φωτογραφία",
+      "photoWithIndex": "Φωτογραφία {index}"
+    },
+    "contactType": {
+      "individual": "Φυσικό Πρόσωπο",
+      "company": "Νομικό Πρόσωπο",
+      "service": "Δημόσια Υπηρεσία",
+      "unknown": "Άγνωστος Τύπος"
+    },
+    "screenReader": {
+      "gallery": "Προβολή φωτογραφίας {current} από {total}. {contactInfo}Χρησιμοποιήστε τα βέλη για πλοήγηση.",
+      "single": "Προβολή φωτογραφίας. {contactInfo}",
+      "photoFrom": "Φωτογραφία από {name}."
+    },
+    "alt": {
+      "gallery": "{title} - Φωτογραφία {current} από {total}",
+      "single": "{title}",
+      "companyLogo": "Λογότυπο Εταιρείας",
+      "representativePhoto": "Φωτογραφία Εκπροσώπου",
+      "serviceLogo": "Λογότυπο Δημόσιας Υπηρεσίας",
+      "photoWithIndex": "Φωτογραφία {index}"
+    },
+    "clickToPreview": "Κλικ για προεπισκόπηση",
+    "dragOrClick": "Κλικ ή σύρετε αρχείο",
+    "empty": {
+      "logo": "Δεν υπάρχει λογότυπο",
+      "photo": "Δεν υπάρχει φωτογραφία",
+      "generic": "Κενή φωτογραφία",
+      "noPhotos": "Δεν υπάρχουν αποθηκευμένες φωτογραφίες"
+    },
+    "headers": {
+      "companyPhotos": "Φωτογραφίες Εταιρείας ({count})",
+      "individualPhotos": "Φωτογραφίες ({count}/{max})",
+      "serviceLogo": "Λογότυπο Δημόσιας Υπηρεσίας"
+    },
+    "unsupportedType": "Μη υποστηριζόμενος τύπος επαφής: {type}"
+  },
+  "photoCard": {
+    "company": {
+      "alt": "Λογότυπο Εταιρείας",
+      "empty": "Δεν υπάρχει λογότυπο"
+    },
+    "representative": {
+      "alt": "Φωτογραφία Εκπροσώπου",
+      "empty": "Δεν υπάρχει φωτογραφία"
+    },
+    "individual": {
+      "alt": "Φωτογραφία {index}",
+      "empty": "Κενή φωτογραφία"
+    },
+    "service": {
+      "alt": "Λογότυπο Δημόσιας Υπηρεσίας",
+      "empty": "Δεν υπάρχει λογότυπο"
+    }
+  },
+  "photoManager": {
+    "individualPhotos": "Φωτογραφίες Προσώπου ({count})",
+    "companyLogo": "Λογότυπο Εταιρείας",
+    "representativePhoto": "Φωτογραφία Εκπροσώπου",
+    "serviceLogo": "Λογότυπο Δημόσιας Υπηρεσίας",
+    "emailShareSimplified": "Φόρμα Κοινοποίησης Email - Προσωρινά Απλοποιημένη"
+  },
+  "upload": {
+    "addPhoto": "Προσθήκη φωτογραφίας",
+    "addLogo": "Προσθήκη λογοτύπου",
+    "clickOrDrag": "Κλικ ή σύρετε αρχείο",
+    "clickOrDragPhoto": "Κάντε κλικ ή σύρετε φωτογραφία εδώ",
+    "clickOrDragLogo": "Κάντε κλικ ή σύρετε λογότυπο εδώ",
+    "supportedFormats": "Υποστηρίζονται JPG, PNG (μέγιστο {size}MB)",
+    "phases": {
+      "uploading": "Ανέβασμα...",
+      "processing": "Επεξεργασία...",
+      "complete": "Ολοκληρώθηκε!"
+    },
+    "errors": {
+      "fileSelection": "Σφάλμα επιλογής αρχείου"
+    },
+    "success": {
+      "photoUploaded": "Η φωτογραφία ανέβηκε επιτυχώς!",
+      "logoUploaded": "Το λογότυπο ανέβηκε επιτυχώς!"
+    }
+  }
+}

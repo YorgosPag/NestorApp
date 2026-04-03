@@ -1,0 +1,164 @@
+{
+  "loanTracking": {
+    "title": "Τραπεζικά Δάνεια",
+    "addLoan": "Νέο Δάνειο",
+    "addLoanDesc": "Καταγράψτε ένα νέο τραπεζικό δάνειο για αυτό το payment plan.",
+    "noLoans": "Δεν υπάρχουν καταγεγραμμένα δάνεια.",
+    "primaryLoan": "Κύριο Δάνειο",
+    "secondaryLoan": "Δευτερεύον Δάνειο",
+    "status": {
+      "not_applicable": "Δεν Απαιτείται",
+      "exploring": "Αναζήτηση Τράπεζας",
+      "applied": "Κατατέθηκε Αίτηση",
+      "pre_approved": "Προέγκριση",
+      "appraisal_pending": "Αναμένεται Εκτίμηση",
+      "appraisal_completed": "Εκτίμηση Ολοκληρώθηκε",
+      "legal_review": "Νομικός Έλεγχος",
+      "approved": "Εγκρίθηκε",
+      "collateral_pending": "Αναμένεται Προσημείωση",
+      "collateral_registered": "Προσημείωση Εγγράφηκε",
+      "disbursement_pending": "Αναμένεται Εκταμίευση",
+      "partially_disbursed": "Μερική Εκταμίευση",
+      "fully_disbursed": "Πλήρης Εκταμίευση",
+      "rejected": "Απορρίφθηκε",
+      "cancelled": "Ακυρώθηκε"
+    },
+    "disbursementType": {
+      "title": "Τύπος Εκταμίευσης",
+      "lump_sum": "Εφάπαξ",
+      "phased": "Σταδιακή (Milestones)"
+    },
+    "collateralType": {
+      "mortgage": "Υποθήκη",
+      "pre_notation": "Προσημείωση Υποθήκης",
+      "personal_guarantee": "Προσωπική Εγγύηση",
+      "other": "Άλλο"
+    },
+    "fields": {
+      "bankName": "Τράπεζα",
+      "bankBranch": "Υποκατάστημα",
+      "bankReference": "Αρ. Πρωτοκόλλου",
+      "requestedAmount": "Αιτηθέν Ποσό",
+      "approvedAmount": "Εγκεκριμένο Ποσό",
+      "disbursedAmount": "Εκταμιευθέν",
+      "ltvPercentage": "LTV (%)",
+      "interestRate": "Επιτόκιο (%)",
+      "termYears": "Διάρκεια (Έτη)",
+      "monthlyPayment": "Μηνιαία Δόση",
+      "dstiRatio": "DSTI (%)",
+      "appraisalValue": "Αξία Εκτίμησης",
+      "collateralAmount": "Ποσό Εγγύησης",
+      "yearsUnit": "έτη"
+    },
+    "actions": {
+      "recordDisbursement": "Καταγραφή Εκταμίευσης",
+      "addCommLog": "Νέα Επικοινωνία",
+      "updateStatus": "Ενημέρωση Κατάστασης"
+    },
+    "noDisbursements": "Δεν υπάρχουν εκταμιεύσεις.",
+    "noCommLog": "Δεν υπάρχουν εγγραφές.",
+    "timeline": "Χρονολόγιο",
+    "milestone": "Milestone",
+    "milestonePlaceholder": "π.χ. Θεμελίωση",
+    "commLog": {
+      "title": "Ιστορικό Επικοινωνίας",
+      "typeLabel": "Τύπος",
+      "description": "Περιγραφή",
+      "descriptionPlaceholder": "Τι συζητήθηκε;",
+      "nextAction": "Επόμενη Ενέργεια",
+      "nextActionPlaceholder": "π.χ. Αναμονή εκτίμησης",
+      "type": {
+        "phone": "Τηλέφωνο",
+        "email": "Email",
+        "meeting": "Συνάντηση",
+        "document": "Έγγραφο",
+        "note": "Σημείωση"
+      }
+    },
+    "alerts": {
+      "preApprovalExpiring": "Η Προέγκριση λήγει σε {days} ημέρες!",
+      "ltvExceeded": "LTV {value}% — υπερβαίνει το όριο {limit}%",
+      "dstiExceeded": "DSTI {value}% — υπερβαίνει το όριο {limit}%"
+    }
+  },
+  "chequeRegistry": {
+    "title": "Μητρώο Επιταγών",
+    "noCheques": "Δεν υπάρχουν καταγεγραμμένες επιταγές.",
+    "status": {
+      "received": "Παραλήφθηκε",
+      "in_custody": "Σε Φύλαξη",
+      "deposited": "Κατατέθηκε",
+      "clearing": "Σε Εκκαθάριση",
+      "cleared": "Εισπράχθηκε",
+      "bounced": "Σφραγίστηκε",
+      "endorsed": "Οπισθογραφήθηκε",
+      "cancelled": "Ακυρώθηκε",
+      "expired": "Έληξε",
+      "replaced": "Αντικαταστάθηκε"
+    },
+    "bouncedReason": {
+      "insufficient_funds": "Ανεπαρκές Υπόλοιπο",
+      "account_closed": "Κλειστός Λογαριασμός",
+      "signature_mismatch": "Ασυμφωνία Υπογραφής",
+      "stop_payment": "Ανάκληση Πληρωμής",
+      "post_dated_early": "Πρόωρη Κατάθεση",
+      "technical_issue": "Τεχνικό Πρόβλημα",
+      "other": "Άλλος Λόγος"
+    },
+    "fields": {
+      "chequeNumber": "Αρ. Επιταγής",
+      "chequeType": "Τύπος Επιταγής",
+      "amount": "Ποσό (€)",
+      "bankName": "Τράπεζα",
+      "bankBranch": "Υποκατάστημα",
+      "drawerName": "Εκδότης",
+      "drawerTaxId": "ΑΦΜ Εκδότη",
+      "issueDate": "Ημ. Έκδοσης",
+      "maturityDate": "Ημ. Λήξης",
+      "depositDate": "Ημ. Κατάθεσης",
+      "clearingDate": "Ημ. Εκκαθάρισης",
+      "bouncedDate": "Ημ. Σφράγισης",
+      "bouncedReason": "Λόγος Σφράγισης",
+      "crossedCheque": "Δίγραμμη Επιταγή",
+      "postDated": "Μεταχρονολογημένη",
+      "yes": "Ναι",
+      "status": "Κατάσταση",
+      "endorserName": "Οπισθογράφος",
+      "endorseeName": "Αποδέκτης",
+      "teiresiasFiled": "Δήλωση Τειρεσία",
+      "policeCaseFiled": "Μήνυση"
+    },
+    "actions": {
+      "addCheque": "Νέα Επιταγή",
+      "chequeCreated": "Η επιταγή καταγράφηκε",
+      "transitionTitle": "Αλλαγή Κατάστασης",
+      "endorse": "Οπισθογράφηση",
+      "endorsed": "Οπισθογραφήθηκε",
+      "bounce": "Σφράγιση Επιταγής",
+      "bounced": "Σφραγίστηκε",
+      "save": "Αποθήκευση",
+      "updated": "Ενημερώθηκε",
+      "terminal": "Η επιταγή είναι σε τερματική κατάσταση."
+    },
+    "tabs": {
+      "details": "Στοιχεία",
+      "actions": "Ενέργειες",
+      "history": "Ιστορικό"
+    },
+    "bouncedInfo": {
+      "title": "Στοιχεία Σφράγισης"
+    },
+    "endorsement": {
+      "title": "Αλυσίδα Οπισθογράφησης",
+      "empty": "Δεν υπάρχουν οπισθογραφήσεις."
+    },
+    "replacement": {
+      "replaces": "Αντικαθιστά επιταγή:",
+      "replacedBy": "Αντικαταστάθηκε από:"
+    },
+    "audit": {
+      "created": "Δημιουργήθηκε:",
+      "updated": "Ενημερώθηκε:"
+    }
+  }
+}

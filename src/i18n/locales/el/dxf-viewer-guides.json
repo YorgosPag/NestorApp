@@ -1,0 +1,145 @@
+{
+  "guidePanel": {
+    "title": "Οδηγοί & Σημεία",
+    "toggleAll": "Εναλλαγή Όλων",
+    "deleteAllGuides": "Διαγραφή Όλων Οδηγών",
+    "deleteAllPoints": "Διαγραφή Όλων Σημείων",
+    "snapToGuides": "Snap σε Οδηγούς",
+    "xGuides": "Κατακόρυφοι (X)",
+    "yGuides": "Οριζόντιοι (Y)",
+    "xzGuides": "Λοξοί (XZ)",
+    "individualPoints": "Μεμονωμένα Σημεία",
+    "stats": "{guideCount} οδηγοί, {pointCount} σημεία",
+    "empty": "Δεν υπάρχουν οδηγοί ή σημεία",
+    "editLabel": "Επεξεργασία Ετικέτας",
+    "editLabelMessage": "Ετικέτα οδηγού",
+    "noLabel": "Χωρίς ετικέτα",
+    "hide": "Απόκρυψη",
+    "show": "Εμφάνιση",
+    "lock": "Κλείδωμα",
+    "unlock": "Ξεκλείδωμα",
+    "delete": "Διαγραφή",
+    "deleteGroup": "Διαγραφή Ομάδας"
+  },
+  "guideGroups": {
+    "create": "Νέα Ομάδα",
+    "createTitle": "Δημιουργία Ομάδας Οδηγών",
+    "nameLabel": "Όνομα ομάδας",
+    "rename": "Μετονομασία",
+    "deleteGroup": "Διαγραφή Ομάδας",
+    "ungrouped": "Χωρίς ομάδα"
+  },
+  "guideMenuGroups": {
+    "create": "Δημιουργία",
+    "points": "Σημεία Κατασκευής",
+    "centers": "Κέντρα & Μέσα",
+    "manage": "Διαχείριση",
+    "transforms": "Μετασχηματισμοί",
+    "grid": "Πλέγμα & Στοιχεία"
+  },
+  "guideContextMenu": {
+    "color": "Χρώμα",
+    "hideAll": "Απόκρυψη Όλων",
+    "showAll": "Εμφάνιση Όλων",
+    "cancel": "Ακύρωση",
+    "resetColor": "Επαναφορά προεπιλογής"
+  },
+  "guides": {
+    "measureToGuide": "Δημιουργία οδηγών στα σημεία μέτρησης;",
+    "createGuides": "Δημιουργία Οδηγών",
+    "equalizeRequiresSameAxis": "Η ισαπόσταση απαιτεί 3+ οδηγούς στον ίδιο άξονα (X ή Y)"
+  },
+  "guideBatchMenu": {
+    "selectedCount": "{count} οδηγοί επιλεγμένοι",
+    "deleteSelected": "Διαγραφή Επιλεγμένων",
+    "lockSelected": "Κλείδωμα Επιλεγμένων",
+    "unlockSelected": "Ξεκλείδωμα Επιλεγμένων",
+    "colorSelected": "Αλλαγή Χρώματος",
+    "groupSelected": "Ομαδοποίηση Επιλεγμένων",
+    "cancel": "Ακύρωση"
+  },
+  "guideAnalysis": {
+    "title": "Ανάλυση Οδηγών",
+    "tabs": {
+      "diagnostics": "Διαγνωστικά",
+      "compliance": "Συμμόρφωση",
+      "sustainability": "Βιωσιμότητα",
+      "export": "Εξαγωγή"
+    },
+    "diagnostics": {
+      "runAnalysis": "Εκτέλεση Ανάλυσης",
+      "totalGuides": "Σύνολο Οδηγών",
+      "byAxis": "Ανά Άξονα",
+      "avgSpacing": "Μέσο Διάστημα",
+      "density": "Πυκνότητα",
+      "complexity": "Πολυπλοκότητα",
+      "anomalies": "Ανωμαλίες",
+      "noAnomalies": "Δεν εντοπίστηκαν ανωμαλίες",
+      "suggestedFixes": "Προτεινόμενες Διορθώσεις",
+      "empty": "Προσθέστε οδηγούς για ανάλυση"
+    },
+    "compliance": {
+      "buildingCode": "Κωδικός Κτιρίου",
+      "seismicZone": "Σεισμική Ζώνη",
+      "check": "Έλεγχος Συμμόρφωσης",
+      "passed": "Όλοι οι έλεγχοι πέρασαν",
+      "failed": "Κάποιοι έλεγχοι απέτυχαν",
+      "code": "Κωδικός",
+      "description": "Περιγραφή",
+      "value": "Τιμή",
+      "limit": "Όριο",
+      "status": "Κατάσταση",
+      "zoneI": "Ζώνη I (PGA 0.12g)",
+      "zoneII": "Ζώνη II (PGA 0.16g)",
+      "zoneIII": "Ζώνη III (PGA 0.24g)",
+      "zoneIV": "Ζώνη IV (PGA 0.36g)",
+      "generic": "Γενικός",
+      "empty": "Προσθέστε οδηγούς για έλεγχο συμμόρφωσης"
+    },
+    "sustainability": {
+      "slabThickness": "Πάχος Πλάκας (m)",
+      "columnSize": "Μέγεθος Στύλου (m)",
+      "estimate": "Εκτίμηση",
+      "material": "Εκτίμηση Υλικών",
+      "concrete": "Σκυρόδεμα",
+      "steel": "Χάλυβας",
+      "waste": "Συντελεστής Αποβλήτων",
+      "cost": "Εκτιμώμενο Κόστος",
+      "carbon": "Αποτύπωμα Άνθρακα",
+      "totalCO2": "Συνολικό CO₂",
+      "rating": "Βαθμολογία",
+      "greenDeal": "EU Green Deal",
+      "ecoPresets": "Οικολογικές Ρυθμίσεις",
+      "applyPreset": "Εφαρμογή",
+      "empty": "Προσθέστε οδηγούς για εκτίμηση βιωσιμότητας"
+    },
+    "export": {
+      "ifcExport": "Εξαγωγή IFC",
+      "exportIFC": "Εξαγωγή .IFC",
+      "quantityTakeoff": "Προμέτρηση",
+      "calculate": "Υπολογισμός",
+      "columns": "Στύλοι",
+      "beams": "Δοκοί",
+      "slabArea": "Εμβαδόν Πλάκας",
+      "estimatedCost": "Εκτιμώμενο Κόστος",
+      "nlpCommand": "Εντολή NLP",
+      "nlpPlaceholder": "π.χ. \"κάνναβος 5x5μ 20x30\" ή \"σεισμική ζώνη 3\"",
+      "run": "Εκτέλεση",
+      "applyGrid": "Εφαρμογή Κανάβου",
+      "confidence": "Εμπιστοσύνη",
+      "empty": "Προσθέστε οδηγούς για επιλογές εξαγωγής"
+    }
+  },
+  "aiAssistant": {
+    "title": "AI Σχεδίαση",
+    "placeholder": "Γράψε μια εντολή σχεδίασης, π.χ. «σχεδίασε γραμμή από 0,0 μέχρι 10,5»",
+    "inputPlaceholder": "Γράψε εντολή...",
+    "send": "Αποστολή",
+    "clear": "Καθαρισμός",
+    "thinking": "Σκέφτομαι...",
+    "entityCreated": "Δημιουργήθηκε {count, plural, one {# entity} other {# entities}}",
+    "error": "Σφάλμα κατά την εκτέλεση",
+    "toggleOpen": "Άνοιγμα AI βοηθού",
+    "toggleClose": "Κλείσιμο AI βοηθού"
+  }
+}

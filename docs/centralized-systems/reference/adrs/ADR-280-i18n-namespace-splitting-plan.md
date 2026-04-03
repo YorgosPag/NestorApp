@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | APPROVED |
+| **Status** | IMPLEMENTED |
 | **Date** | 2026-04-03 |
 | **Category** | Infrastructure / i18n |
 | **Parent ADR** | ADR-279 (Google-Grade i18n Governance) |
@@ -300,13 +300,13 @@ Phase 1-3 adds ~23 new namespaces. Each requires 2 `case` branches (el + en) = ~
 
 After full implementation:
 
-- [ ] No namespace file exceeds 600 lines (except budget-exempt data files)
-- [ ] Each namespace has single-purpose ownership (no domain mixing)
-- [ ] `namespace-compat.ts` provides 100% backward compatibility
-- [ ] Full el/en/pseudo parity for all new namespaces
-- [ ] `namespace-manifest.json` reflects all new namespaces
-- [ ] `validate:i18n` passes with zero missing keys
-- [ ] Generated `types/i18n.ts` includes all new namespaces
+- [x] No namespace file exceeds 600 lines (except budget-exempt data files) — 7 borderline namespaces within warnOnly budgets
+- [x] Each namespace has single-purpose ownership (no domain mixing)
+- [x] `namespace-compat.ts` provides 100% backward compatibility — LEGACY_NESTED_MAP + root mappings
+- [x] Full el/en/pseudo parity for all new namespaces — 30 x 3 = 90 new files
+- [x] `namespace-manifest.json` reflects all new namespaces — 77 entries (sorted)
+- [x] `validate:i18n` passes with zero missing keys — 16,317/16,317 keys (100%)
+- [x] Generated `types/i18n.ts` includes all new namespaces — regenerated successfully
 
 ---
 
@@ -345,3 +345,4 @@ After full implementation:
 | Date | Decision | Author |
 |------|----------|--------|
 | 2026-04-03 | ADR created after comprehensive i18n audit. 14 over-budget namespaces identified, 4-phase splitting plan approved | Georgios Pagonis + Claude Code |
+| 2026-04-03 | Status APPROVED → IMPLEMENTED. Phases 1-4 completed. 30 new namespaces created (90 JSON files across 3 locales). Validation: 16,317/16,317 keys (100%). Manifest: 77 namespaces. Types regenerated. namespace-compat.ts enhanced with LEGACY_NESTED_MAP. lazy-config.ts: 60 new case branches | Georgios Pagonis + Claude Code |

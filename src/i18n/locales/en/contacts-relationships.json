@@ -1,0 +1,763 @@
+{
+  "relationships": {
+    "types": {
+      "employee": "Employee",
+      "manager": "Manager",
+      "shareholder": "Shareholder",
+      "boardMember": "Board Member",
+      "civilServant": "Civil Servant",
+      "departmentHead": "Department Head",
+      "consultant": "Consultant",
+      "colleague": "Colleague",
+      "friend": "Friend",
+      "family": "Family",
+      "businessContact": "Business Contact",
+      "other": "Other"
+    },
+    "presets": {
+      "positions": {
+        "director": "Director",
+        "manager": "Manager",
+        "supervisor": "Supervisor",
+        "engineer": "Engineer",
+        "accountant": "Accountant",
+        "secretary": "Secretary",
+        "technician": "Technician",
+        "salesRep": "Sales Representative"
+      },
+      "departments": {
+        "management": "Management",
+        "finance": "Finance",
+        "hr": "Human Resources",
+        "sales": "Sales",
+        "engineering": "Engineering",
+        "operations": "Operations",
+        "legal": "Legal",
+        "it": "IT"
+      }
+    },
+    "form": {
+      "title": "Add New Relationship",
+      "editTitle": "Edit Relationship",
+      "labels": {
+        "contact": "Contact",
+        "relationshipType": "Relationship Type",
+        "position": "Position",
+        "department": "Department",
+        "startDate": "Start Date",
+        "notes": "Notes",
+        "professionalInfo": "Professional Contact Information"
+      },
+      "placeholders": {
+        "searchContact": "Search contact...",
+        "selectType": "Select relationship type",
+        "searchType": "Search type...",
+        "newTypeName": "New type name...",
+        "position": "e.g. Sales Director",
+        "department": "e.g. Finance Department",
+        "notes": "Additional information..."
+      },
+      "noTypesFound": "No types found",
+      "addCustomType": "Add new type",
+      "validation": {
+        "contactRequired": "Contact selection is required",
+        "relationshipTypeRequired": "Relationship type is required",
+        "positionRequired": "Position is required",
+        "departmentRequired": "Department is required",
+        "sourceContactRequired": "Source contact is required",
+        "invalidSourceFormat": "Invalid source contact format",
+        "invalidTargetFormat": "Invalid target contact format",
+        "selfRelationship": "Cannot create a relationship with yourself",
+        "individualEmploymentIndividual": "An individual cannot be employed by another individual",
+        "invalidTypeForService": "Invalid relationship type for public service organization",
+        "shareholderRequiresCompany": "Shareholder relationships can only be created with companies",
+        "companyCannotBeEmployee": "A company cannot be an employee of another company. Choose a different type (e.g. Consultant, Partner).",
+        "serviceCannotBeEmployee": "A service cannot be an employee of a company. Choose a different type (e.g. Consultant, Supplier).",
+        "employmentRequiresCompanyTarget": "Employment relationships require a company or service as employer",
+        "governmentRequiresService": "Government relationships can only be created with public services",
+        "endDateBeforeStart": "End date cannot be before start date",
+        "invalidStatus": "Invalid relationship status",
+        "invalidPriority": "Invalid priority level",
+        "invalidStrength": "Invalid relationship strength",
+        "invalidEmploymentStatus": "Invalid employment status",
+        "invalidEmploymentType": "Invalid employment type",
+        "invalidEmailFormat": "Invalid business email format",
+        "invalidPhoneFormat": "Invalid business phone format",
+        "duplicateRelationship": "This relationship already exists between these contacts",
+        "missingRequiredFields": "Missing required fields: source contact, target contact, relationship type",
+        "contactsNotFound": "One or both contacts were not found",
+        "relationshipNotFound": "Relationship not found"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "save": "Saving...",
+        "add": "Add",
+        "update": "Update"
+      },
+      "selectContactFirst": "Please select a contact first to fill in the remaining fields.",
+      "pendingReminder": "Click \"Add\" to save the relationship. It will also be saved automatically when you save the contact."
+    },
+    "card": {
+      "editTitle": "Edit relationship",
+      "deleteTitle": "Delete relationship",
+      "from": "From:",
+      "to": "To:",
+      "notes": "Notes:",
+      "createdAt": "Created:",
+      "updatedAt": "Updated:",
+      "recently": "Recently",
+      "phoneExtension": "ext."
+    },
+    "recent": {
+      "title": "Recent Relationships",
+      "showLess": "Show less",
+      "showAll": "Show all ({count} more)"
+    },
+    "stats": {
+      "totalRelationships": "Total Relationships",
+      "employees": "Employees",
+      "shareholders": "Shareholders",
+      "civilServants": "Civil Servants",
+      "consultants": "Consultants",
+      "management": "Management",
+      "recent": "Recent",
+      "key": "Key",
+      "departments": "Departments"
+    },
+    "manager": {
+      "totalCount": "Total: {count} relationships",
+      "refreshData": "Refresh data",
+      "addRelationship": "Add Relationship",
+      "errors": {
+        "listError": "Relationship list error",
+        "formError": "Form error",
+        "treeError": "Organization chart error",
+        "searchError": "Error searching contacts"
+      },
+      "newContact": {
+        "note": "Note",
+        "description": "To create relationships, first save the contact. After saving, the relationship management options will appear."
+      }
+    },
+    "status": {
+      "createSuccess": "Relationship created successfully!",
+      "updateSuccess": "Relationship updated successfully!",
+      "deleteSuccess": "Relationship deleted successfully!",
+      "createError": "Error creating relationship",
+      "updateError": "Error updating relationship",
+      "deleteError": "Error deleting relationship",
+      "terminateSuccess": "The relationship was terminated successfully and preserved in history.",
+      "terminateError": "Error terminating relationship",
+      "deleteBlockedActiveRole": "This active relationship cannot be permanently deleted. Terminate it instead."
+    },
+    "list": {
+      "newContact": {
+        "title": "Create relationships",
+        "description": "To create relationships, first save the contact. After saving, you will be able to add professional relationships.",
+        "tip": "Tip:",
+        "tipText": "Fill in the basic information and click \"Update Contact\""
+      },
+      "loading": "Loading relationships...",
+      "empty": {
+        "title": "No registered relationships",
+        "addHint": "Click the \"Add Relationship\" button to add the first relationship."
+      }
+    },
+    "summary": {
+      "title": "Contact Relationships",
+      "organizationChart": "Organization Chart",
+      "add": "Add",
+      "startHere": "Start here",
+      "newContact": {
+        "availableAfterSave": "Relationships will be available after saving the contact.",
+        "tip": "Tip:",
+        "tipText": "Save the contact to add professional relationships, employees and shareholders."
+      },
+      "loading": "Loading relationships...",
+      "empty": {
+        "title": "No relationships",
+        "description": "Add professional relationships, employees and collaborators."
+      },
+      "viewManage": "View & Manage",
+      "editRelationships": "Edit Relationships"
+    },
+    "organizationTree": {
+      "loading": "Loading...",
+      "loadingTree": "Loading organization chart...",
+      "loadError": "Loading error",
+      "emptyTree": "Empty organization chart",
+      "noEmployeeRelationships": "No employee relationships for this organization.",
+      "unknownContact": "Unknown Contact",
+      "employee": "Employee",
+      "totalEmployees": "Total Employees",
+      "activeDepartments": "Active Departments",
+      "managementLevels": "Management Levels",
+      "simpleStructure": "Simple Organization Structure",
+      "simpleStructureDescription": "This company has a basic organizational structure without complex hierarchy.",
+      "departmentsAndEmployees": "Departments & Employees",
+      "generalDepartment": "General Department",
+      "recentAdditions": "Recent Additions",
+      "moreItems": "+{count} more",
+      "lastUpdated": "Last updated",
+      "createdAt": "Created",
+      "unknown": "Unknown"
+    },
+    "governance": {
+      "confirmTerminateTitle": "Terminate relationship?",
+      "confirmTerminateBody": "The relationship will be removed from active views but kept in history.",
+      "confirmDeleteTitle": "Permanently delete relationship?",
+      "confirmDeleteBody": "The relationship will be permanently deleted from the profile and related summaries.",
+      "impact": {
+        "protectedRole": "This role is treated as critical company data and must remain in history.",
+        "hierarchy": "This action affects the organization tree and related personnel metrics.",
+        "reciprocal": "This action also affects the reciprocal relationship on the linked contact."
+      }
+    }
+  },
+  "communication": {
+    "sections": {
+      "phones": "Phones",
+      "emails": "Emails",
+      "websites": "Websites",
+      "socialMedia": "Social Media",
+      "identity": "Identity"
+    },
+    "phoneTypes": {
+      "mobile": "Mobile",
+      "home": "Home",
+      "work": "Work",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "emailTypes": {
+      "personal": "Personal",
+      "work": "Work",
+      "other": "Other"
+    },
+    "websiteTypes": {
+      "personal": "Personal",
+      "company": "Company",
+      "portfolio": "Portfolio",
+      "blog": "Blog",
+      "other": "Other"
+    },
+    "socialMediaTypes": {
+      "personal": "Personal",
+      "professional": "Professional",
+      "business": "Business",
+      "other": "Other"
+    },
+    "servicePhoneTypes": {
+      "main": "Main",
+      "department": "Department",
+      "secretariat": "Secretariat",
+      "helpdesk": "Helpdesk",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "serviceEmailTypes": {
+      "general": "General",
+      "department": "Department",
+      "secretariat": "Secretariat",
+      "info": "Info",
+      "other": "Other"
+    },
+    "serviceWebsiteTypes": {
+      "official": "Official",
+      "eServices": "E-Services",
+      "portal": "Portal",
+      "other": "Other"
+    },
+    "serviceSocialMediaTypes": {
+      "official": "Official",
+      "informational": "Informational",
+      "other": "Other"
+    },
+    "companyPhoneTypes": {
+      "main": "Main",
+      "department": "Department",
+      "secretariat": "Secretariat",
+      "sales": "Sales",
+      "support": "Support",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "companyEmailTypes": {
+      "general": "General",
+      "department": "Department",
+      "sales": "Sales",
+      "support": "Support",
+      "info": "Info",
+      "other": "Other"
+    },
+    "companyWebsiteTypes": {
+      "corporate": "Corporate",
+      "eshop": "E-Shop",
+      "blog": "Blog",
+      "other": "Other"
+    },
+    "companySocialMediaTypes": {
+      "corporate": "Corporate",
+      "marketing": "Marketing",
+      "other": "Other"
+    },
+    "platforms": {
+      "linkedin": "LinkedIn",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "twitter": "Twitter/X",
+      "youtube": "YouTube",
+      "github": "GitHub",
+      "tiktok": "TikTok",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "other": "Other"
+    },
+    "placeholders": {
+      "phone": "e.g. 6981890123",
+      "phoneLabel": "e.g. Personal mobile",
+      "email": "e.g. email@example.com",
+      "emailLabel": "e.g. Personal email",
+      "website": "e.g. https://example.com",
+      "websiteLabel": "e.g. Personal website",
+      "username": "e.g. @username",
+      "socialLabel": "e.g. Personal profile"
+    },
+    "addContactInfo": "Add contact information",
+    "addNew": "Add {type}",
+    "emptyStates": {
+      "phones": "No phones added",
+      "emails": "No emails added",
+      "websites": "No websites added",
+      "socialMedia": "No social media added"
+    },
+    "buttons": {
+      "addPhone": "Add Phone",
+      "addEmail": "Add Email",
+      "addWebsite": "Add Website",
+      "addSocial": "Add Social Media"
+    },
+    "tableHeaders": {
+      "type": "Type",
+      "countryCode": "Code",
+      "number": "Number",
+      "label": "Label",
+      "actions": "Actions",
+      "email": "Email Address",
+      "url": "URL",
+      "platform": "Platform",
+      "username": "Username"
+    }
+  },
+  "service": {
+    "sections": {
+      "basicInfo": {
+        "title": "Basic Information"
+      },
+      "administrative": {
+        "title": "Administrative Information"
+      },
+      "contact": {
+        "title": "Contact Information"
+      },
+      "address": {
+        "title": "Address"
+      },
+      "communication": {
+        "title": "Communication"
+      },
+      "services": {
+        "title": "Responsibilities & Services"
+      },
+      "logo": {
+        "title": "Logo & Communication"
+      },
+      "relationships": {
+        "title": "Relationships"
+      },
+      "files": {
+        "title": "Contact Documents"
+      },
+      "banking": {
+        "title": "Banking"
+      }
+    },
+    "fields": {
+      "name": {
+        "label": "Service Name",
+        "placeholder": "e.g. City of Athens",
+        "helpText": "The official name of the public service"
+      },
+      "shortName": {
+        "label": "Short Name",
+        "placeholder": "e.g. C.A.",
+        "helpText": "Abbreviation or acronym of the service"
+      },
+      "category": {
+        "label": "Category"
+      },
+      "supervisionMinistry": {
+        "label": "Supervision Ministry",
+        "placeholder": "e.g. Ministry of Interior",
+        "helpText": "The supervising ministry",
+        "searchPlaceholder": "Search ministry...",
+        "noResults": "No ministry found"
+      },
+      "legalStatus": {
+        "label": "Legal Status"
+      },
+      "establishmentLaw": {
+        "label": "Establishment Law",
+        "placeholder": "e.g. Law 3852/2010",
+        "helpText": "The founding law of the public service"
+      },
+      "headTitle": {
+        "label": "Head Title",
+        "placeholder": "e.g. Mayor, General Secretary",
+        "helpText": "The institutional title of the head of service"
+      },
+      "headName": {
+        "label": "Head Name",
+        "placeholder": "e.g. John Smith",
+        "helpText": "The full name of the head"
+      },
+      "mainResponsibilities": {
+        "label": "Main Responsibilities",
+        "placeholder": "Describe the main responsibilities of the service...",
+        "helpText": "The core responsibilities and mission of the service"
+      },
+      "citizenServices": {
+        "label": "Citizen Services",
+        "placeholder": "List the services provided to citizens...",
+        "helpText": "The services provided to citizens"
+      },
+      "onlineServices": {
+        "label": "Online Services",
+        "helpText": "Link to online services (e.g. gov portal)"
+      },
+      "serviceHours": {
+        "label": "Service Hours",
+        "placeholder": "e.g. Monday-Friday 08:00-14:00",
+        "helpText": "The public service hours"
+      },
+      "phone": {
+        "helpText": "The central phone number of the service"
+      },
+      "email": {
+        "helpText": "The official contact email"
+      },
+      "website": {
+        "helpText": "The official website of the service"
+      }
+    }
+  },
+  "individual": {
+    "sections": {
+      "basicInfo": {
+        "title": "Basic Info",
+        "description": "Basic contact information"
+      },
+      "identity": {
+        "title": "Identity & Tax",
+        "description": "Identity and tax information"
+      },
+      "personas": {
+        "title": "Roles",
+        "description": "Select the roles/personas of this person"
+      },
+      "professional": {
+        "title": "Professional Info",
+        "description": "Work and profession information"
+      },
+      "address": {
+        "title": "Home Address",
+        "description": "Address details"
+      },
+      "communication": {
+        "title": "Communication",
+        "description": "Contact details and social media"
+      },
+      "photo": {
+        "title": "Photo",
+        "description": "Contact profile photo"
+      },
+      "relationships": {
+        "title": "Relationships",
+        "description": "Manage relationships with other contacts"
+      },
+      "files": {
+        "title": "Contact Documents",
+        "description": "Manage contact documents"
+      },
+      "banking": {
+        "title": "Banking",
+        "description": "Contact bank accounts"
+      },
+      "history": {
+        "title": "History",
+        "description": "Contact change history"
+      }
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "fatherName": "Father's Name",
+      "motherName": "Mother's Name",
+      "birthDate": "Birth Date",
+      "birthCountry": "Country of Birth",
+      "gender": "Gender",
+      "amka": "AMKA",
+      "documentType": "Document Type",
+      "documentIssuer": "Issuing Authority",
+      "documentNumber": "Document Number",
+      "documentIssueDate": "Issue Date",
+      "documentExpiryDate": "Expiry Date",
+      "vatNumber": "VAT Number",
+      "taxOffice": "Tax Office",
+      "profession": "Profession",
+      "specialty": "Specialty",
+      "employer": "Employer",
+      "position": "Position",
+      "skills": "Skills",
+      "street": "Street",
+      "streetNumber": "Number",
+      "city": "City",
+      "postalCode": "Postal Code"
+    },
+    "helpTexts": {
+      "firstName": "The first name of the individual",
+      "lastName": "The last name of the individual",
+      "fatherName": "Father's name",
+      "motherName": "Mother's name",
+      "birthDate": "Date of birth",
+      "birthCountry": "Country of birth",
+      "gender": "Contact's gender",
+      "amka": "Social Security Number (11 digits)",
+      "documentType": "Type of identification document",
+      "documentIssuer": "Authority that issued the document",
+      "documentNumber": "Identification document number",
+      "documentIssueDate": "Document issue date",
+      "documentExpiryDate": "Document expiry date",
+      "vatNumber": "Tax Identification Number (9 digits)",
+      "taxOffice": "Tax office",
+      "profession": "Type to search the European ESCO occupations registry or enter free text",
+      "specialty": "Professional specialty",
+      "employer": "Employer",
+      "position": "Work position",
+      "street": "Residential street",
+      "streetNumber": "Street number",
+      "city": "Residential city",
+      "postalCode": "Postal code (5 digits)"
+    },
+    "tooltips": {
+      "profession": "Profession is the broad occupational category (e.g. 'Engineer', 'Doctor'). Based on the EU ESCO/ISCO-08 classification. Specialty and Skills depend on this field.",
+      "specialty": "Specialty is the specific area within a Profession (e.g. Profession 'Engineer' → Specialty 'Civil Engineer'). Always linked to the Profession — cannot exist without it.",
+      "skills": "Skills are specific competencies of the individual. They can relate to the Profession (e.g. 'AutoCAD' for an Engineer) or be independent (e.g. 'English B2', 'Driving license'). No mandatory link to Profession/Specialty."
+    },
+    "placeholders": {
+      "documentIssuer": "e.g. Athens Police",
+      "taxOffice": "e.g. Athens Tax Office",
+      "profession": "e.g. Engineer",
+      "specialty": "e.g. Civil Engineer",
+      "employer": "e.g. XYZ Inc.",
+      "position": "e.g. Project Manager",
+      "street": "e.g. Athens Avenue",
+      "streetNumber": "e.g. 123",
+      "city": "e.g. Athens"
+    }
+  },
+  "esco": {
+    "searchResults": "Search results",
+    "noResults": "No occupations found",
+    "useFreeText": "Use as free text",
+    "escoLabel": "Standardized Occupation (ESCO)",
+    "iscoCode": "ISCO-08 Code",
+    "selectedFromEsco": "Selected from ESCO",
+    "skills": {
+      "searchPlaceholder": "Search ESCO skills...",
+      "noResults": "No skills found",
+      "useFreeText": "Add as free text",
+      "maxReached": "Maximum skills reached ({max})",
+      "removeSkill": "Remove skill",
+      "badge": "ESCO"
+    }
+  },
+  "employer": {
+    "vat": "VAT",
+    "noResults": "No companies found",
+    "useFreeText": "Use as free text",
+    "searchResults": "Search results"
+  },
+  "persona": {
+    "selector": {
+      "title": "Roles",
+      "legend": "Select contact roles",
+      "description": "Each role activates additional fields specific to that role",
+      "empty": "No roles selected"
+    },
+    "guards": {
+      "realEstateAgent": {
+        "blocked": "Cannot remove the \"Real Estate Agent\" role — there are active agreements or pending commissions for this contact."
+      },
+      "client": {
+        "blocked": "Cannot remove the \"Client\" role — there are active purchases linked to this contact."
+      }
+    },
+    "types": {
+      "constructionWorker": "Construction Worker",
+      "engineer": "Engineer",
+      "accountant": "Accountant",
+      "lawyer": "Lawyer",
+      "propertyOwner": "Property Owner",
+      "client": "Client",
+      "supplier": "Supplier",
+      "notary": "Notary",
+      "realEstateAgent": "Real Estate Agent"
+    },
+    "sections": {
+      "constructionWorker": {
+        "title": "Construction Worker Details",
+        "description": "EFKA/IKA information for construction site workers"
+      },
+      "engineer": {
+        "title": "Engineer Details",
+        "description": "TEE registry, specialty and license class"
+      },
+      "accountant": {
+        "title": "Accountant Details",
+        "description": "OEE registry and accounting class"
+      },
+      "lawyer": {
+        "title": "Lawyer Details",
+        "description": "Bar Association registry"
+      },
+      "propertyOwner": {
+        "title": "Property Owner Details",
+        "description": "Property ownership information"
+      },
+      "client": {
+        "title": "Client Details",
+        "description": "Client category and communication preferences"
+      },
+      "supplier": {
+        "title": "Supplier Details",
+        "description": "Supplier category and payment terms"
+      },
+      "notary": {
+        "title": "Notary Details",
+        "description": "Notary Association registry"
+      },
+      "realEstateAgent": {
+        "title": "Real Estate Agent Details",
+        "description": "License and agency information"
+      }
+    },
+    "fields": {
+      "ikaNumber": "IKA Registry Number",
+      "insuranceClass": "Insurance Class",
+      "triennia": "Triennia",
+      "dailyWage": "Daily Wage (€)",
+      "specialtyCode": "EFKA Specialty Code",
+      "efkaRegistrationDate": "EFKA Registration Date",
+      "teeRegistryNumber": "TEE Registry Number",
+      "engineerSpecialty": "Engineer Specialty",
+      "licenseClass": "License Class",
+      "ptdeNumber": "PTDE Number",
+      "oeeNumber": "OEE Registry Number",
+      "accountingClass": "Accounting Class",
+      "barAssociationNumber": "Bar Association Number",
+      "barAssociation": "Bar Association",
+      "propertyCount": "Property Count",
+      "ownershipNotes": "Ownership Notes",
+      "clientSince": "Client Since",
+      "clientCategory": "Client Category",
+      "preferredContactMethod": "Preferred Contact Method",
+      "supplierCategory": "Supplier Category",
+      "paymentTermsDays": "Payment Terms (Days)",
+      "notaryRegistryNumber": "Notary Registry Number",
+      "notaryDistrict": "Notary District",
+      "reLicenseNumber": "License Number",
+      "reAgency": "Agency"
+    },
+    "helpTexts": {
+      "ikaNumber": "IKA/EFKA registry number of the employee",
+      "insuranceClass": "Insurance class 1-28 per EFKA (KPK 781)",
+      "triennia": "Number of triennia of work experience",
+      "dailyWage": "Employee daily wage in euros",
+      "specialtyCode": "EFKA specialty code",
+      "efkaRegistrationDate": "Date of registration with EFKA",
+      "teeRegistryNumber": "Registry number at the Technical Chamber of Greece",
+      "engineerSpecialty": "Engineering specialty per TEE",
+      "licenseClass": "Study license class (A, B, C, D)",
+      "ptdeNumber": "National Contractor Database number",
+      "oeeNumber": "Registry number at the Economic Chamber of Greece",
+      "accountingClass": "Accountant/tax consultant class",
+      "barAssociationNumber": "Registry number at the Bar Association",
+      "barAssociation": "Bar Association of registration",
+      "propertyCount": "Total number of properties owned",
+      "ownershipNotes": "Notes regarding property ownership",
+      "clientSince": "Date of client relationship start",
+      "clientCategory": "Client category (residential, commercial, etc.)",
+      "preferredContactMethod": "Preferred method of communication",
+      "supplierCategory": "Supplier category (materials, equipment, etc.)",
+      "paymentTermsDays": "Payment terms in days",
+      "notaryRegistryNumber": "Registry number at the Notary Association",
+      "notaryDistrict": "Notary Association district",
+      "reLicenseNumber": "Real estate agent license number",
+      "reAgency": "Real estate agency name"
+    },
+    "placeholders": {
+      "ikaNumber": "e.g. 12345678901",
+      "insuranceClass": "Select insurance class",
+      "specialtyCode": "e.g. SKY",
+      "teeRegistryNumber": "e.g. 98765",
+      "ptdeNumber": "e.g. 12345",
+      "oeeNumber": "e.g. 12345",
+      "accountingClass": "e.g. A",
+      "barAssociationNumber": "e.g. 12345",
+      "barAssociation": "e.g. Athens Bar",
+      "ownershipNotes": "Notes about properties...",
+      "notaryRegistryNumber": "e.g. 12345",
+      "notaryDistrict": "e.g. Athens",
+      "reLicenseNumber": "e.g. 12345",
+      "reAgency": "e.g. ABC Real Estate"
+    },
+    "options": {
+      "engineerSpecialty": {
+        "civil": "Civil Engineer",
+        "architect": "Architect Engineer",
+        "mechanical": "Mechanical Engineer",
+        "electrical": "Electrical Engineer",
+        "surveyor": "Surveyor Engineer",
+        "chemical": "Chemical Engineer",
+        "mining": "Mining Engineer"
+      },
+      "licenseClass": {
+        "A": "Class A (Large Projects)",
+        "B": "Class B",
+        "C": "Class C",
+        "D": "Class D (Small Projects)"
+      },
+      "clientCategory": {
+        "residential": "Residential",
+        "commercial": "Commercial",
+        "industrial": "Industrial",
+        "publicSector": "Public Sector",
+        "other": "Other"
+      },
+      "contactMethod": {
+        "phone": "Phone",
+        "email": "Email",
+        "inPerson": "In Person",
+        "messaging": "Messaging"
+      },
+      "supplierCategory": {
+        "materials": "Construction Materials",
+        "equipment": "Equipment",
+        "subcontractor": "Subcontractor",
+        "services": "Services",
+        "other": "Other"
+      }
+    }
+  }
+}

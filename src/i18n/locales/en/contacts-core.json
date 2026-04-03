@@ -1,0 +1,320 @@
+{
+  "emptyState": {
+    "title": "Create Contact",
+    "description": "Select a contact from the list or create a new one."
+  },
+  "export": {
+    "noContactSelected": "Select a contact to export",
+    "success": "Export completed successfully!",
+    "successMultiple": "Exported {count} contacts successfully!"
+  },
+  "import": {
+    "title": "Import Contacts",
+    "description": "Select a CSV or JSON file to bulk import contacts.",
+    "selectFile": "Select file...",
+    "acceptedFormats": "Accepted formats: CSV, JSON",
+    "parsing": "Parsing file...",
+    "previewReady": "File parsed successfully",
+    "totalRecords": "Total records: {count}",
+    "validRecords": "Valid records: {count}",
+    "invalidRecords": "Invalid records: {count}",
+    "warnings": "Warnings: {count}",
+    "showErrors": "Show errors ({count})",
+    "parseError": "Failed to parse the file. Please check its format.",
+    "allInvalid": "No valid records found in the file.",
+    "cancel": "Cancel",
+    "confirm": "Import {count} contacts",
+    "success": "Imported {count} contacts successfully!",
+    "row": "Row"
+  },
+  "header": {
+    "title": "Contact Management",
+    "titleWithCount": "Contact Management ({count})",
+    "subtitle": "Central directory of all your contacts",
+    "searchPlaceholder": "Search contacts...",
+    "newContact": "New Contact",
+    "actions": {
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Move to Trash"
+    }
+  },
+  "page": {
+    "pageLabel": "Contact Management",
+    "loading": "Loading Contacts",
+    "loadingMessage": "Loading contacts from database...",
+    "error": {
+      "pageLabel": "Contacts Error",
+      "ariaLabel": "Loading Error",
+      "title": "Failed to load contacts:",
+      "retry": "Retry"
+    },
+    "dashboard": {
+      "label": "Contact Statistics",
+      "totalContacts": "Total Contacts",
+      "totalPersonnel": "Total Personnel",
+      "legalEntities": "Legal Entities",
+      "activeContacts": "Active Contacts",
+      "services": "Services",
+      "recentAdditions": "Recent Additions",
+      "favorites": "Favorites",
+      "contactsWithRelations": "Contacts with Relations"
+    },
+    "filters": {
+      "desktop": "Search Filters",
+      "mobile": "Search Filters Mobile"
+    },
+    "views": {
+      "desktopView": "List and Details Desktop",
+      "mobileList": "Contacts Mobile List",
+      "gridPlaceholder": "Grid View will be implemented soon.",
+      "gridView": "Contacts Grid"
+    },
+    "details": {
+      "title": "Details",
+      "editContact": "Edit Contact",
+      "deleteContact": "Move to Trash"
+    },
+    "filterIndicator": {
+      "viewingCustomer": "Viewing customer:",
+      "selectedContact": "Selected contact",
+      "back": "Back",
+      "backToList": "Back to contacts list",
+      "filteringFor": "Filtering for:",
+      "contactsCount": "{count} contact",
+      "contactsCountPlural": "{count} contacts",
+      "clear": "Clear",
+      "showAll": "Show all contacts"
+    }
+  },
+  "list": {
+    "ariaLabel": "Contacts List",
+    "entityName": "Contacts",
+    "searchPlaceholder": "Search contacts...",
+    "contactAriaLabel": "Contact {name}",
+    "favorites": {
+      "added": "Added to favorites: {name}",
+      "removed": "Removed from favorites: {name}",
+      "error": "Failed to update favorite"
+    },
+    "empty": {
+      "title": "No contacts found",
+      "subtitle": "Add your first contact"
+    },
+    "share": {
+      "modalTitle": "Share Contact",
+      "noContactSelected": "Select a contact to share",
+      "copied": "Contact info copied!",
+      "success": "Shared via {platform} successfully!",
+      "company": "Company",
+      "service": "Service",
+      "profession": "Profession",
+      "phone": "Phone",
+      "address": "Address"
+    }
+  },
+  "types": {
+    "individual": "Individual",
+    "company": "Company",
+    "service": "Service"
+  },
+  "card": {
+    "labels": {
+      "phone": "Phone",
+      "profession": "Profession",
+      "vat": "VAT"
+    }
+  },
+  "stats": {
+    "title": "Property Statistics",
+    "propertiesCount": "Number of Properties",
+    "totalArea": "Total Area",
+    "totalValue": "Total Value"
+  },
+  "projects": {
+    "title": "Related Projects",
+    "empty": "No projects found for this company.",
+    "table": {
+      "project": "Project",
+      "status": "Status",
+      "progress": "Progress"
+    }
+  },
+  "properties": {
+    "title": "Customer Properties ({count})",
+    "addProperty": "Add Property",
+    "empty": "This customer has no registered properties.",
+    "table": {
+      "code": "Code",
+      "type": "Type",
+      "area": "Area",
+      "building": "Building",
+      "actions": "Actions"
+    },
+    "sqm": "sq.m",
+    "view": "View"
+  },
+  "details": {
+    "contactInfo": {
+      "title": "Contact Information",
+      "noContactInfo": "No contact information available.",
+      "sendEmailTitle": "Send email to {email} via Gmail",
+      "callTitle": "Call {phone}"
+    },
+    "taxInfo": {
+      "title": "Tax Information",
+      "vatNumber": "VAT Number:",
+      "notSet": "Not set"
+    }
+  },
+  "toolbar": {
+    "actions": "Actions",
+    "communication": "Communication",
+    "management": "Management",
+    "filters": "Filters",
+    "selectedContacts": "{count} selected contacts",
+    "shortcutActions": {
+      "new": "New Contact (Ctrl+N)",
+      "edit": "Edit Selected (Ctrl+E)",
+      "delete": "Delete Selected (Delete)"
+    },
+    "tabs": {
+      "actions": "Actions",
+      "communication": {
+        "call": "Call",
+        "callTooltip": "Call selected contacts",
+        "email": "Email",
+        "emailTooltip": "Send email to selected contacts",
+        "sms": "SMS",
+        "smsTooltip": "Send SMS to selected contacts",
+        "selectForCommunication": "Select contacts for communication"
+      },
+      "management": {
+        "export": "Export",
+        "exportTooltip": "Export contacts list",
+        "import": "Import",
+        "importTooltip": "Import contacts from file",
+        "archive": "Archive",
+        "archiveCount": "Archive {count} contact(s)",
+        "archiveSelected": "Archive selected contact",
+        "archiveSelectFirst": "Select a contact to archive",
+        "help": "Help",
+        "helpTooltip": "Help and instructions"
+      },
+      "filters": {
+        "favorites": "Favorites",
+        "showAllContacts": "Show all contacts",
+        "filterFavoritesOnly": "Filter favorites only",
+        "archived": "Archived",
+        "showActiveContacts": "Show active contacts",
+        "filterArchivedOnly": "Filter archived only",
+        "sortAtoZ": "Sort A to Z",
+        "sortZtoA": "Sort Z to A",
+        "filterHint": "Use the header filters for more options"
+      },
+      "actionsContent": {
+        "newContact": "New Contact",
+        "newContactTooltip": "Add new contact",
+        "edit": "Edit",
+        "editTooltip": "Edit selected contact",
+        "delete": "Move to Trash",
+        "deleteCount": "Move {count} contact(s) to trash",
+        "deleteSelected": "Move selected contact to trash",
+        "deleteSelectFirst": "Select a contact to move to trash",
+        "refresh": "Refresh",
+        "refreshTooltip": "Refresh contacts list"
+      }
+    }
+  },
+  "dialog": {
+    "deleteConfirmation": {
+      "title": "Move to Trash",
+      "message": "This contact will be moved to trash and can be restored later. Continue for {count} contact(s)?",
+      "warning": "Permanent deletion is only available from trash, after a separate confirmation."
+    },
+    "cancel": "Cancel",
+    "delete": "Move to Trash"
+  },
+  "fields": {
+    "vatNumber": "VAT Number",
+    "taxOffice": "Tax Office",
+    "communication": "Communication"
+  },
+  "common": {
+    "select": "Select",
+    "fields": {
+      "street": {
+        "placeholder": "e.g. Main Street",
+        "helpText": "The street name"
+      },
+      "streetNumber": {
+        "placeholder": "e.g. 123",
+        "helpText": "The street number"
+      },
+      "city": {
+        "placeholder": "e.g. Athens",
+        "helpText": "The city where the service is located"
+      },
+      "postalCode": {
+        "helpText": "The postal code (5 digits)"
+      }
+    }
+  },
+  "sections": {
+    "files": "Contact Documents",
+    "banking": "Banking"
+  },
+  "sectionDescriptions": {
+    "files": "Manage contact documents",
+    "banking": "Contact bank accounts"
+  },
+  "creation": {
+    "selectType": {
+      "title": "What type of contact do you want to create?",
+      "description": "Select the type to continue.",
+      "cancel": "Cancel"
+    },
+    "typeDescription": {
+      "individual": "Individual, buyer, employee, partner",
+      "company": "Company, Ltd, LLC, employer, supplier",
+      "service": "Ministry, tax office, municipality, social security"
+    },
+    "inline": {
+      "back": "Back to type selection"
+    }
+  },
+  "basicInfo": {
+    "noInfoFound": "No basic information found for this contact type."
+  },
+  "placeholderTab": {
+    "comingSoon": "- Coming Soon",
+    "contactIdLabel": "Contact ID:",
+    "typeLabel": "| Type:"
+  },
+  "navigation": {
+    "positionKeywords": {
+      "director": "director",
+      "generalDirector": "general director",
+      "seniorExecutive": "senior executive"
+    },
+    "fallbackSearch": {
+      "totalRelationships": "relationship",
+      "employees": "employee",
+      "shareholders": "shareholder",
+      "consultants": "consultant",
+      "management": "director",
+      "recent": "recent relationship",
+      "key": "key relationship",
+      "departments": "department"
+    }
+  },
+  "filterBar": {
+    "showOnlyWithProperties": "Show only customers with properties"
+  },
+  "duplicate": {
+    "exactMatch": "This contact already exists in the system!",
+    "similarMatch": "A similar contact was found. Please check before continuing.",
+    "possibleMatch": "Possible match with an existing contact."
+  }
+}

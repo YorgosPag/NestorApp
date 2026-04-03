@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
-import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
+import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
@@ -25,9 +25,9 @@ const LoadingComponent = () => {
   );
 };
 
-// Dynamically import the Units page content
-const UnitsPageContent = dynamic(
-  () => import('@/components/properties/UnitsPageContent').then(mod => ({ default: mod.UnitsPageContent })),
+// Dynamically import the floorplan viewer with layers (ADR-237: interactive overlays)
+const PropertyFloorplanViewer = dynamic(
+  () => import('@/components/property-management/PropertyManagementPageContent').then(mod => ({ default: mod.PropertyManagementPageContent })),
   {
     loading: () => <LoadingComponent />,
     ssr: false
@@ -38,9 +38,9 @@ export const PropertiesPageContent = () => {
   const searchParams = useSearchParams();
   const viewParam = searchParams.get('view');
 
-  // If floorplan view is requested, show the Units page (which has the floorplan viewer)
+  // If floorplan view is requested, show the property viewer with layers + interactive overlays
   if (viewParam === 'floorplan') {
-    return <UnitsPageContent />;
+    return <PropertyFloorplanViewer />;
   }
 
   // Otherwise, show the property grid view

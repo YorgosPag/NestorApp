@@ -3,6 +3,8 @@ import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { getNamespaceLoader, type TranslationData } from './namespace-loaders';
+
 const logger = createModuleLogger('i18n-lazy-config');
 
 /**
@@ -67,339 +69,71 @@ export const SUPPORTED_NAMESPACES = [
   'cash-flow',              // 🏢 Cash Flow Forecast (ADR-268 Phase 8)
   'procurement',            // 🏢 Procurement / Purchase Orders
   'saved-reports',          // 🏢 Saved Reports management
+  'building-storage',       // 🏢 Building storage/parking/spaces (split from building — ADR-280)
+  'building-address',       // 🏢 Building address/associations/photos (split from building — ADR-280)
+  'building-filters',       // 🏢 Building filters (split from building — ADR-280)
+  'building-timeline',      // 🏢 Building timeline/analytics (split from building — ADR-280)
+  'building-tabs',          // 🏢 Building tab content (split from building — ADR-280)
+  'common-sales',           // 🏢 Sales/e-commerce domain (split from common — ADR-280)
+  'common-account',         // 🏢 User account/2FA (split from common — ADR-280)
+  'common-photos',          // 🏢 Photo management (split from common — ADR-280)
+  'common-shared',          // 🏢 Shared UI: toolbar, filters, contacts, sharing (split from common — ADR-280)
+  'dxf-viewer-shell',       // 🏢 DXF viewer chrome/toolbar (split from dxf-viewer — ADR-280)
+  'dxf-viewer-panels',      // 🏢 DXF viewer panels/layers (split from dxf-viewer — ADR-280)
+  'dxf-viewer-settings',    // 🏢 DXF viewer settings (split from dxf-viewer — ADR-280)
+  'dxf-viewer-wizard',      // 🏢 DXF viewer wizard/import (split from dxf-viewer — ADR-280)
+  'dxf-viewer-guides',      // 🏢 DXF viewer guides/AI assistant (split from dxf-viewer — ADR-280)
+  'contacts-core',          // 🏢 Contacts core UI (split from contacts — ADR-280)
+  'contacts-form',          // 🏢 Contacts form/validation (split from contacts — ADR-280)
+  'contacts-relationships', // 🏢 Contacts relationships/personas (split from contacts — ADR-280)
+  'contacts-banking',       // 🏢 Contacts banking tab (split from contacts — ADR-280)
+  'contacts-lifecycle',     // 🏢 Contacts trash/identity impact (split from contacts — ADR-280)
+  'projects-data',          // 🏢 Projects data tabs (split from projects — ADR-280)
+  'projects-ika',           // 🏢 Projects IKA labor compliance (split from projects — ADR-280)
+  'payments-loans',         // 🏢 Loan tracking/cheques (split from payments — ADR-280)
+  'payments-cost-calc',     // 🏢 Construction cost calculator (split from payments — ADR-280)
+  'geo-canvas-drawing',     // 🏢 Geo-canvas drawing interfaces (split from geo-canvas — ADR-280)
+  'crm-inbox',              // 🏢 CRM calendar/inbox (split from crm — ADR-280)
+  'accounting-setup',       // 🏢 Accounting setup/reconciliation (split from accounting — ADR-280)
+  'files-media',            // 🏢 Files floorplan/media/capture (split from files — ADR-280)
+  'navigation-entities',    // 🏢 Navigation entities/filters (split from navigation — ADR-280)
+  'reports-extended',       // 🏢 Reports CRM/spaces (split from reports — ADR-280)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
-
-/** Translation data structure */
-type TranslationData = Record<string, string | Record<string, unknown>>;
 
 // Cache for loaded translations
 const translationCache = new Map<string, TranslationData>();
 
 /**
- * Dynamic translation loader με webpack-compatible imports
+ * Dynamic translation loader — delegates to namespace-loaders.ts for webpack-compatible imports
  */
-async function loadTranslations(language: Language, namespace: Namespace, forceReload = false) {
+async function loadTranslations(language: Language, namespace: Namespace, forceReload = false): Promise<TranslationData> {
   const cacheKey = `${language}:${namespace}`;
 
   if (!forceReload && translationCache.has(cacheKey)) {
-    // Map.has() guarantees value exists, so we can safely assert non-undefined
     return translationCache.get(cacheKey) as TranslationData;
   }
 
   try {
-    // Webpack-compatible dynamic import με explicit paths
-    let translations: { default?: TranslationData } & TranslationData;
+    const loader = getNamespaceLoader(language, namespace);
 
-    if (language === 'el') {
-      switch (namespace) {
-        case 'common':
-          translations = await import('./locales/el/common.json');
-          break;
-        case 'common-actions':
-          translations = await import('./locales/el/common-actions.json');
-          break;
-        case 'common-navigation':
-          translations = await import('./locales/el/common-navigation.json');
-          break;
-        case 'common-status':
-          translations = await import('./locales/el/common-status.json');
-          break;
-        case 'common-validation':
-          translations = await import('./locales/el/common-validation.json');
-          break;
-        case 'common-empty-states':
-          translations = await import('./locales/el/common-empty-states.json');
-          break;
-        case 'filters':
-          translations = await import('./locales/el/filters.json');
-          break;
-        case 'dxf-viewer':
-          translations = await import('./locales/el/dxf-viewer.json');
-          break;
-        case 'geo-canvas':
-          translations = await import('./locales/el/geo-canvas.json');
-          break;
-        case 'forms':
-          translations = await import('./locales/el/forms.json');
-          break;
-        case 'toasts':
-          translations = await import('./locales/el/toasts.json');
-          break;
-        case 'errors':
-          translations = await import('./locales/el/errors.json');
-          break;
-        case 'properties':
-          translations = await import('./locales/el/properties.json');
-          break;
-        case 'properties-detail':
-          translations = await import('./locales/el/properties-detail.json');
-          break;
-        case 'properties-enums':
-          translations = await import('./locales/el/properties-enums.json');
-          break;
-        case 'properties-viewer':
-          translations = await import('./locales/el/properties-viewer.json');
-          break;
-        case 'crm':
-          translations = await import('./locales/el/crm.json');
-          break;
-        case 'navigation':
-          translations = await import('./locales/el/navigation.json');
-          break;
-        case 'auth':
-          translations = await import('./locales/el/auth.json');
-          break;
-        case 'dashboard':
-          translations = await import('./locales/el/dashboard.json');
-          break;
-        case 'projects':
-          translations = await import('./locales/el/projects.json');
-          break;
-        case 'obligations':
-          translations = await import('./locales/el/obligations.json');
-          break;
-        case 'toolbars':
-          translations = await import('./locales/el/toolbars.json');
-          break;
-        case 'compositions':
-          translations = await import('./locales/el/compositions.json');
-          break;
-        case 'tasks':
-          translations = await import('./locales/el/tasks.json');
-          break;
-        case 'users':
-          translations = await import('./locales/el/users.json');
-          break;
-        case 'building':
-          translations = await import('./locales/el/building.json');
-          break;
-        case 'contacts':
-          translations = await import('./locales/el/contacts.json');
-          break;
-        case 'landing':
-          translations = await import('./locales/el/landing.json');
-          break;
-        case 'telegram':
-          translations = await import('./locales/el/telegram.json');
-          break;
-        case 'files':
-          translations = await import('./locales/el/files.json');
-          break;
-        case 'storage':
-          translations = await import('./locales/el/storage.json');
-          break;
-        case 'parking':
-          translations = await import('./locales/el/parking.json');
-          break;
-        case 'admin':
-          translations = await import('./locales/el/admin.json');
-          break;
-        case 'tool-hints':
-          translations = await import('./locales/el/tool-hints.json');
-          break;
-        case 'accounting':
-          translations = await import('./locales/el/accounting.json');
-          break;
-        case 'banking':
-          translations = await import('./locales/el/banking.json');
-          break;
-        case 'addresses':
-          translations = await import('./locales/el/addresses.json');
-          break;
-        case 'payments':
-          translations = await import('./locales/el/payments.json');
-          break;
-        case 'attendance':
-          translations = await import('./locales/el/attendance.json');
-          break;
-        case 'legal':
-          translations = await import('./locales/el/legal.json');
-          break;
-        case 'reports':
-          translations = await import('./locales/el/reports.json');
-          break;
-        case 'cash-flow':
-          translations = await import('./locales/el/cash-flow.json');
-          break;
-        case 'procurement':
-          translations = await import('./locales/el/procurement.json');
-          break;
-        case 'report-builder':
-          translations = await import('./locales/el/report-builder.json');
-          break;
-        case 'report-builder-domains':
-          translations = await import('./locales/el/report-builder-domains.json');
-          break;
-        case 'saved-reports':
-          translations = await import('./locales/el/saved-reports.json');
-          break;
-        default:
-          logger.warn(`Namespace ${namespace} not found for language ${language}`);
-          return {};
+    if (!loader) {
+      if (language !== 'el') {
+        return loadTranslations('el', namespace, forceReload);
       }
-    } else if (language === 'en') {
-      // English translations - Full support for all namespaces
-      switch (namespace) {
-        case 'common':
-          translations = await import('./locales/en/common.json');
-          break;
-        case 'common-actions':
-          translations = await import('./locales/en/common-actions.json');
-          break;
-        case 'common-navigation':
-          translations = await import('./locales/en/common-navigation.json');
-          break;
-        case 'common-status':
-          translations = await import('./locales/en/common-status.json');
-          break;
-        case 'common-validation':
-          translations = await import('./locales/en/common-validation.json');
-          break;
-        case 'common-empty-states':
-          translations = await import('./locales/en/common-empty-states.json');
-          break;
-        case 'filters':
-          translations = await import('./locales/en/filters.json');
-          break;
-        case 'dxf-viewer':
-          translations = await import('./locales/en/dxf-viewer.json');
-          break;
-        case 'geo-canvas':
-          translations = await import('./locales/en/geo-canvas.json');
-          break;
-        case 'forms':
-          translations = await import('./locales/en/forms.json');
-          break;
-        case 'toasts':
-          translations = await import('./locales/en/toasts.json');
-          break;
-        case 'errors':
-          translations = await import('./locales/en/errors.json');
-          break;
-        case 'properties':
-          translations = await import('./locales/en/properties.json');
-          break;
-        case 'properties-detail':
-          translations = await import('./locales/en/properties-detail.json');
-          break;
-        case 'properties-enums':
-          translations = await import('./locales/en/properties-enums.json');
-          break;
-        case 'properties-viewer':
-          translations = await import('./locales/en/properties-viewer.json');
-          break;
-        case 'crm':
-          translations = await import('./locales/en/crm.json');
-          break;
-        case 'navigation':
-          translations = await import('./locales/en/navigation.json');
-          break;
-        case 'auth':
-          translations = await import('./locales/en/auth.json');
-          break;
-        case 'dashboard':
-          translations = await import('./locales/en/dashboard.json');
-          break;
-        case 'projects':
-          translations = await import('./locales/en/projects.json');
-          break;
-        case 'obligations':
-          translations = await import('./locales/en/obligations.json');
-          break;
-        case 'toolbars':
-          translations = await import('./locales/en/toolbars.json');
-          break;
-        case 'compositions':
-          translations = await import('./locales/en/compositions.json');
-          break;
-        case 'tasks':
-          translations = await import('./locales/en/tasks.json');
-          break;
-        case 'users':
-          translations = await import('./locales/en/users.json');
-          break;
-        case 'building':
-          translations = await import('./locales/en/building.json');
-          break;
-        case 'contacts':
-          translations = await import('./locales/en/contacts.json');
-          break;
-        case 'landing':
-          translations = await import('./locales/en/landing.json');
-          break;
-        case 'telegram':
-          translations = await import('./locales/en/telegram.json');
-          break;
-        case 'files':
-          translations = await import('./locales/en/files.json');
-          break;
-        case 'storage':
-          translations = await import('./locales/en/storage.json');
-          break;
-        case 'parking':
-          translations = await import('./locales/en/parking.json');
-          break;
-        case 'admin':
-          translations = await import('./locales/en/admin.json');
-          break;
-        case 'tool-hints':
-          translations = await import('./locales/en/tool-hints.json');
-          break;
-        case 'accounting':
-          translations = await import('./locales/en/accounting.json');
-          break;
-        case 'banking':
-          translations = await import('./locales/en/banking.json');
-          break;
-        case 'addresses':
-          translations = await import('./locales/en/addresses.json');
-          break;
-        case 'payments':
-          translations = await import('./locales/en/payments.json');
-          break;
-        case 'attendance':
-          translations = await import('./locales/en/attendance.json');
-          break;
-        case 'legal':
-          translations = await import('./locales/en/legal.json');
-          break;
-        case 'reports':
-          translations = await import('./locales/en/reports.json');
-          break;
-        case 'cash-flow':
-          translations = await import('./locales/en/cash-flow.json');
-          break;
-        case 'procurement':
-          translations = await import('./locales/en/procurement.json');
-          break;
-        case 'report-builder':
-          translations = await import('./locales/en/report-builder.json');
-          break;
-        case 'report-builder-domains':
-          translations = await import('./locales/en/report-builder-domains.json');
-          break;
-        case 'saved-reports':
-          translations = await import('./locales/en/saved-reports.json');
-          break;
-        default:
-          logger.warn(`Namespace ${namespace} not found for language ${language}`);
-          return {};
-      }
-    } else {
-      // Other languages fallback to Greek
-      return loadTranslations('el', namespace);
+      logger.warn(`Namespace ${namespace} not found for language ${language}`);
+      return {};
     }
 
+    const translations = await loader();
     const data = translations.default || translations;
     if (!forceReload) {
-      translationCache.set(cacheKey, data);
+      translationCache.set(cacheKey, data as TranslationData);
     }
-    return data;
+    return data as TranslationData;
   } catch (error) {
     logger.warn(`Failed to load translations for ${language}:${namespace}`, { error });
 
-    // Fallback to Greek if available and not already trying Greek
     if (language !== 'el') {
       try {
         return await loadTranslations('el', namespace, forceReload);

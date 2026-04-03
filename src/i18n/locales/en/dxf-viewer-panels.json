@@ -1,0 +1,300 @@
+{
+  "panels": {
+    "properties": {
+      "title": "Properties",
+      "description": "{selectedCount} selected elements{{layerCount, plural, =0 {} other { | {layerCount} DXF layers}}"
+    },
+    "overlay": {
+      "title": "Overlay",
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}"
+    },
+    "levels": {
+      "title": "Levels",
+      "description": "Management Levels",
+      "loading": "Loading levels...",
+      "projectLevels": "Project Levels",
+      "defaultLevelName": "Level {number}",
+      "emptyNameWarning": "Name cannot be empty.",
+      "selectLevel": "Select level {name}",
+      "elementsCount": "{count} elements",
+      "emptyLevel": "Empty level",
+      "renameLevel": "Rename level",
+      "deleteLevel": "Delete level",
+      "noLevels": "No levels exist",
+      "newLevelPlaceholder": "New level name..."
+    },
+    "hierarchy": {
+      "title": "Hierarchy",
+      "description": "Project Hierarchy & Destinations",
+      "projectHierarchy": "Project Hierarchy",
+      "loading": "Loading hierarchy...",
+      "error": "Ιεραρχία Έργων - Σφάλμα",
+      "retry": "Ξαναδοκιμή",
+      "companies": "Companies",
+      "noCompanies": "Δεν βρέθηκαν εταιρείες",
+      "projects": "Έργα",
+      "noProjects": "Δεν βρέθηκαν έργα",
+      "buildings": "Κτίρια",
+      "floors": "Όροφοι",
+      "availableDestinations": "Available Destinations",
+      "buildingsCount": "{count, plural, =0 {κτίρια} one {κτίριο} other {κτίρια}}",
+      "floorsCount": "{count, plural, =0 {ορόφους} one {όροφο} other {ορόφους}}",
+      "unitsCount": "{count, plural, =0 {μονάδες} one {μονάδα} other {μονάδες}}",
+      "parkingSpots": "{count} θέσεις στάθμευσης",
+      "storageAreas": "{count} αποθήκες"
+    },
+    "layers": {
+      "title": "Layers",
+      "description": "Layer Drawing & Status Management"
+    }
+  },
+  "layerActions": {
+    "changeColor": "Change color",
+    "rename": "Rename layer",
+    "delete": "Delete",
+    "changeColorEntity": "Change entity color",
+    "renameEntity": "Rename entity",
+    "changeColorGroup": "Change Color Group color",
+    "renameGroup": "Rename Color Group",
+    "deleteGroup": "Delete Color Group",
+    "toggleVisibility": "Toggle visibility",
+    "mergeEntities": "Merge selected entities",
+    "mergeLayers": "Merge selected layers",
+    "mergeColorGroups": "Merge selected color groups",
+    "selectAllEntities": "Click to select all entities, Ctrl+Click for multi-selection",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "expandEntities": "Expand entities",
+    "collapseEntities": "Collapse entities",
+    "show": "Show",
+    "hide": "Hide",
+    "doubleClickToRename": "Double-click to rename"
+  },
+  "search": {
+    "layersAndEntities": "Search layers and entities..."
+  },
+  "mergePanel": {
+    "title": "🔗 Multi-Selection Active",
+    "entitiesSelected": "{count} entities selected",
+    "layersSelected": "{count} layers selected",
+    "colorGroupsSelected": "{count} color groups selected",
+    "mergeEntitiesButton": "Merge Entities",
+    "mergeLayersButton": "Merge Layers",
+    "mergeColorGroupsButton": "Merge Color Groups",
+    "tip": "Tip: Ctrl+Click for multi-selection"
+  },
+  "levelPanel": {
+    "title": "Project Levels",
+    "defaultLevelName": "Level {number}",
+    "selectLevel": "Select level {name}",
+    "elements": "{count} elements",
+    "emptyLevel": "Empty level",
+    "rename": "Rename level",
+    "deleteLevel": "Delete level",
+    "noLevels": "No levels",
+    "newLevelPlaceholder": "New level name...",
+    "emptyNameWarning": "Name cannot be empty."
+  },
+  "sceneInfo": {
+    "title": "Scene Information",
+    "noScene": "No scene loaded",
+    "importHint": "Import a DXF file to view information",
+    "elements": "Elements:",
+    "levels": "Levels:",
+    "units": "Units:",
+    "size": "Size:",
+    "selected": "Selected:",
+    "selectedElements": "{count} elements",
+    "selectedSuffix": "({count} selected)",
+    "entityTypes": {
+      "title": "Entity Types",
+      "line": "Lines",
+      "polyline": "Polylines",
+      "circle": "Circles",
+      "arc": "Arcs",
+      "text": "Text",
+      "block": "Blocks"
+    }
+  },
+  "overlayProperties": {
+    "title": "Overlay Properties",
+    "selectOverlay": "Select an overlay to view its properties.",
+    "label": "Label",
+    "labelPlaceholder": "e.g. A-12, P-034",
+    "status": "Status",
+    "type": "Type",
+    "linkedUnit": "Linked Unit",
+    "unitIdPlaceholder": "Unit ID",
+    "linkedEntity": "Linked Entity",
+    "selectEntity": "Select entity...",
+    "noEntity": "— None —",
+    "loadingEntities": "Loading...",
+    "unlink": "Remove link",
+    "transferTitle": "Transfer Entity Link",
+    "transferDescription": "This entity is already linked to another polygon. Transfer the link to the current polygon?",
+    "transferConfirm": "Transfer",
+    "statusLinkedHint": "Status is determined by the linked entity",
+    "geometry": "Geometry",
+    "points": "Points:",
+    "area": "Area:",
+    "perimeter": "Perimeter:",
+    "kindLabels": {
+      "property": "Property",
+      "parking": "Parking",
+      "storage": "Storage",
+      "footprint": "Footprint"
+    }
+  },
+  "overlayCard": {
+    "stats": {
+      "kind": "Type",
+      "area": "Area",
+      "linked": "Link",
+      "linkedYes": "Linked",
+      "linkedNo": "Not linked",
+      "vertices": "Vertices",
+      "perimeter": "Perimeter"
+    },
+    "ariaLabel": "Region card {name}"
+  },
+  "overlayList": {
+    "title": "Overlays",
+    "search": "Search...",
+    "deleteConfirm": "Delete overlay?",
+    "notFound": "No overlays found",
+    "empty": "No overlays",
+    "edit": "Edit",
+    "delete": "Delete",
+    "hide": "Hide",
+    "show": "Show"
+  },
+  "levelCard": {
+    "stats": {
+      "elements": "Elements"
+    },
+    "badges": {
+      "default": "Default"
+    },
+    "ariaLabel": "Level card {name}"
+  },
+  "pdfPanel": {
+    "title": "PDF Background",
+    "upload": "Upload PDF",
+    "loading": "Loading...",
+    "selectFile": "Select a PDF file to use as background",
+    "removePdf": "Remove PDF",
+    "pageInfo": "Page {currentPage} of {numPages}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "scale": "Scale",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "rotation": "Rotation",
+    "rotateCcw": "Rotate counter-clockwise",
+    "rotateCw": "Rotate clockwise",
+    "opacity": "Opacity",
+    "fitToView": "Fit to View",
+    "resetTransform": "Reset Transform",
+    "hidePdf": "Hide PDF",
+    "showPdf": "Show PDF"
+  },
+  "cadDock": {
+    "panels": {
+      "objectSnap": "Object Snap",
+      "layers": "Layers",
+      "properties": "Properties",
+      "commands": "Commands"
+    },
+    "snapModes": {
+      "title": "Object Snap",
+      "description": "Click to toggle snap modes"
+    },
+    "layers": {
+      "default": "0 - Default",
+      "geometry": "Geometry",
+      "dimensions": "Dimensions"
+    },
+    "properties": {
+      "layer": "Layer:",
+      "color": "Color:"
+    },
+    "history": {
+      "title": "Command History",
+      "commands": {
+        "fit": "Command: FIT",
+        "zoomWindow": "Command: ZOOM Window",
+        "line": "Command: LINE"
+      },
+      "ready": "Ready for command..."
+    },
+    "accessibility": {
+      "layerList": "Layer list"
+    }
+  },
+  "layerManager": {
+    "title": "Layer Manager",
+    "loading": "Loading layers...",
+    "createDialog": {
+      "title": "Create New Layer",
+      "nameLabel": "Layer Name",
+      "namePlaceholder": "e.g. Electrical elements",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Layer description...",
+      "categoryLabel": "Category",
+      "colorLabel": "Color",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "actions": {
+      "hide": "Hide",
+      "show": "Show",
+      "lock": "Lock",
+      "unlock": "Unlock",
+      "rename": "Rename",
+      "duplicate": "Duplicate",
+      "exportLayer": "Export Layer",
+      "delete": "Delete",
+      "exportAll": "Export all Layers",
+      "importLayers": "Import Layers",
+      "hideSystemLayers": "Hide System Layers",
+      "showSystemLayers": "Show System Layers"
+    },
+    "labels": {
+      "opacity": "Opacity:",
+      "moreElements": "+{count} more elements",
+      "noLayersFound": "No layers found",
+      "createNewOrChangeFilters": "Create a new layer or change the filters",
+      "searchLayers": "Search layers...",
+      "other": "Other"
+    },
+    "stats": {
+      "total": "Total:",
+      "visible": "Visible:",
+      "elements": "Elements:"
+    },
+    "sync": {
+      "status": "Sync Status:",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "lastSync": "Last Sync:",
+      "errors": "Errors:",
+      "connectedTooltip": "Connected - Real-time sync active",
+      "disconnectedTooltip": "Disconnected"
+    },
+    "badges": {
+      "system": "System"
+    },
+    "readOnly": {
+      "title": "Layers",
+      "viewModeOnly": "View mode only",
+      "canOnlyChangeVisibility": "You can only change visibility",
+      "connectedRealtime": "Connected - Real-time updates",
+      "disconnectedNoUpdates": "Disconnected - No updates",
+      "lastUpdate": "Last update:",
+      "visibleHidden": "Visible|Hidden",
+      "waitForAdmins": "Wait for layers to be created by administrators",
+      "checkConnection": "Check your connection",
+      "dbConnectionError": "Database connection error"
+    }
+  }
+}

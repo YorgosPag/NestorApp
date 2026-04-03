@@ -1,0 +1,187 @@
+{
+  "drawingInterfaces": {
+    "common": {
+      "cancel": "Ακύρωση",
+      "complete": "Ολοκλήρωση",
+      "automatically": "Αυτόματα",
+      "from": "Από",
+      "to": "Έως",
+      "floorPlan": "Κάτοψη:"
+    },
+    "technical": {
+      "title": " Τεχνικά Εργαλεία",
+      "subtitle": "Μηχανικοί - Πλήρης υποστήριξη DXF/DWG με ακρίβεια CAD",
+      "tools": {
+        "precision": " Ακρίβεια Χιλιοστού",
+        "settings": " Ρυθμίσεις",
+        "settingsAdvanced": " Προχωρημένες Ρυθμίσεις",
+        "alertsAuto": " Αυτοματοποιημένες Ειδοποιήσεις"
+      },
+      "automatedAlerts": {
+        "title": " Τεχνικές Αυτοματοποιημένες Ειδοποιήσεις",
+        "detectionSensitivity": "Ευαισθησία Ανίχνευσης",
+        "monitoringInterval": "Διάστημα Παρακολούθησης (λεπτά)",
+        "morePlatforms": "Περισσότερες πλατφόρμες...",
+        "technicalSpecifications": "🔬 Τεχνικές Προδιαγραφές:",
+        "sensitivity": {
+          "high": "Υψηλή (95%+ εμπιστοσύνη)",
+          "medium": "Μεσαία (85%+ εμπιστοσύνη)",
+          "low": "Χαμηλή (75%+ εμπιστοσύνη)"
+        },
+        "intervals": {
+          "realtime": "5 λεπτά (Πραγματικού χρόνου)",
+          "frequent": "15 λεπτά (Συχνά)",
+          "standard": "30 λεπτά (Τυπικό)",
+          "hourly": "60 λεπτά (Ωριαίο)"
+        }
+      },
+      "specifications": {
+        "title": "🔬 Τεχνικές Προδιαγραφές",
+        "accuracy": "±1mm",
+        "coordinates": "WGS84"
+      },
+      "actions": {
+        "complete": " Ολοκλήρωση",
+        "cancel": "❌ Ακύρωση"
+      },
+      "instructions": {
+        "precision": " Τεχνική ακρίβεια επιπέδου χιλιοστού για CAD εργασίες",
+        "settings": " Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες",
+        "automatedAlerts": " Διαμόρφωση αυτοματοποιημένων ειδοποιήσεων με τεχνική ακρίβεια"
+      },
+      "openViewer": "🛠️ Άνοιγμα DXF Viewer",
+      "cadEnvironment": "Περιβάλλον CAD",
+      "fullDxfViewer": "🛠️ Άνοιγμα πλήρους DXF Viewer σε νέο tab με όλα τα CAD εργαλεία",
+      "ultraPrecision": " Ultra-precision mode: Κάντε κλικ για σημεία με ακρίβεια χιλιοστού",
+      "advancedSettings": " Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες"
+    },
+    "professional": {
+      "title": "🏢 Εργαλεία Επαγγελματία",
+      "subtitle": "Μεταφόρτωση κατόψεων και αυτόματη ανίχνευση ακινήτων",
+      "tools": {
+        "property": "Ακίνητο",
+        "propertyManual": "Χειροκίνητα",
+        "autoDetectAuto": "Αυτόματα",
+        "monitoringMarket": "Αγορά"
+      },
+      "uploadFloorPlan": "📁 Μεταφόρτωση κάτοψης σε μορφή DXF, PDF, PNG, ή JPG",
+      "addPropertyPoints": "🏢 Κάντε κλικ για να προσθέσετε σημεία στο ακίνητο. Διπλό κλικ για ολοκλήρωση",
+      "autoDetectRooms": "🤖 Αυτόματη ανίχνευση δωματίων από τη μεταφορτωμένη κάτοψη",
+      "propertyManager": "🏘️ Διαχείριση κατάστασης ακινήτων με χρωματική κωδικοποίηση και στατιστικά",
+      "marketDashboard": " Πίνακας ελέγχου για παρακολούθηση αγοράς ακινήτων και αναλυτικά στοιχεία"
+    },
+    "citizen": {
+      "title": "👥 Εργαλεία Πολίτη",
+      "subtitle": "Απλή χρήση - Επιλογή σημείου ή περιοχής στο χάρτη",
+      "tools": {
+        "point": "Σημείο",
+        "pointDescription": "Πινέζα",
+        "polygon": "Πολύγωνο",
+        "polygonDescription": "Περίγραμμα",
+        "freehand": "Ελεύθερο Σχέδιο",
+        "freehandDrawing": "Σύρετε & Σχεδιάστε",
+        "realEstate": "Ακίνητα",
+        "realEstateDescription": "Ειδοποιήσεις"
+      },
+      "actions": {
+        "complete": "Ολοκλήρωση",
+        "cancel": "Ακύρωση",
+        "drawArea": "Σχεδίαση Περιοχής",
+        "clearAll": "Καθαρισμός όλων"
+      },
+      "instructions": {
+        "realEstate": "🏠 Σχεδιάστε την περιοχή ενδιαφέροντος για ειδοποιήσεις ακινήτων"
+      },
+      "realEstateSetup": {
+        "title": "Ειδοποίηση Ακινήτων",
+        "propertyType": "Τύπος Ακινήτου",
+        "propertyTypes": {
+          "apartment": "Διαμέρισμα",
+          "house": "Μονοκατοικία",
+          "land": "Οικόπεδο",
+          "commercial": "Επαγγελματικό"
+        }
+      },
+      "placePoint": "Κάντε κλικ στο χάρτη για να τοποθετήσετε ένα σημείο ειδοποίησης",
+      "addPolygonPoints": "🔷 Κάντε κλικ για να προσθέσετε σημεία στο πολύγωνο. Διπλό κλικ για ολοκλήρωση",
+      "drawFreehand": " Κρατήστε πατημένο και σύρετε για να σχεδιάσετε ελεύθερα",
+      "drawInterestArea": "🏠 Σχεδιάστε την περιοχή ενδιαφέροντος για ειδοποιήσεις ακινήτων. Διπλό κλικ για ολοκλήρωση"
+    }
+  },
+  "hardcodedTexts": {
+    "ui": {
+      "upload": "Ανέβασμα",
+      "properties": "Ιδιότητες",
+      "status": "Κατάσταση",
+      "monitor": "Παρακολούθηση",
+      "alerts": "Ειδοποιήσεις",
+      "autoDetect": "Αυτ. Εντοπισμός",
+      "dxfViewer": "DXF Viewer",
+      "fullCad": "Πλήρες CAD",
+      "show": "Εμφάνιση",
+      "start": "Έναρξη",
+      "stop": "Διακοπή",
+      "cancel": "Ακύρωση",
+      "precision": "Ακρίβεια",
+      "technical": "Τεχνικό",
+      "processing": "Επεξεργασία",
+      "confidence": "Εμπιστοσύνη",
+      "monitoring": "Παρακολούθηση"
+    },
+    "labels": {
+      "dxfEntities": "DXF Οντότητες:",
+      "controlPoints": "Σημεία Ελέγχου",
+      "accuracyCircles": "Κύκλοι Ακρίβειας",
+      "grid": "Πλέγμα",
+      "transformed": "Μετασχηματισμένα:",
+      "errors": "Σφάλματα:",
+      "rmsAccuracy": "RMS Ακρίβεια:",
+      "technicalSensitivity": "Τεχνική Ευαισθησία",
+      "monitoringPlatforms": "Πλατφόρμες Παρακολούθησης",
+      "monitoringZones": " Ζώνες Παρακολούθησης:",
+      "detectedProperties": " Εντοπισμένα Ακίνητα:",
+      "lastScan": "🕐 Τελευταία Σάρωση:",
+      "technicalMatches": " Τεχνικές Αντιστοιχίες:",
+      "automatedAlerts": " Αυτοματοποιημένες Ειδοποιήσεις:",
+      "precisionLabel": " Ακρίβεια:",
+      "georeferencing": "Γεωαναφορά:",
+      "confidenceThreshold": "Όριο Εμπιστοσύνης:",
+      "processingLabel": "Επεξεργασία:",
+      "formats": "Μορφές:",
+      "cadTools": "Εργαλεία CAD:",
+      "dxfViewerLabel": "DXF Viewer"
+    },
+    "actions": {
+      "automateAll": "Αυτοματοποίηση Όλων",
+      "startMonitoring": "Έναρξη Παρακολούθησης",
+      "stopAll": "Διακοπή Όλων",
+      "showDxfEntities": "Εμφάνιση DXF Οντοτήτων",
+      "showControlPoints": "Εμφάνιση Σημείων Ελέγχου",
+      "showAccuracyCircles": "Εμφάνιση Κύκλων Ακρίβειας",
+      "showGrid": "Εμφάνιση Πλέγματος"
+    },
+    "placeholders": {
+      "optionalDescription": "Προαιρετική περιγραφή",
+      "coordinates": "0.00",
+      "longitude": "23.7275",
+      "latitude": "37.9755",
+      "accuracy": "1.0"
+    },
+    "values": {
+      "uploaded": "Ανέβηκε",
+      "millimeterLevel": "Ακρίβεια επιπέδου χιλιοστού",
+      "wgs84LocalGrid": "WGS84 + Τοπικό Πλέγμα",
+      "realtimeAutomated": "Αυτοματοποιημένο σε πραγματικό χρόνο",
+      "dxfDwg": "DXF, DWG",
+      "full": "Πλήρες",
+      "comingSoon": "(Έρχεται Σύντομα)",
+      "spitogatosGr": "Spitogatos.gr",
+      "xeGr": "XE.gr"
+    }
+  },
+  "citizenDrawingInterface": {
+    "priceRange": {
+      "label": "Εύρος Τιμής (€)"
+    }
+  }
+}

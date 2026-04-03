@@ -1,0 +1,142 @@
+{
+  "trash": {
+    "viewTrash": "Trash",
+    "backToContacts": "Back to Contacts",
+    "trashCount": "{{count}} in trash",
+    "trashCount_one": "1 in trash",
+    "deleteSuccess": "Contact moved to trash",
+    "deleteSuccessMultiple": "{{count}} contacts moved to trash",
+    "moveToTrash": "Move to Trash",
+    "softDeleteDialog": {
+      "title": "Move Contact to Trash",
+      "description": "The contact will be removed from active lists but will remain available for restoration from trash.",
+      "body": "This step does not permanently delete the contact. All data remains available for recovery, audit, and a safe permanent deletion later from trash when needed.",
+      "confirm": "Move to Trash"
+    },
+    "permanentDeleteDialog": {
+      "title": "Permanently Delete Contact",
+      "description": "The contact will be permanently removed from the system if no blocking dependencies exist.",
+      "body": "Permanent deletion cannot be undone. It should only be used from trash after confirming that the record and its history are no longer needed.",
+      "confirm": "Permanently Delete"
+    },
+    "undo": "Undo",
+    "undoSuccess": "Contact restored",
+    "undoFailed": "Failed to undo",
+    "restore": "Restore",
+    "restoreSelected": "Restore selected",
+    "restoreSuccess": "{{count}} contacts restored",
+    "restoreSuccess_one": "Contact restored",
+    "restoreFailed": "Failed to restore",
+    "permanentDelete": "Permanently delete",
+    "permanentDeleteConfirm": "This action cannot be undone. The contact will be permanently deleted.",
+    "permanentDeleteSuccess": "Contact permanently deleted",
+    "emptyTrash": "Empty trash",
+    "emptyTrashConfirm": "All contacts in trash will be permanently deleted.",
+    "autoDeleteWarning": "Contacts in trash are automatically deleted after 30 days.",
+    "noTrashItems": "Trash is empty",
+    "deletedAt": "Deleted"
+  },
+  "identityImpact": {
+    "titles": {
+      "allow": "No identity impact detected",
+      "warn": "Individual identity change impact",
+      "block": "Individual identity change blocked"
+    },
+    "messages": {
+      "allow": "No downstream dependencies were detected for the fields being changed.",
+      "warn": "Changing these fields will affect connected data and live displays. Review the impact before continuing.",
+      "block": "This change cannot continue while attendance or employment records still depend on these identity fields.",
+      "unavailable": "The dependency preview did not complete reliably. Saving was blocked until the check becomes available again."
+    },
+    "sections": {
+      "changes": "Fields being changed",
+      "dependencies": "Affected dependencies",
+      "affectedDomains": "Affected system areas"
+    },
+    "categories": {
+      "display": "Display",
+      "identity": "Identity",
+      "regulated": "Regulated"
+    },
+    "changeSummary": {
+      "updated": "From \"{from}\" to \"{to}\"",
+      "cleared": "This field will be cleared. Current value: \"{from}\"",
+      "emptyValue": "empty"
+    },
+    "dependencySeverity": {
+      "warn": "{count} records require review",
+      "block": "{count} records block this change"
+    },
+    "dependencies": {
+      "projectLinks": {
+        "label": "Project links",
+        "remediation": "Review the projects where this person participates so displayed names and roles remain consistent."
+      },
+      "attendanceEvents": {
+        "label": "Attendance events",
+        "remediation": "Review or correct attendance records before changing identity data used in worker resolution."
+      },
+      "employmentRecords": {
+        "label": "Employment records / stamps",
+        "remediation": "These fields affect EFKA/IKA historical records. Correct the related records first or use a controlled correction process."
+      },
+      "contactRelationships": {
+        "label": "Contact relationships",
+        "remediation": "Review organizational and relationship views where this service appears before finalizing the change."
+      }
+    },
+    "affectedDomains": {
+      "linkedProjects": {
+        "label": "Linked projects and roles",
+        "description": "Live displays of this person in project lists, selectors, and role views will update."
+      },
+      "searchAndReporting": {
+        "label": "Search and reporting",
+        "description": "The new value will appear in live search, exports, and report builder views that read contact data."
+      },
+      "ikaAttendance": {
+        "label": "IKA attendance / worker resolution",
+        "description": "AMKA is used to resolve workers in attendance flows and QR check-ins."
+      },
+      "employmentCompliance": {
+        "label": "Employment and compliance",
+        "description": "Employment records and compliance calculations may require a coordinated correction flow."
+      },
+      "documentsAndIdentifiers": {
+        "label": "Documents and identifiers",
+        "description": "Changing numbers and issuing authorities affects future documents, identity checks, and administrative workflows."
+      },
+      "relationshipViews": {
+        "label": "Relationship views and org structure",
+        "description": "The new values will appear in relationship cards, organizational trees, and selectors."
+      }
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "fatherName": "Father Name",
+      "motherName": "Mother Name",
+      "birthDate": "Birth Date",
+      "birthCountry": "Country of Birth",
+      "gender": "Gender",
+      "amka": "AMKA",
+      "documentType": "Document Type",
+      "documentIssuer": "Issuing Authority",
+      "documentNumber": "Document Number",
+      "documentIssueDate": "Issue Date",
+      "documentExpiryDate": "Expiry Date",
+      "serviceName": "Service Name",
+      "shortName": "Short Name",
+      "serviceType": "Service Type",
+      "serviceCode": "Service Code",
+      "category": "Service Category",
+      "supervisionMinistry": "Supervising Ministry",
+      "legalStatus": "Legal Status"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "confirm": "Continue with impact awareness",
+      "understood": "Understood"
+    }
+  }
+}

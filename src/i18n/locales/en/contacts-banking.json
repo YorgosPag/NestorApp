@@ -1,0 +1,63 @@
+{
+  "bankingTab": {
+    "retry": "Retry",
+    "empty": {
+      "title": "No bank accounts",
+      "description": "Add bank accounts to facilitate transactions with this contact."
+    },
+    "addAccount": "Add Account",
+    "add": "Add",
+    "newAccount": {
+      "title": "New Account",
+      "description": "Add bank account details."
+    },
+    "accountsTitle": "Bank Accounts",
+    "editImpact": {
+      "title": "Confirm bank account changes",
+      "confirm": "Save changes",
+      "makePrimary": "This account will become the primary account and will be used in future payments and documents that read live banking data.",
+      "updateSensitive": "Changes to IBAN, bank, holder, or primary-account status affect future exports, payments, and documents that use live banking data."
+    },
+    "editAccount": {
+      "title": "Edit Account",
+      "description": "Modify the bank account details."
+    },
+    "deleteAccount": {
+      "title": "Delete Account",
+      "confirmation": "Are you sure you want to delete the account",
+      "withIban": "with IBAN",
+      "irreversible": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    },
+    "setPrimaryDialog": {
+      "title": "Set primary account",
+      "confirmation": "The account {bankName} will be set as the contact's primary account.",
+      "impact": "Future payments and documents that use the primary bank account will display this account.",
+      "cancel": "Cancel",
+      "confirm": "Set as primary"
+    },
+    "errors": {
+      "loadError": "Error loading accounts"
+    },
+    "toasts": {
+      "deleted": "The account {bankName} was deleted successfully.",
+      "deleteError": "The account could not be deleted.",
+      "setPrimary": "The account {bankName} was set as primary.",
+      "setPrimaryError": "The primary account could not be set.",
+      "updated": "The account {bankName} was updated successfully.",
+      "created": "The account {bankName} was added successfully."
+    },
+    "impact": {
+      "futureUse": "This account will no longer be available for future payments, invoice PDFs, and flows that use live banking data.",
+      "snapshotPreserved": "Already issued documents that contain banking snapshots will not change.",
+      "deletePrimary": "This is the primary account. After deletion, set a new primary account if this contact must continue to be used for payments.",
+      "deleteLastActive": "This is the last active bank account for this contact.",
+      "deleted": "Future payments and documents that read live banking data will no longer use this account.",
+      "primaryDeleted": "The primary account was removed. Future documents and payments will no longer have this default account.",
+      "primaryApplied": "Future payments and documents that use the primary bank account will now show this account.",
+      "updatedSensitive": "These changes will be used in future payments, exports, and documents that read live banking data.",
+      "createdPrimary": "The new account was saved as primary and will be used in future payment-facing flows."
+    }
+  }
+}

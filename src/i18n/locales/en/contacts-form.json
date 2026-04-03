@@ -1,0 +1,285 @@
+{
+  "form": {
+    "noName": "No name",
+    "noCompanyName": "No company name",
+    "editTitle": "Edit Contact",
+    "addTitle": "Add New Contact",
+    "editDescription": "Edit the contact details.",
+    "addDescription": "Enter the basic details of the new contact.",
+    "typeLabel": "Type",
+    "updateContact": "Update Contact",
+    "saveContact": "Save Contact",
+    "fields": {
+      "phone": "Phone",
+      "notes": "Notes"
+    }
+  },
+  "options": {
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "preferNotToSay": "Prefer not to say"
+    },
+    "identity": {
+      "identityCard": "Identity Card",
+      "passport": "Passport",
+      "driversLicense": "Driver's License",
+      "other": "Other"
+    },
+    "gemiStatuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "dissolution": "In Dissolution",
+      "dissolved": "Dissolved",
+      "bankruptcy": "Bankruptcy",
+      "liquidation": "Liquidation"
+    },
+    "serviceCategories": {
+      "ministry": "Ministry",
+      "region": "Region",
+      "municipality": "Municipality",
+      "publicEntity": "Public Entity",
+      "independentAuthority": "Independent Authority",
+      "taxOffice": "Tax Office",
+      "socialSecurity": "Social Security / EFKA",
+      "urbanPlanning": "Urban Planning Office",
+      "landRegistry": "Land Registry / Cadastre",
+      "fireDepartment": "Fire Department",
+      "police": "Police",
+      "court": "Court",
+      "chamber": "Chamber of Commerce",
+      "utility": "Public Utility (DEI, EYDAP etc)",
+      "military": "Military Service",
+      "university": "University",
+      "hospital": "Hospital",
+      "school": "School",
+      "other": "Other"
+    },
+    "legalStatuses": {
+      "npdd": "Public Law Legal Entity",
+      "npid": "Private Law Legal Entity",
+      "publicService": "Public Service",
+      "independentAuthority": "Independent Authority",
+      "decentralizedAdmin": "Decentralized Administration"
+    },
+    "activityTypes": {
+      "main": "Main Activity",
+      "secondary": "Secondary Activity"
+    },
+    "addressTypes": {
+      "headquarters": "Headquarters",
+      "branch": "Branch"
+    },
+    "shareholderTypes": {
+      "individual": "Individual",
+      "legal": "Legal Entity"
+    },
+    "currencies": {
+      "eur": "Euro (€)",
+      "usd": "US Dollar ($)",
+      "gbp": "British Pound (£)"
+    }
+  },
+  "identity": {
+    "types": {
+      "idCard": "ID Card",
+      "identityCard": "Identity Card",
+      "passport": "Passport",
+      "afm": "Tax ID (AFM)",
+      "amka": "Social Security (AMKA)",
+      "license": "License",
+      "driversLicense": "Driver's License",
+      "other": "Other"
+    }
+  },
+  "professional": {
+    "types": {
+      "companyPhone": "Company Phone",
+      "companyEmail": "Company Email",
+      "companyWebsite": "Company Website",
+      "linkedin": "LinkedIn",
+      "position": "Position",
+      "department": "Department",
+      "other": "Other"
+    },
+    "fields": {
+      "profession": "Profession",
+      "specialty": "Specialty",
+      "employer": "Employer",
+      "position": "Position"
+    }
+  },
+  "address": {
+    "types": {
+      "home": "Home",
+      "work": "Work",
+      "mailing": "Mailing",
+      "billing": "Billing",
+      "headquarters": "Headquarters",
+      "branch": "Branch",
+      "other": "Other"
+    },
+    "fields": {
+      "street": "Street",
+      "streetNumber": "Number",
+      "city": "City",
+      "postalCode": "Postal Code"
+    }
+  },
+  "company": {
+    "legalForms": {
+      "ae": "Société Anonyme (S.A.)",
+      "epe": "Limited Liability (Ltd.)",
+      "ee": "Limited Partnership",
+      "oe": "General Partnership",
+      "ikepe": "Private Capital Company (IKE)",
+      "ike": "Private Capital Company",
+      "mono": "Sole Proprietorship",
+      "smpc": "Social Cooperative Enterprise",
+      "other": "Other"
+    },
+    "positions": {
+      "ceo": "Chief Executive Officer",
+      "president": "President",
+      "manager": "Manager",
+      "legalRep": "Legal Representative",
+      "secretary": "Secretary"
+    },
+    "boardTypes": {
+      "generalAssembly": "General Assembly",
+      "boardDirectors": "Board of Directors",
+      "supervisoryBoard": "Supervisory Board"
+    },
+    "documentTypes": {
+      "certificate": "Certificate",
+      "announcement": "Announcement",
+      "registration": "Registration",
+      "amendment": "Amendment"
+    },
+    "fields": {
+      "companyName": "Company Name",
+      "tradeName": "Trade Name",
+      "legalForm": "Legal Form",
+      "gemiNumber": "GEMI Number",
+      "gemiStatus": "GEMI Status",
+      "chamber": "Chamber",
+      "activityCodeKad": "Activity Code (KAD)",
+      "activityDescription": "Activity Description",
+      "phoneCentral": "Central Phone",
+      "emailContact": "Contact Email",
+      "website": "Website"
+    },
+    "nav": {
+      "selectTitle": "Add Company to Navigation",
+      "selectDescription": "Select a company from your contacts to add it to the navigation.",
+      "companies": "Companies ({count})",
+      "searchPlaceholder": "Search company...",
+      "loading": "Loading companies...",
+      "loadError": "Failed to load companies",
+      "retry": "Retry",
+      "select": "Select",
+      "cancel": "Cancel",
+      "vatNumber": "VAT",
+      "notFound": "No companies found",
+      "searchNotFound": "No results for «{term}»",
+      "allAdded": "All companies have been added!",
+      "allAddedDescription": "You already have {count} companies in navigation.",
+      "existingInfo": "{count} companies are already in navigation."
+    }
+  },
+  "employment": {
+    "status": {
+      "fullTime": "Full Time",
+      "partTime": "Part Time",
+      "contract": "Contract",
+      "temporary": "Temporary",
+      "seasonal": "Seasonal",
+      "volunteer": "Volunteer",
+      "retired": "Retired",
+      "onLeave": "On Leave",
+      "terminated": "Terminated"
+    }
+  },
+  "businessTypes": {
+    "customer": "Customer",
+    "supplier": "Supplier",
+    "agent": "Agent",
+    "contractor": "Contractor"
+  },
+  "validation": {
+    "contactTypeRequired": "Contact type is required",
+    "unknownType": "Unknown contact type",
+    "individual": {
+      "firstNameRequired": "First name is required for individuals",
+      "lastNameRequired": "Last name is required for individuals",
+      "nameRequired": "First name and last name are required",
+      "birthDateFuture": "Birth date cannot be in the future",
+      "documentIssueDateFuture": "Document issue date cannot be in the future",
+      "documentDatesInvalid": "Expiry date must be after issue date",
+      "reviewHighlightedFields": "Review the highlighted fields to continue"
+    },
+    "company": {
+      "nameRequired": "Company name is required for legal entities",
+      "nameAndVatRequired": "Company name and VAT number are required",
+      "vatRecommended": "VAT number is recommended for legal entities"
+    },
+    "service": {
+      "nameRequired": "Service name is required for public services",
+      "typeRequired": "Service type is required for public services"
+    },
+    "email": {
+      "invalid": "Invalid email address"
+    },
+    "phone": {
+      "invalidFormat": "Phone number may have invalid format"
+    },
+    "vatDuplicate": "VAT {{vatNumber}} is already used by: {{contactName}}",
+    "vatChecking": "Checking VAT...",
+    "vatInvalid": "VAT number must be exactly 9 digits",
+    "arrayValidation": {
+      "invalidEmail": "One or more email addresses are invalid.",
+      "invalidPhone": "One or more phone numbers are invalid.",
+      "invalidUrl": "One or more website URLs are invalid.",
+      "duplicateEmail": "Duplicate email addresses found.",
+      "duplicatePhone": "Duplicate phone numbers found.",
+      "duplicateUrl": "Duplicate website URLs found.",
+      "missingPrimaryEmail": "One email must be marked as primary.",
+      "missingPrimaryPhone": "One phone must be marked as primary.",
+      "multiplePrimaryEmails": "Only one email can be marked as primary.",
+      "multiplePrimaryPhones": "Only one phone can be marked as primary."
+    }
+  },
+  "submission": {
+    "failedUploads": "There are failed uploads. Please try again.",
+    "pendingUploads": "Waiting for uploads to complete...",
+    "updateSuccess": "Contact updated successfully!",
+    "createSuccess": "Contact created successfully!",
+    "updateError": "Error updating contact",
+    "createError": "Error creating contact"
+  },
+  "addressesSection": {
+    "headquarters": "Headquarters",
+    "branchesTitle": "Branches / Additional Addresses",
+    "addAddress": "Add Address",
+    "noBranches": "No additional addresses",
+    "branch": "Branch",
+    "administrative": {
+      "title": "Administrative Division",
+      "postalCode": "Postal Code",
+      "placeholders": {
+        "city": "e.g. Athens, Thessaloniki...",
+        "community": "e.g. Municipal Community...",
+        "unit": "e.g. Municipal Unit...",
+        "municipality": "e.g. Municipality of Athens...",
+        "regionalUnit": "e.g. Regional Unit of Attica...",
+        "region": "e.g. Region of Attica...",
+        "decentralized": "e.g. Decentralized Admin of Attica...",
+        "geographic": "e.g. Attica, Northern Greece..."
+      },
+      "searchHint": "Πληκτρολογήστε για αναζήτηση...",
+      "postalCodePlaceholder": "π.χ. 69100"
+    }
+  }
+}

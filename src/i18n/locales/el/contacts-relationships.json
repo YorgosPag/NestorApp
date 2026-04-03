@@ -1,0 +1,763 @@
+{
+  "relationships": {
+    "types": {
+      "employee": "Εργαζόμενος",
+      "manager": "Διευθυντής",
+      "shareholder": "Μέτοχος",
+      "boardMember": "Μέλος Διοικητικού Συμβουλίου",
+      "civilServant": "Δημόσιος Υπάλληλος",
+      "departmentHead": "Προϊστάμενος Τμήματος",
+      "consultant": "Σύμβουλος",
+      "colleague": "Συνάδελφος",
+      "friend": "Φίλος",
+      "family": "Οικογένεια",
+      "businessContact": "Επαγγελματική Επαφή",
+      "other": "Άλλο"
+    },
+    "presets": {
+      "positions": {
+        "director": "Διευθυντής",
+        "manager": "Προϊστάμενος",
+        "supervisor": "Επόπτης",
+        "engineer": "Μηχανικός",
+        "accountant": "Λογιστής",
+        "secretary": "Γραμματέας",
+        "technician": "Τεχνικός",
+        "salesRep": "Πωλητής"
+      },
+      "departments": {
+        "management": "Διοίκηση",
+        "finance": "Οικονομικό",
+        "hr": "Ανθρώπινο Δυναμικό",
+        "sales": "Πωλήσεις",
+        "engineering": "Τεχνικό",
+        "operations": "Λειτουργίες",
+        "legal": "Νομικό",
+        "it": "Πληροφορική"
+      }
+    },
+    "form": {
+      "title": "Προσθήκη Νέας Σχέσης",
+      "editTitle": "Επεξεργασία Σχέσης",
+      "labels": {
+        "contact": "Επαφή",
+        "relationshipType": "Τύπος Σχέσης",
+        "position": "Θέση",
+        "department": "Τμήμα",
+        "startDate": "Ημερομηνία Έναρξης",
+        "notes": "Σημειώσεις",
+        "professionalInfo": "Επαγγελματικά Στοιχεία Επικοινωνίας"
+      },
+      "placeholders": {
+        "searchContact": "Αναζήτηση επαφής...",
+        "selectType": "Επιλέξτε τύπο σχέσης",
+        "searchType": "Αναζήτηση τύπου...",
+        "newTypeName": "Όνομα νέου τύπου...",
+        "position": "π.χ. Διευθυντής Πωλήσεων",
+        "department": "π.χ. Οικονομικό Τμήμα",
+        "notes": "Πρόσθετες πληροφορίες..."
+      },
+      "noTypesFound": "Δεν βρέθηκαν τύποι",
+      "addCustomType": "Προσθήκη νέου τύπου",
+      "validation": {
+        "contactRequired": "Η επιλογή επαφής είναι υποχρεωτική",
+        "relationshipTypeRequired": "Ο τύπος σχέσης είναι υποχρεωτικός",
+        "positionRequired": "Η θέση είναι υποχρεωτική",
+        "departmentRequired": "Το τμήμα είναι υποχρεωτικό",
+        "sourceContactRequired": "Απαιτείται η αρχική επαφή",
+        "invalidSourceFormat": "Μη έγκυρη μορφή αρχικής επαφής",
+        "invalidTargetFormat": "Μη έγκυρη μορφή επαφής-στόχου",
+        "selfRelationship": "Δεν μπορείτε να δημιουργήσετε σχέση με τον εαυτό σας",
+        "individualEmploymentIndividual": "Ένα φυσικό πρόσωπο δεν μπορεί να είναι εργαζόμενο σε άλλο φυσικό πρόσωπο",
+        "invalidTypeForService": "Μη έγκυρος τύπος σχέσης για δημόσια υπηρεσία",
+        "shareholderRequiresCompany": "Οι σχέσεις μετόχων μπορούν να δημιουργηθούν μόνο με εταιρείες",
+        "companyCannotBeEmployee": "Μία εταιρεία δεν μπορεί να είναι εργαζόμενη σε άλλη εταιρεία. Επιλέξτε άλλο τύπο σχέσης (π.χ. Σύμβουλος, Συνεργάτης).",
+        "serviceCannotBeEmployee": "Μία υπηρεσία δεν μπορεί να είναι εργαζόμενη σε εταιρεία. Επιλέξτε άλλο τύπο σχέσης (π.χ. Σύμβουλος, Προμηθευτής).",
+        "employmentRequiresCompanyTarget": "Οι σχέσεις εργασίας απαιτούν εταιρεία ή υπηρεσία ως εργοδότη",
+        "governmentRequiresService": "Οι κρατικές σχέσεις μπορούν να δημιουργηθούν μόνο με δημόσιες υπηρεσίες",
+        "endDateBeforeStart": "Η ημερομηνία λήξης δεν μπορεί να είναι πριν την ημερομηνία έναρξης",
+        "invalidStatus": "Μη έγκυρη κατάσταση σχέσης",
+        "invalidPriority": "Μη έγκυρο επίπεδο προτεραιότητας",
+        "invalidStrength": "Μη έγκυρη ισχύς σχέσης",
+        "invalidEmploymentStatus": "Μη έγκυρη κατάσταση απασχόλησης",
+        "invalidEmploymentType": "Μη έγκυρος τύπος απασχόλησης",
+        "invalidEmailFormat": "Μη έγκυρη μορφή email εργασίας",
+        "invalidPhoneFormat": "Μη έγκυρη μορφή τηλεφώνου εργασίας",
+        "duplicateRelationship": "Αυτή η σχέση υπάρχει ήδη μεταξύ αυτών των επαφών",
+        "missingRequiredFields": "Λείπουν υποχρεωτικά πεδία: επαφή-πηγή, επαφή-στόχος, τύπος σχέσης",
+        "contactsNotFound": "Μία ή και οι δύο επαφές δεν βρέθηκαν",
+        "relationshipNotFound": "Η σχέση δεν βρέθηκε"
+      },
+      "buttons": {
+        "cancel": "Ακύρωση",
+        "save": "Αποθήκευση...",
+        "add": "Προσθήκη",
+        "update": "Ενημέρωση"
+      },
+      "selectContactFirst": "Επιλέξτε πρώτα μία επαφή για να συμπληρώσετε τα υπόλοιπα πεδία.",
+      "pendingReminder": "Πάτησε «Προσθήκη» για να αποθηκεύσεις τη σχέση. Η σχέση αποθηκεύεται επίσης αυτόματα όταν αποθηκεύεις την επαφή."
+    },
+    "card": {
+      "editTitle": "Επεξεργασία σχέσης",
+      "deleteTitle": "Διαγραφή σχέσης",
+      "from": "Από:",
+      "to": "Έως:",
+      "notes": "Σημειώσεις:",
+      "createdAt": "Δημιουργήθηκε:",
+      "updatedAt": "Ενημερώθηκε:",
+      "recently": "Πρόσφατα",
+      "phoneExtension": "ext."
+    },
+    "recent": {
+      "title": "Πρόσφατες Σχέσεις",
+      "showLess": "Προβολή λίγων",
+      "showAll": "Προβολή όλων ({count} ακόμα)"
+    },
+    "stats": {
+      "totalRelationships": "Σύνολο Σχέσεων",
+      "employees": "Εργαζόμενοι",
+      "shareholders": "Μέτοχοι",
+      "civilServants": "Δημόσιοι Υπάλληλοι",
+      "consultants": "Σύμβουλοι",
+      "management": "Διοίκηση",
+      "recent": "Πρόσφατες",
+      "key": "Βασικές",
+      "departments": "Τμήματα"
+    },
+    "manager": {
+      "totalCount": "Σύνολο: {count} σχέσεις",
+      "refreshData": "Ανανέωση δεδομένων",
+      "addRelationship": "Προσθήκη Σχέσης",
+      "errors": {
+        "listError": "Σφάλμα λίστας σχέσεων",
+        "formError": "Σφάλμα φόρμας",
+        "treeError": "Σφάλμα οργανωσιακού διαγράμματος",
+        "searchError": "Σφάλμα κατά την αναζήτηση επαφών"
+      },
+      "newContact": {
+        "note": "Σημείωση",
+        "description": "Για να δημιουργήσετε σχέσεις, αποθηκεύστε πρώτα την επαφή. Μετά την αποθήκευση θα εμφανιστούν οι επιλογές διαχείρισης σχέσεων."
+      }
+    },
+    "status": {
+      "createSuccess": "Η σχέση δημιουργήθηκε επιτυχώς!",
+      "updateSuccess": "Η σχέση ενημερώθηκε επιτυχώς!",
+      "deleteSuccess": "Η σχέση διαγράφηκε επιτυχώς!",
+      "createError": "Σφάλμα κατά τη δημιουργία της σχέσης",
+      "updateError": "Σφάλμα κατά την ενημέρωση της σχέσης",
+      "deleteError": "Σφάλμα κατά τη διαγραφή της σχέσης",
+      "terminateSuccess": "Η σχέση τερματίστηκε επιτυχώς και διατηρήθηκε στο ιστορικό.",
+      "terminateError": "Σφάλμα κατά τον τερματισμό της σχέσης",
+      "deleteBlockedActiveRole": "Η ενεργή σχέση δεν μπορεί να διαγραφεί οριστικά. Τερματίστε τη σχέση αντί για διαγραφή."
+    },
+    "list": {
+      "newContact": {
+        "title": "Δημιουργία σχέσεων",
+        "description": "Για να δημιουργήσετε σχέσεις, πρώτα αποθηκεύστε την επαφή. Μετά την αποθήκευση θα μπορείτε να προσθέσετε επαγγελματικές σχέσεις.",
+        "tip": "Συμβουλή:",
+        "tipText": "Συμπληρώστε τα βασικά στοιχεία και κάντε κλικ \"Ενημέρωση Επαφής\""
+      },
+      "loading": "Φόρτωση σχέσεων...",
+      "empty": {
+        "title": "Δεν υπάρχουν καταχωρημένες σχέσεις",
+        "addHint": "Κάντε κλικ στο κουμπί \"Προσθήκη Σχέσης\" για να προσθέσετε την πρώτη σχέση."
+      }
+    },
+    "summary": {
+      "title": "Σχέσεις Επαφής",
+      "organizationChart": "Οργανωτικό Διάγραμμα",
+      "add": "Προσθήκη",
+      "startHere": "Ξεκινήστε εδώ",
+      "newContact": {
+        "availableAfterSave": "Οι σχέσεις θα είναι διαθέσιμες μετά την αποθήκευση της επαφής.",
+        "tip": "Συμβουλή:",
+        "tipText": "Αποθηκεύστε την επαφή για να προσθέσετε επαγγελματικές σχέσεις, εργαζόμενους και μετόχους."
+      },
+      "loading": "Φόρτωση σχέσεων...",
+      "empty": {
+        "title": "Δεν υπάρχουν σχέσεις",
+        "description": "Προσθέστε επαγγελματικές σχέσεις, εργαζόμενους και συνεργάτες."
+      },
+      "viewManage": "Προβολή & Διαχείριση",
+      "editRelationships": "Επεξεργασία Σχέσεων"
+    },
+    "organizationTree": {
+      "loading": "Φόρτωση...",
+      "loadingTree": "Φόρτωση οργανωτικού διαγράμματος...",
+      "loadError": "Σφάλμα φόρτωσης",
+      "emptyTree": "Κενό οργανωτικό διάγραμμα",
+      "noEmployeeRelationships": "Δεν υπάρχουν σχέσεις εργαζομένων για αυτόν τον οργανισμό.",
+      "unknownContact": "Άγνωστη Επαφή",
+      "employee": "Εργαζόμενος",
+      "totalEmployees": "Συνολικοί Εργαζόμενοι",
+      "activeDepartments": "Ενεργά Τμήματα",
+      "managementLevels": "Επίπεδα Διοίκησης",
+      "simpleStructure": "Απλό Οργανωτικό Σχήμα",
+      "simpleStructureDescription": "Αυτή η εταιρεία έχει βασική οργανωσιακή δομή χωρίς πολύπλοκη ιεραρχία.",
+      "departmentsAndEmployees": "Τμήματα & Εργαζόμενοι",
+      "generalDepartment": "Γενικό Τμήμα",
+      "recentAdditions": "Πρόσφατες Προσθήκες",
+      "moreItems": "+{count} επιπλέον",
+      "lastUpdated": "Τελευταία ενημέρωση",
+      "createdAt": "Δημιουργήθηκε",
+      "unknown": "Άγνωστη"
+    },
+    "governance": {
+      "confirmTerminateTitle": "Τερματισμός σχέσης;",
+      "confirmTerminateBody": "Η σχέση θα αφαιρεθεί από τις ενεργές προβολές αλλά θα παραμείνει στο ιστορικό.",
+      "confirmDeleteTitle": "Οριστική διαγραφή σχέσης;",
+      "confirmDeleteBody": "Η σχέση θα διαγραφεί οριστικά από το προφίλ και τα σχετικά summaries.",
+      "impact": {
+        "protectedRole": "Ο ρόλος θεωρείται κρίσιμο εταιρικό στοιχείο και πρέπει να διατηρηθεί στο ιστορικό.",
+        "hierarchy": "Η ενέργεια επηρεάζει το οργανόγραμμα και τις σχετικές μετρήσεις προσωπικού.",
+        "reciprocal": "Η ενέργεια επηρεάζει και την αντίστροφη σχέση στη συνδεδεμένη επαφή."
+      }
+    }
+  },
+  "communication": {
+    "sections": {
+      "phones": "Τηλέφωνα",
+      "emails": "E-mails",
+      "websites": "Ιστοσελίδες",
+      "socialMedia": "Social Media",
+      "identity": "Ταυτότητα"
+    },
+    "phoneTypes": {
+      "mobile": "Κινητό",
+      "home": "Οικίας",
+      "work": "Εργασίας",
+      "fax": "Fax",
+      "other": "Άλλο"
+    },
+    "emailTypes": {
+      "personal": "Προσωπικό",
+      "work": "Εργασίας",
+      "other": "Άλλο"
+    },
+    "websiteTypes": {
+      "personal": "Προσωπικό",
+      "company": "Εταιρικό",
+      "portfolio": "Portfolio",
+      "blog": "Blog",
+      "other": "Άλλο"
+    },
+    "socialMediaTypes": {
+      "personal": "Προσωπικό",
+      "professional": "Επαγγελματικό",
+      "business": "Επιχειρηματικό",
+      "other": "Άλλο"
+    },
+    "servicePhoneTypes": {
+      "main": "Κεντρικό",
+      "department": "Τμήμα",
+      "secretariat": "Γραμματεία",
+      "helpdesk": "Εξυπηρέτηση",
+      "fax": "Fax",
+      "other": "Άλλο"
+    },
+    "serviceEmailTypes": {
+      "general": "Γενικό",
+      "department": "Τμήμα",
+      "secretariat": "Γραμματεία",
+      "info": "Πληροφορίες",
+      "other": "Άλλο"
+    },
+    "serviceWebsiteTypes": {
+      "official": "Επίσημη",
+      "eServices": "Ηλ. Υπηρεσίες",
+      "portal": "Πύλη",
+      "other": "Άλλο"
+    },
+    "serviceSocialMediaTypes": {
+      "official": "Επίσημο",
+      "informational": "Ενημερωτικό",
+      "other": "Άλλο"
+    },
+    "companyPhoneTypes": {
+      "main": "Κεντρικό",
+      "department": "Τμήμα",
+      "secretariat": "Γραμματεία",
+      "sales": "Πωλήσεις",
+      "support": "Υποστήριξη",
+      "fax": "Fax",
+      "other": "Άλλο"
+    },
+    "companyEmailTypes": {
+      "general": "Γενικό",
+      "department": "Τμήμα",
+      "sales": "Πωλήσεις",
+      "support": "Υποστήριξη",
+      "info": "Πληροφορίες",
+      "other": "Άλλο"
+    },
+    "companyWebsiteTypes": {
+      "corporate": "Εταιρικό",
+      "eshop": "E-Shop",
+      "blog": "Blog",
+      "other": "Άλλο"
+    },
+    "companySocialMediaTypes": {
+      "corporate": "Εταιρικό",
+      "marketing": "Marketing",
+      "other": "Άλλο"
+    },
+    "platforms": {
+      "linkedin": "LinkedIn",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "twitter": "Twitter/X",
+      "youtube": "YouTube",
+      "github": "GitHub",
+      "tiktok": "TikTok",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "other": "Άλλο"
+    },
+    "placeholders": {
+      "phone": "π.χ. 6981890123",
+      "phoneLabel": "π.χ. Προσωπικό κινητό",
+      "email": "π.χ. email@example.com",
+      "emailLabel": "π.χ. Προσωπικό email",
+      "website": "π.χ. https://example.com",
+      "websiteLabel": "π.χ. Προσωπική ιστοσελίδα",
+      "username": "π.χ. @username",
+      "socialLabel": "π.χ. Προσωπικό προφίλ"
+    },
+    "addContactInfo": "Προσθέστε στοιχεία επικοινωνίας",
+    "addNew": "Προσθήκη {type}",
+    "emptyStates": {
+      "phones": "Δεν έχουν προστεθεί τηλέφωνα",
+      "emails": "Δεν έχουν προστεθεί e-mails",
+      "websites": "Δεν έχουν προστεθεί ιστοσελίδες",
+      "socialMedia": "Δεν έχουν προστεθεί social media"
+    },
+    "buttons": {
+      "addPhone": "Προσθήκη Τηλεφώνου",
+      "addEmail": "Προσθήκη E-mail",
+      "addWebsite": "Προσθήκη Ιστοσελίδας",
+      "addSocial": "Προσθήκη Social Media"
+    },
+    "tableHeaders": {
+      "type": "Τύπος",
+      "countryCode": "Κωδικός",
+      "number": "Αριθμός",
+      "label": "Ετικέτα",
+      "actions": "Ενέργειες",
+      "email": "Διεύθυνση E-mail",
+      "url": "URL",
+      "platform": "Πλατφόρμα",
+      "username": "Username"
+    }
+  },
+  "service": {
+    "sections": {
+      "basicInfo": {
+        "title": "Βασικά Στοιχεία"
+      },
+      "administrative": {
+        "title": "Διοικητικά Στοιχεία"
+      },
+      "contact": {
+        "title": "Στοιχεία Επικοινωνίας"
+      },
+      "address": {
+        "title": "Διεύθυνση"
+      },
+      "communication": {
+        "title": "Επικοινωνία"
+      },
+      "services": {
+        "title": "Αρμοδιότητες & Υπηρεσίες"
+      },
+      "logo": {
+        "title": "Λογότυπο & Επικοινωνία"
+      },
+      "relationships": {
+        "title": "Σχέσεις"
+      },
+      "files": {
+        "title": "Έγγραφα Επαφής"
+      },
+      "banking": {
+        "title": "Τραπεζικά"
+      }
+    },
+    "fields": {
+      "name": {
+        "label": "Όνομα Υπηρεσίας",
+        "placeholder": "π.χ. Δήμος Αθηναίων",
+        "helpText": "Η επίσημη επωνυμία του δημόσιου φορέα"
+      },
+      "shortName": {
+        "label": "Σύντομο Όνομα",
+        "placeholder": "π.χ. Δ.Α.",
+        "helpText": "Συντομογραφία ή ακρωνύμιο της υπηρεσίας"
+      },
+      "category": {
+        "label": "Κατηγορία"
+      },
+      "supervisionMinistry": {
+        "label": "Υπουργείο Εποπτείας",
+        "placeholder": "π.χ. Υπουργείο Εσωτερικών",
+        "helpText": "Το υπουργείο που εποπτεύει την υπηρεσία",
+        "searchPlaceholder": "Αναζήτηση υπουργείου...",
+        "noResults": "Δεν βρέθηκε υπουργείο"
+      },
+      "legalStatus": {
+        "label": "Νομικό Καθεστώς"
+      },
+      "establishmentLaw": {
+        "label": "Ιδρυτικός Νόμος",
+        "placeholder": "π.χ. Ν. 3852/2010",
+        "helpText": "Ο νόμος ίδρυσης της δημόσιας υπηρεσίας"
+      },
+      "headTitle": {
+        "label": "Τίτλος Προϊσταμένου",
+        "placeholder": "π.χ. Δήμαρχος, Γενικός Γραμματέας",
+        "helpText": "Ο θεσμικός τίτλος του επικεφαλής της υπηρεσίας"
+      },
+      "headName": {
+        "label": "Όνομα Προϊσταμένου",
+        "placeholder": "π.χ. Ιωάννης Παπαδόπουλος",
+        "helpText": "Το ονοματεπώνυμο του επικεφαλής"
+      },
+      "mainResponsibilities": {
+        "label": "Κύριες Αρμοδιότητες",
+        "placeholder": "Περιγράψτε τις κύριες αρμοδιότητες της υπηρεσίας...",
+        "helpText": "Οι βασικές αρμοδιότητες και αποστολή της υπηρεσίας"
+      },
+      "citizenServices": {
+        "label": "Υπηρεσίες Πολιτών",
+        "placeholder": "Αναφέρετε τις υπηρεσίες προς τους πολίτες...",
+        "helpText": "Οι υπηρεσίες που παρέχονται στους πολίτες"
+      },
+      "onlineServices": {
+        "label": "Ηλεκτρονικές Υπηρεσίες",
+        "helpText": "Σύνδεσμος προς ηλεκτρονικές υπηρεσίες (π.χ. gov.gr)"
+      },
+      "serviceHours": {
+        "label": "Ωράριο Λειτουργίας",
+        "placeholder": "π.χ. Δευτέρα-Παρασκευή 08:00-14:00",
+        "helpText": "Το ωράριο εξυπηρέτησης του κοινού"
+      },
+      "phone": {
+        "helpText": "Το κεντρικό τηλέφωνο της υπηρεσίας"
+      },
+      "email": {
+        "helpText": "Το επίσημο email επικοινωνίας"
+      },
+      "website": {
+        "helpText": "Η επίσημη ιστοσελίδα της υπηρεσίας"
+      }
+    }
+  },
+  "individual": {
+    "sections": {
+      "basicInfo": {
+        "title": "Βασικά Στοιχεία",
+        "description": "Βασικές πληροφορίες της επαφής"
+      },
+      "identity": {
+        "title": "Ταυτότητα & ΑΦΜ",
+        "description": "Στοιχεία ταυτότητας και φορολογικά"
+      },
+      "personas": {
+        "title": "Ιδιότητες",
+        "description": "Επιλέξτε τους ρόλους/ιδιότητες αυτού του ατόμου"
+      },
+      "professional": {
+        "title": "Επαγγελματικά Στοιχεία",
+        "description": "Πληροφορίες εργασίας και επαγγέλματος"
+      },
+      "address": {
+        "title": "Διεύθυνση Κατοικίας",
+        "description": "Στοιχεία διεύθυνσης"
+      },
+      "communication": {
+        "title": "Επικοινωνία",
+        "description": "Στοιχεία επικοινωνίας και κοινωνικά δίκτυα"
+      },
+      "photo": {
+        "title": "Φωτογραφία",
+        "description": "Φωτογραφία προφίλ της επαφής"
+      },
+      "relationships": {
+        "title": "Σχέσεις",
+        "description": "Διαχείριση σχέσεων με άλλες επαφές"
+      },
+      "files": {
+        "title": "Έγγραφα Επαφής",
+        "description": "Διαχείριση εγγράφων της επαφής"
+      },
+      "banking": {
+        "title": "Τραπεζικά",
+        "description": "Τραπεζικοί λογαριασμοί της επαφής"
+      },
+      "history": {
+        "title": "Ιστορικό",
+        "description": "Ιστορικό αλλαγών της επαφής"
+      }
+    },
+    "fields": {
+      "firstName": "Όνομα",
+      "lastName": "Επώνυμο",
+      "fatherName": "Όνομα Πατέρα",
+      "motherName": "Όνομα Μητέρας",
+      "birthDate": "Ημερομηνία Γέννησης",
+      "birthCountry": "Χώρα Γέννησης",
+      "gender": "Φύλο",
+      "amka": "ΑΜΚΑ",
+      "documentType": "Τύπος Εγγράφου",
+      "documentIssuer": "Αρχή Έκδοσης",
+      "documentNumber": "Αριθμός Εγγράφου",
+      "documentIssueDate": "Ημ/νία Έκδοσης",
+      "documentExpiryDate": "Ημ/νία Λήξης",
+      "vatNumber": "ΑΦΜ",
+      "taxOffice": "Δ.Ο.Υ.",
+      "profession": "Επάγγελμα",
+      "specialty": "Ειδικότητα",
+      "employer": "Εργοδότης",
+      "position": "Θέση",
+      "skills": "Δεξιότητες",
+      "street": "Οδός",
+      "streetNumber": "Αριθμός",
+      "city": "Πόλη",
+      "postalCode": "Τ.Κ."
+    },
+    "helpTexts": {
+      "firstName": "Το όνομα του φυσικού προσώπου",
+      "lastName": "Το επώνυμο του φυσικού προσώπου",
+      "fatherName": "Το όνομα του πατέρα",
+      "motherName": "Το όνομα της μητέρας",
+      "birthDate": "Η ημερομηνία γέννησης",
+      "birthCountry": "Η χώρα γέννησης",
+      "gender": "Το φύλο της επαφής",
+      "amka": "Αριθμός Μητρώου Κοινωνικής Ασφάλισης (11 ψηφία)",
+      "documentType": "Τύπος του εγγράφου ταυτοποίησης",
+      "documentIssuer": "Η αρχή που εξέδωσε το έγγραφο",
+      "documentNumber": "Αριθμός του εγγράφου ταυτοποίησης",
+      "documentIssueDate": "Ημερομηνία έκδοσης του εγγράφου",
+      "documentExpiryDate": "Ημερομηνία λήξης του εγγράφου",
+      "vatNumber": "Αριθμός Φορολογικού Μητρώου (9 ψηφία)",
+      "taxOffice": "Η ΔΟΥ στην οποία ανήκει",
+      "profession": "Πληκτρολογήστε για αναζήτηση στο ευρωπαϊκό μητρώο επαγγελμάτων ESCO ή γράψτε ελεύθερο κείμενο",
+      "specialty": "Η ειδικότητα στο επάγγελμα",
+      "employer": "Ο εργοδότης",
+      "position": "Η θέση εργασίας",
+      "street": "Η οδός κατοικίας",
+      "streetNumber": "Ο αριθμός της οδού",
+      "city": "Η πόλη κατοικίας",
+      "postalCode": "Ο ταχυδρομικός κώδικας (5 ψηφία)"
+    },
+    "tooltips": {
+      "profession": "Το Επάγγελμα είναι η γενική κατηγορία εργασίας (π.χ. «Μηχανικός», «Γιατρός»). Βασίζεται στην ταξινόμηση ESCO/ISCO-08 της ΕΕ. Η Ειδικότητα και οι Δεξιότητες εξαρτώνται από αυτό.",
+      "specialty": "Η Ειδικότητα είναι η εξειδίκευση μέσα στο Επάγγελμα (π.χ. Επάγγελμα «Μηχανικός» → Ειδικότητα «Πολιτικός Μηχανικός»). Σχετίζεται πάντα με το Επάγγελμα — δεν μπορεί να υπάρξει χωρίς αυτό.",
+      "skills": "Οι Δεξιότητες είναι συγκεκριμένες ικανότητες του ατόμου. Μπορεί να σχετίζονται με το Επάγγελμα (π.χ. «AutoCAD» για Μηχανικό) ή να είναι ανεξάρτητες (π.χ. «Αγγλικά Β2», «Δίπλωμα οδήγησης»). Δεν είναι υποχρεωτική η σύνδεση με Επάγγελμα/Ειδικότητα."
+    },
+    "placeholders": {
+      "documentIssuer": "π.χ. Αστυνομία Αττικής",
+      "taxOffice": "π.χ. Δ.Ο.Υ. Αθηνών",
+      "profession": "π.χ. Μηχανικός",
+      "specialty": "π.χ. Πολιτικός Μηχανικός",
+      "employer": "π.χ. XYZ Α.Ε.",
+      "position": "π.χ. Υπεύθυνος Έργου",
+      "street": "π.χ. Λεωφόρος Αθηνών",
+      "streetNumber": "π.χ. 123",
+      "city": "π.χ. Αθήνα"
+    }
+  },
+  "esco": {
+    "searchResults": "Αποτελέσματα αναζήτησης",
+    "noResults": "Δεν βρέθηκαν επαγγέλματα",
+    "useFreeText": "Χρήση ελεύθερου κειμένου",
+    "escoLabel": "Τυποποιημένο Επάγγελμα (ESCO)",
+    "iscoCode": "Κωδικός ISCO-08",
+    "selectedFromEsco": "Επιλεγμένο από ESCO",
+    "skills": {
+      "searchPlaceholder": "Αναζήτηση δεξιοτήτων ESCO...",
+      "noResults": "Δεν βρέθηκαν δεξιότητες",
+      "useFreeText": "Προσθήκη ως ελεύθερο κείμενο",
+      "maxReached": "Μέγιστος αριθμός δεξιοτήτων ({max})",
+      "removeSkill": "Αφαίρεση δεξιότητας",
+      "badge": "ESCO"
+    }
+  },
+  "employer": {
+    "vat": "ΑΦΜ",
+    "noResults": "Δεν βρέθηκαν εταιρείες",
+    "useFreeText": "Χρήση ελεύθερου κειμένου",
+    "searchResults": "Αποτελέσματα αναζήτησης"
+  },
+  "persona": {
+    "selector": {
+      "title": "Ιδιότητες",
+      "legend": "Επιλέξτε ιδιότητες επαφής",
+      "description": "Κάθε ιδιότητα ενεργοποιεί πρόσθετα πεδία σχετικά με αυτόν τον ρόλο",
+      "empty": "Δεν έχει επιλεγεί καμία ιδιότητα"
+    },
+    "guards": {
+      "realEstateAgent": {
+        "blocked": "Δεν μπορεί να αφαιρεθεί η ιδιότητα «Μεσίτης Ακινήτων» — υπάρχουν ενεργές συμβάσεις ή εκκρεμείς προμήθειες για αυτήν την επαφή."
+      },
+      "client": {
+        "blocked": "Δεν μπορεί να αφαιρεθεί η ιδιότητα «Πελάτης» — υπάρχουν ενεργές αγορές συνδεδεμένες."
+      }
+    },
+    "types": {
+      "constructionWorker": "Εργάτης Οικοδομής",
+      "engineer": "Μηχανικός",
+      "accountant": "Λογιστής",
+      "lawyer": "Δικηγόρος",
+      "propertyOwner": "Ιδιοκτήτης Ακινήτων",
+      "client": "Πελάτης",
+      "supplier": "Προμηθευτής",
+      "notary": "Συμβολαιογράφος",
+      "realEstateAgent": "Μεσίτης Ακινήτων"
+    },
+    "sections": {
+      "constructionWorker": {
+        "title": "Στοιχεία Εργάτη Οικοδομής",
+        "description": "Πληροφορίες ΕΦΚΑ/ΙΚΑ για εργαζόμενο σε οικοδομικό έργο"
+      },
+      "engineer": {
+        "title": "Στοιχεία Μηχανικού",
+        "description": "Μητρώο ΤΕΕ, ειδικότητα και τάξη πτυχίου"
+      },
+      "accountant": {
+        "title": "Στοιχεία Λογιστή",
+        "description": "Μητρώο ΟΕΕ και τάξη λογιστή"
+      },
+      "lawyer": {
+        "title": "Στοιχεία Δικηγόρου",
+        "description": "Μητρώο Δικηγορικού Συλλόγου"
+      },
+      "propertyOwner": {
+        "title": "Στοιχεία Ιδιοκτήτη",
+        "description": "Πληροφορίες ιδιοκτησίας ακινήτων"
+      },
+      "client": {
+        "title": "Στοιχεία Πελάτη",
+        "description": "Κατηγορία πελάτη και προτιμήσεις επικοινωνίας"
+      },
+      "supplier": {
+        "title": "Στοιχεία Προμηθευτή",
+        "description": "Κατηγορία προμηθευτή και όροι πληρωμής"
+      },
+      "notary": {
+        "title": "Στοιχεία Συμβολαιογράφου",
+        "description": "Μητρώο Συμβολαιογραφικού Συλλόγου"
+      },
+      "realEstateAgent": {
+        "title": "Στοιχεία Μεσίτη",
+        "description": "Άδεια μεσίτη και μεσιτικό γραφείο"
+      }
+    },
+    "fields": {
+      "ikaNumber": "ΑΜ ΙΚΑ",
+      "insuranceClass": "Ασφαλιστική Κλάση",
+      "triennia": "Τριετίες",
+      "dailyWage": "Ημερομίσθιο (€)",
+      "specialtyCode": "Κωδικός Ειδικότητας ΕΦΚΑ",
+      "efkaRegistrationDate": "Ημ/νία Εγγραφής ΕΦΚΑ",
+      "teeRegistryNumber": "Αρ. Μητρώου ΤΕΕ",
+      "engineerSpecialty": "Ειδικότητα Μηχανικού",
+      "licenseClass": "Τάξη Πτυχίου",
+      "ptdeNumber": "Αριθμός ΠΤΔΕ",
+      "oeeNumber": "Αρ. Μητρώου ΟΕΕ",
+      "accountingClass": "Τάξη Λογιστή",
+      "barAssociationNumber": "Αρ. Μητρώου Δ.Σ.",
+      "barAssociation": "Δικηγορικός Σύλλογος",
+      "propertyCount": "Αριθμός Ιδιοκτησιών",
+      "ownershipNotes": "Σημειώσεις Ιδιοκτησίας",
+      "clientSince": "Πελάτης Από",
+      "clientCategory": "Κατηγορία Πελάτη",
+      "preferredContactMethod": "Προτιμώμενη Επικοινωνία",
+      "supplierCategory": "Κατηγορία Προμηθευτή",
+      "paymentTermsDays": "Όροι Πληρωμής (Ημέρες)",
+      "notaryRegistryNumber": "Αρ. Μητρώου Συμβ.",
+      "notaryDistrict": "Περιφέρεια Συμβ. Συλλόγου",
+      "reLicenseNumber": "Αρ. Αδείας Μεσίτη",
+      "reAgency": "Μεσιτικό Γραφείο"
+    },
+    "helpTexts": {
+      "ikaNumber": "Αριθμός Μητρώου ΙΚΑ/ΕΦΚΑ του εργαζομένου",
+      "insuranceClass": "Ασφαλιστική κλάση 1-28 κατά ΕΦΚΑ (KPK 781)",
+      "triennia": "Αριθμός τριετιών εργασίας",
+      "dailyWage": "Ημερομίσθιο εργαζομένου σε ευρώ",
+      "specialtyCode": "Κωδικός ειδικότητας ΕΦΚΑ",
+      "efkaRegistrationDate": "Ημερομηνία εγγραφής στον ΕΦΚΑ",
+      "teeRegistryNumber": "Αριθμός Μητρώου στο Τεχνικό Επιμελητήριο Ελλάδος",
+      "engineerSpecialty": "Ειδικότητα μηχανικού κατά ΤΕΕ",
+      "licenseClass": "Τάξη πτυχίου μελετητή (Α, Β, Γ, Δ)",
+      "ptdeNumber": "Αριθμός Πανελλήνιας Τράπεζας Δεδομένων Εργοληπτών",
+      "oeeNumber": "Αριθμός μητρώου στο Οικονομικό Επιμελητήριο Ελλάδος",
+      "accountingClass": "Τάξη λογιστή/φοροτεχνικού",
+      "barAssociationNumber": "Αριθμός μητρώου στον Δικηγορικό Σύλλογο",
+      "barAssociation": "Δικηγορικός Σύλλογος εγγραφής (π.χ. ΔΣΑ)",
+      "propertyCount": "Συνολικός αριθμός ιδιοκτησιών",
+      "ownershipNotes": "Σημειώσεις σχετικά με τις ιδιοκτησίες",
+      "clientSince": "Ημερομηνία έναρξης σχέσης πελάτη",
+      "clientCategory": "Κατηγορία πελάτη (κατοικία, εμπορικό, κλπ)",
+      "preferredContactMethod": "Προτιμώμενος τρόπος επικοινωνίας",
+      "supplierCategory": "Κατηγορία προμηθευτή (υλικά, εξοπλισμός, κλπ)",
+      "paymentTermsDays": "Όροι πληρωμής σε ημέρες",
+      "notaryRegistryNumber": "Αριθμός μητρώου στον Συμβολαιογραφικό Σύλλογο",
+      "notaryDistrict": "Περιφέρεια του Συμβολαιογραφικού Συλλόγου",
+      "reLicenseNumber": "Αριθμός αδείας μεσίτη (ΓΕ.ΜΗ.)",
+      "reAgency": "Όνομα μεσιτικού γραφείου"
+    },
+    "placeholders": {
+      "ikaNumber": "π.χ. 12345678901",
+      "insuranceClass": "Επιλέξτε ασφαλιστική κλάση",
+      "specialtyCode": "π.χ. SKY",
+      "teeRegistryNumber": "π.χ. 98765",
+      "ptdeNumber": "π.χ. 12345",
+      "oeeNumber": "π.χ. 12345",
+      "accountingClass": "π.χ. Α",
+      "barAssociationNumber": "π.χ. 12345",
+      "barAssociation": "π.χ. ΔΣΑ",
+      "ownershipNotes": "Σημειώσεις σχετικά με ιδιοκτησίες...",
+      "notaryRegistryNumber": "π.χ. 12345",
+      "notaryDistrict": "π.χ. Αθηνών",
+      "reLicenseNumber": "π.χ. 12345",
+      "reAgency": "π.χ. ABC Real Estate"
+    },
+    "options": {
+      "engineerSpecialty": {
+        "civil": "Πολιτικός Μηχανικός",
+        "architect": "Αρχιτέκτονας Μηχανικός",
+        "mechanical": "Μηχανολόγος Μηχανικός",
+        "electrical": "Ηλεκτρολόγος Μηχανικός",
+        "surveyor": "Τοπογράφος Μηχανικός",
+        "chemical": "Χημικός Μηχανικός",
+        "mining": "Μεταλλειολόγος Μηχανικός"
+      },
+      "licenseClass": {
+        "A": "Τάξη Α (Μεγάλα Έργα)",
+        "B": "Τάξη Β",
+        "C": "Τάξη Γ",
+        "D": "Τάξη Δ (Μικρά Έργα)"
+      },
+      "clientCategory": {
+        "residential": "Κατοικία",
+        "commercial": "Εμπορικό",
+        "industrial": "Βιομηχανικό",
+        "publicSector": "Δημόσιος Τομέας",
+        "other": "Άλλο"
+      },
+      "contactMethod": {
+        "phone": "Τηλέφωνο",
+        "email": "Email",
+        "inPerson": "Αυτοπρόσωπα",
+        "messaging": "Μήνυμα"
+      },
+      "supplierCategory": {
+        "materials": "Υλικά Κατασκευής",
+        "equipment": "Εξοπλισμός",
+        "subcontractor": "Υπεργολάβος",
+        "services": "Υπηρεσίες",
+        "other": "Άλλο"
+      }
+    }
+  }
+}

@@ -1,0 +1,294 @@
+{
+  "calendarPage": {
+    "title": "Ημερολόγιο",
+    "description": "Δείτε και διαχειριστείτε το πρόγραμμά σας",
+    "views": {
+      "month": "Μήνας",
+      "week": "Εβδομάδα",
+      "day": "Ημέρα",
+      "agenda": "Ατζέντα"
+    },
+    "filters": {
+      "allUsers": "Όλοι οι χρήστες",
+      "myCalendar": "Το ημερολόγιό μου",
+      "allTypes": "Όλοι οι τύποι"
+    },
+    "newEvent": "Νέο Γεγονός",
+    "noEvents": "Κανένα γεγονός για αυτή την περίοδο",
+    "today": "Σήμερα",
+    "eventTypes": {
+      "appointment": "Ραντεβού",
+      "call": "Κλήση",
+      "meeting": "Συνάντηση",
+      "viewing": "Επίσκεψη",
+      "follow_up": "Παρακολούθηση",
+      "email": "Email",
+      "document": "Έγγραφο",
+      "other": "Άλλο"
+    },
+    "source": {
+      "task": "Εργασία",
+      "appointment": "Ραντεβού"
+    },
+    "dialog": {
+      "viewTitle": "Λεπτομέρειες Γεγονότος",
+      "createTitle": "Νέο Γεγονός Ημερολογίου",
+      "submitting": "Αποθήκευση...",
+      "createError": "Σφάλμα δημιουργίας γεγονότος",
+      "fields": {
+        "title": "Τίτλος",
+        "type": "Τύπος",
+        "date": "Ημερομηνία",
+        "time": "Ώρα",
+        "description": "Περιγραφή",
+        "assignedTo": "Ανατέθηκε σε",
+        "endDate": "Ημερομηνία Λήξης",
+        "endDatePlaceholder": "Επιλογή ημερομηνίας λήξης (προαιρετικό)",
+        "allDay": "Ολοήμερο",
+        "contact": "Επαφή",
+        "contactPlaceholder": "ID Επαφής (προαιρετικό)",
+        "project": "Έργο",
+        "projectPlaceholder": "ID Έργου (προαιρετικό)"
+      },
+      "actions": {
+        "save": "Αποθήκευση",
+        "cancel": "Ακύρωση",
+        "complete": "Ολοκλήρωση",
+        "viewOriginal": "Προβολή Πρωτοτύπου"
+      }
+    },
+    "stats": {
+      "ariaLabel": "Στατιστικά γεγονότων",
+      "separator": "•",
+      "totalEvents": "Σύνολο Γεγονότων"
+    },
+    "search": {
+      "placeholder": "Αναζήτηση γεγονότων...",
+      "noResults": "Δεν βρέθηκαν γεγονότα",
+      "resultsCount": "{{count}} γεγονότα βρέθηκαν"
+    },
+    "shortcuts": {
+      "title": "Συντομεύσεις Πληκτρολογίου",
+      "today": "T — Μετάβαση στο σήμερα",
+      "month": "M — Μηνιαία προβολή",
+      "week": "W — Εβδομαδιαία προβολή",
+      "day": "D — Ημερήσια προβολή",
+      "agenda": "A — Ατζέντα",
+      "navigate": "← → — Πλοήγηση",
+      "newEvent": "N — Νέο γεγονός"
+    },
+    "dragDrop": {
+      "moved": "Το γεγονός μετακινήθηκε",
+      "resized": "Η διάρκεια ενημερώθηκε",
+      "appointmentReadOnly": "Τα ραντεβού δεν μετακινούνται"
+    },
+    "conflicts": {
+      "title": "Σύγκρουση Προγράμματος",
+      "message": "Αυτό το γεγονός επικαλύπτεται με υπάρχοντα:",
+      "continue": "Συνέχεια",
+      "changeTime": "Αλλαγή ώρας"
+    },
+    "reminders": {
+      "label": "Υπενθύμιση",
+      "none": "Χωρίς υπενθύμιση",
+      "15min": "15 λεπτά πριν",
+      "1hour": "1 ώρα πριν",
+      "1day": "1 ημέρα πριν"
+    },
+    "attendees": {
+      "label": "Συμμετέχοντες",
+      "add": "Προσθήκη συμμετέχοντα",
+      "remove": "Αφαίρεση"
+    },
+    "recurrence": {
+      "label": "Επανάληψη",
+      "none": "Δεν επαναλαμβάνεται",
+      "daily": "Καθημερινά",
+      "weekly": "Εβδομαδιαία",
+      "monthly": "Μηνιαία",
+      "yearly": "Ετήσια",
+      "every": "Κάθε",
+      "endType": "Λήξη",
+      "never": "Ποτέ",
+      "onDate": "Σε ημερομηνία",
+      "afterCount": "Μετά από {{count}} επαναλήψεις"
+    },
+    "export": {
+      "print": "Εκτύπωση",
+      "pdf": "Εξαγωγή PDF"
+    },
+    "nlp": {
+      "badge": "Έξυπνη Εισαγωγή",
+      "placeholder": "π.χ. \"Ραντεβού αύριο 11πμ με τον Γιάννη για το project\"",
+      "analyze": "Ανάλυση",
+      "error": "Δεν ήταν δυνατή η ανάλυση",
+      "toggle": "Έξυπνη εισαγωγή"
+    }
+  },
+  "inbox": {
+    "title": "Ενοποιημένα Εισερχόμενα",
+    "historyTitle": "Ιστορικό Επικοινωνιών",
+    "selectContactTitle": "Επιλογή Επαφής",
+    "loading": "Φόρτωση μηνυμάτων...",
+    "loadingConversations": "Φόρτωση συνομιλιών...",
+    "messagesCount": "{count} μηνύματα",
+    "conversationsCount": "{count} συνομιλίες",
+    "noMessages": "Δεν βρέθηκαν μηνύματα",
+    "noConversations": "Δεν βρέθηκαν συνομιλίες",
+    "search": "Αναζήτηση μηνυμάτων...",
+    "dashboard": {
+      "total": "Σύνολο",
+      "active": "Ενεργές",
+      "unread": "Μη Αναγνωσμένα"
+    },
+    "filters": {
+      "title": "Φίλτρα",
+      "all": "Όλα",
+      "channel": "Κανάλι",
+      "direction": "Κατεύθυνση",
+      "status": "Κατάσταση"
+    },
+    "direction": {
+      "inbound": "Εισερχόμενο",
+      "outbound": "Εξερχόμενο"
+    },
+    "time": {
+      "now": "Τώρα",
+      "hoursAgo": "{hours}ω",
+      "yesterday": "Χθες"
+    },
+    "message": {
+      "from": "Από",
+      "to": "Προς",
+      "attachments": "{count} συνημμένα",
+      "pinned": "Καρφιτσωμένο",
+      "edited": "Επεξεργασμένο"
+    },
+    "tabs": {
+      "conversations": "Συνομιλίες",
+      "contactHistory": "Ιστορικό Επαφής"
+    },
+    "status": {
+      "active": "Ενεργή",
+      "closed": "Κλειστή",
+      "archived": "Αρχειοθετημένη",
+      "spam": "Ανεπιθύμητη"
+    },
+    "thread": {
+      "title": "Συνομιλία",
+      "loadEarlier": "Φόρτωση παλαιότερων",
+      "noMessages": "Δεν υπάρχουν μηνύματα σε αυτή τη συνομιλία",
+      "selectConversation": "Επιλέξτε μια συνομιλία για να δείτε τα μηνύματα",
+      "participants": "Συμμετέχοντες",
+      "unread": "{count} αδιάβαστα"
+    },
+    "composer": {
+      "placeholder": "Γράψτε το μήνυμά σας...",
+      "send": "Αποστολή",
+      "sending": "Αποστολή...",
+      "error": "Αποτυχία αποστολής",
+      "success": "Το μήνυμα στάλθηκε",
+      "shortcutHint": "Ctrl+Enter για αποστολή",
+      "replyingTo": "Απάντηση σε",
+      "forwarding": "Προώθηση",
+      "cancelReply": "Ακύρωση",
+      "editing": "Επεξεργασία μηνύματος",
+      "save": "Αποθήκευση",
+      "saving": "Αποθήκευση...",
+      "cancelEdit": "Ακύρωση επεξεργασίας"
+    },
+    "attachments": {
+      "add": "Προσθήκη συνημμένου",
+      "addFile": "Επιλογή αρχείου",
+      "remove": "Αφαίρεση",
+      "removeAll": "Αφαίρεση όλων",
+      "uploading": "Ανέβασμα...",
+      "uploadFailed": "Αποτυχία ανεβάσματος",
+      "downloadFailed": "Αποτυχία λήψης",
+      "unsupportedType": "Μη υποστηριζόμενος τύπος αρχείου",
+      "fileTooLarge": "Το αρχείο είναι πολύ μεγάλο",
+      "maxSize": "Μέγ. μέγεθος: {size}",
+      "count": "{count} συνημμένα",
+      "image": "Εικόνα",
+      "document": "Έγγραφο",
+      "audio": "Ήχος",
+      "video": "Βίντεο",
+      "download": "Λήψη",
+      "preview": "Προεπισκόπηση",
+      "openInNewTab": "Άνοιγμα σε νέα καρτέλα"
+    },
+    "selection": {
+      "selected": "{count} επιλεγμένα",
+      "selectAll": "Επιλογή όλων",
+      "delete": "Διαγραφή",
+      "cancel": "Ακύρωση"
+    },
+    "contextMenu": {
+      "select": "Επιλογή",
+      "deselect": "Αποεπιλογή",
+      "copy": "Αντιγραφή",
+      "reply": "Απάντηση",
+      "forward": "Προώθηση",
+      "edit": "Επεξεργασία",
+      "pin": "Καρφίτσωμα",
+      "unpin": "Ξεκαρφίτσωμα",
+      "delete": "Διαγραφή"
+    },
+    "reactions": {
+      "pickReaction": "Επιλέξτε αντίδραση",
+      "messageReactions": "Αντιδράσεις μηνύματος",
+      "reactedWith": "Αντέδρασαν με {emoji}",
+      "thumbs_up": "Μου αρέσει",
+      "heart": "Καρδιά",
+      "laughing": "Γέλιο",
+      "surprised": "Έκπληξη",
+      "sad": "Λύπη",
+      "angry": "Θυμός"
+    },
+    "channels": {
+      "telegram": "Telegram",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS"
+    },
+    "pagination": {
+      "loadMore": "Φόρτωση περισσότερων",
+      "page": "Σελίδα {current} από {total}"
+    },
+    "errors": {
+      "loadFailed": "Αποτυχία φόρτωσης",
+      "sendFailed": "Αποτυχία αποστολής μηνύματος",
+      "notAuthenticated": "Δεν είστε συνδεδεμένοι"
+    },
+    "noActivity": "Δεν υπάρχει ιστορικό δραστηριοτήτων",
+    "activity": {
+      "overview": "Επισκόπηση Ιστορικού",
+      "timeline": "Χρονολόγιο Γεγονότων",
+      "summary": "Σύνοψη Συνομιλίας",
+      "totalEvents": "Συνολικά",
+      "received": "Εισερχόμενα",
+      "sent": "Εξερχόμενα",
+      "assignments": "Αναθέσεις",
+      "channel": "Κανάλι",
+      "status": "Κατάσταση",
+      "created": "Δημιουργήθηκε",
+      "assignedTo": "Ανατέθηκε σε",
+      "lastUpdated": "Τελευταία Ενημέρωση",
+      "participants": "Συμμετέχοντες",
+      "conversationOpened": "Έναρξη Συνομιλίας",
+      "conversationOpenedDesc": "Ξεκίνησε νέα συνομιλία μέσω {channel}",
+      "conversationClosed": "Κλείσιμο Συνομιλίας",
+      "conversationClosedDesc": "Η συνομιλία έκλεισε",
+      "messageReceived": "Λήψη Μηνύματος",
+      "messageSent": "Αποστολή Μηνύματος",
+      "agentAssigned": "Ανάθεση Πράκτορα",
+      "agentAssignedDesc": "Η συνομιλία ανατέθηκε στον {agent}",
+      "system": "Σύστημα",
+      "unknown": "Άγνωστος",
+      "statusCompleted": "Ολοκληρώθηκε",
+      "statusInProgress": "Σε εξέλιξη",
+      "statusPending": "Εκκρεμεί",
+      "statusFailed": "Απέτυχε"
+    }
+  }
+}

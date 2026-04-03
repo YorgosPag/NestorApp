@@ -206,9 +206,9 @@ export const LazyRoutes = {
     { loadingType: 'dashboard', ssr: false }
   ),
 
-  // ⚡ ENTERPRISE: Units Management (heavy με PropertyGridView και complex state)
-  Units: createLazyRoute(
-    () => import('@/components/properties/UnitsPageContent').then(mod => ({ default: mod.UnitsPageContent })),
+  // ⚡ ENTERPRISE: Properties Management (ADR-269: Unit → Property)
+  Properties: createLazyRoute(
+    () => import('@/components/properties/UnitsPageContent').then(mod => ({ default: mod.PropertiesManagementContent })),
     { loadingType: 'dashboard', ssr: false }
   ),
 

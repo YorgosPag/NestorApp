@@ -1,0 +1,692 @@
+{
+  "toolbar": {
+    "filters": {
+      "categories": {
+        "status": "Κατάσταση",
+        "buildingType": "Τύπος Κτιρίου",
+        "contactType": "Τύπος Επαφής",
+        "parkingType": "Τύπος Θέσης Στάθμευσης",
+        "channel": "Κανάλι"
+      }
+    },
+    "tooltips": {
+      "filters": "Φίλτρα",
+      "favorites": "Προσθήκη στα αγαπημένα",
+      "archive": "Αρχειοθέτηση",
+      "exportData": "Εξαγωγή δεδομένων",
+      "importData": "Εισαγωγή δεδομένων",
+      "refreshData": "Ανανέωση δεδομένων",
+      "preview": "Προεπισκόπηση",
+      "copy": "Αντιγραφή",
+      "reports": "Αναφορές",
+      "settings": "Ρυθμίσεις",
+      "help": "Βοήθεια",
+      "sorting": "Ταξινόμηση"
+    },
+    "labels": {
+      "favoritesManagement": "Διαχείριση αγαπημένων",
+      "share": "Κοινοποίηση",
+      "sorting": "Ταξινόμηση",
+      "exportTo": "Εξαγωγή σε",
+      "excelFormat": "Excel (.xlsx)",
+      "pdfReport": "Αναφορά PDF"
+    },
+    "sort": {
+      "name": {
+        "asc": "Αύξουσα κατά όνομα",
+        "desc": "Φθίνουσα κατά όνομα"
+      },
+      "date": {
+        "asc": "Παλαιότερα πρώτα",
+        "desc": "Νεότερα πρώτα"
+      },
+      "status": {
+        "asc": "Κατάσταση (Α-Ω)",
+        "desc": "Κατάσταση (Ω-Α)"
+      },
+      "channel": {
+        "asc": "Κανάλι (Α-Ω)",
+        "desc": "Κανάλι (Ω-Α)"
+      }
+    },
+    "ui": {
+      "itemsSelected": "{count} επιλεγμένα",
+      "clearAllCount": "Καθαρισμός ({count})"
+    },
+    "actions": {
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή",
+      "filters": "Φίλτρα",
+      "favorites": "Αγαπημένα",
+      "archive": "Αρχειοθέτηση",
+      "export": "Εξαγωγή",
+      "import": "Εισαγωγή",
+      "refresh": "Ανανέωση",
+      "preview": "Προεπισκόπηση",
+      "copy": "Αντιγραφή",
+      "share": "Κοινοποίηση",
+      "reports": "Αναφορές",
+      "settings": "Ρυθμίσεις",
+      "favoritesManagement": "Διαχείριση αγαπημένων",
+      "help": "Βοήθεια",
+      "sorting": "Ταξινόμηση",
+      "buildings": {
+        "edit": "Επεξεργασία κτιρίου",
+        "delete": "Διαγραφή κτιρίου"
+      },
+      "projects": {
+        "edit": "Επεξεργασία έργου",
+        "delete": "Διαγραφή έργου"
+      },
+      "properties": {
+        "edit": "Επεξεργασία ακινήτου",
+        "delete": "Διαγραφή ακινήτου"
+      },
+      "storage": {
+        "edit": "Επεξεργασία αποθήκης",
+        "delete": "Διαγραφή αποθήκης"
+      }
+    },
+    "communications": {
+      "important": "Σημαντικό",
+      "markAsImportant": "Σήμανση ως σημαντικό",
+      "channels": {
+        "all": "Όλα τα κανάλια",
+        "email": "Email",
+        "sms": "SMS",
+        "telegram": "Telegram"
+      },
+      "status": {
+        "all": "Όλες οι καταστάσεις",
+        "sent": "Απεσταλμένα",
+        "received": "Ληφθέντα",
+        "pending": "Εκκρεμή",
+        "failed": "Αποτυχημένα"
+      }
+    },
+    "search": {
+      "placeholder": "Αναζήτηση..."
+    }
+  },
+  "filters": {
+    "title": "Φίλτρα",
+    "status": {
+      "available": "Διαθέσιμο",
+      "sold": "Πωλημένο",
+      "reserved": "Κρατημένο",
+      "maintenance": "Συντήρηση",
+      "occupied": "Κατειλημμένο",
+      "planning": "Σχεδιασμός",
+      "inProgress": "Σε Εξέλιξη",
+      "completed": "Ολοκληρωμένο",
+      "onHold": "Σε Αναμονή",
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό",
+      "archived": "Αρχειοθετημένο",
+      "lead": "Lead",
+      "pending": "Εκκρεμεί",
+      "construction": "Υπό Κατασκευή"
+    },
+    "searchFilters": "Φίλτρα Αναζήτησης",
+    "typeLabel": "Τύπος:",
+    "typeAriaLabel": "Φίλτρα τύπου",
+    "filterBy": "Φιλτράρισμα:",
+    "all": "Όλες",
+    "showAll": "Εμφάνιση όλων",
+    "allTypes": "Όλοι οι Τύποι",
+    "allStatuses": "Όλες οι Καταστάσεις",
+    "allFloors": "Όλοι οι Όροφοι",
+    "allProperties": "Όλα τα Ακίνητα",
+    "allAreas": "Όλες οι Περιοχές",
+    "allProjects": "Όλα τα Έργα",
+    "allLocations": "Όλες οι Τοποθεσίες",
+    "allCompanies": "Όλες οι Εταιρείες",
+    "allClients": "Όλοι οι Πελάτες",
+    "allPriorities": "Όλες οι Προτεραιότητες",
+    "allEnergyClasses": "Όλες οι Ενεργειακές Κλάσεις",
+    "allRenovations": "Όλες οι Ανακαινίσεις",
+    "allRiskLevels": "Όλα τα Επίπεδα Κινδύνου",
+    "allComplexities": "Όλες οι Πολυπλοκότητες",
+    "allBuildings": "Όλα τα Κτίρια",
+    "types": {
+      "individual": "Φυσικό Πρόσωπο",
+      "company": "Εταιρεία",
+      "service": "Υπηρεσία",
+      "residential": "Κατοικία",
+      "commercial": "Εμπορικό",
+      "industrial": "Βιομηχανικό",
+      "office": "Γραφείο",
+      "mixed": "Μικτή Χρήση",
+      "warehouse": "Αποθήκη",
+      "retail": "Λιανικό Εμπόριο",
+      "hotel": "Ξενοδοχείο",
+      "public": "Δημόσιο",
+      "renovation": "Ανακαίνιση",
+      "infrastructure": "Υποδομή"
+    },
+    "fields": {
+      "search": "Αναζήτηση",
+      "priceRange": "Εύρος Τιμής",
+      "areaRange": "Εύρος Επιφάνειας",
+      "status": "Κατάσταση",
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "floor": "Όροφος",
+      "propertyType": "Τύπος Ακινήτου"
+    },
+    "placeholders": {
+      "general": "Αναζήτηση...",
+      "propertiesSearch": "Αναζήτηση ακινήτων...",
+      "contactsSearch": "Αναζήτηση επαφών...",
+      "buildingsSearch": "Αναζήτηση κτιρίων...",
+      "projectsSearch": "Αναζήτηση έργων...",
+      "selectStatus": "Επιλέξτε κατάσταση",
+      "selectProject": "Επιλέξτε έργο",
+      "selectBuilding": "Επιλέξτε κτίριο",
+      "selectFloor": "Επιλέξτε όροφο",
+      "selectType": "Επιλέξτε τύπο",
+      "selectPriority": "Επιλέξτε προτεραιότητα",
+      "selectLocation": "Επιλέξτε τοποθεσία",
+      "selectCompany": "Επιλέξτε εταιρεία",
+      "selectEnergyClass": "Επιλέξτε ενεργειακή κλάση",
+      "selectRenovation": "Επιλέξτε ανακαίνιση",
+      "selectClient": "Επιλέξτε πελάτη",
+      "selectRiskLevel": "Επιλέξτε επίπεδο κινδύνου",
+      "selectComplexity": "Επιλέξτε πολυπλοκότητα"
+    },
+    "propertyTypes": {
+      "ariaLabel": "Φίλτρα τύπου ακινήτου",
+      "all": "Όλες",
+      "allTooltip": "Εμφάνιση όλων των τύπων",
+      "studio": "Studio",
+      "studioTooltip": "Studio / Γκαρσονιέρα",
+      "apartment": "Διαμέρισμα",
+      "apartmentTooltip": "Διαμέρισμα",
+      "maisonette": "Μεζονέτα",
+      "maisonetteTooltip": "Μεζονέτα",
+      "shop": "Κατάστημα",
+      "shopTooltip": "Κατάστημα",
+      "office": "Γραφείο",
+      "officeTooltip": "Γραφείο"
+    },
+    "contactTypes": {
+      "ariaLabel": "Φίλτρα τύπου επαφής",
+      "all": "Όλες",
+      "allTooltip": "Εμφάνιση όλων των επαφών",
+      "individual": "Φυσικό",
+      "company": "Εταιρεία",
+      "service": "Υπηρεσία"
+    },
+    "channels": {
+      "ariaLabel": "Φίλτρα καναλιών",
+      "all": "Όλα",
+      "allTooltip": "Εμφάνιση όλων των καναλιών",
+      "email": "Email",
+      "emailTooltip": "Email μηνύματα",
+      "sms": "SMS",
+      "smsTooltip": "SMS μηνύματα",
+      "telegram": "Telegram",
+      "telegramTooltip": "Telegram μηνύματα"
+    },
+    "common": {
+      "search": "Αναζήτηση",
+      "status": "Κατάσταση",
+      "selectStatus": "Επιλέξτε κατάσταση",
+      "type": "Τύπος",
+      "selectType": "Επιλέξτε τύπο",
+      "building": "Κτίριο",
+      "selectBuilding": "Επιλέξτε κτίριο",
+      "level": "Επίπεδο",
+      "selectLevel": "Επιλέξτε επίπεδο",
+      "project": "Έργο",
+      "selectProject": "Επιλέξτε έργο",
+      "area": "Εμβαδόν",
+      "price": "Τιμή",
+      "updateDate": "Ημ/νία Ενημέρωσης",
+      "from": "Από",
+      "to": "Έως"
+    },
+    "parking": {
+      "title": "Φίλτρα Θέσεων Στάθμευσης",
+      "searchPlaceholder": "Αναζήτηση θέσεων...",
+      "ariaLabels": {
+        "search": "Αναζήτηση θέσεων στάθμευσης",
+        "status": "Φιλτράρισμα κατά κατάσταση",
+        "type": "Φιλτράρισμα κατά τύπο",
+        "building": "Φιλτράρισμα κατά κτίριο",
+        "level": "Φιλτράρισμα κατά επίπεδο",
+        "project": "Φιλτράρισμα κατά έργο",
+        "area": "Φιλτράρισμα κατά εμβαδόν",
+        "price": "Φιλτράρισμα κατά τιμή",
+        "date": "Φιλτράρισμα κατά ημερομηνία"
+      }
+    }
+  },
+  "contacts": {
+    "types": {
+      "individual": "Φυσικό Πρόσωπο",
+      "company": "Εταιρεία",
+      "service": "Δημόσια Υπηρεσία",
+      "organization": "Οργανισμός"
+    },
+    "nameCascade": {
+      "title": "Αλλαγή Ονόματος Επαφής",
+      "body": "Η αλλαγή του ονόματος από «{oldName}» σε «{newName}» θα ενημερώσει αυτόματα τα παρακάτω:",
+      "depProperties": "Ακίνητα (ιδιοκτησίες)",
+      "depPaymentPlans": "Πλάνα πληρωμών",
+      "count": "{count, plural, one {# εγγραφή} other {# εγγραφές}}",
+      "unavailableCount": "Μη διαθέσιμος αριθμός",
+      "warning": "Θα ενημερωθούν αυτόματα {count} εγγραφές σε όλα τα έργα.",
+      "confirm": "Αποθήκευση & Ενημέρωση",
+      "cancel": "Ακύρωση"
+    },
+    "addressImpact": {
+      "title": "Επίπτωση Αλλαγής Διεύθυνσης",
+      "body": "Η αλλαγή της διεύθυνσης «{addressLabel}» μπορεί να επηρεάσει τις παρακάτω εγγραφές:",
+      "sectionLive": "Ζωντανές αναφορές (θα διαβάσουν τη νέα διεύθυνση)",
+      "depProperties": "Ακίνητα (ιδιοκτησίες)",
+      "depPaymentPlans": "Πλάνα πληρωμών",
+      "sectionSnapshot": "Στιγμιότυπα (παγωμένα κατά τη δημιουργία — δεν αλλάζουν)",
+      "depInvoices": "Τιμολόγια",
+      "depApyCertificates": "Βεβαιώσεις ΑΠΥ",
+      "count": "{count, plural, one {# εγγραφή} other {# εγγραφές}}",
+      "warningLive": "{count} εγγραφές αναφέρονται σε αυτή την επαφή.",
+      "confirm": "Αποθήκευση & Συνέχεια",
+      "cancel": "Ακύρωση",
+      "branchDelete": {
+        "title": "Αφαίρεση Υποκαταστήματος",
+        "body": "Είστε σίγουροι ότι θέλετε να αφαιρέσετε αυτή τη διεύθυνση υποκαταστήματος; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "confirm": "Αφαίρεση",
+        "cancel": "Ακύρωση"
+      },
+      "mapDragWarning": {
+        "title": "Επαναφορά Διοικητικής Ιεραρχίας",
+        "body": "Η μετακίνηση του σημείου θα καθαρίσει τα πεδία διοικητικής ιεραρχίας (οικισμός, δήμος, περιφέρεια). Θα χρειαστεί να επιλέξετε ξανά.",
+        "confirm": "Συνέχεια",
+        "cancel": "Ακύρωση"
+      }
+    },
+    "companyIdentityImpact": {
+      "title": "Επιπτώσεις Αλλαγής Στοιχείων Εταιρείας",
+      "body": "Τα ακόλουθα πεδία ταυτότητας τροποποιούνται:",
+      "fieldChanged": "«{oldValue}» → «{newValue}»",
+      "fieldCleared": "«{oldValue}» → (διαγράφηκε)",
+      "sectionLive": "Ζωντανές αναφορές (θα διαβάσουν τα ενημερωμένα δεδομένα)",
+      "depProjects": "Έργα",
+      "depProperties": "Ακίνητα (ιδιοκτησίες)",
+      "depObligations": "Υποχρεώσεις",
+      "sectionSnapshot": "Στιγμιότυπα (παγωμένα κατά τη δημιουργία — δεν αλλάζουν)",
+      "depInvoices": "Τιμολόγια",
+      "depApyCertificates": "Βεβαιώσεις ΑΠΥ",
+      "count": "{count, plural, one {# εγγραφή} other {# εγγραφές}}",
+      "warningLive": "{count} εγγραφές αναφέρονται σε αυτή την επαφή και θα αντικατοπτρίζουν τα νέα στοιχεία.",
+      "confirm": "Αποθήκευση & Συνέχεια",
+      "cancel": "Ακύρωση",
+      "unsafeClear": "Δεν μπορείτε να αφαιρέσετε τα πεδία: {fields}. Είναι κρίσιμα για την ταυτότητα της εταιρείας.",
+      "fields": {
+        "companyName": "Επωνυμία",
+        "vatNumber": "ΑΦΜ",
+        "gemiNumber": "Αρ. ΓΕΜΗ",
+        "taxOffice": "ΔΟΥ",
+        "legalForm": "Νομική Μορφή",
+        "tradeName": "Διακριτικός Τίτλος",
+        "gemiStatus": "Κατάσταση ΓΕΜΗ"
+      },
+      "unavailableTitle": "Η αλλαγή στοιχείων εταιρείας μπλοκαρίστηκε",
+      "unavailableBody": "Ο έλεγχος επιπτώσεων για τα στοιχεία της εταιρείας δεν ολοκληρώθηκε αξιόπιστα. Η αποθήκευση μπλοκαρίστηκε για να προστατευτούν τα συνδεδεμένα δεδομένα. Δοκιμάστε ξανά ή ελέγξτε αργότερα.",
+      "understood": "Το κατάλαβα"
+    },
+    "communicationImpact": {
+      "title": "Επιπτώσεις Αλλαγής Στοιχείων Επικοινωνίας",
+      "body": "Τα ακόλουθα πεδία επικοινωνίας τροποποιούνται:",
+      "changeTypes": {
+        "primaryEmailChanged": "Κύριο Email",
+        "primaryPhoneChanged": "Κύριο Τηλέφωνο",
+        "corporateWebsiteChanged": "Εταιρική Ιστοσελίδα"
+      },
+      "fieldChanged": "«{oldValue}» → «{newValue}»",
+      "sectionLive": "Ζωντανές αναφορές (θα διαβάσουν τα ενημερωμένα δεδομένα)",
+      "depProperties": "Ακίνητα (ιδιοκτησίες)",
+      "depPaymentPlans": "Διακανονισμοί πληρωμών",
+      "depProjects": "Έργα",
+      "sectionSnapshot": "Στιγμιότυπα (παγωμένα κατά τη δημιουργία — δεν αλλάζουν)",
+      "depInvoices": "Τιμολόγια",
+      "depApyCertificates": "Βεβαιώσεις ΑΠΥ",
+      "count": "{count, plural, one {# εγγραφή} other {# εγγραφές}}",
+      "warningLive": "{count} εγγραφές αναφέρονται σε αυτή την επαφή και θα χρησιμοποιούν τα νέα στοιχεία επικοινωνίας.",
+      "confirm": "Αποθήκευση & Συνέχεια",
+      "cancel": "Ακύρωση",
+      "unsafeRemoval": "Δεν μπορείτε να αφαιρέσετε όλα τα emails ή τηλέφωνα μιας εταιρείας. Τουλάχιστον ένα απαιτείται για τις ροές επικοινωνίας."
+    }
+  },
+  "customerActions": {
+    "view": "Προβολή",
+    "viewCustomer": "Προβολή Πελάτη",
+    "call": "Κλήση",
+    "email": "Email",
+    "message": "Μήνυμα",
+    "edit": "Επεξεργασία",
+    "reassign": "Ανακατανομή",
+    "changeProperty": "Αλλαγή Ακινήτου",
+    "history": "Ιστορικό",
+    "documents": "Έγγραφα",
+    "notes": "Σημειώσεις",
+    "sendEmail": "Αποστολή Email",
+    "tooltips": {
+      "viewDetails": "Προβολή στοιχείων του {name}",
+      "callTo": "Κλήση στο {phone}",
+      "noPhone": "Δεν είναι διαθέσιμο τηλέφωνο",
+      "emailTo": "Email στο {email}",
+      "noEmail": "Δεν είναι διαθέσιμο email",
+      "smsTo": "SMS στο {phone}",
+      "noPhoneForSms": "Δεν είναι διαθέσιμο τηλέφωνο για SMS",
+      "editDetails": "Επεξεργασία στοιχείων του {name}",
+      "reassignFor": "Αλλαγή κατανομής για {name}",
+      "viewHistory": "Προβολή ιστορικού του {name}",
+      "viewDocuments": "Προβολή εγγράφων του {name}",
+      "viewNotes": "Προβολή σημειώσεων για {name}"
+    },
+    "states": {
+      "unknownCustomer": "Άγνωστος πελάτης",
+      "loadingError": "Σφάλμα φόρτωσης",
+      "noCustomer": "Δεν υπάρχει πελάτης",
+      "customerNotFound": "Πελάτης ID: {id} (δεν βρέθηκε)",
+      "unknownDate": "Άγνωστη ημερομηνία"
+    },
+    "labels": {
+      "customer": "Πελάτης"
+    },
+    "aria": {
+      "customerActions": "Ενέργειες πελάτη",
+      "customerDetails": "Στοιχεία πελάτη: {name}"
+    }
+  },
+  "sharing": {
+    "shareOn": "Κοινοποίηση σε {platform}",
+    "iconAlt": "Εικονίδιο {platform}",
+    "selectPlatform": "Επιλογή κοινωνικής πλατφόρμας για κοινοποίηση",
+    "noPlatforms": "Δεν υπάρχουν Πλατφόρμες",
+    "noPlatformsMessage": "Δεν υπάρχουν διαθέσιμες πλατφόρμες κοινοποίησης",
+    "socialPlatforms": "Πλατφόρμες Κοινωνικής Κοινοποίησης",
+    "devInfo": "Πληροφορίες Ανάπτυξης",
+    "loadingPlatforms": "Φόρτωση Πλατφορμών"
+  },
+  "recipients": {
+    "managementLabel": "Διαχείριση Παραληπτών Email",
+    "emailRecipients": "Παραλήπτες Email",
+    "recipientLabel": "Email Παραλήπτης {number}",
+    "validationStatus": "Κατάσταση Επικύρωσης",
+    "add": "Προσθήκη",
+    "addEmail": "Προσθήκη Email",
+    "validFromTotal": "{valid} έγκυρα από {total} συνολικά",
+    "invalidCount": "({count} μη έγκυρα)",
+    "available": "{count} διαθέσιμα",
+    "helperText": "Πατήστε Enter για προσθήκη νέου email • Backspace σε άδειο πεδίο για διαγραφή",
+    "recipientsCount": "Παραλήπτες ({count})",
+    "valid": "έγκυρα",
+    "compactLabel": "Compact Recipients Management",
+    "compactEmailLabel": "Compact Email {number}",
+    "compactInputsLabel": "Compact Email Inputs"
+  },
+  "email": {
+    "template": "Email Template",
+    "templateIcon": "Εικονίδιο {name}",
+    "selected": "Επιλεγμένο",
+    "selectTemplate": "Επιλογή Template Email",
+    "availableTemplates": "Διαθέσιμα Templates",
+    "selectAppropriate": "Επιλέξτε το κατάλληλο template για την αποστολή"
+  },
+  "search": {
+    "placeholder": "Αναζήτηση σε έργα, επαφές, κτίρια...",
+    "globalSearch": "Παγκόσμια Αναζήτηση",
+    "noResults": "Δεν βρέθηκαν αποτελέσματα",
+    "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση",
+    "results": "Αποτελέσματα αναζήτησης",
+    "resultsCount": "{count} αποτελέσματα",
+    "resultsCount_one": "{count} αποτέλεσμα",
+    "resultsCount_other": "{count} αποτελέσματα",
+    "navigate": "πλοήγηση",
+    "select": "επιλογή",
+    "hints": {
+      "startTyping": "Πληκτρολογήστε για αναζήτηση...",
+      "minChars": "Τουλάχιστον {count} χαρακτήρες",
+      "escKey": "ESC"
+    },
+    "entityTypes": {
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "property": "Ακίνητο",
+      "contact": "Επαφή",
+      "file": "Αρχείο",
+      "parking": "Θέση Στάθμευσης",
+      "storage": "Αποθήκη"
+    }
+  },
+  "ownership": {
+    "title": "Πίνακας Χιλιοστών Συνιδιοκτησίας",
+    "method": "Μέθοδος Υπολογισμού",
+    "methodArea": "Κατ' Εμβαδόν",
+    "methodValue": "Κατ' Αντικειμενική Αξία",
+    "methodVolume": "Κατ' Όγκον",
+    "zonePrice": "Τιμή Ζώνης (€/τ.μ.)",
+    "commercialityCoefficient": "Συντελεστής Εμπορικότητας (ΣΕ)",
+    "status": "Κατάσταση",
+    "statusDraft": "Προσχέδιο",
+    "statusFinalized": "Οριστικοποιημένος",
+    "statusRegistered": "Μεταγεγραμμένος",
+    "columns": {
+      "ordinal": "Α/Α",
+      "entityCode": "Κωδικός",
+      "description": "Περιγραφή",
+      "category": "Κατηγ.",
+      "floor": "Όροφ.",
+      "areaNet": "Καθαρά (τ.μ.)",
+      "areaGross": "Μικτά",
+      "millesimalShares": "Χιλιοστά (‰)",
+      "allocation": "Κατανομή",
+      "ownerParty": "Ιδιοκτήτης",
+      "preliminary": "Προσύμφωνο",
+      "final": "Οριστικό"
+    },
+    "categoryMain": "Κύρια",
+    "categoryAuxiliary": "Βοηθητική",
+    "categoryAirRights": "Αέρας",
+    "categoryInformational": "Πληροφοριακά",
+    "ownerContractor": "Εργολάβος",
+    "ownerLandowner": "Οικοπεδούχος",
+    "ownerBuyer": "Αγοραστής",
+    "ownerUnassigned": "Αδιάθετο",
+    "actions": {
+      "autoPopulate": "Αυτόματη Συμπλήρωση",
+      "calculate": "Υπολογισμός",
+      "finalize": "Οριστικοποίηση",
+      "unlock": "Ξεκλείδωμα",
+      "exportPdf": "Εξαγωγή PDF",
+      "addRow": "Νέα Γραμμή",
+      "addAirRights": "Προσθήκη Αέρα",
+      "removeRow": "Αφαίρεση",
+      "refreshTable": "Ανανέωση πίνακα",
+      "deleteTable": "Διαγραφή πίνακα",
+      "confirmDelete": "Ναι, διέγραψε",
+      "confirmPrompt": "Σίγουρα;"
+    },
+    "messages": {
+      "noBuildings": "Δεν βρέθηκαν κτίρια συνδεδεμένα με αυτό το έργο. Συνδέστε πρώτα ένα κτίριο με το έργο (Κτίριο → Γενικά → Έργο).",
+      "noFloors": "Δεν υπάρχουν όροφοι στα κτίρια. Προσθέστε ορόφους πρώτα.",
+      "noProperties": "Δεν υπάρχουν ακίνητα στα κτίρια. Προσθέστε ακίνητα πρώτα.",
+      "propertiesWithoutArea": "{count} ακίνητ{count, plural, one {ο} other {α}} χωρίς εμβαδόν — ο υπολογισμός χιλιοστών θα είναι λανθασμένος.",
+      "propertiesWithoutFloor": "{count} ακίνητ{count, plural, one {ο} other {α}} χωρίς σύνδεση με όροφο — ο συντελεστής ορόφου δεν θα υπολογιστεί.",
+      "populateSuccess": "Συμπληρώθηκαν {count} εγγραφές. Πατήστε «Υπολογισμός» για να υπολογιστούν τα χιλιοστά.",
+      "populateWithWarnings": "Συμπληρώθηκαν {count} εγγραφές, αλλά:",
+      "dataCheckError": "Σφάλμα κατά τον έλεγχο δεδομένων. Δοκιμάστε ξανά.",
+      "airRightsNoShares": "Υπάρχ{count, plural, one {ει} other {ουν}} {count} γραμμ{count, plural, one {ή} other {ές}} δικαιώματος υψούν χωρίς χιλιοστά. Εισάγετε πρώτα τα χιλιοστά του αέρα.",
+      "tableDeleted": "Ο πίνακας χιλιοστών διαγράφηκε.",
+      "deleteError": "Σφάλμα κατά τη διαγραφή",
+      "orphanedTitle": "Αποσυνδεμένα κτίρια στον πίνακα",
+      "orphanedSingle": "Ένα κτίριο που αναφέρεται στον πίνακα δεν είναι πλέον συνδεδεμένο με αυτό το έργο.",
+      "orphanedMultiple": "{count} κτίρια που αναφέρονται στον πίνακα δεν είναι πλέον συνδεδεμένα με αυτό το έργο.",
+      "orphanedAdvice": "Μπορείτε να επανασυνδέσετε τα κτίρια ή να διαγράψετε τον πίνακα και να τον δημιουργήσετε εκ νέου.",
+      "noAreaRows": "{count} ιδιοκτησί{count, plural, one {α} other {ες}} ({codes}) χωρίς εμβαδόν. Καταχωρίστε πρώτα τα τ.μ. για να υπολογιστούν τα χιλιοστά.",
+      "spacesNoArea": "{count} παρακολούθημ{count, plural, one {α} other {ατα}} χωρίς εμβαδόν: {codes}",
+      "calculationNote": "Υπολογισμός: {method} — {date}",
+      "storageNoShares": "Αποθήκ{count, plural, one {η} other {ες}} με αυτοτελή χιλιοστά αλλά χωρίς τιμή: {codes}. Εισάγετε χιλιοστά."
+    },
+    "tooltips": {
+      "method": "Μέθοδος Α: Κατ' Εμβαδόν — κατανομή βάσει επιφάνειας. Μέθοδος Β: Κατ' Αντικειμενική Αξία — σταθμισμένη κατανομή βάσει τιμής ζώνης, συντελεστή ορόφου (ΠΟΛ 1149/1994) και συντελεστή αξίας. Μέθοδος Γ: Κατ' Όγκον — κατανομή βάσει όγκου (εμβαδόν × ύψος ορόφου).",
+      "zonePrice": "Η τιμή ζώνης (€/τ.μ.) προέρχεται από τον πίνακα τιμών του ΥΠΟΙΚ/ΑΑΔΕ (αντικειμενικές αξίες). Βρείτε τη σωστή τιμή στο aades.gr → Αντικειμενικές Αξίες → εισάγετε τη διεύθυνση του ακινήτου. Χρησιμοποιείται μόνο στη Μέθοδο Β (Κατ' Αντικειμενική Αξία).",
+      "commerciality": "Ο Συντελεστής Εμπορικότητας (ΣΕ) καθορίζει αν χρησιμοποιείται ο Πίνακας Α (ΣΕ < 1.5, κατοικίες) ή Πίνακας Β (ΣΕ ≥ 1.5, καταστήματα) της ΠΟΛ 1149/1994 για τους συντελεστές ορόφου. Τιμές: 0.6–3.0. Πηγή: ΑΑΔΕ, αντικειμενικές αξίες ακινήτων. Χρησιμοποιείται μόνο στη Μέθοδο Β."
+    },
+    "subtotal": "Υποσύνολο",
+    "total": "ΓΕΝΙΚΟ ΣΥΝΟΛΟ",
+    "bartex": {
+      "title": "Αντιπαροχή",
+      "percentage": "Ποσοστό Αντιπαροχής (%)",
+      "contractor": "Εργολάβος",
+      "landowners": "Οικοπεδούχοι",
+      "shares": "χιλιοστά"
+    },
+    "landownersTab": {
+      "title": "Οικοπεδούχοι Έργου",
+      "addLandowner": "Προσθήκη Οικοπεδούχου",
+      "removeLandowner": "Αφαίρεση",
+      "ownershipPercentage": "Ποσοστό Ιδιοκτησίας (%)",
+      "totalPercentage": "Σύνολο Ποσοστών",
+      "percentageMustBe100": "Το σύνολο πρέπει να είναι 100%",
+      "percentageValid": "Τα ποσοστά αθροίζουν σε 100%",
+      "selectContact": "Επιλέξτε επαφή...",
+      "emptyState": "Δεν υπάρχουν οικοπεδούχοι. Προσθέστε τον πρώτο οικοπεδούχο.",
+      "saved": "Οι αλλαγές αποθηκεύτηκαν",
+      "saveError": "Σφάλμα αποθήκευσης",
+      "save": "Αποθήκευση",
+      "noChanges": "Δεν υπάρχουν αλλαγές",
+      "removalGuard": {
+        "confirmTitle": "Αφαίρεση Οικοπεδούχου",
+        "confirmBody": "Πρόκειται να αφαιρέσετε τον/την «{name}» από τους οικοπεδούχους του έργου. Η επαφή δεν θα διαγραφεί.",
+        "warningTitle": "Αφαίρεση Οικοπεδούχου — Προσοχή",
+        "warningBody": "Ο/Η «{name}» αναφέρεται στα παρακάτω στοιχεία:",
+        "warningNote": "Θα χρειαστεί να ενημερώσετε χειροκίνητα τον πίνακα ποσοστών μετά την αφαίρεση.",
+        "blockedTitle": "Η αφαίρεση δεν είναι δυνατή",
+        "blockedBody": "Ο/Η «{name}» είναι ιδιοκτήτης/τρια ακινήτων σε αυτό το έργο. Πρέπει πρώτα να αφαιρέσετε τα ακίνητα/χώρους από αυτόν τον ιδιοκτήτη.",
+        "confirmRemove": "Αφαίρεση",
+        "confirmRemoveAnyway": "Αφαίρεση παρ' όλα αυτά",
+        "cancel": "Ακύρωση",
+        "understood": "Κατάλαβα",
+        "checking": "Έλεγχος εξαρτήσεων...",
+        "count": "{count, plural, one {# εγγραφή} other {# εγγραφές}}"
+      }
+    },
+    "validation": {
+      "totalMismatch": "Σύνολο χιλιοστών ≠ 1000‰",
+      "totalCorrect": "Σύνολο χιλιοστών = 1000‰",
+      "belowMinimum": "Χιλιοστά κάτω από το ελάχιστο (1‰)"
+    },
+    "empty": "Δεν υπάρχουν ιδιοκτησίες. Πατήστε «Αυτόματη Συμπλήρωση» για να ξεκινήσετε.",
+    "unlockReason": "Λόγος ξεκλειδώματος",
+    "version": "Έκδοση",
+    "revisionHistory": "Ιστορικό Εκδόσεων",
+    "noRevisions": "Δεν υπάρχουν προηγούμενες εκδόσεις"
+  },
+  "workspace": {
+    "type": {
+      "company": "Εταιρεία",
+      "officeDirectory": "Κοινός Κατάλογος",
+      "personal": "Προσωπικός"
+    },
+    "title": "Χώροι εργασίας",
+    "loading": "Φόρτωση χώρων εργασίας...",
+    "noWorkspaces": "Κανένας χώρος εργασίας",
+    "selectWorkspace": "Επιλέξτε χώρο εργασίας",
+    "switchFailed": "Αποτυχία εναλλαγής χώρου εργασίας. Δοκιμάστε ξανά.",
+    "selectLabel": "Επιλογή χώρου εργασίας",
+    "availableLabel": "Διαθέσιμοι χώροι εργασίας",
+    "refreshLabel": "Ανανέωση χώρων εργασίας",
+    "settings": "Ρυθμίσεις"
+  },
+  "productTour": {
+    "next": "Επόμενο",
+    "previous": "Προηγούμενο",
+    "skip": "Παράλειψη",
+    "finish": "Τέλος",
+    "dontShowAgain": "Να μην εμφανιστεί ξανά",
+    "stepIndicator": "Βήμα {current} από {total}",
+    "errorDialog": {
+      "intro": {
+        "title": "Καλωσήρθατε στη Διαχείριση Σφαλμάτων",
+        "description": "Ας δούμε τι επιλογές έχετε όταν παρουσιαστεί ένα σφάλμα. Κάθε κουμπί έχει διαφορετική λειτουργία."
+      },
+      "retry": {
+        "title": "Δοκιμάστε Ξανά",
+        "description": "Προσπαθήστε να εκτελέσετε ξανά την ενέργεια που προκάλεσε το σφάλμα. Χρήσιμο για προσωρινά προβλήματα δικτύου."
+      },
+      "back": {
+        "title": "Πίσω",
+        "description": "Επιστρέψτε στην προηγούμενη σελίδα. Χρησιμοποιήστε το αν θέλετε να αποφύγετε το σφάλμα."
+      },
+      "home": {
+        "title": "Αρχική",
+        "description": "Μεταβείτε στην αρχική σελίδα της εφαρμογής. Ασφαλής επιλογή για νέα εκκίνηση."
+      },
+      "copy": {
+        "title": "Αντιγραφή Λεπτομερειών",
+        "description": "Αντιγράψτε τις τεχνικές λεπτομέρειες του σφάλματος στο πρόχειρο. Χρήσιμο για αποστολή στην υποστήριξη."
+      },
+      "email": {
+        "title": "Αποστολή Email",
+        "description": "Στείλτε email με τις λεπτομέρειες του σφάλματος στην ομάδα υποστήριξης."
+      },
+      "notify": {
+        "title": "Ειδοποίηση Διαχειριστή",
+        "description": "Στείλτε αυτόματη ειδοποίηση στον διαχειριστή του συστήματος για το σφάλμα."
+      },
+      "report": {
+        "title": "Ανώνυμη Αναφορά",
+        "description": "Υποβάλετε ανώνυμη αναφορά σφάλματος για βελτίωση της εφαρμογής."
+      }
+    }
+  },
+  "voiceAssistant": {
+    "tooltip": "Φωνητική εντολή",
+    "title": "Φωνητική Εντολή",
+    "description": "Πατήστε το κουμπί για ηχογράφηση",
+    "recording": "Ακούω...",
+    "transcribing": "Μεταγραφή...",
+    "processing": "Επεξεργασία ήχου...",
+    "done": "Η μεταγραφή ολοκληρώθηκε",
+    "start": "Έναρξη ηχογράφησης",
+    "stop": "Διακοπή ηχογράφησης",
+    "cancel": "Ακύρωση",
+    "close": "Κλείσιμο",
+    "copy": "Αντιγραφή κειμένου",
+    "copied": "Αντιγράφηκε!",
+    "retry": "Επανάληψη",
+    "permissionDenied": "Η πρόσβαση στο μικρόφωνο απορρίφθηκε. Επιτρέψτε την πρόσβαση στις ρυθμίσεις του browser.",
+    "emptyRecording": "Δεν ηχογραφήθηκε ήχος. Δοκιμάστε ξανά.",
+    "transcriptionFailed": "Η μεταγραφή απέτυχε. Δοκιμάστε ξανά.",
+    "genericError": "Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά.",
+    "notSupported": "Η ηχογράφηση φωνής δεν υποστηρίζεται σε αυτόν τον browser.",
+    "sendCommand": "Αποστολή εντολής",
+    "sending": "Αποστολή...",
+    "panelTitle": "Φωνητικός AI Βοηθός",
+    "panelDescription": "Απαντήσεις AI στις φωνητικές σας εντολές",
+    "aiProcessing": "Επεξεργασία εντολής...",
+    "emptyHistory": "Δεν υπάρχουν φωνητικές εντολές. Χρησιμοποιήστε το μικρόφωνο για να ξεκινήσετε.",
+    "clearHistory": "Εκκαθάριση ιστορικού",
+    "commandFailed": "Η εντολή απέτυχε",
+    "commandSent": "Η εντολή στάλθηκε",
+    "openPanel": "Άνοιγμα πάνελ AI",
+    "submitError": "Αποτυχία υποβολής εντολής"
+  },
+  "voiceDictation": {
+    "title": "Φωνητική υπαγόρευση",
+    "description": "Μίλα για να δημιουργήσεις μια γρήγορη σημείωση. Μπορείς να επεξεργαστείς το κείμενο πριν την αποθήκευση.",
+    "placeholder": "Ξεκίνα να μιλάς ή γράψε εδώ...",
+    "start": "Έναρξη",
+    "stop": "Διακοπή",
+    "save": "Αποθήκευση",
+    "cancel": "Ακύρωση",
+    "notSupported": "Η φωνητική υπαγόρευση δεν υποστηρίζεται σε αυτόν τον browser.",
+    "error": "Η φωνητική υπαγόρευση απέτυχε. Δοκίμασε ξανά.",
+    "empty": "Γράψε ή υπαγόρευσε πρώτα λίγο κείμενο.",
+    "authRequired": "Χρειάζεται σύνδεση για να αποθηκευτεί η σημείωση."
+  }
+}
