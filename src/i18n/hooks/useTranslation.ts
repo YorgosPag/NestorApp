@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import type { TOptions } from 'i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
-import { remapLegacyTranslationKey } from '../namespace-compat';
+import { remapLegacyTranslationKey, getCompatNamespaces } from '../namespace-compat';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
@@ -57,31 +57,34 @@ export const useTranslation = (namespace?: string | string[]) => {
     return namespaces.every((ns) => ns === 'common' || i18n.hasResourceBundle(i18n.language, ns));
   });
 
-  // Lazy load namespace if specified
+  // Lazy load namespace + its compat split namespaces (ADR-280)
   useEffect(() => {
     if (namespaces.length > 0 && !namespaces.every((ns) => ns === 'common')) {
-      // Check if already loaded
       const shouldForceReload = process.env.NODE_ENV === 'development';
-      const allLoaded = namespaces.every((ns) => ns === 'common' || i18n.hasResourceBundle(i18n.language, ns));
+
+      // 🏢 ENTERPRISE: Collect explicit namespaces + their compat splits
+      const explicitNamespaces = namespaces.filter((ns) => ns !== 'common');
+      const compatNamespaces = explicitNamespaces.flatMap((ns) =>
+        getCompatNamespaces(ns).filter((compat) => !namespaces.includes(compat))
+      );
+      const allNamespacesToLoad = [...new Set([...explicitNamespaces, ...compatNamespaces])];
+
+      const allLoaded = allNamespacesToLoad.every((ns) => i18n.hasResourceBundle(i18n.language, ns));
       if (!shouldForceReload && allLoaded) {
         setNamespaceLoaded(true);
         return;
       }
 
-      // Load namespace asynchronously
+      // Load all namespaces (explicit + compat splits) asynchronously
       setNamespaceLoaded(false);
-      const namespacesToLoad = namespaces.filter((ns) => ns !== 'common');
       Promise.all(
-        namespacesToLoad.map((ns) => loadNamespace(ns as Namespace, i18n.language as Language, shouldForceReload))
+        allNamespacesToLoad.map((ns) => loadNamespace(ns as Namespace, i18n.language as Language, shouldForceReload))
       )
         .then(() => {
           setNamespaceLoaded(true);
-          if (process.env.NODE_ENV === 'development') {
-            logger.info(`[i18n] Namespace(s) "${namespacesToLoad.join(', ')}" loaded for language "${i18n.language}"`);
-          }
         })
         .catch(error => {
-          logger.error(`Failed to load namespace(s): ${namespacesToLoad.join(', ')}`, { error });
+          logger.error(`Failed to load namespace(s): ${allNamespacesToLoad.join(', ')}`, { error });
           setNamespaceLoaded(true); // Mark as loaded to prevent infinite loading
         });
     }

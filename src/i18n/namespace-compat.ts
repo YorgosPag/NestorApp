@@ -448,3 +448,31 @@ export const PROPERTIES_COMPATIBILITY_NAMESPACES = [
   'properties-enums',
   'properties-viewer',
 ] as const;
+
+// =============================================================================
+// 🏢 COMPAT NAMESPACE MAP — used by useTranslation to auto-load split namespaces
+// =============================================================================
+
+const COMPAT_NAMESPACE_MAP: Record<string, readonly string[]> = {
+  common: COMMON_COMPATIBILITY_NAMESPACES,
+  properties: PROPERTIES_COMPATIBILITY_NAMESPACES,
+  building: BUILDING_COMPATIBILITY_NAMESPACES,
+  contacts: CONTACTS_COMPATIBILITY_NAMESPACES,
+  projects: PROJECTS_COMPATIBILITY_NAMESPACES,
+  payments: PAYMENTS_COMPATIBILITY_NAMESPACES,
+  'dxf-viewer': DXF_VIEWER_COMPATIBILITY_NAMESPACES,
+  'geo-canvas': GEO_CANVAS_COMPATIBILITY_NAMESPACES,
+  crm: CRM_COMPATIBILITY_NAMESPACES,
+  accounting: ACCOUNTING_COMPATIBILITY_NAMESPACES,
+  files: FILES_COMPATIBILITY_NAMESPACES,
+  navigation: NAVIGATION_COMPATIBILITY_NAMESPACES,
+  reports: REPORTS_COMPATIBILITY_NAMESPACES,
+};
+
+/**
+ * Returns the split compat namespaces that must be loaded alongside a parent namespace.
+ * E.g. 'properties' → ['properties-detail', 'properties-enums', 'properties-viewer']
+ */
+export function getCompatNamespaces(namespace: string): readonly string[] {
+  return COMPAT_NAMESPACE_MAP[namespace] ?? [];
+}
