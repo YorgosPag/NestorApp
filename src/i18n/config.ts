@@ -90,14 +90,28 @@ if (typeof window !== 'undefined') {
       'errors',
       'toasts',
       'navigation',
+      'navigation-entities',  // 🏢 Split from navigation (ADR-280)
       'filters',       // 🏢 ENTERPRISE: Generic filter labels (domain separation)
       'auth',          // 🏢 Auth screens - critical for UX
       'forms',         // 🏢 ENTERPRISE: Form labels, sections, help texts (company-gemi, service forms)
       'admin',         // 🏢 ENTERPRISE: Admin pages (AI Inbox, RBAC) - prevents hydration mismatch
       'crm',           // 🏢 CRM module - tasks, opportunities, inbox
+      'crm-inbox',     // 🏢 Split from crm (ADR-280)
       'building',      // Building management - core module
+      'building-storage',   // 🏢 Split from building (ADR-280)
+      'building-address',   // 🏢 Split from building (ADR-280)
+      'building-filters',   // 🏢 Split from building (ADR-280)
+      'building-timeline',  // 🏢 Split from building (ADR-280)
+      'building-tabs',      // 🏢 Split from building (ADR-280)
       'projects',      // Projects module
+      'projects-data',      // 🏢 Split from projects (ADR-280)
+      'projects-ika',       // 🏢 Split from projects (ADR-280)
       'contacts',      // Contacts module
+      'contacts-core',      // 🏢 Split from contacts (ADR-280)
+      'contacts-form',      // 🏢 Split from contacts (ADR-280)
+      'contacts-relationships', // 🏢 Split from contacts (ADR-280)
+      'contacts-banking',   // 🏢 Split from contacts (ADR-280)
+      'contacts-lifecycle', // 🏢 Split from contacts (ADR-280)
       'properties',    // 🏢 Properties module (renamed from units — ADR-269)
       'properties-detail', // 🏢 Read/detail surface split from properties SSOT
       'properties-enums', // 🏢 Domain vocabulary split from properties SSOT
@@ -105,11 +119,28 @@ if (typeof window !== 'undefined') {
       'storage',       // 🏢 Storage module - added 2026-01-24
       'parking',       // 🏢 Parking module - added 2026-01-24
       'dxf-viewer',
+      'dxf-viewer-shell',   // 🏢 Split from dxf-viewer (ADR-280)
+      'dxf-viewer-panels',  // 🏢 Split from dxf-viewer (ADR-280)
+      'dxf-viewer-settings', // 🏢 Split from dxf-viewer (ADR-280)
+      'dxf-viewer-wizard',  // 🏢 Split from dxf-viewer (ADR-280)
+      'dxf-viewer-guides',  // 🏢 Split from dxf-viewer (ADR-280)
       'geo-canvas',
+      'geo-canvas-drawing', // 🏢 Split from geo-canvas (ADR-280)
       'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets
+      'accounting-setup',   // 🏢 Split from accounting (ADR-280)
       'obligations',   // 🏢 Obligations workspace translations
+      'payments',      // 🏢 Payments module
+      'payments-loans',     // 🏢 Split from payments (ADR-280)
+      'payments-cost-calc', // 🏢 Split from payments (ADR-280)
       'reports',       // 🏢 Enterprise Reports System (ADR-265)
+      'reports-extended',   // 🏢 Split from reports (ADR-280)
+      'files',         // 🏢 File management
+      'files-media',        // 🏢 Split from files (ADR-280)
       'procurement',   // 🏢 Procurement module (ADR-267)
+      'common-sales',       // 🏢 Split from common (ADR-280)
+      'common-account',     // 🏢 Split from common (ADR-280)
+      'common-photos',      // 🏢 Split from common (ADR-280)
+      'common-shared',      // 🏢 Split from common (ADR-280)
     ];
 
     const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');

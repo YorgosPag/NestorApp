@@ -214,27 +214,59 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
   // 🏢 ENTERPRISE: Core namespaces loaded at startup (SAP/Salesforce pattern)
   const critical: Namespace[] = [
     'common',
-    'filters',       // 🏢 ENTERPRISE: Generic filter labels (domain separation)
+    'common-sales',
+    'common-account',
+    'common-photos',
+    'common-shared',
+    'filters',
     'errors',
     'toasts',
     'auth',
-    'forms',         // 🏢 ENTERPRISE: Form labels, help texts, sections (company-gemi, service forms)
-    'building',      // Building management - core module
-    'navigation',    // Navigation labels
-    'projects',      // Projects module
-    'obligations',   // Obligations module (register/edit/workflow)
-    'contacts',      // Contacts module
-  'communications', // Shared communications history and inbox surfaces
-    'properties',    // 🏢 Properties module (renamed from units — ADR-269)
-    'properties-detail', // 🏢 Read/detail surface split from properties SSOT
-    'properties-enums', // 🏢 Domain vocabulary split from properties SSOT
-    'properties-viewer', // 🏢 Floorplan/viewer surface split from properties SSOT
-    'storage',       // 🏢 Storage management module - added 2026-01-24
-    'parking',       // 🏢 Parking management module - added 2026-01-24
-    'dxf-viewer',    // ?? DXF viewer UI - avoids fallback-to-keys after language switch
-    'files',         // 🏢 File storage, floorplan import wizard (SPEC-237D)
-    'accounting',    // 🏢 Accounting subapp - all financial modules
-    'crm',           // 🏢 CRM module - calendar, teams, pipeline, contacts
+    'forms',
+    'building',
+    'building-storage',
+    'building-address',
+    'building-filters',
+    'building-timeline',
+    'building-tabs',
+    'navigation',
+    'navigation-entities',
+    'projects',
+    'projects-data',
+    'projects-ika',
+    'obligations',
+    'contacts',
+    'contacts-core',
+    'contacts-form',
+    'contacts-relationships',
+    'contacts-banking',
+    'contacts-lifecycle',
+    'communications',
+    'properties',
+    'properties-detail',
+    'properties-enums',
+    'properties-viewer',
+    'storage',
+    'parking',
+    'dxf-viewer',
+    'dxf-viewer-shell',
+    'dxf-viewer-panels',
+    'dxf-viewer-settings',
+    'dxf-viewer-wizard',
+    'dxf-viewer-guides',
+    'geo-canvas',
+    'geo-canvas-drawing',
+    'files',
+    'files-media',
+    'accounting',
+    'accounting-setup',
+    'payments',
+    'payments-loans',
+    'payments-cost-calc',
+    'crm',
+    'crm-inbox',
+    'reports',
+    'reports-extended',
   ];
 
   await Promise.all(
