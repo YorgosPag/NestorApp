@@ -17,7 +17,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
-import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-propagation.service';
 
@@ -191,18 +191,18 @@ export const DELETE = withStandardRateLimit(
         const docRef = adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(id);
         const existing = (await docRef.get()).data() as Record<string, unknown>;
 
-        // 🛡️ ADR-226: Guarded deletion (checks dependencies + conditional block for sold parking)
-        await executeDeletion(adminDb, 'parking', id, ctx.uid, ctx.companyId);
+        // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
+        await softDelete(adminDb, 'parking', id, ctx.uid, ctx.companyId);
 
-        logger.info('Parking spot deleted', { id, companyId: ctx.companyId });
+        logger.info('Parking spot moved to trash', { id, companyId: ctx.companyId });
 
-        // Auth audit (dual audit — executeDeletion handles entity audit)
-        await logAuditEvent(ctx, 'data_deleted', 'parking_spot', 'api', {
+        // Auth audit (soft-delete engine handles entity audit)
+        await logAuditEvent(ctx, 'soft_deleted', 'parking_spot', 'api', {
           newValue: { type: 'status', value: { parkingSpotId: id, number: existing.number } },
-          metadata: { reason: 'Parking spot deleted via API' },
+          metadata: { reason: 'Parking spot moved to trash via API' },
         });
 
-        return apiSuccess<ParkingMutationResult>({ id }, 'Parking spot deleted');
+        return apiSuccess<ParkingMutationResult>({ id }, 'Parking spot moved to trash');
       } catch (error) {
         if (error instanceof ApiError) throw error;
         logger.error('Error deleting parking spot', { id, error: getErrorMessage(error) });

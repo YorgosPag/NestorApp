@@ -1370,3 +1370,4 @@ Index building pairnei 2-5 lepta — katholos blocking.
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-04-03 | Claude Code | Initial ADR creation |
+| 2026-04-03 | Claude Code | Batch 2: Leaf entity conversion — properties/parking/storages DELETE→softDelete + LIST filtering |

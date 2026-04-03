@@ -17,7 +17,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { PROPERTY_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
-import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
 import { validatePropertyFieldLocking } from '@/lib/firestore/property-field-locking';
 import { PaymentPlanService } from '@/services/payment-plan.service';
@@ -252,17 +252,17 @@ export const DELETE = withStandardRateLimit(
         await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
         const existing = doc.data() as Record<string, unknown>;
 
-        // 🛡️ ADR-226: Guarded deletion (checks dependencies → blocks or deletes + audit)
-        await executeDeletion(adminDb, 'property', id, ctx.uid, ctx.companyId);
+        // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
+        await softDelete(adminDb, 'property', id, ctx.uid, ctx.companyId);
 
-        logger.info('Property deleted', { id, companyId: ctx.companyId });
+        logger.info('Property moved to trash', { id, companyId: ctx.companyId });
 
-        await logAuditEvent(ctx, 'data_deleted', 'property', 'api', {
+        await logAuditEvent(ctx, 'soft_deleted', 'property', 'api', {
           newValue: { type: 'status', value: { propertyId: id, name: existing.name } },
-          metadata: { reason: 'Property deleted via API' },
+          metadata: { reason: 'Property moved to trash via API' },
         });
 
-        return apiSuccess<PropertyMutationResult>({ id }, 'Property deleted');
+        return apiSuccess<PropertyMutationResult>({ id }, 'Property moved to trash');
       } catch (error) {
         if (error instanceof ApiError) throw error;
         logger.error('Error deleting property', { id, error: getErrorMessage(error) });

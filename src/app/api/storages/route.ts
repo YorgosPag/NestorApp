@@ -170,7 +170,11 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     const allStorages: Storage[] = [];
 
     snapshot.docs.forEach(doc => {
-      allStorages.push(mapStorageDoc(doc.id, doc.data() as Record<string, unknown>));
+      const mapped = mapStorageDoc(doc.id, doc.data() as Record<string, unknown>);
+      // ADR-281: Exclude soft-deleted records from normal list
+      if (mapped.status !== 'deleted') {
+        allStorages.push(mapped);
+      }
     });
 
     // 🏢 ENTERPRISE: Tenant isolation — filter by companyId for buildingId queries

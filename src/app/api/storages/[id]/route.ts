@@ -17,7 +17,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
-import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-propagation.service';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -184,18 +184,18 @@ export const DELETE = withStandardRateLimit(
         const docRef = adminDb.collection(COLLECTIONS.STORAGE).doc(id);
         const existing = (await docRef.get()).data() as Record<string, unknown>;
 
-        // 🛡️ ADR-226: Guarded deletion (checks dependencies + conditional block for sold storage)
-        await executeDeletion(adminDb, 'storage', id, ctx.uid, ctx.companyId);
+        // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
+        await softDelete(adminDb, 'storage', id, ctx.uid, ctx.companyId);
 
-        logger.info('Storage unit deleted', { id, companyId: ctx.companyId });
+        logger.info('Storage unit moved to trash', { id, companyId: ctx.companyId });
 
-        // Auth audit (dual audit — executeDeletion handles entity audit)
-        await logAuditEvent(ctx, 'data_deleted', 'storage', 'api', {
+        // Auth audit (soft-delete engine handles entity audit)
+        await logAuditEvent(ctx, 'soft_deleted', 'storage', 'api', {
           newValue: { type: 'status', value: { storageId: id, name: existing.name } },
-          metadata: { reason: 'Storage unit deleted via API' },
+          metadata: { reason: 'Storage unit moved to trash via API' },
         });
 
-        return apiSuccess<StorageMutationResult>({ id }, 'Storage unit deleted');
+        return apiSuccess<StorageMutationResult>({ id }, 'Storage unit moved to trash');
       } catch (error) {
         if (error instanceof ApiError) throw error;
         logger.error('Error deleting storage', { id, error: getErrorMessage(error) });

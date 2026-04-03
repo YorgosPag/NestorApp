@@ -207,7 +207,10 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
         .where(FIELDS.BUILDING_ID, '==', requestedBuildingId)
         .get();
 
-      const parkingSpots = snapshot.docs.map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>));
+      // ADR-281: Exclude soft-deleted records from normal list
+      const parkingSpots = snapshot.docs
+        .map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>))
+        .filter(spot => spot.status !== 'deleted');
       logger.info('Found parking spots for building', { buildingId: requestedBuildingId, count: parkingSpots.length });
 
       return NextResponse.json({
@@ -237,7 +240,10 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
         .where(FIELDS.PROJECT_ID, '==', requestedProjectId)
         .get();
 
-      const parkingSpots = snapshot.docs.map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>));
+      // ADR-281: Exclude soft-deleted records from normal list
+      const parkingSpots = snapshot.docs
+        .map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>))
+        .filter(spot => spot.status !== 'deleted');
       logger.info('Found parking spots for project', { projectId: requestedProjectId, count: parkingSpots.length });
 
       return NextResponse.json({
@@ -266,7 +272,10 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       : getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES)
           .where(FIELDS.COMPANY_ID, '==', ctx.companyId).get());
 
-    const parkingSpots = snapshot.docs.map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>));
+    // ADR-281: Exclude soft-deleted records from normal list
+    const parkingSpots = snapshot.docs
+      .map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>))
+      .filter(spot => spot.status !== 'deleted');
     logger.info('Found parking spots for company', { count: parkingSpots.length });
 
     return NextResponse.json({
