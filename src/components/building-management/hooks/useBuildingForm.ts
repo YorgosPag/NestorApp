@@ -20,7 +20,7 @@
 
 import { useState, useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { createBuilding, updateBuilding } from '../building-services';
+import { createBuildingWithPolicy, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '@/types/building/contracts';
 import type {
@@ -181,20 +181,23 @@ export function useBuildingForm({
       try {
         // 🏢 ENTERPRISE: Use update for edit mode, create for new (ADR-087)
         if (isEditMode && editBuilding?.id) {
-          const result = await updateBuilding(editBuilding.id, {
-            name: formData.name,
-            description: formData.description || undefined,
-            address: formData.address,
-            city: formData.city || undefined,
-            totalArea: formData.totalArea !== '' ? formData.totalArea : undefined,
-            builtArea: formData.builtArea !== '' ? formData.builtArea : undefined,
-            floors: formData.floors !== '' ? formData.floors : undefined,
-            units: formData.units !== '' ? formData.units : undefined,
-            totalValue: formData.totalValue !== '' ? formData.totalValue : undefined,
-            startDate: formData.startDate || undefined,
-            completionDate: formData.completionDate || undefined,
-            status: formData.status,
-            projectId: formData.projectId || null,
+          const result = await updateBuildingWithPolicy({
+            buildingId: editBuilding.id,
+            updates: {
+              name: formData.name,
+              description: formData.description || undefined,
+              address: formData.address,
+              city: formData.city || undefined,
+              totalArea: formData.totalArea !== '' ? formData.totalArea : undefined,
+              builtArea: formData.builtArea !== '' ? formData.builtArea : undefined,
+              floors: formData.floors !== '' ? formData.floors : undefined,
+              units: formData.units !== '' ? formData.units : undefined,
+              totalValue: formData.totalValue !== '' ? formData.totalValue : undefined,
+              startDate: formData.startDate || undefined,
+              completionDate: formData.completionDate || undefined,
+              status: formData.status,
+              projectId: formData.projectId || null,
+            },
           });
 
           if (result.success) {
@@ -207,22 +210,24 @@ export function useBuildingForm({
           }
         } else {
           // Create new building
-          const result = await createBuilding({
-            name: formData.name,
-            description: formData.description || undefined,
-            address: formData.address,
-            city: formData.city || undefined,
-            totalArea: formData.totalArea !== '' ? formData.totalArea : undefined,
-            builtArea: formData.builtArea !== '' ? formData.builtArea : undefined,
-            floors: formData.floors !== '' ? formData.floors : undefined,
-            units: formData.units !== '' ? formData.units : undefined,
-            totalValue: formData.totalValue !== '' ? formData.totalValue : undefined,
-            startDate: formData.startDate || undefined,
-            completionDate: formData.completionDate || undefined,
-            status: formData.status,
-            projectId: formData.projectId || null,
-            companyId: companyId,
-            company: companyName,
+          const result = await createBuildingWithPolicy({
+            payload: {
+              name: formData.name,
+              description: formData.description || undefined,
+              address: formData.address,
+              city: formData.city || undefined,
+              totalArea: formData.totalArea !== '' ? formData.totalArea : undefined,
+              builtArea: formData.builtArea !== '' ? formData.builtArea : undefined,
+              floors: formData.floors !== '' ? formData.floors : undefined,
+              units: formData.units !== '' ? formData.units : undefined,
+              totalValue: formData.totalValue !== '' ? formData.totalValue : undefined,
+              startDate: formData.startDate || undefined,
+              completionDate: formData.completionDate || undefined,
+              status: formData.status,
+              projectId: formData.projectId || null,
+              companyId: companyId,
+              company: companyName,
+            },
           });
 
           if (result.success) {

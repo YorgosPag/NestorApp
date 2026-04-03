@@ -11,168 +11,28 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Task, TaskGroup } from 'react-modern-gantt';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
+import { calculateGanttStats } from '../tabs/TimelineTabContent/gantt/gantt-mock-data';
+import { getConstructionData } from '../construction-services';
+import { buildTaskGroups } from './construction-gantt/construction-gantt-utils';
+import { useConstructionGanttCrud } from './construction-gantt/useConstructionGanttCrud';
+import { useConstructionGanttDialog } from './construction-gantt/useConstructionGanttDialog';
+import { useConstructionGanttInteractions } from './construction-gantt/useConstructionGanttInteractions';
+import type { UseConstructionGanttReturn } from './construction-gantt/construction-gantt-types';
 
 const logger = createModuleLogger('useConstructionGantt');
-import type {
-  ConstructionPhase,
-  ConstructionTask,
-  ConstructionPhaseCreatePayload,
-  ConstructionTaskCreatePayload,
-  ConstructionPhaseStatus,
-  ConstructionTaskStatus,
-} from '@/types/building/construction';
-import { calculateGanttStats } from '../tabs/TimelineTabContent/gantt/gantt-mock-data';
-import type { GanttSummaryStats, GanttTaskStatus } from '../tabs/TimelineTabContent/gantt/gantt-mock-data';
-import {
-  getConstructionData,
-  createConstructionPhase,
-  updateConstructionPhase,
-  deleteConstructionPhase,
-  createConstructionTask,
-  updateConstructionTask,
-  deleteConstructionTask,
-} from '../construction-services';
-
-// ─── Types ───────────────────────────────────────────────────────────────
-
-interface DialogState {
-  open: boolean;
-  mode: 'createPhase' | 'editPhase' | 'createTask' | 'editTask';
-  phase?: ConstructionPhase;
-  task?: ConstructionTask;
-  phaseId?: string; // For creating task under specific phase
-}
-
-interface UseConstructionGanttReturn {
-  // Data for GanttChart
-  taskGroups: TaskGroup[];
-  stats: GanttSummaryStats;
-
-  // Raw data
-  phases: ConstructionPhase[];
-  tasks: ConstructionTask[];
-
-  // State
-  loading: boolean;
-  error: string | null;
-  isEmpty: boolean;
-
-  // Dialog
-  dialogState: DialogState;
-  openCreatePhaseDialog: () => void;
-  openEditPhaseDialog: (phase: ConstructionPhase) => void;
-  openCreateTaskDialog: (phaseId: string) => void;
-  openEditTaskDialog: (task: ConstructionTask) => void;
-  closeDialog: () => void;
-
-  // Gantt event handlers
-  handleTaskUpdate: (groupId: string, updatedTask: Task) => void;
-  handleTaskClick: (task: Task, group: TaskGroup) => void;
-  handleTaskDoubleClick: (task: Task) => void;
-  handleGroupClick: (group: TaskGroup) => void;
-
-  // CRUD
-  savePhase: (data: ConstructionPhaseCreatePayload) => Promise<boolean>;
-  updatePhase: (phaseId: string, updates: Record<string, unknown>) => Promise<boolean>;
-  removePhase: (phaseId: string) => Promise<boolean>;
-  saveTask: (data: ConstructionTaskCreatePayload) => Promise<boolean>;
-  updateTask: (taskId: string, updates: Record<string, unknown>) => Promise<boolean>;
-  removeTask: (taskId: string) => Promise<boolean>;
-  updateBarColor: (id: string, isPhase: boolean, color: string) => Promise<void>;
-
-  // Reload
-  reload: () => Promise<void>;
-}
-
-// ─── Status Colors ──────────────────────────────────────────────────────
-// Centralized CSS variable references for Gantt bar colors (from globals.css)
-// react-modern-gantt uses task.color for bar backgroundColor
-
-const GANTT_STATUS_COLORS: Record<GanttTaskStatus, string> = {
-  completed: 'hsl(var(--status-success))',
-  inProgress: 'hsl(var(--status-info))',
-  notStarted: 'hsl(var(--muted-foreground))',
-  delayed: 'hsl(var(--status-error))',
-  blocked: 'hsl(var(--status-warning))',
-};
-
-// ─── Status Mapping ──────────────────────────────────────────────────────
-// Maps ConstructionTaskStatus → GanttTaskStatus for color resolver
-
-function mapTaskStatusToGantt(status: ConstructionTaskStatus): GanttTaskStatus {
-  switch (status) {
-    case 'completed': return 'completed';
-    case 'inProgress': return 'inProgress';
-    case 'notStarted': return 'notStarted';
-    case 'delayed': return 'delayed';
-    case 'blocked': return 'blocked';
-    default: return 'notStarted';
-  }
-}
-
-function mapPhaseStatusToGantt(status: ConstructionPhaseStatus): GanttTaskStatus {
-  switch (status) {
-    case 'completed': return 'completed';
-    case 'inProgress': return 'inProgress';
-    case 'planning': return 'notStarted';
-    case 'delayed': return 'delayed';
-    case 'blocked': return 'blocked';
-    default: return 'notStarted';
-  }
-}
-
-/**
- * Parses a date string (e.g. "2026-02-01") as LOCAL midnight.
- *
- * JavaScript's `new Date("2026-02-01")` interprets date-only strings as UTC,
- * which creates a timezone offset (e.g. UTC+2 in Greece → bar appears 2h early).
- * Adding T00:00:00 forces local timezone interpretation per ECMA-262.
- */
-function parseLocalDate(dateStr: string): Date {
-  // If already has time component, use as-is
-  if (dateStr.includes('T')) return new Date(dateStr);
-  // Add local midnight time to prevent UTC interpretation
-  return new Date(`${dateStr}T00:00:00`);
-}
-
-/**
- * Extracts a LOCAL date string (YYYY-MM-DD) from a Date object.
- *
- * CRITICAL: Do NOT use `toISOString().split('T')[0]` — that converts to UTC first,
- * which in Greece (UTC+2) can shift the date by -1 day for evening times.
- * This function uses local date methods for correct snap-to-day behavior.
- */
-function toLocalDateString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-// ─── Hook ────────────────────────────────────────────────────────────────
 
 export function useConstructionGantt(buildingId: string): UseConstructionGanttReturn {
-  const { t } = useTranslation('building');
-
-  // State
   const [phases, setPhases] = useState<ConstructionPhase[]>([]);
   const [tasks, setTasks] = useState<ConstructionTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Dialog state
-  const [dialogState, setDialogState] = useState<DialogState>({
-    open: false,
-    mode: 'createPhase',
-  });
-
-  // ─── Load Data ───────────────────────────────────────────────────────
-
   const loadData = useCallback(async () => {
-    if (!buildingId) return;
+    if (!buildingId) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -181,387 +41,40 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
       const data = await getConstructionData(buildingId);
       setPhases(data.phases);
       setTasks(data.tasks);
-    } catch (err) {
-      logger.error('Error loading data', { error: err });
-      setError(err instanceof Error ? err.message : 'Failed to load construction data');
+    } catch (loadError) {
+      logger.error('Error loading data', { error: loadError });
+      setError(loadError instanceof Error ? loadError.message : 'Failed to load construction data');
     } finally {
       setLoading(false);
     }
   }, [buildingId]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
-  // ─── Convert to TaskGroup[] for react-modern-gantt ────────────────────
+  const dialog = useConstructionGanttDialog();
 
-  const taskGroups = useMemo((): TaskGroup[] => {
-    return phases.map((phase) => {
-      const phaseTasks = tasks
-        .filter((task) => task.phaseId === phase.id)
-        .sort((a, b) => a.order - b.order);
-
-      // ALWAYS include synthetic phase bar + real tasks
-      // Phase bar is always first → enables visual cascade during drag
-      const phaseGanttStatus = mapPhaseStatusToGantt(phase.status);
-      const syntheticPhaseBar: Task = {
-        id: `phase-bar-${phase.id}`,
-        name: phase.name,
-        startDate: parseLocalDate(phase.plannedStartDate),
-        endDate: parseLocalDate(phase.plannedEndDate),
-        percent: phase.progress,
-        dependencies: [],
-        taskStatus: phaseGanttStatus,
-        color: phase.barColor ?? GANTT_STATUS_COLORS[phaseGanttStatus],
-        barColor: phase.barColor,
-      };
-
-      const realTasks: Task[] = phaseTasks.map((task) => {
-        const ganttStatus = mapTaskStatusToGantt(task.status);
-        return {
-          id: task.id,
-          name: task.name,
-          startDate: parseLocalDate(task.plannedStartDate),
-          endDate: parseLocalDate(task.plannedEndDate),
-          percent: task.progress,
-          dependencies: task.dependencies ?? [],
-          taskStatus: ganttStatus,
-          color: task.barColor ?? GANTT_STATUS_COLORS[ganttStatus],
-          barColor: task.barColor,
-        };
-      });
-
-      const ganttTasks: Task[] = [syntheticPhaseBar, ...realTasks];
-
-      return {
-        id: phase.id,
-        name: phase.name,
-        description: phase.code,
-        tasks: ganttTasks,
-      };
-    });
-  }, [phases, tasks]);
-
-  // ─── Statistics ────────────────────────────────────────────────────────
-
+  const taskGroups = useMemo(() => buildTaskGroups(phases, tasks), [phases, tasks]);
   const stats = useMemo(() => calculateGanttStats(taskGroups), [taskGroups]);
 
-  // ─── Dialog Handlers ──────────────────────────────────────────────────
+  const interactions = useConstructionGanttInteractions({
+    buildingId,
+    phases,
+    tasks,
+    setPhases,
+    setTasks,
+    openEditPhaseDialog: dialog.openEditPhaseDialog,
+    openEditTaskDialog: dialog.openEditTaskDialog,
+  });
 
-  const openCreatePhaseDialog = useCallback(() => {
-    setDialogState({ open: true, mode: 'createPhase' });
-  }, []);
-
-  const openEditPhaseDialog = useCallback((phase: ConstructionPhase) => {
-    setDialogState({ open: true, mode: 'editPhase', phase });
-  }, []);
-
-  const openCreateTaskDialog = useCallback((phaseId: string) => {
-    setDialogState({ open: true, mode: 'createTask', phaseId });
-  }, []);
-
-  const openEditTaskDialog = useCallback((task: ConstructionTask) => {
-    setDialogState({ open: true, mode: 'editTask', task });
-  }, []);
-
-  const closeDialog = useCallback(() => {
-    setDialogState({ open: false, mode: 'createPhase' });
-  }, []);
-
-  // ─── Gantt Event Handlers ─────────────────────────────────────────────
-
-  const handleTaskUpdate = useCallback(
-    async (groupId: string, updatedTask: Task) => {
-      // Drag/resize callback from react-modern-gantt
-      // Use local timezone conversion to snap to day boundaries correctly
-      const startDate = updatedTask.startDate instanceof Date
-        ? toLocalDateString(updatedTask.startDate)
-        : String(updatedTask.startDate);
-      const endDate = updatedTask.endDate instanceof Date
-        ? toLocalDateString(updatedTask.endDate)
-        : String(updatedTask.endDate);
-
-      // ================================================================
-      // Synthetic phase bars → update phase + CASCADE to all children
-      // ================================================================
-      if (updatedTask.id.startsWith('phase-bar-')) {
-        const phaseId = groupId;
-        const phase = phases.find((p) => p.id === phaseId);
-        if (!phase) return;
-
-        // Calculate day offset from original phase dates
-        const oldStart = parseLocalDate(phase.plannedStartDate).getTime();
-        const newStart = parseLocalDate(startDate).getTime();
-        const offsetMs = newStart - oldStart;
-
-        // Optimistic update: phase
-        setPhases((prev) =>
-          prev.map((p) =>
-            p.id === phaseId
-              ? {
-                  ...p,
-                  plannedStartDate: startDate,
-                  plannedEndDate: endDate,
-                  progress: updatedTask.percent ?? p.progress,
-                }
-              : p
-          )
-        );
-
-        // Persist phase
-        await updateConstructionPhase(buildingId, phaseId, {
-          plannedStartDate: startDate,
-          plannedEndDate: endDate,
-          progress: updatedTask.percent,
-        });
-
-        // CASCADE: Move all children tasks by same offset (if phase was moved, not just resized)
-        if (offsetMs !== 0) {
-          const childTasks = tasks.filter((t) => t.phaseId === phaseId);
-          if (childTasks.length > 0) {
-            // Optimistic update: all children
-            setTasks((prev) =>
-              prev.map((task) => {
-                if (task.phaseId !== phaseId) return task;
-                const taskStart = parseLocalDate(task.plannedStartDate);
-                const taskEnd = parseLocalDate(task.plannedEndDate);
-                taskStart.setTime(taskStart.getTime() + offsetMs);
-                taskEnd.setTime(taskEnd.getTime() + offsetMs);
-                return {
-                  ...task,
-                  plannedStartDate: toLocalDateString(taskStart),
-                  plannedEndDate: toLocalDateString(taskEnd),
-                };
-              })
-            );
-
-            // Persist all children (parallel, non-blocking)
-            await Promise.all(
-              childTasks.map((task) => {
-                const taskStart = parseLocalDate(task.plannedStartDate);
-                const taskEnd = parseLocalDate(task.plannedEndDate);
-                taskStart.setTime(taskStart.getTime() + offsetMs);
-                taskEnd.setTime(taskEnd.getTime() + offsetMs);
-                return updateConstructionTask(buildingId, task.id, {
-                  plannedStartDate: toLocalDateString(taskStart),
-                  plannedEndDate: toLocalDateString(taskEnd),
-                });
-              })
-            );
-          }
-        }
-        return;
-      }
-
-      // ================================================================
-      // Real task → optimistic update + persist + auto-expand phase
-      // ================================================================
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.id === updatedTask.id
-            ? {
-                ...task,
-                plannedStartDate: startDate,
-                plannedEndDate: endDate,
-                progress: updatedTask.percent ?? task.progress,
-              }
-            : task
-        )
-      );
-
-      await updateConstructionTask(buildingId, updatedTask.id, {
-        plannedStartDate: startDate,
-        plannedEndDate: endDate,
-        progress: updatedTask.percent,
-      });
-
-      // Auto-expand phase if task exceeds phase boundaries
-      const phase = phases.find((p) => p.id === groupId);
-      if (phase) {
-        const phaseStart = parseLocalDate(phase.plannedStartDate);
-        const phaseEnd = parseLocalDate(phase.plannedEndDate);
-        const taskStart = parseLocalDate(startDate);
-        const taskEnd = parseLocalDate(endDate);
-        let phaseChanged = false;
-        const newPhaseStart = taskStart < phaseStart ? toLocalDateString(taskStart) : phase.plannedStartDate;
-        const newPhaseEnd = taskEnd > phaseEnd ? toLocalDateString(taskEnd) : phase.plannedEndDate;
-
-        if (newPhaseStart !== phase.plannedStartDate || newPhaseEnd !== phase.plannedEndDate) {
-          phaseChanged = true;
-        }
-
-        if (phaseChanged) {
-          setPhases((prev) =>
-            prev.map((p) =>
-              p.id === groupId
-                ? { ...p, plannedStartDate: newPhaseStart, plannedEndDate: newPhaseEnd }
-                : p
-            )
-          );
-          await updateConstructionPhase(buildingId, groupId, {
-            plannedStartDate: newPhaseStart,
-            plannedEndDate: newPhaseEnd,
-          });
-        }
-      }
-    },
-    [buildingId, phases, tasks]
-  );
-
-  const handleTaskClick = useCallback(
-    (clickedTask: Task, group: TaskGroup) => {
-      // Synthetic phase bars have IDs starting with "phase-bar-"
-      if (clickedTask.id.startsWith('phase-bar-')) {
-        const fullPhase = phases.find((p) => p.id === group.id);
-        if (fullPhase) {
-          openEditPhaseDialog(fullPhase);
-        }
-        return;
-      }
-
-      const fullTask = tasks.find((t) => t.id === clickedTask.id);
-      if (fullTask) {
-        openEditTaskDialog(fullTask);
-      }
-    },
-    [phases, tasks, openEditPhaseDialog, openEditTaskDialog]
-  );
-
-  // Double-click handler — opens edit dialog (library passes only task, no group)
-  const handleTaskDoubleClick = useCallback(
-    (clickedTask: Task) => {
-      // Synthetic phase bars → open phase editor
-      if (clickedTask.id.startsWith('phase-bar-')) {
-        const phaseId = clickedTask.id.replace('phase-bar-', '');
-        const fullPhase = phases.find((p) => p.id === phaseId);
-        if (fullPhase) {
-          openEditPhaseDialog(fullPhase);
-        }
-        return;
-      }
-
-      // Real task → open task editor
-      const fullTask = tasks.find((tsk) => tsk.id === clickedTask.id);
-      if (fullTask) {
-        openEditTaskDialog(fullTask);
-      }
-    },
-    [phases, tasks, openEditPhaseDialog, openEditTaskDialog]
-  );
-
-  const handleGroupClick = useCallback(
-    (group: TaskGroup) => {
-      const fullPhase = phases.find((p) => p.id === group.id);
-      if (fullPhase) {
-        openEditPhaseDialog(fullPhase);
-      }
-    },
-    [phases, openEditPhaseDialog]
-  );
-
-  // ─── CRUD Operations ──────────────────────────────────────────────────
-
-  const savePhase = useCallback(
-    async (data: ConstructionPhaseCreatePayload): Promise<boolean> => {
-      const result = await createConstructionPhase(buildingId, data);
-      if (result.success) {
-        await loadData();
-      }
-      return result.success;
-    },
-    [buildingId, loadData]
-  );
-
-  const updatePhaseHandler = useCallback(
-    async (phaseId: string, updates: Record<string, unknown>): Promise<boolean> => {
-      const result = await updateConstructionPhase(buildingId, phaseId, updates);
-      if (result.success) {
-        await loadData();
-      }
-      return result.success;
-    },
-    [buildingId, loadData]
-  );
-
-  const removePhase = useCallback(
-    async (phaseId: string): Promise<boolean> => {
-      const result = await deleteConstructionPhase(buildingId, phaseId);
-      if (result.success) {
-        await loadData();
-      }
-      return result.success;
-    },
-    [buildingId, loadData]
-  );
-
-  const saveTask = useCallback(
-    async (data: ConstructionTaskCreatePayload): Promise<boolean> => {
-      const result = await createConstructionTask(buildingId, data);
-      if (result.success && result.taskId) {
-        // Optimistic insert — task appears immediately in the Gantt chart
-        // without waiting for Firestore re-fetch (eventual consistency workaround)
-        const optimisticTask: ConstructionTask = {
-          id: result.taskId,
-          phaseId: data.phaseId,
-          buildingId,
-          companyId: '', // Will be resolved on re-fetch
-          name: data.name,
-          code: data.code ?? '',
-          order: data.order ?? tasks.filter((t) => t.phaseId === data.phaseId).length,
-          status: data.status ?? 'notStarted',
-          plannedStartDate: data.plannedStartDate,
-          plannedEndDate: data.plannedEndDate,
-          progress: 0,
-          dependencies: data.dependencies ?? [],
-          description: data.description,
-        };
-        setTasks((prev) => [...prev, optimisticTask]);
-
-        // Background re-fetch to sync full server state
-        loadData();
-      }
-      return result.success;
-    },
-    [buildingId, loadData, tasks]
-  );
-
-  const updateTaskHandler = useCallback(
-    async (taskId: string, updates: Record<string, unknown>): Promise<boolean> => {
-      const result = await updateConstructionTask(buildingId, taskId, updates);
-      if (result.success) {
-        await loadData();
-      }
-      return result.success;
-    },
-    [buildingId, loadData]
-  );
-
-  const removeTask = useCallback(
-    async (taskId: string): Promise<boolean> => {
-      const result = await deleteConstructionTask(buildingId, taskId);
-      if (result.success) {
-        await loadData();
-      }
-      return result.success;
-    },
-    [buildingId, loadData]
-  );
-
-  // ─── Bar Color Update ────────────────────────────────────────────────
-
-  const updateBarColor = useCallback(
-    async (id: string, isPhase: boolean, color: string) => {
-      if (isPhase) {
-        // Optimistic update
-        setPhases((prev) => prev.map((p) => p.id === id ? { ...p, barColor: color } : p));
-        await updateConstructionPhase(buildingId, id, { barColor: color });
-      } else {
-        setTasks((prev) => prev.map((tsk) => tsk.id === id ? { ...tsk, barColor: color } : tsk));
-        await updateConstructionTask(buildingId, id, { barColor: color });
-      }
-    },
-    [buildingId]
-  );
+  const crud = useConstructionGanttCrud({
+    buildingId,
+    tasks,
+    loadData,
+    setPhases,
+    setTasks,
+  });
 
   return {
     taskGroups,
@@ -571,23 +84,23 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
     loading,
     error,
     isEmpty: !loading && phases.length === 0,
-    dialogState,
-    openCreatePhaseDialog,
-    openEditPhaseDialog,
-    openCreateTaskDialog,
-    openEditTaskDialog,
-    closeDialog,
-    handleTaskUpdate,
-    handleTaskClick,
-    handleTaskDoubleClick,
-    handleGroupClick,
-    savePhase,
-    updatePhase: updatePhaseHandler,
-    removePhase,
-    saveTask,
-    updateTask: updateTaskHandler,
-    removeTask,
-    updateBarColor,
+    dialogState: dialog.dialogState,
+    openCreatePhaseDialog: dialog.openCreatePhaseDialog,
+    openEditPhaseDialog: dialog.openEditPhaseDialog,
+    openCreateTaskDialog: dialog.openCreateTaskDialog,
+    openEditTaskDialog: dialog.openEditTaskDialog,
+    closeDialog: dialog.closeDialog,
+    handleTaskUpdate: interactions.handleTaskUpdate,
+    handleTaskClick: interactions.handleTaskClick,
+    handleTaskDoubleClick: interactions.handleTaskDoubleClick,
+    handleGroupClick: interactions.handleGroupClick,
+    savePhase: crud.savePhase,
+    updatePhase: crud.updatePhaseHandler,
+    removePhase: crud.removePhase,
+    saveTask: crud.saveTask,
+    updateTask: crud.updateTaskHandler,
+    removeTask: crud.removeTask,
+    updateBarColor: crud.updateBarColor,
     reload: loadData,
   };
 }

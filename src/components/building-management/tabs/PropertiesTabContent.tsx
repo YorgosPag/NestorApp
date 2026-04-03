@@ -33,17 +33,19 @@ import { PropertyInlineCreateForm } from './PropertyInlineCreateForm';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
-import { useDeletionGuard } from '@/hooks/useDeletionGuard';
+import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
 import {
   UNIT_TYPES_FOR_FILTER, UNIT_STATUSES_FOR_FILTER,
   UNIT_STATUS_COLOR_MAP, getPropertyTypeLabel, getPropertyStatusLabel,
 } from './property-tab-constants';
 import type { FloorRecord } from './property-tab-constants';
 import { usePropertyInlineEdit } from './usePropertyInlineEdit';
+import {
+  deletePropertyWithPolicy,
+  updatePropertyBuildingLinkWithPolicy,
+} from '@/services/property/property-mutation-gateway';
 
-type PropertyConfirmAction =
-  | { type: 'delete'; item: Property }
-  | { type: 'unlink'; item: Property };
+type PropertyConfirmAction = { type: 'unlink'; item: Property };
 
 interface PropertiesApiResponse {
   units: Property[];
@@ -80,7 +82,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   // 🛡️ ADR-226 Phase 3: Deletion Guard
-  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('property');
+  const { requestDelete, Dialogs: DeletionDialogs } = usePropertyDeletionGuard();
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -164,10 +166,25 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   }, [fetchProperties]);
 
   const handleDeleteClick = async (unit: Property) => {
-    const allowed = await checkBeforeDelete(unit.id);
-    if (allowed) {
-      setConfirmAction({ type: 'delete', item: unit });
-    }
+    await requestDelete(
+      {
+        id: unit.id,
+        name: unit.name,
+      },
+      async () => {
+        setDeletingId(unit.id);
+        try {
+          await deletePropertyWithPolicy({ propertyId: unit.id });
+          success(t('unitStats.deleted'));
+          await fetchProperties();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : t('unitStats.error');
+          notifyError(msg);
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    );
   };
 
   const handleUnlinkClick = (unit: Property) => {
@@ -178,18 +195,17 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     if (!confirmAction) return;
 
     setConfirmLoading(true);
-    const { type, item } = confirmAction;
+    const { item } = confirmAction;
 
     try {
-      if (type === 'delete') {
-        setDeletingId(item.id);
-        await apiClient.delete(API_ROUTES.PROPERTIES.BY_ID(item.id));
-        success(t('unitStats.deleted'));
-      } else {
-        setUnlinkingId(item.id);
-        await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(item.id), { buildingId: null });
-        success(t('unitStats.unlinked'));
-      }
+      setUnlinkingId(item.id);
+      await updatePropertyBuildingLinkWithPolicy({
+        propertyId: item.id,
+        currentProperty: item,
+        buildingId: null,
+        floorId: null,
+      });
+      success(t('unitStats.unlinked'));
       await fetchProperties();
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('unitStats.error');
@@ -215,10 +231,20 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   }, [tUnits]);
 
   const handleLinkUnit = useCallback(async (itemId: string) => {
-    await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(itemId), { buildingId: building.id });
+    const propertyToLink = units.find((unit) => unit.id === itemId);
+    if (!propertyToLink) {
+      throw new Error(t('unitStats.error'));
+    }
+
+    await updatePropertyBuildingLinkWithPolicy({
+      propertyId: itemId,
+      currentProperty: propertyToLink,
+      buildingId: building.id,
+      floorId: propertyToLink.floorId ?? null,
+    });
     success(t('unitStats.linked'));
     await fetchProperties();
-  }, [building.id, fetchProperties]);
+  }, [building.id, fetchProperties, t, units]);
 
   const getStatusBadge = (status: string) => (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${UNIT_STATUS_COLOR_MAP[status] || UNIT_STATUS_COLOR_MAP.unavailable}`}>
@@ -456,41 +482,25 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
         onLink={handleLinkUnit}
       />
 
-      {BlockedDialog}
+      {DeletionDialogs}
 
       <BuildingSpaceConfirmDialog
         open={!!confirmAction}
         onOpenChange={(open) => { if (!open) setConfirmAction(null); }}
-        title={
-          confirmAction?.type === 'delete'
-            ? t('spaceConfirm.deleteUnit')
-            : t('spaceConfirm.unlinkProperty')
-        }
+        title={t('spaceConfirm.unlinkProperty')}
         description={
-          confirmAction?.type === 'delete' ? (
-            <>
-              {t('spaceConfirm.deleteUnitDesc')}{' '}
-              <strong>&quot;{confirmAction.item.name}&quot;</strong>;
-              <br /><br />
-              {t('spaceConfirm.irreversible')}
-            </>
-          ) : (
-            <>
-              {t('spaceConfirm.unlinkPropertyDesc')}
-              <br /><br />
-              <strong>{confirmAction?.item.name}</strong>
-            </>
-          )
+          <>
+            {t('spaceConfirm.unlinkPropertyDesc')}
+            <br /><br />
+            <strong>{confirmAction?.item.name}</strong>
+          </>
         }
-        confirmLabel={
-          confirmAction?.type === 'delete'
-            ? t('spaceActions.delete')
-            : t('spaceActions.unlink')
-        }
+        confirmLabel={t('spaceActions.unlink')}
         onConfirm={handleConfirm}
         loading={confirmLoading}
-        variant={confirmAction?.type === 'delete' ? 'destructive' : 'warning'}
+        variant="warning"
       />
+      {edit.ImpactDialog}
     </section>
   );
 }

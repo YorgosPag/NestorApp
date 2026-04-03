@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { createStorageWithPolicy, deleteStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Warehouse, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
@@ -119,7 +120,7 @@ export function StorageTab({ building }: StorageTabProps) {
     if (!createName.trim()) return;
     setCreating(true);
     try {
-      const result = await apiClient.post<StorageMutationResponse>(API_ROUTES.STORAGES.LIST, {
+      const result = await createStorageWithPolicy<StorageMutationResponse>({ payload: {
         name: createName.trim(),
         type: createType,
         floor: createFloor.trim(),
@@ -128,7 +129,7 @@ export function StorageTab({ building }: StorageTabProps) {
         building: building.name,
         projectId: building.projectId,
         status: 'available' as StorageStatus,
-      });
+      }});
       if (result?.success) {
         setShowCreateForm(false);
         setCreateName('');
@@ -164,12 +165,12 @@ export function StorageTab({ building }: StorageTabProps) {
     if (!editingId || !editName.trim()) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<StorageMutationResponse>(API_ROUTES.STORAGES.BY_ID(editingId), {
+      const result = await updateStorageWithPolicy<StorageMutationResponse>({ storageId: editingId, payload: {
         name: editName.trim(),
         type: editType,
         floor: editFloor.trim(),
         area: editArea ? parseFloat(editArea) : 0,
-      });
+      }});
       if (result?.success) {
         setEditingId(null);
         await fetchStorages();
@@ -196,9 +197,7 @@ export function StorageTab({ building }: StorageTabProps) {
 
     setDeletingId(storage.id);
     try {
-      const result = await apiClient.delete<StorageMutationResponse>(
-        API_ROUTES.STORAGES.BY_ID(storage.id)
-      );
+      const result = await deleteStorageWithPolicy<StorageMutationResponse>({ storageId: storage.id });
       if (result?.success) {
         await fetchStorages();
       }

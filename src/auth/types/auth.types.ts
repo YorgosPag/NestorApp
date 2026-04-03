@@ -81,21 +81,27 @@ export interface AuthContextState {
   user: FirebaseAuthUser | null;
   loading: boolean;
   error: string | null;
+  mfaRequired: boolean;
+  isAuthenticated: boolean;
+  needsProfileCompletion: boolean;
 }
 
 /**
  * Auth context actions interface
  */
 export interface AuthContextActions {
-  signIn: (email: string, password: string) => Promise<boolean>;
+  signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signUp: (data: SignUpData) => Promise<boolean>;
+  signUp: (data: SignUpData) => Promise<void>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<boolean>;
-  updateUserProfile: (givenName: string, familyName: string) => Promise<boolean>;
-  sendVerificationEmail: () => Promise<boolean>;
-  /** Complete profile for users who signed up via Google without full name details */
-  completeProfile: (givenName: string, familyName: string) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<void>;
+  updateUserProfile: (givenName: string, familyName: string) => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
+  completeProfile: (givenName: string, familyName: string) => Promise<void>;
+  verifyMfaCode: (code: string) => Promise<void>;
+  cancelMfaVerification: () => void;
+  refreshToken: () => Promise<void>;
+  clearError: () => void;
 }
 
 /**

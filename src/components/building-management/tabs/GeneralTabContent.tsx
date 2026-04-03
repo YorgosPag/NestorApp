@@ -7,7 +7,7 @@ import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
 // ProgressCard → moved to "Χρονοδιάγραμμα" tab (TimelineTabContent)
 import type { Building } from '../BuildingsPageContent';
 // ENTERPRISE: Firestore persistence for building CRUD
-import { updateBuilding, createBuilding, getProjectsList } from '../building-services';
+import { getProjectsList } from '../building-services';
 import { createModuleLogger } from '@/lib/telemetry';
 // ENTERPRISE: Centralized EntityLinkCard (replaces ProjectSelectorCard)
 import { FolderKanban } from 'lucide-react';
@@ -24,6 +24,7 @@ import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndic
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { ConflictDialog } from '@/components/shared/ConflictDialog';
 import { useRouter } from 'next/navigation';
+import { createBuildingWithPolicy, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralTabContent');
@@ -102,7 +103,10 @@ export function GeneralTabContent({
 
   const saveProject = useCallback(async (newId: string | null) => {
     try {
-      const result = await updateBuilding(String(building.id), { projectId: newId });
+      const result = await updateBuildingWithPolicy({
+        buildingId: String(building.id),
+        updates: { projectId: newId },
+      });
       if (result.success) {
         logger.info('Building linked to project', { buildingId: building.id, projectId: newId });
         RealtimeService.dispatchBuildingProjectLinked({
@@ -181,14 +185,17 @@ export function GeneralTabContent({
 
   // 🏢 SPEC-256A: Optimistic versioning — wraps updateBuilding with _v tracking
   const versionedSaveFn = useCallback(async (data: ReturnType<typeof buildFormData> & { _v?: number }) => {
-    const result = await updateBuilding(String(building.id), {
-      name: data.name,
-      description: data.description,
-      startDate: data.startDate,
-      completionDate: data.completionDate,
-      address: data.address,
-      city: data.city,
-      _v: data._v,
+    const result = await updateBuildingWithPolicy({
+      buildingId: String(building.id),
+      updates: {
+        name: data.name,
+        description: data.description,
+        startDate: data.startDate,
+        completionDate: data.completionDate,
+        address: data.address,
+        city: data.city,
+        _v: data._v,
+      },
     });
     return result;
   }, [building.id]);
@@ -249,12 +256,14 @@ export function GeneralTabContent({
       if (isCreateMode) {
         const projectPayload = projectLink.getPayload();
         logger.info('Creating new building in Firestore', { formData, projectId: projectPayload.projectId ?? null });
-        const result = await createBuilding({
-          ...payload,
-          companyId: resolvedCompanyId,
-          status: 'planning',
-          // ADR-200: Include projectId from centralized hook
-          ...projectPayload,
+        const result = await createBuildingWithPolicy({
+          payload: {
+            ...payload,
+            companyId: resolvedCompanyId,
+            status: 'planning',
+            // ADR-200: Include projectId from centralized hook
+            ...projectPayload,
+          },
         });
 
         if (!result.success || !result.buildingId) {
@@ -269,7 +278,10 @@ export function GeneralTabContent({
 
       } else {
         logger.info('Updating building in Firestore', { buildingId: building.id });
-        const result = await updateBuilding(String(building.id), payload);
+        const result = await updateBuildingWithPolicy({
+          buildingId: String(building.id),
+          updates: payload,
+        });
 
         if (!result.success) {
           throw new Error(result.error || 'Failed to save building');

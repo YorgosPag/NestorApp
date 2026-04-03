@@ -17,7 +17,7 @@ import { useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { createProperty } from '@/services/properties.service';
+import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import { Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import {
   UNIT_TYPE_LABEL_KEYS, UNIT_TYPES_FOR_FILTER,
   CREATION_COMMERCIAL_OPTION_KEYS, OPERATIONAL_STATUS_OPTION_KEYS,
@@ -120,7 +121,7 @@ export function PropertyInlineCreateForm({
       if (wc) layout.wc = parseInt(wc, 10);
       if (Object.keys(layout).length > 0) propertyData.layout = layout;
 
-      const result = await createProperty(propertyData);
+      const result = await createPropertyWithPolicy({ propertyData });
 
       if (result.success) {
         success(tUnits('inlineCreate.created'));
@@ -129,7 +130,12 @@ export function PropertyInlineCreateForm({
         notifyError(result.error || tUnits('inlineCreate.createError'));
       }
     } catch (err) {
-      notifyError(err instanceof Error ? err.message : tUnits('inlineCreate.createError'));
+      notifyError(translatePropertyMutationError(
+        err,
+        tUnits,
+        'inlineCreate.createError',
+        'The property could not be created.',
+      ));
     } finally {
       setCreating(false);
     }

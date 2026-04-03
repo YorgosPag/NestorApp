@@ -13,6 +13,7 @@ import type { Building } from '@/types/building/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { createStorageWithPolicy, deleteStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
@@ -184,7 +185,7 @@ export function useStorageTabState(building: Building) {
     setCreating(true);
     try {
       const storageName = createCode.trim() || `${t('storageView.autoNamePrefix')}-${Date.now().toString(36).toUpperCase()}`;
-      await apiClient.post<StorageCreateResult>(API_ROUTES.STORAGES.LIST, {
+      await createStorageWithPolicy<StorageCreateResult>({ payload: {
         name: storageName,
         buildingId: building.id,
         projectId: building.projectId || null,
@@ -195,7 +196,7 @@ export function useStorageTabState(building: Building) {
         price: createPrice ? parseFloat(createPrice) : null,
         description: createDescription.trim() || null,
         building: building.name,
-      });
+      }});
       success(t('storageNotifications.created'));
       resetCreateForm();
       await fetchStorageUnits();
@@ -226,14 +227,14 @@ export function useStorageTabState(building: Building) {
     if (!editingId) return;
     setSaving(true);
     try {
-      await apiClient.patch<StorageMutationResult>(API_ROUTES.STORAGES.BY_ID(editingId), {
+      await updateStorageWithPolicy<StorageMutationResult>({ storageId: editingId, payload: {
         name: editCode.trim() || undefined,
         type: editType,
         status: editStatus,
         floor: editFloor.trim() || null,
         area: editArea ? parseFloat(editArea) : null,
         price: editPrice ? parseFloat(editPrice) : null,
-      });
+      }});
       success(t('storageNotifications.updated'));
       setEditingId(null);
       await fetchStorageUnits();
@@ -258,7 +259,7 @@ export function useStorageTabState(building: Building) {
     setConfirmLoading(true);
     setDeletingId(confirmDelete.id);
     try {
-      await apiClient.delete(API_ROUTES.STORAGES.BY_ID(confirmDelete.id));
+      await deleteStorageWithPolicy({ storageId: confirmDelete.id });
       success(t('storageNotifications.deleted'));
       await fetchStorageUnits();
     } catch (err) {
@@ -281,10 +282,10 @@ export function useStorageTabState(building: Building) {
     setUnlinkLoading(true);
     setUnlinkingId(confirmUnlink.id);
     try {
-      const result = await apiClient.patch<StorageMutationResult>(
-        API_ROUTES.STORAGES.BY_ID(confirmUnlink.id),
-        { buildingId: null },
-      );
+      const result = await updateStorageWithPolicy<StorageMutationResult>({
+        storageId: confirmUnlink.id,
+        payload: { buildingId: null },
+      });
       if (result?.id) {
         RealtimeService.dispatch('STORAGE_UPDATED', {
           storageId: confirmUnlink.id,
@@ -320,7 +321,10 @@ export function useStorageTabState(building: Building) {
   }, [translatedGetTypeLabel]);
 
   const handleLinkStorage = useCallback(async (itemId: string) => {
-    await apiClient.patch(API_ROUTES.STORAGES.BY_ID(itemId), { buildingId: building.id });
+    await updateStorageWithPolicy({
+      storageId: itemId,
+      payload: { buildingId: building.id },
+    });
     success(t('storageNotifications.linked'));
     await fetchStorageUnits();
   }, [building.id, fetchStorageUnits, success, t]);

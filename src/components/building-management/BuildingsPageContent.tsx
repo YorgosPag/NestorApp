@@ -29,7 +29,7 @@ import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { deleteBuilding } from './building-services';
+import { deleteBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 // [ENTERPRISE] i18n - Full internationalization support
@@ -145,7 +145,7 @@ export function BuildingsPageContent() {
   const handleConfirmDelete = useCallback(async () => {
     if (!buildingToDelete) return;
     setIsDeleting(true);
-    const result = await deleteBuilding(buildingToDelete.id);
+    const result = await deleteBuildingWithPolicy({ buildingId: buildingToDelete.id });
     if (result.success) {
       logger.info('Building deleted', { buildingId: buildingToDelete.id });
       setSelectedBuilding(null);
