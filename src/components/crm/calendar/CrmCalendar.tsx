@@ -41,7 +41,7 @@ import { CalendarEventDialog } from './CalendarEventDialog';
 import { CalendarCreateDialog } from './CalendarCreateDialog';
 import { CalendarEventTooltip } from './CalendarEventTooltip';
 import { useCalendarKeyboardShortcuts } from './useCalendarKeyboardShortcuts';
-import { updateTask } from '@/services/tasks.service';
+import { updateTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import { TaskEditDialog } from '@/components/crm/dashboard/dialogs/TaskEditDialog';
 import type { CrmTask } from '@/types/crm';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -301,11 +301,14 @@ export function CrmCalendar({
       try {
         const newStart = start instanceof Date ? start : new Date(start);
         const newEnd = end instanceof Date ? end : new Date(end);
-        await updateTask(event.entityId, {
-          dueDate: newStart.toISOString(),
-          ...(event.allDay || newStart.toDateString() !== newEnd.toDateString()
-            ? { endDate: newEnd.toISOString() }
-            : {}),
+        await updateTaskWithPolicy({
+          taskId: event.entityId,
+          updates: {
+            dueDate: newStart.toISOString(),
+            ...(event.allDay || newStart.toDateString() !== newEnd.toDateString()
+              ? { endDate: newEnd.toISOString() }
+              : {}),
+          },
         });
         notifySuccess(t('calendarPage.dragDrop.moved'));
         onEventUpdated?.();
@@ -326,9 +329,12 @@ export function CrmCalendar({
       try {
         const newStart = start instanceof Date ? start : new Date(start);
         const newEnd = end instanceof Date ? end : new Date(end);
-        await updateTask(event.entityId, {
-          dueDate: newStart.toISOString(),
-          endDate: newEnd.toISOString(),
+        await updateTaskWithPolicy({
+          taskId: event.entityId,
+          updates: {
+            dueDate: newStart.toISOString(),
+            endDate: newEnd.toISOString(),
+          },
         });
         notifySuccess(t('calendarPage.dragDrop.resized'));
         onEventUpdated?.();

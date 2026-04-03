@@ -10,7 +10,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getOpportunities, deleteOpportunity } from "@/services/opportunities.service";
+import { getOpportunities } from "@/services/opportunities.service";
+import { deleteOpportunityWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { Opportunity } from "@/types/crm";
 import { createModuleLogger } from '@/lib/telemetry';
@@ -58,7 +59,7 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
     });
     if (!confirmDelete) return;
     try {
-      await deleteOpportunity(leadId);
+      await deleteOpportunityWithPolicy({ opportunityId: leadId });
       success(t("leads.status.deleteSuccess", { name: leadName }));
       await fetchLeads();
     } catch (err) {

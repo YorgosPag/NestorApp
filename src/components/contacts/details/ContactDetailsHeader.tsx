@@ -16,7 +16,6 @@ import type {
 import type { ContactStatus } from '@/core/types/BadgeTypes';
 import { isNonEmptyString } from '@/lib/type-guards';
 import { getContactDisplayName, getContactInitials, isIndividualContact, isCompanyContact, isServiceContact } from '@/types/contacts';
-import { ContactsService } from '@/services/contacts.service';
 import { CONTACT_TYPES, getContactIcon } from '@/constants/contacts';
 
 const logger = createModuleLogger('ContactDetailsHeader');
@@ -25,7 +24,6 @@ interface ContactDetailsHeaderProps {
   contact: Contact;
   onEditContact?: () => void;
   onDeleteContact?: () => void;
-  onContactUpdate?: (updatedContact: Partial<Contact>) => void;
   onNewContact?: () => void;
   // 🎯 NEW: Edit mode props για κουμπιά στην επικεφαλίδα
   isEditing?: boolean;
@@ -39,7 +37,6 @@ interface ContactDetailsHeaderProps {
 export function ContactDetailsHeader({
   contact,
   onDeleteContact,
-  onContactUpdate,
   onNewContact,
   isEditing,
   onStartEdit,
@@ -176,26 +173,6 @@ export function ContactDetailsHeader({
   };
 
   // 🎯 INLINE EDITING: Handle name updates
-  const _handleNameUpdate = async (newName: string) => {
-    if (!newName.trim() || !contact.id) return; // Don't save empty names or without ID
-
-    try {
-      // Determine which field to update based on contact type
-      const updateField = type === CONTACT_TYPES.INDIVIDUAL ? 'firstName' : 'companyName';
-      const updates = { [updateField]: newName.trim() };
-
-      await ContactsService.updateContact(contact.id, updates);
-
-      // Optional: notify parent component
-      onContactUpdate?.(updates);
-
-      logger.info('Contact name updated successfully', { updateField, newName: newName.trim() });
-    } catch (error) {
-      logger.error('Failed to update contact name', { error });
-      // TODO: Show error toast/notification
-    }
-  };
-
   return (
     <>
       {/* 🖥️ DESKTOP: Show full header with actions */}

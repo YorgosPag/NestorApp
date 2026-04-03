@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
+import { deleteRelationshipWithPolicy } from '@/services/contact-relationships/relationship-mutation-gateway';
 import type { UseRelationshipListReturn } from '../types/relationship-manager.types';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('useRelationshipListOptimized');
@@ -207,7 +208,7 @@ export const useRelationshipListOptimized = (
       setError(null);
 
       logger.info('Deleting relationship:', { data: relationshipId });
-      await ContactRelationshipService.deleteRelationship(relationshipId, 'user');
+      await deleteRelationshipWithPolicy({ relationshipId });
 
       // Invalidate cache για this contact
       RequestDeduplicator.invalidate(contactId);

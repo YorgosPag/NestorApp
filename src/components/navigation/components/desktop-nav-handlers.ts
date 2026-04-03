@@ -5,7 +5,11 @@
  * item connection) are centralised here so the main component stays lean.
  */
 
-import { EntityLinkingService, ENTITY_LINKING_CONFIG } from '@/services/entity-linking';
+import { ENTITY_LINKING_CONFIG } from '@/services/entity-linking';
+import {
+  linkBuildingToProjectWithPolicy,
+  unlinkEntityWithPolicy,
+} from '@/services/entity-linking/entity-linking-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { NavigationBuilding } from '@/components/navigation/core/types';
 
@@ -103,9 +107,11 @@ export async function executeEntityUnlink(deps: UnlinkDeps): Promise<void> {
   const { pending, entityType, clearSelection, warning, t, dialogKey, nameParam } = deps;
 
   try {
-    const result = await EntityLinkingService.unlinkEntity({
-      entityId: pending.id,
-      entityType,
+    const result = await unlinkEntityWithPolicy({
+      params: {
+        entityId: pending.id,
+        entityType,
+      },
     });
 
     if (result.success) {
@@ -135,7 +141,10 @@ interface BuildingConnectionDeps {
 export async function executeBuildingConnection(deps: BuildingConnectionDeps): Promise<void> {
   const { building, selectedProjectId, selectedProjectName, warning, closeModal } = deps;
 
-  const result = await EntityLinkingService.linkBuildingToProject(building.id, selectedProjectId);
+  const result = await linkBuildingToProjectWithPolicy({
+    buildingId: building.id,
+    projectId: selectedProjectId,
+  });
 
   if (result.success) {
     closeModal();

@@ -16,10 +16,6 @@ import type { ContactType } from '@/types/contacts';
 import { User, Building2, Landmark } from 'lucide-react';
 import type { AddNewContactDialogProps } from '@/types/ContactFormTypes';
 import { useContactForm } from '@/hooks/useContactForm';
-import { NameChangeCascadeDialog } from './NameChangeCascadeDialog';
-import { AddressImpactDialog } from './AddressImpactDialog';
-import { CompanyIdentityImpactDialog } from './CompanyIdentityImpactDialog';
-import { CommunicationImpactDialog } from './CommunicationImpactDialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
@@ -61,19 +57,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection,
     handleFieldBlur,
-    nameCascadeDialog,
-    confirmNameCascade,
-    cancelNameCascade,
-    addressImpactDialog,
-    confirmAddressImpact,
-    cancelAddressImpact,
-    companyIdentityDialog,
-    confirmCompanyIdentity,
-    cancelCompanyIdentity,
-    communicationImpactDialog,
-    confirmCommunicationImpact,
-    cancelCommunicationImpact,
-    individualIdentityImpactDialog,
+    guardDialogs,
   } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open, onLiveChange });
 
   // 🔧 TypeScript safety με fallback
@@ -247,63 +231,10 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
           </DialogFooter>
         </form>
       </DialogContent>
-
-      {/* 🔗 Name cascade confirmation dialog (ADR-249 Safety) */}
-      {nameCascadeDialog && (
-        <NameChangeCascadeDialog
-          open={!!nameCascadeDialog}
-          onOpenChange={(open) => { if (!open) cancelNameCascade(); }}
-          oldName={nameCascadeDialog.oldName}
-          newName={nameCascadeDialog.newName}
-          properties={nameCascadeDialog.properties}
-          paymentPlans={nameCascadeDialog.paymentPlans}
-          onConfirm={confirmNameCascade}
-        />
-      )}
-
-      {/* 📍 Address impact confirmation dialog (ADR-277 Safety) */}
-      {addressImpactDialog && (
-        <AddressImpactDialog
-          open={!!addressImpactDialog}
-          onOpenChange={(open) => { if (!open) cancelAddressImpact(); }}
-          addressLabel={addressImpactDialog.addressLabel}
-          properties={addressImpactDialog.properties}
-          paymentPlans={addressImpactDialog.paymentPlans}
-          invoices={addressImpactDialog.invoices}
-          apyCertificates={addressImpactDialog.apyCertificates}
-          onConfirm={confirmAddressImpact}
-        />
-      )}
-
-      {/* 🏢 Company identity impact confirmation dialog (ADR-278 Safety) */}
-      {companyIdentityDialog && (
-        <CompanyIdentityImpactDialog
-          open={!!companyIdentityDialog}
-          onOpenChange={(open) => { if (!open) cancelCompanyIdentity(); }}
-          changes={companyIdentityDialog.changes}
-          projects={companyIdentityDialog.projects}
-          properties={companyIdentityDialog.properties}
-          obligations={companyIdentityDialog.obligations}
-          invoices={companyIdentityDialog.invoices}
-          apyCertificates={companyIdentityDialog.apyCertificates}
-          onConfirm={confirmCompanyIdentity}
-        />
-      )}
-
-      {/* 📧 Communication impact confirmation dialog (ADR-280 Safety) */}
-      {communicationImpactDialog && (
-        <CommunicationImpactDialog
-          open={!!communicationImpactDialog}
-          onOpenChange={(open) => { if (!open) cancelCommunicationImpact(); }}
-          changes={communicationImpactDialog.changes}
-          properties={communicationImpactDialog.properties}
-          paymentPlans={communicationImpactDialog.paymentPlans}
-          projects={communicationImpactDialog.projects}
-          invoices={communicationImpactDialog.invoices}
-          apyCertificates={communicationImpactDialog.apyCertificates}
-          onConfirm={confirmCommunicationImpact}
-        />
-      )}
+      {guardDialogs}
     </Dialog>
   );
 }
+
+
+

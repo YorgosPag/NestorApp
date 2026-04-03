@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { createFloorWithPolicy, deleteFloorWithPolicy, updateFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { toast } from 'sonner';
@@ -207,13 +208,13 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     }
     setCreating(true);
     try {
-      await apiClient.post<FloorMutationResponse>(API_ROUTES.FLOORS.LIST, {
+      await createFloorWithPolicy<FloorMutationResponse>({ payload: {
         number: parseInt(createNumber, 10) || 0,
         name: createName.trim(),
         elevation: createElevation ? parseFloat(createElevation) : null,
         buildingId,
         ...(projectId ? { projectId } : {}),
-      });
+      }});
       setShowCreateForm(false);
       setCreateNumber('0');
       setCreateName('');
@@ -258,7 +259,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
         elevation: editElevation ? parseFloat(editElevation) : null,
       };
       if (editVersion !== undefined) payload._v = editVersion;
-      const result = await apiClient.patch<FloorMutationResponse>(API_ROUTES.FLOORS.LIST, payload);
+      const result = await updateFloorWithPolicy<FloorMutationResponse>({ payload });
       if (result?.success) {
         setEditingId(null);
         toast.success(t('tabs.floors.editSuccess'));
@@ -299,9 +300,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
 
     setDeletingId(floor.id);
     try {
-      const result = await apiClient.delete<FloorMutationResponse>(
-        `${API_ROUTES.FLOORS.LIST}?floorId=${floor.id}`
-      );
+      const result = await deleteFloorWithPolicy<FloorMutationResponse>({ floorId: floor.id });
       if (result?.success) {
         toast.success(t('tabs.floors.deleteSuccess'));
         await fetchFloors();

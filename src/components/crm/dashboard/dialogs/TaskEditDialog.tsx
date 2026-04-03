@@ -49,7 +49,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 
-import { updateTask } from '@/services/tasks.service';
+import { updateTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import type { CrmTask } from '@/types/crm';
 import '@/lib/design-system';
 
@@ -155,13 +155,16 @@ export function TaskEditDialog({
       const dueDate = new Date(date);
       dueDate.setHours(hours, minutes, 0, 0);
 
-      await updateTask(task.id, {
-        title: title.trim(),
-        type,
-        status,
-        priority,
-        dueDate: dueDate.toISOString(),
-        description: description.trim() || null,
+      await updateTaskWithPolicy({
+        taskId: task.id,
+        updates: {
+          title: title.trim(),
+          type,
+          status,
+          priority,
+          dueDate: dueDate.toISOString(),
+          description: description.trim() || null,
+        },
       });
 
       success(t('tasks.messages.updated', { title: title.trim() }));

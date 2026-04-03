@@ -23,7 +23,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, TriangleAlert } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -45,6 +45,8 @@ interface CompanyIdentityImpactDialogProps {
   invoices: number;
   apyCertificates: number;
   onConfirm: () => void;
+  mode?: 'warn' | 'block';
+  message?: string;
 }
 
 // ============================================================================
@@ -77,6 +79,8 @@ export function CompanyIdentityImpactDialog({
   invoices,
   apyCertificates,
   onConfirm,
+  mode = 'warn',
+  message,
 }: CompanyIdentityImpactDialogProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -90,18 +94,22 @@ export function CompanyIdentityImpactDialog({
 
   const totalLive = projects + properties + obligations;
   const hasSnapshots = invoices > 0 || apyCertificates > 0;
+  const isBlocked = mode == 'block';
+  const Icon = isBlocked ? ShieldAlert : TriangleAlert;
+  const title = isBlocked ? ci('unavailableTitle') : ci('title');
+  const body = message ?? ci(isBlocked ? 'unavailableBody' : 'body');
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-            <ShieldAlert className={iconSizes.md} />
-            {ci('title')}
+          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-amber-600 dark:text-amber-400')}>
+            <Icon className={iconSizes.md} />
+            {title}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <section className="space-y-3">
-              <p>{ci('body')}</p>
+              <p>{body}</p>
 
               {/* Changed fields summary */}
               <article className="space-y-1.5">
@@ -182,21 +190,29 @@ export function CompanyIdentityImpactDialog({
                 </article>
               )}
 
-              <p className="text-sm text-amber-600 dark:text-amber-400">
-                {ci('warningLive', { count: totalLive })}
-              </p>
+              {!isBlocked && (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  {ci('warningLive', { count: totalLive })}
+                </p>
+              )}
             </section>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
           <AlertDialogCancel>{ci('cancel')}</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-          >
-            {ci('confirm')}
-          </AlertDialogAction>
+          {isBlocked ? (
+            <AlertDialogAction>
+              {ci('understood')}
+            </AlertDialogAction>
+          ) : (
+            <AlertDialogAction
+              onClick={onConfirm}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {ci('confirm')}
+            </AlertDialogAction>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -12,7 +12,11 @@
 'use client';
 
 import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
-import { ContactsService } from '@/services/contacts.service';
+import {
+  deleteContactWithPolicy,
+  deleteMultipleContactsWithPolicy,
+  restoreMultipleDeletedContactsWithPolicy,
+} from '@/services/contact-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from 'react-i18next';
 import type { Contact } from '@/types/contacts';
@@ -49,9 +53,9 @@ export function DeleteContactDialog(props: DeleteContactDialogProps) {
         if (ids.length === 0) return;
 
         if (ids.length === 1) {
-          await ContactsService.deleteContact(ids[0]);
+          await deleteContactWithPolicy({ id: ids[0] });
         } else {
-          await ContactsService.deleteMultipleContacts(ids);
+          await deleteMultipleContactsWithPolicy({ ids });
         }
 
         props.onContactsDeleted?.();
@@ -69,7 +73,7 @@ export function DeleteContactDialog(props: DeleteContactDialogProps) {
               label: t('trash.undo'),
               onClick: async () => {
                 try {
-                  await ContactsService.restoreMultipleDeletedContacts(ids);
+                  await restoreMultipleDeletedContactsWithPolicy({ ids });
                   notify(t('trash.undoSuccess'), { type: 'info', duration: 2000 });
                   props.onContactsDeleted?.(); // refresh list
                 } catch {

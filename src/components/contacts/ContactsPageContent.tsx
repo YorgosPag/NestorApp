@@ -22,7 +22,7 @@ import { contactFiltersConfig, AdvancedFiltersPanel } from '@/components/core/Ad
 import { ListContainer, PageContainer } from '@/core/containers';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { ContactsService } from '@/services/contacts.service';
+import { toggleContactFavoriteWithPolicy } from '@/services/contact-mutation-gateway';
 import { useContactsPageState } from './page/useContactsPageState';
 
 const DeleteContactDialog = dynamic(
@@ -285,7 +285,10 @@ export function ContactsPageContent() {
                   isFavorite={contact.isFavorite}
                   onSelect={() => setSelectedContact(toggleSelect(selectedContact, contact))}
                   onToggleFavorite={async () => {
-                    await ContactsService.updateContact(contact.id!, { isFavorite: !contact.isFavorite });
+                    await toggleContactFavoriteWithPolicy({
+                      contactId: contact.id!,
+                      currentStatus: contact.isFavorite || false,
+                    });
                     refreshContacts();
                   }}
                 />

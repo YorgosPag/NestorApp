@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { ContactsService } from '@/services/contacts.service';
+import { restoreMultipleDeletedContactsWithPolicy } from '@/services/contact-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 
 interface TrashActionsBarProps {
@@ -42,7 +42,7 @@ export function TrashActionsBar({
   const handleRestoreSelected = async () => {
     if (selectedIds.length === 0) return;
     try {
-      await ContactsService.restoreMultipleDeletedContacts(selectedIds);
+      await restoreMultipleDeletedContactsWithPolicy({ ids: selectedIds });
       notify(t('trash.restoreSuccess', { count: selectedIds.length }), { type: 'success' });
       onRefresh();
     } catch {

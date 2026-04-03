@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
+import { deleteRelationshipWithPolicy } from '@/services/contact-relationships/relationship-mutation-gateway';
 import type { UseRelationshipListReturn } from '../types/relationship-manager.types';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('useRelationshipList');
@@ -77,7 +78,7 @@ export const useRelationshipList = (
       setError(null);
 
       logger.info('Deleting relationship:', { data: relationshipId });
-      await ContactRelationshipService.deleteRelationship(relationshipId, 'user');
+      await deleteRelationshipWithPolicy({ relationshipId });
 
       // Remove from local state immediately for better UX
       setRelationships(prev => {

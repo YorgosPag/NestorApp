@@ -8,11 +8,11 @@
  */
 
 import { useState, useCallback } from 'react';
-import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
+import type { ReactNode } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property, PropertyType } from '@/types/property';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 
 interface UsePropertyInlineEditReturn {
   editingId: string | null;
@@ -30,6 +30,7 @@ interface UsePropertyInlineEditReturn {
   startEdit: (property: Property) => void;
   cancelEdit: () => void;
   handleSaveEdit: () => Promise<void>;
+  ImpactDialog: ReactNode;
 }
 
 export function usePropertyInlineEdit(onSaved: () => Promise<void>): UsePropertyInlineEditReturn {
@@ -43,9 +44,14 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
   const [editArea, setEditArea] = useState('');
   const [editStatus, setEditStatus] = useState('for-sale');
   const [editVersion, setEditVersion] = useState<number | undefined>(undefined);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [saving, setSaving] = useState(false);
+  const { runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(
+    editingProperty ? { id: editingProperty.id } : null,
+  );
 
   const startEdit = useCallback((property: Property) => {
+    setEditingProperty(property);
     setEditingId(property.id);
     setEditName(property.name || '');
     setEditType(property.type || 'apartment');
@@ -57,6 +63,7 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
 
   const cancelEdit = useCallback(() => {
     setEditingId(null);
+    setEditingProperty(null);
   }, []);
 
   const handleSaveEdit = useCallback(async () => {
@@ -72,26 +79,43 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
       };
       if (editVersion !== undefined) payload._v = editVersion;
 
-      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(editingId), payload);
-      success(t('inlineEdit.updated'));
-      setEditingId(null);
-      await onSaved();
-    } catch (err) {
-      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        notifyError(t('inlineEdit.versionConflict'));
-        setEditingId(null);
-        await onSaved();
+      if (!editingProperty) {
+        throw new Error(t('inlineEdit.updateError'));
+      }
+
+      const completed = await runExistingPropertyUpdate(editingProperty, payload);
+      if (!completed) {
         return;
       }
+
+      success(t('inlineEdit.updated'));
+      setEditingId(null);
+      setEditingProperty(null);
+      await onSaved();
+    } catch (err) {
       notifyError(err instanceof Error ? err.message : t('inlineEdit.updateError'));
     } finally {
       setSaving(false);
     }
-  }, [editingId, editName, editType, editFloor, editArea, editStatus, editVersion, onSaved]);
+  }, [
+    editArea,
+    editFloor,
+    editName,
+    editStatus,
+    editType,
+    editVersion,
+    editingId,
+    editingProperty,
+    notifyError,
+    onSaved,
+    runExistingPropertyUpdate,
+    t,
+  ]);
 
   return {
     editingId, editName, editType, editFloor, editArea, editStatus, saving,
     setEditName, setEditType, setEditFloor, setEditArea, setEditStatus,
     startEdit, cancelEdit, handleSaveEdit,
+    ImpactDialog,
   };
 }

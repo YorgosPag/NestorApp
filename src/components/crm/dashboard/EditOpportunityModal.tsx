@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { updateOpportunity } from '@/services/opportunities.service';
+import { updateOpportunityWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import {
@@ -77,7 +77,10 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
     setLoading(true);
 
     try {
-      await updateOpportunity(opportunity.id, formData);
+      await updateOpportunityWithPolicy({
+        opportunityId: opportunity.id,
+        updates: formData,
+      });
       notifications.success(t('opportunities.editModal.messages.success'));
       onLeadUpdated();
       handleClose();

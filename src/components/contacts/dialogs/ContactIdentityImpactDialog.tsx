@@ -16,6 +16,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impact';
 import type { IndividualIdentityFieldCategory } from '@/utils/contactForm/individual-identity-guard';
+import type { ServiceIdentityFieldCategory } from '@/utils/contactForm/service-identity-guard';
 
 interface ContactIdentityImpactDialogProps {
   open: boolean;
@@ -24,7 +25,7 @@ interface ContactIdentityImpactDialogProps {
   onConfirm: () => void;
 }
 
-function getCategoryClassName(category: IndividualIdentityFieldCategory): string {
+function getCategoryClassName(category: IndividualIdentityFieldCategory | ServiceIdentityFieldCategory): string {
   switch (category) {
     case 'display':
       return 'bg-muted text-muted-foreground';
@@ -32,6 +33,8 @@ function getCategoryClassName(category: IndividualIdentityFieldCategory): string
       return 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300';
     case 'regulated':
       return 'bg-destructive/10 text-destructive';
+    case 'administrative':
+      return 'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300';
   }
 }
 

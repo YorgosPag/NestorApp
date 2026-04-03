@@ -18,6 +18,10 @@ import type { ContactType, PhoneInfo, EmailInfo } from '@/types/contacts';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
 import { RelationshipValidationService } from '@/services/contact-relationships/core/RelationshipValidationService';
+import {
+  createRelationshipWithPolicy,
+  updateRelationshipWithPolicy,
+} from '@/services/contact-relationships/relationship-mutation-gateway';
 import type {
   RelationshipFormData,
   UseRelationshipFormReturn
@@ -279,9 +283,14 @@ export const useRelationshipForm = (
 
       // Create or update relationship
       if (editingId) {
-        await ContactRelationshipService.updateRelationship(editingId, relationshipData);
+        await updateRelationshipWithPolicy({
+          relationshipId: editingId,
+          updates: relationshipData,
+        });
       } else {
-        await ContactRelationshipService.createRelationship(relationshipData);
+        await createRelationshipWithPolicy({
+          data: relationshipData,
+        });
       }
 
       // Reset form state

@@ -157,7 +157,7 @@ const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
   buildings: 'actions.newBuilding',
   projects: 'actions.newProject',
   contacts: 'actions.newContact',
-  properties: 'actions.newUnit',
+  properties: 'actions.newProperty',
   storages: 'actions.newStorage',
   parking: 'actions.newParking',
   communications: 'actions.newMessage'
@@ -169,7 +169,7 @@ const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'tooltips.newBuildingShortcut',
   projects: 'tooltips.newProjectShortcut',
   contacts: 'tooltips.newContactShortcut',
-  properties: 'tooltips.newUnitShortcut',
+  properties: 'tooltips.newPropertyShortcut',
   storages: 'tooltips.newStorageShortcut',
   parking: 'tooltips.newParkingShortcut',
   communications: 'tooltips.newMessageShortcut'
@@ -179,7 +179,7 @@ const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'toolbar.actions.buildings.edit',
   projects: 'toolbar.actions.projects.edit',
   contacts: 'tooltips.editContact',
-  properties: 'toolbar.actions.units.edit',
+  properties: 'toolbar.actions.properties.edit',
   storages: 'toolbar.actions.storage.edit',
   parking: 'tooltips.editSelected',
   communications: 'tooltips.editSelected'
@@ -189,7 +189,7 @@ const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'toolbar.actions.buildings.delete',
   projects: 'toolbar.actions.projects.delete',
   contacts: 'tooltips.deleteContact',
-  properties: 'toolbar.actions.units.delete',
+  properties: 'toolbar.actions.properties.delete',
   storages: 'toolbar.actions.storage.delete',
   parking: 'tooltips.deleteSelected',
   communications: 'tooltips.deleteSelected'
@@ -199,7 +199,7 @@ const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'tooltips.shareBuilding',
   projects: 'tooltips.shareProject',
   contacts: 'tooltips.shareContact',
-  properties: 'tooltips.shareUnit',
+  properties: 'tooltips.shareProperty',
   storages: 'tooltips.shareStorage',
   parking: 'toolbar.labels.share',
   communications: 'toolbar.labels.share'

@@ -33,6 +33,10 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FileRecordService } from '@/services/file-record.service';
+import {
+  moveFileToTrashWithPolicy,
+  restoreFileFromTrashWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { isFileRecord } from '@/types/file-record';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -270,7 +274,7 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
     try {
       logger.info('Moving file to trash', { fileId, trashedBy });
 
-      await FileRecordService.moveToTrash(fileId, trashedBy);
+      await moveFileToTrashWithPolicy(fileId, trashedBy);
 
       // Optimistic: move from active to trashed in local state
       // Note: onSnapshot will also update `files` automatically
@@ -297,7 +301,7 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
     try {
       logger.info('Restoring file from trash', { fileId, restoredBy });
 
-      await FileRecordService.restoreFromTrash(fileId, restoredBy);
+      await restoreFileFromTrashWithPolicy(fileId, restoredBy);
 
       // Optimistic: move from trashed to active in local state
       // Note: onSnapshot will also update `files` automatically

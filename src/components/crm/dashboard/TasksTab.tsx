@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { completeTask, deleteTask } from '@/services/tasks.service';
+import { completeTaskWithPolicy, deleteTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
 // 🏢 ENTERPRISE: Use CLIENT service - Server Action has NO auth context!
 import { getOpportunitiesClient as getOpportunities } from '@/services/opportunities-client.service';
 // 🏢 ENTERPRISE: Real-time tasks (ADR-227 Phase 1)
@@ -199,7 +199,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   const handleCompleteTask = useCallback(async (taskId?: string, taskTitle?: string) => {
     if (!taskId || !taskTitle) return;
     try {
-      await completeTask(taskId);
+      await completeTaskWithPolicy({ taskId });
       success(t('tasks.messages.completed', { title: taskTitle }));
       // Real-time subscription auto-updates — no manual refetch needed
     } catch {
@@ -216,7 +216,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
     });
     if (confirmed) {
       try {
-        await deleteTask(taskId);
+        await deleteTaskWithPolicy({ taskId });
         success(t('tasks.messages.deleted', { title: taskTitle }));
         // Real-time subscription auto-updates — no manual refetch needed
       } catch {

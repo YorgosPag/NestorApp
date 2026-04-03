@@ -13,6 +13,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { createParkingWithPolicy, deleteParkingWithPolicy, updateParkingWithPolicy } from '@/services/parking-mutation-gateway';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { Car, CheckCircle, Euro, Ruler } from 'lucide-react';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -144,7 +145,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     if (!createNumber.trim()) return;
     setCreating(true);
     try {
-      const result = await apiClient.post<ParkingCreateResult>(API_ROUTES.PARKING.LIST, {
+      const result = await createParkingWithPolicy<ParkingCreateResult>({ payload: {
         number: createNumber.trim(),
         type: createType,
         status: createStatus,
@@ -156,7 +157,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
         locationZone: createLocationZone || undefined,
         buildingId,
         projectId,
-      });
+      }});
       if (result?.parkingSpotId) {
         RealtimeService.dispatch('PARKING_CREATED', {
           parkingSpotId: result.parkingSpotId,
@@ -204,17 +205,17 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     if (!editingId || !editNumber.trim()) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<ParkingMutationResult>(
-        API_ROUTES.PARKING.BY_ID(editingId),
-        {
+      const result = await updateParkingWithPolicy<ParkingMutationResult>({
+        parkingSpotId: editingId,
+        payload: {
           number: editNumber.trim(),
           type: editType,
           status: editStatus,
           floor: editFloor.trim() || undefined,
           area: editArea ? parseFloat(editArea) : undefined,
           price: editPrice ? parseFloat(editPrice) : undefined,
-        }
-      );
+        },
+      });
       if (result?.id) {
         RealtimeService.dispatch('PARKING_UPDATED', {
           parkingSpotId: editingId,
@@ -261,9 +262,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     try {
       if (type === 'delete') {
         setDeletingId(item.id);
-        const result = await apiClient.delete<ParkingMutationResult>(
-          API_ROUTES.PARKING.BY_ID(item.id)
-        );
+        const result = await deleteParkingWithPolicy<ParkingMutationResult>({ parkingSpotId: item.id });
         if (result?.id) {
           RealtimeService.dispatch('PARKING_DELETED', {
             parkingSpotId: item.id,
@@ -272,10 +271,10 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
         }
       } else {
         setUnlinkingId(item.id);
-        const result = await apiClient.patch<ParkingMutationResult>(
-          API_ROUTES.PARKING.BY_ID(item.id),
-          { buildingId: null }
-        );
+        const result = await updateParkingWithPolicy<ParkingMutationResult>({
+          parkingSpotId: item.id,
+          payload: { buildingId: null },
+        });
         if (result?.id) {
           RealtimeService.dispatch('PARKING_UPDATED', {
             parkingSpotId: item.id,
@@ -312,8 +311,9 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   }, [t]);
 
   const handleLinkParking = useCallback(async (itemId: string) => {
-    await apiClient.patch<ParkingMutationResult>(API_ROUTES.PARKING.BY_ID(itemId), {
-      buildingId,
+    await updateParkingWithPolicy<ParkingMutationResult>({
+      parkingSpotId: itemId,
+      payload: { buildingId },
     });
     RealtimeService.dispatch('PARKING_UPDATED', {
       parkingSpotId: itemId,

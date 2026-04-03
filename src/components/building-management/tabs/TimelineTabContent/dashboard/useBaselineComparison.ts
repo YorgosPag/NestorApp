@@ -14,9 +14,11 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   getConstructionBaselines,
   getConstructionBaselineDetail,
-  createConstructionBaseline,
-  deleteConstructionBaseline,
 } from '@/components/building-management/construction-services';
+import {
+  createConstructionBaselineWithPolicy,
+  deleteConstructionBaselineWithPolicy,
+} from '@/services/construction-mutation-gateway';
 import type {
   ConstructionBaseline,
   ConstructionBaselineSummary,
@@ -98,7 +100,7 @@ export function useBaselineComparison(buildingId: string): UseBaselineComparison
   }, []);
 
   const saveBaseline = useCallback(async (payload: ConstructionBaselineCreatePayload) => {
-    const result = await createConstructionBaseline(buildingId, payload);
+    const result = await createConstructionBaselineWithPolicy({ buildingId, payload });
     if (result.success) {
       await fetchList();
     }
@@ -106,7 +108,7 @@ export function useBaselineComparison(buildingId: string): UseBaselineComparison
   }, [buildingId, fetchList]);
 
   const removeBaseline = useCallback(async (baselineId: string) => {
-    const result = await deleteConstructionBaseline(buildingId, baselineId);
+    const result = await deleteConstructionBaselineWithPolicy({ buildingId, baselineId });
     if (result.success) {
       if (selectedBaselineId === baselineId) {
         clearComparison();

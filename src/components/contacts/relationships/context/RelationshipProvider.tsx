@@ -6,6 +6,10 @@ import type { ContactType } from '@/types/contacts';
 import { RequestDeduplicator } from '../hooks/useRelationshipListOptimized';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
+import {
+  deleteRelationshipWithPolicy,
+  terminateRelationshipWithPolicy,
+} from '@/services/contact-relationships/relationship-mutation-gateway';
 import type { RelationshipCreatedPayload, RelationshipUpdatedPayload, RelationshipDeletedPayload } from '@/services/realtime';
 
 const logger = createModuleLogger('RelationshipProvider');
@@ -92,9 +96,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       setError(null);
 
       logger.info('PROVIDER: Terminating relationship:', { data: relationshipId });
-
-      const { ContactRelationshipService } = await import('@/services/contact-relationships/ContactRelationshipService');
-      await ContactRelationshipService.terminateRelationship(relationshipId, 'user');
+      await terminateRelationshipWithPolicy({ relationshipId });
 
       RequestDeduplicator.invalidate(contactId);
       await loadRelationships(true);
@@ -116,9 +118,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       setError(null);
 
       logger.info('PROVIDER: Deleting relationship:', { data: relationshipId });
-
-      const { ContactRelationshipService } = await import('@/services/contact-relationships/ContactRelationshipService');
-      await ContactRelationshipService.deleteRelationship(relationshipId, 'user');
+      await deleteRelationshipWithPolicy({ relationshipId });
 
       RequestDeduplicator.invalidate(contactId);
 

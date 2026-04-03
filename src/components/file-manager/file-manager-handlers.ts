@@ -14,6 +14,13 @@ import { useCallback } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { FileRecordService } from '@/services/file-record.service';
+import {
+  createPendingFileRecordWithPolicy,
+  finalizeFileRecordWithPolicy,
+  moveFileToTrashWithPolicy,
+  renameFileWithPolicy,
+  updateFileDescriptionWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { getFileExtension } from '@/services/upload/utils/storage-path';
 import { generateUploadThumbnail, buildThumbnailPath } from '@/components/shared/files/utils/generate-upload-thumbnail';
 import { isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
@@ -63,7 +70,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
   const handleRename = useCallback(async (fileId: string, newDisplayName: string) => {
     if (!user?.uid) return;
     try {
-      await FileRecordService.renameFile(fileId, newDisplayName, user.uid);
+      await renameFileWithPolicy(fileId, newDisplayName, user.uid);
       refetch();
     } catch (err) {
       logger.error('Rename failed', { fileId, error: err });
@@ -72,7 +79,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
 
   const handleDescriptionUpdate = useCallback(async (fileId: string, description: string) => {
     try {
-      await FileRecordService.updateDescription(fileId, description);
+      await updateFileDescriptionWithPolicy(fileId, description);
       refetch();
     } catch (err) {
       logger.error('Description update failed', { fileId, error: err });
@@ -83,7 +90,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
   const handleBatchDelete = useCallback(async () => {
     if (!user?.uid) return;
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map(id => FileRecordService.moveToTrash(id, user.uid)));
+    await Promise.all(ids.map(id => moveFileToTrashWithPolicy(id, user.uid)));
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, user?.uid, refetch, setSelectedIds]);
@@ -162,7 +169,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
       try {
         const ext = getFileExtension(file.name);
 
-        const { fileId, storagePath } = await FileRecordService.createPendingFileRecord({
+        const { fileId, storagePath } = await createPendingFileRecordWithPolicy({
           companyId,
           entityType: 'company',
           entityId: companyId,
@@ -193,7 +200,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
           // Non-blocking
         }
 
-        await FileRecordService.finalizeFileRecord({
+        await finalizeFileRecordWithPolicy({
           fileId,
           sizeBytes: file.size,
           downloadUrl,

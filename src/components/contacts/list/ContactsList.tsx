@@ -14,7 +14,10 @@ import { ContactTypeQuickFilters } from '@/components/shared/TypeQuickFilters';
 import type { Contact } from '@/types/contacts';
 import { Users } from 'lucide-react';
 import { getContactDisplayName } from '@/types/contacts';
-import { ContactsService } from '@/services/contacts.service';
+import {
+  createContactWithPolicy,
+  toggleContactFavoriteWithPolicy,
+} from '@/services/contact-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
@@ -86,7 +89,10 @@ export function ContactsList({
       setTogglingFavorites(prev => new Set([...prev, contactId]));
 
       // Toggle favorite in database
-      await ContactsService.toggleFavorite(contactId, contact.isFavorite || false);
+      await toggleContactFavoriteWithPolicy({
+        contactId,
+        currentStatus: contact.isFavorite || false,
+      });
 
       // Show success message
       const contactName = getContactDisplayName(contact);
@@ -212,7 +218,9 @@ export function ContactsList({
           }];
         }
 
-        await ContactsService.createContact(contactData as Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>);
+        await createContactWithPolicy({
+          contactData: contactData as Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>,
+        });
         saved++;
       } catch {
         // Continue with next record on error
