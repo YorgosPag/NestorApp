@@ -345,8 +345,8 @@
   "deletionGuard": {
     "confirm": {
       "title": "Move property to trash",
-      "description": "Move \"{{name}}\" to trash? It can be restored later.",
-      "descriptionWithDependencies": "Move \"{{name}}\" to trash? The guard check found {{count}} linked records that may be affected.",
+      "description": "Move \"{name}\" to trash? It can be restored later.",
+      "descriptionWithDependencies": "Move \"{name}\" to trash? The guard check found {count} linked records that may be affected.",
       "action": "Move to Trash",
       "unnamedProperty": "this property"
     }

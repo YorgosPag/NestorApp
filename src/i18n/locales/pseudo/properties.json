@@ -345,8 +345,8 @@
   "deletionGuard": {
     "confirm": {
       "title": "[[~~ Delete property ~~]]",
-      "description": "[[~~ Delete \"{{name}}\"? This action permanently removes the property record and cannot be undone. ~~]]",
-      "descriptionWithDependencies": "[[~~ Delete \"{{name}}\"? The guard check found {{count}} linked records that will be affected. ~~]]",
+      "description": "[[~~ Delete \"{name}\"? This action permanently removes the property record and cannot be undone. ~~]]",
+      "descriptionWithDependencies": "[[~~ Delete \"{name}\"? The guard check found {count} linked records that will be affected. ~~]]",
       "action": "[[~~ Delete property ~~]]",
       "unnamedProperty": "[[~~ this property ~~]]"
     }
