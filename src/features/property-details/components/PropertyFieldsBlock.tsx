@@ -325,7 +325,7 @@ export function PropertyFieldsBlock({
         if (result.propertyId && onPropertyCreated) {
           onPropertyCreated(result.propertyId);
         }
-        success(t('save.createSuccess', { defaultValue: 'Η μονάδα δημιουργήθηκε επιτυχώς' }));
+        success(t('save.createSuccess'));
       } else {
         // Normal update
         await runExistingPropertyUpdate({
@@ -334,7 +334,7 @@ export function PropertyFieldsBlock({
           floorId: property.floorId,
         }, updates as Partial<Property> & Record<string, unknown>, async () => {
           if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
-          success(t('save.success', { defaultValue: 'Property saved successfully' }));
+          success(t('save.success'));
         });
       }
     } catch (error) {

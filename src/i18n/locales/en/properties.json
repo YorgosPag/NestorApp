@@ -351,6 +351,21 @@
       "unnamedProperty": "this property"
     }
   },
+  "save": {
+    "success": "Property saved successfully",
+    "createSuccess": "Unit created successfully"
+  },
+  "inlineEdit": {
+    "updated": "Property updated successfully"
+  },
+  "dialog": {
+    "addUnit": {
+      "messages": {
+        "success": "Unit created successfully",
+        "error": "Error creating unit"
+      }
+    }
+  },
   "impactGuard": {
     "titles": {
       "block": "Property change blocked",
