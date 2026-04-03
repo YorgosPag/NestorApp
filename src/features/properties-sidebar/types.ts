@@ -10,13 +10,20 @@ export interface FloorData {
   properties: Property[];
 }
 
-/** Viewer props passed to the sidebar */
+/** Canonical viewer capabilities required by the properties sidebar. */
 export interface ViewerPassthroughProps {
+  properties: Property[];
   selectedFloorId?: string | null;
   onSelectFloor?: (floorId: string | null) => void;
   selectedPropertyIds?: string[];
   hoveredPropertyId?: string | null;
-  [key: string]: unknown;
+  handleUpdateProperty?: (propertyId: string, updates: Partial<Property>) => Promise<void>;
+}
+
+export interface ViewerPassthroughPropsWithFloors extends ViewerPassthroughProps {
+  floors: FloorData[];
+  currentFloor: FloorData | null;
+  handleUpdateProperty: (propertyId: string, updates: Partial<Property>) => Promise<void>;
 }
 
 export interface PropertiesSidebarProps {
@@ -31,7 +38,7 @@ export interface PropertiesSidebarProps {
   /** Callback to start inline property creation */
   onNewProperty?: () => void;
   /** Callback to delete the selected property */
-  onDeleteProperty?: (propertyId: string) => void;
+  onDeleteProperty?: (propertyId: string) => Promise<void>;
   /** Whether we are in "create new property" mode (inline form) */
   isCreatingNewUnit?: boolean;
   /** Callback when a new property is successfully created */
@@ -41,5 +48,3 @@ export interface PropertiesSidebarProps {
   /** Default tab to open (from URL query param) */
   defaultTab?: string;
 }
-
-

@@ -4,7 +4,6 @@
   "execute": "Run Query",
   "executing": "Running...",
   "refresh": "Refresh",
-
   "ai": {
     "label": "AI Query",
     "placeholder": "Ask something... e.g. 'Show me all sold units over 100sqm'",
@@ -12,17 +11,14 @@
     "confidence": "Confidence",
     "explanation": "Interpretation"
   },
-
   "domain": {
     "select": "Select Domain",
     "placeholder": "Choose a data source..."
   },
-
   "columns": {
     "title": "Columns",
     "dragHint": "Drag to reorder, click checkbox to toggle"
   },
-
   "filters": {
     "title": "Filters",
     "active": "Active filters",
@@ -39,7 +35,6 @@
     "boolTrue": "Yes",
     "boolFalse": "No"
   },
-
   "operators": {
     "eq": "equals",
     "neq": "not equals",
@@ -54,7 +49,6 @@
     "after": "after",
     "in": "is one of"
   },
-
   "results": {
     "title": "Results",
     "showing": "{count} records found",
@@ -62,12 +56,10 @@
     "showMore": "Show {limit}",
     "noResults": "No records match your filters"
   },
-
   "share": {
     "copy": "Copy link",
     "copied": "Copied!"
   },
-
   "grouping": {
     "title": "Group By",
     "level1": "Group by",
@@ -77,7 +69,6 @@
     "collapseAll": "Collapse All",
     "removeLevel2": "Remove second level"
   },
-
   "aggregations": {
     "count": "Count",
     "sum": "Sum",
@@ -85,7 +76,6 @@
     "min": "Min",
     "max": "Max"
   },
-
   "chart": {
     "title": "Visualization",
     "type": "Chart type",
@@ -97,25 +87,20 @@
     "legend": "Show legend",
     "suggested": "suggested"
   },
-
   "kpis": {
     "title": "Key Metrics"
   },
-
   "percentOfTotal": {
     "toggle": "Show % of Total",
     "label": "% of Total"
   },
-
   "crossFilter": {
     "filtered": "Filtered: {{field}} = {{value}}",
     "clear": "Clear filter"
   },
-
   "grandTotal": {
     "label": "Grand Total"
   },
-
   "export": {
     "title": "Export Report",
     "pdf": "PDF",
@@ -136,7 +121,6 @@
     "cancel": "Cancel",
     "confirm": "Export"
   },
-
   "accessibility": {
     "expandGroup": "Expand group {{group}}",
     "collapseGroup": "Collapse group {{group}}",

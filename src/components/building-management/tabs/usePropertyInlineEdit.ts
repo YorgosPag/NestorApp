@@ -13,6 +13,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property, PropertyType } from '@/types/property';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 
 interface UsePropertyInlineEditReturn {
   editingId: string | null;
@@ -93,7 +94,14 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
       setEditingProperty(null);
       await onSaved();
     } catch (err) {
-      notifyError(err instanceof Error ? err.message : t('inlineEdit.updateError'));
+      notifyError(
+        translatePropertyMutationError(
+          err,
+          t,
+          'inlineEdit.updateError',
+          'The property could not be updated.',
+        ),
+      );
     } finally {
       setSaving(false);
     }

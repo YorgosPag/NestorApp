@@ -12,12 +12,16 @@
  */
 
 import { useState, useCallback } from 'react';
-import { moveFileToTrashWithPolicy } from '@/services/filesystem/file-mutation-gateway';
+import {
+  archiveFilesWithPolicy,
+  batchDownloadFilesWithPolicy,
+  moveFileToTrashWithPolicy,
+  updateFileClassificationWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { useFileClassification, isAIClassifiable } from './useFileClassification';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
-import { API_ROUTES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('useBatchFileOperations');
 
@@ -104,42 +108,31 @@ export function useBatchFileOperations({
     const selected = files.filter(f => selectedIds.has(f.id) && f.downloadUrl);
     if (selected.length === 0) return;
 
-    const response = await fetch(API_ROUTES.FILES.BATCH_DOWNLOAD, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        files: selected.map(f => ({
-          url: f.downloadUrl,
+    try {
+      const blob = await batchDownloadFilesWithPolicy(
+        selected.map(f => ({
+          url: f.downloadUrl as string,
           filename: `${f.displayName || f.originalFilename}.${f.ext}`,
         })),
-      }),
-    });
-
-    if (!response.ok) {
-      logger.error('Batch download failed', { status: response.status });
-      return;
+      );
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `files_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      logger.error('Batch download failed', { error });
     }
-
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = `files_${new Date().toISOString().slice(0, 10)}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
   }, [selectedIds, files]);
 
   // ---- Batch Classify ----
 
   const handleBatchClassify = useCallback(async (classification: FileClassification) => {
     const ids = Array.from(selectedIds);
-    const { doc, updateDoc } = await import('firebase/firestore');
-    const { db } = await import('@/lib/firebase');
-    await Promise.all(ids.map(id =>
-      updateDoc(doc(db, 'files', id), { classification })
-    ));
+    await Promise.all(ids.map(id => updateFileClassificationWithPolicy(id, classification)));
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, refetch]);
@@ -150,14 +143,10 @@ export function useBatchFileOperations({
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
 
-    const response = await fetch(API_ROUTES.FILES.ARCHIVE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileIds: ids, action: 'archive' }),
-    });
-
-    if (!response.ok) {
-      logger.error('Batch archive failed', { status: response.status });
+    try {
+      await archiveFilesWithPolicy(ids);
+    } catch (error) {
+      logger.error('Batch archive failed', { error });
       return;
     }
 

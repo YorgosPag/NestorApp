@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { API_ROUTES } from '@/config/domain-constants';
+import { classifyFileWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 
 // ============================================================================
 // TYPES
@@ -69,16 +69,15 @@ export function useFileClassification(): UseFileClassificationReturn {
     setError(null);
 
     try {
-      const response = await fetch(API_ROUTES.FILES.CLASSIFY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileId }),
-      });
+      const data = await classifyFileWithPolicy(fileId);
 
-      const data = await response.json();
+      if (!data.success) {
+        setError(data.error ?? 'Classification failed');
+        return null;
+      }
 
-      if (!response.ok || !data.success) {
-        setError(data.error ?? `Classification failed (${response.status})`);
+      if (!data.documentType || data.confidence === undefined) {
+        setError('Classification response incomplete');
         return null;
       }
 

@@ -3,11 +3,9 @@
 import { db } from '@/lib/firebase'; // Αλλαγή σε client-side db
 import {
   doc,
-  updateDoc,
   writeBatch,
   where,
   orderBy,
-  serverTimestamp,
 } from 'firebase/firestore';
 import type { DocumentData, QueryConstraint } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -172,19 +170,26 @@ export async function updateProperty(propertyId: string, updates: Partial<Proper
 
 // NEW: Update multiple properties' owner
 export async function updateMultiplePropertiesOwner(propertyIds: string[], contactId: string): Promise<{ success: boolean }> {
-  const batch = writeBatch(db);
+  const saleDate = new Date().toISOString();
 
-  propertyIds.forEach(propertyId => {
-    const propertyRef = doc(db, PROPERTIES_COLLECTION, propertyId);
-    batch.update(propertyRef, {
-      soldTo: contactId,
-      status: 'sold',
-      saleDate: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
+  await Promise.all(
+    propertyIds.map(async (propertyId) => {
+      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), {
+        soldTo: contactId,
+        status: 'sold',
+        saleDate,
+      });
 
-  await batch.commit();
+      RealtimeService.dispatch('UNIT_UPDATED', {
+        propertyId,
+        updates: {
+          soldTo: contactId,
+          status: 'sold',
+        },
+        timestamp: Date.now(),
+      });
+    }),
+  );
   return { success: true };
 }
 

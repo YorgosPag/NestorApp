@@ -13,10 +13,10 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { API_ROUTES } from '@/config/domain-constants';
 import { useVoiceCommandStore } from '@/stores/voiceCommandStore';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { SubmitCommandResult } from '@/types/voice-command';
+import { submitVoiceCommandWithPolicy } from '@/services/voice/voice-mutation-gateway';
 
 // ============================================================================
 // TYPES
@@ -57,13 +57,7 @@ export function useVoiceCommand(): UseVoiceCommandReturn {
       setError(null);
 
       try {
-        const response = await fetch(API_ROUTES.VOICE.COMMAND, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: trimmed }),
-        });
-
-        const result: SubmitCommandResult = await response.json();
+        const result = await submitVoiceCommandWithPolicy(trimmed);
 
         if (result.success && result.commandId) {
           setCommandId(result.commandId);

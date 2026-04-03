@@ -1,16 +1,13 @@
-
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { usePropertyViewer, DEFAULT_FILTERS } from '@/hooks/usePropertyViewer';
-import type { Property } from '@/types/property-viewer';
-import type { Connection } from '@/types/connections';
-import type { FilterState } from '@/types/property-viewer';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { usePropertyViewer, DEFAULT_FILTERS } from '@/hooks/usePropertyViewer';
 import { ContactsService } from '@/services/contacts.service';
-import { BUILDING_IDS } from '@/config/building-ids-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { tallyBy } from '@/utils/collection-utils';
+import type { Connection } from '@/types/connections';
+import type { FilterState, Property } from '@/types/property-viewer';
 
 const logger = createModuleLogger('usePropertiesViewerState');
 
@@ -19,7 +16,7 @@ const noop = () => {};
 export function usePropertiesViewerState() {
   const searchParams = useSearchParams();
   const propertyIdFromUrl = searchParams.get('propertyId');
-  
+
   const {
     properties,
     setProperties,
@@ -33,7 +30,7 @@ export function usePropertiesViewerState() {
     canUndo,
     canRedo,
     setSelectedProperties,
-    floors, 
+    floors,
     activeTool,
     setActiveTool,
     showGrid,
@@ -65,42 +62,49 @@ export function usePropertiesViewerState() {
     filteredProperties,
     isLoading,
     forceDataRefresh,
+    handlePolygonCreated,
+    handlePolygonUpdated,
+    handleDuplicate,
+    handleDelete,
     handleUpdateProperty,
     checkingPropertyMutation,
     PropertyMutationImpactDialog,
+    PropertyDeletionDialogs,
   } = usePropertyViewer();
 
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
   const [allContactIds, setAllContactIds] = useState<string[]>([]);
-  
+
   useEffect(() => {
     async function fetchContactIds() {
-        try {
-            const ids = await ContactsService.getAllContactIds();
-            setAllContactIds(ids);
-        } catch (error) {
-            logger.error('Failed to fetch contact IDs', { error });
-        }
-    }
-    fetchContactIds();
-  }, []);
-
-  // 🏢 ENTERPRISE: Auto-selection from URL parameter (contextual navigation)
-  useEffect(() => {
-    if (propertyIdFromUrl && properties.length > 0 && setSelectedProperties) {
-      const propertyExists = properties.some(p => p.id === propertyIdFromUrl);
-      if (propertyExists) {
-        setSelectedProperties([propertyIdFromUrl]);
-        // Also select the correct floor
-        const property = properties.find(p => p.id === propertyIdFromUrl);
-        if (property?.floorId && onSelectFloor) {
-            onSelectFloor(property.floorId);
-        }
-      } else {
-        logger.warn('Property not found in properties', { propertyId: propertyIdFromUrl });
+      try {
+        const ids = await ContactsService.getAllContactIds();
+        setAllContactIds(ids);
+      } catch (error) {
+        logger.error('Failed to fetch contact IDs', { error });
       }
     }
-  }, [propertyIdFromUrl, properties, setSelectedProperties, onSelectFloor]);
+
+    void fetchContactIds();
+  }, []);
+
+  useEffect(() => {
+    if (!propertyIdFromUrl || properties.length === 0 || !setSelectedProperties) {
+      return;
+    }
+
+    const propertyExists = properties.some((property) => property.id === propertyIdFromUrl);
+    if (!propertyExists) {
+      logger.warn('Property not found in properties', { propertyId: propertyIdFromUrl });
+      return;
+    }
+
+    setSelectedProperties([propertyIdFromUrl]);
+    const property = properties.find((item) => item.id === propertyIdFromUrl);
+    if (property?.floorId && onSelectFloor) {
+      onSelectFloor(property.floorId);
+    }
+  }, [onSelectFloor, properties, propertyIdFromUrl, setSelectedProperties]);
 
   const safeProperties = Array.isArray(properties) ? properties : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
@@ -108,160 +112,115 @@ export function usePropertiesViewerState() {
 
   const selectedProperty = useMemo(() => {
     const safeSelectedPropertyIds = Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [];
-    if (safeSelectedPropertyIds.length === 1) {
-      const property = safeProperties.find(p => p.id === safeSelectedPropertyIds[0]);
-      if (property && property.soldTo && allContactIds.length > 0) {
-        return {
-          ...property,
-          buyerMismatch: !allContactIds.includes(property.soldTo),
-        };
-      }
-      return property;
+    if (safeSelectedPropertyIds.length !== 1) {
+      return null;
     }
-    return null;
-  }, [selectedPropertyIds, safeProperties, allContactIds]);
+
+    const property = safeProperties.find((item) => item.id === safeSelectedPropertyIds[0]);
+    if (property && property.soldTo && allContactIds.length > 0) {
+      return {
+        ...property,
+        buyerMismatch: !allContactIds.includes(property.soldTo),
+      };
+    }
+
+    return property ?? null;
+  }, [allContactIds, safeProperties, selectedPropertyIds]);
 
   const handleSelectProperty = (property: Property) => {
     if (setSelectedProperties) {
       setSelectedProperties([property.id]);
     }
   };
-  
+
   const handlePolygonSelect = (propertyId: string, isShiftClick: boolean) => {
-    if (!setSelectedProperties) return;
-    
-    // Special keywords for bulk actions
-    if (propertyId === '__all__') {
-        setSelectedProperties(safeFilteredProperties.map(p => p.id));
-        return;
-    }
-    if (propertyId === '__none__') {
-        setSelectedProperties([]);
-        return;
+    if (!setSelectedProperties) {
+      return;
     }
 
-    setSelectedProperties((prev: string[]) => {
-      const safePrev = Array.isArray(prev) ? prev : [];
-      if (!propertyId) return [];
-      if (isShiftClick) {
-        return safePrev.includes(propertyId) 
-          ? safePrev.filter(id => id !== propertyId) 
-          : [...safePrev, propertyId];
+    if (propertyId === '__all__') {
+      setSelectedProperties(safeFilteredProperties.map((property) => property.id));
+      return;
+    }
+
+    if (propertyId === '__none__') {
+      setSelectedProperties([]);
+      return;
+    }
+
+    setSelectedProperties((previous: string[]) => {
+      const safePrevious = Array.isArray(previous) ? previous : [];
+      if (!propertyId) {
+        return [];
       }
-      // If not shift-clicking, and the item is already the only one selected, deselect it. Otherwise, select just this one.
-      return safePrev.length === 1 && safePrev[0] === propertyId ? [] : [propertyId];
+
+      if (isShiftClick) {
+        return safePrevious.includes(propertyId)
+          ? safePrevious.filter((id) => id !== propertyId)
+          : [...safePrevious, propertyId];
+      }
+
+      return safePrevious.length === 1 && safePrevious[0] === propertyId ? [] : [propertyId];
     });
 
     if (isConnecting && !isShiftClick) {
-      const property = safeProperties.find(p => p.id === propertyId);
-      if (!property) return;
+      const property = safeProperties.find((item) => item.id === propertyId);
+      if (!property) {
+        return;
+      }
+
       if (!firstConnectionPoint) {
         if (setFirstConnectionPoint) {
           setFirstConnectionPoint(property);
         }
-      } else {
-        if (firstConnectionPoint.id === property.id) return;
-        if (setConnections) {
-          setConnections((prev: Connection[]) => [
-            ...(Array.isArray(prev) ? prev : []), 
-            { 
-              id: `conn_${firstConnectionPoint.id}_${property.id}`, 
-              from: firstConnectionPoint.id, 
-              to: property.id, 
-              type: 'related' 
-            }
-          ]);
-        }
-        if (setFirstConnectionPoint) setFirstConnectionPoint(null);
-        if (setIsConnecting) setIsConnecting(false);
+        return;
+      }
+
+      if (firstConnectionPoint.id === property.id) {
+        return;
+      }
+
+      if (setConnections) {
+        setConnections((previous: Connection[]) => [
+          ...(Array.isArray(previous) ? previous : []),
+          {
+            id: `conn_${firstConnectionPoint.id}_${property.id}`,
+            from: firstConnectionPoint.id,
+            to: property.id,
+            type: 'related',
+          },
+        ]);
+      }
+
+      if (setFirstConnectionPoint) {
+        setFirstConnectionPoint(null);
+      }
+      if (setIsConnecting) {
+        setIsConnecting(false);
       }
     }
   };
 
-  const handlePolygonCreated = (newPropertyData: Omit<Property, 'id' | 'name' | 'type' | 'status' | 'building' | 'floor' | 'project' | 'buildingId' | 'floorId'>) => {
-    if (!setProperties) return;
-    
-    // 🎯 DOMAIN SEPARATION: Default operationalStatus='draft' (NOT sales status!)
-    const newProperty: Property = {
-      id: `prop_${Date.now()}`,
-      name: `Νέο Ακίνητο ${safeProperties.length + 1}`,
-      type: 'Διαμέρισμα 2Δ',
-      status: 'for-sale', // ⚠️ DEPRECATED: Legacy field (required for type compatibility)
-      operationalStatus: 'draft', // 🏢 ENTERPRISE: New units start as draft
-      building: 'Κτίριο Alpha',
-      floor: 1,
-      project: 'Έργο Κέντρο',
-      buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
-      floorId: selectedFloorId || 'floor-1',
-      ...newPropertyData,
-    };
-    setProperties([...safeProperties, newProperty], `Created property ${newProperty.name}`);
-  };
-
-  const handlePolygonUpdated = (polygonId: string, vertices: Array<{ x: number; y: number }>) => {
-    if (!setProperties) return;
-    
-    setProperties(
-      safeProperties.map(p => p.id === polygonId ? { ...p, vertices } : p),
-      `Updated vertices for property ${polygonId}`
-    );
-  };
-
-  const handleDuplicate = (propertyId: string) => {
-    if (!setProperties) return;
-    
-    const propertyToDuplicate = safeProperties.find(p => p.id === propertyId);
-    if (!propertyToDuplicate) return;
-    const newProperty: Property = {
-      ...propertyToDuplicate,
-      id: `prop_${Date.now()}`,
-      name: `${propertyToDuplicate.name} (Αντίγραφο)`,
-      vertices: (propertyToDuplicate.vertices || []).map(v => ({ x: v.x + 20, y: v.y + 20 })),
-    };
-    setProperties([...safeProperties, newProperty], `Duplicated property ${propertyToDuplicate.name}`);
-  };
-
-  const handleDelete = (propertyId: string) => {
-    if (!setProperties) return;
-    
-    setProperties(
-      safeProperties.filter(p => p.id !== propertyId),
-      `Deleted property ${propertyId}`
-    );
-  };
-
   const dashboardStats = useMemo(() => ({
-    // ✅ PHYSICAL METRICS (Unit = Physical Truth)
     totalProperties: safeProperties.length,
-    totalArea: safeProperties.reduce((sum, p) => sum + (p.area || 0), 0),
-    uniqueBuildings: [...new Set(safeProperties.map(p => p.building))].length,
-
-    // 🎯 DOMAIN SEPARATION: OPERATIONAL STATUS METRICS (Physical readiness - NO SALES!)
-    // Units = Physical Truth, Sales = Commercial Truth (separate module)
-    availableProperties: safeProperties.filter(p => p.operationalStatus === 'ready').length,
-    underConstructionProperties: safeProperties.filter(p => p.operationalStatus === 'under-construction').length,
-    maintenanceProperties: safeProperties.filter(p => p.operationalStatus === 'maintenance').length,
-    inspectionProperties: safeProperties.filter(p => p.operationalStatus === 'inspection').length,
-    draftProperties: safeProperties.filter(p => p.operationalStatus === 'draft').length,
-
-    // ✅ DISTRIBUTION METRICS (Physical attributes)
-    // 🎯 DOMAIN SEPARATION: Uses operationalStatus (NOT sales status!)
-    propertiesByStatus: tallyBy(safeProperties, p => p.operationalStatus || 'draft'),
-    propertiesByType: tallyBy(safeProperties, p => p.type),
-    propertiesByFloor: tallyBy(safeProperties, p => `Όροφος ${p.floor}`),
-
-    // ✅ STORAGE METRICS (Physical inventory - Operational status only)
-    // 🎯 DOMAIN SEPARATION: No "sold" storage - that's sales data!
+    totalArea: safeProperties.reduce((sum, property) => sum + (property.area || 0), 0),
+    uniqueBuildings: [...new Set(safeProperties.map((property) => property.building))].length,
+    availableProperties: safeProperties.filter((property) => property.operationalStatus === 'ready').length,
+    underConstructionProperties: safeProperties.filter((property) => property.operationalStatus === 'under-construction').length,
+    maintenanceProperties: safeProperties.filter((property) => property.operationalStatus === 'maintenance').length,
+    inspectionProperties: safeProperties.filter((property) => property.operationalStatus === 'inspection').length,
+    draftProperties: safeProperties.filter((property) => property.operationalStatus === 'draft').length,
+    propertiesByStatus: tallyBy(safeProperties, (property) => property.operationalStatus || 'draft'),
+    propertiesByType: tallyBy(safeProperties, (property) => property.type),
+    propertiesByFloor: tallyBy(safeProperties, (property) => `Floor ${property.floor}`),
     totalStorageUnits: 0,
-    availableStorageUnits: 0, // Storage units with operationalStatus='ready'
-
-    // ✅ ENTERPRISE: Coverage stats for Πληρότητα card (PR1.2)
-    // ⚠️ BACKWARD COMPATIBILITY: Handle missing propertyCoverage until backfill completes
+    availableStorageUnits: 0,
     coverage: (() => {
       const totalProperties = safeProperties.length;
-      const propertiesWithPhotos = safeProperties.filter(p => p.propertyCoverage?.hasPhotos === true).length;
-      const propertiesWithFloorplans = safeProperties.filter(p => p.propertyCoverage?.hasFloorplans === true).length;
-      const propertiesWithDocuments = safeProperties.filter(p => p.propertyCoverage?.hasDocuments === true).length;
+      const propertiesWithPhotos = safeProperties.filter((property) => property.propertyCoverage?.hasPhotos === true).length;
+      const propertiesWithFloorplans = safeProperties.filter((property) => property.propertyCoverage?.hasFloorplans === true).length;
+      const propertiesWithDocuments = safeProperties.filter((property) => property.propertyCoverage?.hasDocuments === true).length;
+
       return {
         totalProperties,
         propertiesWithPhotos,
@@ -274,19 +233,16 @@ export function usePropertiesViewerState() {
     })(),
   }), [safeProperties]);
 
-  // 🏢 ENTERPRISE: Flexible filter handler compatible with AdvancedFiltersPanel
   const handleFiltersChange = (newFilters: Partial<FilterState> | Record<string, unknown>) => {
-    const hasAreaRange = typeof newFilters === 'object' && newFilters !== null && 'areaRange' in newFilters;
-    const areaRange = hasAreaRange ? (newFilters as Record<string, unknown>).areaRange : undefined;
     logger.info('Filters change', {
-      hasAreaRange
+      hasAreaRange: typeof newFilters === 'object' && newFilters !== null && 'areaRange' in newFilters,
     });
 
     if (setFilters) {
-      setFilters((prev: FilterState) => {
-        const updated = { ...prev, ...newFilters } as FilterState;
+      setFilters((previous: FilterState) => {
+        const updated = { ...previous, ...newFilters } as FilterState;
         logger.info('Updated filters', {
-          updatedAreaRange: updated.areaRange
+          updatedAreaRange: updated.areaRange,
         });
         return updated;
       });
@@ -307,7 +263,7 @@ export function usePropertiesViewerState() {
     canUndo: Boolean(canUndo),
     canRedo: Boolean(canRedo),
     setSelectedProperties: setSelectedProperties || noop,
-    floors: safeFloors, 
+    floors: safeFloors,
     activeTool: activeTool || null,
     setActiveTool: setActiveTool || noop,
     viewMode,
@@ -350,8 +306,8 @@ export function usePropertiesViewerState() {
     handleUpdateProperty,
     checkingPropertyMutation,
     PropertyMutationImpactDialog,
+    PropertyDeletionDialogs,
     forceDataRefresh,
   };
 }
-
 

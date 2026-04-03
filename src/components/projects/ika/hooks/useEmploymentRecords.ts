@@ -23,6 +23,10 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EmploymentRecord, ApdStatus, WorkerStampsSummary } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  saveEmploymentRecordsWithPolicy,
+  updateEmploymentRecordApdStatusWithPolicy,
+} from '@/services/ika/ika-mutation-gateway';
 const logger = createModuleLogger('useEmploymentRecords');
 
 /** Parameters for saving employment records in batch */
@@ -141,21 +145,12 @@ export function useEmploymentRecords(
   // Batch save employment records for a month (server-side — SPEC-255C)
   const saveRecords = useCallback(async (params: SaveEmploymentRecordsParams): Promise<boolean> => {
     try {
-      const response = await fetch('/api/ika/employment-records', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: params.projectId,
-          month: params.month,
-          year: params.year,
-          workerSummaries: params.workerSummaries,
-        }),
+      await saveEmploymentRecordsWithPolicy({
+        projectId: params.projectId,
+        month: params.month,
+        year: params.year,
+        workerSummaries: params.workerSummaries,
       });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Server error' }));
-        throw new Error(data.error ?? 'Failed to save employment records');
-      }
 
       refetch();
       return true;
@@ -174,16 +169,7 @@ export function useEmploymentRecords(
     referenceNumber?: string
   ): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/ika/employment-records/${recordId}/apd-status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, referenceNumber }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Server error' }));
-        throw new Error(data.error ?? 'Failed to update APD status');
-      }
+      await updateEmploymentRecordApdStatusWithPolicy(recordId, { status, referenceNumber });
 
       refetch();
       return true;

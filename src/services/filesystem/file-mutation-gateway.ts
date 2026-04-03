@@ -6,7 +6,41 @@ import { FileCommentService, type CreateCommentInput } from '@/services/file-com
 import { FileApprovalService, type CreateApprovalInput } from '@/services/file-approval.service';
 import { FileRecordService } from '@/services/file-record.service';
 import { FileShareService, type CreateShareInput } from '@/services/file-share.service';
-import type { EntityType } from '@/config/domain-constants';
+import { API_ROUTES, type EntityType } from '@/config/domain-constants';
+import type { FileClassification } from '@/config/domain-constants';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { auth } from '@/lib/firebase';
+
+interface BatchDownloadFileInput {
+  url: string;
+  filename: string;
+}
+
+interface FileClassificationResponse {
+  success?: boolean;
+  error?: string;
+  documentType?: string;
+  confidence?: number;
+  signals?: string[];
+}
+
+interface FileUploadAuthContext {
+  uid: string;
+  hasEmail: boolean;
+  tokenLength: number;
+}
+
+async function mutateJson<T>(url: string, init: RequestInit): Promise<T> {
+  const body = init.body !== undefined && typeof init.body === 'string'
+    ? JSON.parse(init.body) as unknown
+    : init.body;
+
+  return apiClient.request<T>(url, {
+    method: (init.method as 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'GET' | undefined) ?? 'GET',
+    headers: init.headers as Record<string, string> | undefined,
+    body,
+  });
+}
 
 export async function createFileFolderWithPolicy(input: CreateFolderInput): Promise<string> {
   return FileFolderService.createFolder(input);
@@ -99,6 +133,22 @@ export async function createFileShareWithPolicy(input: CreateShareInput): Promis
   return FileShareService.createShare(input);
 }
 
+export async function verifyFileUploadAuthWithPolicy(): Promise<FileUploadAuthContext> {
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    throw new Error('FILE_UPLOAD_AUTH_REQUIRED');
+  }
+
+  const idToken = await currentUser.getIdToken(true);
+
+  return {
+    uid: currentUser.uid,
+    hasEmail: typeof currentUser.email === 'string' && currentUser.email.length > 0,
+    tokenLength: idToken.length,
+  };
+}
+
 export async function createPendingFileRecordWithPolicy(
   input: Parameters<typeof FileRecordService.createPendingFileRecord>[0],
 ): Promise<Awaited<ReturnType<typeof FileRecordService.createPendingFileRecord>>> {
@@ -132,3 +182,40 @@ export async function restoreFileFromTrashWithPolicy(
 ): Promise<void> {
   return FileRecordService.restoreFromTrash(fileId, restoredBy);
 }
+
+export async function classifyFileWithPolicy(
+  fileId: string,
+): Promise<FileClassificationResponse> {
+  return mutateJson<FileClassificationResponse>(API_ROUTES.FILES.CLASSIFY, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileId }),
+  });
+}
+
+export async function batchDownloadFilesWithPolicy(
+  files: BatchDownloadFileInput[],
+): Promise<Blob> {
+  return apiClient.post<Blob>(
+    API_ROUTES.FILES.BATCH_DOWNLOAD,
+    { files },
+    { responseType: 'blob' },
+  );
+}
+
+export async function downloadFileFromProxyWithPolicy(
+  downloadUrl: string,
+  filename: string,
+): Promise<Blob> {
+  return apiClient.get<Blob>(API_ROUTES.DOWNLOAD, {
+    params: {
+      url: downloadUrl,
+      filename,
+    },
+    responseType: 'blob',
+  });
+}
+
+export async function archiveFilesWithPolicy(
+  fileIds: string[],
+): Promise<{ success?: boolean; er

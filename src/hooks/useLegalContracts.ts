@@ -25,6 +25,12 @@ import { computeLegalPhase, CONTRACT_PHASE_ORDER } from '@/types/legal-contracts
 import type { BrokerageAgreement } from '@/types/brokerage';
 import { getErrorMessage } from '@/lib/error-utils';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
+import {
+  createLegalContractWithPolicy,
+  overrideLegalProfessionalWithPolicy,
+  transitionLegalContractStatusWithPolicy,
+  updateLegalContractWithPolicy,
+} from '@/services/legal-contracts/legal-contract-mutation-gateway';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -141,14 +147,7 @@ export function useLegalContracts(propertyId: string | null, projectId?: string)
   // Actions
   const createContract = useCallback(async (input: CreateContractInput) => {
     try {
-      const data = await fetchJson<{ success: boolean; error?: string }>(
-        API_ROUTES.CONTRACTS.LIST,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-        }
-      );
+      const data = await createLegalContractWithPolicy(input);
       if (data.success) {
         // Refetch contracts — don't let refetch failure mask successful creation
         clientSafeFireAndForget(fetchContracts(), 'LegalContracts.refetch');
@@ -161,14 +160,7 @@ export function useLegalContracts(propertyId: string | null, projectId?: string)
 
   const transitionStatus = useCallback(async (contractId: string, targetStatus: ContractStatus) => {
     try {
-      const data = await fetchJson<{ success: boolean; error?: string }>(
-        API_ROUTES.CONTRACTS.TRANSITION(contractId),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ targetStatus }),
-        }
-      );
+      const data = await transitionLegalContractStatusWithPolicy(contractId, targetStatus);
       if (data.success) {
         await fetchContracts();
       }
@@ -180,14 +172,7 @@ export function useLegalContracts(propertyId: string | null, projectId?: string)
 
   const updateContract = useCallback(async (contractId: string, updates: Record<string, unknown>) => {
     try {
-      const data = await fetchJson<{ success: boolean; error?: string }>(
-        API_ROUTES.CONTRACTS.BY_ID(contractId),
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updates),
-        }
-      );
+      const data = await updateLegalContractWithPolicy(contractId, updates);
       if (data.success) {
         await fetchContracts();
       }
@@ -203,14 +188,7 @@ export function useLegalContracts(propertyId: string | null, projectId?: string)
     contactId: string | null
   ) => {
     try {
-      const data = await fetchJson<{ success: boolean; error?: string }>(
-        API_ROUTES.CONTRACTS.PROFESSIONALS(contractId),
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role, contactId }),
-        }
-      );
+      const data = await overrideLegalProfessionalWithPolicy(contractId, role, contactId);
       if (data.success) {
         await fetchContracts();
       }

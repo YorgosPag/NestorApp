@@ -7,7 +7,7 @@
  * Pattern: Google Drive / Dropbox / OneDrive / SAP
  *
  * The backend endpoint at /api/download:
- * - Verifies Firebase ID token via Authorization header
+ * - Uses centralized enterprise API client auth handling
  * - Validates Firebase Storage URL
  * - Streams file with Content-Disposition: attachment
  * - Forces browser download instead of inline viewing
@@ -19,8 +19,7 @@
 
 import { useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { auth } from '@/lib/firebase';
-import { API_ROUTES } from '@/config/domain-constants';
+import { downloadFileFromProxyWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 
 // ============================================================================
 // TYPES
@@ -56,33 +55,7 @@ export function useFileDownload(): UseFileDownloadReturn {
     logger.info('Starting enterprise download', { displayName: file.displayName });
 
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        logger.error('Download failed: User not authenticated');
-        return;
-      }
-
-      const idToken = await user.getIdToken();
-
-      const downloadEndpoint = `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(file.downloadUrl)}&filename=${encodeURIComponent(file.displayName)}`;
-
-      const response = await fetch(downloadEndpoint, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error('Download API returned error', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText,
-        });
-        return;
-      }
-
-      const blob = await response.blob();
+      const blob = await downloadFileFromProxyWithPolicy(file.downloadUrl, file.displayName);
       const objectUrl = URL.createObjectURL(blob);
 
       const link = document.createElement('a');
@@ -91,7 +64,7 @@ export function useFileDownload(): UseFileDownloadReturn {
       document.body.appendChild(link);
       link.click();
 
-      // Cleanup
+      // Cleanup browser-only download artifacts after the click has been dispatched.
       setTimeout(() => {
         document.body.removeChild(link);
         URL.revokeObjectURL(objectUrl);

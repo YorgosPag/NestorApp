@@ -33,15 +33,15 @@ export const MODAL_SELECT_NAVIGATION_BASE_LABELS = {
   // Action Labels
   add: 'toolbar.labels.link',
   connect: 'toolbar.labels.link',
-  edit: 'common.actions.edit',
+  edit: 'common-actions:actions.edit',
   remove: 'toolbar.labels.remove',
   disconnect: 'toolbar.labels.unlink',
   filters: 'toolbar.labels.filters',
   favorites: 'toolbar.labels.favorites',
   archive: 'toolbar.labels.archive',
-  export: 'common.actions.export',
-  import: 'common.actions.import',
-  refresh: 'common.actions.refresh',
+  export: 'common-actions:actions.export',
+  import: 'common-actions:actions.import',
+  refresh: 'common-actions:actions.refresh',
   preview: 'toolbar.labels.preview',
   copy: 'toolbar.labels.copy',
   share: 'toolbar.labels.share',
@@ -99,7 +99,7 @@ export const MODAL_SELECT_NAVIGATION_TOOLTIPS = {
   disconnect_floor: 'toolbar.actions.floors.delete',
 
   // Units Tooltips
-  connect_unit: 'common.actions.newProperty',
+  connect_unit: 'common-actions:actions.newProperty',
   edit_unit: 'toolbar.actions.properties.edit',
   disconnect_unit: 'toolbar.actions.properties.delete'
 } as const;
@@ -223,12 +223,12 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
  * 🌐 i18n: Uses keys from common.json namespace
  */
 export const MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {
-  new_building: 'common.actions.newBuilding',
-  new_project: 'common.actions.newProject',
-  new_contact: 'common.actions.newContact',
-  new_unit: 'common.actions.newProperty',
-  new_storage: 'common.actions.newStorage',
-  parking: 'common.actions.newParking'
+  new_building: 'common-actions:actions.newBuilding',
+  new_project: 'common-actions:actions.newProject',
+  new_contact: 'common-actions:actions.newContact',
+  new_unit: 'common-actions:actions.newProperty',
+  new_storage: 'common-actions:actions.newStorage',
+  parking: 'common-actions:actions.newParking'
 } as const;
 
 /**
@@ -253,7 +253,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_CONTEXT_LABELS = {
 
   // Action Labels που δεν υπάρχουν στα navigation labels
   share_alt: 'toolbar.labels.share',
-  delete_items: 'common.actions.delete'
+  delete_items: 'common-actions:actions.delete'
 } as const;
 
 /**

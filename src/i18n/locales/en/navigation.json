@@ -239,11 +239,10 @@
   },
   "pages": {
     "home": "Home",
-    "properties": "Property Directory",
+    "properties": "Properties",
     "contacts": "Contacts",
     "projects": "Projects",
     "buildings": "Buildings",
-    "properties": "Properties",
     "crm": "CRM",
     "login": "Login",
     "navigation": "Navigation",

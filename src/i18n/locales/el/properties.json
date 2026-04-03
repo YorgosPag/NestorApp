@@ -4,176 +4,46 @@
     "subtitle": "Διαχείριση και παρακολούθηση ακινήτων έργων",
     "newProperty": "Νέο Ακίνητο"
   },
-  "status": {
-    "forSale": "Προς Πώληση",
-    "forRent": "Προς Ενοικίαση",
-    "forSaleAndRent": "Πώληση & Ενοικίαση",
-    "reserved": "Κρατημένο",
-    "sold": "Πωλήθηκε",
-    "landowner": "Ιδιοκτήτης Γης",
-    "rented": "Ενοικιάστηκε",
-    "underNegotiation": "Υπό Διαπραγμάτευση",
-    "comingSoon": "Σύντομα Διαθέσιμο",
-    "offMarket": "Εκτός Αγοράς",
-    "unavailable": "Μη Διαθέσιμο",
-    "available": "Διαθέσιμο",
-    "pending": "Εκκρεμεί",
-    "withdrawn": "Αποσυρμένο",
-    "expired": "Ληγμένο",
-    "notSold": "Δεν Πωλήθηκε"
-  },
-  "rental": {
-    "rentOnly": "Μόνο Ενοικίαση",
-    "longTerm": "Μακροχρόνια Μίσθωση",
-    "shortTerm": "Βραχυχρόνια Μίσθωση"
-  },
-  "specialStatus": {
-    "reservedPending": "Κρατημένο Εκκρεμεί",
-    "contractSigned": "Συμβόλαιο Υπογεγραμμένο",
-    "depositPaid": "Προκαταβολή Δεδομένη",
-    "corporate": "Εταιρική Ιδιοκτησία",
-    "notForSale": "Δεν Πωλείται",
-    "family": "Κρατημένο για Οικογένεια",
-    "preLaunch": "Προ-Εκκίνηση",
-    "exclusive": "Αποκλειστική Διάθεση",
-    "reducedPrice": "Μειωμένη Τιμή",
-    "urgentSale": "Επείγουσα Πώληση",
-    "underRenovation": "Υπό Ανακαίνιση",
-    "legalIssues": "Νομικά Θέματα",
-    "inspectionRequired": "Απαιτείται Επιθεώρηση",
-    "pendingDocuments": "Εκκρεμή Έγγραφα",
-    "underNegotiation": "Υπό Διαπραγμάτευση",
-    "availableSoon": "Σύντομα Διαθέσιμο",
-    "landowner": "Ιδιοκτήτης Γης",
-    "offMarket": "Εκτός Αγοράς",
-    "unavailable": "Μη Διαθέσιμο"
-  },
-  "types": {
-    "apartment": "Διαμέρισμα",
-    "studio": "Στούντιο",
-    "maisonette": "Μεζονέτα",
-    "shop": "Κατάστημα",
-    "office": "Γραφείο",
-    "storage": "Αποθήκη",
-    "bedsit": "Γκαρσονιέρα",
-    "apartment2br": "Διαμέρισμα 2 Υ/Δ",
-    "apartment3br": "Διαμέρισμα 3 Υ/Δ",
-    "apartment4br": "Διαμέρισμα 4 Υ/Δ",
-    "loft": "Loft",
-    "penthouse": "Ρετιρέ"
-  },
-  "enhancedStatus": {
-    "rentalOnly": "Μόνο για Ενοικίαση",
-    "longTermRental": "Μακροχρόνια Μίσθωση",
-    "shortTermRental": "Βραχυχρόνια Μίσθωση",
-    "reservedPending": "Κρατημένο Εκκρεμεί",
-    "contractSigned": "Συμβόλαιο Υπογεγραμμένο",
-    "depositPaid": "Προκαταβολή Δεδομένη",
-    "companyOwned": "Ιδιοκτησία Εταιρείας",
-    "notForSale": "Δεν Πωλείται",
-    "familyReserved": "Κρατημένο για Οικογένεια",
-    "preLaunch": "Προ-Εκκίνηση",
-    "exclusiveListing": "Αποκλειστική Διάθεση",
-    "priceReduced": "Μειωμένη Τιμή",
-    "urgentSale": "Επείγουσα Πώληση",
-    "underRenovation": "Υπό Ανακαίνιση",
-    "legalIssues": "Νομικά Θέματα",
-    "inspectionRequired": "Απαιτείται Επιθεώρηση",
-    "documentationPending": "Εκκρεμή Έγγραφα"
-  },
-  "commercialStatus": {
-    "unavailable": "Μη διαθέσιμο",
-    "for-sale": "Προς πώληση",
-    "for-rent": "Προς ενοικίαση",
-    "for-sale-and-rent": "Προς πώληση και ενοικίαση"
-  },
-  "intent": {
-    "sale": "Για Πώληση",
-    "rental": "Για Ενοικίαση",
-    "both": "Πώληση & Ενοικίαση",
-    "investment": "Επένδυση",
-    "development": "Ανάπτυξη",
-    "internal": "Εσωτερική Χρήση",
-    "withdrawn": "Αποσυρμένο"
-  },
-  "availability": {
-    "immediatelyAvailable": "Άμεσα Διαθέσιμο",
-    "availableSoon": "Σύντομα Διαθέσιμο",
-    "conditionallyAvailable": "Υπό Προϋποθέσεις",
-    "reserved": "Κρατημένο",
-    "occupied": "Κατειλημμένο",
-    "offMarket": "Εκτός Αγοράς",
-    "notAvailable": "Μη Διαθέσιμο"
-  },
-  "priority": {
-    "showcase": "Βιτρίνα",
-    "hold": "Σε Αναμονή"
-  },
   "building": {
     "toolbar": {
       "actions": {
         "new": "Νέο Κτίριο (Ctrl+N)",
         "edit": "Επεξεργασία Επιλεγμένου (Ctrl+E)",
-        "delete": "Διαγραφή Επιλεγμένου (Delete)",
-        "export": "Εξαγωγή Δεδομένων"
+        "delete": "Διαγραφή Επιλεγμένου (Delete)"
+      }
+    },
+    "dialog": {
+      "addUnit": {
+        "fields": {
+          "status": "Λειτουργική Κατάσταση",
+          "commercialStatus": "Εμπορική Κατάσταση"
+        },
+        "placeholders": {
+          "status": "Επιλέξτε...",
+          "commercialStatus": "Επιλέξτε..."
+        },
+        "commercialStatusOptions": {
+          "unavailable": "Μη διαθέσιμο",
+          "for-sale": "Προς πώληση",
+          "for-rent": "Προς ενοικίαση",
+          "for-sale-and-rent": "Προς πώληση και ενοικίαση"
+        },
+        "statusOptions": {
+          "draft": "Πρόχειρο",
+          "under-construction": "Υπό κατασκευή",
+          "inspection": "Σε επιθεώρηση",
+          "ready": "Έτοιμο",
+          "maintenance": "Υπό συντήρηση"
+        }
       },
-      "filters": {
-        "active": "Ενεργά φίλτρα:",
-        "clearAll": "Καθαρισμός όλων"
-      },
-      "export": {
-        "title": "Εξαγωγή σε:",
-        "pdf": "PDF Αναφορά",
-        "stats": "Στατιστικά Dashboard", 
-        "timeline": "Χρονοδιάγραμμα"
-      },
-      "delete": {
+      "deleteConfirmation": {
         "title": "Επιβεβαίωση Διαγραφής",
         "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {count} κτίριο/α;",
-        "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
-        "cancel": "Ακύρωση",
-        "confirm": "Διαγραφή"
-      }
-    },
-  "toolbar": {
-    "actions": {
-      "new": "Νέο Κτίριο (Ctrl+N)",
-      "edit": "Επεξεργασία Επιλεγμένου (Ctrl+E)",
-      "delete": "Διαγραφή Επιλεγμένου (Delete)"
-    }
-  },
-  "dialog": {
-    "addUnit": {
-      "fields": {
-        "status": "Λειτουργική Κατάσταση",
-        "commercialStatus": "Εμπορική Κατάσταση"
+        "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
       },
-      "placeholders": {
-        "status": "Επιλέξτε...",
-        "commercialStatus": "Επιλέξτε..."
-      },
-      "commercialStatusOptions": {
-        "unavailable": "Μη διαθέσιμο",
-        "for-sale": "Προς πώληση",
-        "for-rent": "Προς ενοικίαση",
-        "for-sale-and-rent": "Προς πώληση και ενοικίαση"
-      },
-      "statusOptions": {
-        "draft": "Πρόχειρο",
-        "under-construction": "Υπό κατασκευή",
-        "inspection": "Σε επιθεώρηση",
-        "ready": "Έτοιμο",
-        "maintenance": "Υπό συντήρηση"
-      }
+      "cancel": "Ακύρωση",
+      "delete": "Διαγραφή"
     },
-    "deleteConfirmation": {
-      "title": "Επιβεβαίωση Διαγραφής",
-      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {count} κτίριο/α;",
-      "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
-    },
-    "cancel": "Ακύρωση",
-    "delete": "Διαγραφή"
-  },
     "storage": {
       "types": {
         "storage": "Αποθήκη",
@@ -189,7 +59,7 @@
       "form": {
         "basicInfo": "Βασικές Πληροφορίες",
         "code": "Κωδικός",
-        "status": "Κατάσταση", 
+        "status": "Κατάσταση",
         "description": "Περιγραφή",
         "area": "Επιφάνεια",
         "price": "Τιμή",
@@ -202,17 +72,6 @@
           "descriptionParking": "Περιγραφή για τη θέση στάθμευσης..."
         }
       }
-    }
-  },
-  "units": {
-    "types": {
-      "studio": "Στούντιο",
-      "apartment_1br": "Γκαρσονιέρα",
-      "apartment_2br": "Διαμέρισμα 2Δ",
-      "apartment_3br": "Διαμέρισμα 3Δ",
-      "maisonette": "Μεζονέτα",
-      "shop": "Κατάστημα",
-      "storage": "Αποθήκη"
     }
   },
   "search": {
@@ -401,177 +260,6 @@
       "noFloorHint": "Επιλέξτε πρώτα κτίριο"
     }
   },
-  "orientation": {
-    "sectionTitle": "Προσανατολισμός",
-    "short": {
-      "north": "Β",
-      "northeast": "ΒΑ",
-      "east": "Α",
-      "southeast": "ΝΑ",
-      "south": "Ν",
-      "southwest": "ΝΔ",
-      "west": "Δ",
-      "northwest": "ΒΔ"
-    }
-  },
-  "condition": {
-    "sectionTitle": "Κατάσταση",
-    "new": "Νέο",
-    "excellent": "Άριστη",
-    "good": "Καλή",
-    "needs-renovation": "Χρήζει ανακαίνισης"
-  },
-  "energy": {
-    "class": "Ενεργειακή κλάση"
-  },
-  "systems": {
-    "sectionTitle": "Συστήματα",
-    "heating": {
-      "label": "Θέρμανση",
-      "central": "Κεντρική",
-      "autonomous": "Αυτόνομη",
-      "heat-pump": "Αντλία θερμότητας",
-      "solar": "Ηλιακή",
-      "none": "Καμία"
-    },
-    "cooling": {
-      "label": "Ψύξη",
-      "central-air": "Κεντρικός αέρας",
-      "split-units": "Split units",
-      "fan-coil": "Fan coil",
-      "none": "Καμία"
-    }
-  },
-  "finishes": {
-    "sectionTitle": "Τελειώματα",
-    "flooring": {
-      "label": "Δάπεδα",
-      "tiles": "Πλακάκι",
-      "wood": "Ξύλο",
-      "laminate": "Λαμινέιτ",
-      "marble": "Μάρμαρο",
-      "carpet": "Μοκέτα"
-    },
-    "frames": {
-      "label": "Κουφώματα",
-      "aluminum": "Αλουμινίου",
-      "pvc": "PVC",
-      "wood": "Ξύλινα"
-    },
-    "glazing": {
-      "label": "Υαλοπίνακες",
-      "single": "Μονοί",
-      "double": "Διπλοί",
-      "triple": "Τριπλοί",
-      "energy": "Ενεργειακοί"
-    }
-  },
-  "features": {
-    "sectionTitle": "Χαρακτηριστικά",
-    "interior": {
-      "label": "Εσωτερικά",
-      "fireplace": "Τζάκι",
-      "jacuzzi": "Τζακούζι",
-      "sauna": "Σάουνα",
-      "smart-home": "Smart home",
-      "solar-panels": "Ηλιακά πάνελ",
-      "underfloor-heating": "Ενδοδαπέδια θέρμανση",
-      "air-conditioning": "Κλιματισμός",
-      "alarm-system": "Συναγερμός"
-    },
-    "security": {
-      "label": "Ασφάλεια",
-      "alarm": "Συναγερμός",
-      "security-door": "Πόρτα ασφαλείας",
-      "cctv": "CCTV",
-      "access-control": "Έλεγχος πρόσβασης",
-      "intercom": "Θυροτηλέφωνο",
-      "motion-sensors": "Αισθητήρες κίνησης"
-    }
-  },
-  "operationalStatus": {
-    "ready": "Έτοιμο",
-    "underConstruction": "Υπό ολοκλήρωση",
-    "inspection": "Σε επιθεώρηση",
-    "maintenance": "Υπό συντήρηση",
-    "draft": "Πρόχειρο"
-  },
-  "viewer": {
-    "tools": {
-      "select": "Επιλογή",
-      "create": "Δημιουργία",
-      "measure": "Μέτρηση",
-      "move": "Μετακίνηση",
-      "connect": "Σύνδεση",
-      "rectangle": "Ορθογώνιο",
-      "circle": "Κύκλος",
-      "polygon": "Πολύγωνο"
-    },
-    "actions": {
-      "copySelected": "Αντιγραφή επιλεγμένου",
-      "deleteSelected": "Διαγραφή επιλεγμένου",
-      "reset": "Επαναφορά",
-      "info": "Πληροφορίες",
-      "download": "Λήψη"
-    },
-    "status": {
-      "tool": "Εργαλείο",
-      "mode": "Λειτουργία",
-      "connecting": "Σύνδεση",
-      "selected": "Επιλεγμένο",
-      "readOnly": "Μόνο Ανάγνωση"
-    },
-    "availableProperties": "Διαθέσιμα Ακίνητα",
-    "propertyDetails": "Επιλεγμένο Ακίνητο",
-    "propertyInfo": "Γρήγορη Προβολή",
-    "confirm": {
-      "deleteProperty": "Είστε σίγουροι ότι θέλετε να διαγράψετε το επιλεγμένο ακίνητο;"
-    },
-    "download": {
-      "filename": "κάτοψη"
-    },
-    "errors": {
-      "loadingError": "Σφάλμα κατά τη φόρτωση:"
-    },
-    "info": {
-      "title": "Πληροφορίες Ακινήτου:",
-      "floor": "Όροφος:",
-      "unknown": "Άγνωστος",
-      "properties": "Ακίνητα:",
-      "zoom": "Zoom:",
-      "visibleLayers": "Ορατά Layers:",
-      "pdfFloorplan": "Κάτοψη PDF:",
-      "available": "Διαθέσιμη",
-      "notAvailable": "Μη διαθέσιμη"
-    },
-    "emptyState": {
-      "noFloorplan": "Δεν υπάρχει διαθέσιμη κάτοψη",
-      "noFloorplanDescription": "Δεν υπάρχουν διαθέσιμα δεδομένα κάτοψης για αυτό το ακίνητο."
-    },
-    "badges": {
-      "propertiesCount": "{count} Ακίνητα",
-      "viewOnly": "Προβολή μόνο"
-    },
-    "statusBar": {
-      "floor": "Όροφος:",
-      "layers": "Layers:",
-      "liveUpdates": "Ενημερώσεις σε πραγματικό χρόνο"
-    },
-    "selectPropertyToViewMedia": "Επιλέξτε ακίνητο για προβολή",
-    "media": {
-      "floorplans": "Κάτοψη",
-      "photos": "Φωτογραφίες",
-      "videos": "Βίντεο",
-      "noFloorplans": "Δεν υπάρχουν κατόψεις",
-      "noPhotos": "Δεν υπάρχουν φωτογραφίες",
-      "noVideos": "Δεν υπάρχουν βίντεο",
-      "floorplanProperty": "Κάτοψη Ακινήτου",
-      "floorplanFloor": "Κάτοψη Ορόφου",
-      "floorplanUnit": "Κάτοψη Μονάδας",
-      "floorplanLevel": "Κάτοψη {name}",
-      "floorplanFloorLevel": "Κάτοψη Ορόφου {name}"
-    }
-  },
   "meta": {
     "enterNewName": "Εισάγετε νέο όνομα για το ακίνητο:",
     "sqm": "τμ",
@@ -711,147 +399,6 @@
       "ariaLabel": "Φίλτρο τύπου ακινήτου"
     }
   },
-  "statusLegend": {
-    "title": "Κατάσταση Ακινήτων",
-    "propertiesOnFloor": "ακίνητα στον όροφο",
-    "errors": "Σφάλματα:"
-  },
-  "editPanel": {
-    "title": "Ιδιότητες Polygon",
-    "selected": "Επιλεγμένο:",
-    "selectToEdit": "Επιλέξτε ένα polygon για επεξεργασία"
-  },
-  "detailsPanel": {
-    "selectProperty": "Επιλέξτε ένα ακίνητο",
-    "toViewDetails": "για να δείτε τα στοιχεία του",
-    "propertiesSelected": "{count} ακίνητα επιλέχθηκαν",
-    "selectSingleProperty": "Επιλέξτε ένα μόνο ακίνητο για να δείτε τις λεπτομέρειες.",
-    "noDataFound": "Δεν βρέθηκαν στοιχεία",
-    "forSelectedProperty": "για το επιλεγμένο ακίνητο"
-  },
-  "suggestions": {
-    "accept": "Αποδοχή",
-    "title": "Έξυπνες Προτάσεις",
-    "analyze": "Ανάλυση",
-    "analysisComplete": "Ανάλυση Ολοκληρώθηκε: Βρέθηκαν {count} προτάσεις τοποθέτησης",
-    "clickAnalyze": "Πατήστε \"Ανάλυση\" για προτάσεις.",
-    "clearSuggestions": "Καθαρισμός Προτάσεων"
-  },
-  "hover": {
-    "clickForMore": "Κλικ για περισσότερες πληροφορίες"
-  },
-  "hoverInfo": {
-    "hoverMouse": "Περάστε το ποντίκι",
-    "overProperty": "πάνω από ένα ακίνητο",
-    "onFloorPlanToSee": "στην κάτοψη για να δείτε",
-    "quickInfo": "γρήγορες πληροφορίες",
-    "noDataFound": "Δεν βρέθηκαν στοιχεία",
-    "forThisProperty": "για αυτό το ακίνητο"
-  },
-  "connectionPanel": {
-    "title": "Συνδέσεις & Ομαδοποίηση",
-    "legend": {
-      "title": "Υπόμνημα"
-    },
-    "controls": {
-      "typeLabel": "Τύπος Σύνδεσης",
-      "typePlaceholder": "Επιλογή τύπου",
-      "types": {
-        "related": "Σχετικά",
-        "sameBuilding": "Ίδιο Κτίριο",
-        "sameFloor": "Ίδιος Όροφος",
-        "parking": "Με Parking"
-      },
-      "cancelConnection": "Ακύρωση Σύνδεσης",
-      "newConnection": "Νέα Σύνδεση",
-      "createGroup": "Δημιουργία Ομάδας ({count} επιλεγμένα)",
-      "clearConnections": "Καθαρισμός Συνδέσεων",
-      "createGroupTitle": "Δημιουργία Ομάδας",
-      "groupNameLabel": "Όνομα ομάδας",
-      "groupNamePlaceholder": "Εισάγετε όνομα ομάδας"
-    },
-    "connectionTypes": {
-      "sameBuilding": "Ίδιο Κτίριο",
-      "sameFloor": "Ίδιος Όροφος",
-      "related": "Σχετικό",
-      "parking": "Θέση Στάθμευσης"
-    }
-  },
-  "floorPlan": {
-    "emptyState": {
-      "title": "Δεν φορτώθηκε Κάτοψη",
-      "description": "Ανεβάστε μια κάτοψη PDF για να ξεκινήσετε τη διαχείριση ακινήτων",
-      "uploadHint": "Χρησιμοποιήστε το κουμπί \"Φόρτωση PDF\" στη γραμμή εργαλείων"
-    },
-    "statusBar": {
-      "properties": "Ιδιοκτησίες",
-      "selected": "Επιλεγμένο",
-      "none": "Κανένα",
-      "connections": "Συνδέσεις",
-      "pdfLoaded": "PDF Φορτωμένο",
-      "zoom": "Μεγέθυνση",
-      "mode": "Λειτουργία",
-      "connecting": "Σύνδεση"
-    },
-    "canvas": {
-      "noPdfProvided": "ΔΕΝ ΔΟΘΗΚΕ PDF URL",
-      "pdfLoading": "ΦΟΡΤΩΣΗ PDF...",
-      "pdfError": "ΣΦΑΛΜΑ PDF",
-      "pdfLoaded": "PDF ΦΟΡΤΩΘΗΚΕ & ΕΜΦΑΝΙΣΤΗΚΕ! Σελίδες: {count}",
-      "debugTitle": "ΠΛΗΡΟΦΟΡΙΕΣ DEBUG PDF",
-      "debugPdfUrl": "PDF URL",
-      "debugPdfReady": "PDF Έτοιμο",
-      "debugPages": "Σελίδες",
-      "debugTestMode": "Λειτουργία Test",
-      "debugError": "Σφάλμα",
-      "debugNone": "Κανένα",
-      "debugExists": "ΥΠΑΡΧΕΙ",
-      "debugYes": "ΝΑΙ",
-      "debugNo": "ΟΧΙ",
-      "testInstructions": "ΟΔΗΓΙΕΣ ΔΟΚΙΜΗΣ",
-      "testStep1": "Πατήστε FULLSCREEN",
-      "testStep2": "Το PDF πρέπει να καλύπτει ΟΛΗ την οθόνη",
-      "testStep3": "Ψάξτε για χρωματιστά borders",
-      "testStep4": "Ελέγξτε debug info πάνω-αριστερά",
-      "modeHidden": "Κρυφό",
-      "modeNormal": "Κανονικό",
-      "modeFullscreen": "ΠΛΗΡΗΣ ΟΘΟΝΗ"
-    }
-  },
-  "floorPlanToolbar": {
-    "uploadPDF": "Φόρτωση PDF",
-    "uploading": "Φόρτωση...",
-    "uploadTooltip": "Φόρτωση κάτοψης PDF",
-    "selectPDFFile": "Παρακαλώ επιλέξτε ένα PDF αρχείο",
-    "viewModes": {
-      "view": "Προβολή",
-      "create": "Δημιουργία",
-      "measure": "Μέτρηση",
-      "edit": "Επεξεργασία"
-    },
-    "layers": {
-      "hidePDF": "Απόκρυψη PDF",
-      "showPDF": "Εμφάνιση PDF",
-      "hideGrid": "Απόκρυψη Grid",
-      "showGrid": "Εμφάνιση Grid",
-      "hideLayers": "Απόκρυψη Layers",
-      "showLayers": "Εμφάνιση Layers"
-    },
-    "zoom": {
-      "zoomIn": "Μεγέθυνση",
-      "zoomOut": "Σμίκρυνση",
-      "resetView": "Επαναφορά View"
-    },
-    "fullscreen": "Πλήρης Οθόνη",
-    "export": {
-      "exportPNG": "Εξαγωγή PNG",
-      "exportPDF": "Εξαγωγή PDF"
-    },
-    "status": {
-      "mode": "Λειτουργία:",
-      "pdfActive": "PDF Active"
-    }
-  },
   "dashboard": {
     "stats": {
       "totalProperties": "Σύνολο Ακινήτων",
@@ -893,15 +440,9 @@
       "label": "Κτίριο"
     }
   },
-  "floorSelector": {
-    "propertiesCount": "{count} ακίνητα"
-  },
   "contacts": {
     "owner": "Ιδιοκτήτης",
     "agent": "Μεσίτης"
-  },
-  "propertyCount": {
-    "propertiesOnFloor": "{count} ακίνητα στον όροφο"
   },
   "multiLevel": {
     "title": "Επίπεδα Ακινήτου",
@@ -924,29 +465,8 @@
   "fileUploader": {
     "upload": "Φόρτωση"
   },
-  "creation": {
-    "clickToStart": "Κλικ για να ξεκινήσετε",
-    "pointsContinue": "{count} σημεία - Κλικ για συνέχεια"
-  },
-  "multiLevelIndicator": {
-    "groundFloor": "Ισόγειο",
-    "firstFloor": "1ος Όροφος"
-  },
   "tooltip": {
     "sqm": "τμ"
-  },
-  "layerDetails": {
-    "color": "Χρώμα:",
-    "change": "Αλλαγή",
-    "opacity": "Διαφάνεια:",
-    "price": "Τιμή:",
-    "area": "Εμβαδόν:",
-    "sqm": "τμ",
-    "nodes": "Κόμβοι:",
-    "duplicate": "Διπλ."
-  },
-  "viewerFilters": {
-    "resetFilters": "Επαναφορά Φίλτρων"
   },
   "share": {
     "defaultMessage": "Δείτε αυτά τα ενδιαφέροντα ακίνητα από την Nestor Construct!",

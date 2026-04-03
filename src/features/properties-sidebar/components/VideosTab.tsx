@@ -30,7 +30,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import type { Property } from '@/types/property-viewer';
-import type { FloorData } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 const logger = createModuleLogger('VideosTab');
@@ -43,21 +42,8 @@ const logger = createModuleLogger('VideosTab');
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 const propertyColor = NAVIGATION_ENTITIES.property.color;
 
-/** Viewer props structure */
-interface ViewerProps {
-  onSelectFloor?: (floorId: string) => void;
-  properties?: Property[];
-  [key: string]: unknown;
-}
-
 interface VideosTabProps {
   selectedProperty: Property | null;
-  currentFloor: FloorData | null;
-  safeFloors: FloorData[];
-  safeViewerProps: ViewerProps;
-  safeViewerPropsWithFloors: ViewerProps & { floors?: FloorData[] };
-  setShowHistoryPanel: (show: boolean) => void;
-  units: Property[];
 }
 
 // =============================================================================

@@ -13,20 +13,22 @@
 import { useCallback } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import { FileRecordService } from '@/services/file-record.service';
 import {
+  archiveFilesWithPolicy,
+  batchDownloadFilesWithPolicy,
+  classifyFileWithPolicy,
   createPendingFileRecordWithPolicy,
   finalizeFileRecordWithPolicy,
   moveFileToTrashWithPolicy,
   renameFileWithPolicy,
   updateFileDescriptionWithPolicy,
+  updateFileClassificationWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { getFileExtension } from '@/services/upload/utils/storage-path';
 import { generateUploadThumbnail, buildThumbnailPath } from '@/components/shared/files/utils/generate-upload-thumbnail';
 import { isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
 import { defaultFileFilters } from '@/components/core/AdvancedFilters';
 import { createModuleLogger } from '@/lib/telemetry';
-import { API_ROUTES } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -99,40 +101,30 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
     const selected = filteredFiles.filter(f => selectedIds.has(f.id) && f.downloadUrl);
     if (selected.length === 0) return;
 
-    const response = await fetch(API_ROUTES.FILES.BATCH_DOWNLOAD, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        files: selected.map(f => ({
-          url: f.downloadUrl,
+    try {
+      const blob = await batchDownloadFilesWithPolicy(
+        selected.map(f => ({
+          url: f.downloadUrl as string,
           filename: `${f.displayName || f.originalFilename}.${f.ext}`,
         })),
-      }),
-    });
-
-    if (!response.ok) {
-      logger.error('Batch download failed', { status: response.status });
+      );
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `files_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      logger.error('Batch download failed', { error });
       return;
     }
-
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = `files_${new Date().toISOString().slice(0, 10)}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
   }, [selectedIds, filteredFiles]);
 
   const handleBatchClassify = useCallback(async (classification: FileClassification) => {
     const ids = Array.from(selectedIds);
-    const { doc, updateDoc } = await import('firebase/firestore');
-    const { db } = await import('@/lib/firebase');
-    await Promise.all(ids.map(id =>
-      updateDoc(doc(db, 'files', id), { classification })
-    ));
+    await Promise.all(ids.map(id => updateFileClassificationWithPolicy(id, classification)));
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, refetch, setSelectedIds]);
@@ -141,14 +133,10 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
 
-    const response = await fetch(API_ROUTES.FILES.ARCHIVE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileIds: ids, action: 'archive' }),
-    });
-
-    if (!response.ok) {
-      logger.error('Batch archive failed', { status: response.status });
+    try {
+      await archiveFilesWithPolicy(ids);
+    } catch (error) {
+      logger.error('Batch archive failed', { error });
       return;
     }
 
@@ -208,11 +196,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
         });
 
         if (isAIClassifiable(file.type)) {
-          fetch(API_ROUTES.FILES.CLASSIFY, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileId }),
-          }).catch(() => { /* non-blocking */ });
+          classifyFileWithPolicy(fileId).catch(() => { /* non-blocking */ });
         }
 
         successCount++;

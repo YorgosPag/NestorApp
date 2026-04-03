@@ -80,11 +80,20 @@
   "georeferencing": {
     "title": "🗺️ DXF Georeferencing",
     "subtitle": "Transform DXF files to geographic coordinates",
+    "workspace": "Χώρος Εργασίας Γεωαναφοράς DXF",
+    "engineDescription": "Μηχανή μετασχηματισμού συντεταγμένων",
+    "coordinateTransform": "Μετασχηματισμός συντεταγμένων DXF → Γεωγραφικές συντεταγμένες",
     "steps": {
       "upload": "1. Upload DXF",
       "points": "2. Control Points",
       "transform": "3. Transform",
       "validate": "4. Validate"
+    },
+    "workflow": {
+      "step1": "Βήμα 1: Προσθήκη σημείων ελέγχου με DXF και Γεωγραφικές συντεταγμένες",
+      "step2": "Βήμα 2: Εξασφάλιση καλής χωρικής κατανομής (γωνίες + κέντρο)",
+      "step3": "Βήμα 3: Βαθμονόμηση μετασχηματισμού για αντιστοίχιση συντεταγμένων",
+      "step4": "Βήμα 4: Επικύρωση ακρίβειας (στόχος: <5m RMS σφάλμα)"
     },
     "uploadArea": {
       "title": "Upload DXF File",
@@ -96,10 +105,19 @@
     "controlPoints": {
       "title": "Control Points",
       "description": "Define at least 3 control points for accurate georeferencing",
+      "count": "Σημεία Ελέγχου",
       "addPoint": "➕ Add Point",
       "removePoint": " Remove",
       "accuracy": "Accuracy:",
       "status": "Status:",
+      "none": "Δεν προστέθηκαν σημεία ελέγχου ακόμη",
+      "minimum": "Προσθέστε τουλάχιστον 3 σημεία για γεωαναφορά",
+      "features": {
+        "addEdit": "• Προσθήκη/Επεξεργασία σημείων ελέγχου",
+        "mapping": "• Αντιστοίχιση DXF ↔ Γεωγραφικών",
+        "validation": "• Επικύρωση ακρίβειας",
+        "distribution": "• Χωρική κατανομή"
+      },
       "coordinates": {
         "local": "Local Coordinates (DXF)",
         "world": "World Coordinates (Geographic)",
@@ -111,6 +129,8 @@
     },
     "transformation": {
       "title": "Transformation",
+      "controls": "Έλεγχοι Μετασχηματισμού",
+      "engine": "Μηχανή Μετασχηματισμού",
       "method": "Method:",
       "methods": {
         "affine": "Affine (6 parameters)",
@@ -118,6 +138,14 @@
         "tps": "Thin Plate Spline"
       },
       "execute": "Execute Transformation",
+      "calibrate": "Βαθμονόμηση Μετασχηματισμού",
+      "notCalibrated": "❌ Μη Βαθμονομημένο",
+      "features": {
+        "affine": "• Affine μετασχηματισμός",
+        "leastSquares": "• Βαθμονόμηση ελάχιστων τετραγώνων",
+        "rmsCalculation": "• Υπολογισμός ακρίβειας RMS",
+        "inverse": "• Αντίστροφος μετασχηματισμός"
+      },
       "results": {
         "title": "Transformation Results",
         "accuracy": "Accuracy:",
@@ -192,6 +220,73 @@
       "georeferencingReady": "Georeferencing Ready"
     }
   },
+  "progress": {
+    "title": "Πρόοδος Φάσεων",
+    "phase1": "Φάση 1: Θεμέλια",
+    "phase1Description": "Αρχιτεκτονική + Τύποι Ολοκληρώθηκαν",
+    "phase2": "Φάση 2: Μετασχηματισμός",
+    "phase2Description": "Γεωαναφορά DXF Έτοιμη",
+    "phase3": "Φάση 3: MapLibre",
+    "phase3Description": "Διαδραστική χαρτογράφηση",
+    "phase4": "Φάση 4: PostGIS",
+    "phase4Description": "Χωρική βάση δεδομένων",
+    "phase5": "Φάση 5: Ειδοποιήσεις",
+    "phase5Description": "Μηχανή γεω-ειδοποιήσεων"
+  },
+  "features": {
+    "title": "Διαθέσιμα Χαρακτηριστικά",
+    "controlPointManagement": "Διαχείριση Σημείων Ελέγχου",
+    "affineTransformation": "Affine Μετασχηματισμός",
+    "accuracyValidation": "Επικύρωση Ακρίβειας",
+    "spatialDistribution": "Ανάλυση Χωρικής Κατανομής",
+    "rmsCalculation": "Υπολογισμός RMS Σφάλματος",
+    "coordinateTransformation": "Μετασχηματισμός Συντεταγμένων"
+  },
+  "technical": {
+    "title": "Τεχνικές Προδιαγραφές",
+    "transformation": "Μετασχηματισμός:",
+    "transformationValue": "Affine + Ελάχιστα Τετράγωνα",
+    "accuracy": "Ακρίβεια:",
+    "accuracyValue": "Επίπεδο χιλιοστού",
+    "crsSupport": "Υποστήριξη CRS:",
+    "crsSupportValue": "WGS84, GGRS87, UTM",
+    "mathEngine": "Μαθηματική Μηχανή:",
+    "mathEngineValue": "Enterprise TypeScript",
+    "standards": "Πρότυπα:",
+    "standardsValue": "ISO 19107, OGC"
+  },
+  "next": {
+    "title": "Επόμενο (Φάση 3)",
+    "maplibre": "• Ενσωμάτωση MapLibre GL JS",
+    "interactivePicking": "• Διαδραστική επιλογή συντεταγμένων",
+    "realtimePreview": "• Προεπισκόπηση σε πραγματικό χρόνο",
+    "basemapLayers": "• Πολλαπλά επίπεδα βάσης",
+    "visualIndicators": "• Οπτικοί δείκτες ακρίβειας"
+  },
+  "actions": {
+    "savePoints": "💾 Αποθήκευση Σημείων",
+    "loadPoints": "📂 Φόρτωση Σημείων",
+    "clearAllPoints": "Καθαρισμός Όλων των Σημείων",
+    "addPoint": "+ Προσθήκη Σημείου"
+  },
+  "validation": {
+    "status": "Κατάσταση Επικύρωσης",
+    "ready": "Έτοιμο για Βαθμονόμηση",
+    "needsImprovement": "Χρειάζεται Βελτίωση",
+    "statistics": {
+      "controlPoints": "Σημεία Ελέγχου:",
+      "avgAccuracy": "Μέση Ακρίβεια:",
+      "maxError": "Μέγιστο Σφάλμα:",
+      "distribution": "Κατανομή:"
+    },
+    "sections": {
+      "errors": "Σφάλματα:",
+      "warnings": "Προειδοποιήσεις:",
+      "recommendations": "Συστάσεις:"
+    }
+  },
+  "panelTitle": "Σημεία Ελέγχου",
+  "addControlPoint": "Προσθήκη Σημείου Ελέγχου",
   "panelHeader": {
     "title": "🗺️ DXF Georeferencing",
     "subtitle": "Phase 2: Coordinate transformation engine"
@@ -321,6 +416,71 @@
     "systemVersion": "Geo-Canvas System v1.0.0 (Phase 1)",
     "platformName": "Enterprise Geo-Alert Platform"
   },
+  "phaseDetails": {
+    "phase1Features": {
+      "foundationStructure": "• Δομή θεμελίων",
+      "enterpriseTypeSystem": "• Σύστημα τύπων Enterprise",
+      "configurationSetup": "• Ρύθμιση διαμόρφωσης",
+      "routerIntegrationReady": "• Ενσωμάτωση router έτοιμη"
+    },
+    "phase2Features": {
+      "dxfTransformationEngine": "• Μηχανή μετασχηματισμού DXF",
+      "coordinateSystemSupport": "• Υποστήριξη συστήματος συντεταγμένων",
+      "georeferencingTools": "• Εργαλεία γεωαναφοράς",
+      "controlPointManagement": "• Διαχείριση σημείων ελέγχου"
+    },
+    "architectureOverview": {
+      "title": "Επισκόπηση Αρχιτεκτονικής",
+      "centralizedSystem": "Κεντρικοποιημένο Σύστημα: Ενσωματωμένο στο οικοσύστημα DXF Viewer",
+      "technologyStack": "Στοίβα Τεχνολογίας: React + TypeScript + MapLibre GL JS",
+      "dataFlow": "Ροή Δεδομένων: DXF → Μετασχηματισμός → GeoJSON → Χάρτης → Ειδοποιήσεις",
+      "standards": "Πρότυπα: ISO 19107, OGC, συμβάσεις AutoCAD"
+    }
+  },
+  "map": {
+    "controls": {
+      "pickGeographicPoint": "Pick Geographic Point",
+      "cancelPicking": "Cancel Picking",
+      "cancel": "Cancel",
+      "mapStyle": "Map Style",
+      "clickOnMap": "Click on map...",
+      "openStreetMap": "OpenStreetMap",
+      "satellite": "Satellite",
+      "terrain": "Terrain",
+      "darkMode": "Dark Mode",
+      "greece": "Greece",
+      "watercolor": "Watercolor",
+      "toner": "Black & White"
+    },
+    "status": {
+      "mapLoaded": "Map Loaded",
+      "mapLoading": "Loading...",
+      "points": "Points",
+      "controlPoints": "Control Points",
+      "avgAccuracy": "Avg Accuracy:",
+      "best": "Best:",
+      "accuracy": "±{value}m"
+    },
+    "coordinates": {
+      "lng": "Longitude",
+      "lat": "Latitude"
+    },
+    "coordinate": {
+      "displayLabel": "Εμφάνιση Συντεταγμένων",
+      "currentPosition": "Τρέχουσα Θέση",
+      "longitude": "Γεωγρ. Μήκος",
+      "latitude": "Γεωγρ. Πλάτος",
+      "altitude": "Υψόμετρο",
+      "loading": "Φόρτωση...",
+      "clickPrompt": "Κλικ για προσθήκη {mode} σημείου",
+      "geographic": "γεωγραφικό",
+      "dxf": "DXF"
+    },
+    "styleSelector": {
+      "style": "Style:",
+      "quickSwitcher": "Γρήγορη Αλλαγή Στυλ"
+    }
+  },
   "accuracy": {
     "legend": " Accuracy Legend",
     "visualization": "Visualization:",
@@ -343,38 +503,6 @@
       "avgAccuracy": "Avg Accuracy:",
       "best": "Best:",
       "format": "±{value}m"
-    }
-  },
-  "map": {
-    "status": {
-      "mapLoaded": "Map Loaded",
-      "mapLoading": "Loading...",
-      "points": "Points",
-      "controlPoints": "Control Points",
-      "avgAccuracy": "Avg Accuracy:",
-      "best": "Best:",
-      "accuracy": "±{value}m"
-    },
-    "controls": {
-      "pickGeographicPoint": "Pick Geographic Point",
-      "cancelPicking": "Cancel Picking",
-      "cancel": "Cancel",
-      "mapStyle": "Map Style",
-      "clickOnMap": "Click on map...",
-      "openStreetMap": "OpenStreetMap",
-      "satellite": "Satellite",
-      "terrain": "Terrain",
-      "darkMode": "Dark Mode",
-      "greece": "Greece",
-      "watercolor": "Watercolor",
-      "toner": "Black & White"
-    },
-    "coordinates": {
-      "lng": "Longitude",
-      "lat": "Latitude"
-    },
-    "styleSelector": {
-      "style": "Style:"
     }
   },
   "floorPlanControlPoints": {

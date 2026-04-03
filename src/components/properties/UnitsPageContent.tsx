@@ -29,9 +29,6 @@ import { PageLoadingState } from '@/core/states';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { deletePropertyWithPolicy } from '@/services/property/property-mutation-gateway';
-import { useNotifications } from '@/providers/NotificationProvider';
-import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
 import { createStatusLabelGetter, createTypeLabelGetter } from '@/app/properties/properties-page-helpers';
@@ -40,7 +37,6 @@ export function UnitsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('properties');
   const _colors = useSemanticColors();
-  const { success, error: notifyError } = useNotifications();
   const searchParams = useSearchParams();
   const urlPropertyId = searchParams.get('propertyId') ?? searchParams.get('unitId');
   const urlTab = searchParams.get('tab');
@@ -109,6 +105,7 @@ export function UnitsPageContent() {
     handleUpdateProperty,
     checkingPropertyMutation,
     PropertyMutationImpactDialog,
+    PropertyDeletionDialogs,
     forceDataRefresh,
   } = usePropertiesViewerState();
 
@@ -156,26 +153,6 @@ export function UnitsPageContent() {
     setNewUnitTemplate(null);
     handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
   }, [handlePolygonSelect]);
-
-  // 🏢 ENTERPRISE: Delete unit handler — Firestore + local state sync
-  const handleDeleteUnit = useCallback(async (propertyId: string) => {
-    try {
-      await deletePropertyWithPolicy({ propertyId });
-      handleDelete(propertyId);
-      // Deselect the deleted unit
-      handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
-      success(t('viewer.messages.deleteSuccess', {
-        defaultValue: 'Property deleted successfully.',
-      }));
-    } catch (error) {
-      notifyError(translatePropertyMutationError(
-        error,
-        t,
-        'viewer.messages.deleteFailed',
-        'The property could not be deleted.',
-      ));
-    }
-  }, [handleDelete, handlePolygonSelect, notifyError, success, t]);
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -466,7 +443,7 @@ export function UnitsPageContent() {
               setShowHistoryPanel={setShowHistoryPanel}
               onAssignmentSuccess={handleAssignmentSuccess}
               onNewProperty={handleNewUnitInline}
-              onDeleteProperty={handleDeleteUnit}
+              onDeleteProperty={handleDelete}
               isCreatingNewUnit={isCreatingNewUnit}
               onPropertyCreated={handleUnitCreated}
               onCancelCreate={handleCancelCreate}
@@ -489,8 +466,14 @@ export function UnitsPageContent() {
           </div>
         )}
         {PropertyMutationImpactDialog}
+        {PropertyDeletionDialogs}
       </PageContainer>
   );
 }
 
 export default UnitsPageContent;
+
+
+
+
+

@@ -170,8 +170,8 @@ export function PropertyManagementPageContent() {
         showDashboard={false}
         stats={hookState.dashboardStats}
         filteredProperties={hookState.filteredProperties}
-        handleUpdateProperty={() => {}}
       />
     </section>
   );
 }
+

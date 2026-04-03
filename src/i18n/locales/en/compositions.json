@@ -78,7 +78,7 @@
       "description": "Building management toolbar"
     },
     "project": {
-      "title": "ProjectToolbar", 
+      "title": "ProjectToolbar",
       "description": "Project management toolbar"
     },
     "contacts": {

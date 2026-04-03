@@ -77,7 +77,7 @@ const getProjectStatusLabel = (status: string): string => {
     };
     const key = keyMap[status];
     if (key === 'unknown') {
-        return i18n.t('status.unknown', { ns: 'common' });
+        return i18n.t('status.unknown', { ns: 'common-status' });
     }
     return key ? i18n.t(`status.${key}`, { ns: 'projects' }) : status;
 };

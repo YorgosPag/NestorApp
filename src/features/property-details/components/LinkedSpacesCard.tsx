@@ -38,6 +38,8 @@ import type { SpaceInclusionType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { updatePropertyLinkedSpacesWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import '@/lib/design-system';
 const logger = createModuleLogger('LinkedSpacesCard');
 
@@ -99,6 +101,7 @@ export function LinkedSpacesCard({
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   const typography = useTypography();
+  const { error: notifyError } = useNotifications();
   const { checking: previewChecking, runPreviewedMutation, ImpactDialog } = useGuardedPropertyMutation({ id: propertyId });
 
   // 🏢 ENTERPRISE: State management - Available options
@@ -298,11 +301,12 @@ export function LinkedSpacesCard({
       // ROLLBACK: restore previous state
       setDraftLinkedSpaces(rollback);
       setSaveStatus('error');
+      notifyError(translatePropertyMutationError(error, t));
       setTimeout(() => setSaveStatus('idle'), 5000);
     } finally {
       setSaving(false);
     }
-  }, [buildingId, onLinkedSpacesChanged, propertyId, runPreviewedMutation]);
+  }, [buildingId, notifyError, onLinkedSpacesChanged, propertyId, runPreviewedMutation, t]);
 
   // 🏢 ENTERPRISE: Add parking — optimistic update + background save
   const handleParkingSelected = useCallback((parkingId: string) => {

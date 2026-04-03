@@ -765,6 +765,12 @@ export const API_ROUTES = {
     CHECK_IN: '/api/attendance/check-in',
     GEOFENCE: '/api/attendance/geofence',
   },
+  IKA: {
+    ATTENDANCE_EVENTS: '/api/ika/attendance-events',
+    EMPLOYMENT_RECORDS: '/api/ika/employment-records',
+    EMPLOYMENT_RECORD_APD_STATUS: (recordId: string) => `/api/ika/employment-records/${recordId}/apd-status` as const,
+    EFKA_DECLARATION: (projectId: string) => `/api/projects/${projectId}/efka-declaration` as const,
+  },
 
   // ── Communications ────────────────────────────────────────────────────
   COMMUNICATIONS: {

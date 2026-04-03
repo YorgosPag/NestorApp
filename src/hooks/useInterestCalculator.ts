@@ -21,12 +21,16 @@ import type {
   CostCalculationResult,
   ScenarioComparison,
   CostCalculationRequest,
-  CostCalculationResponse,
   EuriborRatesResponse,
   BankSpreadsResponse,
 } from '@/types/interest-calculator';
 import type { Installment } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  calculateInterestCostWithPolicy,
+  refreshEuriborRatesWithPolicy,
+  updateBankSpreadsWithPolicy,
+} from '@/services/interest-calculator/interest-calculator-mutation-gateway';
 
 // =============================================================================
 // FETCH HELPER
@@ -109,9 +113,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
   // --- Force refresh from ECB ---
   const refreshRates = useCallback(async (): Promise<ActionResult> => {
     try {
-      const res = await fetchJson<EuriborRatesResponse>(API_ROUTES.EURIBOR.REFRESH, {
-        method: 'POST',
-      });
+      const res = await refreshEuriborRatesWithPolicy();
       if (res.success && res.rates) {
         setRates(res.rates);
         return { success: true };
@@ -129,10 +131,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
     setError(null);
     try {
       const body: CostCalculationRequest = { ...input, scenarios: false };
-      const res = await fetchJson<CostCalculationResponse>(API_ROUTES.CALCULATOR.COST, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
+      const res = await calculateInterestCostWithPolicy(body);
 
       if (res.success && res.result) {
         setResult(res.result);
@@ -175,10 +174,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
         scenarios: true,
       };
 
-      const res = await fetchJson<CostCalculationResponse>(API_ROUTES.CALCULATOR.COST, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
+      const res = await calculateInterestCostWithPolicy(body);
 
       if (res.success) {
         if (res.result) setResult(res.result);
@@ -196,10 +192,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
   // --- Update spreads ---
   const updateSpreads = useCallback(async (config: BankSpreadConfig): Promise<ActionResult> => {
     try {
-      const res = await fetchJson<BankSpreadsResponse>(API_ROUTES.SETTINGS.BANK_SPREADS, {
-        method: 'PUT',
-        body: JSON.stringify(config),
-      });
+      const res = await updateBankSpreadsWithPolicy(config);
       if (res.success && res.config) {
         setSpreads(res.config);
         return { success: true };

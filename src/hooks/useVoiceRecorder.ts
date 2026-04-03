@@ -17,8 +17,8 @@
  */
 
 import { useState, useRef, useCallback } from 'react';
-import { API_ROUTES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
+import { transcribeVoiceWithPolicy } from '@/services/voice/voice-mutation-gateway';
 
 // =============================================================================
 // TYPES
@@ -172,21 +172,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
           const formData = new FormData();
           formData.append('file', audioBlob, `voice.${ext}`);
 
-          const response = await fetch(API_ROUTES.VOICE.TRANSCRIBE, {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (!response.ok) {
-            const errorData: { error?: string } = await response.json().catch(() => ({}));
-            const errorMsg = errorData.error || `Server error ${response.status}`;
-            setError(errorMsg);
-            setStatus('error');
-            resolve('');
-            return;
-          }
-
-          const data: { success: boolean; text: string; error?: string } = await response.json();
+          const data = await transcribeVoiceWithPolicy(formData);
 
           if (data.success && data.text) {
             setTranscribedText(data.text);

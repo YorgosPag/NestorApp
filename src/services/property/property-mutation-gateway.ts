@@ -5,6 +5,7 @@ import {
   deleteProperty as deletePropertyRecord,
   updateProperty as updatePropertyRecord,
   updatePropertyCoverage as updatePropertyCoverageRecord,
+  updateMultiplePropertiesOwner as updateMultiplePropertiesOwnerRecord,
 } from '@/services/properties.service';
 
 const SOLD_LOCKED_FIELDS: ReadonlySet<string> = new Set([
@@ -72,6 +73,11 @@ interface GuardedPropertyCoverageInput {
     hasFloorplans: boolean;
     hasDocuments: boolean;
   }>;
+}
+
+interface GuardedBulkAssignOwnerInput {
+  readonly propertyIds: readonly string[];
+  readonly contactId: string;
 }
 
 export class PropertyMutationPolicyError extends Error {
@@ -263,4 +269,24 @@ export async function updatePropertyCoverageWithPolicy({
   }
 
   return updatePropertyCoverageRecord(propertyId, coverage);
+}
+
+export async function assignMultiplePropertiesOwnerWithPolicy({
+  propertyIds,
+  contactId,
+}: GuardedBulkAssignOwnerInput): Promise<{ success: boolean }> {
+  if (!Array.isArray(propertyIds) || propertyIds.length === 0) {
+    throw new PropertyMutationPolicyError('At least one property must be selected.');
+  }
+
+  if (isBlank(contactId)) {
+    throw new PropertyMutationPolicyError('A contact must be selected before assigning ownership.');
+  }
+
+  const invalidPropertyId = propertyIds.find((propertyId) => !propertyId || propertyId === '__new__');
+  if (invalidPropertyId) {
+    throw new PropertyMutationPolicyError('Cannot assign ownership to an unsaved property.');
+  }
+
+  return updateMultiplePropertiesOwnerRecord([...propertyIds], contactId);
 }

@@ -15,102 +15,265 @@
  * @module components/generic/mappings/buildingMappings
  */
 
-import type { ComponentType } from 'react';
-import type { TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
-
-// ============================================================================
-// BUILDING-SPECIFIC COMPONENTS
-// ============================================================================
+import React, { type ComponentType } from 'react';
+import type { BuildingTabComponentProps } from '@/components/generic/UniversalTabsRenderer';
+import type { AuditEntityType } from '@/types/audit-trail';
 
 import { GeneralTabContent } from '@/components/building-management/tabs/GeneralTabContent';
 import TimelineTabContent from '@/components/building-management/tabs/TimelineTabContent';
 import AnalyticsTabContent from '@/components/building-management/tabs/AnalyticsTabContent';
 import { StorageTab } from '@/components/building-management/StorageTab';
 import { BuildingCustomersTab } from '@/components/building-management/tabs/BuildingCustomersTab';
-// Entity Associations — contacts & collaborators linked to building
 import { BuildingContactsTab } from '@/components/building-management/tabs/BuildingContactsTab';
-// Locations — addresses & geolocation (moved from GeneralTabContent)
 import { BuildingLocationsTab } from '@/components/building-management/tabs/BuildingLocationsTab';
-
-// ============================================================================
-// 🏢 ENTERPRISE: EntityFilesManager-based tabs (ADR-031)
-// ============================================================================
-
 import { BuildingFloorplanTab } from '@/components/building-management/tabs/BuildingFloorplanTab';
 import { BuildingPhotosTab } from '@/components/building-management/tabs/BuildingPhotosTab';
 import { BuildingVideosTab } from '@/components/building-management/tabs/BuildingVideosTab';
 import { BuildingContractsTab } from '@/components/building-management/tabs/BuildingContractsTab';
-
-// ============================================================================
-// LEGACY COMPONENTS (kept for backward compatibility)
-// ============================================================================
-
 import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab';
-
-// ============================================================================
-// BOQ MEASUREMENTS TAB (ADR-175 Phase 1B)
-// ============================================================================
-
 import { MeasurementsTabContent } from '@/components/building-management/tabs/MeasurementsTabContent';
-
-// ============================================================================
-// FLOORS MANAGEMENT TAB (ADR-180)
-// ============================================================================
-
 import { FloorsTabContent } from '@/components/building-management/tabs/FloorsTabContent';
-
-// ============================================================================
-// BUILDING SPACES TABS (ADR-184)
-// ============================================================================
-
 import { ParkingTabContent } from '@/components/building-management/tabs/ParkingTabContent';
 import { PropertiesTabContent } from '@/components/building-management/tabs/PropertiesTabContent';
-
-// ============================================================================
-// AUDIT & HISTORY (ADR-195)
-// ============================================================================
-
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 
-// ============================================================================
-// BUILDING COMPONENT MAPPING
-// 🏢 ENTERPRISE: Explicit type for UniversalTabsRenderer compatibility
-// ============================================================================
+function resolveBuilding(props: BuildingTabComponentProps): BuildingTabComponentProps['building'] | undefined {
+  return props.building ?? props.data;
+}
 
-export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabComponentProps>> = {
-  'GeneralTabContent': GeneralTabContent as ComponentType<TabComponentProps>,
-  'TimelineTabContent': TimelineTabContent as ComponentType<TabComponentProps>,
-  'AnalyticsTabContent': AnalyticsTabContent as ComponentType<TabComponentProps>,
-  'PhotosTabContent': BuildingPhotosTab as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Now uses EntityFilesManager
-  'VideosTabContent': BuildingVideosTab as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Now uses EntityFilesManager
-  'PlaceholderTab': PlaceholderTab as ComponentType<TabComponentProps>,
-  'FloorplanViewerTab': BuildingFloorplanTab as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Uses EntityFilesManager
-  'StorageTab': StorageTab as ComponentType<TabComponentProps>,
-  'BuildingCustomersTab': BuildingCustomersTab as unknown as ComponentType<TabComponentProps>,
-  'BuildingContactsTab': BuildingContactsTab as unknown as ComponentType<TabComponentProps>,
-  'BuildingLocationsTab': BuildingLocationsTab as unknown as ComponentType<TabComponentProps>,
+function resolveNormalizedBuilding(props: BuildingTabComponentProps): BuildingTabComponentProps['building'] | undefined {
+  const building = resolveBuilding(props);
+  if (!building) {
+    return undefined;
+  }
 
-  'MeasurementsTabContent': MeasurementsTabContent as ComponentType<TabComponentProps>,
-  'FloorsTabContent': FloorsTabContent as ComponentType<TabComponentProps>,
-  'ParkingTabContent': ParkingTabContent as ComponentType<TabComponentProps>,
-  'PropertiesTabContent': PropertiesTabContent as ComponentType<TabComponentProps>,
+  return {
+    ...building,
+    id: String(building.id),
+  } as BuildingTabComponentProps['building'];
+}
 
-  // 🏢 ENTERPRISE: Unified Factory aliases - all using EntityFilesManager (ADR-031)
-  'BuildingGeneralTab': GeneralTabContent as ComponentType<TabComponentProps>,
-  'BuildingFloorsTab': TimelineTabContent as ComponentType<TabComponentProps>,
-  'BuildingFloorplansTab': BuildingFloorplanTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
-  'BuildingDocumentsTab': BuildingContractsTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
-  'BuildingPhotosTab': BuildingPhotosTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
-  'BuildingVideosTab': BuildingVideosTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
-  'BuildingActivityTab': AnalyticsTabContent as ComponentType<TabComponentProps>,
-  'BuildingMeasurementsTab': MeasurementsTabContent as ComponentType<TabComponentProps>,
+function BuildingCustomersTabAdapter(props: BuildingTabComponentProps) {
+  const buildingId = props.buildingId ?? resolveBuilding(props)?.id;
+  if (buildingId === undefined || buildingId === null) {
+    return null;
+  }
+  return React.createElement(BuildingCustomersTab, { buildingId: String(buildingId) });
+}
 
-  // 🏢 AUDIT & HISTORY (ADR-195)
-  'ActivityTab': ActivityTab as ComponentType<TabComponentProps>,
+function BuildingContactsTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  const componentProps: React.ComponentProps<typeof BuildingContactsTab> = {
+    building: building as React.ComponentProps<typeof BuildingContactsTab>['building'],
+    data: building as React.ComponentProps<typeof BuildingContactsTab>['data'],
+  };
+  return React.createElement(BuildingContactsTab, componentProps);
+}
+
+function BuildingLocationsTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  const componentProps: React.ComponentProps<typeof BuildingLocationsTab> = {
+    building: building as React.ComponentProps<typeof BuildingLocationsTab>['building'],
+    data: building as React.ComponentProps<typeof BuildingLocationsTab>['data'],
+  };
+  return React.createElement(BuildingLocationsTab, componentProps);
+}
+
+function GeneralTabContentAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+
+  const componentProps: React.ComponentProps<typeof GeneralTabContent> = {
+    building: building as React.ComponentProps<typeof GeneralTabContent>['building'],
+    isEditing: props.isEditing,
+    onEditingChange: props.onEditingChange,
+    onSaveRef: props.onSaveRef,
+    isCreateMode: props.isCreateMode,
+    onBuildingCreated: props.onBuildingCreated,
+  };
+
+  return React.createElement(GeneralTabContent, componentProps);
+}
+
+function TimelineTabContentAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+
+  const componentProps: React.ComponentProps<typeof TimelineTabContent> = {
+    building: building as React.ComponentProps<typeof TimelineTabContent>['building'],
+  };
+
+  return React.createElement(TimelineTabContent, componentProps);
+}
+
+function AnalyticsTabContentAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+
+  const componentProps: React.ComponentProps<typeof AnalyticsTabContent> = {
+    building: building as React.ComponentProps<typeof AnalyticsTabContent>['building'],
+  };
+
+  return React.createElement(AnalyticsTabContent, componentProps);
+}
+
+function BuildingFloorplanTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  const componentProps: React.ComponentProps<typeof BuildingFloorplanTab> = {
+    building: building as React.ComponentProps<typeof BuildingFloorplanTab>['building'],
+    data: building as React.ComponentProps<typeof BuildingFloorplanTab>['data'],
+    title: typeof props.title === 'string' ? props.title : undefined,
+  };
+  return React.createElement(BuildingFloorplanTab, componentProps);
+}
+
+function BuildingPhotosTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  const componentProps: React.ComponentProps<typeof BuildingPhotosTab> = {
+    building: building as React.ComponentProps<typeof BuildingPhotosTab>['building'],
+    data: building as React.ComponentProps<typeof BuildingPhotosTab>['data'],
+    title: typeof props.title === 'string' ? props.title : undefined,
+  };
+  return React.createElement(BuildingPhotosTab, componentProps);
+}
+
+function BuildingVideosTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  const componentProps: React.ComponentProps<typeof BuildingVideosTab> = {
+    building: building as React.ComponentProps<typeof BuildingVideosTab>['building'],
+    data: building as React.ComponentProps<typeof BuildingVideosTab>['data'],
+    title: typeof props.title === 'string' ? props.title : undefined,
+  };
+  return React.createElement(BuildingVideosTab, componentProps);
+}
+
+function BuildingContractsTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  const componentProps: React.ComponentProps<typeof BuildingContractsTab> = {
+    building: building as React.ComponentProps<typeof BuildingContractsTab>['building'],
+    data: building as React.ComponentProps<typeof BuildingContractsTab>['data'],
+    title: typeof props.title === 'string' ? props.title : undefined,
+  };
+  return React.createElement(BuildingContractsTab, componentProps);
+}
+
+function PlaceholderTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  const componentProps: React.ComponentProps<typeof PlaceholderTab> = {
+    title: typeof props.title === 'string' ? props.title : undefined,
+    building: (building as React.ComponentProps<typeof PlaceholderTab>['building']) ?? undefined,
+    icon: props.icon ?? undefined,
+  };
+  return React.createElement(PlaceholderTab, componentProps);
+}
+
+function StorageTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+
+  const componentProps: React.ComponentProps<typeof StorageTab> = {
+    building: building as React.ComponentProps<typeof StorageTab>['building'],
+  };
+
+  return React.createElement(StorageTab, componentProps);
+}
+
+function MeasurementsTabContentAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+
+  const componentProps: React.ComponentProps<typeof MeasurementsTabContent> = {
+    building: building as React.ComponentProps<typeof MeasurementsTabContent>['building'],
+  };
+
+  return React.createElement(MeasurementsTabContent, componentProps);
+}
+
+function FloorsTabContentAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+
+  const componentProps: React.ComponentProps<typeof FloorsTabContent> = {
+    building: building as React.ComponentProps<typeof FloorsTabContent>['building'],
+  };
+
+  return React.createElement(FloorsTabContent, componentProps);
+}
+
+function ParkingTabContentAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+
+  const componentProps: React.ComponentProps<typeof ParkingTabContent> = {
+    building: building as React.ComponentProps<typeof ParkingTabContent>['building'],
+  };
+
+  return React.createElement(ParkingTabContent, componentProps);
+}
+
+function PropertiesTabContentAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  if (!building) {
+    return null;
+  }
+
+  const componentProps: React.ComponentProps<typeof PropertiesTabContent> = {
+    building: building as React.ComponentProps<typeof PropertiesTabContent>['building'],
+  };
+
+  return React.createElement(PropertiesTabContent, componentProps);
+}
+
+function ActivityTabAdapter(props: BuildingTabComponentProps) {
+  const building = resolveNormalizedBuilding(props);
+  return React.createElement(ActivityTab, {
+    ...props,
+    entityType: (props.entityType as AuditEntityType | undefined) ?? 'building',
+    entityId: building?.id ? String(building.id) : undefined,
+    building,
+    data: building ?? props.data,
+  });
+}
+
+export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<BuildingTabComponentProps>> = {
+  GeneralTabContent: GeneralTabContentAdapter,
+  TimelineTabContent: TimelineTabContentAdapter,
+  AnalyticsTabContent: AnalyticsTabContentAdapter,
+  PhotosTabContent: BuildingPhotosTabAdapter,
+  VideosTabContent: BuildingVideosTabAdapter,
+  PlaceholderTab: PlaceholderTabAdapter,
+  FloorplanViewerTab: BuildingFloorplanTabAdapter,
+  StorageTab: StorageTabAdapter,
+  BuildingCustomersTab: BuildingCustomersTabAdapter,
+  BuildingContactsTab: BuildingContactsTabAdapter,
+  BuildingLocationsTab: BuildingLocationsTabAdapter,
+  MeasurementsTabContent: MeasurementsTabContentAdapter,
+  FloorsTabContent: FloorsTabContentAdapter,
+  ParkingTabContent: ParkingTabContentAdapter,
+  PropertiesTabContent: PropertiesTabContentAdapter,
+  BuildingGeneralTab: GeneralTabContentAdapter,
+  BuildingFloorsTab: TimelineTabContentAdapter,
+  BuildingFloorplansTab: BuildingFloorplanTabAdapter,
+  BuildingDocumentsTab: BuildingContractsTabAdapter,
+  BuildingPhotosTab: BuildingPhotosTabAdapter,
+  BuildingVideosTab: BuildingVideosTabAdapter,
+  BuildingActivityTab: AnalyticsTabContentAdapter,
+  BuildingMeasurementsTab: MeasurementsTabContentAdapter,
+  ActivityTab: ActivityTabAdapter,
 };
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
 
 export type BuildingComponentName = keyof typeof BUILDING_COMPONENT_MAPPING;

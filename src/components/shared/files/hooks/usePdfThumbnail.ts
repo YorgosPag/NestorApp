@@ -17,7 +17,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { API_ROUTES } from '@/config/domain-constants';
+import { downloadFileFromProxyWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 
 // ============================================================================
 // PDF.JS TYPES (minimal — avoid importing full pdfjs-dist types)
@@ -122,6 +122,7 @@ export function usePdfThumbnail(downloadUrl: string | undefined, enabled = true)
       return () => clearTimeout(timer);
     }
 
+    const resolvedDownloadUrl = downloadUrl;
     let cancelled = false;
     let doc: PdfDocProxy | null = null;
 
@@ -134,13 +135,10 @@ export function usePdfThumbnail(downloadUrl: string | undefined, enabled = true)
         const lib = await loadPdfJs();
         if (cancelled) return;
 
-        // Fetch PDF through CORS proxy
-        const proxyUrl = `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(downloadUrl!)}&filename=thumb.pdf`;
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const pdfBlob = await downloadFileFromProxyWithPolicy(resolvedDownloadUrl, 'thumb.pdf');
         if (cancelled) return;
 
-        const data = new Uint8Array(await response.arrayBuffer());
+        const data = new Uint8Array(await pdfBlob.arrayBuffer());
         if (cancelled) return;
 
         doc = await lib.getDocument({ data }).promise;
@@ -175,7 +173,7 @@ export function usePdfThumbnail(downloadUrl: string | undefined, enabled = true)
         });
 
         const url = URL.createObjectURL(blob);
-        thumbnailCache.set(downloadUrl!, url);
+        thumbnailCache.set(resolvedDownloadUrl, url);
         objectUrlRef.current = url;
 
         if (!cancelled) {

@@ -1,9 +1,10 @@
 import type { DocumentData } from 'firebase/firestore';
-import { collection, doc, getDocs, orderBy, query, updateDoc, where } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { firestoreQueryService } from '@/services/firestore';
 import type { Layer, LayerGroup } from '@/types/layers';
+import { saveLayerManagementWithPolicy } from '@/services/layer/layer-management-mutation-gateway';
 import { createMissingSystemLayers, type SystemLayerContext } from './layer-management-defaults';
 
 export interface LoadedLayerManagementData {
@@ -48,21 +49,7 @@ export async function loadLayerManagementData(context: SystemLayerContext): Prom
 }
 
 export async function saveLayerManagementData(layers: Layer[], groups: LayerGroup[]): Promise<void> {
-  const nonSystemLayers = layers.filter((layer) => !layer.isSystem);
-
-  for (const layer of nonSystemLayers) {
-    const layerDocRef = doc(db, COLLECTIONS.LAYERS, layer.id);
-    await updateDoc(layerDocRef, {
-      ...layer,
-      updatedAt: new Date().toISOString()
-    });
-  }
-
-  for (const group of groups) {
-    const groupDocRef = doc(db, COLLECTIONS.LAYER_GROUPS, group.id);
-    const { id: _groupId, ...groupUpdateData } = group;
-    await updateDoc(groupDocRef, groupUpdateData);
-  }
+  await saveLayerManagementWithPolicy(layers, groups);
 }
 
 export function subscribeToLayerManagement(

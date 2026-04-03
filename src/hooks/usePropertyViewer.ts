@@ -170,8 +170,10 @@ export function usePropertyViewer() {
     handleDuplicate,
     handleDelete,
     handlePolygonSelect,
+    PropertyDeletionDialogs,
   } = usePolygonHandlers({
     properties,
+    floors,
     setProperties,
     setSelectedProperties,
     selectedFloorId: selectedFloorId || process.env.NEXT_PUBLIC_DEFAULT_FLOOR_ID || 'floor-1',
@@ -286,5 +288,8 @@ export function usePropertyViewer() {
     handleUpdateProperty: handleGuardedUpdateProperty,
     checkingPropertyMutation,
     PropertyMutationImpactDialog,
+    PropertyDeletionDialogs,
   };
 }
+
+

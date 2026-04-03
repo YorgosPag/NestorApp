@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import type { Property } from '@/types/property-viewer';
+import type { Building } from '@/components/building-management/BuildingsPageContent';
+import type { BuildingFloorplanData } from '@/services/floorplans/BuildingFloorplanService';
+import type { FloorData, ViewerPassthroughProps, ViewerPassthroughPropsWithFloors } from '@/features/properties-sidebar/types';
 import { TabsOnlyTriggers, TabsContent, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import { getIconComponent } from './utils/IconMapping';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
@@ -94,23 +98,93 @@ export interface TabComponentProps {
   [key: string]: unknown;
 }
 
-export interface UniversalTabsRendererProps<TData = unknown> {
+export interface PropertyTabAdditionalData {
+  safeFloors: FloorData[];
+  currentFloor: FloorData | null;
+  safeViewerProps: ViewerPassthroughProps;
+  safeViewerPropsWithFloors: ViewerPassthroughPropsWithFloors;
+  setShowHistoryPanel: (show: boolean) => void;
+  units: Property[];
+  onUpdateProperty: (propertyId: string, updates: Partial<Property>) => Promise<void>;
+  isEditMode: boolean;
+  onToggleEditMode: () => void;
+  onExitEditMode: () => void;
+  isCreatingNewUnit: boolean;
+  onPropertyCreated?: (propertyId: string) => void;
+}
+
+export interface PropertyTabGlobalProps {
+  propertyId?: string;
+}
+
+export interface PropertyTabComponentProps extends TabComponentProps, PropertyTabGlobalProps {
+  data?: Property | null;
+  unit?: Property | null;
+  selectedProperty?: Property | null;
+  safeFloors?: FloorData[];
+  currentFloor?: FloorData | null;
+  safeViewerProps?: ViewerPassthroughProps;
+  safeViewerPropsWithFloors?: ViewerPassthroughPropsWithFloors;
+  setShowHistoryPanel?: (show: boolean) => void;
+  units?: Property[];
+  isEditMode?: boolean;
+  onToggleEditMode?: () => void;
+  onExitEditMode?: () => void;
+  isCreatingNewUnit?: boolean;
+  onPropertyCreated?: (propertyId: string) => void;
+  onSelectFloor?: (floorId: string | null) => void;
+  onUpdateProperty?: (propertyId: string, updates: Partial<Property>) => Promise<void> | void;
+}
+
+export type PropertyComponentMapping = Record<string, React.ComponentType<PropertyTabComponentProps>>;
+
+export interface BuildingTabAdditionalData {
+  buildingFloorplan: BuildingFloorplanData | null;
+  storageFloorplan: BuildingFloorplanData | null;
+  floorplansLoading: boolean;
+  floorplansError: string | null;
+  refetchFloorplans: () => Promise<void>;
+}
+
+export interface BuildingTabGlobalProps {
+  buildingId: string | number;
+  isEditing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
+  onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
+  isCreateMode?: boolean;
+  onBuildingCreated?: (buildingId: string) => void;
+}
+
+export interface BuildingTabComponentProps extends TabComponentProps, Partial<BuildingTabAdditionalData>, Partial<BuildingTabGlobalProps> {
+  data?: Building;
+  building?: Building;
+  title?: string;
+}
+
+export type BuildingComponentMapping = Record<string, React.ComponentType<BuildingTabComponentProps>>;
+
+export interface UniversalTabsRendererProps<
+  TData = unknown,
+  TTabProps extends TabComponentProps = TabComponentProps,
+  TAdditionalData extends object = Record<string, unknown>,
+  TGlobalProps extends object = Record<string, unknown>,
+> {
   /** Tab configurations */
   tabs: UniversalTabConfig[];
   /** Primary data object (project, building, storage, κτλ.) */
   data: TData;
   /** Component mapping για την αντιστοίχιση component names σε React components */
-  componentMapping: Record<string, React.ComponentType<TabComponentProps>>;
+  componentMapping: Record<string, React.ComponentType<TTabProps>>;
   /** Default tab to show */
   defaultTab?: string;
   /** Theme για τα tabs (default, accent, warning, κτλ.) */
   theme?: 'default' | 'accent' | 'warning' | 'success' | 'destructive';
   /** Additional data για specific tabs */
-  additionalData?: Record<string, unknown>;
+  additionalData?: TAdditionalData;
   /** Custom component renderers που override το componentMapping */
-  customComponents?: Record<string, React.ComponentType<TabComponentProps>>;
+  customComponents?: Record<string, React.ComponentType<TTabProps>>;
   /** Global props που περνάνε σε όλα τα tab components */
-  globalProps?: Record<string, unknown>;
+  globalProps?: TGlobalProps;
   /** 🌐 i18n: Translation namespace for tab labels (default: 'common') */
   translationNamespace?: string;
 }
@@ -144,17 +218,22 @@ export interface UniversalTabsRendererProps<TData = unknown> {
  * />
  * ```
  */
-export function UniversalTabsRenderer<TData = unknown>({
+export function UniversalTabsRenderer<
+  TData = unknown,
+  TTabProps extends TabComponentProps = TabComponentProps,
+  TAdditionalData extends object = Record<string, unknown>,
+  TGlobalProps extends object = Record<string, unknown>,
+>({
   tabs,
   data,
   componentMapping,
   defaultTab,
   theme = 'default',
-  additionalData = {},
+  additionalData = {} as TAdditionalData,
   customComponents = {},
-  globalProps = {},
+  globalProps = {} as TGlobalProps,
   translationNamespace = 'building',
-}: UniversalTabsRendererProps<TData>) {
+}: UniversalTabsRendererProps<TData, TTabProps, TAdditionalData, TGlobalProps>) {
   // 🏢 ENTERPRISE: i18n hook for translations
   // currentLanguage is needed in useMemo dependencies for reactivity on language change
   const { t, currentLanguage } = useTranslation(translationNamespace);
@@ -189,8 +268,8 @@ export function UniversalTabsRenderer<TData = unknown>({
       : tabConfig.label;
 
     // Get component από custom components ή componentMapping
-    const ComponentToRender = customComponents[tabConfig.component] ||
-                              componentMapping[tabConfig.component];
+    const ComponentToRender = (customComponents[tabConfig.component] ||
+                              componentMapping[tabConfig.component]) as React.ComponentType<TTabProps> | undefined;
 
     if (!ComponentToRender) {
       logger.warn('Component not found in mapping for tab', { component: tabConfig.component, tabId: tabConfig.id, availableComponents: Object.keys(componentMapping) });
@@ -269,29 +348,28 @@ export function UniversalTabsRenderer<TData = unknown>({
     };
 
     // Render actual component
+    const renderedComponentProps = {
+      data,
+      project: data,
+      building: data,
+      storage: data,
+      parking: data,
+      unit: data,
+      selectedProperty: data,
+      icon: getIconComponent(tabConfig.icon ?? ''),
+      onNavigateToTab: setActiveTab,
+      ...additionalData,
+      ...getFloorplanProps(),
+      ...globalProps,
+      ...tabConfig.componentProps,
+    } as unknown as TTabProps;
+
     return {
       id: tabConfig.value,
       label: displayLabel,
       icon: getIconComponent(tabConfig.icon ?? ''),
       content: (
-        <ComponentToRender
-          // Primary data prop (περνάει ως data, project, building, storage, κτλ.)
-          data={data}
-          project={data} // For backward compatibility με project components
-          building={data} // For backward compatibility με building components
-          storage={data} // For backward compatibility με storage components
-          parking={data} // For backward compatibility με parking components
-          unit={data} // For backward compatibility με unit components
-          selectedProperty={data} // For backward compatibility με unit components
-          // For PlaceholderTab compatibility
-          icon={getIconComponent(tabConfig.icon ?? '')}
-          // 🏢 ENTERPRISE: Inject tab navigation — lets any child switch sibling tabs
-          onNavigateToTab={setActiveTab}
-          {...additionalData}
-          {...getFloorplanProps()} // ✅ ENTERPRISE: FloorplanViewerTab special props
-          {...globalProps}
-          {...tabConfig.componentProps}
-        />
+        <ComponentToRender {...renderedComponentProps} />
       )
     };
   }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps, setActiveTab, t, currentLanguage]);

@@ -7,7 +7,6 @@ import type { ReadOnlyPropertyViewerLayoutProps } from './types';
 import { PropertyDashboard } from '@/components/property-management/PropertyDashboard';
 import { ListLayout } from './components/ListLayout';
 import { GridLayout } from './components/GridLayout';
-import { buildReadOnlyViewerProps } from './utils/buildReadOnlyViewerProps';
 // 🏢 ENTERPRISE: Centralized layout spacing tokens
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import '@/lib/design-system';
@@ -27,8 +26,6 @@ export function ReadOnlyPropertyViewerLayout({
   ...viewerProps
 }: ReadOnlyPropertyViewerLayoutProps) {
   const layout = useLayoutClasses();
-  const readOnlyViewerProps = buildReadOnlyViewerProps(viewerProps);
-
   return (
     <>
       {showDashboard && <div className="shrink-0 px-4"><PropertyDashboard stats={stats} /></div>}
@@ -44,7 +41,6 @@ export function ReadOnlyPropertyViewerLayout({
             handlePolygonSelect={handlePolygonSelect}
             hoveredPropertyId={hoveredPropertyId}
             onHoverProperty={onHoverProperty}
-            readOnlyViewerProps={readOnlyViewerProps}
             viewerProps={{
               ...viewerProps,
               onSelectFloor,

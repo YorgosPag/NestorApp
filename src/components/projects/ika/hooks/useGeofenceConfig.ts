@@ -16,6 +16,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import { generateCircleGeoJSON } from '../map-shared/geo-math';
 import type { GeofenceApiResponse } from '../map-shared/geofence-api-types';
+import { saveGeofenceConfigWithPolicy } from '@/services/ika/ika-mutation-gateway';
 
 // =============================================================================
 // CONSTANTS
@@ -80,19 +81,13 @@ export function useGeofenceConfig(projectId: string, t: (key: string) => string)
     setSaveSuccess(false);
 
     try {
-      const res = await fetch(API_ROUTES.ATTENDANCE.GEOFENCE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          latitude,
-          longitude,
-          radiusMeters,
-          enabled,
-        }),
+      const data = await saveGeofenceConfigWithPolicy({
+        projectId,
+        latitude,
+        longitude,
+        radiusMeters,
+        enabled,
       });
-
-      const data = (await res.json()) as GeofenceApiResponse;
 
       if (data.success) {
         setSaveSuccess(true);

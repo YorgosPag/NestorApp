@@ -3,25 +3,33 @@
     "select": {
       "name": "Select",
       "description": "Select entities",
-      "steps": ["Click on entity to select"],
+      "steps": [
+        "Click on entity to select"
+      ],
       "shortcuts": "Ctrl+A=Select All | ESC=Deselect"
     },
     "pan": {
       "name": "Pan",
       "description": "Pan canvas",
-      "steps": ["Hold and drag to pan"],
+      "steps": [
+        "Hold and drag to pan"
+      ],
       "shortcuts": "Spacebar+Drag | Middle Mouse"
     },
     "zoom-in": {
       "name": "Zoom In",
       "description": "Zoom in view",
-      "steps": ["Click to zoom in"],
+      "steps": [
+        "Click to zoom in"
+      ],
       "shortcuts": "+/= | Scroll Up"
     },
     "zoom-out": {
       "name": "Zoom Out",
       "description": "Zoom out view",
-      "steps": ["Click to zoom out"],
+      "steps": [
+        "Click to zoom out"
+      ],
       "shortcuts": "- | Scroll Down"
     },
     "zoom-window": {
@@ -36,7 +44,9 @@
     "zoom-extents": {
       "name": "Zoom Extents",
       "description": "Show entire drawing",
-      "steps": ["Automatic adjustment"],
+      "steps": [
+        "Automatic adjustment"
+      ],
       "shortcuts": "E | Home"
     },
     "line": {
@@ -340,19 +350,25 @@
     "layering": {
       "name": "Layers",
       "description": "Layer management",
-      "steps": ["Open Layers panel"],
+      "steps": [
+        "Open Layers panel"
+      ],
       "shortcuts": "F7"
     },
     "guide-x": {
       "name": "Vertical Guide",
       "description": "Create vertical guide line",
-      "steps": ["Click on canvas to place vertical guide"],
+      "steps": [
+        "Click on canvas to place vertical guide"
+      ],
       "shortcuts": "G→X | ESC=Cancel"
     },
     "guide-z": {
       "name": "Horizontal Guide",
       "description": "Create horizontal guide line",
-      "steps": ["Click on canvas to place horizontal guide"],
+      "steps": [
+        "Click on canvas to place horizontal guide"
+      ],
       "shortcuts": "G→Z | ESC=Cancel"
     },
     "guide-xz": {
@@ -403,13 +419,17 @@
     "guide-add-point": {
       "name": "Add Point",
       "description": "Add single construction point",
-      "steps": ["Click on canvas to place point"],
+      "steps": [
+        "Click on canvas to place point"
+      ],
       "shortcuts": "G→Q | G→L=Open Panel | ESC=Cancel"
     },
     "guide-delete-point": {
       "name": "Delete Point",
       "description": "Delete construction point",
-      "steps": ["Click on point to delete"],
+      "steps": [
+        "Click on point to delete"
+      ],
       "shortcuts": "G→W | ESC=Cancel"
     },
     "guide-arc-segments": {
@@ -461,25 +481,33 @@
     "guide-delete": {
       "name": "Delete Guide",
       "description": "Delete construction guide",
-      "steps": ["Click on guide to delete"],
+      "steps": [
+        "Click on guide to delete"
+      ],
       "shortcuts": "G→D | ESC=Cancel"
     },
     "guide-rect-center": {
       "name": "Rectangle Center",
       "description": "Place point at center of rectangle formed by 4 guides",
-      "steps": ["Click inside rectangle formed by guides"],
+      "steps": [
+        "Click inside rectangle formed by guides"
+      ],
       "shortcuts": "G→R | ESC=Cancel"
     },
     "guide-line-midpoint": {
       "name": "Line Midpoint",
       "description": "Place construction point at midpoint of a line",
-      "steps": ["Click on a line to place point at its midpoint"],
+      "steps": [
+        "Click on a line to place point at its midpoint"
+      ],
       "shortcuts": "G→E | ESC=Cancel"
     },
     "guide-circle-center": {
       "name": "Circle Center",
       "description": "Place construction point at center of circle or arc",
-      "steps": ["Click on a circle or arc to place point at its center"],
+      "steps": [
+        "Click on a circle or arc to place point at its center"
+      ],
       "shortcuts": "G→C | ESC=Cancel"
     },
     "guide-grid": {

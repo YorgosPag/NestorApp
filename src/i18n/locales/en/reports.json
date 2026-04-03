@@ -294,9 +294,9 @@
       "revenue": "Revenue"
     },
     "pricePerSqm": {
-      "title": "Price per m\u00b2",
+      "title": "Price per m²",
       "description": "Average price per square meter by building",
-      "pricePerSqm": "Price/m\u00b2"
+      "pricePerSqm": "Price/m²"
     },
     "boqVariance": {
       "title": "BOQ Cost Variance",

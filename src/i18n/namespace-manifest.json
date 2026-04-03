@@ -1,0 +1,862 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-03",
+  "canonicalSource": "src/i18n/namespace-manifest.json",
+  "policy": {
+    "requiredLocales": [
+      "el",
+      "en",
+      "pseudo"
+    ],
+    "requiredFields": [
+      "namespace",
+      "owner",
+      "primarySurface",
+      "stringClasses",
+      "budget",
+      "status",
+      "splitRequired",
+      "targetNamespaces"
+    ],
+    "oversizedNamespaceRule": "warn",
+    "singlePurposeRule": true,
+    "translatorContextRequiredForNonTrivialStrings": true
+  },
+  "namespaces": [
+    {
+      "namespace": "accounting",
+      "owner": "accounting-subapp",
+      "primarySurface": "accounting",
+      "stringClasses": [
+        "ui-chrome",
+        "domain-vocabulary",
+        "forms",
+        "validation-errors",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "addresses",
+      "owner": "shared-addressing",
+      "primarySurface": "shared-addresses",
+      "stringClasses": [
+        "forms",
+        "domain-vocabulary",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "admin",
+      "owner": "platform-admin",
+      "primarySurface": "admin-tools",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "attendance",
+      "owner": "projects-ika",
+      "primarySurface": "attendance",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "auth",
+      "owner": "platform-auth",
+      "primarySurface": "authentication",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "validation-errors",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "banking",
+      "owner": "finance-banking",
+      "primarySurface": "banking",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "building",
+      "owner": "building-domain",
+      "primarySurface": "building-management",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "validation-errors",
+        "notifications",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "building-core",
+        "building-floors",
+        "building-filters",
+        "building-reports",
+        "building-help"
+      ]
+    },
+    {
+      "namespace": "cash-flow",
+      "owner": "finance-forecasting",
+      "primarySurface": "cash-flow",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "validation-errors",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "common",
+      "owner": "platform-core",
+      "primarySurface": "cross-product",
+      "stringClasses": [
+        "ui-chrome",
+        "domain-vocabulary",
+        "validation-errors",
+        "notifications",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "common-actions",
+        "common-navigation",
+        "common-status",
+        "common-validation",
+        "common-empty-states"
+      ]
+    },
+    {
+      "namespace": "common-actions",
+      "owner": "platform-core",
+      "primarySurface": "cross-product-actions",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 250,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "common-empty-states",
+      "owner": "platform-core",
+      "primarySurface": "cross-product-empty-states",
+      "stringClasses": [
+        "ui-chrome",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 250,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "common-navigation",
+      "owner": "platform-core",
+      "primarySurface": "cross-product-navigation",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 250,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "common-status",
+      "owner": "platform-core",
+      "primarySurface": "cross-product-status",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 250,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "common-validation",
+      "owner": "platform-core",
+      "primarySurface": "cross-product-validation",
+      "stringClasses": [
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 350,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "communications",
+      "owner": "communications-domain",
+      "primarySurface": "communications",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "compositions",
+      "owner": "design-system",
+      "primarySurface": "compositions-showcase",
+      "stringClasses": [
+        "ui-chrome",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "contacts",
+      "owner": "contacts-domain",
+      "primarySurface": "contacts",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "validation-errors",
+        "notifications",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "contacts-form",
+        "contacts-relationships",
+        "contacts-status",
+        "contacts-trash",
+        "contacts-help"
+      ]
+    },
+    {
+      "namespace": "crm",
+      "owner": "crm-domain",
+      "primarySurface": "crm",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "dashboard",
+      "owner": "platform-dashboard",
+      "primarySurface": "dashboard",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications",
+        "empty-states"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "dxf-viewer",
+      "owner": "dxf-subapp",
+      "primarySurface": "dxf-viewer",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "validation-errors",
+        "notifications",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "dxf-viewer-shell",
+        "dxf-viewer-tools",
+        "dxf-viewer-panels",
+        "dxf-viewer-errors",
+        "dxf-viewer-hints"
+      ]
+    },
+    {
+      "namespace": "errors",
+      "owner": "platform-core",
+      "primarySurface": "cross-product-errors",
+      "stringClasses": [
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "files",
+      "owner": "file-management",
+      "primarySurface": "files",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "filters",
+      "owner": "platform-core",
+      "primarySurface": "shared-filters",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "forms",
+      "owner": "platform-core",
+      "primarySurface": "shared-forms",
+      "stringClasses": [
+        "forms",
+        "validation-errors",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "geo-canvas",
+      "owner": "geo-subapp",
+      "primarySurface": "geo-canvas",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "validation-errors",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "landing",
+      "owner": "marketing-surface",
+      "primarySurface": "landing",
+      "stringClasses": [
+        "ui-chrome",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "legal",
+      "owner": "legal-compliance",
+      "primarySurface": "legal-pages",
+      "stringClasses": [
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "navigation",
+      "owner": "platform-navigation",
+      "primarySurface": "global-navigation",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "obligations",
+      "owner": "obligations-domain",
+      "primarySurface": "obligations",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "validation-errors",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "parking",
+      "owner": "spaces-domain",
+      "primarySurface": "parking",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "payments",
+      "owner": "finance-payments",
+      "primarySurface": "payments",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "procurement",
+      "owner": "procurement-domain",
+      "primarySurface": "procurement",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "projects",
+      "owner": "projects-domain",
+      "primarySurface": "projects",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "properties",
+      "owner": "property-domain",
+      "primarySurface": "properties",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "validation-errors",
+        "notifications",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 700,
+        "warnOnly": true
+      },
+      "status": "governed",
+      "splitRequired": true,
+      "targetNamespaces": [
+        "properties-detail",
+        "properties-form",
+        "properties-mutation"
+      ]
+    },
+    {
+      "namespace": "properties-enums",
+      "owner": "property-domain",
+      "primarySurface": "properties-domain-vocabulary",
+      "stringClasses": [
+        "domain-vocabulary",
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 400,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "properties-viewer",
+      "owner": "property-domain",
+      "primarySurface": "properties-viewer",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 500,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "report-builder",
+      "owner": "reporting-domain",
+      "primarySurface": "report-builder",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "validation-errors",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "report-builder-domains",
+      "owner": "reporting-domain",
+      "primarySurface": "report-builder-domains",
+      "stringClasses": [
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "reports",
+      "owner": "reporting-domain",
+      "primarySurface": "reports",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "saved-reports",
+      "owner": "reporting-domain",
+      "primarySurface": "saved-reports",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "storage",
+      "owner": "spaces-domain",
+      "primarySurface": "storage",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "tasks",
+      "owner": "tasks-domain",
+      "primarySurface": "tasks",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "telegram",
+      "owner": "telegram-integration",
+      "primarySurface": "telegram",
+      "stringClasses": [
+        "notifications",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "toasts",
+      "owner": "platform-notifications",
+      "primarySurface": "global-toasts",
+      "stringClasses": [
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "tool-hints",
+      "owner": "dxf-subapp",
+      "primarySurface": "tool-hints",
+      "stringClasses": [
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "toolbars",
+      "owner": "platform-navigation",
+      "primarySurface": "toolbars",
+      "stringClasses": [
+        "ui-chrome"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
+      "namespace": "users",
+      "owner": "user-management",
+      "primarySurface": "users",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "validation-errors",
+        "notifications"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    }
+  ]
+}

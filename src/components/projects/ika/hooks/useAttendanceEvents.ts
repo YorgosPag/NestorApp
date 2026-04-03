@@ -24,6 +24,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createAttendanceEventWithPolicy } from '@/services/ika/ika-mutation-gateway';
 
 const logger = createModuleLogger('useAttendanceEvents');
 
@@ -159,25 +160,16 @@ export function useAttendanceEvents(
   // Create a new immutable attendance event (server-side — SPEC-255C)
   const addEvent = useCallback(async (params: CreateAttendanceEventParams): Promise<boolean> => {
     try {
-      const response = await fetch('/api/ika/attendance-events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: params.projectId,
-          contactId: params.contactId,
-          eventType: params.eventType,
-          method: params.method,
-          notes: params.notes,
-          coordinates: params.coordinates,
-          deviceId: params.deviceId,
-          approvedBy: params.approvedBy,
-        }),
+      await createAttendanceEventWithPolicy({
+        projectId: params.projectId,
+        contactId: params.contactId,
+        eventType: params.eventType,
+        method: params.method,
+        notes: params.notes,
+        coordinates: params.coordinates,
+        deviceId: params.deviceId,
+        approvedBy: params.approvedBy,
       });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Server error' }));
-        throw new Error(data.error ?? 'Failed to create attendance event');
-      }
 
       refetch();
       return true;

@@ -687,10 +687,10 @@
           "cancelled": "Cancelled"
         },
         "taxRate": {
-          "24": "24%",
-          "13": "13%",
+          "0": "0%",
           "6": "6%",
-          "0": "0%"
+          "13": "13%",
+          "24": "24%"
         },
         "agingBucket": {
           "0-30": "0–30 days",
@@ -1115,8 +1115,8 @@
         "propertyType": "Property Type",
         "budgetMin": "Budget Min",
         "budgetMax": "Budget Max",
-        "areaMin": "Area Min (m\u00b2)",
-        "areaMax": "Area Max (m\u00b2)",
+        "areaMin": "Area Min (m²)",
+        "areaMax": "Area Max (m²)",
         "nextAction": "Next Action",
         "nextActionDate": "Next Action Date",
         "expectedCloseDate": "Expected Close",
@@ -1130,7 +1130,7 @@
         "daysSinceLastActivity": "Days Inactive",
         "daysInCurrentStage": "Days in Stage",
         "pushCount": "Close Date Pushes",
-        "dealVelocityScore": "Velocity (\u20ac/day)"
+        "dealVelocityScore": "Velocity (€/day)"
       },
       "enums": {
         "stage": {

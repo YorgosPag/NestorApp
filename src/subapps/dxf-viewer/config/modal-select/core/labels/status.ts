@@ -122,7 +122,7 @@ export const MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS = {
   // 🏢 ENTERPRISE: Added missing labels για property-hover/constants.ts complete coverage
   sold: 'properties.status.sold',
   reserved: 'properties.status.reserved',
-  unknown: 'common.status.unknown'
+  unknown: 'common-status:status.unknown'
 } as const;
 
 /**

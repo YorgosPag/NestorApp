@@ -23,7 +23,7 @@ interface PropertyDetailsPanelProps {
   propertyIds: string[];
   onSelectFloor: (floorId: string | null) => void;
   properties: Property[];
-  onUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
+  onUpdateProperty?: (propertyId: string, updates: Partial<Property>) => void;
   isReadOnly?: boolean; // NEW: Read-only mode prop
 }
 
@@ -44,7 +44,7 @@ export function PropertyDetailsPanel({
 
   // Safe functions με fallbacks - disable updates in read-only mode
   const safeOnSelectFloor = onSelectFloor || (() => {});
-  const safeOnUpdateProperty = isReadOnly ? (() => {}) : (onUpdateProperty || (() => {}));
+  const safeOnUpdateProperty = isReadOnly ? undefined : onUpdateProperty;
 
   if (safePropertyIds.length === 0) {
     return (

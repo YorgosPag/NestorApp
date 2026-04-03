@@ -99,17 +99,6 @@
     "minutesAgo": "{count} minutes ago",
     "justNow": "Just now"
   },
-  "messages": {
-    "created": "Task created successfully",
-    "updated": "Task updated successfully",
-    "completed": "Task completed successfully",
-    "deleted": "Task deleted successfully",
-    "assigned": "Task assigned successfully",
-    "duplicated": "Task duplicated successfully",
-    "noTasks": "No tasks found",
-    "loadingError": "Error loading tasks",
-    "saveError": "Error saving task"
-  },
   "form": {
     "title": "Task title",
     "description": "Description",
@@ -133,6 +122,17 @@
     "highPriority": "High priority",
     "dueToday": "Due today",
     "dueThisWeek": "Due this week"
+  },
+  "messages": {
+    "created": "Task created successfully",
+    "updated": "Task updated successfully",
+    "completed": "Task completed successfully",
+    "deleted": "Task deleted successfully",
+    "assigned": "Task assigned successfully",
+    "duplicated": "Task duplicated successfully",
+    "noTasks": "No tasks found",
+    "loadingError": "Error loading tasks",
+    "saveError": "Error saving task"
   },
   "notifications": {
     "reminder": "Task reminder",

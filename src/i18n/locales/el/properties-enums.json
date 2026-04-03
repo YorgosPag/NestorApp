@@ -1,0 +1,213 @@
+{
+  "status": {
+    "forSale": "Προς Πώληση",
+    "forRent": "Προς Ενοικίαση",
+    "forSaleAndRent": "Πώληση & Ενοικίαση",
+    "reserved": "Κρατημένο",
+    "sold": "Πωλήθηκε",
+    "landowner": "Ιδιοκτήτης Γης",
+    "rented": "Ενοικιάστηκε",
+    "underNegotiation": "Υπό Διαπραγμάτευση",
+    "comingSoon": "Σύντομα Διαθέσιμο",
+    "offMarket": "Εκτός Αγοράς",
+    "unavailable": "Μη Διαθέσιμο",
+    "available": "Διαθέσιμο",
+    "pending": "Εκκρεμεί",
+    "withdrawn": "Αποσυρμένο",
+    "expired": "Ληγμένο",
+    "notSold": "Δεν Πωλήθηκε"
+  },
+  "rental": {
+    "rentOnly": "Μόνο Ενοικίαση",
+    "longTerm": "Μακροχρόνια Μίσθωση",
+    "shortTerm": "Βραχυχρόνια Μίσθωση"
+  },
+  "specialStatus": {
+    "reservedPending": "Κρατημένο Εκκρεμεί",
+    "contractSigned": "Συμβόλαιο Υπογεγραμμένο",
+    "depositPaid": "Προκαταβολή Δεδομένη",
+    "corporate": "Εταιρική Ιδιοκτησία",
+    "notForSale": "Δεν Πωλείται",
+    "family": "Κρατημένο για Οικογένεια",
+    "preLaunch": "Προ-Εκκίνηση",
+    "exclusive": "Αποκλειστική Διάθεση",
+    "reducedPrice": "Μειωμένη Τιμή",
+    "urgentSale": "Επείγουσα Πώληση",
+    "underRenovation": "Υπό Ανακαίνιση",
+    "legalIssues": "Νομικά Θέματα",
+    "inspectionRequired": "Απαιτείται Επιθεώρηση",
+    "pendingDocuments": "Εκκρεμή Έγγραφα",
+    "underNegotiation": "Υπό Διαπραγμάτευση",
+    "availableSoon": "Σύντομα Διαθέσιμο",
+    "landowner": "Ιδιοκτήτης Γης",
+    "offMarket": "Εκτός Αγοράς",
+    "unavailable": "Μη Διαθέσιμο"
+  },
+  "types": {
+    "apartment": "Διαμέρισμα",
+    "studio": "Στούντιο",
+    "maisonette": "Μεζονέτα",
+    "shop": "Κατάστημα",
+    "office": "Γραφείο",
+    "storage": "Αποθήκη",
+    "bedsit": "Γκαρσονιέρα",
+    "apartment2br": "Διαμέρισμα 2 Υ/Δ",
+    "apartment3br": "Διαμέρισμα 3 Υ/Δ",
+    "apartment4br": "Διαμέρισμα 4 Υ/Δ",
+    "loft": "Loft",
+    "penthouse": "Ρετιρέ"
+  },
+  "enhancedStatus": {
+    "rentalOnly": "Μόνο για Ενοικίαση",
+    "longTermRental": "Μακροχρόνια Μίσθωση",
+    "shortTermRental": "Βραχυχρόνια Μίσθωση",
+    "reservedPending": "Κρατημένο Εκκρεμεί",
+    "contractSigned": "Συμβόλαιο Υπογεγραμμένο",
+    "depositPaid": "Προκαταβολή Δεδομένη",
+    "companyOwned": "Ιδιοκτησία Εταιρείας",
+    "notForSale": "Δεν Πωλείται",
+    "familyReserved": "Κρατημένο για Οικογένεια",
+    "preLaunch": "Προ-Εκκίνηση",
+    "exclusiveListing": "Αποκλειστική Διάθεση",
+    "priceReduced": "Μειωμένη Τιμή",
+    "urgentSale": "Επείγουσα Πώληση",
+    "underRenovation": "Υπό Ανακαίνιση",
+    "legalIssues": "Νομικά Θέματα",
+    "inspectionRequired": "Απαιτείται Επιθεώρηση",
+    "documentationPending": "Εκκρεμή Έγγραφα"
+  },
+  "commercialStatus": {
+    "unavailable": "Μη διαθέσιμο",
+    "for-sale": "Προς πώληση",
+    "for-rent": "Προς ενοικίαση",
+    "for-sale-and-rent": "Προς πώληση και ενοικίαση"
+  },
+  "intent": {
+    "sale": "Για Πώληση",
+    "rental": "Για Ενοικίαση",
+    "both": "Πώληση & Ενοικίαση",
+    "investment": "Επένδυση",
+    "development": "Ανάπτυξη",
+    "internal": "Εσωτερική Χρήση",
+    "withdrawn": "Αποσυρμένο"
+  },
+  "availability": {
+    "immediatelyAvailable": "Άμεσα Διαθέσιμο",
+    "availableSoon": "Σύντομα Διαθέσιμο",
+    "conditionallyAvailable": "Υπό Προϋποθέσεις",
+    "reserved": "Κρατημένο",
+    "occupied": "Κατειλημμένο",
+    "offMarket": "Εκτός Αγοράς",
+    "notAvailable": "Μη Διαθέσιμο"
+  },
+  "priority": {
+    "showcase": "Βιτρίνα",
+    "hold": "Σε Αναμονή"
+  },
+  "units": {
+    "types": {
+      "studio": "Στούντιο",
+      "apartment_1br": "Γκαρσονιέρα",
+      "apartment_2br": "Διαμέρισμα 2Δ",
+      "apartment_3br": "Διαμέρισμα 3Δ",
+      "maisonette": "Μεζονέτα",
+      "shop": "Κατάστημα",
+      "storage": "Αποθήκη"
+    }
+  },
+  "orientation": {
+    "sectionTitle": "Προσανατολισμός",
+    "short": {
+      "north": "Β",
+      "northeast": "ΒΑ",
+      "east": "Α",
+      "southeast": "ΝΑ",
+      "south": "Ν",
+      "southwest": "ΝΔ",
+      "west": "Δ",
+      "northwest": "ΒΔ"
+    }
+  },
+  "condition": {
+    "sectionTitle": "Κατάσταση",
+    "new": "Νέο",
+    "excellent": "Άριστη",
+    "good": "Καλή",
+    "needs-renovation": "Χρήζει ανακαίνισης"
+  },
+  "energy": {
+    "class": "Ενεργειακή κλάση"
+  },
+  "systems": {
+    "sectionTitle": "Συστήματα",
+    "heating": {
+      "label": "Θέρμανση",
+      "central": "Κεντρική",
+      "autonomous": "Αυτόνομη",
+      "heat-pump": "Αντλία θερμότητας",
+      "solar": "Ηλιακή",
+      "none": "Καμία"
+    },
+    "cooling": {
+      "label": "Ψύξη",
+      "central-air": "Κεντρικός αέρας",
+      "split-units": "Split units",
+      "fan-coil": "Fan coil",
+      "none": "Καμία"
+    }
+  },
+  "finishes": {
+    "sectionTitle": "Τελειώματα",
+    "flooring": {
+      "label": "Δάπεδα",
+      "tiles": "Πλακάκι",
+      "wood": "Ξύλο",
+      "laminate": "Λαμινέιτ",
+      "marble": "Μάρμαρο",
+      "carpet": "Μοκέτα"
+    },
+    "frames": {
+      "label": "Κουφώματα",
+      "aluminum": "Αλουμινίου",
+      "pvc": "PVC",
+      "wood": "Ξύλινα"
+    },
+    "glazing": {
+      "label": "Υαλοπίνακες",
+      "single": "Μονοί",
+      "double": "Διπλοί",
+      "triple": "Τριπλοί",
+      "energy": "Ενεργειακοί"
+    }
+  },
+  "features": {
+    "sectionTitle": "Χαρακτηριστικά",
+    "interior": {
+      "label": "Εσωτερικά",
+      "fireplace": "Τζάκι",
+      "jacuzzi": "Τζακούζι",
+      "sauna": "Σάουνα",
+      "smart-home": "Smart home",
+      "solar-panels": "Ηλιακά πάνελ",
+      "underfloor-heating": "Ενδοδαπέδια θέρμανση",
+      "air-conditioning": "Κλιματισμός",
+      "alarm-system": "Συναγερμός"
+    },
+    "security": {
+      "label": "Ασφάλεια",
+      "alarm": "Συναγερμός",
+      "security-door": "Πόρτα ασφαλείας",
+      "cctv": "CCTV",
+      "access-control": "Έλεγχος πρόσβασης",
+      "intercom": "Θυροτηλέφωνο",
+      "motion-sensors": "Αισθητήρες κίνησης"
+    }
+  },
+  "operationalStatus": {
+    "ready": "Έτοιμο",
+    "underConstruction": "Υπό ολοκλήρωση",
+    "inspection": "Σε επιθεώρηση",
+    "maintenance": "Υπό συντήρηση",
+    "draft": "Πρόχειρο"
+  }
+}

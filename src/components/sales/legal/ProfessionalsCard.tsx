@@ -34,6 +34,10 @@ import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown
 import type { EntityAssociationLink } from '@/types/entity-associations';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type { LegalContract, LegalProfessionalRole } from '@/types/legal-contracts';
+import {
+  notifyProfessionalAssignmentWithPolicy,
+  recordPropertyActivityWithPolicy,
+} from '@/services/sales/sales-legal-mutation-gateway';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -177,15 +181,11 @@ export function ProfessionalsCard({
   // Send the email notification (assignment or removal)
   const sendEmailNotification = useCallback(
     (notification: PendingEmailNotification) => {
-      fetch(API_ROUTES.NOTIFICATIONS.PROFESSIONAL_ASSIGNED, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contactId: notification.contactId,
-          role: notification.role,
-          propertyId,
-          type: notification.type,
-        }),
+      notifyProfessionalAssignmentWithPolicy({
+        contactId: notification.contactId,
+        role: notification.role,
+        propertyId,
+        type: notification.type,
       })
         .then(() => toast.success(t('sales.legal.emailSent', { defaultValue: 'Το email στάλθηκε' })))
         .catch(() => toast.error(t('sales.legal.emailFailed', { defaultValue: 'Αποτυχία αποστολής email' })));
@@ -215,13 +215,9 @@ export function ProfessionalsCard({
 
         // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
-        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('property', propertyId), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'professional_assigned',
-            changes: [{ field: 'professional', oldValue: null, newValue: contact.name, label: roleLabel }],
-          }),
+        clientSafeFireAndForget(recordPropertyActivityWithPolicy(propertyId, {
+          action: 'professional_assigned',
+          changes: [{ field: 'professional', oldValue: null, newValue: contact.name, label: roleLabel }],
         }), 'ProfessionalsCard.auditAssign');
 
         // Ask user whether to send email notification
@@ -315,13 +311,9 @@ export function ProfessionalsCard({
 
         // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
-        clientSafeFireAndForget(fetch(API_ROUTES.ENTITY_ACTIVITY('property', propertyId), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'professional_removed',
-            changes: [{ field: 'professional', oldValue: contactName, newValue: null, label: roleLabel }],
-          }),
+        clientSafeFireAndForget(recordPropertyActivityWithPolicy(propertyId, {
+          action: 'professional_removed',
+          changes: [{ field: 'professional', oldValue: contactName, newValue: null, label: roleLabel }],
         }), 'ProfessionalsCard.auditRemove');
 
         // Ask user whether to send removal email

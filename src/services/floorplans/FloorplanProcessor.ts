@@ -20,10 +20,7 @@
 
 'use client';
 
-import { doc, updateDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { db } from '@/lib/firebase';
-import { API_ROUTES } from '@/config/domain-constants';
+import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 import type {
   FileRecord,
   FloorplanProcessedData,
@@ -62,9 +59,6 @@ export interface FloorplanProcessOptions {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-/** Firestore collection for file records */
-const FILES_COLLECTION = 'files';
 
 /** Supported DXF MIME types */
 const DXF_MIME_TYPES = [
@@ -180,40 +174,16 @@ export class FloorplanProcessor {
       // 🏢 ENTERPRISE V2: Call server-side API route (bypasses CORS!)
       logger.info('Calling server API');
 
-      // 🔒 Get ID token for API authentication (same pattern as useFloorplanFiles)
-      const auth = getAuth();
-      const user = auth.currentUser;
-
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      const idToken = await user.getIdToken();
-
-      const response = await fetch(API_ROUTES.FLOORPLANS.PROCESS, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          fileId: fileRecord.id,
-          forceReprocess,
-        }),
+      const result = await processFloorplanWithPolicy({
+        fileId: fileRecord.id,
+        forceReprocess,
       });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || result.details || `Server returned ${response.status}`);
-      }
 
       logger.info('Server processing complete', {
         fileId: result.fileId,
         fileType: result.fileType,
         stats: result.stats,
       });
-
       // Return success - the server has already saved processedData to Firestore
       // The caller should re-fetch the FileRecord to get the updated processedData
       return {
@@ -338,24 +308,6 @@ export class FloorplanProcessor {
     };
   }
 
-  /**
-   * 🏢 ENTERPRISE: Save processed data to FileRecord
-   */
-  private static async saveProcessedData(
-    fileId: string,
-    processedData: FloorplanProcessedData
-  ): Promise<void> {
-    logger.info('Saving processed data to Firestore');
-
-    const docRef = doc(db, FILES_COLLECTION, fileId);
-
-    await updateDoc(docRef, {
-      processedData,
-      updatedAt: new Date().toISOString(),
-    });
-
-    logger.info('Processed data saved');
-  }
 
   /**
    * 🏢 ENTERPRISE: Get processed data from FileRecord
@@ -387,3 +339,4 @@ export class FloorplanProcessor {
 
 export { detectFloorplanType };
 export type { FloorplanFileType };
+

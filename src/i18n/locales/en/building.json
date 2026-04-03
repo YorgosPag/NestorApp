@@ -45,33 +45,121 @@
     "buildingE": "Building E"
   },
   "toolbar": {
-    "newBuilding": "New Building",
-    "editBuilding": "Edit Building",
-    "deleteBuilding": "Delete Building",
-    "archive": "Archive",
-    "tooltips": {
-      "newBuilding": "Create new building (Ctrl+N)",
-      "editBuilding": "Edit selected building (Ctrl+E)",
-      "deleteBuilding": "Delete selected building",
-      "deleteBuildingMultiple": "Delete {count} selected buildings",
-      "exportData": "Export building data",
-      "importData": "Import building data",
-      "refreshData": "Refresh data",
-      "archiveSelected": "Archive selected building",
-      "addToFavorites": "Add to favorites",
-      "showHelp": "Show help"
+    "actions": {
+      "new": "New Building",
+      "edit": "Edit",
+      "delete": "Delete",
+      "export": "Export",
+      "import": "Import",
+      "refresh": "Refresh",
+      "archive": "Archive",
+      "favorite": "Favorites",
+      "favorites": "Favorites",
+      "help": "Help",
+      "filters": "Filters",
+      "preview": "Preview",
+      "copy": "Copy",
+      "share": "Share",
+      "reports": "Reports",
+      "settings": "Settings",
+      "favoritesManagement": "Manage Favorites",
+      "sorting": "Sorting"
     },
     "ui": {
-      "searchPlaceholder": "Search buildings...",
-      "statusLabel": "Building Status",
-      "typeLabel": "Building Type",
-      "sortingLabel": "Sort by",
-      "selectedBuildings": "{count} buildings selected",
-      "selectedOfTotal": "{selected} of {total} selected",
-      "buildingsCount": "{count} Buildings",
-      "selectActionForSelected": "Select action for selected items",
       "clearAllCount": "Clear all ({count})",
       "itemsSelected": "{count} selected"
+    },
+    "communications": {
+      "channels": {
+        "all": "All channels",
+        "email": "Email",
+        "sms": "SMS",
+        "telegram": "Telegram"
+      },
+      "status": {
+        "all": "All statuses",
+        "sent": "Sent",
+        "received": "Received",
+        "pending": "Pending",
+        "failed": "Failed"
+      },
+      "important": "Important",
+      "markAsImportant": "Mark as important"
+    },
+    "tooltips": {
+      "new": "Add new building (Ctrl+N)",
+      "edit": "Edit selected building (Ctrl+E)",
+      "deleteCount": "Delete {count} building(s)",
+      "export": "Export data",
+      "import": "Import data",
+      "refresh": "Refresh data (F5)",
+      "archive": "Archive selected",
+      "favorite": "Add to favorites",
+      "help": "Help and instructions (F1)"
+    },
+    "search": {
+      "placeholder": "Search buildings..."
+    },
+    "filters": {
+      "status": "Status",
+      "statusLabel": "Building status",
+      "type": "Type",
+      "typeLabel": "Building type",
+      "categories": {
+        "status": "Status",
+        "buildingType": "Building Type",
+        "contactType": "Contact Type",
+        "parkingType": "Parking Type",
+        "channel": "Communication Channel"
+      }
+    },
+    "sort": {
+      "label": "Sort",
+      "sortBuildings": "Sort buildings",
+      "ascending": "Ascending (A-Z)",
+      "descending": "Descending (Z-A)",
+      "byDate": "By date",
+      "bySize": "By size",
+      "name": {
+        "asc": "Name (A-Z)",
+        "desc": "Name (Z-A)"
+      },
+      "date": {
+        "asc": "Date (Oldest first)",
+        "desc": "Date (Newest first)"
+      },
+      "status": {
+        "asc": "Status (A-Z)",
+        "desc": "Status (Z-A)"
+      },
+      "channel": {
+        "asc": "Channel (A-Z)",
+        "desc": "Channel (Z-A)"
+      }
+    },
+    "selection": {
+      "selected": "{count} buildings selected"
+    },
+    "advanced": {
+      "copy": "Copy Selected",
+      "archive": "Archive",
+      "addToFavorites": "Add to Favorites",
+      "share": "Share",
+      "viewOnMap": "View on Map",
+      "createReport": "Create Report",
+      "scheduleVisit": "Schedule Visit",
+      "selectedCount": "{count} selected",
+      "activeFilters": "{count} filters active",
+      "synced": "Synced"
+    },
+    "export": {
+      "title": "Export Data",
+      "exportTo": "Export to:",
+      "excel": "Excel (.xlsx)",
+      "pdfReport": "PDF Report",
+      "statsDashboard": "Statistics Dashboard",
+      "timeline": "Timeline",
+      "import": "Import Data"
     }
   },
   "categories": {
@@ -325,124 +413,6 @@
       "completed": "Completed"
     }
   },
-  "toolbar": {
-    "actions": {
-      "new": "New Building",
-      "edit": "Edit",
-      "delete": "Delete",
-      "export": "Export",
-      "import": "Import",
-      "refresh": "Refresh",
-      "archive": "Archive",
-      "favorite": "Favorites",
-      "favorites": "Favorites",
-      "help": "Help",
-      "filters": "Filters",
-      "preview": "Preview",
-      "copy": "Copy",
-      "share": "Share",
-      "reports": "Reports",
-      "settings": "Settings",
-      "favoritesManagement": "Manage Favorites",
-      "sorting": "Sorting"
-    },
-    "ui": {
-      "clearAllCount": "Clear all ({count})",
-      "itemsSelected": "{count} selected"
-    },
-    "communications": {
-      "channels": {
-        "all": "All channels",
-        "email": "Email",
-        "sms": "SMS",
-        "telegram": "Telegram"
-      },
-      "status": {
-        "all": "All statuses",
-        "sent": "Sent",
-        "received": "Received",
-        "pending": "Pending",
-        "failed": "Failed"
-      },
-      "important": "Important",
-      "markAsImportant": "Mark as important"
-    },
-    "tooltips": {
-      "new": "Add new building (Ctrl+N)",
-      "edit": "Edit selected building (Ctrl+E)",
-      "deleteCount": "Delete {count} building(s)",
-      "export": "Export data",
-      "import": "Import data",
-      "refresh": "Refresh data (F5)",
-      "archive": "Archive selected",
-      "favorite": "Add to favorites",
-      "help": "Help and instructions (F1)"
-    },
-    "search": {
-      "placeholder": "Search buildings..."
-    },
-    "filters": {
-      "status": "Status",
-      "statusLabel": "Building status",
-      "type": "Type",
-      "typeLabel": "Building type",
-      "categories": {
-        "status": "Status",
-        "buildingType": "Building Type",
-        "contactType": "Contact Type",
-        "parkingType": "Parking Type",
-        "channel": "Communication Channel"
-      }
-    },
-    "sort": {
-      "label": "Sort",
-      "sortBuildings": "Sort buildings",
-      "ascending": "Ascending (A-Z)",
-      "descending": "Descending (Z-A)",
-      "byDate": "By date",
-      "bySize": "By size",
-      "name": {
-        "asc": "Name (A-Z)",
-        "desc": "Name (Z-A)"
-      },
-      "date": {
-        "asc": "Date (Oldest first)",
-        "desc": "Date (Newest first)"
-      },
-      "status": {
-        "asc": "Status (A-Z)",
-        "desc": "Status (Z-A)"
-      },
-      "channel": {
-        "asc": "Channel (A-Z)",
-        "desc": "Channel (Z-A)"
-      }
-    },
-    "selection": {
-      "selected": "{count} buildings selected"
-    },
-    "advanced": {
-      "copy": "Copy Selected",
-      "archive": "Archive",
-      "addToFavorites": "Add to Favorites",
-      "share": "Share",
-      "viewOnMap": "View on Map",
-      "createReport": "Create Report",
-      "scheduleVisit": "Schedule Visit",
-      "selectedCount": "{count} selected",
-      "activeFilters": "{count} filters active",
-      "synced": "Synced"
-    },
-    "export": {
-      "title": "Export Data",
-      "exportTo": "Export to:",
-      "excel": "Excel (.xlsx)",
-      "pdfReport": "PDF Report",
-      "statsDashboard": "Statistics Dashboard",
-      "timeline": "Timeline",
-      "import": "Import Data"
-    }
-  },
   "viewMode": {
     "list": "List View",
     "grid": "Grid View",
@@ -482,19 +452,10 @@
     "unitsMinimum": "Units must be at least 1"
   },
   "storages": {
-    "header": {
-      "title": "Storage Management",
-      "subtitle": "Manage and track storage spaces",
-      "searchPlaceholder": "Search storages...",
-      "newStorage": "New Storage"
-    },
     "list": {
       "ariaLabel": "Storages List",
-      "noResults": "No storages found",
-      "noResultsForTerm": "for the term \"{term}\""
-    },
-    "accessibility": {
-      "toggleFilters": "Toggle filters"
+      "entityName": "Storages",
+      "searchPlaceholder": "Search storages..."
     }
   },
   "parkings": {
@@ -1878,13 +1839,6 @@
     },
     "ariaLabel": "Building customers list"
   },
-  "storages": {
-    "list": {
-      "ariaLabel": "Storages List",
-      "entityName": "Storages",
-      "searchPlaceholder": "Search storages..."
-    }
-  },
   "unitsTable": {
     "title": "Building Units",
     "description": "List of properties included in this building.",
@@ -2256,15 +2210,15 @@
       "addressPlaceholder": "Enter address...",
       "city": "City",
       "cityPlaceholder": "Enter city...",
-      "totalArea": "Total Area (m\u00B2)",
+      "totalArea": "Total Area (m²)",
       "totalAreaPlaceholder": "0",
-      "builtArea": "Built Area (m\u00B2)",
+      "builtArea": "Built Area (m²)",
       "builtAreaPlaceholder": "0",
       "floors": "Number of Floors",
       "floorsPlaceholder": "0",
       "units": "Number of Units",
       "unitsPlaceholder": "0",
-      "totalValue": "Total Value (\u20AC)",
+      "totalValue": "Total Value (€)",
       "totalValuePlaceholder": "0",
       "startDate": "Start Date",
       "completionDate": "Completion Date",

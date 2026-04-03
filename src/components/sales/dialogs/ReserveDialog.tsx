@@ -35,6 +35,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { resolveProjectId, translateServerError } from './sales-dialog-utils';
 import type { BaseDialogProps } from './sales-dialog-utils';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useNotifications } from '@/providers/NotificationProvider';
 import {
   dispatchSalesAccountingEventWithPolicy,
   syncSalesAppurtenancesWithPolicy,
@@ -45,6 +46,7 @@ const logger = createModuleLogger('ReserveDialog');
 export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
+  const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const [deposit, setDeposit] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -104,6 +106,10 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       if (!completed) {
         return;
       }
+      success(t('viewer.messages.updateSuccess', {
+        ns: 'properties',
+        defaultValue: 'Property changes were saved.',
+      }));
       onOpenChange(false);
       onSuccess?.();
 
@@ -176,11 +182,12 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
         ? translateServerError(rawMsg, t)
         : t('sales.dialogs.reserve.unknownError', { defaultValue: 'Σφάλμα κατά την κράτηση' });
       setSaveError(msg);
+      notifyError(msg);
       logger.warn('Reserve failed', { error: rawMsg });
     } finally {
       setSaving(false);
     }
-  }, [buyerContactId, buyerName, deposit, linkedSpaces, onOpenChange, onSuccess, owners, runExistingPropertyUpdate, t, unit]);
+  }, [buyerContactId, buyerName, deposit, linkedSpaces, notifyError, onOpenChange, onSuccess, owners, runExistingPropertyUpdate, success, t, unit]);
 
   return (
     <>

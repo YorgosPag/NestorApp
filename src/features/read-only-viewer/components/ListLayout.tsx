@@ -14,14 +14,8 @@ import { useTranslation } from 'react-i18next';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { Property } from '@/types/property-viewer';
+import type { ReadOnlyViewerContextProps } from '../types';
 import '@/lib/design-system';
-
-/** Viewer props interface */
-interface ViewerPropsType {
-  onSelectFloor?: (floorId: string | null) => void;
-  properties?: Property[];
-  [key: string]: unknown;
-}
 
 export function ListLayout({
   isLoading,
@@ -30,7 +24,6 @@ export function ListLayout({
   handlePolygonSelect,
   hoveredPropertyId,
   onHoverProperty,
-  readOnlyViewerProps: _readOnlyViewerProps,
   viewerProps,
 }: {
   isLoading: boolean;
@@ -40,8 +33,7 @@ export function ListLayout({
   hoveredPropertyId: string | null;
   /** SPEC-237C: Hover callback for bidirectional sync */
   onHoverProperty?: (propertyId: string | null) => void;
-  readOnlyViewerProps: ViewerPropsType;
-  viewerProps: ViewerPropsType;
+  viewerProps: ReadOnlyViewerContextProps;
 }) {
   const { t } = useTranslation('properties');
   // 🏢 ENTERPRISE: Centralized spacing tokens - NO hardcoded values
@@ -150,7 +142,6 @@ export function ListLayout({
               propertyIds={selectedPropertyIds}
               onSelectFloor={handleSelectFloor}
               properties={properties}
-              onUpdateProperty={() => {}}
               isReadOnly
             />
           </CardContent>

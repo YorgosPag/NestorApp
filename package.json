@@ -48,7 +48,7 @@
     "validate:i18n": "node scripts/validate-translations.js",
     "validate:i18n-config": "node scripts/validate-i18n-config.js",
     "extract:hardcoded": "node scripts/extract-hardcoded-strings.js",
-    "i18n:check": "pnpm run validate:i18n && pnpm run extract:hardcoded",
+    "i18n:check": "pnpm run validate:i18n-config && pnpm run validate:i18n-manifest && pnpm run validate:i18n && pnpm run extract:hardcoded",
     "i18n:migrate": "node scripts/i18n-migration-helper.js",
     "i18n:migrate:file": "node scripts/i18n-migration-helper.js",
     "analyze:bundle": "node scripts/bundle-analyzer.js",
@@ -92,7 +92,8 @@
     "enterprise:validate": "pnpm run typecheck && pnpm run lint && pnpm run enterprise:security",
     "enterprise:ts-gate": "node scripts/enterprise-ts-gate.js",
     "enterprise:ts-gate:update": "node scripts/enterprise-ts-gate.js --update",
-    "enterprise:ts-gate:report": "node scripts/enterprise-ts-gate.js --report"
+    "enterprise:ts-gate:report": "node scripts/enterprise-ts-gate.js --report",
+    "validate:i18n-manifest": "node scripts/validate-i18n-manifest.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

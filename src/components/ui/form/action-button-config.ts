@@ -9,27 +9,27 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 export const useActionTranslations = () => {
   const { t } = useTranslation('toolbars');
   return {
-    save: t('common.actions.save'),
-    save_loading: t('common.actions.save_loading'),
-    cancel: t('common.actions.cancel'),
-    delete: t('common.actions.delete'),
-    delete_loading: t('common.actions.delete_loading'),
-    add: t('common.actions.add'),
-    edit: t('common.actions.edit'),
-    archive: t('common.actions.archive'),
-    archive_loading: t('common.actions.archive_loading'),
-    restore: t('common.actions.restore'),
-    restore_loading: t('common.actions.restore_loading'),
+    save: t('common-actions:actions.save'),
+    save_loading: t('common-actions:actions.save_loading'),
+    cancel: t('common-actions:actions.cancel'),
+    delete: t('common-actions:actions.delete'),
+    delete_loading: t('common-actions:actions.delete_loading'),
+    add: t('common-actions:actions.add'),
+    edit: t('common-actions:actions.edit'),
+    archive: t('common-actions:actions.archive'),
+    archive_loading: t('common-actions:actions.archive_loading'),
+    restore: t('common-actions:actions.restore'),
+    restore_loading: t('common-actions:actions.restore_loading'),
     call: t('contacts.actions.call'),
     email: t('contacts.actions.email'),
-    sms: t('common.actions.sms'),
-    export: t('common.actions.export'),
-    import: t('common.actions.import'),
-    help: t('common.actions.help'),
-    refresh: t('common.actions.refresh'),
-    sort: t('common.sort.sort'),
-    favorites: t('common.actions.favorites'),
-    archived: t('common.actions.archived')
+    sms: t('common-actions:actions.sms'),
+    export: t('common-actions:actions.export'),
+    import: t('common-actions:actions.import'),
+    help: t('common-actions:actions.help'),
+    refresh: t('common-actions:actions.refresh'),
+    sort: t('common-actions:actions.sort'),
+    favorites: t('common-actions:actions.favorites'),
+    archived: t('common-actions:actions.archived')
   };
 };
 

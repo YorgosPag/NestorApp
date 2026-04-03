@@ -1,0 +1,246 @@
+{
+  "viewer": {
+    "tools": {
+      "select": "Select",
+      "create": "Create",
+      "measure": "Measure",
+      "move": "Move",
+      "connect": "Connect",
+      "rectangle": "Rectangle",
+      "circle": "Circle",
+      "polygon": "Polygon"
+    },
+    "actions": {
+      "copySelected": "Copy selected",
+      "deleteSelected": "Delete selected",
+      "reset": "Reset",
+      "info": "Information",
+      "download": "Download"
+    },
+    "status": {
+      "tool": "Tool",
+      "mode": "Mode",
+      "connecting": "Connecting",
+      "selected": "Selected",
+      "readOnly": "Read-Only"
+    },
+    "availableProperties": "Available Properties",
+    "propertyDetails": "Selected Property",
+    "propertyInfo": "Quick View",
+    "confirm": {
+      "deleteProperty": "Are you sure you want to delete the selected property?"
+    },
+    "download": {
+      "filename": "floorplan"
+    },
+    "errors": {
+      "loadingError": "Error loading:"
+    },
+    "info": {
+      "title": "Property Information:",
+      "floor": "Floor:",
+      "unknown": "Unknown",
+      "properties": "Properties:",
+      "zoom": "Zoom:",
+      "visibleLayers": "Visible Layers:",
+      "pdfFloorplan": "PDF Floorplan:",
+      "available": "Available",
+      "notAvailable": "Not available"
+    },
+    "emptyState": {
+      "noFloorplan": "No floor plan available",
+      "noFloorplanDescription": "No floor plan data available for this property."
+    },
+    "badges": {
+      "propertiesCount": "{count} Properties",
+      "viewOnly": "View Only"
+    },
+    "statusBar": {
+      "floor": "Floor:",
+      "layers": "Layers:",
+      "liveUpdates": "Ενημερώσεις σε πραγματικό χρόνο"
+    },
+    "selectPropertyToViewMedia": "Select a property to view",
+    "media": {
+      "floorplans": "Floorplan",
+      "photos": "Photos",
+      "videos": "Videos",
+      "noFloorplans": "No floorplans available",
+      "noPhotos": "No photos available",
+      "noVideos": "No videos available",
+      "floorplanProperty": "Unit Floorplan",
+      "floorplanFloor": "Floor Plan",
+      "floorplanUnit": "Unit Floorplan",
+      "floorplanLevel": "{name} Plan",
+      "floorplanFloorLevel": "Floor Plan {name}"
+    }
+  },
+  "statusLegend": {
+    "title": "Property Status",
+    "propertiesOnFloor": "properties on floor",
+    "errors": "Errors:"
+  },
+  "editPanel": {
+    "title": "Polygon Properties",
+    "selected": "Selected:",
+    "selectToEdit": "Select a polygon to edit"
+  },
+  "detailsPanel": {
+    "selectProperty": "Select a property",
+    "toViewDetails": "to view its details",
+    "propertiesSelected": "{count} properties selected",
+    "selectSingleProperty": "Select a single property to view details.",
+    "noDataFound": "No data found",
+    "forSelectedProperty": "for the selected property"
+  },
+  "suggestions": {
+    "accept": "Accept",
+    "title": "Smart Suggestions",
+    "analyze": "Analyze",
+    "analysisComplete": "Analysis Complete: Found {count} placement suggestions",
+    "clickAnalyze": "Click \"Analyze\" for suggestions.",
+    "clearSuggestions": "Clear Suggestions"
+  },
+  "hover": {
+    "clickForMore": "Click for more details"
+  },
+  "hoverInfo": {
+    "hoverMouse": "Hover your mouse",
+    "overProperty": "over a property",
+    "onFloorPlanToSee": "on the floor plan to see",
+    "quickInfo": "quick information",
+    "noDataFound": "No data found",
+    "forThisProperty": "for this property"
+  },
+  "connectionPanel": {
+    "title": "Connections & Grouping",
+    "legend": {
+      "title": "Legend"
+    },
+    "controls": {
+      "typeLabel": "Connection Type",
+      "typePlaceholder": "Select type",
+      "types": {
+        "related": "Related",
+        "sameBuilding": "Same Building",
+        "sameFloor": "Same Floor",
+        "parking": "With Parking"
+      },
+      "cancelConnection": "Cancel Connection",
+      "newConnection": "New Connection",
+      "createGroup": "Create Group ({count} selected)",
+      "clearConnections": "Clear Connections",
+      "createGroupTitle": "Create Group",
+      "groupNameLabel": "Group name",
+      "groupNamePlaceholder": "Enter group name"
+    },
+    "connectionTypes": {
+      "sameBuilding": "Same Building",
+      "sameFloor": "Same Floor",
+      "related": "Related",
+      "parking": "Parking"
+    }
+  },
+  "floorPlan": {
+    "emptyState": {
+      "title": "No Floor Plan Loaded",
+      "description": "Upload a PDF floor plan to get started with property management",
+      "uploadHint": "Use the \"Upload PDF\" button in the toolbar"
+    },
+    "statusBar": {
+      "properties": "Properties",
+      "selected": "Selected",
+      "none": "None",
+      "connections": "Connections",
+      "pdfLoaded": "PDF Loaded",
+      "zoom": "Zoom",
+      "mode": "Mode",
+      "connecting": "Connecting"
+    },
+    "canvas": {
+      "noPdfProvided": "NO PDF URL PROVIDED",
+      "pdfLoading": "PDF LOADING...",
+      "pdfError": "PDF ERROR",
+      "pdfLoaded": "PDF LOADED & DISPLAYED! Pages: {count}",
+      "debugTitle": "PDF DEBUG INFO",
+      "debugPdfUrl": "PDF URL",
+      "debugPdfReady": "PDF Ready",
+      "debugPages": "Pages",
+      "debugTestMode": "Test Mode",
+      "debugError": "Error",
+      "debugNone": "None",
+      "debugExists": "EXISTS",
+      "debugYes": "YES",
+      "debugNo": "NO",
+      "testInstructions": "TEST INSTRUCTIONS",
+      "testStep1": "Click FULLSCREEN button",
+      "testStep2": "PDF should cover ENTIRE screen",
+      "testStep3": "Look for colored borders",
+      "testStep4": "Check debug info top-left",
+      "modeHidden": "Hidden",
+      "modeNormal": "Normal",
+      "modeFullscreen": "FULLSCREEN"
+    }
+  },
+  "floorPlanToolbar": {
+    "uploadPDF": "Upload PDF",
+    "uploading": "Uploading...",
+    "uploadTooltip": "Upload floor plan PDF",
+    "selectPDFFile": "Please select a PDF file",
+    "viewModes": {
+      "view": "View",
+      "create": "Create",
+      "measure": "Measure",
+      "edit": "Edit"
+    },
+    "layers": {
+      "hidePDF": "Hide PDF",
+      "showPDF": "Show PDF",
+      "hideGrid": "Hide Grid",
+      "showGrid": "Show Grid",
+      "hideLayers": "Hide Layers",
+      "showLayers": "Show Layers"
+    },
+    "zoom": {
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "resetView": "Reset View"
+    },
+    "fullscreen": "Fullscreen",
+    "export": {
+      "exportPNG": "Export PNG",
+      "exportPDF": "Export PDF"
+    },
+    "status": {
+      "mode": "Mode:",
+      "pdfActive": "PDF Active"
+    }
+  },
+  "floorSelector": {
+    "propertiesCount": "{count} properties"
+  },
+  "propertyCount": {
+    "propertiesOnFloor": "{count} properties on floor"
+  },
+  "creation": {
+    "clickToStart": "Click to start",
+    "pointsContinue": "{count} points - Click to continue"
+  },
+  "multiLevelIndicator": {
+    "groundFloor": "Ground Floor",
+    "firstFloor": "1st Floor"
+  },
+  "layerDetails": {
+    "color": "Color:",
+    "change": "Change",
+    "opacity": "Opacity:",
+    "price": "Price:",
+    "area": "Area:",
+    "sqm": "sqm",
+    "nodes": "Nodes:",
+    "duplicate": "Dupl."
+  },
+  "viewerFilters": {
+    "resetFilters": "Reset Filters"
+  }
+}

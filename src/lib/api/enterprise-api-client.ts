@@ -61,7 +61,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export interface ApiRequestConfig {
   /** HTTP method (default: GET) */
   method?: HttpMethod;
-  /** Request body (will be JSON stringified) */
+  /** Request body (JSON by default, supports FormData/Blob/URLSearchParams/raw payloads) */
   body?: Record<string, unknown> | unknown;
   /** Additional headers (Authorization is auto-added) */
   headers?: Record<string, string>;
@@ -75,6 +75,8 @@ export interface ApiRequestConfig {
   maxRetries?: number;
   /** Skip automatic Authorization header (για public endpoints) */
   skipAuth?: boolean;
+  /** Expected response parsing mode (default: json/text auto-detect) */
+  responseType?: 'auto' | 'json' | 'text' | 'blob';
 }
 
 /**
@@ -177,6 +179,25 @@ interface RequestContext {
   requestId: string;
 }
 
+function hasContentTypeHeader(headers: Record<string, string>): boolean {
+  return Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
+}
+
+function isBinaryRequestBody(body: unknown): body is BodyInit {
+  return typeof body === 'string'
+    || body instanceof FormData
+    || body instanceof URLSearchParams
+    || body instanceof Blob
+    || body instanceof ArrayBuffer
+    || ArrayBuffer.isView(body);
+}
+
+function shouldSerializeBodyAsJson(body: unknown): boolean {
+  if (body === undefined || body === null) return false;
+  return !isBinaryRequestBody(body);
+}
+
+
 // =============================================================================
 // ENTERPRISE API CLIENT CLASS
 // =============================================================================
@@ -266,6 +287,7 @@ export class EnterpriseApiClient {
       retry = true,
       maxRetries = 3,
       skipAuth = false,
+      responseType = 'auto',
     } = config;
 
     // Build full URL with query params
@@ -289,7 +311,7 @@ export class EnterpriseApiClient {
 
       try {
         // Build headers με automatic Authorization
-        const requestHeaders = await this.buildHeaders(headers, skipAuth);
+        const requestHeaders = await this.buildHeaders(headers, skipAuth, body);
 
         // Build fetch options
         const fetchOptions: RequestInit = {
@@ -299,7 +321,9 @@ export class EnterpriseApiClient {
 
         // Add body if provided
         if (body !== undefined && body !== null) {
-          fetchOptions.body = JSON.stringify(body);
+          fetchOptions.body = shouldSerializeBodyAsJson(body)
+            ? JSON.stringify(body)
+            : body as BodyInit;
         }
 
         // Log request (development only)
@@ -309,7 +333,7 @@ export class EnterpriseApiClient {
         const response = await this.fetchWithTimeout(fullUrl, fetchOptions, timeout);
 
         // Handle response
-        const result = await this.handleResponse<T>(response, context);
+        const result = await this.handleResponse<T>(response, context, responseType);
 
         // Log success
         this.logSuccess(context, response.status);
@@ -400,22 +424,21 @@ export class EnterpriseApiClient {
    */
   private async buildHeaders(
     customHeaders: Record<string, string>,
-    skipAuth: boolean
+    skipAuth: boolean,
+    body?: unknown,
   ): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...customHeaders,
     };
 
+    if (shouldSerializeBodyAsJson(body) && !hasContentTypeHeader(headers)) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     // Add Authorization header (unless skipped)
     if (!skipAuth) {
-      try {
-        const token = await this.getIdToken();
-        headers['Authorization'] = `Bearer ${token}`;
-      } catch (error) {
-        // If token retrieval fails, throw immediately (don't proceed without auth)
-        throw error;
-      }
+      const token = await this.getIdToken();
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     return headers;
@@ -429,13 +452,13 @@ export class EnterpriseApiClient {
    * Handle HTTP response με error normalization
    * Enterprise pattern: Standardized error codes and messages
    */
-  private async handleResponse<T>(response: Response, context: RequestContext): Promise<T> {
+  private async handleResponse<T>(response: Response, context: RequestContext, responseType: ApiRequestConfig['responseType'] = 'auto'): Promise<T> {
     const { status, statusText } = response;
     const requestId = context.requestId;
 
     // Success responses (2xx)
     if (status >= 200 && status < 300) {
-      return this.parseResponseBody<T>(response, context);
+      return this.parseResponseBody<T>(response, context, responseType);
     }
 
     // Error responses - normalize based on status code
@@ -539,8 +562,20 @@ export class EnterpriseApiClient {
    * Parse response body με type safety και contract validation
    * 🔒 ENTERPRISE: Validates canonical response format
    */
-  private async parseResponseBody<T>(response: Response, context: RequestContext): Promise<T> {
+  private async parseResponseBody<T>(response: Response, context: RequestContext, responseType: ApiRequestConfig['responseType'] = 'auto'): Promise<T> {
     const contentType = response.headers.get('content-type');
+
+    if (responseType === 'blob') {
+      return response.blob() as Promise<T>;
+    }
+
+    if (responseType === 'text') {
+      return (await response.text()) as T;
+    }
+
+    if (responseType === 'json') {
+      return await response.json() as T;
+    }
 
     // Handle empty responses (204 No Content)
     if (response.status === 204) {
@@ -763,3 +798,5 @@ export const apiClient = EnterpriseApiClient.getInstance();
 // =============================================================================
 
 export default apiClient;
+
+

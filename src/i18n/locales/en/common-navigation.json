@@ -1,0 +1,51 @@
+{
+  "navigation": {
+    "actions": {
+      "delete": {
+        "label": "Delete",
+        "description": "Delete item"
+      },
+      "unlink": {
+        "label": "Unlink",
+        "description": "Remove link"
+      },
+      "add": {
+        "label": "Add",
+        "description": "Add new item"
+      },
+      "link": {
+        "label": "Link",
+        "description": "Create a link"
+      },
+      "actions": {
+        "label": "Actions",
+        "description": "Available actions"
+      },
+      "view": {
+        "label": "View",
+        "description": "View details"
+      },
+      "edit": {
+        "label": "Edit",
+        "description": "Edit item"
+      },
+      "share": {
+        "label": "Share",
+        "description": "Share item"
+      },
+      "filter": {
+        "label": "Filter",
+        "description": "Filter results"
+      }
+    },
+    "home": "Home",
+    "properties": "Properties",
+    "crm": "CRM",
+    "admin": "Administration",
+    "contacts": "Contacts",
+    "projects": "Projects",
+    "buildings": "Buildings",
+    "storages": "Storages",
+    "details": "Details"
+  }
+}

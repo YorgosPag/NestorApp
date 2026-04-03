@@ -20,7 +20,6 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { API_ROUTES } from '@/config/domain-constants';
 import {
   QrCode,
   RefreshCw,
@@ -38,6 +37,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
+import { generateAttendanceQrCodeWithPolicy } from '@/services/ika/ika-mutation-gateway';
 
 // =============================================================================
 // TYPES
@@ -81,13 +81,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
 
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const res = await fetch(API_ROUTES.ATTENDANCE.QR_GENERATE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, date: today }),
-      });
-
-      const data = (await res.json()) as QrGenerateResult;
+      const data = await generateAttendanceQrCodeWithPolicy({ projectId, date: today });
 
       if (data.success) {
         setQrData(data);

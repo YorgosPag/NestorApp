@@ -20,6 +20,11 @@ export const DEFAULT_LANGUAGE: Language = 'el';
 // Available namespaces
 export const SUPPORTED_NAMESPACES = [
   'common',
+  'common-actions',
+  'common-navigation',
+  'common-status',
+  'common-validation',
+  'common-empty-states',
   'filters',   // 🏢 ENTERPRISE: Generic filter labels (domain separation - ADR-032)
   'dxf-viewer',
   'geo-canvas', // Added geo-canvas namespace
@@ -27,6 +32,8 @@ export const SUPPORTED_NAMESPACES = [
   'toasts',
   'errors',
   'properties',
+  'properties-enums',
+  'properties-viewer',
   'crm',
   'navigation',
   'auth',
@@ -39,6 +46,7 @@ export const SUPPORTED_NAMESPACES = [
   'users',
   'building',
   'contacts',
+  'communications',
   'landing',
   'telegram',  // Telegram bot templates - PR1 centralization
   'files',     // File storage display names (ADR-031)
@@ -87,6 +95,21 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
         case 'common':
           translations = await import('./locales/el/common.json');
           break;
+        case 'common-actions':
+          translations = await import('./locales/el/common-actions.json');
+          break;
+        case 'common-navigation':
+          translations = await import('./locales/el/common-navigation.json');
+          break;
+        case 'common-status':
+          translations = await import('./locales/el/common-status.json');
+          break;
+        case 'common-validation':
+          translations = await import('./locales/el/common-validation.json');
+          break;
+        case 'common-empty-states':
+          translations = await import('./locales/el/common-empty-states.json');
+          break;
         case 'filters':
           translations = await import('./locales/el/filters.json');
           break;
@@ -107,6 +130,12 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'properties':
           translations = await import('./locales/el/properties.json');
+          break;
+        case 'properties-enums':
+          translations = await import('./locales/el/properties-enums.json');
+          break;
+        case 'properties-viewer':
+          translations = await import('./locales/el/properties-viewer.json');
           break;
         case 'crm':
           translations = await import('./locales/el/crm.json');
@@ -211,6 +240,21 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
         case 'common':
           translations = await import('./locales/en/common.json');
           break;
+        case 'common-actions':
+          translations = await import('./locales/en/common-actions.json');
+          break;
+        case 'common-navigation':
+          translations = await import('./locales/en/common-navigation.json');
+          break;
+        case 'common-status':
+          translations = await import('./locales/en/common-status.json');
+          break;
+        case 'common-validation':
+          translations = await import('./locales/en/common-validation.json');
+          break;
+        case 'common-empty-states':
+          translations = await import('./locales/en/common-empty-states.json');
+          break;
         case 'filters':
           translations = await import('./locales/en/filters.json');
           break;
@@ -231,6 +275,12 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'properties':
           translations = await import('./locales/en/properties.json');
+          break;
+        case 'properties-enums':
+          translations = await import('./locales/en/properties-enums.json');
+          break;
+        case 'properties-viewer':
+          translations = await import('./locales/en/properties-viewer.json');
           break;
         case 'crm':
           translations = await import('./locales/en/crm.json');
@@ -432,7 +482,10 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'projects',      // Projects module
     'obligations',   // Obligations module (register/edit/workflow)
     'contacts',      // Contacts module
+  'communications', // Shared communications history and inbox surfaces
     'properties',    // 🏢 Properties module (renamed from units — ADR-269)
+    'properties-enums', // 🏢 Domain vocabulary split from properties SSOT
+    'properties-viewer', // 🏢 Floorplan/viewer surface split from properties SSOT
     'storage',       // 🏢 Storage management module - added 2026-01-24
     'parking',       // 🏢 Parking management module - added 2026-01-24
     'dxf-viewer',    // ?? DXF viewer UI - avoids fallback-to-keys after language switch

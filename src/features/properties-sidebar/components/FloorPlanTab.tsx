@@ -31,7 +31,6 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
-import type { FloorData } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 const logger = createModuleLogger('FloorPlanTab');
@@ -44,21 +43,8 @@ const logger = createModuleLogger('FloorPlanTab');
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 const propertyColor = NAVIGATION_ENTITIES.property.color;
 
-/** Viewer props structure */
-interface ViewerProps {
-  onSelectFloor?: (floorId: string) => void;
-  properties?: Property[];
-  [key: string]: unknown;
-}
-
 interface FloorPlanTabProps {
   selectedProperty: Property | null;
-  currentFloor: FloorData | null;
-  safeFloors: FloorData[];
-  safeViewerProps: ViewerProps;
-  safeViewerPropsWithFloors: ViewerProps & { floors?: FloorData[] };
-  setShowHistoryPanel: (show: boolean) => void;
-  units: Property[];
 }
 
 // =============================================================================

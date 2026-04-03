@@ -239,27 +239,6 @@ export function usePublicPropertyViewer() {
     }
   };
 
-  // Disabled handlers for read-only mode
-  const readOnlyHandlers = {
-    handlePolygonCreated: () => {},
-    handlePolygonUpdated: () => {},
-    handleDuplicate: () => {},
-    handleDelete: () => {},
-    setProperties: () => {},
-    undo: () => {},
-    redo: () => {},
-    setActiveTool: () => {},
-    setShowGrid: () => {},
-    setSnapToGrid: () => {},
-    setGridSize: () => {},
-    setShowMeasurements: () => {},
-    setConnections: () => {},
-    setGroups: () => {},
-    setIsConnecting: () => {},
-    setFirstConnectionPoint: () => {},
-    onShowHistory: () => {},
-  };
-
   return {
     // Data
     properties: publicProperties,
@@ -298,17 +277,12 @@ export function usePublicPropertyViewer() {
     handlePolygonSelect,
     setSelectedProperties: setSelectedPropertyIds,
     
-    // Read-only handlers
-    ...readOnlyHandlers,
-    
     // Disabled capabilities
     canUndo: false,
     canRedo: false,
     activeTool: null,
     showHistoryPanel: false,
-    setShowHistoryPanel: () => {},
     suggestionToDisplay: null,
-    setSuggestionToDisplay: () => {},
     connections: [],
     groups: [],
     isConnecting: false,

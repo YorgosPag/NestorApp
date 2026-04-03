@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { Property } from '@/types/property-viewer';
-import type { FloorData, ViewerPassthroughProps } from '../types';
+import type { FloorData, ViewerPassthroughProps, ViewerPassthroughPropsWithFloors } from '../types';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -13,17 +13,15 @@ const logger = createModuleLogger('usePropertiesSidebar');
 
 export function usePropertiesSidebar(
   floors: FloorData[] | undefined,
-  viewerProps: ViewerPassthroughProps | null | undefined,
+  viewerProps: ViewerPassthroughProps,
   selectedProperty: Property | null | undefined,
 ) {
   const { t } = useTranslation('properties');
   const { success, error: notifyError } = useNotifications();
   const safeFloors = Array.isArray(floors) ? floors : [];
-  const safeViewerProps = viewerProps || {};
-  const safeProperties = Array.isArray(safeViewerProps.properties)
-    ? safeViewerProps.properties as Property[]
-    : [];
-  const safeSelectedFloorId = safeViewerProps.selectedFloorId as string | undefined;
+  const safeViewerProps = viewerProps;
+  const safeProperties = viewerProps.properties;
+  const safeSelectedFloorId = viewerProps.selectedFloorId ?? undefined;
   const { runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(selectedProperty);
 
   const currentFloor = React.useMemo(
@@ -56,7 +54,7 @@ export function usePropertiesSidebar(
     }
   }, [notifyError, runExistingPropertyUpdate, safeProperties, success, t]);
 
-  const safeViewerPropsWithFloors = React.useMemo(() => ({
+  const safeViewerPropsWithFloors = React.useMemo<ViewerPassthroughPropsWithFloors>(() => ({
     ...safeViewerProps,
     floors: safeFloors,
     currentFloor,

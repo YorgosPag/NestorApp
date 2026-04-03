@@ -45,6 +45,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { resolveProjectId, translateServerError } from './sales-dialog-utils';
 import type { BaseDialogProps } from './sales-dialog-utils';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useNotifications } from '@/providers/NotificationProvider';
 import {
   dispatchSalesAccountingEventWithPolicy,
   syncSalesAppurtenancesWithPolicy,
@@ -55,6 +56,7 @@ const logger = createModuleLogger('SellDialog');
 export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
+  const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const [finalPrice, setFinalPrice] = useState<string>(
     unit.commercial?.askingPrice?.toString() ?? ''
@@ -128,6 +130,10 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       if (!completed) {
         return;
       }
+      success(t('viewer.messages.updateSuccess', {
+        ns: 'properties',
+        defaultValue: 'Property changes were saved.',
+      }));
       onOpenChange(false);
       onSuccess?.();
 
@@ -192,11 +198,12 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         ? translateServerError(rawMsg, t)
         : t('sales.dialogs.sell.unknownError', { defaultValue: 'Σφάλμα κατά την πώληση' });
       setSaveError(msg);
+      notifyError(msg);
       logger.warn('Sell failed', { error: rawMsg });
     } finally {
       setSaving(false);
     }
-  }, [brokerAgreements, buyerContactId, buyerName, finalPrice, linkedSpaces, onOpenChange, onSuccess, owners, runExistingPropertyUpdate, selectedBrokerId, t, unit]);
+  }, [brokerAgreements, buyerContactId, buyerName, finalPrice, linkedSpaces, notifyError, onOpenChange, onSuccess, owners, runExistingPropertyUpdate, selectedBrokerId, success, t, unit]);
 
   const askingPrice = unit.commercial?.askingPrice;
   const discount = askingPrice && Number(finalPrice) > 0

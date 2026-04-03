@@ -1,7 +1,10 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ContactsService } from '@/services/contacts.service';
-import { updateMultiplePropertiesOwner } from '@/services/properties.service';
+import { assignMultiplePropertiesOwnerWithPolicy } from '@/services/property/property-mutation-gateway';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import type { Contact } from '@/types/contacts';
 
 interface NotificationFunctions {
@@ -15,18 +18,24 @@ interface UseBulkAssignProps {
 }
 
 export function useBulkAssign({ notifications, onSuccess }: UseBulkAssignProps) {
+  const { t } = useTranslation('properties');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+
     (async () => {
       const { contacts: fetchedContacts } = await ContactsService.getAllContacts({
         limitCount: 1000,
       });
-      if (mounted) setContacts(fetchedContacts);
+
+      if (mounted) {
+        setContacts(fetchedContacts);
+      }
     })();
+
     return () => {
       mounted = false;
     };
@@ -35,21 +44,39 @@ export function useBulkAssign({ notifications, onSuccess }: UseBulkAssignProps) 
   const assignToContact = useCallback(
     async (ids: string[]) => {
       if (!selectedContactId) {
-        notifications.error('❌ Παρακαλώ επιλέξτε έναν πελάτη');
+        notifications.error(t('common.dropdowns.selectClient', {
+          ns: 'common',
+          defaultValue: 'Select client',
+        }));
         return;
       }
+
       setIsLoading(true);
+
       try {
-        await updateMultiplePropertiesOwner(ids, selectedContactId);
-        notifications.success('✅ Τα ακίνητα ανατέθηκαν στον επιλεγμένο πελάτη');
+        await assignMultiplePropertiesOwnerWithPolicy({
+          propertyIds: ids,
+          contactId: selectedContactId,
+        });
+
+        notifications.success(t('toolbar.bulkAssignSuccess', {
+          defaultValue: 'The selected properties were assigned successfully.',
+        }));
         onSuccess();
-      } catch {
-        notifications.error('❌ Η ανάθεση απέτυχε');
+      } catch (error) {
+        notifications.error(
+          translatePropertyMutationError(
+            error,
+            t,
+            'toolbar.bulkAssignError',
+            'The selected properties could not be assigned.',
+          ),
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    [selectedContactId, notifications, onSuccess]
+    [notifications, onSuccess, selectedContactId, t],
   );
 
   return {

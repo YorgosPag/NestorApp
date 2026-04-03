@@ -729,7 +729,7 @@
   },
   "reconciliation": {
     "title": "Bank Reconciliation",
-    "description": "Match bank transactions with invoices and journal entries",
+    "description": "Description",
     "transactions": "Transactions",
     "candidates": "Match Candidates",
     "unmatched": "unmatched",
@@ -750,7 +750,6 @@
     "filterExcluded": "Excluded",
     "selectAll": "Select all",
     "date": "Date",
-    "description": "Description",
     "amount": "Amount",
     "status": "Status",
     "confidence": "Confidence",
@@ -818,4 +817,3 @@
     "viewOriginal": "View Original"
   }
 }
-

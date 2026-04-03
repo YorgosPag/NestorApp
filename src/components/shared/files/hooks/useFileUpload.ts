@@ -26,11 +26,11 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import {
+  classifyFileWithPolicy,
   createPendingFileRecordWithPolicy,
   finalizeFileRecordWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { getFileExtension } from '@/services/upload';
-import { API_ROUTES } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
 import { generateUploadThumbnail, buildThumbnailPath } from '../utils/generate-upload-thumbnail';
@@ -206,11 +206,7 @@ export function useFileUpload({
 
           // ADR-191 Phase 2.2: AI auto-classify (fire-and-forget)
           if (isAIClassifiable(file.type)) {
-            fetch(API_ROUTES.FILES.CLASSIFY, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileId }),
-            }).catch(() => { /* non-blocking */ });
+            classifyFileWithPolicy(fileId).catch(() => { /* non-blocking */ });
           }
 
           successCount++;

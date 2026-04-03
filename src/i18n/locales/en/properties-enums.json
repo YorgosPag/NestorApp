@@ -1,0 +1,213 @@
+{
+  "status": {
+    "forSale": "For Sale",
+    "forRent": "For Rent",
+    "forSaleAndRent": "Sale & Rent",
+    "reserved": "Reserved",
+    "sold": "Sold",
+    "landowner": "Landowner",
+    "rented": "Rented",
+    "underNegotiation": "Under Negotiation",
+    "comingSoon": "Coming Soon",
+    "offMarket": "Off Market",
+    "unavailable": "Unavailable",
+    "available": "Available",
+    "pending": "Pending",
+    "withdrawn": "Withdrawn",
+    "expired": "Expired",
+    "notSold": "Not Sold"
+  },
+  "rental": {
+    "rentOnly": "Rent Only",
+    "longTerm": "Long-Term Rental",
+    "shortTerm": "Short-Term Rental"
+  },
+  "specialStatus": {
+    "reservedPending": "Reserved Pending",
+    "contractSigned": "Contract Signed",
+    "depositPaid": "Deposit Paid",
+    "corporate": "Corporate Property",
+    "notForSale": "Not For Sale",
+    "family": "Family Reserved",
+    "preLaunch": "Pre-Launch",
+    "exclusive": "Exclusive Listing",
+    "reducedPrice": "Price Reduced",
+    "urgentSale": "Urgent Sale",
+    "underRenovation": "Under Renovation",
+    "legalIssues": "Legal Issues",
+    "inspectionRequired": "Inspection Required",
+    "pendingDocuments": "Pending Documents",
+    "underNegotiation": "Under Negotiation",
+    "availableSoon": "Available Soon",
+    "landowner": "Landowner",
+    "offMarket": "Off Market",
+    "unavailable": "Unavailable"
+  },
+  "types": {
+    "apartment": "Apartment",
+    "studio": "Studio",
+    "maisonette": "Maisonette",
+    "shop": "Shop",
+    "office": "Office",
+    "storage": "Storage",
+    "bedsit": "Bedsit",
+    "apartment2br": "2 Bedroom Apartment",
+    "apartment3br": "3 Bedroom Apartment",
+    "apartment4br": "4 Bedroom Apartment",
+    "loft": "Loft",
+    "penthouse": "Penthouse"
+  },
+  "enhancedStatus": {
+    "rentalOnly": "Rental Only",
+    "longTermRental": "Long-Term Rental",
+    "shortTermRental": "Short-Term Rental",
+    "reservedPending": "Reserved Pending",
+    "contractSigned": "Contract Signed",
+    "depositPaid": "Deposit Paid",
+    "companyOwned": "Company Owned",
+    "notForSale": "Not For Sale",
+    "familyReserved": "Family Reserved",
+    "preLaunch": "Pre-Launch",
+    "exclusiveListing": "Exclusive Listing",
+    "priceReduced": "Price Reduced",
+    "urgentSale": "Urgent Sale",
+    "underRenovation": "Under Renovation",
+    "legalIssues": "Legal Issues",
+    "inspectionRequired": "Inspection Required",
+    "documentationPending": "Documentation Pending"
+  },
+  "commercialStatus": {
+    "unavailable": "Unavailable",
+    "for-sale": "For sale",
+    "for-rent": "For rent",
+    "for-sale-and-rent": "For sale and rent"
+  },
+  "intent": {
+    "sale": "For Sale",
+    "rental": "For Rental",
+    "both": "Sale & Rental",
+    "investment": "Investment",
+    "development": "Development",
+    "internal": "Internal Use",
+    "withdrawn": "Withdrawn"
+  },
+  "availability": {
+    "immediatelyAvailable": "Immediately Available",
+    "availableSoon": "Available Soon",
+    "conditionallyAvailable": "Conditionally Available",
+    "reserved": "Reserved",
+    "occupied": "Occupied",
+    "offMarket": "Off Market",
+    "notAvailable": "Not Available"
+  },
+  "priority": {
+    "showcase": "Showcase",
+    "hold": "On Hold"
+  },
+  "units": {
+    "types": {
+      "studio": "Studio",
+      "apartment_1br": "1 Bedroom Apartment",
+      "apartment_2br": "2 Bedroom Apartment",
+      "apartment_3br": "3 Bedroom Apartment",
+      "maisonette": "Maisonette",
+      "shop": "Shop",
+      "storage": "Storage"
+    }
+  },
+  "orientation": {
+    "sectionTitle": "Orientation",
+    "short": {
+      "north": "N",
+      "northeast": "NE",
+      "east": "E",
+      "southeast": "SE",
+      "south": "S",
+      "southwest": "SW",
+      "west": "W",
+      "northwest": "NW"
+    }
+  },
+  "condition": {
+    "sectionTitle": "Condition",
+    "new": "New",
+    "excellent": "Excellent",
+    "good": "Good",
+    "needs-renovation": "Needs renovation"
+  },
+  "energy": {
+    "class": "Energy class"
+  },
+  "systems": {
+    "sectionTitle": "Systems",
+    "heating": {
+      "label": "Heating",
+      "central": "Central",
+      "autonomous": "Autonomous",
+      "heat-pump": "Heat pump",
+      "solar": "Solar",
+      "none": "None"
+    },
+    "cooling": {
+      "label": "Cooling",
+      "central-air": "Central air",
+      "split-units": "Split units",
+      "fan-coil": "Fan coil",
+      "none": "None"
+    }
+  },
+  "finishes": {
+    "sectionTitle": "Finishes",
+    "flooring": {
+      "label": "Flooring",
+      "tiles": "Tiles",
+      "wood": "Wood",
+      "laminate": "Laminate",
+      "marble": "Marble",
+      "carpet": "Carpet"
+    },
+    "frames": {
+      "label": "Frames",
+      "aluminum": "Aluminum",
+      "pvc": "PVC",
+      "wood": "Wood"
+    },
+    "glazing": {
+      "label": "Glazing",
+      "single": "Single",
+      "double": "Double",
+      "triple": "Triple",
+      "energy": "Energy-efficient"
+    }
+  },
+  "features": {
+    "sectionTitle": "Features",
+    "interior": {
+      "label": "Interior",
+      "fireplace": "Fireplace",
+      "jacuzzi": "Jacuzzi",
+      "sauna": "Sauna",
+      "smart-home": "Smart home",
+      "solar-panels": "Solar panels",
+      "underfloor-heating": "Underfloor heating",
+      "air-conditioning": "Air conditioning",
+      "alarm-system": "Alarm system"
+    },
+    "security": {
+      "label": "Security",
+      "alarm": "Alarm",
+      "security-door": "Security door",
+      "cctv": "CCTV",
+      "access-control": "Access control",
+      "intercom": "Intercom",
+      "motion-sensors": "Motion sensors"
+    }
+  },
+  "operationalStatus": {
+    "ready": "Ready",
+    "underConstruction": "Under Construction",
+    "inspection": "Under Inspection",
+    "maintenance": "Under Maintenance",
+    "draft": "Draft"
+  }
+}

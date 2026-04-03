@@ -1,76 +1,66 @@
 #!/usr/bin/env node
 
 /**
- * 🌐 i18n Translation Validation Script
+ * i18n Translation Validation Script
  *
- * This script validates translation completeness and consistency
- * across all supported locales in the Nestor application.
- *
- * Features:
- * - Validates all translation files exist
- * - Checks for missing keys between locales
- * - Validates JSON syntax
- * - Reports translation coverage
+ * Validates locale directory presence, namespace parity and schema parity.
  */
 
-const fs = require('fs');
 const path = require('path');
+const {
+  LOCALES_DIR,
+  PRIMARY_LOCALE,
+  SUPPORTED_LOCALES,
+  compareSchemas,
+  getLocaleFiles,
+  readJson,
+} = require('./_shared/i18n-governance');
 
-// Configuration
-const I18N_DIR = path.join(__dirname, '..', 'src', 'i18n', 'locales');
-const SUPPORTED_LOCALES = ['el', 'en']; // Greek (primary), English
-const PRIMARY_LOCALE = 'el';
+const fs = require('fs');
 
-// Colors for console output
 const colors = {
   reset: '\x1b[0m',
   red: '\x1b[31m',
   green: '\x1b[32m',
   yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  magenta: '\x1b[35m',
   cyan: '\x1b[36m',
-  white: '\x1b[37m'
+  magenta: '\x1b[35m',
 };
 
-function log(message, color = 'white') {
-  console.log(`${colors[color]}${message}${colors.reset}`);
+function log(message, color = 'reset') {
+  console.log(`${colors[color] || colors.reset}${message}${colors.reset}`);
 }
 
 function logSuccess(message) {
-  log(`✅ ${message}`, 'green');
+  log(`OK ${message}`, 'green');
 }
 
 function logError(message) {
-  log(`❌ ${message}`, 'red');
+  log(`ERROR ${message}`, 'red');
 }
 
 function logWarning(message) {
-  log(`⚠️  ${message}`, 'yellow');
+  log(`WARN ${message}`, 'yellow');
 }
 
 function logInfo(message) {
-  log(`ℹ️  ${message}`, 'cyan');
+  log(`INFO ${message}`, 'cyan');
 }
 
-/**
- * Check if i18n directory structure exists
- */
 function validateDirectoryStructure() {
   logInfo('Validating i18n directory structure...');
 
-  if (!fs.existsSync(I18N_DIR)) {
-    logWarning(`i18n directory not found at: ${I18N_DIR}`);
-    logInfo('This is acceptable - i18n may not be implemented yet.');
+  if (!fs.existsSync(LOCALES_DIR)) {
+    logWarning(`i18n directory not found at: ${LOCALES_DIR}`);
     return false;
   }
 
   let allLocalesExist = true;
 
-  SUPPORTED_LOCALES.forEach(locale => {
-    const localePath = path.join(I18N_DIR, locale);
+  SUPPORTED_LOCALES.forEach((locale) => {
+    const localePath = path.join(LOCALES_DIR, locale);
     if (!fs.existsSync(localePath)) {
-      logWarning(`Locale directory missing: ${localePath}`);
+      logError(`Locale directory missing: ${localePath}`);
       allLocalesExist = false;
     } else {
       logSuccess(`Locale directory exists: ${locale}`);
@@ -80,52 +70,27 @@ function validateDirectoryStructure() {
   return allLocalesExist;
 }
 
-/**
- * Get all translation files in a locale directory
- */
 function getTranslationFiles(locale) {
-  const localePath = path.join(I18N_DIR, locale);
-
-  if (!fs.existsSync(localePath)) {
-    return [];
-  }
-
-  try {
-    return fs.readdirSync(localePath)
-      .filter(file => file.endsWith('.json'))
-      .map(file => path.join(localePath, file));
-  } catch (error) {
-    logError(`Error reading locale directory ${locale}: ${error.message}`);
-    return [];
-  }
+  return getLocaleFiles(locale).map((file) => path.join(LOCALES_DIR, locale, file));
 }
 
-/**
- * Load and validate JSON translation file
- */
 function loadTranslationFile(filePath) {
   try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const data = JSON.parse(content);
-    return { success: true, data };
+    return { success: true, data: readJson(filePath) };
   } catch (error) {
     logError(`Invalid JSON in ${filePath}: ${error.message}`);
     return { success: false, error: error.message };
   }
 }
 
-/**
- * Get all keys from a nested object (dot notation)
- */
 function getAllKeys(obj, prefix = '') {
   let keys = [];
 
   for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
-
-      if (typeof obj[key] === 'object' && obj[key] !== null) {
-        keys.push(...getAllKeys(obj[key], fullKey));
+      if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+        keys = keys.concat(getAllKeys(obj[key], fullKey));
       } else {
         keys.push(fullKey);
       }
@@ -135,59 +100,81 @@ function getAllKeys(obj, prefix = '') {
   return keys;
 }
 
-/**
- * Validate translation completeness
- */
 function validateTranslationCompleteness() {
   logInfo('Validating translation completeness...');
 
   const localeData = {};
   let hasErrors = false;
+  const primaryFiles = getLocaleFiles(PRIMARY_LOCALE);
 
-  // Load all translation files for each locale
-  SUPPORTED_LOCALES.forEach(locale => {
+  SUPPORTED_LOCALES.forEach((locale) => {
     const files = getTranslationFiles(locale);
     localeData[locale] = {};
 
-    files.forEach(filePath => {
+    files.forEach((filePath) => {
       const fileName = path.basename(filePath, '.json');
       const result = loadTranslationFile(filePath);
-
       if (result.success) {
         localeData[locale][fileName] = result.data;
-        logSuccess(`Loaded ${locale}/${fileName}.json`);
       } else {
         hasErrors = true;
       }
     });
   });
 
-  // Compare keys between locales
+  SUPPORTED_LOCALES.forEach((locale) => {
+    const localeFiles = getLocaleFiles(locale);
+    const missingFiles = primaryFiles.filter((file) => !localeFiles.includes(file));
+    const extraFiles = localeFiles.filter((file) => !primaryFiles.includes(file));
+
+    if (missingFiles.length > 0) {
+      hasErrors = true;
+      logError(`Missing namespace files in ${locale}: ${missingFiles.join(', ')}`);
+    }
+
+    if (extraFiles.length > 0) {
+      hasErrors = true;
+      logError(`Unexpected namespace files in ${locale}: ${extraFiles.join(', ')}`);
+    }
+  });
+
   const primaryData = localeData[PRIMARY_LOCALE] || {};
 
-  SUPPORTED_LOCALES.forEach(locale => {
-    if (locale === PRIMARY_LOCALE) return;
+  SUPPORTED_LOCALES.forEach((locale) => {
+    if (locale === PRIMARY_LOCALE) {
+      return;
+    }
 
     const currentData = localeData[locale] || {};
 
-    Object.keys(primaryData).forEach(fileName => {
-      const primaryKeys = getAllKeys(primaryData[fileName] || {});
-      const currentKeys = getAllKeys(currentData[fileName] || {});
+    Object.keys(primaryData).forEach((fileName) => {
+      const comparison = compareSchemas(primaryData[fileName] || {}, currentData[fileName] || {});
 
-      const missingKeys = primaryKeys.filter(key => !currentKeys.includes(key));
-      const extraKeys = currentKeys.filter(key => !primaryKeys.includes(key));
-
-      if (missingKeys.length > 0) {
+      if (comparison.missing.length > 0) {
+        hasErrors = true;
         logWarning(`Missing keys in ${locale}/${fileName}.json:`);
-        missingKeys.forEach(key => log(`  - ${key}`, 'yellow'));
+        comparison.missing.forEach((key) => log(`  - ${key}`, 'yellow'));
       }
 
-      if (extraKeys.length > 0) {
+      if (comparison.extra.length > 0) {
+        hasErrors = true;
         logWarning(`Extra keys in ${locale}/${fileName}.json:`);
-        extraKeys.forEach(key => log(`  - ${key}`, 'yellow'));
+        comparison.extra.forEach((key) => log(`  - ${key}`, 'yellow'));
       }
 
-      if (missingKeys.length === 0 && extraKeys.length === 0) {
+      if (comparison.typeMismatches.length > 0) {
+        hasErrors = true;
+        logWarning(`Type mismatches in ${locale}/${fileName}.json:`);
+        comparison.typeMismatches.forEach((mismatch) => {
+          log(`  - ${mismatch.path}: expected ${mismatch.expected}, received ${mismatch.actual}`, 'yellow');
+        });
+      }
+
+      if (
+        comparison.missing.length === 0 &&
+        comparison.extra.length === 0 &&
+        comparison.typeMismatches.length === 0
+      ) {
         logSuccess(`Translation complete: ${locale}/${fileName}.json`);
       }
     });
@@ -196,26 +183,21 @@ function validateTranslationCompleteness() {
   return !hasErrors;
 }
 
-/**
- * Generate translation coverage report
- */
 function generateCoverageReport() {
   logInfo('Generating translation coverage report...');
 
   const localeData = {};
   let totalKeys = 0;
 
-  // Load all translation files
-  SUPPORTED_LOCALES.forEach(locale => {
+  SUPPORTED_LOCALES.forEach((locale) => {
     const files = getTranslationFiles(locale);
     let localeKeys = 0;
 
-    files.forEach(filePath => {
+    files.forEach((filePath) => {
       const result = loadTranslationFile(filePath);
       if (result.success) {
         const keys = getAllKeys(result.data);
         localeKeys += keys.length;
-
         if (locale === PRIMARY_LOCALE) {
           totalKeys += keys.length;
         }
@@ -225,56 +207,41 @@ function generateCoverageReport() {
     localeData[locale] = localeKeys;
   });
 
-  // Calculate and display coverage
-  log('\\n📊 Translation Coverage Report:', 'magenta');
-  log('================================', 'magenta');
+  log('\nTranslation Coverage Report:', 'magenta');
+  log('============================', 'magenta');
 
-  SUPPORTED_LOCALES.forEach(locale => {
+  SUPPORTED_LOCALES.forEach((locale) => {
     const keys = localeData[locale] || 0;
     const coverage = totalKeys > 0 ? ((keys / totalKeys) * 100).toFixed(1) : '0.0';
-    const status = coverage >= 100 ? '✅' : coverage >= 80 ? '⚠️' : '❌';
-
-    log(`${status} ${locale.toUpperCase()}: ${keys}/${totalKeys} keys (${coverage}%)`,
-        coverage >= 100 ? 'green' : coverage >= 80 ? 'yellow' : 'red');
+    const color = coverage === '100.0' ? 'green' : 'yellow';
+    log(`${locale.toUpperCase()}: ${keys}/${totalKeys} keys (${coverage}%)`, color);
   });
 
-  log('\\n');
+  log('');
 }
 
-/**
- * Main validation function
- */
 function main() {
-  log('\\n🌐 Nestor i18n Translation Validation', 'cyan');
-  log('=====================================\\n', 'cyan');
+  log('\ni18n Translation Validation', 'cyan');
+  log('===========================\n', 'cyan');
 
-  // Check if i18n is implemented
   const hasI18nStructure = validateDirectoryStructure();
-
   if (!hasI18nStructure) {
-    logInfo('i18n structure not found or incomplete.');
-    logInfo('This is acceptable for projects that haven\'t implemented internationalization yet.');
-    logSuccess('Validation passed - no i18n requirements to validate.');
-    process.exit(0);
-  }
-
-  // Validate translations
-  const isValid = validateTranslationCompleteness();
-
-  // Generate coverage report
-  generateCoverageReport();
-
-  // Exit with appropriate code
-  if (isValid) {
-    logSuccess('All translation validations passed!');
-    process.exit(0);
-  } else {
-    logError('Translation validation failed!');
+    logWarning('i18n structure not found or incomplete.');
     process.exit(1);
   }
+
+  const isValid = validateTranslationCompleteness();
+  generateCoverageReport();
+
+  if (isValid) {
+    logSuccess('All translation validations passed.');
+    process.exit(0);
+  }
+
+  logError('Translation validation failed.');
+  process.exit(1);
 }
 
-// Run the script
 if (require.main === module) {
   main();
 }
@@ -282,5 +249,5 @@ if (require.main === module) {
 module.exports = {
   validateDirectoryStructure,
   validateTranslationCompleteness,
-  generateCoverageReport
+  generateCoverageReport,
 };

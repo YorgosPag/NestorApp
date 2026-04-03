@@ -44,6 +44,7 @@ import {
   deletePropertyWithPolicy,
   updatePropertyBuildingLinkWithPolicy,
 } from '@/services/property/property-mutation-gateway';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 
 type PropertyConfirmAction = { type: 'unlink'; item: Property };
 
@@ -178,8 +179,14 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
           success(t('unitStats.deleted'));
           await fetchProperties();
         } catch (err) {
-          const msg = err instanceof Error ? err.message : t('unitStats.error');
-          notifyError(msg);
+          notifyError(
+            translatePropertyMutationError(
+              err,
+              tUnits,
+              'viewer.messages.deleteFailed',
+              'The property could not be deleted.',
+            ),
+          );
         } finally {
           setDeletingId(null);
         }
@@ -208,8 +215,14 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
       success(t('unitStats.unlinked'));
       await fetchProperties();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t('unitStats.error');
-      notifyError(msg);
+      notifyError(
+        translatePropertyMutationError(
+          err,
+          tUnits,
+          'unitStats.error',
+          'The property could not be unlinked from the building.',
+        ),
+      );
     } finally {
       setConfirmLoading(false);
       setConfirmAction(null);

@@ -3,14 +3,12 @@
   "description": "Your saved report configurations",
   "empty": "No saved reports yet",
   "emptyHint": "Save a report from the Report Builder to see it here",
-
   "tabs": {
     "all": "All",
     "favorites": "Favorites",
     "recent": "Recently Run",
     "shared": "Shared"
   },
-
   "categories": {
     "monthly": "Monthly",
     "tax": "Tax",
@@ -19,13 +17,11 @@
     "efka": "EFKA",
     "general": "General"
   },
-
   "visibility": {
     "personal": "Personal",
     "shared": "Shared",
     "system": "System"
   },
-
   "dialog": {
     "saveTitle": "Save Report",
     "saveAsTitle": "Save As New Report",
@@ -38,14 +34,12 @@
     "save": "Save",
     "cancel": "Cancel"
   },
-
   "deleteConfirm": {
     "title": "Delete Report",
     "message": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
     "confirm": "Delete",
     "cancel": "Cancel"
   },
-
   "table": {
     "name": "Name",
     "category": "Category",
@@ -54,7 +48,6 @@
     "visibility": "Visibility",
     "actions": "Actions"
   },
-
   "datePresets": {
     "today": "Today",
     "yesterday": "Yesterday",
@@ -71,7 +64,6 @@
     "last_12_months": "Last 12 Months",
     "year_to_date": "Year to Date"
   },
-
   "actions": {
     "save": "Save Report",
     "saveAs": "Save As New",
@@ -86,7 +78,6 @@
     "newReport": "New Report",
     "savedReports": "Saved Reports"
   },
-
   "messages": {
     "saved": "Report saved successfully",
     "updated": "Report updated",

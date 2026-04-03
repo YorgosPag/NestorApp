@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
+import type { Property } from '@/types/property-viewer';
 import { Edit, Trash2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
@@ -12,10 +13,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIsMobile } from '@/hooks/useMobile';
 import { useTranslation } from 'react-i18next';
-import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
 
 import { PropertiesList } from '@/components/properties/PropertiesList';
-import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+import { UniversalTabsRenderer, convertToUniversalConfig, type PropertyTabAdditionalData, type PropertyTabComponentProps, type PropertyTabGlobalProps } from '@/components/generic/UniversalTabsRenderer';
 import { PROPERTIES_COMPONENT_MAPPING } from '@/components/generic/mappings/propertiesMappings';
 import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
@@ -71,25 +71,35 @@ export function PropertiesSidebar({
     }
   }, [isCreatingNewUnit, onCancelCreate]);
 
-  const { requestDelete, Dialogs: DeletionDialogs } = usePropertyDeletionGuard();
 
   const handleDeleteProperty = useCallback(async () => {
     if (!selectedProperty || !onDeleteProperty) {
       return;
     }
 
-    await requestDelete(
-      {
-        id: selectedProperty.id,
-        name: selectedProperty.name,
-      },
-      async () => {
-        await onDeleteProperty(selectedProperty.id);
-      },
-    );
-  }, [onDeleteProperty, requestDelete, selectedProperty]);
+    await onDeleteProperty(selectedProperty.id);
+  }, [onDeleteProperty, selectedProperty]);
 
   const propertiesTabs = getSortedPropertiesTabs();
+
+  const propertyTabAdditionalData: PropertyTabAdditionalData = {
+    safeFloors,
+    currentFloor,
+    safeViewerProps,
+    safeViewerPropsWithFloors,
+    setShowHistoryPanel,
+    units,
+    onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty,
+    isEditMode: effectiveEditMode,
+    onToggleEditMode: handleToggleEditMode,
+    onExitEditMode: handleExitEditMode,
+    isCreatingNewUnit,
+    onPropertyCreated,
+  };
+
+  const propertyTabGlobalProps: PropertyTabGlobalProps = {
+    propertyId: selectedProperty?.id,
+  };
 
   const detailsContent = (
     <DetailsContainer
@@ -106,30 +116,15 @@ export function PropertiesSidebar({
         />
       )}
       tabsRenderer={(
-        <UniversalTabsRenderer
+        <UniversalTabsRenderer<Property | null, PropertyTabComponentProps, PropertyTabAdditionalData, PropertyTabGlobalProps>
           tabs={propertiesTabs.map(convertToUniversalConfig)}
           data={selectedProperty}
           componentMapping={PROPERTIES_COMPONENT_MAPPING}
           defaultTab={defaultTab || 'info'}
           theme="default"
           translationNamespace="building"
-          additionalData={{
-            safeFloors,
-            currentFloor,
-            safeViewerProps,
-            safeViewerPropsWithFloors,
-            setShowHistoryPanel,
-            units,
-            onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty,
-            isEditMode: effectiveEditMode,
-            onToggleEditMode: handleToggleEditMode,
-            onExitEditMode: handleExitEditMode,
-            isCreatingNewUnit,
-            onPropertyCreated,
-          }}
-          globalProps={{
-            propertyId: selectedProperty?.id,
-          }}
+          additionalData={propertyTabAdditionalData}
+          globalProps={propertyTabGlobalProps}
         />
       )}
       onCreateAction={onNewProperty}
@@ -196,7 +191,6 @@ export function PropertiesSidebar({
       </MobileDetailsSlideIn>
 
       {ImpactDialog}
-      {DeletionDialogs}
     </>
   );
 }

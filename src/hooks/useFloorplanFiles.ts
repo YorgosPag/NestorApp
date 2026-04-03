@@ -26,7 +26,8 @@ import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES, API_ROUTES } from '@/config/domain-constants';
+import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
+import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 
 // ============================================================================
 // TYPES
@@ -125,40 +126,14 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
     );
 
     if (unprocessed.length === 0) return;
-
     logger.info(`Processing ${unprocessed.length} unprocessed files via API`);
-
-    // 🏢 ENTERPRISE: Get ID token for API authentication
-    let idToken: string;
-    try {
-      idToken = await user.getIdToken();
-    } catch (tokenError) {
-      logger.error('Failed to get ID token', { error: tokenError });
-      return;
-    }
 
     for (const file of unprocessed) {
       try {
-        // 🏢 ENTERPRISE: Call server-side API (bypasses CORS)
-        // Authorization header required by withAuth middleware
-        const response = await fetch(API_ROUTES.FLOORPLANS.PROCESS, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            fileId: file.id,
-            forceReprocess: false,
-          }),
+        const result = await processFloorplanWithPolicy({
+          fileId: file.id,
+          forceReprocess: false,
         });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
         logger.info(`Processed via API: ${file.displayName}`, { result });
       } catch (err) {
         logger.warn(`Failed to process: ${file.displayName}`, { error: err });
@@ -262,3 +237,4 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
 }
 
 export default useFloorplanFiles;
+

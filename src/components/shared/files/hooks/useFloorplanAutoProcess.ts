@@ -14,9 +14,8 @@
 
 import { useEffect, useRef } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { auth } from '@/lib/firebase';
-import { API_ROUTES } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
+import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 
 // ============================================================================
 // TYPES
@@ -58,50 +57,23 @@ export function useFloorplanAutoProcess({
 
     if (unprocessed.length === 0) return;
 
-    const currentUser = auth.currentUser;
-    if (!currentUser) return;
-
     // Mark as submitted immediately — prevents duplicate API calls on re-renders
     unprocessed.forEach((f) => submittedIds.current.add(f.id));
 
     let cancelled = false;
 
     const processFiles = async () => {
-      let idToken: string;
-      try {
-        idToken = await currentUser.getIdToken();
-      } catch {
-        // Allow retry on next render
-        unprocessed.forEach((f) => submittedIds.current.delete(f.id));
-        return;
-      }
-
       let anyProcessed = false;
 
       for (const file of unprocessed) {
         if (cancelled) return;
+
         try {
-          const response = await fetch(API_ROUTES.FLOORPLANS.PROCESS, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({ fileId: file.id, forceReprocess: false }),
-          });
-          if (response.ok) {
-            anyProcessed = true;
-            logger.info('Auto-processed floorplan', { fileId: file.id });
-          } else {
-            // HTTP error — allow retry on next mount
-            submittedIds.current.delete(file.id);
-            logger.warn('Auto-process returned HTTP error (non-blocking)', {
-              fileId: file.id,
-              status: response.status,
-            });
-          }
+          await processFloorplanWithPolicy({ fileId: file.id, forceReprocess: false });
+          anyProcessed = true;
+          logger.info('Auto-processed floorplan', { fileId: file.id });
         } catch (err) {
-          // Network error — allow retry on next render
+          // Allow retry on next render
           submittedIds.current.delete(file.id);
           logger.warn('Auto-process failed (non-blocking)', {
             fileId: file.id,

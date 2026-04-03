@@ -1,0 +1,36 @@
+{
+  "emptyState": {
+    "selectItem": {
+      "title": "Make a selection",
+      "description": "Select an item or create a new one."
+    },
+    "contact": {
+      "title": "Create Contact",
+      "description": "Select a contact from the list or create a new one."
+    },
+    "project": {
+      "title": "Create Project",
+      "description": "Select a project from the list or create a new one."
+    },
+    "building": {
+      "title": "Create Building",
+      "description": "Select a building from the list or create a new one."
+    },
+    "storage": {
+      "title": "Create Storage",
+      "description": "Select a storage from the list or create a new one."
+    },
+    "property": {
+      "title": "Create Property",
+      "description": "Select a property from the list or create a new one."
+    },
+    "parking": {
+      "title": "Create Parking Spot",
+      "description": "Select a parking spot from the list or create a new one."
+    },
+    "generic": {
+      "title": "Create",
+      "description": "Select an item from the list or create a new one."
+    }
+  }
+}

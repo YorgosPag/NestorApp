@@ -26,9 +26,9 @@ import {
   finalizeFileRecordWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { isFloorplanFile } from '@/services/floorplans/FloorplanProcessor';
+import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
-import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFloorplanUpload');
@@ -253,21 +253,11 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
 
       // Phase 8: Trigger server-side DXF processing immediately (fire-and-forget)
       // Do NOT await — processing takes 15-60s. User can close wizard; API continues.
-      auth.currentUser?.getIdToken().then((token) => {
-        fetch(API_ROUTES.FLOORPLANS.PROCESS, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ fileId, forceReprocess: false }),
+      processFloorplanWithPolicy({ fileId, forceReprocess: false })
+        .then(() => {
+          logger.info('Floorplan processing started successfully', { fileId });
         })
-          .then((res) => {
-            if (res.ok) logger.info('Floorplan processing started successfully', { fileId });
-            else logger.warn('Floorplan processing returned error', { fileId, status: res.status });
-          })
-          .catch((err) => logger.warn('Floorplan processing request failed', { fileId, error: String(err) }));
-      }).catch((err: unknown) => {
-        console.warn('[useFloorplanUpload] Failed to get token for processing', err);
-      });
-
+        .catch((err) => logger.warn('Floorplan processing request failed', { fileId, error: String(err) }));
       setProgress(100);
 
       const finalFileRecord: FileRecord = { ...fileRecord, downloadUrl, sizeBytes: file.size, status: 'ready' };

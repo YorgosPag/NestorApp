@@ -43,7 +43,7 @@ export const getPropertyStatusConfig = (colors?: ReturnType<typeof useSemanticCo
         color: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning} ${borderVariants.status.warning.className}`,  // ✅ SEMANTIC: orange -> warning
     },
     default: {
-        label: i18n.t('status.unknown', { ns: 'common' }),
+        label: i18n.t('status.unknown', { ns: 'common-status' }),
         color: `bg-slate-50 text-slate-600 ${borderVariants.card.className}`,
     },
         } as const;
@@ -72,7 +72,7 @@ export const getPropertyStatusConfig = (colors?: ReturnType<typeof useSemanticCo
             color: `${colors.bg.warningSubtle} ${colors.text.warning} ${borderVariants.status.warning.className}`,
         },
         default: {
-            label: i18n.t('status.unknown', { ns: 'common' }),
+            label: i18n.t('status.unknown', { ns: 'common-status' }),
             color: `${colors.bg.muted} ${colors.text.muted} ${borderVariants.card.className}`,
         },
     } as const;

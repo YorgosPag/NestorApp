@@ -5,7 +5,7 @@ import type { Building } from '../BuildingsPageContent';
 import { useBuildingFloorplans } from '../../../hooks/useBuildingFloorplans';
 // ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
 import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
-import type { UniversalTabConfig } from '@/components/generic/UniversalTabsRenderer';
+import type { UniversalTabConfig, BuildingTabAdditionalData, BuildingTabComponentProps, BuildingTabGlobalProps } from '@/components/generic/UniversalTabsRenderer';
 import { BUILDING_COMPONENT_MAPPING } from '@/components/generic/mappings/buildingMappings';
 import { getSortedBuildingTabs } from '../../../config/building-tabs-config';
 
@@ -37,7 +37,7 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
     } = useBuildingFloorplans(building?.id || 0);
 
     // ✅ PERF: Memoize additionalData — only changes when floorplan data changes
-    const additionalData = useMemo(() => ({
+    const additionalData = useMemo<BuildingTabAdditionalData>(() => ({
         buildingFloorplan,
         storageFloorplan,
         floorplansLoading,
@@ -46,7 +46,7 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
     }), [buildingFloorplan, storageFloorplan, floorplansLoading, floorplansError, refetchFloorplans]);
 
     // ✅ PERF: Memoize globalProps — only changes when editing state or building changes
-    const globalProps = useMemo(() => ({
+    const globalProps = useMemo<BuildingTabGlobalProps>(() => ({
         buildingId: building.id,
         isEditing,
         onEditingChange,
@@ -56,7 +56,7 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
     }), [building.id, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated]);
 
     return (
-        <UniversalTabsRenderer
+        <UniversalTabsRenderer<Building, BuildingTabComponentProps, BuildingTabAdditionalData, BuildingTabGlobalProps>
             tabs={STABLE_BUILDING_TABS}
             data={building}
             componentMapping={BUILDING_COMPONENT_MAPPING}

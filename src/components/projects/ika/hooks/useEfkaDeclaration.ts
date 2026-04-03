@@ -19,6 +19,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EfkaDeclarationData, EfkaDeclarationStatus } from '../contracts';
 import { createDefaultEfkaDeclaration } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { updateEfkaDeclarationWithPolicy } from '@/services/ika/ika-mutation-gateway';
 
 const logger = createModuleLogger('useEfkaDeclaration');
 
@@ -127,18 +128,7 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
     if (!projectId) return false;
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/efka-declaration`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Server error' }));
-        throw new Error(data.error ?? 'Failed to save declaration');
-      }
-
-      const result = await response.json();
+      const result = await updateEfkaDeclarationWithPolicy(projectId, updates);
 
       // Optimistic update: merge locally
       const currentDeclaration = declaration ?? createDefaultEfkaDeclaration('system');
@@ -169,17 +159,7 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
 
     try {
       const newDeclaration = createDefaultEfkaDeclaration(userId);
-
-      const response = await fetch(`/api/projects/${projectId}/efka-declaration`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newDeclaration),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Server error' }));
-        throw new Error(data.error ?? 'Failed to initialize declaration');
-      }
+      await updateEfkaDeclarationWithPolicy(projectId, newDeclaration);
 
       setDeclaration(newDeclaration);
       return true;

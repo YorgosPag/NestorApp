@@ -46,6 +46,11 @@ import type {
   BudgetVarianceAnalysis,
   HealthStatus,
 } from '@/types/interest-calculator';
+import {
+  addDebtMaturityEntryWithPolicy,
+  removeDebtMaturityEntryWithPolicy,
+  saveBudgetVarianceWithPolicy,
+} from '@/services/financial-intelligence/financial-intelligence-mutation-gateway';
 
 // =============================================================================
 // TYPES
@@ -162,30 +167,17 @@ export function PortfolioDashboard() {
   // =========================================================================
 
   const handleAddDebt = useCallback(async (data: DebtMaturityFormData) => {
-    const res = await fetch(API_ROUTES.FINANCIAL_INTELLIGENCE.DEBT_MATURITY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('Failed to add debt entry');
+    await addDebtMaturityEntryWithPolicy(data);
     await fetchDebtMaturity();
   }, [fetchDebtMaturity]);
 
   const handleRemoveDebt = useCallback(async (loanId: string) => {
-    const res = await fetch(`${API_ROUTES.FINANCIAL_INTELLIGENCE.DEBT_MATURITY}?loanId=${loanId}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) throw new Error('Failed to remove debt entry');
+    await removeDebtMaturityEntryWithPolicy(loanId);
     await fetchDebtMaturity();
   }, [fetchDebtMaturity]);
 
   const handleSaveBudget = useCallback(async (data: { projectId: string; projectName: string; categories: Array<{ category: string; categoryKey: string; budgetAmount: number; actualAmount: number }> }) => {
-    const res = await fetch(API_ROUTES.FINANCIAL_INTELLIGENCE.BUDGET_VARIANCE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('Failed to save budget variance');
+    await saveBudgetVarianceWithPolicy(data);
     if (selectedBudgetProject) {
       await fetchBudgetVariance(selectedBudgetProject);
     }

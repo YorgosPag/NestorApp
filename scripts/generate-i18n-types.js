@@ -1,69 +1,53 @@
 #!/usr/bin/env node
 
-/**
- * 🌐 i18n TypeScript Types Generator
- *
- * This script automatically generates TypeScript type definitions
- * for internationalization keys based on the translation files.
- *
- * Features:
- * - Scans all translation files in supported locales
- * - Generates strongly-typed interfaces for i18n keys
- * - Supports nested translation objects
- * - Creates autocomplete-friendly type definitions
- * - Handles missing translation files gracefully
- */
-
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+const {
+  LOCALES_DIR,
+  PRIMARY_LOCALE,
+  ensureDir,
+  getLocaleFiles,
+  readJson,
+} = require('./_shared/i18n-governance');
 
-// Configuration
-const I18N_DIR = path.join(__dirname, '..', 'src', 'i18n', 'locales');
 const TYPES_OUTPUT_DIR = path.join(__dirname, '..', 'src', 'types');
 const TYPES_OUTPUT_FILE = path.join(TYPES_OUTPUT_DIR, 'i18n.ts');
-const PRIMARY_LOCALE = 'el'; // Greek as primary locale
 
-// Colors for console output
 const colors = {
   reset: '\x1b[0m',
   red: '\x1b[31m',
   green: '\x1b[32m',
   yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  magenta: '\x1b[35m',
-  cyan: '\x1b[36m'
+  cyan: '\x1b[36m',
 };
 
 function log(message, color = 'reset') {
-  console.log(`${colors[color]}${message}${colors.reset}`);
+  console.log(`${colors[color] || colors.reset}${message}${colors.reset}`);
 }
 
 function logSuccess(message) {
-  log(`✅ ${message}`, 'green');
+  log(`OK ${message}`, 'green');
 }
 
 function logError(message) {
-  log(`❌ ${message}`, 'red');
+  log(`ERROR ${message}`, 'red');
 }
 
 function logWarning(message) {
-  log(`⚠️  ${message}`, 'yellow');
+  log(`WARN ${message}`, 'yellow');
 }
 
 function logInfo(message) {
-  log(`ℹ️  ${message}`, 'cyan');
+  log(`INFO ${message}`, 'cyan');
 }
 
-/**
- * Check if i18n directory exists
- */
 function checkI18nExists() {
-  if (!fs.existsSync(I18N_DIR)) {
-    logWarning('i18n directory not found. This is acceptable for projects without i18n.');
+  if (!fs.existsSync(LOCALES_DIR)) {
+    logWarning('i18n directory not found.');
     return false;
   }
 
-  const primaryLocalePath = path.join(I18N_DIR, PRIMARY_LOCALE);
+  const primaryLocalePath = path.join(LOCALES_DIR, PRIMARY_LOCALE);
   if (!fs.existsSync(primaryLocalePath)) {
     logWarning(`Primary locale '${PRIMARY_LOCALE}' directory not found.`);
     return false;
@@ -72,29 +56,13 @@ function checkI18nExists() {
   return true;
 }
 
-/**
- * Get all translation files from primary locale
- */
 function getTranslationFiles() {
-  const primaryLocalePath = path.join(I18N_DIR, PRIMARY_LOCALE);
-
-  try {
-    return fs.readdirSync(primaryLocalePath)
-      .filter(file => file.endsWith('.json'))
-      .map(file => path.join(primaryLocalePath, file));
-  } catch (error) {
-    logError(`Error reading primary locale directory: ${error.message}`);
-    return [];
-  }
+  return getLocaleFiles(PRIMARY_LOCALE).map((file) => path.join(LOCALES_DIR, PRIMARY_LOCALE, file));
 }
 
-/**
- * Parse translation file and extract keys
- */
 function parseTranslationFile(filePath) {
   try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const data = JSON.parse(content);
+    const data = readJson(filePath);
     const fileName = path.basename(filePath, '.json');
     return { fileName, data, success: true };
   } catch (error) {
@@ -103,192 +71,166 @@ function parseTranslationFile(filePath) {
   }
 }
 
-/**
- * Generate TypeScript interface from translation object
- */
-function generateInterface(obj, interfaceName, indent = 0) {
-  const indentStr = '  '.repeat(indent);
-  let result = `${indentStr}interface ${interfaceName} {\n`;
-  let nestedInterfaces = '';
-
-  for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      const value = obj[key];
-      const indentStr2 = '  '.repeat(indent + 1);
-
-      if (typeof value === 'object' && value !== null) {
-        // Nested object - create sub-interface
-        const sanitizedKey = key.replace(/[-]/g, ''); // Remove dashes for TypeScript compatibility
-        const subInterfaceName = `${interfaceName}_${sanitizedKey.charAt(0).toUpperCase() + sanitizedKey.slice(1)}`;
-        result += `${indentStr2}'${key}': ${subInterfaceName};\n`; // Quote keys with dashes
-        // Collect nested interfaces to append after current interface
-        nestedInterfaces += '\n' + generateInterface(value, subInterfaceName, indent);
-      } else {
-        // String value
-        const isValidIdentifier = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key);
-        const keyOutput = isValidIdentifier ? key : `'${key}'`;
-        result += `${indentStr2}${keyOutput}: string;\n`;
-      }
-    }
-  }
-
-  result += `${indentStr}}\n`;
-  result += nestedInterfaces;
-  return result;
+function sanitizeSegment(segment) {
+  const alphanumeric = segment.replace(/[^a-zA-Z0-9]/g, ' ');
+  return alphanumeric
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
 }
 
-/**
- * Generate complete TypeScript definitions
- */
+function getObjectPropertyKey(key) {
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key) ? key : `'${key}'`;
+}
+
+function inferArrayType(values, interfaceName, registry) {
+  if (values.length === 0) {
+    return 'readonly unknown[]';
+  }
+
+  const itemTypes = [...new Set(values.map((value) => {
+    if (Array.isArray(value)) {
+      return inferArrayType(value, `${interfaceName}Item`, registry);
+    }
+    if (value !== null && typeof value === 'object') {
+      return registerInterface(value, `${interfaceName}Item`, registry);
+    }
+    if (typeof value === 'string') {
+      return 'string';
+    }
+    if (typeof value === 'number') {
+      return 'number';
+    }
+    if (typeof value === 'boolean') {
+      return 'boolean';
+    }
+    return 'unknown';
+  }))].sort();
+
+  return `readonly (${itemTypes.join(' | ')})[]`;
+}
+
+function registerInterface(obj, interfaceName, registry) {
+  if (registry.has(interfaceName)) {
+    return interfaceName;
+  }
+
+  const lines = [`interface ${interfaceName} {`];
+
+  for (const [key, value] of Object.entries(obj)) {
+    let typeExpression = 'string';
+
+    if (Array.isArray(value)) {
+      typeExpression = inferArrayType(value, `${interfaceName}${sanitizeSegment(key)}`, registry);
+    } else if (value !== null && typeof value === 'object') {
+      typeExpression = registerInterface(value, `${interfaceName}_${sanitizeSegment(key)}`, registry);
+    } else if (typeof value === 'number') {
+      typeExpression = 'number';
+    } else if (typeof value === 'boolean') {
+      typeExpression = 'boolean';
+    }
+
+    lines.push(`  ${getObjectPropertyKey(key)}: ${typeExpression};`);
+  }
+
+  lines.push('}');
+  registry.set(interfaceName, lines.join('\n'));
+  return interfaceName;
+}
+
 function generateTypeDefinitions(translationData) {
   let typeDefinitions = `/**
- * 🌐 Auto-generated i18n TypeScript Definitions
+ * Auto-generated i18n TypeScript Definitions
  *
  * This file is automatically generated from translation files.
- * Do not edit manually - changes will be overwritten.
+ * Do not edit manually.
  *
  * Generated: ${new Date().toISOString()}
  */
 
+/* eslint-disable custom/no-hardcoded-strings, @typescript-eslint/no-empty-object-type */
+
 `;
 
-  // Generate interfaces for each namespace
-  const namespaces = Object.keys(translationData);
+  const namespaces = Object.keys(translationData).sort();
 
   if (namespaces.length === 0) {
-    typeDefinitions += `// No translation files found - using minimal interface
-export interface I18nKeys {
+    typeDefinitions += `export interface I18nKeys {
   [key: string]: string;
 }
 
 export type TranslationNamespace = 'common';
 `;
-  } else {
-    // Generate individual namespace interfaces
-    namespaces.forEach(namespace => {
-      const data = translationData[namespace];
-      const sanitizedNamespace = namespace.replace(/[-]/g, ''); // Remove dashes for TypeScript compatibility
-      const interfaceName = `I18n_${sanitizedNamespace.charAt(0).toUpperCase() + sanitizedNamespace.slice(1)}`;
-      typeDefinitions += generateInterface(data, interfaceName);
-      typeDefinitions += '\n';
-    });
+    return typeDefinitions;
+  }
 
-    // Generate main interface
-    typeDefinitions += 'export interface I18nKeys {\n';
-    namespaces.forEach(namespace => {
-      const sanitizedNamespace = namespace.replace(/[-]/g, ''); // Remove dashes for TypeScript compatibility
-      const interfaceName = `I18n_${sanitizedNamespace.charAt(0).toUpperCase() + sanitizedNamespace.slice(1)}`;
-      typeDefinitions += `  '${namespace}': ${interfaceName};\n`; // Quote keys with dashes
-    });
-    typeDefinitions += '}\n\n';
+  const registry = new Map();
 
-    // Generate namespace union type
-    const namespaceList = namespaces.map(ns => `'${ns}'`).join(' | ');
-    typeDefinitions += `export type TranslationNamespace = ${namespaceList};\n\n`;
+  namespaces.forEach((namespace) => {
+    const data = translationData[namespace];
+    const interfaceName = `I18n_${sanitizeSegment(namespace)}`;
+    registerInterface(data, interfaceName, registry);
+  });
 
-    // Generate utility types
-    typeDefinitions += `/**
- * Utility type for nested translation keys
- */
-export type NestedKeyOf<ObjectType extends object> = {
+  for (const definition of registry.values()) {
+    typeDefinitions += `${definition}\n\n`;
+  }
+
+  typeDefinitions += 'export interface I18nKeys {\n';
+  namespaces.forEach((namespace) => {
+    typeDefinitions += `  '${namespace}': I18n_${sanitizeSegment(namespace)};\n`;
+  });
+  typeDefinitions += '}\n\n';
+
+  typeDefinitions += `export type TranslationNamespace = ${namespaces.map((namespace) => `'${namespace}'`).join(' | ')};\n\n`;
+  typeDefinitions += `export type NestedKeyOf<ObjectType extends object> = {
   [Key in keyof ObjectType & (string | number)]: ObjectType[Key] extends object
-    ? \`\${Key}.\${NestedKeyOf<ObjectType[Key]>}\`
-    : \`\${Key}\`
+    ? \`${'${Key}'}.\${NestedKeyOf<ObjectType[Key]>}\`
+    : \`${'${Key}'}\`
 }[keyof ObjectType & (string | number)];
 
-/**
- * All available translation keys in dot notation
- */
 export type TranslationKey = NestedKeyOf<I18nKeys>;
 `;
-  }
 
   return typeDefinitions;
 }
 
-/**
- * Ensure output directory exists
- */
-function ensureOutputDirectory() {
-  if (!fs.existsSync(TYPES_OUTPUT_DIR)) {
-    fs.mkdirSync(TYPES_OUTPUT_DIR, { recursive: true });
-    logInfo(`Created types directory: ${TYPES_OUTPUT_DIR}`);
-  }
+function writeTypeDefinitions(content) {
+  ensureDir(TYPES_OUTPUT_DIR);
+  fs.writeFileSync(TYPES_OUTPUT_FILE, content, 'utf8');
+  logSuccess(`TypeScript definitions written to: ${TYPES_OUTPUT_FILE}`);
 }
 
-/**
- * Write type definitions to file
- */
-function writeTypeDefinitions(content) {
-  ensureOutputDirectory();
+function main() {
+  log('\ni18n TypeScript Types Generator', 'cyan');
+  log('===============================\n', 'cyan');
 
-  try {
-    fs.writeFileSync(TYPES_OUTPUT_FILE, content, 'utf8');
-    logSuccess(`TypeScript definitions written to: ${TYPES_OUTPUT_FILE}`);
-  } catch (error) {
-    logError(`Error writing type definitions: ${error.message}`);
+  if (!checkI18nExists()) {
     process.exit(1);
   }
-}
 
-/**
- * Main generation function
- */
-function main() {
-  log('\n🌐 i18n TypeScript Types Generator', 'cyan');
-  log('====================================\n', 'cyan');
-
-  // Check if i18n is implemented
-  const hasI18n = checkI18nExists();
-
-  if (!hasI18n) {
-    logInfo('i18n not found or incomplete. Generating minimal type definitions.');
-    const minimalTypes = generateTypeDefinitions({});
-    writeTypeDefinitions(minimalTypes);
-    logSuccess('Minimal i18n type definitions generated successfully!');
-    return;
-  }
-
-  // Load translation files
   const translationFiles = getTranslationFiles();
-
-  if (translationFiles.length === 0) {
-    logWarning('No translation files found in primary locale.');
-    const minimalTypes = generateTypeDefinitions({});
-    writeTypeDefinitions(minimalTypes);
-    logSuccess('Minimal i18n type definitions generated successfully!');
-    return;
-  }
-
-  // Parse all translation files
   const translationData = {};
   let hasErrors = false;
 
-  translationFiles.forEach(filePath => {
+  translationFiles.forEach((filePath) => {
     const result = parseTranslationFile(filePath);
-
     if (result.success) {
       translationData[result.fileName] = result.data;
-      logSuccess(`Loaded: ${result.fileName}.json`);
     } else {
       hasErrors = true;
     }
   });
 
-  // Generate type definitions
-  if (!hasErrors) {
-    const typeDefinitions = generateTypeDefinitions(translationData);
-    writeTypeDefinitions(typeDefinitions);
-
-    logSuccess('i18n type definitions generated successfully!');
-    log(`Generated interfaces for: ${Object.keys(translationData).join(', ')}`, 'green');
-  } else {
-    logError('Type generation failed due to parsing errors.');
+  if (hasErrors) {
     process.exit(1);
   }
+
+  writeTypeDefinitions(generateTypeDefinitions(translationData));
+  logInfo(`Generated namespaces: ${Object.keys(translationData).sort().join(', ')}`);
 }
 
-// Run the script
 if (require.main === module) {
   main();
 }
@@ -296,5 +238,5 @@ if (require.main === module) {
 module.exports = {
   generateTypeDefinitions,
   checkI18nExists,
-  parseTranslationFile
+  parseTranslationFile,
 };

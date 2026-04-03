@@ -40,6 +40,7 @@
     "occupied": "Occupied",
     "reserved": "Reserved",
     "maintenance": "Maintenance",
+    "sold": "Πωλημένη",
     "unknown": "Unknown"
   },
   "general": {
@@ -62,7 +63,7 @@
       "building": "Building",
       "floor": "Floor",
       "price": "Price",
-      "pricePerSqm": "Price per m\u00b2",
+      "pricePerSqm": "Price per m²",
       "project": "Project",
       "description": "Description",
       "notes": "Notes",

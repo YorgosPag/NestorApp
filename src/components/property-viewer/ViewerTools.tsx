@@ -23,7 +23,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { LucideIcon } from 'lucide-react';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -43,13 +42,11 @@ interface Tool {
   shortcut?: string;
 }
 
-/** Connection pair between two property IDs */
 interface ConnectionPair {
   from: string;
   to: string;
 }
 
-/** Property data for viewer */
 interface ViewerProperty {
   id: string;
   name?: string;
@@ -66,11 +63,12 @@ interface ViewerToolsProps {
   connectionPairs?: ConnectionPair[];
   onConnectionPairsChange?: (pairs: ConnectionPair[]) => void;
   properties?: ViewerProperty[];
+  onDuplicateSelected?: (propertyId: string) => Promise<void> | void;
+  onDeleteSelected?: (propertyId: string) => Promise<void> | void;
   isReadOnly?: boolean;
   className?: string;
 }
 
-// 🏢 ENTERPRISE: Tool definitions (labels come from i18n)
 const TOOL_DEFINITIONS: Array<{ id: ToolId; icon: LucideIcon; shortcut: string }> = [
   { id: 'select', icon: MousePointer, shortcut: 'V' },
   { id: 'create', icon: Plus, shortcut: 'C' },
@@ -92,10 +90,11 @@ export function ViewerTools({
   connectionPairs: _connectionPairs = [],
   onConnectionPairsChange: _onConnectionPairsChange,
   properties: _properties = [],
+  onDuplicateSelected,
+  onDeleteSelected,
   isReadOnly = false,
   className
 }: ViewerToolsProps) {
-  // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('properties');
   const { confirm, dialogProps } = useConfirmDialog();
   const { warning } = useNotifications();
@@ -103,16 +102,13 @@ export function ViewerTools({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
-  // 🏢 ENTERPRISE: Build tools with translated labels
   const TOOLS: Tool[] = TOOL_DEFINITIONS.map(def => ({
     ...def,
     label: t(`viewer.tools.${def.id}`)
   }));
 
-  // Local state για active tool
   const [activeTool, setActiveTool] = useState<ToolId>('select');
 
-  // Handle tool change
   const handleToolChange = (toolId: ToolId) => {
     if (isReadOnly) {
       logger.warn('Cannot change tool in read-only mode');
@@ -121,7 +117,6 @@ export function ViewerTools({
 
     setActiveTool(toolId);
 
-    // Map tools to view modes
     switch (toolId) {
       case 'select':
         onViewModeChange('view');
@@ -151,7 +146,6 @@ export function ViewerTools({
     logger.info('Tool changed', { toolId, viewMode });
   };
 
-  // Handle property actions
   const handleDeleteSelected = async () => {
     if (!selectedPropertyId || isReadOnly) return;
 
@@ -162,19 +156,29 @@ export function ViewerTools({
     });
     if (!confirmed) return;
 
-    warning(t('viewer.messages.deleteUseGuardedFlow', {
-      defaultValue: 'Use the property details or list delete action so dependency guards can run before deletion.',
-    }));
-    logger.info('Blocked viewer delete in favor of guarded delete flow', { selectedPropertyId });
+    if (!onDeleteSelected) {
+      warning(t('viewer.messages.deleteUseGuardedFlow', {
+        defaultValue: 'Use the property details or list delete action so dependency guards can run before deletion.',
+      }));
+      logger.info('Blocked viewer delete because canonical delete handler is not wired.', { selectedPropertyId });
+      return;
+    }
+
+    await onDeleteSelected(selectedPropertyId);
   };
 
-  const handleCopySelected = () => {
+  const handleCopySelected = async () => {
     if (!selectedPropertyId || isReadOnly) return;
 
-    warning(t('viewer.messages.duplicateBlocked', {
-      defaultValue: 'Property duplication from the floorplan viewer is blocked until the guarded create flow is completed.',
-    }));
-    logger.info('Blocked viewer copy in favor of guarded duplicate flow', { selectedPropertyId });
+    if (!onDuplicateSelected) {
+      warning(t('viewer.messages.duplicateBlocked', {
+        defaultValue: 'Property duplication from the floorplan viewer is blocked until the guarded create flow is completed.',
+      }));
+      logger.info('Blocked viewer copy because canonical duplicate handler is not wired.', { selectedPropertyId });
+      return;
+    }
+
+    await onDuplicateSelected(selectedPropertyId);
   };
 
   const handleResetView = () => {
@@ -212,8 +216,6 @@ export function ViewerTools({
       `flex items-center gap-2 p-2 ${colors.bg.primary} ${quick.separatorH}`,
       className
     )}>
-      
-      {/* BASIC TOOLS */}
       <div className="flex items-center gap-1">
         {TOOLS.slice(0, 5).map(tool => (
           <ToolButton key={tool.id} tool={tool} />
@@ -222,7 +224,6 @@ export function ViewerTools({
 
       <Separator orientation="vertical" className="h-6" />
 
-      {/* SHAPE TOOLS */}
       <div className="flex items-center gap-1">
         {TOOLS.slice(5).map(tool => (
           <ToolButton key={tool.id} tool={tool} />
@@ -231,7 +232,6 @@ export function ViewerTools({
 
       <Separator orientation="vertical" className="h-6" />
 
-      {/* PROPERTY ACTIONS */}
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -239,7 +239,9 @@ export function ViewerTools({
               variant="outline"
               size="sm"
               className={`${iconSizes.xl} p-0`}
-              onClick={handleCopySelected}
+              onClick={() => {
+                void handleCopySelected();
+              }}
               disabled={!selectedPropertyId || isReadOnly}
             >
               <Copy className={iconSizes.sm} />
@@ -254,7 +256,9 @@ export function ViewerTools({
               variant="outline"
               size="sm"
               className={cn(`${iconSizes.xl} p-0`, HOVER_TEXT_EFFECTS.RED)}
-              onClick={handleDeleteSelected}
+              onClick={() => {
+                void handleDeleteSelected();
+              }}
               disabled={!selectedPropertyId || isReadOnly}
             >
               <Trash2 className={iconSizes.sm} />
@@ -278,7 +282,6 @@ export function ViewerTools({
         </Tooltip>
       </div>
 
-      {/* STATUS INFO */}
       <div className={`ml-auto flex items-center gap-4 text-xs ${colors.text.muted}`}>
         <span>{t('viewer.status.tool')}: {TOOLS.find(tool => tool.id === activeTool)?.label}</span>
         <span>{t('viewer.status.mode')}: {viewMode}</span>
