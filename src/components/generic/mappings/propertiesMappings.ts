@@ -55,8 +55,6 @@ function resolveSelectedProperty(props: PropertyTabComponentProps): Property | n
   return null;
 }
 
-type PropertyDetailsTabProps = Pick<PropertyDetailsContentProps, 'property' | 'onSelectFloor' | 'onUpdateProperty'>;
-
 function PropertyDetailsTabAdapter(props: PropertyTabComponentProps) {
   const selectedProperty = resolveSelectedProperty(props);
   if (!selectedProperty) {
@@ -70,10 +68,22 @@ function PropertyDetailsTabAdapter(props: PropertyTabComponentProps) {
     ? props.onUpdateProperty as (propertyId: string, updates: Partial<Property>) => void
     : () => {};
 
-  const detailsProps: PropertyDetailsTabProps = {
+  const detailsProps: PropertyDetailsContentProps = {
     property: selectedProperty as PropertyDetailsContentProps['property'],
     onSelectFloor,
     onUpdateProperty,
+    // 🏢 ENTERPRISE: Pass edit-mode props from additionalData → PropertyDetailsContent
+    isEditMode: typeof props.isEditMode === 'boolean' ? props.isEditMode : undefined,
+    onToggleEditMode: typeof props.onToggleEditMode === 'function'
+      ? props.onToggleEditMode as () => void
+      : undefined,
+    onExitEditMode: typeof props.onExitEditMode === 'function'
+      ? props.onExitEditMode as () => void
+      : undefined,
+    isCreatingNewUnit: typeof props.isCreatingNewUnit === 'boolean' ? props.isCreatingNewUnit : undefined,
+    onPropertyCreated: typeof props.onPropertyCreated === 'function'
+      ? props.onPropertyCreated as (propertyId: string) => void
+      : undefined,
   };
 
   return React.createElement(PropertyDetailsContent, detailsProps);
