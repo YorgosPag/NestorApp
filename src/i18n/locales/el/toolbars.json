@@ -5,7 +5,7 @@
     "actions": {
       "new": "Νέο",
       "edit": "Επεξεργασία",
-      "delete": "Διαγραφή",
+      "delete": "Μεταφορά στον κάδο",
       "export": "Εξαγωγή",
       "import": "Εισαγωγή",
       "refresh": "Ανανέωση",
@@ -24,7 +24,7 @@
       "info": "Πληροφορίες",
 
       "save_loading": "Αποθήκευση...",
-      "delete_loading": "Διαγραφή...",
+      "delete_loading": "Μεταφορά...",
       "archive_loading": "Αρχειοθέτηση...",
       "restore_loading": "Επαναφορά...",
       "favorites": "Αγαπημένα",
@@ -84,7 +84,7 @@
     "actions": {
       "newBuilding": "Νέο Κτίριο",
       "editBuilding": "Επεξεργασία Κτιρίου",
-      "deleteBuilding": "Διαγραφή Κτιρίου"
+      "deleteBuilding": "Μεταφορά Κτιρίου στον κάδο"
     },
     "selection": {
       "selected": "επιλεγμένα κτίρια"

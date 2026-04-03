@@ -48,7 +48,7 @@
     "actions": {
       "new": "New Building",
       "edit": "Edit",
-      "delete": "Delete",
+      "delete": "Move to Trash",
       "export": "Export",
       "import": "Import",
       "refresh": "Refresh",
@@ -89,7 +89,7 @@
     "tooltips": {
       "new": "Add new building (Ctrl+N)",
       "edit": "Edit selected building (Ctrl+E)",
-      "deleteCount": "Delete {count} building(s)",
+      "deleteCount": "Move {count} building(s) to trash",
       "export": "Export data",
       "import": "Import data",
       "refresh": "Refresh data (F5)",
@@ -226,14 +226,14 @@
     "newBuilding": "New Building",
     "viewBuilding": "View Building",
     "editBuilding": "Edit",
-    "deleteBuilding": "Delete",
-    "confirmDelete": "Are you sure you want to delete the building \"{name}\"?",
-    "cascadeWarning": "Deleting this building will PERMANENTLY delete the following:",
+    "deleteBuilding": "Move to Trash",
+    "confirmDelete": "Move building \"{name}\" to trash?",
+    "cascadeWarning": "The building will be removed from active lists but can be restored from trash.",
     "cascadeUnits": "Units / Apartments",
     "cascadeParking": "Parking Spaces",
     "cascadeStorage": "Storage Units",
     "cascadeFloors": "Floors",
-    "cascadeTotal": "Total records to be deleted: {count}",
+    "cascadeTotal": "Related records: {count}",
     "cascadeNoChildren": "This building has no units or other records.",
     "cascadeLoading": "Loading data...",
     "cascadeIrreversible": "This action is irreversible.",
@@ -272,7 +272,7 @@
       "details": {
         "title": "Building Details",
         "editBuilding": "Edit Building",
-        "deleteBuilding": "Delete Building"
+        "deleteBuilding": "Move Building to Trash"
       }
     },
     "storage": {
@@ -334,7 +334,7 @@
       },
       "toolbar": {
         "newSpot": "New Parking Spot",
-        "deleteSelected": "Delete Selected",
+        "deleteSelected": "Move Selected to Trash",
         "saveChanges": "Save Changes",
         "refreshData": "Refresh Data",
         "exportData": "Export Data",
@@ -343,8 +343,8 @@
         "selectedCount": "{count} selected"
       },
       "deleteDialog": {
-        "title": "Delete Parking Spot",
-        "description": "Are you sure you want to delete spot \"{number}\"? This action cannot be undone."
+        "title": "Move Parking Spot to Trash",
+        "description": "Move spot \"{number}\" to trash? It can be restored later."
       },
       "addSpot": "New Parking Spot",
       "addSpotDescription": "Fill in the details for the new parking spot.",

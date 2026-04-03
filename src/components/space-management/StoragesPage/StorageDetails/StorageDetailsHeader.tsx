@@ -59,7 +59,7 @@ export function StorageDetailsHeader({
     : [
         createEntityAction('new', t('header.newStorage', 'Νέα Αποθήκη'), () => onNewStorage?.()),
         createEntityAction('edit', t('header.edit', 'Επεξεργασία'), onStartEdit),
-        createEntityAction('delete', t('header.delete', 'Διαγραφή'), () => onDelete?.()),
+        createEntityAction('delete', t('header.delete', 'Μεταφορά στον κάδο'), () => onDelete?.()),
       ];
 
   return (

@@ -12,7 +12,7 @@
     },
     "actions": {
       "copySelected": "Copy selected",
-      "deleteSelected": "Delete selected",
+      "deleteSelected": "Move to Trash",
       "reset": "Reset",
       "info": "Information",
       "download": "Download"
@@ -28,7 +28,7 @@
     "propertyDetails": "Selected Property",
     "propertyInfo": "Quick View",
     "confirm": {
-      "deleteProperty": "Are you sure you want to delete the selected property?"
+      "deleteProperty": "Move the selected property to trash?"
     },
     "download": {
       "filename": "floorplan"

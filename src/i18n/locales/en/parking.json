@@ -93,7 +93,7 @@
     "saving": "Saving...",
     "cancel": "Cancel",
     "newParking": "New Spot",
-    "delete": "Delete",
+    "delete": "Move to Trash",
     "ownerLabel": "Owner:",
     "saveSuccess": "Parking spot updated",
     "saveError": "Failed to save"

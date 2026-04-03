@@ -12,7 +12,7 @@
     },
     "actions": {
       "copySelected": "Αντιγραφή επιλεγμένου",
-      "deleteSelected": "Διαγραφή επιλεγμένου",
+      "deleteSelected": "Μεταφορά στον κάδο",
       "reset": "Επαναφορά",
       "info": "Πληροφορίες",
       "download": "Λήψη"
@@ -28,7 +28,7 @@
     "propertyDetails": "Επιλεγμένο Ακίνητο",
     "propertyInfo": "Γρήγορη Προβολή",
     "confirm": {
-      "deleteProperty": "Είστε σίγουροι ότι θέλετε να διαγράψετε το επιλεγμένο ακίνητο;"
+      "deleteProperty": "Θέλετε να μεταφέρετε το επιλεγμένο ακίνητο στον κάδο;"
     },
     "download": {
       "filename": "κάτοψη"

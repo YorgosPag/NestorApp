@@ -141,7 +141,7 @@
     },
     "actions": {
       "edit": "Edit",
-      "delete": "Delete"
+      "delete": "Move to Trash"
     }
   },
   "documents": {

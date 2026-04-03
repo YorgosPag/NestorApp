@@ -5,7 +5,7 @@
     "actions": {
       "new": "New",
       "edit": "Edit",
-      "delete": "Delete",
+      "delete": "Move to Trash",
       "export": "Export",
       "import": "Import",
       "refresh": "Refresh",
@@ -23,7 +23,7 @@
       "sms": "SMS",
       "info": "Information",
       "save_loading": "Saving...",
-      "delete_loading": "Deleting...",
+      "delete_loading": "Moving...",
       "archive_loading": "Archiving...",
       "restore_loading": "Restoring...",
       "favorites": "Favorites",
@@ -83,7 +83,7 @@
     "actions": {
       "newBuilding": "New Building",
       "editBuilding": "Edit Building",
-      "deleteBuilding": "Delete Building"
+      "deleteBuilding": "Move Building to Trash"
     },
     "selection": {
       "selected": "selected buildings"
