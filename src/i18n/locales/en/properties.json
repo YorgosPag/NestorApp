@@ -352,8 +352,25 @@
     }
   },
   "impactGuard": {
+    "titles": {
+      "block": "Property change blocked",
+      "warn": "Review property impact"
+    },
+    "messages": {
+      "block": "This change is blocked because dependent property workflows would be put at risk.",
+      "warn": "This change affects downstream property workflows. Review the impact before continuing.",
+      "unavailable": "The impact preview could not complete reliably. Saving was blocked to protect linked records.",
+      "allow": "No downstream impact was detected."
+    },
+    "sections": {
+      "changes": "Changes",
+      "dependencies": "Dependencies"
+    },
+    "emptyValue": "empty",
     "actions": {
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "confirm": "Continue",
+      "understood": "Understood"
     }
   }
 }
