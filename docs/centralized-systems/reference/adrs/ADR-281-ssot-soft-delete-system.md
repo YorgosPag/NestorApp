@@ -1372,3 +1372,4 @@ Index building pairnei 2-5 lepta — katholos blocking.
 | 2026-04-03 | Claude Code | Initial ADR creation |
 | 2026-04-03 | Claude Code | Batch 2: Leaf entity conversion — properties/parking/storages DELETE→softDelete + LIST filtering |
 | 2026-04-03 | Claude Code | Batch 3: Structural entity conversion — buildings/projects DELETE→softDelete + LIST filtering |
+| 2026-04-03 | Claude Code | Batch 4: Centralized routes (restore, permanent-delete, cron purge) + vercel.json + firestore indexes |

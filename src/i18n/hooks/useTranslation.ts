@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import type { TOptions } from 'i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
+import { remapLegacyTranslationKey } from '../namespace-compat';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
@@ -16,11 +17,36 @@ const logger = createModuleLogger('useTranslation');
  * @returns Translation function and i18n utilities
  */
 export const useTranslation = (namespace?: string | string[]) => {
-  const { t, i18n, ready } = useI18nextTranslation(namespace);
+  const { t: rawT, i18n, ready } = useI18nextTranslation(namespace);
   const namespaceKey = Array.isArray(namespace)
     ? namespace.join('|')
     : namespace || '';
   const namespaces = namespaceKey ? namespaceKey.split('|') : [];
+  const primaryNs = namespaces[0] || 'common';
+
+  // Wrap t to apply compat remapping for split namespaces (ADR-280)
+  const t = useMemo(() => {
+    const wrapped = ((key: string, optionsOrDefault?: TOptions | string, ...rest: unknown[]) => {
+      // Try original namespace first
+      const result = rawT(key, optionsOrDefault as TOptions, ...rest);
+      if (typeof result === 'string' && result !== key && !result.includes(':')) {
+        return result;
+      }
+
+      // If key wasn't found, try remapping via compat layer
+      const fullKey = `${primaryNs}:${key}`;
+      const remapped = remapLegacyTranslationKey(fullKey);
+      if (remapped.key !== fullKey) {
+        const remappedResult = rawT(remapped.key, remapped.options as TOptions, ...rest);
+        if (typeof remappedResult === 'string' && remappedResult !== remapped.key) {
+          return remappedResult;
+        }
+      }
+
+      return result;
+    }) as typeof rawT;
+    return wrapped;
+  }, [rawT, primaryNs]);
 
   // 🏢 ENTERPRISE: Track if this specific namespace is loaded
   const [namespaceLoaded, setNamespaceLoaded] = useState(() => {
