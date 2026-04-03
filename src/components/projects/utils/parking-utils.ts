@@ -1,3 +1,4 @@
+/* eslint-disable design-system/enforce-semantic-colors -- Legacy hardcoded fallbacks kept for non-hook contexts */
 'use client';
 
 /**
@@ -24,6 +25,7 @@ export const getParkingStatusColors = (colors?: ReturnType<typeof useSemanticCol
       reserved: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
       sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
       maintenance: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+      deleted: 'bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-500',
     };
   }
 
@@ -33,6 +35,7 @@ export const getParkingStatusColors = (colors?: ReturnType<typeof useSemanticCol
     reserved: `${colors.bg.warningSubtle} ${colors.text.warning}`,
     sold: `${colors.bg.successSubtle} ${colors.text.success}`,
     maintenance: `${colors.bg.errorSubtle} ${colors.text.error}`,
+    deleted: `${colors.bg.muted} ${colors.text.muted}`,
   };
 };
 
@@ -42,6 +45,7 @@ export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
   reserved: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
   sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
   maintenance: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  deleted: 'bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-500',
 };
 
 export const getParkingTypeLabel = (type: ParkingSpotType | undefined) => PARKING_TYPE_LABELS[type || 'standard'] || type;

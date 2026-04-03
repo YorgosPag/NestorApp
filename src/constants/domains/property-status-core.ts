@@ -23,7 +23,8 @@ export type PropertyStatus =
   | 'under-negotiation' // Υπό διαπραγμάτευση
   | 'coming-soon'      // Σύντομα διαθέσιμο
   | 'off-market'       // Εκτός αγοράς
-  | 'unavailable';     // Μη διαθέσιμο
+  | 'unavailable'      // Μη διαθέσιμο
+  | 'deleted';         // ADR-281: Soft-deleted (στον κάδο)
 
 // i18n keys for property status labels
 export const PROPERTY_STATUS_LABELS: Record<PropertyStatus, string> = {
@@ -38,6 +39,7 @@ export const PROPERTY_STATUS_LABELS: Record<PropertyStatus, string> = {
   'coming-soon': 'properties:status.comingSoon',
   'off-market': 'properties:status.offMarket',
   'unavailable': 'properties:status.unavailable',
+  'deleted': 'properties:status.deleted',
 };
 
 export const PROPERTY_STATUS_COLORS: Record<PropertyStatus, string> = {
@@ -52,6 +54,7 @@ export const PROPERTY_STATUS_COLORS: Record<PropertyStatus, string> = {
   'coming-soon': 'hsl(var(--status-purple-light))',
   'off-market': 'hsl(var(--neutral-400))',
   'unavailable': 'hsl(var(--neutral-500))',
+  'deleted': 'hsl(var(--neutral-300))',
 };
 
 export const DEFAULT_PROPERTY_STATUS: PropertyStatus = 'for-sale';

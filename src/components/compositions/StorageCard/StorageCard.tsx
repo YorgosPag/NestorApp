@@ -51,7 +51,8 @@ const getStatusBadgeClass = (status: StorageStatus, colors: ReturnType<typeof us
     'reserved': `${colors.bg.warning} ${colors.text.warning}`,
     'maintenance': `${colors.bg.muted} ${colors.text.muted}`,
     'unavailable': `${colors.bg.muted} ${colors.text.muted}`,
-    'sold': `${colors.bg.error} ${colors.text.error}`
+    'sold': `${colors.bg.error} ${colors.text.error}`,
+    'deleted': `${colors.bg.muted} ${colors.text.muted}`
   };
   return statusClasses[status] || `${colors.bg.muted} ${colors.text.muted}`;
 };

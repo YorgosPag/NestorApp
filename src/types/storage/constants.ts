@@ -53,7 +53,8 @@ export const statusLabels: Record<StorageStatus, string> = {
   sold: 'storage.status.sold',
   reserved: 'storage.status.reserved',
   maintenance: 'storage.status.maintenance',
-  unavailable: 'storage.status.unavailable'
+  unavailable: 'storage.status.unavailable',
+  deleted: 'storage.status.deleted'
 };
 
 // Type labels (i18n keys)

@@ -46,6 +46,7 @@ export const STATUS_TO_SEMANTIC: Record<PropertyStatus, SemanticIntent> = {
 
   // ⚪ MUTED - Neutral, inactive
   'off-market': 'muted',
+  'deleted': 'muted', // ADR-281: Soft-deleted
 } as const;
 
 // ============================================================================

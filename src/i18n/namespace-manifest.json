@@ -1348,6 +1348,23 @@
       "status": "governed",
       "splitRequired": false,
       "targetNamespaces": []
+    },
+    {
+      "namespace": "trash",
+      "owner": "platform-soft-delete",
+      "primarySurface": "trash-lifecycle",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     }
   ]
 }

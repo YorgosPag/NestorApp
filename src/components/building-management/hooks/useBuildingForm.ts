@@ -33,7 +33,7 @@ import type {
 // TYPES
 // =============================================================================
 
-export type BuildingStatus = 'planning' | 'construction' | 'completed' | 'active';
+export type BuildingStatus = 'planning' | 'construction' | 'completed' | 'active' | 'deleted';
 export type BuildingCategory = 'residential' | 'commercial' | 'industrial' | 'mixed';
 
 export interface BuildingFormData {

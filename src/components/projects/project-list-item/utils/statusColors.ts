@@ -20,6 +20,7 @@ export const getStatusColorClass = (status: ProjectStatus, colors: UseSemanticCo
     completed:   `${colors.status.completed.bg} ${colors.status.completed.text} ${colors.status.completed.border}`,
     on_hold:     `${colors.status.inactive.bg} ${colors.status.inactive.text} ${colors.status.inactive.border}`,
     cancelled:   `${colors.status.cancelled.bg} ${colors.status.cancelled.text} ${colors.status.cancelled.border}`,
+    deleted:     `${colors.status.inactive.bg} ${colors.status.inactive.text} ${colors.status.inactive.border}`,
   };
 
   return STATUS_MAP[status];

@@ -35,7 +35,8 @@ export type ProjectStatus =
   | 'on_hold'
   | 'cancelled'
   | 'review'
-  | 'approved';
+  | 'approved'
+  | 'deleted';
 
 export type BuildingStatus =
   | 'available'
@@ -51,7 +52,8 @@ export type BuildingStatus =
   | 'active'
   | 'completed'
   | 'planning'
-  | 'partially-occupied';
+  | 'partially-occupied'
+  | 'deleted';
 
 export type ContactStatus =
   | 'active'
@@ -100,7 +102,8 @@ export type PropertyStatus =
   | 'coming-soon'              // Σύντομα διαθέσιμο
   | 'landowner'                // Ιδιοκτήτης γης
   | 'off-market'               // Εκτός αγοράς
-  | 'unavailable';             // Μη διαθέσιμο
+  | 'unavailable'              // Μη διαθέσιμο
+  | 'deleted';                 // ADR-281: Soft-deleted (στον κάδο)
 
 export type UnitStatus =
   | 'available'

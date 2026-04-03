@@ -4,7 +4,7 @@
 export type StorageType = 'large' | 'small' | 'basement' | 'ground' | 'special' | 'storage' | 'parking' | 'garage' | 'warehouse';
 
 // 🏢 ENTERPRISE: Extended storage status for all use cases
-export type StorageStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'sold' | 'unavailable';
+export type StorageStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'sold' | 'unavailable' | 'deleted';
 
 export interface Coordinates {
   x: number;

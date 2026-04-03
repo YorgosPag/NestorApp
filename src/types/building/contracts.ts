@@ -46,7 +46,7 @@ import type { BuildingAddressReference, ProjectAddress } from '../project/addres
     builtArea?: number;
     floors: number;
     units?: number;
-    status: 'planning' | 'construction' | 'completed' | 'active';
+    status: 'planning' | 'construction' | 'completed' | 'active' | 'deleted';
     progress: number; // 0-100
     startDate?: string;
     completionDate?: string;

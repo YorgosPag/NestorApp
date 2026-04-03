@@ -124,6 +124,13 @@ export const createProjectStatuses = (colors: UseSemanticColorsReturn): Record<P
     backgroundColor: colors.bg.success,
     color: colors.text.success,
     icon: 'checkCircle'
+  },
+  deleted: {
+    label: 'trash:trashView',
+    variant: 'outline',
+    backgroundColor: colors.bg.secondary,
+    color: colors.text.muted,
+    icon: 'trash'
   }
 });
 };
@@ -185,7 +192,8 @@ export const createPropertyStatuses = (colors: UseSemanticColorsReturn): Record<
   'under-renovation': { label: propertySpecialStatusLabels.under_renovation, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'wrench' },
   'legal-issues': { label: propertySpecialStatusLabels.legal_issues, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'gavel' },
   'inspection-required': { label: propertySpecialStatusLabels.inspection_required, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'search' },
-  'documentation-pending': { label: propertySpecialStatusLabels.pending_documents, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'fileText' }
+  'documentation-pending': { label: propertySpecialStatusLabels.pending_documents, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'fileText' },
+  deleted: { label: 'trash:trashView', variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'trash' }
 });
 
 /**
@@ -334,6 +342,13 @@ export const createBuildingStatuses = (colors: UseSemanticColorsReturn): Record<
     backgroundColor: colors.bg.warning,
     color: colors.text.warning,
     icon: 'users'
+  },
+  deleted: {
+    label: 'trash:trashView',
+    variant: 'outline',
+    backgroundColor: colors.bg.secondary,
+    color: colors.text.muted,
+    icon: 'trash'
   }
 });
 

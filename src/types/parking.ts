@@ -27,7 +27,8 @@ export type ParkingSpotStatus =
   | 'occupied'
   | 'reserved'
   | 'sold'
-  | 'maintenance';
+  | 'maintenance'
+  | 'deleted';
 
 /** Location zone — where the parking spot is physically situated */
 export type ParkingLocationZone =
@@ -144,6 +145,7 @@ export const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
   reserved: 'parking.status.reserved',
   sold: 'parking.status.sold',
   maintenance: 'parking.status.maintenance',
+  deleted: 'parking.status.deleted',
 };
 
 export const PARKING_LOCATION_ZONE_LABELS: Record<ParkingLocationZone, string> = {
@@ -167,6 +169,7 @@ export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
   occupied: `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,
   reserved: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`,
   maintenance: `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,
+  deleted: `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`,
 };
 
 // =============================================================================

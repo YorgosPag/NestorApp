@@ -2,7 +2,7 @@
 import type { ProjectAddress } from './project/addresses';
 import type { LandownerEntry } from '@/types/ownership-table';
 
-export type ProjectStatus = 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
+export type ProjectStatus = 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled' | 'deleted';
 
 /** 🏢 ENTERPRISE: Project types for construction industry */
 export type ProjectType = 'residential' | 'commercial' | 'industrial' | 'mixed' | 'infrastructure' | 'renovation';
@@ -166,5 +166,6 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
     in_progress: 'Σε εξέλιξη',
     completed: 'Ολοκληρωμένο',
     on_hold: 'Σε αναμονή',
-    cancelled: 'Ακυρωμένο'
+    cancelled: 'Ακυρωμένο',
+    deleted: 'Στον κάδο'
 };

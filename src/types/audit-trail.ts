@@ -29,6 +29,8 @@ export type AuditAction =
   | 'created'
   | 'updated'
   | 'deleted'
+  | 'soft_deleted'
+  | 'restored'
   | 'status_changed'
   | 'linked'
   | 'unlinked'

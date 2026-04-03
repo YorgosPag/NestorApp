@@ -98,6 +98,7 @@ export const SUPPORTED_NAMESPACES = [
   'files-media',            // 🏢 Files floorplan/media/capture (split from files — ADR-280)
   'navigation-entities',    // 🏢 Navigation entities/filters (split from navigation — ADR-280)
   'reports-extended',       // 🏢 Reports CRM/spaces (split from reports — ADR-280)
+  'trash',                  // 🗑️ Centralized trash/soft-delete strings (ADR-281)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 

@@ -220,6 +220,7 @@ export function StorageTab({ building }: StorageTabProps) {
       maintenance: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
       sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
       unavailable: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+      deleted: 'bg-gray-100 text-gray-500 dark:bg-gray-900/30 dark:text-gray-500',
     };
     return (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorMap[status] || colorMap.unavailable}`}>

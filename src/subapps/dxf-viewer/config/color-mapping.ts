@@ -16,6 +16,7 @@ export const STATUS_COLORS_MAPPING: Record<PropertyStatus, { stroke: string; fil
   'coming-soon': { stroke: UI_COLORS.LIGHT_PURPLE, fill: withOpacity(UI_COLORS.LIGHT_PURPLE, 0.5) }, // 🟣 Light Purple - coming soon
   'off-market': { stroke: UI_COLORS.LIGHT_GRAY, fill: withOpacity(UI_COLORS.LIGHT_GRAY, 0.375) },  // ⚪ Gray - off market
   'unavailable': { stroke: UI_COLORS.DARK_GRAY, fill: withOpacity(UI_COLORS.DARK_GRAY, 0.375) }, // ⚫ Dark Gray - unavailable
+  'deleted': { stroke: UI_COLORS.LIGHT_GRAY, fill: withOpacity(UI_COLORS.LIGHT_GRAY, 0.25) }, // ADR-281: Soft-deleted
 };
 
 // Helper function για backward compatibility

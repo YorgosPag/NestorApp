@@ -643,6 +643,14 @@ export const API_ROUTES = {
     PERMANENT_DELETE: (id: string) => `/api/contacts/${id}/permanent-delete` as const,
   },
 
+  // ── Trash (SSOT Soft-Delete — ADR-281) ─────────────────────────────────
+  TRASH: {
+    RESTORE: (entityType: string, entityId: string) =>
+      `/api/trash/${entityType}/${entityId}/restore` as const,
+    PERMANENT_DELETE: (entityType: string, entityId: string) =>
+      `/api/trash/${entityType}/${entityId}/permanent-delete` as const,
+  },
+
   // ── Contracts ─────────────────────────────────────────────────────────
   CONTRACTS: {
     LIST: '/api/contracts',

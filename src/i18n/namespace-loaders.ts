@@ -96,6 +96,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'report-builder': return () => import('./locales/el/report-builder.json');
     case 'report-builder-domains': return () => import('./locales/el/report-builder-domains.json');
     case 'saved-reports': return () => import('./locales/el/saved-reports.json');
+    case 'trash': return () => import('./locales/el/trash.json');
     default: return null;
   }
 }
@@ -181,6 +182,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'report-builder': return () => import('./locales/en/report-builder.json');
     case 'report-builder-domains': return () => import('./locales/en/report-builder-domains.json');
     case 'saved-reports': return () => import('./locales/en/saved-reports.json');
+    case 'trash': return () => import('./locales/en/trash.json');
     default: return null;
   }
 }
