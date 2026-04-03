@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | PLANNING |
+| **Status** | ACTIVE |
 | **Date** | 2026-04-03 |
 | **Category** | Infrastructure / Data & State |
 | **Canonical Location** | `src/i18n/` |
@@ -454,6 +454,7 @@ The application reaches "Google-grade direction" only when all of the following 
 - `docs/open ai analysis/buildings-storage-i18n-investigation-2026-02-15.md`
 - Related: `ADR-269-unit-to-property-rename.md`
 - Related: `ADR-172-pre-production-audit-remediation.md`
+- **Implementation Plan**: `ADR-280-i18n-namespace-splitting-plan.md`
 
 ---
 
@@ -462,3 +463,4 @@ The application reaches "Google-grade direction" only when all of the following 
 | Date | Decision | Author |
 |------|----------|--------|
 | 2026-04-03 | Initial ADR created after repo-wide i18n governance audit | Georgios Pagonis + Claude Code (OpenAI) |
+| 2026-04-03 | Status PLANNING --> ACTIVE. Concrete splitting plan created in ADR-280. 14 over-budget namespaces identified, 4-phase plan with ~33 new namespaces | Georgios Pagonis + Claude Code |

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 259 ADRs | Last Updated: 2026-03-31
+**📊 Stats**: 263 ADRs | Last Updated: 2026-04-03
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 76 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 77 | [View](#uncategorized) |
 
 ---
 
@@ -58,7 +58,7 @@
 | **ADR-020** | Centralized Auth Module | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-centralized-auth-module.md) |
 | **ADR-023** | Centralized Spinner Component | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-023-centralized-spinner-component.md) |
 | **ADR-024** | Environment Security Configuration | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-024-environment-security-configuration.md) |
-| **ADR-025** | Unit Linking System | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-025-unit-linking-system.md) |
+| **ADR-025** | Property Linking System | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-025-unit-linking-system.md) |
 | **ADR-026** | DXF Toolbar Colors System | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-026-dxf-toolbar-colors-system.md) |
 | **ADR-027** | DXF Keyboard Shortcuts System | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-027-dxf-keyboard-shortcuts-system.md) |
 | **ADR-028** | Button Component Consolidation | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-028-button-component-consolidation.md) |
@@ -112,7 +112,7 @@
 | **ADR-075** | Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-075-grip-size-multipliers-centralization.md) |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-076-rgb-hex-color-conversion-centralization.md) |
 | **ADR-077** | Firebase Admin SDK — Unified Lazy Initialization | ✅ IMPLEMENTED | 2026-02-06 | Infrastructure & SDK | [📄](./adrs/ADR-077-firebase-admin-unified-lazy-init.md) |
-| **ADR-078** | Server-Side Unit Creation via Admin SDK | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-078-server-side-unit-creation.md) |
+| **ADR-078** | Server-Side Property Creation via Admin SDK | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-078-server-side-unit-creation.md) |
 | **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
 | **ADR-080** | Universal AI Pipeline — Phase 1 Implementation | ✅ IMPLEMENTED | 2026-02-07 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-080-ai-pipeline-implementation.md) |
 | **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-081-percentage-formatting-centralization-formatpercent.md) |
@@ -294,9 +294,10 @@
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-269** | Unit to Property Rename — Naming Standardization | ✅ APPROVED | 2026-03-31 | Entity Systems | [📄](./adrs/ADR-269-unit-to-property-rename.md) |
-| **ADR-277** | Address Impact Guard — Company Address Change/Delete Safety | ✅ IMPLEMENTED | 2026-04-01 | Backend Systems / Data Safety | [📄](./adrs/ADR-277-address-impact-guard.md) |
-| **ADR-278** | Company Identity Field Guard — Master Data Edit Safety | ✅ IMPLEMENTED | 2026-04-01 | Backend Systems / Data Safety | [📄](./adrs/ADR-278-company-identity-field-guard.md) |
-| **ADR-280** | Communication Field Impact Detection — Primary Email/Phone/Website Change Safety | ✅ IMPLEMENTED | 2026-04-01 | Backend Systems / Data Safety | — |
+| **ADR-277** | Address Impact Guard — Company Address Change/Delete Safety | ✅ ✅ IMPLEMENTED | 2026-04-01 | Backend Systems / Data Safety | [📄](./adrs/ADR-277-address-impact-guard.md) |
+| **ADR-278** | Company Identity Field Guard | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-278-company-identity-field-guard.md) |
+| **ADR-279** | Google-Grade i18n Governance & Localization Operating Model | ✅ ACTIVE | 2026-04-03 | Infrastructure / Data & State | [📄](./adrs/ADR-279-google-grade-i18n-governance.md) |
+| **ADR-280** | i18n Namespace Splitting Implementation Plan | ✅ APPROVED | 2026-04-03 | Infrastructure / i18n | [📄](./adrs/ADR-280-i18n-namespace-splitting-plan.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -437,7 +438,7 @@
 | **ADR-012** | Entity Linking Service | ✅ APPROVED | [View](./adrs/ADR-012-entity-linking-service.md) |
 | **ADR-017** | Enterprise ID Generation | ✅ APPROVED | [View](./adrs/ADR-017-enterprise-id-generation.md) |
 | **ADR-018** | Unified Upload Service | ✅ APPROVED | [View](./adrs/ADR-018-unified-upload-service.md) |
-| **ADR-025** | Unit Linking System | ✅ APPROVED | [View](./adrs/ADR-025-unit-linking-system.md) |
+| **ADR-025** | Property Linking System | ✅ APPROVED | [View](./adrs/ADR-025-unit-linking-system.md) |
 | **ADR-052** | DXF Export API Contract | ✅ APPROVED | [View](./adrs/ADR-052-dxf-export-api-contract.md) |
 | **ADR-054** | Enterprise Upload System Consolidation | ✅ APPROVED | [View](./adrs/ADR-054-enterprise-upload-system-consolidation.md) |
 | **ADR-104** | Entity Type Guards Centralization | ✅ APPROVED | [View](./adrs/ADR-104-entity-type-guards-centralization.md) |
@@ -533,7 +534,7 @@
 | **ADR-071** | Enterprise Email Webhook Queue System | ✅ APPROVED | [View](./adrs/ADR-071-enterprise-email-webhook-queue.md) |
 | **ADR-073** | Firestore Composite Index Strategy | ✅ APPROVED | [View](./adrs/ADR-073-firestore-indexes-strategy.md) |
 | **ADR-074** | AI Inbox UX Improvements - Link Visibility & Theme Colors | ✅ APPROVED | [View](./adrs/ADR-074-ai-inbox-ux-improvements.md) |
-| **ADR-078** | Server-Side Unit Creation via Admin SDK | ✅ APPROVED | [View](./adrs/ADR-078-server-side-unit-creation.md) |
+| **ADR-078** | Server-Side Property Creation via Admin SDK | ✅ APPROVED | [View](./adrs/ADR-078-server-side-unit-creation.md) |
 | **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ APPROVED | [View](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
 | **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ APPROVED | [View](./adrs/ADR-100-user-profile-sync.md) |
 | **ADR-103** | Availability Check & AI Operator Briefing | ✅ APPROVED | [View](./adrs/ADR-103-availability-check-operator-briefing.md) |
@@ -601,6 +602,7 @@
 | **ADR-266** | Gantt & Construction Schedule Reports | ✅ APPROVED | [View](./adrs/ADR-266-gantt-construction-reports.md) |
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | [View](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | [View](./adrs/ADR-268-route-rename-audit-to-projects.md) |
+| **ADR-278** | Company Identity Field Guard | ✅ APPROVED | [View](./adrs/ADR-278-company-identity-field-guard.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

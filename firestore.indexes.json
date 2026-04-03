@@ -1696,6 +1696,20 @@
       ]
     },
     {
+      "collectionGroup": "legal_contracts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "propertyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "cheques",
       "queryScope": "COLLECTION",
       "fields": [
