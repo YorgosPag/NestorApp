@@ -7,7 +7,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { softDelete } from '@/lib/firestore/soft-delete-engine';
 
 const logger = createModuleLogger('BuildingByIdRoute');
 
@@ -60,15 +60,15 @@ export const DELETE = withStandardRateLimit(
         throw new ApiError(403, 'Unauthorized: Building belongs to different company');
       }
 
-      logger.info('Deleting building (bottom-up BLOCK guard)', { buildingId, companyId: ctx.companyId });
+      logger.info('Moving building to trash (soft-delete)', { buildingId, companyId: ctx.companyId });
 
-      // 🛡️ ADR-226: BLOCK guard — refuses deletion if dependencies exist (bottom-up only)
-      await executeDeletion(adminDb, 'building', buildingId, ctx.uid, ctx.companyId);
+      // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
+      await softDelete(adminDb, 'building', buildingId, ctx.uid, ctx.companyId);
 
-      logger.info('Building deleted', { buildingId, email: ctx.email });
+      logger.info('Building moved to trash', { buildingId, email: ctx.email });
 
-      // 📊 Auth audit (dual audit — executeDeletion handles entity audit with full snapshot)
-      await logAuditEvent(ctx, 'data_deleted', 'buildings', 'api', {
+      // 📊 Auth audit (soft-delete engine handles entity audit)
+      await logAuditEvent(ctx, 'soft_deleted', 'buildings', 'api', {
         newValue: {
           type: 'building_delete',
           value: {
@@ -76,12 +76,12 @@ export const DELETE = withStandardRateLimit(
             name: buildingData?.name ?? '',
           },
         },
-        metadata: { reason: 'Building hard deleted (bottom-up, no cascade)' },
+        metadata: { reason: 'Building moved to trash via API' },
       });
 
       return apiSuccess<BuildingDeleteResponse>(
         { buildingId, deleted: true },
-        'Building deleted successfully'
+        'Building moved to trash'
       );
     },
     { permissions: 'buildings:buildings:delete' }

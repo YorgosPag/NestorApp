@@ -16,7 +16,7 @@ import { isRoleBypass } from '@/lib/auth/roles';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { createModuleLogger } from '@/lib/telemetry';
-import { executeDeletion } from '@/lib/firestore/deletion-guard';
+import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
@@ -149,11 +149,11 @@ export async function handleDeleteProject(
     throw new ApiError(403, 'Access denied - Project not found');
   }
 
-  // 3. ADR-226: BLOCK guard — refuses deletion if dependencies exist
-  await executeDeletion(db, 'project', projectId, ctx.uid, ctx.companyId);
+  // 3. ADR-281: Soft-delete — move to trash (status='deleted')
+  await softDelete(db, 'project', projectId, ctx.uid, ctx.companyId);
 
   const duration = Date.now() - startTime;
-  logger.info('[Projects/Delete] Project DELETED', { projectId, durationMs: duration });
+  logger.info('[Projects/Delete] Project moved to trash', { projectId, durationMs: duration });
 
   // 4. Invalidate caches
   const cache = EnterpriseAPICache.getInstance();
@@ -161,17 +161,17 @@ export async function handleDeleteProject(
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
 
   // 5. Audit log
-  await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {
+  await logAuditEvent(ctx, 'soft_deleted', 'projects', 'api', {
     newValue: {
       type: 'status',
-      value: { projectId, projectName: projectData?.name, deleteType: 'hard', duration },
+      value: { projectId, projectName: projectData?.name, deleteType: 'soft', duration },
     },
-    metadata: { reason: 'Project hard deleted (bottom-up, no cascade)' },
+    metadata: { reason: 'Project moved to trash via API' },
   });
 
   return apiSuccess<ProjectDeleteResponse>(
     { projectId, deleted: true },
-    `Project permanently deleted in ${duration}ms`
+    `Project moved to trash in ${duration}ms`
   );
 }
 

@@ -20,6 +20,10 @@
       "title": "Create Storage",
       "description": "Select a storage from the list or create a new one."
     },
+    "unit": {
+      "title": "Create Unit",
+      "description": "Select a unit from the list or create a new one."
+    },
     "property": {
       "title": "Create Property",
       "description": "Select a property from the list or create a new one."

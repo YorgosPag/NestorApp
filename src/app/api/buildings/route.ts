@@ -1,20 +1,18 @@
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { getErrorMessage } from '@/lib/error-utils';
-import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateBuildingSchema = z.object({
@@ -108,10 +106,13 @@ export const GET = withStandardRateLimit(
     }
 
     // 🏢 ENTERPRISE: Ensure Firestore document ID is preserved
-    const buildings: BuildingDocument[] = snapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id,  // ✅ Firestore document ID (always last to prevent override)
-    })) as BuildingDocument[];
+    // ADR-281: Exclude soft-deleted records from normal list
+    const buildings: BuildingDocument[] = snapshot.docs
+      .filter(doc => doc.data().status !== 'deleted')
+      .map(doc => ({
+        ...doc.data(),
+        id: doc.id,  // ✅ Firestore document ID (always last to prevent override)
+      })) as BuildingDocument[];
 
     // 🔄 ENTERPRISE: Server-side sort by createdAt (desc order)
     buildings.sort((a, b) => normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt));
@@ -207,145 +208,5 @@ export const POST = withStandardRateLimit(
   )
 );
 
-// =============================================================================
-// PATCH - Update Building (Admin SDK)
-// =============================================================================
-
-interface BuildingUpdatePayload {
-  name?: string;
-  description?: string;
-  address?: string;
-  city?: string;
-  totalArea?: number;
-  builtArea?: number;
-  floors?: number;
-  units?: number;
-  totalValue?: number;
-  startDate?: string;
-  completionDate?: string;
-  status?: string;
-  projectId?: string | null;
-  // 🏢 ENTERPRISE: Company association (separate from tenant companyId)
-  linkedCompanyId?: string | null;
-  linkedCompanyName?: string | null;
-  company?: string | null;  // Legacy display name
-  addresses?: Record<string, unknown>[];  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-}
-
-interface BuildingUpdateResponse {
-  buildingId: string;
-  updated: boolean;
-  _v?: number;
-}
-
-/**
- * 🏗️ ENTERPRISE: Update building via Admin SDK
- *
- * @security Firestore rules block client-side writes (allow write: if false)
- *           This endpoint uses Admin SDK to bypass rules with proper auth
- * @permission buildings:buildings:update
- */
-export const PATCH = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
-    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-    // 🔐 ADMIN SDK: Get server-side Firestore instance
-    const adminDb = getAdminFirestore();
-    if (!adminDb) {
-      logger.error('Firebase Admin not initialized');
-      throw new ApiError(503, 'Database unavailable');
-    }
-
-    try {
-      // Parse request body (SPEC-256A: extract _v for version check)
-      const body = await request.json();
-      const { buildingId, _v: expectedVersion, ...updates } = body as { buildingId: string; _v?: number } & BuildingUpdatePayload;
-
-      if (!buildingId) {
-        throw new ApiError(400, 'Building ID is required');
-      }
-
-      // 🔐 Get building to check ownership
-      const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-
-      if (!buildingDoc.exists) {
-        throw new ApiError(404, 'Building not found');
-      }
-
-      const buildingData = buildingDoc.data();
-      const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-      // 🔒 TENANT ISOLATION: Check ownership (unless super_admin)
-      if (!isSuperAdmin && buildingData?.companyId !== ctx.companyId) {
-        logger.warn('[Buildings] Unauthorized update attempt', { email: ctx.email, buildingId });
-        throw new ApiError(403, 'Unauthorized: Building belongs to different company');
-      }
-
-      // 🔒 SECURITY: Sanitize - remove undefined fields AND protect tenant isolation fields
-      // companyId is the TENANT key (set at creation, immutable by client)
-      // Use linkedCompanyId/linkedCompanyName for company association changes
-      const IMMUTABLE_FIELDS = ['companyId'];
-      const cleanUpdates = Object.fromEntries(
-        Object.entries(updates).filter(([key, value]) =>
-          value !== undefined && !IMMUTABLE_FIELDS.includes(key)
-        )
-      );
-
-      logger.info('[Buildings] Updating building for tenant', { buildingId, companyId: ctx.companyId });
-
-      // 🏗️ UPDATE: Version-checked write (SPEC-256A)
-      const versionResult = await withVersionCheck({
-        db: adminDb,
-        collection: COLLECTIONS.BUILDINGS,
-        docId: buildingId,
-        expectedVersion,
-        updates: cleanUpdates,
-        userId: ctx.uid,
-      });
-
-      logger.info('[Buildings] Building updated', { buildingId, email: ctx.email, _v: versionResult.newVersion });
-
-      // 🔗 ADR-239: Centralized linking — change detection + cascade + entity audit
-      if ('projectId' in cleanUpdates) {
-        linkEntity('building:projectId', {
-          auth: ctx,
-          entityId: buildingId,
-          newLinkValue: (cleanUpdates.projectId as string) ?? null,
-          existingDoc: (buildingData ?? {}) as Record<string, unknown>,
-          apiPath: '/api/buildings (PATCH)',
-        }).catch((err) => {
-          logger.warn('[Buildings] linkEntity failed (non-blocking)', {
-            buildingId,
-            error: getErrorMessage(err),
-          });
-        });
-      }
-
-      // 📊 Audit log
-      await logAuditEvent(ctx, 'data_updated', 'buildings', 'api', {
-        newValue: {
-          type: 'building_update',
-          value: {
-            buildingId,
-            fields: Object.keys(cleanUpdates),
-          },
-        },
-        metadata: { reason: 'Building updated' },
-      });
-
-      return apiSuccess<BuildingUpdateResponse>(
-        { buildingId, updated: true, _v: versionResult.newVersion },
-        'Building updated successfully'
-      );
-
-    } catch (error) {
-      // SPEC-256A: Return 409 on version conflict
-      if (error instanceof ConflictError) {
-        return NextResponse.json(error.body, { status: error.statusCode });
-      }
-      logger.error('[Buildings] Error updating building', { error });
-      throw new ApiError(500, getErrorMessage(error, 'Failed to update building'));
-    }
-    },
-    { permissions: 'buildings:buildings:update' }
-  )
-);
+// PATCH — Update Building (extracted for SRP, ADR-281)
+export { PATCH } from './building-update.handler';
