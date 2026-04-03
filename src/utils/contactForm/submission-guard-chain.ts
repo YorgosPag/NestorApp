@@ -36,6 +36,10 @@ export type GuardResult =
   | { blocked: true; errorKey: string }
   | { blocked: false; deferred: true; guardType: 'nameCascade' | 'addressImpact' | 'companyIdentity' | 'communicationImpact' };
 
+type GuardFailureKey =
+  | 'contacts.identityImpact.messages.unavailable'
+  | 'contacts.companyIdentityImpact.unavailableBody';
+
 interface GuardChainDeps {
   editContact: Contact;
   editContactId: string;
@@ -64,6 +68,15 @@ interface GuardChainDeps {
   notifications: { success: (msg: string) => void; error: (msg: string) => void };
 }
 
+function blockPreviewFailure(
+  scope: string,
+  error: unknown,
+  errorKey: GuardFailureKey,
+): GuardResult {
+  logger.warn(`${scope} preview failed, blocking save`, { error });
+  return { blocked: true, errorKey };
+}
+
 // ============================================================================
 // GUARD CHAIN
 // ============================================================================
@@ -88,14 +101,20 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
         if (preview.totalAffected > 0) {
           deps.deferredSubmitRef.current = async () => {
             deps.nameCascadeConfirmedRef.current = true;
-            await ContactsService.updateContact(editContactId, contactData);
+            await ContactsService.updateExistingContactFromForm(editContact, formData);
             deps.notifications.success('contacts.submission.updateSuccess');
             deps.nameCascadeConfirmedRef.current = false;
           };
           deps.setNameCascadeDialog({ oldName, newName, properties: preview.properties, paymentPlans: preview.paymentPlans });
           return { blocked: false, deferred: true, guardType: 'nameCascade' };
         }
-      } catch { logger.warn('Name cascade preview failed, proceeding'); }
+      } catch (error) {
+        return blockPreviewFailure(
+          'nameCascade',
+          error,
+          'contacts.identityImpact.messages.unavailable',
+        );
+      }
     }
   }
   deps.nameCascadeConfirmedRef.current = false;
@@ -112,14 +131,20 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
         if (ap.totalAffected > 0) {
           deps.deferredAddressSubmitRef.current = async () => {
             deps.addressImpactConfirmedRef.current = true;
-            await ContactsService.updateContact(editContactId, contactData);
+            await ContactsService.updateExistingContactFromForm(editContact, formData);
             deps.notifications.success('contacts.submission.updateSuccess');
             deps.addressImpactConfirmedRef.current = false;
           };
           deps.setAddressImpactDialog({ addressLabel: 'Έδρα', properties: ap.properties, paymentPlans: ap.paymentPlans, invoices: ap.invoices, apyCertificates: ap.apyCertificates });
           return { blocked: false, deferred: true, guardType: 'addressImpact' };
         }
-      } catch { logger.warn('Address impact preview failed, proceeding'); }
+      } catch (error) {
+        return blockPreviewFailure(
+          'addressImpact',
+          error,
+          'contacts.identityImpact.messages.unavailable',
+        );
+      }
     }
   }
   deps.addressImpactConfirmedRef.current = false;
@@ -139,14 +164,20 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
         if (ip.totalAffected > 0) {
           deps.deferredIdentitySubmitRef.current = async () => {
             deps.companyIdentityConfirmedRef.current = true;
-            await ContactsService.updateContact(editContactId, contactData);
+            await ContactsService.updateExistingContactFromForm(editContact, formData);
             deps.notifications.success('contacts.submission.updateSuccess');
             deps.companyIdentityConfirmedRef.current = false;
           };
           deps.setCompanyIdentityDialog({ changes: detection.changes, projects: ip.projects, properties: ip.properties, obligations: ip.obligations, invoices: ip.invoices, apyCertificates: ip.apyCertificates });
           return { blocked: false, deferred: true, guardType: 'companyIdentity' };
         }
-      } catch { logger.warn('Company identity impact preview failed, proceeding'); }
+      } catch (error) {
+        return blockPreviewFailure(
+          'companyIdentityImpact',
+          error,
+          'contacts.companyIdentityImpact.unavailableBody',
+        );
+      }
     }
   }
   deps.companyIdentityConfirmedRef.current = false;
@@ -165,14 +196,20 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
         if (cp.totalAffected > 0) {
           deps.deferredCommunicationSubmitRef.current = async () => {
             deps.communicationImpactConfirmedRef.current = true;
-            await ContactsService.updateContact(editContactId, contactData);
+            await ContactsService.updateExistingContactFromForm(editContact, formData);
             deps.notifications.success('contacts.submission.updateSuccess');
             deps.communicationImpactConfirmedRef.current = false;
           };
           deps.setCommunicationImpactDialog({ changes: commDetection.changes, properties: cp.properties, paymentPlans: cp.paymentPlans, projects: cp.projects, invoices: cp.invoices, apyCertificates: cp.apyCertificates });
           return { blocked: false, deferred: true, guardType: 'communicationImpact' };
         }
-      } catch { logger.warn('Communication impact preview failed, proceeding'); }
+      } catch (error) {
+        return blockPreviewFailure(
+          'communicationImpact',
+          error,
+          'contacts.identityImpact.messages.unavailable',
+        );
+      }
     }
   }
   deps.communicationImpactConfirmedRef.current = false;

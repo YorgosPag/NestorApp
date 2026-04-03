@@ -99,9 +99,9 @@ export const MODAL_SELECT_NAVIGATION_TOOLTIPS = {
   disconnect_floor: 'toolbar.actions.floors.delete',
 
   // Units Tooltips
-  connect_unit: 'toolbar.actions.units.new',
-  edit_unit: 'toolbar.actions.units.edit',
-  disconnect_unit: 'toolbar.actions.units.delete'
+  connect_unit: 'common.actions.newProperty',
+  edit_unit: 'toolbar.actions.properties.edit',
+  disconnect_unit: 'toolbar.actions.properties.delete'
 } as const;
 
 /**
@@ -226,7 +226,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {
   new_building: 'common.actions.newBuilding',
   new_project: 'common.actions.newProject',
   new_contact: 'common.actions.newContact',
-  new_unit: 'common.actions.newUnit',
+  new_unit: 'common.actions.newProperty',
   new_storage: 'common.actions.newStorage',
   parking: 'common.actions.newParking'
 } as const;
@@ -269,7 +269,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS = {
   new_building_tooltip: 'common.tooltips.newBuildingShortcut',
   new_project_tooltip: 'common.tooltips.newProjectShortcut',
   new_contact_tooltip: 'common.tooltips.newContactShortcut',
-  new_unit_tooltip: 'common.tooltips.newUnitShortcut',
+  new_unit_tooltip: 'common.tooltips.newPropertyShortcut',
   new_storage_tooltip: 'common.tooltips.newStorageShortcut',
 
   // ========================================================================
@@ -278,7 +278,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS = {
   edit_building: 'toolbar.actions.buildings.edit',
   edit_project: 'toolbar.actions.projects.edit',
   edit_contact: 'common.tooltips.editContact',
-  edit_unit: 'toolbar.actions.units.edit',
+  edit_unit: 'toolbar.actions.properties.edit',
   edit_storage: 'toolbar.actions.storage.edit',
   edit_generic: 'common.tooltips.editSelected',
 
@@ -288,7 +288,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS = {
   delete_building: 'toolbar.actions.buildings.delete',
   delete_project: 'toolbar.actions.projects.delete',
   delete_contact: 'common.tooltips.deleteContact',
-  delete_unit: 'toolbar.actions.units.delete',
+  delete_unit: 'toolbar.actions.properties.delete',
   delete_storage: 'toolbar.actions.storage.delete',
   delete_generic: 'common.tooltips.deleteSelected',
 
@@ -298,7 +298,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS = {
   share_building: 'common.tooltips.shareBuilding',
   share_project: 'common.tooltips.shareProject',
   share_contact: 'common.tooltips.shareContact',
-  share_unit: 'common.tooltips.shareUnit',
+  share_unit: 'common.tooltips.shareProperty',
   share_storage: 'common.tooltips.shareStorage',
   share_generic: 'toolbar.labels.share',
 
