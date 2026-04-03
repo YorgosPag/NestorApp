@@ -19,7 +19,7 @@ const logger = createModuleLogger('CompactToolbar');
 // ============================================================================
 
 function useToolbarTranslation() {
-  const { t } = useTranslation(['common', 'common-shared']);
+  const { t, i18n, isNamespaceReady } = useTranslation(['common', 'common-shared']);
 
   /** Translate search placeholder (handles i18n keys with dots) */
   const getTranslatedPlaceholder = (placeholder?: string): string => {
@@ -40,6 +40,7 @@ function useToolbarTranslation() {
   const getTooltip = (tooltipKey?: string): string | undefined => {
     if (!tooltipKey) return undefined;
 
+    // Try via the multi-namespace t() first
     const translated = t(tooltipKey);
     const isSuccess = translated !== tooltipKey &&
       !translated.startsWith('common.') &&
@@ -47,7 +48,15 @@ function useToolbarTranslation() {
 
     if (isSuccess) return translated;
 
-    if (process.env.NODE_ENV === 'development') {
+    // Explicit fallback: try common-shared namespace directly via i18n instance
+    const directKey = `common-shared:${tooltipKey}`;
+    const directResult = i18n.t(directKey);
+    if (typeof directResult === 'string' && directResult !== directKey && directResult !== tooltipKey) {
+      return directResult;
+    }
+
+    // Only warn after ALL namespaces are confirmed loaded — avoids false positives during async load
+    if (process.env.NODE_ENV === 'development' && isNamespaceReady) {
       logger.warn('Translation missing for key', { tooltipKey });
     }
 

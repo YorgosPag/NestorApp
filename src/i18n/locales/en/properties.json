@@ -12,7 +12,7 @@
       "actions": {
         "new": "New Building (Ctrl+N)",
         "edit": "Edit Selected (Ctrl+E)",
-        "delete": "Delete Selected (Delete)"
+        "delete": "Move Selected to Trash (Delete)"
       }
     },
     "dialog": {
@@ -40,12 +40,12 @@
         }
       },
       "deleteConfirmation": {
-        "title": "Confirm Deletion",
-        "message": "Are you sure you want to delete {count} building(s)?",
-        "warning": "This action cannot be undone."
+        "title": "Move to Trash",
+        "message": "Move {count} building(s) to trash?",
+        "warning": "You can restore later from trash."
       },
       "cancel": "Cancel",
-      "delete": "Delete"
+      "delete": "Move to Trash"
     },
     "storage": {
       "types": {
@@ -344,10 +344,10 @@
   },
   "deletionGuard": {
     "confirm": {
-      "title": "Delete property",
-      "description": "Delete \"{{name}}\"? This action permanently removes the property record and cannot be undone.",
-      "descriptionWithDependencies": "Delete \"{{name}}\"? The guard check found {{count}} linked records that will be affected by this operation.",
-      "action": "Delete property",
+      "title": "Move property to trash",
+      "description": "Move \"{{name}}\" to trash? It can be restored later.",
+      "descriptionWithDependencies": "Move \"{{name}}\" to trash? The guard check found {{count}} linked records that may be affected.",
+      "action": "Move to Trash",
       "unnamedProperty": "this property"
     }
   },

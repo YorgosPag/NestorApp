@@ -79,7 +79,7 @@ export function PropertyDetailsHeader({
     : [
         createEntityAction('edit', t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }), () => onToggleEditMode?.()),
         createEntityAction('new', t('navigation.actions.newUnit.label', { defaultValue: 'Νέο Ακίνητο' }), () => onNewProperty?.()),
-        createEntityAction('delete', t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }), () => onDeleteProperty?.()),
+        createEntityAction('delete', t('navigation.actions.delete.label', { defaultValue: 'Μεταφορά στον κάδο' }), () => onDeleteProperty?.()),
       ];
 
   const headerTitle = isCreatingNewUnit
