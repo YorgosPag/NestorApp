@@ -341,5 +341,19 @@
   },
   "tooltip": {
     "sqm": "sqm"
+  },
+  "deletionGuard": {
+    "confirm": {
+      "title": "Delete property",
+      "description": "Delete \"{{name}}\"? This action permanently removes the property record and cannot be undone.",
+      "descriptionWithDependencies": "Delete \"{{name}}\"? The guard check found {{count}} linked records that will be affected by this operation.",
+      "action": "Delete property",
+      "unnamedProperty": "this property"
+    }
+  },
+  "impactGuard": {
+    "actions": {
+      "cancel": "Cancel"
+    }
   }
 }
