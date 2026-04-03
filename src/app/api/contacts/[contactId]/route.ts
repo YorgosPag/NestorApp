@@ -3,9 +3,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { FieldValue } from 'firebase-admin/firestore';
+import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -128,48 +127,15 @@ export async function DELETE(
       }
 
       const adminDb = getAdminFirestore();
-      const contactRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
-      const contactDoc = await contactRef.get();
 
-      if (!contactDoc.exists) {
-        throw new ApiError(404, 'Contact not found');
-      }
+      // 🗑️ ADR-281: Centralized soft-delete engine (tenant check + audit built-in)
+      await softDelete(adminDb, 'contact', contactId, ctx.uid, ctx.companyId);
 
-      const contactData = contactDoc.data();
+      logger.info('Contact moved to trash', { contactId, email: ctx.email });
 
-      const isSuperAdmin = isRoleBypass(ctx.globalRole);
-      if (!isSuperAdmin && contactData?.companyId !== ctx.companyId) {
-        logger.warn('Unauthorized contact delete attempt', { email: ctx.email, contactId });
-        throw new ApiError(403, 'Unauthorized: Contact belongs to different company');
-      }
-
-      if (contactData?.status === 'deleted') {
-        throw new ApiError(409, 'Contact is already in trash');
-      }
-
-      logger.info('Soft-deleting contact', { contactId, companyId: ctx.companyId });
-
-      await contactRef.update({
-        status: 'deleted',
-        previousStatus: contactData?.status ?? 'active',
-        deletedAt: FieldValue.serverTimestamp(),
-        deletedBy: ctx.uid,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-
-      logger.info('Contact soft-deleted', { contactId, email: ctx.email });
-
-      await logAuditEvent(ctx, 'data_deleted', 'contact', 'api', {
-        newValue: {
-          type: 'status',
-          value: {
-            contactId,
-            displayName: contactData?.firstName
-              ? `${contactData.firstName} ${contactData.lastName ?? ''}`.trim()
-              : contactData?.companyName ?? '',
-          },
-        },
-        metadata: { reason: 'Contact soft-deleted (moved to trash)' },
+      await logAuditEvent(ctx, 'soft_deleted', 'contact', 'api', {
+        newValue: { type: 'status', value: { contactId } },
+        metadata: { reason: 'Contact moved to trash via API' },
       });
 
       return apiSuccess<ContactDeleteResponse>(
