@@ -3,7 +3,7 @@
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { CommonBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized action icons/colors (ZERO hardcoded values)
 import { NAVIGATION_ACTIONS } from '@/components/navigation/config/navigation-entities';
 // 🏢 ENTERPRISE: Centralized spacing tokens

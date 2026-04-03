@@ -360,6 +360,19 @@
   },
   "dialog": {
     "addUnit": {
+      "fields": {
+        "status": "Operational Status"
+      },
+      "placeholders": {
+        "status": "Select..."
+      },
+      "statusOptions": {
+        "draft": "Draft",
+        "under-construction": "Under construction",
+        "inspection": "Inspection",
+        "ready": "Ready",
+        "maintenance": "Maintenance"
+      },
       "messages": {
         "success": "Unit created successfully",
         "error": "Error creating unit"

@@ -360,6 +360,19 @@
   },
   "dialog": {
     "addUnit": {
+      "fields": {
+        "status": "Λειτουργική Κατάσταση"
+      },
+      "placeholders": {
+        "status": "Επιλέξτε..."
+      },
+      "statusOptions": {
+        "draft": "Πρόχειρο",
+        "under-construction": "Υπό κατασκευή",
+        "inspection": "Σε επιθεώρηση",
+        "ready": "Έτοιμο",
+        "maintenance": "Υπό συντήρηση"
+      },
       "messages": {
         "success": "Η μονάδα δημιουργήθηκε επιτυχώς",
         "error": "Σφάλμα κατά τη δημιουργία μονάδας"

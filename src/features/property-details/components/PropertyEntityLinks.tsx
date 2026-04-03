@@ -17,7 +17,7 @@ import React, { useCallback } from 'react';
 import { Building } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/properties.service';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityLink } from '@/hooks/useEntityLink';
 
 interface PropertyEntityLinksProps {

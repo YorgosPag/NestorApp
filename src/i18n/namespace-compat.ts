@@ -256,6 +256,8 @@ const LEGACY_NAMESPACE_ROOT_MAP = {
     operationalStatus: 'properties-enums',
     card: 'properties-detail',
     fields: 'properties-detail',
+    fieldLocking: 'properties-detail',
+    entityCode: 'properties-detail',
     entityLinks: 'properties-detail',
     meta: 'properties-detail',
     details: 'properties-detail',

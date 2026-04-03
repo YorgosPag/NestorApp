@@ -5,7 +5,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import type { Property, ExtendedPropertyDetails } from '@/types/property-viewer';
 import type { PropertyDetailsContentProps } from './types';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { MultiLevelNavigation } from '@/components/property-viewer/details/MultiLevelNavigation';
 

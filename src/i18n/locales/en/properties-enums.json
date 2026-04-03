@@ -55,7 +55,11 @@
     "apartment3br": "3 Bedroom Apartment",
     "apartment4br": "4 Bedroom Apartment",
     "loft": "Loft",
-    "penthouse": "Penthouse"
+    "penthouse": "Penthouse",
+    "apartment_1br": "1-Bedroom Apartment",
+    "hall": "Hall",
+    "detached_house": "Detached House",
+    "villa": "Villa"
   },
   "enhancedStatus": {
     "rentalOnly": "Rental Only",

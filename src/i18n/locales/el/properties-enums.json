@@ -55,7 +55,11 @@
     "apartment3br": "Διαμέρισμα 3 Υ/Δ",
     "apartment4br": "Διαμέρισμα 4 Υ/Δ",
     "loft": "Loft",
-    "penthouse": "Ρετιρέ"
+    "penthouse": "Ρετιρέ",
+    "apartment_1br": "Γκαρσονιέρα",
+    "hall": "Αίθουσα",
+    "detached_house": "Μονοκατοικία",
+    "villa": "Βίλα"
   },
   "enhancedStatus": {
     "rentalOnly": "Μόνο για Ενοικίαση",
