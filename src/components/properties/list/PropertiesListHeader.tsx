@@ -4,7 +4,7 @@
 import React from 'react';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized Property Icon
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;

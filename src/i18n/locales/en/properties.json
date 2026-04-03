@@ -95,6 +95,17 @@
     }
   },
   "filters": {
+    "unitsTitle": "Properties",
+    "showAdvanced": "More Filters",
+    "hideAdvanced": "Fewer Filters",
+    "areaPresets": {
+      "all": "All",
+      "small": "Small (0-50 m²)",
+      "medium": "Medium (50-100 m²)",
+      "large": "Large (100-200 m²)",
+      "veryLarge": "Very large (200+ m²)",
+      "custom": "Custom"
+    },
     "allTypes": "All Types",
     "allStatuses": "All Statuses",
     "allFloors": "All Floors",
@@ -171,7 +182,33 @@
     }
   },
   "page": {
-    "loading": "Loading properties..."
+    "loading": "Loading properties...",
+    "dashboard": {
+      "totalArea": "Total Area",
+      "uniqueBuildings": "Unique Buildings",
+      "propertyStatus": "Property Status",
+      "unitTypes": "Unit Types",
+      "floorDistribution": "Floor Distribution",
+      "coverage": {
+        "title": "Data Coverage",
+        "photos": "Photos",
+        "floorplans": "Floor Plans",
+        "documents": "Documents",
+        "missing": "{count} missing",
+        "clickToFilterMissing": "Filter properties missing {type}"
+      }
+    },
+    "typeLabels": {
+      "apartment": "Apartment",
+      "studio": "Studio",
+      "maisonette": "Maisonette",
+      "shop": "Shop",
+      "office": "Office",
+      "storage": "Storage"
+    }
+  },
+  "placeholders": {
+    "searchUnits": "Search units..."
   },
   "grid": {
     "emptyState": {

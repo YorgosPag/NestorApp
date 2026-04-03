@@ -23,7 +23,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { FileImage, FileText, FolderOpen, TrendingUp } from 'lucide-react';
 
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Types
 import type { CoverageStats } from '@/hooks/usePropertiesStats';

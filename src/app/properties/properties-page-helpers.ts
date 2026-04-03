@@ -7,8 +7,14 @@ export type TypeKey = 'apartment' | 'studio' | 'maisonette' | 'shop' | 'office' 
 // 🎯 DOMAIN SEPARATION: Units = Physical Truth, NO sales statuses!
 export const createStatusLabelGetter = (t: (key: string) => string) => (status: string): string => {
   const operationalStatuses: OperationalStatusKey[] = ['ready', 'underConstruction', 'inspection', 'maintenance', 'draft'];
+  // Firestore stores kebab-case (e.g. 'under-construction'), enums use both
   if (operationalStatuses.includes(status as OperationalStatusKey)) {
     return t(`operationalStatus.${status}`);
+  }
+  // Fallback: try the raw status as key (handles kebab-case from Firestore)
+  const translated = t(`operationalStatus.${status}`);
+  if (translated !== `operationalStatus.${status}`) {
+    return translated;
   }
   return status;
 };

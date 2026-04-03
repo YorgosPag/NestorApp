@@ -209,7 +209,8 @@
   },
   "operationalStatus": {
     "ready": "Έτοιμο",
-    "underConstruction": "Υπό ολοκλήρωση",
+    "underConstruction": "Υπό κατασκευή",
+    "under-construction": "Υπό κατασκευή",
     "inspection": "Σε επιθεώρηση",
     "maintenance": "Υπό συντήρηση",
     "draft": "Πρόχειρο"

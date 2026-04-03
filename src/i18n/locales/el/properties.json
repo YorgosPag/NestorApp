@@ -95,6 +95,17 @@
     }
   },
   "filters": {
+    "unitsTitle": "Ακίνητα",
+    "showAdvanced": "Περισσότερα Φίλτρα",
+    "hideAdvanced": "Λιγότερα Φίλτρα",
+    "areaPresets": {
+      "all": "Όλες",
+      "small": "Μικρά (0-50 m²)",
+      "medium": "Μεσαία (50-100 m²)",
+      "large": "Μεγάλα (100-200 m²)",
+      "veryLarge": "Πολύ μεγάλα (200+ m²)",
+      "custom": "Προσαρμοσμένο"
+    },
     "allTypes": "Όλοι οι Τύποι",
     "allStatuses": "Όλες οι Καταστάσεις",
     "allFloors": "Όλοι οι Όροφοι",
@@ -171,7 +182,33 @@
     }
   },
   "page": {
-    "loading": "Φόρτωση ακινήτων..."
+    "loading": "Φόρτωση ακινήτων...",
+    "dashboard": {
+      "totalArea": "Συνολική Επιφάνεια",
+      "uniqueBuildings": "Μοναδικά Κτίρια",
+      "propertyStatus": "Κατάσταση Ακινήτων",
+      "unitTypes": "Τύποι Μονάδων",
+      "floorDistribution": "Κατανομή ανά Όροφο",
+      "coverage": {
+        "title": "Κάλυψη Δεδομένων",
+        "photos": "Φωτογραφίες",
+        "floorplans": "Κατόψεις",
+        "documents": "Έγγραφα",
+        "missing": "{count} χωρίς",
+        "clickToFilterMissing": "Φιλτράρισμα ακινήτων χωρίς {type}"
+      }
+    },
+    "typeLabels": {
+      "apartment": "Διαμέρισμα",
+      "studio": "Στούντιο",
+      "maisonette": "Μεζονέτα",
+      "shop": "Κατάστημα",
+      "office": "Γραφείο",
+      "storage": "Αποθήκη"
+    }
+  },
+  "placeholders": {
+    "searchUnits": "Αναζήτηση μονάδων..."
   },
   "grid": {
     "emptyState": {
