@@ -11,6 +11,17 @@ import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('useTranslation');
 
 /**
+ * Compute all namespaces that must be loaded: explicit + ADR-280 compat splits.
+ * E.g. ['common'] → ['common-shared', 'common-actions', ...]
+ * E.g. ['properties'] → ['properties', 'properties-detail', 'properties-enums', ...]
+ */
+function resolveAllNamespaces(namespaces: string[]): string[] {
+  const compatSplits = namespaces.flatMap((ns) => [...getCompatNamespaces(ns)]);
+  const nonCommon = namespaces.filter((ns) => ns !== 'common');
+  return [...new Set([...nonCommon, ...compatSplits])];
+}
+
+/**
  * Custom translation hook with lazy loading support
  *
  * @param namespace - Translation namespace (e.g., 'dxf-viewer', 'forms')
@@ -23,6 +34,9 @@ export const useTranslation = (namespace?: string | string[]) => {
     : namespace || '';
   const namespaces = namespaceKey ? namespaceKey.split('|') : [];
   const primaryNs = namespaces[0] || 'common';
+
+  // 🏢 ADR-280: Resolve compat splits once
+  const allNamespacesToLoad = useMemo(() => resolveAllNamespaces(namespaces), [namespaceKey]);
 
   // Wrap t to apply compat remapping for split namespaces (ADR-280)
   const t = useMemo(() => {
@@ -48,46 +62,35 @@ export const useTranslation = (namespace?: string | string[]) => {
     return wrapped;
   }, [rawT, primaryNs]);
 
-  // 🏢 ENTERPRISE: Track if this specific namespace is loaded
+  // 🏢 ENTERPRISE: Track if ALL required namespaces (explicit + compat) are loaded
   const [namespaceLoaded, setNamespaceLoaded] = useState(() => {
-    // Check if namespace is already loaded on mount
-    if (namespaces.length === 0 || namespaces.every((ns) => ns === 'common')) {
-      return true;
-    }
-    return namespaces.every((ns) => ns === 'common' || i18n.hasResourceBundle(i18n.language, ns));
+    if (allNamespacesToLoad.length === 0) return true;
+    return allNamespacesToLoad.every((ns) => i18n.hasResourceBundle(i18n.language, ns));
   });
 
   // Lazy load namespace + its compat split namespaces (ADR-280)
   useEffect(() => {
-    if (namespaces.length > 0 && !namespaces.every((ns) => ns === 'common')) {
-      const shouldForceReload = process.env.NODE_ENV === 'development';
+    if (allNamespacesToLoad.length === 0) return;
 
-      // 🏢 ENTERPRISE: Collect explicit namespaces + their compat splits
-      const explicitNamespaces = namespaces.filter((ns) => ns !== 'common');
-      const compatNamespaces = explicitNamespaces.flatMap((ns) =>
-        getCompatNamespaces(ns).filter((compat) => !namespaces.includes(compat))
-      );
-      const allNamespacesToLoad = [...new Set([...explicitNamespaces, ...compatNamespaces])];
-
-      const allLoaded = allNamespacesToLoad.every((ns) => i18n.hasResourceBundle(i18n.language, ns));
-      if (!shouldForceReload && allLoaded) {
-        setNamespaceLoaded(true);
-        return;
-      }
-
-      // Load all namespaces (explicit + compat splits) asynchronously
-      setNamespaceLoaded(false);
-      Promise.all(
-        allNamespacesToLoad.map((ns) => loadNamespace(ns as Namespace, i18n.language as Language, shouldForceReload))
-      )
-        .then(() => {
-          setNamespaceLoaded(true);
-        })
-        .catch(error => {
-          logger.error(`Failed to load namespace(s): ${allNamespacesToLoad.join(', ')}`, { error });
-          setNamespaceLoaded(true); // Mark as loaded to prevent infinite loading
-        });
+    const shouldForceReload = process.env.NODE_ENV === 'development';
+    const allLoaded = allNamespacesToLoad.every((ns) => i18n.hasResourceBundle(i18n.language, ns));
+    if (!shouldForceReload && allLoaded) {
+      setNamespaceLoaded(true);
+      return;
     }
+
+    // Load all namespaces (explicit + compat splits) asynchronously
+    setNamespaceLoaded(false);
+    Promise.all(
+      allNamespacesToLoad.map((ns) => loadNamespace(ns as Namespace, i18n.language as Language, shouldForceReload))
+    )
+      .then(() => {
+        setNamespaceLoaded(true);
+      })
+      .catch(error => {
+        logger.error(`Failed to load namespace(s): ${allNamespacesToLoad.join(', ')}`, { error });
+        setNamespaceLoaded(true); // Mark as loaded to prevent infinite loading
+      });
   }, [namespaceKey, i18n, i18n.language]);
 
   return {
@@ -101,17 +104,13 @@ export const useTranslation = (namespace?: string | string[]) => {
     // Change language function with namespace loading
     changeLanguage: async (lng: string) => {
       try {
-        // If we have a namespace, preload it for the new language
-        if (namespaces.length > 0 && !namespaces.every((ns) => ns === 'common')) {
-          const namespacesToLoad = namespaces.filter((ns) => ns !== 'common');
+        if (allNamespacesToLoad.length > 0) {
           await Promise.all(
-            namespacesToLoad.map((ns) => loadNamespace(ns as Namespace, lng as Language))
+            allNamespacesToLoad.map((ns) => loadNamespace(ns as Namespace, lng as Language))
           );
         }
-        
+
         await i18n.changeLanguage(lng);
-        
-        // Store preference
         safeSetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, lng);
       } catch (error) {
         logger.error('Failed to change language', { error });
