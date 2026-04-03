@@ -81,6 +81,12 @@
     "inspectionRequired": "Απαιτείται Επιθεώρηση",
     "documentationPending": "Εκκρεμή Έγγραφα"
   },
+  "commercialStatus": {
+    "unavailable": "Μη διαθέσιμο",
+    "for-sale": "Προς πώληση",
+    "for-rent": "Προς ενοικίαση",
+    "for-sale-and-rent": "Προς πώληση και ενοικίαση"
+  },
   "intent": {
     "sale": "Για Πώληση",
     "rental": "Για Ενοικίαση",
@@ -137,6 +143,29 @@
     }
   },
   "dialog": {
+    "addUnit": {
+      "fields": {
+        "status": "Λειτουργική Κατάσταση",
+        "commercialStatus": "Εμπορική Κατάσταση"
+      },
+      "placeholders": {
+        "status": "Επιλέξτε...",
+        "commercialStatus": "Επιλέξτε..."
+      },
+      "commercialStatusOptions": {
+        "unavailable": "Μη διαθέσιμο",
+        "for-sale": "Προς πώληση",
+        "for-rent": "Προς ενοικίαση",
+        "for-sale-and-rent": "Προς πώληση και ενοικίαση"
+      },
+      "statusOptions": {
+        "draft": "Πρόχειρο",
+        "under-construction": "Υπό κατασκευή",
+        "inspection": "Σε επιθεώρηση",
+        "ready": "Έτοιμο",
+        "maintenance": "Υπό συντήρηση"
+      }
+    },
     "deleteConfirmation": {
       "title": "Επιβεβαίωση Διαγραφής",
       "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {count} κτίριο/α;",
@@ -341,6 +370,123 @@
       "propertyActions": "Ενέργειες Ακινήτου",
       "favorite": "Προσθήκη στα αγαπημένα",
       "moreDetails": "Περισσότερες λεπτομέρειες"
+    }
+  },
+  "fields": {
+    "areas": {
+      "sectionTitle": "Εμβαδά",
+      "gross": "Μικτό",
+      "net": "Καθαρό",
+      "balcony": "Μπαλκόνι",
+      "terrace": "Βεράντα",
+      "garden": "Κήπος"
+    },
+    "layout": {
+      "sectionTitle": "Διάταξη",
+      "wc": "WC"
+    }
+  },
+  "entityLinks": {
+    "save": "Αποθήκευση",
+    "saving": "Αποθήκευση...",
+    "error": "Αποτυχία ενημέρωσης σύνδεσης",
+    "building": {
+      "title": "Σύνδεση κτιρίου",
+      "label": "Κτίριο",
+      "placeholder": "Επιλέξτε κτίριο",
+      "noSelection": "Δεν έχει επιλεγεί κτίριο",
+      "loading": "Φόρτωση κτιρίων...",
+      "success": "Η σύνδεση κτιρίου ενημερώθηκε",
+      "currentLabel": "Τρέχον κτίριο",
+      "noFloorHint": "Επιλέξτε πρώτα κτίριο"
+    }
+  },
+  "orientation": {
+    "sectionTitle": "Προσανατολισμός",
+    "short": {
+      "north": "Β",
+      "northeast": "ΒΑ",
+      "east": "Α",
+      "southeast": "ΝΑ",
+      "south": "Ν",
+      "southwest": "ΝΔ",
+      "west": "Δ",
+      "northwest": "ΒΔ"
+    }
+  },
+  "condition": {
+    "sectionTitle": "Κατάσταση",
+    "new": "Νέο",
+    "excellent": "Άριστη",
+    "good": "Καλή",
+    "needs-renovation": "Χρήζει ανακαίνισης"
+  },
+  "energy": {
+    "class": "Ενεργειακή κλάση"
+  },
+  "systems": {
+    "sectionTitle": "Συστήματα",
+    "heating": {
+      "label": "Θέρμανση",
+      "central": "Κεντρική",
+      "autonomous": "Αυτόνομη",
+      "heat-pump": "Αντλία θερμότητας",
+      "solar": "Ηλιακή",
+      "none": "Καμία"
+    },
+    "cooling": {
+      "label": "Ψύξη",
+      "central-air": "Κεντρικός αέρας",
+      "split-units": "Split units",
+      "fan-coil": "Fan coil",
+      "none": "Καμία"
+    }
+  },
+  "finishes": {
+    "sectionTitle": "Τελειώματα",
+    "flooring": {
+      "label": "Δάπεδα",
+      "tiles": "Πλακάκι",
+      "wood": "Ξύλο",
+      "laminate": "Λαμινέιτ",
+      "marble": "Μάρμαρο",
+      "carpet": "Μοκέτα"
+    },
+    "frames": {
+      "label": "Κουφώματα",
+      "aluminum": "Αλουμινίου",
+      "pvc": "PVC",
+      "wood": "Ξύλινα"
+    },
+    "glazing": {
+      "label": "Υαλοπίνακες",
+      "single": "Μονοί",
+      "double": "Διπλοί",
+      "triple": "Τριπλοί",
+      "energy": "Ενεργειακοί"
+    }
+  },
+  "features": {
+    "sectionTitle": "Χαρακτηριστικά",
+    "interior": {
+      "label": "Εσωτερικά",
+      "fireplace": "Τζάκι",
+      "jacuzzi": "Τζακούζι",
+      "sauna": "Σάουνα",
+      "smart-home": "Smart home",
+      "solar-panels": "Ηλιακά πάνελ",
+      "underfloor-heating": "Ενδοδαπέδια θέρμανση",
+      "air-conditioning": "Κλιματισμός",
+      "alarm-system": "Συναγερμός"
+    },
+    "security": {
+      "label": "Ασφάλεια",
+      "alarm": "Συναγερμός",
+      "security-door": "Πόρτα ασφαλείας",
+      "cctv": "CCTV",
+      "access-control": "Έλεγχος πρόσβασης",
+      "intercom": "Θυροτηλέφωνο",
+      "motion-sensors": "Αισθητήρες κίνησης"
     }
   },
   "operationalStatus": {

@@ -21,7 +21,7 @@
 
 import { useState, useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { createProject } from '@/services/projects-client.service';
+import { createProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
   ProjectStatus,
@@ -151,7 +151,8 @@ export function useProjectForm({ onProjectAdded, onOpenChange }: UseProjectFormP
     setLoading(true);
     try {
       // 🏢 ENTERPRISE: CREATE-ONLY — edit moved to inline GeneralProjectTab
-      const result = await createProject({
+      const result = await createProjectWithPolicy({
+        payload: {
         name: formData.name,
         title: formData.title || formData.name,
         status: formData.status,
@@ -161,7 +162,8 @@ export function useProjectForm({ onProjectAdded, onOpenChange }: UseProjectFormP
         city: formData.city,
         description: formData.description,
         // 🏢 ENTERPRISE: Include addresses if any (ADR-167)
-        ...(formData.addresses.length > 0 && { addresses: formData.addresses }),
+          ...(formData.addresses.length > 0 && { addresses: formData.addresses }),
+        },
       });
 
       if (result.success) {

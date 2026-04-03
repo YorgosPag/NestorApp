@@ -1,11 +1,16 @@
 
 'use client';
 
+import { useCallback, useMemo } from 'react';
 import { usePropertyState } from './usePropertyState';
 import { usePropertyEditor } from './usePropertyEditor';
 import { usePropertyFilters } from './usePropertyFilters';
 import { usePolygonHandlers } from './usePolygonHandlers';
 import type { FilterState, PropertyStats } from '@/types/property-viewer';
+import type { Property } from '@/types/property-viewer';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * 🚨 ENTERPRISE MIGRATION NOTICE
@@ -114,6 +119,9 @@ export const DEFAULT_STATS: PropertyStats = {
  * @enterprise-ready true
  */
 export function usePropertyViewer() {
+  const { t } = useTranslation('properties');
+  const { success, error: notifyError } = useNotifications();
+
   // 1. Core State Management (properties, selection, history)
   const {
     properties,
@@ -162,7 +170,6 @@ export function usePropertyViewer() {
     handleDuplicate,
     handleDelete,
     handlePolygonSelect,
-    handleUpdateProperty,
   } = usePolygonHandlers({
     properties,
     setProperties,
@@ -173,6 +180,47 @@ export function usePropertyViewer() {
     setIsConnecting,
     setFirstConnectionPoint,
   });
+
+  const selectedProperty = useMemo(
+    () => (selectedPropertyIds.length === 1
+      ? properties.find((property) => property.id === selectedPropertyIds[0]) ?? null
+      : null),
+    [properties, selectedPropertyIds],
+  );
+  const {
+    checking: checkingPropertyMutation,
+    runExistingPropertyUpdate,
+    ImpactDialog: PropertyMutationImpactDialog,
+  } = useGuardedPropertyMutation(selectedProperty);
+
+  const handleGuardedUpdateProperty = useCallback(async (propertyId: string, updates: Partial<Property>) => {
+    const currentProperty = properties.find((property) => property.id === propertyId);
+    if (!currentProperty) {
+      throw new Error(`Property ${propertyId} not found.`);
+    }
+
+    if (!selectedProperty || selectedProperty.id !== propertyId) {
+      notifyError(t('viewer.messages.selectSinglePropertyToEdit', {
+        defaultValue: 'Select the property you want to edit before applying changes.',
+      }));
+      return;
+    }
+
+    const completed = await runExistingPropertyUpdate(currentProperty, updates, async () => {
+      const description = `Updated details for property ${propertyId}`;
+      setProperties(
+        properties.map((property) => (property.id === propertyId ? { ...property, ...updates } : property)),
+        description,
+      );
+      success(t('viewer.messages.updateSuccess', {
+        defaultValue: 'Property changes were saved.',
+      }));
+    });
+
+    if (!completed) {
+      return;
+    }
+  }, [notifyError, properties, runExistingPropertyUpdate, selectedProperty, setProperties, success, t]);
 
   // Εξασφαλίζουμε ότι οι τιμές που επιστρέφονται είναι πάντα προβλέψιμες και δεν είναι ποτέ null/undefined.
   return {
@@ -235,6 +283,8 @@ export function usePropertyViewer() {
     handleDuplicate,
     handleDelete,
     handlePolygonSelect,
-    handleUpdateProperty,
+    handleUpdateProperty: handleGuardedUpdateProperty,
+    checkingPropertyMutation,
+    PropertyMutationImpactDialog,
   };
 }

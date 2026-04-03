@@ -1323,6 +1323,12 @@
       "description": "Add bank account details."
     },
     "accountsTitle": "Bank Accounts",
+    "editImpact": {
+      "title": "Confirm bank account changes",
+      "confirm": "Save changes",
+      "makePrimary": "This account will become the primary account and will be used in future payments and documents that read live banking data.",
+      "updateSensitive": "Changes to IBAN, bank, holder, or primary-account status affect future exports, payments, and documents that use live banking data."
+    },
     "editAccount": {
       "title": "Edit Account",
       "description": "Modify the bank account details."
@@ -1494,6 +1500,10 @@
       "employmentRecords": {
         "label": "Employment records / stamps",
         "remediation": "These fields affect EFKA/IKA historical records. Correct the related records first or use a controlled correction process."
+      },
+      "contactRelationships": {
+        "label": "Contact relationships",
+        "remediation": "Review organizational and relationship views where this service appears before finalizing the change."
       }
     },
     "affectedDomains": {
@@ -1516,6 +1526,10 @@
       "documentsAndIdentifiers": {
         "label": "Documents and identifiers",
         "description": "Changing numbers and issuing authorities affects future documents, identity checks, and administrative workflows."
+      },
+      "relationshipViews": {
+        "label": "Relationship views and org structure",
+        "description": "The new values will appear in relationship cards, organizational trees, and selectors."
       }
     },
     "fields": {
@@ -1531,7 +1545,14 @@
       "documentIssuer": "Issuing Authority",
       "documentNumber": "Document Number",
       "documentIssueDate": "Issue Date",
-      "documentExpiryDate": "Expiry Date"
+      "documentExpiryDate": "Expiry Date",
+      "serviceName": "Service Name",
+      "shortName": "Short Name",
+      "serviceType": "Service Type",
+      "serviceCode": "Service Code",
+      "category": "Service Category",
+      "supervisionMinistry": "Supervising Ministry",
+      "legalStatus": "Legal Status"
     },
     "actions": {
       "cancel": "Cancel",
@@ -1540,3 +1561,5 @@
     }
   }
 }
+
+

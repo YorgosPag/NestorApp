@@ -65,6 +65,9 @@ export function usePropertiesViewerState() {
     filteredProperties,
     isLoading,
     forceDataRefresh,
+    handleUpdateProperty,
+    checkingPropertyMutation,
+    PropertyMutationImpactDialog,
   } = usePropertyViewer();
 
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
@@ -344,6 +347,9 @@ export function usePropertiesViewerState() {
     handlePolygonUpdated,
     handleDuplicate,
     handleDelete,
+    handleUpdateProperty,
+    checkingPropertyMutation,
+    PropertyMutationImpactDialog,
     forceDataRefresh,
   };
 }

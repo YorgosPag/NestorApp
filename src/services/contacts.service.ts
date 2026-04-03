@@ -33,6 +33,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import { computeEntityDiff, CONTACT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
+import { cleanupOrphanedPhotos } from '@/utils/contactForm/photo-cleanup';
 
 // Re-export read operations for backward compatibility
 export {
@@ -220,6 +221,29 @@ export class ContactsService {
   }
 
   // ==== UPDATE FROM FORM ====
+
+  static async updateExistingContactFromForm(
+    existingContact: Contact,
+    formData: Partial<ContactFormData>,
+  ): Promise<void> {
+    const contactId = existingContact.id;
+    if (!contactId) {
+      throw new Error('Contact not found');
+    }
+
+    const enterpriseData = EnterpriseContactSaver.updateExistingContact(existingContact, formData);
+    const photoData: {
+      photoURL?: string;
+      logoURL?: string;
+      multiplePhotoURLs?: string[];
+    } = {
+      photoURL: typeof enterpriseData.photoURL === 'string' ? enterpriseData.photoURL : undefined,
+      logoURL: typeof enterpriseData.logoURL === 'string' ? enterpriseData.logoURL : undefined,
+      multiplePhotoURLs: Array.isArray(enterpriseData.multiplePhotoURLs) ? enterpriseData.multiplePhotoURLs : undefined,
+    };
+    await cleanupOrphanedPhotos(existingContact, photoData);
+    await this.updateContactFromForm(contactId, formData);
+  }
 
   static async updateContactFromForm(id: string, formData: Partial<ContactFormData>): Promise<void> {
     const existingContact = await this.getContact(id);

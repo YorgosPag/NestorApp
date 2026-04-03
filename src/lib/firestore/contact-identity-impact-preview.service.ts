@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
   type ContactIdentityAffectedDomainId,
   type ContactIdentityImpactDependency,
@@ -89,7 +90,7 @@ export async function previewContactIdentityImpact(
     const [projectLinksSnapshot, attendanceEventsSnapshot, employmentRecordsSnapshot] = await Promise.all([
       db.collection(COLLECTIONS.CONTACT_LINKS)
         .where('sourceContactId', '==', contactId)
-        .where('targetEntityType', '==', 'project')
+        .where('targetEntityType', '==', ENTITY_TYPES.PROJECT)
         .where('status', '==', 'active')
         .select()
         .get(),

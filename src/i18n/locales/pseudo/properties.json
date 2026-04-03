@@ -54,6 +54,145 @@
     "cancel": "[Ćάńćέł_]",
     "delete": "[Ðέłέţέ_]"
   },
+  "dialog": {
+    "addUnit": {
+      "fields": {
+        "status": "[Øþëřåţîöñåľ šţåţûš_]"
+      },
+      "placeholders": {
+        "status": "[Šëľëçţ..._]"
+      },
+      "statusOptions": {
+        "draft": "[Ðřåƒţ_]",
+        "under-construction": "[Ûñðëř çöñšţřûçţîöñ_]",
+        "inspection": "[Īñšþëçţîöñ_]",
+        "ready": "[Řëåðÿ_]",
+        "maintenance": "[Måîñţëñåñçë_]"
+      }
+    },
+    "deleteConfirmation": {
+      "title": "[Ćόńƒīŕɱ Ðέłέţīόń_]",
+      "message": "[Άŕέ yόū ŝūŕέ yόū шάńţ ţό ðέłέţέ {count} βūīłðīńģ(ŝ)?_]",
+      "warning": "[Ţĥīŝ άćţīόń ćάńńόţ βέ ūńðόńέ._]"
+    },
+    "cancel": "[Ćάńćέł_]",
+    "delete": "[Ðέłέţέ_]"
+  },
+  "card": {
+    "stats": {
+      "bedrooms": "[?д?ццът??т?_]",
+      "bathrooms": "[?с?цц?ъ_]"
+    }
+  },
+  "fields": {
+    "layout": {
+      "sectionTitle": "[?ц?тънд?_]",
+      "wc": "[??_]"
+    }
+  },
+  "orientation": {
+    "sectionTitle": "[?сц?съцтццц?_]",
+    "short": {
+      "north": "[?_]",
+      "northeast": "[??_]",
+      "east": "[?_]",
+      "southeast": "[??_]",
+      "south": "[?_]",
+      "southwest": "[??_]",
+      "west": "[?_]",
+      "northwest": "[??_]"
+    }
+  },
+  "condition": {
+    "sectionTitle": "[?ъъ?ъсъъъ?_]",
+    "new": "[?тц_]",
+    "excellent": "[ъсцъ?цт?_]",
+    "good": "[ъъъд?_]",
+    "needs-renovation": "[?съст? ?тцъъъцц?с?_]"
+  },
+  "energy": {
+    "class": "[?цтсътцъъ ?ъъсъ_]"
+  },
+  "systems": {
+    "sectionTitle": "[?эсътцтъ?_]",
+    "heating": {
+      "label": "[?тсцъцэт?_]",
+      "central": "[?тцътцъц?_]",
+      "autonomous": "[ъэътццц?_]",
+      "heat-pump": "[ъцтъъ?ъ ?т?цъъътъ_]",
+      "solar": "[?ццътъ?_]",
+      "none": "[?ццц?_]"
+    },
+    "cooling": {
+      "label": "[?чиц?_]",
+      "central-air": "[?тцътцъцъ ът?ъ?_]",
+      "split-units": "[?ъцц?т эцц??ъ_]",
+      "fan-coil": "[?ъц-?цц?_]",
+      "none": "[?ццц?_]"
+    }
+  },
+  "finishes": {
+    "sectionTitle": "[?тцтццсъът?_]",
+    "flooring": {
+      "label": "[?ъът?тъ_]",
+      "tiles": "[?цъъъъъ?_]",
+      "wood": "[нчцц?_]",
+      "laminate": "[?ъццццт?_]",
+      "marble": "[?ъс?ъсц_]",
+      "carpet": "[?ц?тъъ_]"
+    },
+    "frames": {
+      "label": "[?цэ?щ?ъът?_]",
+      "aluminum": "[ъцчэцццц?_]",
+      "pvc": "[???_]",
+      "wood": "[нчццццъ_]"
+    },
+    "glazing": {
+      "label": "[?ъццъ?ц?цъ?_]",
+      "single": "[?цццц_]",
+      "double": "[?ц?ццц_]",
+      "triple": "[?сц?ццц_]",
+      "energy": "[?цтсътцс?ъ_]"
+    }
+  },
+  "features": {
+    "sectionTitle": "[?ъъсъъ?тътъэсъъъ_]",
+    "interior": {
+      "label": "[?сш?ттсц?ъ_]",
+      "fireplace": "[?дъъ?_]",
+      "jacuzzi": "[?ъцъ??ц_]",
+      "sauna": "[?ъэццъ_]",
+      "smart-home": "[?цъсс? ?ццт_]",
+      "solar-panels": "[?ццсъ?? ?ъцт?_]",
+      "underfloor-heating": "[?ц?ц?ъът?цъ ?тсцъцсц?_]",
+      "air-conditioning": "[?цццътсэцс?_]",
+      "alarm-system": "[?эцъютсцс?_]"
+    },
+    "security": {
+      "label": "[ъс?ъъцтцъ_]",
+      "alarm": "[?эцъютсцс?_]",
+      "security-door": "[?цс?ъ ?ъ?ъцтцъ_]",
+      "cctv": "[????_]",
+      "access-control": "[?цтт?чцс ?с?сцьъс?_]",
+      "intercom": "[?эссстццт?цц?_]",
+      "motion-sensors": "[ъцэц?дс?т? ?ццдзс?_]"
+    }
+  },
+  "entityLinks": {
+    "save": "[ŠåVë_]",
+    "saving": "[ŠåVîñĝ..._]",
+    "error": "[Fåîľëð ţö ûþðåţë ľîñķ_]",
+    "building": {
+      "title": "[ßûîľðîñĝ ľîñķ_]",
+      "label": "[ßûîľðîñĝ_]",
+      "placeholder": "[Šëľëçţ βûîľðîñĝ_]",
+      "noSelection": "[Ñö βûîľðîñĝ šëľëçţëð_]",
+      "loading": "[Ŀöåðîñĝ βûîľðîñĝš..._]",
+      "success": "[ßûîľðîñĝ ľîñķ ûþðåţëð_]",
+      "currentLabel": "[Çûřřëñţ βûîľðîñĝ_]",
+      "noFloorHint": "[Šëľëçţ å βûîľðîñĝ ƒîřšţ_]"
+    }
+  },
   "units": {
     "types": {
       "studio": "[Ŝţūðīό_]",

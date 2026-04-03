@@ -81,6 +81,12 @@
     "inspectionRequired": "Inspection Required",
     "documentationPending": "Documentation Pending"
   },
+  "commercialStatus": {
+    "unavailable": "Unavailable",
+    "for-sale": "For sale",
+    "for-rent": "For rent",
+    "for-sale-and-rent": "For sale and rent"
+  },
   "intent": {
     "sale": "For Sale",
     "rental": "For Rental",
@@ -137,6 +143,29 @@
     }
   },
   "dialog": {
+    "addUnit": {
+      "fields": {
+        "status": "Operational status",
+        "commercialStatus": "Commercial status"
+      },
+      "placeholders": {
+        "status": "Select...",
+        "commercialStatus": "Select..."
+      },
+      "commercialStatusOptions": {
+        "unavailable": "Unavailable",
+        "for-sale": "For sale",
+        "for-rent": "For rent",
+        "for-sale-and-rent": "For sale and rent"
+      },
+      "statusOptions": {
+        "draft": "Draft",
+        "under-construction": "Under construction",
+        "inspection": "Inspection",
+        "ready": "Ready",
+        "maintenance": "Maintenance"
+      }
+    },
     "deleteConfirmation": {
       "title": "Confirm Deletion",
       "message": "Are you sure you want to delete {count} building(s)?",
@@ -341,6 +370,123 @@
       "propertyActions": "Property Actions",
       "favorite": "Add to favorites",
       "moreDetails": "More details"
+    }
+  },
+  "fields": {
+    "areas": {
+      "sectionTitle": "Areas",
+      "gross": "Gross",
+      "net": "Net",
+      "balcony": "Balcony",
+      "terrace": "Terrace",
+      "garden": "Garden"
+    },
+    "layout": {
+      "sectionTitle": "Layout",
+      "wc": "WC"
+    }
+  },
+  "entityLinks": {
+    "save": "Save",
+    "saving": "Saving...",
+    "error": "Failed to update link",
+    "building": {
+      "title": "Building link",
+      "label": "Building",
+      "placeholder": "Select building",
+      "noSelection": "No building selected",
+      "loading": "Loading buildings...",
+      "success": "Building link updated",
+      "currentLabel": "Current building",
+      "noFloorHint": "Select a building first"
+    }
+  },
+  "orientation": {
+    "sectionTitle": "Orientation",
+    "short": {
+      "north": "N",
+      "northeast": "NE",
+      "east": "E",
+      "southeast": "SE",
+      "south": "S",
+      "southwest": "SW",
+      "west": "W",
+      "northwest": "NW"
+    }
+  },
+  "condition": {
+    "sectionTitle": "Condition",
+    "new": "New",
+    "excellent": "Excellent",
+    "good": "Good",
+    "needs-renovation": "Needs renovation"
+  },
+  "energy": {
+    "class": "Energy class"
+  },
+  "systems": {
+    "sectionTitle": "Systems",
+    "heating": {
+      "label": "Heating",
+      "central": "Central",
+      "autonomous": "Autonomous",
+      "heat-pump": "Heat pump",
+      "solar": "Solar",
+      "none": "None"
+    },
+    "cooling": {
+      "label": "Cooling",
+      "central-air": "Central air",
+      "split-units": "Split units",
+      "fan-coil": "Fan coil",
+      "none": "None"
+    }
+  },
+  "finishes": {
+    "sectionTitle": "Finishes",
+    "flooring": {
+      "label": "Flooring",
+      "tiles": "Tiles",
+      "wood": "Wood",
+      "laminate": "Laminate",
+      "marble": "Marble",
+      "carpet": "Carpet"
+    },
+    "frames": {
+      "label": "Frames",
+      "aluminum": "Aluminum",
+      "pvc": "PVC",
+      "wood": "Wood"
+    },
+    "glazing": {
+      "label": "Glazing",
+      "single": "Single",
+      "double": "Double",
+      "triple": "Triple",
+      "energy": "Energy-efficient"
+    }
+  },
+  "features": {
+    "sectionTitle": "Features",
+    "interior": {
+      "label": "Interior",
+      "fireplace": "Fireplace",
+      "jacuzzi": "Jacuzzi",
+      "sauna": "Sauna",
+      "smart-home": "Smart home",
+      "solar-panels": "Solar panels",
+      "underfloor-heating": "Underfloor heating",
+      "air-conditioning": "Air conditioning",
+      "alarm-system": "Alarm system"
+    },
+    "security": {
+      "label": "Security",
+      "alarm": "Alarm",
+      "security-door": "Security door",
+      "cctv": "CCTV",
+      "access-control": "Access control",
+      "intercom": "Intercom",
+      "motion-sensors": "Motion sensors"
     }
   },
   "operationalStatus": {

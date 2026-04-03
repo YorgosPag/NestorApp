@@ -329,12 +329,11 @@ export async function updatePropertyCoverage(
     hasDocuments: boolean;
   }>
 ): Promise<{ success: boolean }> {
-  const propertyRef = doc(db, PROPERTIES_COLLECTION, propertyId);
-  await updateDoc(propertyRef, {
+  await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), {
     'propertyCoverage.hasPhotos': coverage.hasPhotos,
     'propertyCoverage.hasFloorplans': coverage.hasFloorplans,
     'propertyCoverage.hasDocuments': coverage.hasDocuments,
-    'propertyCoverage.updatedAt': serverTimestamp()
+    'propertyCoverage.updatedAt': new Date().toISOString(),
   });
   return { success: true };
 }

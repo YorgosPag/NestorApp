@@ -227,7 +227,6 @@
     "contacts": "Contacts",
     "projects": "Projects",
     "buildings": "Buildings",
-    "properties": "Properties",
     "storages": "Storages",
     "details": "Details"
   },
@@ -400,7 +399,7 @@
       "depProperties": "Properties (ownerships)",
       "depPaymentPlans": "Payment plans",
       "count": "{count, plural, one {# record} other {# records}}",
-    "unavailableCount": "Unavailable count",
+      "unavailableCount": "Unavailable count",
       "warning": "{count} records will be automatically updated across all projects.",
       "confirm": "Save & Update",
       "cancel": "Cancel"
@@ -456,7 +455,10 @@
         "legalForm": "Legal Form",
         "tradeName": "Trade Name",
         "gemiStatus": "GEMI Status"
-      }
+      },
+      "unavailableTitle": "Company identity change blocked",
+      "unavailableBody": "The impact preview for company identity fields could not complete reliably. Saving was blocked to protect linked records. Please try again or review the system state later.",
+      "understood": "Understood"
     },
     "communicationImpact": {
       "title": "Communication Change Impact",
