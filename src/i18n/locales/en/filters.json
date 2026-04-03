@@ -1,6 +1,7 @@
 {
   "title": "Filters",
   "propertiesTitle": "Property Filters",
+  "unitsTitle": "Unit Filters",
   "aiInboxTitle": "AI Inbox Filters",
   "operatorInboxTitle": "Operator Inbox Filters",
   "intent": "Intent",

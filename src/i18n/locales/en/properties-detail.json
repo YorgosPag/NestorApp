@@ -8,7 +8,8 @@
       "floor": "Floor",
       "area": "Area",
       "price": "Price",
-      "type": "Type"
+      "type": "Type",
+      "bedrooms": "Bedrooms"
     },
     "ariaLabel": "Property card {name}",
     "aria": {

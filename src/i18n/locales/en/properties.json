@@ -1,4 +1,7 @@
 {
+  "list": {
+    "title": "Properties"
+  },
   "header": {
     "title": "Property Management",
     "subtitle": "Manage and track project properties",
