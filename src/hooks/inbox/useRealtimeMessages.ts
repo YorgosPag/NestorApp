@@ -20,15 +20,14 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
-import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { MessageListItem } from './useInboxApi';
 import type { MessageDirection, DeliveryStatus } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
 import type { SenderType } from '@/config/domain-constants';
-import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getString, getObject } from '@/lib/firestore/field-extractors';
 import { fieldToISO } from '@/lib/date-local';
+import { dispatchRealtimeMessageNotificationWithPolicy } from '@/services/notification/notification-mutation-gateway';
 
 const logger = createModuleLogger('useRealtimeMessages');
 
@@ -156,7 +155,7 @@ export function useRealtimeMessages(
 
           // Dispatch notifications for new inbound messages (fire-and-forget)
           for (const message of newInboundMessages) {
-            apiClient.post(API_ROUTES.NOTIFICATIONS.DISPATCH, {
+            dispatchRealtimeMessageNotificationWithPolicy({
               messageId: message.id,
               conversationId: message.conversationId,
               recipientId: user.uid,

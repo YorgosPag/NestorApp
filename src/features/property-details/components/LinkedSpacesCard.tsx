@@ -36,6 +36,8 @@ import { API_ROUTES, ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES, SELECT_CLEAR
 import type { LinkedSpace } from '@/types/property';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { updatePropertyLinkedSpacesWithPolicy } from '@/services/property/property-mutation-gateway';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import '@/lib/design-system';
 const logger = createModuleLogger('LinkedSpacesCard');
 
@@ -97,6 +99,7 @@ export function LinkedSpacesCard({
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   const typography = useTypography();
+  const { checking: previewChecking, runPreviewedMutation, ImpactDialog } = useGuardedPropertyMutation({ id: propertyId });
 
   // 🏢 ENTERPRISE: State management - Available options
   const [parkingOptions, setParkingOptions] = useState<ParkingOption[]>([]);
@@ -273,13 +276,23 @@ export function LinkedSpacesCard({
     if (!propertyId) return;
     setSaving(true);
     try {
-      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), {
-        linkedSpaces: newDraft,
+      const completed = await runPreviewedMutation({ linkedSpaces: newDraft }, async () => {
+        await updatePropertyLinkedSpacesWithPolicy({
+          propertyId,
+          currentProperty: {
+            buildingId,
+          },
+          linkedSpaces: newDraft,
+        });
+        logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);
+        setSaveStatus('success');
+        onLinkedSpacesChanged?.(newDraft);
+        setTimeout(() => setSaveStatus('idle'), 3000);
       });
-      logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);
-      setSaveStatus('success');
-      onLinkedSpacesChanged?.(newDraft);
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      if (!completed) {
+        setDraftLinkedSpaces(rollback);
+        return;
+      }
     } catch (error) {
       logger.error('[LinkedSpacesCard] Save failed — rolling back', { error });
       // ROLLBACK: restore previous state
@@ -289,7 +302,7 @@ export function LinkedSpacesCard({
     } finally {
       setSaving(false);
     }
-  }, [propertyId, onLinkedSpacesChanged]);
+  }, [buildingId, onLinkedSpacesChanged, propertyId, runPreviewedMutation]);
 
   // 🏢 ENTERPRISE: Add parking — optimistic update + background save
   const handleParkingSelected = useCallback((parkingId: string) => {
@@ -545,7 +558,7 @@ export function LinkedSpacesCard({
             {/* Auto-save status indicators (no manual save button needed) */}
             {(saving || saveStatus !== 'idle') && (
               <footer className={`flex items-center ${spacing.gap.sm} ${spacing.padding.top.sm}`}>
-                {saving && (
+                {(saving || previewChecking) && (
                   <span className={cn(`flex items-center ${spacing.gap.sm} text-sm`, colors.text.muted)}>
                     <Spinner size="small" />
                     {t('linkedSpaces.saving', { defaultValue: 'Αποθήκευση...' })}
@@ -575,6 +588,7 @@ export function LinkedSpacesCard({
           </p>
         )}
       </CardContent>
+      {ImpactDialog}
     </Card>
   );
 }

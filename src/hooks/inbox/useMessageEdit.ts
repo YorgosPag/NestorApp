@@ -16,7 +16,7 @@
 import { useState, useCallback } from 'react';
 import type { MessageListItem } from './useInboxApi';
 import { createModuleLogger } from '@/lib/telemetry';
-import { API_ROUTES } from '@/config/domain-constants';
+import { editMessageWithPolicy } from '@/services/messages/message-mutation-gateway';
 
 const logger = createModuleLogger('useMessageEdit');
 
@@ -126,21 +126,10 @@ export function useMessageEdit(): UseMessageEditReturn {
     setIsSaving(true);
 
     try {
-      const response = await fetch(API_ROUTES.MESSAGES.EDIT, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messageId: editingMessage.id,
-          newText: textToSave,
-        }),
+      await editMessageWithPolicy({
+        messageId: editingMessage.id,
+        newText: textToSave,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return { success: false, error: error.message || 'Failed to edit message' };
-      }
 
       setEditingMessage(null);
       return { success: true };

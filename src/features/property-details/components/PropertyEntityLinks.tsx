@@ -16,7 +16,7 @@
 import React, { useCallback } from 'react';
 import { Building } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
-import { updatePropertyLink, getBuildingsList } from '@/services/properties.service';
+import { getBuildingsList } from '@/services/properties.service';
 import { useTranslation } from 'react-i18next';
 import { useEntityLink } from '@/hooks/useEntityLink';
 
@@ -28,6 +28,7 @@ interface PropertyEntityLinksProps {
   currentProjectId?: string;
   currentBuildingId?: string;
   isEditing: boolean;
+  onBuildingLinkChange?: (newId: string | null) => Promise<{ success: boolean; error?: string }>;
   onLinkChanged?: () => void;
 }
 
@@ -35,6 +36,7 @@ export function PropertyEntityLinks({
   propertyId,
   currentBuildingId,
   isEditing,
+  onBuildingLinkChange,
   onLinkChanged,
 }: PropertyEntityLinksProps) {
   const { t } = useTranslation('properties');
@@ -42,10 +44,17 @@ export function PropertyEntityLinks({
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 
   const saveBuilding = useCallback(async (newId: string | null) => {
-    const result = await updatePropertyLink(propertyId, { buildingId: newId });
+    if (!onBuildingLinkChange) {
+      return {
+        success: false,
+        error: t('entityLinks.error'),
+      };
+    }
+
+    const result = await onBuildingLinkChange(newId);
     if (result.success && onLinkChanged) onLinkChanged();
     return result;
-  }, [propertyId, onLinkChanged]);
+  }, [onBuildingLinkChange, onLinkChanged, t]);
 
   // ADR-200: Centralized entity linking via useEntityLink
   const buildingLink = useEntityLink({

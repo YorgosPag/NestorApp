@@ -23,8 +23,8 @@ import { PropertyFieldsBlock } from './components/PropertyFieldsBlock';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { resolveAttachments } from './utils/attachments';
-import { makeSafeUpdate } from './utils/safeUpdate';
 import { createModuleLogger } from '@/lib/telemetry';
+import { updatePropertyBuildingLinkWithPolicy } from '@/services/property/property-mutation-gateway';
 const logger = createModuleLogger('PropertyDetailsContent');
 
 import { PropertyEntityLinks } from './components/PropertyEntityLinks';
@@ -39,6 +39,9 @@ import { MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import '@/lib/design-system';
 
 export function PropertyDetailsContent({
@@ -46,7 +49,6 @@ export function PropertyDetailsContent({
   unit, // Support for UniversalTabsRenderer compatibility
   data, // Support for UniversalTabsRenderer compatibility
   onSelectFloor,
-  onUpdateProperty,
   isReadOnly = false,
   // 🏢 ENTERPRISE: Edit mode props from parent (UnitsSidebar) - Pattern A
   isEditMode: externalEditMode,
@@ -75,6 +77,7 @@ export function PropertyDetailsContent({
   const spacing = useSpacingTokens();
   const iconSizes = useIconSizes();
   const typography = useTypography();
+  const { error: notifyError } = useNotifications();
 
   // 🏢 ENTERPRISE: Edit mode - prefer external props (from UnitsSidebar), fallback to local state
   const [localEditMode, setLocalEditMode] = useState(false);
@@ -120,6 +123,12 @@ export function PropertyDetailsContent({
     return null;
   }
 
+  const {
+    runExistingPropertyUpdate,
+    runPreviewedMutation,
+    ImpactDialog,
+  } = useGuardedPropertyMutation(resolvedProperty);
+
   // Type guard για buyerMismatch property
   const hasPropertyWithMismatch = (prop: unknown): prop is ExtendedPropertyDetails & { buyerMismatch: boolean } => {
     return typeof prop === 'object' && prop !== null && 'buyerMismatch' in prop;
@@ -141,18 +150,66 @@ export function PropertyDetailsContent({
   const { storage: attachedStorage, parking: attachedParking } = resolveAttachments(resolvedProperty);
 
   // safe update (ίδια συμπεριφορά: no-op όταν read-only)
-  const baseSafeUpdate = makeSafeUpdate(isReadOnly, onUpdateProperty || (() => {}));
+  const baseSafeUpdate = useCallback(
+    async (_propertyId: string, updates: Partial<Property>) => {
+      if (isReadOnly) {
+        return;
+      }
+
+      await runExistingPropertyUpdate(resolvedProperty, updates);
+    },
+    [isReadOnly, resolvedProperty, runExistingPropertyUpdate]
+  );
 
   // ADR-236: Intercept updates to track type changes locally for instant UI response
   const safeOnUpdateProperty = useCallback(
-    (id: string, updates: Partial<Property>) => {
+    async (id: string, updates: Partial<Property>) => {
       if (updates.type && typeof updates.type === 'string') {
         setLocalType(updates.type);
       }
-      baseSafeUpdate(id, updates);
+      try {
+        await baseSafeUpdate(id, updates);
+      } catch (error) {
+        notifyError(translatePropertyMutationError(error, t));
+      }
     },
-    [baseSafeUpdate]
+    [baseSafeUpdate, notifyError, t]
   );
+
+  const handleBuildingLinkChange = useCallback(async (newBuildingId: string | null) => {
+    const nextBuildingId = newBuildingId ?? null;
+    const nextFloorId = nextBuildingId === (resolvedProperty.buildingId ?? null)
+      ? (resolvedProperty.floorId ?? null)
+      : null;
+
+    try {
+      const completed = await runPreviewedMutation(
+        {
+          buildingId: nextBuildingId,
+          floorId: nextFloorId,
+        },
+        async () => {
+          await updatePropertyBuildingLinkWithPolicy({
+            propertyId: resolvedProperty.id,
+            currentProperty: resolvedProperty,
+            buildingId: nextBuildingId,
+            floorId: nextFloorId,
+          });
+        },
+      );
+
+      return completed
+        ? { success: true }
+        : { success: false, error: t('entityLinks.error') };
+    } catch (error) {
+      const translatedError = translatePropertyMutationError(error, t);
+      notifyError(translatedError);
+      return {
+        success: false,
+        error: translatedError,
+      };
+    }
+  }, [notifyError, resolvedProperty, runPreviewedMutation, t]);
 
   // === RENDER: ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels ===
   // 🏢 ADR-258D: Read-only mode uses PropertyQuickView (shared SSoT with Γρήγορη Προβολή)
@@ -183,6 +240,7 @@ export function PropertyDetailsContent({
             propertyId={resolvedProperty?.id ?? ''}
             currentBuildingId={resolvedProperty?.buildingId}
             isEditing={isEditMode && !isSoldOrRented}
+            onBuildingLinkChange={handleBuildingLinkChange}
           />
           {/* Floor card — only for single-floor types */}
           {!showMultiFloorSelector && (
@@ -200,12 +258,12 @@ export function PropertyDetailsContent({
                   onChange={(v: string, payload?: FloorChangePayload) => {
                     if (safeOnUpdateProperty && resolvedProperty?.id) {
                       if (payload) {
-                        safeOnUpdateProperty(resolvedProperty.id, {
+                        void safeOnUpdateProperty(resolvedProperty.id, {
                           floor: payload.floor,
                           floorId: payload.floorId,
                         });
                       } else {
-                        safeOnUpdateProperty(resolvedProperty.id, { floor: 0, floorId: undefined });
+                        void safeOnUpdateProperty(resolvedProperty.id, { floor: 0, floorId: undefined });
                       }
                     }
                   }}
@@ -229,7 +287,7 @@ export function PropertyDetailsContent({
               onLevelsChange={(levels: PropertyLevel[]) => {
                 if (safeOnUpdateProperty && resolvedProperty?.id) {
                   const derived = deriveMultiLevelFields(levels);
-                  safeOnUpdateProperty(resolvedProperty.id, {
+                  void safeOnUpdateProperty(resolvedProperty.id, {
                     levels: derived.levels,
                     isMultiLevel: derived.isMultiLevel,
                     floor: derived.floor,
@@ -254,7 +312,6 @@ export function PropertyDetailsContent({
       {/* 🏢 ENTERPRISE: Property Fields Block (identity, location, layout, areas, etc) */}
       <PropertyFieldsBlock
         property={resolvedProperty}
-        onUpdateProperty={safeOnUpdateProperty}
         isReadOnly={isReadOnly}
         isEditMode={isEditMode}
         onExitEditMode={handleExitEditMode}
@@ -296,6 +353,7 @@ export function PropertyDetailsContent({
           <LimitedInfoNotice />
         </>
       )}
+      {ImpactDialog}
     </div>
   );
 }

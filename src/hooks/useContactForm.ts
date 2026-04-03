@@ -95,23 +95,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     attemptPendingSave,
     clearPendingSave,
     isPendingSave,
-    // 🔗 Name cascade confirmation (ADR-249 Safety)
-    nameCascadeDialog,
-    confirmNameCascade,
-    cancelNameCascade,
-    // 📍 Address impact confirmation (ADR-277 Safety)
-    addressImpactDialog,
-    confirmAddressImpact,
-    cancelAddressImpact,
-    // 🏢 Company identity confirmation (ADR-278 Safety)
-    companyIdentityDialog,
-    confirmCompanyIdentity,
-    cancelCompanyIdentity,
-    // 📧 Communication impact confirmation (ADR-280 Safety)
-    communicationImpactDialog,
-    confirmCommunicationImpact,
-    cancelCommunicationImpact,
-    individualIdentityImpactDialog,
+    guardDialogs,
   } = useContactSubmission({
     editContact,
     onContactAdded,
@@ -262,21 +246,6 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     // 🏢 Enterprise Layer 3: UI/UX Coordination
     getSubmissionState,
 
-    // 🔗 Name cascade confirmation (ADR-249 Safety)
-    nameCascadeDialog,
-    confirmNameCascade,
-    cancelNameCascade,
-    // 📍 Address impact confirmation (ADR-277 Safety)
-    addressImpactDialog,
-    confirmAddressImpact,
-    cancelAddressImpact,
-    // 🏢 Company identity confirmation (ADR-278 Safety)
-    companyIdentityDialog,
-    confirmCompanyIdentity,
-    cancelCompanyIdentity,
-    // 📧 Communication impact confirmation (ADR-280 Safety)
-    communicationImpactDialog,
-    confirmCommunicationImpact,
-    cancelCommunicationImpact,
+    guardDialogs,
   };
 }

@@ -12,10 +12,12 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { generateTempId } from '@/services/enterprise-id.service';
+import { savePurchaseOrderWithPolicy } from '@/services/procurement/procurement-mutation-gateway';
 import type {
   PurchaseOrder,
   POVatRate,
   CreatePurchaseOrderDTO,
+  UpdatePurchaseOrderDTO,
 } from '@/types/procurement';
 
 // ============================================================================
@@ -215,28 +217,15 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null) {
 
     try {
       const dto = buildDTO();
-      const url = poId
-        ? `/api/procurement/${poId}?action=update`
-        : '/api/procurement';
-      const method = poId ? 'PATCH' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dto),
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        const msg = json.error ?? 'Failed to save PO';
-        setSubmitError(msg);
-        return { success: false, error: msg };
-      }
+      const result = await savePurchaseOrderWithPolicy(
+        poId ? dto as UpdatePurchaseOrderDTO : dto,
+        poId,
+      );
 
       return {
         success: true,
-        id: json.data?.id,
-        poNumber: json.data?.poNumber,
+        id: result.id,
+        poNumber: result.poNumber,
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Network error';

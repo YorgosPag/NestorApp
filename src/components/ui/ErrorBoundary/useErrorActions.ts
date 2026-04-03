@@ -9,21 +9,14 @@
 import { useState, useCallback } from 'react';
 import { copyToClipboard } from '@/lib/share-utils';
 import { errorTracker } from '@/services/ErrorTracker';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import { notificationConfig } from '@/config/error-reporting';
 import { createModuleLogger } from '@/lib/telemetry';
 import { openEmailCompose } from './email-compose';
 import { getUserId, getErrorSeverity, formatErrorForEmail, goHome, goBack } from './error-helpers';
 import type { EmailProvider, EmailComposeOptions, ErrorActionState, ErrorActionHandlers } from './types';
+import { reportErrorNotificationWithPolicy } from '@/services/notification/notification-mutation-gateway';
 
 const logger = createModuleLogger('useErrorActions');
-
-interface ErrorReportApiResponse {
-  success: boolean;
-  notificationId?: string;
-  error?: string;
-}
 
 interface UseErrorActionsParams {
   error: Error;
@@ -93,10 +86,9 @@ export function useErrorActions(params: UseErrorActionsParams): ErrorActionState
         retryCount,
       };
 
-      const response = await apiClient.post(
-        API_ROUTES.NOTIFICATIONS.ERROR_REPORT,
+      const response = await reportErrorNotificationWithPolicy(
         notificationPayload
-      ) as ErrorReportApiResponse;
+      );
 
       if (response.success) {
         setEmailSent(true);

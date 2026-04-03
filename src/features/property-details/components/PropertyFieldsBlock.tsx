@@ -44,6 +44,9 @@ import { ReadOnlyCompactView } from './PropertyFieldsReadOnly';
 import { PropertyFieldsEditForm } from './PropertyFieldsEditForm';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
 import type { PropertyType } from '@/types/property';
+import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 const logger = createModuleLogger('PropertyFieldsBlock');
 
 // =============================================================================
@@ -52,7 +55,6 @@ const logger = createModuleLogger('PropertyFieldsBlock');
 
 interface PropertyFieldsBlockProps {
   property: Property;
-  onUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
   isReadOnly?: boolean;
   isEditMode?: boolean;
   onExitEditMode?: () => void;
@@ -72,7 +74,6 @@ interface PropertyFieldsBlockProps {
 
 export function PropertyFieldsBlock({
   property,
-  onUpdateProperty,
   isReadOnly = false,
   isEditMode = false,
   onExitEditMode,
@@ -89,6 +90,7 @@ export function PropertyFieldsBlock({
   const typography = useTypography();
 
   const { success, error: notifyError } = useNotifications();
+  const { runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(property);
   const [localEditing, setLocalEditing] = useState(false);
   const isEditing = isEditMode || localEditing;
   const [, setIsSaving] = useState(false);
@@ -306,7 +308,6 @@ export function PropertyFieldsBlock({
       if (isCreatingNewUnit) {
         // 🏢 ENTERPRISE: Create new unit via server-side API (Admin SDK)
         // Client-side setDoc blocked by Firestore rules — must use API endpoint
-        const { createProperty } = await import('@/services/properties.service');
         const propertyData = {
           ...updates,
           name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
@@ -317,7 +318,7 @@ export function PropertyFieldsBlock({
           floor: formData.floor,
           area: formData.areaGross,
         };
-        const result = await createProperty(propertyData);
+        const result = await createPropertyWithPolicy({ propertyData });
         if (!result.success) {
           throw new Error(result.error ?? 'Unit creation failed');
         }
@@ -327,32 +328,39 @@ export function PropertyFieldsBlock({
         success(t('save.createSuccess', { defaultValue: 'Η μονάδα δημιουργήθηκε επιτυχώς' }));
       } else {
         // Normal update
-        await onUpdateProperty(property.id, updates);
-        if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
-        success(t('save.success', 'Οι αλλαγές αποθηκεύτηκαν'));
+        await runExistingPropertyUpdate({
+          commercialStatus: property.commercialStatus,
+          buildingId: property.buildingId,
+          floorId: property.floorId,
+        }, updates as Partial<Property> & Record<string, unknown>, async () => {
+          if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
+          success(t('save.success', { defaultValue: 'Property saved successfully' }));
+        });
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('permission') || errorMessage.includes('PERMISSION_DENIED')) {
-        notifyError(t('save.permissionDenied', { defaultValue: 'Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας' }));
-      } else if (errorMessage.includes('asking price')) {
-        notifyError(t('save.askingPriceRequired', { defaultValue: 'Απαιτείται τιμή πώλησης πριν την κράτηση ή πώληση. Ορίστε τιμή μέσω "Αλλαγή Τιμής" στις Πωλήσεις.' }));
-      } else if (errorMessage.includes('Buyer contact')) {
-        notifyError(t('save.buyerRequired', { defaultValue: 'Απαιτείται επιλογή αγοραστή πριν την κράτηση ή πώληση.' }));
-      } else if (errorMessage.includes('locked fields')) {
-        notifyError(t('fieldLocking.serverReject', { defaultValue: 'Δεν επιτρέπεται η αλλαγή κλειδωμένων πεδίων σε πωλημένη/ενοικιασμένη μονάδα' }));
-      } else if (errorMessage.includes('not linked to a building')) {
-        notifyError(t('save.buildingRequired', { defaultValue: 'Η μονάδα πρέπει να ανήκει σε κτίριο πριν την κράτηση ή πώληση.' }));
-      } else if (errorMessage.includes('area')) {
-        notifyError(t('save.areaRequired', { defaultValue: 'Η μονάδα πρέπει να έχει εμβαδόν πριν την κράτηση ή πώληση.' }));
-      } else {
-        notifyError(t('save.error', { defaultValue: 'Σφάλμα κατά την αποθήκευση' }));
-      }
+      notifyError(translatePropertyMutationError(error, t));
       logger.error('PropertyFieldsBlock save error:', { error });
     } finally {
       setIsSaving(false);
     }
-  }, [buildUpdatesFromForm, isCreatingNewUnit, formData.name, formData.type, formData.floor, formData.areaGross, property.id, onUpdateProperty, onExitEditMode, onPropertyCreated, t]);
+  }, [
+    buildUpdatesFromForm,
+    formData.areaGross,
+    formData.floor,
+    formData.name,
+    formData.type,
+    isCreatingNewUnit,
+    onExitEditMode,
+    onPropertyCreated,
+    property.id,
+    property.buildingId,
+    property.commercialStatus,
+    property.floorId,
+    runExistingPropertyUpdate,
+    suggestedCode,
+    success,
+    t,
+  ]);
 
   // ── Cancel handler ──
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- cancel handler kept for future use
@@ -411,33 +419,37 @@ export function PropertyFieldsBlock({
   }
 
   return (
-    <PropertyFieldsEditForm
-      formData={formData}
-      setFormData={setFormData}
-      property={property}
-      isEditing={isEditing}
-      isReservedOrSold={isReservedOrSold}
-      isSoldOrRented={isSoldOrRented}
-      isMultiLevel={!!isMultiLevel}
-      activeLevelId={activeLevelId}
-      setActiveLevelId={setActiveLevelId}
-      currentLevelData={currentLevelData}
-      aggregatedTotals={aggregatedTotals}
-      toggleArrayItem={toggleArrayItem}
-      updateLevelField={updateLevelField}
-      handleSave={handleSave}
-      suggestedCode={suggestedCode || ''}
-      codeOverridden={codeOverridden}
-      setCodeOverridden={setCodeOverridden}
-      codeLoading={codeLoading}
-      t={t}
-      typography={typography}
-      iconSizes={iconSizes}
-      quick={quick}
-    />
+    <>
+      <PropertyFieldsEditForm
+        formData={formData}
+        setFormData={setFormData}
+        property={property}
+        isEditing={isEditing}
+        isReservedOrSold={isReservedOrSold}
+        isSoldOrRented={isSoldOrRented}
+        isMultiLevel={!!isMultiLevel}
+        activeLevelId={activeLevelId}
+        setActiveLevelId={setActiveLevelId}
+        currentLevelData={currentLevelData}
+        aggregatedTotals={aggregatedTotals}
+        toggleArrayItem={toggleArrayItem}
+        updateLevelField={updateLevelField}
+        handleSave={handleSave}
+        suggestedCode={suggestedCode || ''}
+        codeOverridden={codeOverridden}
+        setCodeOverridden={setCodeOverridden}
+        codeLoading={codeLoading}
+        t={t}
+        typography={typography}
+        iconSizes={iconSizes}
+        quick={quick}
+      />
+      {ImpactDialog}
+    </>
   );
 }
 
 // Extracted to: PropertyFieldsEditForm.tsx, PropertyFieldsReadOnly.tsx, property-fields-constants.ts
 
 export default PropertyFieldsBlock;
+

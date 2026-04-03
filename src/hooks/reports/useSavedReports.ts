@@ -15,6 +15,13 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { getErrorMessage } from '@/lib/error-utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  createSavedReportWithPolicy,
+  deleteSavedReportWithPolicy,
+  toggleFavoriteSavedReportWithPolicy,
+  trackSavedReportRunWithPolicy,
+  updateSavedReportWithPolicy,
+} from '@/services/saved-reports/saved-reports-mutation-gateway';
 import type {
   SavedReport,
   CreateSavedReportInput,
@@ -98,7 +105,7 @@ export function useSavedReports(): UseSavedReportsReturn {
   // ========================================================================
 
   const createReport = useCallback(async (input: CreateSavedReportInput): Promise<SavedReport> => {
-    const created = await apiClient.post<SavedReport>(API_BASE, input);
+    const created = await createSavedReportWithPolicy({ input });
     setReports(prev => [created, ...prev]);
     toast.success(t('messages.saved'));
     return created;
@@ -112,7 +119,7 @@ export function useSavedReports(): UseSavedReportsReturn {
     id: string,
     input: UpdateSavedReportInput,
   ): Promise<SavedReport> => {
-    const updated = await apiClient.put<SavedReport>(reportUrl(id), input);
+    const updated = await updateSavedReportWithPolicy({ id, input });
     setReports(prev => prev.map(r => (r.id === id ? updated : r)));
     toast.success(t('messages.updated'));
     return updated;
@@ -124,7 +131,7 @@ export function useSavedReports(): UseSavedReportsReturn {
 
   const deleteReport = useCallback(async (id: string): Promise<boolean> => {
     try {
-      await apiClient.delete<{ deleted: boolean }>(reportUrl(id));
+      await deleteSavedReportWithPolicy({ id });
       setReports(prev => prev.filter(r => r.id !== id));
       toast.success(t('messages.deleted'));
       return true;
@@ -155,11 +162,7 @@ export function useSavedReports(): UseSavedReportsReturn {
     );
 
     try {
-      const result = await apiClient.post<{ action: string; result: boolean }>(
-        reportUrl(id),
-        // eslint-disable-next-line custom/no-hardcoded-strings -- API action
-        { action: 'toggle_favorite' },
-      );
+      const result = await toggleFavoriteSavedReportWithPolicy({ id });
       return result.result;
     } catch {
       // Revert on failure
@@ -171,11 +174,7 @@ export function useSavedReports(): UseSavedReportsReturn {
 
   const trackRun = useCallback(async (id: string): Promise<void> => {
     try {
-      await apiClient.post<{ action: string; result: boolean }>(
-        reportUrl(id),
-        // eslint-disable-next-line custom/no-hardcoded-strings -- API action
-        { action: 'track_run' },
-      );
+      await trackSavedReportRunWithPolicy({ id });
       setReports(prev =>
         prev.map(r =>
           r.id === id

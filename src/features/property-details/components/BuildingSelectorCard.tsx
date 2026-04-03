@@ -37,6 +37,10 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Centralized Select clear value (Radix forbids empty string in SelectItem)
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { updatePropertyBuildingLinkWithPolicy } from '@/services/property/property-mutation-gateway';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import '@/lib/design-system';
 const logger = createModuleLogger('BuildingSelectorCard');
 
@@ -97,6 +101,8 @@ export function BuildingSelectorCard({
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   const typography = useTypography();
+  const { error: notifyError } = useNotifications();
+  const { checking: previewChecking, runPreviewedMutation, ImpactDialog } = useGuardedPropertyMutation({ id: propertyId });
 
   // 🏢 ENTERPRISE: State management - Buildings
   const [buildings, setBuildings] = useState<BuildingOption[]>([]);
@@ -267,14 +273,21 @@ export function BuildingSelectorCard({
       // 🏢 ENTERPRISE: Use draft values directly (undefined → null for Firestore)
       const buildingIdToSave = draftBuildingId || null;
       const floorIdToSave = draftFloorId || null;
-
-      // 🔒 ADR-232: Use Admin SDK PATCH (Client SDK blocked by Firestore rules
-      // which treat buildingId/floorId as structural invariants)
-      const { updateProperty } = await import('@/services/properties.service');
-      await updateProperty(propertyId, {
+      await runPreviewedMutation({
         buildingId: buildingIdToSave,
         floorId: floorIdToSave,
-      } as Record<string, unknown>);
+      }, async () => {
+      // 🔒 ADR-232: Use Admin SDK PATCH (Client SDK blocked by Firestore rules
+      // which treat buildingId/floorId as structural invariants)
+      await updatePropertyBuildingLinkWithPolicy({
+        propertyId,
+        currentProperty: {
+          buildingId: currentBuildingId,
+          floorId: currentFloorId,
+        },
+        buildingId: buildingIdToSave,
+        floorId: floorIdToSave,
+      });
 
       logger.info(`[BuildingSelectorCard] Unit ${propertyId} linked to building ${buildingIdToSave}, floor ${floorIdToSave}`);
       setSaveStatus('success');
@@ -293,13 +306,25 @@ export function BuildingSelectorCard({
 
       // Reset success status after 3 seconds
       setTimeout(() => setSaveStatus('idle'), 3000);
+      });
     } catch (error) {
       logger.error('[BuildingSelectorCard] Error saving:', { error: error });
       setSaveStatus('error');
+      notifyError(translatePropertyMutationError(error, t));
     } finally {
       setSaving(false);
     }
-  }, [propertyId, draftBuildingId, draftFloorId, currentBuildingId, onBuildingChanged]);
+  }, [
+    propertyId,
+    draftBuildingId,
+    draftFloorId,
+    currentBuildingId,
+    currentFloorId,
+    notifyError,
+    onBuildingChanged,
+    runPreviewedMutation,
+    t,
+  ]);
 
   // 🏢 ENTERPRISE: Check if draft differs from props (no magic strings)
   const hasBuildingChanges = draftBuildingId !== currentBuildingId;
@@ -428,7 +453,7 @@ export function BuildingSelectorCard({
           <footer className={`flex items-center justify-between ${spacing.padding.top.sm}`}>
             <Button
               onClick={handleSave}
-              disabled={saving || !hasChanges}
+              disabled={saving || previewChecking || !hasChanges}
               variant={hasChanges ? 'default' : 'outline'}
               size="sm"
             >
@@ -460,6 +485,7 @@ export function BuildingSelectorCard({
             )}
           </footer>
         )}
+        {ImpactDialog}
       </CardContent>
     </Card>
   );

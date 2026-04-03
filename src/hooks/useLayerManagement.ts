@@ -1,21 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import {
-  collection,
-  doc,
-  updateDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-} from 'firebase/firestore';
-import type { DocumentData } from 'firebase/firestore';
-import { firestoreQueryService } from '@/services/firestore';
-import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES, SYSTEM_LAYER_COLORS } from '@/types/layers';
-import { generateHistoryId, generateLayerId, generateElementId } from '@/services/enterprise-id.service';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useAutoSave } from '@/hooks/useAutoSave';
 import type {
   Layer,
   LayerGroup,
@@ -27,6 +13,20 @@ import type {
   LayerValidationResult
 } from '@/types/layers';
 import { createModuleLogger } from '@/lib/telemetry';
+import { INITIAL_LAYER_FILTER, createInitialLayerState } from '@/hooks/layer-management/layer-management-defaults';
+import { appendHistoryEntry, clearHistoryState } from '@/hooks/layer-management/layer-management-history';
+import { filterLayers } from '@/hooks/layer-management/layer-management-filters';
+import {
+  createElementRecord,
+  createLayerRecord,
+  duplicateLayerRecord,
+  updateLayerRecord
+} from '@/hooks/layer-management/layer-management-operations';
+import {
+  loadLayerManagementData,
+  saveLayerManagementData,
+  subscribeToLayerManagement
+} from '@/hooks/layer-management/layer-management-persistence';
 
 const logger = createModuleLogger('useLayerManagement');
 
@@ -40,67 +40,43 @@ export interface UseLayerManagementOptions {
 }
 
 export interface UseLayerManagementReturn {
-  // State
   state: LayerState;
   isLoading: boolean;
   error: string | null;
-  
-  // Layer Operations
-  // 🏢 ENTERPRISE: floorId, buildingId, createdBy are injected by the hook from options
   createLayer: (layer: Omit<Layer, 'id' | 'createdAt' | 'updatedAt' | 'floorId' | 'buildingId' | 'createdBy'>) => Promise<string>;
   updateLayer: (layerId: string, updates: Partial<Layer>) => Promise<void>;
   deleteLayer: (layerId: string) => Promise<void>;
   duplicateLayer: (layerId: string) => Promise<string>;
-  
-  // Layer Visibility & Lock
   toggleLayerVisibility: (layerId: string) => void;
   toggleLayerLock: (layerId: string) => void;
   setLayerOpacity: (layerId: string, opacity: number) => void;
   setLayerZIndex: (layerId: string, zIndex: number) => void;
-  
-  // Element Operations
   createElement: (layerId: string, element: Omit<AnyLayerElement, 'id' | 'createdAt' | 'updatedAt'>) => string;
   updateElement: (layerId: string, elementId: string, updates: Partial<AnyLayerElement>) => void;
   deleteElement: (layerId: string, elementId: string) => void;
   duplicateElement: (layerId: string, elementId: string) => string;
   moveElement: (elementId: string, fromLayerId: string, toLayerId: string) => void;
-  
-  // Selection
   selectLayer: (layerId: string | null) => void;
   selectElements: (elementIds: string[]) => void;
   clearSelection: () => void;
-  
-  // Clipboard
   copyElements: (elementIds: string[]) => void;
   pasteElements: (targetLayerId: string) => void;
   cutElements: (elementIds: string[]) => void;
-  
-  // History
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
   clearHistory: () => void;
-  
-  // Groups
   createGroup: (group: Omit<LayerGroup, 'id'>) => string;
   updateGroup: (groupId: string, updates: Partial<LayerGroup>) => void;
   deleteGroup: (groupId: string) => void;
   addLayerToGroup: (layerId: string, groupId: string) => void;
   removeLayerFromGroup: (layerId: string, groupId: string) => void;
-  
-  // Filtering
   setFilter: (filter: Partial<LayerFilter>) => void;
   getFilteredLayers: () => Layer[];
-  
-  // Import/Export
   exportLayers: (options: LayerExportOptions) => Promise<string>;
   importLayers: (data: string) => Promise<void>;
-  
-  // Validation
   validateLayer: (layer: Partial<Layer>) => LayerValidationResult;
-  
-  // Utilities
   getLayerById: (layerId: string) => Layer | null;
   getElementByIdInLayer: (layerId: string, elementId: string) => AnyLayerElement | null;
   getSystemLayers: () => Layer[];
@@ -108,16 +84,6 @@ export interface UseLayerManagementReturn {
   saveToFirestore: () => Promise<void>;
 }
 
-/**
- * Hook για τη διαχείριση layers στις κατόψεις
- * 
- * Παρέχει πλήρη functionality για:
- * - CRUD operations για layers και elements
- * - History management με undo/redo
- * - Real-time sync με Firestore
- * - Import/Export capabilities
- * - Validation και error handling
- */
 export function useLayerManagement({
   floorId,
   buildingId,
@@ -126,520 +92,346 @@ export function useLayerManagement({
   maxHistorySize = 50,
   enableRealtime = true
 }: UseLayerManagementOptions): UseLayerManagementReturn {
-  
-  const [state, setState] = useState<LayerState>({
-    layers: [],
-    groups: [],
-    activeLayerId: null,
-    selectedElementIds: [],
-    clipboard: [],
-    history: [],
-    historyIndex: -1,
-    maxHistorySize
-  });
-  
+  const [state, setState] = useState<LayerState>(() => createInitialLayerState(maxHistorySize));
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilterState] = useState<LayerFilter>({
-    showVisible: true,
-    showHidden: true,
-    showLocked: true,
-    showUnlocked: true,
-    categories: [],
-    searchTerm: ''
-  });
-  
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [filter, setFilterState] = useState<LayerFilter>(INITIAL_LAYER_FILTER);
 
-  // Initialize and load layers
-  useEffect(() => {
-    loadLayers();
-    
-    if (enableRealtime) {
-      setupRealtimeSync();
-    }
-    
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, [floorId, buildingId, enableRealtime]);
+  const persistenceContext = useMemo(() => ({ floorId, buildingId, userId }), [floorId, buildingId, userId]);
 
-  // Auto-save when state changes
-  useEffect(() => {
-    if (autoSave && !isLoading) {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-      
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        saveToFirestore();
-      }, 2000); // Save after 2 seconds of inactivity
-    }
-  }, [state, autoSave, isLoading]);
-
-  // Load layers from Firestore
-  const loadLayers = async () => {
+  const loadLayers = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const layersQuery = query(
-        collection(db, COLLECTIONS.LAYERS),
-        where('floorId', '==', floorId),
-        orderBy('zIndex', 'asc')
-      );
-      
-      const groupsQuery = query(
-        collection(db, COLLECTIONS.LAYER_GROUPS),
-        where('floorId', '==', floorId),
-        orderBy('order', 'asc')
-      );
-      
-      const [layersSnapshot, groupsSnapshot] = await Promise.all([
-        getDocs(layersQuery),
-        getDocs(groupsQuery)
-      ]);
-      
-      const layers: Layer[] = layersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Layer));
-      
-      const groups: LayerGroup[] = groupsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as LayerGroup));
-      
-      // Create system layers if they don't exist
-      const systemLayers = await ensureSystemLayers(layers);
-      
-      setState(prev => ({
+
+      const loadedData = await loadLayerManagementData(persistenceContext);
+
+      setState((prev) => ({
         ...prev,
-        layers: [...systemLayers, ...layers.filter(l => !l.isSystem)],
-        groups
+        layers: loadedData.layers,
+        groups: loadedData.groups
       }));
-      
     } catch (err) {
       logger.error('Error loading layers', { error: err });
       setError('Σφάλμα κατά τη φόρτωση των layers');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [persistenceContext]);
 
-  // Setup real-time synchronization (ADR-227 Phase 2: canonical pattern)
-  const setupRealtimeSync = () => {
-    unsubscribeRef.current = firestoreQueryService.subscribe<DocumentData>(
-      'LAYERS',
-      (result) => {
-        const updatedLayers: Layer[] = result.documents.map(d => ({
-          ...d,
-        } as unknown as Layer));
+  useEffect(() => {
+    void loadLayers();
+  }, [loadLayers]);
 
-        setState(prev => ({
+  useEffect(() => {
+    if (!enableRealtime) {
+      return undefined;
+    }
+
+    return subscribeToLayerManagement(persistenceContext, {
+      onLayers: (layers) => {
+        setState((prev) => ({
           ...prev,
-          layers: updatedLayers
+          layers
         }));
       },
-      (err) => {
-        logger.error('Layer subscription error', { error: err.message });
-      },
-      {
-        constraints: [
-          where('floorId', '==', floorId)
-        ],
+      onError: (message) => {
+        logger.error('Layer subscription error', { error: message });
       }
-    );
-  };
-
-  // Ensure system layers exist
-  const ensureSystemLayers = async (existingLayers: Layer[]): Promise<Layer[]> => {
-    const systemLayers: Layer[] = [];
-    const now = new Date().toISOString();
-    
-    // Properties layer
-    if (!existingLayers.find(l => l.id === SYSTEM_LAYERS.PROPERTIES)) {
-      const propertiesLayer: Layer = {
-        id: SYSTEM_LAYERS.PROPERTIES,
-        name: 'Ακίνητα',
-        isVisible: true,
-        isLocked: false,
-        isSystem: true,
-        opacity: 1,
-        zIndex: 100,
-        color: { primary: SYSTEM_LAYER_COLORS.properties, opacity: 0.3 },
-        defaultStyle: DEFAULT_LAYER_STYLES.property,
-        elements: [],
-        floorId,
-        buildingId,
-        createdBy: userId,
-        createdAt: now,
-        updatedAt: now,
-        metadata: { category: 'structural' }
-      };
-      systemLayers.push(propertiesLayer);
-    }
-    
-    // Grid layer
-    if (!existingLayers.find(l => l.id === SYSTEM_LAYERS.GRID)) {
-      const gridLayer: Layer = {
-        id: SYSTEM_LAYERS.GRID,
-        name: 'Πλέγμα',
-        isVisible: false,
-        isLocked: true,
-        isSystem: true,
-        opacity: 0.2,
-        zIndex: 1,
-        color: { primary: SYSTEM_LAYER_COLORS.grid, opacity: 0.2 },
-        defaultStyle: DEFAULT_LAYER_STYLES.line,
-        elements: [],
-        floorId,
-        buildingId,
-        createdBy: userId,
-        createdAt: now,
-        updatedAt: now
-      };
-      systemLayers.push(gridLayer);
-    }
-    
-    return systemLayers;
-  };
-
-  // Add to history
-  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
-  const addToHistory = useCallback((entry: Omit<LayerHistoryEntry, 'id' | 'timestamp'>) => {
-    setState(prev => {
-      const newEntry: LayerHistoryEntry = {
-        ...entry,
-        id: generateHistoryId(),
-        timestamp: new Date().toISOString()
-      };
-      
-      const newHistory = prev.history.slice(0, prev.historyIndex + 1);
-      newHistory.push(newEntry);
-      
-      // Limit history size
-      if (newHistory.length > prev.maxHistorySize) {
-        newHistory.shift();
-      }
-      
-      return {
-        ...prev,
-        history: newHistory,
-        historyIndex: newHistory.length - 1
-      };
     });
-  }, []);
+  }, [enableRealtime, persistenceContext]);
 
-  // Layer Operations
-  // 🏢 ENTERPRISE: floorId, buildingId, createdBy are auto-injected from hook options
-  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
-  const createLayer = useCallback(async (layerData: Omit<Layer, 'id' | 'createdAt' | 'updatedAt' | 'floorId' | 'buildingId' | 'createdBy'>): Promise<string> => {
-    const now = new Date().toISOString();
-    const newLayer: Layer = {
-      ...layerData,
-      id: generateLayerId(),
-      createdAt: now,
-      updatedAt: now,
-      floorId,
-      buildingId,
-      createdBy: userId
-    };
-    
-    setState(prev => ({
+  const persistedState = useMemo(() => ({
+    layers: state.layers,
+    groups: state.groups
+  }), [state.groups, state.layers]);
+
+  const { saveNow } = useAutoSave(persistedState, {
+    saveFn: async (data) => {
+      await saveLayerManagementData(data.layers, data.groups);
+    },
+    enabled: autoSave && !isLoading,
+    onError: (saveError) => {
+      logger.error('Error saving to Firestore', { error: saveError });
+      setError('Σφάλμα κατά την αποθήκευση');
+    }
+  });
+
+  const createLayer = useCallback(async (
+    layerData: Omit<Layer, 'id' | 'createdAt' | 'updatedAt' | 'floorId' | 'buildingId' | 'createdBy'>
+  ): Promise<string> => {
+    const newLayer = createLayerRecord(layerData, persistenceContext);
+
+    setState((prev) => appendHistoryEntry({
       ...prev,
       layers: [...prev.layers, newLayer]
-    }));
-    
-    addToHistory({
+    }, {
       action: 'create',
       layerId: newLayer.id,
       afterState: newLayer,
       description: `Δημιουργία layer: ${newLayer.name}`
-    });
-    
+    }));
+
     return newLayer.id;
-  }, [floorId, buildingId, userId, addToHistory]);
+  }, [persistenceContext]);
 
   const updateLayer = useCallback(async (layerId: string, updates: Partial<Layer>): Promise<void> => {
-    setState(prev => {
-      const layerIndex = prev.layers.findIndex(l => l.id === layerId);
-      if (layerIndex === -1) return prev;
-      
-      const oldLayer = prev.layers[layerIndex];
-      const updatedLayer = {
-        ...oldLayer,
-        ...updates,
-        updatedAt: new Date().toISOString()
-      };
-      
-      const newLayers = [...prev.layers];
-      newLayers[layerIndex] = updatedLayer;
-      
-      addToHistory({
+    setState((prev) => {
+      const layerIndex = prev.layers.findIndex((layer) => layer.id === layerId);
+      if (layerIndex === -1) {
+        return prev;
+      }
+
+      const currentLayer = prev.layers[layerIndex];
+      const updatedLayer = updateLayerRecord(currentLayer, updates);
+      const nextLayers = [...prev.layers];
+      nextLayers[layerIndex] = updatedLayer;
+
+      return appendHistoryEntry({
+        ...prev,
+        layers: nextLayers
+      }, {
         action: 'update',
         layerId,
-        beforeState: oldLayer,
+        beforeState: currentLayer,
         afterState: updatedLayer,
         description: `Ενημέρωση layer: ${updatedLayer.name}`
       });
-      
-      return {
-        ...prev,
-        layers: newLayers
-      };
     });
-  }, [addToHistory]);
+  }, []);
 
   const deleteLayer = useCallback(async (layerId: string): Promise<void> => {
-    setState(prev => {
-      const layerToDelete = prev.layers.find(l => l.id === layerId);
-      if (!layerToDelete || layerToDelete.isSystem) return prev;
-      
-      addToHistory({
+    setState((prev) => {
+      const layerToDelete = prev.layers.find((layer) => layer.id === layerId);
+      if (!layerToDelete || layerToDelete.isSystem) {
+        return prev;
+      }
+
+      return appendHistoryEntry({
+        ...prev,
+        layers: prev.layers.filter((layer) => layer.id !== layerId),
+        activeLayerId: prev.activeLayerId === layerId ? null : prev.activeLayerId
+      }, {
         action: 'delete',
         layerId,
         beforeState: layerToDelete,
         description: `Διαγραφή layer: ${layerToDelete.name}`
       });
-      
-      return {
-        ...prev,
-        layers: prev.layers.filter(l => l.id !== layerId),
-        activeLayerId: prev.activeLayerId === layerId ? null : prev.activeLayerId
-      };
     });
-  }, [addToHistory]);
+  }, []);
 
-  // Toggle functions
-  const toggleLayerVisibility = useCallback((layerId: string) => {
-    updateLayer(layerId, { 
-      isVisible: !state.layers.find(l => l.id === layerId)?.isVisible 
+  const createElement = useCallback((
+    layerId: string,
+    elementData: Omit<AnyLayerElement, 'id' | 'createdAt' | 'updatedAt'>
+  ): string => {
+    const newElement = createElementRecord(elementData);
+
+    setState((prev) => {
+      const layerIndex = prev.layers.findIndex((layer) => layer.id === layerId);
+      if (layerIndex === -1) {
+        return prev;
+      }
+
+      const currentLayer = prev.layers[layerIndex];
+      const updatedLayer = {
+        ...currentLayer,
+        elements: [...currentLayer.elements, newElement],
+        updatedAt: newElement.updatedAt
+      };
+      const nextLayers = [...prev.layers];
+      nextLayers[layerIndex] = updatedLayer;
+
+      return appendHistoryEntry({
+        ...prev,
+        layers: nextLayers
+      }, {
+        action: 'create',
+        layerId,
+        elementId: newElement.id,
+        afterState: newElement,
+        description: `Δημιουργία στοιχείου: ${newElement.type}`
+      });
     });
-  }, [state.layers, updateLayer]);
+
+    return newElement.id;
+  }, []);
+
+  const toggleLayerVisibility = useCallback((layerId: string) => {
+    setState((prev) => {
+      const currentLayer = prev.layers.find((layer) => layer.id === layerId);
+      if (!currentLayer) {
+        return prev;
+      }
+
+      const nextLayers = prev.layers.map((layer) => layer.id === layerId
+        ? updateLayerRecord(layer, { isVisible: !layer.isVisible })
+        : layer
+      );
+
+      return appendHistoryEntry({
+        ...prev,
+        layers: nextLayers
+      }, {
+        action: 'update',
+        layerId,
+        beforeState: currentLayer,
+        afterState: nextLayers.find((layer) => layer.id === layerId),
+        description: `Αλλαγή ορατότητας layer: ${currentLayer.name}`
+      });
+    });
+  }, []);
 
   const toggleLayerLock = useCallback((layerId: string) => {
-    updateLayer(layerId, { 
-      isLocked: !state.layers.find(l => l.id === layerId)?.isLocked 
-    });
-  }, [state.layers, updateLayer]);
+    setState((prev) => {
+      const currentLayer = prev.layers.find((layer) => layer.id === layerId);
+      if (!currentLayer) {
+        return prev;
+      }
 
-  // Element Operations
-  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
-  const createElement = useCallback((layerId: string, elementData: Omit<AnyLayerElement, 'id' | 'createdAt' | 'updatedAt'>): string => {
-    const now = new Date().toISOString();
-    const newElement: AnyLayerElement = {
-      ...elementData,
-      id: generateElementId(),
-      createdAt: now,
-      updatedAt: now
-    } as AnyLayerElement;
-    
-    setState(prev => {
-      const layerIndex = prev.layers.findIndex(l => l.id === layerId);
-      if (layerIndex === -1) return prev;
-      
-      const layer = prev.layers[layerIndex];
-      const updatedLayer = {
-        ...layer,
-        elements: [...layer.elements, newElement],
-        updatedAt: now
-      };
-      
-      const newLayers = [...prev.layers];
-      newLayers[layerIndex] = updatedLayer;
-      
-      return {
+      const nextLayers = prev.layers.map((layer) => layer.id === layerId
+        ? updateLayerRecord(layer, { isLocked: !layer.isLocked })
+        : layer
+      );
+
+      return appendHistoryEntry({
         ...prev,
-        layers: newLayers
-      };
+        layers: nextLayers
+      }, {
+        action: 'update',
+        layerId,
+        beforeState: currentLayer,
+        afterState: nextLayers.find((layer) => layer.id === layerId),
+        description: `Αλλαγή κλειδώματος layer: ${currentLayer.name}`
+      });
     });
-    
-    addToHistory({
-      action: 'create',
-      layerId,
-      elementId: newElement.id,
-      afterState: newElement,
-      description: `Δημιουργία στοιχείου: ${newElement.type}`
-    });
-    
-    return newElement.id;
-  }, [addToHistory]);
+  }, []);
 
-  // Save to Firestore
-  const saveToFirestore = useCallback(async (): Promise<void> => {
-    try {
-      // Save layers (excluding system layers as they're managed separately)
-      const layersToSave = state.layers.filter(l => !l.isSystem);
-      
-      for (const layer of layersToSave) {
-        const layerDoc = doc(db, COLLECTIONS.LAYERS, layer.id);
-        await updateDoc(layerDoc, {
-          ...layer,
-          updatedAt: new Date().toISOString()
-        });
-      }
-      
-      // Save groups
-      // 🏢 ENTERPRISE: Destructure to exclude id from update payload (Firestore UpdateData pattern)
-      for (const group of state.groups) {
-        const groupDoc = doc(db, COLLECTIONS.LAYER_GROUPS, group.id);
-        const { id: _groupId, ...groupUpdateData } = group;
-        await updateDoc(groupDoc, groupUpdateData);
-      }
-      
-    } catch (err) {
-      logger.error('Error saving to Firestore', { error: err });
-      setError('Σφάλμα κατά την αποθήκευση');
-    }
-  }, [state.layers, state.groups]);
-
-  // Utility functions
   const getLayerById = useCallback((layerId: string): Layer | null => {
-    return state.layers.find(l => l.id === layerId) || null;
+    return state.layers.find((layer) => layer.id === layerId) || null;
   }, [state.layers]);
 
   const getFilteredLayers = useCallback((): Layer[] => {
-    return state.layers.filter(layer => {
-      if (!filter.showVisible && layer.isVisible) return false;
-      if (!filter.showHidden && !layer.isVisible) return false;
-      if (!filter.showLocked && layer.isLocked) return false;
-      if (!filter.showUnlocked && !layer.isLocked) return false;
-      
-      if (filter.categories.length > 0 && 
-          !filter.categories.includes(layer.metadata?.category || '')) {
-        return false;
-      }
-      
-      if (filter.searchTerm && 
-          !layer.name.toLowerCase().includes(filter.searchTerm.toLowerCase())) {
-        return false;
-      }
-      
-      return true;
-    });
-  }, [state.layers, filter]);
+    return filterLayers(state.layers, filter);
+  }, [filter, state.layers]);
 
-  // History operations
   const canUndo = state.historyIndex >= 0;
   const canRedo = state.historyIndex < state.history.length - 1;
 
   const undo = useCallback(() => {
-    if (!canUndo) return;
-    
-    // Implementation for undo would restore previous state
-    setState(prev => ({
+    if (!canUndo) {
+      return;
+    }
+
+    setState((prev) => ({
       ...prev,
       historyIndex: prev.historyIndex - 1
     }));
   }, [canUndo]);
 
   const redo = useCallback(() => {
-    if (!canRedo) return;
-    
-    // Implementation for redo would restore next state
-    setState(prev => ({
+    if (!canRedo) {
+      return;
+    }
+
+    setState((prev) => ({
       ...prev,
       historyIndex: prev.historyIndex + 1
     }));
   }, [canRedo]);
 
+  const saveToFirestore = useCallback(async (): Promise<void> => {
+    setError(null);
+    await saveNow();
+  }, [saveNow]);
+
   return {
-    // State
     state,
     isLoading,
     error,
-    
-    // Layer Operations
     createLayer,
     updateLayer,
     deleteLayer,
-    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     duplicateLayer: async (layerId: string) => {
       const layer = getLayerById(layerId);
-      if (!layer) return '';
+      if (!layer) {
+        return '';
+      }
 
-      const duplicatedLayer = {
-        ...layer,
-        name: `${layer.name} (Αντίγραφο)`,
-        elements: layer.elements.map(e => ({ ...e, id: generateElementId() }))
-      };
-
-      return createLayer(duplicatedLayer);
+      return createLayer(duplicateLayerRecord(layer));
     },
-    
-    // Layer Visibility & Lock
     toggleLayerVisibility,
     toggleLayerLock,
-    setLayerOpacity: (layerId: string, opacity: number) => updateLayer(layerId, { opacity }),
-    setLayerZIndex: (layerId: string, zIndex: number) => updateLayer(layerId, { zIndex }),
-    
-    // Element Operations
+    setLayerOpacity: (layerId: string, opacity: number) => {
+      void updateLayer(layerId, { opacity });
+    },
+    setLayerZIndex: (layerId: string, zIndex: number) => {
+      void updateLayer(layerId, { zIndex });
+    },
     createElement,
-    updateElement: (layerId: string, elementId: string, updates: Partial<AnyLayerElement>) => {
-      // Implementation for updating elements
+    updateElement: (_layerId: string, _elementId: string, _updates: Partial<AnyLayerElement>) => {
+      // Placeholder preserved for backward compatibility.
     },
-    deleteElement: (layerId: string, elementId: string) => {
-      // Implementation for deleting elements
+    deleteElement: (_layerId: string, _elementId: string) => {
+      // Placeholder preserved for backward compatibility.
     },
-    duplicateElement: (layerId: string, elementId: string) => {
-      // Implementation for duplicating elements
-      return '';
+    duplicateElement: (_layerId: string, _elementId: string) => '',
+    moveElement: (_elementId: string, _fromLayerId: string, _toLayerId: string) => {
+      // Placeholder preserved for backward compatibility.
     },
-    moveElement: (elementId: string, fromLayerId: string, toLayerId: string) => {
-      // Implementation for moving elements between layers
+    selectLayer: (layerId: string | null) => setState((prev) => ({ ...prev, activeLayerId: layerId })),
+    selectElements: (elementIds: string[]) => setState((prev) => ({ ...prev, selectedElementIds: elementIds })),
+    clearSelection: () => setState((prev) => ({ ...prev, selectedElementIds: [], activeLayerId: null })),
+    copyElements: (_elementIds: string[]) => {
+      // Placeholder preserved for backward compatibility.
     },
-    
-    // Selection
-    selectLayer: (layerId: string | null) => setState(prev => ({ ...prev, activeLayerId: layerId })),
-    selectElements: (elementIds: string[]) => setState(prev => ({ ...prev, selectedElementIds: elementIds })),
-    clearSelection: () => setState(prev => ({ ...prev, selectedElementIds: [], activeLayerId: null })),
-    
-    // Clipboard operations (simplified)
-    copyElements: (elementIds: string[]) => {},
-    pasteElements: (targetLayerId: string) => {},
-    cutElements: (elementIds: string[]) => {},
-    
-    // History
+    pasteElements: (_targetLayerId: string) => {
+      // Placeholder preserved for backward compatibility.
+    },
+    cutElements: (_elementIds: string[]) => {
+      // Placeholder preserved for backward compatibility.
+    },
     undo,
     redo,
     canUndo,
     canRedo,
-    clearHistory: () => setState(prev => ({ ...prev, history: [], historyIndex: -1 })),
-    
-    // Groups (simplified implementations)
-    createGroup: (group: Omit<LayerGroup, 'id'>) => '',
-    updateGroup: (groupId: string, updates: Partial<LayerGroup>) => {},
-    deleteGroup: (groupId: string) => {},
-    addLayerToGroup: (layerId: string, groupId: string) => {},
-    removeLayerFromGroup: (layerId: string, groupId: string) => {},
-    
-    // Filtering
-    setFilter: (newFilter: Partial<LayerFilter>) => setFilterState(prev => ({ ...prev, ...newFilter })),
+    clearHistory: () => setState((prev) => clearHistoryState(prev)),
+    createGroup: (_group: Omit<LayerGroup, 'id'>) => '',
+    updateGroup: (_groupId: string, _updates: Partial<LayerGroup>) => {
+      // Placeholder preserved for backward compatibility.
+    },
+    deleteGroup: (_groupId: string) => {
+      // Placeholder preserved for backward compatibility.
+    },
+    addLayerToGroup: (_layerId: string, _groupId: string) => {
+      // Placeholder preserved for backward compatibility.
+    },
+    removeLayerFromGroup: (_layerId: string, _groupId: string) => {
+      // Placeholder preserved for backward compatibility.
+    },
+    setFilter: (nextFilter: Partial<LayerFilter>) => setFilterState((prev) => ({ ...prev, ...nextFilter })),
     getFilteredLayers,
-    
-    // Import/Export (placeholder)
-    exportLayers: async (options: LayerExportOptions) => '',
-    importLayers: async (data: string) => {},
-    
-    // Validation
-    validateLayer: (layer: Partial<Layer>): LayerValidationResult => ({
+    exportLayers: async (_options: LayerExportOptions) => '',
+    importLayers: async (_data: string) => {
+      // Placeholder preserved for backward compatibility.
+    },
+    validateLayer: (_layer: Partial<Layer>): LayerValidationResult => ({
       isValid: true,
       errors: [],
       warnings: []
     }),
-    
-    // Utilities
     getLayerById,
-    getElementByIdInLayer: (layerId: string, elementId: string) => null,
-    getSystemLayers: () => state.layers.filter(l => l.isSystem),
-    resetToDefaults: () => {},
+    getElementByIdInLayer: (layerId: string, elementId: string) => {
+      const layer = state.layers.find((candidateLayer) => candidateLayer.id === layerId);
+      return layer?.elements.find((element) => element.id === elementId) || null;
+    },
+    getSystemLayers: () => state.layers.filter((layer) => layer.isSystem),
+    resetToDefaults: () => {
+      setState((prev) => ({
+        ...createInitialLayerState(prev.maxHistorySize),
+        maxHistorySize: prev.maxHistorySize
+      }));
+      setFilterState(INITIAL_LAYER_FILTER);
+    },
     saveToFirestore
   };
 }

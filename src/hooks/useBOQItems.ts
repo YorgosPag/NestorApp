@@ -23,6 +23,12 @@ import type {
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { boqService, computeBuildingSummary } from '@/services/measurements';
+import {
+  createBOQItemWithPolicy,
+  deleteBOQItemWithPolicy,
+  transitionBOQItemWithPolicy,
+  updateBOQItemWithPolicy,
+} from '@/services/measurements/boq-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAsyncData } from '@/hooks/useAsyncData';
 
@@ -166,7 +172,11 @@ export function useBOQItems(
     async (input: CreateBOQItemInput): Promise<BOQItem | null> => {
       try {
         setCrudError(null);
-        const created = await boqService.create(input, userId, companyId);
+        const created = await createBOQItemWithPolicy({
+          data: input,
+          userId,
+          companyId,
+        });
         await refreshItems();
         return created;
       } catch (err) {
@@ -183,7 +193,10 @@ export function useBOQItems(
     async (id: string, input: UpdateBOQItemInput): Promise<boolean> => {
       try {
         setCrudError(null);
-        const updated = await boqService.update(id, input);
+        const updated = await updateBOQItemWithPolicy({
+          id,
+          data: input,
+        });
         if (updated) {
           await refreshItems();
           return true;
@@ -202,7 +215,7 @@ export function useBOQItems(
   const deleteItem = useCallback(async (id: string): Promise<boolean> => {
     try {
       setCrudError(null);
-      const success = await boqService.delete(id);
+      const success = await deleteBOQItemWithPolicy({ id });
       if (success) {
         await refreshItems();
       }
@@ -219,7 +232,11 @@ export function useBOQItems(
     async (id: string, status: BOQItemStatus): Promise<boolean> => {
       try {
         setCrudError(null);
-        const success = await boqService.transition(id, status, userId);
+        const success = await transitionBOQItemWithPolicy({
+          id,
+          status,
+          userId,
+        });
         if (success) {
           await refreshItems();
         }

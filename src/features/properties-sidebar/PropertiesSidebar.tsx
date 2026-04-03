@@ -1,7 +1,7 @@
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+// ?? i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Edit, Trash2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
@@ -9,21 +9,13 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-// 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-// 🏢 ENTERPRISE: Viewport detection for conditional rendering (avoid duplicate mount)
 import { useIsMobile } from '@/hooks/useMobile';
 import { useTranslation } from 'react-i18next';
-// 🛡️ ADR-226: Deletion Guard (pre-check + blocked dialog)
-import { useDeletionGuard } from '@/hooks/useDeletionGuard';
-// 🏢 ENTERPRISE: Centralized confirmation dialog (AlertDialog, centered)
-import { BuildingSpaceConfirmDialog } from '@/components/building-management/shared/BuildingSpaceConfirmDialog';
+import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
 
 import { PropertiesList } from '@/components/properties/PropertiesList';
-// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
-// UniversalTabsRenderer from generic (renderer only, no mappings)
 import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
-// PROPERTIES_COMPONENT_MAPPING from domain-scoped file (not master barrel)
 import { PROPERTIES_COMPONENT_MAPPING } from '@/components/generic/mappings/propertiesMappings';
 import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
@@ -51,7 +43,6 @@ export function PropertiesSidebar({
   onCancelCreate,
   defaultTab,
 }: PropertiesSidebarProps) {
-  // 🗨️ ENTERPRISE: Centralized systems
   const { t } = useTranslation('properties');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -59,10 +50,6 @@ export function PropertiesSidebar({
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();
-
-  // 🏢 ENTERPRISE: Viewport detection — render detailsContent in ONE place only
-  // Without this, both Desktop and Mobile paths mount the same component tree,
-  // causing duplicate API calls (BuildingSelectorCard, LinkedSpacesCard, etc.)
   const isMobile = useIsMobile();
 
   const {
@@ -70,64 +57,61 @@ export function PropertiesSidebar({
     currentFloor,
     safeViewerPropsWithFloors,
     safeViewerProps,
-  } = usePropertiesSidebar(floors, viewerProps);
+    ImpactDialog,
+  } = usePropertiesSidebar(floors, viewerProps, selectedProperty);
 
-  // 🏢 ENTERPRISE: Edit mode state - lifted to sidebar level (Pattern A)
   const [isEditMode, setIsEditMode] = useState(false);
   const properties = units;
-  // Auto-enter edit mode when creating a new property
   const effectiveEditMode = isEditMode || isCreatingNewUnit;
-  const handleToggleEditMode = useCallback(() => setIsEditMode(prev => !prev), []);
+  const handleToggleEditMode = useCallback(() => setIsEditMode((prev) => !prev), []);
   const handleExitEditMode = useCallback(() => {
     setIsEditMode(false);
-    // If we were creating a property, cancel the draft flow
     if (isCreatingNewUnit && onCancelCreate) {
       onCancelCreate();
     }
   }, [isCreatingNewUnit, onCancelCreate]);
 
-  // 🛡️ ADR-226: Deletion Guard — pre-check dependencies before allowing delete
-  const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('property');
-
-  // Confirmation state for centered AlertDialog (NOT toast)
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const { requestDelete, Dialogs: DeletionDialogs } = usePropertyDeletionGuard();
 
   const handleDeleteProperty = useCallback(async () => {
-    if (!selectedProperty || !onDeleteProperty) return;
-    const allowed = await checkBeforeDelete(selectedProperty.id);
-    if (allowed) {
-      setConfirmDelete(true);
+    if (!selectedProperty || !onDeleteProperty) {
+      return;
     }
-  }, [selectedProperty, onDeleteProperty, checkBeforeDelete]);
 
-  const handleConfirmDelete = useCallback(async () => {
-    if (!selectedProperty || !onDeleteProperty) return;
-    setDeleteLoading(true);
-    try {
-      await onDeleteProperty(selectedProperty.id);
-    } finally {
-      setDeleteLoading(false);
-      setConfirmDelete(false);
-    }
-  }, [selectedProperty, onDeleteProperty]);
+    await requestDelete(
+      {
+        id: selectedProperty.id,
+        name: selectedProperty.name,
+      },
+      async () => {
+        await onDeleteProperty(selectedProperty.id);
+      },
+    );
+  }, [onDeleteProperty, requestDelete, selectedProperty]);
 
-  // Get property tabs from centralized config
   const propertiesTabs = getSortedPropertiesTabs();
 
-  // Details content component using centralized DetailsContainer
   const detailsContent = (
     <DetailsContainer
       selectedItem={selectedProperty}
-      header={<PropertyDetailsHeader property={selectedProperty} isEditMode={effectiveEditMode} isCreatingNewUnit={isCreatingNewUnit} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewProperty={onNewProperty} onDeleteProperty={handleDeleteProperty} />}
-      tabsRenderer={
+      header={(
+        <PropertyDetailsHeader
+          property={selectedProperty}
+          isEditMode={effectiveEditMode}
+          isCreatingNewUnit={isCreatingNewUnit}
+          onToggleEditMode={handleToggleEditMode}
+          onExitEditMode={handleExitEditMode}
+          onNewProperty={onNewProperty}
+          onDeleteProperty={handleDeleteProperty}
+        />
+      )}
+      tabsRenderer={(
         <UniversalTabsRenderer
           tabs={propertiesTabs.map(convertToUniversalConfig)}
           data={selectedProperty}
           componentMapping={PROPERTIES_COMPONENT_MAPPING}
-          defaultTab={defaultTab || "info"}
+          defaultTab={defaultTab || 'info'}
           theme="default"
-          // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
           translationNamespace="building"
           additionalData={{
             safeFloors,
@@ -136,33 +120,28 @@ export function PropertiesSidebar({
             safeViewerPropsWithFloors,
             setShowHistoryPanel,
             units,
-            // 🏢 ENTERPRISE: Pass onUpdateProperty directly for PropertyDetailsContent
-            // UniversalTabsRenderer spreads additionalData as props, so this is the correct pattern
             onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty,
-            // 🏢 ENTERPRISE: Edit mode state lifted to sidebar level (Pattern A - entity header)
             isEditMode: effectiveEditMode,
             onToggleEditMode: handleToggleEditMode,
             onExitEditMode: handleExitEditMode,
-            // 🏢 ENTERPRISE: Inline new property creation props
             isCreatingNewUnit,
             onPropertyCreated,
           }}
           globalProps={{
-            propertyId: selectedProperty?.id
+            propertyId: selectedProperty?.id,
           }}
         />
-      }
+      )}
       onCreateAction={onNewProperty}
       emptyStateProps={{
         icon: NAVIGATION_ENTITIES.property.icon,
-        ...emptyStateMessages.unit
+        ...emptyStateMessages.unit,
       }}
     />
   );
 
   return (
     <>
-      {/* 🖥️ DESKTOP: Standard split layout */}
       <div className={`hidden md:flex flex-1 ${layout.listItemsGap} min-h-0 min-w-0 overflow-hidden`}>
         <PropertiesList
           units={properties}
@@ -173,11 +152,9 @@ export function PropertiesSidebar({
           onEditProperty={handleToggleEditMode}
           onDeleteProperty={handleDeleteProperty}
         />
-        {/* 🏢 ENTERPRISE: Render details on desktop — DetailsContainer handles empty state */}
         {!isMobile && detailsContent}
       </div>
 
-      {/* 📱 MOBILE: Show only the property list when no property is selected */}
       <div className={`md:hidden w-full ${selectedProperty ? 'hidden' : 'block'}`}>
         <PropertiesList
           units={properties}
@@ -190,57 +167,36 @@ export function PropertiesSidebar({
         />
       </div>
 
-      {/* 📱 MOBILE: Slide-in property details when a property is selected */}
-      {/* 🏢 ENTERPRISE: Render details ONLY on mobile — prevents duplicate mount */}
       <MobileDetailsSlideIn
         isOpen={isMobile && !!selectedProperty}
         onClose={() => onSelectProperty('__none__', false)}
-        title={selectedProperty?.name || t('mobile.unitDetails', { defaultValue: 'Στοιχεία Ακινήτου' })}
-        actionButtons={
+        title={selectedProperty?.name || t('mobile.unitDetails', { defaultValue: 'СлжаоЬхШ Абадулжм' })}
+        actionButtons={(
           <>
             <button
-              onClick={() => {/* TODO: Edit property handler */}}
+              onClick={() => {}}
               className={`${spacing.padding.sm} rounded-md ${quick.input} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label={t('mobile.editUnit', { defaultValue: 'Επεξεργασία ακινήτου' })}
+              aria-label={t('mobile.editUnit', { defaultValue: 'ДзЬеЬиЪШйхШ Шбадулжм' })}
             >
               <Edit className={iconSizes.sm} />
             </button>
             <button
-              onClick={() => {/* TODO: Delete property handler */}}
+              onClick={() => {
+                void handleDeleteProperty();
+              }}
               className={`${spacing.padding.sm} rounded-md ${quick.error} ${colors.bg.primary} text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label={t('mobile.deleteUnit', { defaultValue: 'Διαγραφή ακινήτου' })}
+              aria-label={t('mobile.deleteUnit', { defaultValue: 'ГаШЪиШну Шбадулжм' })}
             >
               <Trash2 className={iconSizes.sm} />
             </button>
           </>
-        }
+        )}
       >
         {isMobile && selectedProperty && detailsContent}
       </MobileDetailsSlideIn>
 
-      {/* 🛡️ ADR-226: Deletion Guard blocked dialog */}
-      {BlockedDialog}
-
-      {/* Centered confirmation dialog (NOT toast) */}
-      <BuildingSpaceConfirmDialog
-        open={confirmDelete}
-        onOpenChange={(open) => { if (!open) setConfirmDelete(false); }}
-        title={t('navigation.actions.delete.confirmTitle', { defaultValue: 'Διαγραφή Ακινήτου' })}
-        description={
-          <>
-            {t('navigation.actions.delete.confirmMessage', { name: selectedProperty?.name })}{' '}
-            <br /><br />
-            {t('navigation.actions.delete.confirmWarning', { defaultValue: 'Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.' })}
-          </>
-        }
-        confirmLabel={t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' })}
-        onConfirm={handleConfirmDelete}
-        loading={deleteLoading}
-        variant="destructive"
-      />
+      {ImpactDialog}
+      {DeletionDialogs}
     </>
   );
 }
-
-
-

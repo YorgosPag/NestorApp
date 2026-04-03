@@ -16,6 +16,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
+import {
+  addLoanCommunicationLogWithPolicy,
+  createPropertyLoanWithPolicy,
+  recordLoanDisbursementWithPolicy,
+  transitionPropertyLoanWithPolicy,
+  updatePropertyLoanWithPolicy,
+} from '@/services/property-finance/property-finance-mutation-gateway';
 import type {
   LoanTracking,
   CreateLoanInput,
@@ -97,11 +104,7 @@ export function useLoanTracking(propertyId: string | null): UseLoanTrackingRetur
     async (input: CreateLoanInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No unit selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(basePath, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-        });
+        const res = await createPropertyLoanWithPolicy(propertyId!, input);
         if (res.success) clientSafeFireAndForget(fetchData(), 'LoanTracking.refetch');
         return { success: res.success, error: res.error };
       } catch (err) {
@@ -116,14 +119,7 @@ export function useLoanTracking(propertyId: string | null): UseLoanTrackingRetur
     async (loanId: string, input: UpdateLoanInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No unit selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(
-          `${basePath}/${loanId}`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-          }
-        );
+        const res = await updatePropertyLoanWithPolicy(propertyId!, loanId, input);
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
@@ -138,14 +134,7 @@ export function useLoanTracking(propertyId: string | null): UseLoanTrackingRetur
     async (loanId: string, input: LoanTransitionInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No unit selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(
-          `${basePath}/${loanId}/transition`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-          }
-        );
+        const res = await transitionPropertyLoanWithPolicy(propertyId!, loanId, input);
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
@@ -160,14 +149,7 @@ export function useLoanTracking(propertyId: string | null): UseLoanTrackingRetur
     async (loanId: string, input: RecordDisbursementInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No unit selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(
-          `${basePath}/${loanId}/disburse`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-          }
-        );
+        const res = await recordLoanDisbursementWithPolicy(propertyId!, loanId, input);
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
@@ -182,14 +164,7 @@ export function useLoanTracking(propertyId: string | null): UseLoanTrackingRetur
     async (loanId: string, input: AddCommunicationLogInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No unit selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(
-          `${basePath}/${loanId}/comm-log`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-          }
-        );
+        const res = await addLoanCommunicationLogWithPolicy(propertyId!, loanId, input);
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {

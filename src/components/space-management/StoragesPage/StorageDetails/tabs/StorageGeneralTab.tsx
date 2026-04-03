@@ -19,8 +19,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { createStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
 // 🏢 SPEC-256A: Optimistic versioning — conflict detection
 import { ConflictDialog } from '@/components/shared/ConflictDialog';
 import type { ConflictResponseBody } from '@/types/versioning';
@@ -135,7 +135,7 @@ export function StorageGeneralTab({
         if (form.description.trim()) payload.description = form.description.trim();
         if (form.notes.trim()) payload.notes = form.notes.trim();
 
-        const result = await apiClient.post<{ storageId: string }>(API_ROUTES.STORAGES.LIST, payload);
+        const result = await createStorageWithPolicy<{ storageId: string }>({ payload });
 
         if (result?.storageId) {
           RealtimeService.dispatch('STORAGE_CREATED', {
@@ -182,10 +182,10 @@ export function StorageGeneralTab({
         payload._v = versionRef.current;
       }
 
-      const result = await apiClient.patch<StoragePatchResult & { _v?: number }>(
-        API_ROUTES.STORAGES.BY_ID(storage.id),
+      const result = await updateStorageWithPolicy<StoragePatchResult & { _v?: number }>({
+        storageId: storage.id,
         payload,
-      );
+      });
 
       // SPEC-256A: Update local version from response
       if (typeof result?._v === 'number') {

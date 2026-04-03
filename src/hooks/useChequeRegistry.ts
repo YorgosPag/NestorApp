@@ -16,6 +16,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
+import {
+  bouncePropertyChequeWithPolicy,
+  createPropertyChequeWithPolicy,
+  endorsePropertyChequeWithPolicy,
+  transitionPropertyChequeWithPolicy,
+  updatePropertyChequeWithPolicy,
+} from '@/services/property-finance/property-finance-mutation-gateway';
 import type {
   ChequeRecord,
   CreateChequeInput,
@@ -96,11 +103,7 @@ export function useChequeRegistry(propertyId: string | null): UseChequeRegistryR
     async (input: CreateChequeInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No property selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(basePath, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-        });
+        const res = await createPropertyChequeWithPolicy(propertyId!, input);
         if (res.success) clientSafeFireAndForget(fetchData(), 'ChequeRegistry.refetch');
         return { success: res.success, error: res.error };
       } catch (err) {
@@ -115,14 +118,7 @@ export function useChequeRegistry(propertyId: string | null): UseChequeRegistryR
     async (chequeId: string, input: UpdateChequeInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No property selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(
-          `${basePath}/${chequeId}`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-          }
-        );
+        const res = await updatePropertyChequeWithPolicy(propertyId!, chequeId, input);
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
@@ -137,14 +133,7 @@ export function useChequeRegistry(propertyId: string | null): UseChequeRegistryR
     async (chequeId: string, input: ChequeTransitionInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No property selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(
-          `${basePath}/${chequeId}/transition`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-          }
-        );
+        const res = await transitionPropertyChequeWithPolicy(propertyId!, chequeId, input);
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
@@ -159,14 +148,7 @@ export function useChequeRegistry(propertyId: string | null): UseChequeRegistryR
     async (chequeId: string, input: EndorseInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No property selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(
-          `${basePath}/${chequeId}/endorse`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-          }
-        );
+        const res = await endorsePropertyChequeWithPolicy(propertyId!, chequeId, input);
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {
@@ -181,14 +163,7 @@ export function useChequeRegistry(propertyId: string | null): UseChequeRegistryR
     async (chequeId: string, input: BounceInput): Promise<ActionResult> => {
       if (!basePath) return { success: false, error: 'No property selected' };
       try {
-        const res = await fetchJson<{ success: boolean; error?: string }>(
-          `${basePath}/${chequeId}/bounce`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-          }
-        );
+        const res = await bouncePropertyChequeWithPolicy(propertyId!, chequeId, input);
         if (res.success) await fetchData();
         return { success: res.success, error: res.error };
       } catch (err) {

@@ -21,7 +21,10 @@
 import { useState, useCallback } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
-import { FileRecordService } from '@/services/file-record.service';
+import {
+  createPendingFileRecordWithPolicy,
+  finalizeFileRecordWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { isFloorplanFile } from '@/services/floorplans/FloorplanProcessor';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
@@ -206,7 +209,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
       logger.info('Creating FileRecord');
 
       // Phase 3: Create pending FileRecord
-      const { fileId, storagePath, fileRecord } = await FileRecordService.createPendingFileRecord({
+      const { fileId, storagePath, fileRecord } = await createPendingFileRecordWithPolicy({
         companyId, projectId, entityType, entityId, domain, category,
         entityLabel, purpose, originalFilename: file.name, ext,
         contentType: file.type, createdBy: userId,
@@ -244,7 +247,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
       setProgress(60);
 
       // Phase 7: Finalize FileRecord
-      await FileRecordService.finalizeFileRecord({ fileId, sizeBytes: file.size, downloadUrl });
+      await finalizeFileRecordWithPolicy({ fileId, sizeBytes: file.size, downloadUrl });
       logger.info('FileRecord finalized');
       setProgress(90);
 

@@ -17,6 +17,11 @@ import type { ReactNode } from 'react';
 import { AssociationService } from '@/services/association.service';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';
+import {
+  linkContactToEntityWithPolicy,
+  unlinkContactWithPolicy,
+  updateContactLinkRoleWithPolicy,
+} from '@/services/entity-linking/association-mutation-gateway';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { RealtimeService } from '@/services/realtime';
 import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
@@ -169,13 +174,15 @@ export function useEntityContactLinks(
   const addLink = useCallback(async (contactId: string, role: string): Promise<boolean> => {
     if (!entityId || !user) return false;
 
-    const result = await AssociationService.linkContactToEntity({
-      sourceWorkspaceId: 'default',
-      sourceContactId: contactId,
-      targetEntityType: entityType,
-      targetEntityId: entityId,
-      role,
-      createdBy: user.uid,
+    const result = await linkContactToEntityWithPolicy({
+      input: {
+        sourceWorkspaceId: 'default',
+        sourceContactId: contactId,
+        targetEntityType: entityType,
+        targetEntityId: entityId,
+        role,
+        createdBy: user.uid,
+      },
     });
 
     if (result.success) {
@@ -194,7 +201,7 @@ export function useEntityContactLinks(
     const allowed = await checkBeforeRemove(linkId);
     if (!allowed) return false;
 
-    const result = await AssociationService.unlinkContact(linkId, user.uid);
+    const result = await unlinkContactWithPolicy({ linkId, updatedBy: user.uid });
     if (result.success) {
       refresh();
       return true;
@@ -208,7 +215,11 @@ export function useEntityContactLinks(
   const updateRole = useCallback(async (linkId: string, newRole: string): Promise<boolean> => {
     if (!user) return false;
 
-    const result = await AssociationService.updateContactLinkRole(linkId, newRole, user.uid);
+    const result = await updateContactLinkRoleWithPolicy({
+      linkId,
+      role: newRole,
+      updatedBy: user.uid,
+    });
     if (result.success) {
       refresh();
       return true;

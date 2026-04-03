@@ -9,13 +9,13 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
   CashFlowConfig,
   RecurringPayment,
 } from '@/services/cash-flow/cash-flow.types';
 import { DEFAULT_CASH_FLOW_CONFIG } from '@/services/cash-flow/cash-flow.types';
 import { getErrorMessage } from '@/lib/error-utils';
+import { updateCashFlowConfigWithPolicy } from '@/services/cash-flow/cash-flow-mutation-gateway';
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -85,7 +85,7 @@ export function useCashFlowSettings(
     const snapshot = { ...config };
 
     try {
-      await apiClient.put('/api/reports/cash-flow', {
+      await updateCashFlowConfigWithPolicy({
         initialBalance: config.initialBalance,
         recurringPayments: config.recurringPayments,
       });

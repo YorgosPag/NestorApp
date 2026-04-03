@@ -569,6 +569,17 @@ export const API_ROUTES = {
     IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/impact-preview` as const,
   },
 
+  PROCUREMENT: {
+    LIST: '/api/procurement',
+    BY_ID: (poId: string) => `/api/procurement/${poId}` as const,
+    ACTION: (poId: string, action: string) => `/api/procurement/${poId}?action=${action}` as const,
+    SHARE: (poId: string) => `/api/procurement/${poId}/share` as const,
+    EMAIL: (poId: string) => `/api/procurement/${poId}/email` as const,
+    PDF: (poId: string) => `/api/procurement/${poId}/pdf` as const,
+    SUPPLIER_METRICS: '/api/procurement/supplier-metrics',
+    SUPPLIER_COMPARISON: '/api/procurement/supplier-metrics/comparison',
+  },
+
   // ── Buildings ─────────────────────────────────────────────────────────
   BUILDINGS: {
     LIST: '/api/buildings',
@@ -591,6 +602,7 @@ export const API_ROUTES = {
     LIST: '/api/properties',
     CREATE: '/api/properties/create',
     BY_ID: (id: string) => `/api/properties/${id}` as const,
+    IMPACT_PREVIEW: (propertyId: string) => `/api/properties/${propertyId}/impact-preview` as const,
     ADMIN_LINK: '/api/properties/admin-link',
     HIERARCHY: (propertyId: string) => `/api/properties/${propertyId}/hierarchy` as const,
     ACTIVITY: (propertyId: string) => `/api/properties/${propertyId}/activity` as const,
@@ -625,6 +637,8 @@ export const API_ROUTES = {
     PROPERTIES: (contactId: string) => `/api/contacts/${contactId}/properties` as const,
     SEARCH_INDIVIDUALS: '/api/contacts/search-individuals',
     IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/identity-impact-preview` as const,
+    COMPANY_IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/company-identity-impact-preview` as const,
+    SERVICE_IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/service-identity-impact-preview` as const,
     RESTORE: (id: string) => `/api/contacts/${id}/restore` as const,
     PERMANENT_DELETE: (id: string) => `/api/contacts/${id}/permanent-delete` as const,
   },
