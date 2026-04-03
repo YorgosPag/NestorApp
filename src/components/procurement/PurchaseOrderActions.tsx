@@ -24,6 +24,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { PurchaseOrder } from '@/types/procurement';
+import { API_ROUTES } from '@/config/domain-constants';
+import {
+  createPurchaseOrderShareWithPolicy,
+  sendPurchaseOrderEmailWithPolicy,
+} from '@/services/procurement/procurement-mutation-gateway';
 
 // ============================================================================
 // TYPES
@@ -45,8 +50,7 @@ function usePdfDownload(poId: string) {
   const download = useCallback(async (lang: 'el' | 'en' = 'el') => {
     setStatus('loading');
     try {
-      const pdfPath = ['/api/procurement', poId, 'pdf'].join('/');
-      const pdfUrl = new URL(pdfPath, window.location.origin);
+      const pdfUrl = new URL(API_ROUTES.PROCUREMENT.PDF(poId), window.location.origin);
       pdfUrl.searchParams.set('lang', lang);
       const res = await fetch(pdfUrl.toString());
       if (!res.ok) throw new Error(res.statusText);
@@ -81,13 +85,8 @@ function useShareLink(poId: string) {
   const createShare = useCallback(async () => {
     setStatus('loading');
     try {
-      const res = await fetch(`/api/procurement/${poId}/share`, {
-        method: 'POST',
-      });
-      if (!res.ok) throw new Error(res.statusText);
-
-      const json = await res.json();
-      const url = json.data?.url as string;
+      const result = await createPurchaseOrderShareWithPolicy(poId);
+      const url = result.url;
       setShareUrl(url);
 
       await navigator.clipboard.writeText(url);
@@ -127,20 +126,11 @@ function EmailSendDialog({ open, onClose, poId, poNumber }: EmailDialogProps) {
     setErrorMsg('');
 
     try {
-      const res = await fetch(`/api/procurement/${poId}/email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipientEmail: email,
-          recipientName: name,
-          language: lang,
-        }),
+      await sendPurchaseOrderEmailWithPolicy(poId, {
+        recipientEmail: email,
+        recipientName: name,
+        language: lang,
       });
-
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error ?? 'Send failed');
-      }
 
       setStatus('success');
       setTimeout(() => {

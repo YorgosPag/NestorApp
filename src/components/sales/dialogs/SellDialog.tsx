@@ -21,8 +21,6 @@ import { Label } from '@/components/ui/label';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import { OwnersList } from '@/components/shared/owners/OwnersList';
 import { isOwnersValid, formatOwnerNames, getPrimaryBuyerContactId, buildOwnerFields } from '@/lib/ownership/owner-utils';
 import { AppurtenancesSection } from './AppurtenancesSection';
@@ -46,6 +44,11 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { resolveProjectId, translateServerError } from './sales-dialog-utils';
 import type { BaseDialogProps } from './sales-dialog-utils';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import {
+  dispatchSalesAccountingEventWithPolicy,
+  syncSalesAppurtenancesWithPolicy,
+} from '@/services/sales-mutation-gateway';
 
 const logger = createModuleLogger('SellDialog');
 
@@ -58,6 +61,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>('');
+  const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
 
   const existingOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
 
@@ -106,7 +110,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     setSaving(true);
     setSaveError('');
     try {
-      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unit.id), {
+      const updates = {
         commercialStatus: 'sold',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,
@@ -119,7 +123,11 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           listedDate: unit.commercial?.listedDate ?? null,
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
-      } as Record<string, unknown>);
+      };
+      const completed = await runExistingPropertyUpdate(unit, updates as Record<string, unknown>);
+      if (!completed) {
+        return;
+      }
       onOpenChange(false);
       onSuccess?.();
 
@@ -129,7 +137,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         ? linkedSpaces.buildLineItems(price, propertyName)
         : undefined;
 
-      apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
+      dispatchSalesAccountingEventWithPolicy(unit.id, {
         eventType: 'final_sale_invoice',
         propertyId: unit.id, propertyName,
         projectId: resolveProjectId(unit) ?? null,
@@ -169,7 +177,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       }
 
       if (selectedSpaces.length > 0) {
-        apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
+        syncSalesAppurtenancesWithPolicy(unit.id, {
           action: 'sell',
           spaces: linkedSpaces.buildSyncPayload('sell'),
           ...buildOwnerFields(owners),
@@ -188,7 +196,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     } finally {
       setSaving(false);
     }
-  }, [finalPrice, owners, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, selectedBrokerId, brokerAgreements, t]);
+  }, [brokerAgreements, buyerContactId, buyerName, finalPrice, linkedSpaces, onOpenChange, onSuccess, owners, runExistingPropertyUpdate, selectedBrokerId, t, unit]);
 
   const askingPrice = unit.commercial?.askingPrice;
   const discount = askingPrice && Number(finalPrice) > 0
@@ -196,7 +204,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     : null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -349,7 +358,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || !finalPrice || Number(finalPrice) <= 0 || !isOwnersValid(owners) || !hierarchy.isValid || !sellHasArea}
+            disabled={saving || previewChecking || !finalPrice || Number(finalPrice) <= 0 || !isOwnersValid(owners) || !hierarchy.isValid || !sellHasArea}
             className={cn(colors.bg.success, "hover:opacity-90 text-white")}
           >
             {saving
@@ -358,6 +367,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+      {ImpactDialog}
+    </>
   );
 }

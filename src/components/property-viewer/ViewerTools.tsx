@@ -28,6 +28,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useNotifications } from '@/providers/NotificationProvider';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('ViewerTools');
@@ -97,6 +98,7 @@ export function ViewerTools({
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('properties');
   const { confirm, dialogProps } = useConfirmDialog();
+  const { warning } = useNotifications();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -160,16 +162,19 @@ export function ViewerTools({
     });
     if (!confirmed) return;
 
-    onPropertySelect?.(null);
-    // TODO: Implement actual deletion
-    logger.info('Delete property', { selectedPropertyId });
+    warning(t('viewer.messages.deleteUseGuardedFlow', {
+      defaultValue: 'Use the property details or list delete action so dependency guards can run before deletion.',
+    }));
+    logger.info('Blocked viewer delete in favor of guarded delete flow', { selectedPropertyId });
   };
 
   const handleCopySelected = () => {
     if (!selectedPropertyId || isReadOnly) return;
-    
-    // TODO: Implement property copying
-    logger.info('Copy property', { selectedPropertyId });
+
+    warning(t('viewer.messages.duplicateBlocked', {
+      defaultValue: 'Property duplication from the floorplan viewer is blocked until the guarded create flow is completed.',
+    }));
+    logger.info('Blocked viewer copy in favor of guarded duplicate flow', { selectedPropertyId });
   };
 
   const handleResetView = () => {

@@ -22,10 +22,11 @@
 
 import { useState, useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { createProperty } from '@/services/properties.service';
+import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyType, PropertyLevel, OperationalStatus, CommercialStatus } from '@/types/property';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 
 // =============================================================================
 // TYPES
@@ -171,7 +172,7 @@ export function usePropertyForm({
         if (formData.bathrooms !== '') layout.bathrooms = formData.bathrooms;
         if (Object.keys(layout).length > 0) propertyData.layout = layout;
 
-        const result = await createProperty(propertyData);
+        const result = await createPropertyWithPolicy({ propertyData });
 
         if (result.success) {
           success(t('dialog.addUnit.messages.success'));
@@ -181,8 +182,13 @@ export function usePropertyForm({
         } else {
           error(result.error || t('dialog.addUnit.messages.error'));
         }
-      } catch {
-        error(t('dialog.addUnit.messages.error'));
+      } catch (caughtError) {
+        error(translatePropertyMutationError(
+          caughtError,
+          t,
+          'dialog.addUnit.messages.error',
+          'Failed to create property.',
+        ));
       } finally {
         setLoading(false);
       }

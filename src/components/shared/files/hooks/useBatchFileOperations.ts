@@ -12,7 +12,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { FileRecordService } from '@/services/file-record.service';
+import { moveFileToTrashWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 import { useFileClassification, isAIClassifiable } from './useFileClassification';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
@@ -93,7 +93,7 @@ export function useBatchFileOperations({
   const handleBatchDelete = useCallback(async () => {
     if (!currentUserId) return;
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map(id => FileRecordService.moveToTrash(id, currentUserId)));
+    await Promise.all(ids.map(id => moveFileToTrashWithPolicy(id, currentUserId)));
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, currentUserId, refetch]);

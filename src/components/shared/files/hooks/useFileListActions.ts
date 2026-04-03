@@ -8,6 +8,7 @@
  * - Inline description editing (start/save/keydown)
  * - Delete confirmation modal state
  * - Unlink confirmation modal state
+ * - Fail-closed blocked deletion modal for held files
  * - Simple click handlers (link, view, download)
  *
  * Extracted from FilesList for Google SRP compliance.
@@ -21,10 +22,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { FileRecord } from '@/types/file-record';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 interface UseFileListActionsParams {
   onDelete?: (fileId: string) => Promise<void>;
   onView?: (file: FileRecord) => void;
@@ -37,7 +34,6 @@ interface UseFileListActionsParams {
 }
 
 export interface UseFileListActionsReturn {
-  // Rename
   editingFileId: string | null;
   editingName: string;
   setEditingName: (name: string) => void;
@@ -46,40 +42,44 @@ export interface UseFileListActionsReturn {
   handleRenameCancel: () => void;
   handleRenameConfirm: () => Promise<void>;
   handleRenameKeyDown: (e: React.KeyboardEvent) => void;
-  // Description
   editingDescFileId: string | null;
   editingDesc: string;
   setEditingDesc: (desc: string) => void;
   handleDescriptionStart: (file: FileRecord) => void;
   handleDescriptionSave: () => void;
   handleDescriptionKeyDown: (e: React.KeyboardEvent) => void;
-  // Delete
   deleteConfirmOpen: boolean;
   setDeleteConfirmOpen: (open: boolean) => void;
   deleteLoading: boolean;
   handleDeleteClick: (fileId: string, event: React.MouseEvent) => void;
   handleDeleteConfirm: () => Promise<void>;
-  // Unlink
+  deleteBlockedOpen: boolean;
+  setDeleteBlockedOpen: (open: boolean) => void;
+  deleteBlockedMessage: string;
   unlinkConfirmOpen: boolean;
   setUnlinkConfirmOpen: (open: boolean) => void;
   unlinkLoading: boolean;
   handleUnlinkClick: (fileId: string, event: React.MouseEvent) => void;
   handleUnlinkConfirm: () => Promise<void>;
-  // Simple handlers
   handleLinkClick: (file: FileRecord, event: React.MouseEvent) => void;
   handleView: (file: FileRecord, event: React.MouseEvent) => void;
   handleDownload: (file: FileRecord, event: React.MouseEvent) => void;
 }
 
-// ============================================================================
-// MODULE LOGGER
-// ============================================================================
-
 const logger = createModuleLogger('FileListActions');
 
-// ============================================================================
-// HOOK
-// ============================================================================
+function deriveDeleteBlockMessage(error: unknown, fallbackMessage: string): string {
+  if (!(error instanceof Error)) {
+    return fallbackMessage;
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+  if (normalizedMessage.includes('hold')) {
+    return fallbackMessage;
+  }
+
+  return '';
+}
 
 export function useFileListActions({
   onDelete,
@@ -94,36 +94,22 @@ export function useFileListActions({
   const { t } = useTranslation('files');
   const { success, error } = useNotifications();
 
-  // =========================================================================
-  // RENAME STATE
-  // =========================================================================
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [renameLoading, setRenameLoading] = useState(false);
 
-  // =========================================================================
-  // DESCRIPTION EDIT STATE
-  // =========================================================================
   const [editingDescFileId, setEditingDescFileId] = useState<string | null>(null);
   const [editingDesc, setEditingDesc] = useState('');
 
-  // =========================================================================
-  // DELETE CONFIRMATION STATE
-  // =========================================================================
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteBlockedOpen, setDeleteBlockedOpen] = useState(false);
+  const [deleteBlockedMessage, setDeleteBlockedMessage] = useState('');
 
-  // =========================================================================
-  // UNLINK CONFIRMATION STATE
-  // =========================================================================
   const [unlinkConfirmOpen, setUnlinkConfirmOpen] = useState(false);
   const [fileToUnlink, setFileToUnlink] = useState<string | null>(null);
   const [unlinkLoading, setUnlinkLoading] = useState(false);
-
-  // =========================================================================
-  // RENAME HANDLERS
-  // =========================================================================
 
   const handleRenameStart = useCallback((file: FileRecord) => {
     setEditingFileId(file.id);
@@ -155,15 +141,11 @@ export function useFileListActions({
   const handleRenameKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleRenameConfirm();
+      void handleRenameConfirm();
     } else if (e.key === 'Escape') {
       handleRenameCancel();
     }
   }, [handleRenameConfirm, handleRenameCancel]);
-
-  // =========================================================================
-  // DESCRIPTION HANDLERS
-  // =========================================================================
 
   const handleDescriptionStart = useCallback((file: FileRecord) => {
     setEditingDescFileId(file.id);
@@ -183,10 +165,6 @@ export function useFileListActions({
     }
   }, []);
 
-  // =========================================================================
-  // DELETE HANDLERS
-  // =========================================================================
-
   const handleDeleteClick = useCallback((fileId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     if (!onDelete || !currentUserId) return;
@@ -204,16 +182,21 @@ export function useFileListActions({
       setDeleteConfirmOpen(false);
       setFileToDelete(null);
     } catch (err) {
-      error(t('list.deleteError'));
+      const blockedMessage = deriveDeleteBlockMessage(err, t('trash.cannotTrashWithHold'));
+      setDeleteConfirmOpen(false);
+
+      if (blockedMessage) {
+        setDeleteBlockedMessage(blockedMessage);
+        setDeleteBlockedOpen(true);
+      } else {
+        error(t('list.deleteError'));
+      }
+
       logger.error('Delete failed', { error: err });
     } finally {
       setDeleteLoading(false);
     }
   }, [fileToDelete, onDelete, t, success, error]);
-
-  // =========================================================================
-  // UNLINK HANDLERS
-  // =========================================================================
 
   const handleUnlinkClick = useCallback((fileId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -238,10 +221,6 @@ export function useFileListActions({
       setUnlinkLoading(false);
     }
   }, [fileToUnlink, onUnlink, t, success, error]);
-
-  // =========================================================================
-  // SIMPLE CLICK HANDLERS
-  // =========================================================================
 
   const handleLinkClick = useCallback((file: FileRecord, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -270,6 +249,7 @@ export function useFileListActions({
     handleDescriptionStart, handleDescriptionSave, handleDescriptionKeyDown,
     deleteConfirmOpen, setDeleteConfirmOpen, deleteLoading,
     handleDeleteClick, handleDeleteConfirm,
+    deleteBlockedOpen, setDeleteBlockedOpen, deleteBlockedMessage,
     unlinkConfirmOpen, setUnlinkConfirmOpen, unlinkLoading,
     handleUnlinkClick, handleUnlinkConfirm,
     handleLinkClick, handleView, handleDownload,

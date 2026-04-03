@@ -29,7 +29,10 @@ import { useProjectWorkers } from './hooks/useProjectWorkers';
 import { WorkerCard } from './components/WorkerCard';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import { AssociationService } from '@/services/association.service';
+import {
+  linkContactToEntityWithPolicy,
+  unlinkContactWithPolicy,
+} from '@/services/entity-linking/association-mutation-gateway';
 import type { ProjectWorker } from './contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -72,13 +75,15 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
     try {
       setIsAssigning(true);
 
-      const result = await AssociationService.linkContactToEntity({
-        sourceWorkspaceId: 'ws_office_directory',
-        sourceContactId: selectedContact.id,
-        targetEntityType: 'project',
-        targetEntityId: projectId,
-        reason: 'IKA worker assignment',
-        createdBy: 'current_user',
+      const result = await linkContactToEntityWithPolicy({
+        input: {
+          sourceWorkspaceId: 'ws_office_directory',
+          sourceContactId: selectedContact.id,
+          targetEntityType: 'project',
+          targetEntityId: projectId,
+          reason: 'IKA worker assignment',
+          createdBy: 'current_user',
+        },
       });
 
       if (result.success) {
@@ -106,7 +111,10 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
 
     try {
       setIsRemoving(worker.contactId);
-      const result = await AssociationService.unlinkContact(worker.linkId, 'current_user');
+      const result = await unlinkContactWithPolicy({
+        linkId: worker.linkId,
+        updatedBy: 'current_user',
+      });
       if (!result.success) {
         throw new Error(result.error);
       }

@@ -36,6 +36,10 @@ import {
   type DocumentTemplate,
   type TemplateCategory,
 } from '@/services/document-template.service';
+import {
+  createDocumentTemplateWithPolicy,
+  deleteDocumentTemplateWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -161,7 +165,7 @@ export function DocumentTemplatePanel({
       required: true,
     }));
 
-    await DocumentTemplateService.createTemplate({
+    await createDocumentTemplateWithPolicy({
       companyId,
       name: newName.trim(),
       category: newCategory,
@@ -179,7 +183,7 @@ export function DocumentTemplatePanel({
   // Delete template
   const handleDelete = useCallback(
     async (id: string) => {
-      await DocumentTemplateService.deleteTemplate(id);
+      await deleteDocumentTemplateWithPolicy(id);
       if (selectedTemplate?.id === id) {
         setSelectedTemplate(null);
         setPreview(null);

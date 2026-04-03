@@ -12,10 +12,9 @@
 
 import { useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { createStorageWithPolicy } from '@/services/storage-mutation-gateway';
 import {
   Dialog,
   DialogContent,
@@ -108,7 +107,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
     setError(null);
 
     try {
-      const result = await apiClient.post<StorageCreateResult>(API_ROUTES.STORAGES.LIST, {
+      const result = await createStorageWithPolicy<StorageCreateResult>({ payload: {
         name: name.trim(),
         code: code.trim() || undefined,
         buildingId,
@@ -119,7 +118,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
         price: price ? parseFloat(price) : undefined,
         description: description.trim() || undefined,
         notes: notes.trim() || undefined,
-      });
+      }});
 
       if (result?.storageId) {
         RealtimeService.dispatch('STORAGE_CREATED', {

@@ -26,6 +26,11 @@ import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FileFolderService, type FileFolder } from '@/services/file-folder.service';
+import {
+  createFileFolderWithPolicy,
+  deleteFileFolderWithPolicy,
+  renameFileFolderWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { getStatusColor } from '@/lib/design-system';
 
@@ -102,12 +107,12 @@ export function FolderManager({
   }, [selectedFolderId, onFolderSelect]);
 
   const handleRename = useCallback(async (id: string, name: string) => {
-    await FileFolderService.renameFolder(id, name);
+    await renameFileFolderWithPolicy(id, name);
     fetchFolders();
   }, [fetchFolders]);
 
   const handleDelete = useCallback(async (id: string) => {
-    await FileFolderService.deleteFolder(id);
+    await deleteFileFolderWithPolicy(id);
     if (selectedFolderId === id) { setSelectedFolderId(null); onFolderSelect?.(null); }
     fetchFolders();
   }, [fetchFolders, selectedFolderId, onFolderSelect]);
@@ -123,7 +128,7 @@ export function FolderManager({
 
   const handleCreateSubmit = useCallback(async () => {
     if (!newFolderName.trim()) return;
-    await FileFolderService.createFolder({
+    await createFileFolderWithPolicy({
       companyId,
       parentId: createParentId ?? undefined,
       name: newFolderName.trim(),

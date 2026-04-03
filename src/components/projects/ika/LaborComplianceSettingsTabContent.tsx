@@ -31,6 +31,10 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { LaborComplianceService } from '@/services/labor-compliance';
+import {
+  saveLaborComplianceConfigWithPolicy,
+  seedLaborComplianceDefaultsWithPolicy,
+} from '@/services/labor-compliance/labor-compliance-mutation-gateway';
 import type { LaborComplianceDocument } from '@/services/labor-compliance';
 import type { InsuranceClass, ContributionRates } from './contracts';
 import {
@@ -134,11 +138,15 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
 
     try {
       setIsSaving(true);
-      await LaborComplianceService.saveConfig(classes, rates, {
-        year: activeYear,
-        userId: user.uid,
-        sourceCircular: sourceCircular || null,
-        effectiveDate: effectiveDate || new Date().toISOString().split('T')[0],
+      await saveLaborComplianceConfigWithPolicy({
+        classes,
+        rates,
+        metadata: {
+          year: activeYear,
+          userId: user.uid,
+          sourceCircular: sourceCircular || null,
+          effectiveDate: effectiveDate || new Date().toISOString().split('T')[0],
+        },
       });
       notifications.success(t('ika.efkaSettingsTab.saveSuccess'));
       setIsEditing(false);
@@ -156,7 +164,9 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
 
     try {
       setIsSeeding(true);
-      const seeded = await LaborComplianceService.seedFromDefaults(user.uid);
+      const seeded = await seedLaborComplianceDefaultsWithPolicy({
+        userId: user.uid,
+      });
       if (seeded) {
         notifications.success(t('ika.efkaSettingsTab.seedSuccess'));
         await loadData();

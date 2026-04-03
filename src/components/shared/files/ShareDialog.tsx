@@ -42,7 +42,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { FileShareService } from '@/services/file-share.service';
+import { createFileShareWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -99,7 +99,7 @@ export function ShareDialog({
   const handleCreate = useCallback(async () => {
     setCreating(true);
     try {
-      const token = await FileShareService.createShare({
+      const token = await createFileShareWithPolicy({
         fileId,
         createdBy: userId,
         expiresInHours: parseInt(expiresInHours, 10),

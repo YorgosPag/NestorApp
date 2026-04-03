@@ -31,6 +31,12 @@ import {
   type FileApproval,
   type ApprovalStatus,
 } from '@/services/file-approval.service';
+import {
+  approveFileApprovalWithPolicy,
+  cancelFileApprovalWithPolicy,
+  createFileApprovalWithPolicy,
+  rejectFileApprovalWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import '@/lib/design-system';
@@ -108,7 +114,7 @@ export function ApprovalPanel({
     if (newApprovers.length === 0) return;
     setSubmitting(true);
     try {
-      await FileApprovalService.createApproval({
+      await createFileApprovalWithPolicy({
         fileId,
         companyId: '', // Will be populated from context
         requestedBy: currentUserId,
@@ -126,7 +132,7 @@ export function ApprovalPanel({
 
   const handleApprove = useCallback(
     async (approvalId: string) => {
-      await FileApprovalService.approve(approvalId, currentUserId);
+      await approveFileApprovalWithPolicy(approvalId, currentUserId);
     },
     [currentUserId]
   );
@@ -134,7 +140,7 @@ export function ApprovalPanel({
   const handleReject = useCallback(
     async (approvalId: string) => {
       if (!rejectReason.trim()) return;
-      await FileApprovalService.reject(approvalId, currentUserId, rejectReason);
+      await rejectFileApprovalWithPolicy(approvalId, currentUserId, rejectReason);
       setRejectingId(null);
       setRejectReason('');
     },
@@ -143,7 +149,7 @@ export function ApprovalPanel({
 
   const handleCancel = useCallback(
     async (approvalId: string) => {
-      await FileApprovalService.cancel(approvalId, currentUserId, fileId);
+      await cancelFileApprovalWithPolicy(approvalId, currentUserId, fileId);
     },
     [currentUserId, fileId]
   );

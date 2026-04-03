@@ -31,6 +31,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { FileRecordService } from '@/services/file-record.service';
+import {
+  linkFileToEntityWithPolicy,
+  unlinkFileFromEntityWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -174,8 +178,8 @@ export function LinkToBuildingModal({
 
       // Execute link/unlink operations
       const operations: Promise<void>[] = [
-        ...toAdd.map(id => FileRecordService.linkFileToEntity(file.id, 'building', id)),
-        ...toRemove.map(id => FileRecordService.unlinkFileFromEntity(file.id, 'building', id)),
+        ...toAdd.map(id => linkFileToEntityWithPolicy(file.id, 'building', id)),
+        ...toRemove.map(id => unlinkFileFromEntityWithPolicy(file.id, 'building', id)),
       ];
 
       await Promise.all(operations);

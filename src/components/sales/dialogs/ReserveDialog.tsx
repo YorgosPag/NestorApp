@@ -20,8 +20,6 @@ import { Label } from '@/components/ui/label';
 import { UserCheck, UserPlus, AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
 import { OwnersList } from '@/components/shared/owners/OwnersList';
 import { isOwnersValid, formatOwnerNames, getPrimaryBuyerContactId, buildOwnerFields } from '@/lib/ownership/owner-utils';
@@ -36,6 +34,11 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { resolveProjectId, translateServerError } from './sales-dialog-utils';
 import type { BaseDialogProps } from './sales-dialog-utils';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import {
+  dispatchSalesAccountingEventWithPolicy,
+  syncSalesAppurtenancesWithPolicy,
+} from '@/services/sales-mutation-gateway';
 
 const logger = createModuleLogger('ReserveDialog');
 
@@ -46,6 +49,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const [deposit, setDeposit] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>('');
+  const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
 
   // ADR-244: Multi-buyer owners state
   const [owners, setOwners] = useState<PropertyOwnerEntry[]>([]);
@@ -82,7 +86,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     setSaving(true);
     setSaveError('');
     try {
-      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unit.id), {
+      const updates = {
         commercialStatus: 'reserved',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,
@@ -95,7 +99,11 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           listedDate: unit.commercial?.listedDate ?? new Date().toISOString(),
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
-      } as Record<string, unknown>);
+      };
+      const completed = await runExistingPropertyUpdate(unit, updates as Record<string, unknown>);
+      if (!completed) {
+        return;
+      }
       onOpenChange(false);
       onSuccess?.();
 
@@ -108,7 +116,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
         : undefined;
 
       if (buyerContactId) {
-        apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
+        dispatchSalesAccountingEventWithPolicy(unit.id, {
           eventType: 'reservation_notify',
           propertyId: unit.id,
           propertyName,
@@ -130,7 +138,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       }
 
       if (depositAmount > 0) {
-        apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
+        dispatchSalesAccountingEventWithPolicy(unit.id, {
           eventType: 'deposit_invoice',
           propertyId: unit.id,
           propertyName,
@@ -153,7 +161,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       }
 
       if (selectedSpaces.length > 0) {
-        apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
+        syncSalesAppurtenancesWithPolicy(unit.id, {
           action: 'reserve',
           spaces: linkedSpaces.buildSyncPayload('reserve'),
           ...buildOwnerFields(owners),
@@ -172,7 +180,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     } finally {
       setSaving(false);
     }
-  }, [deposit, owners, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces, t]);
+  }, [buyerContactId, buyerName, deposit, linkedSpaces, onOpenChange, onSuccess, owners, runExistingPropertyUpdate, t, unit]);
 
   return (
     <>
@@ -276,7 +284,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               {t('common.cancel', { defaultValue: 'Ακύρωση' })}
             </Button>
-            <Button onClick={handleSave} disabled={saving || !isOwnersValid(owners) || !hierarchy.isValid || !hasAskingPrice || !hasArea}>
+            <Button onClick={handleSave} disabled={saving || previewChecking || !isOwnersValid(owners) || !hierarchy.isValid || !hasAskingPrice || !hasArea}>
               {saving
                 ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
                 : t('sales.dialogs.reserve.confirm', { defaultValue: 'Κράτηση' })}
@@ -285,6 +293,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
         </DialogContent>
       </Dialog>
 
+      {ImpactDialog}
       <TabbedAddNewContactDialog
         open={open && activeDialog === 'new-contact'}
         onOpenChange={handleNewContactCancel}

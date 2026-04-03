@@ -44,6 +44,7 @@ import { formatDateTime } from '@/lib/intl-utils';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FileRecordService } from '@/services/file-record.service';
+import { restoreFileFromTrashWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 import type { FileRecord } from '@/types/file-record';
 import { HOLD_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -210,7 +211,7 @@ export function TrashView({
 
     setRestoreLoading(true);
     try {
-      await FileRecordService.restoreFromTrash(fileToRestore, currentUserId);
+      await restoreFileFromTrashWithPolicy(fileToRestore, currentUserId);
       success(t('trash.restoreSuccess'));
       setRestoreDialogOpen(false);
       setFileToRestore(null);

@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { OwnersList } from '@/components/shared/owners/OwnersList';
 import { LandownerRemovalDialog } from '@/components/shared/owners/LandownerRemovalDialog';
 import { isOwnersValid } from '@/lib/ownership/owner-utils';
-import { updateProjectClient } from '@/services/projects-client.service';
+import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useLandownerUnlinkGuard } from '@/hooks/useLandownerUnlinkGuard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -236,10 +236,13 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
       const landownerEntries = toLandownerEntries(owners);
       // ADR-244: Denormalized IDs for Firestore array-contains queries (contact details page)
       const contactIds = owners.filter(o => o.contactId).map(o => o.contactId);
-      const result = await updateProjectClient(projectId, {
-        landowners: landownerEntries.length > 0 ? landownerEntries : null,
-        bartexPercentage: bartexPct,
-        landownerContactIds: contactIds.length > 0 ? contactIds : null,
+      const result = await updateProjectWithPolicy({
+        projectId,
+        updates: {
+          landowners: landownerEntries.length > 0 ? landownerEntries : null,
+          bartexPercentage: bartexPct,
+          landownerContactIds: contactIds.length > 0 ? contactIds : null,
+        },
       });
 
       if (result.success) {

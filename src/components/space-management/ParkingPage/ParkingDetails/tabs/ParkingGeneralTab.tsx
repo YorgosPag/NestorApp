@@ -17,8 +17,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { createParkingWithPolicy, updateParkingWithPolicy } from '@/services/parking-mutation-gateway';
 // 🏢 SPEC-256A: Optimistic versioning — conflict detection
 import { ConflictDialog } from '@/components/shared/ConflictDialog';
 import type { ConflictResponseBody } from '@/types/versioning';
@@ -204,7 +204,7 @@ export function ParkingGeneralTab({
         if (form.area) payload.area = parseFloat(form.area);
         if (form.notes.trim()) payload.notes = form.notes.trim();
 
-        const result = await apiClient.post<{ parkingSpotId: string }>(API_ROUTES.PARKING.LIST, payload);
+        const result = await createParkingWithPolicy<{ parkingSpotId: string }>({ payload });
 
         if (result?.parkingSpotId) {
           RealtimeService.dispatch('PARKING_CREATED', {
@@ -248,10 +248,10 @@ export function ParkingGeneralTab({
         payload._v = versionRef.current;
       }
 
-      const result = await apiClient.patch<ParkingPatchResult & { _v?: number }>(
-        API_ROUTES.PARKING.BY_ID(parking.id),
+      const result = await updateParkingWithPolicy<ParkingPatchResult & { _v?: number }>({
+        parkingSpotId: parking.id,
         payload,
-      );
+      });
 
       // SPEC-256A: Update local version from response
       if (typeof result?._v === 'number') {

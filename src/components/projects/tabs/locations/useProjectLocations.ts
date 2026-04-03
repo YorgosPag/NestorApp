@@ -19,7 +19,7 @@ import {
   extractLegacyFields,
   createProjectAddress,
 } from '@/types/project/address-helpers';
-import { updateProjectClient } from '@/services/projects-client.service';
+import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { toHierarchyValue, fromHierarchyValue, EMPTY_HIERARCHY } from './location-converters';
 
@@ -77,10 +77,13 @@ export function useProjectLocations(project: Project) {
   async function persistAddresses(newAddresses: ProjectAddress[], successMsg: string, errorMsg: string) {
     const legacy = extractLegacyFields(newAddresses);
     try {
-      const result = await updateProjectClient(project.id!, {
-        addresses: newAddresses,
-        address: legacy.address,
-        city: legacy.city,
+      const result = await updateProjectWithPolicy({
+        projectId: project.id!,
+        updates: {
+          addresses: newAddresses,
+          address: legacy.address,
+          city: legacy.city,
+        },
       });
       if (result.success) {
         setLocalAddresses(newAddresses);

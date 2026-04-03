@@ -47,6 +47,15 @@ import type { ContactType } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint, FloorInfo } from '@/config/upload-entry-points';
 import { FileRecordService } from '@/services/file-record.service';
+import { syncPropertyCoverageForRemainingFiles } from '@/services/property/property-file-mutation-gateway';
+import {
+  buildPropertyFileBatchDeletePreview,
+  buildPropertyFileDeletePreview,
+  buildPropertyFileUnlinkPreview,
+} from '@/services/property/property-file-mutation-preview';
+import { unlinkFileFromEntityWithPolicy } from '@/services/filesystem/file-mutation-gateway';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 // Hooks
 import { useEntityFiles } from './hooks/useEntityFiles';
@@ -138,6 +147,7 @@ export function EntityFilesManager({
   const [searchTerm, setSearchTerm] = useState('');
   const [linkModalFile, setLinkModalFile] = useState<FileRecord | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
+  const { confirm, dialogProps } = useConfirmDialog();
 
   // =========================================================================
   // DATA FETCHING
@@ -208,10 +218,35 @@ export function EntityFilesManager({
   // CRUD HANDLERS (thin wrappers for audit trail)
   // =========================================================================
   const handleDelete = useCallback(async (fileId: string) => {
+    const file = files.find((candidate) => candidate.id === fileId);
+    if (!file) {
+      return;
+    }
     const name = getFileName(fileId);
+    const remainingFiles = files.filter((file) => file.id !== fileId);
+    if (entityType === 'property') {
+      const preview = buildPropertyFileDeletePreview({
+        category,
+        file,
+        remainingFiles,
+        t,
+      });
+      if (preview) {
+        const confirmed = await confirm(preview);
+        if (!confirmed) {
+          return;
+        }
+      }
+    }
     await deleteFile(fileId, currentUserId);
+    await syncPropertyCoverageForRemainingFiles({
+      entityType,
+      entityId,
+      category,
+      remainingFiles,
+    });
     recordFileActivity('deleted', 'file_trash', name, null, t('audit.fileTrash'));
-  }, [deleteFile, currentUserId, getFileName, recordFileActivity]);
+  }, [category, confirm, currentUserId, deleteFile, entityId, entityType, files, getFileName, recordFileActivity, t]);
 
   const handleRename = useCallback((fileId: string, newDisplayName: string) => {
     const oldName = getFileName(fileId);
@@ -230,11 +265,28 @@ export function EntityFilesManager({
   }, []);
 
   const handleUnlink = useCallback(async (fileId: string) => {
+    const file = files.find((candidate) => candidate.id === fileId);
+    if (!file) {
+      return;
+    }
     const name = getFileName(fileId);
-    await FileRecordService.unlinkFileFromEntity(fileId, entityType, entityId);
+    if (entityType === 'property') {
+      const preview = buildPropertyFileUnlinkPreview({
+        category,
+        file,
+        t,
+      });
+      if (preview) {
+        const confirmed = await confirm(preview);
+        if (!confirmed) {
+          return;
+        }
+      }
+    }
+    await unlinkFileFromEntityWithPolicy(fileId, entityType, entityId);
     recordFileActivity('unlinked', 'file_unlink', name, null, t('audit.fileUnlink'));
     await refetch();
-  }, [entityType, entityId, refetch, getFileName, recordFileActivity]);
+  }, [category, confirm, entityId, entityType, files, getFileName, recordFileActivity, refetch, t]);
 
   const handleView = useCallback((file: FileRecord) => {
     setSelectedFile(file);
@@ -255,12 +307,35 @@ export function EntityFilesManager({
   });
 
   const handleBatchDelete = useCallback(async () => {
+    const deletedIds = new Set(selectedIds);
     const names = Array.from(selectedIds).map(getFileName);
+    const filesToDelete = files.filter((file) => deletedIds.has(file.id));
+    const remainingFiles = files.filter((file) => !deletedIds.has(file.id));
+    if (entityType === 'property') {
+      const preview = buildPropertyFileBatchDeletePreview({
+        category,
+        filesToDelete,
+        remainingFiles,
+        t,
+      });
+      if (preview) {
+        const confirmed = await confirm(preview);
+        if (!confirmed) {
+          return;
+        }
+      }
+    }
     await batchDeleteRaw();
+    await syncPropertyCoverageForRemainingFiles({
+      entityType,
+      entityId,
+      category,
+      remainingFiles,
+    });
     for (const name of names) {
       recordFileActivity('deleted', 'file_trash', name, null, t('audit.fileBatchTrash'));
     }
-  }, [batchDeleteRaw, selectedIds, getFileName, recordFileActivity]);
+  }, [batchDeleteRaw, category, confirm, entityId, entityType, files, getFileName, recordFileActivity, selectedIds, t]);
 
   const handleBatchArchive = useCallback(async () => {
     const names = Array.from(selectedIds).map(getFileName);
@@ -378,6 +453,7 @@ export function EntityFilesManager({
           />
         )}
       </Card>
+      <ConfirmDialog {...dialogProps} />
     </FullscreenOverlay>
   );
 }

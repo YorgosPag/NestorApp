@@ -24,6 +24,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { where } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import { FileRecordService } from '@/services/file-record.service';
+import {
+  moveFileToTrashWithPolicy,
+  renameFileWithPolicy,
+  updateFileDescriptionWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
@@ -315,7 +320,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     try {
       logger.info('Moving file to trash', { fileId, trashedBy });
 
-      await FileRecordService.moveToTrash(fileId, trashedBy);
+      await moveFileToTrashWithPolicy(fileId, trashedBy);
 
       logger.info('File moved to trash successfully', { fileId });
 
@@ -343,7 +348,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     try {
       logger.info('Renaming file', { fileId, newDisplayName, renamedBy });
 
-      await FileRecordService.renameFile(fileId, newDisplayName, renamedBy);
+      await renameFileWithPolicy(fileId, newDisplayName, renamedBy);
 
       logger.info('File renamed successfully', { fileId });
 
@@ -371,7 +376,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     try {
       logger.info('Updating file description', { fileId });
 
-      await FileRecordService.updateDescription(fileId, description);
+      await updateFileDescriptionWithPolicy(fileId, description);
 
       // Optimistic local state update
       setFiles((prev) => prev.map((file) =>

@@ -25,7 +25,10 @@ import app from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { FileRecordService } from '@/services/file-record.service';
+import {
+  createPendingFileRecordWithPolicy,
+  finalizeFileRecordWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { getFileExtension } from '@/services/upload';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
@@ -153,7 +156,7 @@ export function useFileUpload({
           const ext = getFileExtension(file.name);
 
           // STEP A: Create pending FileRecord
-          const { fileId, storagePath, displayName } = await FileRecordService.createPendingFileRecord({
+          const { fileId, storagePath, displayName } = await createPendingFileRecordWithPolicy({
             companyId,
             projectId,
             entityType,
@@ -194,7 +197,7 @@ export function useFileUpload({
           }
 
           // STEP C: Finalize FileRecord
-          await FileRecordService.finalizeFileRecord({
+          await finalizeFileRecordWithPolicy({
             fileId,
             sizeBytes: file.size,
             downloadUrl,

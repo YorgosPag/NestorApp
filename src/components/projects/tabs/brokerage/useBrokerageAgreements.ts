@@ -15,6 +15,11 @@ import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestor
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { BrokerageService } from '@/services/brokerage.service';
+import {
+  createBrokerageAgreementWithPolicy,
+  terminateBrokerageAgreementWithPolicy,
+  updateBrokerageAgreementWithPolicy,
+} from '@/services/brokerage-mutation-gateway';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type {
   BrokerageAgreement,
@@ -229,9 +234,9 @@ export function useBrokerageAgreements(
       const userId = user?.uid ?? 'unknown';
 
       if (isEditMode && editingAgreement) {
-        const result = await BrokerageService.updateAgreement(
-          editingAgreement.id,
-          {
+        const result = await updateBrokerageAgreementWithPolicy({
+          id: editingAgreement.id,
+          updates: {
             scope: form.scope,
             propertyId: form.scope === 'property' ? form.propertyId : null,
             exclusivity: form.exclusivity,
@@ -242,15 +247,15 @@ export function useBrokerageAgreements(
             endDate: form.endDate || null,
             notes: form.notes || null,
           },
-          userId
-        );
+          updatedBy: userId,
+        });
         if (!result.success) {
           setFormError(result.error ?? t('sales.legal.saveError'));
           return;
         }
       } else {
-        const result = await BrokerageService.createAgreement(
-          {
+        const result = await createBrokerageAgreementWithPolicy({
+          input: {
             agentContactId: form.agentContactId,
             agentName: form.agentName,
             scope: form.scope,
@@ -264,8 +269,8 @@ export function useBrokerageAgreements(
             endDate: form.endDate || undefined,
             notes: form.notes || undefined,
           },
-          userId
-        );
+          createdBy: userId,
+        });
         if (!result.success) {
           setFormError(result.error ?? t('sales.legal.saveError'));
           return;
@@ -302,14 +307,18 @@ export function useBrokerageAgreements(
 
   const handleTerminate = useCallback(async (id: string) => {
     const userId = user?.uid ?? 'unknown';
-    const result = await BrokerageService.terminateAgreement(id, userId);
+    const result = await terminateBrokerageAgreementWithPolicy({ id, updatedBy: userId });
     if (result.success) setTerminatingId(null);
   }, [user]);
 
   const handleRenew = useCallback(async (id: string) => {
     if (!renewDate) return;
     const userId = user?.uid ?? 'unknown';
-    const result = await BrokerageService.updateAgreement(id, { endDate: renewDate }, userId);
+    const result = await updateBrokerageAgreementWithPolicy({
+      id,
+      updates: { endDate: renewDate },
+      updatedBy: userId,
+    });
     if (result.success) {
       setRenewingId(null);
       setRenewDate('');

@@ -30,6 +30,7 @@ import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDate } from '@/lib/intl-utils';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
 import { useFileListActions } from './hooks/useFileListActions';
 
 // ============================================================================
@@ -392,6 +393,14 @@ export function FilesList({
         loading={actions.deleteLoading}
       />
 
+      {/* File Hold Blocked Modal */}
+      <DeletionBlockedDialog
+        open={actions.deleteBlockedOpen}
+        onOpenChange={actions.setDeleteBlockedOpen}
+        dependencies={[]}
+        message={actions.deleteBlockedMessage}
+      />
+
       {/* Unlink Confirmation Modal */}
       <DeleteConfirmDialog
         open={actions.unlinkConfirmOpen}
@@ -406,3 +415,4 @@ export function FilesList({
     </section>
   );
 }
+

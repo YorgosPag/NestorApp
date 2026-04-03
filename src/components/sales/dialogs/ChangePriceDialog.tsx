@@ -26,15 +26,20 @@ import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BaseDialogProps } from './sales-dialog-utils';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 
 export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const { success, error: notifyError } = useNotifications();
   const [askingPrice, setAskingPrice] = useState<string>(
     unit.commercial?.askingPrice?.toString() ?? ''
   );
   const [saving, setSaving] = useState(false);
+  const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
 
   // Sync state when dialog opens or unit data changes
   useEffect(() => {
@@ -49,7 +54,7 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
 
     setSaving(true);
     try {
-      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unit.id), {
+      const updates = {
         commercialStatus: unit.commercialStatus ?? 'for-sale',
         commercial: {
           askingPrice: price,
@@ -63,18 +68,26 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
           listedDate: unit.commercial?.listedDate ?? new Date().toISOString(),
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
-      } as Record<string, unknown>);
+      };
+      const completed = await runExistingPropertyUpdate(unit, updates as Record<string, unknown>);
+      if (!completed) {
+        return;
+      }
       onOpenChange(false);
       onSuccess?.();
-    } catch {
-      // Error handled by service
+      success(t('viewer.messages.updateSuccess', {
+        defaultValue: 'Property changes were saved.',
+      }));
+    } catch (error) {
+      notifyError(translatePropertyMutationError(error, t));
     } finally {
       setSaving(false);
     }
-  }, [askingPrice, unit, onOpenChange, onSuccess]);
+  }, [askingPrice, notifyError, onOpenChange, onSuccess, runExistingPropertyUpdate, success, t, unit]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -115,7 +128,7 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || !askingPrice || Number(askingPrice) <= 0}
+            disabled={saving || previewChecking || !askingPrice || Number(askingPrice) <= 0}
           >
             {saving
               ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
@@ -123,6 +136,8 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+      {ImpactDialog}
+    </>
   );
 }

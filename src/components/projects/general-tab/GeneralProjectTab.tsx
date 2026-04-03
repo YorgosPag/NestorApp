@@ -11,7 +11,7 @@ import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
 import { useAutosave } from './hooks/useAutosave';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { updateProjectClient, createProject, type ProjectUpdatePayload } from '@/services/projects-client.service';
+import type { ProjectUpdatePayload } from '@/services/projects-client.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { ConflictDialog } from '@/components/shared/ConflictDialog';
@@ -22,7 +22,8 @@ import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { useProjectMutationImpactGuard } from '@/hooks/useProjectMutationImpactGuard';
+import { useGuardedProjectMutation } from '@/hooks/useGuardedProjectMutation';
+import { createProjectWithPolicy, updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralProjectTab');
@@ -104,7 +105,7 @@ export function GeneralProjectTab({
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const { previewBeforeMutate, ImpactDialog } = useProjectMutationImpactGuard(project.id, {
+  const { ImpactDialog, runExistingProjectUpdate } = useGuardedProjectMutation(project.id, {
     onBlockDismiss: () => {
       companyLink.reset();
     },
@@ -172,7 +173,10 @@ export function GeneralProjectTab({
   }, [companyLink]);
 
   const versionedSaveFn = useCallback(async (data: ProjectFormData & { _v?: number }) => {
-    return updateProjectClient(project.id, buildUpdatePayload(data, data._v));
+    return updateProjectWithPolicy({
+      projectId: project.id,
+      updates: buildUpdatePayload(data, data._v),
+    });
   }, [buildUpdatePayload, project.id]);
 
   const versioned = useVersionedSave<ProjectFormData>({
@@ -237,13 +241,15 @@ export function GeneralProjectTab({
         const effectiveLinkedCompanyId = companyPayload.linkedCompanyId ?? null;
         logger.info('Creating new project...', { data: projectData, linkedCompanyId: effectiveLinkedCompanyId });
 
-        const result = await createProject({
+        const result = await createProjectWithPolicy({
+          payload: {
           name: projectData.name || 'Νέο Έργο',
           title: projectData.licenseTitle,
           description: projectData.description,
           status: projectData.status || 'planning',
           companyId: fallbackCompanyId,
-          linkedCompanyId: effectiveLinkedCompanyId,
+            linkedCompanyId: effectiveLinkedCompanyId,
+          },
         });
 
         if (!result.success || !result.projectId) {
@@ -257,7 +263,7 @@ export function GeneralProjectTab({
       }
 
       const payload = buildUpdatePayload(projectData);
-      await previewBeforeMutate(payload, async () => {
+      await runExistingProjectUpdate(payload, async () => {
         setIsSaving(true);
         try {
           logger.info('Updating project...', { data: projectData, payload });
@@ -280,9 +286,9 @@ export function GeneralProjectTab({
     fallbackCompanyId,
     isCreateMode,
     onProjectCreated,
-    previewBeforeMutate,
     project.id,
     projectData,
+    runExistingProjectUpdate,
     setIsEditing,
     versioned,
   ]);

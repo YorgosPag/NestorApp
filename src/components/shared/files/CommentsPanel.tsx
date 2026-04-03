@@ -32,6 +32,12 @@ import {
   FileCommentService,
   type FileComment,
 } from '@/services/file-comment.service';
+import {
+  addFileCommentWithPolicy,
+  deleteFileCommentWithPolicy,
+  editFileCommentWithPolicy,
+  toggleFileCommentResolveWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -256,10 +262,10 @@ export function CommentsPanel({
     setSubmitting(true);
     try {
       if (editingComment) {
-        await FileCommentService.editComment(editingComment.id, text);
+        await editFileCommentWithPolicy(editingComment.id, text);
         setEditingComment(null);
       } else {
-        await FileCommentService.addComment({
+        await addFileCommentWithPolicy({
           companyId,
           fileId,
           parentId: replyingTo ?? undefined,
@@ -276,12 +282,12 @@ export function CommentsPanel({
   }, [newText, editingComment, companyId, fileId, replyingTo, currentUserId, currentUserName]);
 
   const handleDelete = useCallback(async (commentId: string) => {
-    await FileCommentService.deleteComment(commentId);
+    await deleteFileCommentWithPolicy(commentId);
   }, []);
 
   const handleToggleResolve = useCallback(
     async (comment: FileComment) => {
-      await FileCommentService.toggleResolve(
+      await toggleFileCommentResolveWithPolicy(
         comment.id,
         !comment.resolved,
         currentUserId

@@ -19,8 +19,6 @@ import { Button } from '@/components/ui/button';
 import { Undo2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import { AppurtenancesSection } from './AppurtenancesSection';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import { getPrimaryBuyerContactId, formatOwnerNames } from '@/lib/ownership/owner-utils';
@@ -31,6 +29,13 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { resolveProjectId } from './sales-dialog-utils';
 import type { BaseDialogProps } from './sales-dialog-utils';
+import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+import {
+  dispatchSalesAccountingEventWithPolicy,
+  syncSalesAppurtenancesWithPolicy,
+} from '@/services/sales-mutation-gateway';
 
 const logger = createModuleLogger('RevertDialog');
 
@@ -38,7 +43,9 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const { success, error: notifyError } = useNotifications();
   const [saving, setSaving] = useState(false);
+  const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
 
   const linkedSpaces = useLinkedSpacesForSale(unit);
 
@@ -57,7 +64,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       const refundBuyerContactId = getPrimaryBuyerContactId(existingOwners);
       const refundBuyerName = formatOwnerNames(existingOwners);
 
-      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(unit.id), {
+      const updates: Record<string, unknown> = {
         commercialStatus: 'for-sale',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,
@@ -71,9 +78,16 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           cancellationDate: new Date().toISOString(),
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
-      } as Record<string, unknown>);
+      };
+      const completed = await runExistingPropertyUpdate(unit, updates);
+      if (!completed) {
+        return;
+      }
       onOpenChange(false);
       onSuccess?.();
+      success(t('viewer.messages.updateSuccess', {
+        defaultValue: 'Property changes were saved.',
+      }));
 
       const wasSold = currentStatus === 'sold';
       const creditAmount = wasSold
@@ -89,7 +103,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
         : undefined;
 
       if (creditAmount > 0) {
-        apiClient.post(API_ROUTES.SALES.ACCOUNTING_EVENT(unit.id), {
+        dispatchSalesAccountingEventWithPolicy(unit.id, {
           eventType: 'credit_invoice',
           propertyId: unit.id, propertyName,
           projectId: resolveProjectId(unit) ?? null,
@@ -109,7 +123,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       if (linkedSpaces.hasSpaces) {
         const syncPayload = linkedSpaces.buildSyncPayload('revert');
         if (syncPayload.length > 0) {
-          apiClient.post(API_ROUTES.SALES.APPURTENANCE_SYNC(unit.id), {
+          syncSalesAppurtenancesWithPolicy(unit.id, {
             action: 'revert',
             spaces: syncPayload,
             owners: null,
@@ -119,14 +133,15 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           });
         }
       }
-    } catch {
-      // Error handled by service
+    } catch (error) {
+      notifyError(translatePropertyMutationError(error, t));
     } finally {
       setSaving(false);
     }
-  }, [unit, onOpenChange, onSuccess, linkedSpaces, currentStatus, t]);
+  }, [currentStatus, linkedSpaces, notifyError, onOpenChange, onSuccess, runExistingPropertyUpdate, success, t, unit]);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -184,20 +199,22 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
         </section>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || previewChecking}>
             {t('common.cancel', { defaultValue: 'Ακύρωση' })}
           </Button>
           <Button
             onClick={handleRevert}
-            disabled={saving}
+            disabled={saving || previewChecking}
             className={cn(colors.bg.warning, "hover:opacity-90 text-white")}
           >
-            {saving
+            {saving || previewChecking
               ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
               : t('sales.dialogs.revert.confirm', { defaultValue: 'Επαναφορά σε Προς Πώληση' })}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {ImpactDialog}
+    </>
   );
 }

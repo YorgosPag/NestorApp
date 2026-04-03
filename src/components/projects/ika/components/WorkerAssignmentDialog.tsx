@@ -26,7 +26,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { AssociationService } from '@/services/association.service';
+import { linkContactToEntityWithPolicy } from '@/services/entity-linking/association-mutation-gateway';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -120,13 +120,15 @@ export function WorkerAssignmentDialog({
     try {
       setIsAssigning(true);
 
-      const result = await AssociationService.linkContactToEntity({
-        sourceWorkspaceId: 'ws_office_directory',
-        sourceContactId: selectedContact.id,
-        targetEntityType: 'project',
-        targetEntityId: projectId,
-        reason: 'IKA worker assignment',
-        createdBy: 'current_user', // TODO: Get from auth context
+      const result = await linkContactToEntityWithPolicy({
+        input: {
+          sourceWorkspaceId: 'ws_office_directory',
+          sourceContactId: selectedContact.id,
+          targetEntityType: 'project',
+          targetEntityId: projectId,
+          reason: 'IKA worker assignment',
+          createdBy: 'current_user', // TODO: Get from auth context
+        },
       });
 
       if (result.success) {
