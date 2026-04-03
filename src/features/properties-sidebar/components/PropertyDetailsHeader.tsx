@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Property } from '@/types/property-viewer';

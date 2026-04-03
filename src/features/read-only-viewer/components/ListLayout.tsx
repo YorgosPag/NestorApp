@@ -9,7 +9,7 @@ import { PropertyList } from '@/components/property-viewer/PropertyList';
 import { PropertyDetailsPanel } from '@/components/property-viewer/PropertyDetailsPanel';
 import { PropertyHoverInfo } from '@/components/property-viewer/PropertyHoverInfo';
 import { ReadOnlyMediaViewer, MEDIA_TAB_PARAM, parseMediaTabParam } from './ReadOnlyMediaViewer';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';

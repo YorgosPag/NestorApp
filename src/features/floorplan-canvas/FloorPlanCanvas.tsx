@@ -16,7 +16,7 @@ import {
 import type {
   FloorPlanCanvasProps
 } from './types';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 const logger = createModuleLogger('FloorPlanCanvas');

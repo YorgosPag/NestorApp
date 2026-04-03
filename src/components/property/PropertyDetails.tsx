@@ -15,7 +15,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   MapPin, Euro, Ruler, Users, Calendar, Share2, Home
 } from 'lucide-react';

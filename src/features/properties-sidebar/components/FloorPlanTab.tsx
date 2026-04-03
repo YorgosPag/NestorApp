@@ -23,7 +23,7 @@ import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';

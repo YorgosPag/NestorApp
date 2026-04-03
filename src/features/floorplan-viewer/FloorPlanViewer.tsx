@@ -36,7 +36,7 @@ import { useZoom } from '@/subapps/dxf-viewer/systems/zoom/hooks/useZoom';
 import type { ViewTransform, Viewport } from '@/subapps/dxf-viewer/rendering/types/Types';
 import { asArray, ensureFloor, safeGetProperty } from './utils/safeProps';
 import { truncateText } from '@/lib/text-utils';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 const logger = createModuleLogger('FloorPlanViewer');

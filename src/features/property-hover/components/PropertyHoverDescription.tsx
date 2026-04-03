@@ -1,6 +1,6 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 

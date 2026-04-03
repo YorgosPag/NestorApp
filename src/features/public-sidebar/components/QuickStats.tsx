@@ -2,7 +2,7 @@
 'use client';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import '@/lib/design-system';
 

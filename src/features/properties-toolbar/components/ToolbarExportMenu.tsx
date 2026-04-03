@@ -13,7 +13,7 @@ import {
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Upload, Download, FileText } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 const logger = createModuleLogger('ToolbarExportMenu');

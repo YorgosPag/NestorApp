@@ -16,7 +16,7 @@ import { Filter, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { SortToggleButton } from './SortToggleButton';
 import { RefreshButton } from './RefreshButton';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Import centralized unit filter options - NO MORE HARDCODED VALUES
 import { getUnitFilterOptions } from '@/subapps/dxf-viewer/config/modal-select';
 import { createModuleLogger } from '@/lib/telemetry';

@@ -12,7 +12,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIsMobile } from '@/hooks/useMobile';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { PropertiesList } from '@/components/properties/PropertiesList';
 import { UniversalTabsRenderer, convertToUniversalConfig, type PropertyTabAdditionalData, type PropertyTabComponentProps, type PropertyTabGlobalProps } from '@/components/generic/UniversalTabsRenderer';

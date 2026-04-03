@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { BulkAssignToolbar } from './BulkAssignToolbar';
 import { usePropertiesToolbarState } from './hooks/usePropertiesToolbarState';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 export function PropertiesToolbar({
