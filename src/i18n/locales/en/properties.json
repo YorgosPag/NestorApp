@@ -106,6 +106,21 @@
       "veryLarge": "Very large (200+ m²)",
       "custom": "Custom"
     },
+    "unitTypes": {
+      "all": "All",
+      "allTooltip": "Show all unit types",
+      "studio": "Studio",
+      "studioTooltip": "Studio / Bedsit",
+      "apartment": "Apartment",
+      "apartmentTooltip": "Apartment (2+ rooms)",
+      "maisonette": "Maisonette",
+      "maisonetteTooltip": "Maisonette (2+ levels)",
+      "shop": "Shop",
+      "shopTooltip": "Commercial shop",
+      "office": "Office",
+      "officeTooltip": "Office space",
+      "ariaLabel": "Property type filter"
+    },
     "allTypes": "All Types",
     "allStatuses": "All Statuses",
     "allFloors": "All Floors",

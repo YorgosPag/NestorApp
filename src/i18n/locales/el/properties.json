@@ -106,6 +106,21 @@
       "veryLarge": "Πολύ μεγάλα (200+ m²)",
       "custom": "Προσαρμοσμένο"
     },
+    "unitTypes": {
+      "all": "Όλα",
+      "allTooltip": "Εμφάνιση όλων των τύπων",
+      "studio": "Στούντιο",
+      "studioTooltip": "Γκαρσονιέρα / Στούντιο",
+      "apartment": "Διαμέρισμα",
+      "apartmentTooltip": "Διαμέρισμα (2+ δωμάτια)",
+      "maisonette": "Μεζονέτα",
+      "maisonetteTooltip": "Μεζονέτα (2+ επίπεδα)",
+      "shop": "Κατάστημα",
+      "shopTooltip": "Εμπορικό κατάστημα",
+      "office": "Γραφείο",
+      "officeTooltip": "Χώρος γραφείου",
+      "ariaLabel": "Φίλτρο τύπου ακινήτου"
+    },
     "allTypes": "Όλοι οι Τύποι",
     "allStatuses": "Όλες οι Καταστάσεις",
     "allFloors": "Όλοι οι Όροφοι",
