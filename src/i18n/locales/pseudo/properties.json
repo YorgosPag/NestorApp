@@ -355,5 +355,13 @@
     "actions": {
       "cancel": "[[~~ Cancel ~~]]"
     }
+  },
+  "fieldWarnings": {
+    "basementResidential": {
+      "title": "[[~~ Residential unit in basement? ~~]]",
+      "description": "[[~~ You selected a basement floor for a residential unit. This is unusual — are you sure the location is correct? ~~]]"
+    },
+    "confirm": "[[~~ Yes, it's correct ~~]]",
+    "cancel": "[[~~ Cancel ~~]]"
   }
 }

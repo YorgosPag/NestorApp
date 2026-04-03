@@ -42,6 +42,9 @@ import { cn } from '@/lib/utils';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { evaluateFloorTypeCompatibility } from '@/services/property/property-field-rules';
 import '@/lib/design-system';
 
 export function PropertyDetailsContent({
@@ -78,6 +81,7 @@ export function PropertyDetailsContent({
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const { error: notifyError } = useNotifications();
+  const { confirm: confirmWarning, dialogProps: floorWarningDialogProps } = useConfirmDialog();
 
   // 🏢 ENTERPRISE: Edit mode - prefer external props (from UnitsSidebar), fallback to local state
   const [localEditMode, setLocalEditMode] = useState(false);
@@ -176,6 +180,21 @@ export function PropertyDetailsContent({
     [baseSafeUpdate, notifyError, t]
   );
 
+  // 🏢 ENTERPRISE: Contextual floor validation (Google Contacts pattern)
+  // Warns when user places a residential unit in a basement — non-blocking, user decides.
+  const handleFloorBeforeChange = useCallback(async (floor: number): Promise<boolean> => {
+    const warning = evaluateFloorTypeCompatibility(floor, effectiveType);
+    if (!warning) return true;
+
+    return confirmWarning({
+      title: t(`properties:${warning.titleKey}`),
+      description: t(`properties:${warning.descriptionKey}`),
+      variant: 'warning',
+      confirmText: t('properties:fieldWarnings.confirm'),
+      cancelText: t('properties:fieldWarnings.cancel'),
+    });
+  }, [confirmWarning, effectiveType, t]);
+
   const handleBuildingLinkChange = useCallback(async (newBuildingId: string | null) => {
     const nextBuildingId = newBuildingId ?? null;
     const nextFloorId = nextBuildingId === (resolvedProperty.buildingId ?? null)
@@ -255,6 +274,7 @@ export function PropertyDetailsContent({
                 <FloorSelectField
                   buildingId={resolvedProperty?.buildingId ?? null}
                   value={resolvedProperty?.floorId ?? ''}
+                  onBeforeChange={handleFloorBeforeChange}
                   onChange={(v: string, payload?: FloorChangePayload) => {
                     if (safeOnUpdateProperty && resolvedProperty?.id) {
                       if (payload) {
@@ -354,6 +374,7 @@ export function PropertyDetailsContent({
         </>
       )}
       {ImpactDialog}
+      <ConfirmDialog {...floorWarningDialogProps} />
     </div>
   );
 }

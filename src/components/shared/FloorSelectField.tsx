@@ -63,6 +63,12 @@ export interface FloorSelectFieldProps {
   value: string;
   /** Callback when floor selection changes — returns both floor number and floorId */
   onChange: (floorValue: string, payload?: FloorChangePayload) => void;
+  /**
+   * Async guard called BEFORE committing a floor change.
+   * Receives the floor number about to be set. Return `true` to allow,
+   * `false` to cancel (e.g. user dismissed a warning dialog).
+   */
+  onBeforeChange?: (floor: number) => Promise<boolean>;
   /** Field label */
   label: string;
   /** Hint shown when no building is linked */
@@ -83,6 +89,7 @@ export function FloorSelectField({
   buildingId,
   value,
   onChange,
+  onBeforeChange,
   label,
   noBuildingHint,
   placeholder = '—',
@@ -129,7 +136,7 @@ export function FloorSelectField({
   const isDisabled = disabled || !buildingId;
   const selectValue = value || NONE_VALUE;
 
-  const handleValueChange = (v: string) => {
+  const handleValueChange = async (v: string) => {
     if (v === NONE_VALUE) {
       onChange('');
       return;
@@ -137,12 +144,20 @@ export function FloorSelectField({
 
     // v = floor doc ID (since SelectItem value={f.id})
     const selectedFloor = floorsRef.current.find((f) => f.id === v);
-    if (selectedFloor) {
-      onChange(selectedFloor.value, {
-        floor: Number(selectedFloor.value),
-        floorId: v,
-      });
+    if (!selectedFloor) return;
+
+    const floorNumber = Number(selectedFloor.value);
+
+    // Guard: let consumer veto the change (e.g. "basement for apartment?" warning)
+    if (onBeforeChange) {
+      const allowed = await onBeforeChange(floorNumber);
+      if (!allowed) return;
     }
+
+    onChange(selectedFloor.value, {
+      floor: floorNumber,
+      floorId: v,
+    });
   };
 
   return (
