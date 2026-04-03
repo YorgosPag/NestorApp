@@ -1,5 +1,6 @@
 {
   "navigation": {
+    "units": "μονάδες",
     "actions": {
       "delete": {
         "label": "Διαγραφή",
