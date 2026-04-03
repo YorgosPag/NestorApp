@@ -19,7 +19,7 @@ const logger = createModuleLogger('CompactToolbar');
 // ============================================================================
 
 function useToolbarTranslation() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-shared']);
 
   /** Translate search placeholder (handles i18n keys with dots) */
   const getTranslatedPlaceholder = (placeholder?: string): string => {
