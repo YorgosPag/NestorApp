@@ -2,524 +2,117 @@
  * =============================================================================
  * BUILDING FEATURES MIGRATION - PROTECTED (AUTHZ Phase 2)
  * =============================================================================
- *
- * @purpose Migrate legacy Greek building feature strings to BuildingFeatureKey
- * @author Enterprise Architecture Team
- * @date 2026-01-12
- * @protection withAuth + super_admin + audit logging
- * @classification System-level operation (manual migration)
- *
- * This endpoint performs a one-time migration of legacy Greek feature labels
- * stored in Firestore to type-safe BuildingFeatureKey values.
- *
- * @method GET - Preview/dry run (shows what would be migrated)
- * @method POST - Execute migration (updates Firestore documents)
- *
- * @security Multi-layer protection:
- *   - Layer 1: withAuth (admin:migrations:execute permission)
- *   - Layer 2: super_admin role check (explicit)
- *   - Layer 3: Audit logging (logMigrationExecuted)
- *
- * IMPORTANT: Delete this file after successful migration!
- * =============================================================================
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { processAdminBatch, BATCH_SIZE_READ, BATCH_SIZE_WRITE } from '@/lib/admin-batch-utils';
-import { isBuildingFeatureKey, type BuildingFeatureKey } from '@/types/building/features';
+import 'server-only';
 
-// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
-import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  createForbiddenPayload,
+  executeBuildingFeaturesMigration,
+  previewBuildingFeaturesMigration,
+} from './migration-operations';
+import {
+  SUPER_ADMIN_REQUIRED_CODE,
+  SUPER_ADMIN_REQUIRED_ERROR,
+} from './migration-config';
 
 const logger = createModuleLogger('MigrateBuildingFeaturesRoute');
 
-// ============================================================================
-// LEGACY MAPPING - REMOVE AFTER MIGRATION - DO NOT IMPORT IN UI
-// ============================================================================
+const ensureSuperAdmin = (ctx: AuthContext, action: 'preview' | 'migration'): NextResponse | null => {
+  if (ctx.globalRole === 'super_admin') {
+    return null;
+  }
 
-/**
- * Maps legacy Greek labels to BuildingFeatureKey.
- *
- * @serverOnly This mapping is ONLY for migration purposes.
- * @deprecated Delete after migration is complete.
- */
-const LEGACY_GREEK_TO_KEY: Record<string, BuildingFeatureKey> = {
-  // Heating & Climate
-  'Θέρμανση Αυτονομίας': 'autonomousHeating',
-  'Αυτόνομη θέρμανση': 'autonomousHeating',
-  'Ηλιακή Θέρμανση': 'solarHeating',
-  'Ηλιακή θέρμανση': 'solarHeating',
-  'VRV Κλιματισμός': 'vrvClimate',
-  'VRV κλιματισμός': 'vrvClimate',
-  'Έξυπνος Κλιματισμός': 'smartClimate',
-  'Έξυπνος κλιματισμός': 'smartClimate',
-  'Κλιματισμός Αποθηκών': 'warehouseClimate',
-  'Κλιματισμός αποθηκών': 'warehouseClimate',
+  logger.warn(`BLOCKED: Non-super_admin attempted building features ${action}`, {
+    userId: ctx.uid,
+    email: ctx.email,
+    globalRole: ctx.globalRole,
+  });
 
-  // Ventilation
-  'Αυτόματος Εξαερισμός': 'automaticVentilation',
-  'Αυτόματος εξαερισμός': 'automaticVentilation',
-  'Φυσικός Αερισμός': 'naturalVentilation',
-  'Φυσικός αερισμός': 'naturalVentilation',
-
-  // Parking & Transport
-  'Θέσεις Στάθμευσης': 'parkingSpaces',
-  'Θέσεις στάθμευσης': 'parkingSpaces',
-  'Χώροι στάθμευσης': 'parkingSpaces',
-  'Φόρτιση Ηλεκτρικών Οχημάτων': 'electricVehicleCharging',
-  'Φόρτιση ηλεκτρικών οχημάτων': 'electricVehicleCharging',
-  'Σταθμοί φόρτισης Tesla/VW': 'teslaVwCharging',
-  'Tesla/VW Φόρτιση': 'teslaVwCharging',
-  'Σύστημα Καθοδήγησης Στάθμευσης': 'parkingGuidanceSystem',
-  'Σύστημα καθοδήγησης στάθμευσης': 'parkingGuidanceSystem',
-  'Πλυντήριο αυτοκινήτων': 'carWash',
-  'Πλυντήρια αυτοκινήτων': 'carWashPlural',
-
-  // Elevators & Access
-  'Ασανσέρ': 'elevator',
-  'Ανελκυστήρας': 'elevator',
-  'Κυλιόμενες Σκάλες σε Όλους τους Ορόφους': 'escalatorsAllFloors',
-  'Κυλιόμενες σκάλες': 'escalatorsAllFloors',
-  'Πρόσβαση ΑμεΑ': 'disabilityAccess',
-  'Πρόσβαση ΑΜΕΑ': 'disabilityAccess',
-  'Πρόσβαση Φόρτωσης': 'loadingAccess',
-  'Πρόσβαση φόρτωσης': 'loadingAccess',
-  'Ράμπες Φόρτωσης': 'loadingRamps',
-  'Ράμπες φόρτωσης': 'loadingRamps',
-  'Έλεγχος Πρόσβασης': 'accessControl',
-  'Έλεγχος πρόσβασης': 'accessControl',
-
-  // Security
-  'Κάμερες Ασφαλείας 24/7': 'securityCameras247',
-  'Κάμερες ασφαλείας 24/7': 'securityCameras247',
-  'Συστήματα Ασφαλείας': 'securitySystems',
-  'Συστήματα ασφαλείας': 'securitySystems',
-  'Μηχανική Ασφάλεια': 'mechanicalSecurity',
-  'Μηχανική ασφάλεια': 'mechanicalSecurity',
-  'Έξοδοι Κινδύνου': 'emergencyExits',
-  'Έξοδοι κινδύνου': 'emergencyExits',
-
-  // Fire Safety
-  'Πυρόσβεση': 'fireSuppression',
-  'Σύστημα πυρόσβεσης': 'fireSuppression',
-  'Πυρόσβεση Αερίου': 'gasFireSuppression',
-  'Πυρόσβεση αερίου': 'gasFireSuppression',
-
-  // Energy & Power
-  'Ενεργειακή Κλάση Α+': 'energyClassAPlus',
-  'Ενεργειακή κλάση Α+': 'energyClassAPlus',
-  'Παροχή Ρεύματος 1000kW': 'powerSupply1000kw',
-  'Παροχή ρεύματος 1000kW': 'powerSupply1000kw',
-
-  // Architecture & Design
-  'Μπαλκόνια με Θέα': 'balconiesWithView',
-  'Μπαλκόνια με θέα': 'balconiesWithView',
-  'Βιτρίνες Καταστημάτων': 'shopWindows',
-  'Βιτρίνες καταστημάτων': 'shopWindows',
-  'Φυσικός Φωτισμός Atrium': 'naturalLightingAtrium',
-  'Φυσικός φωτισμός atrium': 'naturalLightingAtrium',
-  'Υψηλή Ακουστική': 'highQualityAcoustics',
-  'Υψηλή ακουστική': 'highQualityAcoustics',
-
-  // Industrial & Warehouse
-  'Γερανογέφυρα 20 Τόνων': 'craneBridge20Tons',
-  'Γερανογέφυρα 20 τόνων': 'craneBridge20Tons',
-  'Συστήματα Αποκονίωσης': 'dustRemovalSystems',
-  'Συστήματα αποκονίωσης': 'dustRemovalSystems',
-  'Ράφια Ύψους 12μ': 'highShelving12m',
-  'Ράφια ύψους 12μ': 'highShelving12m',
-  'RFID Παρακολούθηση': 'rfidTracking',
-  'RFID παρακολούθηση': 'rfidTracking',
-
-  // Automation & Technology
-  'Συστήματα Αυτοματισμού': 'automationSystems',
-  'Συστήματα αυτοματισμού': 'automationSystems',
-  'Συστήματα Παρακολούθησης': 'monitoringSystems',
-  'Συστήματα παρακολούθησης': 'monitoringSystems',
-  'Video Conferencing σε Όλες τις Αίθουσες': 'videoConferencingAllRooms',
-  'Video conferencing σε όλες τις αίθουσες': 'videoConferencingAllRooms',
-  'Σύστημα Διαχείρισης Καταστημάτων': 'shopManagementSystem',
-  'Σύστημα διαχείρισης καταστημάτων': 'shopManagementSystem',
-
-  // Amenities
-  'Καφετέρια Προσωπικού': 'staffCafeteria',
-  'Καφετέρια προσωπικού': 'staffCafeteria',
-  'Food Court 800 Θέσεων': 'foodCourt800Seats',
-  'Food court 800 θέσεων': 'foodCourt800Seats',
-  'Κινηματογράφος 8 Αιθουσών': 'cinema8Rooms',
-  'Κινηματογράφος 8 αιθουσών': 'cinema8Rooms',
-  'Παιδότοπος 300τμ': 'playground300sqm',
-  'Παιδότοπος 300 τμ': 'playground300sqm',
+  return NextResponse.json(
+    createForbiddenPayload(SUPER_ADMIN_REQUIRED_ERROR, SUPER_ADMIN_REQUIRED_CODE),
+    { status: 403 },
+  );
 };
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-interface BuildingDoc {
-  id: string;
-  name: string;
-  features?: string[];
-}
-
-interface MigrationPreview {
-  id: string;
-  name: string;
-  currentFeatures: string[];
-  migratedFeatures: BuildingFeatureKey[];
-  unmappedFeatures: string[];
-  alreadyMigrated: string[];
-  needsMigration: boolean;
-}
-
-/**
- * Migrate a single feature string to BuildingFeatureKey.
- * Returns the key if valid, or null if unmapped.
- */
-function migrateFeature(feature: string): { key: BuildingFeatureKey | null; status: 'migrated' | 'already_key' | 'unmapped' } {
-  // Already a valid key? Return as-is
-  if (isBuildingFeatureKey(feature)) {
-    return { key: feature, status: 'already_key' };
-  }
-
-  // Try legacy mapping
-  const mappedKey = LEGACY_GREEK_TO_KEY[feature];
-  if (mappedKey) {
-    return { key: mappedKey, status: 'migrated' };
-  }
-
-  // Try trimmed version
-  const trimmed = feature.trim();
-  if (LEGACY_GREEK_TO_KEY[trimmed]) {
-    return { key: LEGACY_GREEK_TO_KEY[trimmed], status: 'migrated' };
-  }
-
-  // Unmapped
-  return { key: null, status: 'unmapped' };
-}
-
-/**
- * Analyze a building's features for migration.
- */
-function analyzeBuilding(building: BuildingDoc): MigrationPreview {
-  const currentFeatures = building.features || [];
-  const migratedFeatures: BuildingFeatureKey[] = [];
-  const unmappedFeatures: string[] = [];
-  const alreadyMigrated: string[] = [];
-
-  for (const feature of currentFeatures) {
-    const result = migrateFeature(feature);
-
-    if (result.status === 'already_key' && result.key) {
-      alreadyMigrated.push(result.key);
-      migratedFeatures.push(result.key);
-    } else if (result.status === 'migrated' && result.key) {
-      migratedFeatures.push(result.key);
-    } else {
-      unmappedFeatures.push(feature);
-    }
-  }
-
-  // Deduplicate
-  const uniqueMigrated = [...new Set(migratedFeatures)];
-
-  return {
-    id: building.id,
-    name: building.name,
-    currentFeatures,
-    migratedFeatures: uniqueMigrated,
-    unmappedFeatures,
-    alreadyMigrated,
-    needsMigration: uniqueMigrated.length !== currentFeatures.length || unmappedFeatures.length > 0 || alreadyMigrated.length !== currentFeatures.length,
-  };
-}
-
-// ============================================================================
-// API ENDPOINTS - PROTECTED (AUTHZ Phase 2)
-// ============================================================================
-
-/**
- * GET - Preview/Dry Run (withAuth protected)
- * Shows what would be migrated without making changes.
- *
- * @security withAuth + super_admin check + existing permission: admin:migrations:execute
- * @rateLimit SENSITIVE (20 req/min) - Admin operation
- */
 export const GET = withSensitiveRateLimit(withAuth(
-  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    return handleMigrateBuildingFeaturesPreview(req, ctx);
-  },
-  { permissions: 'admin:migrations:execute' }
-));
+  async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    const forbiddenResponse = ensureSuperAdmin(ctx, 'preview');
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
 
-/**
- * Internal handler for GET (preview mode).
- */
-async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
-  const startTime = Date.now();
+    try {
+      const payload = await previewBuildingFeaturesMigration();
+      return NextResponse.json(payload);
+    } catch (error: unknown) {
+      logger.error('Error analyzing buildings', { error });
 
-  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
-  if (ctx.globalRole !== 'super_admin') {
-    logger.warn('BLOCKED: Non-super_admin attempted building features preview', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Forbidden: This operation requires super_admin role',
-        code: 'SUPER_ADMIN_REQUIRED',
-      },
-      { status: 403 }
-    );
-  }
-
-  try {
-    logger.info('Analyzing buildings for feature migration...');
-
-    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
-    const db = getAdminFirestore();
-    const buildings: BuildingDoc[] = [];
-    await processAdminBatch(
-      db.collection(COLLECTIONS.BUILDINGS),
-      BATCH_SIZE_READ,
-      (docs) => {
-        for (const docSnap of docs) {
-          const data = docSnap.data();
-          buildings.push({
-            id: docSnap.id,
-            name: (data.name as string) || 'UNNAMED',
-            features: (data.features as string[]) || [],
-          });
-        }
-      },
-    );
-
-    const previews = buildings.map(analyzeBuilding);
-    const needsMigration = previews.filter(p => p.needsMigration);
-    const alreadyCorrect = previews.filter(p => !p.needsMigration);
-
-    // Collect all unmapped features
-    const allUnmapped = new Set<string>();
-    previews.forEach(p => p.unmappedFeatures.forEach(f => allUnmapped.add(f)));
-
-    const duration = Date.now() - startTime;
-
-    return NextResponse.json({
-      success: true,
-      mode: 'preview',
-      summary: {
-        totalBuildings: buildings.length,
-        needsMigration: needsMigration.length,
-        alreadyCorrect: alreadyCorrect.length,
-        totalUnmappedFeatures: allUnmapped.size,
-      },
-      unmappedFeatures: Array.from(allUnmapped),
-      buildingPreviews: previews,
-      executionTimeMs: duration,
-      message: `Found ${needsMigration.length} buildings that need migration. Use POST to execute.`,
-      warning: allUnmapped.size > 0
-        ? `WARNING: ${allUnmapped.size} features could not be mapped. Add them to LEGACY_GREEK_TO_KEY before migration.`
-        : undefined,
-    });
-  } catch (error: unknown) {
-    logger.error('Error analyzing buildings', { error });
-    const duration = Date.now() - startTime;
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to analyze buildings',
-        details: getErrorMessage(error),
-        executionTimeMs: duration,
-      },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * POST - Execute Migration (withAuth protected)
- * Converts legacy Greek labels to BuildingFeatureKey in Firestore.
- *
- * @security withAuth + super_admin check + audit logging + existing permission: admin:migrations:execute
- * @rateLimit SENSITIVE (20 req/min) - Admin operation
- */
-export const POST = withSensitiveRateLimit(withAuth(
-  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    return handleMigrateBuildingFeaturesExecute(req, ctx);
-  },
-  { permissions: 'admin:migrations:execute' }
-));
-
-/**
- * Internal handler for POST (live migration).
- */
-async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
-  const startTime = Date.now();
-
-  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
-  if (ctx.globalRole !== 'super_admin') {
-    logger.warn('BLOCKED: Non-super_admin attempted building features migration', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Forbidden: This operation requires super_admin role',
-        code: 'SUPER_ADMIN_REQUIRED',
-      },
-      { status: 403 }
-    );
-  }
-
-  try {
-    logger.info('Starting building features migration...');
-
-    // Check for force flag (migrates even with unmapped features)
-    const { searchParams } = new URL(request.url);
-    const force = searchParams.get('force') === 'true';
-
-    // ADR-214 Phase 8: Batch processing to prevent unbounded reads
-    const db = getAdminFirestore();
-    const buildings: BuildingDoc[] = [];
-    await processAdminBatch(
-      db.collection(COLLECTIONS.BUILDINGS),
-      BATCH_SIZE_WRITE,
-      (docs) => {
-        for (const docSnap of docs) {
-          const data = docSnap.data();
-          buildings.push({
-            id: docSnap.id,
-            name: (data.name as string) || 'UNNAMED',
-            features: (data.features as string[]) || [],
-          });
-        }
-      },
-    );
-
-    const previews = buildings.map(analyzeBuilding);
-
-    // Collect all unmapped features
-    const allUnmapped = new Set<string>();
-    previews.forEach(p => p.unmappedFeatures.forEach(f => allUnmapped.add(f)));
-
-    // Safety check: Don't migrate if there are unmapped features (unless force=true)
-    if (allUnmapped.size > 0 && !force) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Migration blocked: unmapped features found',
-          unmappedFeatures: Array.from(allUnmapped),
-          message: 'Add missing features to LEGACY_GREEK_TO_KEY mapping, or use POST?force=true to migrate anyway (unmapped features will be dropped).',
+          error: 'Failed to analyze buildings',
+          details: getErrorMessage(error),
         },
-        { status: 400 }
+        { status: 500 },
       );
     }
+  },
+  { permissions: 'admin:migrations:execute' },
+));
 
-    // Execute migration
-    const results: Array<{ id: string; name: string; status: 'updated' | 'skipped' | 'error'; oldFeatures?: string[]; newFeatures?: BuildingFeatureKey[]; error?: string }> = [];
-
-    for (const preview of previews) {
-      if (!preview.needsMigration) {
-        results.push({
-          id: preview.id,
-          name: preview.name,
-          status: 'skipped',
-        });
-        continue;
-      }
-
-      try {
-        await db.collection(COLLECTIONS.BUILDINGS).doc(preview.id).update({
-          features: preview.migratedFeatures,
-          updatedAt: new Date().toISOString(),
-          _featuresMigratedAt: new Date().toISOString(),
-        });
-
-        results.push({
-          id: preview.id,
-          name: preview.name,
-          status: 'updated',
-          oldFeatures: preview.currentFeatures,
-          newFeatures: preview.migratedFeatures,
-        });
-
-        logger.info('Migrated building features', { buildingId: preview.id, buildingName: preview.name, featuresCount: preview.migratedFeatures.length });
-      } catch (err) {
-        logger.error('Failed to migrate building features', { buildingId: preview.id, error: err });
-        results.push({
-          id: preview.id,
-          name: preview.name,
-          status: 'error',
-          error: getErrorMessage(err),
-        });
-      }
+export const POST = withSensitiveRateLimit(withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    const forbiddenResponse = ensureSuperAdmin(ctx, 'migration');
+    if (forbiddenResponse) {
+      return forbiddenResponse;
     }
 
-    const updated = results.filter(r => r.status === 'updated').length;
-    const skipped = results.filter(r => r.status === 'skipped').length;
-    const errors = results.filter(r => r.status === 'error').length;
+    try {
+      const payload = await executeBuildingFeaturesMigration(req, ctx);
+      return NextResponse.json(payload);
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
 
-    const duration = Date.now() - startTime;
+      try {
+        const parsed = JSON.parse(message) as {
+          type?: string;
+          unmappedFeatures?: string[];
+          message?: string;
+        };
 
-    // 🏢 ENTERPRISE: Audit logging (non-blocking)
-    const metadata = extractRequestMetadata(request);
-    await logMigrationExecuted(
-      ctx,
-      'migrate_building_features_greek_to_keys',
-      {
-        operation: 'migrate-building-features',
-        totalBuildings: results.length,
-        buildingsUpdated: updated,
-        buildingsSkipped: skipped,
-        buildingsErrored: errors,
-        unmappedFeaturesDropped: allUnmapped.size,
-        forceFlag: force,
-        updatedBuildings: results.filter(r => r.status === 'updated').map(r => ({
-          id: r.id,
-          name: r.name,
-          oldFeaturesCount: r.oldFeatures?.length || 0,
-          newFeaturesCount: r.newFeatures?.length || 0,
-        })),
-        executionTimeMs: duration,
-        result: errors === 0 ? 'success' : 'partial_success',
-        metadata,
-      },
-      `Building features migration (Greek→Keys) by ${ctx.globalRole} ${ctx.email}`
-    ).catch((err: unknown) => {
-      logger.warn('Audit logging failed (non-blocking)', { error: err });
-    });
+        if (parsed.type === 'UNMAPPED_FEATURES') {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Migration blocked: unmapped features found',
+              unmappedFeatures: parsed.unmappedFeatures ?? [],
+              message: parsed.message,
+            },
+            { status: 400 },
+          );
+        }
+      } catch {
+        // Ignore JSON parse failures and fall through to generic error response.
+      }
 
-    return NextResponse.json({
-      success: errors === 0,
-      message: `Migration complete! Updated: ${updated}, Skipped: ${skipped}, Errors: ${errors}`,
-      summary: {
-        total: results.length,
-        updated,
-        skipped,
-        errors,
-        droppedUnmapped: allUnmapped.size,
-      },
-      results,
-      executionTimeMs: duration,
-      warning: allUnmapped.size > 0
-        ? `WARNING: ${allUnmapped.size} unmapped features were dropped: ${Array.from(allUnmapped).join(', ')}`
-        : undefined,
-    });
-  } catch (error: unknown) {
-    logger.error('Error during migration', { error });
-    const duration = Date.now() - startTime;
+      logger.error('Error during migration', { error });
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to migrate building features',
-        details: getErrorMessage(error),
-        executionTimeMs: duration,
-      },
-      { status: 500 }
-    );
-  }
-}
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to migrate building features',
+          details: message,
+        },
+        { status: 500 },
+      );
+    }
+  },
+  { permissions: 'admin:migrations:execute' },
+));

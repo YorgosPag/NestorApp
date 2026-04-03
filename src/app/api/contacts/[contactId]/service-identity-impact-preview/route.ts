@@ -7,18 +7,18 @@ import { apiSuccess, ApiError, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isRoleBypass } from '@/lib/auth/roles';
-import { previewContactIdentityImpact } from '@/lib/firestore/contact-identity-impact-preview.service';
-import { INDIVIDUAL_IDENTITY_FIELDS } from '@/utils/contactForm/individual-identity-guard';
+import { previewServiceIdentityImpact } from '@/lib/firestore/service-identity-impact-preview.service';
+import { SERVICE_IDENTITY_FIELDS } from '@/utils/contactForm/service-identity-guard';
 import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impact';
 import type { Contact } from '@/types/contacts';
 
-const IndividualIdentityFieldSchema = z.enum(INDIVIDUAL_IDENTITY_FIELDS);
-const IndividualIdentityFieldCategorySchema = z.enum(['display', 'identity', 'regulated']);
+const ServiceIdentityFieldSchema = z.enum(SERVICE_IDENTITY_FIELDS);
+const ServiceIdentityFieldCategorySchema = z.enum(['display', 'administrative']);
 
-const ContactIdentityImpactRequestSchema = z.object({
+const ServiceIdentityImpactRequestSchema = z.object({
   changes: z.array(z.object({
-    field: IndividualIdentityFieldSchema,
-    category: IndividualIdentityFieldCategorySchema,
+    field: ServiceIdentityFieldSchema,
+    category: ServiceIdentityFieldCategorySchema,
     oldValue: z.string(),
     newValue: z.string(),
     isCleared: z.boolean(),
@@ -33,7 +33,7 @@ async function handlePost(
 
   const handler = withAuth<ApiSuccessResponse<ContactIdentityImpactPreview>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const parsed = ContactIdentityImpactRequestSchema.safeParse(await req.json());
+      const parsed = ServiceIdentityImpactRequestSchema.safeParse(await req.json());
       if (!parsed.success) {
         throw new ApiError(400, 'Validation failed');
       }
@@ -51,11 +51,11 @@ async function handlePost(
         throw new ApiError(403, 'Access denied - Contact not found');
       }
 
-      if (contact.type !== 'individual') {
-        throw new ApiError(400, 'Identity impact preview is only available for individual contacts');
+      if (contact.type !== 'service') {
+        throw new ApiError(400, 'Identity impact preview is only available for service contacts');
       }
 
-      const preview = await previewContactIdentityImpact(contactId, parsed.data.changes);
+      const preview = await previewServiceIdentityImpact(contactId, parsed.data.changes);
       return apiSuccess(preview);
     },
     { permissions: 'crm:contacts:update' },

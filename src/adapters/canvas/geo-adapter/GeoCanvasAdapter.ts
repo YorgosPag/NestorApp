@@ -14,66 +14,45 @@ import type {
   CanvasProviderConfig,
   CanvasCreationConfig,
   CanvasMiddleware,
-  CanvasPlugin
+  CanvasPlugin,
 } from '../../../core/canvas/interfaces/ICanvasProvider';
-
+import type { Point2D } from '../../../core/canvas/primitives/coordinates';
 import type { CanvasInstance } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasManager';
 import type { CanvasRenderSettings } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasSettings';
-import { UI_COLORS } from '../../../subapps/dxf-viewer/config/color-config';
-// 🏢 ENTERPRISE: Import DXF-specific CanvasConfig for type casting
-import type { CanvasConfig as DxfCanvasConfig } from '../../../subapps/dxf-viewer/rendering/types/Types';
-
-// Import coordinate utilities
-import type { Point2D } from '../../../core/canvas/primitives/coordinates';
-import { CoordinateUtils } from '../../../core/canvas/primitives/coordinates';
-
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  applyMiddlewareHooks,
+  cleanupPlugins,
+  emitCanvasEvent,
+  initializePlugins,
+  registerEventListener,
+  unregisterEventListener,
+} from './geo-canvas-runtime';
+import {
+  createGeoCanvasInstance,
+  createGeoSettings,
+  createInitialGeoTransform,
+  setupGeoCanvasContext,
+} from './geo-canvas-config';
+import { canvasToGeoPoint, geoToCanvasPoint } from './geo-canvas-projection';
+import type {
+  GeographicPoint,
+  GeographicTransform,
+  GeoCanvasConfig,
+  GeoCanvasProviderConfig,
+  MapBounds,
+} from './geo-canvas-types';
+
 const logger = createModuleLogger('GeoCanvasAdapter');
 
-/**
- * 🗺️ GEO-SPECIFIC TYPES
- * Geographic canvas-specific types και interfaces
- */
-export interface GeographicPoint {
-  lat: number;
-  lng: number;
-  alt?: number; // altitude in meters
-}
+export type {
+  GeographicPoint,
+  GeographicTransform,
+  GeoCanvasConfig,
+  GeoCanvasProviderConfig,
+  MapBounds,
+} from './geo-canvas-types';
 
-export interface MapBounds {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-}
-
-export interface GeographicTransform {
-  center: GeographicPoint;
-  zoom: number;
-  bounds: MapBounds;
-  projection: string; // 'mercator', 'equirectangular', etc.
-}
-
-export interface GeoCanvasConfig extends CanvasCreationConfig {
-  // Geographic-specific config
-  initialCenter?: GeographicPoint;
-  initialZoom?: number;
-  initialBounds?: MapBounds;
-  projection?: string;
-
-  // Map interaction settings
-  enablePanning?: boolean;
-  enableZooming?: boolean;
-  enableRotation?: boolean;
-  maxZoom?: number;
-  minZoom?: number;
-}
-
-/**
- * 🔺 GEO CANVAS ADAPTER
- * Specialized adapter για geographic/mapping canvas operations
- * Built on top του enterprise DXF Canvas infrastructure
- */
 export class GeoCanvasAdapter implements ICanvasProvider {
   readonly id: string;
   readonly type = 'geo' as const;
@@ -94,48 +73,18 @@ export class GeoCanvasAdapter implements ICanvasProvider {
     return this._isInitialized;
   }
 
-  // ============================================================================
-  // LIFECYCLE MANAGEMENT
-  // ============================================================================
-
-  /**
-   * Initialize Geo Canvas Provider
-   */
   async initialize(config: CanvasProviderConfig): Promise<void> {
     if (this._isInitialized) {
       throw new Error(`Geo Canvas Provider '${this.id}' already initialized`);
     }
 
     try {
-      // Initialize default geo-specific settings
-      this.settings = {
-        enableHiDPI: true,
-        devicePixelRatio: window.devicePixelRatio || 1,
-        imageSmoothingEnabled: true,
-        backgroundColor: UI_COLORS.TRANSPARENT,
-        enableBatching: true,
-        enableCaching: true,
-        enableMetrics: config.enablePerformanceMonitoring !== false,
-        useUnifiedRendering: true,
-        enableCoordination: config.enableGlobalEventBus !== false,
-        debugMode: process.env.NODE_ENV === 'development',
-        ...config.defaultSettings
-      };
+      this.settings = createGeoSettings(config);
+      this.middlewares = config.middlewares ? [...config.middlewares] : [];
+      this.plugins = config.plugins ? [...config.plugins] : [];
 
-      // Initialize middlewares
-      if (config.middlewares) {
-        this.middlewares = [...config.middlewares];
-      }
+      initializePlugins(this.plugins, this);
 
-      // Initialize plugins
-      if (config.plugins) {
-        this.plugins = [...config.plugins];
-        this.plugins.forEach(plugin => {
-          plugin.initialize(this);
-        });
-      }
-
-      // Setup custom event handlers
       if (config.customEventHandlers) {
         Object.entries(config.customEventHandlers).forEach(([event, handler]) => {
           this.on(event, handler);
@@ -144,122 +93,63 @@ export class GeoCanvasAdapter implements ICanvasProvider {
 
       this._isInitialized = true;
       logger.info(`[GeoCanvasAdapter] Initialized provider: ${this.id}`);
-
     } catch (error) {
-      logger.error(`[GeoCanvasAdapter] Initialization failed`, { error });
+      logger.error('[GeoCanvasAdapter] Initialization failed', { error });
       throw new Error(`Failed to initialize Geo Canvas Provider '${this.id}': ${error}`);
     }
   }
 
-  /**
-   * Cleanup Geo Canvas Provider
-   */
   async cleanup(): Promise<void> {
     try {
-      // Cleanup plugins
-      for (const plugin of this.plugins) {
-        try {
-          plugin.cleanup();
-        } catch (error) {
-          logger.error(`[GeoCanvasAdapter] Plugin cleanup error: ${plugin.name}`, { error });
-        }
-      }
-
-      // Clear all data structures
+      cleanupPlugins(this.plugins, logger);
       this.canvasInstances.clear();
       this.geoTransforms.clear();
       this.eventListeners.clear();
       this.middlewares = [];
       this.plugins = [];
-
-      logger.info(`[GeoCanvasAdapter] Cleaned up provider: ${this.id}`);
+      this.settings = {};
       this._isInitialized = false;
 
+      logger.info(`[GeoCanvasAdapter] Cleaned up provider: ${this.id}`);
     } catch (error) {
-      logger.error(`[GeoCanvasAdapter] Cleanup error`, { error });
+      logger.error('[GeoCanvasAdapter] Cleanup error', { error });
       throw error;
     }
   }
 
-  // ============================================================================
-  // CANVAS MANAGEMENT
-  // ============================================================================
-
-  /**
-   * Create νέο geo canvas instance
-   */
-  createCanvas(id: string, config: CanvasCreationConfig): CanvasInstance {
-    if (!this._isInitialized) {
-      throw new Error(`Geo Canvas Provider '${this.id}' not initialized`);
-    }
+  createCanvas(_id: string, config: CanvasCreationConfig): CanvasInstance {
+    this.ensureInitialized();
 
     if (this.canvasInstances.has(config.canvasId)) {
       throw new Error(`Geo canvas '${config.canvasId}' already exists`);
     }
 
     try {
-      // Apply middleware hooks
-      this.applyMiddlewareHooks('onCanvasCreate', null, config);
+      applyMiddlewareHooks(this.middlewares, 'onCanvasCreate', logger, null, config);
 
-      // Create geo-specific canvas instance
       const geoConfig = config as GeoCanvasConfig;
+      const context = setupGeoCanvasContext(config.element, this.settings);
+      const canvasInstance = createGeoCanvasInstance(config, context);
 
-      // Setup canvas context (using DXF infrastructure principles)
-      const context = this.setupGeoCanvasContext(config.element);
-
-      // 🏢 ENTERPRISE: Cast CanvasConfig to DXF-specific type
-      const dxfConfig: DxfCanvasConfig = {
-        devicePixelRatio: (config.config as Record<string, unknown>).devicePixelRatio as number ?? window.devicePixelRatio,
-        enableHiDPI: (config.config as Record<string, unknown>).enableHiDPI as boolean ?? true,
-        backgroundColor: (config.config as Record<string, unknown>).backgroundColor as string ?? UI_COLORS.CANVAS_BACKGROUND_AUTOCAD_DARK,
-        antialias: (config.config as Record<string, unknown>).antialias as boolean | undefined,
-        imageSmoothingEnabled: (config.config as Record<string, unknown>).imageSmoothingEnabled as boolean | undefined
-      };
-      const canvasInstance: CanvasInstance = {
-        id: config.canvasId,
-        type: config.canvasType,
-        element: config.element,
-        context,
-        config: dxfConfig,
-        zIndex: config.zIndex || 1,
-        isActive: config.isActive !== false,
-        lastRenderTime: 0
-      };
-
-      // Setup geographic transform
-      this.initializeGeoTransform(config.canvasId, geoConfig);
-
-      // Store canvas instance
       this.canvasInstances.set(config.canvasId, canvasInstance);
+      this.geoTransforms.set(config.canvasId, createInitialGeoTransform(geoConfig));
 
-      // Store metadata αν υπάρχουν
-      if (config.metadata) {
-        (canvasInstance as unknown as { metadata: Record<string, unknown> }).metadata = config.metadata;
-      }
-
-      // Emit creation event
       this.emit('canvas:created', {
         canvasId: config.canvasId,
         canvasType: config.canvasType,
-        providerId: this.id
+        providerId: this.id,
       });
 
       logger.info(`[GeoCanvasAdapter] Created geo canvas: ${config.canvasId}`);
       return canvasInstance;
-
     } catch (error) {
-      logger.error(`[GeoCanvasAdapter] Geo canvas creation failed`, { error });
+      logger.error('[GeoCanvasAdapter] Geo canvas creation failed', { error });
       throw error;
     }
   }
 
-  /**
-   * Destroy geo canvas instance
-   */
   destroyCanvas(id: string): void {
-    if (!this._isInitialized) {
-      throw new Error(`Geo Canvas Provider '${this.id}' not initialized`);
-    }
+    this.ensureInitialized();
 
     const canvas = this.canvasInstances.get(id);
     if (!canvas) {
@@ -268,57 +158,42 @@ export class GeoCanvasAdapter implements ICanvasProvider {
     }
 
     try {
-      // Apply middleware hooks
-      this.applyMiddlewareHooks('onCanvasDestroy', canvas);
-
-      // Remove canvas and related data
+      applyMiddlewareHooks(this.middlewares, 'onCanvasDestroy', logger, canvas);
       this.canvasInstances.delete(id);
       this.geoTransforms.delete(id);
 
-      // Emit destruction event
       this.emit('canvas:destroyed', {
         canvasId: id,
-        providerId: this.id
+        providerId: this.id,
       });
 
       logger.info(`[GeoCanvasAdapter] Destroyed geo canvas: ${id}`);
-
     } catch (error) {
-      logger.error(`[GeoCanvasAdapter] Geo canvas destruction failed`, { error });
+      logger.error('[GeoCanvasAdapter] Geo canvas destruction failed', { error });
       throw error;
     }
   }
 
-  /**
-   * Get geo canvas instance
-   */
   getCanvas(id: string): CanvasInstance | undefined {
-    if (!this._isInitialized) return undefined;
+    if (!this._isInitialized) {
+      return undefined;
+    }
+
     return this.canvasInstances.get(id);
   }
 
-  /**
-   * List all geo canvas instances
-   */
   listCanvases(): CanvasInstance[] {
-    if (!this._isInitialized) return [];
+    if (!this._isInitialized) {
+      return [];
+    }
+
     return Array.from(this.canvasInstances.values());
   }
 
-  // ============================================================================
-  // GEO-SPECIFIC METHODS
-  // ============================================================================
-
-  /**
-   * Get geographic transform για specific canvas
-   */
   getGeoTransform(canvasId: string): GeographicTransform | undefined {
     return this.geoTransforms.get(canvasId);
   }
 
-  /**
-   * Update geographic transform
-   */
   updateGeoTransform(canvasId: string, transform: Partial<GeographicTransform>): void {
     const existing = this.geoTransforms.get(canvasId);
     if (!existing) {
@@ -332,13 +207,10 @@ export class GeoCanvasAdapter implements ICanvasProvider {
     this.emit('geo:transform:changed', {
       canvasId,
       transform: updated,
-      providerId: this.id
+      providerId: this.id,
     });
   }
 
-  /**
-   * Convert geographic point to canvas coordinates
-   */
   geoToCanvas(canvasId: string, geoPoint: GeographicPoint): Point2D | undefined {
     const transform = this.geoTransforms.get(canvasId);
     const canvas = this.canvasInstances.get(canvasId);
@@ -347,13 +219,9 @@ export class GeoCanvasAdapter implements ICanvasProvider {
       return undefined;
     }
 
-    // Simple mercator projection (can be extended για other projections)
-    return this.mercatorProjection(geoPoint, transform, canvas.element);
+    return geoToCanvasPoint(geoPoint, canvas.element, transform);
   }
 
-  /**
-   * Convert canvas coordinates to geographic point
-   */
   canvasToGeo(canvasId: string, canvasPoint: Point2D): GeographicPoint | undefined {
     const transform = this.geoTransforms.get(canvasId);
     const canvas = this.canvasInstances.get(canvasId);
@@ -362,220 +230,68 @@ export class GeoCanvasAdapter implements ICanvasProvider {
       return undefined;
     }
 
-    // Inverse mercator projection
-    return this.inverseMercatorProjection(canvasPoint, transform, canvas.element);
+    return canvasToGeoPoint(canvasPoint, canvas.element, transform);
   }
 
-  /**
-   * Get current map bounds για canvas
-   */
   getMapBounds(canvasId: string): MapBounds | undefined {
-    const transform = this.geoTransforms.get(canvasId);
-    return transform?.bounds;
+    return this.geoTransforms.get(canvasId)?.bounds;
   }
 
-  // ============================================================================
-  // SETTINGS MANAGEMENT
-  // ============================================================================
-
-  /**
-   * Update settings
-   */
   updateSettings(settings: Partial<CanvasRenderSettings>): void {
-    if (!this._isInitialized) {
-      throw new Error(`Geo Canvas Provider '${this.id}' not initialized`);
-    }
-
+    this.ensureInitialized();
     this.settings = { ...this.settings, ...settings };
 
-    // Emit settings change event
     this.emit('settings:changed', {
       providerId: this.id,
-      settings: this.settings
+      settings: this.settings,
     });
   }
 
-  /**
-   * Get current settings
-   */
   getSettings(): CanvasRenderSettings {
-    if (!this._isInitialized) {
-      throw new Error(`Geo Canvas Provider '${this.id}' not initialized`);
-    }
-
+    this.ensureInitialized();
     return this.settings as CanvasRenderSettings;
   }
 
-  // ============================================================================
-  // EVENT HANDLING
-  // ============================================================================
-
-  /**
-   * Subscribe to events
-   */
   on(event: string, callback: Function): void {
-    if (!this.eventListeners.has(event)) {
-      this.eventListeners.set(event, []);
-    }
-    this.eventListeners.get(event)!.push(callback);
+    registerEventListener(this.eventListeners, event, callback);
   }
 
-  /**
-   * Unsubscribe από events
-   */
   off(event: string, callback: Function): void {
-    const listeners = this.eventListeners.get(event);
-    if (listeners) {
-      const index = listeners.indexOf(callback);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    }
+    unregisterEventListener(this.eventListeners, event, callback);
   }
 
-  /**
-   * Emit event
-   */
   emit(event: string, data?: unknown): void {
-    const listeners = this.eventListeners.get(event) || this.eventListeners.get('*') || [];
-    listeners.forEach(listener => {
-      try {
-        listener(event, data);
-      } catch (error) {
-        logger.error(`[GeoCanvasAdapter] Event listener error for '${event}'`, { error });
-      }
-    });
-
-    // Apply middleware event hooks
-    this.applyMiddlewareHooks('onEvent', null, { event, data });
+    emitCanvasEvent(this.eventListeners, event, data, logger);
+    applyMiddlewareHooks(this.middlewares, 'onEvent', logger, null, { event, data });
   }
 
-  // ============================================================================
-  // PRIVATE METHODS
-  // ============================================================================
-
-  /**
-   * Setup geo canvas context με HiDPI support
-   */
-  private setupGeoCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Could not get canvas 2D context for geo canvas');
-    }
-
-    // Apply HiDPI settings using DXF infrastructure principles
-    const dpr = this.settings.devicePixelRatio || window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = this.settings.imageSmoothingEnabled !== false;
-
-    return ctx;
-  }
-
-  /**
-   * Initialize geographic transform για canvas
-   */
-  private initializeGeoTransform(canvasId: string, config: GeoCanvasConfig): void {
-    const canvas = this.canvasInstances.get(canvasId) || this.canvasInstances.values().next().value;
-    if (!canvas) return;
-
-    const rect = canvas.element.getBoundingClientRect();
-
-    const transform: GeographicTransform = {
-      center: config.initialCenter || { lat: 0, lng: 0 },
-      zoom: config.initialZoom || 1,
-      bounds: config.initialBounds || {
-        north: 85,
-        south: -85,
-        east: 180,
-        west: -180
-      },
-      projection: config.projection || 'mercator'
-    };
-
-    this.geoTransforms.set(canvasId, transform);
-  }
-
-  /**
-   * Simple Mercator projection
-   */
-  private mercatorProjection(
-    geoPoint: GeographicPoint,
-    transform: GeographicTransform,
-    canvas: HTMLCanvasElement
-  ): Point2D {
-    const rect = canvas.getBoundingClientRect();
-
-    // Simple mercator math (can be enhanced για proper projections)
-    const x = (geoPoint.lng + 180) / 360 * rect.width;
-    const latRad = geoPoint.lat * Math.PI / 180;
-    const mercN = Math.log(Math.tan((Math.PI / 4) + (latRad / 2)));
-    const y = (rect.height / 2) - (rect.width * mercN / (2 * Math.PI));
-
-    return CoordinateUtils.point2D(x, y);
-  }
-
-  /**
-   * Inverse Mercator projection
-   */
-  private inverseMercatorProjection(
-    canvasPoint: Point2D,
-    transform: GeographicTransform,
-    canvas: HTMLCanvasElement
-  ): GeographicPoint {
-    const rect = canvas.getBoundingClientRect();
-
-    // Inverse mercator math
-    const lng = (canvasPoint.x / rect.width) * 360 - 180;
-    const n = Math.PI - 2 * Math.PI * canvasPoint.y / rect.height;
-    const lat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-
-    return { lat, lng };
-  }
-
-  /**
-   * Apply middleware hooks
-   * 🏢 ENTERPRISE: Type-safe middleware hook application
-   */
-  private applyMiddlewareHooks(
-    hookName: keyof CanvasMiddleware,
-    canvas?: CanvasInstance | null,
-    data?: { event?: string; data?: unknown } | CanvasCreationConfig
-  ): void {
-    const sortedMiddlewares = this.middlewares
-      .slice()
-      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
-
-    for (const middleware of sortedMiddlewares) {
-      try {
-        const hook = middleware[hookName] as ((arg1: unknown, arg2?: unknown) => void) | undefined;
-        if (hook) {
-          if (canvas) {
-            hook.call(middleware, canvas, data);
-          } else {
-            // 🏢 ENTERPRISE: Type-safe event extraction
-            const eventName = data && 'event' in data ? data.event : hookName;
-            hook.call(middleware, eventName, data);
-          }
-        }
-      } catch (error) {
-        logger.error(`[GeoCanvasAdapter] Middleware '${middleware.name}' hook '${hookName}' error`, { error });
-      }
+  private ensureInitialized(): void {
+    if (!this._isInitialized) {
+      throw new Error(`Geo Canvas Provider '${this.id}' not initialized`);
     }
   }
 }
 
-/**
- * ✅ CONVENIENCE FACTORY FUNCTION
- */
 export const createGeoCanvasProvider = (
   providerId: string,
-  config?: Partial<CanvasProviderConfig>
+  config?: Partial<GeoCanvasProviderConfig>,
 ): GeoCanvasAdapter => {
-  return new GeoCanvasAdapter(providerId);
-};
+  const adapter = new GeoCanvasAdapter(providerId);
 
+  const defaultConfig: CanvasProviderConfig = {
+    providerId,
+    providerType: 'geo',
+    enableGlobalEventBus: true,
+    enableCrossProviderCommunication: true,
+    enablePerformanceMonitoring: process.env.NODE_ENV === 'development',
+    ...config,
+  };
+
+  if (process.env.NODE_ENV === 'development' && config?.autoInitialize !== false) {
+    adapter.initialize(defaultConfig).catch((error) => {
+      logger.error('[GeoCanvasAdapter] Auto-initialization failed', { error });
+    });
+  }
+
+  return adapter;
+};

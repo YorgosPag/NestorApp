@@ -13,6 +13,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
+import { extractNestedIdFromUrl } from '@/lib/api/route-helpers';
 
 const logger = createModuleLogger('PropertyHierarchyRoute');
 
@@ -67,11 +68,7 @@ export const GET = withStandardRateLimit(
         throw new ApiError(503, 'Database unavailable');
       }
 
-      // Extract property ID from URL
-      const url = new URL(request.url);
-      const pathParts = url.pathname.split('/');
-      const propertyIdIndex = pathParts.indexOf('properties') + 1;
-      const propertyId = pathParts[propertyIdIndex];
+      const propertyId = extractNestedIdFromUrl(request.url, 'properties');
 
       if (!propertyId) {
         throw new ApiError(400, 'Property ID is required');

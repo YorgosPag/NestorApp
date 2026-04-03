@@ -1,2 +1,10 @@
-<testsuites id="" name="" tests="0" failures="0" skipped="0" errors="0" time="180.40375">
+<testsuites id="" name="" tests="3" failures="0" skipped="0" errors="0" time="223.213186">
+<testsuite name="components\contacts\e2e\contact-mutation-impact.e2e.spec.ts" timestamp="2026-04-02T21:21:17.421Z" hostname="chromium" tests="3" failures="0" skipped="0" time="33.452" errors="0">
+<testcase name="Contact mutation impact browser flows › individual warn flow cancels without saving" classname="components\contacts\e2e\contact-mutation-impact.e2e.spec.ts" time="13.429">
+</testcase>
+<testcase name="Contact mutation impact browser flows › individual warn flow confirms and completes save" classname="components\contacts\e2e\contact-mutation-impact.e2e.spec.ts" time="13.309">
+</testcase>
+<testcase name="Contact mutation impact browser flows › company preview failure blocks save and shows fail-closed dialog" classname="components\contacts\e2e\contact-mutation-impact.e2e.spec.ts" time="6.714">
+</testcase>
+</testsuite>
 </testsuites>
