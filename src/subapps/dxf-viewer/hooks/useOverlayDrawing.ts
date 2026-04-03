@@ -4,30 +4,39 @@
  * Extracted from DxfViewerContent.tsx for better separation of concerns
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { useSnapManager } from '../snapping/hooks/useSnapManager';
-import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
-import { MIN_POLY_POINTS } from '../overlays/types';
-import { POLYGON_TOLERANCES } from '../config/tolerance-config';
-import type { OverlayEditorMode, OverlayKind, Status, Overlay, CreateOverlayData, UpdateOverlayData } from '../overlays/types';
-import type { Point2D } from '../rendering/types/Types';
-import type { SceneModel } from '../types/entities';
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useSnapManager } from "../snapping/hooks/useSnapManager";
+import { calculateDistance } from "../rendering/entities/shared/geometry-rendering-utils";
+import { MIN_POLY_POINTS } from "../overlays/types";
+import { POLYGON_TOLERANCES } from "../config/tolerance-config";
+import type {
+  OverlayEditorMode,
+  OverlayKind,
+  Status,
+  Overlay,
+  CreateOverlayData,
+  UpdateOverlayData,
+} from "../overlays/types";
+import type { Point2D } from "../rendering/types/Types";
+import type { SceneModel } from "../types/entities";
 // ✅ ENTERPRISE FIX: Remove non-existent import
 // TODO: Implement proper property status system if needed
 
 // Status labels in English for Firestore
-const STATUS_ENGLISH_LABELS: Record<Status, string> = { // ✅ ENTERPRISE FIX: Complete Status type mapping
-  'for-sale': 'For Sale',
-  'for-rent': 'For Rent',
-  'for-sale-and-rent': 'For Sale & Rent',
-  'reserved': 'Reserved',
-  'sold': 'Sold',
-  'landowner': 'Landowner',
-  'rented': 'Rented',
-  'under-negotiation': 'Under Negotiation',
-  'coming-soon': 'Coming Soon',
-  'off-market': 'Off Market',
-  'unavailable': 'Unavailable'
+const STATUS_ENGLISH_LABELS: Record<Status, string> = {
+  // ✅ ENTERPRISE FIX: Complete Status type mapping
+  "for-sale": "For Sale",
+  "for-rent": "For Rent",
+  "for-sale-and-rent": "For Sale & Rent",
+  reserved: "Reserved",
+  sold: "Sold",
+  landowner: "Landowner",
+  rented: "Rented",
+  "under-negotiation": "Under Negotiation",
+  "coming-soon": "Coming Soon",
+  "off-market": "Off Market",
+  unavailable: "Unavailable",
+  deleted: "Deleted",
 };
 
 interface UseOverlayDrawingConfig {
@@ -61,7 +70,7 @@ export const useOverlayDrawing = ({
   overlayStore,
   levelManager,
   canvasTransform,
-  onOverlaySelect
+  onOverlaySelect,
 }: UseOverlayDrawingConfig) => {
   // Overlay canvas ref for snap manager
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -70,49 +79,61 @@ export const useOverlayDrawing = ({
   const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
 
   // Snap state for overlay drawing
-  const [snapPoint, setSnapPoint] = useState<{x: number, y: number} | null>(null);
+  const [snapPoint, setSnapPoint] = useState<{ x: number; y: number } | null>(
+    null,
+  );
 
   // Snap manager
   // 🏢 FIX (2026-02-20): Pass current zoom scale for correct pixel→world tolerance conversion
   const snapManager = useSnapManager(overlayCanvasRef, {
     scale: canvasTransform.scale,
-    onSnapPoint: (point: {x: number, y: number} | null) => {
+    onSnapPoint: (point: { x: number; y: number } | null) => {
       setSnapPoint(point);
-    }
+    },
   });
 
   // Canvas click handler for overlay drawing
-  const handleOverlayCanvasClick = useCallback((point: Point2D) => {
-    if (overlayMode !== 'draw' || !activeTool || activeTool !== 'layering') return;
-
-    // Check if point is close to first point (closing polygon)
-    if (draftPolygon.length >= MIN_POLY_POINTS) {
-      const firstPoint = draftPolygon[0];
-      const distance = calculateDistance(point, { x: firstPoint[0], y: firstPoint[1] });
-
-      // 🏢 ADR-099: Centralized polygon close tolerance - converts pixels to world units
-      const worldTolerance = POLYGON_TOLERANCES.OVERLAY_CLOSE_PIXELS / canvasTransform.scale;
-
-      if (distance < worldTolerance) {
-        finishDrawing();
+  const handleOverlayCanvasClick = useCallback(
+    (point: Point2D) => {
+      if (overlayMode !== "draw" || !activeTool || activeTool !== "layering")
         return;
-      }
-    }
 
-    // Add new point to draft polygon
-    setDraftPolygon(prev => [...prev, [point.x, point.y]]);
-  }, [overlayMode, activeTool, draftPolygon, canvasTransform.scale]);
+      // Check if point is close to first point (closing polygon)
+      if (draftPolygon.length >= MIN_POLY_POINTS) {
+        const firstPoint = draftPolygon[0];
+        const distance = calculateDistance(point, {
+          x: firstPoint[0],
+          y: firstPoint[1],
+        });
+
+        // 🏢 ADR-099: Centralized polygon close tolerance - converts pixels to world units
+        const worldTolerance =
+          POLYGON_TOLERANCES.OVERLAY_CLOSE_PIXELS / canvasTransform.scale;
+
+        if (distance < worldTolerance) {
+          finishDrawing();
+          return;
+        }
+      }
+
+      // Add new point to draft polygon
+      setDraftPolygon((prev) => [...prev, [point.x, point.y]]);
+    },
+    [overlayMode, activeTool, draftPolygon, canvasTransform.scale],
+  );
 
   // Finish drawing function
   const finishDrawing = useCallback(async () => {
     if (draftPolygon.length < MIN_POLY_POINTS) {
-      console.warn('[useOverlayDrawing] Cannot finish drawing: insufficient points');
+      console.warn(
+        "[useOverlayDrawing] Cannot finish drawing: insufficient points",
+      );
       return;
     }
 
     const currentLevel = levelManager?.getCurrentLevel();
     if (!currentLevel?.id) {
-      console.warn('[useOverlayDrawing] No current level selected for overlay');
+      console.warn("[useOverlayDrawing] No current level selected for overlay");
       return;
     }
 
@@ -137,54 +158,79 @@ export const useOverlayDrawing = ({
 
       // Keep drawing mode active for continuous drawing
     } catch (error) {
-      console.error('Error creating overlay:', error);
+      console.error("Error creating overlay:", error);
     }
   }, [draftPolygon, overlayStore, levelManager, overlayKind, overlayStatus]);
 
   // Handle vertex drag for overlay editing
-  const handleVertexDrag = useCallback((overlayId: string, vertexIndex: number, newPoint: Point2D) => {
-    // ✅ ENTERPRISE FIX: Find overlay by level (overlayStore interface doesn't have overlays property)
-    const currentLevel = levelManager?.getCurrentLevel();
-    const overlay = overlayStore?.getByLevel(currentLevel?.id || '')?.find(o => o.id === overlayId);
-    if (!overlay) return;
+  const handleVertexDrag = useCallback(
+    (overlayId: string, vertexIndex: number, newPoint: Point2D) => {
+      // ✅ ENTERPRISE FIX: Find overlay by level (overlayStore interface doesn't have overlays property)
+      const currentLevel = levelManager?.getCurrentLevel();
+      const overlay = overlayStore
+        ?.getByLevel(currentLevel?.id || "")
+        ?.find((o) => o.id === overlayId);
+      if (!overlay) return;
 
-    // overlay.polygon can be flat [x1,y1,...] or nested [[x,y],...]
-    const nested = Array.isArray(overlay.polygon[0])
-      ? (overlay.polygon as number[][])
-      : Array.from({ length: overlay.polygon.length / 2 }, (_, i) => [overlay.polygon[i*2], overlay.polygon[i*2+1]]);
+      // overlay.polygon can be flat [x1,y1,...] or nested [[x,y],...]
+      const nested = Array.isArray(overlay.polygon[0])
+        ? (overlay.polygon as number[][])
+        : Array.from({ length: overlay.polygon.length / 2 }, (_, i) => [
+            overlay.polygon[i * 2],
+            overlay.polygon[i * 2 + 1],
+          ]);
 
-    // ✅ ENTERPRISE: Explicit tuple type for Point2D coordinates
-    const newNested = nested.map((v, i) => i === vertexIndex ? [newPoint.x, newPoint.y] as [number, number] : v);
+      // ✅ ENTERPRISE: Explicit tuple type for Point2D coordinates
+      const newNested = nested.map((v, i) =>
+        i === vertexIndex ? ([newPoint.x, newPoint.y] as [number, number]) : v,
+      );
 
-    overlayStore?.update(overlayId, { polygon: newNested as [number, number][] }); // ✅ Save in nested format
-  }, [overlayStore]);
+      overlayStore?.update(overlayId, {
+        polygon: newNested as [number, number][],
+      }); // ✅ Save in nested format
+    },
+    [overlayStore],
+  );
 
   // Handle entire region drag & drop (for moving whole polygons)
-  const handleRegionUpdate = useCallback((regionId: string, updates: { vertices?: Point2D[] }) => {
-    // ✅ ENTERPRISE FIX: Find overlay by level (overlayStore interface doesn't have overlays property)
-    const currentLevel = levelManager?.getCurrentLevel();
-    const overlay = overlayStore?.getByLevel(currentLevel?.id || '')?.find(o => o.id === regionId);
-    if (!overlay || !updates.vertices) return;
+  const handleRegionUpdate = useCallback(
+    (regionId: string, updates: { vertices?: Point2D[] }) => {
+      // ✅ ENTERPRISE FIX: Find overlay by level (overlayStore interface doesn't have overlays property)
+      const currentLevel = levelManager?.getCurrentLevel();
+      const overlay = overlayStore
+        ?.getByLevel(currentLevel?.id || "")
+        ?.find((o) => o.id === regionId);
+      if (!overlay || !updates.vertices) return;
 
-    // Convert Point2D[] to nested number[][] format for renderer compatibility
-    // ✅ ENTERPRISE: Explicit tuple type for Point2D coordinates
-    const nested = updates.vertices.map(v => [v.x, v.y] as [number, number]);
+      // Convert Point2D[] to nested number[][] format for renderer compatibility
+      // ✅ ENTERPRISE: Explicit tuple type for Point2D coordinates
+      const nested = updates.vertices.map(
+        (v) => [v.x, v.y] as [number, number],
+      );
 
-    overlayStore?.update(regionId, { polygon: nested });
-  }, [overlayStore]);
+      overlayStore?.update(regionId, { polygon: nested });
+    },
+    [overlayStore],
+  );
 
   // Mouse move handler for snap functionality
-  const handleOverlayMouseMove = useCallback((worldX: number, worldY: number) => {
-    if (overlayMode === 'draw' && snapManager.findSnapPoint) {
-      const snapResult = snapManager.findSnapPoint(worldX, worldY);
-      if (snapResult) {
-        // ✅ ENTERPRISE FIX: Use snappedPoint coordinates instead of x,y properties
-        setSnapPoint({ x: snapResult.snappedPoint.x, y: snapResult.snappedPoint.y });
-      } else {
-        setSnapPoint(null);
+  const handleOverlayMouseMove = useCallback(
+    (worldX: number, worldY: number) => {
+      if (overlayMode === "draw" && snapManager.findSnapPoint) {
+        const snapResult = snapManager.findSnapPoint(worldX, worldY);
+        if (snapResult) {
+          // ✅ ENTERPRISE FIX: Use snappedPoint coordinates instead of x,y properties
+          setSnapPoint({
+            x: snapResult.snappedPoint.x,
+            y: snapResult.snappedPoint.y,
+          });
+        } else {
+          setSnapPoint(null);
+        }
       }
-    }
-  }, [overlayMode, snapManager]);
+    },
+    [overlayMode, snapManager],
+  );
 
   // Clear snap point on click
   const clearSnapPoint = useCallback(() => {
@@ -194,13 +240,21 @@ export const useOverlayDrawing = ({
   // Event listener for canvas clicks from overlay drawing
   useEffect(() => {
     const onOverlayCanvasClick = (event: CustomEvent) => {
-      if (overlayMode !== 'draw' || !activeTool || activeTool !== 'layering') return;
+      if (overlayMode !== "draw" || !activeTool || activeTool !== "layering")
+        return;
       const { point } = event.detail;
       handleOverlayCanvasClick(point);
     };
 
-    window.addEventListener('overlay:canvas-click', onOverlayCanvasClick as EventListener);
-    return () => window.removeEventListener('overlay:canvas-click', onOverlayCanvasClick as EventListener);
+    window.addEventListener(
+      "overlay:canvas-click",
+      onOverlayCanvasClick as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "overlay:canvas-click",
+        onOverlayCanvasClick as EventListener,
+      );
   }, [overlayMode, activeTool, handleOverlayCanvasClick]);
 
   return {
@@ -221,6 +275,6 @@ export const useOverlayDrawing = ({
     setDraftPolygon,
 
     // Snap manager
-    snapManager
+    snapManager,
   };
 };

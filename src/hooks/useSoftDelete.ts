@@ -8,13 +8,13 @@
  * @enterprise ADR-281 — SSOT Soft-Delete System
  */
 
-'use client';
+"use client";
 
-import { useCallback, useState } from 'react';
-import { useNotifications } from '@/providers/NotificationProvider';
-import { useTranslation } from 'react-i18next';
-import { TrashService } from '@/services/trash.service';
-import type { SoftDeletableEntityType } from '@/types/soft-deletable';
+import { useCallback, useState } from "react";
+import { useNotifications } from "@/providers/NotificationProvider";
+import { useTranslation } from "react-i18next";
+import { TrashService } from "@/services/trash.service";
+import type { SoftDeletableEntityType } from "@/types/soft-deletable";
 
 interface UseSoftDeleteOptions {
   entityType: SoftDeletableEntityType;
@@ -33,65 +33,79 @@ interface UseSoftDeleteReturn {
   loading: boolean;
 }
 
-export function useSoftDelete({ entityType, deleteFn, onSuccess }: UseSoftDeleteOptions): UseSoftDeleteReturn {
+export function useSoftDelete({
+  entityType,
+  deleteFn,
+  onSuccess,
+}: UseSoftDeleteOptions): UseSoftDeleteReturn {
   const [loading, setLoading] = useState(false);
   const { notify } = useNotifications();
-  const { t } = useTranslation('trash');
+  const { t } = useTranslation("trash");
 
-  const softDelete = useCallback(async (id: string) => {
-    setLoading(true);
-    try {
-      await deleteFn(id);
-      onSuccess?.();
+  const softDelete = useCallback(
+    async (id: string) => {
+      setLoading(true);
+      try {
+        await deleteFn(id);
+        onSuccess?.();
 
-      // Undo toast — 5 second window
-      notify(t('deleteSuccess'), {
-        type: 'success',
-        duration: 5000,
-        actions: [{
-          label: t('undo'),
-          onClick: async () => {
-            try {
-              await TrashService.restore(entityType, id);
-              notify(t('undoSuccess'), { type: 'info', duration: 2000 });
-              onSuccess?.();
-            } catch {
-              notify(t('undoFailed'), { type: 'error' });
-            }
-          },
-        }],
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [deleteFn, entityType, notify, onSuccess, t]);
+        // Undo toast — 5 second window
+        notify(t("deleteSuccess"), {
+          type: "success",
+          duration: 5000,
+          actions: [
+            {
+              label: t("undo"),
+              onClick: async () => {
+                try {
+                  await TrashService.restore(entityType, id);
+                  notify(t("undoSuccess"), { type: "info", duration: 2000 });
+                  onSuccess?.();
+                } catch {
+                  notify(t("undoFailed"), { type: "error" });
+                }
+              },
+            },
+          ],
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [deleteFn, entityType, notify, onSuccess, t],
+  );
 
-  const softDeleteMultiple = useCallback(async (ids: string[]) => {
-    setLoading(true);
-    try {
-      await Promise.all(ids.map(id => deleteFn(id)));
-      onSuccess?.();
+  const softDeleteMultiple = useCallback(
+    async (ids: string[]) => {
+      setLoading(true);
+      try {
+        await Promise.all(ids.map((id) => deleteFn(id)));
+        onSuccess?.();
 
-      notify(t('deleteSuccessMultiple', { count: ids.length }), {
-        type: 'success',
-        duration: 5000,
-        actions: [{
-          label: t('undo'),
-          onClick: async () => {
-            try {
-              await TrashService.bulkRestore(entityType, ids);
-              notify(t('undoSuccess'), { type: 'info', duration: 2000 });
-              onSuccess?.();
-            } catch {
-              notify(t('undoFailed'), { type: 'error' });
-            }
-          },
-        }],
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [deleteFn, entityType, notify, onSuccess, t]);
+        notify(t("deleteSuccessMultiple", { count: ids.length }), {
+          type: "success",
+          duration: 5000,
+          actions: [
+            {
+              label: t("undo"),
+              onClick: async () => {
+                try {
+                  await TrashService.bulkRestore(entityType, ids);
+                  notify(t("undoSuccess"), { type: "info", duration: 2000 });
+                  onSuccess?.();
+                } catch {
+                  notify(t("undoFailed"), { type: "error" });
+                }
+              },
+            },
+          ],
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [deleteFn, entityType, notify, onSuccess, t],
+  );
 
   return { softDelete, softDeleteMultiple, loading };
 }

@@ -8,12 +8,12 @@
  * @enterprise ADR-281 — SSOT Soft-Delete System
  */
 
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { useIconSizes, useSemanticColors } from '@/hooks/useDesignTokens';
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, RotateCcw, Trash2, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useIconSizes, useSemanticColors } from "@/hooks/useDesignTokens";
 
 interface TrashActionsBarProps {
   /** Selected entity IDs in trash view */
@@ -37,7 +37,7 @@ export function TrashActionsBar({
   onPermanentDelete,
   trashCount,
 }: TrashActionsBarProps) {
-  const { t } = useTranslation('trash');
+  const { t } = useTranslation("trash");
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -45,23 +45,30 @@ export function TrashActionsBar({
     <section
       className="flex flex-col gap-2 px-3 py-2 border-b"
       role="toolbar"
-      aria-label={t('trashView')}
+      aria-label={t("trashView")}
     >
       {/* Warning banner */}
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm ${colors.text.muted}`}>
+      <div
+        className={`flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm ${colors.text.muted}`}
+      >
         <AlertTriangle className={`${iconSizes.sm} text-amber-500 shrink-0`} />
-        <p>{t('autoDeleteWarning')}</p>
+        <p>{t("autoDeleteWarning")}</p>
       </div>
 
       {/* Action buttons */}
       <nav className="flex items-center gap-2 flex-wrap">
-        <Button size="sm" variant="outline" onClick={onBack} className="gap-1.5">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onBack}
+          className="gap-1.5"
+        >
           <ArrowLeft className={iconSizes.xs} />
-          {t('backToList')}
+          {t("backToList")}
         </Button>
 
         <span className={`text-sm ${colors.text.muted} px-2`}>
-          {t('trashCount', { count: trashCount })}
+          {t("trashCount", { count: trashCount })}
         </span>
 
         <div className="flex-1" />
@@ -74,7 +81,7 @@ export function TrashActionsBar({
           className="gap-1.5"
         >
           <RotateCcw className={iconSizes.xs} />
-          {t('restoreSelected')}
+          {t("restoreSelected")}
           {selectedIds.length > 0 && ` (${selectedIds.length})`}
         </Button>
 
@@ -86,7 +93,7 @@ export function TrashActionsBar({
           className="gap-1.5"
         >
           <Trash2 className={iconSizes.xs} />
-          {t('permanentDelete')}
+          {t("permanentDelete")}
         </Button>
       </nav>
     </section>

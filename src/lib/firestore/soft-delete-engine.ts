@@ -12,18 +12,18 @@
  * @enterprise ADR-281 — SSOT Soft-Delete System
  */
 
-import 'server-only';
+import "server-only";
 
-import { FieldValue } from 'firebase-admin/firestore';
-import { SOFT_DELETE_CONFIG } from './soft-delete-config';
-import { executeDeletion } from './deletion-guard';
-import { EntityAuditService } from '@/services/entity-audit.service';
-import { ApiError } from '@/lib/api/ApiErrorHandler';
-import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
-import type { SoftDeletableEntityType } from '@/types/soft-deletable';
+import { FieldValue } from "firebase-admin/firestore";
+import { SOFT_DELETE_CONFIG } from "./soft-delete-config";
+import { executeDeletion } from "./deletion-guard";
+import { EntityAuditService } from "@/services/entity-audit.service";
+import { ApiError } from "@/lib/api/ApiErrorHandler";
+import { createModuleLogger } from "@/lib/telemetry";
+import { getErrorMessage } from "@/lib/error-utils";
+import type { SoftDeletableEntityType } from "@/types/soft-deletable";
 
-const logger = createModuleLogger('SoftDeleteEngine');
+const logger = createModuleLogger("SoftDeleteEngine");
 
 // ============================================================================
 // SOFT DELETE — Move to trash
@@ -42,7 +42,7 @@ export async function softDelete(
   entityType: SoftDeletableEntityType,
   entityId: string,
   deletedBy: string,
-  companyId: string
+  companyId: string,
 ): Promise<{ success: true; entityId: string }> {
   const config = SOFT_DELETE_CONFIG[entityType];
   const docRef = db.collection(config.collection).doc(entityId);
@@ -56,20 +56,28 @@ export async function softDelete(
 
   // Tenant isolation
   if (data?.companyId && data.companyId !== companyId) {
-    throw new ApiError(403, `Unauthorized: ${config.labelEn} belongs to different company`);
+    throw new ApiError(
+      403,
+      `Unauthorized: ${config.labelEn} belongs to different company`,
+    );
   }
 
   // Idempotency guard
-  if (data?.status === 'deleted') {
+  if (data?.status === "deleted") {
     throw new ApiError(409, `${config.labelEn} is already in trash`);
   }
 
-  const previousStatus = (data?.status as string) ?? config.defaultRestoreStatus;
+  const previousStatus =
+    (data?.status as string) ?? config.defaultRestoreStatus;
 
-  logger.info(`Soft-deleting ${entityType}`, { entityId, companyId, previousStatus });
+  logger.info(`Soft-deleting ${entityType}`, {
+    entityId,
+    companyId,
+    previousStatus,
+  });
 
   await docRef.update({
-    status: 'deleted',
+    status: "deleted",
     previousStatus,
     deletedAt: FieldValue.serverTimestamp(),
     deletedBy,
@@ -81,15 +89,24 @@ export async function softDelete(
     entityType,
     entityId,
     entityName: extractEntityName(data),
-    action: 'soft_deleted',
+    action: "soft_deleted",
     changes: [
-      { field: 'status', oldValue: previousStatus, newValue: 'deleted', label: 'Moved to trash' },
+      {
+        field: "status",
+        oldValue: previousStatus,
+        newValue: "deleted",
+        label: "Moved to trash",
+      },
     ],
     performedBy: deletedBy,
     performedByName: null,
     companyId,
   }).catch((err) => {
-    logger.error('Audit trail failed (non-blocking)', { entityType, entityId, error: getErrorMessage(err) });
+    logger.error("Audit trail failed (non-blocking)", {
+      entityType,
+      entityId,
+      error: getErrorMessage(err),
+    });
   });
 
   logger.info(`${entityType} soft-deleted`, { entityId });
@@ -112,7 +129,7 @@ export async function restoreFromTrash(
   entityType: SoftDeletableEntityType,
   entityId: string,
   restoredBy: string,
-  companyId: string
+  companyId: string,
 ): Promise<{ success: true; entityId: string; restoredStatus: string }> {
   const config = SOFT_DELETE_CONFIG[entityType];
   const docRef = db.collection(config.collection).doc(entityId);
@@ -125,16 +142,23 @@ export async function restoreFromTrash(
   const data = docSnap.data();
 
   if (data?.companyId && data.companyId !== companyId) {
-    throw new ApiError(403, `Unauthorized: ${config.labelEn} belongs to different company`);
+    throw new ApiError(
+      403,
+      `Unauthorized: ${config.labelEn} belongs to different company`,
+    );
   }
 
-  if (data?.status !== 'deleted') {
+  if (data?.status !== "deleted") {
     throw new ApiError(409, `${config.labelEn} is not in trash`);
   }
 
-  const restoredStatus = (data.previousStatus as string) || config.defaultRestoreStatus;
+  const restoredStatus =
+    (data.previousStatus as string) || config.defaultRestoreStatus;
 
-  logger.info(`Restoring ${entityType} from trash`, { entityId, restoredStatus });
+  logger.info(`Restoring ${entityType} from trash`, {
+    entityId,
+    restoredStatus,
+  });
 
   await docRef.update({
     status: restoredStatus,
@@ -151,15 +175,24 @@ export async function restoreFromTrash(
     entityType,
     entityId,
     entityName: extractEntityName(data),
-    action: 'restored',
+    action: "restored",
     changes: [
-      { field: 'status', oldValue: 'deleted', newValue: restoredStatus, label: 'Restored from trash' },
+      {
+        field: "status",
+        oldValue: "deleted",
+        newValue: restoredStatus,
+        label: "Restored from trash",
+      },
     ],
     performedBy: restoredBy,
     performedByName: null,
     companyId,
   }).catch((err) => {
-    logger.error('Audit trail failed (non-blocking)', { entityType, entityId, error: getErrorMessage(err) });
+    logger.error("Audit trail failed (non-blocking)", {
+      entityType,
+      entityId,
+      error: getErrorMessage(err),
+    });
   });
 
   return { success: true, entityId, restoredStatus };
@@ -180,7 +213,7 @@ export async function permanentDelete(
   entityType: SoftDeletableEntityType,
   entityId: string,
   deletedBy: string,
-  companyId: string
+  companyId: string,
 ): Promise<{ success: true; entityId: string }> {
   const config = SOFT_DELETE_CONFIG[entityType];
   const docRef = db.collection(config.collection).doc(entityId);
@@ -193,12 +226,18 @@ export async function permanentDelete(
   const data = docSnap.data();
 
   if (data?.companyId && data.companyId !== companyId) {
-    throw new ApiError(403, `Unauthorized: ${config.labelEn} belongs to different company`);
+    throw new ApiError(
+      403,
+      `Unauthorized: ${config.labelEn} belongs to different company`,
+    );
   }
 
   // MUST be in trash
-  if (data?.status !== 'deleted') {
-    throw new ApiError(409, `${config.labelEn} must be in trash before permanent deletion`);
+  if (data?.status !== "deleted") {
+    throw new ApiError(
+      409,
+      `${config.labelEn} must be in trash before permanent deletion`,
+    );
   }
 
   logger.info(`Permanently deleting ${entityType}`, { entityId });
@@ -219,19 +258,24 @@ export async function batchSoftDelete(
   entityType: SoftDeletableEntityType,
   entityIds: string[],
   deletedBy: string,
-  companyId: string
-): Promise<{ succeeded: string[]; failed: Array<{ id: string; error: string }> }> {
+  companyId: string,
+): Promise<{
+  succeeded: string[];
+  failed: Array<{ id: string; error: string }>;
+}> {
   const succeeded: string[] = [];
   const failed: Array<{ id: string; error: string }> = [];
 
-  await Promise.all(entityIds.map(async (id) => {
-    try {
-      await softDelete(db, entityType, id, deletedBy, companyId);
-      succeeded.push(id);
-    } catch (err) {
-      failed.push({ id, error: getErrorMessage(err) });
-    }
-  }));
+  await Promise.all(
+    entityIds.map(async (id) => {
+      try {
+        await softDelete(db, entityType, id, deletedBy, companyId);
+        succeeded.push(id);
+      } catch (err) {
+        failed.push({ id, error: getErrorMessage(err) });
+      }
+    }),
+  );
 
   return { succeeded, failed };
 }
@@ -241,19 +285,24 @@ export async function batchRestore(
   entityType: SoftDeletableEntityType,
   entityIds: string[],
   restoredBy: string,
-  companyId: string
-): Promise<{ succeeded: string[]; failed: Array<{ id: string; error: string }> }> {
+  companyId: string,
+): Promise<{
+  succeeded: string[];
+  failed: Array<{ id: string; error: string }>;
+}> {
   const succeeded: string[] = [];
   const failed: Array<{ id: string; error: string }> = [];
 
-  await Promise.all(entityIds.map(async (id) => {
-    try {
-      await restoreFromTrash(db, entityType, id, restoredBy, companyId);
-      succeeded.push(id);
-    } catch (err) {
-      failed.push({ id, error: getErrorMessage(err) });
-    }
-  }));
+  await Promise.all(
+    entityIds.map(async (id) => {
+      try {
+        await restoreFromTrash(db, entityType, id, restoredBy, companyId);
+        succeeded.push(id);
+      } catch (err) {
+        failed.push({ id, error: getErrorMessage(err) });
+      }
+    }),
+  );
 
   return { succeeded, failed };
 }
@@ -262,15 +311,19 @@ export async function batchRestore(
 // HELPERS
 // ============================================================================
 
-function extractEntityName(data: FirebaseFirestore.DocumentData | undefined): string {
-  if (!data) return 'Unknown';
+function extractEntityName(
+  data: FirebaseFirestore.DocumentData | undefined,
+): string {
+  if (!data) return "Unknown";
   return (
     data.name ??
     data.title ??
-    (data.firstName ? `${data.firstName} ${data.lastName ?? ''}`.trim() : null) ??
+    (data.firstName
+      ? `${data.firstName} ${data.lastName ?? ""}`.trim()
+      : null) ??
     data.companyName ??
     data.number ??
     data.code ??
-    'Unknown'
+    "Unknown"
   );
 }

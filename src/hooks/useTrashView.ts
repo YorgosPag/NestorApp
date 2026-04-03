@@ -8,9 +8,9 @@
  * @enterprise ADR-281 — SSOT Soft-Delete System
  */
 
-'use client';
+"use client";
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from "react";
 
 interface TrashableItem {
   id: string;
@@ -29,24 +29,34 @@ interface UseTrashViewReturn<T extends TrashableItem> {
   visibleItems: T[];
 }
 
-export function useTrashView<T extends TrashableItem>(items: T[]): UseTrashViewReturn<T> {
+export function useTrashView<T extends TrashableItem>(
+  items: T[],
+): UseTrashViewReturn<T> {
   const [showTrash, setShowTrash] = useState(false);
 
-  const toggleTrash = useCallback(() => setShowTrash(prev => !prev), []);
+  const toggleTrash = useCallback(() => setShowTrash((prev) => !prev), []);
 
   const activeItems = useMemo(
-    () => items.filter(item => item.status !== 'deleted'),
-    [items]
+    () => items.filter((item) => item.status !== "deleted"),
+    [items],
   );
 
   const trashedItems = useMemo(
-    () => items.filter(item => item.status === 'deleted'),
-    [items]
+    () => items.filter((item) => item.status === "deleted"),
+    [items],
   );
 
   const trashCount = trashedItems.length;
 
   const visibleItems = showTrash ? trashedItems : activeItems;
 
-  return { showTrash, toggleTrash, setShowTrash, activeItems, trashedItems, trashCount, visibleItems };
+  return {
+    showTrash,
+    toggleTrash,
+    setShowTrash,
+    activeItems,
+    trashedItems,
+    trashCount,
+    visibleItems,
+  };
 }

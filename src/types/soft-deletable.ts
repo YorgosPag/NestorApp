@@ -30,9 +30,9 @@ export interface SoftDeletableFields {
 
 /** Entity types that support soft-delete lifecycle */
 export type SoftDeletableEntityType =
-  | 'contact'
-  | 'property'
-  | 'building'
-  | 'project'
-  | 'parking'
-  | 'storage';
+  | "contact"
+  | "property"
+  | "building"
+  | "project"
+  | "parking"
+  | "storage";
