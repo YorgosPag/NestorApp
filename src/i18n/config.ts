@@ -99,6 +99,7 @@ if (typeof window !== 'undefined') {
       'projects',      // Projects module
       'contacts',      // Contacts module
       'properties',    // 🏢 Properties module (renamed from units — ADR-269)
+      'properties-detail', // 🏢 Read/detail surface split from properties SSOT
       'properties-enums', // 🏢 Domain vocabulary split from properties SSOT
       'properties-viewer', // 🏢 Floorplan/viewer surface split from properties SSOT
       'storage',       // 🏢 Storage module - added 2026-01-24

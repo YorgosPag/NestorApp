@@ -16,7 +16,12 @@
 import React from 'react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { getSortedParkingTabs } from '@/config/parking-tabs-config';
-import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
+import {
+  UniversalTabsRenderer,
+  convertToUniversalConfig,
+  type ParkingTabComponentProps,
+  type ParkingTabGlobalProps,
+} from '@/components/generic/UniversalTabsRenderer';
 import { PARKING_COMPONENT_MAPPING } from '@/components/generic/mappings/parkingMappings';
 
 interface ParkingTabsProps {
@@ -38,22 +43,22 @@ interface ParkingTabsProps {
  * ZERO INLINE STYLES - τηρεί το Fortune 500 protocol.
  */
 export function ParkingTabs({ parking, isEditing, onEditingChange, saveRef }: ParkingTabsProps) {
-  // Get centralized tabs configuration
   const tabs = getSortedParkingTabs();
+  const globalProps: ParkingTabGlobalProps = {
+    isEditing,
+    onEditingChange,
+    onSaveRef: saveRef,
+  };
 
   return (
-    <UniversalTabsRenderer
+    <UniversalTabsRenderer<ParkingSpot, ParkingTabComponentProps, Record<string, never>, ParkingTabGlobalProps>
       tabs={tabs.map(convertToUniversalConfig)}
       data={parking}
-      componentMapping={PARKING_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
+      componentMapping={PARKING_COMPONENT_MAPPING}
       defaultTab="info"
       theme="default"
       translationNamespace="building"
-      globalProps={{
-        isEditing,
-        onEditingChange,
-        onSaveRef: saveRef,
-      }}
+      globalProps={globalProps}
     />
   );
 }

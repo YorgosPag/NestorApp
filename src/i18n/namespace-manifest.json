@@ -638,10 +638,26 @@
       "status": "governed",
       "splitRequired": true,
       "targetNamespaces": [
-        "properties-detail",
         "properties-form",
         "properties-mutation"
       ]
+    },
+    {
+      "namespace": "properties-detail",
+      "owner": "property-domain",
+      "primarySurface": "property-detail-read-model",
+      "stringClasses": [
+        "ui-chrome",
+        "notifications",
+        "long-form-help"
+      ],
+      "budget": {
+        "maxLines": 350,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     },
     {
       "namespace": "properties-enums",

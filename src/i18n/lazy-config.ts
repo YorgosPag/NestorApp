@@ -32,6 +32,7 @@ export const SUPPORTED_NAMESPACES = [
   'toasts',
   'errors',
   'properties',
+  'properties-detail',
   'properties-enums',
   'properties-viewer',
   'crm',
@@ -130,6 +131,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'properties':
           translations = await import('./locales/el/properties.json');
+          break;
+        case 'properties-detail':
+          translations = await import('./locales/el/properties-detail.json');
           break;
         case 'properties-enums':
           translations = await import('./locales/el/properties-enums.json');
@@ -275,6 +279,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'properties':
           translations = await import('./locales/en/properties.json');
+          break;
+        case 'properties-detail':
+          translations = await import('./locales/en/properties-detail.json');
           break;
         case 'properties-enums':
           translations = await import('./locales/en/properties-enums.json');
@@ -484,6 +491,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'contacts',      // Contacts module
   'communications', // Shared communications history and inbox surfaces
     'properties',    // 🏢 Properties module (renamed from units — ADR-269)
+    'properties-detail', // 🏢 Read/detail surface split from properties SSOT
     'properties-enums', // 🏢 Domain vocabulary split from properties SSOT
     'properties-viewer', // 🏢 Floorplan/viewer surface split from properties SSOT
     'storage',       // 🏢 Storage management module - added 2026-01-24

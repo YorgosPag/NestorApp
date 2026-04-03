@@ -12,7 +12,12 @@
 import React from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { getSortedStorageTabs } from '@/config/storage-tabs-config';
-import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
+import {
+  UniversalTabsRenderer,
+  convertToUniversalConfig,
+  type StorageTabComponentProps,
+  type StorageTabGlobalProps,
+} from '@/components/generic/UniversalTabsRenderer';
 import { STORAGE_COMPONENT_MAPPING } from '@/components/generic/mappings/storageMappings';
 
 interface StorageTabsProps {
@@ -33,22 +38,22 @@ interface StorageTabsProps {
  * ZERO HARDCODED VALUES - όλα από centralized configuration.
  */
 export function StorageTabs({ storage, isEditing, onEditingChange, saveRef }: StorageTabsProps) {
-  // Get centralized tabs configuration
   const tabs = getSortedStorageTabs();
+  const globalProps: StorageTabGlobalProps = {
+    isEditing,
+    onEditingChange,
+    onSaveRef: saveRef,
+  };
 
   return (
-    <UniversalTabsRenderer
+    <UniversalTabsRenderer<Storage, StorageTabComponentProps, Record<string, never>, StorageTabGlobalProps>
       tabs={tabs.map(convertToUniversalConfig)}
       data={storage}
-      componentMapping={STORAGE_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
+      componentMapping={STORAGE_COMPONENT_MAPPING}
       defaultTab="info"
       theme="default"
       translationNamespace="building"
-      globalProps={{
-        isEditing,
-        onEditingChange,
-        onSaveRef: saveRef,
-      }}
+      globalProps={globalProps}
     />
   );
 }

@@ -218,4 +218,19 @@ export async function downloadFileFromProxyWithPolicy(
 
 export async function archiveFilesWithPolicy(
   fileIds: string[],
-): Promise<{ success?: boolean; er
+): Promise<{ success?: boolean; error?: string }> {
+  return mutateJson<{ success?: boolean; error?: string }>(API_ROUTES.FILES.ARCHIVE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileIds, action: 'archive' }),
+  });
+}
+
+export async function updateFileClassificationWithPolicy(
+  fileId: string,
+  classification: FileClassification,
+): Promise<void> {
+  const { doc, updateDoc } = await import('firebase/firestore');
+  const { db } = await import('@/lib/firebase');
+  await updateDoc(doc(db, 'files', fileId), { classification });
+}

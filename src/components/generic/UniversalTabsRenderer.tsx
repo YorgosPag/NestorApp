@@ -3,6 +3,8 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import type { Property } from '@/types/property-viewer';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
+import type { Storage } from '@/types/storage/contracts';
+import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import type { BuildingFloorplanData } from '@/services/floorplans/BuildingFloorplanService';
 import type { FloorData, ViewerPassthroughProps, ViewerPassthroughPropsWithFloors } from '@/features/properties-sidebar/types';
 import { TabsOnlyTriggers, TabsContent, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
@@ -162,6 +164,38 @@ export interface BuildingTabComponentProps extends TabComponentProps, Partial<Bu
 }
 
 export type BuildingComponentMapping = Record<string, React.ComponentType<BuildingTabComponentProps>>;
+
+export interface StorageTabGlobalProps {
+  isEditing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
+  onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
+  createMode?: boolean;
+  onCreated?: (id: string) => void;
+}
+
+export interface StorageTabComponentProps extends TabComponentProps, Partial<StorageTabGlobalProps> {
+  data?: Storage;
+  storage?: Storage;
+  title?: string;
+}
+
+export type StorageComponentMapping = Record<string, React.ComponentType<StorageTabComponentProps>>;
+
+export interface ParkingTabGlobalProps {
+  isEditing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
+  onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
+  createMode?: boolean;
+  onCreated?: (id: string) => void;
+}
+
+export interface ParkingTabComponentProps extends TabComponentProps, Partial<ParkingTabGlobalProps> {
+  data?: ParkingSpot;
+  parking?: ParkingSpot;
+  title?: string;
+}
+
+export type ParkingComponentMapping = Record<string, React.ComponentType<ParkingTabComponentProps>>;
 
 export interface UniversalTabsRendererProps<
   TData = unknown,

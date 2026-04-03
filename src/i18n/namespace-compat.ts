@@ -29,6 +29,18 @@ const LEGACY_NAMESPACE_ROOT_MAP = {
     finishes: 'properties-enums',
     features: 'properties-enums',
     operationalStatus: 'properties-enums',
+    card: 'properties-detail',
+    fields: 'properties-detail',
+    entityLinks: 'properties-detail',
+    meta: 'properties-detail',
+    details: 'properties-detail',
+    versionHistory: 'properties-detail',
+    contacts: 'properties-detail',
+    multiLevel: 'properties-detail',
+    documents: 'properties-detail',
+    attachments: 'properties-detail',
+    dates: 'properties-detail',
+    share: 'properties-detail',
     viewer: 'properties-viewer',
     statusLegend: 'properties-viewer',
     editPanel: 'properties-viewer',
@@ -121,6 +133,7 @@ export const COMMON_COMPATIBILITY_NAMESPACES = [
 ] as const;
 
 export const PROPERTIES_COMPATIBILITY_NAMESPACES = [
+  'properties-detail',
   'properties-enums',
   'properties-viewer',
 ] as const;

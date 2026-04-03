@@ -1,0 +1,135 @@
+{
+  "card": {
+    "floor": "{floor}th floor",
+    "contactUs": "Contact us",
+    "viewFloorPlan": "View on floor plan",
+    "stats": {
+      "building": "Building",
+      "floor": "Floor",
+      "area": "Area",
+      "price": "Price",
+      "type": "Type"
+    },
+    "ariaLabel": "Property card {name}",
+    "aria": {
+      "propertyStatus": "Property Status",
+      "propertyInfo": "Property Information",
+      "propertyPrice": "Property Price",
+      "propertyFeatures": "Property Features",
+      "propertyTags": "Property Tags",
+      "propertyActions": "Property Actions",
+      "favorite": "Add to favorites",
+      "moreDetails": "More details"
+    }
+  },
+  "fields": {
+    "areas": {
+      "sectionTitle": "Areas",
+      "gross": "Gross",
+      "net": "Net",
+      "balcony": "Balcony",
+      "terrace": "Terrace",
+      "garden": "Garden"
+    },
+    "layout": {
+      "sectionTitle": "Layout",
+      "wc": "WC"
+    }
+  },
+  "entityLinks": {
+    "save": "Save",
+    "saving": "Saving...",
+    "error": "Failed to update link",
+    "building": {
+      "title": "Building link",
+      "label": "Building",
+      "placeholder": "Select building",
+      "noSelection": "No building selected",
+      "loading": "Loading buildings...",
+      "success": "Building link updated",
+      "currentLabel": "Current building",
+      "noFloorHint": "Select a building first"
+    }
+  },
+  "meta": {
+    "enterNewName": "Enter new name for the property:",
+    "sqm": "sqm",
+    "rooms": "rooms",
+    "description": "Description",
+    "features": "Features",
+    "edit": "Edit"
+  },
+  "details": {
+    "publicView": "Public View",
+    "building": "Building",
+    "floor": "Floor",
+    "price": "Price",
+    "area": "Area",
+    "rooms": "Rooms",
+    "balcony": "Balcony",
+    "buyer": "Buyer",
+    "viewContact": "View Contact",
+    "saleDate": "Sale Date:",
+    "features": "Features",
+    "share": "Share",
+    "shareSuccess": "Property shared successfully!",
+    "shareError": "Sharing error. Please try again.",
+    "limitedInfo": "Limited information in public view",
+    "contactForMore": "Contact us for more information"
+  },
+  "versionHistory": {
+    "title": "Version History",
+    "createMilestone": "Create Milestone",
+    "milestoneName": "Milestone name:",
+    "restoreConfirm": "Are you sure you want to restore this version? The current state will be saved as a new version.",
+    "restoring": "Restoring version {versionId}...",
+    "restored": "Version restored",
+    "creatingMilestone": "Creating milestone \"{name}\"...",
+    "selectVersion": "Select a version to view details.",
+    "badge": {
+      "milestone": "Milestone",
+      "auto": "Auto"
+    },
+    "details": {
+      "title": "Version Details",
+      "creator": "Creator:",
+      "date": "Date:",
+      "size": "Size:",
+      "changes": "Changes:",
+      "additions": "additions",
+      "modifications": "modifications",
+      "deletions": "deletions",
+      "preview": "Preview:"
+    },
+    "actions": {
+      "restore": "Restore",
+      "compare": "Compare"
+    }
+  },
+  "contacts": {
+    "owner": "Owner",
+    "agent": "Agent"
+  },
+  "multiLevel": {
+    "title": "Property Levels",
+    "goTo": "Go to"
+  },
+  "documents": {
+    "title": "Documents"
+  },
+  "attachments": {
+    "linkedStorages": "Linked Storages",
+    "linkedParking": "Linked Parking Spaces",
+    "sqm": "sq.m."
+  },
+  "dates": {
+    "title": "Dates",
+    "created": "Created:",
+    "updated": "Updated:",
+    "availability": "Availability:"
+  },
+  "share": {
+    "defaultMessage": "Check out these interesting properties from Nestor Construct!",
+    "title": "Nestor Construct - Properties"
+  }
+}

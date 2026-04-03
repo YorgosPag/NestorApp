@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Enterprise upload handler implementing:
- * - Auth gate with forced token refresh
+ * - Centralized auth preflight
  * - Step A: Create pending FileRecord
  * - Step B: Upload binary to Firebase Storage
  * - Step C: Finalize FileRecord with downloadUrl
@@ -20,7 +20,7 @@
 
 import { useCallback, useState } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, auth } from '@/lib/firebase';
+import { auth, storage } from '@/lib/firebase';
 import app from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,6 +29,7 @@ import {
   classifyFileWithPolicy,
   createPendingFileRecordWithPolicy,
   finalizeFileRecordWithPolicy,
+  verifyFileUploadAuthWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { getFileExtension } from '@/services/upload';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
@@ -104,25 +105,21 @@ export function useFileUpload({
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     // =========================================================================
-    // AUTH GATE — Deterministic authentication verification
+    // AUTH GATE — Centralized upload auth preflight
     // =========================================================================
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      logger.error('AUTH_GATE_FAILED', { reason: 'No authenticated user' });
-      showError(t('upload.errors.notAuthenticated'));
-      return;
-    }
+    let authContext: Awaited<ReturnType<typeof verifyFileUploadAuthWithPolicy>>;
 
     try {
-      const idToken = await currentUser.getIdToken(true);
-      logger.info('AUTH_VERIFIED', {
-        uid: currentUser.uid,
-        tokenLength: idToken.length,
-        hasEmail: !!currentUser.email,
-      });
+      authContext = await verifyFileUploadAuthWithPolicy();
+      logger.info('AUTH_VERIFIED', authContext);
     } catch (authError) {
-      logger.error('AUTH_TOKEN_REFRESH_FAILED', { error: String(authError) });
-      showError(t('upload.errors.authFailed'));
+      logger.error('AUTH_PRECHECK_FAILED', { error: String(authError) });
+      const errorMessage = authError instanceof Error ? authError.message : '';
+      showError(
+        errorMessage === 'FILE_UPLOAD_AUTH_REQUIRED'
+          ? t('upload.errors.notAuthenticated')
+          : t('upload.errors.authFailed'),
+      );
       return;
     }
 
@@ -130,7 +127,7 @@ export function useFileUpload({
     logger.info('UPLOAD_DIAGNOSTIC', {
       projectId: app.options.projectId,
       storageBucket: app.options.storageBucket,
-      authUid: currentUser.uid,
+      authUid: authContext.uid,
       companyId,
       entityType,
       entityId,
