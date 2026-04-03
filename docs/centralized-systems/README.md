@@ -4,9 +4,9 @@
 >
 > Complete documentation για όλα τα κεντρικοποιημένα συστήματα της εφαρμογής
 
-**📊 Quick Stats**: 33 Enterprise Systems + Accounting Subapp (11 ADRs) | 24,000+ Lines | Fortune 500 Quality
+**📊 Quick Stats**: 34 Enterprise Systems + Accounting Subapp (11 ADRs) | 24,000+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-248 Centralized Auto-Save System — useAutoSave hook + AutoSaveStatusIndicator. 8+ boilerplate patterns → 1 hook, actual Firestore persistence (2026-03-19)
+> **🆕 Latest**: ADR-281 SSOT Soft-Delete System — Google-level trash lifecycle for ALL entities. softDelete/restore/permanentDelete engine, 30-day auto-purge cron, centralized API routes (2026-04-03)
 
 ---
 
