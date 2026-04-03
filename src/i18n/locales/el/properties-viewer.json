@@ -58,7 +58,8 @@
     "statusBar": {
       "floor": "Όροφος:",
       "layers": "Layers:",
-      "liveUpdates": "Ενημερώσεις σε πραγματικό χρόνο"
+      "liveUpdates": "Ενημερώσεις σε πραγματικό χρόνο",
+      "realTimeUpdates": "Ενημερώσεις πραγματικού χρόνου"
     },
     "selectPropertyToViewMedia": "Επιλέξτε ακίνητο για προβολή",
     "media": {
@@ -72,7 +73,8 @@
       "floorplanFloor": "Κάτοψη Ορόφου",
       "floorplanUnit": "Κάτοψη Μονάδας",
       "floorplanLevel": "Κάτοψη {name}",
-      "floorplanFloorLevel": "Κάτοψη Ορόφου {name}"
+      "floorplanFloorLevel": "Κάτοψη Ορόφου {name}",
+      "noFloorFloorplans": "Δεν βρέθηκαν κατόψεις ορόφου"
     }
   },
   "statusLegend": {
@@ -102,7 +104,13 @@
     "clearSuggestions": "Καθαρισμός Προτάσεων"
   },
   "hover": {
-    "clickForMore": "Κλικ για περισσότερες πληροφορίες"
+    "clickForMore": "Κλικ για περισσότερες πληροφορίες",
+    "perMonth": "/ μήνα",
+    "priceOnRequest": "Τιμή κατόπιν αιτήματος",
+    "area": "Εμβαδόν",
+    "pricePerSqm": "Τιμή/τ.μ.",
+    "pricePerSqmTooltip": "Τιμή ανά τετραγωνικό μέτρο",
+    "shortDescription": "Σύντομη περιγραφή"
   },
   "hoverInfo": {
     "hoverMouse": "Περάστε το ποντίκι",

@@ -58,7 +58,8 @@
     "statusBar": {
       "floor": "Floor:",
       "layers": "Layers:",
-      "liveUpdates": "Ενημερώσεις σε πραγματικό χρόνο"
+      "liveUpdates": "Real-time updates",
+      "realTimeUpdates": "Real-time updates"
     },
     "selectPropertyToViewMedia": "Select a property to view",
     "media": {
@@ -72,7 +73,8 @@
       "floorplanFloor": "Floor Plan",
       "floorplanUnit": "Unit Floorplan",
       "floorplanLevel": "{name} Plan",
-      "floorplanFloorLevel": "Floor Plan {name}"
+      "floorplanFloorLevel": "Floor Plan {name}",
+      "noFloorFloorplans": "No floor plans found"
     }
   },
   "statusLegend": {
@@ -102,7 +104,13 @@
     "clearSuggestions": "Clear Suggestions"
   },
   "hover": {
-    "clickForMore": "Click for more details"
+    "clickForMore": "Click for more details",
+    "perMonth": "/ month",
+    "priceOnRequest": "Price on request",
+    "area": "Area",
+    "pricePerSqm": "Price/sq.m.",
+    "pricePerSqmTooltip": "Price per square meter",
+    "shortDescription": "Short description"
   },
   "hoverInfo": {
     "hoverMouse": "Hover your mouse",

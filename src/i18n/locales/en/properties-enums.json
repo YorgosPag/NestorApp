@@ -109,6 +109,7 @@
     "hold": "On Hold"
   },
   "units": {
+    "sqm": "sq.m.",
     "types": {
       "studio": "Studio",
       "apartment_1br": "1 Bedroom Apartment",

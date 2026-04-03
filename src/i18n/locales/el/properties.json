@@ -453,6 +453,58 @@
       "understood": "Κατάλαβα"
     }
   },
+  "toolbar": {
+    "selectedCount": "{count} επιλεγμένα",
+    "selectAll": "Επιλογή όλων",
+    "quickSearchPlaceholder": "Γρήγορη αναζήτηση...",
+    "advancedTools": "Προχωρημένα εργαλεία",
+    "helpAndGuides": "Βοήθεια & Οδηγοί",
+    "filtersAndView": "Φίλτρα & Προβολή",
+    "unitFilters": "Φίλτρα μονάδων",
+    "clearFilters": "Καθαρισμός φίλτρων",
+    "bulkAssign": "Μαζική ανάθεση",
+    "assigning": "Ανάθεση...",
+    "assign": "Ανάθεση",
+    "clearSelection": "Καθαρισμός επιλογής",
+    "bulkAssignSuccess": "Η μαζική ανάθεση ολοκληρώθηκε",
+    "actions": {
+      "new": "Νέα Μονάδα",
+      "edit": "Επεξεργασία",
+      "delete": "Μεταφορά στον κάδο"
+    }
+  },
+  "mobile": {
+    "unitDetails": "Λεπτομέρειες μονάδας",
+    "editUnit": "Επεξεργασία μονάδας",
+    "deleteUnit": "Διαγραφή μονάδας"
+  },
+  "public": {
+    "quickStats": "Στατιστικά",
+    "companyInfo": "Πληροφορίες Εταιρείας"
+  },
+  "buildingSelector": {
+    "save": "Αποθήκευση"
+  },
+  "floorplan": {
+    "selectProperty": "Επιλέξτε ακίνητο",
+    "selectUnitDescription": "Επιλέξτε μια μονάδα για να δείτε την κάτοψη",
+    "noAuth": "Πρέπει να συνδεθείτε για να δείτε κατόψεις"
+  },
+  "photos": {
+    "selectProperty": "Επιλέξτε ακίνητο",
+    "selectUnitDescription": "Επιλέξτε μια μονάδα για να δείτε φωτογραφίες",
+    "noAuth": "Πρέπει να συνδεθείτε για να δείτε φωτογραφίες"
+  },
+  "videos": {
+    "selectProperty": "Επιλέξτε ακίνητο",
+    "selectUnitDescription": "Επιλέξτε μια μονάδα για να δείτε βίντεο",
+    "noAuth": "Πρέπει να συνδεθείτε για να δείτε βίντεο"
+  },
+  "documents": {
+    "selectProperty": "Επιλέξτε ακίνητο",
+    "selectUnitDescription": "Επιλέξτε μια μονάδα για να δείτε έγγραφα",
+    "noAuth": "Πρέπει να συνδεθείτε για να δείτε έγγραφα"
+  },
   "fieldWarnings": {
     "basementResidential": {
       "title": "Κατοικία σε υπόγειο;",

@@ -2,7 +2,7 @@
 'use client';
 import { SearchInput } from '@/components/ui/search';
 import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 export function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void; }) {
@@ -12,7 +12,7 @@ export function SearchBar({ value, onChange }: { value: string; onChange: (v: st
       <SearchInput
         value={value}
         onChange={onChange}
-        placeholder={t('grid.searchPlaceholder')}
+        placeholder={t('grid.search.placeholder')}
         debounceMs={300}
         className={cn(
           "border-gray-200 dark:border-border dark:bg-muted/30",

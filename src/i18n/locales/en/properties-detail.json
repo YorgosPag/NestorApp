@@ -111,7 +111,9 @@
     "shareSuccess": "Property shared successfully!",
     "shareError": "Sharing error. Please try again.",
     "limitedInfo": "Limited information in public view",
-    "contactForMore": "Contact us for more information"
+    "contactForMore": "Contact us for more information",
+    "noUnitSelected": "No unit selected",
+    "selectProperty": "Select a property"
   },
   "versionHistory": {
     "title": "Version History",

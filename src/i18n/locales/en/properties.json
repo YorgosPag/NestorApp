@@ -453,6 +453,58 @@
       "understood": "Understood"
     }
   },
+  "toolbar": {
+    "selectedCount": "{count} selected",
+    "selectAll": "Select all",
+    "quickSearchPlaceholder": "Quick search...",
+    "advancedTools": "Advanced tools",
+    "helpAndGuides": "Help & Guides",
+    "filtersAndView": "Filters & View",
+    "unitFilters": "Unit filters",
+    "clearFilters": "Clear filters",
+    "bulkAssign": "Bulk assign",
+    "assigning": "Assigning...",
+    "assign": "Assign",
+    "clearSelection": "Clear selection",
+    "bulkAssignSuccess": "Bulk assignment completed",
+    "actions": {
+      "new": "New Unit",
+      "edit": "Edit",
+      "delete": "Move to Trash"
+    }
+  },
+  "mobile": {
+    "unitDetails": "Unit details",
+    "editUnit": "Edit unit",
+    "deleteUnit": "Delete unit"
+  },
+  "public": {
+    "quickStats": "Quick Stats",
+    "companyInfo": "Company Info"
+  },
+  "buildingSelector": {
+    "save": "Save"
+  },
+  "floorplan": {
+    "selectProperty": "Select property",
+    "selectUnitDescription": "Select a unit to view the floor plan",
+    "noAuth": "Sign in to view floor plans"
+  },
+  "photos": {
+    "selectProperty": "Select property",
+    "selectUnitDescription": "Select a unit to view photos",
+    "noAuth": "Sign in to view photos"
+  },
+  "videos": {
+    "selectProperty": "Select property",
+    "selectUnitDescription": "Select a unit to view videos",
+    "noAuth": "Sign in to view videos"
+  },
+  "documents": {
+    "selectProperty": "Select property",
+    "selectUnitDescription": "Select a unit to view documents",
+    "noAuth": "Sign in to view documents"
+  },
   "fieldWarnings": {
     "basementResidential": {
       "title": "Residential unit in basement?",
