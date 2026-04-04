@@ -1,7 +1,7 @@
 /* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -12,10 +12,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { getCompanyById } from '@/services/companies.service';
 import { getContactFormConfig, getContactFormSections, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
-import { getPersonaFields } from '@/config/persona-config';
 import { getIndividualSortedSections } from '@/config/individual-config';
-import type { PersonaType } from '@/types/contacts/personas';
-import { DEFAULT_INSURANCE_CLASSES } from '@/components/projects/ika/contracts';
 import { useTranslation } from 'react-i18next';
 import { buildCoreRenderers, buildCompanyRenderers, type RendererContext } from './contactRenderersCore';
 import { buildIndividualRenderers, buildServiceRenderers, buildSectionFooterRenderers } from './contactRenderersTyped';
@@ -46,7 +43,6 @@ interface UnifiedContactTabbedSectionProps {
   canonicalUploadContext?: CanonicalUploadContext;
   onActiveTabChange?: (tabId: string) => void;
   initialTab?: string;
-  onPersonaToggle?: (personaType: PersonaType) => void;
   validationErrors?: Record<string, string>;
   onFieldBlur?: (fieldName: string) => void;
 }
@@ -59,7 +55,7 @@ export function UnifiedContactTabbedSection({
   handleUploadedLogoURL, handleUploadedPhotoURL,
   setFormData, disabled = false, relationshipsMode = 'full',
   onPhotoClick, canonicalUploadContext,
-  onActiveTabChange, initialTab, onPersonaToggle,
+  onActiveTabChange, initialTab,
   validationErrors, onFieldBlur,
 }: UnifiedContactTabbedSectionProps) {
   const { t } = useTranslation('contacts');
@@ -99,60 +95,6 @@ export function UnifiedContactTabbedSection({
     return getContactFormSections(contactType);
   }, [contactType]);
 
-  const personaFieldLookup = useMemo(() => {
-    if (contactType !== 'individual') return new Map<string, PersonaType>();
-    const lookup = new Map<string, PersonaType>();
-    for (const pt of (formData.activePersonas ?? [])) {
-      for (const field of getPersonaFields(pt)) lookup.set(field.id, pt);
-    }
-    return lookup;
-  }, [contactType, formData.activePersonas]);
-
-  // ── Enhanced FormData (flatten persona fields) ───────────────
-  const enhancedFormData = useMemo((): ContactFormData => {
-    if (contactType !== 'individual' || personaFieldLookup.size === 0) return formData;
-    const pd = formData.personaData ?? {};
-    const flat: Record<string, string | number | null> = {};
-    for (const pt of (formData.activePersonas ?? [])) {
-      const fields = pd[pt];
-      if (fields) Object.assign(flat, fields);
-    }
-    return { ...formData, ...flat } as ContactFormData;
-  }, [contactType, formData, personaFieldLookup]);
-
-  // ── Wrapped Handlers (persona routing) ───────────────────────
-  const wrappedHandleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const pt = personaFieldLookup.get(e.target.name);
-      if (pt && setFormData) {
-        const currentPD = formData.personaData ?? {};
-        setFormData({ ...formData, personaData: { ...currentPD, [pt]: { ...currentPD[pt] ?? {}, [e.target.name]: e.target.value || null } } });
-      } else {
-        handleChange(e);
-      }
-    },
-    [formData, handleChange, setFormData, personaFieldLookup]
-  );
-
-  const wrappedHandleSelectChange = useCallback(
-    (name: string, value: string) => {
-      const pt = personaFieldLookup.get(name);
-      if (pt && setFormData) {
-        const currentPD = formData.personaData ?? {};
-        const currentFields = currentPD[pt] ?? {};
-        const extraFields: Record<string, string | number | null> = {};
-        if (name === 'insuranceClassId' && pt === 'construction_worker') {
-          const matched = DEFAULT_INSURANCE_CLASSES.find(c => c.classNumber === parseInt(value, 10));
-          if (matched) extraFields.dailyWage = matched.imputedDailyWage;
-        }
-        setFormData({ ...formData, personaData: { ...currentPD, [pt]: { ...currentFields, [name]: value || null, ...extraFields } } });
-      } else {
-        handleSelectChange(name, value);
-      }
-    },
-    [formData, handleSelectChange, setFormData, personaFieldLookup]
-  );
-
   // ── Photo Handler ────────────────────────────────────────────
   const unifiedPhotosChange = useMemo(
     () => createUnifiedPhotosChangeHandler({ onPhotosChange, handleMultiplePhotosChange, setFormData, formData }),
@@ -173,7 +115,7 @@ export function UnifiedContactTabbedSection({
         return t(key, '');
       },
       relationshipsMode,
-      onPersonaToggle, canonicalUploadContext,
+      canonicalUploadContext,
       handleLogoChange, handleFileChange,
       handleUploadedLogoURL, handleUploadedPhotoURL,
     };
@@ -187,9 +129,9 @@ export function UnifiedContactTabbedSection({
 
     const baseProps = {
       sections,
-      formData: enhancedFormData,
-      onChange: wrappedHandleChange,
-      onSelectChange: wrappedHandleSelectChange,
+      formData,
+      onChange: handleChange,
+      onSelectChange: handleSelectChange,
       disabled,
       onActiveTabChange,
       initialTab,
@@ -206,7 +148,7 @@ export function UnifiedContactTabbedSection({
       handleProfilePhotoSelection, setFormData, formData, onPhotoClick,
     });
   }, [
-    sections, formData, enhancedFormData, wrappedHandleChange, wrappedHandleSelectChange,
+    sections, formData, handleChange, handleSelectChange,
     disabled, contactType,
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,

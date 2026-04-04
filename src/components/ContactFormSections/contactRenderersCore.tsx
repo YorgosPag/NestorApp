@@ -13,15 +13,7 @@ import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicConta
 import { EntityFilesManager } from '@/components/shared/files';
 import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
-import { RoleChipSelector } from '@/components/contacts/personas/RoleChipSelector';
-import { ProfessionalChipSelector } from '@/components/contacts/personas/ProfessionalChipSelector';
-import { PersonaConditionalSections } from '@/components/contacts/personas/PersonaConditionalSections';
 import { ProjectParticipationSection } from '@/components/contacts/details/ProjectParticipationSection';
-import { ROLE_PERSONA_TYPES, PROFESSIONAL_PERSONA_TYPES } from '@/config/persona-config';
-import type { PersonaType } from '@/types/contacts/personas';
-import { createDefaultPersonaData } from '@/types/contacts/personas';
-import { checkPersonaRemovalGuard } from '@/config/persona-removal-guards';
-import { toast } from 'sonner';
 import { DoyPicker } from '@/components/ui/doy-picker';
 import { VatNumberField } from '@/components/contacts/fields/VatNumberField';
 import { ContactKadSection } from '@/components/contacts/dynamic/ContactKadSection';
@@ -53,7 +45,6 @@ export interface RendererContext {
   companyDisplayName?: string;
   t: (key: string, optionsOrFallback?: string | Record<string, unknown>) => string;
   relationshipsMode: 'summary' | 'full';
-  onPersonaToggle?: (personaType: PersonaType) => void;
   canonicalUploadContext?: CanonicalUploadContext;
   handleLogoChange?: (file: File | null) => void;
   handleFileChange?: (file: File | null) => void;
@@ -161,50 +152,6 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       else if (contactType === 'service') entityLabel = (formData.serviceName as string) || (formData.name as string) || '';
       return <EntityFilesManager entityType="contact" entityId={contactId} companyId={ctx.resolvedCompanyId} domain="admin" category="documents" currentUserId={ctx.userId} entityLabel={entityLabel} companyName={ctx.companyDisplayName} contactType={contactType} activePersonas={formData.activePersonas} />;
     },
-
-    // ── Persona Chips (ADR-282: roles + specialties in Professional tab) ──
-    personaChips: () => {
-      const handleToggle = async (personaType: PersonaType) => {
-        if (ctx.onPersonaToggle) { ctx.onPersonaToggle(personaType); return; }
-        if (!setFormData) return;
-        const currentActive = formData.activePersonas ?? [];
-        const isActive = currentActive.includes(personaType);
-        if (isActive) {
-          if (formData.id) {
-            const guard = await checkPersonaRemovalGuard(personaType, formData.id);
-            if (guard.blocked) { toast.error(t(guard.reasonKey!), { duration: 5000 }); return; }
-          }
-          setFormData({ ...formData, activePersonas: currentActive.filter(p => p !== personaType) });
-        } else {
-          const currentData = formData.personaData ?? {};
-          const existingData = currentData[personaType];
-          const defaultData = createDefaultPersonaData(personaType);
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { personaType: _pt, status: _s, activatedAt: _a, deactivatedAt: _d, notes: _n, ...defaultFields } = defaultData;
-          setFormData({ ...formData, activePersonas: [...currentActive, personaType], personaData: { ...currentData, [personaType]: existingData ?? (defaultFields as Record<string, string | number | null>) } });
-        }
-      };
-      const active = formData.activePersonas ?? [];
-      const activeRoles = active.filter(p => (ROLE_PERSONA_TYPES as readonly string[]).includes(p));
-      const activeProfessionals = active.filter(p => (PROFESSIONAL_PERSONA_TYPES as readonly string[]).includes(p));
-      return (
-        <div className="space-y-4 w-full">
-          <RoleChipSelector activeRoles={activeRoles} onToggle={handleToggle} disabled={disabled} />
-          <ProfessionalChipSelector activeProfessionals={activeProfessionals} onToggle={handleToggle} disabled={disabled} />
-        </div>
-      );
-    },
-
-    // ── Persona Conditional Sections (ADR-282: collapsible inside Professional) ──
-    personaConditionalSections: () => (
-      <PersonaConditionalSections
-        activePersonas={formData.activePersonas ?? []}
-        formData={formData}
-        onChange={handleChange}
-        onSelectChange={handleSelectChange}
-        disabled={disabled}
-      />
-    ),
 
     // ── Project Participation (ADR-282: read-only derived section) ──
     projectParticipation: () => (

@@ -271,12 +271,6 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
     order: 3,
     fields: [
       {
-        // 🎯 DUMMY: Persona chip toggles (roles + specialties)
-        id: 'personaChips',
-        label: 'individual.fields.personaChips',
-        type: 'input',
-      },
-      {
         id: 'profession',
         label: PROFESSIONAL_INFO_FIELD_LABELS.PROFESSION,
         type: 'input',
@@ -300,12 +294,6 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PROFESSIONAL_INFO_FIELD_LABELS.SKILLS,
         type: 'input',
         tooltip: 'individual.tooltips.skills',
-      },
-      {
-        // 🎯 DUMMY: Collapsible persona conditional sections
-        id: 'personaConditionalSections',
-        label: 'individual.fields.personaConditionalSections',
-        type: 'input',
       },
     ],
   },

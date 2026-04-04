@@ -32,7 +32,6 @@ export function ContactDetails({
     handleFileChange,
     handleLogoChange,
     handleMultiplePhotosChange,
-    handlePersonaToggle,
     handlePhotoClick,
     handleSaveEdit,
     handleSelectChange,
@@ -103,9 +102,6 @@ export function ContactDetails({
           handleUploadedPhotoURL={isEditing ? handleUploadedPhotoURL : undefined}
           handleFileChange={isEditing ? handleFileChange : undefined}
           handleLogoChange={isEditing ? handleLogoChange : undefined}
-          onPersonaToggle={(personaType) => {
-            void handlePersonaToggle(personaType);
-          }}
           validationErrors={isEditing ? validationErrors : undefined}
           onFieldBlur={isEditing ? handleFieldBlur : undefined}
         />
