@@ -21,15 +21,23 @@ import type { ServiceIdentityFieldCategory } from '@/utils/contactForm/service-i
 
 const DATE_FIELDS = new Set(['birthDate']);
 const COUNTRY_FIELDS = new Set(['birthCountry']);
+const GENDER_VALUES = new Set(['male', 'female', 'other', 'preferNotToSay']);
 
-/** Format value for display — dates get locale formatting, country codes get names */
-function formatChangeValue(field: string, value: string): string {
+/** Format value for display — dates, country codes, and enums get locale formatting */
+function formatChangeValue(
+  field: string,
+  value: string,
+  tForm: (key: string) => string,
+): string {
   if (!value) return value;
   if (DATE_FIELDS.has(field) && /^\d{4}-\d{2}-\d{2}/.test(value)) {
     return formatDate(value);
   }
   if (COUNTRY_FIELDS.has(field) && /^[A-Z]{2}$/.test(value)) {
     return getDisplayNames().region.of(value) ?? value;
+  }
+  if (field === 'gender' && GENDER_VALUES.has(value)) {
+    return tForm(`options.gender.${value}`);
   }
   return value;
 }
@@ -61,6 +69,7 @@ export function ContactIdentityImpactDialog({
   onConfirm,
 }: ContactIdentityImpactDialogProps) {
   const { t } = useTranslation('contacts');
+  const { t: tForm } = useTranslation('contacts-form');
   const iconSizes = useIconSizes();
 
   const mode = preview?.mode ?? 'allow';
@@ -100,11 +109,11 @@ export function ContactIdentityImpactDialog({
                         <p className="mt-1 text-xs text-muted-foreground">
                           {change.isCleared
                             ? t('identityImpact.changeSummary.cleared', {
-                                from: formatChangeValue(change.field, change.oldValue) || t('identityImpact.changeSummary.emptyValue'),
+                                from: formatChangeValue(change.field, change.oldValue, tForm) || t('identityImpact.changeSummary.emptyValue'),
                               })
                             : t('identityImpact.changeSummary.updated', {
-                                from: formatChangeValue(change.field, change.oldValue) || t('identityImpact.changeSummary.emptyValue'),
-                                to: formatChangeValue(change.field, change.newValue) || t('identityImpact.changeSummary.emptyValue'),
+                                from: formatChangeValue(change.field, change.oldValue, tForm) || t('identityImpact.changeSummary.emptyValue'),
+                                to: formatChangeValue(change.field, change.newValue, tForm) || t('identityImpact.changeSummary.emptyValue'),
                               })}
                         </p>
                       </li>
