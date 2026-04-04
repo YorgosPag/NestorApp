@@ -54,6 +54,8 @@ interface GuardedPropertyLinkInput {
   readonly currentProperty: PropertyMutationCurrentState;
   readonly buildingId: string | null;
   readonly floorId: string | null;
+  /** ADR-233: Clear entity code when building is disconnected */
+  readonly clearCode?: boolean;
 }
 
 interface GuardedPropertyLinkedSpacesInput {
@@ -217,10 +219,12 @@ export async function updatePropertyBuildingLinkWithPolicy({
   currentProperty,
   buildingId,
   floorId,
+  clearCode,
 }: GuardedPropertyLinkInput): Promise<{ success: boolean }> {
   const updates: Record<string, unknown> = {
     buildingId,
     floorId,
+    ...(clearCode ? { code: '' } : {}),
   };
 
   assertPropertyMutationPolicy({

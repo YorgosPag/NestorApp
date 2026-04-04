@@ -201,11 +201,15 @@ export function PropertyDetailsContent({
       ? (resolvedProperty.floorId ?? null)
       : null;
 
+    // ADR-233: Clear entity code when building is disconnected (code depends on building)
+    const shouldClearCode = !nextBuildingId && !!resolvedProperty.code;
+
     try {
       const completed = await runPreviewedMutation(
         {
           buildingId: nextBuildingId,
           floorId: nextFloorId,
+          ...(shouldClearCode ? { code: '' } : {}),
         },
         async () => {
           await updatePropertyBuildingLinkWithPolicy({
@@ -213,6 +217,7 @@ export function PropertyDetailsContent({
             currentProperty: resolvedProperty,
             buildingId: nextBuildingId,
             floorId: nextFloorId,
+            clearCode: shouldClearCode,
           });
         },
       );
