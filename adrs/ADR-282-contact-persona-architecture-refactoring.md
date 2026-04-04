@@ -4,6 +4,7 @@
 **Date**: 2026-04-04  
 **Author**: Claude + Γιώργος Παγώνης  
 **Supersedes**: Extends ADR-121 (Contact Persona System)  
+**Related**: ADR-283 (Project Roles SSOT Refactoring)  
 **Category**: Entity Systems / UX Architecture  
 
 ---
@@ -278,25 +279,30 @@ SOURCE OF TRUTH:                    DERIVED (computed live):
 
 ---
 
-## 8. Κίνδυνοι και Μετριασμός
+## 8. Περιβάλλον Ανάπτυξης — Κρίσιμη Σημείωση
 
-| Κίνδυνος | Μετριασμός |
-|----------|------------|
-| Breaking existing persona data | Zero Firestore migration — μόνο UI αλλαγές |
-| IKA integration break | IKA reads Firestore directly, not affected by UI changes |
-| Removal guards stop working | Toggle logic moves with chips, guards remain pluggable |
-| persona-config.ts >500 lines | Extract `PERSONA_SELECT_OPTIONS` σε ξεχωριστό file |
-| User confusion from tab removal | Σταδιακή μετάβαση: Phase 1 = δύο tabs coexist, Phase 2 = ένα tab |
+> **Η εφαρμογή είναι σε στάδιο ΑΝΑΠΤΥΞΗΣ, ΟΧΙ παραγωγής.**
+> - Η βάση δεδομένων (Firestore) περιέχει **ελάχιστα δοκιμαστικά δεδομένα**
+> - Όλα τα δεδομένα θα **αδειάσουν** πριν τη μετάβαση σε production
+> - **ΔΕΝ χρειάζεται backward compatibility** ή data migration
+> - **ΔΕΝ χρειάζονται deprecated functions** ή σταδιακή μετάβαση
+> - Μπορούμε να κάνουμε **breaking changes** ελεύθερα
+
+### Συνέπειες στο σχεδιασμό:
+- **Φάσεις 1+2 μπορούν να ενοποιηθούν** σε μία φάση (δεν χρειάζεται coexistence period)
+- `PersonaSelector` μπορεί να **αντικατασταθεί** αντί να γίνει deprecated
+- `getMergedIndividualSections()` μπορεί να **αφαιρεθεί** αντί να παραμείνει
+- Firestore schema μπορεί να αλλάξει αν χρειαστεί (τα δεδομένα είναι δοκιμαστικά)
 
 ---
 
-## 9. Backward Compatibility
+## 9. Κίνδυνοι και Μετριασμός
 
-- `getMergedIndividualSections()` → deprecated αλλά λειτουργικό
-- `PersonaSelector` → deprecated, delegates σε ProfessionalTagSelector + RoleTagSelector
-- `PERSONA_SECTIONS` → SSoT παραμένει unchanged
-- Όλα τα type exports (`PersonaType`, `PersonaData`, discriminated unions) → unchanged
-- Firestore document schema → **ZERO changes**
+| Κίνδυνος | Μετριασμός |
+|----------|------------|
+| IKA integration break | IKA reads Firestore directly, not affected by UI changes |
+| Removal guards stop working | Toggle logic moves with chips, guards remain pluggable |
+| persona-config.ts >500 lines | Extract `PERSONA_SELECT_OPTIONS` σε ξεχωριστό file |
 
 ---
 
@@ -329,3 +335,5 @@ SOURCE OF TRUTH:                    DERIVED (computed live):
 | Ημερομηνία | Αλλαγή |
 |------------|--------|
 | 2026-04-04 | Initial proposal — ευρήματα + σχεδιασμός 3 φάσεων |
+| 2026-04-04 | Ενημέρωση: development mode, zero backward compatibility needed, φάσεις μπορούν να ενοποιηθούν |
+| 2026-04-04 | Cross-reference: ADR-283 (Project Roles SSOT) — companion ADR for project-side role refactoring |

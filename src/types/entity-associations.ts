@@ -21,15 +21,13 @@ import type { EntityType } from '@/config/domain-constants';
  */
 export const ENTITY_ASSOCIATION_ROLES = {
   project: [
-    'engineer',
-    'contractor',
-    'land_owner',
-    'buyer',
-    'supervisor',
-    'lawyer',
-    'notary',
-    'realtor',
-    'accountant',
+    'architect',
+    'structural_engineer',
+    'electrical_engineer',
+    'mechanical_engineer',
+    'surveyor',
+    'energy_inspector',
+    'supervising_engineer',
   ] as const,
   building: [
     'supervisor',

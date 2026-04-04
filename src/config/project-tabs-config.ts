@@ -139,14 +139,14 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // =========================================================================
 
   // -------------------------------------------------------------------------
-  // 5. ΣΥΝΕΡΓΑΤΕΣ & ΕΠΑΦΕΣ (αντικατέστησε τον stub ContributorsTab)
+  // 5. ΜΗΧΑΝΙΚΟΙ ΕΡΓΟΥ (ADR-283)
   // -------------------------------------------------------------------------
   {
-    id: 'contributors',
-    label: PROJECT_TAB_LABELS.CONTRIBUTORS,
-    value: 'contributors',
-    icon: 'handshake',
-    description: PROJECT_TAB_DESCRIPTIONS.CONTRIBUTORS,
+    id: 'project-engineers',
+    label: PROJECT_TAB_LABELS.PROJECT_ENGINEERS,
+    value: 'project-engineers',
+    icon: 'hard-hat',
+    description: PROJECT_TAB_DESCRIPTIONS.PROJECT_ENGINEERS,
     order: 5,
     enabled: true,
     component: 'ProjectAssociationsTab',
