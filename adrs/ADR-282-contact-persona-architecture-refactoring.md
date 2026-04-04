@@ -338,3 +338,4 @@ SOURCE OF TRUTH:                    DERIVED (computed live):
 | 2026-04-04 | Ενημέρωση: development mode, zero backward compatibility needed, φάσεις μπορούν να ενοποιηθούν |
 | 2026-04-04 | Cross-reference: ADR-283 (Project Roles SSOT) — companion ADR for project-side role refactoring |
 | 2026-04-04 | IMPLEMENTED: Phases 1+2+3 merged, personas tab removed, professional tab enhanced, role badges in header, project participation section added |
+| 2026-04-04 | PHASE 4: Google Derived Roles — removed ALL persona chips (RoleChipSelector, ProfessionalChipSelector, PersonaConditionalSections). Professional tab now shows only Profession/Specialty/Skills. Roles derived from relationships, not declared. Firestore personas[] preserved for backward compatibility. |
