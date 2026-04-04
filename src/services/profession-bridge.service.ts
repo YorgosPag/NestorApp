@@ -4,10 +4,11 @@
  * =============================================================================
  *
  * When a contact is assigned to a project as an engineer (e.g. architect),
- * this service checks if the contact has a profession set. If not:
+ * this service checks if the contact has a profession set. If not, it
+ * writes the verified ESCO data directly from the static mapping.
  *
- * 1. Searches the ESCO cache → uses REAL ESCO data (preferred label, URI, ISCO)
- * 2. If no ESCO match → falls back to hardcoded profession from config
+ * 5/7 roles have exact ESCO URIs (verified against EU API 2026-04-04).
+ * 2/7 roles are Greek TEE-specific (hardcoded, no URI).
  *
  * Google "smart defaults" pattern: the system fills in the obvious answer,
  * the user can change it later.
@@ -17,11 +18,9 @@
  */
 
 import { ContactsService } from '@/services/contacts.service';
-import { EscoService } from '@/services/esco.service';
 import { getBridgeEntry } from '@/config/profession-bridge.config';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { Contact } from '@/types/contacts/contracts';
-import type { EscoOccupation } from '@/types/contacts/esco-types';
 
 const logger = createModuleLogger('ProfessionBridge');
 
@@ -41,7 +40,11 @@ interface BridgeResult {
 /**
  * Auto-fills contact profession from project role assignment.
  *
- * Strategy: ESCO cache first → hardcoded fallback → never overwrites existing.
+ * Rules:
+ * - Only fills for the 7 project engineer roles
+ * - Only fills for individual contacts (not company/service)
+ * - Never overwrites an existing profession
+ * - Uses verified ESCO data (URI + ISCO) where available
  */
 export async function maybeFillProfessionFromRole(
   contactId: string,
@@ -57,57 +60,15 @@ export async function maybeFillProfessionFromRole(
   const individual = contact as Extract<Contact, { type: 'individual' }>;
   if (individual.profession?.trim()) return { updated: false };
 
-  // Strategy: ESCO cache first, hardcoded fallback
-  const occupation = await findEscoOccupation(entry.escoSearchHint);
-
-  const payload = occupation
-    ? buildEscoPayload(occupation)
-    : buildFallbackPayload(entry.fallbackProfession, entry.fallbackIscoCode);
-
-  await ContactsService.updateContact(contactId, payload);
-
-  const profession = payload.profession;
-  const source = occupation ? 'ESCO' : 'fallback';
-  logger.info(`Auto-filled profession [${source}]: ${profession} (${contactId})`);
-
-  return { updated: true, profession };
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function buildEscoPayload(occupation: EscoOccupation): Record<string, string> {
-  return {
-    profession: occupation.preferredLabel.el,
-    escoLabel: occupation.preferredLabel.el,
-    iscoCode: occupation.iscoCode,
-    escoUri: occupation.uri,
+  const updatePayload: Record<string, string | null> = {
+    profession: entry.profession,
+    escoLabel: entry.escoLabel,
+    iscoCode: entry.iscoCode,
+    escoUri: entry.escoUri,
   };
-}
 
-function buildFallbackPayload(
-  profession: string,
-  iscoCode: string
-): Record<string, string | null> {
-  return {
-    profession,
-    escoLabel: profession,
-    iscoCode,
-    escoUri: null,
-  };
-}
+  await ContactsService.updateContact(contactId, updatePayload);
+  logger.info(`Auto-filled profession: ${entry.profession} (${contactId})`);
 
-async function findEscoOccupation(hint: string): Promise<EscoOccupation | null> {
-  try {
-    const response = await EscoService.searchOccupations({
-      query: hint,
-      language: 'el',
-      limit: 1,
-    });
-    return response.results.length > 0 ? response.results[0].occupation : null;
-  } catch {
-    logger.warn('ESCO cache search failed, using fallback');
-    return null;
-  }
+  return { updated: true, profession: entry.profession };
 }
