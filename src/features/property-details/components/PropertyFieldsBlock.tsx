@@ -96,11 +96,18 @@ export function PropertyFieldsBlock({
   const [, setIsSaving] = useState(false);
   const [codeOverridden, setCodeOverridden] = useState(!!property.code);
 
+  // ADR-233: Track type locally — responds instantly to form dropdown changes
+  // (property.type only updates after Firestore save, but code suggestion needs immediate response)
+  const [localType, setLocalType] = useState(property.type ?? '');
+  useEffect(() => {
+    setLocalType(property.type ?? '');
+  }, [property.type]);
+
   // ADR-233: Track building/floor/type to detect changes requiring code regeneration
   const prevCodeInputsRef = useRef({
     buildingId: property.buildingId,
     floor: property.floor,
-    type: property.type,
+    type: localType,
   });
 
   // ADR-233: Reset code when building, floor, or type changes — request new suggestion
@@ -109,7 +116,7 @@ export function PropertyFieldsBlock({
     const changed =
       property.buildingId !== prev.buildingId ||
       property.floor !== prev.floor ||
-      property.type !== prev.type;
+      localType !== prev.type;
 
     if (changed) {
       setCodeOverridden(false);
@@ -117,10 +124,10 @@ export function PropertyFieldsBlock({
       prevCodeInputsRef.current = {
         buildingId: property.buildingId,
         floor: property.floor,
-        type: property.type,
+        type: localType,
       };
     }
-  }, [property.buildingId, property.floor, property.type]);
+  }, [property.buildingId, property.floor, localType]);
 
   // ── Field locking based on commercialStatus ──
   // reserved: identity fields locked (code, name, type)
@@ -130,20 +137,20 @@ export function PropertyFieldsBlock({
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
 
   // ADR-233: Code suggestion requires all three inputs: building + type + explicit floor
-  const hasAllCodeInputs = !!property.buildingId && !!property.type && !!property.floorId;
+  const hasAllCodeInputs = !!property.buildingId && !!localType && !!property.floorId;
 
   const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
     entityType: 'property',
     buildingId: property.buildingId ?? '',
     floorLevel: property.floor ?? 0,
-    propertyType: (property.type as PropertyType) || undefined,
+    propertyType: (localType as PropertyType) || undefined,
     disabled: codeOverridden || !hasAllCodeInputs,
   });
 
   // ADR-233: Contextual placeholder — tells user what's missing before code can be generated
   const codePlaceholderHint = !property.buildingId
     ? t('entityCode.needBuilding', { defaultValue: 'Δηλώστε κτίριο' })
-    : !property.type
+    : !localType
       ? t('entityCode.needType', { defaultValue: 'Δηλώστε τύπο ακινήτου' })
       : !property.floorId
         ? t('entityCode.needFloor', { defaultValue: 'Δηλώστε όροφο' })
@@ -399,41 +406,6 @@ export function PropertyFieldsBlock({
     t,
   ]);
 
-  // ── Cancel handler ──
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- cancel handler kept for future use
-  const _handleCancel = useCallback(() => {
-    setFormData({
-      name: property.name ?? '',
-      code: property.code ?? '',
-      type: property.type ?? '',
-      operationalStatus: ((property as unknown as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
-      commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
-      description: property.description ?? '',
-      floor: property.floor ?? 0,
-      bedrooms: property.layout?.bedrooms ?? 0,
-      bathrooms: property.layout?.bathrooms ?? 0,
-      wc: property.layout?.wc ?? 0,
-      areaGross: property.areas?.gross ?? 0,
-      areaNet: property.areas?.net ?? 0,
-      areaBalcony: property.areas?.balcony ?? 0,
-      areaTerrace: property.areas?.terrace ?? 0,
-      areaGarden: property.areas?.garden ?? 0,
-      orientations: property.orientations ?? [],
-      condition: property.condition ?? '',
-      energyClass: property.energy?.class ?? '',
-      heatingType: property.systemsOverride?.heatingType ?? '',
-      coolingType: property.systemsOverride?.coolingType ?? '',
-      flooring: property.finishes?.flooring ?? [],
-      windowFrames: property.finishes?.windowFrames ?? '',
-      glazing: property.finishes?.glazing ?? '',
-      interiorFeatures: property.interiorFeatures ?? [],
-      securityFeatures: property.securityFeatures ?? [],
-      levelData: property.levelData ?? {} as Record<string, LevelData>,
-      askingPrice: property.commercial?.askingPrice?.toString() ?? '',
-    });
-    if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
-  }, [property, onExitEditMode]);
-
   // ── Toggle multi-select ──
   const toggleArrayItem = useCallback(<T extends string>(
     field: 'orientations' | 'flooring' | 'interiorFeatures' | 'securityFeatures',
@@ -477,6 +449,7 @@ export function PropertyFieldsBlock({
         codeOverridden={codeOverridden}
         setCodeOverridden={setCodeOverridden}
         codeLoading={codeLoading}
+        onTypeChange={setLocalType}
         t={t}
         typography={typography}
         iconSizes={iconSizes}

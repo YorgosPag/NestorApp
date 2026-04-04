@@ -89,6 +89,8 @@ export interface PropertyFieldsEditFormProps {
   setCodeOverridden: (v: boolean) => void;
   /** Whether code suggestion is loading */
   codeLoading: boolean;
+  /** ADR-233: Notify parent when type changes in form — triggers code re-suggestion */
+  onTypeChange: (type: string) => void;
   /** Translation function (scoped to 'units') */
   t: TFunction;
   /** Typography tokens */

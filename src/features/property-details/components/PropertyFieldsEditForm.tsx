@@ -69,6 +69,7 @@ export function PropertyFieldsEditForm({
   codeOverridden,
   setCodeOverridden,
   codeLoading,
+  onTypeChange,
   t,
   typography,
   iconSizes,
@@ -216,7 +217,10 @@ export function PropertyFieldsEditForm({
                 {t('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
               </Label>
               <Select value={formData.type} disabled={!isEditing || isReservedOrSold}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
+                onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, type: value }));
+                  onTypeChange(value);
+                }}>
                 <SelectTrigger className="h-7 text-xs">
                   <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
                 </SelectTrigger>
