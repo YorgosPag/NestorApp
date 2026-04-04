@@ -329,3 +329,15 @@ Client (AddUnitDialog)           Server (API)
 - Updated cascade propagation to prefer `code` over legacy fields
 
 **Affected files:** types/storage/contracts.ts, types/parking.ts, firestore-mappers.ts, entity-creation.types.ts, entity-code/suggest/route.ts, storages/route.ts, storages/[id]/route.ts, parking/route.ts, parking/[id]/route.ts, StorageGeneralTab.tsx, ParkingGeneralTab.tsx, AddStorageDialog.tsx, AddParkingDialog.tsx, EntityCodeField.tsx, i18n (el/en storage + parking)
+
+### 2026-04-04: Code regeneration on building/floor/type change + prerequisite validation
+
+**Problem:** Ο κωδικός δημιουργούνταν μόνο μία φορά (κατά την πρώτη δήλωση κτιρίου). Αλλαγή ορόφου, κτιρίου ή τύπου δεν ενημέρωνε τον κωδικό. Επίσης, αν δεν είχε δηλωθεί ρητά όροφος, ο κωδικός δημιουργούνταν με floor=0 (default ισόγειο).
+
+**Fix 1 — Regeneration:** Όταν αλλάζει `buildingId`, `floor`, ή `type` σε υπάρχον property, γίνεται reset `codeOverridden` + καθαρισμός code → νέα πρόταση κωδικού αυτόματα.
+
+**Fix 2 — Prerequisite validation:** Πρόταση κωδικού γίνεται ΜΟΝΟ αν υπάρχουν ΚΑΙ τα τρία: `buildingId` + `type` + `floorId` (ρητή δήλωση ορόφου, όχι default 0).
+
+**Fix 3 — Contextual placeholder:** Αν λείπει κάτι, το πεδίο κωδικού δείχνει τι χρειάζεται: "Δηλώστε κτίριο" / "Δηλώστε τύπο ακινήτου" / "Δηλώστε όροφο".
+
+**Affected files:** PropertyFieldsBlock.tsx, PropertyFieldsEditForm.tsx, property-fields-form-types.ts
