@@ -102,7 +102,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
           deps.deferredSubmitRef.current = async () => {
             deps.nameCascadeConfirmedRef.current = true;
             await ContactsService.updateExistingContactFromForm(editContact, formData);
-            deps.notifications.success('contacts.submission.updateSuccess');
+            deps.notifications.success('contacts-form.submission.updateSuccess');
             deps.nameCascadeConfirmedRef.current = false;
           };
           deps.setNameCascadeDialog({ oldName, newName, properties: preview.properties, paymentPlans: preview.paymentPlans });
@@ -132,7 +132,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
           deps.deferredAddressSubmitRef.current = async () => {
             deps.addressImpactConfirmedRef.current = true;
             await ContactsService.updateExistingContactFromForm(editContact, formData);
-            deps.notifications.success('contacts.submission.updateSuccess');
+            deps.notifications.success('contacts-form.submission.updateSuccess');
             deps.addressImpactConfirmedRef.current = false;
           };
           deps.setAddressImpactDialog({ addressLabel: 'Έδρα', properties: ap.properties, paymentPlans: ap.paymentPlans, invoices: ap.invoices, apyCertificates: ap.apyCertificates });
@@ -165,7 +165,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
           deps.deferredIdentitySubmitRef.current = async () => {
             deps.companyIdentityConfirmedRef.current = true;
             await ContactsService.updateExistingContactFromForm(editContact, formData);
-            deps.notifications.success('contacts.submission.updateSuccess');
+            deps.notifications.success('contacts-form.submission.updateSuccess');
             deps.companyIdentityConfirmedRef.current = false;
           };
           deps.setCompanyIdentityDialog({ changes: detection.changes, projects: ip.projects, properties: ip.properties, obligations: ip.obligations, invoices: ip.invoices, apyCertificates: ip.apyCertificates });
@@ -197,7 +197,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
           deps.deferredCommunicationSubmitRef.current = async () => {
             deps.communicationImpactConfirmedRef.current = true;
             await ContactsService.updateExistingContactFromForm(editContact, formData);
-            deps.notifications.success('contacts.submission.updateSuccess');
+            deps.notifications.success('contacts-form.submission.updateSuccess');
             deps.communicationImpactConfirmedRef.current = false;
           };
           deps.setCommunicationImpactDialog({ changes: commDetection.changes, properties: cp.properties, paymentPlans: cp.paymentPlans, projects: cp.projects, invoices: cp.invoices, apyCertificates: cp.apyCertificates });

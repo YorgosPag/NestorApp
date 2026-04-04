@@ -139,7 +139,7 @@ export function NotificationProvider({
 
     // Try every possible namespace split in dotted keys.
     // Example:
-    // - "contacts.submission.createSuccess" -> ns=contacts, key=submission.createSuccess
+    // - "contacts-form.submission.createSuccess" -> ns=contacts-form, key=submission.createSuccess
     // - "validation.contacts.individual.nameRequired" -> ns=contacts, key=individual.nameRequired
     const parts = message.split('.');
     if (parts.length > 1) {

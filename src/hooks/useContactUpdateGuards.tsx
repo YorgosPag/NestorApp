@@ -142,7 +142,7 @@ export function useContactUpdateGuards({
       });
 
       if (guardResult.blocked) {
-        const errorKey = 'errorKey' in guardResult ? guardResult.errorKey : 'contacts.submission.updateError';
+        const errorKey = 'errorKey' in guardResult ? guardResult.errorKey : 'contacts-form.submission.updateError';
         notifications.error(errorKey);
         return;
       }

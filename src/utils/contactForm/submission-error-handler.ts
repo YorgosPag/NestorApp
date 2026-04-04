@@ -49,7 +49,7 @@ export function handleSubmissionError(
     });
   } else {
     notifications.error(
-      editContact ? 'contacts.submission.updateError' : 'contacts.submission.createError'
+      editContact ? 'contacts-form.submission.updateError' : 'contacts-form.submission.createError'
     );
     logger.error('Submission failed', { contactType: formType, isEdit: Boolean(editContact), errorMessage });
   }

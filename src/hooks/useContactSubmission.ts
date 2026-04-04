@@ -132,7 +132,7 @@ export function useContactSubmission({
     if (!uploadValidation.isValid) {
       if (uploadValidation.failedUploads > 0) {
         logger.error('SUBMISSION BLOCKED: Failed uploads detected', { uploadValidation });
-        notifications.error('contacts.submission.failedUploads');
+        notifications.error('contacts-form.submission.failedUploads');
         return;
       }
 
@@ -142,7 +142,7 @@ export function useContactSubmission({
           errors: uploadValidation.errors,
         });
 
-        notifications.info('contacts.submission.pendingUploads', { duration: 3000 });
+        notifications.info('contacts-form.submission.pendingUploads', { duration: 3000 });
         logger.info('DEFERRED SAVE: Uploads in progress — will auto-save on completion', {
           pendingUploads: uploadValidation.pendingUploads,
         });
@@ -166,7 +166,7 @@ export function useContactSubmission({
           'SUBMISSION',
           async () => {
             await ContactsService.updateExistingContactFromForm(editContact, formData);
-            notifications.success('contacts.submission.updateSuccess');
+            notifications.success('contacts-form.submission.updateSuccess');
           },
         );
         if (!updateCompleted) {
@@ -175,7 +175,7 @@ export function useContactSubmission({
       } else {
         logger.info('SUBMISSION: Creating new contact');
         await createContactWithPolicy({ contactData });
-        notifications.success('contacts.submission.createSuccess');
+        notifications.success('contacts-form.submission.createSuccess');
       }
 
       setValidationErrors({});
@@ -211,7 +211,7 @@ export function useContactSubmission({
     if (uploadValidation.failedUploads > 0) {
       logger.info('DEFERRED SAVE: Cancelled — failed uploads detected');
       setPendingSave(false);
-      notifications.error('contacts.submission.failedUploads');
+      notifications.error('contacts-form.submission.failedUploads');
       return;
     }
 

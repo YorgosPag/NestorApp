@@ -50,7 +50,7 @@ export function createGuardHandlers(deps: GuardHandlerDeps): GuardHandlers {
           deps.onContactAdded();
         }
       } catch (error) {
-        deps.notifyError(getErrorMessage(error, 'contacts.submission.updateError'));
+        deps.notifyError(getErrorMessage(error, 'contacts-form.submission.updateError'));
       } finally {
         deps.setLoading(false);
       }

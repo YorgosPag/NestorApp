@@ -330,7 +330,7 @@ export function useContactDetailsController({
       if (message.startsWith('VALIDATION_ERROR:')) {
         notifications.error('validation.individual.reviewHighlightedFields');
       } else {
-        notifications.error('contacts.submission.updateError');
+        notifications.error('contacts-form.submission.updateError');
       }
     }
   }, [contact, editedData, focusField, getEditedFormData, getValidationResult, notifications, onContactUpdated, runExistingContactFormUpdate]);
