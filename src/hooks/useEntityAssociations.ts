@@ -26,8 +26,10 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { RealtimeService } from '@/services/realtime';
 import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
 import type { ContactLinkCreatedPayload, ContactLinkDeletedPayload } from '@/services/realtime';
+import { toast } from 'sonner';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { maybeFillProfessionFromRole } from '@/services/profession-bridge.service';
 import type { EntityType } from '@/config/domain-constants';
 import type { ContactLink } from '@/types/associations';
 import type { EntityAssociationLink, ContactEntityLink, GroupedContactEntityLinks } from '@/types/entity-associations';
@@ -187,6 +189,20 @@ export function useEntityContactLinks(
 
     if (result.success) {
       refresh();
+
+      // ADR-282: Auto-fill profession from project role (non-blocking)
+      if (entityType === 'project') {
+        maybeFillProfessionFromRole(contactId, role)
+          .then((bridgeResult) => {
+            if (bridgeResult.updated && bridgeResult.profession) {
+              toast.info(`Το επάγγελμα ορίστηκε αυτόματα: ${bridgeResult.profession}`);
+            }
+          })
+          .catch((err) => {
+            logger.warn('Profession bridge failed (non-critical)', { error: err });
+          });
+      }
+
       return true;
     }
 

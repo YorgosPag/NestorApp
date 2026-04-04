@@ -157,6 +157,7 @@
       "projects": "Projects",
       "buildings": "Buildings",
       "units": "Units"
-    }
+    },
+    "professionAutoFilled": "Profession auto-filled: {{profession}}"
   }
 }
