@@ -16,7 +16,7 @@
 /* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors, custom/no-hardcoded-strings */
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 
 
@@ -96,6 +96,32 @@ export function PropertyFieldsBlock({
   const [, setIsSaving] = useState(false);
   const [codeOverridden, setCodeOverridden] = useState(!!property.code);
 
+  // ADR-233: Track building/floor/type to detect changes requiring code regeneration
+  const prevCodeInputsRef = useRef({
+    buildingId: property.buildingId,
+    floor: property.floor,
+    type: property.type,
+  });
+
+  // ADR-233: Reset code when building, floor, or type changes — request new suggestion
+  useEffect(() => {
+    const prev = prevCodeInputsRef.current;
+    const changed =
+      property.buildingId !== prev.buildingId ||
+      property.floor !== prev.floor ||
+      property.type !== prev.type;
+
+    if (changed) {
+      setCodeOverridden(false);
+      setFormData(p => ({ ...p, code: '' }));
+      prevCodeInputsRef.current = {
+        buildingId: property.buildingId,
+        floor: property.floor,
+        type: property.type,
+      };
+    }
+  }, [property.buildingId, property.floor, property.type]);
+
   // ── Field locking based on commercialStatus ──
   // reserved: identity fields locked (code, name, type)
   // sold/rented: identity + physical fields locked (areas, layout, floor, commercialStatus)
@@ -109,7 +135,7 @@ export function PropertyFieldsBlock({
     buildingId: property.buildingId ?? '',
     floorLevel: property.floor ?? 0,
     propertyType: (property.type as PropertyType) || undefined,
-    disabled: codeOverridden || !!property.code,
+    disabled: codeOverridden,
   });
 
   const [formData, setFormData] = useState<PropertyFieldsFormData>({
