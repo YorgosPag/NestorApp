@@ -14,6 +14,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { AssociationService } from '@/services/association.service';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';
@@ -30,6 +32,7 @@ import { toast } from 'sonner';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { maybeFillProfessionFromRole } from '@/services/profession-bridge.service';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EntityType } from '@/config/domain-constants';
 import type { ContactLink } from '@/types/associations';
 import type { EntityAssociationLink, ContactEntityLink, GroupedContactEntityLinks } from '@/types/entity-associations';
@@ -330,6 +333,9 @@ export function useContactEntityLinks(
           }
         }
 
+        // Resolve entity names (project name, building name, etc.)
+        await resolveEntityNames(result);
+
         if (!cancelled) setGrouped(result);
       } catch (err) {
         if (!cancelled) {
@@ -429,8 +435,48 @@ function mapToContactEntityLink(link: ContactLink): ContactEntityLink | null {
     linkId: link.id,
     entityType: link.targetEntityType,
     entityId: link.targetEntityId,
-    entityName: link.targetEntityId, // Will be resolved later in component if needed
+    entityName: link.targetEntityId, // Placeholder — resolved by resolveEntityNames
     role: link.role || '',
     createdAt: typeof link.createdAt === 'string' ? link.createdAt : '',
   };
+}
+
+// ============================================================================
+// HELPERS — Entity Name Resolution
+// ============================================================================
+
+const ENTITY_COLLECTION_MAP: Record<string, string> = {
+  project: COLLECTIONS.PROJECTS,
+  building: COLLECTIONS.BUILDINGS,
+  property: COLLECTIONS.PROPERTIES,
+};
+
+/**
+ * Resolves entity display names for all links in the grouped result.
+ * Reads entity documents from Firestore to get the real name.
+ */
+async function resolveEntityNames(grouped: GroupedContactEntityLinks): Promise<void> {
+  const allLinks = [
+    ...grouped.projects,
+    ...grouped.buildings,
+    ...grouped.properties,
+  ];
+
+  await Promise.all(
+    allLinks.map(async (link) => {
+      const collectionName = ENTITY_COLLECTION_MAP[link.entityType];
+      if (!collectionName) return;
+
+      try {
+        const docRef = doc(db, collectionName, link.entityId);
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          link.entityName = data.name || data.title || link.entityId;
+        }
+      } catch {
+        logger.warn(`Could not resolve name for ${link.entityType}/${link.entityId}`);
+      }
+    })
+  );
 }
