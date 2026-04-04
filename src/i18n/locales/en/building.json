@@ -499,13 +499,34 @@
       "energyClassPlaceholder": "Select energy class..."
     },
     "validation": {
-      "addressRequired": "Address is required"
+      "addressRequired": "Address is required",
+      "projectRequired": "Project is required"
     },
     "messages": {
       "success": "Building created successfully!",
       "updateSuccess": "Building updated successfully!",
       "error": "Error creating building. Please try again.",
       "updateError": "Error updating building. Please try again."
+    },
+    "addFloor": {
+      "title": "New Floor",
+      "description": "Add a new floor to the building.",
+      "fields": {
+        "name": "Floor Name",
+        "namePlaceholder": "e.g. Ground Floor, 1st Floor...",
+        "level": "Level (Number)",
+        "levelPlaceholder": "0 = Ground, -1 = Basement"
+      },
+      "validation": {
+        "nameRequired": "Floor name is required",
+        "levelRequired": "Floor level is required",
+        "levelRange": "Level must be between -5 and 100"
+      },
+      "messages": {
+        "success": "Floor created successfully!",
+        "error": "Error creating floor",
+        "duplicate": "A floor with this level already exists in the building"
+      }
     }
   },
   "entityLabel": "Building {id}",

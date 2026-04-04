@@ -1,0 +1,94 @@
+/**
+ * =============================================================================
+ * ENTERPRISE: Project Mutation Policy (Server-Side)
+ * =============================================================================
+ *
+ * Layer 0 policy enforcement for project creation.
+ * Ensures every Project has a valid linkedCompanyId (ADR-284).
+ *
+ * @module services/projects/project-mutation-policy
+ * @enterprise ADR-284 §3.0 — Layer 0 Project Creation Policy
+ * @supersedes ADR-232 (linkedCompanyId was optional; now REQUIRED)
+ */
+
+import type { Firestore } from 'firebase-admin/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
+
+// =============================================================================
+// ERRORS
+// =============================================================================
+
+export class ProjectMutationPolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProjectMutationPolicyError';
+  }
+}
+
+// =============================================================================
+// INTERNAL HELPERS
+// =============================================================================
+
+function isBlank(value: unknown): boolean {
+  return typeof value !== 'string' || value.trim().length === 0;
+}
+
+// =============================================================================
+// POLICY ASSERTIONS
+// =============================================================================
+
+/**
+ * Validates that the project creation payload contains the required fields.
+ *
+ * @throws {ProjectMutationPolicyError} if name or linkedCompanyId is blank.
+ */
+export function assertProjectCreatePolicy(projectData: Record<string, unknown>): void {
+  if (isBlank(projectData.name)) {
+    throw new ProjectMutationPolicyError('Project name is required.');
+  }
+
+  // ADR-284: linkedCompanyId REQUIRED (supersedes ADR-232)
+  if (isBlank(projectData.linkedCompanyId)) {
+    throw new ProjectMutationPolicyError(
+      'Company (linkedCompanyId) is required — every project must belong to a company.'
+    );
+  }
+}
+
+/**
+ * Verifies that the supplied linkedCompanyId points to an existing
+ * company-type contact in Firestore.
+ *
+ * Companies are stored in the CONTACTS collection with type === 'company'.
+ *
+ * @throws {ProjectMutationPolicyError} if the contact does not exist or
+ *         is not of type 'company'.
+ */
+export async function assertLinkedCompanyExists(
+  db: Firestore,
+  linkedCompanyId: string
+): Promise<void> {
+  if (isBlank(linkedCompanyId)) {
+    throw new ProjectMutationPolicyError(
+      'Company (linkedCompanyId) is required — every project must belong to a company.'
+    );
+  }
+
+  const contactSnap = await db
+    .collection(COLLECTIONS.CONTACTS)
+    .doc(linkedCompanyId)
+    .get();
+
+  if (!contactSnap.exists) {
+    throw new ProjectMutationPolicyError(
+      'Linked Company not found — the referenced company does not exist.'
+    );
+  }
+
+  const data = contactSnap.data();
+  if (data?.type !== 'company') {
+    throw new ProjectMutationPolicyError(
+      'Linked Company is not a valid company contact.'
+    );
+  }
+}

@@ -134,6 +134,11 @@ export function useBuildingForm({
       newErrors.name = t('validation.nameRequired');
     }
 
+    // Required: projectId (ADR-284 — Unit Creation Hierarchy Enforcement)
+    if (!formData.projectId.trim()) {
+      newErrors.projectId = t('dialog.validation.projectRequired');
+    }
+
     // Required: address
     if (!formData.address.trim()) {
       newErrors.address = t('dialog.validation.addressRequired');

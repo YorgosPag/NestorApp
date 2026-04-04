@@ -25,22 +25,17 @@ import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { fieldToISO } from '@/lib/date-local';
 import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
-import { FieldValue } from 'firebase-admin/firestore';
 import type { ProjectSummary, ProjectStatus } from '@/types/project';
 import type { ProjectAddress } from '@/types/project/addresses';
 import type { LandownerEntry } from '@/types/ownership-table';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
-import { generateProjectId, generateNavigationId } from '@/services/enterprise-id.service';
-import { projectCodeService, type FirestoreDatabase } from '@/services/project-code.service';
-import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ProjectsListRoute');
 
@@ -249,130 +244,8 @@ export const GET = withHighRateLimit(
 
 // ============================================================================
 // POST - Create Single Project (Admin SDK)
+// Extracted to project-create.handler.ts to keep this route within
+// Google SRP size limits (API ≤300 lines).
 // ============================================================================
+export { POST } from './project-create.handler';
 
-interface ProjectCreatePayload {
-  name: string;
-  title?: string;
-  description?: string;
-  status?: string;
-  companyId: string;
-  company?: string;
-  address?: string;
-  city?: string;
-  /** 🏢 ADR-232: Business entity link */
-  linkedCompanyId?: string | null;
-}
-
-interface ProjectCreateResponse {
-  projectId: string;
-  project: ProjectCreatePayload & { id: string };
-}
-
-/**
- * 🎯 ENTERPRISE: Create new project via Admin SDK
- *
- * 🔒 SECURITY: Firestore rules block client-side writes (allow write: if false)
- *              This endpoint uses Admin SDK to bypass rules with proper auth
- * @permission projects:projects:create
- * @rateLimit STANDARD (60 req/min) - CRUD
- */
-export const POST = withHighRateLimit(
-  withAuth<ApiSuccessResponse<ProjectCreateResponse>>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      try {
-        // 🏢 ENTERPRISE: Parse request body
-        const body: ProjectCreatePayload = await req.json();
-
-        // 🏢 ENTERPRISE: ALL users (including super_admin) get companyId
-        // Super admin inherits from linkedCompanyId (the company entity this project belongs to)
-        const isSuperAdmin = isRoleBypass(ctx.globalRole);
-        const resolvedCompanyId = isSuperAdmin
-          ? (body.linkedCompanyId ?? ctx.companyId)
-          : ctx.companyId;
-
-        const sanitizedData = {
-          ...body,
-          companyId: resolvedCompanyId,
-          linkedCompanyId: body.linkedCompanyId ?? null,
-          progress: 0,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-          createdBy: ctx.uid,
-        };
-
-        // 🏢 ENTERPRISE: Remove undefined fields (Firestore doesn't accept undefined)
-        const cleanData = Object.fromEntries(
-          Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
-        );
-
-        logger.info('[Projects] Creating new project for tenant', { companyId: ctx.companyId });
-
-        // 🏗️ ADR-210: Enterprise ID + sequential projectCode (PRJ-001, PRJ-002, ...)
-        const projectId = generateProjectId();
-        const adminDb = getAdminFirestore();
-        // Admin SDK Firestore is structurally compatible with FirestoreDatabase at runtime
-        const { code: projectCode } = await projectCodeService.generateNextCode(adminDb as unknown as FirestoreDatabase);
-
-        await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).set({
-          ...cleanData,
-          projectCode,
-        });
-
-        logger.info('[Projects] Project created', { projectId, projectCode });
-
-        // 📊 Audit log
-        await logAuditEvent(ctx, 'data_created', 'projects', 'api', {
-          newValue: {
-            type: 'project_create',
-            value: {
-              projectId,
-              projectCode,
-              projectName: body.name,
-            },
-          },
-          metadata: { reason: 'Project created' },
-        });
-
-        // 🏢 AUTO-REGISTER: Ensure company exists in navigation_companies
-        // Skip for super admin (companyId is null)
-        if (!isSuperAdmin && ctx.companyId) {
-          const navQuery = await adminDb
-            .collection(COLLECTIONS.NAVIGATION)
-            .where(FIELDS.CONTACT_ID, '==', ctx.companyId)
-            .limit(1)
-            .get();
-
-          if (navQuery.empty) {
-            const navId = generateNavigationId();
-            await adminDb.collection(COLLECTIONS.NAVIGATION).doc(navId).set({
-              contactId: ctx.companyId,
-              addedAt: FieldValue.serverTimestamp(),
-              addedBy: ctx.uid,
-              source: 'auto_project_create',
-            });
-            logger.info('[Projects] Auto-registered company in navigation', { companyId: ctx.companyId, navId });
-          }
-        }
-
-        // 🔄 Invalidate cache for this tenant
-        const cache = EnterpriseAPICache.getInstance();
-        cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
-        cache.delete(`${CACHE_KEY_PREFIX}:all`);
-
-        return apiSuccess<ProjectCreateResponse>(
-          {
-            projectId,
-            project: { ...body, id: projectId }
-          },
-          'Project created successfully'
-        );
-
-      } catch (error) {
-        logger.error('[Projects] Error creating project', { error });
-        throw new ApiError(500, getErrorMessage(error, 'Failed to create project'));
-      }
-    },
-    { permissions: 'projects:projects:create' }
-  )
-);

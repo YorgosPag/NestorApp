@@ -5,8 +5,16 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { PropertyType } from '@/types/property';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  PropertyCreationPolicyError,
+  STANDALONE_UNIT_TYPES,
+  assertPropertyCreatePolicy,
+  assertUpstreamChainExists,
+  resolveProjectIdFromBuilding,
+} from '@/services/property/property-creation-policy';
 
 const logger = createModuleLogger('PropertiesCreateRoute');
 
@@ -33,6 +41,8 @@ interface PropertyCreatePayload {
   building?: string;
   floor?: number;
   floorId?: string;
+  /** ADR-284 §3.1: projectId is ALWAYS required (both Family A and Family B) */
+  projectId?: string;
   project?: string;
   status?: string;
   operationalStatus?: string;
@@ -70,6 +80,55 @@ export const POST = withStandardRateLimit(
         // Validation
         if (!body.name || !body.name.trim()) {
           throw new ApiError(400, 'Property name is required');
+        }
+
+        // ============================================================
+        // 🏢 ADR-284 §3.1: Layer 1 — Server-Side Unit Creation Policy
+        // Discriminated validation (Family A vs Family B) + upstream
+        // chain check (Project→Company, Building→Project, Floor→Building,
+        // multi-level per-floor). Blocks orphan units regardless of UI.
+        // ============================================================
+        const adminDb = getAdminFirestore();
+
+        // Defense-in-depth: for in-building (Family A) units, auto-fill
+        // projectId from Building.projectId if the client didn't send it.
+        const incomingType = body.type?.trim() ?? '';
+        const isStandalone =
+          incomingType.length > 0 &&
+          (STANDALONE_UNIT_TYPES as readonly string[]).includes(incomingType);
+        if (
+          !isStandalone &&
+          (!body.projectId || !body.projectId.trim()) &&
+          body.buildingId &&
+          body.buildingId.trim().length > 0
+        ) {
+          try {
+            const resolved = await resolveProjectIdFromBuilding(
+              adminDb,
+              body.buildingId.trim(),
+            );
+            if (resolved) {
+              body.projectId = resolved;
+            }
+          } catch (error) {
+            if (error instanceof PropertyCreationPolicyError) {
+              throw new ApiError(400, error.message);
+            }
+            throw error;
+          }
+        }
+
+        try {
+          assertPropertyCreatePolicy(body as unknown as Record<string, unknown>);
+          await assertUpstreamChainExists(
+            adminDb,
+            body as unknown as Record<string, unknown>,
+          );
+        } catch (error) {
+          if (error instanceof PropertyCreationPolicyError) {
+            throw new ApiError(400, error.message);
+          }
+          throw error;
         }
 
         // 🏢 ADR-236: Validate multi-level floors (entity-specific business logic)

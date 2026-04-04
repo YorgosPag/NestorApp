@@ -86,14 +86,14 @@ export function AddBuildingBasicInfoTab({
         </FormInput>
       </FormField>
 
-      <FormField label={t('dialog.fields.project')} htmlFor="projectId">
+      <FormField label={t('dialog.fields.project')} htmlFor="projectId" required>
         <FormInput>
           <Select
             value={formData.projectId}
             onValueChange={(value) => handleSelectChange('projectId', value)}
             disabled={loading || projectsLoading}
           >
-            <SelectTrigger>
+            <SelectTrigger className={errors.projectId ? 'border-destructive' : ''}>
               <SelectValue placeholder={t('dialog.fields.projectPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
@@ -104,6 +104,7 @@ export function AddBuildingBasicInfoTab({
               ))}
             </SelectContent>
           </Select>
+          {errors.projectId ? <p className="mt-1 text-xs text-destructive">{errors.projectId}</p> : null}
         </FormInput>
       </FormField>
 
