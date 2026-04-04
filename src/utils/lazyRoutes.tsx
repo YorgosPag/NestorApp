@@ -207,7 +207,7 @@ export const LazyRoutes = {
   ),
 
   // ⚡ ENTERPRISE: Properties Management (ADR-269: Unit → Property)
-  Properties: createLazyRoute(
+  PropertiesManagement: createLazyRoute(
     () => import('@/components/properties/UnitsPageContent').then(mod => ({ default: mod.PropertiesManagementContent })),
     { loadingType: 'dashboard', ssr: false }
   ),
