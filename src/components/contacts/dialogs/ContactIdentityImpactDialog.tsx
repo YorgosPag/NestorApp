@@ -19,9 +19,14 @@ import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impa
 import type { IndividualIdentityFieldCategory } from '@/utils/contactForm/individual-identity-guard';
 import type { ServiceIdentityFieldCategory } from '@/utils/contactForm/service-identity-guard';
 
-const DATE_FIELDS = new Set(['birthDate']);
+const DATE_FIELDS = new Set(['birthDate', 'documentIssueDate']);
 const COUNTRY_FIELDS = new Set(['birthCountry']);
-const GENDER_VALUES = new Set(['male', 'female', 'other', 'preferNotToSay']);
+
+/** Map of fields whose raw values need i18n lookup via contacts-form namespace */
+const ENUM_FIELD_KEYS: Record<string, string> = {
+  gender: 'options.gender',
+  documentType: 'options.identity',
+};
 
 /** Format value for display — dates, country codes, and enums get locale formatting */
 function formatChangeValue(
@@ -36,8 +41,10 @@ function formatChangeValue(
   if (COUNTRY_FIELDS.has(field) && /^[A-Z]{2}$/.test(value)) {
     return getDisplayNames().region.of(value) ?? value;
   }
-  if (field === 'gender' && GENDER_VALUES.has(value)) {
-    return tForm(`options.gender.${value}`);
+  const enumPrefix = ENUM_FIELD_KEYS[field];
+  if (enumPrefix) {
+    const translated = tForm(`${enumPrefix}.${value}`);
+    if (translated !== `${enumPrefix}.${value}`) return translated;
   }
   return value;
 }
