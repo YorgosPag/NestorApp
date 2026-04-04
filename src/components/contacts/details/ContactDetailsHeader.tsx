@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
-import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import { EntityDetailsHeader, createEntityAction, type EntityHeaderBadge } from '@/core/entity-headers';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { UserPlus } from 'lucide-react';
@@ -17,6 +17,8 @@ import type { ContactStatus } from '@/core/types/BadgeTypes';
 import { isNonEmptyString } from '@/lib/type-guards';
 import { getContactDisplayName, getContactInitials, isIndividualContact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { CONTACT_TYPES, getContactIcon } from '@/constants/contacts';
+import { getActivePersonaTypes } from '@/types/contacts/personas';
+import { ROLE_PERSONA_TYPES, getPersonaMetadata } from '@/config/persona-config';
 
 const logger = createModuleLogger('ContactDetailsHeader');
 
@@ -172,7 +174,22 @@ export function ContactDetailsHeader({
     }
   };
 
-  // 🎯 INLINE EDITING: Handle name updates
+  // 🎭 ADR-282: Role persona badges in header
+  const roleBadges: EntityHeaderBadge[] = (() => {
+    if (!isIndividualContact(contact)) return [];
+    const activeTypes = getActivePersonaTypes(contact.personas);
+    return activeTypes
+      .filter(pt => (ROLE_PERSONA_TYPES as readonly string[]).includes(pt))
+      .map(pt => {
+        const meta = getPersonaMetadata(pt);
+        return {
+          type: 'category' as const,
+          value: meta ? t(meta.label) : pt,
+          variant: 'outline' as const,
+        };
+      });
+  })();
+
   return (
     <>
       {/* 🖥️ DESKTOP: Show full header with actions */}
@@ -181,6 +198,7 @@ export function ContactDetailsHeader({
           key={`contact-header-${contact.id}-${avatarKey}`}
           icon={Icon}
           title={displayName}
+          badges={roleBadges}
           avatarImageUrl={avatarImageUrl}
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
           actions={[

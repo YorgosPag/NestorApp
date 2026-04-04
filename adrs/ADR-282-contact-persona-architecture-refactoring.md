@@ -1,6 +1,6 @@
 # ADR-282: Contact Persona Architecture Refactoring — Google-Level Redesign
 
-**Status**: PROPOSED  
+**Status**: IMPLEMENTED  
 **Date**: 2026-04-04  
 **Author**: Claude + Γιώργος Παγώνης  
 **Supersedes**: Extends ADR-121 (Contact Persona System)  
@@ -337,3 +337,4 @@ SOURCE OF TRUTH:                    DERIVED (computed live):
 | 2026-04-04 | Initial proposal — ευρήματα + σχεδιασμός 3 φάσεων |
 | 2026-04-04 | Ενημέρωση: development mode, zero backward compatibility needed, φάσεις μπορούν να ενοποιηθούν |
 | 2026-04-04 | Cross-reference: ADR-283 (Project Roles SSOT) — companion ADR for project-side role refactoring |
+| 2026-04-04 | IMPLEMENTED: Phases 1+2+3 merged, personas tab removed, professional tab enhanced, role badges in header, project participation section added |

@@ -13,7 +13,11 @@ import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicConta
 import { EntityFilesManager } from '@/components/shared/files';
 import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
-import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector';
+import { RoleChipSelector } from '@/components/contacts/personas/RoleChipSelector';
+import { ProfessionalChipSelector } from '@/components/contacts/personas/ProfessionalChipSelector';
+import { PersonaConditionalSections } from '@/components/contacts/personas/PersonaConditionalSections';
+import { ProjectParticipationSection } from '@/components/contacts/details/ProjectParticipationSection';
+import { ROLE_PERSONA_TYPES, PROFESSIONAL_PERSONA_TYPES } from '@/config/persona-config';
 import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { checkPersonaRemovalGuard } from '@/config/persona-removal-guards';
@@ -158,8 +162,8 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       return <EntityFilesManager entityType="contact" entityId={contactId} companyId={ctx.resolvedCompanyId} domain="admin" category="documents" currentUserId={ctx.userId} entityLabel={entityLabel} companyName={ctx.companyDisplayName} contactType={contactType} activePersonas={formData.activePersonas} />;
     },
 
-    // ── Personas ───────────────────────────────────────────────
-    personas: () => {
+    // ── Persona Chips (ADR-282: roles + specialties in Professional tab) ──
+    personaChips: () => {
       const handleToggle = async (personaType: PersonaType) => {
         if (ctx.onPersonaToggle) { ctx.onPersonaToggle(personaType); return; }
         if (!setFormData) return;
@@ -180,8 +184,32 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
           setFormData({ ...formData, activePersonas: [...currentActive, personaType], personaData: { ...currentData, [personaType]: existingData ?? (defaultFields as Record<string, string | number | null>) } });
         }
       };
-      return <PersonaSelector activePersonas={formData.activePersonas ?? []} onToggle={handleToggle} disabled={false} />;
+      const active = formData.activePersonas ?? [];
+      const activeRoles = active.filter(p => (ROLE_PERSONA_TYPES as readonly string[]).includes(p));
+      const activeProfessionals = active.filter(p => (PROFESSIONAL_PERSONA_TYPES as readonly string[]).includes(p));
+      return (
+        <div className="space-y-4 w-full">
+          <RoleChipSelector activeRoles={activeRoles} onToggle={handleToggle} disabled={disabled} />
+          <ProfessionalChipSelector activeProfessionals={activeProfessionals} onToggle={handleToggle} disabled={disabled} />
+        </div>
+      );
     },
+
+    // ── Persona Conditional Sections (ADR-282: collapsible inside Professional) ──
+    personaConditionalSections: () => (
+      <PersonaConditionalSections
+        activePersonas={formData.activePersonas ?? []}
+        formData={formData}
+        onChange={handleChange}
+        onSelectChange={handleSelectChange}
+        disabled={disabled}
+      />
+    ),
+
+    // ── Project Participation (ADR-282: read-only derived section) ──
+    projectParticipation: () => (
+      <ProjectParticipationSection contactId={formData.id} />
+    ),
 
     // ── Banking ────────────────────────────────────────────────
     banking: () => (

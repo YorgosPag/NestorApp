@@ -261,27 +261,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 2.5 ΙΔΙΟΤΗΤΕΣ — 🎭 ENTERPRISE: Contact Persona System (ADR-121)
-  // -------------------------------------------------------------------------
-  {
-    id: 'personas',
-    title: 'individual.sections.personas.title',
-    icon: 'user-cog',
-    description: 'individual.sections.personas.description',
-    order: 2.5,
-    fields: [
-      {
-        // 🎯 DUMMY FIELD για custom renderer triggering
-        // Actual UI rendered by PersonaSelector component
-        id: 'personas',
-        label: 'individual.fields.personas',
-        type: 'input',
-      }
-    ],
-  },
-
-  // -------------------------------------------------------------------------
-  // 3. ΕΠΑΓΓΕΛΜΑΤΙΚΑ ΣΤΟΙΧΕΙΑ
+  // 3. ΕΠΑΓΓΕΛΜΑΤΙΚΑ ΣΤΟΙΧΕΙΑ (ADR-282: ενοποίηση personas + professional)
   // -------------------------------------------------------------------------
   {
     id: 'professional',
@@ -290,6 +270,12 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
     description: 'individual.sections.professional.description',
     order: 3,
     fields: [
+      {
+        // 🎯 DUMMY: Persona chip toggles (roles + specialties)
+        id: 'personaChips',
+        label: 'individual.fields.personaChips',
+        type: 'input',
+      },
       {
         id: 'profession',
         label: PROFESSIONAL_INFO_FIELD_LABELS.PROFESSION,
@@ -309,12 +295,36 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         icon: 'target',
       },
       {
-        // 🎯 DUMMY FIELD για custom renderer triggering (ADR-132)
-        // Actual UI rendered by EscoSkillPicker component
+        // 🎯 DUMMY: EscoSkillPicker (ADR-132)
         id: 'skills',
         label: PROFESSIONAL_INFO_FIELD_LABELS.SKILLS,
         type: 'input',
         tooltip: 'individual.tooltips.skills',
+      },
+      {
+        // 🎯 DUMMY: Collapsible persona conditional sections
+        id: 'personaConditionalSections',
+        label: 'individual.fields.personaConditionalSections',
+        type: 'input',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 3.5 ΣΥΜΜΕΤΟΧΗ ΣΕ ΕΡΓΑ (ADR-282: derived, read-only)
+  // -------------------------------------------------------------------------
+  {
+    id: 'projectParticipation',
+    title: 'individual.sections.projectParticipation.title',
+    icon: 'folder-kanban',
+    description: 'individual.sections.projectParticipation.description',
+    order: 3.5,
+    fields: [
+      {
+        // 🎯 DUMMY: Read-only project links
+        id: 'projectParticipation',
+        label: 'individual.fields.projectParticipation',
+        type: 'input',
       },
     ],
   },

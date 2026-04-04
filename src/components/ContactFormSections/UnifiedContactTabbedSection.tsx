@@ -12,7 +12,8 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { getCompanyById } from '@/services/companies.service';
 import { getContactFormConfig, getContactFormSections, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
-import { getMergedIndividualSections, getPersonaFields } from '@/config/persona-config';
+import { getPersonaFields } from '@/config/persona-config';
+import { getIndividualSortedSections } from '@/config/individual-config';
 import type { PersonaType } from '@/types/contacts/personas';
 import { DEFAULT_INSURANCE_CLASSES } from '@/components/projects/ika/contracts';
 import { useTranslation } from 'react-i18next';
@@ -92,11 +93,11 @@ export function UnifiedContactTabbedSection({
   // Config loaded for side effects (field registration)
   useMemo(() => getContactFormConfig(contactType), [contactType]);
 
-  // ── Persona Sections (ADR-121) ───────────────────────────────
+  // ── Sections (ADR-282: persona sections render inside Professional tab) ──
   const sections = useMemo(() => {
-    if (contactType === 'individual') return getMergedIndividualSections(formData.activePersonas ?? []);
+    if (contactType === 'individual') return getIndividualSortedSections();
     return getContactFormSections(contactType);
-  }, [contactType, formData.activePersonas]);
+  }, [contactType]);
 
   const personaFieldLookup = useMemo(() => {
     if (contactType !== 'individual') return new Map<string, PersonaType>();

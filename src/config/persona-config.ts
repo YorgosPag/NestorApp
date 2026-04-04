@@ -18,7 +18,6 @@ import {
   PERSONA_TYPE_LABELS,
   PERSONA_TYPE_ICONS,
 } from '@/constants/property-statuses-enterprise';
-import { getIndividualSortedSections } from './individual-config';
 import { DEFAULT_INSURANCE_CLASSES } from '@/components/projects/ika/contracts';
 
 // ============================================================================
@@ -59,6 +58,30 @@ export const PERSONA_METADATA: readonly PersonaMetadata[] = [
   { type: 'notary',              label: PERSONA_TYPE_LABELS.NOTARY,              icon: PERSONA_TYPE_ICONS.NOTARY,              order: 8 },
   { type: 'real_estate_agent',   label: PERSONA_TYPE_LABELS.REAL_ESTATE_AGENT,   icon: PERSONA_TYPE_ICONS.REAL_ESTATE_AGENT,   order: 9 },
 ] as const;
+
+// ============================================================================
+// PERSONA TYPE CATEGORIZATION (ADR-282)
+// ============================================================================
+
+/** Professional personas — show chips + conditional sections in Professional tab */
+export const PROFESSIONAL_PERSONA_TYPES: readonly PersonaType[] = [
+  'construction_worker', 'engineer', 'accountant', 'lawyer', 'notary',
+] as const;
+
+/** Role personas — show chips in Professional tab, badges in header */
+export const ROLE_PERSONA_TYPES: readonly PersonaType[] = [
+  'property_owner', 'client', 'supplier', 'real_estate_agent',
+] as const;
+
+/** Get metadata for professional personas only */
+export function getProfessionalPersonaMetadata(): readonly PersonaMetadata[] {
+  return PERSONA_METADATA.filter(m => PROFESSIONAL_PERSONA_TYPES.includes(m.type));
+}
+
+/** Get metadata for role personas only */
+export function getRolePersonaMetadata(): readonly PersonaMetadata[] {
+  return PERSONA_METADATA.filter(m => ROLE_PERSONA_TYPES.includes(m.type));
+}
 
 // ============================================================================
 // SELECT OPTIONS FOR PERSONA FIELDS
@@ -460,18 +483,6 @@ export function getPersonaSections(
   return activePersonas
     .flatMap(personaType => PERSONA_SECTIONS[personaType] ?? [])
     .sort((a, b) => a.order - b.order);
-}
-
-/**
- * Merge standard individual sections with active persona sections.
- * Standard sections come first (order 1-9), persona sections after (order 100+).
- */
-export function getMergedIndividualSections(
-  activePersonas: PersonaType[]
-): IndividualSectionConfig[] {
-  const standardSections = getIndividualSortedSections();
-  const personaSections = getPersonaSections(activePersonas);
-  return [...standardSections, ...personaSections].sort((a, b) => a.order - b.order);
 }
 
 /**
