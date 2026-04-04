@@ -469,6 +469,10 @@
         "title": "Επαγγελματικά Στοιχεία",
         "description": "Πληροφορίες εργασίας και επαγγέλματος"
       },
+      "projectParticipation": {
+        "title": "Συμμετοχή σε Έργα",
+        "description": "Έργα στα οποία συμμετέχει η επαφή"
+      },
       "address": {
         "title": "Διεύθυνση Κατοικίας",
         "description": "Στοιχεία διεύθυνσης"
@@ -522,7 +526,8 @@
       "street": "Οδός",
       "streetNumber": "Αριθμός",
       "city": "Πόλη",
-      "postalCode": "Τ.Κ."
+      "postalCode": "Τ.Κ.",
+      "projectParticipation": "Συμμετοχή σε Έργα"
     },
     "helpTexts": {
       "firstName": "Το όνομα του φυσικού προσώπου",

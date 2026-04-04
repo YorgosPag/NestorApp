@@ -469,6 +469,10 @@
         "title": "Professional Info",
         "description": "Work and profession information"
       },
+      "projectParticipation": {
+        "title": "Project Participation",
+        "description": "Projects this contact participates in"
+      },
       "address": {
         "title": "Home Address",
         "description": "Address details"
@@ -522,7 +526,8 @@
       "street": "Street",
       "streetNumber": "Number",
       "city": "City",
-      "postalCode": "Postal Code"
+      "postalCode": "Postal Code",
+      "projectParticipation": "Project Participation"
     },
     "helpTexts": {
       "firstName": "The first name of the individual",
