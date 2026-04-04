@@ -81,6 +81,8 @@ export interface PropertyFieldsEditFormProps {
   handleSave: () => void;
   /** Entity code suggestion */
   suggestedCode: string;
+  /** Contextual placeholder for code field — shows what's missing or the suggestion */
+  codePlaceholderHint: string;
   /** Whether code has been manually overridden */
   codeOverridden: boolean;
   /** Set code override state */

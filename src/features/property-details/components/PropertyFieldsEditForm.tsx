@@ -65,6 +65,7 @@ export function PropertyFieldsEditForm({
   updateLevelField,
   handleSave,
   suggestedCode,
+  codePlaceholderHint,
   codeOverridden,
   setCodeOverridden,
   codeLoading,
@@ -194,7 +195,7 @@ export function PropertyFieldsEditForm({
                   if (!e.target.value) setCodeOverridden(false);
                 }}
                 className={cn('h-7 text-xs', quick.input)}
-                placeholder={suggestedCode || t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' })}
+                placeholder={codePlaceholderHint}
                 disabled={!isEditing || isReservedOrSold}
               />
               {formData.code && isValidEntityCodeFormat(formData.code) && (

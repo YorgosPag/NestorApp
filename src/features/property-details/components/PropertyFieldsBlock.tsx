@@ -129,14 +129,25 @@ export function PropertyFieldsBlock({
   const isReservedOrSold = (['reserved', 'sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
 
-  // ADR-233: Auto-suggest entity code when code is empty and editing
+  // ADR-233: Code suggestion requires all three inputs: building + type + explicit floor
+  const hasAllCodeInputs = !!property.buildingId && !!property.type && !!property.floorId;
+
   const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
     entityType: 'property',
     buildingId: property.buildingId ?? '',
     floorLevel: property.floor ?? 0,
     propertyType: (property.type as PropertyType) || undefined,
-    disabled: codeOverridden,
+    disabled: codeOverridden || !hasAllCodeInputs,
   });
+
+  // ADR-233: Contextual placeholder — tells user what's missing before code can be generated
+  const codePlaceholderHint = !property.buildingId
+    ? t('entityCode.needBuilding', { defaultValue: 'Δηλώστε κτίριο' })
+    : !property.type
+      ? t('entityCode.needType', { defaultValue: 'Δηλώστε τύπο ακινήτου' })
+      : !property.floorId
+        ? t('entityCode.needFloor', { defaultValue: 'Δηλώστε όροφο' })
+        : suggestedCode || t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' });
 
   const [formData, setFormData] = useState<PropertyFieldsFormData>({
     name: property.name ?? '',
@@ -462,6 +473,7 @@ export function PropertyFieldsBlock({
         updateLevelField={updateLevelField}
         handleSave={handleSave}
         suggestedCode={suggestedCode || ''}
+        codePlaceholderHint={codePlaceholderHint}
         codeOverridden={codeOverridden}
         setCodeOverridden={setCodeOverridden}
         codeLoading={codeLoading}
