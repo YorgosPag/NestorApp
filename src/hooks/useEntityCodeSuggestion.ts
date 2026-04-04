@@ -124,6 +124,10 @@ export function useEntityCodeSuggestion({
       return;
     }
 
+    // ADR-233: Clear stale suggestion immediately so auto-populate
+    // doesn't re-apply the OLD code before the new API response arrives
+    setSuggestedCode(null);
+
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
