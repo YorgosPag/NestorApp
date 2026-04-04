@@ -167,6 +167,67 @@ async function assertCompanyExists(linkedCompanyId: string): Promise<void> {
 
 ---
 
+### 3.0.5 Layer 0.5 — Building Creation Policy (NEW — Gap Discovery 2026-04-04)
+
+**Στόχος**: Fix στο Building layer — ΚΑΝΕΝΑ Building χωρίς `projectId`. Κλείνει το security/integrity gap που αποκαλύφθηκε μετά το Batch 3 (βλ. §9.2 Gap Discovery).
+
+**Αρχεία**:
+- NEW: `src/services/building/building-creation-policy.ts` (server-only)
+- MOD: `src/app/api/buildings/route.ts` (POST handler — enforce policy)
+
+**Server Policy**:
+
+```typescript
+// src/services/building/building-creation-policy.ts (server-only)
+export class BuildingCreationPolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BuildingCreationPolicyError';
+  }
+}
+
+export function assertBuildingCreatePolicy(data: Record<string, unknown>): void {
+  if (isBlank(data.name)) {
+    throw new BuildingCreationPolicyError('Building name is required.');
+  }
+  // ADR-284: projectId REQUIRED (every building must belong to a project)
+  if (isBlank(data.projectId)) {
+    throw new BuildingCreationPolicyError(
+      'Project (projectId) is required — every building must belong to a project.'
+    );
+  }
+}
+
+export async function assertBuildingUpstreamChain(
+  db: FirebaseFirestore.Firestore,
+  data: { projectId: string }
+): Promise<void> {
+  // Verify Project exists
+  const project = await db.collection(COLLECTIONS.PROJECTS).doc(data.projectId).get();
+  if (!project.exists) {
+    throw new BuildingCreationPolicyError('Referenced Project not found.');
+  }
+  // Verify Project has linkedCompanyId (5-level chain integrity)
+  const linkedCompanyId = project.data()?.linkedCompanyId;
+  if (isBlank(linkedCompanyId)) {
+    throw new BuildingCreationPolicyError(
+      'Referenced Project is orphan (no linkedCompanyId). Fix Project first.'
+    );
+  }
+}
+```
+
+**Integration point**: `/api/buildings` POST, **πριν** το `createEntity()` call.
+
+**Error mapping**: `BuildingCreationPolicyError` → `ApiError(400 Bad Request)`.
+
+**Defense-in-depth rationale**:
+- Server enforcement is the **only** security boundary — UI validation can be bypassed (browser devtools, direct API calls, import scripts).
+- Mirror του pattern από Batch 1 (Project policy) + Batch 2 (Property policy) — identical contract, identical error mapping.
+- Closes the gap που παρακάμπτεται από το inline "Fill then Create" flow (βλ. §9.2).
+
+---
+
 ### 3.1 Layer 1 — Server-Side Policy for Units (CRITICAL, μηδενική ανοχή)
 
 **Στόχος**: Να μπλοκάρει orphan units **ανεξάρτητα** από το UI. Επίσης verifies upstream Company chain.
@@ -690,6 +751,77 @@ async function linkBuildingToProject(
 
 ---
 
+## 9.2 Gap Discovery — Building Layer Bypass (2026-04-04, μετά Batch 3)
+
+**Ανακαλύφθηκε από production testing**: Ο Γιώργος δημιούργησε κτίριο ("κτίριο Δέλτα") χωρίς `projectId`. **Saved κανονικά, zero warnings.** Το enforcement του ADR-284 παρακάμφθηκε εντελώς.
+
+### Root Cause: 2 Παράλληλα UI Paths για Building Creation (❌ ΟΧΙ SSoT)
+
+| # | Path | Αρχείο | Client Validation | Server Validation |
+|---|------|--------|-------------------|-------------------|
+| **#1** | **Dialog** | `src/components/building-management/dialogs/add-building-dialog/` + `useBuildingForm.ts` | ✅ projectId required (Batch 0) | ❌ ΛΕΙΠΕΙ |
+| **#2** | **Inline "Fill then Create"** | `src/components/building-management/BuildingsPageContent.tsx:91-115` (Salesforce temp-row pattern `__new__`) | ❌ ΚΑΜΙΑ | ❌ ΛΕΙΠΕΙ |
+
+**Path που τρέχει κανονικά στο production**: #2 (Inline). Το κουμπί "Νέο Κτίριο" ανοίγει temp row, όχι dialog. Το Path #1 (AddBuildingDialog) είναι πιθανώς orphan/dead code — **verification pending**.
+
+### Server Gap
+
+- `/api/buildings` POST route **ΔΕΝ** έχει policy enforcement.
+- Σε αντίθεση με:
+  - `/api/projects/list` POST → `assertProjectCreatePolicy()` (Batch 1) ✅
+  - `/api/properties/create` POST → `assertPropertyCreatePolicy()` (Batch 2) ✅
+- Αποτέλεσμα: **Οποιοσδήποτε client** (Postman, curl, import script, inline UI, dialog UI) μπορεί να στείλει Building χωρίς `projectId`.
+
+### Impact Assessment
+
+| Layer | Status πριν το fix |
+|---|---|
+| Layer 0 (Project policy) | ✅ Υλοποιήθηκε (Batch 1) |
+| **Layer 0.5 (Building policy server)** | ❌ **ΛΕΙΠΕΙ** |
+| Layer 1 (Property policy server) | ✅ Υλοποιήθηκε (Batch 2) |
+| Layer 2 (Property client validation) | ✅ Υλοποιήθηκε (Batch 3) |
+| UI — AddBuildingDialog client | ✅ Required projectId (Batch 0) |
+| **UI — Inline "Fill then Create"** | ❌ **ΚΑΝΕΝΑΣ ΕΛΕΓΧΟΣ** |
+| SSoT για building creation | ❌ 2 παράλληλα paths |
+
+### Orphan Data
+
+Το κτίριο Δέλτα ήδη υπάρχει στο Firestore χωρίς `projectId`. **Migration required** (post-fix) για:
+1. Εντοπισμό όλων των orphan buildings (`where projectId is null/empty`)
+2. Admin dashboard tile: "X buildings without projectId — fix now"
+3. Επιλογή: auto-assign σε default "unassigned" project, ή block τις downstream operations μέχρι να γίνει manual fix.
+
+### Fix Strategy (Google Playbook — Server First)
+
+**Φιλοσοφία**: Server enforcement κλείνει το security gap **ανεξάρτητα** από UI cleanup. Multiple UI paths είναι OK αν όλα περνούν από το ίδιο validated server endpoint.
+
+**Προτεινόμενη σειρά** (βλ. Batches 3.5a + 3.5b στο §10):
+1. **Batch 3.5a — Server Policy FIRST**: `building-creation-policy.ts` + `/api/buildings` POST enforcement → 400 αν λείπει projectId. Κλείνει το hole **immediately**. (~3 αρχεία)
+2. **Batch 3.5b — Inline UI Validation**: `BuildingsPageContent.tsx` inline flow → require projectId + disabled save + tooltip (Google Docs draft pattern). (~2-3 αρχεία)
+3. **Post-hoc**: Dead code audit (AddBuildingDialog usage?), SSoT consolidation via shared service, orphan migration. **Tech debt, όχι blocker.**
+
+### Critical Files για επόμενο context
+
+**Server-side (Batch 3.5a)**:
+- `src/app/api/buildings/route.ts` — POST handler (current: no policy)
+- `src/services/building/building-mutation-gateway.ts` — existing gateway για dialog path
+- `src/services/property/property-creation-policy.ts` — **PATTERN TO MIRROR** (Batch 2)
+- `src/services/projects/project-mutation-policy.ts` — **PATTERN TO MIRROR** (Batch 1)
+
+**Client-side (Batch 3.5b)**:
+- `src/components/building-management/BuildingsPageContent.tsx:91-115` — inline temp-row flow
+- `src/components/building-management/hooks/useBuildingForm.ts` — existing validation (reuse logic)
+
+**Verification commands (για επόμενο agent)**:
+```bash
+# Verify actual production path:
+grep -rn "POST.*buildings" src/app/api/buildings/
+grep -rn "AddBuildingDialog" src/  # dead code check
+grep -rn "__new__" src/components/building-management/  # inline flow
+```
+
+---
+
 ## 10. Execution Strategy (Context-Safe Implementation)
 
 **Απόφαση Γιώργου (2026-04-04)**: FULL implementation (όλες οι phases). Κάθε phase σε καθαρό context (`/clear` μεταξύ phases).
@@ -710,6 +842,8 @@ async function linkBuildingToProject(
 | **Batch 1** | 1a (Project policy) | 2-3 files | Low | Fresh context |
 | **Batch 2** | 1b (Unit policy + chain validation) | 3-4 files | Medium | Fresh context |
 | **Batch 3** | 2 (Client form validation, discriminated) | 2-3 files | Medium | Fresh context |
+| **🚨 Batch 3.5a** | **Layer 0.5 — Building server policy (Gap Discovery §9.2)** | 3 files | Low-Medium | **Fresh context (PRIORITY)** |
+| **🚨 Batch 3.5b** | **Inline Building creation UI validation (`BuildingsPageContent.tsx`)** | 2-3 files | Medium | Fresh context |
 | **Batch 4** | 3a (Empty state CTAs) + 3c (Project form Company field — verify companyId vs linkedCompanyId) | 3-4 files | Medium | Fresh context |
 | **Batch 5** | 3b (Inline fix modal `linkBuildingToProject`) | 3-5 files | High | Fresh context |
 | **Batch 6** | 4 (i18n EN/EL) + 5 (tests) | 2-3 + test files | Low | Fresh context |
@@ -730,11 +864,19 @@ Batch 0 (Prerequisites: AddFloorDialog + AddBuildingDialog projectId) ─→ Bat
                                                                            │
 Batch 2 ───────────────────────────────────────────────────────────────────┴─→ Batch 3 (Client mirrors server)
                                                                                │
-                                                                               ├─→ Batch 4 (Empty states build on client validation + Batch 0 dialogs)
-                                                                               │
-                                                                               └─→ Batch 5 (Inline fix modal)
-                                                                                   │
-                                                                                   └─→ Batch 6 (i18n + tests for all above)
+                          ┌────────────────────────────────────────────────────┤
+                          │                                                    │
+                          ▼ [GAP DISCOVERY 2026-04-04, §9.2]                    │
+           🚨 Batch 3.5a (Building server policy — SECURITY)                    │
+                          │                                                    │
+                          └─→ 🚨 Batch 3.5b (Inline UI validation)              │
+                                              │                                │
+                                              ▼                                │
+                                              Batch 4 (Empty states) ◄─────────┘
+                                              │
+                                              └─→ Batch 5 (Inline fix modal)
+                                                  │
+                                                  └─→ Batch 6 (i18n + tests for all above)
 ```
 
 **Κανόνας**: Δεν ξεκινάμε επόμενο batch αν δεν έχει ολοκληρωθεί και γίνει commit το προηγούμενο.
@@ -774,11 +916,62 @@ Batch 2 ────────────────────────
 - ⏸️ Unit tests pending (will be added in Batch 6 per execution strategy)
 - ✅ TypeScript compiles (0 errors στα νέα/τροποποιημένα αρχεία)
 
-**Batch 3 Acceptance**:
-- `usePropertyForm.validate()` discriminated βάσει type
-- Save button disabled όσο λείπουν required fields
-- Tooltip εμφανίζεται
-- TypeScript compiles
+**Batch 3 Acceptance**: ✅ **COMPLETED 2026-04-04**
+- ✅ `usePropertyForm.validate()` discriminated βάσει type (Family A vs Family B)
+  - File: `src/components/properties/hooks/usePropertyForm.ts`
+  - Exports: `STANDALONE_UNIT_TYPES`, `isStandaloneUnitType()`
+  - Adds `projectId` to `PropertyFormData` + `INITIAL_FORM_DATA`
+  - Discriminated validation: `nameRequired`, `typeRequired`, `projectRequired` (both families); `buildingRequired` + `floorRequired` (Family A); `standaloneNoBuilding` (Family B)
+  - Derived `isValid` memo (silent — for Save button disabled state)
+  - `handleSubmit` sends `projectId` + omits `buildingId/floorId` for Family B
+- ✅ Save button disabled όσο λείπουν required fields (via `isValid`)
+- ✅ Tooltip εμφανίζεται με family-specific message (`inBuildingRequired` / `standaloneRequired`)
+- ✅ AddPropertyDialog UI updated:
+  - File: `src/components/properties/dialogs/AddPropertyDialog.tsx`
+  - Project selector (Radix Select per ADR-001) — required, always visible
+  - Building/Floor fields conditionally hidden for standalone units
+  - Type field marked required + error display
+  - SaveButton wrapped in Tooltip when disabled
+- ✅ Dialog state hook loads projects + handles type change:
+  - File: `src/components/properties/dialogs/useAddPropertyDialogState.ts`
+  - `getProjectsList()` on dialog open
+  - `handleTypeChange()` auto-clears building/floor when switching to standalone
+  - Exposes `isStandalone`, `projects`, `projectsLoading`
+- ✅ i18n keys added to EL + EN (`dialog.addUnit.validation.*`, `dialog.addUnit.fields.project`, `dialog.addUnit.placeholders.project`, `dialog.addUnit.tooltips.*`)
+- ✅ TypeScript compiles (0 errors στα τροποποιημένα αρχεία)
+- ⏸️ NO COMMIT (per Γιώργος instruction — commits for Batches 3+4+5+6 will happen together at the end)
+
+**🚨 Batch 3.5a Acceptance** (Building Server Policy — Gap Discovery §9.2):
+- [x] NEW `src/services/building/building-creation-policy.ts` (server-only) δημιουργήθηκε:
+  - [x] `BuildingCreationPolicyError` class exported
+  - [x] `assertBuildingCreatePolicy(data)` — sync validation: name required, projectId required
+  - [x] `assertBuildingUpstreamChain(db, data)` — async: Project exists + has linkedCompanyId
+  - [x] Mirror του pattern από `src/services/property/property-creation-policy.ts` (Batch 2)
+  - [x] Mirror του pattern από `src/services/projects/project-mutation-policy.ts` (Batch 1)
+- [x] `/api/buildings` POST route enforces policy **πριν** το `createEntity()`:
+  - [x] `assertBuildingCreatePolicy(body)` call
+  - [x] `assertBuildingUpstreamChain(db, body)` call (async)
+  - [x] `BuildingCreationPolicyError` → `ApiError(400 Bad Request)` mapping
+- [x] TypeScript compiles (0 errors στα νέα/τροποποιημένα αρχεία)
+- [ ] Manual verification: POST στο `/api/buildings` χωρίς `projectId` → 400 response (pending Γιώργος)
+- [ ] Manual verification: POST στο `/api/buildings` με invalid `projectId` → 400 response (pending Γιώργος)
+- [ ] Manual verification: POST στο `/api/buildings` με valid `projectId` (που έχει `linkedCompanyId`) → 201 Created (pending Γιώργος)
+- ⏸️ NO COMMIT (join με τα υπόλοιπα batches)
+
+**🚨 Batch 3.5b Acceptance** (Inline Building UI Validation):
+- [x] `BuildingsPageContent.tsx` inline "Fill then Create" flow:
+  - [x] Temp row δέχεται `projectId` field (Radix Select per ADR-001) — **ήδη υπήρχε** via `EntityLinkCard` στο `GeneralTabContent`
+  - [x] Save action blocked αν λείπει `projectId` ή `name` (client-side pre-flight) — enforced στο `handleSave()` σε create mode
+  - [x] Tooltip/message εμφανίζεται όταν Save blocked: "Επίλεξε Έργο για να συνεχίσεις" — **error banner pattern** (Google Docs draft) via `saveError` state
+  - [x] Google Docs draft pattern: temp row σε "draft" state μέχρι να γίνει valid — error surfaces μετά από failed save attempt
+- [x] Inline flow καλεί το ίδιο `createBuildingWithPolicy()` gateway (SSoT via API) — ήδη καλύπτεται
+- [x] Server errors από το Batch 3.5a displayed ως saveError banner (ίδιο channel με client errors)
+- [x] i18n keys added στο EL + EN: `building.validation.projectRequired`
+- [x] TypeScript compiles (0 errors στα τροποποιημένα αρχεία)
+- [x] Projectid error auto-clears όταν ο χρήστης επιλέξει Έργο via `EntityLinkCard` (useEffect watch linkedId)
+- [ ] Manual verification: Inline create χωρίς projectId → blocked με error banner (pending Γιώργος)
+- [ ] Manual verification: Inline create με projectId → saved + appears in list (pending Γιώργος)
+- ⏸️ NO COMMIT (join με τα υπόλοιπα batches)
 
 **Batch 4 Acceptance**:
 - Empty state CTAs εμφανίζονται σωστά (no Projects, no Buildings, no Floors)
@@ -811,4 +1004,8 @@ Batch 2 ────────────────────────
 - **2026-04-04**: **Q&A COMPLETE** — Όλες οι 8 αρχικές ερωτήσεις απαντήθηκαν. Το ADR είναι πλήρες και αυτόνομο. Status: **PROPOSED → READY FOR IMPLEMENTATION** pending final review.
 - **2026-04-04**: **Batch 0 IMPLEMENTED** — P1 `AddFloorDialog` (new, 225 lines), P2 `AddBuildingDialog.projectId` required (validation + UI). 4 files touched: `AddFloorDialog.tsx` (new), `useBuildingForm.ts`, `AddBuildingDialogTabs.tsx`, `el/en building.json`. TypeScript 0 errors. Ready for Batch 1.
 - **2026-04-04**: **Batch 1 IMPLEMENTED** — Layer 0 Project Creation Policy. New module `project-mutation-policy.ts` (ProjectMutationPolicyError + assertProjectCreatePolicy + assertLinkedCompanyExists). POST `/api/projects/list` enforces policy server-side → 400 on missing/invalid linkedCompanyId. Companies resolved from CONTACTS collection (type='company'). TypeScript 0 errors. Ready for Batch 2.
+- **2026-04-04**: **🚨 GAP DISCOVERY (§9.2)** — Production testing αποκάλυψε κρίσιμο security gap: ο Γιώργος δημιούργησε "κτίριο Δέλτα" χωρίς `projectId`, saved κανονικά με zero warnings. Root cause: (1) 2 παράλληλα UI paths για Building creation (❌ ΟΧΙ SSoT) — `AddBuildingDialog` (έχει Batch 0 validation) vs. inline "Fill then Create" στο `BuildingsPageContent.tsx:91-115` (καμία validation). (2) `/api/buildings` POST route ΔΕΝ έχει server-side policy (σε αντίθεση με `/api/projects` και `/api/properties`). **Google Playbook fix**: Server First → Νέο **Layer 0.5 (§3.0.5)** — `building-creation-policy.ts` + `/api/buildings` enforcement (Batch 3.5a, PRIORITY). Μετά inline UI validation (Batch 3.5b). SSoT via API, όχι via UI consolidation. Orphan data migration = post-hoc tech debt. Added **Batches 3.5a + 3.5b** στο §10 execution strategy με full acceptance criteria. Critical files reference για επόμενο context: §9.2.
+- **2026-04-04**: **Batch 3 IMPLEMENTED** — Layer 2 Client Form Validation. `usePropertyForm.ts` updated: new `STANDALONE_UNIT_TYPES` + `isStandaloneUnitType()` exports, `projectId` added to `PropertyFormData`, discriminated `validate()` (Family A vs Family B), derived `isValid` memo για Save button disabled state, `handleSubmit` sends `projectId` + omits building/floor για Family B. `AddPropertyDialog.tsx` updated: Project selector (Radix Select), Building/Floor conditionally hidden για standalone, Save button wrapped σε Tooltip με family-specific messages (`inBuildingRequired` / `standaloneRequired`). `useAddPropertyDialogState.ts`: loads projects list on open, `handleTypeChange()` auto-clears building/floor when switching to standalone. i18n keys added σε EL + EN (`dialog.addUnit.validation.*` + `fields.project` + `tooltips.*`). TypeScript 0 errors. NO COMMIT — uncommitted changes αφημένα για επόμενο batch (Γιώργος: commits για Batches 3+4+5+6 θα γίνουν όλα μαζί στο τέλος).
+- **2026-04-04**: **🚨 Batch 3.5b IMPLEMENTED** — Inline Building UI Validation (closes §9.2 client-side gap). `GeneralTabContent.tsx` (inline "Fill then Create" flow) `handleSave()` enhanced: σε create mode απαιτεί `projectId` (από `projectLink.getPayload()`) επιπλέον του `name`. On validation failure → error banner (Google Docs draft pattern) με localized message "Επίλεξε Έργο για να συνεχίσεις". Auto-clear του error όταν χρήστης επιλέξει project (useEffect watch `projectLink.linkedId`). Προστέθηκε i18n key `validation.projectRequired` σε EL + EN `building.json`. Inline flow ήδη χρησιμοποιεί `createBuildingWithPolicy()` gateway (SSoT via API) — no refactor needed. Defense-in-depth: server policy (Batch 3.5a) είναι το security boundary, client validation είναι UX layer. 3 αρχεία modified. TypeScript 0 errors. NO COMMIT. Manual verification pending Γιώργος.
+- **2026-04-04**: **🚨 Batch 3.5a IMPLEMENTED** — Layer 0.5 Building Server Policy (Gap Discovery §9.2 closed). New server-only module `src/services/building/building-creation-policy.ts` (BuildingCreationPolicyError + assertBuildingCreatePolicy + assertBuildingUpstreamChain). Mirrors pattern από Batch 1 (project-mutation-policy) + Batch 2 (property-creation-policy). `/api/buildings` POST route enforces policy server-side **πριν** `createEntity()`: sync validation (name + projectId required) + async upstream chain (Project exists + has linkedCompanyId). `BuildingCreationPolicyError` → `ApiError(400 Bad Request)` mapping. Security hole closed: οποιοσδήποτε client (Postman, curl, inline UI, import script) χωρίς έγκυρο projectId παίρνει 400. 2 αρχεία (1 new + 1 modified). TypeScript 0 errors. NO COMMIT (join με υπόλοιπα batches). Manual verification pending Γιώργος. Ready for Batch 3.5b.
 - **2026-04-04**: **Batch 2 IMPLEMENTED** — Layer 1 Server-Side Unit Creation Policy. New server-only module `src/services/property/property-creation-policy.ts` (PropertyCreationPolicyError + STANDALONE_UNIT_TYPES + assertPropertyCreatePolicy + assertUpstreamChainExists + resolveProjectIdFromBuilding). Discriminated validation βάσει type (Family A in-building vs Family B standalone: detached_house, villa). Async upstream chain check: Project→Company (both families), Building→Project + Floor→Building + per-level validation για multi-level (Family A only, §3.1.1). POST `/api/properties/create` enforces policy server-side πριν `createEntity()` → 400 on violation. Defense-in-depth auto-fill `projectId` από `Building.projectId` για Family A. TypeScript 0 errors. Ready for Batch 3.

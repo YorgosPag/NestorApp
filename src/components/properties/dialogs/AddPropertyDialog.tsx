@@ -31,9 +31,14 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
-import { Home, ClipboardList } from 'lucide-react';
+import { Home, ClipboardList, FolderPlus, Building2, Layers, AlertTriangle } from 'lucide-react';
+import { AddProjectDialog as NestedAddProjectDialog } from '@/components/projects/dialogs/AddProjectDialog';
+import { AddFloorDialog } from '@/components/building-management/dialogs/AddFloorDialog';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
@@ -68,9 +73,10 @@ export function AddPropertyDialog({
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const router = useRouter();
 
   const {
-    formData, loading, errors,
+    formData, loading, errors, isValid,
     handleSubmit, handleChange, handleSelectChange, handleNumberChange, handleLevelsChange,
     floorOptions, floorsLoading,
     codeOverridden, setCodeOverridden,
@@ -78,7 +84,40 @@ export function AddPropertyDialog({
     isMultiLevelType,
     activeTab, setActiveTab,
     handleBuildingChange, handleFloorSelection,
-  } = useAddPropertyDialogState({ open, onPropertyAdded, onOpenChange });
+    projects, projectsLoading, reloadProjects, isStandalone, handleTypeChange,
+    filteredBuildings, emptyStates,
+    showAddProjectDialog, setShowAddProjectDialog,
+    showAddFloorDialog, setShowAddFloorDialog,
+  } = useAddPropertyDialogState({ open, onPropertyAdded, onOpenChange, buildings });
+
+  // ADR-284 §3.3 (Phase 3a): No-floors detection (only meaningful when building is selected)
+  const noFloors =
+    !isStandalone &&
+    !!formData.buildingId &&
+    !floorsLoading &&
+    floorOptions.length === 0 &&
+    !isMultiLevelType;
+
+  // Building navigation CTA: close this dialog + go to Buildings page with projectId preselected
+  const handleNavigateToCreateBuilding = React.useCallback(() => {
+    onOpenChange(false);
+    const params = formData.projectId ? `?projectId=${encodeURIComponent(formData.projectId)}` : '';
+    router.push(`/buildings${params}`);
+  }, [formData.projectId, onOpenChange, router]);
+
+  const selectedProjectName = React.useMemo(
+    () => projects.find((p) => p.id === formData.projectId)?.name ?? '',
+    [projects, formData.projectId],
+  );
+  const selectedBuildingName = React.useMemo(
+    () => buildings.find((b) => b.id === formData.buildingId)?.name ?? '',
+    [buildings, formData.buildingId],
+  );
+
+  // ADR-284: Tooltip message differs between families
+  const saveTooltipKey = isStandalone
+    ? 'dialog.addUnit.tooltips.standaloneRequired'
+    : 'dialog.addUnit.tooltips.inBuildingRequired';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -90,6 +129,94 @@ export function AddPropertyDialog({
           </DialogTitle>
           <DialogDescription>{t('dialog.addUnit.description')}</DialogDescription>
         </DialogHeader>
+
+        {/* 🔐 ADR-284 §3.3 Phase 3a: Empty State CTAs (HYBRID strategy — inline Project/Floor, navigation Building) */}
+        {emptyStates.noProjects && (
+          <section
+            role="status"
+            aria-label={t('dialog.addUnit.emptyState.noProjects.title')}
+            className={cn('rounded-md border border-dashed p-4 flex flex-col gap-3', colors.bg.muted)}
+          >
+            <header className="flex items-start gap-3">
+              <FolderPlus className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
+              <div className="flex-1">
+                <p className={cn('font-medium', colors.text.primary)}>
+                  {t('dialog.addUnit.emptyState.noProjects.title')}
+                </p>
+                <p className={cn('text-xs mt-1', colors.text.muted)}>
+                  {t('dialog.addUnit.emptyState.noProjects.description')}
+                </p>
+              </div>
+            </header>
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={() => setShowAddProjectDialog(true)}
+              className="self-start"
+            >
+              <FolderPlus className={iconSizes.xs} aria-hidden />
+              {t('dialog.addUnit.emptyState.noProjects.cta')}
+            </Button>
+          </section>
+        )}
+
+        {emptyStates.noBuildings && (
+          <section
+            role="status"
+            aria-label={t('dialog.addUnit.emptyState.noBuildings.title')}
+            className={cn('rounded-md border border-dashed p-4 flex flex-col gap-3', colors.bg.muted)}
+          >
+            <header className="flex items-start gap-3">
+              <Building2 className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
+              <div className="flex-1">
+                <p className={cn('font-medium', colors.text.primary)}>
+                  {t('dialog.addUnit.emptyState.noBuildings.title', { projectName: selectedProjectName })}
+                </p>
+                <p className={cn('text-xs mt-1', colors.text.muted)}>
+                  {t('dialog.addUnit.emptyState.noBuildings.description')}
+                </p>
+              </div>
+            </header>
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={handleNavigateToCreateBuilding}
+              className="self-start"
+            >
+              <Building2 className={iconSizes.xs} aria-hidden />
+              {t('dialog.addUnit.emptyState.noBuildings.cta')}
+            </Button>
+          </section>
+        )}
+
+        {noFloors && (
+          <section
+            role="status"
+            aria-label={t('dialog.addUnit.emptyState.noFloors.title')}
+            className={cn('rounded-md border border-dashed p-4 flex flex-col gap-3', colors.bg.muted)}
+          >
+            <header className="flex items-start gap-3">
+              <AlertTriangle className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
+              <div className="flex-1">
+                <p className={cn('font-medium', colors.text.primary)}>
+                  {t('dialog.addUnit.emptyState.noFloors.title', { buildingName: selectedBuildingName })}
+                </p>
+              </div>
+            </header>
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={() => setShowAddFloorDialog(true)}
+              className="self-start"
+            >
+              <Layers className={iconSizes.xs} aria-hidden />
+              {t('dialog.addUnit.emptyState.noFloors.cta')}
+            </Button>
+          </section>
+        )}
 
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -139,41 +266,65 @@ export function AddPropertyDialog({
                   </FormInput>
                 </FormField>
 
-                <FormField label={t('dialog.addUnit.fields.type')} htmlFor="type">
+                <FormField label={t('dialog.addUnit.fields.type')} htmlFor="type" required>
                   <FormInput>
-                    <Select value={formData.type} onValueChange={(v) => handleSelectChange('type', v)} disabled={loading}>
-                      <SelectTrigger><SelectValue placeholder={t('dialog.addUnit.placeholders.type')} /></SelectTrigger>
+                    <Select value={formData.type} onValueChange={handleTypeChange} disabled={loading}>
+                      <SelectTrigger className={errors.type ? 'border-destructive' : ''}>
+                        <SelectValue placeholder={t('dialog.addUnit.placeholders.type')} />
+                      </SelectTrigger>
                       <SelectContent>
                         {PROPERTY_TYPE_OPTIONS.map((propertyType) => (
                           <SelectItem key={propertyType} value={propertyType}>{t(`types.${propertyType}`)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {errors.type && <p className="text-xs text-destructive mt-1">{errors.type}</p>}
                   </FormInput>
                 </FormField>
 
-                <FormField label={t('dialog.addUnit.fields.building')} htmlFor="buildingId" required>
+                <FormField label={t('dialog.addUnit.fields.project')} htmlFor="projectId" required>
                   <FormInput>
-                    <Select value={formData.buildingId} onValueChange={handleBuildingChange}
-                      disabled={loading || buildingsLoading}>
-                      <SelectTrigger className={errors.buildingId ? 'border-destructive' : ''}>
-                        <SelectValue placeholder={t('dialog.addUnit.placeholders.building')} />
+                    <Select value={formData.projectId} onValueChange={(v) => handleSelectChange('projectId', v)}
+                      disabled={loading || projectsLoading}>
+                      <SelectTrigger className={errors.projectId ? 'border-destructive' : ''}>
+                        <SelectValue placeholder={t('dialog.addUnit.placeholders.project')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {buildings.map((building) => (
-                          <SelectItem key={building.id} value={building.id}>{building.name}</SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors.buildingId && <p className="text-xs text-destructive mt-1">{errors.buildingId}</p>}
+                    {errors.projectId && <p className="text-xs text-destructive mt-1">{errors.projectId}</p>}
                   </FormInput>
                 </FormField>
 
+                {!isStandalone && (
+                  <FormField label={t('dialog.addUnit.fields.building')} htmlFor="buildingId" required>
+                    <FormInput>
+                      <Select value={formData.buildingId} onValueChange={handleBuildingChange}
+                        disabled={loading || buildingsLoading}>
+                        <SelectTrigger className={errors.buildingId ? 'border-destructive' : ''}>
+                          <SelectValue placeholder={t('dialog.addUnit.placeholders.building')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredBuildings.map((building) => (
+                            <SelectItem key={building.id} value={building.id}>{building.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.buildingId && <p className="text-xs text-destructive mt-1">{errors.buildingId}</p>}
+                    </FormInput>
+                  </FormField>
+                )}
+
+                {!isStandalone && (
                 <FormField
                   label={isMultiLevelType
                     ? t('multiLevel.floors', { defaultValue: 'Όροφοι' })
                     : t('dialog.addUnit.fields.floor')}
                   htmlFor="floorId"
+                  required
                 >
                   <FormInput>
                     {isMultiLevelType ? (
@@ -208,8 +359,10 @@ export function AddPropertyDialog({
                         placeholder={formData.buildingId ? t('dialog.addUnit.noFloors') : t('dialog.addUnit.placeholders.floor')}
                         disabled={loading} />
                     )}
+                    {errors.floorId && <p className="text-xs text-destructive mt-1">{errors.floorId}</p>}
                   </FormInput>
                 </FormField>
+                )}
 
                 <FormField label={t('dialog.addUnit.fields.status')} htmlFor="operationalStatus">
                   <FormInput>
@@ -283,10 +436,43 @@ export function AddPropertyDialog({
 
           <DialogFooter className="mt-6">
             <CancelButton onClick={() => onOpenChange(false)} disabled={loading} />
-            <SaveButton loading={loading} />
+            {isValid ? (
+              <SaveButton loading={loading} />
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <SaveButton loading={loading} disabled />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{t(saveTooltipKey)}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* 🔐 ADR-284 §3.3 Phase 3a: Nested inline dialogs (zero context switching) */}
+      <NestedAddProjectDialog
+        open={showAddProjectDialog}
+        onOpenChange={setShowAddProjectDialog}
+        onProjectAdded={() => {
+          reloadProjects();
+        }}
+      />
+      {formData.buildingId && (
+        <AddFloorDialog
+          buildingId={formData.buildingId}
+          open={showAddFloorDialog}
+          onClose={() => setShowAddFloorDialog(false)}
+          onSuccess={() => {
+            // Floors auto-refresh via onSnapshot subscription on buildingId
+            setShowAddFloorDialog(false);
+          }}
+        />
+      )}
     </Dialog>
   );
 }

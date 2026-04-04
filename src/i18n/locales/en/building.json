@@ -217,6 +217,7 @@
   },
   "validation": {
     "nameRequired": "Name is required",
+    "projectRequired": "Select a Project to continue",
     "areaPositive": "Area must be greater than 0",
     "builtAreaExceeds": "Built area cannot exceed total area",
     "floorsMinimum": "Floors must be at least 1",

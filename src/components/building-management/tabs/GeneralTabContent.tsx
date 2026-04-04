@@ -165,6 +165,22 @@ export function GeneralTabContent({
     }
   }, [building, effectiveIsEditing]);
 
+  // 🔐 ADR-284 §3.0.5: Clear projectId validation error when user selects a project
+  useEffect(() => {
+    if (projectLink.linkedId && projectLink.linkedId.trim().length > 0) {
+      setErrors((prev) => {
+        if (!prev.projectId) return prev;
+        const { projectId: _dropped, ...rest } = prev;
+        return rest;
+      });
+      setSaveError((prev) =>
+        prev && prev === t('validation.projectRequired', { defaultValue: 'Select a Project to continue' })
+          ? null
+          : prev,
+      );
+    }
+  }, [projectLink.linkedId, t]);
+
   // Track cancel vs save transitions for form reset
   const didSaveRef = React.useRef(false);
   const prevEditingRef = React.useRef(effectiveIsEditing);
@@ -230,13 +246,26 @@ export function GeneralTabContent({
    * Returns true on success, false on failure
    */
   const handleSave = useCallback(async (): Promise<boolean> => {
-    // Validation: only name is required
+    // Validation: name always required; projectId required in create mode (ADR-284 §3.0.5)
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) {
       newErrors.name = t('validation.nameRequired', { defaultValue: 'Name is required' });
     }
+    if (isCreateMode) {
+      const projectPayloadForValidation = projectLink.getPayload();
+      const projectIdValue = projectPayloadForValidation.projectId;
+      if (typeof projectIdValue !== 'string' || projectIdValue.trim().length === 0) {
+        newErrors.projectId = t('validation.projectRequired', {
+          defaultValue: 'Select a Project to continue',
+        });
+      }
+    }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      // Surface the first error as saveError banner (Google Docs draft pattern)
+      const firstError =
+        newErrors.projectId ?? newErrors.name ?? Object.values(newErrors)[0];
+      setSaveError(firstError ?? null);
       return false;
     }
 

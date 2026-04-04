@@ -413,10 +413,12 @@
   "dialog": {
     "addUnit": {
       "fields": {
-        "status": "Operational Status"
+        "status": "Operational Status",
+        "project": "Project"
       },
       "placeholders": {
-        "status": "Select..."
+        "status": "Select...",
+        "project": "Select Project..."
       },
       "statusOptions": {
         "draft": "Draft",
@@ -425,9 +427,38 @@
         "ready": "Ready",
         "maintenance": "Maintenance"
       },
+      "validation": {
+        "nameRequired": "Unit name is required",
+        "typeRequired": "Unit type is required",
+        "projectRequired": "Select a Project",
+        "buildingRequired": "Select a Building",
+        "floorRequired": "Select a Floor",
+        "standaloneNoBuilding": "Standalone units (detached house, villa) cannot have a Building or Floor",
+        "areaPositive": "Area must be a positive number"
+      },
+      "tooltips": {
+        "inBuildingRequired": "Select Project, Building & Floor to continue",
+        "standaloneRequired": "Select Project to continue"
+      },
       "messages": {
         "success": "Unit created successfully",
         "error": "Error creating unit"
+      },
+      "emptyState": {
+        "noProjects": {
+          "title": "No Projects yet",
+          "description": "Every Unit must belong to a Project.",
+          "cta": "Create a Project"
+        },
+        "noBuildings": {
+          "title": "Project \"{{projectName}}\" has no Buildings yet",
+          "description": "For this unit type you need: Project → Building → Floor",
+          "cta": "Create a Building in this Project"
+        },
+        "noFloors": {
+          "title": "Building \"{{buildingName}}\" has no floors yet",
+          "cta": "Add a Floor to this Building"
+        }
       }
     }
   },

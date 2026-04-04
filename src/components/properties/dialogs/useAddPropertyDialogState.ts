@@ -9,16 +9,20 @@
  * @enterprise ADR-034
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { usePropertyForm } from '../hooks/usePropertyForm';
+import { usePropertyForm, isStandaloneUnitType } from '../hooks/usePropertyForm';
 import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
+import { getProjectsList, type ProjectListItem } from '@/components/building-management/building-services';
+import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyType, OperationalStatus, CommercialStatus } from '@/types/property';
 import type { Building } from '@/types/building/contracts';
+
+const logger = createModuleLogger('AddPropertyDialogState');
 
 // =============================================================================
 // CONSTANTS
@@ -83,10 +87,52 @@ export function useAddPropertyDialogState({
   open,
   onPropertyAdded,
   onOpenChange,
-}: Pick<AddPropertyDialogProps, 'open' | 'onPropertyAdded' | 'onOpenChange'>) {
+  buildings,
+}: Pick<AddPropertyDialogProps, 'open' | 'onPropertyAdded' | 'onOpenChange'> & {
+  buildings: Building[];
+}) {
   // Form state management
   const form = usePropertyForm({ onPropertyAdded, onOpenChange });
   const { formData, errors, handleSelectChange, handleNumberChange, handleLevelsChange, resetForm } = form;
+
+  // ADR-284: Projects list for Project selector (required for both families)
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  const reloadProjects = useCallback(() => {
+    setProjectsLoading(true);
+    getProjectsList()
+      .then(setProjects)
+      .catch((err: unknown) => logger.error('Failed to load projects', { error: err }))
+      .finally(() => setProjectsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    reloadProjects();
+  }, [open, reloadProjects]);
+
+  // ADR-284 §3.3 (Phase 3a): Nested dialog state for inline CTAs
+  const [showAddProjectDialog, setShowAddProjectDialog] = useState(false);
+  const [showAddFloorDialog, setShowAddFloorDialog] = useState(false);
+
+  // ADR-284: Discriminator between Family A (in-building) and Family B (standalone)
+  const isStandalone = isStandaloneUnitType(formData.type);
+
+  // ADR-284 §3.3 (Phase 3a): Buildings filtered by selected Project for empty-state detection
+  const filteredBuildings = useMemo<Building[]>(() => {
+    if (!formData.projectId) return buildings;
+    return buildings.filter((b) => b.projectId === formData.projectId);
+  }, [buildings, formData.projectId]);
+
+  // ADR-284 §3.3 (Phase 3a): Empty state flags — drive inline CTAs in AddPropertyDialog
+  const emptyStates = useMemo(() => ({
+    noProjects: !projectsLoading && projects.length === 0,
+    noBuildings:
+      !isStandalone &&
+      !!formData.projectId &&
+      filteredBuildings.length === 0,
+  }), [projectsLoading, projects.length, isStandalone, formData.projectId, filteredBuildings.length]);
 
   // Real-time floor subscription
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
@@ -186,6 +232,17 @@ export function useAddPropertyDialogState({
     handleLevelsChange([]);
   };
 
+  // ADR-284: Type change handler — when switching to standalone, clear building/floor
+  const handleTypeChange = (value: string) => {
+    handleSelectChange('type', value);
+    if (isStandaloneUnitType(value as PropertyType | '')) {
+      handleSelectChange('buildingId', '');
+      handleSelectChange('floorId', '');
+      handleNumberChange('floor', '');
+      handleLevelsChange([]);
+    }
+  };
+
   // Floor selection handler
   const handleFloorSelection = (value: string) => {
     const selectedFloor = floorOptions.find(f => f.id === value);
@@ -208,5 +265,18 @@ export function useAddPropertyDialogState({
     setActiveTab,
     handleBuildingChange,
     handleFloorSelection,
+    // ADR-284
+    projects,
+    projectsLoading,
+    reloadProjects,
+    isStandalone,
+    handleTypeChange,
+    // ADR-284 §3.3 (Phase 3a): Empty states + inline CTAs
+    filteredBuildings,
+    emptyStates,
+    showAddProjectDialog,
+    setShowAddProjectDialog,
+    showAddFloorDialog,
+    setShowAddFloorDialog,
   };
 }

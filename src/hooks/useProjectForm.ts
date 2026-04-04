@@ -157,6 +157,11 @@ export function useProjectForm({ onProjectAdded, onOpenChange }: UseProjectFormP
         title: formData.title || formData.name,
         status: formData.status,
         companyId: formData.companyId,
+        // 🔐 ADR-284 §2.2 (Phase 3c): linkedCompanyId REQUIRED by server policy.
+        // The Company dropdown represents the BUSINESS link (linkedCompanyId),
+        // which in most cases coincides with the tenant companyId for single-
+        // company users. Server enforces linkedCompanyId → 400 if missing.
+        linkedCompanyId: formData.companyId,
         company: formData.company,
         address: formData.address,
         city: formData.city,

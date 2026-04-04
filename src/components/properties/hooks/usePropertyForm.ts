@@ -20,13 +20,28 @@
  * @see ADR-034
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyType, PropertyLevel, OperationalStatus, CommercialStatus } from '@/types/property';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/**
+ * ADR-284 — Standalone unit types (Family B).
+ * These units attach directly to a Project without Building/Floor.
+ * Mirror of server-side `STANDALONE_UNIT_TYPES` in property-creation-policy.ts.
+ */
+export const STANDALONE_UNIT_TYPES: readonly PropertyType[] = ['detached_house', 'villa'];
+
+export function isStandaloneUnitType(type: PropertyType | ''): boolean {
+  return type !== '' && STANDALONE_UNIT_TYPES.includes(type);
+}
 
 // =============================================================================
 // TYPES
@@ -37,6 +52,8 @@ export interface PropertyFormData {
   name: string;
   code: string;
   type: PropertyType | '';
+  // ADR-284: Project scope (required for both families)
+  projectId: string;
   buildingId: string;
   floorId: string;
   floor: number | '';
@@ -56,6 +73,8 @@ const INITIAL_FORM_DATA: PropertyFormData = {
   name: '',
   code: '',
   type: '',
+  // ADR-284: Project scope
+  projectId: '',
   buildingId: '',
   floorId: '',
   floor: '',
@@ -94,6 +113,7 @@ export function usePropertyForm({
   // VALIDATION
   // ==========================================================================
 
+  // ADR-284: Discriminated validation — Family A (in-building) vs Family B (standalone)
   const validate = useCallback((): boolean => {
     const newErrors: Partial<Record<keyof PropertyFormData, string>> = {};
 
@@ -102,9 +122,33 @@ export function usePropertyForm({
       newErrors.name = t('dialog.addUnit.validation.nameRequired');
     }
 
-    // Required: buildingId
-    if (!formData.buildingId) {
-      newErrors.buildingId = t('dialog.addUnit.validation.buildingRequired');
+    // Required: type (discriminator between Family A and Family B)
+    if (!formData.type) {
+      newErrors.type = t('dialog.addUnit.validation.typeRequired');
+    }
+
+    // Required: projectId (both families — ADR-284)
+    if (!formData.projectId) {
+      newErrors.projectId = t('dialog.addUnit.validation.projectRequired');
+    }
+
+    const isStandalone = isStandaloneUnitType(formData.type);
+
+    if (!isStandalone && formData.type) {
+      // Family A: In-building — buildingId + floor scope required
+      if (!formData.buildingId) {
+        newErrors.buildingId = t('dialog.addUnit.validation.buildingRequired');
+      }
+      // Floor scope: accept either single floorId OR multi-level selection
+      const hasFloorScope = !!formData.floorId || formData.levels.length > 0;
+      if (!hasFloorScope) {
+        newErrors.floorId = t('dialog.addUnit.validation.floorRequired');
+      }
+    } else if (isStandalone) {
+      // Family B: Standalone — buildingId + floorId MUST be empty
+      if (formData.buildingId || formData.floorId || formData.levels.length > 0) {
+        newErrors.type = t('dialog.addUnit.validation.standaloneNoBuilding');
+      }
     }
 
     // Validate area if provided
@@ -115,6 +159,30 @@ export function usePropertyForm({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData, t]);
+
+  // ==========================================================================
+  // DERIVED: isValid (silent check — no side effects, for Save button disabled)
+  // ==========================================================================
+
+  const isValid = useMemo((): boolean => {
+    if (!formData.name.trim()) return false;
+    if (!formData.type) return false;
+    if (!formData.projectId) return false;
+
+    const isStandalone = isStandaloneUnitType(formData.type);
+
+    if (!isStandalone) {
+      if (!formData.buildingId) return false;
+      const hasFloorScope = !!formData.floorId || formData.levels.length > 0;
+      if (!hasFloorScope) return false;
+    } else {
+      if (formData.buildingId || formData.floorId || formData.levels.length > 0) return false;
+    }
+
+    if (formData.area !== '' && formData.area <= 0) return false;
+
+    return true;
+  }, [formData]);
 
   // ==========================================================================
   // SUBMIT HANDLER
@@ -142,13 +210,18 @@ export function usePropertyForm({
           resolvedFloorId = derived.floorId;
         }
 
+        const isStandalone = isStandaloneUnitType(formData.type);
+
         const propertyData: Record<string, unknown> = {
           name: formData.name,
           type: formData.type || 'apartment',
-          buildingId: formData.buildingId,
+          // ADR-284: Family A sends building/floor; Family B omits them
+          buildingId: isStandalone ? '' : formData.buildingId,
           building: '',
-          floor: resolvedFloor,
-          floorId: resolvedFloorId,
+          floor: isStandalone ? 0 : resolvedFloor,
+          floorId: isStandalone ? '' : resolvedFloorId,
+          // ADR-284: projectId always sent (server auto-fills for Family A if empty)
+          projectId: formData.projectId,
           project: '',
           commercialStatus: formData.commercialStatus,
           operationalStatus: formData.operationalStatus,
@@ -257,6 +330,7 @@ export function usePropertyForm({
     formData,
     loading,
     errors,
+    isValid,
     handleSubmit,
     handleChange,
     handleSelectChange,

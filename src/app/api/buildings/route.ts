@@ -14,6 +14,11 @@ import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import {
+  BuildingCreationPolicyError,
+  assertBuildingCreatePolicy,
+  assertBuildingUpstreamChain,
+} from '@/services/building/building-creation-policy';
 
 const CreateBuildingSchema = z.object({
   name: z.string().min(1).max(200),
@@ -171,6 +176,24 @@ export const POST = withStandardRateLimit(
       const parsed = safeParseBody(CreateBuildingSchema, await request.json());
       if (parsed.error) throw new ApiError(400, 'Validation failed');
       const body = parsed.data;
+
+      // 🔐 ADR-284 §3.0.5: Layer 0.5 Building Creation Policy (server-side enforcement)
+      const adminDb = getAdminFirestore();
+      if (!adminDb) {
+        logger.error('Firebase Admin not initialized');
+        throw new ApiError(500, 'Database unavailable: Firebase Admin not initialized');
+      }
+      try {
+        assertBuildingCreatePolicy(body as unknown as Record<string, unknown>);
+        await assertBuildingUpstreamChain(adminDb, {
+          projectId: String(body.projectId),
+        });
+      } catch (error) {
+        if (error instanceof BuildingCreationPolicyError) {
+          throw new ApiError(400, error.message);
+        }
+        throw error;
+      }
 
       // Entity-specific fields: exclude common fields handled by createEntity
       const { companyId: _c, ...bodyFields } = body;
