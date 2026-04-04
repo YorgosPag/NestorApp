@@ -160,7 +160,7 @@ export function PropertyFieldsEditForm({
                   </PopoverTrigger>
                   <PopoverContent className="w-80 text-xs" side="right" align="start">
                     <h4 className="font-semibold mb-2">{t('entityCode.infoTitle', { defaultValue: 'Σύστημα Κωδικοποίησης' })}</h4>
-                    <p className={cn("mb-2", colors.text.muted)}>{t('entityCode.infoFormat', { defaultValue: 'Μορφή: {Κτίριο}-{Τύπος}-{Όροφος}.{ΑΑ}' })}</p>
+                    <p className={cn("mb-2", colors.text.muted)}>{t('entityCode.infoFormat', { defaultValue: 'Μορφή: [Κτίριο]-[Τύπος]-[Όροφος].[ΑΑ]' })}</p>
                     <p className={cn("mb-3", colors.text.muted)}>{t('entityCode.infoExample', { defaultValue: 'π.χ. A-DI-1.01' })}</p>
                     <table className="w-full border-collapse">
                       <thead>

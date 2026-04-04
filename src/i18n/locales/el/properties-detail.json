@@ -61,7 +61,7 @@
   },
   "entityCode": {
     "infoTitle": "Σύστημα Κωδικοποίησης",
-    "infoFormat": "Μορφή: {building}-{type}-{floor}.{seq}",
+    "infoFormat": "Μορφή: [Κτίριο]-[Τύπος]-[Όροφος].[ΑΑ]",
     "infoExample": "π.χ. A-DI-1.01",
     "infoResidential": "Κατοικίες",
     "infoCommercial": "Εμπορικά",
@@ -70,7 +70,10 @@
     "loading": "Υπολογισμός κωδικού...",
     "suggested": "Προτεινόμενος: {code}",
     "formatWarning": "Ο κωδικός δεν ακολουθεί το πρότυπο format",
-    "infoFloors": "Υπόγεια: Y1, Y2... | Ισόγειο: 0 | Όροφοι: 1, 2..."
+    "infoFloors": "Υπόγεια: Y1, Y2... | Ισόγειο: 0 | Όροφοι: 1, 2...",
+    "needBuilding": "Δηλώστε κτίριο",
+    "needType": "Δηλώστε τύπο ακινήτου",
+    "needFloor": "Δηλώστε όροφο"
   },
   "entityLinks": {
     "save": "Αποθήκευση",

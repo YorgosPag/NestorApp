@@ -61,7 +61,7 @@
   },
   "entityCode": {
     "infoTitle": "Coding System",
-    "infoFormat": "Format: {building}-{type}-{floor}.{seq}",
+    "infoFormat": "Format: [Building]-[Type]-[Floor].[Seq]",
     "infoExample": "e.g. A-DI-1.01",
     "infoResidential": "Residential",
     "infoCommercial": "Commercial",
@@ -70,7 +70,10 @@
     "loading": "Calculating code...",
     "suggested": "Suggested: {code}",
     "formatWarning": "Code does not follow the standard format",
-    "infoFloors": "Basements: Y1, Y2... | Ground: 0 | Floors: 1, 2..."
+    "infoFloors": "Basements: Y1, Y2... | Ground: 0 | Floors: 1, 2...",
+    "needBuilding": "Assign a building",
+    "needType": "Select property type",
+    "needFloor": "Select a floor"
   },
   "entityLinks": {
     "save": "Save",
