@@ -133,7 +133,7 @@
     "inheritedFromProject": "From Project",
     "roles": {
       "architect": "Architect",
-      "structural_engineer": "Structural Engineer",
+      "structural_engineer": "Civil Engineer",
       "electrical_engineer": "Electrical Engineer",
       "mechanical_engineer": "Mechanical Engineer",
       "surveyor": "Surveyor",
