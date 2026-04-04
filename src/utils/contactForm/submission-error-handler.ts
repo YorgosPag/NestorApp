@@ -36,11 +36,11 @@ export function handleSubmissionError(
     const confidence = confidenceMatch ? parseFloat(confidenceMatch[1]) : 0;
 
     if (confidence >= 95) {
-      notifications.error('contacts.duplicate.exactMatch', { duration: 8000 });
+      notifications.error('contacts-core.duplicate.exactMatch', { duration: 8000 });
     } else if (confidence >= 80) {
-      notifications.warning('contacts.duplicate.similarMatch', { duration: 6000 });
+      notifications.warning('contacts-core.duplicate.similarMatch', { duration: 6000 });
     } else {
-      notifications.info('contacts.duplicate.possibleMatch', { duration: 5000 });
+      notifications.info('contacts-core.duplicate.possibleMatch', { duration: 5000 });
     }
 
     logger.info('Duplicate handling applied', {

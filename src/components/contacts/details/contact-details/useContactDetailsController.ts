@@ -268,13 +268,13 @@ export function useContactDetailsController({
 
     const validationResult = getValidationResult(mergedFormData);
     if (!validationResult) {
-      notifications.error('validation.unknownType');
+      notifications.error('contacts-form.validation.unknownType');
       return;
     }
 
     setValidationErrors(validationResult.fieldErrors);
     if (!validationResult.isValid) {
-      notifications.error('validation.individual.reviewHighlightedFields');
+      notifications.error('contacts-form.validation.individual.reviewHighlightedFields');
       focusField(validationResult.firstErrorField);
       return;
     }
@@ -328,7 +328,7 @@ export function useContactDetailsController({
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Failed to update contact', error instanceof Error ? error : { error });
       if (message.startsWith('VALIDATION_ERROR:')) {
-        notifications.error('validation.individual.reviewHighlightedFields');
+        notifications.error('contacts-form.validation.individual.reviewHighlightedFields');
       } else {
         notifications.error('contacts-form.submission.updateError');
       }

@@ -37,8 +37,8 @@ export type GuardResult =
   | { blocked: false; deferred: true; guardType: 'nameCascade' | 'addressImpact' | 'companyIdentity' | 'communicationImpact' };
 
 type GuardFailureKey =
-  | 'contacts.identityImpact.messages.unavailable'
-  | 'contacts.companyIdentityImpact.unavailableBody';
+  | 'contacts-lifecycle.identityImpact.messages.unavailable'
+  | 'common-shared.contacts.companyIdentityImpact.unavailableBody';
 
 interface GuardChainDeps {
   editContact: Contact;
@@ -112,7 +112,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
         return blockPreviewFailure(
           'nameCascade',
           error,
-          'contacts.identityImpact.messages.unavailable',
+          'contacts-lifecycle.identityImpact.messages.unavailable',
         );
       }
     }
@@ -142,7 +142,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
         return blockPreviewFailure(
           'addressImpact',
           error,
-          'contacts.identityImpact.messages.unavailable',
+          'contacts-lifecycle.identityImpact.messages.unavailable',
         );
       }
     }
@@ -154,7 +154,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
     const detection = detectCompanyIdentityChanges(editContact, formData);
     if (detection.hasUnsafeClear) {
       logger.warn('Blocked unsafe clear of identity fields:', detection.unsafeClearFields.join(', '));
-      return { blocked: true, errorKey: 'contacts.companyIdentityImpact.unsafeClear' };
+      return { blocked: true, errorKey: 'common-shared.contacts.companyIdentityImpact.unsafeClear' };
     }
     if (detection.requiresImpactPreview) {
       try {
@@ -175,7 +175,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
         return blockPreviewFailure(
           'companyIdentityImpact',
           error,
-          'contacts.companyIdentityImpact.unavailableBody',
+          'common-shared.contacts.companyIdentityImpact.unavailableBody',
         );
       }
     }
@@ -186,7 +186,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
   if (!deps.communicationImpactConfirmedRef.current && editContact.type === 'company') {
     const commDetection = detectCommunicationChanges(editContact, formData);
     if (commDetection.hasUnsafeRemoval) {
-      return { blocked: true, errorKey: 'contacts.communicationImpact.unsafeRemoval' };
+      return { blocked: true, errorKey: 'common-shared.contacts.communicationImpact.unsafeRemoval' };
     }
     if (commDetection.requiresImpactPreview) {
       try {
@@ -207,7 +207,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
         return blockPreviewFailure(
           'communicationImpact',
           error,
-          'contacts.identityImpact.messages.unavailable',
+          'contacts-lifecycle.identityImpact.messages.unavailable',
         );
       }
     }

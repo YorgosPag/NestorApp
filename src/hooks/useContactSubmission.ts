@@ -97,7 +97,7 @@ export function useContactSubmission({
   const validateFormData = useCallback((formData: ContactFormData): boolean => {
     const validationResult = getValidationResult(formData);
     if (!validationResult) {
-      notifications.error('validation.unknownType');
+      notifications.error('contacts-form.validation.unknownType');
       return false;
     }
 
@@ -108,7 +108,7 @@ export function useContactSubmission({
     }));
 
     if (!validationResult.isValid) {
-      notifications.error('validation.individual.reviewHighlightedFields');
+      notifications.error('contacts-form.validation.individual.reviewHighlightedFields');
       focusField(validationResult.firstErrorField);
       return false;
     }

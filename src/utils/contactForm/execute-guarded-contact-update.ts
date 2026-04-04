@@ -39,7 +39,7 @@ export async function executeGuardedContactUpdate({
 
   const mutationResult = await previewBeforeUpdate(formData, mappingResult.contactData, action);
   if (mutationResult.blockedUnsafeClear) {
-    notifications.error('contacts.companyIdentityImpact.unsafeClear');
+    notifications.error('common-shared.contacts.companyIdentityImpact.unsafeClear');
     return false;
   }
 
