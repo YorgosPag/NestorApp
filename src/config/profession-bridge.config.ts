@@ -1,11 +1,12 @@
 /**
  * =============================================================================
- * Profession Bridge Config — Project Role → ESCO Mapping
+ * Profession Bridge Config — Project Role → ESCO Search Hints
  * =============================================================================
  *
- * Static mapping from project association roles to ESCO occupation data.
- * Used by ProfessionBridgeService to auto-fill contact profession
- * when assigned to a project.
+ * Maps project association roles to ESCO search queries.
+ * The service uses these hints to find the REAL ESCO occupation
+ * from the Firestore cache. No hardcoded labels — only the cache
+ * is the source of truth for profession data.
  *
  * @module config/profession-bridge.config
  * @enterprise ADR-282 - Google Derived Roles Pattern
@@ -14,80 +15,30 @@
 import type { ProjectRole } from '@/types/entity-associations';
 
 // ============================================================================
-// TYPES
-// ============================================================================
-
-export interface ProfessionBridgeMapping {
-  /** Greek human-readable profession label */
-  readonly profession: string;
-  /** Cached ESCO label (Greek) */
-  readonly escoLabel: string;
-  /** ISCO-08 4-digit code for grouping/filtering */
-  readonly iscoCode: string;
-  /** ESCO search query hint — used for runtime URI lookup */
-  readonly escoSearchHint: string;
-}
-
-// ============================================================================
-// MAPPING TABLE
+// MAPPING TABLE — Search hints only, NO hardcoded profession labels
 // ============================================================================
 
 /**
- * Maps project engineer roles to ESCO occupation data.
+ * Maps project engineer roles to ESCO search queries.
  *
- * Notes:
- * - `escoUri` is NOT hardcoded — resolved at runtime via EscoService search
- * - `iscoCode` follows ISCO-08 (ILO International Standard)
- * - Labels match the Firestore ESCO cache preferred labels (Greek)
+ * The bridge service will:
+ * 1. Search the ESCO cache with these hints
+ * 2. Use ONLY the real ESCO preferred label, URI, ISCO code
+ * 3. If no match found → does NOT write anything (zero guessing)
  */
-export const PROJECT_ROLE_TO_PROFESSION: Partial<Record<ProjectRole, ProfessionBridgeMapping>> = {
-  architect: {
-    profession: 'Αρχιτέκτονας',
-    escoLabel: 'Αρχιτέκτονας',
-    iscoCode: '2161',
-    escoSearchHint: 'Αρχιτέκτονας',
-  },
-  structural_engineer: {
-    profession: 'Πολιτικός Μηχανικός',
-    escoLabel: 'Πολιτικός Μηχανικός',
-    iscoCode: '2142',
-    escoSearchHint: 'Πολιτικός Μηχανικός',
-  },
-  electrical_engineer: {
-    profession: 'Ηλεκτρολόγος Μηχανικός',
-    escoLabel: 'Ηλεκτρολόγος Μηχανικός',
-    iscoCode: '2151',
-    escoSearchHint: 'Ηλεκτρολόγος',
-  },
-  mechanical_engineer: {
-    profession: 'Μηχανολόγος Μηχανικός',
-    escoLabel: 'Μηχανολόγος Μηχανικός',
-    iscoCode: '2144',
-    escoSearchHint: 'Μηχανολόγος',
-  },
-  surveyor: {
-    profession: 'Τοπογράφος Μηχανικός',
-    escoLabel: 'Τοπογράφος Μηχανικός',
-    iscoCode: '2165',
-    escoSearchHint: 'Τοπογράφος',
-  },
-  energy_inspector: {
-    profession: 'Ενεργειακός Επιθεωρητής',
-    escoLabel: 'Ενεργειακός Επιθεωρητής',
-    iscoCode: '2143',
-    escoSearchHint: 'Ενεργειακός',
-  },
-  supervising_engineer: {
-    profession: 'Επιβλέπων Μηχανικός',
-    escoLabel: 'Επιβλέπων Μηχανικός',
-    iscoCode: '2142',
-    escoSearchHint: 'Επιβλέπων',
-  },
+export const PROJECT_ROLE_ESCO_HINTS: Partial<Record<ProjectRole, string>> = {
+  architect: 'Αρχιτέκτονας',
+  structural_engineer: 'Πολιτικός Μηχανικός',
+  electrical_engineer: 'Ηλεκτρολόγος',
+  mechanical_engineer: 'Μηχανολόγος',
+  surveyor: 'Τοπογράφος',
+  energy_inspector: 'Ενεργειακός',
+  supervising_engineer: 'Επιβλέπων Μηχανικός',
 };
 
 /**
- * Returns the profession mapping for a given role, or null.
+ * Returns the ESCO search hint for a given project role, or null.
  */
-export function getProfessionForRole(role: string): ProfessionBridgeMapping | null {
-  return (PROJECT_ROLE_TO_PROFESSION as Record<string, ProfessionBridgeMapping>)[role] ?? null;
+export function getEscoSearchHint(role: string): string | null {
+  return (PROJECT_ROLE_ESCO_HINTS as Record<string, string>)[role] ?? null;
 }
