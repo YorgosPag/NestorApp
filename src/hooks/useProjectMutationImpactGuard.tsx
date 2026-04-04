@@ -54,11 +54,13 @@ export function useProjectMutationImpactGuard(
     }
   }, [options]);
 
-  const handleConfirm = useCallback(async () => {
+  // 🏢 GOOGLE-LEVEL INP: Decouple dialog dismiss from mutation execution.
+  // Close dialog first, yield to browser for paint, then execute mutation.
+  const handleConfirm = useCallback(() => {
     const action = deferredActionRef.current;
     reset();
     if (action) {
-      await action();
+      setTimeout(() => void action(), 0);
     }
   }, [reset]);
 

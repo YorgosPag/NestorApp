@@ -104,19 +104,21 @@ export function useContactMutationImpactGuard(
     deferredActionRef.current = null;
   }, []);
 
-  const handleIdentityConfirm = useCallback(async () => {
+  // 🏢 GOOGLE-LEVEL INP: Decouple dialog dismiss from mutation execution.
+  // Close dialog first, yield to browser for paint, then execute mutation.
+  const handleIdentityConfirm = useCallback(() => {
     const action = deferredActionRef.current;
     resetIdentityDialog();
     if (action) {
-      await action();
+      setTimeout(() => void action(), 0);
     }
   }, [resetIdentityDialog]);
 
-  const handleCompanyConfirm = useCallback(async () => {
+  const handleCompanyConfirm = useCallback(() => {
     const action = deferredActionRef.current;
     resetCompanyDialog();
     if (action) {
-      await action();
+      setTimeout(() => void action(), 0);
     }
   }, [resetCompanyDialog]);
 
