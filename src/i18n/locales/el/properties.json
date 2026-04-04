@@ -505,6 +505,22 @@
     "selectUnitDescription": "Επιλέξτε μια μονάδα για να δείτε έγγραφα",
     "noAuth": "Πρέπει να συνδεθείτε για να δείτε έγγραφα"
   },
+  "inlineCreate": {
+    "nameRequired": "Το όνομα μονάδας είναι υποχρεωτικό",
+    "created": "Η μονάδα δημιουργήθηκε επιτυχώς",
+    "createError": "Σφάλμα δημιουργίας μονάδας",
+    "cancel": "Ακύρωση",
+    "save": "Δημιουργία",
+    "floor": "Όροφος",
+    "selectFloor": "Επιλέξτε όροφο",
+    "netArea": "Καθαρά m²",
+    "grossArea": "Μικτά m²",
+    "bedrooms": "Υ/Δ",
+    "bathrooms": "Μπάνια",
+    "wc": "WC",
+    "askingPrice": "Ζητούμενη Τιμή (€)",
+    "codeInfoExample": "π.χ. A-DI-1.01"
+  },
   "fieldWarnings": {
     "basementResidential": {
       "title": "Κατοικία σε υπόγειο;",

@@ -57,6 +57,8 @@
     "loft": "Loft",
     "penthouse": "Ρετιρέ",
     "apartment_1br": "Γκαρσονιέρα",
+    "apartment_2br": "Διαμέρισμα 2 Υ/Δ",
+    "apartment_3br": "Διαμέρισμα 3 Υ/Δ",
     "hall": "Αίθουσα",
     "detached_house": "Μονοκατοικία",
     "villa": "Βίλα"
@@ -84,7 +86,11 @@
     "unavailable": "Μη διαθέσιμο",
     "for-sale": "Προς πώληση",
     "for-rent": "Προς ενοικίαση",
-    "for-sale-and-rent": "Προς πώληση και ενοικίαση"
+    "for-sale-and-rent": "Προς πώληση και ενοικίαση",
+    "sold": "Πωλήθηκε",
+    "reserved": "Κρατημένο",
+    "rented": "Ενοικιάστηκε",
+    "under-negotiation": "Υπό Διαπραγμάτευση"
   },
   "intent": {
     "sale": "Για Πώληση",

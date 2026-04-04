@@ -57,6 +57,8 @@
     "loft": "Loft",
     "penthouse": "Penthouse",
     "apartment_1br": "1-Bedroom Apartment",
+    "apartment_2br": "2-Bedroom Apartment",
+    "apartment_3br": "3-Bedroom Apartment",
     "hall": "Hall",
     "detached_house": "Detached House",
     "villa": "Villa"
@@ -84,7 +86,11 @@
     "unavailable": "Unavailable",
     "for-sale": "For sale",
     "for-rent": "For rent",
-    "for-sale-and-rent": "For sale and rent"
+    "for-sale-and-rent": "For sale and rent",
+    "sold": "Sold",
+    "reserved": "Reserved",
+    "rented": "Rented",
+    "under-negotiation": "Under Negotiation"
   },
   "intent": {
     "sale": "For Sale",

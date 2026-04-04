@@ -505,6 +505,22 @@
     "selectUnitDescription": "Select a unit to view documents",
     "noAuth": "Sign in to view documents"
   },
+  "inlineCreate": {
+    "nameRequired": "Unit name is required",
+    "created": "Unit created successfully",
+    "createError": "Failed to create unit",
+    "cancel": "Cancel",
+    "save": "Create",
+    "floor": "Floor",
+    "selectFloor": "Select floor",
+    "netArea": "Net m²",
+    "grossArea": "Gross m²",
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "wc": "WC",
+    "askingPrice": "Asking Price (€)",
+    "codeInfoExample": "e.g. A-AP-1.01"
+  },
   "fieldWarnings": {
     "basementResidential": {
       "title": "Residential unit in basement?",
