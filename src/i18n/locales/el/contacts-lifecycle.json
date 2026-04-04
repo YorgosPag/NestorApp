@@ -56,7 +56,8 @@
     "categories": {
       "display": "Εμφάνιση",
       "identity": "Ταυτοποίηση",
-      "regulated": "Ρυθμιζόμενο"
+      "regulated": "Ρυθμιζόμενο",
+      "administrative": "Διοικητικό"
     },
     "changeSummary": {
       "updated": "Από \"{from}\" σε \"{to}\"",
@@ -120,6 +121,8 @@
       "birthCountry": "Χώρα Γέννησης",
       "gender": "Φύλο",
       "amka": "ΑΜΚΑ",
+      "vatNumber": "ΑΦΜ",
+      "taxOffice": "ΔΟΥ",
       "documentType": "Τύπος Εγγράφου",
       "documentIssuer": "Αρχή Έκδοσης",
       "documentNumber": "Αριθμός Εγγράφου",

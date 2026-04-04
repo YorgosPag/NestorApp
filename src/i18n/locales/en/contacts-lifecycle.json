@@ -56,7 +56,8 @@
     "categories": {
       "display": "Display",
       "identity": "Identity",
-      "regulated": "Regulated"
+      "regulated": "Regulated",
+      "administrative": "Administrative"
     },
     "changeSummary": {
       "updated": "From \"{from}\" to \"{to}\"",
@@ -120,6 +121,8 @@
       "birthCountry": "Country of Birth",
       "gender": "Gender",
       "amka": "AMKA",
+      "vatNumber": "Tax ID (AFM)",
+      "taxOffice": "Tax Office (DOY)",
       "documentType": "Document Type",
       "documentIssuer": "Issuing Authority",
       "documentNumber": "Document Number",

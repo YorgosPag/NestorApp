@@ -19,6 +19,8 @@ export const INDIVIDUAL_IDENTITY_FIELDS = [
   'birthCountry',
   'gender',
   'amka',
+  'vatNumber',
+  'taxOffice',
   'documentType',
   'documentIssuer',
   'documentNumber',
@@ -27,7 +29,7 @@ export const INDIVIDUAL_IDENTITY_FIELDS = [
 ] as const;
 
 export type IndividualIdentityField = typeof INDIVIDUAL_IDENTITY_FIELDS[number];
-export type IndividualIdentityFieldCategory = 'display' | 'identity' | 'regulated';
+export type IndividualIdentityFieldCategory = 'display' | 'identity' | 'regulated' | 'administrative';
 
 export interface IndividualIdentityFieldChange {
   readonly field: IndividualIdentityField;
@@ -53,6 +55,8 @@ const FIELD_CATEGORY_MAP: Record<IndividualIdentityField, IndividualIdentityFiel
   birthCountry: 'identity',
   gender: 'identity',
   amka: 'regulated',
+  vatNumber: 'regulated',
+  taxOffice: 'administrative',
   documentType: 'regulated',
   documentIssuer: 'regulated',
   documentNumber: 'regulated',
@@ -90,6 +94,10 @@ function extractContactValue(contact: Contact, field: IndividualIdentityField): 
       return normalizeValue(contact.gender);
     case 'amka':
       return normalizeValue(contact.amka);
+    case 'vatNumber':
+      return normalizeValue(contact.vatNumber);
+    case 'taxOffice':
+      return normalizeValue(contact.taxOffice);
     case 'documentType':
       return normalizeValue(contact.documentType);
     case 'documentIssuer':
@@ -121,6 +129,10 @@ function extractFormValue(formData: ContactFormData, field: IndividualIdentityFi
       return normalizeValue(formData.gender);
     case 'amka':
       return normalizeValue(formData.amka);
+    case 'vatNumber':
+      return normalizeValue(formData.vatNumber);
+    case 'taxOffice':
+      return normalizeValue(formData.taxOffice);
     case 'documentType':
       return normalizeValue(formData.documentType);
     case 'documentIssuer':
