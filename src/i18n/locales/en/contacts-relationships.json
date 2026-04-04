@@ -527,7 +527,9 @@
       "streetNumber": "Number",
       "city": "City",
       "postalCode": "Postal Code",
-      "projectParticipation": "Project Participation"
+      "projectParticipation": "Project Participation",
+      "personaChips": "Roles / Personas",
+      "personaConditionalSections": "Persona Fields"
     },
     "helpTexts": {
       "firstName": "The first name of the individual",

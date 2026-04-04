@@ -527,7 +527,9 @@
       "streetNumber": "Αριθμός",
       "city": "Πόλη",
       "postalCode": "Τ.Κ.",
-      "projectParticipation": "Συμμετοχή σε Έργα"
+      "projectParticipation": "Συμμετοχή σε Έργα",
+      "personaChips": "Ιδιότητες / Ρόλοι",
+      "personaConditionalSections": "Πεδία Ιδιοτήτων"
     },
     "helpTexts": {
       "firstName": "Το όνομα του φυσικού προσώπου",
