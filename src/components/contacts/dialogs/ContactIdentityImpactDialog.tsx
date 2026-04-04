@@ -14,9 +14,21 @@ import { ShieldAlert, TriangleAlert } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
+import { formatDate } from '@/lib/intl-formatting';
 import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impact';
 import type { IndividualIdentityFieldCategory } from '@/utils/contactForm/individual-identity-guard';
 import type { ServiceIdentityFieldCategory } from '@/utils/contactForm/service-identity-guard';
+
+const DATE_FIELDS = new Set(['birthDate']);
+
+/** Format value for display — dates get locale formatting */
+function formatChangeValue(field: string, value: string): string {
+  if (!value) return value;
+  if (DATE_FIELDS.has(field) && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return formatDate(value);
+  }
+  return value;
+}
 
 interface ContactIdentityImpactDialogProps {
   open: boolean;
@@ -84,11 +96,11 @@ export function ContactIdentityImpactDialog({
                         <p className="mt-1 text-xs text-muted-foreground">
                           {change.isCleared
                             ? t('identityImpact.changeSummary.cleared', {
-                                from: change.oldValue || t('identityImpact.changeSummary.emptyValue'),
+                                from: formatChangeValue(change.field, change.oldValue) || t('identityImpact.changeSummary.emptyValue'),
                               })
                             : t('identityImpact.changeSummary.updated', {
-                                from: change.oldValue || t('identityImpact.changeSummary.emptyValue'),
-                                to: change.newValue || t('identityImpact.changeSummary.emptyValue'),
+                                from: formatChangeValue(change.field, change.oldValue) || t('identityImpact.changeSummary.emptyValue'),
+                                to: formatChangeValue(change.field, change.newValue) || t('identityImpact.changeSummary.emptyValue'),
                               })}
                         </p>
                       </li>
