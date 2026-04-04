@@ -47,6 +47,17 @@ export interface DxfFileMetadata {
   checksum?: string;
   sizeBytes?: number;
   entityCount?: number;
+  /**
+   * 🔒 TENANT SCOPING: Company (tenant) that owns this file — required by Firestore
+   * rules for cross-user read access. Nullable for legacy docs; new writes always
+   * populate from the authenticated user's companyId.
+   */
+  companyId?: string | null;
+  /**
+   * 🔒 TENANT SCOPING: Authenticated user that created/last-saved this file.
+   * Used for ownership-based access checks in Firestore rules.
+   */
+  createdBy?: string | null;
   securityValidation?: {
     validatedAt: Timestamp;
     validationResults: SecurityValidationResult[];

@@ -280,6 +280,11 @@ export async function saveToStorageImpl(
       checksum: generateSceneChecksum(scene),
       sizeBytes: sceneBytes.length,
       entityCount: scene.entities.length,
+      // 🔒 TENANT SCOPING (Sentry NESTOR-APP-3): write companyId + createdBy so
+      // Firestore rules that enforce companyId == getUserCompanyId() allow
+      // cross-user reads on cadFiles metadata.
+      companyId: context?.companyId ?? null,
+      createdBy: context?.createdBy ?? null,
       securityValidation: {
         validatedAt: serverTimestamp() as Timestamp,
         validationResults: validation.validationResults,

@@ -5,6 +5,7 @@ import { useSceneManager, type SceneManagerState } from './useSceneManager';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { SceneModel } from '../../types/scene';
+import { useAuth } from '@/auth/hooks/useAuth';
 
 export interface AutoSaveSceneManagerState extends SceneManagerState {
   currentFileName: string | null;
@@ -25,6 +26,10 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
 
 export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const sceneManager = useSceneManager();
+  // 🔒 TENANT SCOPING (Sentry NESTOR-APP-3): inject authenticated user so
+  // auto-save writes companyId + createdBy into cadFiles metadata, enabling
+  // cross-user reads under tenant-scoped Firestore rules.
+  const { user } = useAuth();
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
@@ -134,8 +139,13 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
 
           // 🚀 PHASE 4: Use Storage-based auto-save with canonical path
           // 🏢 ADR-240: Merge injected save context (from Wizard) with canonical path
+          // 🔒 TENANT SCOPING: fall back to authenticated user for companyId/createdBy
+          // when the Wizard did not supply them (standalone DXF saves).
+          const injectedCtx = injectedSaveContextRef.current ?? {};
           const saveContext: DxfSaveContext = {
-            ...(injectedSaveContextRef.current ?? {}),
+            ...injectedCtx,
+            companyId: injectedCtx.companyId ?? user?.companyId ?? undefined,
+            createdBy: injectedCtx.createdBy ?? user?.uid ?? undefined,
             ...(canonicalScenePath ? { canonicalScenePath } : {}),
           };
           const success = await DxfFirestoreService.autoSaveV2(

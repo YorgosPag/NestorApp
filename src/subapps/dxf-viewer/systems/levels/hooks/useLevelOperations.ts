@@ -12,6 +12,7 @@ import { db } from '../../../../../lib/firebase';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withStorageErrorHandling } from '../../../utils/storage-utils';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { LevelOperations, FloorplanOperations } from '../utils';
 import type { Level, FloorplanDoc, LevelSystemSettings } from '../config';
 
@@ -70,6 +71,10 @@ export function useLevelOperations({
   handleError,
   onLevelChange,
 }: UseLevelOperationsParams): UseLevelOperationsResult {
+  // 🔒 TENANT SCOPING (Sentry NESTOR-APP-3): write companyId + createdBy on new
+  // level docs so Firestore rules allow cross-user reads of their items subcollection.
+  const { user } = useAuth();
+
   const addLevel = useCallback(
     async (name: string, setAsDefault = false, floorId?: string): Promise<string | null> => {
       try {
@@ -88,6 +93,8 @@ export function useLevelOperations({
             isDefault: setAsDefault,
             visible: true,
             createdAt: serverTimestamp(),
+            companyId: user?.companyId ?? null,
+            createdBy: user?.uid ?? null,
             ...(floorId ? { floorId } : {}),
           };
 
@@ -126,7 +133,7 @@ export function useLevelOperations({
         setIsLoading(false);
       }
     },
-    [levels, enableFirestore, firestoreCollection, settings.autoSelectNewLevel, handleError, onLevelChange, setIsLoading, setLevels, setCurrentLevelId]
+    [levels, enableFirestore, firestoreCollection, settings.autoSelectNewLevel, handleError, onLevelChange, setIsLoading, setLevels, setCurrentLevelId, user]
   );
 
   const removeLevel = useCallback(
