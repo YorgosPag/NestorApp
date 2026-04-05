@@ -1,5 +1,7 @@
 import type { CommercialStatus, LinkedSpace } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
+import { normalizePropertyType } from '@/constants/property-types';
+import { normalizeCommercialStatus as normalizeCommercialStatusSSoT } from '@/constants/commercial-statuses';
 import {
   createProperty as createPropertyRecord,
   deleteProperty as deletePropertyRecord,
@@ -89,15 +91,63 @@ export class PropertyMutationPolicyError extends Error {
   }
 }
 
+export class InvalidPropertyTypeError extends PropertyMutationPolicyError {
+  constructor(rawValue: unknown) {
+    super(`Invalid property type: ${String(rawValue)}. Must match a canonical PropertyType (see src/constants/property-types.ts).`);
+    this.name = 'InvalidPropertyTypeError';
+  }
+}
+
+export class InvalidCommercialStatusError extends PropertyMutationPolicyError {
+  constructor(rawValue: unknown) {
+    super(`Invalid commercial status: ${String(rawValue)}. Must match a canonical CommercialStatus (see src/constants/commercial-statuses.ts).`);
+    this.name = 'InvalidCommercialStatusError';
+  }
+}
+
 function isBlank(value: unknown): boolean {
   return typeof value !== 'string' || value.trim().length === 0;
 }
 
-function normalizeCommercialStatus(
+function readCurrentCommercialStatus(
   currentProperty: PropertyMutationCurrentState | null | undefined,
 ): CommercialStatus | null {
   const status = currentProperty?.commercialStatus;
   return typeof status === 'string' ? status as CommercialStatus : null;
+}
+
+/**
+ * Write-time enum normalization (ADR-287 Batch 13).
+ *
+ * Normalizes enum-typed fields in a Firestore write payload to their canonical
+ * SSoT values BEFORE persistence. Throws if a provided value cannot be resolved
+ * to a canonical token, preventing dirty data from entering the database.
+ *
+ * Null/undefined values and missing keys are passed through untouched — the
+ * caller controls whether a field is being set at all.
+ *
+ * Currently covers: `type` (PropertyType), `commercialStatus` (CommercialStatus).
+ */
+function normalizeEnumFieldsForWrite(payload: Record<string, unknown>): void {
+  if ('type' in payload && payload.type !== null && payload.type !== undefined) {
+    const canonical = normalizePropertyType(payload.type);
+    if (!canonical) {
+      throw new InvalidPropertyTypeError(payload.type);
+    }
+    payload.type = canonical;
+  }
+
+  if (
+    'commercialStatus' in payload &&
+    payload.commercialStatus !== null &&
+    payload.commercialStatus !== undefined
+  ) {
+    const canonical = normalizeCommercialStatusSSoT(payload.commercialStatus);
+    if (!canonical) {
+      throw new InvalidCommercialStatusError(payload.commercialStatus);
+    }
+    payload.commercialStatus = canonical;
+  }
 }
 
 function assertKnownPropertyContext(context: PropertyMutationContext): void {
@@ -176,7 +226,7 @@ function assertPropertyMutationPolicy(context: PropertyMutationContext): void {
 
   const currentProperty = context.currentProperty!;
   const updateKeys = Object.keys(context.updates);
-  const commercialStatus = normalizeCommercialStatus(currentProperty);
+  const commercialStatus = readCurrentCommercialStatus(currentProperty);
   assertFieldLocking(commercialStatus, updateKeys);
 
   if (context.intent === 'building-link') {
@@ -196,6 +246,8 @@ export async function createPropertyWithPolicy({
     updates: propertyData,
   });
 
+  normalizeEnumFieldsForWrite(propertyData);
+
   return createPropertyRecord(propertyData);
 }
 
@@ -210,6 +262,8 @@ export async function updatePropertyWithPolicy({
     currentProperty,
     updates,
   });
+
+  normalizeEnumFieldsForWrite(updates);
 
   return updatePropertyRecord(propertyId, updates as Partial<Property>);
 }
