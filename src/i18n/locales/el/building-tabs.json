@@ -251,6 +251,8 @@
       },
       "basicInfo": {
         "title": "Βασικές Πληροφορίες",
+        "buildingCode": "Κωδικός Κτηρίου",
+        "buildingCodePlaceholder": "Αυτόματη ανάθεση (επίλεξε έργο)",
         "buildingTitle": "Τίτλος Κτιρίου *",
         "description": "Περιγραφή Κτιρίου",
         "descriptionPlaceholder": "Περιγράψτε το κτίριο...",

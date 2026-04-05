@@ -7,7 +7,8 @@ import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
 // ProgressCard → moved to "Χρονοδιάγραμμα" tab (TimelineTabContent)
 import type { Building } from '../BuildingsPageContent';
 // ENTERPRISE: Firestore persistence for building CRUD
-import { getProjectsList } from '../building-services';
+import { getProjectsList, getBuildingCodesByProject } from '../building-services';
+import { suggestNextBuildingCode } from '@/config/entity-code-config';
 import { createModuleLogger } from '@/lib/telemetry';
 // ENTERPRISE: Centralized EntityLinkCard (replaces ProjectSelectorCard)
 import { FolderKanban } from 'lucide-react';
@@ -32,6 +33,8 @@ const logger = createModuleLogger('GeneralTabContent');
 /** Extract initial form data from building (reused for reset on cancel) */
 function buildFormData(building: Building) {
   return {
+    // 🏢 ADR-233 §3.4: locked building identifier (e.g. "Κτήριο Α")
+    code: building.code || '',
     name: building.name,
     description: building.description || '',
     startDate: building.startDate || '',
@@ -165,6 +168,29 @@ export function GeneralTabContent({
     }
   }, [building, effectiveIsEditing]);
 
+  // 🏢 ADR-233 §3.4: Auto-suggest next building `code` in create mode whenever
+  // user picks/changes the parent project. Preview appears in the read-only
+  // code field (BasicInfoCard) so the user sees what will be assigned.
+  useEffect(() => {
+    if (!isCreateMode) return;
+    const projectId = projectLink.linkedId;
+    if (!projectId || projectId.trim().length === 0) {
+      setFormData((prev) => ({ ...prev, code: '' }));
+      return;
+    }
+
+    let cancelled = false;
+    getBuildingCodesByProject(projectId).then((existingCodes) => {
+      if (cancelled) return;
+      const next = suggestNextBuildingCode(existingCodes);
+      setFormData((prev) => ({ ...prev, code: next }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCreateMode, projectLink.linkedId]);
+
   // 🔐 ADR-284 §3.0.5: Clear projectId validation error when user selects a project
   useEffect(() => {
     if (projectLink.linkedId && projectLink.linkedId.trim().length > 0) {
@@ -284,10 +310,23 @@ export function GeneralTabContent({
 
       if (isCreateMode) {
         const projectPayload = projectLink.getPayload();
-        logger.info('Creating new building in Firestore', { formData, projectId: projectPayload.projectId ?? null });
+        // ADR-233 §3.4 / ADR-290: prefer the reactively-suggested code already
+        // shown in the UI (formData.code). Re-fetch only as a safety net — e.g.
+        // if the user opened the form without selecting a project, then picks
+        // one and immediately clicks Save before the preview effect resolves.
+        let nextCode = formData.code?.trim() ?? '';
+        if (!nextCode) {
+          const projectIdForCode = String(projectPayload.projectId ?? '');
+          const existingCodes = projectIdForCode
+            ? await getBuildingCodesByProject(projectIdForCode)
+            : [];
+          nextCode = suggestNextBuildingCode(existingCodes);
+        }
+        logger.info('Creating new building in Firestore', { formData, projectId: projectPayload.projectId ?? null, code: nextCode });
         const result = await createBuildingWithPolicy({
           payload: {
             ...payload,
+            code: nextCode,
             companyId: resolvedCompanyId,
             status: 'planning',
             // ADR-200: Include projectId from centralized hook

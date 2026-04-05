@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { FieldValue } from 'firebase-admin/firestore';
 import type { NextRequest } from 'next/server';
+import type { Firestore } from 'firebase-admin/firestore';
 
 import {
   requireAdminContext,
@@ -17,10 +17,12 @@ import {
   buildingExistsForTemplate,
   getExistingBuildingId,
   type BuildingTemplate,
-  type BuildingPayload,
 } from '@/services/admin-building-templates.service';
-import { generateBuildingId, generateOperationId } from '@/services/enterprise-id.service';
-import type { Building } from '@/types/building/contracts';
+import { generateOperationId } from '@/services/enterprise-id.service';
+import { createEntity } from '@/lib/firestore/entity-creation.service';
+import { suggestNextBuildingCode } from '@/config/entity-code-config';
+import { FIELDS } from '@/config/firestore-field-constants';
+import type { AuthContext } from '@/lib/auth/types';
 
 /**
  * ENTERPRISE: Shared Building Instantiation Handler
@@ -86,44 +88,64 @@ export interface HandlerOptions {
   includeEnterpriseFields?: boolean;
 }
 
+// ============================================================================
+// HELPERS (ADR-290)
+// ============================================================================
+
 /**
- * Strongly-typed building data for Firestore
- * projectId is optional - only set if template has it (no hardcoded defaults)
+ * ADR-290: Adapt AdminContext → AuthContext so admin-bulk flows can call the
+ * SSoT `createEntity()` service. Admin seed/populate endpoints are gated with
+ * `super_admin` at the route layer, so the globalRole mapping is safe.
  */
-interface BuildingDocument extends Omit<Building, 'id' | 'projectId'> {
-  projectId?: string;
-  sourceTemplateId: string;
-  sourceTemplateKey: string;
-  createdBy: string;
-  operationId: string;
-  createdAt: FieldValue;
-  updatedAt: FieldValue;
-  // Enterprise fields from template (if present)
-  legalInfo?: BuildingPayload['legalInfo'];
-  technicalSpecs?: BuildingPayload['technicalSpecs'];
-  financialData?: BuildingPayload['financialData'];
+function buildAuthContextFromAdmin(
+  adminContext: AdminContext,
+  companyId: string
+): AuthContext {
+  return {
+    uid: adminContext.uid,
+    email: adminContext.email,
+    companyId,
+    globalRole: 'super_admin',
+    mfaEnrolled: adminContext.mfaEnrolled,
+    isAuthenticated: true,
+  };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+/**
+ * ADR-233 §3.4 / ADR-290: Fetch existing building `code` values for a given
+ * project via Admin SDK. Used to auto-generate unique codes for templates
+ * that don't explicitly declare one.
+ */
+async function fetchBuildingCodesForProject(
+  db: Firestore,
+  projectId: string
+): Promise<string[]> {
+  const snapshot = await db
+    .collection(SERVER_COLLECTIONS.BUILDINGS)
+    .where(FIELDS.PROJECT_ID, '==', projectId)
+    .get();
+
+  return snapshot.docs
+    .map((doc) => ((doc.data().code as string | undefined) ?? '').trim())
+    .filter((code) => code.length > 0);
+}
 
 /**
- * Create building document from template
- * Pure orchestration - all enterprise data comes from template, NOT generated
+ * Build the `entitySpecificFields` payload passed to `createEntity()` for a
+ * given template. Common fields (companyId, linkedCompanyId, createdAt,
+ * updatedAt, createdBy) are omitted — they are provided by createEntity().
  */
-function createBuildingDocument(
+function buildBuildingEntityFields(
   template: BuildingTemplate,
-  companyId: string,
+  code: string,
   companyName: string,
   operationId: string,
-  createdBy: string,
   includeEnterpriseFields: boolean
-): BuildingDocument {
-  const payload: BuildingPayload = template.buildingPayload;
+): Record<string, unknown> {
+  const payload = template.buildingPayload;
 
-  const doc: BuildingDocument = {
-    // Core fields from template payload
+  const fields: Record<string, unknown> = {
+    // Core template fields
     name: payload.name,
     description: payload.description,
     address: payload.address,
@@ -139,41 +161,29 @@ function createBuildingDocument(
     totalValue: payload.totalValue,
     category: payload.category,
     features: payload.features,
-
-    // Company association
-    companyId,
+    // ADR-233 §3.4: locked building identifier
+    code,
+    // Company display name (string — distinct from companyId FK)
     company: companyName,
-
     // Template tracking
     sourceTemplateId: template.id,
     sourceTemplateKey: template.templateKey,
-
-    // Metadata
-    createdBy,
     operationId,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
   };
 
-  // Conditional field: only add projectId if template has it (no hardcoded defaults)
+  // projectId passed explicitly — parentId below also sets it, but keep for
+  // templates that declared a projectId without requiring parent-data lookup.
   if (template.projectId) {
-    doc.projectId = template.projectId;
+    fields.projectId = template.projectId;
   }
 
-  // Enterprise fields from template (stored in DB, not generated)
   if (includeEnterpriseFields) {
-    if (payload.legalInfo) {
-      doc.legalInfo = payload.legalInfo;
-    }
-    if (payload.technicalSpecs) {
-      doc.technicalSpecs = payload.technicalSpecs;
-    }
-    if (payload.financialData) {
-      doc.financialData = payload.financialData;
-    }
+    if (payload.legalInfo) fields.legalInfo = payload.legalInfo;
+    if (payload.technicalSpecs) fields.technicalSpecs = payload.technicalSpecs;
+    if (payload.financialData) fields.financialData = payload.financialData;
   }
 
-  return doc;
+  return fields;
 }
 
 // ============================================================================
@@ -286,7 +296,13 @@ export async function handleBuildingInstantiation(
 
   // Get Admin Firestore instance
   const db = getAdminFirestore();
-  const buildingsCollection = db.collection(SERVER_COLLECTIONS.BUILDINGS);
+
+  // ADR-290: Build AuthContext adapter for createEntity() — super_admin-gated
+  const authContext = buildAuthContextFromAdmin(adminContext, companyId);
+
+  // ADR-233 §3.4: cache of auto-suggested codes per project (avoids collisions
+  // when the same project has multiple templates in this batch).
+  const projectCodesCache = new Map<string, string[]>();
 
   // Create buildings from templates with idempotency check
   const results: InstantiationResult[] = [];
@@ -317,21 +333,43 @@ export async function handleBuildingInstantiation(
         continue;
       }
 
-      // Generate building ID using enterprise ID service
-      const buildingId = generateBuildingId();
+      // ADR-290: resolve building `code` — prefer template-supplied, else
+      // auto-suggest based on existing siblings in the same project.
+      let code = template.buildingPayload.code?.trim() ?? '';
+      if (!code) {
+        const cacheKey = template.projectId ?? '__no_project__';
+        let codes = projectCodesCache.get(cacheKey);
+        if (!codes) {
+          codes = template.projectId
+            ? await fetchBuildingCodesForProject(db, template.projectId)
+            : [];
+          projectCodesCache.set(cacheKey, codes);
+        }
+        code = suggestNextBuildingCode(codes);
+        // Reserve this code in the cache so subsequent templates in the same
+        // project pick the next gap instead of the same value.
+        codes.push(code);
+      }
 
-      // Create building document (pure orchestration)
-      const buildingData = createBuildingDocument(
-        template,
-        companyId,
-        company.companyName,
-        operationId,
-        createdBy,
-        includeEnterpriseFields
-      );
+      // ADR-290: route through the SSoT entity creation service
+      const result = await createEntity('building', {
+        auth: authContext,
+        parentId: template.projectId ?? null,
+        entitySpecificFields: buildBuildingEntityFields(
+          template,
+          code,
+          company.companyName,
+          operationId,
+          includeEnterpriseFields
+        ),
+        apiPath: `admin/${operationPrefix}`,
+      });
+      const buildingId = result.id;
 
-      // Write to Firestore using Admin SDK
-      await buildingsCollection.doc(buildingId).set(buildingData);
+      // Signal to static analysis that createdBy option (legacy hardcoded
+      // string from route layer) is no longer the source of truth — actual
+      // createdBy is adminContext.uid via createEntity().
+      void createdBy;
 
       results.push({
         buildingId,
@@ -346,6 +384,7 @@ export async function handleBuildingInstantiation(
         buildingId,
         templateId: template.id,
         buildingName: template.buildingPayload.name,
+        code,
       }, adminContext);
     } catch (error) {
       results.push({

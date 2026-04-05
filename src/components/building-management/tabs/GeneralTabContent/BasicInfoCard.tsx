@@ -17,7 +17,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 interface BasicInfoCardProps {
-    formData: { name: string; description: string };
+    /** ADR-233 §3.4: `code` is the locked building identifier ("Κτήριο Α"). Read-only. */
+    formData: { code?: string; name: string; description: string };
     updateField: (field: string, value: string | number) => void;
     isEditing: boolean;
     errors: { [key: string]: string };
@@ -39,6 +40,17 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
         </CardTitle>
       </CardHeader>
       <CardContent className="p-2 pt-0 space-y-2">
+        {/* 🏢 ADR-233 §3.4: locked building code, read-only — auto-suggested per project */}
+        <div className="space-y-2">
+          <Label>{t('tabs.general.basicInfo.buildingCode')}</Label>
+          <Input
+            value={formData.code ?? ''}
+            readOnly
+            placeholder={t('tabs.general.basicInfo.buildingCodePlaceholder')}
+            className="bg-muted"
+          />
+        </div>
+
         <div className="space-y-2">
           <Label>{t('tabs.general.basicInfo.buildingTitle')}</Label>
           <Input

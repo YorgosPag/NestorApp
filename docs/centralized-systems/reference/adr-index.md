@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 263 ADRs | Last Updated: 2026-04-03
+**📊 Stats**: 274 ADRs | Last Updated: 2026-04-05
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 77 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 86 | [View](#uncategorized) |
 
 ---
 
@@ -166,6 +166,7 @@
 | **ADR-140** | Angle Measurement Visualization Constants | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-140-angle-measurement-visualization-constants.md) |
 | **ADR-143** | Origin/Cursor Offset Constants Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-143-origin-cursor-offset-constants-centralization.md) |
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | 2026-02-01 | UI Components | [📄](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
+| **ADR-145** | PropertyType SSoT Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-145-property-types-ssot.md) |
 | **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-145-super-admin-ai-assistant.md) |
 | **ADR-146** | Canvas Size Observer Hook Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-146-canvas-size-observer-hook-centralization.md) |
 | **ADR-150** | Arrow Head Size Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-150-arrow-head-size-centralization.md) |
@@ -297,12 +298,17 @@
 | **ADR-277** | Address Impact Guard — Company Address Change/Delete Safety | ✅ ✅ IMPLEMENTED | 2026-04-01 | Backend Systems / Data Safety | [📄](./adrs/ADR-277-address-impact-guard.md) |
 | **ADR-278** | Company Identity Field Guard | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-278-company-identity-field-guard.md) |
 | **ADR-279** | Google-Grade i18n Governance & Localization Operating Model | ✅ ACTIVE | 2026-04-03 | Infrastructure / Data & State | [📄](./adrs/ADR-279-google-grade-i18n-governance.md) |
-| **ADR-280** | i18n Namespace Splitting Implementation Plan | ✅ APPROVED | 2026-04-03 | Infrastructure / i18n | [📄](./adrs/ADR-280-i18n-namespace-splitting-plan.md) |
-| **ADR-281** | SSOT Soft-Delete System — Google-Level Enterprise Trash Lifecycle | ✅ IMPLEMENTED (Batches 1-5) | 2026-04-03 | Backend Systems / Data Safety | [📄](./adrs/ADR-281-ssot-soft-delete-system.md) |
-| **ADR-286** | DXF Level Creation Centralization (SSOT) | ✅ IMPLEMENTED | 2026-04-05 | Entity Systems / DXF Viewer | [📄](./adrs/ADR-286-dxf-level-creation-centralization.md) |
-| **ADR-287** | Enum SSoT Centralization (Batch 9) — CommercialStatus, OperationalStatus, EnergyClass, BuildingType | 🚧 IN PROGRESS (9A-14 done) | 2026-04-05 | Data & State | [📄](./adrs/ADR-287-enum-ssot-centralization.md) |
-| **ADR-288** | CAD File Metadata Centralization — SSOT upsert endpoint for cadFiles | ✅ IMPLEMENTED | 2026-04-05 | Entity Systems / DXF Viewer | [📄](./adrs/ADR-288-cad-file-metadata-centralization.md) |
-| **ADR-289** | DXF Overlay Item Centralization — SSOT CRUD + upsert endpoint for overlay polygons | ✅ IMPLEMENTED | 2026-04-05 | Entity Systems / DXF Viewer | [📄](./adrs/ADR-289-dxf-overlay-item-centralization.md) |
+| **ADR-280** | i18n Namespace Splitting Implementation Plan | ✅ IMPLEMENTED | 2026-04-03 | Infrastructure / i18n | [📄](./adrs/ADR-280-i18n-namespace-splitting-plan.md) |
+| **ADR-281** | SSOT Soft-Delete System — Google-Level Enterprise Trash Lifecycle | ✅ APPROVED | 2026-04-03 | Backend Systems / Data Safety / Entity Systems | [📄](./adrs/ADR-281-ssot-soft-delete-system.md) |
+| **ADR-282** | Contact Persona Architecture Refactoring — Google-Level Redesign | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-282-contact-persona-architecture-refactoring.md) |
+| **ADR-283** | Project Roles SSOT Refactoring | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-283-project-roles-ssot-refactoring.md) |
+| **ADR-284** | Unit Creation Hierarchy Enforcement (Company → Project → Building → Floor → Unit) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-284-unit-creation-hierarchy-enforcement.md) |
+| **ADR-285** | DXF Levels + cadFiles Tenant Scoping & Module Split | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-285-dxf-tenant-scoping-and-module-split.md) |
+| **ADR-286** | DXF Level Creation Centralization (SSOT) | ✅ Accepted | 2026-04-05 | Entity Systems / DXF Viewer | [📄](./adrs/ADR-286-dxf-level-creation-centralization.md) |
+| **ADR-287** | Enum SSoT Centralization (Batch 9) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-287-enum-ssot-centralization.md) |
+| **ADR-288** | CAD File Metadata Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-288-cad-file-metadata-centralization.md) |
+| **ADR-289** | DXF Overlay Item Centralization (SSOT API Gateway) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-289-dxf-overlay-item-centralization.md) |
+| **ADR-290** | Building Creation SSoT Enforcement | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-290-building-creation-ssot-enforcement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -543,6 +549,7 @@
 | **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ APPROVED | [View](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
 | **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ APPROVED | [View](./adrs/ADR-100-user-profile-sync.md) |
 | **ADR-103** | Availability Check & AI Operator Briefing | ✅ APPROVED | [View](./adrs/ADR-103-availability-check-operator-briefing.md) |
+| **ADR-145** | PropertyType SSoT Centralization | ✅ APPROVED | [View](./adrs/ADR-145-property-types-ssot.md) |
 | **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ APPROVED | [View](./adrs/ADR-156-voice-message-transcription-whisper.md) |
 | **ADR-161** | Global Voice Assistant (Header Microphone) | ✅ APPROVED | [View](./adrs/ADR-161-global-voice-assistant.md) |
 | **ADR-165** | Entity Validation Centralization | ✅ APPROVED | [View](./adrs/ADR-165-entity-validation-centralization.md) |
@@ -608,6 +615,14 @@
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | [View](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | [View](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-278** | Company Identity Field Guard | ✅ APPROVED | [View](./adrs/ADR-278-company-identity-field-guard.md) |
+| **ADR-282** | Contact Persona Architecture Refactoring — Google-Level Redesign | ✅ APPROVED | [View](./adrs/ADR-282-contact-persona-architecture-refactoring.md) |
+| **ADR-283** | Project Roles SSOT Refactoring | ✅ APPROVED | [View](./adrs/ADR-283-project-roles-ssot-refactoring.md) |
+| **ADR-284** | Unit Creation Hierarchy Enforcement (Company → Project → Building → Floor → Unit) | ✅ APPROVED | [View](./adrs/ADR-284-unit-creation-hierarchy-enforcement.md) |
+| **ADR-285** | DXF Levels + cadFiles Tenant Scoping & Module Split | ✅ APPROVED | [View](./adrs/ADR-285-dxf-tenant-scoping-and-module-split.md) |
+| **ADR-287** | Enum SSoT Centralization (Batch 9) | ✅ APPROVED | [View](./adrs/ADR-287-enum-ssot-centralization.md) |
+| **ADR-288** | CAD File Metadata Centralization | ✅ APPROVED | [View](./adrs/ADR-288-cad-file-metadata-centralization.md) |
+| **ADR-289** | DXF Overlay Item Centralization (SSOT API Gateway) | ✅ APPROVED | [View](./adrs/ADR-289-dxf-overlay-item-centralization.md) |
+| **ADR-290** | Building Creation SSoT Enforcement | ✅ APPROVED | [View](./adrs/ADR-290-building-creation-ssot-enforcement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

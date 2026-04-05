@@ -30,6 +30,12 @@ import { ENTITY_STATUS } from '@/constants/entity-status-values';
  * and must be stored in Firestore templates, NOT hardcoded
  */
 export interface BuildingPayload {
+  /**
+   * ADR-233 §3.4 / ADR-290: locked building identifier (e.g. "Κτήριο Α").
+   * Optional on templates — auto-generated per project by the
+   * instantiation handler when omitted.
+   */
+  code?: string;
   name: string;
   description: string;
   address: string;

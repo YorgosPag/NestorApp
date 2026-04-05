@@ -251,6 +251,8 @@
       },
       "basicInfo": {
         "title": "Basic Information",
+        "buildingCode": "Building Code",
+        "buildingCodePlaceholder": "Auto-assigned (select a project)",
         "buildingTitle": "Building Title *",
         "description": "Building Description",
         "descriptionPlaceholder": "Describe the building...",
