@@ -16,7 +16,7 @@
 
 import 'server-only';
 
-import { PROPERTY_TYPE_LABELS_EL } from '@/constants/property-types';
+import { getPropertyTypeLabelEL } from '@/constants/property-types';
 import {
   normalizeCommercialStatus,
   isListedCommercialStatus,
@@ -97,24 +97,18 @@ interface ProjectPropertyBreakdown {
 }
 
 // ============================================================================
-// PROPERTY TYPE LABELS — Greek display names (lookup table for lowercased keys)
+// PROPERTY TYPE LABEL RESOLVER — ADR-287 Batch 11B
 // ============================================================================
-// Built από SSoT labels (@/constants/property-types, ADR-145) + legacy Greek
-// lowercase keys από παλιά Firestore data + parking (not in canonical).
+// Delegates σε SSoT resolver (@/constants/property-types) για canonical
+// Greek labels. Fallback για 'parking' (not a canonical PropertyType) και για
+// unknown types (επιστρέφει το raw input όπως είχε πριν).
 
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  ...PROPERTY_TYPE_LABELS_EL,
-  parking: 'Parking',
-  // Legacy Greek values (lowercased keys from Firestore data)
-  'στούντιο': 'Στούντιο',
-  'γκαρσονιέρα': 'Γκαρσονιέρα',
-  // Legacy 2Δ/3Δ variants → συγχωνεύονται στο γενικό "Διαμέρισμα" (Γιώργος 2026-04-05)
-  'διαμέρισμα 2δ': 'Διαμέρισμα',
-  'διαμέρισμα 3δ': 'Διαμέρισμα',
-  'μεζονέτα': 'Μεζονέτα',
-  'κατάστημα': 'Κατάστημα',
-  'αποθήκη': 'Αποθήκη',
-};
+function resolvePropertyTypeLabel(typeKey: string): string {
+  const canonicalLabel = getPropertyTypeLabelEL(typeKey);
+  if (canonicalLabel !== null) return canonicalLabel;
+  if (typeKey.trim().toLowerCase() === 'parking') return 'Parking';
+  return typeKey;
+}
 
 // ============================================================================
 // MODULE
@@ -415,7 +409,7 @@ export class AdminPropertyStatsModule implements IUCModule {
             lines.push('');
             lines.push('Ανά τύπο:');
             for (const [typeName, count] of typeEntries) {
-              const label = PROPERTY_TYPE_LABELS[typeName] ?? typeName;
+              const label = resolvePropertyTypeLabel(typeName);
               lines.push(`  ${label}: ${count}`);
             }
           } else {
@@ -443,7 +437,7 @@ export class AdminPropertyStatsModule implements IUCModule {
             lines.push('');
             lines.push('Ανά τύπο:');
             for (const [typeName, count] of typeEntries) {
-              const label = PROPERTY_TYPE_LABELS[typeName] ?? typeName;
+              const label = resolvePropertyTypeLabel(typeName);
               lines.push(`  ${label}: ${count}`);
             }
           }

@@ -398,3 +398,75 @@ export function arePropertyTypesEquivalent(
   ]);
   return apartmentFamily.has(canonicalA) && apartmentFamily.has(canonicalB);
 }
+
+// =============================================================================
+// 11. LEGACY GREEK RESOLVER + LABEL HELPER (ADR-287 Batch 11B)
+// =============================================================================
+//
+// Παλιά Firestore records (pre-2026-01-24) αποθηκεύουν property type σε
+// capitalized Greek label form ('Στούντιο', 'Διαμέρισμα 2Δ', ...). Αυτές οι
+// τιμές ορίζονται στο `LEGACY_GREEK_PROPERTY_TYPES` (section 5b) — τώρα
+// αποκτούν dedicated resolver + reverse label helper.
+
+/**
+ * Narrow resolver: accepts **only** a value from `LEGACY_GREEK_PROPERTY_TYPES`
+ * (the 7 capitalized Greek label strings historically persisted στο Firestore)
+ * και επιστρέφει το canonical `PropertyTypeCanonical`. Άλλες μορφές (English
+ * canonical, lowercase Greek, general aliases) επιστρέφουν `null` — χρησιμοποίησε
+ * το πιο γενικό `normalizePropertyType()` όταν θέλεις να δεχτείς οποιοδήποτε input.
+ *
+ * Διπλά 2Δ/3Δ variants καταρρέουν στο 'apartment' (family collapse, consistent
+ * με Batch 11A semantics: Γιώργος 2026-04-05 decision).
+ *
+ * @param raw — Expected: ακριβώς ένα από τα `LEGACY_GREEK_PROPERTY_TYPES` strings.
+ *   Δέχεται whitespace (trimmed). Ο έλεγχος είναι case-sensitive — τα παλιά
+ *   Firestore records έχουν τη γνωστή capitalized μορφή.
+ * @returns Canonical `PropertyTypeCanonical` ή `null` αν το input δεν είναι
+ *   γνωστός legacy Greek label.
+ *
+ * @example
+ * normalizeLegacyGreekPropertyType('Στούντιο')      // → 'studio'
+ * normalizeLegacyGreekPropertyType('Γκαρσονιέρα')   // → 'apartment_1br'
+ * normalizeLegacyGreekPropertyType('Διαμέρισμα 2Δ') // → 'apartment' (family collapse)
+ * normalizeLegacyGreekPropertyType('Διαμέρισμα 3Δ') // → 'apartment' (family collapse)
+ * normalizeLegacyGreekPropertyType('apartment')     // → null (not legacy Greek)
+ * normalizeLegacyGreekPropertyType('διαμέρισμα')    // → null (lowercase, use normalizePropertyType)
+ */
+export function normalizeLegacyGreekPropertyType(
+  raw: unknown,
+): PropertyTypeCanonical | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return null;
+  if (!(LEGACY_GREEK_PROPERTY_TYPES as readonly string[]).includes(trimmed)) {
+    return null;
+  }
+  // Safe cast — membership validated above.
+  return normalizePropertyType(trimmed);
+}
+
+/**
+ * Convenience helper: resolve any input (canonical, alias, Greek with/without
+ * tones, legacy Greek label, deprecated underscore) στο αντίστοιχο Greek display
+ * label από το `PROPERTY_TYPE_LABELS_EL`.
+ *
+ * Χρησιμοποιείται σε server-side AI pipeline replies (Telegram/email) όπου
+ * εμφανίζουμε breakdown ανά property type και θέλουμε consistent Ελληνικά
+ * labels ανεξαρτήτως της raw μορφής στο Firestore.
+ *
+ * @param raw — Οποιοδήποτε string (canonical underscore, Greek, alias)
+ * @returns Greek label από `PROPERTY_TYPE_LABELS_EL` ή `null` αν unknown.
+ *   Consumers τυπικά κάνουν fallback στο raw input για display.
+ *
+ * @example
+ * getPropertyTypeLabelEL('apartment')       // → 'Διαμέρισμα'
+ * getPropertyTypeLabelEL('apartment_2br')   // → 'Διαμέρισμα' (family collapse)
+ * getPropertyTypeLabelEL('store')           // → 'Κατάστημα'
+ * getPropertyTypeLabelEL('Στούντιο')        // → 'Στούντιο' (via legacy resolver path)
+ * getPropertyTypeLabelEL('parking')         // → null (unknown)
+ */
+export function getPropertyTypeLabelEL(raw: unknown): string | null {
+  const canonical = normalizePropertyType(raw);
+  if (canonical === null) return null;
+  return PROPERTY_TYPE_LABELS_EL[canonical];
+}
