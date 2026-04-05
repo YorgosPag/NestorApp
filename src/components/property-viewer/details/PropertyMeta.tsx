@@ -155,7 +155,7 @@ export function PropertyMeta({
           <div className={`flex ${spacing.gap.sm}`}>
             <Button variant="outline" size="sm" className="flex-1" onClick={handleViewClick}>
               <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, spacing.margin.right.sm)} />
-              {t('meta.floorPlan', { defaultValue: 'Κάτοψη' })}
+              {t('meta.floorPlan')}
             </Button>
           </div>
         </>

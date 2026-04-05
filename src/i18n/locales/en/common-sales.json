@@ -181,7 +181,8 @@
       "openInSpaces": "Open in Spaces",
       "documentsHint": "Documents are managed in Spaces → Properties",
       "photosHint": "Photos are managed in Spaces → Properties",
-      "videosHint": "Videos are managed in Spaces → Properties"
+      "videosHint": "Videos are managed in Spaces → Properties",
+      "videosNoAuth": "Sign in required to view videos."
     },
     "actions": {
       "changePrice": "Change Price",

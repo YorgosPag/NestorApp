@@ -238,7 +238,7 @@ export function CustomerProfileSection({ customerId, unitPrice }: CustomerProfil
                 onClick={() => window.open(`mailto:${customerInfo.primaryEmail}`, '_self')}
               >
                 <Mail className={`${iconSizes.sm} mr-2`} />
-                {t('common.labels.email', { defaultValue: 'Email' })}
+                {t('common.labels.email')}
               </Button>
             )}
           </div>

@@ -371,7 +371,7 @@ export function ParkingGeneralTab({
               buildingId={buildingLink.linkedId || ''}
               floorLevel={form.floor ? parseInt(form.floor, 10) || 0 : 0}
               locationZone={parking.locationZone || undefined}
-              label={t('general.fields.code', { defaultValue: 'Κωδικός Θέσης (ADR-233)' })}
+              label={t('general.fields.code')}
               placeholderFallback="A-PK-Y1.01"
               infoExample="π.χ. A-PK-Y1.01 (Κτίριο A, Parking, Υπόγ.1, #01)"
               disabled={!isEditing}

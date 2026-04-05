@@ -112,7 +112,8 @@
     "search": "Search",
     "searchCompany": "Search Company",
     "clearSearch": "Clear search",
-    "contact": "Contact"
+    "contact": "Contact",
+    "email": "Email"
   },
   "clickableField": {
     "sendEmail": "Send email to {value} via Gmail",

@@ -213,7 +213,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
             buildingId={buildingId}
             floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
             locationZone={locationZone || undefined}
-            label={tParking('general.fields.code', { defaultValue: 'Κωδικός Θέσης (ADR-233)' })}
+            label={tParking('general.fields.code')}
             placeholderFallback="A-PK-Y1.01"
             infoExample="π.χ. A-PK-Y1.01 (Κτίριο A, Parking, Υπόγ.1, #01)"
             disabled={creating}

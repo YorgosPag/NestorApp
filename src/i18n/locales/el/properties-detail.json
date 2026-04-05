@@ -97,7 +97,8 @@
     "rooms": "δωμ.",
     "description": "Περιγραφή",
     "features": "Χαρακτηριστικά",
-    "edit": "Επεξ."
+    "edit": "Επεξ.",
+    "floorPlan": "Κάτοψη"
   },
   "details": {
     "publicView": "Δημόσια Προβολή",

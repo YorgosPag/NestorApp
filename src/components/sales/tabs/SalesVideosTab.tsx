@@ -75,7 +75,7 @@ export function SalesVideosTab({ unit }: SalesVideosTabProps) {
       <section className={cn("flex flex-col items-center justify-center gap-2 p-6 text-center", colors.text.muted)}>
         <Video className={`${iconSizes.xl} opacity-50`} />
         <p className="text-sm">
-          {t('sales.tabs.videosNoAuth', { defaultValue: 'Απαιτείται σύνδεση για να δείτε τα βίντεο.' })}
+          {t('sales.tabs.videosNoAuth')}
         </p>
       </section>
     );

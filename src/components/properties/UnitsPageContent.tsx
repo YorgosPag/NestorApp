@@ -329,7 +329,7 @@ export function PropertiesManagementContent() {
   if (loading) {
     return (
       <PageContainer ariaLabel={t('page.pageLabel')}>
-        <PageLoadingState icon={NAVIGATION_ENTITIES.property.icon} message={t('page.loading', { defaultValue: 'Φόρτωση μονάδων...' })} layout="contained" />
+        <PageLoadingState icon={NAVIGATION_ENTITIES.property.icon} message={t('page.loading')} layout="contained" />
       </PageContainer>
     );
   }

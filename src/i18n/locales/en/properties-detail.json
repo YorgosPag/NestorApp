@@ -97,7 +97,8 @@
     "rooms": "rooms",
     "description": "Description",
     "features": "Features",
-    "edit": "Edit"
+    "edit": "Edit",
+    "floorPlan": "Floor Plan"
   },
   "details": {
     "publicView": "Public View",

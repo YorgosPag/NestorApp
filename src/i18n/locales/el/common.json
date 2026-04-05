@@ -112,7 +112,8 @@
     "search": "Αναζήτηση",
     "searchCompany": "Αναζήτηση Εταιρείας",
     "clearSearch": "Καθαρισμός αναζήτησης",
-    "contact": "Επαφή"
+    "contact": "Επαφή",
+    "email": "Email"
   },
   "clickableField": {
     "sendEmail": "Αποστολή email στο {value} μέσω Gmail",
