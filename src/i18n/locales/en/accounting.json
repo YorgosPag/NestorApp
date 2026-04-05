@@ -688,5 +688,45 @@
       "message": "A certificate for this customer and year {{year}} already exists.",
       "viewExisting": "View existing certificate →"
     }
+  },
+  "setup": {
+    "customCategories": {
+      "empty": "No custom categories yet.",
+      "inactive": "Inactive",
+      "addNew": "New Category",
+      "editTitle": "Edit Category",
+      "createTitle": "New Category",
+      "listAriaLabel": "Custom categories list",
+      "editAriaLabel": "Edit {{name}}",
+      "deleteAriaLabel": "Delete {{name}}",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "types": {
+        "income": "Income",
+        "expense": "Expense"
+      },
+      "form": {
+        "type": "Type",
+        "label": "Category name",
+        "labelPlaceholder": "e.g. Steel Subcontractors",
+        "description": "Description",
+        "descriptionPlaceholder": "e.g. Steel subcontractors for construction sites",
+        "mydataCode": "myDATA Code (AADE)",
+        "mydataCodePlaceholder": "Select myDATA code",
+        "e3Code": "E3 Code",
+        "e3CodePlaceholder": "e.g. 585_001",
+        "vatRate": "VAT Rate",
+        "vatDeductible": "VAT Deductibility"
+      },
+      "vatOptions": {
+        "exempt": "0% (Exempt)"
+      },
+      "deductibleOptions": {
+        "full": "100% — Full deduction",
+        "mixed": "50% — Mixed use",
+        "none": "0% — Not deductible"
+      }
+    }
   }
 }

@@ -688,5 +688,45 @@
       "message": "Υπάρχει ήδη βεβαίωση για αυτόν τον πελάτη και το έτος {{year}}.",
       "viewExisting": "Προβολή υπάρχουσας βεβαίωσης →"
     }
+  },
+  "setup": {
+    "customCategories": {
+      "empty": "Δεν υπάρχουν custom κατηγορίες ακόμη.",
+      "inactive": "Ανενεργή",
+      "addNew": "Νέα Κατηγορία",
+      "editTitle": "Επεξεργασία Κατηγορίας",
+      "createTitle": "Νέα Κατηγορία",
+      "listAriaLabel": "Λίστα custom κατηγοριών",
+      "editAriaLabel": "Επεξεργασία {{name}}",
+      "deleteAriaLabel": "Διαγραφή {{name}}",
+      "cancel": "Ακύρωση",
+      "save": "Αποθήκευση",
+      "create": "Δημιουργία",
+      "types": {
+        "income": "Έσοδο",
+        "expense": "Έξοδο"
+      },
+      "form": {
+        "type": "Τύπος",
+        "label": "Όνομα κατηγορίας",
+        "labelPlaceholder": "π.χ. Υπεργολαβίες Σιδηρού",
+        "description": "Περιγραφή",
+        "descriptionPlaceholder": "π.χ. Υπεργολαβίες σιδηρού για εργοτάξια",
+        "mydataCode": "Κωδικός myDATA (ΑΑΔΕ)",
+        "mydataCodePlaceholder": "Επιλέξτε κωδικό myDATA",
+        "e3Code": "Κωδικός Ε3",
+        "e3CodePlaceholder": "π.χ. 585_001",
+        "vatRate": "Συντελεστής ΦΠΑ",
+        "vatDeductible": "Εκπτωσιμότητα ΦΠΑ"
+      },
+      "vatOptions": {
+        "exempt": "0% (Απαλλαγή)"
+      },
+      "deductibleOptions": {
+        "full": "100% — Πλήρης έκπτωση",
+        "mixed": "50% — Μικτή χρήση",
+        "none": "0% — Δεν εκπίπτει"
+      }
+    }
   }
 }

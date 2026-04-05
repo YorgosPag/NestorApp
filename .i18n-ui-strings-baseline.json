@@ -1,14 +1,13 @@
 {
   "_meta": {
     "description": "i18n hardcoded UI strings baseline (JSX text, attrs, errors, toasts)",
-    "generated": "2026-04-05T22:53:10Z",
-    "totalViolations": 242,
-    "totalFiles": 86,
+    "generated": "2026-04-05T22:57:41Z",
+    "totalViolations": 231,
+    "totalFiles": 85,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "patterns": ["JSX text", "attributes", "throw/alert/confirm", "toast calls"]
   },
   "files": {
-    "src/subapps/accounting/components/setup/CustomCategoriesSection.tsx": 11,
     "src/app/admin/link-properties/page.tsx": 9,
     "src/subapps/dxf-viewer/debug/TestResultsModal.tsx": 8,
     "src/services/measurements/boq-service.ts": 8,

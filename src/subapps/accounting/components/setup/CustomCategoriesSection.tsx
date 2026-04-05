@@ -230,7 +230,7 @@ export function CustomCategoriesSection() {
             <Spinner />
           </div>
         ) : (
-          <section aria-label="Λίστα custom κατηγοριών">
+          <section aria-label={t('setup.customCategories.listAriaLabel')}>
             {categories.length === 0 ? (
               <p className={cn("text-sm py-2", colors.text.muted)}>
                 {t('setup.customCategories.empty', 'Δεν υπάρχουν custom κατηγορίες ακόμη.')}
@@ -321,8 +321,8 @@ export function CustomCategoriesSection() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="income">Έσοδο</SelectItem>
-                    <SelectItem value="expense">Έξοδο</SelectItem>
+                    <SelectItem value="income">{t('setup.customCategories.types.income')}</SelectItem>
+                    <SelectItem value="expense">{t('setup.customCategories.types.expense')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -338,7 +338,7 @@ export function CustomCategoriesSection() {
                 id="cat-label"
                 value={form.label}
                 onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-                placeholder="π.χ. Υπεργολαβίες Σιδηρού"
+                placeholder={t('setup.customCategories.form.labelPlaceholder')}
               />
             </div>
 
@@ -351,7 +351,7 @@ export function CustomCategoriesSection() {
                 id="cat-desc"
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="π.χ. Υπεργολαβίες σιδηρού για εργοτάξια"
+                placeholder={t('setup.customCategories.form.descriptionPlaceholder')}
               />
             </div>
 
@@ -366,7 +366,7 @@ export function CustomCategoriesSection() {
                 onValueChange={(v) => setForm((f) => ({ ...f, mydataCode: v }))}
               >
                 <SelectTrigger id="cat-mydata">
-                  <SelectValue placeholder="Επιλέξτε κωδικό myDATA" />
+                  <SelectValue placeholder={t('setup.customCategories.form.mydataCodePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {mydataOptions.map((opt) => (
@@ -387,7 +387,7 @@ export function CustomCategoriesSection() {
                 id="cat-e3"
                 value={form.e3Code}
                 onChange={(e) => setForm((f) => ({ ...f, e3Code: e.target.value }))}
-                placeholder="π.χ. 585_001"
+                placeholder={t('setup.customCategories.form.e3CodePlaceholder')}
               />
             </div>
 
@@ -409,7 +409,7 @@ export function CustomCategoriesSection() {
                   <SelectItem value="24">24%</SelectItem>
                   <SelectItem value="13">13%</SelectItem>
                   <SelectItem value="6">6%</SelectItem>
-                  <SelectItem value="0">0% (Απαλλαγή)</SelectItem>
+                  <SelectItem value="0">{t('setup.customCategories.vatOptions.exempt')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -432,9 +432,9 @@ export function CustomCategoriesSection() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="100">100% — Πλήρης έκπτωση</SelectItem>
-                  <SelectItem value="50">50% — Μικτή χρήση</SelectItem>
-                  <SelectItem value="0">0% — Δεν εκπίπτει</SelectItem>
+                  <SelectItem value="100">{t('setup.customCategories.deductibleOptions.full')}</SelectItem>
+                  <SelectItem value="50">{t('setup.customCategories.deductibleOptions.mixed')}</SelectItem>
+                  <SelectItem value="0">{t('setup.customCategories.deductibleOptions.none')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
