@@ -92,3 +92,8 @@
   - **Migrated**:
     - `src/types/building/contracts.ts` — inline `BuildingPriority` (4 values) → `export type BuildingPriority = PriorityLevel`. Inline `RenovationStatus` (4 values) → `export type { RenovationStatus } from '@/constants/renovation-statuses'`.
     - `src/config/report-builder/domain-definitions.ts` — local `PROJECT_PRIORITIES` literal array → `const PROJECT_PRIORITIES = PRIORITY_LEVELS` (semantic alias πάνω στο shared SSoT).
+- **2026-04-05 (Batch 9F-1)**: `ProjectStatus` centralization.
+  - **Created**: `src/constants/project-statuses.ts` — `PROJECT_STATUSES` (6, incl. `deleted`), `ProjectStatus` union, `isProjectStatus()` guard, derived subsets `ACTIVE_PROJECT_STATUSES` (5, non-deleted) + `IN_PROGRESS_PROJECT_STATUSES` (3) + αντίστοιχα guards.
+  - **Migrated**:
+    - `src/types/project.ts` — inline union (6 values) → `export type { ProjectStatus } from '@/constants/project-statuses'`.
+    - `src/config/report-builder/domain-definitions.ts` — local 5-value array → `const PROJECT_STATUSES = ACTIVE_PROJECT_STATUSES` (subset import excluding `deleted` για να διατηρηθεί η prior filter-dropdown συμπεριφορά).

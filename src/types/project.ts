@@ -2,7 +2,9 @@
 import type { ProjectAddress } from './project/addresses';
 import type { LandownerEntry } from '@/types/ownership-table';
 
-export type ProjectStatus = 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled' | 'deleted';
+// ADR-287 — ProjectStatus SSoT: canonical union lives στο
+// `src/constants/project-statuses.ts`. Re-export για backward-compat.
+export type { ProjectStatus } from '@/constants/project-statuses';
 
 /** 🏢 ENTERPRISE: Project types for construction industry */
 export type ProjectType = 'residential' | 'commercial' | 'industrial' | 'mixed' | 'infrastructure' | 'renovation';

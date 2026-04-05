@@ -16,6 +16,7 @@ import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
 import { ENERGY_CLASSES } from '@/constants/energy-classes';
 import { BUILDING_TYPES } from '@/constants/building-types';
 import { PRIORITY_LEVELS } from '@/constants/priority-levels';
+import { ACTIVE_PROJECT_STATUSES } from '@/constants/project-statuses';
 import type {
   BuilderDomainId,
   DomainDefinition,
@@ -71,9 +72,10 @@ import {
 // Enum Value Constants (SSoT — match actual Firestore data)
 // ============================================================================
 
-const PROJECT_STATUSES = [
-  'planning', 'in_progress', 'completed', 'on_hold', 'cancelled',
-] as const;
+// ADR-287 — ProjectStatus SSoT lives στο `@/constants/project-statuses`.
+// Χρησιμοποιείται το `ACTIVE_PROJECT_STATUSES` subset (5 values) ώστε το
+// soft-deleted `deleted` να μην εμφανίζεται στα report-builder dropdowns.
+const PROJECT_STATUSES = ACTIVE_PROJECT_STATUSES;
 
 const PROJECT_TYPES = [
   'residential', 'commercial', 'industrial', 'mixed', 'infrastructure', 'renovation',
