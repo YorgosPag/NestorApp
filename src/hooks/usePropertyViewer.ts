@@ -202,9 +202,7 @@ export function usePropertyViewer() {
     }
 
     if (!selectedProperty || selectedProperty.id !== propertyId) {
-      notifyError(t('viewer.messages.selectSinglePropertyToEdit', {
-        defaultValue: 'Select the property you want to edit before applying changes.',
-      }));
+      notifyError(t('viewer.messages.selectSinglePropertyToEdit'));
       return;
     }
 
@@ -214,9 +212,7 @@ export function usePropertyViewer() {
         properties.map((property) => (property.id === propertyId ? { ...property, ...updates } : property)),
         description,
       );
-      success(t('viewer.messages.updateSuccess', {
-        defaultValue: 'Property changes were saved.',
-      }));
+      success(t('viewer.messages.updateSuccess'));
     });
 
     if (!completed) {

@@ -2,6 +2,7 @@
   "viewer": {
     "messages": {
       "updateSuccess": "Property changes were saved.",
+      "selectSinglePropertyToEdit": "Select the property you want to edit before applying changes.",
       "selectFloorBeforeCreate": "Select a floor with a building link before creating a property from the viewer.",
       "orphanBuildingBlocked": "The building is not linked to a project — fix it before creating properties.",
       "createFailed": "The property could not be created from the viewer.",

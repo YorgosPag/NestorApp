@@ -202,10 +202,10 @@ export function AssetsPageContent() {
       {/* Content */}
       <section className="p-6">
         {loading ? (
-          <PageLoadingState icon={HardDrive} message={t('assets.loading', { defaultValue: 'Φόρτωση παγίων...' })} layout="contained" />
+          <PageLoadingState icon={HardDrive} message={t('assets.loading')} layout="contained" />
         ) : error ? (
           <PageErrorState
-            title={t('assets.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            title={t('assets.loadError')}
             message={error}
             onRetry={refetch}
             retryLabel={t('common.retry')}

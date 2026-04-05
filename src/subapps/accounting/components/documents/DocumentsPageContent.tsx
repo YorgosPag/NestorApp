@@ -265,10 +265,10 @@ export function DocumentsPageContent() {
       {/* Content */}
       <section className="p-6">
         {loading ? (
-          <PageLoadingState icon={FileText} message={t('documents.loading', { defaultValue: 'Φόρτωση παραστατικών...' })} layout="contained" />
+          <PageLoadingState icon={FileText} message={t('documents.loading')} layout="contained" />
         ) : error ? (
           <PageErrorState
-            title={t('documents.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            title={t('documents.loadError')}
             message={error}
             onRetry={refetch}
             retryLabel={t('common.retry')}

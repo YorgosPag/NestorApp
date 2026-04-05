@@ -116,6 +116,8 @@
   "bank": {
     "title": "Bank Reconciliation",
     "description": "Import and match bank transactions",
+    "loading": "Loading bank transactions...",
+    "loadError": "Loading error",
     "importCSV": "Import CSV",
     "matchTransactions": "Match Transactions",
     "transactions": "Transactions",
@@ -183,6 +185,8 @@
   "assets": {
     "title": "Fixed Assets",
     "description": "Manage equipment and depreciation",
+    "loading": "Loading assets...",
+    "loadError": "Loading error",
     "addAsset": "Add Asset",
     "noAssets": "No assets registered",
     "noAssetsDescription": "Register your first fixed asset",
@@ -214,6 +218,8 @@
   "documents": {
     "title": "AI Documents",
     "description": "AI processing of incoming expense documents",
+    "loading": "Loading documents...",
+    "loadError": "Loading error",
     "newDocument": "New Document",
     "noDocuments": "No documents found",
     "uploadTitle": "Submit Document for Analysis",

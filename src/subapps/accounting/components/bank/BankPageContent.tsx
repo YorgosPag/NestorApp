@@ -223,10 +223,10 @@ export function BankPageContent() {
       {/* Content */}
       <section className="p-6">
         {loading ? (
-          <PageLoadingState icon={Landmark} message={t('bank.loading', { defaultValue: 'Φόρτωση τραπεζικών κινήσεων...' })} layout="contained" />
+          <PageLoadingState icon={Landmark} message={t('bank.loading')} layout="contained" />
         ) : error ? (
           <PageErrorState
-            title={t('bank.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            title={t('bank.loadError')}
             message={error}
             onRetry={refetch}
             retryLabel={t('common.retry')}
