@@ -81,3 +81,8 @@
   - **Migrated**:
     - `src/types/building/contracts.ts` — inline union (9 values) → `export type { EnergyClass } from '@/constants/energy-classes'`.
     - `src/config/report-builder/domain-definitions.ts` — local `ENERGY_CLASSES` array αφαιρέθηκε · imported από SSoT.
+- **2026-04-05 (Batch 9D)**: `BuildingType` centralization.
+  - **Created**: `src/constants/building-types.ts` — `BUILDING_TYPES` (6), `BuildingType` union, `isBuildingType()` guard, derived subset `NON_RESIDENTIAL_BUILDING_TYPES` (4) + `isNonResidentialBuildingType()` guard.
+  - **Migrated**:
+    - `src/types/building/contracts.ts` — inline union (6 values) → `export type { BuildingType } from '@/constants/building-types'`.
+    - `src/config/report-builder/domain-definitions.ts` — local `BUILDING_TYPES` array αφαιρέθηκε · imported από SSoT.

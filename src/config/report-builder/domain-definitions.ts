@@ -14,6 +14,7 @@ import { ALL_PROPERTY_TYPES_WITH_DEPRECATED } from '@/constants/property-types';
 import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
 import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
 import { ENERGY_CLASSES } from '@/constants/energy-classes';
+import { BUILDING_TYPES } from '@/constants/building-types';
 import type {
   BuilderDomainId,
   DomainDefinition,
@@ -83,9 +84,8 @@ const BUILDING_STATUSES = [
   'planning', 'construction', 'completed', 'active',
 ] as const;
 
-const BUILDING_TYPES = [
-  'residential', 'commercial', 'industrial', 'mixed', 'office', 'warehouse',
-] as const;
+// ADR-287 — BuildingType SSoT lives στο `@/constants/building-types`.
+// Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.
 
 // ADR-287 — EnergyClass SSoT lives στο `@/constants/energy-classes`.
 // Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.

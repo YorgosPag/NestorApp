@@ -8,8 +8,9 @@ import type { PropertyType } from '@/types/property';
 // NOTE: Contact → @/types/contacts, Project → @/types/project (canonical types)
 // Dead Contact/Project interfaces removed 2026-03-13 (centralization audit)
 
-  /** 🏢 ENTERPRISE: Building types for construction industry */
-  export type BuildingType = 'residential' | 'commercial' | 'industrial' | 'mixed' | 'office' | 'warehouse';
+  // ADR-287 — BuildingType SSoT: canonical union lives στο
+  // `src/constants/building-types.ts`. Re-export για backward-compat.
+  export type { BuildingType } from '@/constants/building-types';
 
   /** 🏢 ENTERPRISE: Priority levels for building management */
   export type BuildingPriority = 'low' | 'medium' | 'high' | 'critical';
