@@ -108,18 +108,18 @@ export function FileInspector({
       if (copied) {
         success(t('technical.pathCopied'));
       } else {
-        error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
+        error(t('copy.copyError', { ns: 'common' }));
       }
     } catch (err) {
       logger.error('Failed to copy path', { error: err });
-      error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
+      error(t('copy.copyError', { ns: 'common' }));
     }
   }, [file.storagePath, success, error, t]);
 
   // 🏢 ENTERPRISE: Format timestamp using centralized formatFlexibleDateTime (ADR-208)
   const formatDate = (timestamp: unknown): string => {
     const result = formatFlexibleDateTime(timestamp);
-    return result === '-' ? t('technical.unavailable', { defaultValue: 'N/A' }) : result;
+    return result === '-' ? t('technical.unavailable') : result;
   };
 
   return (
