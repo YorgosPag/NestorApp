@@ -1,17 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T21:00:10Z",
-    "totalViolations": 98,
-    "totalFiles": 59,
+    "generated": "2026-04-05T21:12:00Z",
+    "totalViolations": 82,
+    "totalFiles": 54,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/components/contacts/details/ProjectParticipationSection.tsx": 4,
-    "src/subapps/accounting/components/invoices/EditInvoicePageContent.tsx": 3,
-    "src/features/property-details/PropertyDetailsContent.tsx": 3,
-    "src/features/properties-sidebar/PropertiesSidebar.tsx": 3,
-    "src/components/shared/files/FileInspector.tsx": 3,
     "src/components/projects/ika/components/WorkerAssignmentDialog.tsx": 3,
     "src/components/building-management/tabs/GeneralTabContent.tsx": 3,
     "src/subapps/accounting/components/vat/VATPageContent.tsx": 2,
