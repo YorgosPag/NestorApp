@@ -9,7 +9,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import {
   Dialog,
   DialogContent,
@@ -104,6 +104,7 @@ export function ChequeDetailDialog({
 }: ChequeDetailDialogProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('payments');
+  const { success, error: notifyError } = useNotifications();
   const isTerminal = isTerminalChequeStatus(cheque.status);
   const nextStatuses = getValidNextChequeStatuses(cheque.status);
 
@@ -128,16 +129,16 @@ export function ChequeDetailDialog({
       try {
         const result = await fn();
         if (result.success) {
-          toast.success(label);
+          success(label);
           onOpenChange(false);
         } else {
-          toast.error(result.error ?? t('errors.createFailed'));
+          notifyError(result.error ?? t('errors.createFailed'));
         }
       } finally {
         setIsBusy(false);
       }
     },
-    [onOpenChange]
+    [onOpenChange, t, success, notifyError]
   );
 
   return (

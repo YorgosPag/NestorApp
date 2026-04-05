@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { BankSelector } from '@/components/banking/BankSelector';
 import type { BankInfo } from '@/constants/greek-banks';
 import {
@@ -50,6 +50,7 @@ export function AddChequeDialog({
   contactId,
 }: AddChequeDialogProps) {
   const { t } = useTranslation('payments');
+  const { success, error: notifyError } = useNotifications();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
@@ -110,16 +111,16 @@ export function AddChequeDialog({
 
       const result = await onAdd(input);
       if (result.success) {
-        toast.success(t('chequeRegistry.actions.chequeCreated'));
+        success(t('chequeRegistry.actions.chequeCreated'));
         resetForm();
         onOpenChange(false);
       } else {
-        toast.error(result.error ?? t('errors.createFailed'));
+        notifyError(result.error ?? t('errors.createFailed'));
       }
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, chequeType, chequeNumber, amount, bankName, bankBranch, drawerName, issueDate, maturityDate, crossedCheque, notes, projectId, paymentPlanId, contactId, onAdd, resetForm, onOpenChange, t]);
+  }, [canSubmit, chequeType, chequeNumber, amount, bankName, bankBranch, drawerName, issueDate, maturityDate, crossedCheque, notes, projectId, paymentPlanId, contactId, onAdd, resetForm, onOpenChange, t, success, notifyError]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

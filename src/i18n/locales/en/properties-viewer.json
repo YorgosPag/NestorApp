@@ -1,5 +1,20 @@
 {
   "viewer": {
+    "messages": {
+      "updateSuccess": "Property changes were saved.",
+      "selectFloorBeforeCreate": "Select a floor with a building link before creating a property from the viewer.",
+      "orphanBuildingBlocked": "The building is not linked to a project — fix it before creating properties.",
+      "createFailed": "The property could not be created from the viewer.",
+      "createSuccess": "Property created successfully.",
+      "duplicateFailed": "The property could not be duplicated from the viewer.",
+      "duplicateSuccess": "Property duplicated successfully.",
+      "deleteSuccess": "Property deleted successfully.",
+      "updateFailed": "The property update could not be saved. Refresh and try again."
+    },
+    "defaults": {
+      "newPropertyName": "New property",
+      "duplicatePropertyName": "{{name}} copy"
+    },
     "tools": {
       "select": "Select",
       "create": "Create",

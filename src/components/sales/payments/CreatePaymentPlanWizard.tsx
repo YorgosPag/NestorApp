@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { PAYMENT_PLAN_TEMPLATES } from '@/config/payment-plan-templates';
 import type {
   PaymentPlanTemplate,
@@ -91,6 +91,7 @@ export function CreatePaymentPlanWizard({
 }: CreatePaymentPlanWizardProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('payments');
+  const { success, error: notifyError } = useNotifications();
 
   // ADR-244: Multi-owner step — only shown when >1 owner
   const hasMultipleOwners = (owners?.length ?? 0) > 1;
@@ -174,12 +175,12 @@ export function CreatePaymentPlanWizard({
     if (!selectedTemplate) return;
     const total = parseFloat(totalAmount);
     if (isNaN(total) || total <= 0) {
-      toast.error(t('errors.invalidAmount'));
+      notifyError(t('errors.invalidAmount'));
       return;
     }
     setInstallments(computeInstallments(selectedTemplate, total));
     setStep(STEP_INSTALLMENTS);
-  }, [selectedTemplate, totalAmount, computeInstallments, STEP_INSTALLMENTS]);
+  }, [selectedTemplate, totalAmount, computeInstallments, STEP_INSTALLMENTS, t, notifyError]);
 
   // Update individual installment amount
   const updateInstallmentAmount = useCallback((idx: number, newAmount: string) => {
@@ -229,13 +230,13 @@ export function CreatePaymentPlanWizard({
     setSubmitting(false);
 
     if (result.success) {
-      toast.success(t('paymentPlan.createPlan'));
+      success(t('paymentPlan.createPlan'));
       onOpenChange(false);
       setStep(0);
     } else {
-      toast.error(result.error ?? t('errors.createFailed'));
+      notifyError(result.error ?? t('errors.createFailed'));
     }
-  }, [totalAmount, taxRegime, installments, buildingId, projectId, ownerContactId, ownerName, planMode, hasMultipleOwners, owners, onCreate, onCreateSplit, onOpenChange, t]);
+  }, [totalAmount, taxRegime, installments, buildingId, projectId, ownerContactId, ownerName, planMode, hasMultipleOwners, owners, onCreate, onCreateSplit, onOpenChange, t, success, notifyError]);
 
   const installmentSum = installments.reduce((s, i) => s + i.amount, 0);
   const total = parseFloat(totalAmount) || 0;

@@ -181,3 +181,4 @@ const handleSubmit = async () => {
 |------|--------|--------|
 | 2026-03-19 | Initial SPEC creation — full 14-file list | Claude Code |
 | 2026-04-05 | ESLint enforcement added (`custom/no-direct-sonner-import`, warn level) — will block new violations while 20 legacy files are migrated. File count grew from 14 → 20 since initial SPEC; updated baseline. Rule promoted to `error` once count hits 0. | Claude Code |
+| 2026-04-05 | **MIGRATION COMPLETE** — All 20 files migrated to `useNotifications()` across 4 commits (Reports 3, Sales/Legal 3, Building Mgmt 5, Sales/Payments 9). ESLint rule promoted to `error` level. Zero remaining direct sonner imports. SPEC-251C closed. | Claude Code |

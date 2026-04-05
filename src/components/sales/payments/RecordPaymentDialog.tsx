@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { BankSelector } from '@/components/banking/BankSelector';
 import type { BankInfo } from '@/constants/greek-banks';
 import type {
@@ -71,6 +71,7 @@ export function RecordPaymentDialog({
   onRecord,
 }: RecordPaymentDialogProps) {
   const { t } = useTranslation('payments');
+  const { success, error: notifyError } = useNotifications();
 
   const remaining = installment.amount - installment.paidAmount;
   const [amount, setAmount] = useState(remaining.toString());
@@ -118,7 +119,7 @@ export function RecordPaymentDialog({
   const handleSubmit = useCallback(async () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      toast.error(t('errors.invalidAmount'));
+      notifyError(t('errors.invalidAmount'));
       return;
     }
 
@@ -135,12 +136,12 @@ export function RecordPaymentDialog({
     setSubmitting(false);
 
     if (result.success) {
-      toast.success(`${t('dialog.paymentRecorded')} €${numAmount.toLocaleString('el-GR')}`);
+      success(`${t('dialog.paymentRecorded')} €${numAmount.toLocaleString('el-GR')}`);
       onOpenChange(false);
     } else {
-      toast.error(result.error ?? t('errors.paymentFailed'));
+      notifyError(result.error ?? t('errors.paymentFailed'));
     }
-  }, [amount, method, paymentDate, notes, installment.index, paymentPlanId, onRecord, onOpenChange, buildMethodDetails, t]);
+  }, [amount, method, paymentDate, notes, installment.index, paymentPlanId, onRecord, onOpenChange, buildMethodDetails, t, success, notifyError]);
 
   const showBankFields = method === 'bank_transfer' || method === 'bank_cheque' || method === 'personal_cheque' || method === 'bank_loan';
 

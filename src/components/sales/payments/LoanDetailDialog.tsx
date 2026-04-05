@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { LoanStatusTimeline } from '@/components/sales/payments/LoanStatusTimeline';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type {
   LoanTracking,
   UpdateLoanInput,
@@ -77,6 +77,7 @@ export function LoanDetailDialog({
 }: LoanDetailDialogProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('payments');
+  const { success, error: notifyError } = useNotifications();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- Details Tab State ---
@@ -103,17 +104,17 @@ export function LoanDetailDialog({
     try {
       const result = await action();
       if (result.success) {
-        toast.success(successMsg);
+        success(successMsg);
         onOpenChange(false);
       } else {
-        toast.error(result.error ?? 'Error');
+        notifyError(result.error ?? 'Error');
       }
     } catch {
-      toast.error('Unexpected error');
+      notifyError('Unexpected error');
     } finally {
       setIsSubmitting(false);
     }
-  }, [onOpenChange]);
+  }, [onOpenChange, success, notifyError]);
 
   // Save details
   const handleSaveDetails = useCallback(() => {

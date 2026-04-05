@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { BankSelector } from '@/components/banking/BankSelector';
 import type { BankInfo } from '@/constants/greek-banks';
 import type { CreateLoanInput, DisbursementType } from '@/types/loan-tracking';
@@ -56,6 +56,7 @@ interface AddLoanDialogProps {
 
 export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddLoanDialogProps) {
   const { t } = useTranslation('payments');
+  const { success, error: notifyError } = useNotifications();
   const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [isPrimary, setIsPrimary] = useState(existingCount === 0);
@@ -78,7 +79,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
       const result = await onAdd(input);
 
       if (result.success) {
-        toast.success(t('loanTracking.addLoan'));
+        success(t('loanTracking.addLoan'));
         // Reset form
         setBankCode('');
         setBankName('');
@@ -86,14 +87,14 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
         setDisbursementType('lump_sum');
         onOpenChange(false);
       } else {
-        toast.error(result.error ?? 'Error');
+        notifyError(result.error ?? 'Error');
       }
     } catch {
-      toast.error('Unexpected error');
+      notifyError('Unexpected error');
     } finally {
       setIsSubmitting(false);
     }
-  }, [bankName, isPrimary, requestedAmount, disbursementType, onAdd, onOpenChange, toast, t]);
+  }, [bankName, isPrimary, requestedAmount, disbursementType, onAdd, onOpenChange, t, success, notifyError]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

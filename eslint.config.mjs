@@ -36,9 +36,8 @@ export default defineConfig([
       "custom/no-i18n-defaultvalue-literals": "error",
 
       // 🏢 ADR-219 / SPEC-251C — forbid direct sonner imports (use NotificationProvider)
-      // Warn for now (20 legacy files pending migration via SPEC-251C).
-      // Promote to "error" once all files migrated.
-      "custom/no-direct-sonner-import": "warn",
+      // Promoted to "error" after full 20-file migration (2026-04-05).
+      "custom/no-direct-sonner-import": "error",
 
       // Enable custom hardcoded strings detection
       "custom/no-hardcoded-strings": ["error", {

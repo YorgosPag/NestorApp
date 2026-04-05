@@ -15,7 +15,7 @@ import {
   TrendingUp,
   RefreshCw,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -176,6 +176,7 @@ export function SettingsTab({
   t,
 }: SettingsTabProps) {
   const colors = useSemanticColors();
+  const { success, error: notifyError } = useNotifications();
   const [localSpread, setLocalSpread] = useState(spreads?.defaultSpread ?? 2.40);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -183,9 +184,9 @@ export function SettingsTab({
     setRefreshing(true);
     const res = await onRefreshRates();
     if (res.success) {
-      toast.success(t('costCalculator.settings.ratesRefreshed'));
+      success(t('costCalculator.settings.ratesRefreshed'));
     } else {
-      toast.error(res.error ?? 'Failed');
+      notifyError(res.error ?? 'Failed');
     }
     setRefreshing(false);
   };
@@ -195,9 +196,9 @@ export function SettingsTab({
     const updated = { ...spreads, defaultSpread: localSpread };
     const res = await onUpdateSpreads(updated);
     if (res.success) {
-      toast.success(t('costCalculator.settings.spreadSaved'));
+      success(t('costCalculator.settings.spreadSaved'));
     } else {
-      toast.error(res.error ?? 'Failed');
+      notifyError(res.error ?? 'Failed');
     }
   };
 

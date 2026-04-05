@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type {
   Installment,
   InstallmentType,
@@ -102,6 +102,7 @@ export function EditInstallmentDialog({
 }: EditInstallmentDialogProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('payments');
+  const { success, error: notifyError } = useNotifications();
 
   const isNotesOnly = planStatus === 'active';
   const isDraftOrNeg = planStatus === 'negotiation' || planStatus === 'draft';
@@ -150,10 +151,10 @@ export function EditInstallmentDialog({
         setSubmitting(false);
 
         if (result.success) {
-          toast.success(t('installments.updateSuccess'));
+          success(t('installments.updateSuccess'));
           onOpenChange(false);
         } else {
-          toast.error(result.error ?? 'Error');
+          notifyError(result.error ?? 'Error');
         }
         return;
       }
@@ -162,7 +163,7 @@ export function EditInstallmentDialog({
       const numAmount = parseFloat(amount);
       const numPercentage = parseFloat(percentage);
       if (isNaN(numAmount) || numAmount <= 0) {
-        toast.error(t('errors.invalidAmount'));
+        notifyError(t('errors.invalidAmount'));
         return;
       }
 
@@ -179,25 +180,25 @@ export function EditInstallmentDialog({
       setSubmitting(false);
 
       if (result.success) {
-        toast.success(t('installments.updateSuccess'));
+        success(t('installments.updateSuccess'));
         onOpenChange(false);
       } else {
-        toast.error(result.error ?? 'Error');
+        notifyError(result.error ?? 'Error');
       }
     } else {
       // Add mode
       const numAmount = parseFloat(amount);
       const numPercentage = parseFloat(percentage);
       if (!label.trim()) {
-        toast.error(t('errors.invalidLabel'));
+        notifyError(t('errors.invalidLabel'));
         return;
       }
       if (isNaN(numAmount) || numAmount <= 0) {
-        toast.error(t('errors.invalidAmount'));
+        notifyError(t('errors.invalidAmount'));
         return;
       }
       if (!dueDate) {
-        toast.error(t('errors.invalidDueDate'));
+        notifyError(t('errors.invalidDueDate'));
         return;
       }
 
@@ -217,13 +218,13 @@ export function EditInstallmentDialog({
       setSubmitting(false);
 
       if (result.success) {
-        toast.success(t('installments.addSuccess'));
+        success(t('installments.addSuccess'));
         onOpenChange(false);
       } else {
-        toast.error(result.error ?? 'Error');
+        notifyError(result.error ?? 'Error');
       }
     }
-  }, [mode, installment, isNotesOnly, label, type, amount, percentage, dueDate, notes, insertAtIndex, onAdd, onUpdate, onOpenChange, t]);
+  }, [mode, installment, isNotesOnly, label, type, amount, percentage, dueDate, notes, insertAtIndex, onAdd, onUpdate, onOpenChange, t, success, notifyError]);
 
   // Delete handler
   const handleDelete = useCallback(async () => {
@@ -235,12 +236,12 @@ export function EditInstallmentDialog({
     setDeleteConfirmOpen(false);
 
     if (result.success) {
-      toast.success(t('installments.deleteSuccess'));
+      success(t('installments.deleteSuccess'));
       onOpenChange(false);
     } else {
-      toast.error(result.error ?? 'Error');
+      notifyError(result.error ?? 'Error');
     }
-  }, [installment, onDelete, onOpenChange, t]);
+  }, [installment, onDelete, onOpenChange, t, success, notifyError]);
 
   const canDelete =
     mode === 'edit' &&

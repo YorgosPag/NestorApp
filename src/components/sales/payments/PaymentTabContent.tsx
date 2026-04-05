@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { Property } from '@/types/property';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import type { CreateInstallmentInput, CreatePaymentPlanInput } from '@/types/payment-plan';
@@ -56,6 +56,7 @@ interface PaymentTabContentProps {
 export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('payments');
+  const { success, error: notifyError } = useNotifications();
   const {
     plan,
     plans,
@@ -148,11 +149,11 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
     const result = await deletePlan(plan.id);
     setDeleteConfirmOpen(false);
     if (result.success) {
-      toast.success(t('paymentPlan.deleteSuccess'));
+      success(t('paymentPlan.deleteSuccess'));
     } else {
-      toast.error(result.error ?? 'Error');
+      notifyError(result.error ?? 'Error');
     }
-  }, [plan, deletePlan, t]);
+  }, [plan, deletePlan, t, success, notifyError]);
 
   // Loading
   if (isLoading) {

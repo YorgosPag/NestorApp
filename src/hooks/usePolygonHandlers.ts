@@ -74,9 +74,7 @@ export function usePolygonHandlers({
     const resolvedBuildingId = selectedFloor?.buildingId ?? floorContext?.buildingId ?? '';
 
     if (!selectedFloorId || !resolvedBuildingId) {
-      warning(t('viewer.messages.selectFloorBeforeCreate', {
-        defaultValue: 'Select a floor with a building link before creating a property from the viewer.',
-      }));
+      warning(t('viewer.messages.selectFloorBeforeCreate'));
       logger.warn('Blocked viewer property creation because floor context is incomplete.', {
         selectedFloorId,
       });
@@ -86,9 +84,7 @@ export function usePolygonHandlers({
     // ADR-284 Batch 7: Resolve projectId from Building (required by server policy).
     const resolvedProjectId = await resolveProjectIdFromBuilding(resolvedBuildingId);
     if (!resolvedProjectId) {
-      warning(t('viewer.messages.orphanBuildingBlocked', {
-        defaultValue: 'The building is not linked to a project — fix it before creating properties.',
-      }));
+      warning(t('viewer.messages.orphanBuildingBlocked'));
       logger.warn('Blocked viewer property creation: orphan Building (no projectId)', {
         buildingId: resolvedBuildingId,
       });
@@ -98,9 +94,7 @@ export function usePolygonHandlers({
     try {
       const result = await createPropertyWithPolicy({
         propertyData: {
-          name: t('viewer.defaults.newPropertyName', {
-            defaultValue: 'New property',
-          }),
+          name: t('viewer.defaults.newPropertyName'),
           type: floorContext?.type ?? 'apartment',
           status: floorContext?.status ?? 'reserved',
           operationalStatus: floorContext?.operationalStatus ?? 'draft',
@@ -116,16 +110,12 @@ export function usePolygonHandlers({
       });
 
       if (!result.success || !result.propertyId) {
-        notifyError(t('viewer.messages.createFailed', {
-          defaultValue: 'The property could not be created from the viewer.',
-        }));
+        notifyError(t('viewer.messages.createFailed'));
         return;
       }
 
       setSelectedProperties([result.propertyId]);
-      notifySuccess(t('viewer.messages.createSuccess', {
-        defaultValue: 'Property created successfully.',
-      }));
+      notifySuccess(t('viewer.messages.createSuccess'));
     } catch (error) {
       notifyError(
         translatePropertyMutationError(
@@ -190,9 +180,7 @@ export function usePolygonHandlers({
       ? await resolveProjectIdFromBuilding(sourceProperty.buildingId)
       : null;
     if (!resolvedProjectId) {
-      notifyError(t('viewer.messages.orphanBuildingBlocked', {
-        defaultValue: 'The source building is not linked to a project — cannot duplicate.',
-      }));
+      notifyError(t('viewer.messages.orphanBuildingBlocked'));
       return;
     }
 
@@ -200,7 +188,6 @@ export function usePolygonHandlers({
       const result = await createPropertyWithPolicy({
         propertyData: {
           name: t('viewer.defaults.duplicatePropertyName', {
-            defaultValue: '{{name}} copy',
             name: sourceProperty.name,
           }),
           type: sourceProperty.type,
@@ -233,16 +220,12 @@ export function usePolygonHandlers({
       });
 
       if (!result.success || !result.propertyId) {
-        notifyError(t('viewer.messages.duplicateFailed', {
-          defaultValue: 'The property could not be duplicated from the viewer.',
-        }));
+        notifyError(t('viewer.messages.duplicateFailed'));
         return;
       }
 
       setSelectedProperties([result.propertyId]);
-      notifySuccess(t('viewer.messages.duplicateSuccess', {
-        defaultValue: 'Property duplicated successfully.',
-      }));
+      notifySuccess(t('viewer.messages.duplicateSuccess'));
     } catch (error) {
       notifyError(
         translatePropertyMutationError(
@@ -275,9 +258,7 @@ export function usePolygonHandlers({
           `Deleted property ${targetProperty.id}`,
         );
         setSelectedProperties((previous) => previous.filter((id) => id !== targetProperty.id));
-        notifySuccess(t('viewer.messages.deleteSuccess', {
-          defaultValue: 'Property deleted successfully.',
-        }));
+        notifySuccess(t('viewer.messages.deleteSuccess'));
       },
     );
   };
@@ -333,9 +314,7 @@ export function usePolygonHandlers({
       });
     } catch (error) {
       logger.error('Failed to persist property update to Firestore', { error });
-      notifyError(t('viewer.messages.updateFailed', {
-        defaultValue: 'The property update could not be saved. Refresh and try again.',
-      }));
+      notifyError(t('viewer.messages.updateFailed'));
     }
   };
 

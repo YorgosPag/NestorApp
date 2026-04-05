@@ -110,3 +110,4 @@ error(t('failed'));
 |------|--------|
 | 2026-03-13 | Initial implementation — Full migration from react-hot-toast to useNotifications |
 | 2026-04-05 | ESLint enforcement added — `custom/no-direct-sonner-import` rule (warn level). Blocks `import ... from 'sonner'` everywhere except `NotificationProvider.tsx`. Promote to `error` when SPEC-251C migration of 20 legacy files completes. See `eslint-rules/no-direct-sonner-import.js`. |
+| 2026-04-05 | SPEC-251C migration **COMPLETE** — All 20 legacy files migrated to `useNotifications()` across 4 modules (Reports, Sales/Legal, Building Mgmt, Sales/Payments). ESLint rule promoted to `error` level. Zero direct sonner imports remain outside `NotificationProvider.tsx`. |
