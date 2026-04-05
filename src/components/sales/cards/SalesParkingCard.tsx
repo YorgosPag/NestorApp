@@ -69,13 +69,13 @@ export function SalesParkingCard({
       {
         icon: Car,
         iconColor: 'text-blue-600',
-        label: t('parking:general.fields.type', { defaultValue: 'Τύπος' }),
+        label: t('parking:general.fields.type'),
         value: t(`parking:types.${spot.type ?? 'standard'}`, { defaultValue: spot.type ?? 'standard' }),
       },
       {
         icon: MapPin,
         iconColor: 'text-orange-600',
-        label: t('parking:general.fields.locationZone', { defaultValue: 'Ζώνη' }),
+        label: t('parking:general.fields.locationZone'),
         value: spot.locationZone
           ? t(`parking:locationZone.${spot.locationZone}`, { defaultValue: spot.locationZone })
           : '—',
@@ -83,7 +83,7 @@ export function SalesParkingCard({
       {
         icon: DollarSign,
         iconColor: 'text-green-600',
-        label: t('parking:general.fields.price', { defaultValue: 'Τιμή' }),
+        label: t('parking:general.fields.price'),
         value: formatCurrencyWhole(price > 0 ? price : null),
       },
     ];
@@ -92,7 +92,7 @@ export function SalesParkingCard({
       items.push({
         icon: Calculator,
         iconColor: 'text-pink-600',
-        label: t('parking:general.fields.area', { defaultValue: 'Εμβαδόν' }),
+        label: t('parking:general.fields.area'),
         value: `${area} m²`,
       });
     }
@@ -103,7 +103,7 @@ export function SalesParkingCard({
   return (
     <ListCard
       title={spot.number || spot.id}
-      subtitle={spot.floor ? `${t('parking:general.fields.floor', { defaultValue: 'Επίπεδο' })}: ${spot.floor}` : undefined}
+      subtitle={spot.floor ? `${t('parking:general.fields.floor')}: ${spot.floor}` : undefined}
       badges={badges}
       stats={stats}
       compact={compact}
