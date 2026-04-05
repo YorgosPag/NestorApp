@@ -100,7 +100,7 @@ export function WorkerAssignmentDialog({
 
       const mapped: SearchResult[] = (data?.contacts || []).map(c => ({
         id: c.id,
-        name: `${c.firstName} ${c.lastName}`.trim() || t('ika.workersTab.noName', { defaultValue: 'Χωρίς Όνομα' }),
+        name: `${c.firstName} ${c.lastName}`.trim() || t('ika.workersTab.noName'),
         specialty: c.specialty,
         amka: c.amka,
       }));
@@ -108,7 +108,7 @@ export function WorkerAssignmentDialog({
       setResults(mapped);
     } catch (err) {
       logger.error('Worker search failed', { error: err });
-      setSearchError(t('ika.workersTab.searchError', { defaultValue: 'Σφάλμα κατά την αναζήτηση' }));
+      setSearchError(t('ika.workersTab.searchError'));
     } finally {
       setIsSearching(false);
     }
@@ -167,7 +167,7 @@ export function WorkerAssignmentDialog({
               </Label>
               <Input
                 id="worker-search"
-                placeholder={t('ika.workersTab.searchPlaceholder', { defaultValue: 'Αναζήτηση με όνομα, ειδικότητα ή ΑΜΚΑ...' })}
+                placeholder={t('ika.workersTab.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
