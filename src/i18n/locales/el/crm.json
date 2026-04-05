@@ -9,7 +9,8 @@
   },
   "page": {
     "title": "Πίνακας CRM",
-    "subtitle": "Διαχείριση πελατειακών σχέσεων και pipeline πωλήσεων"
+    "subtitle": "Διαχείριση πελατειακών σχέσεων και pipeline πωλήσεων",
+    "loading": "Φόρτωση CRM..."
   },
   "tabs": {
     "overview": {

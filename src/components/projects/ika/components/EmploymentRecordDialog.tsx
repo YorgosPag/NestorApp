@@ -132,7 +132,7 @@ export function EmploymentRecordDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('common.cancel', { defaultValue: 'Cancel' })}
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleSave} disabled={!selectedClass}>
             {t('ika.stampsTab.dialog.save')}

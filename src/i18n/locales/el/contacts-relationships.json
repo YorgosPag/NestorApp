@@ -39,6 +39,7 @@
     "form": {
       "title": "Προσθήκη Νέας Σχέσης",
       "editTitle": "Επεξεργασία Σχέσης",
+      "alreadyRegistered": "Ήδη καταχωρημένο",
       "labels": {
         "contact": "Επαφή",
         "relationshipType": "Τύπος Σχέσης",

@@ -39,6 +39,7 @@
     "form": {
       "title": "Add New Relationship",
       "editTitle": "Edit Relationship",
+      "alreadyRegistered": "Already registered",
       "labels": {
         "contact": "Contact",
         "relationshipType": "Relationship Type",

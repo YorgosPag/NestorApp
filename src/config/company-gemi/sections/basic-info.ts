@@ -79,7 +79,7 @@ export const basicInfoSection: SectionConfig = {
       label: fieldLabels.gemiStatus,
       type: 'select',
       options: GEMI_STATUS_OPTIONS,
-      defaultValue: 'active',
+      initialValue: 'active',
       helpText: gemiHelps.company_status_help,
     },
   ],

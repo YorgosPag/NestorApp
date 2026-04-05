@@ -16,7 +16,7 @@ export function NotificationBell() {
   const isOpen = useNotificationDrawer(s => s.isOpen);
   const unread = useNotificationCenter(s => s.unread);
 
-  const label = t('notifications.title', { defaultValue: 'Notifications' });
+  const label = t('notifications.title');
 
   return (
     <Button

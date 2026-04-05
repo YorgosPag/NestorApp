@@ -43,7 +43,7 @@ export interface FieldConfig {
   /** Select options (only for type='select') */
   options?: SelectOption[];
   /** Default value */
-  defaultValue?: string;
+  initialValue?: string;
   /** Help text or description */
   helpText?: string;
   /** CSS class names for styling */

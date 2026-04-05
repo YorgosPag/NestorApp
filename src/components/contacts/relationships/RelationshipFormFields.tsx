@@ -151,7 +151,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     // Shows all options but prevents re-selection — Google-level UX
     if (usedRelationshipTypes.length === 0) return allOptions;
     return allOptions.map(option => usedRelationshipTypes.includes(option.value)
-      ? { ...option, disabled: true, disabledHint: t('relationships.form.alreadyRegistered', { defaultValue: 'Ήδη καταχωρημένο' }) }
+      ? { ...option, disabled: true, disabledHint: t('relationships.form.alreadyRegistered') }
       : option
     );
   }, [contactType, t, customRelTypes, usedRelationshipTypes]);

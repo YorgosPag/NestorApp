@@ -41,7 +41,7 @@ export const capitalSection: SectionConfig = {
       label: fieldLabels.currency,
       type: 'select',
       options: CURRENCY_OPTIONS,
-      defaultValue: 'EUR',
+      initialValue: 'EUR',
       helpText: gemiHelps.currency_help,
     },
     {

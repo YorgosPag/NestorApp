@@ -178,7 +178,7 @@ export function ApdPaymentsTabContent({ projectId }: ApdPaymentsTabContentProps)
       {isLoading && (
         <Card>
           <CardContent className={cn('text-center', spacing.padding.xl, colors.text.muted)}>
-            <p className={typography.body.sm}>{t('common.loading', { defaultValue: 'Loading...' })}</p>
+            <p className={typography.body.sm}>{t('common.loading')}</p>
           </CardContent>
         </Card>
       )}

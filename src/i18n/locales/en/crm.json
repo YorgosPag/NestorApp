@@ -9,7 +9,8 @@
   },
   "page": {
     "title": "CRM Dashboard",
-    "subtitle": "Customer relationship management and sales pipeline"
+    "subtitle": "Customer relationship management and sales pipeline",
+    "loading": "Loading CRM..."
   },
   "tabs": {
     "overview": {

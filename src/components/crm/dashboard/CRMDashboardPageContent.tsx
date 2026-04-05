@@ -76,7 +76,7 @@ export function CRMDashboardPageContent() {
   if (authLoading || loadingStats) {
     return (
       <PageContainer ariaLabel={t('page.title')}>
-        <PageLoadingState icon={BarChart3} message={t('page.loading', { defaultValue: 'Φόρτωση CRM...' })} layout="contained" />
+        <PageLoadingState icon={BarChart3} message={t('page.loading')} layout="contained" />
       </PageContainer>
     );
   }
