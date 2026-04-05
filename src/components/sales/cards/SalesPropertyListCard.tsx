@@ -83,7 +83,7 @@ export function SalesPropertyListCard({
   const badges = useMemo(() => [{
     label: hasCommercialStatus
       ? t(badgeConfig.labelKey, { defaultValue: commercialStatus })
-      : t('sales.commercialStatus.new', { defaultValue: 'Νέα' }),
+      : t('sales.commercialStatus.new'),
     variant: hasCommercialStatus ? badgeConfig.variant : ('outline' as BadgeVariant),
   }], [t, badgeConfig, commercialStatus, hasCommercialStatus]);
 
@@ -93,19 +93,19 @@ export function SalesPropertyListCard({
     {
       icon: NAVIGATION_ENTITIES.property.icon,
       iconColor: 'text-teal-600',
-      label: t('sales.fields.type', { defaultValue: 'Τύπος' }),
+      label: t('sales.fields.type'),
       value: t(`units:types.${unit.type}`, { defaultValue: unit.type }),
     },
     {
       icon: NAVIGATION_ENTITIES.area?.icon ?? Calculator,
       iconColor: 'text-pink-600',
-      label: t('sales.fields.area', { defaultValue: 'Εμβαδόν' }),
+      label: t('sales.fields.area'),
       value: `${area} m²`,
     },
     ...(unit.floor !== undefined ? [{
       icon: NAVIGATION_ENTITIES.floor?.icon ?? Calendar,
       iconColor: 'text-orange-600',
-      label: t('sales.fields.floor', { defaultValue: 'Όροφος' }),
+      label: t('sales.fields.floor'),
       value: `${unit.floor}ος`,
     }] : []),
   ], [t, unit.type, area, unit.floor]);
@@ -120,7 +120,7 @@ export function SalesPropertyListCard({
       {
         icon: DollarSign,
         iconColor: 'text-green-600',
-        label: t('sales.fields.askingPrice', { defaultValue: 'Τιμή' }),
+        label: t('sales.fields.askingPrice'),
         value: formatCurrencyWhole(askingPrice),
       },
     ];
@@ -129,7 +129,7 @@ export function SalesPropertyListCard({
       stats.push({
         icon: Calculator,
         iconColor: 'text-blue-600',
-        label: t('sales.fields.pricePerSqm', { defaultValue: '€/m²' }),
+        label: t('sales.fields.pricePerSqm'),
         value: `${formatCurrencyWhole(pricePerSqm)}/m²`,
       });
     }
@@ -138,8 +138,8 @@ export function SalesPropertyListCard({
       stats.push({
         icon: Calendar,
         iconColor: 'text-gray-500',
-        label: t('sales.fields.daysOnMarket', { defaultValue: 'Ημέρες' }),
-        value: `${daysOnMarket} ${t('sales.daysOnMarket', { defaultValue: 'ημέρες' })}`,
+        label: t('sales.fields.daysOnMarket'),
+        value: `${daysOnMarket} ${t('sales.daysOnMarket')}`,
       });
     }
 
@@ -165,8 +165,8 @@ export function SalesPropertyListCard({
       stats.push({
         icon: User,
         iconColor: 'text-violet-600',
-        label: t('sales.fields.buyer', { defaultValue: 'Αγοραστής' }),
-        value: resolvedBuyerName ?? t('sales.fields.unknownBuyer', { defaultValue: '...' }),
+        label: t('sales.fields.buyer'),
+        value: resolvedBuyerName ?? t('sales.fields.unknownBuyer'),
       });
     }
 
@@ -175,7 +175,7 @@ export function SalesPropertyListCard({
       stats.push({
         icon: CreditCard,
         iconColor: 'text-amber-600',
-        label: t('sales.fields.deposit', { defaultValue: 'Προκαταβολή' }),
+        label: t('sales.fields.deposit'),
         value: formatCurrencyWhole(unit.commercial.reservationDeposit),
       });
     }
@@ -185,7 +185,7 @@ export function SalesPropertyListCard({
       stats.push({
         icon: DollarSign,
         iconColor: 'text-blue-600',
-        label: t('sales.fields.finalPrice', { defaultValue: 'Τελική τιμή' }),
+        label: t('sales.fields.finalPrice'),
         value: formatCurrencyWhole(unit.commercial.finalPrice),
       });
     }

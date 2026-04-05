@@ -351,9 +351,28 @@
       "grandTotal": "Σύνολο (ακίνητο + παρακολουθήματα)"
     },
     "commercialStatus": {
+      "unavailable": "Μη διαθέσιμο",
+      "forSale": "Προς πώληση",
+      "forRent": "Προς ενοικίαση",
+      "forSaleAndRent": "Προς πώληση & ενοικίαση",
       "sold": "Πωλήθηκε",
-      "reserved": "Κρατημένη"
+      "reserved": "Κρατημένη",
+      "rented": "Ενοικιάστηκε",
+      "new": "Νέα"
     },
+    "fields": {
+      "type": "Τύπος",
+      "area": "Εμβαδόν",
+      "floor": "Όροφος",
+      "askingPrice": "Τιμή",
+      "pricePerSqm": "€/m²",
+      "daysOnMarket": "Ημέρες",
+      "buyer": "Αγοραστής",
+      "unknownBuyer": "…",
+      "deposit": "Προκαταβολή",
+      "finalPrice": "Τελική τιμή"
+    },
+    "daysOnMarket": "ημέρες",
     "dialogs": {
       "changePrice": {
         "title": "Αλλαγή Τιμής",

@@ -351,9 +351,28 @@
       "grandTotal": "Total (property + appurtenances)"
     },
     "commercialStatus": {
+      "unavailable": "Unavailable",
+      "forSale": "For Sale",
+      "forRent": "For Rent",
+      "forSaleAndRent": "For Sale & Rent",
       "sold": "Sold",
-      "reserved": "Reserved"
+      "reserved": "Reserved",
+      "rented": "Rented",
+      "new": "New"
     },
+    "fields": {
+      "type": "Type",
+      "area": "Area",
+      "floor": "Floor",
+      "askingPrice": "Price",
+      "pricePerSqm": "€/m²",
+      "daysOnMarket": "Days",
+      "buyer": "Buyer",
+      "unknownBuyer": "…",
+      "deposit": "Deposit",
+      "finalPrice": "Final price"
+    },
+    "daysOnMarket": "days",
     "dialogs": {
       "changePrice": {
         "title": "Change Price",
