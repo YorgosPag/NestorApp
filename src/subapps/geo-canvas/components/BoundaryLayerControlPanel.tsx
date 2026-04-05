@@ -10,6 +10,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { GEO_COLORS } from '../config/color-config';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 
 // ============================================================================
 // TYPES
@@ -69,6 +70,7 @@ export function BoundaryLayerControlPanel({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslationLazy('geo-canvas');
 
   // State
   const [isExpanded, setIsExpanded] = useState(true);
@@ -110,11 +112,11 @@ export function BoundaryLayerControlPanel({
 
   const getBoundaryTypeLabel = (type: BoundaryLayer['type']) => {
     switch (type) {
-      case 'region': return 'Περιφέρεια';
-      case 'municipality': return 'Δήμος';
-      case 'municipal_unit': return 'Δημοτική Ενότητα';
-      case 'community': return 'Κοινότητα';
-      default: return 'Άγνωστο';
+      case 'region': return t('boundaryLayer.types.region');
+      case 'municipality': return t('boundaryLayer.types.municipality');
+      case 'municipal_unit': return t('boundaryLayer.types.municipal_unit');
+      case 'community': return t('boundaryLayer.types.community');
+      default: return t('boundaryLayer.types.unknown');
     }
   };
 
@@ -148,7 +150,7 @@ export function BoundaryLayerControlPanel({
               {layer.visible ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
             </button>
           </TooltipTrigger>
-          <TooltipContent>{layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}</TooltipContent>
+          <TooltipContent>{layer.visible ? t('boundaryLayer.hide') : t('boundaryLayer.show')}</TooltipContent>
         </Tooltip>
 
         {/* Remove Button */}
@@ -161,7 +163,7 @@ export function BoundaryLayerControlPanel({
               ×
             </button>
           </TooltipTrigger>
-          <TooltipContent>Αφαίρεση layer</TooltipContent>
+          <TooltipContent>{t('boundaryLayer.remove')}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -169,7 +171,7 @@ export function BoundaryLayerControlPanel({
       {layer.visible && (
         <div className="mb-3">
           <div className={`flex items-center justify-between text-xs ${colors.text.muted} mb-1`}>
-            <span>Διαφάνεια</span>
+            <span>{t('boundaryLayer.opacity')}</span>
             <span>{Math.round(layer.opacity * 100)}%</span>
           </div>
           <input
@@ -192,7 +194,7 @@ export function BoundaryLayerControlPanel({
             className={`flex items-center gap-2 text-xs ${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
           >
             <Palette className={iconSizes.xs} />
-            <span>Προσαρμογή στυλ</span>
+            <span>{t('boundaryLayer.customizeStyle')}</span>
           </button>
 
           {/* Style Panel */}
@@ -200,7 +202,7 @@ export function BoundaryLayerControlPanel({
             <div className={`${colors.bg.secondary} rounded p-3 space-y-2`}>
               {/* Stroke Color */}
               <div className="flex items-center gap-2">
-                <label className={`text-xs ${colors.text.muted} w-16`}>Χρώμα:</label>
+                <label className={`text-xs ${colors.text.muted} w-16`}>{t('boundaryLayer.color')}</label>
                 <input
                   type="color"
                   value={layer.style.strokeColor}
@@ -214,7 +216,7 @@ export function BoundaryLayerControlPanel({
 
               {/* Stroke Width */}
               <div className="flex items-center gap-2">
-                <label className={`text-xs ${colors.text.muted} w-16`}>Πάχος:</label>
+                <label className={`text-xs ${colors.text.muted} w-16`}>{t('boundaryLayer.strokeWidth')}</label>
                 <input
                   type="range"
                   min="1"
@@ -231,7 +233,7 @@ export function BoundaryLayerControlPanel({
 
               {/* Fill Color */}
               <div className="flex items-center gap-2">
-                <label className={`text-xs ${colors.text.muted} w-16`}>Γέμισμα:</label>
+                <label className={`text-xs ${colors.text.muted} w-16`}>{t('boundaryLayer.fill')}</label>
                 <input
                   type="color"
                   value={layer.style.fillColor}
@@ -288,7 +290,7 @@ export function BoundaryLayerControlPanel({
                 {isExpanded ? '−' : '+'}
               </button>
             </TooltipTrigger>
-            <TooltipContent>{isExpanded ? 'Σύμπτυξη' : 'Επέκταση'}</TooltipContent>
+            <TooltipContent>{isExpanded ? t('boundaryLayer.collapse') : t('boundaryLayer.expand')}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -302,7 +304,7 @@ export function BoundaryLayerControlPanel({
             className={`w-full mb-4 flex items-center justify-center gap-2 p-3 border border-dashed border-border ${quick.card} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
           >
             <span className="text-lg">+</span>
-            <span className="text-sm font-medium">Προσθήκη Boundary</span>
+            <span className="text-sm font-medium">{t('boundaryLayer.addBoundary')}</span>
           </button>
 
           {/* Layers List */}
@@ -310,8 +312,8 @@ export function BoundaryLayerControlPanel({
             {layers.length === 0 ? (
               <div className={`text-center py-8 ${colors.text.muted}`}>
                 <Layers className={`${iconSizes.xl3} mx-auto mb-2 ${colors.text.muted}`} />
-                <p className="text-sm">Δεν υπάρχουν boundary layers</p>
-                <p className="text-xs">Κάντε κλικ "Προσθήκη Boundary" για να ξεκινήσετε</p>
+                <p className="text-sm">{t('boundaryLayer.noLayers')}</p>
+                <p className="text-xs">{t('boundaryLayer.clickToStart')}</p>
               </div>
             ) : (
               layers.map(renderLayerItem)
@@ -326,13 +328,13 @@ export function BoundaryLayerControlPanel({
                   onClick={() => layers.forEach(layer => handleVisibilityToggle(layer.id, true))}
                   className={`flex-1 px-3 py-2 text-xs ${colors.bg.success} ${colors.text.success} ${quick.input} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
                 >
-                  Εμφάνιση Όλων
+                  {t('boundaryLayer.showAll')}
                 </button>
                 <button
                   onClick={() => layers.forEach(layer => handleVisibilityToggle(layer.id, false))}
                   className={`flex-1 px-3 py-2 text-xs ${colors.bg.secondary} ${colors.text.muted} ${quick.input} ${HOVER_BACKGROUND_EFFECTS.LIGHT} transition-colors`}
                 >
-                  Απόκρυψη Όλων
+                  {t('boundaryLayer.hideAll')}
                 </button>
               </div>
             </div>

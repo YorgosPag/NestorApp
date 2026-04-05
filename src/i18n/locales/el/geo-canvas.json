@@ -693,5 +693,48 @@
       "addPolygonPoints": "🔷 Κάντε κλικ για να προσθέσετε σημεία στο πολύγωνο. Διπλό κλικ για ολοκλήρωση",
       "drawFreehand": " Κρατήστε πατημένο και σύρετε για να σχεδιάσετε ελεύθερα"
     }
+  },
+  "boundaryLayer": {
+    "title": "Boundary Layers",
+    "remove": "Αφαίρεση layer",
+    "opacity": "Διαφάνεια",
+    "customizeStyle": "Προσαρμογή στυλ",
+    "color": "Χρώμα:",
+    "strokeWidth": "Πάχος:",
+    "fill": "Γέμισμα:",
+    "addBoundary": "Προσθήκη Boundary",
+    "noLayers": "Δεν υπάρχουν boundary layers",
+    "clickToStart": "Κάντε κλικ «Προσθήκη Boundary» για να ξεκινήσετε",
+    "hide": "Απόκρυψη",
+    "show": "Εμφάνιση",
+    "collapse": "Σύμπτυξη",
+    "expand": "Επέκταση",
+    "showAll": "Εμφάνιση Όλων",
+    "hideAll": "Απόκρυψη Όλων",
+    "types": {
+      "region": "Περιφέρεια",
+      "municipality": "Δήμος",
+      "municipal_unit": "Δημοτική Ενότητα",
+      "community": "Κοινότητα",
+      "unknown": "Άγνωστο"
+    }
+  },
+  "citizenDrawing": {
+    "searchTitle": "Αναζήτηση διεύθυνσης ή GPS",
+    "searchLabel": "Αναζήτηση",
+    "addressesAndBoundaries": "Διευθύνσεις & Όρια",
+    "pinRadius": "Ακτίνα Πινέζας",
+    "regions": "Περιοχές:",
+    "propertyAlerts": "🏠 Ειδοποιήσεις Ακινήτων:",
+    "matchesFound": "🎯 Βρέθηκαν:",
+    "propertiesFound": "ακίνητα"
+  },
+  "professionalDrawing": {
+    "floorPlan": "Κάτοψη",
+    "complete": "Ολοκλήρωση",
+    "cancel": "Ακύρωση",
+    "detectRooms": "Ανίχνευση Δωματίων",
+    "floorPlanLabel": "Κάτοψη:",
+    "properties": "Ακίνητα:"
   }
 }

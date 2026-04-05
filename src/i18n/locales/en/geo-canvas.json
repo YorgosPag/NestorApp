@@ -693,5 +693,48 @@
       "addPolygonPoints": "🔷 Click to add points to the polygon. Double-click to complete",
       "drawFreehand": " Hold and drag to draw freely"
     }
+  },
+  "boundaryLayer": {
+    "title": "Boundary Layers",
+    "remove": "Remove layer",
+    "opacity": "Opacity",
+    "customizeStyle": "Customize style",
+    "color": "Color:",
+    "strokeWidth": "Width:",
+    "fill": "Fill:",
+    "addBoundary": "Add Boundary",
+    "noLayers": "No boundary layers",
+    "clickToStart": "Click \"Add Boundary\" to start",
+    "hide": "Hide",
+    "show": "Show",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "showAll": "Show All",
+    "hideAll": "Hide All",
+    "types": {
+      "region": "Region",
+      "municipality": "Municipality",
+      "municipal_unit": "Municipal Unit",
+      "community": "Community",
+      "unknown": "Unknown"
+    }
+  },
+  "citizenDrawing": {
+    "searchTitle": "Address search or GPS",
+    "searchLabel": "Search",
+    "addressesAndBoundaries": "Addresses & Boundaries",
+    "pinRadius": "Pin Radius",
+    "regions": "Regions:",
+    "propertyAlerts": "🏠 Property Alerts:",
+    "matchesFound": "🎯 Found:",
+    "propertiesFound": "properties"
+  },
+  "professionalDrawing": {
+    "floorPlan": "Floor Plan",
+    "complete": "Complete",
+    "cancel": "Cancel",
+    "detectRooms": "Detect Rooms",
+    "floorPlanLabel": "Floor Plan:",
+    "properties": "Properties:"
   }
 }
