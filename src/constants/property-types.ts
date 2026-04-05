@@ -230,3 +230,171 @@ export const PROPERTY_TYPE_LABELS_EL: Record<PropertyTypeCanonical, string> = {
   hall: 'Αίθουσα',
   storage: 'Αποθήκη',
 };
+
+// =============================================================================
+// 10. ALIAS RESOLUTION — Greek ↔ English normalization (ADR-287 Batch 11A)
+// =============================================================================
+//
+// Consumers across the codebase (AI pipeline property search, admin stats,
+// legacy Firestore data) receive property type values σε πολλαπλές μορφές:
+//   - Canonical English underscore: 'apartment', 'shop', 'maisonette', ...
+//   - Deprecated English:           'apartment_2br'/'apartment_3br' → 'apartment'
+//   - Legacy English:               'store' → 'shop'
+//   - Greek (user text):            'διαμέρισμα', '2δ', 'κατάστημα', 'μεζονέτα', ...
+//   - Legacy Greek labels (Firestore pre-2026-01-24): 'Στούντιο', 'Διαμέρισμα 2Δ', ...
+//
+// Ο `normalizePropertyType()` resolver παρέχει το **μοναδικό σημείο** μετατροπής
+// από οποιαδήποτε από αυτές τις μορφές στην canonical τιμή, εξαλείφοντας
+// hardcoded alias maps σε consumers (π.χ. UC-003 property search fuzzy matching).
+
+/**
+ * Alias map: user-facing / legacy input → canonical `PropertyTypeCanonical`.
+ *
+ * Keys αποθηκεύονται **lowercase** — ο resolver κάνει `.trim().toLowerCase()`
+ * στην είσοδο πριν το lookup. Περιέχει:
+ *   - Canonical values (self-mapping) για idempotency
+ *   - Deprecated underscore ('apartment_2br'/'apartment_3br' → 'apartment' family collapse)
+ *   - Legacy English ('store' → 'shop')
+ *   - Greek aliases σε πολλαπλές μορφές (με/χωρίς τόνους, short forms 2δ/3δ)
+ *   - Legacy Greek display labels (lowercase keys από παλιά Firestore data)
+ *
+ * **Προσθήκη νέου alias**: Πρόσθεσε entry εδώ — δεν χρειάζεται αλλαγή αλλού.
+ *
+ * @note 'apartment_1br' παραμένει canonical (Γκαρσονιέρα) — ΔΕΝ καταρρέει στο 'apartment'.
+ */
+export const PROPERTY_TYPE_ALIASES: Record<string, PropertyTypeCanonical> = {
+  // Canonical (self-mapping — guarantees idempotency)
+  'studio': 'studio',
+  'apartment_1br': 'apartment_1br',
+  'apartment': 'apartment',
+  'maisonette': 'maisonette',
+  'penthouse': 'penthouse',
+  'loft': 'loft',
+  'detached_house': 'detached_house',
+  'villa': 'villa',
+  'shop': 'shop',
+  'office': 'office',
+  'hall': 'hall',
+  'storage': 'storage',
+
+  // Deprecated underscore — collapse to 'apartment' family (Γιώργος 2026-04-05)
+  'apartment_2br': 'apartment',
+  'apartment_3br': 'apartment',
+
+  // Legacy English variants
+  'store': 'shop',
+  'detached house': 'detached_house',
+  'detached-house': 'detached_house',
+
+  // Greek — studio
+  'στούντιο': 'studio',
+  'στουντιο': 'studio',
+
+  // Greek — apartment_1br (Γκαρσονιέρα)
+  'γκαρσονιέρα': 'apartment_1br',
+  'γκαρσονιερα': 'apartment_1br',
+
+  // Greek — apartment (Διαμέρισμα + legacy 2Δ/3Δ variants)
+  'διαμέρισμα': 'apartment',
+  'διαμερισμα': 'apartment',
+  'διαμέρισμα 2δ': 'apartment',
+  'διαμερισμα 2δ': 'apartment',
+  'διαμέρισμα 3δ': 'apartment',
+  'διαμερισμα 3δ': 'apartment',
+  '2δ': 'apartment',
+  '3δ': 'apartment',
+
+  // Greek — maisonette
+  'μεζονέτα': 'maisonette',
+  'μεζονετα': 'maisonette',
+
+  // Greek — penthouse
+  'ρετιρέ': 'penthouse',
+  'ρετιρε': 'penthouse',
+  'πενθάουζ': 'penthouse',
+  'πενθαουζ': 'penthouse',
+
+  // Greek — detached_house
+  'μονοκατοικία': 'detached_house',
+  'μονοκατοικια': 'detached_house',
+
+  // Greek — villa
+  'βίλα': 'villa',
+  'βιλα': 'villa',
+
+  // Greek — shop
+  'κατάστημα': 'shop',
+  'καταστημα': 'shop',
+  'μαγαζί': 'shop',
+  'μαγαζι': 'shop',
+
+  // Greek — office
+  'γραφείο': 'office',
+  'γραφειο': 'office',
+
+  // Greek — hall
+  'αίθουσα': 'hall',
+  'αιθουσα': 'hall',
+
+  // Greek — storage
+  'αποθήκη': 'storage',
+  'αποθηκη': 'storage',
+};
+
+/**
+ * Normalize any user-facing or legacy input to the canonical `PropertyTypeCanonical`.
+ *
+ * Safe to call with untrusted input (Firestore data, AI-extracted entities,
+ * user message text). Returns `null` αν το value δεν αντιστοιχεί σε γνωστό
+ * alias — ο consumer μπορεί να το ταξινομήσει ως "unknown" ή να το απορρίψει.
+ *
+ * @param raw — Οποιοδήποτε string (με ή χωρίς whitespace, case-insensitive)
+ * @returns Canonical `PropertyTypeCanonical` ή `null` αν unknown
+ *
+ * @example
+ * normalizePropertyType('διαμέρισμα')      // → 'apartment'
+ * normalizePropertyType('  STORE  ')       // → 'shop'
+ * normalizePropertyType('apartment_2br')   // → 'apartment' (family collapse)
+ * normalizePropertyType('apartment')       // → 'apartment' (idempotent)
+ * normalizePropertyType('κάτι τυχαίο')     // → null
+ */
+export function normalizePropertyType(
+  raw: unknown,
+): PropertyTypeCanonical | null {
+  if (typeof raw !== 'string') return null;
+  const key = raw.trim().toLowerCase();
+  if (key.length === 0) return null;
+  return PROPERTY_TYPE_ALIASES[key] ?? null;
+}
+
+/**
+ * Check whether two property type inputs match semantically after normalization.
+ *
+ * Handles the common AI-pipeline use case: user searches for "διαμέρισμα" and
+ * we need to match stored units with type "apartment" OR "apartment_2br" OR
+ * "apartment_3br" (all canonicalize to 'apartment'). Also treats the apartment
+ * family (`apartment` + `apartment_1br`) as compatible για search-by-family.
+ *
+ * @param a — First property type (canonical, alias, or Greek)
+ * @param b — Second property type (canonical, alias, or Greek)
+ * @returns `true` αν τα δύο inputs αναφέρονται στον ίδιο canonical τύπο (ή στο
+ *   ίδιο apartment family), `false` αλλιώς (ή αν κάποιο από τα δύο είναι unknown).
+ */
+export function arePropertyTypesEquivalent(
+  a: unknown,
+  b: unknown,
+): boolean {
+  const canonicalA = normalizePropertyType(a);
+  const canonicalB = normalizePropertyType(b);
+  if (canonicalA === null || canonicalB === null) return false;
+  if (canonicalA === canonicalB) return true;
+
+  // Apartment family expansion: a generic "apartment" search matches the
+  // more specific "apartment_1br" (Γκαρσονιέρα) and vice versa. Preserves
+  // the legacy fuzzy-matching behaviour of UC-003 property search.
+  const apartmentFamily: ReadonlySet<PropertyTypeCanonical> = new Set([
+    'apartment',
+    'apartment_1br',
+  ]);
+  return apartmentFamily.has(canonicalA) && apartmentFamily.has(canonicalB);
+}

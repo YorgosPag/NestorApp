@@ -8,6 +8,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { arePropertyTypesEquivalent } from '@/constants/property-types';
 import type { PropertySearchCriteria } from '@/services/property-search.service';
 import type { ContactMatch } from '../../shared/contact-lookup';
 
@@ -145,19 +146,16 @@ export async function queryAvailableUnits(
 // TYPE MATCHING
 // ============================================================================
 
+/**
+ * Match a stored unit type against a search type input.
+ *
+ * ADR-287 Batch 11A — delegates to SSoT resolver (@/constants/property-types).
+ * Both `unitType` (Firestore) and `searchType` (AI-extracted criteria) are
+ * normalized to canonical `PropertyTypeCanonical`, then compared with apartment
+ * family expansion. Previously this was a hardcoded `typeAliases` map.
+ */
 function matchUnitType(unitType: string, searchType: string): boolean {
-  const normalized = unitType.toLowerCase();
-  const searchNormalized = searchType.toLowerCase();
-
-  const typeAliases: Record<string, string[]> = {
-    apartment: ['apartment', 'apartment_1br', 'apartment_2br', 'apartment_3br', 'διαμέρισμα', 'διαμέρισμα 2δ', 'διαμέρισμα 3δ'],
-    maisonette: ['maisonette', 'μεζονέτα'],
-    store: ['shop', 'store', 'κατάστημα'],
-    studio: ['studio', 'στούντιο'],
-  };
-
-  const aliases = typeAliases[searchNormalized] ?? [searchNormalized];
-  return aliases.some(alias => normalized.includes(alias));
+  return arePropertyTypesEquivalent(unitType, searchType);
 }
 
 function extractRoomsFromType(unitType: string): number | null {
