@@ -10,6 +10,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ALL_PROPERTY_TYPES_WITH_DEPRECATED } from '@/constants/property-types';
 import type {
   BuilderDomainId,
   DomainDefinition,
@@ -85,11 +86,8 @@ const BUILDING_TYPES = [
 
 const ENERGY_CLASSES = ['A+', 'A', 'B+', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
 
-const UNIT_TYPES = [
-  'studio', 'apartment_1br', 'apartment', 'apartment_2br', 'apartment_3br',
-  'maisonette', 'penthouse', 'loft', 'detached_house', 'villa',
-  'shop', 'office', 'hall', 'storage',
-] as const;
+// ADR-145 SSoT — 12 canonical + 2 deprecated (apartment_2br/3br for legacy data)
+const UNIT_TYPES = ALL_PROPERTY_TYPES_WITH_DEPRECATED;
 
 const COMMERCIAL_STATUSES = [
   'unavailable', 'for-sale', 'for-rent', 'for-sale-and-rent',

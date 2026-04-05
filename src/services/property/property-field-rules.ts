@@ -14,6 +14,7 @@
  */
 
 import type { PropertyType } from '@/types/property';
+import { RESIDENTIAL_PROPERTY_TYPES } from '@/constants/property-types';
 
 // =============================================================================
 // TYPES
@@ -29,25 +30,17 @@ export interface FieldWarning {
 }
 
 // =============================================================================
-// CONSTANTS — SSoT for property type classification
+// CONSTANTS — derived from SSoT (@/constants/property-types, ADR-145)
 // =============================================================================
 
 /**
  * Residential property types — basement placement is unusual for these.
- * Storage, parking, shop, office, hall are commonly found in basements.
+ * Shop, office, hall, storage (commercial/auxiliary) are commonly found in basements.
+ * Derived from SSoT `RESIDENTIAL_PROPERTY_TYPES` (includes deprecated underscore values).
  */
-const RESIDENTIAL_TYPES: ReadonlySet<PropertyType> = new Set([
-  'studio',
-  'apartment',
-  'apartment_1br',
-  'apartment_2br',
-  'apartment_3br',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-]);
+const RESIDENTIAL_TYPES: ReadonlySet<PropertyType> = new Set(
+  RESIDENTIAL_PROPERTY_TYPES,
+);
 
 // =============================================================================
 // RULES

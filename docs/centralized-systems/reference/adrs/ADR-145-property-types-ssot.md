@@ -106,3 +106,12 @@
 
 - **2026-04-05**: PROPOSED + IMPLEMENTED (Γιώργος + Claude). SSoT module created, 9 files migrated, 3 bug categories resolved.
 - **2026-04-05**: `apartment_2br` + `apartment_3br` removed από το active dropdown (Γιώργος request — "να αφήσεις μόνον το γενικό Διαμέρισμα"). Μεταφέρθηκαν στο `DEPRECATED_PROPERTY_TYPES` για backward-compat με παλιά Firestore records. `PROPERTY_TYPES` πλέον 12 entries.
+- **2026-04-05 (Batch 8)**: Εμβάθυνση κεντρικοποίησης — 4 ακόμα shadow/duplicate definitions διαγράφηκαν:
+  - **SSoT additions**: `COMMERCIAL_PROPERTY_TYPES` (4), `RESIDENTIAL_PROPERTY_TYPES` (derived complement, 10 + 2 deprecated), `ALL_PROPERTY_TYPES_WITH_DEPRECATED` (14), `PROPERTY_TYPE_LABELS_EL` (Greek labels για server-side AI pipeline replies).
+  - **Migrated**:
+    - `src/services/property/property-field-rules.ts` — `RESIDENTIAL_TYPES` set πλέον derived από SSoT.
+    - `src/services/ai-pipeline/modules/uc-013-admin-property-stats/admin-property-stats-module.ts` — Greek labels από SSoT `PROPERTY_TYPE_LABELS_EL`. Legacy `'διαμέρισμα 2δ'/'3δ'` mappings → γενικό `'Διαμέρισμα'`.
+    - `src/subapps/geo-canvas/floor-plan-system/types/index.ts` — shadow `PropertyType` union τώρα derived από `PropertyTypeCanonical` + floor-plan-specific extras (`parking`, `common_area`, `other`). Δροπαρίστηκαν τα εκτός canonical `apartment_4br`, `commercial`.
+    - `src/config/report-builder/domain-definitions.ts` — `UNIT_TYPES` = `ALL_PROPERTY_TYPES_WITH_DEPRECATED` από SSoT.
+    - `src/types/building/contracts.ts` — inline `Property.type` union (`studio|apartment_1br|...|store|shop`) → `PropertyType` import (canonical).
+  - **Label cleanup**: `apartment_2br`/`apartment_3br` keys αφαιρέθηκαν από `PROPERTY_TYPE_LABELS_EL` (Γιώργος: "να αφήσεις μόνον το γενικό Διαμέρισμα").

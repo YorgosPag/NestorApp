@@ -16,6 +16,7 @@
 
 import 'server-only';
 
+import { PROPERTY_TYPE_LABELS_EL } from '@/constants/property-types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -91,25 +92,20 @@ interface ProjectPropertyBreakdown {
 }
 
 // ============================================================================
-// PROPERTY TYPE LABELS — Greek display names for property types
+// PROPERTY TYPE LABELS — Greek display names (lookup table for lowercased keys)
 // ============================================================================
+// Built από SSoT labels (@/constants/property-types, ADR-145) + legacy Greek
+// lowercase keys από παλιά Firestore data + parking (not in canonical).
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  studio: 'Στούντιο',
-  apartment_1br: 'Γκαρσονιέρα',
-  apartment: 'Διαμέρισμα',
-  apartment_2br: 'Διαμέρισμα 2Δ',
-  apartment_3br: 'Διαμέρισμα 3Δ',
-  maisonette: 'Μεζονέτα',
-  shop: 'Κατάστημα',
-  office: 'Γραφείο',
-  storage: 'Αποθήκη',
+  ...PROPERTY_TYPE_LABELS_EL,
   parking: 'Parking',
-  // Legacy Greek values (from Firestore data)
+  // Legacy Greek values (lowercased keys from Firestore data)
   'στούντιο': 'Στούντιο',
   'γκαρσονιέρα': 'Γκαρσονιέρα',
-  'διαμέρισμα 2δ': 'Διαμέρισμα 2Δ',
-  'διαμέρισμα 3δ': 'Διαμέρισμα 3Δ',
+  // Legacy 2Δ/3Δ variants → συγχωνεύονται στο γενικό "Διαμέρισμα" (Γιώργος 2026-04-05)
+  'διαμέρισμα 2δ': 'Διαμέρισμα',
+  'διαμέρισμα 3δ': 'Διαμέρισμα',
   'μεζονέτα': 'Μεζονέτα',
   'κατάστημα': 'Κατάστημα',
   'αποθήκη': 'Αποθήκη',

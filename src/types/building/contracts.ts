@@ -2,6 +2,7 @@
 import type { BuildingFeatureKey } from './features';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { BuildingAddressReference, ProjectAddress } from '../project/addresses';
+import type { PropertyType } from '@/types/property';
 
 // Building hierarchy interfaces
 // NOTE: Contact → @/types/contacts, Project → @/types/project (canonical types)
@@ -112,7 +113,8 @@ import type { BuildingAddressReference, ProjectAddress } from '../project/addres
     id: string;
     floorId: string; // References Floor
     code: string;
-    type: 'studio' | 'apartment_1br' | 'apartment_2br' | 'apartment_3br' | 'maisonette' | 'store' | 'shop';
+    // ADR-145: Centralized via @/types/property (SSoT → @/constants/property-types)
+    type: PropertyType;
     area: number;
     price: number;
     status: 'available' | 'sold' | 'reserved';

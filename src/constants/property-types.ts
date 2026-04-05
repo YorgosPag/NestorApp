@@ -156,3 +156,77 @@ export function isPropertyType(value: unknown): value is PropertyTypeCanonical {
     (PROPERTY_TYPES as readonly string[]).includes(value)
   );
 }
+
+// =============================================================================
+// 7. RESIDENTIAL vs COMMERCIAL CLASSIFICATION
+// =============================================================================
+
+/**
+ * Commercial/auxiliary property types — εμπορικοί χώροι & βοηθητικές εγκαταστάσεις.
+ * Χρησιμοποιούνται για cross-field validations (π.χ. basement residential warning).
+ */
+export const COMMERCIAL_PROPERTY_TYPES = [
+  'shop',
+  'office',
+  'hall',
+  'storage',
+] as const satisfies readonly PropertyTypeCanonical[];
+
+export type CommercialPropertyType = (typeof COMMERCIAL_PROPERTY_TYPES)[number];
+
+/**
+ * Residential property types — derived complement of COMMERCIAL_PROPERTY_TYPES.
+ * Basement placement is unusual για residential types (field-rule warning trigger).
+ * Περιλαμβάνει τα 2 deprecated underscore values (apartment_2br/3br) για
+ * backward compat με παλιά Firestore data.
+ */
+export const RESIDENTIAL_PROPERTY_TYPES: readonly (
+  | PropertyTypeCanonical
+  | DeprecatedPropertyType
+)[] = [
+  ...PROPERTY_TYPES.filter(
+    (t) => !(COMMERCIAL_PROPERTY_TYPES as readonly string[]).includes(t),
+  ),
+  ...DEPRECATED_PROPERTY_TYPES,
+];
+
+// =============================================================================
+// 8. UNION WITH DEPRECATED (για report-builder, AI search, legacy dropdowns)
+// =============================================================================
+
+/**
+ * All canonical + deprecated underscore types (14 total).
+ * Χρησιμοποιείται από report-builder και AI search ώστε να ταιριάζουν
+ * και τα παλιά Firestore records (apartment_2br/3br).
+ */
+export const ALL_PROPERTY_TYPES_WITH_DEPRECATED = [
+  ...PROPERTY_TYPES,
+  ...DEPRECATED_PROPERTY_TYPES,
+] as const;
+
+// =============================================================================
+// 9. GREEK DISPLAY LABELS (server-side, no i18n runtime)
+// =============================================================================
+
+/**
+ * Greek display labels για PropertyType values. Χρησιμοποιείται σε server-side
+ * AI pipeline replies (Telegram/email) όπου δεν υπάρχει `t()` runtime.
+ * Οι τιμές mirror-ουν το `src/i18n/locales/el/properties-enums.json` (types.*).
+ *
+ * **Διατήρηση**: Αν αλλάξουν οι ελληνικές μεταφράσεις στο i18n JSON, ενημέρωσε
+ * και αυτό το map.
+ */
+export const PROPERTY_TYPE_LABELS_EL: Record<PropertyTypeCanonical, string> = {
+  studio: 'Στούντιο',
+  apartment_1br: 'Γκαρσονιέρα',
+  apartment: 'Διαμέρισμα',
+  maisonette: 'Μεζονέτα',
+  penthouse: 'Ρετιρέ',
+  loft: 'Loft',
+  detached_house: 'Μονοκατοικία',
+  villa: 'Βίλα',
+  shop: 'Κατάστημα',
+  office: 'Γραφείο',
+  hall: 'Αίθουσα',
+  storage: 'Αποθήκη',
+};

@@ -19,6 +19,7 @@ export type {
 } from './control-points';
 
 import type { GeoCoordinate } from './control-points';
+import type { PropertyTypeCanonical } from '@/constants/property-types';
 
 // ============================================================================
 // 🔄 TRANSFORMATION (STEP 2.3)
@@ -179,20 +180,13 @@ export interface GeoreferencingAccuracy {
 // ============================================================================
 
 /**
- * Property type (apartment, studio, etc.)
+ * Property type για floor plan polygons — derived από canonical SSoT
+ * (`@/constants/property-types`, ADR-145) + floor-plan-specific extensions
+ * (`parking`, `common_area`, `other`) που δεν ανήκουν στο domain των
+ * Properties αλλά χρειάζονται για polygon visualization.
  */
 export type PropertyType =
-  | 'studio'
-  | 'apartment_1br'
-  | 'apartment_2br'
-  | 'apartment_3br'
-  | 'apartment_4br'
-  | 'penthouse'
-  | 'maisonette'
-  | 'loft'
-  | 'office'
-  | 'commercial'
-  | 'storage'
+  | PropertyTypeCanonical
   | 'parking'
   | 'common_area'
   | 'other';
