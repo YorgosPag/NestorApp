@@ -1,13 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T19:34:48Z",
-    "totalViolations": 310,
-    "totalFiles": 86,
+    "generated": "2026-04-05T19:36:46Z",
+    "totalViolations": 298,
+    "totalFiles": 85,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/components/sales/details/StorageDetailPanel.tsx": 12,
     "src/components/sales/details/ParkingDetailPanel.tsx": 12,
     "src/components/sales/cards/SalesPropertyListCard.tsx": 12,
     "src/components/properties/dialogs/PropertyMutationImpactDialog.tsx": 12,
