@@ -13,137 +13,80 @@ import { useGripStyles } from '../../settings-provider';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { useZoom } from '../../systems/zoom';
 import { dwarn, derr } from '../../debug';
-// 🚀 PERF (2026-02-20): CanvasSection no longer subscribes to SnapContext.
-// Snap result is read imperatively from ImmediateSnapStore to avoid re-renders.
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { usePdfBackgroundStore } from '../../pdf-background';
-import { useEventBus, EventBus } from '../../systems/events';
+import { useEventBus } from '../../systems/events';
 import { useUniversalSelection } from '../../systems/selection';
 import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
   useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
-  useCanvasEffects, useOverlayInteraction,
-  type ArcPickableEntity, type LinePickableEntity,
-  type DraggingGuideState,
+  useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
 } from '../../hooks/canvas';
+import { useGuideToolWorkflows } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
 import { useSpecialTools } from '../../hooks/tools';
 import { useRotationTool } from '../../hooks/tools/useRotationTool';
 import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
-// ADR-189: Construction Guide System
 import { useGuideState } from '../../hooks/state/useGuideState';
-// ADR-189 §3.7-3.16: Construction Snap Points
 import { useConstructionPointState } from '../../hooks/state/useConstructionPointState';
-import { pointToSegmentDistance } from '../../systems/guides/guide-types';
-import type { GridAxis } from '../../systems/guides/guide-types';
-import { MoveGuideCommand } from '../../systems/guides/guide-commands';
-import { getGlobalGuideStore } from '../../systems/guides/guide-store';
-import type { Point2D } from '../../rendering/types/Types';
-import {
-  getPointerSnapshotFromElement,
-  getScreenPosFromEvent,
-  screenToWorldWithSnapshot,
-} from '../../rendering/core/CoordinateTransforms';
-// ADR-189: Centralized prompt dialog for distance input (parallel guides, future tools)
 import { PromptDialog, usePromptDialog } from '../../systems/prompt-dialog';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🏢 PERF (2026-02-19): Imperative context menus — no parent re-render on open
 import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
-// ADR-189: Guide context menu
 import GuideContextMenu, { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
-// ADR-189 B14: Batch guide context menu
 import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
-// Tool hint step override for guide tools (they don't use DrawingStateMachine)
-import { toolHintOverrideStore } from '../../hooks/toolHintOverrideStore';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
 /**
- * Canvas orchestrator — wires 25+ hooks together and delegates rendering to CanvasLayerStack.
- * No business logic, no JSX beyond the single CanvasLayerStack call.
+ * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
+ * No business logic beyond hook composition.
  *
- * ADR-183: Unified Grip System — useGripSystem + useDxfGripInteraction + useLayerCanvasMouseMove
- * replaced by single useUnifiedGripInteraction hook.
+ * ADR-183: Unified Grip System — useUnifiedGripInteraction.
+ * ADR-189: Guide workflows — useGuideToolWorkflows (hooks/guides/).
+ * ADR-189 B5: Container handlers — useCanvasContainerHandlers (hooks/canvas/).
  */
 export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status, currentKind: OverlayKind }> = (props) => {
   const {
-    activeTool,
-    showGrid,
-    showLayers,
-    overlayMode = 'select',
-    setOverlayMode,
-    currentStatus = 'for-sale',
-    currentKind = 'property',
+    activeTool, showGrid, showLayers,
+    overlayMode = 'select', setOverlayMode,
+    currentStatus = 'for-sale', currentKind = 'property',
     ...restProps
   } = props;
 
-  // === Canvas context (ADR-043: CanvasProvider must wrap this component) ===
+  // === Canvas context ===
   const canvasContext = useCanvasContext();
-
   if (process.env.NODE_ENV === 'development' && !canvasContext) {
     dwarn('CanvasSection', 'CanvasProvider not found — zoom buttons will not work.');
   }
-
   const dxfCanvasRef = canvasContext?.dxfRef;
   if (!dxfCanvasRef) {
     derr('CanvasSection', 'CanvasContext.dxfRef is null — zoom buttons will not work.');
   }
-
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<PreviewCanvasHandle>(null);
 
-  // === Transform state ===
+  // === Transform + Viewport ===
   const defaultTransform = useMemo(() => ({ scale: 1, offsetX: 0, offsetY: 0 }), []);
   const transform = canvasContext?.transform || defaultTransform;
   const contextSetTransform = canvasContext?.setTransform || (() => {
     derr('CanvasSection', 'setTransform called but CanvasContext not available');
   });
-
-  // === Viewport management ===
   const containerRef = useRef<HTMLDivElement>(null);
-  const {
-    enabled: pdfEnabled,
-    opacity: pdfOpacity,
-    transform: pdfTransform,
-    renderedImageUrl: pdfImageUrl,
-    setViewport: setPdfViewport,
-  } = usePdfBackgroundStore();
-
+  const { enabled: pdfEnabled, opacity: pdfOpacity, transform: pdfTransform, renderedImageUrl: pdfImageUrl, setViewport: setPdfViewport } = usePdfBackgroundStore();
   const { viewport, viewportRef, viewportReady, setTransform, transformRef } = useViewportManager({
-    containerRef, transform,
-    setTransform: contextSetTransform,
-    onViewportChange: setPdfViewport,
+    containerRef, transform, setTransform: contextSetTransform, onViewportChange: setPdfViewport,
   });
+  const zoomSystem = useZoom({ initialTransform: transform, onTransformChange: setTransform, viewport });
 
-  // Canvas element accessor for coordinate transforms
-  const getCanvasElement = useCallback((): HTMLElement | null => {
-    const dxfCanvas = dxfCanvasRef?.current?.getCanvas?.();
-    if (dxfCanvas instanceof HTMLElement) return dxfCanvas;
-    if (overlayCanvasRef.current instanceof HTMLElement) return overlayCanvasRef.current;
-    if (containerRef.current instanceof HTMLElement) return containerRef.current;
-    return null;
-  }, []);
-
-  const zoomSystem = useZoom({
-    initialTransform: transform,
-    onTransformChange: setTransform,
-    viewport,
-  });
-
-  // === Canvas visibility ===
+  // === Visibility ===
   const showDxfCanvas = props.dxfCanvasVisible ?? true;
   const showLayerCanvasDebug = props.layerCanvasVisible ?? true;
-
-  if (!showDxfCanvas) {
-    derr('CanvasSection', 'DxfCanvas is HIDDEN — zoom buttons will NOT work.');
-  }
 
   // === Core stores + state ===
   const overlayStore = useOverlayStore();
@@ -152,22 +95,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { warning: notifyWarning, success: notifySuccess } = useNotifications();
   const { t } = useTranslation('dxf-viewer');
   useCommandHistoryKeyboard();
-
-  // Stable refs to avoid stale closures in mouse event callbacks
   const overlayStoreRef = useRef(overlayStore);
   const universalSelectionRef = useRef(universalSelection);
   overlayStoreRef.current = overlayStore;
   universalSelectionRef.current = universalSelection;
-
   const levelManager = useLevels();
-  const currentOverlays = levelManager.currentLevelId
-    ? overlayStore.getByLevel(levelManager.currentLevelId)
-    : [];
+  const currentOverlays = levelManager.currentLevelId ? overlayStore.getByLevel(levelManager.currentLevelId) : [];
 
   // === Entity interaction state ===
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
-  // Prevents handleCanvasClick from deselecting what mouseDown just selected
   const entitySelectedOnMouseDownRef = useRef(false);
   const [hoveredOverlayId, setHoveredOverlayId] = useState<string | null>(null);
   const eventBus = useEventBus();
@@ -175,1730 +112,239 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // === Settings ===
   const { state: { grid: gridContextSettings, rulers: rulerContextSettings } } = useRulersGridContext();
   const { settings: cursorSettings } = useCursorSettings();
-  const {
-    crosshairSettings, cursorCanvasSettings, snapSettings,
-    rulerSettings, gridSettings, selectionSettings, gridMajorInterval,
-  } = useCanvasSettings({
-    cursorSettings,
-    gridContextSettings: gridContextSettings ?? null,
-    rulerContextSettings: rulerContextSettings ?? null,
-    showGrid,
+  const { crosshairSettings, cursorCanvasSettings, snapSettings, rulerSettings, gridSettings, selectionSettings, gridMajorInterval } = useCanvasSettings({
+    cursorSettings, gridContextSettings: gridContextSettings ?? null, rulerContextSettings: rulerContextSettings ?? null, showGrid,
   });
   const gripSettings = useGripStyles();
 
-  // === ADR-189: Construction Guide state ===
+  // === Guide + Construction Point state ===
   const guideState = useGuideState();
   const cpState = useConstructionPointState();
   const { prompt: showPromptDialog } = usePromptDialog();
 
-  // === DXF scene (must be before unified grip system) ===
+  // === DXF scene ===
   const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
 
-  // === ADR-183: Unified Grip System ===
+  // === Unified Grip System ===
   const unified = useUnifiedGripInteraction({
-    selectedEntityIds,
-    dxfScene,
-    transform,
-    currentOverlays,
-    universalSelection,
-    overlayStore,
-    overlayStoreRef,
-    activeTool,
-    gripSettings,
-    executeCommand,
+    selectedEntityIds, dxfScene, transform, currentOverlays, universalSelection,
+    overlayStore, overlayStoreRef, activeTool, gripSettings, executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
   });
 
   // === Polygon drawing ===
-  const {
-    draftPolygon, setDraftPolygon, draftPolygonRef,
-    isSavingPolygon, setIsSavingPolygon,
-    finishDrawingWithPolygonRef, finishDrawing,
-  } = usePolygonCompletion({
-    levelManager, overlayStore, eventBus,
-    currentStatus, currentKind, activeTool, overlayMode,
+  const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
+    levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
-
   const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement } = useSpecialTools({ activeTool, levelManager });
-  // 🚀 PERF (2026-02-20): Removed currentSnapResult from SnapContext subscription.
-  // CanvasSection is heavy (~dozens of hooks); re-rendering on every snap update (30×/sec)
-  // caused "heavy cursor movement". Now uses ImmediateSnapStore (zero-cost imperative read).
 
-  // === Cursor + touch gestures (ADR-176) ===
+  // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
-
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
-  useTouchGestures({
-    targetRef: containerRef,
-    enabled: canvasLayoutMode !== 'desktop',
-    activeTool,
-    transform,
-    setTransform: contextSetTransform,
+  useTouchGestures({ targetRef: containerRef, enabled: canvasLayoutMode !== 'desktop', activeTool, transform, setTransform: contextSetTransform });
+
+  // === Mouse event handling ===
+  // draggingGuide/handleGuideDragComplete declared here (before useCanvasMouse which needs them)
+  const containerHandlerHook = useCanvasContainerHandlers({
+    activeTool, transform, containerRef, mouseWorld: null, executeCommand,
+    unified: { handleMouseDown: unified.handleMouseDown, handleMouseUp: unified.handleMouseUp },
   });
-
-  // ADR-189 B5: Guide drag & drop state (declared before useCanvasMouse which needs it)
-  const [draggingGuide, setDraggingGuide] = useState<DraggingGuideState | null>(null);
-
-  // ADR-189 B5: Guide drag completion callback — creates MoveGuideCommand for undo/redo
-  // Defined before useCanvasMouse because it's passed as a prop
-  const handleGuideDragComplete = useCallback((
-    guideId: string,
-    axis: GridAxis,
-    oldOffset: number,
-    newOffset: number,
-    oldStart?: Point2D,
-    oldEnd?: Point2D,
-    newStart?: Point2D,
-    newEnd?: Point2D,
-  ) => {
-    const store = getGlobalGuideStore();
-    const cmd = new MoveGuideCommand(
-      store, guideId, axis,
-      oldOffset, newOffset,
-      oldStart, oldEnd,
-      newStart, newEnd,
-    );
-    // The guide was already moved live during drag (direct store mutation).
-    // Revert to original, then execute through command history for proper undo/redo.
-    if (axis === 'XZ' && oldStart && oldEnd) {
-      store.moveDiagonalGuideById(guideId, oldStart, oldEnd);
-    } else {
-      store.moveGuideById(guideId, oldOffset);
-    }
-    executeCommand(cmd);
-  }, [executeCommand]);
-
-  // === Mouse event handling (STRIPPED — grip logic now in unified hook) ===
-  const {
-    mouseCss, mouseWorld,
-    updateMouseCss, updateMouseWorld,
-    handleContainerMouseMove,
-    handleContainerMouseEnter, handleContainerMouseLeave,
-  } = useCanvasMouse({
-    transform, viewport, activeTool,
-    updatePosition, setActive, containerRef,
-    // ADR-183: Pass unified grip state so container drag preview still works
+  const { draggingGuide, setDraggingGuide, handleGuideDragComplete, handleContainerMouseDown, handleContainerMouseUp } = containerHandlerHook;
+  const { mouseCss, mouseWorld, updateMouseCss, updateMouseWorld, handleContainerMouseMove, handleContainerMouseEnter, handleContainerMouseLeave } = useCanvasMouse({
+    transform, viewport, activeTool, updatePosition, setActive, containerRef,
     hoveredVertexInfo: unified.overlayProjection.hoveredVertexInfo,
     hoveredEdgeInfo: unified.overlayProjection.hoveredEdgeInfo,
-    selectedGrips: unified.selectedGrips,
-    setSelectedGrips: unified.setSelectedGrips,
-    draggingVertices: unified.draggingVertices,
-    setDraggingVertices: () => {}, // no-op — unified handles this
-    draggingEdgeMidpoint: unified.draggingEdgeMidpoint,
-    setDraggingEdgeMidpoint: () => {}, // no-op
-    draggingOverlayBody: unified.draggingOverlayBody,
-    setDraggingOverlayBody: () => {}, // no-op
+    selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
+    draggingVertices: unified.draggingVertices, setDraggingVertices: () => {},
+    draggingEdgeMidpoint: unified.draggingEdgeMidpoint, setDraggingEdgeMidpoint: () => {},
+    draggingOverlayBody: unified.draggingOverlayBody, setDraggingOverlayBody: () => {},
     dragPreviewPosition: unified.overlayProjection.dragPreviewPosition,
     setDragPreviewPosition: unified.setDragPreviewPosition,
     gripHoverThrottleRef: unified.gripHoverThrottleRef,
-    justFinishedDragRef: unified.justFinishedDragRef,
-    markDragFinished: unified.markDragFinished,
-    universalSelectionRef, overlayStoreRef,
-    executeCommand,
+    justFinishedDragRef: unified.justFinishedDragRef, markDragFinished: unified.markDragFinished,
+    universalSelectionRef, overlayStoreRef, executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
-    // ADR-189 B5: Guide drag & drop
-    draggingGuide,
-    setDraggingGuide,
-    onGuideDragComplete: handleGuideDragComplete,
+    draggingGuide, setDraggingGuide, onGuideDragComplete: handleGuideDragComplete,
   });
 
-  // ADR-189: Parallel guide workflow — highlighted reference + prompt dialog
-  const [parallelRefGuideId, setParallelRefGuideId] = useState<string | null>(null);
-
-  // ADR-189 §3.3: Diagonal guide 3-click workflow state
-  const [diagonalStep, setDiagonalStep] = useState<0 | 1 | 2>(0);
-  const [diagonalStartPoint, setDiagonalStartPoint] = useState<Point2D | null>(null);
-  const [diagonalDirectionPoint, setDiagonalDirectionPoint] = useState<Point2D | null>(null);
-
-  // ADR-189 B28: Guide rotation workflow state
-  const [rotateRefGuideId, setRotateRefGuideId] = useState<string | null>(null);
-
-  // ADR-189 B29: Group rotation — selected guide IDs
-  const [rotateGroupSelectedIds, setRotateGroupSelectedIds] = useState<Set<string>>(new Set());
-
-  // ADR-189 B33: Equalize — selected guide IDs
-  const [equalizeSelectedIds, setEqualizeSelectedIds] = useState<Set<string>>(new Set());
-
-  // ADR-189: Reset parallel reference when switching away from guide-parallel tool
-  useEffect(() => {
-    if (activeTool !== 'guide-parallel') {
-      setParallelRefGuideId(null);
-    }
-  }, [activeTool]);
-
-  // ADR-189 B28: Reset rotation state when switching away from guide-rotate tool
-  useEffect(() => {
-    if (activeTool !== 'guide-rotate') {
-      setRotateRefGuideId(null);
-    }
-  }, [activeTool]);
-
-  // ADR-189 B29: Reset group rotation state when switching away
-  useEffect(() => {
-    if (activeTool !== 'guide-rotate-group') {
-      setRotateGroupSelectedIds(new Set());
-    }
-  }, [activeTool]);
-
-  // ADR-189 B33: Reset equalize state when switching away
-  useEffect(() => {
-    if (activeTool !== 'guide-equalize') {
-      setEqualizeSelectedIds(new Set());
-    }
-  }, [activeTool]);
-
-  // ADR-189 §3.3: Reset diagonal state when switching away from guide-xz tool
-  useEffect(() => {
-    if (activeTool !== 'guide-xz') {
-      setDiagonalStep(0);
-      setDiagonalStartPoint(null);
-      setDiagonalDirectionPoint(null);
-    }
-  }, [activeTool]);
-
-  // ADR-189: Step 1 — user clicks near a guide → highlight it as reference
-  const handleParallelRefSelected = useCallback((refGuideId: string) => {
-    setParallelRefGuideId(refGuideId);
-  }, []);
-
-  // ADR-189: Step 2 — user clicks on desired side → determines direction, opens dialog
-  const handleParallelSideChosen = useCallback((refGuideId: string, sign: 1 | -1) => {
-    showPromptDialog({
-      title: t('promptDialog.parallelDistance'),
-      label: t('promptDialog.enterDistance'),
-      placeholder: t('promptDialog.distancePlaceholder'),
-      inputType: 'number',
-      unit: 'mm',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n) || n === 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const distance = parseFloat(result);
-        if (!isNaN(distance) && Math.abs(distance) > 0.001) {
-          // Apply sign from step 2 to the entered distance
-          guideState.addParallelGuide(refGuideId, Math.abs(distance) * sign);
-        }
-      }
-      // Reset highlight regardless of confirm/cancel
-      setParallelRefGuideId(null);
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // ADR-189 B28: Guide rotation — Step 0: reference guide selected
-  const handleRotateRefSelected = useCallback((guideId: string) => {
-    setRotateRefGuideId(guideId);
-  }, []);
-
-  // ADR-189 B28: Guide rotation — Step 1: pivot set → open angle dialog
-  const handleRotatePivotSet = useCallback((guideId: string, pivot: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.rotateGuideAngle'),
-      label: t('promptDialog.enterRotateAngle'),
-      placeholder: t('promptDialog.rotateAnglePlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n)) return t('promptDialog.invalidNumber');
-        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const angleDeg = parseFloat(result);
-        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
-          guideState.rotateGuide(guideId, pivot, angleDeg);
-        }
-      }
-      setRotateRefGuideId(null);
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // ADR-189 B30: Rotate ALL guides — Step 0: pivot set → open angle dialog
-  const handleRotateAllPivotSet = useCallback((pivot: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.rotateAllGuidesAngle'),
-      label: t('promptDialog.enterRotateAngle'),
-      placeholder: t('promptDialog.rotateAnglePlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n)) return t('promptDialog.invalidNumber');
-        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const angleDeg = parseFloat(result);
-        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
-          guideState.rotateAllGuides(pivot, angleDeg);
-        }
-      }
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // ADR-189 B29: Toggle guide selection for group rotation
-  const handleRotateGroupToggle = useCallback((guideId: string) => {
-    setRotateGroupSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(guideId)) {
-        next.delete(guideId);
-      } else {
-        next.add(guideId);
-      }
-      return next;
-    });
-  }, []);
-
-  // ADR-189 B33: Toggle guide selection for equalization
-  const handleEqualizeToggle = useCallback((guideId: string) => {
-    setEqualizeSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(guideId)) {
-        next.delete(guideId);
-      } else {
-        next.add(guideId);
-      }
-      return next;
-    });
-  }, []);
-
-  // ADR-189 B33: Apply equalization — immediate execution (no dialog)
-  const handleEqualizeApply = useCallback((guideIds: readonly string[]) => {
-    const cmd = guideState.equalizeGuides(guideIds);
-    if (!cmd.isValid) {
-      notifyWarning(t('guides.equalizeRequiresSameAxis'));
-    }
-    setEqualizeSelectedIds(new Set());
-  }, [guideState, notifyWarning, t]);
-
-  // ADR-189 B29: Pivot set for group rotation → open angle dialog
-  const handleRotateGroupPivotSet = useCallback((guideIds: readonly string[], pivot: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.rotateGuideGroupAngle'),
-      label: t('promptDialog.enterRotateAngle'),
-      placeholder: t('promptDialog.rotateAnglePlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n)) return t('promptDialog.invalidNumber');
-        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const angleDeg = parseFloat(result);
-        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
-          guideState.rotateGuideGroup(guideIds, pivot, angleDeg);
-        }
-      }
-      setRotateGroupSelectedIds(new Set());
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // ADR-189 §3.3: Diagonal guide 3-click callbacks
-  const handleDiagonalStartSet = useCallback((point: Point2D) => {
-    setDiagonalStartPoint(point);
-    setDiagonalStep(1);
-  }, []);
-
-  const handleDiagonalDirectionSet = useCallback((point: Point2D) => {
-    setDiagonalDirectionPoint(point);
-    setDiagonalStep(2);
-  }, []);
-
-  const handleDiagonalComplete = useCallback(() => {
-    setDiagonalStep(0);
-    setDiagonalStartPoint(null);
-    setDiagonalDirectionPoint(null);
-  }, []);
-
-  // Two-step perpendicular guide: step 0 = select reference guide, step 1 = place perpendicular
-  const [perpRefGuideId, setPerpRefGuideId] = useState<string | null>(null);
-
-  const handlePerpRefSelected = useCallback((guideId: string) => {
-    setPerpRefGuideId(guideId);
-  }, []);
-
-  const handlePerpPlaced = useCallback(() => {
-    setPerpRefGuideId(null);
-  }, []);
-
-  // Reset when switching away from guide-perpendicular
-  useEffect(() => {
-    if (activeTool !== 'guide-perpendicular') {
-      setPerpRefGuideId(null);
-    }
-  }, [activeTool]);
-
-  // ADR-189 §3.7: Segments tool — 2-click + dialog workflow state
-  const [segmentsStep, setSegmentsStep] = useState<0 | 1>(0);
-  const [segmentsStartPoint, setSegmentsStartPoint] = useState<Point2D | null>(null);
-
-  // ADR-189 §3.8: Distance tool — 2-click + dialog workflow state
-  const [distanceStep, setDistanceStep] = useState<0 | 1>(0);
-  const [distanceStartPoint, setDistanceStartPoint] = useState<Point2D | null>(null);
-
-  // ADR-189: Reset segments/distance state when switching away
-  useEffect(() => {
-    if (activeTool !== 'guide-segments') {
-      setSegmentsStep(0);
-      setSegmentsStartPoint(null);
-    }
-  }, [activeTool]);
-
-  useEffect(() => {
-    if (activeTool !== 'guide-distance') {
-      setDistanceStep(0);
-      setDistanceStartPoint(null);
-    }
-  }, [activeTool]);
-
-  // ADR-189 §3.7: Segments callbacks
-  const handleSegmentsStartSet = useCallback((point: Point2D) => {
-    setSegmentsStartPoint(point);
-    setSegmentsStep(1);
-  }, []);
-
-  const handleSegmentsComplete = useCallback((start: Point2D, end: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.segmentCount'),
-      label: t('promptDialog.enterSegmentCount'),
-      placeholder: t('promptDialog.segmentCountPlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseInt(val, 10);
-        if (isNaN(n) || n < 2) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const count = parseInt(result, 10);
-        if (!isNaN(count) && count >= 2) {
-          cpState.addSegmentPoints(start, end, count);
-        }
-      }
-      setSegmentsStep(0);
-      setSegmentsStartPoint(null);
-    });
-  }, [showPromptDialog, t, cpState]);
-
-  // ADR-189 §3.8: Distance callbacks
-  const handleDistanceStartSet = useCallback((point: Point2D) => {
-    setDistanceStartPoint(point);
-    setDistanceStep(1);
-  }, []);
-
-  const handleDistanceComplete = useCallback((start: Point2D, end: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.pointDistance'),
-      label: t('promptDialog.enterPointDistance'),
-      placeholder: t('promptDialog.pointDistancePlaceholder'),
-      inputType: 'number',
-      unit: 'mm',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n) || n <= 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const distance = parseFloat(result);
-        if (!isNaN(distance) && distance > 0) {
-          cpState.addDistancePoints(start, end, distance);
-        }
-      }
-      setDistanceStep(0);
-      setDistanceStartPoint(null);
-    });
-  }, [showPromptDialog, t, cpState]);
-
-  // ADR-189 B2: Automatic grid generation — 1-click + dialog
-  const handleGridOriginSet = useCallback((origin: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.gridPattern'),
-      label: t('promptDialog.enterGridPattern'),
-      placeholder: t('promptDialog.gridPatternPlaceholder'),
-      inputType: 'text',
-      validate: (val) => {
-        const trimmed = val.trim();
-        if (!trimmed) return t('promptDialog.invalidNumber');
-        // Accept formats: "5x4" (equal) or "5,3,7" (custom) or "5" (single interval)
-        const equalMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+)$/i);
-        if (equalMatch) return null;
-        const parts = trimmed.split(',').map(s => parseFloat(s.trim()));
-        if (parts.some(isNaN) || parts.some(n => n <= 0)) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const trimmed = result.trim();
-        const offsets: number[] = [];
-
-        // Parse: "5x4" → 4 intervals of 5m
-        const equalMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+)$/i);
-        if (equalMatch) {
-          const spacing = parseFloat(equalMatch[1]);
-          const count = parseInt(equalMatch[2], 10);
-          for (let i = 0; i <= count; i++) offsets.push(i * spacing);
-        } else {
-          // Parse: "5,3,7" → cumulative offsets: 0, 5, 8, 15
-          offsets.push(0);
-          const parts = trimmed.split(',').map(s => parseFloat(s.trim()));
-          let cumulative = 0;
-          for (const p of parts) {
-            cumulative += p;
-            offsets.push(cumulative);
-          }
-        }
-
-        // Create X guides (vertical) from origin
-        for (const off of offsets) {
-          guideState.addGuide('X', origin.x + off);
-        }
-        // Create Y guides (horizontal) from origin
-        for (const off of offsets) {
-          guideState.addGuide('Y', origin.y + off);
-        }
-      }
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // ADR-189 B31/B9: Set center for polar array → open count+startAngle dialog
-  const handlePolarArrayCenterSet = useCallback((center: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.polarArrayCount'),
-      label: t('promptDialog.enterPolarArrayCount'),
-      placeholder: t('promptDialog.polarArrayCountPlaceholder'),
-      inputType: 'text',
-      validate: (val) => {
-        const trimmed = val.trim();
-        // Accept "N" or "N,angle"
-        const parts = trimmed.split(',');
-        const n = parseInt(parts[0], 10);
-        if (isNaN(n) || n < 2) return t('promptDialog.invalidNumber');
-        if (parts.length > 1) {
-          const angle = parseFloat(parts[1]);
-          if (isNaN(angle)) return t('promptDialog.invalidNumber');
-        }
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const parts = result.trim().split(',');
-        const count = parseInt(parts[0], 10);
-        const startAngle = parts.length > 1 ? parseFloat(parts[1]) : 0;
-        guideState.createPolarArray(center, count, startAngle);
-      }
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // ADR-189 B32: Set origin for scale → open scale factor dialog
-  const handleScaleOriginSet = useCallback((origin: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.scaleAllGuides'),
-      label: t('promptDialog.enterScaleFactor'),
-      placeholder: t('promptDialog.scaleFactorPlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n) || n === 0 || n === 1) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const factor = parseFloat(result);
-        guideState.scaleAllGuides(origin, factor);
-      }
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // ADR-189 B16: Set origin for guide at angle → open angle dialog
-  const handleGuideAngleOriginSet = useCallback((origin: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.guideAtAngle'),
-      label: t('promptDialog.enterGuideAngle'),
-      placeholder: t('promptDialog.guideAnglePlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n)) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const angleDeg = parseFloat(result);
-        const rad = (angleDeg * Math.PI) / 180;
-        const extent = 10_000;
-        const dx = Math.cos(rad) * extent;
-        const dy = Math.sin(rad) * extent;
-        const start: Point2D = { x: origin.x - dx, y: origin.y - dy };
-        const end: Point2D = { x: origin.x + dx, y: origin.y + dy };
-        guideState.addDiagonalGuide(start, end);
-      }
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // ADR-189 B19: Mirror guides — click on X/Y guide → mirror all others immediately
-  const handleMirrorAxisSelected = useCallback((axisGuideId: string) => {
-    guideState.mirrorGuides(axisGuideId);
-  }, [guideState]);
-
-  // ADR-189 B8: Guide from entity — entity picked → create guide(s)
-  const handleGuideFromEntity = useCallback((
-    entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE',
-    params: { lineStart?: Point2D; lineEnd?: Point2D; center?: Point2D; radius?: number; clickPoint?: Point2D },
-  ) => {
-    guideState.createGuideFromEntity({ entityType, ...params });
-  }, [guideState]);
-
-  // ADR-189 B24: Guide offset from entity — entity picked → prompt offset → create offset guides
-  const handleGuideOffsetFromEntity = useCallback((
-    entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE',
-    params: { lineStart?: Point2D; lineEnd?: Point2D; center?: Point2D; radius?: number; clickPoint?: Point2D },
-  ) => {
-    showPromptDialog({
-      title: t('promptDialog.offsetDistance'),
-      label: t('promptDialog.enterOffsetDistance'),
-      placeholder: t('promptDialog.offsetDistancePlaceholder'),
-    }).then(value => {
-      if (value === null) return;
-      const offset = parseFloat(value);
-      if (isNaN(offset) || offset <= 0) return;
-      guideState.createGuideOffsetFromEntity({ entityType, ...params }, offset);
-    });
-  }, [guideState, showPromptDialog, t]);
-
-  // ADR-189 B23: Structural preset grid
-  const handlePresetGrid = useCallback(() => {
-    showPromptDialog({
-      title: t('promptDialog.selectPreset'),
-      label: t('promptDialog.enterPresetChoice'),
-      placeholder: t('promptDialog.presetPlaceholder'),
-    }).then(value => {
-      if (value === null) return;
-      const input = value.trim().toLowerCase();
-
-      // Check preset shortcuts
-      const presetMap: Record<string, { x: readonly number[]; y: readonly number[]; name: string }> = {
-        '4m': { x: [0, 4, 8, 12, 16], y: [0, 4, 8, 12], name: 'Bay 4m Grid' },
-        '5m': { x: [0, 5, 10, 15, 20], y: [0, 5, 10, 15], name: 'Bay 5m Grid' },
-        '6m': { x: [0, 6, 12, 18, 24], y: [0, 6, 12, 18], name: 'Bay 6m Grid' },
-        '8m': { x: [0, 8, 16, 24], y: [0, 8, 16], name: 'Bay 8m Grid' },
-      };
-
-      const preset = presetMap[input];
-      if (preset) {
-        guideState.createGridFromPreset(preset.x, preset.y, null, null, preset.name);
-        return;
-      }
-
-      // Custom: ask for X spacings, then Y spacings
-      showPromptDialog({
-        title: t('promptDialog.enterXSpacings'),
-        label: t('promptDialog.enterXSpacings'),
-        placeholder: t('promptDialog.xSpacingsPlaceholder'),
-      }).then(xInput => {
-        if (xInput === null) return;
-        const xValues = xInput.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-        if (xValues.length < 2) return;
-
-        showPromptDialog({
-          title: t('promptDialog.enterYSpacings'),
-          label: t('promptDialog.enterYSpacings'),
-          placeholder: t('promptDialog.ySpacingsPlaceholder'),
-        }).then(yInput => {
-          if (yInput === null) return;
-          const yValues = yInput.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-          if (yValues.length < 2) return;
-
-          guideState.createGridFromPreset(xValues, yValues, null, null, 'Custom Grid');
-        });
-      });
-    });
-  }, [guideState, showPromptDialog, t]);
-
-  // ADR-189 B37: Guide from selection — batch create guides from selected entities
-  const handleGuideFromSelection = useCallback(() => {
-    const selIds = universalSelection.getIds();
-    if (selIds.length === 0) {
-      notifyWarning(t('promptDialog.selectEntitiesFirst'));
-      return;
-    }
-
-    // Get scene for entity lookup
-    const scene = props.currentScene;
-    if (!scene) return;
-
-    const paramsList: Array<{ entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE'; lineStart?: Point2D; lineEnd?: Point2D; center?: Point2D; radius?: number; clickPoint?: Point2D }> = [];
-
-    for (const entityId of selIds) {
-      const entity = scene.entities?.find(e => e.id === entityId);
-      if (!entity) continue;
-
-      if (entity.type === 'line' && 'start' in entity && 'end' in entity) {
-        const ent = entity as unknown as { start: Point2D; end: Point2D };
-        paramsList.push({
-          entityType: 'LINE',
-          lineStart: { x: ent.start.x, y: ent.start.y },
-          lineEnd: { x: ent.end.x, y: ent.end.y },
-        });
-      } else if (entity.type === 'circle' && 'center' in entity && 'radius' in entity) {
-        const ent = entity as unknown as { center: Point2D; radius: number };
-        paramsList.push({
-          entityType: 'CIRCLE',
-          center: { x: ent.center.x, y: ent.center.y },
-          radius: ent.radius,
-        });
-      } else if (entity.type === 'arc' && 'center' in entity && 'radius' in entity) {
-        const ent = entity as unknown as { center: Point2D; radius: number };
-        paramsList.push({
-          entityType: 'ARC',
-          center: { x: ent.center.x, y: ent.center.y },
-          radius: ent.radius,
-          clickPoint: { x: ent.center.x, y: ent.center.y + ent.radius },
-        });
-      }
-    }
-
-    if (paramsList.length > 0) {
-      guideState.createGuidesFromSelection(paramsList);
-    }
-  }, [guideState, universalSelection, props.currentScene, notifyWarning, t]);
-
-  // ADR-189 B23/B37: Auto-trigger preset/selection tools when activated
-  useEffect(() => {
-    if (activeTool === 'guide-preset-grid') {
-      handlePresetGrid();
-    } else if (activeTool === 'guide-from-selection') {
-      handleGuideFromSelection();
-    }
-  // eslint-disable-next-line
-  }, [activeTool]);
-
-  // ADR-189 B14: Multi-select guides
-  const [selectedGuideIds, setSelectedGuideIds] = useState<ReadonlySet<string>>(new Set());
-
-  const handleGuideSelectToggle = useCallback((guideId: string, addToSelection: boolean) => {
-    setSelectedGuideIds(prev => {
-      const next = new Set(prev);
-      if (addToSelection) {
-        if (next.has(guideId)) next.delete(guideId);
-        else next.add(guideId);
-      } else {
-        // Single-click: toggle or replace
-        if (next.size === 1 && next.has(guideId)) {
-          next.clear();
-        } else {
-          next.clear();
-          next.add(guideId);
-        }
-      }
-      return next;
-    });
-  }, []);
-
-  const handleGuideDeselectAll = useCallback(() => {
-    setSelectedGuideIds(new Set());
-  }, []);
-
-  // B14: Clear selection when switching tools
-  useEffect(() => {
-    if (activeTool !== 'guide-select' && activeTool !== 'guide-copy-pattern') {
-      setSelectedGuideIds(new Set());
-    }
-  }, [activeTool]);
-
-  // ADR-189 B17: Copy/Offset Pattern handler
-  const handleCopyPatternTrigger = useCallback(() => {
-    if (selectedGuideIds.size === 0) {
-      notifyWarning(t('promptDialog.selectGuidesFirst'));
-      return;
-    }
-    showPromptDialog({
-      title: t('promptDialog.copyPattern'),
-      label: t('promptDialog.enterOffsetAndCount'),
-      placeholder: t('promptDialog.copyPatternPlaceholder'),
-      inputType: 'text',
-      validate: (val) => {
-        const parts = val.trim().split(',');
-        if (parts.length < 2) return t('promptDialog.invalidNumber');
-        const offset = parseFloat(parts[0]);
-        const count = parseInt(parts[1], 10);
-        if (isNaN(offset) || offset === 0) return t('promptDialog.invalidNumber');
-        if (isNaN(count) || count < 1) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const parts = result.trim().split(',');
-        const offset = parseFloat(parts[0]);
-        const count = parseInt(parts[1], 10);
-        guideState.copyGuidePattern(Array.from(selectedGuideIds), offset, count);
-      }
-    });
-  }, [selectedGuideIds, showPromptDialog, t, guideState, notifyWarning]);
-
-  // B17: Auto-trigger dialog when tool activated with selection
-  useEffect(() => {
-    if (activeTool === 'guide-copy-pattern') {
-      handleCopyPatternTrigger();
-    }
-  // eslint-disable-next-line
-  }, [activeTool]);
-
-  // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)
-  const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
-  const [arcLineLine, setArcLineLine] = useState<LinePickableEntity | null>(null);
-
-  // ADR-189 §3.11: Circle-Circle intersection — 2-step state (step 0: pick first, step 1: pick second)
-  const [circleIntersectStep, setCircleIntersectStep] = useState<0 | 1>(0);
-  const [circleIntersectFirst, setCircleIntersectFirst] = useState<ArcPickableEntity | null>(null);
-
-  // ADR-189: Reset arc/circle tool state when switching away
-  useEffect(() => {
-    if (activeTool !== 'guide-arc-line-intersect') {
-      setArcLineStep(0);
-      setArcLineLine(null);
-    }
-    if (activeTool !== 'guide-circle-intersect') {
-      setCircleIntersectStep(0);
-      setCircleIntersectFirst(null);
-    }
-  }, [activeTool]);
-
-  // ADR-189: Sync guide tool step state → toolHintOverrideStore for ToolbarStatusBar hint progression
-  // Guide tools manage their own step state (not DrawingStateMachine), so we push it to the shared store.
-  useEffect(() => {
-    if (activeTool === 'guide-perpendicular') {
-      toolHintOverrideStore.setStepOverride(perpRefGuideId ? 1 : 0);
-    } else if (activeTool === 'guide-xz') {
-      toolHintOverrideStore.setStepOverride(diagonalStep);
-    } else if (activeTool === 'guide-parallel') {
-      toolHintOverrideStore.setStepOverride(parallelRefGuideId ? 1 : 0);
-    } else if (activeTool === 'guide-segments') {
-      toolHintOverrideStore.setStepOverride(segmentsStep);
-    } else if (activeTool === 'guide-distance') {
-      toolHintOverrideStore.setStepOverride(distanceStep);
-    } else if (activeTool === 'guide-arc-line-intersect') {
-      toolHintOverrideStore.setStepOverride(arcLineStep);
-    } else if (activeTool === 'guide-circle-intersect') {
-      toolHintOverrideStore.setStepOverride(circleIntersectStep);
-    } else if (activeTool === 'guide-rotate') {
-      toolHintOverrideStore.setStepOverride(rotateRefGuideId ? 1 : 0);
-    } else if (activeTool === 'guide-rotate-group') {
-      toolHintOverrideStore.setStepOverride(rotateGroupSelectedIds.size > 0 ? 1 : 0);
-    } else if (activeTool === 'guide-equalize') {
-      toolHintOverrideStore.setStepOverride(equalizeSelectedIds.size >= 3 ? 1 : 0);
-    } else {
-      toolHintOverrideStore.setStepOverride(null);
-    }
-  }, [activeTool, perpRefGuideId, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep, rotateRefGuideId, rotateGroupSelectedIds, equalizeSelectedIds]);
-
-  // ADR-189 §3.9: Arc segments picked → prompt for segment count
-  const handleArcSegmentsPicked = useCallback((entity: ArcPickableEntity) => {
-    showPromptDialog({
-      title: t('promptDialog.arcSegmentCount'),
-      label: t('promptDialog.enterArcSegmentCount'),
-      placeholder: t('promptDialog.segmentCountPlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseInt(val, 10);
-        if (isNaN(n) || n < 2) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const count = parseInt(result, 10);
-        if (!isNaN(count) && count >= 2) {
-          cpState.addArcSegmentPoints(
-            entity.center, entity.radius,
-            entity.startAngle, entity.endAngle,
-            count, entity.isFullCircle,
-          );
-        }
-      }
-    });
-  }, [showPromptDialog, t, cpState]);
-
-  // ADR-189 §3.10: Arc distance picked → prompt for distance
-  const handleArcDistancePicked = useCallback((entity: ArcPickableEntity) => {
-    showPromptDialog({
-      title: t('promptDialog.arcPointDistance'),
-      label: t('promptDialog.enterArcPointDistance'),
-      placeholder: t('promptDialog.pointDistancePlaceholder'),
-      inputType: 'number',
-      unit: 'mm',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n) || n <= 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const distance = parseFloat(result);
-        if (!isNaN(distance) && distance > 0) {
-          cpState.addArcDistancePoints(
-            entity.center, entity.radius,
-            entity.startAngle, entity.endAngle,
-            distance, entity.isFullCircle,
-          );
-        }
-      }
-    });
-  }, [showPromptDialog, t, cpState]);
-
-  // ADR-189 §3.12: Arc-Line intersection — step 0 → store line, advance to step 1
-  const handleArcLineLinePicked = useCallback((entity: LinePickableEntity) => {
-    setArcLineLine(entity);
-    setArcLineStep(1);
-  }, []);
-
-  // ADR-189 §3.12: Arc-Line intersection — step 1 → compute + create points
-  const handleArcLineArcPicked = useCallback((entity: ArcPickableEntity) => {
-    if (!arcLineLine) return;
-    const prevCount = cpState.pointCount;
-    cpState.addLineArcIntersectionPoints(
-      arcLineLine.start, arcLineLine.end,
-      entity.center, entity.radius,
-      entity.startAngle, entity.endAngle,
-      entity.isFullCircle,
-    );
-    // Notify user if no intersections found (pointCount didn't change)
-    // Use setTimeout to let the store update propagate
-    setTimeout(() => {
-      if (cpState.getStore().count === prevCount) {
-        notifyWarning(t('promptDialog.noIntersectionFound'));
-      }
-    }, 0);
-    // Reset state
-    setArcLineStep(0);
-    setArcLineLine(null);
-  }, [arcLineLine, cpState, notifyWarning, t]);
-
-  // ADR-189 §3.11: Circle-Circle intersection — step 0 → store first arc, advance to step 1
-  const handleCircleIntersectFirstPicked = useCallback((entity: ArcPickableEntity) => {
-    setCircleIntersectFirst(entity);
-    setCircleIntersectStep(1);
-  }, []);
-
-  // ADR-189 §3.11: Circle-Circle intersection — step 1 → compute + create points
-  const handleCircleIntersectSecondPicked = useCallback((entity: ArcPickableEntity) => {
-    if (!circleIntersectFirst) return;
-    const prevCount = cpState.pointCount;
-    cpState.addCircleCircleIntersectionPoints(
-      circleIntersectFirst.center, circleIntersectFirst.radius,
-      circleIntersectFirst.startAngle, circleIntersectFirst.endAngle, circleIntersectFirst.isFullCircle,
-      entity.center, entity.radius,
-      entity.startAngle, entity.endAngle, entity.isFullCircle,
-    );
-    // Notify user if no intersections found
-    setTimeout(() => {
-      if (cpState.getStore().count === prevCount) {
-        notifyWarning(t('promptDialog.noCircleIntersectionFound'));
-      }
-    }, 0);
-    // Reset state
-    setCircleIntersectStep(0);
-    setCircleIntersectFirst(null);
-  }, [circleIntersectFirst, cpState, notifyWarning, t]);
-
-  // Guide rect-center: place construction point at center of enclosing guide rectangle
-  const handleRectCenterPlace = useCallback((center: Point2D) => {
-    cpState.addPoint(center, 'RC');
-  }, [cpState]);
-
-  // Guide line-midpoint: place construction point at midpoint of line entity
-  const handleLineMidpointPlace = useCallback((midpoint: Point2D) => {
-    cpState.addPoint(midpoint, 'MP');
-  }, [cpState]);
-
-  // Guide circle-center: place construction point at center of circle/arc entity
-  const handleCircleCenterPlace = useCallback((center: Point2D) => {
-    cpState.addPoint(center, 'CC');
-  }, [cpState]);
-
-  // ADR-189: Guide context menu handlers
-  const handleGuideContextDelete = useCallback((guideId: string) => {
-    guideState.removeGuide(guideId);
-  }, [guideState]);
-
-  const handleGuideContextToggleLock = useCallback((guideId: string) => {
-    const store = guideState.getStore();
-    const guide = store.getGuideById(guideId);
-    if (guide) {
-      store.setGuideLocked(guideId, !guide.locked);
-    }
-  }, [guideState]);
-
-  const handleGuideContextEditLabel = useCallback((guideId: string, currentLabel: string | null) => {
-    showPromptDialog({
-      title: t('promptDialog.editLabel'),
-      label: t('promptDialog.enterLabel'),
-      placeholder: currentLabel ?? '',
-      defaultValue: currentLabel ?? '',
-      inputType: 'text',
-    }).then((result) => {
-      if (result !== null) {
-        const store = guideState.getStore();
-        store.setGuideLabel(guideId, result || null);
-      }
-    });
-  }, [showPromptDialog, t, guideState]);
-
-  // B6: Guide color change handler
-  const handleGuideContextChangeColor = useCallback((guideId: string, color: string | null) => {
-    const store = guideState.getStore();
-    store.setGuideColor(guideId, color);
-  }, [guideState]);
-
-  // B36 (ADR-189): Measurement → Guide — show notification with "Create Guides" after measurement
-  const handleMeasurementComplete = useCallback((points: ReadonlyArray<{ x: number; y: number }>, tool: ToolType) => {
-    if (points.length < 2) return;
-    notifySuccess(t('guides.measureToGuide'), {
-      duration: 5000,
-      actions: [{
-        label: t('guides.createGuides'),
-        onClick: () => {
-          // Create guides at all unique X and Y coordinates from the measurement
-          const xOffsets = new Set<number>();
-          const yOffsets = new Set<number>();
-          for (const p of points) {
-            xOffsets.add(Math.round(p.x * 1000) / 1000); // 3 decimal precision
-            yOffsets.add(Math.round(p.y * 1000) / 1000);
-          }
-          for (const x of xOffsets) guideState.addGuide('X', x);
-          for (const y of yOffsets) guideState.addGuide('Y', y);
-        },
-      }],
-    });
-  }, [notifySuccess, t, guideState]);
-
-  // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes + snap highlight)
-  const highlightedGuideId = useMemo<string | null>(() => {
-    if (!mouseWorld || !guideState.guides.length) return null;
-
-    // 1. Guide tool modes: highlight nearest guide for delete/perpendicular(step 0)/parallel/move
-    const needsToolHighlight =
-      activeTool === 'guide-delete' ||
-      (activeTool === 'guide-perpendicular' && !perpRefGuideId) ||
-      activeTool === 'guide-move' ||
-      (activeTool === 'guide-parallel' && !parallelRefGuideId) ||
-      (activeTool === 'guide-rotate' && !rotateRefGuideId) ||
-      activeTool === 'guide-rotate-group' ||
-      activeTool === 'guide-equalize' ||
-      activeTool === 'guide-mirror';
-
-    if (needsToolHighlight) {
-      const hitToleranceWorld = 30 / transform.scale;
-      let nearestId: string | null = null;
-      let nearestDist = hitToleranceWorld;
-      for (const guide of guideState.guides) {
-        if (!guide.visible) continue;
-        let dist: number;
-        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-          dist = pointToSegmentDistance(mouseWorld, guide.startPoint, guide.endPoint);
-        } else {
-          dist = guide.axis === 'X'
-            ? Math.abs(mouseWorld.x - guide.offset)
-            : Math.abs(mouseWorld.y - guide.offset);
-        }
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestId = guide.id;
-        }
-      }
-      return nearestId;
-    }
-
-    // 2. Parallel/Perpendicular/Rotate ref selected → highlight the reference guide
-    if (parallelRefGuideId) return parallelRefGuideId;
-    if (perpRefGuideId) return perpRefGuideId;
-    if (rotateRefGuideId) return rotateRefGuideId;
-
-    // 3. Snap-based highlight: when snap engine locks onto a guide, highlight it
-    const snap = getImmediateSnap();
-    if (snap?.found && snap.mode === 'guide' && snap.entityId) {
-      return snap.entityId;
-    }
-
-    return null;
-  }, [mouseWorld, guideState.guides, activeTool, parallelRefGuideId, perpRefGuideId, rotateRefGuideId, transform.scale]);
-
-  // ADR-189 §4.13: Panel highlight — hover over guide row in GuidePanel → highlight on canvas
-  const [panelHighlightGuideId, setPanelHighlightGuideId] = useState<string | null>(null);
-  useEffect(() => {
-    return eventBus.on('grid:guide-panel-highlight', ({ guideId }) => {
-      setPanelHighlightGuideId(guideId);
-    });
-  }, [eventBus]);
-
-  // ADR-189 §4.13: Panel highlight — hover over point row in GuidePanel → highlight on canvas
-  const [panelHighlightPointId, setPanelHighlightPointId] = useState<string | null>(null);
-  useEffect(() => {
-    return eventBus.on('grid:point-panel-highlight', ({ pointId }) => {
-      setPanelHighlightPointId(pointId);
-    });
-  }, [eventBus]);
-
-  // B35: Auto-remove temporary guides when a drawing operation completes
-  useEffect(() => {
-    return EventBus.on('drawing:complete', () => {
-      const removed = guideState.getStore().removeTemporaryGuides();
-      if (removed.length > 0) {
-        EventBus.emit('grid:temporary-guides-removed', { count: removed.length });
-      }
-    });
-  }, [guideState]);
-
-  // Merge: panel highlight takes precedence when no tool-based highlight
-  const effectiveHighlightedGuideId = highlightedGuideId ?? panelHighlightGuideId;
-
-  // ADR-189: Ghost guide preview (follows cursor when guide tool is active)
-  const ghostGuide = useMemo(() => {
-    if (!mouseWorld) return null;
-    if (activeTool === 'guide-x') return { axis: 'X' as const, offset: mouseWorld.x };
-    if (activeTool === 'guide-z') return { axis: 'Y' as const, offset: mouseWorld.y };
-    // Step 2 preview: ghost follows cursor along reference guide's axis (X/Y only — XZ handled by ghostDiagonalGuide)
-    if (activeTool === 'guide-parallel' && parallelRefGuideId) {
-      const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
-      if (refGuide && refGuide.axis !== 'XZ') {
-        return { axis: refGuide.axis, offset: refGuide.axis === 'X' ? mouseWorld.x : mouseWorld.y };
-      }
-    }
-    // Perpendicular step 1 preview: ghost shows perpendicular direction following cursor
-    if (activeTool === 'guide-perpendicular' && perpRefGuideId) {
-      const refGuide = guideState.guides.find(g => g.id === perpRefGuideId);
-      if (refGuide && refGuide.axis !== 'XZ') {
-        // Perpendicular to X → ghost Y, perpendicular to Y → ghost X
-        const perpAxis = refGuide.axis === 'X' ? 'Y' as const : 'X' as const;
-        return { axis: perpAxis, offset: perpAxis === 'X' ? mouseWorld.x : mouseWorld.y };
-      }
-    }
-    return null;
-  }, [activeTool, mouseWorld, parallelRefGuideId, perpRefGuideId, guideState.guides]);
-
-  // ADR-189 §3.3: Ghost diagonal guide preview (3-click workflow + XZ parallel)
-  const ghostDiagonalGuide = useMemo(() => {
-    if (!mouseWorld) return null;
-
-    // XZ parallel preview: shifted diagonal following cursor perpendicular distance
-    if (activeTool === 'guide-parallel' && parallelRefGuideId) {
-      const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
-      if (refGuide?.axis === 'XZ' && refGuide.startPoint && refGuide.endPoint) {
-        const dx = refGuide.endPoint.x - refGuide.startPoint.x;
-        const dy = refGuide.endPoint.y - refGuide.startPoint.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len > 0) {
-          const nx = -dy / len;
-          const ny = dx / len;
-          const perpDist = (mouseWorld.x - refGuide.startPoint.x) * nx + (mouseWorld.y - refGuide.startPoint.y) * ny;
-          return {
-            start: { x: refGuide.startPoint.x + nx * perpDist, y: refGuide.startPoint.y + ny * perpDist },
-            end: { x: refGuide.endPoint.x + nx * perpDist, y: refGuide.endPoint.y + ny * perpDist },
-          };
-        }
-      }
-    }
-
-    if (activeTool !== 'guide-xz') return null;
-
-    if (diagonalStep === 1 && diagonalStartPoint) {
-      // Step 1: Free direction — line from start to cursor
-      return { start: diagonalStartPoint, end: mouseWorld };
-    }
-
-    if (diagonalStep === 2 && diagonalStartPoint && diagonalDirectionPoint) {
-      // Step 2: Constrained — project cursor onto direction line
-      const dx = diagonalDirectionPoint.x - diagonalStartPoint.x;
-      const dy = diagonalDirectionPoint.y - diagonalStartPoint.y;
-      const lenSq = dx * dx + dy * dy;
-      if (lenSq === 0) return null;
-      const t = ((mouseWorld.x - diagonalStartPoint.x) * dx + (mouseWorld.y - diagonalStartPoint.y) * dy) / lenSq;
-      return {
-        start: diagonalStartPoint,
-        end: { x: diagonalStartPoint.x + t * dx, y: diagonalStartPoint.y + t * dy },
-      };
-    }
-
-    return null;
-  }, [activeTool, mouseWorld, diagonalStep, diagonalStartPoint, diagonalDirectionPoint, parallelRefGuideId, guideState.guides]);
-
-  // ADR-189 §3.16: Highlight nearest construction point for delete-point hover
-  const highlightedPointId = useMemo<string | null>(() => {
-    if (!mouseWorld || activeTool !== 'guide-delete-point') return null;
-    const hitToleranceWorld = 30 / transform.scale;
-    const nearest = cpState.findNearest(mouseWorld, hitToleranceWorld);
-    return nearest?.id ?? null;
-  }, [mouseWorld, activeTool, cpState, transform.scale]);
-
-  // ADR-189 §3.7/3.8: Ghost line preview during segments/distance step 1 (start→cursor)
-  const ghostSegmentLine = useMemo(() => {
-    if (!mouseWorld) return null;
-    if (activeTool === 'guide-segments' && segmentsStep === 1 && segmentsStartPoint) {
-      return { start: segmentsStartPoint, end: mouseWorld };
-    }
-    if (activeTool === 'guide-distance' && distanceStep === 1 && distanceStartPoint) {
-      return { start: distanceStartPoint, end: mouseWorld };
-    }
-    return null;
-  }, [activeTool, mouseWorld, segmentsStep, segmentsStartPoint, distanceStep, distanceStartPoint]);
-
-  // ADR-183: Wrapper container handlers — unified hook handles grip mouseDown/mouseUp
-  const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-
-    // ADR-189 B5: Guide drag initiation — highest priority for guide-move tool
-    if (activeTool === 'guide-move' && containerRef.current) {
-      const snap = getPointerSnapshotFromElement(containerRef.current);
-      if (snap) {
-        const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-        const store = getGlobalGuideStore();
-        const hitTolerance = 30 / transform.scale;
-        const nearest = store.findNearestGuide(worldPos.x, worldPos.y, hitTolerance);
-
-        if (nearest && !nearest.locked) {
-          e.preventDefault();
-          e.stopPropagation();
-          setDraggingGuide({
-            guideId: nearest.id,
-            axis: nearest.axis,
-            startMouseWorld: worldPos,
-            originalOffset: nearest.offset,
-            originalStartPoint: nearest.startPoint ? { x: nearest.startPoint.x, y: nearest.startPoint.y } : undefined,
-            originalEndPoint: nearest.endPoint ? { x: nearest.endPoint.x, y: nearest.endPoint.y } : undefined,
-          });
-          return;
-        }
-      }
-      return;
-    }
-
-    const consumed = unified.handleMouseDown(
-      mouseWorld ?? { x: 0, y: 0 },
-      e.shiftKey,
-    );
-    if (consumed) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    // Fall through to useCanvasMouse for non-grip behavior (not needed — grip handling is complete)
-  }, [unified, mouseWorld, activeTool, containerRef, transform, setDraggingGuide]);
-
-  const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
-    // ADR-189 B5: Guide drag end — create MoveGuideCommand
-    if (draggingGuide && containerRef.current) {
-      const snap = getPointerSnapshotFromElement(containerRef.current);
-      if (snap) {
-        const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-        const deltaX = worldPos.x - draggingGuide.startMouseWorld.x;
-        const deltaY = worldPos.y - draggingGuide.startMouseWorld.y;
-        const hasMovement = Math.abs(deltaX) > MOVEMENT_DETECTION.MIN_MOVEMENT ||
-                            Math.abs(deltaY) > MOVEMENT_DETECTION.MIN_MOVEMENT;
-
-        if (hasMovement) {
-          if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
-            const newStart = { x: draggingGuide.originalStartPoint.x + deltaX, y: draggingGuide.originalStartPoint.y + deltaY };
-            const newEnd = { x: draggingGuide.originalEndPoint.x + deltaX, y: draggingGuide.originalEndPoint.y + deltaY };
-            handleGuideDragComplete(
-              draggingGuide.guideId, draggingGuide.axis,
-              draggingGuide.originalOffset, draggingGuide.originalOffset,
-              draggingGuide.originalStartPoint, draggingGuide.originalEndPoint,
-              newStart, newEnd,
-            );
-          } else {
-            const delta1D = draggingGuide.axis === 'X' ? deltaX : deltaY;
-            const newOffset = draggingGuide.originalOffset + delta1D;
-            handleGuideDragComplete(
-              draggingGuide.guideId, draggingGuide.axis,
-              draggingGuide.originalOffset, newOffset,
-            );
-          }
-        } else {
-          // No movement — revert the live store mutation
-          const store = getGlobalGuideStore();
-          if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
-            store.moveDiagonalGuideById(draggingGuide.guideId, draggingGuide.originalStartPoint, draggingGuide.originalEndPoint);
-          } else {
-            store.moveGuideById(draggingGuide.guideId, draggingGuide.originalOffset);
-          }
-        }
-      }
-      setDraggingGuide(null);
-      return;
-    }
-
-    // 🏢 ENTERPRISE (2026-02-19): Apply snap to container mouseUp for overlay grip alignment
-    // 🚀 PERF (2026-02-20): Read from imperative store — no SnapContext re-render needed
-    let worldPos = mouseWorld ?? { x: 0, y: 0 };
-    const snapResult = getImmediateSnap();
-    if (snapResult?.found && snapResult.point) {
-      worldPos = snapResult.point;
-    }
-    const consumed = await unified.handleMouseUp(worldPos);
-    if (consumed) return;
-    // No fallback needed — unified handles all grip commits
-  }, [unified, mouseWorld, draggingGuide, containerRef, transform, setDraggingGuide, handleGuideDragComplete]);
-
-  // === Layer visibility: always show when drawing/editing ===
+  // === Guide tool workflows ===
+  const guideWorkflows = useGuideToolWorkflows({
+    activeTool, guideState, cpState, showPromptDialog, t, executeCommand,
+    notifyWarning, notifySuccess, universalSelection,
+    currentScene: props.currentScene ?? null, transform, mouseWorld, eventBus,
+  });
+
+  // === Layer visibility ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
 
-  // === Overlay → ColorLayer conversion ===
-  const {
-    hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, selectedGrip,
-    draggingVertex, draggingVertices, draggingEdgeMidpoint,
-    dragPreviewPosition, draggingOverlayBody,
-  } = unified.overlayProjection;
-
+  // === Overlay → ColorLayer ===
+  const { hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, selectedGrip, draggingVertex, draggingVertices, draggingEdgeMidpoint, dragPreviewPosition, draggingOverlayBody } = unified.overlayProjection;
   const { colorLayers, colorLayersWithDraft, isNearFirstPoint } = useOverlayLayers({
-    overlays: currentOverlays,
-    isSelected: universalSelection.isSelected,
-    hoveredVertexInfo, hoveredEdgeInfo,
-    selectedGrips, draggingVertex, draggingVertices,
-    draggingEdgeMidpoint, dragPreviewPosition,
-    draftPolygon, mouseWorld,
-    transformScale: transform.scale,
-    currentStatus, hoveredOverlayId, overlayMode,
+    overlays: currentOverlays, isSelected: universalSelection.isSelected,
+    hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, draggingVertex, draggingVertices,
+    draggingEdgeMidpoint, dragPreviewPosition, draftPolygon, mouseWorld,
+    transformScale: transform.scale, currentStatus, hoveredOverlayId, overlayMode,
   });
-
-  const { fitToOverlay } = useFitToView({
-    dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays,
-  });
+  const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
 
   const { globalRulerSettings, drawingHandlers, drawingHandlersRef, hasUnifiedDrawingPointsRef } = useCanvasEffects({
-    activeTool, overlayMode,
-    currentScene: props.currentScene ?? null,
-    handleSceneChange: props.handleSceneChange,
-    onToolChange: props.onToolChange,
-    previewCanvasRef,
-    selectedGrips: unified.selectedGrips,
-    setSelectedGrips: unified.setSelectedGrips,
+    activeTool, overlayMode, currentScene: props.currentScene ?? null,
+    handleSceneChange: props.handleSceneChange, onToolChange: props.onToolChange, previewCanvasRef,
+    selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
     setDragPreviewPosition: unified.setDragPreviewPosition,
     universalSelection, dxfScene, dxfCanvasRef, overlayCanvasRef, zoomSystem,
-    currentLevelId: levelManager.currentLevelId,
-    onMeasurementComplete: handleMeasurementComplete,
+    currentLevelId: levelManager.currentLevelId, onMeasurementComplete: guideWorkflows.handleMeasurementComplete,
   });
 
-  // 🏢 PERF (2026-02-19): Imperative refs for context menus — open() doesn't re-render canvas
+  // === Context menu refs ===
   const drawingMenuRef = useRef<DrawingContextMenuHandle>(null);
   const entityMenuRef = useRef<EntityContextMenuHandle>(null);
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
 
-  // ADR-188: Entity Rotation Tool (must be before useCanvasContextMenu + useCanvasClickHandler)
+  // === Rotation Tool ===
   const rotationTool = useRotationTool({
-    activeTool,
-    selectedEntityIds,
-    levelManager,
-    executeCommand,
-    previewCanvasRef,
+    activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
-    currentOverlays,
-    overlayUpdate: overlayStore.update,
+    currentOverlays, overlayUpdate: overlayStore.update,
   });
-
-  // ADR-188: Right-click during awaiting-angle → PromptDialog for typed angle input
   const handleRotationAnglePrompt = useCallback(async () => {
     const result = await showPromptDialog({
-      title: t('promptDialog.rotationAngle'),
-      label: t('promptDialog.enterAngle'),
-      placeholder: t('promptDialog.anglePlaceholder'),
-      inputType: 'number',
-      unit: '°',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n)) return t('promptDialog.invalidNumber');
-        return null;
-      },
+      title: t('promptDialog.rotationAngle'), label: t('promptDialog.enterAngle'),
+      placeholder: t('promptDialog.anglePlaceholder'), inputType: 'number', unit: '°',
+      validate: (val) => { const n = parseFloat(val); if (isNaN(n)) return t('promptDialog.invalidNumber'); return null; },
     });
-    if (result !== null) {
-      const angle = parseFloat(result);
-      if (!isNaN(angle) && Math.abs(angle) > 0.001) {
-        rotationTool.handleAngleInput(angle);
-      }
-    }
+    if (result !== null) { const angle = parseFloat(result); if (!isNaN(angle) && Math.abs(angle) > 0.001) rotationTool.handleAngleInput(angle); }
   }, [showPromptDialog, t, rotationTool]);
 
   const { handleDrawingContextMenu } = useCanvasContextMenu({
     containerRef, activeTool, overlayMode, hasUnifiedDrawingPointsRef, draftPolygonRef,
-    selectedEntityIds, drawingMenuRef, entityMenuRef,
-    rotationPhase: rotationTool.phase,
-    onRotationAnglePrompt: handleRotationAnglePrompt,
-    // ADR-189: Guide context menu support
-    guideMenuRef,
-    guides: guideState.guides,
-    transformRef,
-    // ADR-189 B14: Batch guide context menu
-    guideBatchMenuRef,
-    selectedGuideIds,
+    selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase: rotationTool.phase,
+    onRotationAnglePrompt: handleRotationAnglePrompt, guideMenuRef, guides: guideState.guides,
+    transformRef, guideBatchMenuRef, selectedGuideIds: guideWorkflows.selectedGuideIds,
   });
-
   const { handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = useDrawingUIHandlers({
     overlayMode, draftPolygonRef, finishDrawingWithPolygonRef, drawingHandlersRef, setDraftPolygon,
   });
-
   const { handleOverlayClick, handleMultiOverlayClick } = useOverlayInteraction({
     activeTool, overlayMode, currentOverlays, universalSelection, overlayStore,
-    hoveredEdgeInfo, transformScale: transform.scale,
-    fitToOverlay,
-    setDraggingOverlayBody: unified.setDraggingOverlayBody,
-    setDragPreviewPosition: unified.setDragPreviewPosition,
+    hoveredEdgeInfo, transformScale: transform.scale, fitToOverlay,
+    setDraggingOverlayBody: unified.setDraggingOverlayBody, setDragPreviewPosition: unified.setDragPreviewPosition,
   });
 
   const { handleCanvasClick } = useCanvasClickHandler({
-    viewportReady, viewport, transform,
-    activeTool, overlayMode,
+    viewportReady, viewport, transform, activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
     dxfGripInteraction: unified.dxfProjection,
-    // ADR-188: Rotation tool click routing — isCollectingInput is true ONLY during
-    // base-point and angle phases (not during awaiting-entity, where clicks should
-    // fall through to entity selection instead of being consumed by rotation)
-    rotationIsActive: rotationTool.isCollectingInput,
-    handleRotationClick: rotationTool.handleRotationClick,
-    levelManager,
-    draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
-    isNearFirstPoint, finishDrawingWithPolygonRef,
-    drawingHandlersRef, entitySelectedOnMouseDownRef,
-    universalSelection,
-    hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
-    selectedGrips: unified.selectedGrips,
-    setSelectedGrips: unified.setSelectedGrips,
-    justFinishedDragRef: unified.justFinishedDragRef,
-    draggingOverlayBody: unified.draggingOverlayBody,
-    setSelectedEntityIds,
-    currentOverlays, handleOverlayClick,
-    // ADR-189: Guide click handlers (3-step parallel: ref → side → dialog)
-    guideAddGuide: guideState.addGuide,
-    guideRemoveGuide: guideState.removeGuide,
-    guides: guideState.guides,
-    parallelRefGuideId,
-    onParallelRefSelected: handleParallelRefSelected,
-    onParallelSideChosen: handleParallelSideChosen,
-    // ADR-189 §3.3: Diagonal guide 3-click workflow
-    guideAddDiagonalGuide: guideState.addDiagonalGuide,
-    diagonalStep,
-    diagonalStartPoint,
-    diagonalDirectionPoint,
-    onDiagonalStartSet: handleDiagonalStartSet,
-    onDiagonalDirectionSet: handleDiagonalDirectionSet,
-    onDiagonalComplete: handleDiagonalComplete,
-    // ADR-189 §3.7-3.16: Construction snap point tools
-    cpAddPoint: cpState.addPoint,
-    cpDeletePoint: cpState.deletePoint,
-    cpFindNearest: cpState.findNearest,
-    segmentsStep,
-    segmentsStartPoint,
-    onSegmentsStartSet: handleSegmentsStartSet,
-    onSegmentsComplete: handleSegmentsComplete,
-    distanceStep,
-    distanceStartPoint,
-    onDistanceStartSet: handleDistanceStartSet,
-    onDistanceComplete: handleDistanceComplete,
-    // ADR-189 §3.9/3.10/3.11/3.12: Arc guide entity picking
-    onArcSegmentsPicked: handleArcSegmentsPicked,
-    onArcDistancePicked: handleArcDistancePicked,
-    arcLineStep,
-    onArcLineLinePicked: handleArcLineLinePicked,
-    onArcLineArcPicked: handleArcLineArcPicked,
-    circleIntersectStep,
-    onCircleIntersectFirstPicked: handleCircleIntersectFirstPicked,
-    onCircleIntersectSecondPicked: handleCircleIntersectSecondPicked,
-    // Two-step perpendicular guide
-    perpRefGuideId,
-    onPerpRefSelected: handlePerpRefSelected,
-    onPerpPlaced: handlePerpPlaced,
-    // Guide rect-center
-    onRectCenterPlace: handleRectCenterPlace,
-    // Guide line-midpoint + circle-center
-    onLineMidpointPlace: handleLineMidpointPlace,
-    onCircleCenterPlace: handleCircleCenterPlace,
-    // ADR-189 B2: Grid generation
-    onGridOriginSet: handleGridOriginSet,
-    // ADR-189 B28: Guide rotation
-    rotateRefGuideId,
-    onRotateRefSelected: handleRotateRefSelected,
-    onRotatePivotSet: handleRotatePivotSet,
-    // ADR-189 B30: Rotate all guides
-    onRotateAllPivotSet: handleRotateAllPivotSet,
-    // ADR-189 B29: Rotate guide group
-    rotateGroupSelectedIds,
-    onRotateGroupToggle: handleRotateGroupToggle,
-    onRotateGroupPivotSet: handleRotateGroupPivotSet,
-    // ADR-189 B33: Equalize guide spacing
-    equalizeSelectedIds,
-    onEqualizeToggle: handleEqualizeToggle,
-    onEqualizeApply: handleEqualizeApply,
-    // ADR-189 B31: Polar array
-    onPolarArrayCenterSet: handlePolarArrayCenterSet,
-    // ADR-189 B32: Scale grid
-    onScaleOriginSet: handleScaleOriginSet,
-    // ADR-189 B16: Guide at angle
-    onGuideAngleOriginSet: handleGuideAngleOriginSet,
-    // ADR-189 B19: Mirror guides
-    onMirrorAxisSelected: handleMirrorAxisSelected,
-    // ADR-189 B8: Guide from entity
-    onGuideFromEntity: handleGuideFromEntity,
-    // ADR-189 B24: Guide offset from entity
-    onGuideOffsetFromEntity: handleGuideOffsetFromEntity,
-    // ADR-189 B14: Guide multi-select
-    onGuideSelectToggle: handleGuideSelectToggle,
-    onGuideDeselectAll: handleGuideDeselectAll,
+    rotationIsActive: rotationTool.isCollectingInput, handleRotationClick: rotationTool.handleRotationClick,
+    levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
+    isNearFirstPoint, finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
+    universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
+    selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
+    justFinishedDragRef: unified.justFinishedDragRef, draggingOverlayBody: unified.draggingOverlayBody,
+    setSelectedEntityIds, currentOverlays, handleOverlayClick,
+    guideAddGuide: guideState.addGuide, guideRemoveGuide: guideState.removeGuide, guides: guideState.guides,
+    parallelRefGuideId: guideWorkflows.parallelRefGuideId, onParallelRefSelected: guideWorkflows.handleParallelRefSelected, onParallelSideChosen: guideWorkflows.handleParallelSideChosen,
+    guideAddDiagonalGuide: guideState.addDiagonalGuide, diagonalStep: guideWorkflows.diagonalStep, diagonalStartPoint: guideWorkflows.diagonalStartPoint, diagonalDirectionPoint: guideWorkflows.diagonalDirectionPoint,
+    onDiagonalStartSet: guideWorkflows.handleDiagonalStartSet, onDiagonalDirectionSet: guideWorkflows.handleDiagonalDirectionSet, onDiagonalComplete: guideWorkflows.handleDiagonalComplete,
+    cpAddPoint: cpState.addPoint, cpDeletePoint: cpState.deletePoint, cpFindNearest: cpState.findNearest,
+    segmentsStep: guideWorkflows.segmentsStep, segmentsStartPoint: guideWorkflows.segmentsStartPoint,
+    onSegmentsStartSet: guideWorkflows.handleSegmentsStartSet, onSegmentsComplete: guideWorkflows.handleSegmentsComplete,
+    distanceStep: guideWorkflows.distanceStep, distanceStartPoint: guideWorkflows.distanceStartPoint,
+    onDistanceStartSet: guideWorkflows.handleDistanceStartSet, onDistanceComplete: guideWorkflows.handleDistanceComplete,
+    onArcSegmentsPicked: guideWorkflows.handleArcSegmentsPicked, onArcDistancePicked: guideWorkflows.handleArcDistancePicked,
+    arcLineStep: guideWorkflows.arcLineStep, onArcLineLinePicked: guideWorkflows.handleArcLineLinePicked, onArcLineArcPicked: guideWorkflows.handleArcLineArcPicked,
+    circleIntersectStep: guideWorkflows.circleIntersectStep, onCircleIntersectFirstPicked: guideWorkflows.handleCircleIntersectFirstPicked, onCircleIntersectSecondPicked: guideWorkflows.handleCircleIntersectSecondPicked,
+    perpRefGuideId: guideWorkflows.perpRefGuideId, onPerpRefSelected: guideWorkflows.handlePerpRefSelected, onPerpPlaced: guideWorkflows.handlePerpPlaced,
+    onRectCenterPlace: guideWorkflows.handleRectCenterPlace, onLineMidpointPlace: guideWorkflows.handleLineMidpointPlace, onCircleCenterPlace: guideWorkflows.handleCircleCenterPlace,
+    onGridOriginSet: guideWorkflows.handleGridOriginSet, rotateRefGuideId: guideWorkflows.rotateRefGuideId,
+    onRotateRefSelected: guideWorkflows.handleRotateRefSelected, onRotatePivotSet: guideWorkflows.handleRotatePivotSet,
+    onRotateAllPivotSet: guideWorkflows.handleRotateAllPivotSet, rotateGroupSelectedIds: guideWorkflows.rotateGroupSelectedIds,
+    onRotateGroupToggle: guideWorkflows.handleRotateGroupToggle, onRotateGroupPivotSet: guideWorkflows.handleRotateGroupPivotSet,
+    equalizeSelectedIds: guideWorkflows.equalizeSelectedIds, onEqualizeToggle: guideWorkflows.handleEqualizeToggle, onEqualizeApply: guideWorkflows.handleEqualizeApply,
+    onPolarArrayCenterSet: guideWorkflows.handlePolarArrayCenterSet, onScaleOriginSet: guideWorkflows.handleScaleOriginSet,
+    onGuideAngleOriginSet: guideWorkflows.handleGuideAngleOriginSet, onMirrorAxisSelected: guideWorkflows.handleMirrorAxisSelected,
+    onGuideFromEntity: guideWorkflows.handleGuideFromEntity, onGuideOffsetFromEntity: guideWorkflows.handleGuideOffsetFromEntity,
+    onGuideSelectToggle: guideWorkflows.handleGuideSelectToggle, onGuideDeselectAll: guideWorkflows.handleGuideDeselectAll,
   });
 
   const { handleSmartDelete } = useSmartDelete({
-    selectedGrips: unified.selectedGrips,
-    setSelectedGrips: unified.setSelectedGrips,
-    executeCommand,
-    overlayStoreRef, universalSelectionRef, levelManager,
-    setSelectedEntityIds, eventBus,
+    selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
+    executeCommand, overlayStoreRef, universalSelectionRef, levelManager, setSelectedEntityIds, eventBus,
   });
-
-  // ADR-186: Entity Join System
-  const entityJoinHook = useEntityJoin({
-    levelManager,
-    executeCommand,
-    setSelectedEntityIds,
-    onWarning: notifyWarning,
-    onSuccess: notifySuccess,
-  });
-
-  // ADR-161: Memoized join state (avoid recalculating on every render)
+  const entityJoinHook = useEntityJoin({ levelManager, executeCommand, setSelectedEntityIds, onWarning: notifyWarning, onSuccess: notifySuccess });
   const entityJoinState = useMemo(() => {
     const canJoin = entityJoinHook.canJoin(selectedEntityIds);
     const preview = canJoin ? entityJoinHook.getJoinPreview(selectedEntityIds) : null;
-    return {
-      canJoin,
-      joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined,
-    };
+    return { canJoin, joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined };
   }, [entityJoinHook, selectedEntityIds]);
 
-  // ADR-188: Rotation ghost preview (rubber band + ghost entities)
-  // 🏢 FIX (2026-02-20): getViewportElement returns the DxfCanvas element so that
-  // worldToScreen uses the SAME dimensions as the click handler (getPointerSnapshotFromElement).
-  // This eliminates viewport mismatch between the click path and preview rendering.
+  // === Rotation preview ===
   useRotationPreview({
-    phase: rotationTool.phase,
-    basePoint: rotationTool.basePoint,
-    referencePoint: rotationTool.referencePoint,
-    currentAngle: rotationTool.currentAngle,
-    selectedEntityIds,
-    levelManager,
-    transform,
+    phase: rotationTool.phase, basePoint: rotationTool.basePoint, referencePoint: rotationTool.referencePoint,
+    currentAngle: rotationTool.currentAngle, selectedEntityIds, levelManager, transform,
     getCanvas: () => previewCanvasRef.current?.getCanvas() ?? null,
-    getViewportElement: () => {
-      const canvas = dxfCanvasRef?.current?.getCanvas?.();
-      return canvas instanceof HTMLElement ? canvas : null;
-    },
+    getViewportElement: () => { const canvas = dxfCanvasRef?.current?.getCanvas?.(); return canvas instanceof HTMLElement ? canvas : null; },
     cursorWorld: mouseWorld,
   });
+  useEffect(() => { if (rotationTool.isActive && mouseWorld) rotationTool.handleRotationMouseMove(mouseWorld); }, [mouseWorld, rotationTool.isActive, rotationTool.handleRotationMouseMove]);
 
-  // ADR-188: Route mouse moves to rotation tool when active
-  useEffect(() => {
-    if (rotationTool.isActive && mouseWorld) {
-      rotationTool.handleRotationMouseMove(mouseWorld);
-    }
-  }, [mouseWorld, rotationTool.isActive, rotationTool.handleRotationMouseMove]);
-
-  // 🏢 FIX (2026-02-19): Callback to exit overlay draw mode on Escape
-  // Resets overlayMode from 'draw' → 'select' so drawing doesn't persist
-  const handleExitDrawMode = useCallback(() => {
-    if (overlayMode === 'draw' && setOverlayMode) {
-      setOverlayMode('select');
-    }
-  }, [overlayMode, setOverlayMode]);
-
+  const handleExitDrawMode = useCallback(() => { if (overlayMode === 'draw' && setOverlayMode) setOverlayMode('select'); }, [overlayMode, setOverlayMode]);
   useCanvasKeyboardShortcuts({
-    handleSmartDelete,
-    dxfGripInteraction: unified.dxfProjection,
-    setDraftPolygon, draftPolygon,
-    selectedGrips: unified.selectedGrips,
-    setSelectedGrips: unified.setSelectedGrips,
-    activeTool, handleDrawingFinish, handleFlipArc, finishDrawing,
-    // ADR-161: Entity Join via J key
-    selectedEntityIds,
-    handleEntityJoin: () => entityJoinHook.joinEntities(selectedEntityIds),
-    canEntityJoin: entityJoinState.canJoin,
-    onExitDrawMode: handleExitDrawMode,
-    // ADR-188: Rotation tool Escape handling
-    handleRotationEscape: rotationTool.handleRotationEscape,
-    rotationIsActive: rotationTool.isCollectingInput,
+    handleSmartDelete, dxfGripInteraction: unified.dxfProjection,
+    setDraftPolygon, draftPolygon, selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
+    activeTool, handleDrawingFinish, handleFlipArc, finishDrawing, selectedEntityIds,
+    handleEntityJoin: () => entityJoinHook.joinEntities(selectedEntityIds), canEntityJoin: entityJoinState.canJoin,
+    onExitDrawMode: handleExitDrawMode, handleRotationEscape: rotationTool.handleRotationEscape, rotationIsActive: rotationTool.isCollectingInput,
   });
 
   // === Render ===
   return (
     <>
       <CanvasLayerStack
-        transform={transform}
-        viewport={viewport}
-        activeTool={activeTool}
-        overlayMode={overlayMode}
-        showLayers={showLayers}
-        showDxfCanvas={showDxfCanvas}
-        showLayerCanvas={showLayerCanvas}
-        containerRef={containerRef}
-        dxfCanvasRef={dxfCanvasRef}
-        overlayCanvasRef={overlayCanvasRef}
-        previewCanvasRef={previewCanvasRef}
-        drawingHandlersRef={drawingHandlersRef}
-        entitySelectedOnMouseDownRef={entitySelectedOnMouseDownRef}
-        dxfScene={dxfScene}
-        colorLayers={colorLayers}
-        colorLayersWithDraft={colorLayersWithDraft}
-        settings={{
-          crosshair: crosshairSettings,
-          cursor: cursorCanvasSettings,
-          snap: snapSettings,
-          ruler: rulerSettings,
-          grid: gridSettings,
-          gridMajorInterval,
-          selection: selectionSettings,
-          grip: gripSettings,
-          globalRuler: globalRulerSettings,
-        }}
+        transform={transform} viewport={viewport} activeTool={activeTool} overlayMode={overlayMode}
+        showLayers={showLayers} showDxfCanvas={showDxfCanvas} showLayerCanvas={showLayerCanvas}
+        containerRef={containerRef} dxfCanvasRef={dxfCanvasRef} overlayCanvasRef={overlayCanvasRef}
+        previewCanvasRef={previewCanvasRef} drawingHandlersRef={drawingHandlersRef}
+        entitySelectedOnMouseDownRef={entitySelectedOnMouseDownRef} dxfScene={dxfScene}
+        colorLayers={colorLayers} colorLayersWithDraft={colorLayersWithDraft}
+        settings={{ crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings }}
         gripState={unified.gripStateForStack}
-        entityState={{
-          selectedEntityIds, setSelectedEntityIds,
-          hoveredEntityId, setHoveredEntityId,
-          hoveredOverlayId, setHoveredOverlayId,
-        }}
-        zoomSystem={zoomSystem}
-        dxfGripInteraction={unified.dxfProjection}
-        universalSelection={universalSelection}
-        /* 🚀 PERF (2026-02-20): currentSnapResult removed — CanvasLayerStack reads from SnapContext directly */
-        setTransform={setTransform}
-        mouseCss={mouseCss}
-        updateMouseCss={updateMouseCss}
-        updateMouseWorld={updateMouseWorld}
-        containerHandlers={{
-          onMouseMove: handleContainerMouseMove,
-          onMouseDown: handleContainerMouseDown,
-          onMouseUp: handleContainerMouseUp,
-          onMouseEnter: handleContainerMouseEnter,
-          onMouseLeave: handleContainerMouseLeave,
-        }}
-        handleOverlayClick={handleOverlayClick}
-        handleMultiOverlayClick={handleMultiOverlayClick}
-        handleCanvasClick={handleCanvasClick}
-        handleUnifiedMouseMove={unified.handleMouseMove}
+        entityState={{ selectedEntityIds, setSelectedEntityIds, hoveredEntityId, setHoveredEntityId, hoveredOverlayId, setHoveredOverlayId }}
+        zoomSystem={zoomSystem} dxfGripInteraction={unified.dxfProjection} universalSelection={universalSelection}
+        setTransform={setTransform} mouseCss={mouseCss} updateMouseCss={updateMouseCss} updateMouseWorld={updateMouseWorld}
+        containerHandlers={{ onMouseMove: handleContainerMouseMove, onMouseDown: handleContainerMouseDown, onMouseUp: handleContainerMouseUp, onMouseEnter: handleContainerMouseEnter, onMouseLeave: handleContainerMouseLeave }}
+        handleOverlayClick={handleOverlayClick} handleMultiOverlayClick={handleMultiOverlayClick}
+        handleCanvasClick={handleCanvasClick} handleUnifiedMouseMove={unified.handleMouseMove}
         handleDrawingContextMenu={handleDrawingContextMenu}
-        drawingState={{
-          drawingHandlers,
-          draftPolygon,
-          handleDrawingFinish, handleDrawingClose,
-          handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc,
-        }}
-        entityJoin={{
-          canJoin: entityJoinState.canJoin,
-          joinResultLabel: entityJoinState.joinResultLabel,
-          onJoin: () => entityJoinHook.joinEntities(selectedEntityIds),
-          onDelete: () => handleSmartDelete(),
-        }}
-        pdf={{
-          imageUrl: pdfImageUrl,
-          transform: pdfTransform,
-          enabled: pdfEnabled,
-          opacity: pdfOpacity,
-        }}
+        drawingState={{ drawingHandlers, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc }}
+        entityJoin={{ canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete() }}
+        pdf={{ imageUrl: pdfImageUrl, transform: pdfTransform, enabled: pdfEnabled, opacity: pdfOpacity }}
         onMouseMove={props.onMouseMove}
-        entityPickingActive={
-          angleEntityMeasurement.isActive ||
-          rotationTool.phase === 'awaiting-entity' ||
-          activeTool === 'guide-arc-segments' ||
-          activeTool === 'guide-arc-distance' ||
-          activeTool === 'guide-arc-line-intersect' ||
-          activeTool === 'guide-circle-intersect' ||
-          activeTool === 'guide-line-midpoint' ||
-          activeTool === 'guide-circle-center'
-        }
-        // ADR-189: Construction guides
-        guides={guideState.guides}
-        guidesVisible={guideState.guidesVisible}
-        ghostGuide={ghostGuide}
-        ghostDiagonalGuide={ghostDiagonalGuide}
-        ghostSegmentLine={ghostSegmentLine}
-        highlightedGuideId={effectiveHighlightedGuideId}
-        selectedGuideIds={selectedGuideIds}
-        constructionPoints={cpState.points}
-        highlightedPointId={highlightedPointId ?? panelHighlightPointId}
+        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
+        guides={guideState.guides} guidesVisible={guideState.guidesVisible}
+        ghostGuide={guideWorkflows.ghostGuide} ghostDiagonalGuide={guideWorkflows.ghostDiagonalGuide}
+        ghostSegmentLine={guideWorkflows.ghostSegmentLine} highlightedGuideId={guideWorkflows.effectiveHighlightedGuideId}
+        selectedGuideIds={guideWorkflows.selectedGuideIds} constructionPoints={cpState.points}
+        highlightedPointId={guideWorkflows.highlightedPointId ?? guideWorkflows.panelHighlightPointId}
       />
-
-      {/* 🏢 PERF (2026-02-19): Context menus rendered OUTSIDE CanvasLayerStack.
-          Opening the menu triggers re-render ONLY in the menu component itself,
-          not the entire canvas stack (~94ms saved per right-click). */}
-      <DrawingContextMenu
-        ref={drawingMenuRef}
-        activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
-        pointCount={
-          overlayMode === 'draw'
-            ? draftPolygon.length
-            : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)
-        }
-        onFinish={handleDrawingFinish}
-        onClose={handleDrawingClose}
-        onUndoLastPoint={handleDrawingUndoLastPoint}
-        onCancel={handleDrawingCancel}
-        onFlipArc={handleFlipArc}
-      />
-      <EntityContextMenu
-        ref={entityMenuRef}
-        selectedCount={selectedEntityIds.length}
-        canJoin={entityJoinState.canJoin}
-        joinResultLabel={entityJoinState.joinResultLabel}
-        onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)}
-        onDelete={() => handleSmartDelete()}
-        onCancel={() => entityMenuRef.current?.close()}
-      />
-      <GuideContextMenu
-        ref={guideMenuRef}
-        onDelete={handleGuideContextDelete}
-        onToggleLock={handleGuideContextToggleLock}
-        onEditLabel={handleGuideContextEditLabel}
-        onChangeColor={handleGuideContextChangeColor}
-        onToggleVisibility={guideState.toggleVisibility}
-        guidesVisible={guideState.guidesVisible}
-        onCancel={() => guideMenuRef.current?.close()}
-      />
-
-      {/* ADR-189 B14: Batch context menu for selected guides */}
-      <GuideBatchContextMenu
-        ref={guideBatchMenuRef}
-        onDeleteSelected={() => {
-          if (selectedGuideIds.size > 0) {
-            guideState.batchDeleteGuides(Array.from(selectedGuideIds));
-            setSelectedGuideIds(new Set());
-          }
-        }}
-        onLockSelected={() => {
-          const store = guideState.getStore();
-          store.setGuidesLocked(Array.from(selectedGuideIds), true);
-        }}
-        onUnlockSelected={() => {
-          const store = guideState.getStore();
-          store.setGuidesLocked(Array.from(selectedGuideIds), false);
-        }}
-        onChangeColor={(color) => {
-          const store = guideState.getStore();
-          store.setGuidesColor(Array.from(selectedGuideIds), color);
-        }}
-        onGroupSelected={() => {
-          // B7: Create new group from selected guides
-          const store = guideState.getStore();
-          const group = store.addGroup(`Group ${Date.now()}`);
-          if (group) {
-            for (const gid of selectedGuideIds) {
-              store.setGuideGroupId(gid, group.id);
-            }
-          }
-        }}
-        onCancel={() => guideBatchMenuRef.current?.close()}
-      />
-
-      {/* ADR-189: Centralized prompt dialog (parallel guide distance, future tools) */}
+      <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
+        pointCount={overlayMode === 'draw' ? draftPolygon.length : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)}
+        onFinish={handleDrawingFinish} onClose={handleDrawingClose} onUndoLastPoint={handleDrawingUndoLastPoint} onCancel={handleDrawingCancel} onFlipArc={handleFlipArc} />
+      <EntityContextMenu ref={entityMenuRef} selectedCount={selectedEntityIds.length}
+        canJoin={entityJoinState.canJoin} joinResultLabel={entityJoinState.joinResultLabel}
+        onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)} onDelete={() => handleSmartDelete()} onCancel={() => entityMenuRef.current?.close()} />
+      <GuideContextMenu ref={guideMenuRef}
+        onDelete={guideWorkflows.handleGuideContextDelete} onToggleLock={guideWorkflows.handleGuideContextToggleLock}
+        onEditLabel={guideWorkflows.handleGuideContextEditLabel} onChangeColor={guideWorkflows.handleGuideContextChangeColor}
+        onToggleVisibility={guideState.toggleVisibility} guidesVisible={guideState.guidesVisible} onCancel={() => guideMenuRef.current?.close()} />
+      <GuideBatchContextMenu ref={guideBatchMenuRef}
+        onDeleteSelected={() => { if (guideWorkflows.selectedGuideIds.size > 0) { guideState.batchDeleteGuides(Array.from(guideWorkflows.selectedGuideIds)); guideWorkflows.setSelectedGuideIds(new Set()); } }}
+        onLockSelected={() => { guideState.getStore().setGuidesLocked(Array.from(guideWorkflows.selectedGuideIds), true); }}
+        onUnlockSelected={() => { guideState.getStore().setGuidesLocked(Array.from(guideWorkflows.selectedGuideIds), false); }}
+        onChangeColor={(color) => { guideState.getStore().setGuidesColor(Array.from(guideWorkflows.selectedGuideIds), color); }}
+        onGroupSelected={() => { const store = guideState.getStore(); const group = store.addGroup(`Group ${Date.now()}`); if (group) { for (const gid of guideWorkflows.selectedGuideIds) store.setGuideGroupId(gid, group.id); } }}
+        onCancel={() => guideBatchMenuRef.current?.close()} />
       <PromptDialog />
     </>
   );

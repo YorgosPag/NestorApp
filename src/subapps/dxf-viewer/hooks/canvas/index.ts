@@ -124,3 +124,10 @@ export type {
   UseOverlayInteractionParams,
   UseOverlayInteractionReturn,
 } from './useOverlayInteraction';
+
+// === useCanvasContainerHandlers === (ADR-189 B5 — guide drag + grip mouseDown/Up)
+export { useCanvasContainerHandlers } from './useCanvasContainerHandlers';
+export type {
+  UseCanvasContainerHandlersParams,
+  UseCanvasContainerHandlersReturn,
+} from './useCanvasContainerHandlers';

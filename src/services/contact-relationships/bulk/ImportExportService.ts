@@ -32,54 +32,14 @@ function isServiceContact(contact: Contact): contact is ServiceContact {
   return contact.type === 'service';
 }
 
-// ============================================================================
-// IMPORT/EXPORT TYPES
-// ============================================================================
-
-export interface ImportResult {
-  processedRows: number;
-  importedRelationships: number;
-  createdContacts: number;
-  errors: Array<{
-    row: number;
-    data: Record<string, unknown>;
-    error: string;
-  }>;
-  summary: {
-    totalTime: number;
-    successRate: number;
-  };
-}
-
-export interface ExportResult {
-  fileName: string;
-  recordCount: number;
-  fileSize: number;
-  downloadUrl?: string;
-}
-
-export interface ImportOptions {
-  createMissingContacts?: boolean;
-  updateExistingRelationships?: boolean;
-  skipDuplicates?: boolean;
-  validateData?: boolean;
-}
-
-export interface CSVRow {
-  [key: string]: string;
-}
-
-export interface RelationshipImportRow {
-  sourceEmail: string;
-  targetEmail: string;
-  relationshipType: string;
-  position?: string;
-  department?: string;
-  startDate?: string;
-  endDate?: string;
-  status?: string;
-  notes?: string;
-}
+export type {
+  ImportResult,
+  ExportResult,
+  ImportOptions,
+  CSVRow,
+  RelationshipImportRow,
+} from './import-export-types';
+import type { ImportResult, ExportResult, ImportOptions, CSVRow } from './import-export-types';
 
 // ============================================================================
 // IMPORT/EXPORT SERVICE
@@ -489,7 +449,7 @@ export class ImportExportService {
 
   private static async createContactFromEmail(email: string): Promise<Contact> {
     // TODO: Implement contact creation από email
-    throw new Error('Contact creation από email not yet implemented');
+    throw new Error('Contact creation from email not yet implemented');
   }
 
   private static getContactDisplayName(contact: Contact | null): string {
