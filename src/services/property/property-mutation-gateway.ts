@@ -240,7 +240,7 @@ function assertPropertyMutationPolicy(context: PropertyMutationContext): void {
 
 export async function createPropertyWithPolicy({
   propertyData,
-}: GuardedPropertyCreateInput): Promise<{ success: boolean; propertyId?: string; error?: string }> {
+}: GuardedPropertyCreateInput): Promise<{ success: boolean; propertyId?: string; error?: string; errorCode?: string }> {
   assertPropertyMutationPolicy({
     intent: 'create',
     updates: propertyData,

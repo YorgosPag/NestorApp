@@ -15,7 +15,7 @@ import type { PropertyDoc, PropertyModel } from '@/types/property';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { normalizeProperty } from '@/utils/property-normalizer';
 import { generatePropertyId } from '@/services/enterprise-id.service';
@@ -69,7 +69,7 @@ function toPropertyModel(raw: DocumentData): PropertyModel {
  */
 export async function createProperty(
   propertyData: Record<string, unknown>
-): Promise<{ success: boolean; propertyId?: string; error?: string }> {
+): Promise<{ success: boolean; propertyId?: string; error?: string; errorCode?: string }> {
   try {
     logger.info('Creating new property via API');
 
@@ -98,7 +98,8 @@ export async function createProperty(
     logger.error('Error creating property', { error });
     return {
       success: false,
-      error: getErrorMessage(error)
+      error: getErrorMessage(error),
+      errorCode: ApiClientError.isApiClientError(error) ? error.errorCode : undefined,
     };
   }
 }

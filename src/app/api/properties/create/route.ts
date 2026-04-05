@@ -15,6 +15,7 @@ import {
   assertUpstreamChainExists,
   resolveProjectIdFromBuilding,
 } from '@/services/property/property-creation-policy';
+import { POLICY_ERROR_CODES } from '@/lib/policy';
 
 const logger = createModuleLogger('PropertiesCreateRoute');
 
@@ -79,7 +80,7 @@ export const POST = withStandardRateLimit(
 
         // Validation
         if (!body.name || !body.name.trim()) {
-          throw new ApiError(400, 'Property name is required');
+          throw new ApiError(400, 'Property name is required', POLICY_ERROR_CODES.NAME_REQUIRED);
         }
 
         // ============================================================
@@ -112,7 +113,7 @@ export const POST = withStandardRateLimit(
             }
           } catch (error) {
             if (error instanceof PropertyCreationPolicyError) {
-              throw new ApiError(400, error.message);
+              throw new ApiError(400, error.message, error.code);
             }
             throw error;
           }
@@ -126,7 +127,7 @@ export const POST = withStandardRateLimit(
           );
         } catch (error) {
           if (error instanceof PropertyCreationPolicyError) {
-            throw new ApiError(400, error.message);
+            throw new ApiError(400, error.message, error.code);
           }
           throw error;
         }
@@ -134,11 +135,11 @@ export const POST = withStandardRateLimit(
         // 🏢 ADR-236: Validate multi-level floors (entity-specific business logic)
         if (body.isMultiLevel && Array.isArray(body.levels)) {
           if (body.levels.length < 2) {
-            throw new ApiError(400, 'Multi-level properties require at least 2 floors');
+            throw new ApiError(400, 'Multi-level properties require at least 2 floors', POLICY_ERROR_CODES.MULTILEVEL_MIN_FLOORS);
           }
           const primaryCount = body.levels.filter(l => l.isPrimary).length;
           if (primaryCount !== 1) {
-            throw new ApiError(400, 'Exactly one floor must be marked as primary');
+            throw new ApiError(400, 'Exactly one floor must be marked as primary', POLICY_ERROR_CODES.MULTILEVEL_SINGLE_PRIMARY);
           }
           const primary = body.levels.find(l => l.isPrimary);
           if (primary) {

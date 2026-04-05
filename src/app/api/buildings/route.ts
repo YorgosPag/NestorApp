@@ -13,6 +13,7 @@ import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { POLICY_ERROR_CODES } from '@/lib/policy';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import {
   BuildingCreationPolicyError,
@@ -192,7 +193,7 @@ export const POST = withStandardRateLimit(
         });
       } catch (error) {
         if (error instanceof BuildingCreationPolicyError) {
-          throw new ApiError(400, error.message);
+          throw new ApiError(400, error.message, error.code);
         }
         throw error;
       }
@@ -208,7 +209,7 @@ export const POST = withStandardRateLimit(
         if (!duplicateSnap.empty) {
           const existingId = duplicateSnap.docs[0].id;
           logger.warn('[Buildings] Duplicate code for projectId', { code: body.code, projectId: body.projectId, existingId });
-          throw new ApiError(409, `Building code "${body.code}" already exists in this project`);
+          throw new ApiError(409, `Building code "${body.code}" already exists in this project`, POLICY_ERROR_CODES.DUPLICATE_CODE);
         }
       }
 

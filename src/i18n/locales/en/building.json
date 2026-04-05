@@ -224,6 +224,27 @@
     "floorsMinimum": "Floors must be at least 1",
     "unitsMinimum": "Units must be at least 1"
   },
+  "policyErrors": {
+    "nameRequired": "Name is required.",
+    "typeRequired": "Type is required.",
+    "projectRequired": "Select a Project — the entity must belong to a project.",
+    "projectNotFound": "The selected Project was not found.",
+    "projectOrphanNoCompany": "The selected Project is not linked to a Company. First link the Project to a Company (edit Project → Linked company), then try again.",
+    "companyNotFound": "Linked Company not found — data integrity violation.",
+    "companyInvalidType": "Linked Company is not a valid company-type contact.",
+    "buildingRequired": "Select a Building — in-building units must belong to a building.",
+    "buildingNotFound": "The selected Building was not found.",
+    "buildingProjectMismatch": "Building belongs to a different Project than the one you selected.",
+    "floorRequired": "Select a Floor — in-building units must be placed on a floor.",
+    "floorNotFound": "The selected Floor was not found.",
+    "floorBuildingMismatch": "Floor belongs to a different Building than the one you selected.",
+    "multilevelMinFloors": "Multi-level properties require at least 2 floors.",
+    "multilevelSinglePrimary": "Exactly one floor must be marked as primary.",
+    "multilevelFloorRequired": "Every level must have a floor.",
+    "multilevelFloorMismatch": "All levels must share the same Building.",
+    "standaloneWithBuilding": "Standalone units ({type}) cannot have a Building/Floor — they connect directly to the Project.",
+    "duplicateCode": "The code already exists. Please try again."
+  },
   "details": {
     "newBuilding": "New Building",
     "viewBuilding": "View Building",

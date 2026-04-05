@@ -136,7 +136,7 @@ export interface BuildingCreatePayload {
  */
 export async function createBuilding(
   data: BuildingCreatePayload
-): Promise<{ success: boolean; buildingId?: string; error?: string }> {
+): Promise<{ success: boolean; buildingId?: string; error?: string; errorCode?: string }> {
   try {
     logger.info('Creating new building via API');
 
@@ -168,7 +168,8 @@ export async function createBuilding(
     logger.error('createBuilding failed', { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorCode: ApiClientError.isApiClientError(error) ? error.errorCode : undefined,
     };
   }
 }
@@ -285,8 +286,8 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
 /**
  * 🏢 ENTERPRISE: Fetch existing building `code` values for a project (ADR-233 §3.4).
  *
- * Used by AddBuildingDialog to auto-suggest the next sequential code
- * ("Κτήριο Α", "Κτήριο Β", ...) when creating a new building.
+ * Used by GeneralTabContent (inline create mode) to auto-suggest the next
+ * sequential code ("Κτήριο Α", "Κτήριο Β", ...) when the user picks a project.
  *
  * @param projectId - Parent project ID
  * @returns Array of codes (omits buildings without a `code` field)

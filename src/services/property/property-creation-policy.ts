@@ -28,14 +28,23 @@ import {
   STANDALONE_UNIT_TYPES as CANONICAL_STANDALONE_UNIT_TYPES,
   isStandaloneUnitType,
 } from '@/constants/property-types';
+import { EntityPolicyError, POLICY_ERROR_CODES } from '@/lib/policy';
 
 // =============================================================================
 // ERRORS
 // =============================================================================
 
-export class PropertyCreationPolicyError extends Error {
-  constructor(message: string) {
-    super(message);
+/**
+ * Thin wrapper — fixes `entity: 'property'` so callers don't need to pass it.
+ * All cross-entity codes live in `POLICY_ERROR_CODES` (SSoT).
+ */
+export class PropertyCreationPolicyError extends EntityPolicyError {
+  constructor(
+    code: (typeof POLICY_ERROR_CODES)[keyof typeof POLICY_ERROR_CODES],
+    message: string,
+    params?: Record<string, string>,
+  ) {
+    super(code, 'property', message, params);
     this.name = 'PropertyCreationPolicyError';
   }
 }
@@ -81,6 +90,7 @@ export function assertPropertyCreatePolicy(
 ): void {
   if (isBlank(propertyData.name)) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.NAME_REQUIRED,
       'Property name is required before creation.',
     );
   }
@@ -88,6 +98,7 @@ export function assertPropertyCreatePolicy(
   const type = propertyData.type;
   if (isBlank(type)) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.TYPE_REQUIRED,
       'Property type is required before creation.',
     );
   }
@@ -95,6 +106,7 @@ export function assertPropertyCreatePolicy(
   // ADR-284: projectId is ALWAYS required (both families)
   if (isBlank(propertyData.projectId)) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.PROJECT_REQUIRED,
       'Project (projectId) is required — a unit cannot exist without a project.',
     );
   }
@@ -105,7 +117,9 @@ export function assertPropertyCreatePolicy(
     // Family B: Standalone — MUST NOT carry buildingId/floorId
     if (!isBlank(propertyData.buildingId) || !isBlank(propertyData.floorId)) {
       throw new PropertyCreationPolicyError(
+        POLICY_ERROR_CODES.STANDALONE_WITH_BUILDING,
         `Standalone units (${String(type)}) cannot have buildingId/floorId — they connect directly to Project.`,
+        { type: String(type) },
       );
     }
     return;
@@ -114,12 +128,16 @@ export function assertPropertyCreatePolicy(
   // Family A: In-building — buildingId + floorId REQUIRED
   if (isBlank(propertyData.buildingId)) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.BUILDING_REQUIRED,
       `Building (buildingId) is required for type "${String(type)}" — in-building units must belong to a building.`,
+      { type: String(type) },
     );
   }
   if (isBlank(propertyData.floorId)) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.FLOOR_REQUIRED,
       `Floor (floorId) is required for type "${String(type)}" — in-building units must be placed on a floor.`,
+      { type: String(type) },
     );
   }
 }
@@ -156,6 +174,7 @@ export async function assertUpstreamChainExists(
     .get();
   if (!projectSnap.exists) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.PROJECT_NOT_FOUND,
       'Project not found in Firestore.',
     );
   }
@@ -163,6 +182,7 @@ export async function assertUpstreamChainExists(
   const linkedCompanyId = project.linkedCompanyId;
   if (isBlank(linkedCompanyId)) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.PROJECT_ORPHAN_NO_COMPANY,
       'Project has no linked Company — every project must belong to a Company (ADR-284 supersedes ADR-232).',
     );
   }
@@ -173,12 +193,14 @@ export async function assertUpstreamChainExists(
     .get();
   if (!companySnap.exists) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.COMPANY_NOT_FOUND,
       'Linked Company not found — data integrity violation.',
     );
   }
   const companyData = companySnap.data() ?? {};
   if (companyData.type !== 'company') {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.COMPANY_INVALID_TYPE,
       'Linked Company is not a valid company contact.',
     );
   }
@@ -197,11 +219,15 @@ export async function assertUpstreamChainExists(
     .doc(buildingId)
     .get();
   if (!buildingSnap.exists) {
-    throw new PropertyCreationPolicyError('Building not found.');
+    throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.BUILDING_NOT_FOUND,
+      'Building not found.',
+    );
   }
   const building = buildingSnap.data() ?? {};
   if (building.projectId !== projectId) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.BUILDING_PROJECT_MISMATCH,
       'Building.projectId mismatch — building belongs to different project.',
     );
   }
@@ -211,11 +237,15 @@ export async function assertUpstreamChainExists(
     .doc(floorId)
     .get();
   if (!floorSnap.exists) {
-    throw new PropertyCreationPolicyError('Floor not found.');
+    throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.FLOOR_NOT_FOUND,
+      'Floor not found.',
+    );
   }
   const floor = floorSnap.data() ?? {};
   if (floor.buildingId !== buildingId) {
     throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.FLOOR_BUILDING_MISMATCH,
       'Floor.buildingId mismatch — floor belongs to different building.',
     );
   }
@@ -229,6 +259,7 @@ export async function assertUpstreamChainExists(
       const levelFloorId = level?.floorId;
       if (typeof levelFloorId !== 'string' || isBlank(levelFloorId)) {
         throw new PropertyCreationPolicyError(
+          POLICY_ERROR_CODES.MULTILEVEL_FLOOR_REQUIRED,
           'Multi-level: every level must have floorId.',
         );
       }
@@ -238,13 +269,17 @@ export async function assertUpstreamChainExists(
         .get();
       if (!levelFloorSnap.exists) {
         throw new PropertyCreationPolicyError(
+          POLICY_ERROR_CODES.FLOOR_NOT_FOUND,
           `Multi-level: floor ${levelFloorId} not found.`,
+          { floorId: levelFloorId },
         );
       }
       const levelFloorData = levelFloorSnap.data() ?? {};
       if (levelFloorData.buildingId !== buildingId) {
         throw new PropertyCreationPolicyError(
+          POLICY_ERROR_CODES.MULTILEVEL_FLOOR_MISMATCH,
           `Multi-level: floor ${levelFloorId} belongs to different building — all levels must share the same Building.`,
+          { floorId: levelFloorId },
         );
       }
     }
@@ -275,7 +310,10 @@ export async function resolveProjectIdFromBuilding(
     .doc(buildingId)
     .get();
   if (!snap.exists) {
-    throw new PropertyCreationPolicyError('Building not found.');
+    throw new PropertyCreationPolicyError(
+      POLICY_ERROR_CODES.BUILDING_NOT_FOUND,
+      'Building not found.',
+    );
   }
   const data = snap.data() ?? {};
   const projectId = data.projectId;

@@ -41,6 +41,7 @@ import type { PropertyType } from '@/types/property';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+import { translatePolicyError, isKnownPolicyErrorCode } from '@/lib/policy';
 // ADR-284 Batch 7: SSoT hierarchy validation + inline new-unit UI
 import { NewUnitHierarchySection } from '@/components/properties/shared/NewUnitHierarchySection';
 import {
@@ -83,6 +84,8 @@ export function PropertyFieldsBlock({
   onActiveLevelChange,
 }: PropertyFieldsBlockProps) {
   const { t } = useTranslation('properties');
+  // ADR-284: policy errors live in the shared `building` i18n namespace
+  const { t: tPolicy } = useTranslation('building');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future spacing tokens
   const _spacing = useSpacingTokens();
   const iconSizes = useIconSizes();
@@ -324,6 +327,19 @@ export function PropertyFieldsBlock({
         };
         const result = await createPropertyWithPolicy({ propertyData });
         if (!result.success) {
+          // 🏢 ADR-284: If the server returned a known policy error code,
+          // show the localized message from the central translator.
+          if (isKnownPolicyErrorCode(result.errorCode)) {
+            notifyError(
+              translatePolicyError(
+                result.errorCode,
+                tPolicy,
+                result.error ?? 'Unit creation failed',
+                { type: String(propertyData.type ?? '') },
+              ),
+            );
+            return;
+          }
           throw new Error(result.error ?? 'Unit creation failed');
         }
         if (result.propertyId && onPropertyCreated) {

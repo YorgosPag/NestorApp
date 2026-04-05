@@ -22,6 +22,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
+import { POLICY_ERROR_CODES } from '@/lib/policy';
 
 const logger = createModuleLogger('BuildingUpdate');
 
@@ -111,7 +112,7 @@ export const PATCH = withStandardRateLimit(
           const conflict = duplicateSnap.docs.find(d => d.id !== buildingId);
           if (conflict) {
             logger.warn('[Buildings] Duplicate code on update', { code: cleanUpdates.code, projectId: effectiveProjectId, conflictId: conflict.id });
-            throw new ApiError(409, `Building code "${cleanUpdates.code}" already exists in this project`);
+            throw new ApiError(409, `Building code "${cleanUpdates.code}" already exists in this project`, POLICY_ERROR_CODES.DUPLICATE_CODE);
           }
         }
       }

@@ -26,6 +26,7 @@ import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { ConflictDialog } from '@/components/shared/ConflictDialog';
 import { useRouter } from 'next/navigation';
 import { createBuildingWithPolicy, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
+import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralTabContent');
@@ -88,6 +89,10 @@ export function GeneralTabContent({
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // 🏢 ADR-284 §3.0.5: Recovery context — when the server returns an actionable
+  // policy error code, we surface the matching inline recovery UI (e.g. link
+  // orphan project → company) right next to the banner.
+  const [saveErrorCode, setSaveErrorCode] = useState<string | null>(null);
   const [formData, setFormData] = useState(() => buildFormData(building));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -164,6 +169,7 @@ export function GeneralTabContent({
     if (idChanged || (namePopulated && !effectiveIsEditing)) {
       setFormData(buildFormData(building));
       setSaveError(null);
+      setSaveErrorCode(null);
       setErrors({});
     }
   }, [building, effectiveIsEditing]);
@@ -220,6 +226,7 @@ export function GeneralTabContent({
       // Cancel: revert form to original building values
       setFormData(buildFormData(building));
       setSaveError(null);
+      setSaveErrorCode(null);
       setErrors({});
     }
     didSaveRef.current = false;
@@ -292,12 +299,14 @@ export function GeneralTabContent({
       const firstError =
         newErrors.projectId ?? newErrors.name ?? Object.values(newErrors)[0];
       setSaveError(firstError ?? null);
+      setSaveErrorCode(null);
       return false;
     }
 
     try {
       setIsSaving(true);
       setSaveError(null);
+      setSaveErrorCode(null);
 
       const payload = {
         name: formData.name,
@@ -335,7 +344,12 @@ export function GeneralTabContent({
         });
 
         if (!result.success || !result.buildingId) {
-          throw new Error(result.error || 'Failed to create building');
+          // 🏢 ADR-284 §3.0.5: Store raw server message + errorCode — the
+          // <PolicyErrorBanner> handles i18n translation AND renders any
+          // matching inline recovery action (self-healing error pattern).
+          setSaveError(result.error || 'Failed to create building');
+          setSaveErrorCode(result.errorCode ?? null);
+          return false;
         }
 
         logger.info('Building created successfully', { buildingId: result.buildingId });
@@ -364,6 +378,7 @@ export function GeneralTabContent({
     } catch (error) {
       logger.error('Error saving building', { error });
       setSaveError(error instanceof Error ? error.message : 'Failed to save building');
+      setSaveErrorCode(null);
       return false;
     } finally {
       setIsSaving(false);
@@ -431,14 +446,18 @@ export function GeneralTabContent({
           onRetry={autoSaveRetry}
         />
       )}
-      {/* ENTERPRISE: Show save error if any */}
-      {saveError && (
-        // eslint-disable-next-line design-system/enforce-semantic-colors
-        <aside className="bg-red-100 border border-red-400 text-red-700 px-2 py-2 rounded relative dark:bg-red-900 dark:border-red-700 dark:text-red-300">
-          <strong className="font-bold">{t('tabs.general.errorLabel')}</strong>
-          <span>{saveError}</span>
-        </aside>
-      )}
+      {/* 🏢 ADR-284 §3.0.5: Shared PolicyErrorBanner handles i18n + any
+          registered inline recovery action (e.g. link orphan project →
+          company) without domain-specific logic leaking into this tab. */}
+      <PolicyErrorBanner
+        errorCode={saveErrorCode}
+        rawMessage={saveError}
+        context={{ projectId: projectLink.linkedId ?? '' }}
+        onRecovered={() => {
+          setSaveError(null);
+          setSaveErrorCode(null);
+        }}
+      />
       {/* ADR-200: Building → Project linking via centralized useEntityLink hook */}
       <EntityLinkCard key={projectLink.linkCardKey} {...projectLink.linkCardProps} />
       <BasicInfoCard

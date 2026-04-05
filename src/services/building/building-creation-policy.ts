@@ -25,14 +25,23 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { EntityPolicyError, POLICY_ERROR_CODES } from '@/lib/policy';
 
 // =============================================================================
 // ERRORS
 // =============================================================================
 
-export class BuildingCreationPolicyError extends Error {
-  constructor(message: string) {
-    super(message);
+/**
+ * Thin wrapper — fixes `entity: 'building'` so callers don't need to pass it.
+ * All cross-entity codes live in `POLICY_ERROR_CODES` (SSoT).
+ */
+export class BuildingCreationPolicyError extends EntityPolicyError {
+  constructor(
+    code: (typeof POLICY_ERROR_CODES)[keyof typeof POLICY_ERROR_CODES],
+    message: string,
+    params?: Record<string, string>,
+  ) {
+    super(code, 'building', message, params);
     this.name = 'BuildingCreationPolicyError';
   }
 }
@@ -60,6 +69,7 @@ export function assertBuildingCreatePolicy(
 ): void {
   if (isBlank(data.name)) {
     throw new BuildingCreationPolicyError(
+      POLICY_ERROR_CODES.NAME_REQUIRED,
       'Building name is required.',
     );
   }
@@ -67,6 +77,7 @@ export function assertBuildingCreatePolicy(
   // ADR-284: projectId REQUIRED (every building must belong to a project)
   if (isBlank(data.projectId)) {
     throw new BuildingCreationPolicyError(
+      POLICY_ERROR_CODES.PROJECT_REQUIRED,
       'Project (projectId) is required — every building must belong to a project.',
     );
   }
@@ -97,6 +108,7 @@ export async function assertBuildingUpstreamChain(
     .get();
   if (!projectSnap.exists) {
     throw new BuildingCreationPolicyError(
+      POLICY_ERROR_CODES.PROJECT_NOT_FOUND,
       'Referenced Project not found.',
     );
   }
@@ -104,6 +116,7 @@ export async function assertBuildingUpstreamChain(
   const linkedCompanyId = projectSnap.data()?.linkedCompanyId;
   if (isBlank(linkedCompanyId)) {
     throw new BuildingCreationPolicyError(
+      POLICY_ERROR_CODES.PROJECT_ORPHAN_NO_COMPANY,
       'Referenced Project is orphan (no linkedCompanyId). Fix Project first.',
     );
   }

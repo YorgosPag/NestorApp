@@ -23,7 +23,7 @@ interface GuardedBuildingDeleteInput {
 
 export async function createBuildingWithPolicy({
   payload,
-}: GuardedBuildingCreateInput): Promise<{ success: boolean; buildingId?: string; error?: string }> {
+}: GuardedBuildingCreateInput): Promise<{ success: boolean; buildingId?: string; error?: string; errorCode?: string }> {
   return createBuilding(payload);
 }
 
