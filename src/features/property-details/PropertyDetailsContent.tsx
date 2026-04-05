@@ -277,7 +277,7 @@ export function PropertyDetailsContent({
               <CardHeader className="p-2">
                 <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
                   <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
-                  {t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
+                  {t('properties:fields.location.floor')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-2 pt-0">
@@ -297,8 +297,8 @@ export function PropertyDetailsContent({
                       }
                     }
                   }}
-                  label={t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
-                  noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
+                  label={t('properties:fields.location.floor')}
+                  noBuildingHint={t('properties:fields.location.noFloorHint')}
                   disabled={!isEditMode || isSoldOrRented}
                 />
               </CardContent>

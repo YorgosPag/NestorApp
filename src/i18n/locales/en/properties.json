@@ -1,4 +1,10 @@
 {
+  "fields": {
+    "location": {
+      "floor": "Floor",
+      "noFloorHint": "Connect a building first"
+    }
+  },
   "list": {
     "title": "Properties"
   },

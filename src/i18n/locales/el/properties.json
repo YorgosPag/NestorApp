@@ -1,4 +1,10 @@
 {
+  "fields": {
+    "location": {
+      "floor": "Όροφος",
+      "noFloorHint": "Συνδέστε πρώτα κτίριο"
+    }
+  },
   "list": {
     "title": "Ακίνητα"
   },
