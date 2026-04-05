@@ -3,6 +3,8 @@ import type { BuildingFeatureKey } from './features';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { BuildingAddressReference, ProjectAddress } from '../project/addresses';
 import type { PropertyType } from '@/types/property';
+// ADR-287 — PriorityLevel SSoT (shared across Building/Project domains)
+import type { PriorityLevel } from '@/constants/priority-levels';
 
 // Building hierarchy interfaces
 // NOTE: Contact → @/types/contacts, Project → @/types/project (canonical types)
@@ -12,15 +14,18 @@ import type { PropertyType } from '@/types/property';
   // `src/constants/building-types.ts`. Re-export για backward-compat.
   export type { BuildingType } from '@/constants/building-types';
 
-  /** 🏢 ENTERPRISE: Priority levels for building management */
-  export type BuildingPriority = 'low' | 'medium' | 'high' | 'critical';
+  // ADR-287 — BuildingPriority: semantic alias πάνω στο shared PriorityLevel
+  // (canonical στο `src/constants/priority-levels.ts`). Το ίδιο 4-value scale
+  // χρησιμοποιείται και στο Project domain (domain-definitions.ts).
+  export type BuildingPriority = PriorityLevel;
 
   // ADR-287 — EnergyClass SSoT: canonical union lives στο
   // `src/constants/energy-classes.ts`. Re-export για backward-compat.
   export type { EnergyClass } from '@/constants/energy-classes';
 
-  /** 🏢 ENTERPRISE: Renovation status */
-  export type RenovationStatus = 'none' | 'partial' | 'full' | 'planned';
+  // ADR-287 — RenovationStatus SSoT: canonical union lives στο
+  // `src/constants/renovation-statuses.ts`. Re-export για backward-compat.
+  export type { RenovationStatus } from '@/constants/renovation-statuses';
 
   export interface Building {
     // 🏢 ENTERPRISE: Index signature for SelectedItemBase compatibility (2026-01-20)

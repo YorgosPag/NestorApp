@@ -15,6 +15,7 @@ import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
 import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
 import { ENERGY_CLASSES } from '@/constants/energy-classes';
 import { BUILDING_TYPES } from '@/constants/building-types';
+import { PRIORITY_LEVELS } from '@/constants/priority-levels';
 import type {
   BuilderDomainId,
   DomainDefinition,
@@ -78,7 +79,10 @@ const PROJECT_TYPES = [
   'residential', 'commercial', 'industrial', 'mixed', 'infrastructure', 'renovation',
 ] as const;
 
-const PROJECT_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
+// ADR-287 — PriorityLevel SSoT lives στο `@/constants/priority-levels`.
+// Το local `PROJECT_PRIORITIES` αντικαταστάθηκε με alias στο imported array
+// ώστε να διατηρηθεί το semantic naming στα downstream field definitions.
+const PROJECT_PRIORITIES = PRIORITY_LEVELS;
 
 const BUILDING_STATUSES = [
   'planning', 'construction', 'completed', 'active',

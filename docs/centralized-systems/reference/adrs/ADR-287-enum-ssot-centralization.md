@@ -86,3 +86,9 @@
   - **Migrated**:
     - `src/types/building/contracts.ts` — inline union (6 values) → `export type { BuildingType } from '@/constants/building-types'`.
     - `src/config/report-builder/domain-definitions.ts` — local `BUILDING_TYPES` array αφαιρέθηκε · imported από SSoT.
+- **2026-04-05 (Batch 9E)**: `BuildingPriority` + `RenovationStatus` centralization.
+  - **Shared SSoT**: `src/constants/priority-levels.ts` — `PRIORITY_LEVELS` (4: low/medium/high/critical), `PriorityLevel` union, `isPriorityLevel()` guard, `getPriorityRank()` helper. Το priority scale είναι **shared** across Building + Project domains (identical 4 values).
+  - **Renovation SSoT**: `src/constants/renovation-statuses.ts` — `RENOVATION_STATUSES` (4), `RenovationStatus` union, `isRenovationStatus()` guard, derived subset `COMPLETED_RENOVATION_STATUSES` (2) + `isCompletedRenovationStatus()` guard.
+  - **Migrated**:
+    - `src/types/building/contracts.ts` — inline `BuildingPriority` (4 values) → `export type BuildingPriority = PriorityLevel`. Inline `RenovationStatus` (4 values) → `export type { RenovationStatus } from '@/constants/renovation-statuses'`.
+    - `src/config/report-builder/domain-definitions.ts` — local `PROJECT_PRIORITIES` literal array → `const PROJECT_PRIORITIES = PRIORITY_LEVELS` (semantic alias πάνω στο shared SSoT).
