@@ -22,7 +22,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/lib/api/domain-constants';
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useProjectQuickCreate');
