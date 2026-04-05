@@ -37,8 +37,8 @@ import type { PropertyFieldsFormData } from './property-fields-form-types';
 export function buildPropertyUpdatesFromForm(params: {
   formData: PropertyFieldsFormData;
   property: Property;
-  suggestedCode: string | undefined;
-  isMultiLevel: boolean;
+  suggestedCode: string | null | undefined;
+  isMultiLevel: boolean | undefined;
 }): Partial<Property> {
   const { formData, property, suggestedCode, isMultiLevel } = params;
 
