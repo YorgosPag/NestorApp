@@ -1,21 +1,14 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T21:49:58Z",
-    "totalViolations": 21,
-    "totalFiles": 21,
+    "generated": "2026-04-05T21:57:33Z",
+    "totalViolations": 14,
+    "totalFiles": 14,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
     "src/config/company-gemi/sections/capital.ts": 1,
     "src/config/company-gemi/sections/basic-info.ts": 1,
-    "src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab.tsx": 1,
-    "src/components/space-management/ParkingPage/AddParkingDialog.tsx": 1,
-    "src/components/sales/tabs/SalesVideosTab.tsx": 1,
-    "src/components/property-viewer/details/PropertyMeta.tsx": 1,
-    "src/components/properties/UnitsPageContent.tsx": 1,
-    "src/components/properties/tabs/CustomerProfileSection.tsx": 1,
-    "src/components/projects/ika/StampsCalculationTabContent.tsx": 1,
     "src/components/projects/ika/components/EmploymentRecordDialog.tsx": 1,
     "src/components/projects/ika/ApdPaymentsTabContent.tsx": 1,
     "src/components/NotificationBell.enterprise.tsx": 1,
