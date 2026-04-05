@@ -413,5 +413,15 @@
     "cannotJoinNonGeometric": "Cannot join non-geometric entities",
     "entitiesNotConnected": "Entities are not connected",
     "needTwoOrMore": "Select 2+ entities to join"
+  },
+  "levelSelection": {
+    "title": "Select Level for DXF Import",
+    "description": "Select an existing level or create a new one. Each level can contain multiple floor plans.",
+    "existingLevels": "Existing Levels",
+    "defaultLevel": "Default Level",
+    "createNewSection": "Or Create New Level",
+    "createNew": "Create New Level",
+    "namePlaceholder": "Enter level name (e.g. Basement, 2nd Floor)",
+    "cancel": "Cancel"
   }
 }

@@ -637,5 +637,12 @@
   "progressiveLoader": {
     "percentComplete": "{percent}% Ολοκληρωμένο",
     "remaining": "{time} απομένουν"
+  },
+  "theme": {
+    "title": "Θέμα Εμφάνισης",
+    "toggle": "Αλλαγή θέματος",
+    "light": "Φωτεινό",
+    "dark": "Σκοτεινό",
+    "system": "Σύστημα"
   }
 }

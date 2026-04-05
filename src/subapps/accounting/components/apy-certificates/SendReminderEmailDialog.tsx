@@ -37,6 +37,7 @@ import {
   buildAPYEmailContent,
 } from '../../services/email/apy-certificate-email-template';
 import type { APYEmailLanguage } from '../../services/email/apy-certificate-email-template';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES
@@ -73,6 +74,7 @@ export function SendReminderEmailDialog({
   onSent,
 }: SendReminderEmailDialogProps) {
   const { user } = useAuth();
+  const { t } = useTranslation('accounting');
 
   const [recipientEmail, setRecipientEmail] = useState('');
   const [language, setLanguage] = useState<APYEmailLanguage>('el');
@@ -111,7 +113,7 @@ export function SendReminderEmailDialog({
 
     const trimmedEmail = recipientEmail.trim();
     if (!isValidEmail(trimmedEmail)) {
-      setErrorMessage('Μη έγκυρη διεύθυνση email.');
+      setErrorMessage(t('apyCertificates.reminderEmail.invalidEmail'));
       return;
     }
 
@@ -143,7 +145,7 @@ export function SendReminderEmailDialog({
 
       if (!response.ok || !json.success) {
         setSendStatus('error');
-        setErrorMessage(json.error ?? 'Αποτυχία αποστολής email.');
+        setErrorMessage(json.error ?? t('apyCertificates.reminderEmail.sendError'));
         return;
       }
 
@@ -152,7 +154,7 @@ export function SendReminderEmailDialog({
       setTimeout(() => onOpenChange(false), 2000);
     } catch (err) {
       setSendStatus('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Αποτυχία αποστολής email.');
+      setErrorMessage(err instanceof Error ? err.message : t('apyCertificates.reminderEmail.sendError'));
     }
   }, [user, recipientEmail, subject, language, cert.certificateId, onSent, onOpenChange]);
 
@@ -166,14 +168,14 @@ export function SendReminderEmailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Αποστολή Reminder — Βεβαίωση {cert.fiscalYear}
+            {t('apyCertificates.reminderEmail.title', { year: cert.fiscalYear })}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* Recipient */}
           <div className="space-y-1.5">
-            <Label htmlFor="apy-reminder-to">Προς</Label>
+            <Label htmlFor="apy-reminder-to">{t('apyCertificates.reminderEmail.to')}</Label>
             <Input
               id="apy-reminder-to"
               ref={inputRef}
@@ -188,13 +190,13 @@ export function SendReminderEmailDialog({
               aria-invalid={recipientEmail.length > 0 && !emailValid}
             />
             <p className="text-xs text-gray-500">
-              Πελάτης: <strong>{cert.customer.name}</strong> ({cert.customer.vatNumber})
+              {t('apyCertificates.reminderEmail.customer', { name: cert.customer.name, vat: cert.customer.vatNumber })}
             </p>
           </div>
 
           {/* Subject */}
           <div className="space-y-1.5">
-            <Label htmlFor="apy-reminder-subject">Θέμα</Label>
+            <Label htmlFor="apy-reminder-subject">{t('apyCertificates.reminderEmail.subject')}</Label>
             <Input
               id="apy-reminder-subject"
               type="text"
@@ -206,7 +208,7 @@ export function SendReminderEmailDialog({
 
           {/* Language */}
           <div className="space-y-1.5">
-            <Label htmlFor="apy-reminder-lang">Γλώσσα</Label>
+            <Label htmlFor="apy-reminder-lang">{t('apyCertificates.reminderEmail.language')}</Label>
             <Select
               value={language}
               onValueChange={(v) => setLanguage(v as APYEmailLanguage)}
@@ -216,20 +218,20 @@ export function SendReminderEmailDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="el">Ελληνικά</SelectItem>
-                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="el">{t('apyCertificates.reminderEmail.langEl')}</SelectItem>
+                <SelectItem value="en">{t('apyCertificates.reminderEmail.langEn')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* PDF note */}
           <p className="text-xs text-gray-500">
-            📎 Θα επισυναφθεί αυτόματα το PDF της βεβαίωσης.
+            📎 {t('apyCertificates.reminderEmail.pdfNote')}
           </p>
 
           {/* Preview */}
           <div className="space-y-1.5">
-            <Label>Προεπισκόπηση</Label>
+            <Label>{t('apyCertificates.reminderEmail.preview')}</Label>
             <div
               className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm overflow-auto max-h-48"
               /* biome-ignore lint/security/noDangerouslySetInnerHtml: preview of server-generated HTML */
@@ -241,7 +243,7 @@ export function SendReminderEmailDialog({
           {sendStatus === 'success' && (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Το email στάλθηκε στο {recipientEmail.trim()}.</span>
+              <span>{t('apyCertificates.reminderEmail.sendSuccess', { email: recipientEmail.trim() })}</span>
             </div>
           )}
           {sendStatus === 'error' && errorMessage && (
@@ -254,7 +256,7 @@ export function SendReminderEmailDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
-            Ακύρωση
+            {t('apyCertificates.reminderEmail.cancel')}
           </Button>
           <Button
             onClick={handleSend}
@@ -263,12 +265,12 @@ export function SendReminderEmailDialog({
             {isSending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Αποστολή...
+                {t('apyCertificates.reminderEmail.sending')}
               </>
             ) : (
               <>
                 <Mail className="mr-2 h-4 w-4" />
-                Αποστολή
+                {t('apyCertificates.reminderEmail.send')}
               </>
             )}
           </Button>

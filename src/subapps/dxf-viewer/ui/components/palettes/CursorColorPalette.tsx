@@ -5,6 +5,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../config/color-config';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 export interface CursorColors {
@@ -36,6 +37,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const semanticColors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-settings');
 
   const handleColorChange = (key: keyof CursorColors, value: string) => {
     const newColors = { ...colors, [key]: value };
@@ -119,10 +121,10 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
         {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
           const isSelected = colors[styleKey] === style;
           const styleLabels = {
-            solid: 'Συνεχόμενη',
-            dashed: 'Διακεκομμένη',
-            dotted: 'Κουκίδες',
-            'dash-dot': 'Παύλα-Τελεία'
+            solid: t('cursorPalette.styleSolid'),
+            dashed: t('cursorPalette.styleDashed'),
+            dotted: t('cursorPalette.styleDotted'),
+            'dash-dot': t('cursorPalette.styleDashDot'),
           };
 
           const getLinePreview = (lineStyle: string) => {
@@ -167,20 +169,20 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
         <h4 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.TAB.FONT_WEIGHT} ${semanticColors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Window Selection</h4>
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <ColorRow
-            label="Γέμισμα"
-            description="Εσωτερικό κουτιού"
+            label={t('cursorPalette.fill')}
+            description={t('cursorPalette.fillDesc')}
             colorKey="windowFillColor"
             opacityKey="windowFillOpacity"
           />
           <ColorRow
-            label="Περίγραμμα"
-            description="Εξωτερική γραμμή"
+            label={t('cursorPalette.border')}
+            description={t('cursorPalette.borderDesc')}
             colorKey="windowBorderColor"
             opacityKey="windowBorderOpacity"
           />
           <BorderStyleRow
-            label="Είδος Περιγράμματος"
-            description="Τύπος γραμμής περιγράμματος"
+            label={t('cursorPalette.borderStyle')}
+            description={t('cursorPalette.borderStyleDesc')}
             styleKey="windowBorderStyle"
             color={colors.windowBorderColor}
           />
@@ -192,20 +194,20 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
         <h4 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.TAB.FONT_WEIGHT} ${semanticColors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Crossing Selection</h4>
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <ColorRow
-            label="Γέμισμα"
-            description="Εσωτερικό κουτιού"
+            label={t('cursorPalette.fill')}
+            description={t('cursorPalette.fillDesc')}
             colorKey="crossingFillColor"
             opacityKey="crossingFillOpacity"
           />
           <ColorRow
-            label="Περίγραμμα"
-            description="Εξωτερική γραμμή"
+            label={t('cursorPalette.border')}
+            description={t('cursorPalette.borderDesc')}
             colorKey="crossingBorderColor"
             opacityKey="crossingBorderOpacity"
           />
           <BorderStyleRow
-            label="Είδος Περιγράμματος"
-            description="Τύπος γραμμής περιγράμματος"
+            label={t('cursorPalette.borderStyle')}
+            description={t('cursorPalette.borderStyleDesc')}
             styleKey="crossingBorderStyle"
             color={colors.crossingBorderColor}
           />

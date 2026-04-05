@@ -21,7 +21,11 @@
     "total": "Total",
     "category": "ATOE",
     "delivery": "Delivery",
-    "addItem": "Add item"
+    "addItem": "Add item",
+    "descriptionPlaceholder": "e.g. Cement boards 12mm",
+    "descriptionShort": "Description",
+    "quantityShort": "Qty",
+    "unitPriceShort": "€/unit"
   },
   "form": {
     "editTitle": "Edit PO",
@@ -130,6 +134,15 @@
     "poApproved": "PO {{poNumber}} has been approved",
     "poOverdue": "PO {{poNumber}} is overdue (needed by {{dateNeeded}})"
   },
+  "kpi": {
+    "activePO": "Active POs",
+    "pendingDelivery": "Pending Delivery",
+    "totalCommitted": "Total Committed",
+    "overdue": "Overdue",
+    "partialDelivery": "Partial Delivery",
+    "awaitingInvoice": "Awaiting Invoice",
+    "monthlySpend": "Monthly Spend"
+  },
   "categories": {
     "OIK-1": "Earthworks",
     "OIK-2": "Concrete",
@@ -157,7 +170,9 @@
     "days": "days",
     "noSuppliers": "No suppliers with orders",
     "suppliers": "suppliers",
-    "rank": "Rank"
+    "rank": "Rank",
+    "spend": "Spend",
+    "leadTime": "Lead Time"
   },
   "invoiceMatch": {
     "title": "Invoice Matching",

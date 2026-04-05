@@ -1,5 +1,4 @@
 "use client"
-/* eslint-disable custom/no-hardcoded-strings */
 
 import * as React from "react"
 import { useTheme } from "next-themes"
@@ -16,11 +15,13 @@ import { Button } from "@/components/ui/button"
 import { Moon, Sun, Monitor } from "lucide-react"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
+import { useTranslation } from '@/i18n/hooks/useTranslation'
 import '@/lib/design-system';
 
 export function ThemeToggle() {
   const iconSizes = useIconSizes();
   const { theme, setTheme } = useTheme()
+  const { t } = useTranslation('common');
 
   return (
     <DropdownMenu>
@@ -28,24 +29,24 @@ export function ThemeToggle() {
         <Button variant="outline" size="icon">
           <Sun className={`${iconSizes.sm} rotate-0 scale-100 dark:-rotate-90 dark:scale-0 ${TRANSITION_PRESETS.STANDARD_ALL}`} />
           <Moon className={`absolute ${iconSizes.sm} rotate-90 scale-0 dark:rotate-0 dark:scale-100 ${TRANSITION_PRESETS.STANDARD_ALL}`} />
-          <span className="sr-only">Αλλαγή θέματος</span>
+          <span className="sr-only">{t('theme.toggle')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Θέμα Εμφάνισης</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('theme.title')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
           <DropdownMenuRadioItem value="light">
             <Sun className={`mr-2 ${iconSizes.sm}`} />
-            <span>Φωτεινό</span>
+            <span>{t('theme.light')}</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">
             <Moon className={`mr-2 ${iconSizes.sm}`} />
-            <span>Σκοτεινό</span>
+            <span>{t('theme.dark')}</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system">
             <Monitor className={`mr-2 ${iconSizes.sm}`} />
-            <span>Σύστημα</span>
+            <span>{t('theme.system')}</span>
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

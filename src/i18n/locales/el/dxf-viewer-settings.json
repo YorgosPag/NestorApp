@@ -682,5 +682,35 @@
       "segments": "Τμήματα:",
       "total": "Σύνολο:"
     }
+  },
+  "cursorPalette": {
+    "fill": "Γέμισμα",
+    "fillDesc": "Εσωτερικό κουτιού",
+    "border": "Περίγραμμα",
+    "borderDesc": "Εξωτερική γραμμή",
+    "borderStyle": "Είδος Περιγράμματος",
+    "borderStyleDesc": "Τύπος γραμμής περιγράμματος",
+    "styleSolid": "Συνεχόμενη",
+    "styleDashed": "Διακεκομμένη",
+    "styleDotted": "Κουκίδες",
+    "styleDashDot": "Παύλ��-Τελεία"
+  },
+  "canvasSettings": {
+    "title": "Ρυθμίσεις Καμ��ά",
+    "subtitle": "Ρυθμίσεις εμφάνισης και συμπεριφοράς καμβά",
+    "comingSoon": "Σύντομα Διαθέσιμο",
+    "comingSoonDesc": "Οι ρυθμίσεις καμβά θα περιλαμβάνο��ν:",
+    "bgColor": "Χρώμα φόντου καμβά",
+    "zoomPan": "Ρυθμίσεις zoom και pan",
+    "gridRef": "Εμφάνιση πλέγματος αν��φοράς",
+    "rendering": "Ρυθμίσ��ις rendering",
+    "performance": "Προσαρμογές performance"
+  },
+  "debugCorners": {
+    "yellowLine": "Κίτρινη γρα��μή",
+    "redLine": "Κόκκινη γραμμή",
+    "greenLine": "Πράσινη γραμμή",
+    "blueLine": "Μπλε γραμμή",
+    "allLines": "Όλες οι γ��αμμές: 2px πάχος"
   }
 }

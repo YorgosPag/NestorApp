@@ -59,6 +59,13 @@
       "rejected": "Rejected",
       "cancelled": "Cancelled"
     },
+    "customerForm": {
+      "vatNumber": "VAT Number",
+      "taxOffice": "Tax Office",
+      "address": "Address",
+      "city": "City",
+      "postalCode": "Postal Code"
+    },
     "summary": {
       "totalIssued": "Total Issued",
       "unpaidBalance": "Unpaid Balance",
@@ -687,6 +694,23 @@
       "title": "Certificate already exists",
       "message": "A certificate for this customer and year {{year}} already exists.",
       "viewExisting": "View existing certificate →"
+    },
+    "reminderEmail": {
+      "title": "Send Reminder — Certificate {{year}}",
+      "to": "To",
+      "subject": "Subject",
+      "language": "Language",
+      "langEl": "Greek",
+      "langEn": "English",
+      "pdfNote": "The certificate PDF will be automatically attached.",
+      "preview": "Preview",
+      "customer": "Customer: {{name}} ({{vat}})",
+      "invalidEmail": "Invalid email address.",
+      "sendError": "Failed to send email.",
+      "sendSuccess": "Email sent to {{email}}.",
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "send": "Send"
     }
   },
   "setup": {

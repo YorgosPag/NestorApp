@@ -11,6 +11,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT, PANEL_COLORS } from '../../config/panel-tokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface LevelSelectionStepProps {
     onNext: () => void;
@@ -21,6 +22,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-wizard');
   const {
     levels,
     importWizard,
@@ -53,15 +55,15 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
       {/* ✅ ENTERPRISE: Semantic header + fix broken template string (ADR-003) */}
       <header>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-          Επιλέξτε Επίπεδο για Εισαγωγή DXF
+          {t('levelSelection.title')}
         </h3>
         <p className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-          Επιλέξτε ένα υπάρχον επίπεδο ή δημιουργήστε ένα νέο. Κάθε επίπεδο μπορεί να περιέχει πολλές κατόψεις.
+          {t('levelSelection.description')}
         </p>
       </header>
 
       <section className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.MAX_HEIGHT.MD} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.PADDING.RIGHT_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Υπάρχοντα Επίπεδα</h4>
+        <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>{t('levelSelection.existingLevels')}</h4>
         {levels.map((level) => (
           <label
             key={level.id}
@@ -84,7 +86,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
               <div>
                 <div className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{level.name}</div>
                 {level.isDefault && (
-                  <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.info}`}>Προεπιλεγμένο Επίπεδο</div>
+                  <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.info}`}>{t('levelSelection.defaultLevel')}</div>
                 )}
               </div>
             </div>
@@ -93,7 +95,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
       </section>
 
       <section className={PANEL_LAYOUT.SPACING.GAP_MD}>
-        <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Ή Δημιουργήστε Νέο Επίπεδο</h4>
+        <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>{t('levelSelection.createNewSection')}</h4>
 
         {!showNewLevelForm ? (
           <button
@@ -105,7 +107,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
             }`}
           >
             <Plus className={`${iconSizes.sm} ${colors.text.muted} ${PANEL_LAYOUT.SPACING.GAP_H_SM}`} />
-            <span className={`${colors.text.tertiary}`}>Δημιουργία Νέου Επιπέδου</span>
+            <span className={`${colors.text.tertiary}`}>{t('levelSelection.createNew')}</span>
           </button>
         ) : (
           <div className={`${quick.card} ${PANEL_LAYOUT.SPACING.MD}`}>
@@ -120,7 +122,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
               <div className="flex-1">
                 <input
                   type="text"
-                  placeholder="Εισάγετε όνομα επιπέδου (π.χ. Υπόγειο, 2ος Όροφος)"
+                  placeholder={t('levelSelection.namePlaceholder')}
                   value={newLevelName}
                   onChange={(e) => handleNewLevelNameChange(e.target.value)}
                   className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${colors.bg.secondary} ${PANEL_LAYOUT.INPUT.PADDING} ${colors.text.primary} ${PANEL_COLORS.TEXT_MUTED} ${PANEL_LAYOUT.INPUT.FOCUS} ${quick.input}`}
@@ -136,7 +138,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
               }}
               className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
-              Ακύρωση
+              {t('levelSelection.cancel')}
             </button>
           </div>
         )}

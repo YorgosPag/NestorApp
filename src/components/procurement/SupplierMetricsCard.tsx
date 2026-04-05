@@ -27,6 +27,7 @@ function formatCurrency(n: number): string {
   return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(n);
 }
 import type { SupplierMetrics, CategorySpend } from '@/types/procurement';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES
@@ -43,46 +44,47 @@ interface SupplierMetricsCardProps {
 
 export function SupplierMetricsCard({ metrics, className }: SupplierMetricsCardProps) {
   const typography = useTypography();
+  const { t } = useTranslation('procurement');
 
   return (
     <Card className={cn('w-full', className)}>
       <CardHeader className="pb-3">
         <h3 className={cn(typography.heading.h4, 'flex items-center gap-2')}>
           <BarChart3 className="h-5 w-5" />
-          Απόδοση Προμηθευτή
+          {t('supplierMetrics.title')}
         </h3>
         <p className={cn(typography.body.sm, 'text-sm')}>{metrics.supplierName}</p>
       </CardHeader>
       <CardContent>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <MetricItem
-            label="Παραγγελίες"
+            label={t('supplierMetrics.totalOrders')}
             value={String(metrics.totalOrders)}
             icon={<Package className="h-4 w-4" />}
           />
           <MetricItem
-            label="Συνολική Δαπάνη"
+            label={t('supplierMetrics.totalSpend')}
             value={formatCurrency(metrics.totalSpend)}
             icon={<TrendingUp className="h-4 w-4" />}
           />
           <MetricItem
-            label="Μ.Ο. Παραγγελίας"
+            label={t('supplierMetrics.averageOrder')}
             value={formatCurrency(metrics.averageOrderValue)}
             icon={<TrendingUp className="h-4 w-4" />}
           />
           <MetricItem
-            label="Εγκαιρότητα"
+            label={t('supplierMetrics.onTimeRate')}
             value={`${metrics.onTimeDeliveryRate}%`}
             icon={<CheckCircle className="h-4 w-4" />}
             variant={getOnTimeVariant(metrics.onTimeDeliveryRate)}
           />
           <MetricItem
-            label="Μ.Ο. Χρόνου"
-            value={metrics.averageLeadTimeDays !== null ? `${metrics.averageLeadTimeDays} ημ.` : '—'}
+            label={t('supplierMetrics.avgLeadTime')}
+            value={metrics.averageLeadTimeDays !== null ? `${metrics.averageLeadTimeDays} ${t('supplierMetrics.days')}` : '—'}
             icon={<Clock className="h-4 w-4" />}
           />
           <MetricItem
-            label="Ακυρώσεις"
+            label={t('supplierMetrics.cancellationRate')}
             value={`${metrics.cancellationRate}%`}
             icon={<XCircle className="h-4 w-4" />}
             variant={metrics.cancellationRate > 20 ? 'warning' : 'default'}
@@ -92,7 +94,7 @@ export function SupplierMetricsCard({ metrics, className }: SupplierMetricsCardP
         {metrics.categoryBreakdown.length > 0 && (
           <section className="mt-4 border-t pt-4">
             <h4 className={cn(typography.label.xs, 'mb-2 font-medium')}>
-              Κατανομή ανά Κατηγορία
+              {t('supplierMetrics.categoryBreakdown')}
             </h4>
             <ul className="space-y-1">
               {metrics.categoryBreakdown.slice(0, 5).map((cat: CategorySpend) => (

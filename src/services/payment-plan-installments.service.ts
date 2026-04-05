@@ -66,7 +66,7 @@ export async function resyncTotalAmount(
 
       if (delta < 0 && Math.abs(delta) > totalUnpaid) {
         throw new Error(
-          `Η νέα τιμή (${newSalePrice}) θα μειώσει το πλάνο κατά ${Math.abs(delta)} αλλά το αδιάθετο υπόλοιπο είναι μόνο ${totalUnpaid}.`
+          `New price (${newSalePrice}) would reduce plan by ${Math.abs(delta)} but unallocated balance is only ${totalUnpaid}.`
         );
       }
 
@@ -135,10 +135,10 @@ export async function deletePlan(
     if (!plan) return { success: false, error: 'Payment plan not found' };
 
     if (plan.status !== 'negotiation' && plan.status !== 'draft') {
-      return { success: false, error: 'Μπορείτε να διαγράψετε μόνο plans σε negotiation/draft' };
+      return { success: false, error: 'Can only delete plans in negotiation/draft status' };
     }
     if (plan.paidAmount > 0) {
-      return { success: false, error: 'Δεν μπορείτε να διαγράψετε plan με καταγεγραμμένες πληρωμές' };
+      return { success: false, error: 'Cannot delete plan with recorded payments' };
     }
 
     const db = getDb();
@@ -176,7 +176,7 @@ async function transitionPlanStatus(
     if (!plan) return { success: false, error: 'Payment plan not found' };
 
     if (!isValidPlanTransition(plan.status, targetStatus)) {
-      return { success: false, error: `Μη έγκυρη μετάβαση: ${plan.status} → ${targetStatus}` };
+      return { success: false, error: `Invalid transition: ${plan.status} → ${targetStatus}` };
     }
 
     const db = getDb();
@@ -215,7 +215,7 @@ export async function addInstallment(
       const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
 
       if (plan.status !== 'negotiation' && plan.status !== 'draft') {
-        throw new Error('Μπορείτε να προσθέσετε δόσεις μόνο σε negotiation/draft');
+        throw new Error('Can only add installments in negotiation/draft status');
       }
 
       const newInstallment: Installment = {
@@ -236,7 +236,7 @@ export async function addInstallment(
       if (existingInstallments.length > 0 && addedAmount > maxAllowed) {
         const fmt = (v: number) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
         throw new Error(
-          `Το ποσό ${fmt(addedAmount)} υπερβαίνει το μέγιστο επιτρεπτό ${fmt(maxAllowed)} (95% του αδιάθετου υπολοίπου ${fmt(totalUnpaid)}).`
+          `Amount ${fmt(addedAmount)} exceeds maximum allowed ${fmt(maxAllowed)} (95% of unallocated balance ${fmt(totalUnpaid)}).`
         );
       }
 
@@ -296,15 +296,15 @@ export async function updateInstallment(
       const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
 
       if (index < 0 || index >= plan.installments.length) {
-        throw new Error(`Δόση #${index} δεν βρέθηκε`);
+        throw new Error(`Installment #${index} not found`);
       }
 
       if (plan.status === 'active') {
         if (input.label || input.amount !== undefined || input.percentage !== undefined || input.dueDate) {
-          throw new Error('Σε ενεργό plan μπορείτε να αλλάξετε μόνο σημειώσεις');
+          throw new Error('Active plan — only notes can be modified');
         }
       } else if (plan.status !== 'negotiation' && plan.status !== 'draft') {
-        throw new Error('Δεν μπορείτε να τροποποιήσετε δόσεις σε αυτό το status');
+        throw new Error('Cannot modify installments in this status');
       }
 
       const updated = [...plan.installments];
@@ -328,7 +328,7 @@ export async function updateInstallment(
         if (amountDelta > maxIncrease) {
           const fmt = (v: number) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
           throw new Error(
-            `Η αύξηση κατά ${fmt(amountDelta)} υπερβαίνει το μέγιστο ${fmt(maxIncrease)} (95% του αδιάθετου υπολοίπου ${fmt(othersUnpaid)}).`
+            `Increase of ${fmt(amountDelta)} exceeds maximum ${fmt(maxIncrease)} (95% of unallocated balance ${fmt(othersUnpaid)}).`
           );
         }
       }
@@ -384,13 +384,13 @@ export async function removeInstallment(
       const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
 
       if (plan.status !== 'negotiation' && plan.status !== 'draft') {
-        throw new Error('Μπορείτε να αφαιρέσετε δόσεις μόνο σε negotiation/draft');
+        throw new Error('Can only remove installments in negotiation/draft status');
       }
       if (index < 0 || index >= plan.installments.length) {
-        throw new Error(`Δόση #${index} δεν βρέθηκε`);
+        throw new Error(`Installment #${index} not found`);
       }
       if (plan.installments[index].paidAmount > 0) {
-        throw new Error('Δεν μπορείτε να αφαιρέσετε πληρωμένη δόση');
+        throw new Error('Cannot remove a paid installment');
       }
 
       const removedAmount = plan.installments[index].amount;

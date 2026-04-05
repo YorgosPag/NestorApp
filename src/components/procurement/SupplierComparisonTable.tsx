@@ -95,11 +95,11 @@ export function SupplierComparisonTable({ suppliers, className }: SupplierCompar
               <tr className="border-b bg-muted/50">
                 <th className="px-4 py-2 text-left font-medium">#</th>
                 <th className="px-4 py-2 text-left font-medium">{t('list.supplier')}</th>
-                <SortHeader label="Παραγγελίες" field="totalOrders" current={sortField} asc={sortAsc} onSort={toggleSort} />
-                <SortHeader label="Δαπάνη" field="totalSpend" current={sortField} asc={sortAsc} onSort={toggleSort} />
-                <SortHeader label="Εγκαιρότητα" field="onTimeDeliveryRate" current={sortField} asc={sortAsc} onSort={toggleSort} />
-                <SortHeader label="Χρόνος" field="averageLeadTimeDays" current={sortField} asc={sortAsc} onSort={toggleSort} />
-                <SortHeader label="Ακυρώσεις" field="cancellationRate" current={sortField} asc={sortAsc} onSort={toggleSort} />
+                <SortHeader label={t('supplierMetrics.totalOrders')} field="totalOrders" current={sortField} asc={sortAsc} onSort={toggleSort} />
+                <SortHeader label={t('supplierMetrics.spend')} field="totalSpend" current={sortField} asc={sortAsc} onSort={toggleSort} />
+                <SortHeader label={t('supplierMetrics.onTimeRate')} field="onTimeDeliveryRate" current={sortField} asc={sortAsc} onSort={toggleSort} />
+                <SortHeader label={t('supplierMetrics.leadTime')} field="averageLeadTimeDays" current={sortField} asc={sortAsc} onSort={toggleSort} />
+                <SortHeader label={t('supplierMetrics.cancellationRate')} field="cancellationRate" current={sortField} asc={sortAsc} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody>
@@ -115,7 +115,7 @@ export function SupplierComparisonTable({ suppliers, className }: SupplierCompar
                     <OnTimeBadge rate={s.onTimeDeliveryRate} />
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {s.averageLeadTimeDays !== null ? `${s.averageLeadTimeDays} ημ.` : '—'}
+                    {s.averageLeadTimeDays !== null ? `${s.averageLeadTimeDays} ${t('supplierMetrics.days')}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={cn(s.cancellationRate > 20 && 'text-amber-600 dark:text-amber-400')}>
@@ -200,7 +200,7 @@ function MobileSupplierCard({ supplier, rank }: { supplier: SupplierMetrics; ran
         <div>
           <dt className={typography.body.sm}>{t('supplierMetrics.avgLeadTime')}</dt>
           <dd className="font-medium">
-            {supplier.averageLeadTimeDays !== null ? `${supplier.averageLeadTimeDays} ημ.` : '—'}
+            {supplier.averageLeadTimeDays !== null ? `${supplier.averageLeadTimeDays} ${t('supplierMetrics.days')}` : '—'}
           </dd>
         </div>
       </dl>

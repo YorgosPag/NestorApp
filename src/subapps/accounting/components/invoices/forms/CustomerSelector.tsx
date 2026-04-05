@@ -169,7 +169,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
         </fieldset>
 
         <fieldset>
-          <Label htmlFor="customerVat">ΑΦΜ</Label>
+          <Label htmlFor="customerVat">{t('invoices.customerForm.vatNumber')}</Label>
           <Input
             id="customerVat"
             value={customer.vatNumber ?? ''}
@@ -187,7 +187,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <fieldset>
-          <Label htmlFor="customerTaxOffice">ΔΟΥ</Label>
+          <Label htmlFor="customerTaxOffice">{t('invoices.customerForm.taxOffice')}</Label>
           <DoyPicker
             value={customer.taxOffice ?? ''}
             onValueChange={(val) => updateField('taxOffice', val)}
@@ -196,7 +196,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
         </fieldset>
 
         <fieldset>
-          <Label htmlFor="customerAddress">Διεύθυνση</Label>
+          <Label htmlFor="customerAddress">{t('invoices.customerForm.address')}</Label>
           <Input
             id="customerAddress"
             value={customer.address ?? ''}
@@ -205,7 +205,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
         </fieldset>
 
         <fieldset>
-          <Label htmlFor="customerCity">Πόλη</Label>
+          <Label htmlFor="customerCity">{t('invoices.customerForm.city')}</Label>
           <Input
             id="customerCity"
             value={customer.city ?? ''}
@@ -216,7 +216,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <fieldset>
-          <Label htmlFor="customerPostalCode">ΤΚ</Label>
+          <Label htmlFor="customerPostalCode">{t('invoices.customerForm.postalCode')}</Label>
           <Input
             id="customerPostalCode"
             value={customer.postalCode ?? ''}

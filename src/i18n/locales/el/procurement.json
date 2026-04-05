@@ -21,7 +21,11 @@
     "total": "Σύνολο",
     "category": "ΑΤΟΕ",
     "delivery": "Παραλαβή",
-    "addItem": "Προσθήκη είδους"
+    "addItem": "Προσθήκη είδους",
+    "descriptionPlaceholder": "π.χ. Τσιμεντοσανίδες 12mm",
+    "descriptionShort": "Περιγραφή",
+    "quantityShort": "Ποσ.",
+    "unitPriceShort": "€/μον."
   },
   "form": {
     "editTitle": "Επεξεργασία PO",
@@ -130,6 +134,15 @@
     "poApproved": "Το PO {{poNumber}} εγκρίθηκε",
     "poOverdue": "Το PO {{poNumber}} έχει καθυστερήσει (ημ. παράδοσης: {{dateNeeded}})"
   },
+  "kpi": {
+    "activePO": "Ενεργές PO",
+    "pendingDelivery": "Αναμονή Παράδοσης",
+    "totalCommitted": "Σύνολο Δεσμεύσεων",
+    "overdue": "Εκπρόθεσμες",
+    "partialDelivery": "Μερική Παραλαβή",
+    "awaitingInvoice": "Χωρίς Τιμολόγιο",
+    "monthlySpend": "Μηνιαία Δαπάνη"
+  },
   "categories": {
     "OIK-1": "Χωματουργικά",
     "OIK-2": "Σκυροδέματα",
@@ -157,7 +170,9 @@
     "days": "ημ.",
     "noSuppliers": "Δεν υπάρχουν προμηθευτές με παραγγελίες",
     "suppliers": "προμηθευτές",
-    "rank": "Κατάταξη"
+    "rank": "Κατάταξη",
+    "spend": "Δαπάνη",
+    "leadTime": "Χρόνος"
   },
   "invoiceMatch": {
     "title": "Αντιστοίχιση Τιμολογίου",

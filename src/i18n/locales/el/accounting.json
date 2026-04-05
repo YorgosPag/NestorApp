@@ -59,6 +59,13 @@
       "rejected": "Απορρίφθηκε",
       "cancelled": "Ακυρωμένο"
     },
+    "customerForm": {
+      "vatNumber": "ΑΦΜ",
+      "taxOffice": "ΔΟΥ",
+      "address": "Διεύθυνση",
+      "city": "Πόλη",
+      "postalCode": "ΤΚ"
+    },
     "summary": {
       "totalIssued": "Σύνολο Εκδοθέντων",
       "unpaidBalance": "Ανεξόφλητο Υπόλοιπο",
@@ -687,6 +694,23 @@
       "title": "Βεβαίωση ήδη υπάρχει",
       "message": "Υπάρχει ήδη βεβαίωση για αυτόν τον πελάτη και το έτος {{year}}.",
       "viewExisting": "Προβολή υπάρχουσας βεβαίωσης →"
+    },
+    "reminderEmail": {
+      "title": "Αποστολή Reminder — Βεβαίωση {{year}}",
+      "to": "Προς",
+      "subject": "Θέμα",
+      "language": "Γλώσσα",
+      "langEl": "Ελληνικά",
+      "langEn": "English",
+      "pdfNote": "Θα επισυναφθεί αυτόματα το PDF της βεβαίωσης.",
+      "preview": "Προεπισκόπηση",
+      "customer": "Πελάτης: {{name}} ({{vat}})",
+      "invalidEmail": "Μη έγκυρη διεύθυνση email.",
+      "sendError": "Αποτυχία αποστολής email.",
+      "sendSuccess": "Το email στάλθηκε στο {{email}}.",
+      "cancel": "Ακύρωση",
+      "sending": "Αποστολή...",
+      "send": "Αποστολή"
     }
   },
   "setup": {

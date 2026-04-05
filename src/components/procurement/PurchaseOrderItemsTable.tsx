@@ -76,12 +76,12 @@ export function PurchaseOrderItemsTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[200px]">{t('items.description', 'Περιγραφή')}</TableHead>
-              <TableHead className="w-[100px]">{t('items.quantity', 'Ποσότητα')}</TableHead>
-              <TableHead className="w-[100px]">{t('items.unit', 'Μονάδα')}</TableHead>
-              <TableHead className="w-[120px]">{t('items.unitPrice', 'Τιμή/Μον.')}</TableHead>
-              <TableHead className="w-[120px]">{t('items.total', 'Σύνολο')}</TableHead>
-              <TableHead className="w-[140px]">{t('items.category', 'ΑΤΟΕ')}</TableHead>
+              <TableHead className="min-w-[200px]">{t('items.description')}</TableHead>
+              <TableHead className="w-[100px]">{t('items.quantity')}</TableHead>
+              <TableHead className="w-[100px]">{t('items.unit')}</TableHead>
+              <TableHead className="w-[120px]">{t('items.unitPrice')}</TableHead>
+              <TableHead className="w-[120px]">{t('items.total')}</TableHead>
+              <TableHead className="w-[140px]">{t('items.category')}</TableHead>
               {!readOnly && <TableHead className="w-[50px]" />}
             </TableRow>
           </TableHeader>
@@ -94,7 +94,7 @@ export function PurchaseOrderItemsTable({
                     onChange={(e) =>
                       onUpdateItem(item.tempId, { description: e.target.value })
                     }
-                    placeholder="π.χ. Τσιμεντοσανίδες 12mm"
+                    placeholder={t('items.descriptionPlaceholder')}
                     disabled={readOnly}
                   />
                 </TableCell>
@@ -218,7 +218,7 @@ export function PurchaseOrderItemsTable({
               onChange={(e) =>
                 onUpdateItem(item.tempId, { description: e.target.value })
               }
-              placeholder="Περιγραφή"
+              placeholder={t('items.descriptionShort')}
               disabled={readOnly}
             />
             <div className="grid grid-cols-3 gap-2">
@@ -231,7 +231,7 @@ export function PurchaseOrderItemsTable({
                     quantity: parseFloat(e.target.value) || 0,
                   })
                 }
-                placeholder="Ποσ."
+                placeholder={t('items.quantityShort')}
                 disabled={readOnly}
               />
               <Select
@@ -260,7 +260,7 @@ export function PurchaseOrderItemsTable({
                     unitPrice: parseFloat(e.target.value) || 0,
                   })
                 }
-                placeholder="€/μον."
+                placeholder={t('items.unitPriceShort')}
                 disabled={readOnly}
               />
             </div>
@@ -299,7 +299,7 @@ export function PurchaseOrderItemsTable({
           className="w-full md:w-auto"
         >
           <Plus className="mr-1.5 h-4 w-4" />
-          {t('items.addItem', 'Προσθήκη είδους')}
+          {t('items.addItem')}
         </Button>
       )}
     </div>

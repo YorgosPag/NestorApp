@@ -637,5 +637,12 @@
   "progressiveLoader": {
     "percentComplete": "{percent}% Complete",
     "remaining": "{time} remaining"
+  },
+  "theme": {
+    "title": "Theme",
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }

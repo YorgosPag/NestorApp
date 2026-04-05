@@ -86,16 +86,16 @@ class BOQService implements IBOQService {
   async create(data: CreateBOQItemInput, userId: string, companyId: string): Promise<BOQItem> {
     // Validation
     if (!data.title.trim()) {
-      throw new Error('VALIDATION_ERROR: Ο τίτλος είναι υποχρεωτικός');
+      throw new Error('VALIDATION_ERROR: Title is required');
     }
     if (!data.buildingId) {
-      throw new Error('VALIDATION_ERROR: Το building ID είναι υποχρεωτικό');
+      throw new Error('VALIDATION_ERROR: Building ID is required');
     }
     if (!data.projectId) {
-      throw new Error('VALIDATION_ERROR: Το project ID είναι υποχρεωτικό');
+      throw new Error('VALIDATION_ERROR: Project ID is required');
     }
     if (data.estimatedQuantity < 0) {
-      throw new Error('VALIDATION_ERROR: Η ποσότητα δεν μπορεί να είναι αρνητική');
+      throw new Error('VALIDATION_ERROR: Quantity cannot be negative');
     }
 
     // Apply default waste factor from category if not provided
@@ -120,7 +120,7 @@ class BOQService implements IBOQService {
     // Governance: locked items cannot be updated
     if (current.status === 'locked') {
       logger.warn('Attempted to update locked BOQ item', { id });
-      throw new Error('GOVERNANCE_ERROR: Κλειδωμένο item — δεν επιτρέπεται ενημέρωση');
+      throw new Error('GOVERNANCE_ERROR: Locked item — updates not allowed');
     }
 
     // Governance: certified items — μόνο actualQuantity
@@ -132,17 +132,17 @@ class BOQService implements IBOQService {
       if (disallowedFields.length > 0) {
         logger.warn('Attempted to modify certified BOQ item beyond allowed fields', { id, disallowedFields });
         throw new Error(
-          `GOVERNANCE_ERROR: Πιστοποιημένο item — μόνο actualQuantity/qaStatus/notes επιτρέπονται`
+          `GOVERNANCE_ERROR: Certified item — only actualQuantity/qaStatus/notes allowed`
         );
       }
     }
 
     // Validation: quantities cannot be negative
     if (data.estimatedQuantity !== undefined && data.estimatedQuantity < 0) {
-      throw new Error('VALIDATION_ERROR: Η ποσότητα δεν μπορεί να είναι αρνητική');
+      throw new Error('VALIDATION_ERROR: Quantity cannot be negative');
     }
     if (data.actualQuantity !== undefined && data.actualQuantity !== null && data.actualQuantity < 0) {
-      throw new Error('VALIDATION_ERROR: Η πραγματική ποσότητα δεν μπορεί να είναι αρνητική');
+      throw new Error('VALIDATION_ERROR: Actual quantity cannot be negative');
     }
 
     return this.repository.update(id, data);
@@ -159,7 +159,7 @@ class BOQService implements IBOQService {
     // Governance: μόνο draft items μπορούν να διαγραφούν
     if (current.status !== 'draft') {
       logger.warn('Attempted to delete non-draft BOQ item', { id, status: current.status });
-      throw new Error('GOVERNANCE_ERROR: Μόνο draft items μπορούν να διαγραφούν');
+      throw new Error('GOVERNANCE_ERROR: Only draft items can be deleted');
     }
 
     return this.repository.delete(id);

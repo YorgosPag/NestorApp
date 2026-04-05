@@ -682,5 +682,35 @@
       "segments": "Segments:",
       "total": "Total:"
     }
+  },
+  "cursorPalette": {
+    "fill": "Fill",
+    "fillDesc": "Box interior",
+    "border": "Border",
+    "borderDesc": "Outer line",
+    "borderStyle": "Border Style",
+    "borderStyleDesc": "Border line type",
+    "styleSolid": "Solid",
+    "styleDashed": "Dashed",
+    "styleDotted": "Dotted",
+    "styleDashDot": "Dash-Dot"
+  },
+  "canvasSettings": {
+    "title": "Canvas Settings",
+    "subtitle": "Canvas display and behavior settings",
+    "comingSoon": "Coming Soon",
+    "comingSoonDesc": "Canvas settings will include:",
+    "bgColor": "Canvas background color",
+    "zoomPan": "Zoom and pan settings",
+    "gridRef": "Reference grid display",
+    "rendering": "Rendering settings",
+    "performance": "Performance adjustments"
+  },
+  "debugCorners": {
+    "yellowLine": "Yellow line",
+    "redLine": "Red line",
+    "greenLine": "Green line",
+    "blueLine": "Blue line",
+    "allLines": "All lines: 2px thickness"
   }
 }

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 // Enterprise CSS Module - CLAUDE.md Protocol N.3 compliance
 import styles from './DebugOverlay.module.css';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface CornerPosition {
   x: number;
@@ -13,6 +14,7 @@ interface CornerPosition {
 export default function CornerMarkers() {
   const [positions, setPositions] = useState<CornerPosition[]>([]);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const { t } = useTranslation('dxf-viewer-settings');
 
   useEffect(() => {
     const updatePositions = () => {
@@ -83,22 +85,22 @@ export default function CornerMarkers() {
         <div className={styles.cornerDebugTitle}>🎯 LAYOUT DEBUGGING</div>
         <div className={styles.cornerDebugItem}>Viewport: {viewport.width}x{viewport.height}</div>
         <div className={styles.cornerDebugLabel}>
-          <span className={styles.cornerDebugLabelYellow}>Κίτρινη γραμμή</span> (πάνω)<br/>
+          <span className={styles.cornerDebugLabelYellow}>{t('debugCorners.yellowLine')}</span> (top)<br/>
           <span className={styles.cornerDebugValue}>Y = 0px</span>
         </div>
         <div className={styles.cornerDebugLabel}>
-          <span className={styles.cornerDebugLabelRed}>Κόκκινη γραμμή</span> (κάτω)<br/>
+          <span className={styles.cornerDebugLabelRed}>{t('debugCorners.redLine')}</span> (bottom)<br/>
           <span className={styles.cornerDebugValue}>Y = {viewport.height}px</span>
         </div>
         <div className={styles.cornerDebugLabel}>
-          <span className={styles.cornerDebugLabelGreen}>Πράσινη γραμμή</span> (αριστερά)<br/>
+          <span className={styles.cornerDebugLabelGreen}>{t('debugCorners.greenLine')}</span> (left)<br/>
           <span className={styles.cornerDebugValue}>X = 0px</span>
         </div>
         <div className={styles.cornerDebugLabel}>
-          <span className={styles.cornerDebugLabelBlue}>Μπλε γραμμή</span> (δεξιά)<br/>
+          <span className={styles.cornerDebugLabelBlue}>{t('debugCorners.blueLine')}</span> (right)<br/>
           <span className={styles.cornerDebugValue}>X = {viewport.width}px</span>
         </div>
-        <div className={styles.cornerDebugNote}>Όλες οι γραμμές: 2px πάχος</div>
+        <div className={styles.cornerDebugNote}>{t('debugCorners.allLines')}</div>
       </div>
     </div>
   );

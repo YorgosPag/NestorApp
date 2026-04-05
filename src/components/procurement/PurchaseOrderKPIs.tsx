@@ -22,6 +22,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { PurchaseOrder } from '@/types/procurement';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface KPICardProps {
   label: string;
@@ -66,6 +67,7 @@ interface PurchaseOrderKPIsProps {
 }
 
 export function PurchaseOrderKPIs({ purchaseOrders }: PurchaseOrderKPIsProps) {
+  const { t } = useTranslation('procurement');
   const kpis = useMemo(() => {
     const now = new Date().toISOString();
     const currentMonth = now.substring(0, 7); // YYYY-MM
@@ -117,39 +119,39 @@ export function PurchaseOrderKPIs({ purchaseOrders }: PurchaseOrderKPIsProps) {
   return (
     <section className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
       <KPICard
-        label="Ενεργές PO"
+        label={t('kpi.activePO')}
         value={kpis.active}
         icon={<Package className="h-5 w-5" />}
       />
       <KPICard
-        label="Αναμονή Παράδοσης"
+        label={t('kpi.pendingDelivery')}
         value={kpis.pendingDelivery}
         icon={<Truck className="h-5 w-5" />}
       />
       <KPICard
-        label="Σύνολο Δεσμεύσεων"
+        label={t('kpi.totalCommitted')}
         value={formatCurrency(kpis.totalCommitted)}
         icon={<DollarSign className="h-5 w-5" />}
       />
       <KPICard
-        label="Εκπρόθεσμες"
+        label={t('kpi.overdue')}
         value={kpis.overdue}
         icon={<AlertTriangle className="h-5 w-5" />}
         variant={kpis.overdue > 0 ? 'warning' : 'default'}
       />
       <KPICard
-        label="Μερική Παραλαβή"
+        label={t('kpi.partialDelivery')}
         value={kpis.partial}
         icon={<PackageOpen className="h-5 w-5" />}
       />
       <KPICard
-        label="Χωρίς Τιμολόγιο"
+        label={t('kpi.awaitingInvoice')}
         value={kpis.awaitingInvoice}
         icon={<FileWarning className="h-5 w-5" />}
         variant={kpis.awaitingInvoice > 0 ? 'warning' : 'default'}
       />
       <KPICard
-        label="Μηνιαία Δαπάνη"
+        label={t('kpi.monthlySpend')}
         value={formatCurrency(kpis.monthlySpend)}
         icon={<TrendingUp className="h-5 w-5" />}
         variant="success"
