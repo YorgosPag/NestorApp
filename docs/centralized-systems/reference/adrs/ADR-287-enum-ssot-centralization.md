@@ -76,3 +76,8 @@
   - **Migrated**:
     - `src/types/property.ts` — inline union (5 values) → `export type { OperationalStatus } from '@/constants/operational-statuses'`.
     - `src/config/report-builder/domain-definitions.ts` — local `OPERATIONAL_STATUSES` array αφαιρέθηκε · imported από SSoT.
+- **2026-04-05 (Batch 9C)**: `EnergyClass` centralization (EU Directive 2010/31/EU).
+  - **Created**: `src/constants/energy-classes.ts` — `ENERGY_CLASSES` (9, ordered best→worst), `EnergyClass` union, `isEnergyClass()` guard, `getEnergyClassRank()` helper, derived subset `HIGH_EFFICIENCY_ENERGY_CLASSES` (4) + `isHighEfficiencyEnergyClass()` guard.
+  - **Migrated**:
+    - `src/types/building/contracts.ts` — inline union (9 values) → `export type { EnergyClass } from '@/constants/energy-classes'`.
+    - `src/config/report-builder/domain-definitions.ts` — local `ENERGY_CLASSES` array αφαιρέθηκε · imported από SSoT.

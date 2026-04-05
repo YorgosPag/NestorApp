@@ -14,8 +14,9 @@ import type { PropertyType } from '@/types/property';
   /** 🏢 ENTERPRISE: Priority levels for building management */
   export type BuildingPriority = 'low' | 'medium' | 'high' | 'critical';
 
-  /** 🏢 ENTERPRISE: Energy efficiency classes (EU standard) */
-  export type EnergyClass = 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
+  // ADR-287 — EnergyClass SSoT: canonical union lives στο
+  // `src/constants/energy-classes.ts`. Re-export για backward-compat.
+  export type { EnergyClass } from '@/constants/energy-classes';
 
   /** 🏢 ENTERPRISE: Renovation status */
   export type RenovationStatus = 'none' | 'partial' | 'full' | 'planned';
