@@ -392,7 +392,7 @@ export function LinkedSpacesCard({
 
   // 🏢 ENTERPRISE: Get inclusion label
   const getInclusionLabel = (inclusion: SpaceInclusionType): string => {
-    return t(`linkedSpaces.inclusion.${inclusion}`, { defaultValue: inclusion });
+    return t(`linkedSpaces.inclusion.${inclusion}`);
   };
 
   // Don't render if no building is selected
@@ -405,7 +405,7 @@ export function LinkedSpacesCard({
       <CardHeader className="!p-2 flex flex-col space-y-2">
         <CardTitle className={cn('flex items-center', spacing.gap.sm, typography.card.titleCompact)}>
           <Package className={cn(iconSizes.md, 'text-purple-600')} />
-          {t('linkedSpaces.title', { defaultValue: 'Συνδεδεμένοι Χώροι' })}
+          {t('linkedSpaces.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="!p-2 !pt-2 space-y-3">
@@ -413,7 +413,7 @@ export function LinkedSpacesCard({
         {draftLinkedSpaces.length > 0 && (
           <section className={spacing.spaceBetween.sm}>
             <Label className={cn("text-xs", colors.text.muted)}>
-              {t('linkedSpaces.currentlyLinked', { defaultValue: 'Συνδεδεμένα' })}
+              {t('linkedSpaces.currentlyLinked')}
             </Label>
             <ul className={`flex flex-wrap ${spacing.gap.sm}`}>
               {draftLinkedSpaces.map((space) => (
@@ -440,7 +440,7 @@ export function LinkedSpacesCard({
                           `${colors.text.muted} hover:text-destructive`,
                           'transition-colors'
                         )}
-                        aria-label={t('linkedSpaces.remove', { defaultValue: 'Αφαίρεση' })}
+                        aria-label={t('linkedSpaces.remove')}
                       >
                         <X className={iconSizes.xs} />
                       </button>
@@ -458,7 +458,7 @@ export function LinkedSpacesCard({
             {/* Inclusion type selector */}
             <fieldset className={spacing.spaceBetween.sm}>
               <Label htmlFor="inclusion-selector" className="text-xs">
-                {t('linkedSpaces.inclusionLabel', { defaultValue: 'Τύπος σύνδεσης' })}
+                {t('linkedSpaces.inclusionLabel')}
               </Label>
               <Select
                 value={selectedInclusion}
@@ -469,13 +469,13 @@ export function LinkedSpacesCard({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={SPACE_INCLUSION_TYPES.INCLUDED}>
-                    {t('linkedSpaces.inclusion.included', { defaultValue: 'Συμπεριλαμβάνεται' })}
+                    {t('linkedSpaces.inclusion.included')}
                   </SelectItem>
                   <SelectItem value={SPACE_INCLUSION_TYPES.OPTIONAL}>
-                    {t('linkedSpaces.inclusion.optional', { defaultValue: 'Προαιρετικό' })}
+                    {t('linkedSpaces.inclusion.optional')}
                   </SelectItem>
                   <SelectItem value={SPACE_INCLUSION_TYPES.RENTED}>
-                    {t('linkedSpaces.inclusion.rented', { defaultValue: 'Ενοικιαζόμενο' })}
+                    {t('linkedSpaces.inclusion.rented')}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -485,16 +485,16 @@ export function LinkedSpacesCard({
             <fieldset className={spacing.spaceBetween.sm}>
               <Label className="text-xs flex items-center gap-1">
                 <Car className={cn(iconSizes.xs, 'text-blue-600')} />
-                {t('linkedSpaces.addParking', { defaultValue: 'Προσθήκη Parking' })}
+                {t('linkedSpaces.addParking')}
               </Label>
               {loadingParking ? (
                 <section className={cn(`flex items-center ${spacing.gap.sm} text-sm`, colors.text.muted)}>
                   <Spinner size="small" />
-                  <span>{t('linkedSpaces.loadingParking', { defaultValue: 'Φόρτωση...' })}</span>
+                  <span>{t('linkedSpaces.loadingParking')}</span>
                 </section>
               ) : parkingOptions.length === 0 ? (
                 <p className={cn('text-xs', colors.text.muted)}>
-                  {t('linkedSpaces.noParkingAvailable', { defaultValue: 'Δεν υπάρχουν διαθέσιμες θέσεις parking' })}
+                  {t('linkedSpaces.noParkingAvailable')}
                 </p>
               ) : (
                 <Select
@@ -502,11 +502,11 @@ export function LinkedSpacesCard({
                   onValueChange={handleParkingSelected}
                 >
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder={t('linkedSpaces.selectParking', { defaultValue: 'Επιλογή parking...' })} />
+                    <SelectValue placeholder={t('linkedSpaces.selectParking')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={SELECT_CLEAR_VALUE}>
-                      {t('linkedSpaces.selectParking', { defaultValue: '-- Επιλέξτε --' })}
+                      {t('linkedSpaces.selectParking')}
                     </SelectItem>
                     {parkingOptions
                       .filter(p => !draftLinkedSpaces.some(ls => ls.spaceId === p.id) && !occupiedSpaceIds.has(p.id))
@@ -524,16 +524,16 @@ export function LinkedSpacesCard({
             <fieldset className={spacing.spaceBetween.sm}>
               <Label className="text-xs flex items-center gap-1">
                 <Package className={cn(iconSizes.xs, 'text-amber-600')} />
-                {t('linkedSpaces.addStorage', { defaultValue: 'Προσθήκη Αποθήκης' })}
+                {t('linkedSpaces.addStorage')}
               </Label>
               {loadingStorage ? (
                 <section className={cn(`flex items-center ${spacing.gap.sm} text-sm`, colors.text.muted)}>
                   <Spinner size="small" />
-                  <span>{t('linkedSpaces.loadingStorage', { defaultValue: 'Φόρτωση...' })}</span>
+                  <span>{t('linkedSpaces.loadingStorage')}</span>
                 </section>
               ) : storageOptions.length === 0 ? (
                 <p className={cn('text-xs', colors.text.muted)}>
-                  {t('linkedSpaces.noStorageAvailable', { defaultValue: 'Δεν υπάρχουν διαθέσιμες αποθήκες' })}
+                  {t('linkedSpaces.noStorageAvailable')}
                 </p>
               ) : (
                 <Select
@@ -541,11 +541,11 @@ export function LinkedSpacesCard({
                   onValueChange={handleStorageSelected}
                 >
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder={t('linkedSpaces.selectStorage', { defaultValue: 'Επιλογή αποθήκης...' })} />
+                    <SelectValue placeholder={t('linkedSpaces.selectStorage')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={SELECT_CLEAR_VALUE}>
-                      {t('linkedSpaces.selectStorage', { defaultValue: '-- Επιλέξτε --' })}
+                      {t('linkedSpaces.selectStorage')}
                     </SelectItem>
                     {storageOptions
                       .filter(s => !draftLinkedSpaces.some(ls => ls.spaceId === s.id) && !occupiedSpaceIds.has(s.id))
@@ -565,19 +565,19 @@ export function LinkedSpacesCard({
                 {(saving || previewChecking) && (
                   <span className={cn(`flex items-center ${spacing.gap.sm} text-sm`, colors.text.muted)}>
                     <Spinner size="small" />
-                    {t('linkedSpaces.saving', { defaultValue: 'Αποθήκευση...' })}
+                    {t('linkedSpaces.saving')}
                   </span>
                 )}
                 {saveStatus === 'success' && (
                   <span className={`flex items-center ${spacing.gap.sm} text-sm text-green-600 dark:text-green-400`}>
                     <CheckCircle className={iconSizes.sm} />
-                    {t('linkedSpaces.success', { defaultValue: 'Αποθηκεύτηκε!' })}
+                    {t('linkedSpaces.success')}
                   </span>
                 )}
                 {saveStatus === 'error' && (
                   <span className={`flex items-center ${spacing.gap.sm} text-sm text-red-600 dark:text-red-400`}>
                     <AlertCircle className={iconSizes.sm} />
-                    {t('linkedSpaces.error', { defaultValue: 'Σφάλμα' })}
+                    {t('linkedSpaces.error')}
                   </span>
                 )}
               </footer>
@@ -588,7 +588,7 @@ export function LinkedSpacesCard({
         {/* Empty state */}
         {draftLinkedSpaces.length === 0 && !isEditing && (
           <p className={cn('text-sm', colors.text.muted)}>
-            {t('linkedSpaces.noLinkedSpaces', { defaultValue: 'Δεν υπάρχουν συνδεδεμένοι χώροι' })}
+            {t('linkedSpaces.noLinkedSpaces')}
           </p>
         )}
       </CardContent>

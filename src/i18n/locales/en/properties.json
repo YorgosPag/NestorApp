@@ -592,5 +592,28 @@
     },
     "confirm": "Yes, it's correct",
     "cancel": "Cancel"
+  },
+  "linkedSpaces": {
+    "title": "Linked Spaces",
+    "currentlyLinked": "Linked",
+    "remove": "Remove",
+    "inclusionLabel": "Link type",
+    "inclusion": {
+      "included": "Included",
+      "optional": "Optional",
+      "rented": "Rented"
+    },
+    "addParking": "Add Parking",
+    "loadingParking": "Loading...",
+    "noParkingAvailable": "No parking spots available",
+    "selectParking": "Select parking...",
+    "addStorage": "Add Storage",
+    "loadingStorage": "Loading...",
+    "noStorageAvailable": "No storages available",
+    "selectStorage": "Select storage...",
+    "saving": "Saving...",
+    "success": "Saved!",
+    "error": "Error",
+    "noLinkedSpaces": "No linked spaces"
   }
 }
