@@ -71,3 +71,8 @@
   - **Migrated**:
     - `src/types/property.ts` — inline union (7 values) → `export type { CommercialStatus } from '@/constants/commercial-statuses'`.
     - `src/config/report-builder/domain-definitions.ts` — local `COMMERCIAL_STATUSES` array αφαιρέθηκε · imported από SSoT. Το `enumValues` στο properties domain field ακολουθεί αυτόματα.
+- **2026-04-05 (Batch 9B)**: `OperationalStatus` centralization.
+  - **Created**: `src/constants/operational-statuses.ts` — `OPERATIONAL_STATUSES` (5), `OperationalStatus` union, `isOperationalStatus()` guard, derived subset `IN_PROGRESS_OPERATIONAL_STATUSES` (3) + `isInProgressOperationalStatus()` guard.
+  - **Migrated**:
+    - `src/types/property.ts` — inline union (5 values) → `export type { OperationalStatus } from '@/constants/operational-statuses'`.
+    - `src/config/report-builder/domain-definitions.ts` — local `OPERATIONAL_STATUSES` array αφαιρέθηκε · imported από SSoT.

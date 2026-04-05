@@ -12,6 +12,7 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ALL_PROPERTY_TYPES_WITH_DEPRECATED } from '@/constants/property-types';
 import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
+import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
 import type {
   BuilderDomainId,
   DomainDefinition,
@@ -93,9 +94,8 @@ const UNIT_TYPES = ALL_PROPERTY_TYPES_WITH_DEPRECATED;
 // ADR-287 — CommercialStatus SSoT lives στο `@/constants/commercial-statuses`.
 // Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.
 
-const OPERATIONAL_STATUSES = [
-  'ready', 'under-construction', 'inspection', 'maintenance', 'draft',
-] as const;
+// ADR-287 — OperationalStatus SSoT lives στο `@/constants/operational-statuses`.
+// Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.
 
 const LEGAL_PHASES = [
   'initial', 'deedPrep', 'documentReview', 'signaturePending', 'completed', 'cancelled',

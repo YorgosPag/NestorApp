@@ -56,12 +56,10 @@ export type {
  * @example "maintenance" - Unit is under maintenance/repairs
  * @example "draft" - Unit record is not finalized (data entry)
  */
-export type OperationalStatus =
-  | 'ready'                 // Έτοιμο (construction complete)
-  | 'under-construction'    // υπό ολοκλήρωση (not ready)
-  | 'inspection'            // σε επιθεώρηση (under inspection)
-  | 'maintenance'           // υπό συντήρηση (under maintenance)
-  | 'draft';                // πρόχειρο (not finalized)
+// ADR-287 — OperationalStatus SSoT: canonical union lives στο
+// `src/constants/operational-statuses.ts`. Εδώ re-export για backward-compat
+// με existing imports `import type { OperationalStatus } from '@/types/property'`.
+export type { OperationalStatus } from '@/constants/operational-statuses';
 
 // =============================================================================
 // 🏢 LEGACY SALES STATUS (Commercial Truth - DEPRECATED IN UNITS)
