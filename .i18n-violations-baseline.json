@@ -1,13 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T19:02:38Z",
-    "totalViolations": 391,
-    "totalFiles": 91,
+    "generated": "2026-04-05T19:13:50Z",
+    "totalViolations": 371,
+    "totalFiles": 90,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/components/sales/dialogs/SellDialog.tsx": 20,
     "src/services/property/property-file-mutation-preview.ts": 19,
     "src/services/property/property-mutation-preview.ts": 15,
     "src/components/sales/dialogs/RevertDialog.tsx": 14,

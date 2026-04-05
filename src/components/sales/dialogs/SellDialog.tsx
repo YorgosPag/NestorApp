@@ -130,10 +130,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       if (!completed) {
         return;
       }
-      success(t('viewer.messages.updateSuccess', {
-        ns: 'properties',
-        defaultValue: 'Property changes were saved.',
-      }));
+      success(t('viewer.messages.updateSuccess', { ns: 'properties' }));
       onOpenChange(false);
       onSuccess?.();
 
@@ -196,7 +193,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       const rawMsg = errorObj?.error ?? errorObj?.message ?? '';
       const msg = rawMsg
         ? translateServerError(rawMsg, t)
-        : t('sales.dialogs.sell.unknownError', { defaultValue: 'Σφάλμα κατά την πώληση' });
+        : t('sales.dialogs.sell.unknownError');
       setSaveError(msg);
       notifyError(msg);
       logger.warn('Sell failed', { error: rawMsg });
@@ -217,12 +214,10 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle className={cn(iconSizes.sm, colors.text.success)} />
-            {t('sales.dialogs.sell.title', { defaultValue: 'Πώληση Μονάδας' })}
+            {t('sales.dialogs.sell.title')}
           </DialogTitle>
           <DialogDescription>
-            {t('sales.dialogs.sell.description', {
-              defaultValue: 'Επιβεβαιώστε την τελική τιμή πώλησης',
-            })}
+            {t('sales.dialogs.sell.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -231,48 +226,46 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           {!hasExistingOwners && buyerContactId && !buyerHasEmail && (
             <p className={cn("flex items-center gap-1.5 text-xs", colors.text.warning)}>
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {t('sales.dialogs.reserve.noEmailWarning', {
-                defaultValue: 'Ο αγοραστής δεν έχει email — δεν θα σταλεί επιβεβαίωση πώλησης. Ενημερώστε την καρτέλα του.',
-              })}
+              {t('sales.dialogs.reserve.noEmailWarning')}
             </p>
           )}
 
           {askingPrice && (
             <p className={cn("text-sm", colors.text.muted)}>
-              {t('sales.dialogs.sell.askingWas', { defaultValue: 'Ζητούμενη τιμή' })}:{' '}
+              {t('sales.dialogs.sell.askingWas')}:{' '}
               <span className="font-medium text-foreground">{formatCurrency(askingPrice)}</span>
             </p>
           )}
 
           <Label className="text-sm font-medium">
-            {t('sales.dialogs.sell.finalPrice', { defaultValue: 'Τελική τιμή πώλησης (€)' })}
+            {t('sales.dialogs.sell.finalPrice')}
           </Label>
           <Input
             type="number" min={0} step={1000}
             value={finalPrice}
             onChange={(e) => setFinalPrice(e.target.value)}
-            placeholder={t('sales.dialogs.sell.finalPricePlaceholder', { defaultValue: 'π.χ. 145000' })}
+            placeholder={t('sales.dialogs.sell.finalPricePlaceholder')}
             className="text-right" autoFocus
           />
 
           {discount && Number(discount) > 0 && (
             <p className={cn("text-xs", colors.text.warning)}>
-              {t('sales.dialogs.sell.discount', { defaultValue: 'Έκπτωση' })}: −{discount}%
+              {t('sales.dialogs.sell.discount')}: −{discount}%
             </p>
           )}
 
           {brokerAgreements.length > 0 && (
             <fieldset className="space-y-1">
               <Label className="text-sm font-medium">
-                {t('sales.dialogs.sell.broker', { defaultValue: 'Μεσίτης (προαιρετικό)' })}
+                {t('sales.dialogs.sell.broker')}
               </Label>
               <Select value={selectedBrokerId} onValueChange={setSelectedBrokerId}>
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder={t('sales.dialogs.sell.noBroker', { defaultValue: 'Χωρίς μεσίτη' })} />
+                  <SelectValue placeholder={t('sales.dialogs.sell.noBroker')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none" className="text-xs">
-                    {t('sales.dialogs.sell.noBroker', { defaultValue: 'Χωρίς μεσίτη' })}
+                    {t('sales.dialogs.sell.noBroker')}
                   </SelectItem>
                   {brokerAgreements.map((a) => (
                     <SelectItem key={a.id} value={a.id} className="text-xs">
@@ -298,20 +291,20 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
                 });
                 return (
                   <p className={cn("text-xs", colors.text.muted)}>
-                    {t('sales.dialogs.sell.commissionPreview', { defaultValue: 'Προμήθεια' })}:{' '}
+                    {t('sales.dialogs.sell.commissionPreview')}:{' '}
                     <span className="font-medium">{formatCurrency(comm)}</span>
                   </p>
                 );
               })()}
               <p className={cn("text-xs", colors.text.muted)}>
-                {t('sales.legal.addBrokerHint', { defaultValue: 'Προσθέστε μεσίτη από το tab Μεσίτες του έργου' })}
+                {t('sales.legal.addBrokerHint')}
               </p>
             </fieldset>
           )}
 
           {brokerAgreements.length === 0 && (
             <p className={cn("text-xs", colors.text.muted)}>
-              {t('sales.legal.addBrokerHint', { defaultValue: 'Προσθέστε μεσίτη από το tab Μεσίτες του έργου' })}
+              {t('sales.legal.addBrokerHint')}
             </p>
           )}
 
@@ -326,9 +319,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           )}
 
           <p className={cn("text-xs", colors.text.muted)}>
-            {t('sales.dialogs.sell.warning', {
-              defaultValue: 'Η μονάδα θα μεταβεί σε κατάσταση «Πωλήθηκε» και δεν θα εμφανίζεται πλέον στις διαθέσιμες.',
-            })}
+            {t('sales.dialogs.sell.warning')}
           </p>
         </section>
 
@@ -336,7 +327,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           <aside className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">
             <p className="flex items-center gap-1.5 text-sm text-destructive">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              {t('sales.errors.noArea', { defaultValue: 'Η μονάδα δεν έχει εμβαδόν (τ.μ.). Ορίστε καθαρά ή μικτά τ.μ. πριν την πώληση.' })}
+              {t('sales.errors.noArea')}
             </p>
           </aside>
         )}
@@ -361,7 +352,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            {t('common.cancel', { defaultValue: 'Ακύρωση' })}
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleSave}
@@ -369,8 +360,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             className={cn(colors.bg.success, "hover:opacity-90 text-white")}
           >
             {saving
-              ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
-              : t('sales.dialogs.sell.confirm', { defaultValue: 'Επιβεβαίωση Πώλησης' })}
+              ? t('common.saving')
+              : t('sales.dialogs.sell.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>
