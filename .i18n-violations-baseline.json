@@ -1,18 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T22:03:56Z",
-    "totalViolations": 7,
-    "totalFiles": 7,
+    "generated": "2026-04-05T22:09:31Z",
+    "totalViolations": ,
+    "totalFiles": 0,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/components/contacts/personas/PersonaSelector.tsx": 1,
-    "src/components/contacts/ContactsPageContent.tsx": 1,
-    "src/components/communications/hooks/useCommunicationsHistory.ts": 1,
-    "src/components/building-management/tabs/TimelineTabContent/CompletionForecastCard.tsx": 1,
-    "src/components/app-sidebar.tsx": 1,
-    "src/app/admin/operator-inbox/OperatorInboxClient.tsx": 1,
-    "src/app/admin/ai-inbox/AIInboxClient.tsx": 1
+
   }
 }
