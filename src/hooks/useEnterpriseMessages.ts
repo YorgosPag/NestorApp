@@ -252,12 +252,12 @@ export function useEnterpriseMessages(): UseEnterpriseMessagesReturn {
       navigation: {
         breadcrumbs: {
           home: t('navigation.home'),
-          contacts: t('navigation.contacts', { defaultValue: 'Επαφές' }),
-          projects: t('navigation.projects', { defaultValue: 'Έργα' }),
-          buildings: t('navigation.buildings', { defaultValue: 'Κτίρια' }),
-          units: t('navigation.units', { defaultValue: 'Μονάδες' }),
-          storages: t('navigation.storages', { defaultValue: 'Αποθήκες' }),
-          details: t('navigation.details', { defaultValue: 'Λεπτομέρειες' }),
+          contacts: t('navigation.contacts'),
+          projects: t('navigation.projects'),
+          buildings: t('navigation.buildings'),
+          units: t('navigation.units'),
+          storages: t('navigation.storages'),
+          details: t('navigation.details'),
         },
         menu: {
           dashboard: t('headerActions.dashboard'),
@@ -275,7 +275,7 @@ export function useEnterpriseMessages(): UseEnterpriseMessagesReturn {
           inactive: t('filters.status.inactive'),
           pending: t('filters.status.pending'),
           completed: t('filters.status.completed'),
-          cancelled: t('status.completed', { defaultValue: 'Ακυρωμένο' }),
+          cancelled: t('status.cancelled'),
           draft: t('documentStatus.draft'),
         },
         notifications: {

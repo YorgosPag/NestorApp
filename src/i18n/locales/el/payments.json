@@ -131,7 +131,11 @@
     "selectTemplate": "Επιλέξτε πρότυπο",
     "totalAmount": "Συνολικό Ποσό Πώλησης",
     "reviewAndCreate": "Δημιουργία",
-    "totalInstallments": "Σύνολο δόσεων"
+    "totalInstallments": "Σύνολο δόσεων",
+    "nextStep": "Επόμενο",
+    "planTypeDescription": "Επιλέξτε τον τύπο πλάνου αποπληρωμής",
+    "jointPlan": "Κοινό πλάνο (ένα για όλους)",
+    "individualPlans": "Ξεχωριστά πλάνα (ένα ανά ιδιοκτήτη)"
   },
   "dialog": {
     "title": "Καταγραφή Πληρωμής",

@@ -148,7 +148,7 @@ export async function createProject(
     const message = getErrorMessage(error);
     const errorCode = ApiClientError.isApiClientError(error) ? error.errorCode : undefined;
     const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
-    logger.error('Error creating project', { message, errorCode, statusCode });
+    logger.error(`Error creating project: ${message} (status=${statusCode ?? 'n/a'}, code=${errorCode ?? 'n/a'})`);
     return {
       success: false,
       error: message,

@@ -131,7 +131,11 @@
     "selectTemplate": "Select a template",
     "totalAmount": "Total Sale Amount",
     "reviewAndCreate": "Create",
-    "totalInstallments": "Total installments"
+    "totalInstallments": "Total installments",
+    "nextStep": "Next",
+    "planTypeDescription": "Select payment plan type",
+    "jointPlan": "Joint plan (single for all)",
+    "individualPlans": "Individual plans (one per owner)"
   },
   "dialog": {
     "title": "Record Payment",

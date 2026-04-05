@@ -37,10 +37,10 @@ export function BrokerageCard({ agreements }: BrokerageCardProps) {
       <section className="rounded-lg border bg-card p-3">
         <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-1">
           <Building2 className={cn("h-4 w-4", colors.text.muted)} />
-          {t('sales.legal.brokerageTitle', { defaultValue: 'Μεσιτικές Συμβάσεις' })}
+          {t('sales.legal.brokerageTitle')}
         </h3>
         <p className={cn("text-xs", colors.text.muted)}>
-          {t('sales.legal.noBrokerage', { defaultValue: 'Δεν υπάρχουν μεσιτικές συμβάσεις.' })}
+          {t('sales.legal.noBrokerage')}
         </p>
       </section>
     );
@@ -50,7 +50,7 @@ export function BrokerageCard({ agreements }: BrokerageCardProps) {
     <section className="rounded-lg border bg-card p-3 space-y-2">
       <h3 className="text-sm font-semibold flex items-center gap-1.5">
         <Building2 className={cn("h-4 w-4", colors.text.muted)} />
-        {t('sales.legal.brokerageTitle', { defaultValue: 'Μεσιτικές Συμβάσεις' })}
+        {t('sales.legal.brokerageTitle')}
       </h3>
 
       <ul className="space-y-2">
@@ -63,7 +63,7 @@ export function BrokerageCard({ agreements }: BrokerageCardProps) {
                 className="text-[10px]"
               >
                 {agreement.status === 'active'
-                  ? t('sales.legal.activeAgreement', { defaultValue: 'Ενεργή' })
+                  ? t('sales.legal.activeAgreement')
                   : agreement.status}
               </Badge>
             </header>
@@ -71,19 +71,19 @@ export function BrokerageCard({ agreements }: BrokerageCardProps) {
             <dl className={cn("grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs", colors.text.muted)}>
               <dt className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
-                {t('sales.legal.exclusivity', { defaultValue: 'Τύπος' })}
+                {t('sales.legal.exclusivity')}
               </dt>
               <dd className="font-medium text-foreground">
                 {agreement.exclusivity === 'exclusive'
-                  ? t('sales.legal.exclusive', { defaultValue: 'Αποκλειστική' })
-                  : t('sales.legal.nonExclusive', { defaultValue: 'Απλή' })}
+                  ? t('sales.legal.exclusive')
+                  : t('sales.legal.nonExclusive')}
               </dd>
 
               <dt className="flex items-center gap-1">
                 {agreement.commissionType === 'percentage'
                   ? <Percent className="h-3 w-3" />
                   : <Banknote className="h-3 w-3" />}
-                {t('sales.legal.commission', { defaultValue: 'Προμήθεια' })}
+                {t('sales.legal.commission')}
               </dt>
               <dd className="font-medium text-foreground">
                 {formatCommission(agreement)}

@@ -69,7 +69,6 @@ export function useBulkAssign({ notifications, onSuccess }: UseBulkAssignProps) 
             error,
             t,
             'toolbar.bulkAssignError',
-            'The selected properties could not be assigned.',
           ),
         );
       } finally {

@@ -122,7 +122,6 @@ export function usePolygonHandlers({
           error,
           t,
           'viewer.messages.createFailed',
-          'The property could not be created from the viewer.',
         ),
       );
       logger.error('Failed to create property from viewer', { error });
@@ -156,7 +155,6 @@ export function usePolygonHandlers({
           error,
           t,
           'viewer.messages.updateFailed',
-          'The property update could not be saved. Refresh and try again.',
         ),
       );
       logger.error('Failed to persist polygon vertices', { error, polygonId });
@@ -232,7 +230,6 @@ export function usePolygonHandlers({
           error,
           t,
           'viewer.messages.duplicateFailed',
-          'The property could not be duplicated from the viewer.',
         ),
       );
       logger.error('Failed to duplicate property from viewer', { error, propertyId });

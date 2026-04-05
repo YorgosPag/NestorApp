@@ -154,7 +154,6 @@ export function PropertyInlineCreateForm({
         err,
         tUnits,
         'inlineCreate.createError',
-        'The property could not be created.',
       ));
     } finally {
       setCreating(false);

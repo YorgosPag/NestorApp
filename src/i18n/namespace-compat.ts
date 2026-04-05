@@ -268,6 +268,8 @@ const LEGACY_NAMESPACE_ROOT_MAP = {
     attachments: 'properties-detail',
     dates: 'properties-detail',
     share: 'properties-detail',
+    navigation: 'properties-detail',
+    buildingSelector: 'properties-detail',
     viewer: 'properties-viewer',
     statusLegend: 'properties-viewer',
     editPanel: 'properties-viewer',

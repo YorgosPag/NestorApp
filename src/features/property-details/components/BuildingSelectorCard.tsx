@@ -392,17 +392,17 @@ export function BuildingSelectorCard({
           <fieldset className={spacing.spaceBetween.sm}>
             <Label htmlFor="floor-selector">
               <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color, 'inline mr-1')} />
-              {t('buildingSelector.floorLabel', { defaultValue: 'Όροφος' })}
+              {t('buildingSelector.floorLabel')}
             </Label>
 
             {loadingFloors ? (
               <section className={cn(`flex items-center ${spacing.gap.sm}`, colors.text.muted)}>
                 <Spinner size="small" />
-                <span>{t('buildingSelector.loadingFloors', { defaultValue: 'Φόρτωση ορόφων...' })}</span>
+                <span>{t('buildingSelector.loadingFloors')}</span>
               </section>
             ) : floors.length === 0 ? (
               <p className={cn('text-sm', colors.text.muted)}>
-                {t('buildingSelector.noFloors', { defaultValue: 'Δεν βρέθηκαν όροφοι για αυτό το κτίριο' })}
+                {t('buildingSelector.noFloors')}
               </p>
             ) : (
               <Select
@@ -418,12 +418,12 @@ export function BuildingSelectorCard({
                     saveStatus === 'error' && getStatusBorder('error')
                   )}
                 >
-                  <SelectValue placeholder={t('buildingSelector.floorPlaceholder', { defaultValue: 'Επιλέξτε όροφο' })} />
+                  <SelectValue placeholder={t('buildingSelector.floorPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
                   <SelectItem value={SELECT_CLEAR_VALUE}>
-                    {t('buildingSelector.noFloor', { defaultValue: '-- Χωρίς όροφο --' })}
+                    {t('buildingSelector.noFloor')}
                   </SelectItem>
 
                   {/* Floor options sorted by level */}
@@ -443,7 +443,7 @@ export function BuildingSelectorCard({
           <p className={cn('text-sm', colors.text.muted)}>
             {t('buildingSelector.currentBuilding')}: <strong>{currentBuildingName}</strong>
             {currentFloorName && (
-              <> • {t('buildingSelector.floor', { defaultValue: 'Όροφος' })}: <strong>{currentFloorName}</strong></>
+              <> • {t('buildingSelector.floor')}: <strong>{currentFloorName}</strong></>
             )}
           </p>
         )}

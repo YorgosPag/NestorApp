@@ -1,24 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T20:08:58Z",
-    "totalViolations": 210,
-    "totalFiles": 77,
+    "generated": "2026-04-05T20:40:54Z",
+    "totalViolations": 127,
+    "totalFiles": 65,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/components/sales/dialogs/ChangePriceDialog.tsx": 9,
-    "src/features/property-details/components/PropertyFieldsReadOnly.tsx": 8,
-    "src/features/properties-sidebar/components/PropertyDetailsHeader.tsx": 8,
-    "src/components/sales/legal/LegalTabContent.tsx": 8,
-    "src/components/sales/brokerage/BrokerageCard.tsx": 8,
-    "src/hooks/usePropertyDeletionGuard.tsx": 7,
-    "src/hooks/useEnterpriseMessages.ts": 7,
-    "src/services/property/property-mutation-feedback.ts": 6,
-    "src/features/property-details/components/BuildingSelectorCard.tsx": 6,
-    "src/components/sales/SalesParkingSidebar.tsx": 6,
-    "src/features/property-details/components/PropertyFieldsBlock.tsx": 5,
-    "src/components/sales/SalesStorageSidebar.tsx": 5,
     "src/components/sales/payments/CreatePaymentPlanWizard.tsx": 5,
     "src/components/sales/dialogs/AppurtenancesSection.tsx": 5,
     "src/components/sales/cards/SalesParkingCard.tsx": 5,

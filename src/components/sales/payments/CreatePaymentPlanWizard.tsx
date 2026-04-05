@@ -255,14 +255,14 @@ export function CreatePaymentPlanWizard({
         {hasMultipleOwners && step === STEP_PLAN_TYPE && owners && (
           <section className="space-y-4">
             <p className={cn("text-sm", colors.text.muted)}>
-              {t('wizard.planTypeDescription', { defaultValue: 'Επιλέξτε τον τύπο πλάνου αποπληρωμής' })}
+              {t('wizard.planTypeDescription')}
             </p>
             <RadioGroup value={planMode} onValueChange={(v) => setPlanMode(v as 'joint' | 'individual')}>
               <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50">
                 <RadioGroupItem value="joint" className="mt-0.5" />
                 <article>
                   <p className="text-sm font-medium">
-                    {t('wizard.jointPlan', { defaultValue: 'Κοινό πλάνο (ένα για όλους)' })}
+                    {t('wizard.jointPlan')}
                   </p>
                   <p className={cn("text-xs", colors.text.muted)}>
                     {formatOwnerNames(owners)} — {formatCurrency(suggestedAmount)}
@@ -273,7 +273,7 @@ export function CreatePaymentPlanWizard({
                 <RadioGroupItem value="individual" className="mt-0.5" />
                 <article>
                   <p className="text-sm font-medium">
-                    {t('wizard.individualPlans', { defaultValue: 'Ξεχωριστά πλάνα (ένα ανά ιδιοκτήτη)' })}
+                    {t('wizard.individualPlans')}
                   </p>
                   <ul className="mt-1 space-y-0.5">
                     {owners.map((owner) => (
@@ -382,7 +382,7 @@ export function CreatePaymentPlanWizard({
           {/* Plan type step → Template step */}
           {hasMultipleOwners && step === STEP_PLAN_TYPE && (
             <Button onClick={() => setStep(STEP_TEMPLATE)}>
-              {t('wizard.step2', { defaultValue: 'Επόμενο' })}
+              {t('wizard.nextStep')}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           )}
@@ -390,7 +390,7 @@ export function CreatePaymentPlanWizard({
           {/* Template step → Installments step */}
           {step === STEP_TEMPLATE && (
             <Button onClick={goToInstallmentStep}>
-              {t('wizard.step2', { defaultValue: 'Επόμενο' })}
+              {t('wizard.nextStep')}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           )}

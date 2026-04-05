@@ -157,7 +157,8 @@
     "perLevel": {
       "perFloorHint": "per floor",
       "sharedHint": "shared",
-      "autoComputed": "Auto-computed totals from levels"
+      "autoComputed": "Auto-computed totals from levels",
+      "tabTotals": "Totals"
     }
   },
   "documents": {
@@ -177,5 +178,23 @@
   "share": {
     "defaultMessage": "Check out these interesting properties from Nestor Construct!",
     "title": "Nestor Construct - Properties"
+  },
+  "navigation": {
+    "actions": {
+      "edit": {
+        "label": "Edit"
+      },
+      "newUnit": {
+        "label": "New Property",
+        "create": "Create",
+        "defaultName": "New Unit"
+      },
+      "delete": {
+        "label": "Move to trash"
+      }
+    }
+  },
+  "buildingSelector": {
+    "save": "Save"
   }
 }

@@ -49,12 +49,12 @@ interface SalesStorageSidebarProps {
 // =============================================================================
 
 const TABS = [
-  { id: 'info', icon: DollarSign, labelKey: 'salesStorage.tabs.info', defaultLabel: 'Πληροφορίες' },
-  { id: 'floor-plan', icon: Map, labelKey: 'salesStorage.tabs.floorPlan', defaultLabel: 'Κάτοψη' },
-  { id: 'documents', icon: FileText, labelKey: 'salesStorage.tabs.documents', defaultLabel: 'Έγγραφα' },
-  { id: 'photos', icon: Camera, labelKey: 'salesStorage.tabs.photos', defaultLabel: 'Φωτογραφίες' },
-  { id: 'videos', icon: Video, labelKey: 'salesStorage.tabs.videos', defaultLabel: 'Βίντεο' },
-  { id: 'history', icon: Clock, labelKey: 'salesStorage.tabs.history', defaultLabel: 'Ιστορικό' },
+  { id: 'info', icon: DollarSign, labelKey: 'salesStorage.tabs.info' },
+  { id: 'floor-plan', icon: Map, labelKey: 'salesStorage.tabs.floorPlan' },
+  { id: 'documents', icon: FileText, labelKey: 'salesStorage.tabs.documents' },
+  { id: 'photos', icon: Camera, labelKey: 'salesStorage.tabs.photos' },
+  { id: 'videos', icon: Video, labelKey: 'salesStorage.tabs.videos' },
+  { id: 'history', icon: Clock, labelKey: 'salesStorage.tabs.history' },
 ] as const;
 
 // =============================================================================
@@ -110,7 +110,7 @@ export function SalesStorageSidebar({
               >
                 <tab.icon className={iconSizes.sm} />
                 <span className="hidden sm:inline">
-                  {t(tab.labelKey, { defaultValue: tab.defaultLabel })}
+                  {t(tab.labelKey)}
                 </span>
               </TabsTrigger>
             ))}
@@ -127,7 +127,7 @@ export function SalesStorageSidebar({
               <TabsContent key={tabId} value={tabId} className="flex-1">
                 <section className="p-4">
                   <p className={cn("text-sm text-center mb-3", colors.text.muted)}>
-                    {t(`salesStorage.tabs.${hintKey}Hint`, { defaultValue: `Διαχείριση στη σελίδα Χώροι → Αποθήκες` })}
+                    {t(`salesStorage.tabs.${hintKey}Hint`)}
                   </p>
                   <div className="pt-2 border-t">
                     <Button
@@ -139,7 +139,7 @@ export function SalesStorageSidebar({
                       }}
                     >
                       <ExternalLink className={iconSizes.sm} />
-                      {t('salesStorage.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+                      {t('salesStorage.tabs.openInSpaces')}
                     </Button>
                   </div>
                 </section>
@@ -159,10 +159,10 @@ export function SalesStorageSidebar({
   // List Column
   // =========================================================================
   const listColumn = (
-    <EntityListColumn aria-label={t('salesStorage.listLabel', { defaultValue: 'Λίστα αποθηκών πωλήσεων' })}>
+    <EntityListColumn aria-label={t('salesStorage.listLabel')}>
       <GenericListHeader
         icon={Package}
-        entityName={t('salesStorage.listTitle', { defaultValue: 'Αποθήκες' })}
+        entityName={t('salesStorage.listTitle')}
         itemCount={items.length}
       />
 
@@ -186,7 +186,7 @@ export function SalesStorageSidebar({
 
           {items.length === 0 && (
             <div className={cn("p-6 text-center text-sm", colors.text.muted)}>
-              {t('salesStorage.noResults', { defaultValue: 'Δεν βρέθηκαν αποθήκες με αυτά τα κριτήρια.' })}
+              {t('salesStorage.noResults')}
             </div>
           )}
         </div>
@@ -205,7 +205,7 @@ export function SalesStorageSidebar({
       <MobileDetailsSlideIn
         isOpen={isMobile && !!selectedItem}
         onClose={() => onSelectItem('__none__')}
-        title={selectedItem?.name || t('salesStorage.details.title', { defaultValue: 'Στοιχεία Αποθήκης' })}
+        title={selectedItem?.name || t('salesStorage.details.title')}
       >
         {isMobile && selectedItem && detailsContent}
       </MobileDetailsSlideIn>

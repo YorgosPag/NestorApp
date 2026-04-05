@@ -99,7 +99,6 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
           err,
           t,
           'inlineEdit.updateError',
-          'The property could not be updated.',
         ),
       );
     } finally {

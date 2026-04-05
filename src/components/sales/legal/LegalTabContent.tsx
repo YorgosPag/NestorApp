@@ -90,16 +90,16 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
       (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? []
     );
     if (!primaryBuyerContactId) {
-      notifyError(t('sales.legal.noBuyer', { defaultValue: 'Δεν υπάρχει αγοραστής' }));
+      notifyError(t('sales.legal.noBuyer'));
       return;
     }
     if (!unit.buildingId) {
-      notifyError(t('sales.errors.noBuilding', { defaultValue: 'Η μονάδα δεν είναι συνδεδεμένη με κτίριο' }));
+      notifyError(t('sales.errors.noBuilding'));
       return;
     }
     const resolvedProjectId = unit.project;
     if (!resolvedProjectId) {
-      notifyError(t('sales.errors.noProject', { defaultValue: 'Η μονάδα δεν ανήκει σε έργο' }));
+      notifyError(t('sales.errors.noProject'));
       return;
     }
 
@@ -114,9 +114,9 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
     setCreating(false);
 
     if (result.success) {
-      success(CREATABLE_PHASES.find((p) => p.value === selectedPhase)?.label ?? t('sales.legal.created', { defaultValue: 'Δημιουργήθηκε' }));
+      success(CREATABLE_PHASES.find((p) => p.value === selectedPhase)?.label ?? t('sales.legal.created'));
     } else {
-      notifyError(result.error ?? t('sales.legal.createError', { defaultValue: 'Σφάλμα' }));
+      notifyError(result.error ?? t('sales.legal.createError'));
     }
   }, [unit, selectedPhase, createContract, success, notifyError, t]);
 
@@ -151,7 +151,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
         <span className="flex items-center gap-2">
           <Scale className={cn("h-4 w-4", colors.text.muted)} />
           <h2 className="text-sm font-semibold">
-            {t('sales.legal.title', { defaultValue: 'Νομική Διαδικασία' })}
+            {t('sales.legal.title')}
           </h2>
         </span>
         {/* 🏢 ADR-241: Fullscreen toggle */}
@@ -187,7 +187,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
             className="text-xs gap-1"
           >
             {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-            {t('sales.legal.create', { defaultValue: 'Δημιουργία' })}
+            {t('sales.legal.create')}
           </Button>
         </section>
       )}
@@ -206,7 +206,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
         </ul>
       ) : (
         <p className={cn("text-xs text-center py-4", colors.text.muted)}>
-          {t('sales.legal.noContracts', { defaultValue: 'Δεν υπάρχουν συμβόλαια. Δημιουργήστε το πρώτο.' })}
+          {t('sales.legal.noContracts')}
         </p>
       )}
 

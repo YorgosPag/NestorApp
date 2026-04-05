@@ -191,12 +191,12 @@ export function PropertyFieldsBlock({
 
   // ADR-233: Contextual placeholder — tells user what's missing before code can be generated
   const codePlaceholderHint = !codeBuildingId
-    ? t('entityCode.needBuilding', { defaultValue: 'Δηλώστε κτίριο' })
+    ? t('entityCode.needBuilding')
     : !localType
-      ? t('entityCode.needType', { defaultValue: 'Δηλώστε τύπο ακινήτου' })
+      ? t('entityCode.needType')
       : !codeFloorId
-        ? t('entityCode.needFloor', { defaultValue: 'Δηλώστε όροφο' })
-        : suggestedCode || t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' });
+        ? t('entityCode.needFloor')
+        : suggestedCode || t('fields.identity.codePlaceholder');
 
   // ── ADR-236 Phase 2: Active level tab (null = "Totals" tab) ──
   const isMultiLevel = property.isMultiLevel && (property.levels?.length ?? 0) >= 2;
@@ -312,7 +312,7 @@ export function PropertyFieldsBlock({
         const standalone = isStandaloneUnitType(formData.type as import('@/types/property').PropertyType | '');
         const propertyData = {
           ...updates,
-          name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
+          name: formData.name || t('navigation.actions.newUnit.defaultName'),
           code: formData.code || suggestedCode || '',
           type: formData.type || 'apartment',
           status: 'reserved' as const,

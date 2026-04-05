@@ -49,11 +49,11 @@ interface SalesParkingSidebarProps {
 // =============================================================================
 
 const TABS = [
-  { id: 'info', icon: DollarSign, labelKey: 'salesParking.tabs.info', defaultLabel: 'Πληροφορίες' },
-  { id: 'documents', icon: FileText, labelKey: 'salesParking.tabs.documents', defaultLabel: 'Έγγραφα' },
-  { id: 'photos', icon: Camera, labelKey: 'salesParking.tabs.photos', defaultLabel: 'Φωτογραφίες' },
-  { id: 'videos', icon: Video, labelKey: 'salesParking.tabs.videos', defaultLabel: 'Βίντεο' },
-  { id: 'history', icon: Clock, labelKey: 'salesParking.tabs.history', defaultLabel: 'Ιστορικό' },
+  { id: 'info', icon: DollarSign, labelKey: 'salesParking.tabs.info' },
+  { id: 'documents', icon: FileText, labelKey: 'salesParking.tabs.documents' },
+  { id: 'photos', icon: Camera, labelKey: 'salesParking.tabs.photos' },
+  { id: 'videos', icon: Video, labelKey: 'salesParking.tabs.videos' },
+  { id: 'history', icon: Clock, labelKey: 'salesParking.tabs.history' },
 ] as const;
 
 // =============================================================================
@@ -93,7 +93,7 @@ export function SalesParkingSidebar({
         <EntityDetailsHeader
           icon={Car}
           title={selectedItem.number || selectedItem.id}
-          subtitle={selectedItem.floor ? `${t('parking:general.fields.floor', { defaultValue: 'Επίπεδο' })}: ${selectedItem.floor}` : undefined}
+          subtitle={selectedItem.floor ? `${t('parking:general.fields.floor')}: ${selectedItem.floor}` : undefined}
           variant="detailed"
           actions={actions}
         />
@@ -109,7 +109,7 @@ export function SalesParkingSidebar({
               >
                 <tab.icon className={iconSizes.sm} />
                 <span className="hidden sm:inline">
-                  {t(tab.labelKey, { defaultValue: tab.defaultLabel })}
+                  {t(tab.labelKey)}
                 </span>
               </TabsTrigger>
             ))}
@@ -124,7 +124,7 @@ export function SalesParkingSidebar({
             <TabsContent key={tabId} value={tabId} className="flex-1">
               <section className="p-4">
                 <p className={cn("text-sm text-center mb-3", colors.text.muted)}>
-                  {t(`salesParking.tabs.${tabId}Hint`, { defaultValue: `Διαχείριση στη σελίδα Χώροι → Στάθμευση` })}
+                  {t(`salesParking.tabs.${tabId}Hint`)}
                 </p>
                 <div className="pt-2 border-t">
                   <Button
@@ -136,7 +136,7 @@ export function SalesParkingSidebar({
                     }}
                   >
                     <ExternalLink className={iconSizes.sm} />
-                    {t('salesParking.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+                    {t('salesParking.tabs.openInSpaces')}
                   </Button>
                 </div>
               </section>
@@ -155,10 +155,10 @@ export function SalesParkingSidebar({
   // List Column
   // =========================================================================
   const listColumn = (
-    <EntityListColumn aria-label={t('salesParking.listLabel', { defaultValue: 'Λίστα θέσεων στάθμευσης' })}>
+    <EntityListColumn aria-label={t('salesParking.listLabel')}>
       <GenericListHeader
         icon={Car}
-        entityName={t('salesParking.listTitle', { defaultValue: 'Θέσεις Στάθμευσης' })}
+        entityName={t('salesParking.listTitle')}
         itemCount={items.length}
       />
 
@@ -182,7 +182,7 @@ export function SalesParkingSidebar({
 
           {items.length === 0 && (
             <div className={cn("p-6 text-center text-sm", colors.text.muted)}>
-              {t('salesParking.noResults', { defaultValue: 'Δεν βρέθηκαν θέσεις στάθμευσης με αυτά τα κριτήρια.' })}
+              {t('salesParking.noResults')}
             </div>
           )}
         </div>
@@ -201,7 +201,7 @@ export function SalesParkingSidebar({
       <MobileDetailsSlideIn
         isOpen={isMobile && !!selectedItem}
         onClose={() => onSelectItem('__none__')}
-        title={selectedItem?.number || t('salesParking.details.title', { defaultValue: 'Στοιχεία Θέσης' })}
+        title={selectedItem?.number || t('salesParking.details.title')}
       >
         {isMobile && selectedItem && detailsContent}
       </MobileDetailsSlideIn>

@@ -184,7 +184,6 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
               err,
               tUnits,
               'viewer.messages.deleteFailed',
-              'The property could not be deleted.',
             ),
           );
         } finally {
@@ -220,7 +219,6 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
           err,
           tUnits,
           'unitStats.error',
-          'The property could not be unlinked from the building.',
         ),
       );
     } finally {

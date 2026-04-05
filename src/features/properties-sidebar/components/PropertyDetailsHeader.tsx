@@ -57,7 +57,7 @@ export function PropertyDetailsHeader({
         <EntityDetailsHeader
           icon={PropertyIcon}
           title={t('details.selectProperty')}
-          subtitle={t('details.noUnitSelected', { defaultValue: 'Δεν έχει επιλεγεί ακίνητο' })}
+          subtitle={t('details.noUnitSelected')}
           variant="detailed"
           className="h-[81px] flex items-center"
         />
@@ -70,20 +70,20 @@ export function PropertyDetailsHeader({
         createEntityAction(
           'save',
           isCreatingNewUnit
-            ? t('navigation.actions.newUnit.create', { defaultValue: 'Δημιουργία' })
-            : t('buildingSelector.save', { defaultValue: 'Αποθήκευση' }),
+            ? t('navigation.actions.newUnit.create')
+            : t('buildingSelector.save'),
           handleHeaderSave
         ),
-        createEntityAction('cancel', t('dialog.cancel', { ns: 'common', defaultValue: 'Ακύρωση' }), handleHeaderCancel),
+        createEntityAction('cancel', t('buttons.cancel', { ns: 'common' }), handleHeaderCancel),
       ]
     : [
-        createEntityAction('edit', t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }), () => onToggleEditMode?.()),
-        createEntityAction('new', t('navigation.actions.newUnit.label', { defaultValue: 'Νέο Ακίνητο' }), () => onNewProperty?.()),
-        createEntityAction('delete', t('navigation.actions.delete.label', { defaultValue: 'Μεταφορά στον κάδο' }), () => onDeleteProperty?.()),
+        createEntityAction('edit', t('navigation.actions.edit.label'), () => onToggleEditMode?.()),
+        createEntityAction('new', t('navigation.actions.newUnit.label'), () => onNewProperty?.()),
+        createEntityAction('delete', t('navigation.actions.delete.label'), () => onDeleteProperty?.()),
       ];
 
   const headerTitle = isCreatingNewUnit
-    ? t('navigation.actions.newUnit.label', { defaultValue: 'Νέο Ακίνητο' })
+    ? t('navigation.actions.newUnit.label')
     : property.name;
 
   return (

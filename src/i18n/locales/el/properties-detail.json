@@ -157,7 +157,8 @@
     "perLevel": {
       "perFloorHint": "ανά όροφο",
       "sharedHint": "κοινά",
-      "autoComputed": "Αυτόματα αθροίσματα από τα επίπεδα"
+      "autoComputed": "Αυτόματα αθροίσματα από τα επίπεδα",
+      "tabTotals": "Σύνολα"
     }
   },
   "documents": {
@@ -177,5 +178,23 @@
   "share": {
     "defaultMessage": "Δείτε αυτά τα ενδιαφέροντα ακίνητα από την Nestor Construct!",
     "title": "Nestor Construct - Ακίνητα"
+  },
+  "navigation": {
+    "actions": {
+      "edit": {
+        "label": "Επεξεργασία"
+      },
+      "newUnit": {
+        "label": "Νέο Ακίνητο",
+        "create": "Δημιουργία",
+        "defaultName": "Νέα Μονάδα"
+      },
+      "delete": {
+        "label": "Μεταφορά στον κάδο"
+      }
+    }
+  },
+  "buildingSelector": {
+    "save": "Αποθήκευση"
   }
 }

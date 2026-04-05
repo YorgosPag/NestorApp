@@ -65,24 +65,24 @@ export function ReadOnlyCompactView({ property, t }: { property: Property; t: TF
   return (
     <section className="flex flex-col gap-1 p-2">
       {/* Identity */}
-      <CompactField label={t('fields.identity.name', { defaultValue: 'Όνομα' })} value={property.name} />
-      <CompactField label={t('fields.identity.code', { defaultValue: 'Κωδικός' })} value={property.code} />
+      <CompactField label={t('fields.identity.name')} value={property.name} />
+      <CompactField label={t('fields.identity.code')} value={property.code} />
       <CompactField
-        label={t('fields.identity.type', { defaultValue: 'Τύπος' })}
+        label={t('fields.identity.type')}
         value={property.type ? t(`types.${property.type}`, { defaultValue: property.type }) : undefined}
       />
       <CompactField
-        label={t('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}
+        label={t('fields.identity.commercialStatus')}
         value={property.commercialStatus ? t(`commercialStatus.${property.commercialStatus}`, { defaultValue: property.commercialStatus }) : undefined}
       />
       {property.commercial?.askingPrice ? (
         <CompactField
-          label={t('fields.commercial.askingPrice', { defaultValue: 'Ζητούμενη Τιμή' })}
+          label={t('fields.commercial.askingPrice')}
           value={formatCurrencyWhole(property.commercial.askingPrice)}
         />
       ) : null}
       <CompactField
-        label={t('dialog.addUnit.fields.status', { defaultValue: 'Λειτουργική' })}
+        label={t('dialog.addUnit.fields.status')}
         value={(() => {
           const opStatus = (property as unknown as Record<string, unknown>).operationalStatus;
           return opStatus
@@ -150,7 +150,7 @@ export function ReadOnlyCompactView({ property, t }: { property: Property; t: TF
       {/* Description — full width */}
       {property.description && (
         <dl className="mt-1">
-          <dt className={cn("text-xs", colors.text.muted)}>{t('fields.identity.description', { defaultValue: 'Περιγραφή' })}</dt>
+          <dt className={cn("text-xs", colors.text.muted)}>{t('fields.identity.description')}</dt>
           <dd className="text-xs mt-0.5">{property.description}</dd>
         </dl>
       )}
@@ -198,7 +198,7 @@ export function LevelTabStrip({
         className="h-6 px-2 text-xs"
         onClick={() => onSelectLevel(null)}
       >
-        {t('multiLevel.perLevel.tabTotals', { defaultValue: 'Σύνολα' })} ✓
+        {t('multiLevel.perLevel.tabTotals')} ✓
       </Button>
     </nav>
   );

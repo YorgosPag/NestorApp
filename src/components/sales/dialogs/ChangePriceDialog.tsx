@@ -75,9 +75,7 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
       }
       onOpenChange(false);
       onSuccess?.();
-      success(t('viewer.messages.updateSuccess', {
-        defaultValue: 'Property changes were saved.',
-      }));
+      success(t('viewer.messages.updateSuccess'));
     } catch (error) {
       notifyError(translatePropertyMutationError(error, t));
     } finally {
@@ -92,18 +90,16 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className={cn(iconSizes.sm, colors.text.info)} />
-            {t('sales.dialogs.changePrice.title', { defaultValue: 'Αλλαγή Τιμής' })}
+            {t('sales.dialogs.changePrice.title')}
           </DialogTitle>
           <DialogDescription>
-            {t('sales.dialogs.changePrice.description', {
-              defaultValue: 'Ορίστε τη ζητούμενη τιμή για τη μονάδα',
-            })}
+            {t('sales.dialogs.changePrice.description')}
           </DialogDescription>
         </DialogHeader>
 
         <fieldset className="space-y-3 py-2">
           <Label className="text-sm font-medium">
-            {t('sales.dialogs.changePrice.askingPrice', { defaultValue: 'Ζητούμενη τιμή (€)' })}
+            {t('sales.dialogs.changePrice.askingPrice')}
           </Label>
           <Input
             type="number"
@@ -111,28 +107,24 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
             step={1000}
             value={askingPrice}
             onChange={(e) => setAskingPrice(e.target.value)}
-            placeholder={t('sales.dialogs.changePrice.placeholder', { defaultValue: 'π.χ. 150000' })}
+            placeholder={t('sales.dialogs.changePrice.placeholder')}
             className="text-right"
             autoFocus
           />
           <p className={cn("text-xs", colors.text.muted)}>
-            {t('sales.dialogs.changePrice.hint', {
-              defaultValue: 'Η μονάδα θα μπει αυτόματα σε κατάσταση «Προς πώληση»',
-            })}
+            {t('sales.dialogs.changePrice.hint')}
           </p>
         </fieldset>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            {t('common.cancel', { defaultValue: 'Ακύρωση' })}
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving || previewChecking || !askingPrice || Number(askingPrice) <= 0}
           >
-            {saving
-              ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
-              : t('common.save', { defaultValue: 'Αποθήκευση' })}
+            {saving ? t('common.saving') : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -270,7 +270,12 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
     return projects;
 
   } catch (error) {
-    logger.error('getProjectsList failed', { error });
+    const message = error instanceof Error ? error.message : String(error);
+    const errorCode = ApiClientError.isApiClientError(error) ? error.errorCode : undefined;
+    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
+    logger.error(
+      `getProjectsList failed: ${message} (status=${statusCode ?? 'n/a'}, code=${errorCode ?? 'n/a'})`
+    );
     return [];
   }
 }

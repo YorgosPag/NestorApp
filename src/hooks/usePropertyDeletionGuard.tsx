@@ -81,12 +81,10 @@ export function usePropertyDeletionGuard(): UsePropertyDeletionGuardReturn {
   const dialogDescription = dependencyCount > 0
     ? t('deletionGuard.confirm.descriptionWithDependencies', {
         count: dependencyCount,
-        name: targetName ?? t('deletionGuard.confirm.unnamedProperty', { defaultValue: 'this property' }),
-        defaultValue: 'Delete "{{name}}"? The guard check found {{count}} linked records that will be affected by this operation.',
+        name: targetName ?? t('deletionGuard.confirm.unnamedProperty'),
       })
     : t('deletionGuard.confirm.description', {
-        name: targetName ?? t('deletionGuard.confirm.unnamedProperty', { defaultValue: 'this property' }),
-        defaultValue: 'Delete "{{name}}"? This action permanently removes the property record and cannot be undone.',
+        name: targetName ?? t('deletionGuard.confirm.unnamedProperty'),
       });
 
   const Dialogs = useMemo(() => (
@@ -99,10 +97,10 @@ export function usePropertyDeletionGuard(): UsePropertyDeletionGuardReturn {
             reset();
           }
         }}
-        title={t('deletionGuard.confirm.title', { defaultValue: 'Delete property' })}
+        title={t('deletionGuard.confirm.title')}
         description={dialogDescription}
-        confirmLabel={t('deletionGuard.confirm.action', { defaultValue: 'Delete property' })}
-        cancelLabel={t('impactGuard.actions.cancel', { defaultValue: 'Cancel' })}
+        confirmLabel={t('deletionGuard.confirm.action')}
+        cancelLabel={t('impactGuard.actions.cancel')}
         onConfirm={() => {
           void handleConfirm();
         }}

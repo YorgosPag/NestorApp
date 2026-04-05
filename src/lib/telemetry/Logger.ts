@@ -65,6 +65,33 @@ export interface LogOutput {
 // CONSOLE OUTPUT
 // ============================================================================
 
+/**
+ * Normalize metadata so Error instances serialize to plain objects.
+ * Error instances are non-enumerable by default, which makes them log as
+ * `{}` in both browser consoles and JSON.stringify. We expand them to
+ * { message, name, stack, cause } plus any own enumerable properties.
+ */
+function normalizeMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!metadata) return metadata;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (value instanceof Error) {
+      out[key] = {
+        message: value.message,
+        name: value.name,
+        stack: value.stack,
+        ...(value.cause !== undefined ? { cause: value.cause } : {}),
+        ...Object.fromEntries(
+          Object.entries(value).filter(([k]) => !['message', 'name', 'stack', 'cause'].includes(k))
+        ),
+      };
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 export class ConsoleOutput implements LogOutput {
   write(entry: LogEntry): void {
     const prefix = `[${LogLevel[entry.level]}]`;
@@ -72,19 +99,20 @@ export class ConsoleOutput implements LogOutput {
     const correlationId = entry.correlationId ? ` [${entry.correlationId}]` : '';
 
     const message = `${timestamp}${correlationId} ${prefix} ${entry.message}`;
+    const metadata = normalizeMetadata(entry.metadata) || '';
 
     switch (entry.level) {
       case LogLevel.ERROR:
-        console.error(message, entry.metadata || '');
+        console.error(message, metadata);
         break;
       case LogLevel.WARN:
-        console.warn(message, entry.metadata || '');
+        console.warn(message, metadata);
         break;
       case LogLevel.INFO:
-        console.info(message, entry.metadata || '');
+        console.info(message, metadata);
         break;
       case LogLevel.DEBUG:
-        console.debug(message, entry.metadata || '');
+        console.debug(message, metadata);
         break;
     }
   }

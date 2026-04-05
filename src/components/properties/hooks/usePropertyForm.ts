@@ -238,7 +238,6 @@ export function usePropertyForm({
           caughtError,
           t,
           'dialog.addUnit.messages.error',
-          'Failed to create property.',
         ));
       } finally {
         setLoading(false);
