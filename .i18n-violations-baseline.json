@@ -1,13 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T19:52:42Z",
-    "totalViolations": 250,
-    "totalFiles": 81,
+    "generated": "2026-04-05T19:58:55Z",
+    "totalViolations": 239,
+    "totalFiles": 80,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/hooks/usePolygonHandlers.ts": 11,
     "src/features/property-hover/components/PropertyQuickView.tsx": 11,
     "src/features/read-only-viewer/components/ReadOnlyMediaViewer.tsx": 9,
     "src/components/sales/legal/ContractCard.tsx": 9,
