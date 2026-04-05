@@ -62,3 +62,9 @@ All callers (wizard, toolbar, migrations, auto-save manager, floorplan service) 
 ## Files Changed
 - 9 files in CL #1 (1429 insertions, 955 deletions)
 - 4 files in CL #2 (35 insertions, 2 deletions)
+
+## Superseded By
+
+- **2026-04-05 — ADR-286**: `useLevelOperations.addLevel` no longer writes client-side. All DXF level CRUD now routes through `/api/dxf-levels` (server stamps `companyId`/`createdBy`).
+- **2026-04-05 — ADR-288**: `saveToStorageImpl` no longer writes `cadFiles` client-side. Metadata upserts now route through `/api/cad-files` (server stamps `companyId`/`createdBy`).
+- **2026-04-05 — ADR-289**: `overlay-store.tsx` no longer writes overlay items client-side. All `dxf-overlay-levels/{levelId}/items/*` mutations now route through `/api/dxf-overlay-items` (server stamps `companyId`/`createdBy`; audit events emitted per mutation). The CL #2 client-side `companyId`/`createdBy` stamping in `overlay-store.tsx` is obsolete and has been removed.
