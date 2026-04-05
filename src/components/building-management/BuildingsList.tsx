@@ -63,6 +63,7 @@ export const BuildingsList = React.memo(function BuildingsList({
     return buildings.filter(building =>
       matchesSearchTerm(
         [
+          building.code,    // 🏢 ADR-233 §3.4: locked building identifier ("Κτήριο Α")
           building.name,
           building.description,
           building.location,

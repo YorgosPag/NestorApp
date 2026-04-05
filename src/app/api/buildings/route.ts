@@ -197,6 +197,21 @@ export const POST = withStandardRateLimit(
         throw error;
       }
 
+      // 🔐 ADR-233 §3.4: Uniqueness validation for building `code` within projectId scope
+      // Protects against race conditions when two users pick the same auto-suggested code.
+      if (body.projectId) {
+        const duplicateSnap = await adminDb.collection(COLLECTIONS.BUILDINGS)
+          .where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(String(body.projectId)))
+          .where('code', '==', body.code)
+          .limit(1)
+          .get();
+        if (!duplicateSnap.empty) {
+          const existingId = duplicateSnap.docs[0].id;
+          logger.warn('[Buildings] Duplicate code for projectId', { code: body.code, projectId: body.projectId, existingId });
+          throw new ApiError(409, `Building code "${body.code}" already exists in this project`);
+        }
+      }
+
       // Entity-specific fields: exclude common fields handled by createEntity
       const { companyId: _c, ...bodyFields } = body;
       const entitySpecificFields: Record<string, unknown> = {

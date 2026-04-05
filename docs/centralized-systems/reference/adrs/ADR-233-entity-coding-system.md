@@ -359,7 +359,7 @@ Client (AddUnitDialog)           Server (API)
 
 **Affected files:** types/building/contracts.ts, config/entity-code-config.ts, services/entity-code.service.ts, lib/firestore/entity-creation.service.ts, lib/firestore/entity-creation.types.ts, app/api/entity-code/suggest/route.ts, app/api/buildings/route.ts, app/api/buildings/building-update.handler.ts, app/api/admin/backfill-building-code/route.ts (new), components/building-management/hooks/useBuildingForm.ts, components/building-management/dialogs/AddBuildingDialog.tsx, components/building-management/dialogs/add-building-dialog/AddBuildingDialogTabs.tsx, components/building-management/dialogs/add-building-dialog/add-building-dialog.config.ts, components/building-management/building-services.ts, components/building-management/BuildingCard/BuildingCardContent.tsx, components/building-management/BuildingCard/BuildingCardContent/BuildingCardTitle.tsx, components/building-management/BuildingDetails/BuildingDetailsHeader.tsx, domain/cards/building/BuildingListCard.tsx, domain/cards/building/BuildingGridCard.tsx, i18n/locales/{el,en}/building.json
 
-**⏸️ PENDING ITEMS (για επόμενη συνεδρία — 2026-04-05):**
+**✅ PENDING ITEMS — ΟΛΟΚΛΗΡΩΘΗΚΑΝ (follow-up συνεδρία 2026-04-05):**
 
 Τα παρακάτω είχαν προγραμματιστεί στο plan αλλά **δεν υλοποιήθηκαν** στην αρχική pass:
 
@@ -386,3 +386,24 @@ Client (AddUnitDialog)           Server (API)
      - `{ name: "Κτήριο Γ" }` → "G" (fallback)
      - `{ name: "TestBuildingOK" }` → "T" (legacy fallback)
      - Backward-compat: `"Κτήριο Α"` (string) → "A"
+
+---
+
+### 2026-04-05 (follow-up): 3 pending items completed
+
+**Implementation:**
+
+1. **[HIGH] ✅ Server-side uniqueness validation** — `src/app/api/buildings/route.ts` POST + `building-update.handler.ts` PATCH:
+   - POST: query `buildings.where(projectId==X).where('code'==body.code).limit(1)` → `ApiError(409)` αν υπάρχει conflict.
+   - PATCH: τρέχει μόνο όταν αλλάζει το `code`, εξαιρεί το ίδιο το document από το check (conflict detection σε `docs.find(d => d.id !== buildingId)`).
+   - Χρησιμοποιεί `normalizeProjectIdForQuery()` για συμβατότητα με ADR-209 (string/number projectId).
+
+2. **[MEDIUM] ✅ BuildingsList search να περιλαμβάνει `code`** — `src/components/building-management/BuildingsList.tsx:63-75`:
+   - Προστέθηκε το `building.code` στο search array του `matchesSearchTerm()`. Η οπτική εμφάνιση (title `{code} — {name}`) γίνεται ήδη στο `BuildingListCard`.
+
+3. **[LOW] ✅ Unit tests** — νέο αρχείο `src/config/__tests__/entity-code-config.test.ts` (28 tests, όλα περνούν):
+   - `suggestNextBuildingCode()`: empty, sequential, gap-filling, beyond Ω, case-insensitive matching, numeric overflow.
+   - `extractBuildingLetter()`: object + string signatures, Greek→Latin conversion, trailing digit extraction, TestBuildingOK fallback (historical regression), null/undefined defense.
+   - `buildBuildingCode()` / `getGreekLetterAt()`: full 24-letter coverage, Ω→25 numeric fallback.
+
+**Affected files:** `src/app/api/buildings/route.ts`, `src/app/api/buildings/building-update.handler.ts`, `src/components/building-management/BuildingsList.tsx`, `src/config/__tests__/entity-code-config.test.ts` (new)

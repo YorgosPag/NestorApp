@@ -11,6 +11,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -96,6 +98,23 @@ export const PATCH = withStandardRateLimit(
           value !== undefined && !IMMUTABLE_FIELDS.includes(key)
         )
       );
+
+      // 🔐 ADR-233 §3.4: Uniqueness validation when `code` changes within projectId scope
+      if (typeof cleanUpdates.code === 'string' && cleanUpdates.code !== buildingData?.code) {
+        const effectiveProjectId = (cleanUpdates.projectId ?? buildingData?.projectId) as string | null | undefined;
+        if (effectiveProjectId) {
+          const duplicateSnap = await adminDb.collection(COLLECTIONS.BUILDINGS)
+            .where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(String(effectiveProjectId)))
+            .where('code', '==', cleanUpdates.code)
+            .limit(2)
+            .get();
+          const conflict = duplicateSnap.docs.find(d => d.id !== buildingId);
+          if (conflict) {
+            logger.warn('[Buildings] Duplicate code on update', { code: cleanUpdates.code, projectId: effectiveProjectId, conflictId: conflict.id });
+            throw new ApiError(409, `Building code "${cleanUpdates.code}" already exists in this project`);
+          }
+        }
+      }
 
       logger.info('[Buildings] Updating building for tenant', { buildingId, companyId: ctx.companyId });
 
