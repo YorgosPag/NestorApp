@@ -121,5 +121,12 @@
       "new": "ΝΕΟ"
     },
     "subItems": "{count} υπο-ενότητες"
+  },
+  "contactDistribution": {
+    "title": "Κατανομή Επαφών",
+    "description": "Ανάλυση ανά τύπο επαφής",
+    "individuals": "Φυσικά Πρόσωπα",
+    "companies": "Νομικά Πρόσωπα",
+    "services": "Δημόσιες Υπηρεσίες"
   }
 }

@@ -128,5 +128,19 @@
     "textDesc": "Write a quick note",
     "textPlaceholder": "Write your note here...",
     "saveNote": "Save note"
+  },
+  "share": {
+    "loading": "Loading...",
+    "invalidLink": "Invalid link",
+    "expired": "Link has expired",
+    "requestNew": "Request a new link from the sender.",
+    "protected": "Protected file",
+    "passwordRequired": "This file requires a password.",
+    "password": "Password",
+    "wrongPassword": "Wrong password",
+    "access": "Access",
+    "download": "Download file",
+    "expires": "Expires:",
+    "downloads": "downloads"
   }
 }

@@ -13,11 +13,13 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function EmailAnalyticsDashboard() {
   const router = useRouter();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { t } = useTranslation('crm');
   // 🏢 ENTERPRISE: Use centralized unit icon for residential
   const ResidentialIcon = NAVIGATION_ENTITIES.property.icon;
 
@@ -27,30 +29,30 @@ export function EmailAnalyticsDashboard() {
 
   const dashboardStats: DashboardStat[] = [
     {
-      title: 'Σύνολο Emails',
+      title: t('emailAnalytics.totalEmails'),
       value: 0,
-      description: 'Απεσταλμένα',
+      description: t('emailAnalytics.sent'),
       icon: Mail,
       color: 'blue',
     },
     {
-      title: 'Ποσοστό Παράδοσης',
+      title: t('emailAnalytics.deliveryRate'),
       value: '0%',
-      description: '0/0 παραδόθηκαν',
+      description: t('emailAnalytics.delivered'),
       icon: TrendingUp,
       color: 'green',
     },
     {
-      title: 'Ποσοστό Ανοίγματος',
+      title: t('emailAnalytics.openRate'),
       value: '0%',
-      description: '0 ανοίγματα',
+      description: t('emailAnalytics.opens'),
       icon: Eye,
       color: 'cyan',
     },
     {
-      title: 'Ποσοστό Κλικ',
+      title: t('emailAnalytics.clickRate'),
       value: '0%',
-      description: '0 κλικ',
+      description: t('emailAnalytics.clicks'),
       icon: MousePointer,
       color: 'purple',
     },
@@ -68,11 +70,11 @@ export function EmailAnalyticsDashboard() {
             className="flex items-center gap-2"
           >
             <ArrowLeft className={iconSizes.sm} />
-            Πίσω στο CRM
+            {t('emailAnalytics.backToCRM')}
           </Button>
           <div>
             <h2 className="text-2xl font-bold">Email Analytics</h2>
-            <p className={colors.text.muted}>Αναλυτικά στοιχεία email marketing</p>
+            <p className={colors.text.muted}>{t('emailAnalytics.subtitle')}</p>
           </div>
         </div>
       </div>
@@ -89,24 +91,24 @@ export function EmailAnalyticsDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Construction className={`${iconSizes.md} text-orange-500`} />
-            Email Analytics - Σύντομα Διαθέσιμο
+            {t('emailAnalytics.comingSoonTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className={cn("text-center py-8", colors.text.muted)}>
             <Mail className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
             <h3 className="text-lg font-medium mb-2">
-              Analytics Dashboard Υπό Κατασκευή
+              {t('emailAnalytics.underConstruction')}
             </h3>
             <p className={cn("mb-4", colors.text.muted)}>
-              Σύντομα θα μπορείτε να δείτε:
+              {t('emailAnalytics.comingSoonDesc')}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
               <ul className={cn("text-left space-y-2 text-sm", colors.text.muted)}>
-                <li>Αναλυτικά στοιχεία email campaigns</li>
-                <li>Ποσοστά ανοίγματος και κλικ</li>
-                <li>Πρόσφατη δραστηριότητα emails</li>
-                <li>Στατιστικά ανά ακίνητο</li>
+                <li>{t('emailAnalytics.feature1')}</li>
+                <li>{t('emailAnalytics.feature2')}</li>
+                <li>{t('emailAnalytics.feature3')}</li>
+                <li>{t('emailAnalytics.feature4')}</li>
                 <li>Email performance tracking</li>
               </ul>
               <ul className={cn("text-left space-y-2 text-sm", colors.text.muted)}>
@@ -118,8 +120,8 @@ export function EmailAnalyticsDashboard() {
               </ul>
             </div>
             <p className={cn("text-xs mt-6", colors.text.muted)}>
-              Τα analytics θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.<br/>
-              Τώρα διαθέσιμα 3 email templates στο Share Modal!
+              {t('emailAnalytics.activationNote')}<br/>
+              {t('emailAnalytics.templatesNote')}
             </p>
           </div>
         </CardContent>

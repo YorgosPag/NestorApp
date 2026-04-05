@@ -41,7 +41,7 @@ export async function recordPayment(
 ): Promise<{ success: boolean; payment?: PaymentRecord; error?: string }> {
   try {
     if (input.amount <= 0) {
-      return { success: false, error: 'Το ποσό πρέπει να είναι θετικό' };
+      return { success: false, error: 'Amount must be positive' };
     }
 
     const db = getDb();
@@ -56,19 +56,19 @@ export async function recordPayment(
       const plan = { id: planSnap.id, ...planSnap.data() } as PaymentPlan;
 
       if (plan.status === 'completed' || plan.status === 'cancelled') {
-        throw new Error('Δεν μπορείτε να καταγράψετε πληρωμή σε ολοκληρωμένο/ακυρωμένο plan');
+        throw new Error('Cannot record payment on completed/cancelled plan');
       }
 
       const targetIdx = input.installmentIndex;
       if (targetIdx < 0 || targetIdx >= plan.installments.length) {
-        throw new Error(`Δόση #${targetIdx} δεν βρέθηκε`);
+        throw new Error(`Installment #${targetIdx} not found`);
       }
 
       if (plan.config.sequentialPaymentRequired) {
         for (let i = 0; i < targetIdx; i++) {
           const prev = plan.installments[i];
           if (prev.status !== 'paid' && prev.status !== 'waived') {
-            throw new Error(`Η δόση #${i} (${prev.label}) πρέπει να εξοφληθεί πρώτα`);
+            throw new Error(`Installment #${i} (${prev.label}) must be paid first`);
           }
         }
       }
@@ -77,7 +77,7 @@ export async function recordPayment(
       const targetRemaining = targetInst.amount - targetInst.paidAmount;
 
       if (targetRemaining <= 0) {
-        throw new Error(`Η δόση #${targetIdx} (${targetInst.label}) είναι ήδη εξοφλημένη`);
+        throw new Error(`Installment #${targetIdx} (${targetInst.label}) is already paid`);
       }
 
       const allocations: SplitAllocation[] = [];
@@ -192,7 +192,7 @@ export async function updateLoanInfo(
 
     const updatedLoan: LoanInfo = { ...plan.loan, ...loan };
     if (updatedLoan.loanAmount !== null && updatedLoan.loanAmount > plan.totalAmount) {
-      return { success: false, error: 'Το ποσό δανείου δεν μπορεί να υπερβαίνει το συνολικό ποσό' };
+      return { success: false, error: 'Loan amount cannot exceed total amount' };
     }
 
     const db = getDb();

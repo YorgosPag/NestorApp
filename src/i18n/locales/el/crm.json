@@ -543,5 +543,26 @@
       "loadFailed": "Αποτυχία φόρτωσης ομάδων. Δοκιμάστε ξανά.",
       "reload": "Επαναφόρτωση"
     }
+  },
+  "emailAnalytics": {
+    "totalEmails": "Σύνολο Emails",
+    "sent": "Απεσταλμένα",
+    "deliveryRate": "Ποσοστό Παράδοσης",
+    "delivered": "0/0 παραδόθηκαν",
+    "openRate": "Ποσοστό Ανοίγματος",
+    "opens": "0 ανοίγματα",
+    "clickRate": "Ποσοστό Κλικ",
+    "clicks": "0 κλικ",
+    "backToCRM": "Πίσω στο CRM",
+    "subtitle": "Αναλυτικά στοιχεία email marketing",
+    "comingSoonTitle": "Email Analytics - Σύντομα Διαθέσιμο",
+    "underConstruction": "Analytics Dashboard Υπό Κατασκευή",
+    "comingSoonDesc": "Σύντομα θα μπορείτε να δείτε:",
+    "feature1": "Αναλυτικά στοιχεία email campaigns",
+    "feature2": "Ποσοστά ανοίγματος και κλικ",
+    "feature3": "Πρόσφατη δραστηριότητα emails",
+    "feature4": "Στατιστικά ανά ακίνητο",
+    "activationNote": "Τα analytics θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.",
+    "templatesNote": "Τώρα διαθέσιμα 3 email templates στο Share Modal!"
   }
 }

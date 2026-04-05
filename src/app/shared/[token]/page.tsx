@@ -1,4 +1,3 @@
-/* eslint-disable custom/no-hardcoded-strings */
 /**
  * =============================================================================
  * Public Share Page — View/download shared files
@@ -23,6 +22,7 @@ import {
   AlertTriangle,
   Shield,
 } from 'lucide-react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,6 +55,7 @@ export default function SharedFilePage() {
   const params = useParams();
   const token = params.token as string;
   const colors = useSemanticColors();
+  const { t } = useTranslation('files-media');
 
   const [state, setState] = useState<PageState>('loading');
   const [share, setShare] = useState<FileShareRecord | null>(null);
@@ -170,7 +171,7 @@ export default function SharedFilePage() {
           {state === 'loading' && (
             <section className="text-center py-8">
               <Spinner size="large" className="mx-auto mb-4" />
-              <p className={cn("text-sm", colors.text.muted)}>Φόρτωση...</p>
+              <p className={cn("text-sm", colors.text.muted)}>{t('share.loading')}</p>
             </section>
           )}
 
@@ -178,7 +179,7 @@ export default function SharedFilePage() {
           {state === 'error' && (
             <section className="text-center py-8">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-              <h2 className="text-lg font-semibold mb-2">Μη έγκυρος σύνδεσμος</h2>
+              <h2 className="text-lg font-semibold mb-2">{t('share.invalidLink')}</h2>
               <p className={cn("text-sm", colors.text.muted)}>{errorMessage}</p>
             </section>
           )}
@@ -187,9 +188,9 @@ export default function SharedFilePage() {
           {state === 'expired' && (
             <section className="text-center py-8">
               <Clock className="h-12 w-12 mx-auto mb-4 text-amber-500" />
-              <h2 className="text-lg font-semibold mb-2">Ο σύνδεσμος έχει λήξει</h2>
+              <h2 className="text-lg font-semibold mb-2">{t('share.expired')}</h2>
               <p className={cn("text-sm", colors.text.muted)}>
-                Ζητήστε νέο σύνδεσμο από τον αποστολέα.
+                {t('share.requestNew')}
               </p>
             </section>
           )}
@@ -201,14 +202,14 @@ export default function SharedFilePage() {
                 <Lock className="h-12 w-12 text-amber-500" />
               </figure>
               <h2 className="text-lg font-semibold text-center mb-2">
-                Προστατευμένο αρχείο
+                {t('share.protected')}
               </h2>
               <p className={cn("text-sm text-center mb-6", colors.text.muted)}>
-                Αυτό το αρχείο απαιτεί κωδικό πρόσβασης.
+                {t('share.passwordRequired')}
               </p>
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
                 <label className="block">
-                  <span className="text-sm font-medium">Κωδικός</span>
+                  <span className="text-sm font-medium">{t('share.password')}</span>
                   <input
                     type="password"
                     value={password}
@@ -221,12 +222,12 @@ export default function SharedFilePage() {
                     required
                   />
                   {passwordError && (
-                    <span className="text-xs text-destructive mt-1">Λανθασμένος κωδικός</span>
+                    <span className="text-xs text-destructive mt-1">{t('share.wrongPassword')}</span>
                   )}
                 </label>
                 <Button type="submit" className="w-full">
                   <Shield className="h-4 w-4 mr-2" />
-                  Πρόσβαση
+                  {t('share.access')}
                 </Button>
               </form>
             </section>
@@ -268,7 +269,7 @@ export default function SharedFilePage() {
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
                 )}
-                Λήψη αρχείου
+                {t('share.download')}
               </Button>
 
               {/* Preview for images */}
@@ -286,11 +287,11 @@ export default function SharedFilePage() {
               {/* Expiration info */}
               <footer className={cn("flex items-center justify-center gap-2 text-xs", colors.text.muted)}>
                 <Clock className="h-3 w-3" />
-                <span>Λήγει: {expiresLabel}</span>
+                <span>{t('share.expires')} {expiresLabel}</span>
                 {share && share.maxDownloads > 0 && (
                   <>
                     <span>·</span>
-                    <span>{share.downloadCount}/{share.maxDownloads} λήψεις</span>
+                    <span>{share.downloadCount}/{share.maxDownloads} {t('share.downloads')}</span>
                   </>
                 )}
               </footer>

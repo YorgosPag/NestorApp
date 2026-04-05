@@ -121,5 +121,12 @@
       "new": "NEW"
     },
     "subItems": "{count} sub-sections"
+  },
+  "contactDistribution": {
+    "title": "Contact Distribution",
+    "description": "Analysis by contact type",
+    "individuals": "Individuals",
+    "companies": "Companies",
+    "services": "Public Services"
   }
 }

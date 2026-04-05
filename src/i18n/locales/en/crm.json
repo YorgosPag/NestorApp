@@ -543,5 +543,26 @@
       "loadFailed": "Failed to load teams. Please try again.",
       "reload": "Reload"
     }
+  },
+  "emailAnalytics": {
+    "totalEmails": "Total Emails",
+    "sent": "Sent",
+    "deliveryRate": "Delivery Rate",
+    "delivered": "0/0 delivered",
+    "openRate": "Open Rate",
+    "opens": "0 opens",
+    "clickRate": "Click Rate",
+    "clicks": "0 clicks",
+    "backToCRM": "Back to CRM",
+    "subtitle": "Email marketing analytics",
+    "comingSoonTitle": "Email Analytics - Coming Soon",
+    "underConstruction": "Analytics Dashboard Under Construction",
+    "comingSoonDesc": "Soon you will be able to see:",
+    "feature1": "Email campaign analytics",
+    "feature2": "Open and click rates",
+    "feature3": "Recent email activity",
+    "feature4": "Statistics per property",
+    "activationNote": "Analytics will be activated once the Mailgun webhook is configured.",
+    "templatesNote": "Now available: 3 email templates in the Share Modal!"
   }
 }

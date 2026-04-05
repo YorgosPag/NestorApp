@@ -17,6 +17,7 @@ import { Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function AdminBoundaryDemo() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,6 +25,7 @@ export function AdminBoundaryDemo() {
   const { quick, radius } = useBorderTokens();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('geo-canvas');
 
   const {
     isLoading,
@@ -89,19 +91,19 @@ export function AdminBoundaryDemo() {
             disabled={isLoading || !searchQuery.trim()}
             className={`px-6 py-2 ${colors.bg.info} text-white ${radius.lg} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {isLoading ? 'Αναζήτηση...' : 'Αναζήτηση'}
+            {isLoading ? t('adminBoundary.searching') : t('adminBoundary.search')}
           </button>
           <button
             onClick={clearResults}
             className={`px-4 py-2 ${colors.bg.secondary} text-white ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
           >
-            Καθαρισμός
+            {t('adminBoundary.clear')}
           </button>
         </div>
 
         {/* Quick Search Buttons */}
         <div className="flex gap-2 mb-4 flex-wrap">
-          <h3 className="w-full text-sm font-medium text-gray-600 mb-2">Γρήγορη αναζήτηση:</h3>
+          <h3 className="w-full text-sm font-medium text-gray-600 mb-2">{t('adminBoundary.quickSearch')}</h3>
           {[
             'Δήμος Αθηναίων',
             'Δήμος Θεσσαλονίκης',
@@ -159,11 +161,11 @@ export function AdminBoundaryDemo() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Search Results */}
         <div>
-          <h3 className="text-lg font-semibold mb-3">Αποτελέσματα Αναζήτησης</h3>
+          <h3 className="text-lg font-semibold mb-3">{t('adminBoundary.results')}</h3>
 
           {suggestions.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-600 mb-2">Προτάσεις:</h4>
+              <h4 className="text-sm font-medium text-gray-600 mb-2">{t('adminBoundary.suggestions')}</h4>
               <div className="flex gap-2 flex-wrap">
                 {suggestions.map((suggestion, index) => (
                   <button
@@ -181,7 +183,7 @@ export function AdminBoundaryDemo() {
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {searchResults.length === 0 && !isLoading ? (
               <div className="text-gray-500 text-center py-8">
-                Δεν βρέθηκαν αποτελέσματα
+                {t('adminBoundary.noResults')}
               </div>
             ) : (
               searchResults.map((result, index) => (
@@ -215,8 +217,8 @@ export function AdminBoundaryDemo() {
                       result.adminLevel === 8 ? `${colors.bg.info} text-blue-800` :
                       `${colors.bg.muted} text-gray-800`
                     }`}>
-                      {result.adminLevel === 4 ? 'Περιφέρεια' :
-                       result.adminLevel === 8 ? 'Δήμος' :
+                      {result.adminLevel === 4 ? t('adminBoundary.region') :
+                       result.adminLevel === 8 ? t('adminBoundary.municipality') :
                        `Level ${result.adminLevel}`}
                     </div>
                   </div>
@@ -261,7 +263,7 @@ export function AdminBoundaryDemo() {
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
-              Επιλέξτε ένα αποτέλεσμα για να δείτε το boundary
+              {t('adminBoundary.selectToView')}
             </div>
           )}
 
