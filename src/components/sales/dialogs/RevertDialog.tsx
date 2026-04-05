@@ -51,9 +51,9 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
 
   const currentStatus = unit.commercialStatus;
   const statusLabel = currentStatus === 'sold'
-    ? t('sales.commercialStatus.sold', { defaultValue: 'Πωλήθηκε' })
+    ? t('sales.commercialStatus.sold')
     : currentStatus === 'reserved'
-      ? t('sales.commercialStatus.reserved', { defaultValue: 'Κρατημένη' })
+      ? t('sales.commercialStatus.reserved')
       : currentStatus ?? '';
 
   const handleRevert = useCallback(async () => {
@@ -85,17 +85,15 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       }
       onOpenChange(false);
       onSuccess?.();
-      success(t('viewer.messages.updateSuccess', {
-        defaultValue: 'Property changes were saved.',
-      }));
+      success(t('viewer.messages.updateSuccess', { ns: 'properties' }));
 
       const wasSold = currentStatus === 'sold';
       const creditAmount = wasSold
         ? (unit.commercial?.finalPrice ?? depositToRefund)
         : depositToRefund;
       const creditReason = wasSold
-        ? t('sales.dialogs.revert.creditReasonSale', { defaultValue: 'Ακύρωση πώλησης' })
-        : t('sales.dialogs.revert.creditReasonReservation', { defaultValue: 'Ακύρωση κράτησης' });
+        ? t('sales.dialogs.revert.creditReasonSale')
+        : t('sales.dialogs.revert.creditReasonReservation');
 
       const propertyName = unit.name ?? unit.propertyName ?? '';
       const lineItems = linkedSpaces.hasSpaces
@@ -147,24 +145,22 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Undo2 className={cn(iconSizes.sm, colors.text.warning)} />
-            {t('sales.dialogs.revert.title', { defaultValue: 'Επαναφορά Μονάδας' })}
+            {t('sales.dialogs.revert.title')}
           </DialogTitle>
           <DialogDescription>
-            {t('sales.dialogs.revert.description', {
-              defaultValue: 'Ακύρωση πώλησης ή κράτησης — η μονάδα επιστρέφει σε κατάσταση «Προς Πώληση»',
-            })}
+            {t('sales.dialogs.revert.description')}
           </DialogDescription>
         </DialogHeader>
 
         <section className="space-y-3 py-2">
           <p className="text-sm">
-            {t('sales.dialogs.revert.currentStatus', { defaultValue: 'Τρέχουσα κατάσταση' })}:{' '}
+            {t('sales.dialogs.revert.currentStatus')}:{' '}
             <span className="font-semibold">{statusLabel}</span>
           </p>
 
           {unit.commercial?.owners && (unit.commercial.owners as PropertyOwnerEntry[]).length > 0 && (
             <p className={cn("text-sm", colors.text.muted)}>
-              {t('sales.dialogs.revert.buyer', { defaultValue: 'Αγοραστής' })}:{' '}
+              {t('sales.dialogs.revert.buyer')}:{' '}
               <span className="font-medium text-foreground">
                 {formatOwnerNames(unit.commercial.owners as PropertyOwnerEntry[]) ?? '—'}
               </span>
@@ -173,7 +169,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
 
           {unit.commercial?.finalPrice && (
             <p className={cn("text-sm", colors.text.muted)}>
-              {t('sales.dialogs.revert.finalPrice', { defaultValue: 'Τιμή πώλησης' })}:{' '}
+              {t('sales.dialogs.revert.finalPrice')}:{' '}
               <span className="font-medium text-foreground">
                 {formatCurrency(unit.commercial.finalPrice)}
               </span>
@@ -192,15 +188,13 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           )}
 
           <p className={cn("text-xs font-medium", colors.text.warning)}>
-            {t('sales.dialogs.revert.warning', {
-              defaultValue: 'Τα στοιχεία αγοραστή, προκαταβολής και τελικής τιμής θα διαγραφούν. Η ζητούμενη τιμή διατηρείται.',
-            })}
+            {t('sales.dialogs.revert.warning')}
           </p>
         </section>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || previewChecking}>
-            {t('common.cancel', { defaultValue: 'Ακύρωση' })}
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleRevert}
@@ -208,8 +202,8 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
             className={cn(colors.bg.warning, "hover:opacity-90 text-white")}
           >
             {saving || previewChecking
-              ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
-              : t('sales.dialogs.revert.confirm', { defaultValue: 'Επαναφορά σε Προς Πώληση' })}
+              ? t('common.saving')
+              : t('sales.dialogs.revert.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>
