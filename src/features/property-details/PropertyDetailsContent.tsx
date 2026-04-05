@@ -32,6 +32,7 @@ import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
+import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 import type { PropertyLevel } from '@/types/property';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -142,6 +143,8 @@ export function PropertyDetailsContent({
   const effectiveType = localType || resolvedProperty.type;
   const isMultiLevel = resolvedProperty.isMultiLevel || isMultiLevelCapableType(effectiveType);
   const showMultiFloorSelector = isMultiLevelCapableType(effectiveType);
+  // ADR-284 Family B: Standalone units (villa, detached_house) have no building/floor parent.
+  const isStandalone = isStandaloneUnitType(effectiveType as import('@/types/property').PropertyType | '');
 
   // ADR-236: Shared active level state — synchronized between MultiLevelNavigation and LevelTabStrip
   const [activeLevelId, setActiveLevelId] = useState<string | null>(
@@ -259,7 +262,8 @@ export function PropertyDetailsContent({
 
       {/* Building Link + Floor/MultiLevel + Linked Spaces — top row */}
       {/* ADR-284 Batch 7: Hidden when creating new unit — NewUnitHierarchySection handles Project/Building/Floor selection */}
-      {!isReadOnly && !isCreatingNewUnit && (
+      {/* ADR-284 Family B: Hidden for standalone units (villa, detached_house) — direct Project parent, no Building/Floor */}
+      {!isReadOnly && !isCreatingNewUnit && !isStandalone && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <PropertyEntityLinks
             propertyId={resolvedProperty?.id ?? ''}
