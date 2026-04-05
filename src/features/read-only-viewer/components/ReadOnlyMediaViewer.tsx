@@ -165,7 +165,7 @@ export function ReadOnlyMediaViewer({
           <figure className={cn('text-center', colors.text.muted)}>
             <FileQuestion className={cn(iconSizes['2xl'], 'mx-auto mb-3 opacity-50')} aria-hidden="true" />
             <figcaption className="text-sm">
-              {t('viewer.selectPropertyToViewMedia', { ns: 'properties', defaultValue: 'Επιλέξτε ακίνητο για προβολή' })}
+              {t('viewer.selectPropertyToViewMedia', { ns: 'properties' })}
             </figcaption>
           </figure>
         </CardContent>
@@ -193,7 +193,7 @@ export function ReadOnlyMediaViewer({
           ) : (
             <TabsTrigger value="floorplans" className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
               <Map className={iconSizes.sm} aria-hidden="true" />
-              <span className="text-xs">{t('viewer.media.floorplanUnit', { ns: 'properties', defaultValue: 'Κάτοψη Μονάδας' })}</span>
+              <span className="text-xs">{t('viewer.media.floorplanUnit', { ns: 'properties' })}</span>
               {!floorplansData.loading && floorplansData.files.length > 0 && (
                 <span className={cn('ml-1 text-xs', colors.text.muted)}>({floorplansData.files.length})</span>
               )}
@@ -210,19 +210,19 @@ export function ReadOnlyMediaViewer({
           ) : (
             <TabsTrigger value="floorplan-floor" className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
               <Layers className={iconSizes.sm} aria-hidden="true" />
-              <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties', defaultValue: 'Κάτοψη Ορόφου' })}</span>
+              <span className="text-xs">{t('viewer.media.floorplanFloor', { ns: 'properties' })}</span>
             </TabsTrigger>
           )}
           <TabsTrigger value="photos" className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
             <Camera className={iconSizes.sm} aria-hidden="true" />
-            <span className="text-xs">{t('viewer.media.photos', { ns: 'properties', defaultValue: 'Φωτογραφίες' })}</span>
+            <span className="text-xs">{t('viewer.media.photos', { ns: 'properties' })}</span>
             {!photosData.loading && photosData.files.length > 0 && (
               <span className={cn('ml-1 text-xs', colors.text.muted)}>({photosData.files.length})</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="videos" className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
             <Video className={iconSizes.sm} aria-hidden="true" />
-            <span className="text-xs">{t('viewer.media.videos', { ns: 'properties', defaultValue: 'Βίντεο' })}</span>
+            <span className="text-xs">{t('viewer.media.videos', { ns: 'properties' })}</span>
             {!videosData.loading && videosData.files.length > 0 && (
               <span className={cn('ml-1 text-xs', colors.text.muted)}>({videosData.files.length})</span>
             )}
@@ -251,7 +251,7 @@ export function ReadOnlyMediaViewer({
               <TabContentWrapper loading={floorplansData.loading} error={floorplansData.error} onRetry={floorplansData.refetch} spacing={spacing} iconSizes={iconSizes} t={t}>
                 <FloorplanGallery
                   files={floorplansData.files}
-                  emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχουν κατόψεις' })}
+                  emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties' })}
                   className="h-full"
                 />
               </TabContentWrapper>
@@ -279,7 +279,7 @@ export function ReadOnlyMediaViewer({
                   overlays={singleFloorOverlays}
                   highlightedOverlayUnitId={highlightedOverlayUnitId}
                   onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}
-                  emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
+                  emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
                   className="h-full"
                 />
               </TabContentWrapper>
@@ -291,7 +291,7 @@ export function ReadOnlyMediaViewer({
             <TabContentWrapper loading={photosData.loading} error={photosData.error} onRetry={photosData.refetch} spacing={spacing} iconSizes={iconSizes} t={t}>
               <MediaGallery
                 files={photosData.files} showToolbar={false} enableSelection={false} cardSize="md"
-                emptyMessage={t('viewer.media.noPhotos', { ns: 'properties', defaultValue: 'Δεν υπάρχουν φωτογραφίες' })}
+                emptyMessage={t('viewer.media.noPhotos', { ns: 'properties' })}
                 className={spacing.padding.sm}
               />
             </TabContentWrapper>
@@ -302,7 +302,7 @@ export function ReadOnlyMediaViewer({
             <TabContentWrapper loading={videosData.loading} error={videosData.error} onRetry={videosData.refetch} spacing={spacing} iconSizes={iconSizes} t={t}>
               <MediaGallery
                 files={videosData.files} showToolbar={false} enableSelection={false} cardSize="md"
-                emptyMessage={t('viewer.media.noVideos', { ns: 'properties', defaultValue: 'Δεν υπάρχουν βίντεο' })}
+                emptyMessage={t('viewer.media.noVideos', { ns: 'properties' })}
                 className={spacing.padding.sm}
               />
             </TabContentWrapper>
