@@ -595,5 +595,98 @@
     "viewCreditNote": "Προβολή Πιστωτικού",
     "originalInvoiceLink": "Αυτό είναι πιστωτικό τιμολόγιο — σχετίζεται με αρχικό παραστατικό.",
     "viewOriginal": "Προβολή Αρχικού"
+  },
+  "apy": {
+    "pageTitle": "Βεβαιώσεις Παρακράτησης Φόρου",
+    "pageDescription": "Tracking παρακρατήσεων από πελάτες",
+    "newCertificate": "Νέα Βεβαίωση",
+    "loading": "Φόρτωση βεβαιώσεων...",
+    "loadingOne": "Φόρτωση βεβαίωσης...",
+    "errorTitle": "Σφάλμα",
+    "notFoundTitle": "Δεν βρέθηκε",
+    "notFoundMessage": "Η βεβαίωση δεν βρέθηκε.",
+    "fetchFailed": "Αποτυχία φόρτωσης βεβαίωσης",
+    "backToList": "Πίσω στη λίστα",
+    "certificateTitle": "Βεβαίωση Παρακράτησης {{year}}",
+    "createDialogTitle": "Νέα Βεβαίωση Παρακράτησης Φόρου",
+    "createFailed": "Αποτυχία δημιουργίας βεβαίωσης.",
+    "createButton": "Δημιουργία Βεβαίωσης",
+    "cancel": "Ακύρωση",
+    "filters": {
+      "year": "Έτος:",
+      "status": "Κατάσταση:",
+      "all": "Όλες",
+      "received": "Ελήφθησαν",
+      "pending": "Εκκρεμείς"
+    },
+    "count": "{{count}} βεβαιώσεις",
+    "empty": {
+      "title": "Δεν βρέθηκαν βεβαιώσεις",
+      "hint": "Δημιουργήστε μια νέα βεβαίωση για να ξεκινήσετε."
+    },
+    "table": {
+      "customer": "Πελάτης",
+      "vatNumber": "ΑΦΜ",
+      "year": "Έτος",
+      "invoiceCount": "Τιμολόγια",
+      "totalWithholding": "Σύνολο Παρακράτησης",
+      "status": "Κατάσταση"
+    },
+    "status": {
+      "received": "Ελήφθη",
+      "pending": "Εκκρεμεί"
+    },
+    "actions": {
+      "markReceived": "Ελήφθη",
+      "exportPdf": "PDF",
+      "sendReminder": "Reminder"
+    },
+    "provider": {
+      "title": "Πάροχος (Εσείς)"
+    },
+    "customerSection": {
+      "title": "Πελάτης (Παρακρατών)"
+    },
+    "fields": {
+      "vatNumber": "ΑΦΜ",
+      "taxOffice": "ΔΟΥ",
+      "address": "Διεύθυνση",
+      "email": "Email",
+      "phone": "Τηλέφωνο",
+      "received": "Ελήφθη",
+      "fiscalYear": "Φορολογικό Έτος",
+      "customerVat": "ΑΦΜ Πελάτη",
+      "vatPlaceholder": "π.χ. 123456789"
+    },
+    "invoices": {
+      "heading": "Τιμολόγια ({{count}})",
+      "withholdingHeading": "Τιμολόγια με παρακράτηση ({{count}})",
+      "empty": "Δεν βρέθηκαν ΤΠΥ με παρακράτηση φόρου για αυτό το ΑΦΜ / έτος."
+    },
+    "invoiceTable": {
+      "number": "Αρ. ΤΠΥ",
+      "date": "Ημερομηνία",
+      "netAmount": "Καθαρό Ποσό",
+      "rate": "Συντ. %",
+      "withholding": "Παρακράτηση",
+      "totals": "Σύνολα",
+      "totalWithholding": "Σύνολο Παρακράτησης"
+    },
+    "notesHeading": "Σημειώσεις",
+    "emailHistory": {
+      "heading": "Ιστορικό Αποστολών Reminder ({{count}})",
+      "date": "Ημερομηνία",
+      "recipient": "Παραλήπτης",
+      "subject": "Θέμα",
+      "status": "Κατάσταση",
+      "sent": "Εστάλη",
+      "failed": "Αποτυχία"
+    },
+    "footer": "Δημιουργήθηκε: {{created}} · Τελ. ενημέρωση: {{updated}}",
+    "duplicate": {
+      "title": "Βεβαίωση ήδη υπάρχει",
+      "message": "Υπάρχει ήδη βεβαίωση για αυτόν τον πελάτη και το έτος {{year}}.",
+      "viewExisting": "Προβολή υπάρχουσας βεβαίωσης →"
+    }
   }
 }

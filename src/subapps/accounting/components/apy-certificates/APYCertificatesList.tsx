@@ -10,6 +10,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ClipboardCheck, Plus, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +57,7 @@ function buildFiscalYearOptions(): number[] {
 // ============================================================================
 
 export function APYCertificatesList({ onSelectCertificate }: APYCertificatesListProps) {
+  const { t } = useTranslation('accounting');
   const currentYear = new Date().getFullYear();
 
   const [fiscalYear, setFiscalYear] = useState<number>(currentYear);
@@ -76,8 +78,8 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
     onSelectCertificate(certificateId);
   };
 
-  if (loading) return <PageLoadingState message="Φόρτωση βεβαιώσεων..." />;
-  if (error) return <PageErrorState title="Σφάλμα" message={error} onRetry={refetch} />;
+  if (loading) return <PageLoadingState message={t('apy.loading')} />;
+  if (error) return <PageErrorState title={t('apy.errorTitle')} message={error} onRetry={refetch} />;
 
   return (
     <section>
@@ -86,23 +88,23 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
           <ClipboardCheck className="h-6 w-6 text-navy-600" />
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
-              Βεβαιώσεις Παρακράτησης Φόρου
+              {t('apy.pageTitle')}
             </h1>
             <p className="text-sm text-gray-500">
-              Tracking παρακρατήσεων από πελάτες
+              {t('apy.pageDescription')}
             </p>
           </div>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Νέα Βεβαίωση
+          {t('apy.newCertificate')}
         </Button>
       </header>
 
       {/* Filters */}
       <div className="flex items-center gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Έτος:</span>
+          <span className="text-sm text-gray-600">{t('apy.filters.year')}</span>
           <Select
             value={String(fiscalYear)}
             onValueChange={(v) => setFiscalYear(parseInt(v, 10))}
@@ -121,7 +123,7 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Κατάσταση:</span>
+          <span className="text-sm text-gray-600">{t('apy.filters.status')}</span>
           <Select
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
@@ -130,15 +132,15 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Όλες</SelectItem>
-              <SelectItem value="received">Ελήφθησαν</SelectItem>
-              <SelectItem value="pending">Εκκρεμείς</SelectItem>
+              <SelectItem value="all">{t('apy.filters.all')}</SelectItem>
+              <SelectItem value="received">{t('apy.filters.received')}</SelectItem>
+              <SelectItem value="pending">{t('apy.filters.pending')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <span className="text-sm text-gray-500 ml-auto">
-          {filteredCertificates.length} βεβαιώσεις
+          {t('apy.count', { count: filteredCertificates.length })}
         </span>
       </div>
 
@@ -146,19 +148,19 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
       {filteredCertificates.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <ClipboardCheck className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-          <p className="font-medium">Δεν βρέθηκαν βεβαιώσεις</p>
-          <p className="text-sm mt-1">Δημιουργήστε μια νέα βεβαίωση για να ξεκινήσετε.</p>
+          <p className="font-medium">{t('apy.empty.title')}</p>
+          <p className="text-sm mt-1">{t('apy.empty.hint')}</p>
         </div>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Πελάτης</TableHead>
-              <TableHead>ΑΦΜ</TableHead>
-              <TableHead className="text-center">Έτος</TableHead>
-              <TableHead className="text-center">Τιμολόγια</TableHead>
-              <TableHead className="text-right">Σύνολο Παρακράτησης</TableHead>
-              <TableHead className="text-center">Κατάσταση</TableHead>
+              <TableHead>{t('apy.table.customer')}</TableHead>
+              <TableHead>{t('apy.table.vatNumber')}</TableHead>
+              <TableHead className="text-center">{t('apy.table.year')}</TableHead>
+              <TableHead className="text-center">{t('apy.table.invoiceCount')}</TableHead>
+              <TableHead className="text-right">{t('apy.table.totalWithholding')}</TableHead>
+              <TableHead className="text-center">{t('apy.table.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -193,6 +195,7 @@ interface APYCertificateRowProps {
 }
 
 function APYCertificateRow({ cert, onClick }: APYCertificateRowProps) {
+  const { t } = useTranslation('accounting');
   return (
     <TableRow
       className="cursor-pointer hover:bg-gray-50 transition-colors"
@@ -209,12 +212,12 @@ function APYCertificateRow({ cert, onClick }: APYCertificateRowProps) {
         {cert.isReceived ? (
           <Badge className="bg-green-100 text-green-800 border-green-200">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Ελήφθη
+            {t('apy.status.received')}
           </Badge>
         ) : (
           <Badge className="bg-orange-100 text-orange-800 border-orange-200">
             <Clock className="h-3 w-3 mr-1" />
-            Εκκρεμεί
+            {t('apy.status.pending')}
           </Badge>
         )}
       </TableCell>

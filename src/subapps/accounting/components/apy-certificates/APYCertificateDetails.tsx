@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -94,6 +95,7 @@ interface EmailHistoryRowProps {
 }
 
 function EmailHistoryRow({ record, index }: EmailHistoryRowProps) {
+  const { t } = useTranslation('accounting');
   return (
     <TableRow>
       <TableCell className="text-gray-600 text-sm">{index + 1}</TableCell>
@@ -104,12 +106,12 @@ function EmailHistoryRow({ record, index }: EmailHistoryRowProps) {
         {record.status === 'sent' ? (
           <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Εστάλη
+            {t('apy.emailHistory.sent')}
           </Badge>
         ) : (
           <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
             <AlertCircle className="h-3 w-3 mr-1" />
-            Αποτυχία
+            {t('apy.emailHistory.failed')}
           </Badge>
         )}
       </TableCell>
@@ -125,6 +127,7 @@ export function APYCertificateDetails({
   certificateId,
   onBack,
 }: APYCertificateDetailsProps) {
+  const { t } = useTranslation('accounting');
   const { user } = useAuth();
   const { updateCertificate } = useAPYCertificates({ autoFetch: false });
 
@@ -151,11 +154,11 @@ export function APYCertificateDetails({
       const data: { data: APYCertificate } = await response.json();
       setCert(data.data);
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Αποτυχία φόρτωσης βεβαίωσης');
+      setFetchError(err instanceof Error ? err.message : t('apy.fetchFailed'));
     } finally {
       setLoading(false);
     }
-  }, [user, certificateId]);
+  }, [user, certificateId, t]);
 
   useEffect(() => {
     fetchCertificate();
@@ -187,9 +190,9 @@ export function APYCertificateDetails({
     }
   };
 
-  if (loading) return <PageLoadingState message="Φόρτωση βεβαίωσης..." />;
-  if (fetchError) return <PageErrorState title="Σφάλμα" message={fetchError} onRetry={fetchCertificate} />;
-  if (!cert) return <PageErrorState title="Δεν βρέθηκε" message="Η βεβαίωση δεν βρέθηκε." onRetry={onBack} />;
+  if (loading) return <PageLoadingState message={t('apy.loadingOne')} />;
+  if (fetchError) return <PageErrorState title={t('apy.errorTitle')} message={fetchError} onRetry={fetchCertificate} />;
+  if (!cert) return <PageErrorState title={t('apy.notFoundTitle')} message={t('apy.notFoundMessage')} onRetry={onBack} />;
 
   const emailHistory = cert.emailHistory ?? [];
   const totalNetFormatted = formatCurrency(cert.totalNetAmount);
@@ -200,23 +203,23 @@ export function APYCertificateDetails({
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Πίσω στη λίστα">
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label={t('apy.backToList')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold text-gray-900">
-                Βεβαίωση Παρακράτησης {cert.fiscalYear}
+                {t('apy.certificateTitle', { year: cert.fiscalYear })}
               </h1>
               {cert.isReceived ? (
                 <Badge className="bg-green-100 text-green-800 border-green-200">
                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Ελήφθη
+                  {t('apy.status.received')}
                 </Badge>
               ) : (
                 <Badge className="bg-orange-100 text-orange-800 border-orange-200">
                   <Clock className="h-3 w-3 mr-1" />
-                  Εκκρεμεί
+                  {t('apy.status.pending')}
                 </Badge>
               )}
             </div>
@@ -238,7 +241,7 @@ export function APYCertificateDetails({
               ) : (
                 <CalendarCheck className="h-4 w-4 mr-2" />
               )}
-              Ελήφθη
+              {t('apy.actions.markReceived')}
             </Button>
           )}
           <Button variant="outline" onClick={handleExportPDF} disabled={pdfLoading}>
@@ -247,11 +250,11 @@ export function APYCertificateDetails({
             ) : (
               <FileDown className="h-4 w-4 mr-2" />
             )}
-            PDF
+            {t('apy.actions.exportPdf')}
           </Button>
           <Button onClick={() => setReminderDialogOpen(true)}>
             <Mail className="h-4 w-4 mr-2" />
-            Reminder
+            {t('apy.actions.sendReminder')}
           </Button>
         </div>
       </header>
@@ -266,22 +269,22 @@ export function APYCertificateDetails({
           <header className="flex items-center gap-2 mb-2">
             <Building2 className="h-4 w-4 text-gray-400" />
             <h2 id="provider-heading" className="text-sm font-semibold text-gray-700">
-              Πάροχος (Εσείς)
+              {t('apy.provider.title')}
             </h2>
           </header>
           <p className="text-base font-medium text-gray-900">{cert.provider.name}</p>
-          <InfoRow label="ΑΦΜ" value={cert.provider.vatNumber} />
-          <InfoRow label="ΔΟΥ" value={cert.provider.taxOffice} />
+          <InfoRow label={t('apy.fields.vatNumber')} value={cert.provider.vatNumber} />
+          <InfoRow label={t('apy.fields.taxOffice')} value={cert.provider.taxOffice} />
           <InfoRow
-            label="Διεύθυνση"
+            label={t('apy.fields.address')}
             value={
               cert.provider.address
                 ? `${cert.provider.address}, ${cert.provider.city} ${cert.provider.postalCode}`
                 : null
             }
           />
-          <InfoRow label="Email" value={cert.provider.email} />
-          <InfoRow label="Τηλέφωνο" value={cert.provider.phone} />
+          <InfoRow label={t('apy.fields.email')} value={cert.provider.email} />
+          <InfoRow label={t('apy.fields.phone')} value={cert.provider.phone} />
         </section>
 
         {/* Customer */}
@@ -292,14 +295,14 @@ export function APYCertificateDetails({
           <header className="flex items-center gap-2 mb-2">
             <User className="h-4 w-4 text-gray-400" />
             <h2 id="customer-heading" className="text-sm font-semibold text-gray-700">
-              Πελάτης (Παρακρατών)
+              {t('apy.customerSection.title')}
             </h2>
           </header>
           <p className="text-base font-medium text-gray-900">{cert.customer.name}</p>
-          <InfoRow label="ΑΦΜ" value={cert.customer.vatNumber} />
-          <InfoRow label="ΔΟΥ" value={cert.customer.taxOffice} />
+          <InfoRow label={t('apy.fields.vatNumber')} value={cert.customer.vatNumber} />
+          <InfoRow label={t('apy.fields.taxOffice')} value={cert.customer.taxOffice} />
           <InfoRow
-            label="Διεύθυνση"
+            label={t('apy.fields.address')}
             value={
               cert.customer.address && cert.customer.city
                 ? `${cert.customer.address}, ${cert.customer.city}`
@@ -309,7 +312,7 @@ export function APYCertificateDetails({
           {cert.isReceived && cert.receivedAt && (
             <div className="mt-2 pt-2 border-t border-gray-100">
               <InfoRow
-                label="Ελήφθη"
+                label={t('apy.fields.received')}
                 value={formatDateTime(cert.receivedAt)}
               />
             </div>
@@ -320,16 +323,16 @@ export function APYCertificateDetails({
       {/* ── Invoice Table ───────────────────────────────────────────────────── */}
       <section aria-labelledby="invoices-heading">
         <h2 id="invoices-heading" className="text-sm font-semibold text-gray-700 mb-2">
-          Τιμολόγια ({cert.lineItems.length})
+          {t('apy.invoices.heading', { count: cert.lineItems.length })}
         </h2>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Αρ. ΤΠΥ</TableHead>
-              <TableHead>Ημερομηνία</TableHead>
-              <TableHead className="text-right">Καθαρό Ποσό</TableHead>
-              <TableHead className="text-center">Συντ. %</TableHead>
-              <TableHead className="text-right">Παρακράτηση</TableHead>
+              <TableHead>{t('apy.invoiceTable.number')}</TableHead>
+              <TableHead>{t('apy.invoiceTable.date')}</TableHead>
+              <TableHead className="text-right">{t('apy.invoiceTable.netAmount')}</TableHead>
+              <TableHead className="text-center">{t('apy.invoiceTable.rate')}</TableHead>
+              <TableHead className="text-right">{t('apy.invoiceTable.withholding')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -347,7 +350,7 @@ export function APYCertificateDetails({
             {/* Totals row */}
             <TableRow className="bg-gray-50 font-semibold">
               <TableCell colSpan={2} className="text-right text-gray-700">
-                Σύνολα
+                {t('apy.invoiceTable.totals')}
               </TableCell>
               <TableCell className="text-right">{totalNetFormatted}</TableCell>
               <TableCell />
@@ -363,7 +366,7 @@ export function APYCertificateDetails({
       {cert.notes && (
         <section aria-labelledby="notes-heading" className="rounded-lg border border-gray-200 p-4">
           <h2 id="notes-heading" className="text-sm font-semibold text-gray-700 mb-1">
-            Σημειώσεις
+            {t('apy.notesHeading')}
           </h2>
           <p className="text-sm text-gray-700 whitespace-pre-wrap">{cert.notes}</p>
         </section>
@@ -373,16 +376,16 @@ export function APYCertificateDetails({
       {emailHistory.length > 0 && (
         <section aria-labelledby="email-history-heading">
           <h2 id="email-history-heading" className="text-sm font-semibold text-gray-700 mb-2">
-            Ιστορικό Αποστολών Reminder ({emailHistory.length})
+            {t('apy.emailHistory.heading', { count: emailHistory.length })}
           </h2>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">#</TableHead>
-                <TableHead>Ημερομηνία</TableHead>
-                <TableHead>Παραλήπτης</TableHead>
-                <TableHead>Θέμα</TableHead>
-                <TableHead className="text-center">Κατάσταση</TableHead>
+                <TableHead>{t('apy.emailHistory.date')}</TableHead>
+                <TableHead>{t('apy.emailHistory.recipient')}</TableHead>
+                <TableHead>{t('apy.emailHistory.subject')}</TableHead>
+                <TableHead className="text-center">{t('apy.emailHistory.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -396,8 +399,10 @@ export function APYCertificateDetails({
 
       {/* ── Footer metadata ─────────────────────────────────────────────────── */}
       <footer className="text-xs text-gray-400 pt-2 border-t border-gray-100">
-        Δημιουργήθηκε: {formatDateTime(cert.createdAt)} · Τελ. ενημέρωση:{' '}
-        {formatDateTime(cert.updatedAt)}
+        {t('apy.footer', {
+          created: formatDateTime(cert.createdAt),
+          updated: formatDateTime(cert.updatedAt),
+        })}
       </footer>
 
       {/* ── Reminder Dialog ─────────────────────────────────────────────────── */}

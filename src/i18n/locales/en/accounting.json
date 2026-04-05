@@ -595,5 +595,98 @@
     "viewCreditNote": "View Credit Note",
     "originalInvoiceLink": "This is a credit note — linked to the original document.",
     "viewOriginal": "View Original"
+  },
+  "apy": {
+    "pageTitle": "Tax Withholding Certificates",
+    "pageDescription": "Tracking withholdings from customers",
+    "newCertificate": "New Certificate",
+    "loading": "Loading certificates...",
+    "loadingOne": "Loading certificate...",
+    "errorTitle": "Error",
+    "notFoundTitle": "Not Found",
+    "notFoundMessage": "Certificate not found.",
+    "fetchFailed": "Failed to load certificate",
+    "backToList": "Back to list",
+    "certificateTitle": "Tax Withholding Certificate {{year}}",
+    "createDialogTitle": "New Tax Withholding Certificate",
+    "createFailed": "Failed to create certificate.",
+    "createButton": "Create Certificate",
+    "cancel": "Cancel",
+    "filters": {
+      "year": "Year:",
+      "status": "Status:",
+      "all": "All",
+      "received": "Received",
+      "pending": "Pending"
+    },
+    "count": "{{count}} certificates",
+    "empty": {
+      "title": "No certificates found",
+      "hint": "Create a new certificate to get started."
+    },
+    "table": {
+      "customer": "Customer",
+      "vatNumber": "VAT #",
+      "year": "Year",
+      "invoiceCount": "Invoices",
+      "totalWithholding": "Total Withholding",
+      "status": "Status"
+    },
+    "status": {
+      "received": "Received",
+      "pending": "Pending"
+    },
+    "actions": {
+      "markReceived": "Received",
+      "exportPdf": "PDF",
+      "sendReminder": "Reminder"
+    },
+    "provider": {
+      "title": "Provider (You)"
+    },
+    "customerSection": {
+      "title": "Customer (Withholder)"
+    },
+    "fields": {
+      "vatNumber": "VAT #",
+      "taxOffice": "Tax Office",
+      "address": "Address",
+      "email": "Email",
+      "phone": "Phone",
+      "received": "Received",
+      "fiscalYear": "Fiscal Year",
+      "customerVat": "Customer VAT #",
+      "vatPlaceholder": "e.g. 123456789"
+    },
+    "invoices": {
+      "heading": "Invoices ({{count}})",
+      "withholdingHeading": "Invoices with withholding ({{count}})",
+      "empty": "No invoices with tax withholding found for this VAT # / year."
+    },
+    "invoiceTable": {
+      "number": "Inv. #",
+      "date": "Date",
+      "netAmount": "Net Amount",
+      "rate": "Rate %",
+      "withholding": "Withholding",
+      "totals": "Totals",
+      "totalWithholding": "Total Withholding"
+    },
+    "notesHeading": "Notes",
+    "emailHistory": {
+      "heading": "Reminder Send History ({{count}})",
+      "date": "Date",
+      "recipient": "Recipient",
+      "subject": "Subject",
+      "status": "Status",
+      "sent": "Sent",
+      "failed": "Failed"
+    },
+    "footer": "Created: {{created}} · Last updated: {{updated}}",
+    "duplicate": {
+      "title": "Certificate already exists",
+      "message": "A certificate for this customer and year {{year}} already exists.",
+      "viewExisting": "View existing certificate →"
+    }
   }
 }

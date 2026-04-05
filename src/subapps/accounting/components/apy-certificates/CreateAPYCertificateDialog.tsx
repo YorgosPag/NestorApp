@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, AlertCircle, Loader2, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +79,7 @@ export function CreateAPYCertificateDialog({
   onCreated,
   defaultFiscalYear,
 }: CreateAPYCertificateDialogProps) {
+  const { t } = useTranslation('accounting');
   const { user } = useAuth();
   const { profile: companyProfile } = useCompanySetup();
   const { createCertificate } = useAPYCertificates({ autoFetch: false });
@@ -216,7 +218,7 @@ export function CreateAPYCertificateDialog({
     setSubmitting(false);
 
     if (!result) {
-      setSubmitError('Αποτυχία δημιουργίας βεβαίωσης.');
+      setSubmitError(t('apy.createFailed'));
       return;
     }
 
@@ -237,7 +239,7 @@ export function CreateAPYCertificateDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ClipboardCheck className="h-5 w-5" />
-            Νέα Βεβαίωση Παρακράτησης Φόρου
+            {t('apy.createDialogTitle')}
           </DialogTitle>
         </DialogHeader>
 
@@ -245,7 +247,7 @@ export function CreateAPYCertificateDialog({
           {/* Fiscal Year */}
           <div className="flex items-center gap-4">
             <div className="w-36">
-              <Label htmlFor="apy-fiscal-year">Φορολογικό Έτος</Label>
+              <Label htmlFor="apy-fiscal-year">{t('apy.fields.fiscalYear')}</Label>
               <Select
                 value={String(fiscalYear)}
                 onValueChange={(v) => setFiscalYear(parseInt(v, 10))}
@@ -265,13 +267,13 @@ export function CreateAPYCertificateDialog({
 
             {/* Customer VAT */}
             <div className="flex-1">
-              <Label htmlFor="apy-vat">ΑΦΜ Πελάτη</Label>
+              <Label htmlFor="apy-vat">{t('apy.fields.customerVat')}</Label>
               <div className="flex gap-2 mt-1">
                 <Input
                   id="apy-vat"
                   value={customerVatNumber}
                   onChange={(e) => setCustomerVatNumber(e.target.value)}
-                  placeholder="π.χ. 123456789"
+                  placeholder={t('apy.fields.vatPlaceholder')}
                   className="font-mono"
                 />
                 <Button
@@ -300,16 +302,16 @@ export function CreateAPYCertificateDialog({
           {eligibleInvoices.length > 0 && (
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">
-                Τιμολόγια με παρακράτηση ({eligibleInvoices.length})
+                {t('apy.invoices.withholdingHeading', { count: eligibleInvoices.length })}
               </p>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Αρ. ΤΠΥ</TableHead>
-                    <TableHead>Ημερομηνία</TableHead>
-                    <TableHead className="text-right">Καθαρό Ποσό</TableHead>
-                    <TableHead className="text-center">Συντ. %</TableHead>
-                    <TableHead className="text-right">Παρακράτηση</TableHead>
+                    <TableHead>{t('apy.invoiceTable.number')}</TableHead>
+                    <TableHead>{t('apy.invoiceTable.date')}</TableHead>
+                    <TableHead className="text-right">{t('apy.invoiceTable.netAmount')}</TableHead>
+                    <TableHead className="text-center">{t('apy.invoiceTable.rate')}</TableHead>
+                    <TableHead className="text-right">{t('apy.invoiceTable.withholding')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -326,7 +328,7 @@ export function CreateAPYCertificateDialog({
                   ))}
                   <TableRow className="bg-gray-50 font-semibold">
                     <TableCell colSpan={4} className="text-right">
-                      Σύνολο Παρακράτησης
+                      {t('apy.invoiceTable.totalWithholding')}
                     </TableCell>
                     <TableCell className="text-right text-blue-900">
                       {formatCurrency(totalWithholdingAmount)}
@@ -339,7 +341,7 @@ export function CreateAPYCertificateDialog({
 
           {eligibleInvoices.length === 0 && !invoicesLoading && customerVatNumber.trim() && (
             <p className="text-sm text-gray-500 text-center py-4">
-              Δεν βρέθηκαν ΤΠΥ με παρακράτηση φόρου για αυτό το ΑΦΜ / έτος.
+              {t('apy.invoices.empty')}
             </p>
           )}
 
@@ -348,13 +350,13 @@ export function CreateAPYCertificateDialog({
             <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
               <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
               <div className="text-sm text-amber-800">
-                <p className="font-medium">Βεβαίωση ήδη υπάρχει</p>
-                <p>Υπάρχει ήδη βεβαίωση για αυτόν τον πελάτη και το έτος {fiscalYear}.</p>
+                <p className="font-medium">{t('apy.duplicate.title')}</p>
+                <p>{t('apy.duplicate.message', { year: fiscalYear })}</p>
                 <button
                   className="underline mt-1"
                   onClick={() => { onOpenChange(false); onCreated(duplicateId); }}
                 >
-                  Προβολή υπάρχουσας βεβαίωσης →
+                  {t('apy.duplicate.viewExisting')}
                 </button>
               </div>
             </div>
@@ -367,11 +369,11 @@ export function CreateAPYCertificateDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Ακύρωση
+            {t('apy.cancel')}
           </Button>
           <Button onClick={handleCreate} disabled={!canCreate}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Δημιουργία Βεβαίωσης
+            {t('apy.createButton')}
           </Button>
         </DialogFooter>
       </DialogContent>
