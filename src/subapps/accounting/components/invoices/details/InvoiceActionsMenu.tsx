@@ -94,7 +94,7 @@ export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendE
         {isEditable && onEdit && (
           <DropdownMenuItem onClick={onEdit}>
             <Pencil className="mr-2 h-4 w-4" />
-            {t('invoices.editInvoice', { defaultValue: 'Επεξεργασία' })}
+            {t('invoices.editInvoice')}
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={handlePrint} disabled={printing}>

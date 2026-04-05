@@ -117,6 +117,7 @@
     "title": "Bank Reconciliation",
     "description": "Import and match bank transactions",
     "loading": "Loading bank transactions...",
+    "loadingCandidates": "Searching candidates...",
     "loadError": "Loading error",
     "importCSV": "Import CSV",
     "matchTransactions": "Match Transactions",
@@ -480,6 +481,7 @@
   },
   "dashboard": {
     "title": "Accounting Dashboard",
+    "loading": "Loading dashboard...",
     "totalIncome": "Total Income",
     "totalExpenses": "Total Expenses",
     "vatOwed": "VAT Owed",

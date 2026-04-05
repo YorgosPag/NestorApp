@@ -117,6 +117,7 @@
     "title": "Συμφωνία Τράπεζας",
     "description": "Εισαγωγή και αντιστοίχιση τραπεζικών κινήσεων",
     "loading": "Φόρτωση τραπεζικών κινήσεων...",
+    "loadingCandidates": "Αναζήτηση υποψηφίων...",
     "loadError": "Σφάλμα φόρτωσης",
     "importCSV": "Εισαγωγή CSV",
     "matchTransactions": "Αντιστοίχιση Κινήσεων",
@@ -480,6 +481,7 @@
   },
   "dashboard": {
     "title": "Dashboard Λογιστικού",
+    "loading": "Φόρτωση dashboard...",
     "totalIncome": "Σύνολο Εσόδων",
     "totalExpenses": "Σύνολο Εξόδων",
     "vatOwed": "Οφειλόμενο ΦΠΑ",

@@ -145,7 +145,7 @@ export function ReportDetailView() {
         {loading && (
           <PageLoadingState
             icon={FileBarChart}
-            message={t('reports.loading', { defaultValue: 'Loading report...' })}
+            message={t('reports.loading')}
             layout="contained"
           />
         )}

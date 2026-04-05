@@ -43,9 +43,7 @@ export function usePropertiesSidebar(
       }
 
       await runExistingPropertyUpdate(currentProperty, updates);
-      success(t('viewer.messages.updateSuccess', {
-        defaultValue: 'Property changes were saved.',
-      }));
+      success(t('viewer.messages.updateSuccess'));
       logger.info(`Property ${propertyId} updated in Firestore:`, { data: Object.keys(updates) });
     } catch (error) {
       logger.error(`Failed to persist property update to Firestore: ${error instanceof Error ? error.message : String(error)}`);

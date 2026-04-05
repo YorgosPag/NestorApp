@@ -59,7 +59,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Bed className={cn(iconSizes.sm, 'text-violet-500')} />
-              {t('fields.layout.sectionTitle', { defaultValue: 'Διάταξη' })}
+              {t('fields.layout.sectionTitle')}
               {isMultiLevel && (
                 <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
                   {t('multiLevel.perLevel.perFloorHint')}

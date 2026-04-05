@@ -163,7 +163,7 @@ export function MatchingPanel({
             </p>
           ) : loadingCandidates ? (
             <p className={cn("text-center py-6", colors.text.muted)}>
-              {t('bank.loadingCandidates', { defaultValue: 'Αναζήτηση υποψηφίων...' })}
+              {t('bank.loadingCandidates')}
             </p>
           ) : candidates.length === 0 ? (
             <p className={cn("text-center py-6", colors.text.muted)}>

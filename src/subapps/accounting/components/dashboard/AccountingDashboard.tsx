@@ -148,7 +148,7 @@ export function AccountingDashboard() {
   if (loading) {
     return (
       <main className="min-h-screen bg-background">
-        <PageLoadingState icon={Receipt} message={t('dashboard.loading', { defaultValue: 'Φόρτωση dashboard...' })} layout="contained" />
+        <PageLoadingState icon={Receipt} message={t('dashboard.loading')} layout="contained" />
       </main>
     );
   }
