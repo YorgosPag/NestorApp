@@ -1,16 +1,8 @@
 import { getErrorMessage } from '@/lib/error-utils';
-import { db, storage } from '../../../lib/firebase';
-import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { storage } from '../../../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
-import { COLLECTIONS } from '../../../config/firestore-collections';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import { buildFileDisplayName } from '@/services/upload/utils/file-display-name';
-import {
-  LEGACY_STORAGE_PATHS,
-  type EntityType,
-  type FileDomain,
-  type FileCategory,
-} from '@/config/domain-constants';
+import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import type { SceneModel } from '../types/scene';
 import {
   DxfSecurityValidator,
@@ -18,6 +10,7 @@ import {
   SecuritySeverity,
 } from '../security/DxfSecurityValidator';
 import { generateFileId as enterpriseGenerateFileId } from '@/services/enterprise-id.service';
+import { upsertCadFileWithPolicy } from '@/services/cad-file-mutation-gateway';
 import { dxfLogger, isExpectedError } from './dxf-firestore-logger';
 import type { DxfSaveContext, DxfFileMetadata, DxfFileRecord } from './dxf-firestore.types';
 
@@ -25,15 +18,16 @@ import type { DxfSaveContext, DxfFileMetadata, DxfFileRecord } from './dxf-fires
 // 🏢 ENTERPRISE STORAGE IMPLEMENTATION MODULE
 // =============================================================================
 // Contains the heavy lifting for DXF scene persistence:
-//  - Save/load scenes to Firebase Storage + Firestore metadata
+//  - Upload/download scene JSON to Firebase Storage (client-side)
 //  - Security validation pipeline
-//  - Dual-write to `files` collection (cadFiles → files consolidation)
+//  - Delegates cadFiles metadata writes + dual-write to the centralized
+//    /api/cad-files SSOT endpoint (ADR-288). No direct client-side Firestore
+//    writes on cadFiles/files collections live here anymore.
 //
 // The public-facing `DxfFirestoreService` class delegates to these functions,
 // keeping its surface area thin and enabling testability of each concern.
 // =============================================================================
 
-const COLLECTION_NAME = COLLECTIONS.CAD_FILES;
 const STORAGE_FOLDER = LEGACY_STORAGE_PATHS.DXF_SCENES;
 
 /**
@@ -134,98 +128,15 @@ export async function validateForSaveImpl(
 }
 
 /**
- * 🔄 DUAL-WRITE: Write enterprise FileRecord to `files` collection.
- * Maps DxfFileMetadata → FileRecord schema for cadFiles → files consolidation.
- * Uses merge: true so repeated saves update rather than overwrite.
+ * Save scene to Firebase Storage + metadata to Firestore (Enterprise Edition).
  *
- * @enterprise ADR-031 — File Storage Consolidation (cadFiles → files)
- */
-async function writeToFilesCollection(
-  fileId: string,
-  fileName: string,
-  downloadUrl: string,
-  sizeBytes: number,
-  entityCount: number,
-  version: number,
-  context?: DxfSaveContext
-): Promise<void> {
-  // 🏢 ENTERPRISE: Use canonical scene path if available
-  const scenePath = context?.canonicalScenePath ?? `${STORAGE_FOLDER}/${fileId}/scene.json`;
-  if (!context?.canonicalScenePath) {
-    dxfLogger.warn(
-      'Using legacy dxf-scenes/ path in files collection — provide canonicalScenePath in DxfSaveContext',
-      { fileId }
-    );
-  }
-
-  // 🏢 ADR-240: Resolve entityType + entityId from context (fix hardcoded 'building')
-  const resolvedEntityType = context?.entityType ?? 'building';
-  const resolvedEntityId = (() => {
-    if (resolvedEntityType === 'floor') return context?.floorId ?? 'standalone';
-    if (resolvedEntityType === 'property')
-      return context?.floorId ?? context?.buildingId ?? 'standalone';
-    return context?.buildingId ?? 'standalone';
-  })();
-  const resolvedCategory = context?.filesCategory ?? 'drawings';
-
-  // 🏢 ENTERPRISE: Generate proper displayName via centralized buildFileDisplayName
-  // instead of using the raw filename (fixes ΕΚΚΡ.2 — floorplan display names)
-  // When no entityLabel from wizard context, use cleaned filename as fallback
-  // to avoid generic-only names like "Σχέδια" for direct DXF saves
-  const cleanedFileName = fileName.replace(/\.dxf$/i, '').trim();
-  const { displayName: generatedDisplayName } = buildFileDisplayName({
-    entityType: resolvedEntityType as EntityType,
-    entityId: resolvedEntityId,
-    domain: 'construction' as FileDomain,
-    category: resolvedCategory as FileCategory,
-    entityLabel: context?.entityLabel || cleanedFileName,
-    purpose: context?.purpose,
-    ext: 'dxf',
-    originalFilename: fileName,
-  });
-
-  const fileRecord = {
-    id: fileId,
-    companyId: context?.companyId ?? null,
-    projectId: context?.projectId ?? null,
-    entityType: resolvedEntityType,
-    entityId: resolvedEntityId,
-    domain: 'construction' as const,
-    category: resolvedCategory,
-    ...(context?.purpose ? { purpose: context.purpose } : {}),
-    storagePath: scenePath,
-    displayName: generatedDisplayName,
-    originalFilename: fileName,
-    ext: 'dxf',
-    contentType: 'application/dxf',
-    status: 'ready' as const,
-    lifecycleState: 'active' as const,
-    isDeleted: false,
-    sizeBytes,
-    downloadUrl,
-    revision: version,
-    hash: null,
-    createdBy: context?.createdBy ?? 'system',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    processedData: {
-      fileType: 'dxf' as const,
-      sceneStats: { entityCount, layerCount: 0, parseTimeMs: 0 },
-      processedDataPath: scenePath,
-      processedDataUrl: downloadUrl,
-      processedAt: Date.now(),
-    },
-  };
-
-  const filesDocRef = doc(db, COLLECTIONS.FILES, fileId);
-  await setDoc(filesDocRef, fileRecord, { merge: true });
-
-  dxfLogger.debug('Dual-write to files collection succeeded', { fileId });
-}
-
-/**
- * Save scene to Firebase Storage + metadata to Firestore (Enterprise Edition)
- * Also dual-writes to `files` collection for cadFiles → files consolidation.
+ * 🏢 ADR-288: Metadata writes go through the centralized /api/cad-files
+ * endpoint via `upsertCadFileWithPolicy`. This function only performs the
+ * client-side Firebase Storage upload (scene JSON bytes) and then delegates
+ * the cadFiles + files dual-write to the server-side SSOT pipeline.
+ *
+ * @see ADR-288 — CAD File Metadata Centralization
+ * @see ADR-031 — File Storage Consolidation (cadFiles → files)
  */
 export async function saveToStorageImpl(
   fileId: string,
@@ -262,61 +173,47 @@ export async function saveToStorageImpl(
     // 3. Get download URL
     const downloadURL = await getDownloadURL(snapshot.ref);
 
-    // 4. Get current version for incrementing
-    const currentMetadata = await getFileMetadataImpl(fileId);
-    const newVersion = (currentMetadata?.version || 0) + 1;
-
-    // 4.5. Run security validation for audit trail
+    // 4. Run security validation for audit trail
     const validation = await validateForSaveImpl(fileName, scene);
 
-    // 5. Save metadata to Firestore (NO SCENE DATA)
-    const metadata: DxfFileMetadata = {
-      id: fileId,
+    // 5. 🏢 ADR-288: Upsert cadFiles metadata via centralized server endpoint.
+    //    Server computes the next version, writes cadFiles, dual-writes `files`,
+    //    and records an audit log entry. companyId/createdBy come from auth ctx.
+    //    Throws on HTTP/contract failure — handled by the outer try/catch.
+    const upsertResult = await upsertCadFileWithPolicy({
+      fileId,
       fileName,
       storageUrl: downloadURL,
-      storagePath, // 🏢 ENTERPRISE: Persist actual storage path for reliable loading
-      lastModified: serverTimestamp() as Timestamp,
-      version: newVersion,
-      checksum: generateSceneChecksum(scene),
+      storagePath,
       sizeBytes: sceneBytes.length,
       entityCount: scene.entities.length,
-      // 🔒 TENANT SCOPING (Sentry NESTOR-APP-3): write companyId + createdBy so
-      // Firestore rules that enforce companyId == getUserCompanyId() allow
-      // cross-user reads on cadFiles metadata.
-      companyId: context?.companyId ?? null,
-      createdBy: context?.createdBy ?? null,
+      checksum: generateSceneChecksum(scene),
       securityValidation: {
-        validatedAt: serverTimestamp() as Timestamp,
-        validationResults: validation.validationResults,
+        validationResults: validation.validationResults as unknown as Array<{
+          isValid: boolean;
+          [key: string]: unknown;
+        }>,
         isSecure: validation.isValid,
       },
-    };
-
-    const docRef = doc(db, COLLECTION_NAME, fileId);
-    await setDoc(docRef, metadata);
-
-    // 🔄 DUAL-WRITE: Also save to files collection (enterprise FileRecord)
-    // Non-blocking — cadFiles remains primary, files write failure is silent
-    try {
-      await writeToFilesCollection(
-        fileId,
-        fileName,
-        downloadURL,
-        sceneBytes.length,
-        scene.entities.length,
-        newVersion,
-        context
-      );
-    } catch (dualWriteError) {
-      dxfLogger.warn('Dual-write to files collection failed (non-blocking)', {
-        fileId,
-        error: getErrorMessage(dualWriteError),
-      });
-    }
+      context: context
+        ? {
+            projectId: context.projectId,
+            buildingId: context.buildingId,
+            floorId: context.floorId,
+            entityType: context.entityType,
+            filesCategory: context.filesCategory,
+            purpose: context.purpose,
+            entityLabel: context.entityLabel,
+            canonicalScenePath: context.canonicalScenePath,
+          }
+        : undefined,
+    });
 
     // 🏢 ENTERPRISE: INFO level for successful saves (important operation)
     dxfLogger.info('Storage save complete', {
       fileId,
+      version: upsertResult.version,
+      created: upsertResult.created,
       sizeKB: Math.round(sceneBytes.length / 1024),
       entities: scene.entities.length,
     });

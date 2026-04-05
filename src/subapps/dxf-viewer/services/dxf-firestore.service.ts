@@ -1,6 +1,5 @@
 import { getErrorMessage } from '@/lib/error-utils';
 import { db } from '../../../lib/firebase';
-import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { COLLECTIONS } from '../../../config/firestore-collections';
 import { generateFileId as enterpriseGenerateFileId } from '@/services/enterprise-id.service';
 import type { SceneModel } from '../types/scene';
@@ -16,7 +15,6 @@ import {
   validateForSaveImpl,
   getFileMetadataImpl,
   getFileImpl,
-  generateSceneChecksum,
 } from './dxf-firestore-storage.impl';
 
 // Re-export types for backward compatibility with existing callers.
@@ -33,29 +31,21 @@ export class DxfFirestoreService {
   private static readonly COLLECTION_NAME = COLLECTIONS.CAD_FILES;
 
   /**
-   * Auto-save scene to Firestore
+   * Auto-save scene.
+   *
+   * 🏢 ADR-288: Delegates to saveToStorageImpl (centralized /api/cad-files
+   * upsert pipeline). No direct client-side Firestore writes. The scene bytes
+   * are uploaded to Firebase Storage and metadata is written server-side.
+   *
    * @deprecated Use autoSaveV3 for enterprise security features
    */
   static async autoSave(fileId: string, fileName: string, scene: SceneModel): Promise<boolean> {
     try {
-      // Get current version
-      const currentDoc = await getFileImpl(fileId);
-      const newVersion = (currentDoc?.version || 0) + 1;
-
-      const record: DxfFileRecord = {
-        id: fileId,
-        fileName,
-        scene,
-        lastModified: serverTimestamp() as Timestamp,
-        version: newVersion,
-        checksum: generateSceneChecksum(scene),
-      };
-
-      const docRef = doc(db, this.COLLECTION_NAME, fileId);
-      await setDoc(docRef, record);
-
-      dxfLogger.debug('Auto-save complete', { fileId, version: newVersion });
-      return true;
+      const success = await saveToStorageImpl(fileId, fileName, scene);
+      if (success) {
+        dxfLogger.debug('Auto-save complete (delegated to SSOT)', { fileId });
+      }
+      return success;
     } catch (error) {
       dxfLogger.error('Auto-save failed', { fileId, error: getErrorMessage(error) });
       return false;

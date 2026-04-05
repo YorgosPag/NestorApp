@@ -604,6 +604,11 @@ export const API_ROUTES = {
     LIST: '/api/dxf-levels',
   },
 
+  // ── CAD Files (ADR-288) ───────────────────────────────────────────────
+  CAD_FILES: {
+    LIST: '/api/cad-files',
+  },
+
   // ── Properties ────────────────────────────────────────────────────────
   PROPERTIES: {
     LIST: '/api/properties',

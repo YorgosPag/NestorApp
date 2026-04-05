@@ -28,7 +28,8 @@ export type ServerEntityType =
   | 'property'
   | 'storage'
   | 'parking'
-  | 'dxfLevel';
+  | 'dxfLevel'
+  | 'cadFile';
 
 /**
  * Determines how companyId is resolved.
@@ -44,7 +45,8 @@ export type EntityIdGeneratorName =
   | 'generatePropertyId'
   | 'generateStorageId'
   | 'generateParkingId'
-  | 'generateLevelId';
+  | 'generateLevelId'
+  | 'generateFileId';
 
 /** Entity types that support ADR-233 code generation */
 export type EntityCodeType = 'property' | 'parking' | 'storage';
@@ -144,6 +146,23 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     hierarchy: 'tenant-scoped',
     parentField: 'floorId',
     idGenerator: 'generateLevelId',
+    codeType: null,
+    codeField: null,
+    tenantCheck: false,
+    auditTargetType: 'api',
+  },
+  /**
+   * 🏢 ADR-288: CAD File metadata (DXF scene metadata, stored in cadFiles collection).
+   * Standalone tenant-scoped entity — no parent FK. Client supplies fileId for
+   * upsert semantics (auto-save re-writes same doc with incremented version),
+   * so the dedicated /api/cad-files handler uses direct adminDb upserts rather
+   * than createEntity(). This registry entry exists for SSOT documentation.
+   */
+  cadFile: {
+    collection: COLLECTIONS.CAD_FILES,
+    hierarchy: 'tenant-scoped',
+    parentField: null,
+    idGenerator: 'generateFileId',
     codeType: null,
     codeField: null,
     tenantCheck: false,
