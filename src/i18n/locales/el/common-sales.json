@@ -274,6 +274,8 @@
       "emailNotifyRemoveBody": "Θέλετε να σταλεί email ακύρωσης στον/στην «{{contactName}}» για την αφαίρεσή του/της από τον ρόλο {{roleLabel}};",
       "emailNotifyYes": "Ναι, αποστολή",
       "emailNotifyNo": "Όχι",
+      "viewContact": "Προβολή επαφής",
+      "understood": "Κατάλαβα",
       "addBrokerHint": "Προσθέστε μεσίτη από το tab Μεσίτες του έργου",
       "unassigned": "Μη ανατεθ.",
       "brokerageTitle": "Μεσιτικές Συμβάσεις",

@@ -274,6 +274,8 @@
       "emailNotifyRemoveBody": "Would you like to send a cancellation email to «{{contactName}}» about their removal from the role {{roleLabel}}?",
       "emailNotifyYes": "Yes, send",
       "emailNotifyNo": "No",
+      "viewContact": "View contact",
+      "understood": "Understood",
       "addBrokerHint": "Add a broker from the project's Brokers tab",
       "unassigned": "Unassigned",
       "brokerageTitle": "Brokerage Agreements",

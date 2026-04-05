@@ -187,8 +187,8 @@ export function ProfessionalsCard({
         propertyId,
         type: notification.type,
       })
-        .then(() => toast.success(t('sales.legal.emailSent', { defaultValue: 'Το email στάλθηκε' })))
-        .catch(() => toast.error(t('sales.legal.emailFailed', { defaultValue: 'Αποτυχία αποστολής email' })));
+        .then(() => toast.success(t('sales.legal.emailSent')))
+        .catch(() => toast.error(t('sales.legal.emailFailed')));
     },
     [propertyId, t]
   );
@@ -201,7 +201,7 @@ export function ProfessionalsCard({
       try {
         const linked = await onAssign(contact.id, role);
         if (!linked) {
-          toast.error(t('common.error', { defaultValue: 'Σφάλμα' }));
+          toast.error(t('status.error'));
           return;
         }
 
@@ -211,7 +211,7 @@ export function ProfessionalsCard({
         }
 
         setEditingRole(null);
-        toast.success(t('sales.legal.professionalAssigned', { defaultValue: 'Ανατέθηκε επιτυχώς' }));
+        toast.success(t('sales.legal.professionalAssigned'));
 
         // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
@@ -229,7 +229,7 @@ export function ProfessionalsCard({
           type: 'assignment',
         });
       } catch {
-        toast.error(t('common.error', { defaultValue: 'Σφάλμα' }));
+        toast.error(t('status.error'));
       } finally {
         setSaving(false);
       }
@@ -298,7 +298,7 @@ export function ProfessionalsCard({
       try {
         const removed = await onRemove(linkId);
         if (!removed) {
-          toast.error(t('common.error', { defaultValue: 'Σφάλμα' }));
+          toast.error(t('status.error'));
           return;
         }
 
@@ -307,7 +307,7 @@ export function ProfessionalsCard({
           await onOverrideProfessional(draft.id, role, null);
         }
 
-        toast.success(t('sales.legal.professionalRemoved', { defaultValue: 'Αφαιρέθηκε' }));
+        toast.success(t('sales.legal.professionalRemoved'));
 
         // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
@@ -325,7 +325,7 @@ export function ProfessionalsCard({
           type: 'removal',
         });
       } catch {
-        toast.error(t('common.error', { defaultValue: 'Σφάλμα' }));
+        toast.error(t('status.error'));
       } finally {
         setSaving(false);
       }
@@ -338,7 +338,7 @@ export function ProfessionalsCard({
       <section className="rounded-lg border bg-card p-3 space-y-2">
         <h3 className="text-sm font-semibold flex items-center gap-1.5">
           <User className={cn("h-4 w-4", colors.text.muted)} />
-          {t('sales.legal.professionalsTitle', { defaultValue: 'Νομικοί Επαγγελματίες' })}
+          {t('sales.legal.professionalsTitle')}
         </h3>
 
         <ul className="space-y-2">
@@ -359,7 +359,7 @@ export function ProfessionalsCard({
                       <Link
                         href={ENTITY_ROUTES.contacts.withId(linked.contactId)}
                         className="font-medium truncate text-foreground hover:text-blue-700 hover:underline dark:hover:text-blue-400"
-                        title={t('common.viewContact', { defaultValue: 'Προβολή επαφής' })}
+                        title={t('sales.legal.viewContact')}
                       >
                         {linked.contactName}
                       </Link>
@@ -370,7 +370,7 @@ export function ProfessionalsCard({
                           className="h-5 w-5"
                           onClick={() => setEditingRole(isEditing ? null : slot.role)}
                           disabled={saving}
-                          title={t('common.edit', { defaultValue: 'Επεξεργασία' })}
+                          title={t('actions.edit')}
                         >
                           <Pencil className="h-3 w-3" />
                         </Button>
@@ -380,7 +380,7 @@ export function ProfessionalsCard({
                           className="h-5 w-5 text-destructive hover:text-destructive"
                           onClick={() => handleRemove(linked.linkId, slot.role, linked.contactId, linked.contactName)}
                           disabled={saving}
-                          title={t('sales.legal.removeProfessional', { defaultValue: 'Αφαίρεση' })}
+                          title={t('sales.legal.removeProfessional')}
                         >
                           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
                         </Button>
@@ -395,7 +395,7 @@ export function ProfessionalsCard({
                       disabled={saving}
                     >
                       <UserPlus className="h-3 w-3" />
-                      {t('sales.legal.assign', { defaultValue: 'Ανάθεση' })}
+                      {t('sales.legal.assign')}
                     </Button>
                   )}
                 </article>
@@ -406,7 +406,7 @@ export function ProfessionalsCard({
                     <ContactSearchManager
                       selectedContactId=""
                       onContactSelect={(contact) => handleAssign(contact, slot.role)}
-                      placeholder={t('sales.legal.searchProfessional', { defaultValue: 'Αναζήτηση επαγγελματία...' })}
+                      placeholder={t('sales.legal.searchProfessional')}
                       label=""
                       className="max-w-xs"
                     />
@@ -420,7 +420,7 @@ export function ProfessionalsCard({
         {saving && (
           <p className={cn("text-[10px] flex items-center gap-1", colors.text.muted)}>
             <Loader2 className="h-3 w-3 animate-spin" />
-            {t('common.saving', { defaultValue: 'Αποθήκευση...' })}
+            {t('loadingStates.saving')}
           </p>
         )}
       </section>
@@ -436,29 +436,27 @@ export function ProfessionalsCard({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <ShieldAlert className="h-5 w-5" />
-              {t('sales.legal.conflictBlockTitle', { defaultValue: 'Ασυμβίβαστο Ρόλων' })}
+              {t('sales.legal.conflictBlockTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <section className="space-y-2 text-sm">
                 <p>
-                  {t('sales.legal.conflictBlockPre', { defaultValue: 'Ο/Η' })}{' '}
+                  {t('sales.legal.conflictBlockPre')}{' '}
                   <strong>«{pendingAssignment?.contact.name}»</strong>{' '}
-                  {t('sales.legal.conflictBlockAlready', { defaultValue: 'έχει ήδη ανατεθεί ως' })}{' '}
+                  {t('sales.legal.conflictBlockAlready')}{' '}
                   <strong>{pendingAssignment?.existingRoleLabel}</strong>.{' '}
-                  {t('sales.legal.conflictBlockCannot', { defaultValue: 'Δεν μπορεί να αναλάβει ταυτόχρονα και τον ρόλο' })}{' '}
+                  {t('sales.legal.conflictBlockCannot')}{' '}
                   <strong>{pendingAssignment?.targetRoleLabel}</strong>.
                 </p>
                 <p className={cn("italic", colors.text.muted)}>
-                  {t('sales.legal.conflictBlockLaw', {
-                    defaultValue: 'Ν.2830/2000, Άρ.22§2: Ο διορισμός ως συμβολαιογράφος συνεπάγεται αυτοδίκαια αποβολή της ιδιότητας του δικηγόρου. Άρ.37§1: Τα έργα του συμβολαιογράφου είναι ασυμβίβαστα με κάθε άλλη επαγγελματική δραστηριότητα.',
-                  })}
+                  {t('sales.legal.conflictBlockLaw')}
                 </p>
               </section>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              {t('common.understood', { defaultValue: 'Κατάλαβα' })}
+              {t('sales.legal.understood')}
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -475,32 +473,30 @@ export function ProfessionalsCard({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
               <AlertTriangle className="h-5 w-5" />
-              {t('sales.legal.conflictWarningTitle', { defaultValue: 'Σύγκρουση Συμφερόντων' })}
+              {t('sales.legal.conflictWarningTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <section className="space-y-2 text-sm">
                 <p>
-                  {t('sales.legal.conflictBlockPre', { defaultValue: 'Ο/Η' })}{' '}
+                  {t('sales.legal.conflictBlockPre')}{' '}
                   <strong>«{pendingAssignment?.contact.name}»</strong>{' '}
-                  {t('sales.legal.conflictBlockAlready', { defaultValue: 'έχει ήδη ανατεθεί ως' })}{' '}
+                  {t('sales.legal.conflictBlockAlready')}{' '}
                   <strong>{pendingAssignment?.existingRoleLabel}</strong>.{' '}
-                  {t('sales.legal.conflictWarningSure', { defaultValue: 'Είστε σίγουροι ότι θέλετε να αναλάβει και τον ρόλο' })}{' '}
+                  {t('sales.legal.conflictWarningSure')}{' '}
                   <strong>{pendingAssignment?.targetRoleLabel}</strong>;
                 </p>
                 <p className={cn("italic", colors.text.muted)}>
-                  {t('sales.legal.conflictWarningLaw', {
-                    defaultValue: 'Κώδικας Δεοντολογίας Δικηγόρων, Άρ.37: Απαγορεύεται η παροχή βοήθειας σε αμφότερα τα μέρη. Η ταυτόχρονη εκπροσώπηση πωλητή και αγοραστή αποτελεί σύγκρουση συμφερόντων.',
-                  })}
+                  {t('sales.legal.conflictWarningLaw')}
                 </p>
               </section>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              {t('common.cancel', { defaultValue: 'Ακύρωση' })}
+              {t('actions.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmAssignment} className="bg-amber-600 hover:bg-amber-700">
-              {t('sales.legal.assignAnyway', { defaultValue: 'Ανάθεση παρόλα αυτά' })}
+              {t('sales.legal.assignAnyway')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -518,19 +514,17 @@ export function ProfessionalsCard({
             <AlertDialogTitle className="flex items-center gap-2">
               <Mail className={`h-5 w-5 ${pendingEmail?.type === 'removal' ? 'text-destructive' : 'text-blue-600'}`} />
               {pendingEmail?.type === 'removal'
-                ? t('sales.legal.emailNotifyRemoveTitle', { defaultValue: 'Αποστολή email ακύρωσης' })
-                : t('sales.legal.emailNotifyAssignTitle', { defaultValue: 'Αποστολή email ειδοποίησης' })}
+                ? t('sales.legal.emailNotifyRemoveTitle')
+                : t('sales.legal.emailNotifyAssignTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <p className="text-sm">
                 {pendingEmail?.type === 'removal'
                   ? t('sales.legal.emailNotifyRemoveBody', {
-                      defaultValue: 'Θέλετε να σταλεί email ακύρωσης στον/στην «{{contactName}}» για την αφαίρεσή του/της από τον ρόλο {{roleLabel}};',
                       contactName: pendingEmail?.contactName ?? '',
                       roleLabel: pendingEmail?.roleLabel ?? '',
                     })
                   : t('sales.legal.emailNotifyAssignBody', {
-                      defaultValue: 'Θέλετε να σταλεί email ειδοποίησης στον/στην «{{contactName}}» για την ανάθεση του ρόλου {{roleLabel}};',
                       contactName: pendingEmail?.contactName ?? '',
                       roleLabel: pendingEmail?.roleLabel ?? '',
                     })}
@@ -539,7 +533,7 @@ export function ProfessionalsCard({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              {t('sales.legal.emailNotifyNo', { defaultValue: 'Όχι' })}
+              {t('sales.legal.emailNotifyNo')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
@@ -547,7 +541,7 @@ export function ProfessionalsCard({
                 setPendingEmail(null);
               }}
             >
-              {t('sales.legal.emailNotifyYes', { defaultValue: 'Ναι, αποστολή' })}
+              {t('sales.legal.emailNotifyYes')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
