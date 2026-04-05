@@ -84,7 +84,7 @@ export function SalesQuickFilters({
         selectedTypes={selectedCommercialStatus === 'all' ? [] : [selectedCommercialStatus]}
         onTypeChange={handleStatusChange}
         compact
-        ariaLabel={t('sales.quickFilters.statusAriaLabel', { defaultValue: 'Φίλτρο εμπορικής κατάστασης' })}
+        ariaLabel={t('sales.quickFilters.statusAriaLabel')}
       />
 
       {/* Row 2: Unit Type */}
@@ -93,7 +93,7 @@ export function SalesQuickFilters({
         selectedTypes={selectedPropertyType === 'all' ? [] : [selectedPropertyType]}
         onTypeChange={handleTypeChange}
         compact
-        ariaLabel={t('sales.quickFilters.typeAriaLabel', { defaultValue: 'Φίλτρο τύπου μονάδας' })}
+        ariaLabel={t('sales.quickFilters.typeAriaLabel')}
       />
     </div>
   );

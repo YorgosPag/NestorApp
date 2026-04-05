@@ -111,6 +111,8 @@
       "overview": "Διαθέσιμα Ακίνητα - Επισκόπηση",
       "listTitle": "Διαθέσιμα Ακίνητα",
       "listLabel": "Λίστα διαθέσιμων ακινήτων προς πώληση",
+      "searchPlaceholder": "Αναζήτηση μονάδας...",
+      "addToMarket": "Προσθήκη στην αγορά",
       "noResults": "Δεν βρέθηκαν ακίνητα με αυτά τα κριτήρια.",
       "propertyDetails": "Στοιχεία Ακινήτου",
       "stats": {
@@ -434,7 +436,9 @@
       "reserved": "Κρατημένα",
       "reservedTooltip": "Κρατημένα από αγοραστή",
       "dualListing": "Πώληση & Ενοικίαση",
-      "dualListingTooltip": "Καταχωρημένα για πώληση και ενοικίαση"
+      "dualListingTooltip": "Καταχωρημένα για πώληση και ενοικίαση",
+      "statusAriaLabel": "Φίλτρο εμπορικής κατάστασης",
+      "typeAriaLabel": "Φίλτρο τύπου μονάδας"
     }
   },
   "salesStorage": {

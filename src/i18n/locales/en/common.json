@@ -121,7 +121,8 @@
   },
   "dropdown": {
     "clearSelection": "Clear selection",
-    "totalContacts": "{count} total contacts - use scroll or search to navigate"
+    "totalContacts": "{count} total contacts - use scroll or search to navigate",
+    "createNewContact": "Create new contact"
   },
   "propertyStatus": {
     "sold": "Sold",

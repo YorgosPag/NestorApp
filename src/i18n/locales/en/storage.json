@@ -68,7 +68,8 @@
       "description": "Description",
       "notes": "Notes",
       "lastUpdated": "Last Updated",
-      "owner": "Owner"
+      "owner": "Owner",
+      "millesimalShares": "Millesimal shares (‰)"
     },
     "types": {
       "large": "Large",

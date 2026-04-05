@@ -108,10 +108,10 @@ export function FilePathTree({
       try {
         const copied = await copyToClipboard(storagePath);
         if (copied) { success(t('technical.pathCopied')); }
-        else { error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' })); }
+        else { error(t('copy.copyError', { ns: 'common' })); }
       } catch (err) {
         logger.error('Failed to copy path', { error: err });
-        error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
+        error(t('copy.copyError', { ns: 'common' }));
       }
     },
     [success, error, t]

@@ -94,7 +94,7 @@ export function SalesAvailableHeader({
       search={{
         value: searchTerm,
         onChange: setSearchTerm,
-        placeholder: searchPlaceholderOverride ?? t('sales.available.searchPlaceholder', { defaultValue: 'Αναζήτηση μονάδας...' }),
+        placeholder: searchPlaceholderOverride ?? t('sales.available.searchPlaceholder'),
       }}
       actions={{
         showDashboard,
@@ -103,7 +103,7 @@ export function SalesAvailableHeader({
         onViewModeChange: (mode) => setViewMode(mode as SalesViewMode),
         viewModes: ['list', 'grid'] as CoreViewMode[],
         addButton: onAddToMarket
-          ? { label: t('sales.available.addToMarket', { defaultValue: 'Προσθήκη στην αγορά' }), onClick: onAddToMarket }
+          ? { label: t('sales.available.addToMarket'), onClick: onAddToMarket }
           : undefined,
         customActions: customActions.length > 0 ? customActions : undefined,
       }}

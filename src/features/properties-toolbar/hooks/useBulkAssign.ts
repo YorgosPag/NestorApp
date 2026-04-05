@@ -44,10 +44,7 @@ export function useBulkAssign({ notifications, onSuccess }: UseBulkAssignProps) 
   const assignToContact = useCallback(
     async (ids: string[]) => {
       if (!selectedContactId) {
-        notifications.error(t('common.dropdowns.selectClient', {
-          ns: 'common',
-          defaultValue: 'Select client',
-        }));
+        notifications.error(t('dropdowns.selectClient', { ns: 'common' }));
         return;
       }
 
@@ -59,9 +56,7 @@ export function useBulkAssign({ notifications, onSuccess }: UseBulkAssignProps) 
           contactId: selectedContactId,
         });
 
-        notifications.success(t('toolbar.bulkAssignSuccess', {
-          defaultValue: 'The selected properties were assigned successfully.',
-        }));
+        notifications.success(t('toolbar.bulkAssignSuccess'));
         onSuccess();
       } catch (error) {
         notifications.error(

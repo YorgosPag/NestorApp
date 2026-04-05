@@ -118,7 +118,7 @@ export function FloorFloorplanTabContent({
         highlightedOverlayUnitId={highlightedOverlayUnitId}
         onHoverOverlay={onHoverOverlay}
         onClickOverlay={onClickOverlay}
-        emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχει κάτοψη ορόφου' })}
+        emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
         className="h-full"
       />
     </TabContentWrapper>
@@ -158,7 +158,7 @@ export function UnitFloorplanTabContent({
     >
       <FloorplanGallery
         files={filteredFiles}
-        emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties', defaultValue: 'Δεν υπάρχουν κατόψεις' })}
+        emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties' })}
         className="h-full"
       />
     </TabContentWrapper>

@@ -405,7 +405,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     )}
                   >
                     <UserPlus className={iconSizes.sm} />
-                    {t('dropdown.createNewContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
+                    {t('dropdown.createNewContact')}
                   </button>
                 )}
               </>
@@ -426,7 +426,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     )}
                   >
                     <UserPlus className={iconSizes.sm} />
-                    {t('dropdown.createNewContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
+                    {t('dropdown.createNewContact')}
                   </button>
                 )}
               </div>

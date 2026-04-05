@@ -68,7 +68,8 @@
       "description": "Περιγραφή",
       "notes": "Σημειώσεις",
       "lastUpdated": "Τελευταία Ενημέρωση",
-      "owner": "Ιδιοκτήτης"
+      "owner": "Ιδιοκτήτης",
+      "millesimalShares": "Χιλιοστά (‰)"
     },
     "types": {
       "large": "Μεγάλη",

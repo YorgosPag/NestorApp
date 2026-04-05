@@ -121,7 +121,8 @@
   },
   "dropdown": {
     "clearSelection": "Καθαρισμός επιλογής",
-    "totalContacts": "{count} συνολικές επαφές - χρησιμοποιήστε scroll ή αναζήτηση για πλοήγηση"
+    "totalContacts": "{count} συνολικές επαφές - χρησιμοποιήστε scroll ή αναζήτηση για πλοήγηση",
+    "createNewContact": "Δημιουργία νέας επαφής"
   },
   "propertyStatus": {
     "sold": "Πωλήθηκε",

@@ -304,7 +304,7 @@ export function StorageGeneralTab({
               entityType="storage"
               buildingId={buildingLink.linkedId || ''}
               floorLevel={form.floor ? parseInt(form.floor, 10) || 0 : 0}
-              label={t('general.fields.code', { defaultValue: 'Κωδικός Αποθήκης' })}
+              label={t('general.fields.code')}
               placeholderFallback="A-AP-Y1.01"
               infoExample="π.χ. A-AP-Y1.01 (Κτίριο A, Αποθήκη, Υπόγ.1, #01)"
               disabled={!isEditing}
@@ -375,7 +375,7 @@ export function StorageGeneralTab({
               <fieldset className="space-y-1.5">
                 <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   <Lock className="h-3 w-3" />
-                  {t('general.fields.millesimalShares', { defaultValue: 'Χιλιοστά (‰)' })}
+                  {t('general.fields.millesimalShares')}
                 </Label>
                 <p className="text-sm font-semibold">{storage.millesimalShares}‰</p>
               </fieldset>

@@ -111,6 +111,8 @@
       "overview": "Available Properties - Overview",
       "listTitle": "Available Properties",
       "listLabel": "Available properties for sale list",
+      "searchPlaceholder": "Search unit...",
+      "addToMarket": "Add to market",
       "noResults": "No properties found matching these criteria.",
       "propertyDetails": "Property Details",
       "stats": {
@@ -434,7 +436,9 @@
       "reserved": "Reserved",
       "reservedTooltip": "Reserved by buyer",
       "dualListing": "Sale & Rent",
-      "dualListingTooltip": "Listed for both sale and rent"
+      "dualListingTooltip": "Listed for both sale and rent",
+      "statusAriaLabel": "Commercial status filter",
+      "typeAriaLabel": "Unit type filter"
     }
   },
   "salesStorage": {
