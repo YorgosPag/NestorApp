@@ -97,7 +97,7 @@ export function ContactsPageContent() {
   if (authLoading || isLoading) {
     return (
       <PageContainer ariaLabel={t('page.pageLabel')}>
-        <PageLoadingState icon={Users} message={t('page.loadingMessage', { defaultValue: 'Φόρτωση επαφών...' })} layout="contained" />
+        <PageLoadingState icon={Users} message={t('page.loadingMessage')} layout="contained" />
       </PageContainer>
     );
   }

@@ -36,7 +36,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                 </CardHeader>
                 <CardContent>
                     <p className={cn("text-sm", colors.text.muted)}>
-                        {t('tabs.timeline.forecast.noData', { defaultValue: 'Δεν υπάρχουν ορόσημα για πρόβλεψη.' })}
+                        {t('tabs.timeline.forecast.noData')}
                     </p>
                 </CardContent>
             </Card>

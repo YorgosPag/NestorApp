@@ -159,8 +159,12 @@
       "body": "The refreshToken() affects only YOUR (super_admin) session. The affected user must logout/login separately to load the new claims."
     }
   },
+  "inbox": {
+    "loading": "Loading inbox..."
+  },
   "operatorInbox": {
     "title": "Operator Inbox",
+    "loading": "Loading inbox...",
     "description": "Review and approve AI pipeline proposals before execution.",
     "queueTitle": "Proposal Queue",
     "queueDescription": "Review proposals by status, intent and confidence.",

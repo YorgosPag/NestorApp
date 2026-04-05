@@ -125,7 +125,7 @@ export function PersonaSelector({
                 {isActive && (
                   <X
                     className="h-3.5 w-3.5 ml-0.5 text-primary-foreground/80 hover:text-destructive-foreground transition-colors"
-                    aria-label={t('persona.selector.remove', { defaultValue: 'Remove' })}
+                    aria-label={t('persona.selector.remove')}
                   />
                 )}
               </button>

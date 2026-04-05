@@ -290,7 +290,8 @@
   "legal": {
     "privacyPolicy": "Πολιτική Απορρήτου",
     "termsOfService": "Όροι Χρήσης",
-    "dataDeletion": "Διαγραφή Δεδομένων"
+    "dataDeletion": "Διαγραφή Δεδομένων",
+    "legalLinks": "Νομικοί σύνδεσμοι"
   },
   "module": {
     "home": "Αρχική",

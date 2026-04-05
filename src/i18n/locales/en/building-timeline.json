@@ -78,6 +78,7 @@
       },
       "forecast": {
         "title": "Completion Forecast",
+        "noData": "No milestones available for forecast.",
         "originalSchedule": "Original schedule",
         "currentForecast": "Current forecast",
         "delay": "Delay",

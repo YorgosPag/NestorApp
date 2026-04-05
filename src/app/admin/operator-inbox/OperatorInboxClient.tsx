@@ -89,7 +89,7 @@ export default function OperatorInboxClient({ adminContext: _adminContext }: Ope
   if (loading) {
     return (
       <PageContainer ariaLabel={t('operatorInbox.title')}>
-        <PageLoadingState icon={Inbox} message={t('operatorInbox.loading', { defaultValue: 'Φόρτωση εισερχομένων...' })} layout="contained" />
+        <PageLoadingState icon={Inbox} message={t('operatorInbox.loading')} layout="contained" />
       </PageContainer>
     );
   }

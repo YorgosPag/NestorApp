@@ -290,7 +290,8 @@
   "legal": {
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
-    "dataDeletion": "Data Deletion"
+    "dataDeletion": "Data Deletion",
+    "legalLinks": "Legal links"
   },
   "module": {
     "home": "Home",

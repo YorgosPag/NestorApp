@@ -220,7 +220,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <PageLoadingState icon={Inbox} message={t('inbox.loading', { defaultValue: 'Φόρτωση εισερχομένων...' })} layout="contained" />
+                <PageLoadingState icon={Inbox} message={t('inbox.loading')} layout="contained" />
               ) : filteredCommunications.length === 0 ? (
                 <div className={`${layout.textCenter} ${spacing.padding.y.lg}`}>
                   <Inbox className={`${iconSizes.xl2} ${layout.centerHorizontal} ${colors.text.muted} ${spacing.margin.bottom.md}`} />

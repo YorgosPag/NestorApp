@@ -600,7 +600,8 @@
       "title": "Roles",
       "legend": "Select contact roles",
       "description": "Each role activates additional fields specific to that role",
-      "empty": "No roles selected"
+      "empty": "No roles selected",
+      "remove": "Remove"
     },
     "guards": {
       "realEstateAgent": {

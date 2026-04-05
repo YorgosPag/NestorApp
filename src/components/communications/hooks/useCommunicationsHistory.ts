@@ -30,7 +30,7 @@ export function useCommunicationsHistory(contactId?: string) {
       }
     } catch {
       // 🌐 i18n: Error message converted to i18n key - 2026-01-18
-      if (isMounted) setError(t('history.loadError', { defaultValue: 'Failed to load communications history' }));
+      if (isMounted) setError(t('history.loadError'));
       // Error logging removed
     } finally {
       if (isMounted) setLoading(false);
