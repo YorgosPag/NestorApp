@@ -297,21 +297,21 @@ export function NotificationDrawer() {
       >
         {/* ✅ ENTERPRISE: Live region for screen readers */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
-          {t('notifications.count', { count: notificationsList.length, defaultValue: `${notificationsList.length} notifications` })}
+          {t('notifications.count', { count: notificationsList.length })}
         </div>
 
         <header className="flex items-center justify-between p-4 border-b">
-          <h2 id="notif-title" className="text-lg font-semibold">{t('notifications.title', { defaultValue: 'Notifications' })}</h2>
+          <h2 id="notif-title" className="text-lg font-semibold">{t('notifications.title')}</h2>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => void markRead()}>
-              {t('notifications.markAllRead', { defaultValue: 'Mark all read' })}
+              {t('notifications.markAllRead')}
             </Button>
             <Button
               ref={closeButtonRef}
               variant="ghost"
               size="icon-sm"
               onClick={close}
-              aria-label={t('buttons.close', { defaultValue: 'Close' })}
+              aria-label={t('buttons.close')}
             >
               <X className={iconSizes.md} />
             </Button>
@@ -327,16 +327,16 @@ export function NotificationDrawer() {
               <p className="text-sm text-center">{storeError}</p>
               <Button variant="default" size="sm" onClick={handleRetry}>
                 <RefreshCw className={iconSizes.sm} />
-                {t('notifications.retry', { defaultValue: 'Retry' })}
+                {t('notifications.retry')}
               </Button>
             </div>
           ) : status === 'loading' ? (
             <div className={cn("flex items-center justify-center h-full", colors.text.muted)}>
-              <p>{t('notifications.loading', { defaultValue: 'Loading...' })}</p>
+              <p>{t('notifications.loading')}</p>
             </div>
           ) : notificationsList.length === 0 ? (
             <div className={cn("flex items-center justify-center h-full", colors.text.muted)}>
-              <p>{t('notifications.empty', { defaultValue: 'No notifications' })}</p>
+              <p>{t('notifications.empty')}</p>
             </div>
           ) : (
             <div className="p-2 space-y-2">
@@ -355,7 +355,7 @@ export function NotificationDrawer() {
                       if (fromMatch) {
                         params.sender = fromMatch[1];
                       } else {
-                        params.sender = t('notifications.unknownSender', { defaultValue: 'Άγνωστος' });
+                        params.sender = t('notifications.unknownSender');
                       }
                     }
                     return t(n.titleKey, { ...params, defaultValue: n.title ?? '' });
@@ -417,8 +417,8 @@ export function NotificationDrawer() {
                         size="icon-sm"
                         className={cn("flex-shrink-0 hover:text-red-500 hover:bg-red-500/10", colors.text.muted)} // eslint-disable-line design-system/enforce-semantic-colors
                         onClick={(e) => { e.stopPropagation(); void handleDismiss(n.id); }}
-                        aria-label={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
-                        title={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
+                        aria-label={t('notifications.dismiss')}
+                        title={t('notifications.dismiss')}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -434,7 +434,7 @@ export function NotificationDrawer() {
                           onClick={(e) => { e.stopPropagation(); void handleAction(n.id, n.actions?.[0]?.id ?? 'view', actionUrl); }}
                         >
                           <Eye className="h-3.5 w-3.5" />
-                          {t('notifications.actions.view_email', { defaultValue: 'Προβολή' })}
+                          {t('notifications.actions.view_email')}
                         </Button>
                       )}
 
@@ -447,7 +447,7 @@ export function NotificationDrawer() {
                         onClick={(e) => { e.stopPropagation(); void markRead([n.id]); }}
                       >
                         <CheckCheck className="h-3.5 w-3.5" />
-                        {t('notifications.markRead', { defaultValue: 'Προβλήθηκε' })}
+                        {t('notifications.markRead')}
                       </Button>
                     </nav>
                   </Card>
@@ -460,7 +460,7 @@ export function NotificationDrawer() {
           {cursor && status === 'ready' && notificationsList.length > 0 && (
             <div className="p-2 pt-0">
               <Button variant="secondary" size="sm" className="w-full" onClick={handleLoadMore}>
-                {t('notifications.loadMore', { defaultValue: 'Load More' })}
+                {t('notifications.loadMore')}
               </Button>
             </div>
           )}
