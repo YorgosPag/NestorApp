@@ -822,6 +822,59 @@ grep -rn "__new__" src/components/building-management/  # inline flow
 
 ---
 
+## 9.3 Gap Discovery — Property Layer Bypass (2026-04-04, μετά Batch 5)
+
+**Ανακαλύφθηκε από production testing**: Ο Γιώργος προσπάθησε να testάρει Batch 3+4+5 μέσω της σελίδας `/properties`, αλλά η σελίδα χρησιμοποιεί **inline temp-row flow** αντί για το `AddPropertyDialog`. Οι ADR-284 integrations (discriminated validation, empty states, orphan fix modal) **ΔΕΝ** έχουν εφαρμοστεί εκεί.
+
+### Root Cause: 2 Παράλληλα UI Paths για Property Creation (❌ ΟΧΙ SSoT)
+
+| # | Path | Αρχείο | Client Validation (Batch 3) | Empty States (Batch 4) | Orphan Fix Modal (Batch 5) | Server Validation |
+|---|------|--------|------------------------------|------------------------|----------------------------|-------------------|
+| **#1** | **Dialog** (ContactDetails) | `src/components/properties/dialogs/AddPropertyDialog.tsx` + `usePropertyForm.ts` + `useAddPropertyDialogState.ts` | ✅ (Batch 3) | ✅ (Batch 4) | ✅ (Batch 5) | ✅ (Batch 2) |
+| **#2** | **Inline "Temp Row"** (`/properties`) | `src/components/properties/UnitsPageContent.tsx` + inline temp-row pattern | ❌ ΛΕΙΠΕΙ | ❌ ΛΕΙΠΕΙ | ❌ ΛΕΙΠΕΙ | ✅ (Batch 2) |
+
+**Αντανάκλαση §9.2**: Το ίδιο exact pattern gap με το Buildings (dialog vs inline). Η εφαρμογή έχει consistent anti-pattern: 2 παράλληλα UI paths χωρίς SSoT για κάθε entity creation.
+
+### Impact Assessment
+
+| Layer | Status |
+|-------|--------|
+| Server policy (Layer 1, Batch 2) | ✅ Προστατεύει — bypass requests απορρίπτονται με 400 |
+| **UX για inline path (Batch 3+4+5)** | ❌ **ΛΕΙΠΕΙ** — users βλέπουν generic errors μετά από failed save αντί για discriminated UI, empty state CTAs, orphan detection |
+| SSoT για property creation UI | ❌ 2 παράλληλα paths, δική τους form state logic |
+
+**Security boundary is intact** — οποιοδήποτε client (dialog, inline, Postman) που στείλει invalid Property θα πάρει 400 από τον server.
+
+### Fix Strategy (Google Playbook — UX Consolidation)
+
+**Φιλοσοφία**: Server enforcement είναι intact. UX parity είναι tech debt που κλείνει σε χωριστό batch για να μη μεγαλώσει το scope του τρέχοντος work.
+
+**Προτεινόμενη σειρά**:
+1. **Post-Batch 5 (tech debt)**: Batch 7 — Inline Property creation UI parity:
+   - Προσθήκη discriminated validation (Family A vs Family B) στο inline form
+   - Empty state CTAs (no Projects / no Buildings / no Floors / orphan Building)
+   - Orphan fix modal integration
+2. **Long-term**: SSoT consolidation via shared hook (`usePropertyFormValidation`) που χρησιμοποιείται και από τα 2 paths — ή ενοποίηση σε ένα component.
+
+### Critical Files για επόμενο context
+
+**Client-side (Batch 7 candidate)**:
+- `src/components/properties/UnitsPageContent.tsx` — inline temp-row flow (entry point)
+- `src/components/building-management/tabs/PropertyInlineCreateForm.tsx` — alternative inline form (per-building tab)
+- `src/components/properties/hooks/usePropertyForm.ts` — **REUSE** — has discriminated logic from Batch 3
+
+**Verification commands**:
+```bash
+grep -rn "PropertyInlineCreateForm\|UnitsPageContent" src/components/properties/
+grep -rn "setIsCreatingNewUnit" src/components/properties/UnitsPageContent.tsx
+```
+
+### Orphan Data
+
+Προς το παρόν **0 known orphan Properties** (server enforcement protects since Batch 2). Αν βρεθούν παλιά test data → ίδιο pattern με §9.2 (admin dashboard tile + manual cleanup).
+
+---
+
 ## 10. Execution Strategy (Context-Safe Implementation)
 
 **Απόφαση Γιώργου (2026-04-04)**: FULL implementation (όλες οι phases). Κάθε phase σε καθαρό context (`/clear` μεταξύ phases).
@@ -974,14 +1027,47 @@ Batch 2 ────────────────────────
 - ⏸️ NO COMMIT (join με τα υπόλοιπα batches)
 
 **Batch 4 Acceptance**:
-- Empty state CTAs εμφανίζονται σωστά (no Projects, no Buildings, no Floors)
-- Project form έχει Company required field
-- TypeScript compiles
+- [x] Empty state CTAs εμφανίζονται σωστά (no Projects, no Buildings, no Floors) — `AddPropertyDialog` renders 3 inline empty-state sections με CTAs
+- [x] Project form έχει Company required field — AddProjectDialog ήδη είχε Company dropdown; fixed critical bug: `useProjectForm.handleSubmit` τώρα στέλνει `linkedCompanyId` (server policy απαιτούσε το, φόρμα δεν το έστελνε → 400)
+- [x] TypeScript compiles (0 errors στα 5 τροποποιημένα αρχεία)
+- [x] HYBRID CTA strategy (ADR §3.3): **Inline nested dialogs** για Project (`NestedAddProjectDialog`) + Floor (`AddFloorDialog`); **Navigation redirect** για Building (`/buildings?projectId=...`)
+- [x] Filter buildings by `projectId` στο Building dropdown (prevents cross-project selection)
+- [x] i18n keys added σε EL + EN: `dialog.addUnit.emptyState.{noProjects,noBuildings,noFloors}.*`
+- [x] `reloadProjects()` callback καλείται μετά από inline Project creation → dropdown refresh
+- ⏸️ NO COMMIT (join με τα υπόλοιπα batches)
 
-**Batch 5 Acceptance**:
-- Inline modal `linkBuildingToProject` δουλεύει
-- Transaction atomic (rollback on failure)
-- TypeScript compiles
+**Batch 5 Acceptance**: ✅ **COMPLETED 2026-04-04**
+- ✅ New API endpoint `POST /api/buildings/[buildingId]/link-project` — atomic Firestore `runTransaction`:
+  - File: `src/app/api/buildings/[buildingId]/link-project/route.ts` (NEW)
+  - Step 1: verifies Project exists + has `linkedCompanyId` (5-level chain integrity)
+  - Step 2: verifies Building exists + tenant-isolation (403 if cross-company)
+  - Step 3: scope guard — **rejects with 409** if Building already has a non-empty `projectId` (no cross-project reassignment here)
+  - Step 4: atomic `tx.update({ projectId, updatedAt, updatedBy })`
+  - Cascade + audit via existing `linkEntity('building:projectId', …)` (fire-and-forget) + `logAuditEvent`
+  - Rate-limited via `withStandardRateLimit`, permission `buildings:buildings:update`
+- ✅ API route added to `API_ROUTES.BUILDINGS.LINK_PROJECT` in `src/config/domain-constants.ts`
+- ✅ New component `LinkBuildingToProjectDialog`:
+  - File: `src/components/building-management/dialogs/LinkBuildingToProjectDialog.tsx` (NEW)
+  - Read-only Building name + required Project selector (Radix Select per ADR-001)
+  - Scope-limiting by design: assigns ONLY `projectId` (per ADR §3.3 constraint)
+  - Uses centralized `apiClient.post` + `API_ROUTES.BUILDINGS.LINK_PROJECT(buildingId)`
+  - Error surface: inline error below Select + toast; auto-clear on Project change
+- ✅ `AddPropertyDialog` integration:
+  - File: `src/components/properties/dialogs/AddPropertyDialog.tsx`
+  - New empty-state section "Το Κτίριο δεν είναι συνδεδεμένο με Έργο" with 2 CTAs:
+    `[Σύνδεσέ το τώρα]` → opens `LinkBuildingToProjectDialog`
+    `[Επίλεξε άλλο Κτίριο]` → clears `buildingId`
+  - On link success → `handleSelectChange('projectId', linkedProjectId)` auto-selects the project (form becomes valid)
+- ✅ `useAddPropertyDialogState` extensions:
+  - File: `src/components/properties/dialogs/useAddPropertyDialogState.ts`
+  - New memos: `selectedBuilding`, `isOrphanBuilding` (detects Building with blank projectId)
+  - Extended `emptyStates.orphanBuilding` flag
+  - New state `showLinkBuildingDialog` + setter
+- ✅ i18n keys added to EL + EN (`dialog.addUnit.emptyState.orphanBuilding.*`, `dialog.linkBuildingToProject.*`)
+- ✅ TypeScript compiles (0 errors στα νέα/τροποποιημένα αρχεία — see background check)
+- Files touched (5): `route.ts` (new), `LinkBuildingToProjectDialog.tsx` (new), `AddPropertyDialog.tsx`, `useAddPropertyDialogState.ts`, `domain-constants.ts`, `el/properties.json`, `en/properties.json`
+- [ ] Manual verification: orphan Building detection + link flow (pending Γιώργος)
+- ⏸️ NO COMMIT (per Γιώργος instruction)
 
 **Batch 6 Acceptance**:
 - Όλα τα i18n keys υπάρχουν σε EN + EL
@@ -992,6 +1078,14 @@ Batch 2 ────────────────────────
 
 ## 11. Changelog
 
+- **2026-04-05**: **📁 ADR RELOCATION** — Moved ADR-282/283/284/285 from `adrs/` → `docs/centralized-systems/reference/adrs/` (canonical SSoT location, 285 files). Git history preserved via `git mv`. `adrs/` directory deleted.
+- **2026-04-05**: **🏛️ ARCHITECTURE REVISION (UI)** — Γιώργος: Family A Units show **Κτίριο + Όροφος only** in UI (Project field HIDDEN — projectId is grandparent, not parent). Family B Units show **Project only** (direct parent). Rule: "κάθε παιδί δείχνει στον γονέα του". **UI change**: `NewUnitHierarchySection.handleBuildingChange` auto-derives `projectId` from selected `Building.projectId` (denormalized cache — server policy still requires it). `{isStandalone && ...}` conditional hides Project selector for Family A. **Data model ADR-284 §2.4 still retains `projectId` on Property** for query performance (denormalized). UI-level revision only.
+- **2026-04-05**: **Batch 7.1 IMPLEMENTED — FloorInlineCreateForm SSoT Extraction** (Γιώργος request). NEW `src/components/building-management/tabs/FloorInlineCreateForm.tsx` — self-contained component με own state (number/name/elevation + manuallyEdited flags), Revit/ArchiCAD auto-suggest pattern (number→name+elevation with DEFAULT_STOREY_HEIGHT=3.0m), createNameMismatch warning, API call, Check/X buttons. Used by **3 places** (SSoT): (1) `FloorsTabContent.tsx` (Building → Floors tab — refactored), (2) `NewUnitHierarchySection` empty-state CTA "Πρόσθεσε Όροφο" (replaces AddFloorDialog modal), (3) inline noFloors button inside Floor field area. `useFloorsTabState.ts` cleaned: create state extracted. Only `showCreateForm` toggle remains. i18n: `dialog.addUnit.emptyState.noFloors.inlineCta` + `actions.save_loading` (common-actions) added EL+EN.
+- **2026-04-05**: **Batch 7.2 FIX — Auto-code regeneration in create mode**. Bug: `useEntityCodeSuggestion` in `PropertyFieldsBlock` kept reading stale `property.buildingId/floor/floorId` from `__new__` template. Fix: `codeBuildingId`/`codeFloorId`/`codeFloorLevel` derived conditionally — `isCreatingNewUnit ? formData.X : property.X`. Reset effect now depends on unified inputs. Code regenerates live as user changes Building/Floor.
+- **2026-04-05**: **Batch 7.3 FIX — Type field dedup**. `PropertyFieldsEditForm` rendered its own Type dropdown alongside `NewUnitHierarchySection` Type → duplicate UI. Added `isCreatingNewUnit?: boolean` prop to `PropertyFieldsEditFormProps`; Type fieldset wrapped in `{!isCreatingNewUnit && (...)}`. Create mode: Type owned by `NewUnitHierarchySection`. Edit mode: Type stays in `PropertyFieldsEditForm`.
+- **2026-04-05**: **Batch 7.4 FIX — Inline noFloors CTA in Floor field** (Γιώργος request). When user selects Building with no floors, Floor `<Select>` replaced by dashed outline `<Button>` "Δεν υπάρχουν όροφοι — Πρόσθεσε Όροφο" + Plus icon. Click opens inline `FloorInlineCreateForm` (SSoT). Uses design-system `Button` + i18n key (no hardcoded strings, no native `<button>`).
+- **2026-04-05**: **Batch 7.5 FIX — Template literal fallback για i18n interpolation**. Bug: empty state titles displayed `{{buildingName}}` literally. Root cause unclear. Workaround: replaced `t('...title', { buildingName })` with inline template literals in `PropertyHierarchyEmptyStates.tsx`.
+- **2026-04-05**: **Batch 7.6 — UI layout fix**. `NewUnitHierarchySection` collapsed to 0 height in narrow sidebar (flex parent). Added `minHeight: 280px` + `shrink-0` class.
 - **2026-04-04**: PROPOSED (initial document) — Claude + Γιώργος Παγώνης
 - **2026-04-04**: Απάντηση Γιώργου σε Q1 — dev data, clean slate. Αφαιρέθηκε Phase 0 (audit) & migration path. Strict rules από την αρχή.
 - **2026-04-04**: Απάντηση Γιώργου σε Q2 — **Discriminated hierarchy βάσει type**. 2 families: In-Building (12 τύποι, require building+floor) + Standalone (detached_house, villa — direct to project). Μεζονέτα = in-building. Schema change: νέο `projectId` field στο Property.
@@ -1006,6 +1100,10 @@ Batch 2 ────────────────────────
 - **2026-04-04**: **Batch 1 IMPLEMENTED** — Layer 0 Project Creation Policy. New module `project-mutation-policy.ts` (ProjectMutationPolicyError + assertProjectCreatePolicy + assertLinkedCompanyExists). POST `/api/projects/list` enforces policy server-side → 400 on missing/invalid linkedCompanyId. Companies resolved from CONTACTS collection (type='company'). TypeScript 0 errors. Ready for Batch 2.
 - **2026-04-04**: **🚨 GAP DISCOVERY (§9.2)** — Production testing αποκάλυψε κρίσιμο security gap: ο Γιώργος δημιούργησε "κτίριο Δέλτα" χωρίς `projectId`, saved κανονικά με zero warnings. Root cause: (1) 2 παράλληλα UI paths για Building creation (❌ ΟΧΙ SSoT) — `AddBuildingDialog` (έχει Batch 0 validation) vs. inline "Fill then Create" στο `BuildingsPageContent.tsx:91-115` (καμία validation). (2) `/api/buildings` POST route ΔΕΝ έχει server-side policy (σε αντίθεση με `/api/projects` και `/api/properties`). **Google Playbook fix**: Server First → Νέο **Layer 0.5 (§3.0.5)** — `building-creation-policy.ts` + `/api/buildings` enforcement (Batch 3.5a, PRIORITY). Μετά inline UI validation (Batch 3.5b). SSoT via API, όχι via UI consolidation. Orphan data migration = post-hoc tech debt. Added **Batches 3.5a + 3.5b** στο §10 execution strategy με full acceptance criteria. Critical files reference για επόμενο context: §9.2.
 - **2026-04-04**: **Batch 3 IMPLEMENTED** — Layer 2 Client Form Validation. `usePropertyForm.ts` updated: new `STANDALONE_UNIT_TYPES` + `isStandaloneUnitType()` exports, `projectId` added to `PropertyFormData`, discriminated `validate()` (Family A vs Family B), derived `isValid` memo για Save button disabled state, `handleSubmit` sends `projectId` + omits building/floor για Family B. `AddPropertyDialog.tsx` updated: Project selector (Radix Select), Building/Floor conditionally hidden για standalone, Save button wrapped σε Tooltip με family-specific messages (`inBuildingRequired` / `standaloneRequired`). `useAddPropertyDialogState.ts`: loads projects list on open, `handleTypeChange()` auto-clears building/floor when switching to standalone. i18n keys added σε EL + EN (`dialog.addUnit.validation.*` + `fields.project` + `tooltips.*`). TypeScript 0 errors. NO COMMIT — uncommitted changes αφημένα για επόμενο batch (Γιώργος: commits για Batches 3+4+5+6 θα γίνουν όλα μαζί στο τέλος).
+- **2026-04-04**: **Batch 4 IMPLEMENTED** — Phase 3a (Empty State CTAs) + Phase 3c (Project form Company field). **Phase 3c CRITICAL FIX**: `useProjectForm.handleSubmit` στέλνει τώρα `linkedCompanyId: formData.companyId` στο payload — ο server policy (Batch 1) απαιτεί `linkedCompanyId`, η φόρμα δεν το έστελνε → κάθε project creation επέστρεφε 400 (silent regression). **Phase 3a**: `AddPropertyDialog.tsx` renders 3 inline empty-state sections (no Projects / no Buildings in selected Project / no Floors in selected Building) με CTAs. HYBRID strategy per §3.3: **inline nested dialogs** για Project (`AddProjectDialog`) + Floor (`AddFloorDialog`), **navigation redirect** για Building (`/buildings?projectId=...`). `useAddPropertyDialogState.ts`: new `filteredBuildings` (filter by `projectId`), `emptyStates` memo, nested dialog state (`showAddProjectDialog`, `showAddFloorDialog`), `reloadProjects` callback. Building dropdown τώρα εμφανίζει μόνο buildings του επιλεγμένου project. i18n: EL + EN keys `dialog.addUnit.emptyState.{noProjects,noBuildings,noFloors}.*`. 5 αρχεία: `useProjectForm.ts`, `useAddPropertyDialogState.ts`, `AddPropertyDialog.tsx`, `el/properties.json`, `en/properties.json`. TypeScript 0 errors. NO COMMIT. Ready for Batch 5 (linkBuildingToProject inline fix modal).
 - **2026-04-04**: **🚨 Batch 3.5b IMPLEMENTED** — Inline Building UI Validation (closes §9.2 client-side gap). `GeneralTabContent.tsx` (inline "Fill then Create" flow) `handleSave()` enhanced: σε create mode απαιτεί `projectId` (από `projectLink.getPayload()`) επιπλέον του `name`. On validation failure → error banner (Google Docs draft pattern) με localized message "Επίλεξε Έργο για να συνεχίσεις". Auto-clear του error όταν χρήστης επιλέξει project (useEffect watch `projectLink.linkedId`). Προστέθηκε i18n key `validation.projectRequired` σε EL + EN `building.json`. Inline flow ήδη χρησιμοποιεί `createBuildingWithPolicy()` gateway (SSoT via API) — no refactor needed. Defense-in-depth: server policy (Batch 3.5a) είναι το security boundary, client validation είναι UX layer. 3 αρχεία modified. TypeScript 0 errors. NO COMMIT. Manual verification pending Γιώργος.
 - **2026-04-04**: **🚨 Batch 3.5a IMPLEMENTED** — Layer 0.5 Building Server Policy (Gap Discovery §9.2 closed). New server-only module `src/services/building/building-creation-policy.ts` (BuildingCreationPolicyError + assertBuildingCreatePolicy + assertBuildingUpstreamChain). Mirrors pattern από Batch 1 (project-mutation-policy) + Batch 2 (property-creation-policy). `/api/buildings` POST route enforces policy server-side **πριν** `createEntity()`: sync validation (name + projectId required) + async upstream chain (Project exists + has linkedCompanyId). `BuildingCreationPolicyError` → `ApiError(400 Bad Request)` mapping. Security hole closed: οποιοσδήποτε client (Postman, curl, inline UI, import script) χωρίς έγκυρο projectId παίρνει 400. 2 αρχεία (1 new + 1 modified). TypeScript 0 errors. NO COMMIT (join με υπόλοιπα batches). Manual verification pending Γιώργος. Ready for Batch 3.5b.
+- **2026-04-04**: **Batch 7 IMPLEMENTED** — SSoT Property Creation Validation Layer (Option B2). NEW shared primitives: `src/types/property-creation.ts` (PropertyCreationFormFields), `src/hooks/properties/usePropertyCreateValidation.ts` (discriminated validation hook + pure `validatePropertyCreationFields`), `PropertyHierarchyEmptyStates.tsx` (extracted reusable CTAs), `useNewUnitHierarchy.ts` (self-contained hierarchy state for inline flow), `NewUnitHierarchySection.tsx` (UI section with Type/Project/Building/Floor selectors + empty states + orphan fix integration). Refactored: `usePropertyForm.ts` (Path #1) uses shared validator — no behavior change. `AddPropertyDialog.tsx` uses extracted PropertyHierarchyEmptyStates (DRY — ~100 lines removed). `PropertyFieldsBlock.tsx` (Path #2 inline __new__): extended formData με projectId/buildingId/floorId + renders NewUnitHierarchySection όταν isCreatingNewUnit=true + pre-flight discriminated validation + Family-aware payload. `PropertyInlineCreateForm.tsx` (Path #3 Building tab): added required projectId prop + standalone type guard + floorId resolution from FloorRecord. `usePolygonHandlers.ts` (Path #4 DXF viewer): added `resolveProjectIdFromBuilding()` client helper + orphan Building guard. Primary user-facing fix: closes §9.3 gap. Server policy (Batch 2) remains security boundary. SSoT achieved at validation/types layer. 12 files. NO COMMIT.
+- **2026-04-04**: **🚨 GAP DISCOVERY (§9.3)** — Manual testing Batch 5 αποκάλυψε δεύτερο UI parity gap: η σελίδα `/properties` χρησιμοποιεί **inline temp-row flow** (`UnitsPageContent.tsx` + `PropertyInlineCreateForm.tsx`) αντί για το `AddPropertyDialog`. Οι ADR-284 integrations (Batch 3 discriminated validation, Batch 4 empty states, Batch 5 orphan fix modal) **ΔΕΝ** έχουν εφαρμοστεί στο inline path. Το ίδιο exact anti-pattern με §9.2 (Buildings: dialog vs inline). **Server boundary (Batch 2) intact** — bypass requests απορρίπτονται με 400. UX parity είναι tech debt → **Batch 7 candidate** (post-Batch 6). Added **§9.3 Gap Discovery** με impact assessment, fix strategy, και critical files reference για επόμενο context.
+- **2026-04-04**: **Batch 5 IMPLEMENTED** — Phase 3b Inline fix modal για orphan Buildings. NEW API endpoint `POST /api/buildings/[buildingId]/link-project` με atomic `runTransaction` (verifies Project.linkedCompanyId + Building tenant + orphan state, then `tx.update({ projectId })`; 409 αν Building ήδη συνδεδεμένο — cross-project reassignment out of scope per §3.3). Cascade via existing `linkEntity('building:projectId', …)`. API_ROUTES.BUILDINGS.LINK_PROJECT προστέθηκε στο `domain-constants.ts`. NEW `LinkBuildingToProjectDialog` component: read-only Building name + required Project Select (Radix per ADR-001), uses `apiClient.post`, toast + inline errors. Integration στο `AddPropertyDialog`: new empty-state "Orphan Building" με [Σύνδεσέ το τώρα] + [Επίλεξε άλλο Κτίριο] CTAs, auto-selects linked project on success. `useAddPropertyDialogState` επέκταση: `selectedBuilding`/`isOrphanBuilding` memos + `emptyStates.orphanBuilding` + `showLinkBuildingDialog` state. i18n EL+EN: `dialog.addUnit.emptyState.orphanBuilding.*` + `dialog.linkBuildingToProject.*`. 7 files (2 new + 5 modified). TypeScript 0 errors. NO COMMIT. Manual verification pending Γιώργος.
 - **2026-04-04**: **Batch 2 IMPLEMENTED** — Layer 1 Server-Side Unit Creation Policy. New server-only module `src/services/property/property-creation-policy.ts` (PropertyCreationPolicyError + STANDALONE_UNIT_TYPES + assertPropertyCreatePolicy + assertUpstreamChainExists + resolveProjectIdFromBuilding). Discriminated validation βάσει type (Family A in-building vs Family B standalone: detached_house, villa). Async upstream chain check: Project→Company (both families), Building→Project + Floor→Building + per-level validation για multi-level (Family A only, §3.1.1). POST `/api/properties/create` enforces policy server-side πριν `createEntity()` → 400 on violation. Defense-in-depth auto-fill `projectId` από `Building.projectId` για Family A. TypeScript 0 errors. Ready for Batch 3.

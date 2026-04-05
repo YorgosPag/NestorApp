@@ -1,6 +1,7 @@
 {
   "actions": {
     "save": "Save",
+    "save_loading": "Saving...",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",

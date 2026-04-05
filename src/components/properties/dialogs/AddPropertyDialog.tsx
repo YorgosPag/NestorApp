@@ -34,9 +34,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
-import { Home, ClipboardList, FolderPlus, Building2, Layers, AlertTriangle } from 'lucide-react';
+import { Home, ClipboardList } from 'lucide-react';
 import { AddProjectDialog as NestedAddProjectDialog } from '@/components/projects/dialogs/AddProjectDialog';
 import { AddFloorDialog } from '@/components/building-management/dialogs/AddFloorDialog';
+import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';
+import { PropertyHierarchyEmptyStates } from '@/components/properties/shared/PropertyHierarchyEmptyStates';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
@@ -88,7 +90,10 @@ export function AddPropertyDialog({
     filteredBuildings, emptyStates,
     showAddProjectDialog, setShowAddProjectDialog,
     showAddFloorDialog, setShowAddFloorDialog,
+    showLinkBuildingDialog, setShowLinkBuildingDialog,
+    selectedBuilding,
   } = useAddPropertyDialogState({ open, onPropertyAdded, onOpenChange, buildings });
+
 
   // ADR-284 §3.3 (Phase 3a): No-floors detection (only meaningful when building is selected)
   const noFloors =
@@ -130,93 +135,22 @@ export function AddPropertyDialog({
           <DialogDescription>{t('dialog.addUnit.description')}</DialogDescription>
         </DialogHeader>
 
-        {/* 🔐 ADR-284 §3.3 Phase 3a: Empty State CTAs (HYBRID strategy — inline Project/Floor, navigation Building) */}
-        {emptyStates.noProjects && (
-          <section
-            role="status"
-            aria-label={t('dialog.addUnit.emptyState.noProjects.title')}
-            className={cn('rounded-md border border-dashed p-4 flex flex-col gap-3', colors.bg.muted)}
-          >
-            <header className="flex items-start gap-3">
-              <FolderPlus className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
-              <div className="flex-1">
-                <p className={cn('font-medium', colors.text.primary)}>
-                  {t('dialog.addUnit.emptyState.noProjects.title')}
-                </p>
-                <p className={cn('text-xs mt-1', colors.text.muted)}>
-                  {t('dialog.addUnit.emptyState.noProjects.description')}
-                </p>
-              </div>
-            </header>
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={() => setShowAddProjectDialog(true)}
-              className="self-start"
-            >
-              <FolderPlus className={iconSizes.xs} aria-hidden />
-              {t('dialog.addUnit.emptyState.noProjects.cta')}
-            </Button>
-          </section>
-        )}
-
-        {emptyStates.noBuildings && (
-          <section
-            role="status"
-            aria-label={t('dialog.addUnit.emptyState.noBuildings.title')}
-            className={cn('rounded-md border border-dashed p-4 flex flex-col gap-3', colors.bg.muted)}
-          >
-            <header className="flex items-start gap-3">
-              <Building2 className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
-              <div className="flex-1">
-                <p className={cn('font-medium', colors.text.primary)}>
-                  {t('dialog.addUnit.emptyState.noBuildings.title', { projectName: selectedProjectName })}
-                </p>
-                <p className={cn('text-xs mt-1', colors.text.muted)}>
-                  {t('dialog.addUnit.emptyState.noBuildings.description')}
-                </p>
-              </div>
-            </header>
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={handleNavigateToCreateBuilding}
-              className="self-start"
-            >
-              <Building2 className={iconSizes.xs} aria-hidden />
-              {t('dialog.addUnit.emptyState.noBuildings.cta')}
-            </Button>
-          </section>
-        )}
-
-        {noFloors && (
-          <section
-            role="status"
-            aria-label={t('dialog.addUnit.emptyState.noFloors.title')}
-            className={cn('rounded-md border border-dashed p-4 flex flex-col gap-3', colors.bg.muted)}
-          >
-            <header className="flex items-start gap-3">
-              <AlertTriangle className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
-              <div className="flex-1">
-                <p className={cn('font-medium', colors.text.primary)}>
-                  {t('dialog.addUnit.emptyState.noFloors.title', { buildingName: selectedBuildingName })}
-                </p>
-              </div>
-            </header>
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={() => setShowAddFloorDialog(true)}
-              className="self-start"
-            >
-              <Layers className={iconSizes.xs} aria-hidden />
-              {t('dialog.addUnit.emptyState.noFloors.cta')}
-            </Button>
-          </section>
-        )}
+        {/* 🔐 ADR-284 §3.3: Empty State CTAs — shared component (Batch 7 SSoT) */}
+        <PropertyHierarchyEmptyStates
+          flags={{
+            noProjects: emptyStates.noProjects,
+            noBuildings: emptyStates.noBuildings,
+            orphanBuilding: emptyStates.orphanBuilding,
+            noFloors,
+          }}
+          selectedProjectName={selectedProjectName}
+          selectedBuildingName={selectedBuildingName}
+          onCreateProject={() => setShowAddProjectDialog(true)}
+          onCreateBuilding={handleNavigateToCreateBuilding}
+          onLinkBuildingToProject={() => setShowLinkBuildingDialog(true)}
+          onPickAnotherBuilding={() => handleSelectChange('buildingId', '')}
+          onCreateFloor={() => setShowAddFloorDialog(true)}
+        />
 
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -470,6 +404,23 @@ export function AddPropertyDialog({
           onSuccess={() => {
             // Floors auto-refresh via onSnapshot subscription on buildingId
             setShowAddFloorDialog(false);
+          }}
+        />
+      )}
+
+      {/* 🔐 ADR-284 §3.3 Phase 3b: Inline fix modal for orphan Buildings */}
+      {formData.buildingId && selectedBuilding && (
+        <LinkBuildingToProjectDialog
+          open={showLinkBuildingDialog}
+          onOpenChange={setShowLinkBuildingDialog}
+          buildingId={formData.buildingId}
+          buildingName={selectedBuilding.name}
+          projects={projects}
+          projectsLoading={projectsLoading}
+          onSuccess={(linkedProjectId) => {
+            // Auto-select the newly linked project so the form becomes valid
+            handleSelectChange('projectId', linkedProjectId);
+            // Building.projectId will refresh via RealtimeService (BUILDING_PROJECT_LINKED)
           }}
         />
       )}

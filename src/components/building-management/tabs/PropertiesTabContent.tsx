@@ -21,8 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { TableCell } from '@/components/ui/table';
-import { Home, Plus, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2, Check, X } from 'lucide-react';
+import { Home, Plus, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -30,6 +29,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { Building } from '@/types/building/contracts';
 import type { Property, PropertyType } from '@/types/property';
 import { PropertyInlineCreateForm } from './PropertyInlineCreateForm';
+import { PropertyInlineEditRow } from './PropertyInlineEditRow';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -373,6 +373,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
         <PropertyInlineCreateForm
           buildingId={building.id}
           buildingName={building.name || ''}
+          projectId={building.projectId || ''}
           floors={floors}
           onCreated={handleCreateSuccess}
           onCancel={() => setShowCreateForm(false)}
@@ -432,49 +433,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
             }}
             actionState={{ unlinkingId, deletingId }}
             editingId={edit.editingId}
-            renderEditRow={() => (
-              <>
-                <TableCell>
-                  <Input value={edit.editName} onChange={(e) => edit.setEditName(e.target.value)} className="h-8" disabled={edit.saving} />
-                </TableCell>
-                <TableCell>
-                  <Select value={edit.editType || 'apartment'} onValueChange={(v) => edit.setEditType(v as PropertyType)} disabled={edit.saving}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {UNIT_TYPES_FOR_FILTER.map(ut => (<SelectItem key={ut} value={ut}>{getPropertyTypeLabel(ut, tUnits)}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Input type="number" value={edit.editFloor} onChange={(e) => edit.setEditFloor(e.target.value)} className="h-8 w-16" disabled={edit.saving} />
-                </TableCell>
-                <TableCell>
-                  <Input type="number" step="0.01" value={edit.editArea} onChange={(e) => edit.setEditArea(e.target.value)} className="h-8 w-16" disabled={edit.saving} />
-                </TableCell>
-                <TableCell>
-                  <Select value={edit.editStatus} onValueChange={edit.setEditStatus} disabled={edit.saving}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {UNIT_STATUSES_FOR_FILTER.map(us => (<SelectItem key={us} value={us}>{getPropertyStatusLabel(us, tUnits)}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <nav className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={edit.handleSaveEdit} disabled={edit.saving || !edit.editName.trim()}>
-                      {edit.saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={edit.cancelEdit} disabled={edit.saving}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </nav>
-                </TableCell>
-              </>
-            )}
+            renderEditRow={() => <PropertyInlineEditRow edit={edit} tUnits={tUnits} />}
           />
           <footer className={cn("text-xs", colors.text.muted)}>
             {filteredUnits.length} {t('tabs.labels.units')}

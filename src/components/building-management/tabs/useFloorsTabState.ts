@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import { createFloorWithPolicy, deleteFloorWithPolicy, updateFloorWithPolicy } from '@/services/floor-mutation-gateway';
+import { deleteFloorWithPolicy, updateFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { toast } from 'sonner';
@@ -61,14 +61,9 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   // Expand/collapse
   const [expandedFloorId, setExpandedFloorId] = useState<string | null>(null);
 
-  // Inline create state
+  // Inline create: SSoT moved to FloorInlineCreateForm (ADR-284 Batch 7)
+  // Only toggle state remains here — form state lives in the extracted component.
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createNumber, setCreateNumber] = useState('0');
-  const [createName, setCreateName] = useState('');
-  const [createNameManuallyEdited, setCreateNameManuallyEdited] = useState(false);
-  const [createElevation, setCreateElevation] = useState('');
-  const [createElevationManuallyEdited, setCreateElevationManuallyEdited] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -99,30 +94,6 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     return (floorNumber * DEFAULT_STOREY_HEIGHT).toFixed(2);
   }, []);
 
-  /** Update create number and auto-suggest name + elevation if user hasn't manually edited them */
-  const handleCreateNumberChange = useCallback((value: string) => {
-    setCreateNumber(value);
-    const num = parseInt(value, 10);
-    if (!createNameManuallyEdited) {
-      setCreateName(isNaN(num) ? '' : formatFloorLabel(num));
-    }
-    if (!createElevationManuallyEdited) {
-      setCreateElevation(isNaN(num) ? '' : computeDefaultElevation(num));
-    }
-  }, [createNameManuallyEdited, createElevationManuallyEdited, computeDefaultElevation]);
-
-  /** Mark name as manually edited when user types in the name field */
-  const handleCreateNameChange = useCallback((value: string) => {
-    setCreateName(value);
-    setCreateNameManuallyEdited(true);
-  }, []);
-
-  /** Mark elevation as manually edited when user types in the elevation field */
-  const handleCreateElevationChange = useCallback((value: string) => {
-    setCreateElevation(value);
-    setCreateElevationManuallyEdited(true);
-  }, []);
-
   /** Update edit number and auto-suggest name + elevation if user hasn't manually edited them */
   const handleEditNumberChange = useCallback((value: string) => {
     setEditNumber(value);
@@ -150,14 +121,6 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   // =========================================================================
   // WARNINGS: Mismatch + Gap Detection
   // =========================================================================
-
-  /** Check if manually-entered name mismatches the auto-suggested name */
-  const createNameMismatch = useMemo((): boolean => {
-    if (!createNameManuallyEdited || !createName.trim()) return false;
-    const num = parseInt(createNumber, 10);
-    if (isNaN(num)) return false;
-    return createName.trim() !== formatFloorLabel(num);
-  }, [createNumber, createName, createNameManuallyEdited]);
 
   const editNameMismatch = useMemo((): boolean => {
     if (!editNameManuallyEdited || !editName.trim()) return false;
@@ -201,40 +164,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
 
   useEffect(() => { fetchFloors(); }, [fetchFloors]);
 
-  const handleCreate = async () => {
-    if (!createName.trim()) {
-      toast.error(t('tabs.floors.validationNameRequired'));
-      return;
-    }
-    setCreating(true);
-    try {
-      await createFloorWithPolicy<FloorMutationResponse>({ payload: {
-        number: parseInt(createNumber, 10) || 0,
-        name: createName.trim(),
-        elevation: createElevation ? parseFloat(createElevation) : null,
-        buildingId,
-        ...(projectId ? { projectId } : {}),
-      }});
-      setShowCreateForm(false);
-      setCreateNumber('0');
-      setCreateName('');
-      setCreateNameManuallyEdited(false);
-      setCreateElevation('');
-      setCreateElevationManuallyEdited(false);
-      toast.success(t('tabs.floors.createSuccess'));
-      await fetchFloors();
-    } catch (err) {
-      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        toast.error(t('tabs.floors.duplicateNumber'));
-      } else {
-        const msg = err instanceof Error ? err.message : '';
-        toast.error(t('tabs.floors.createError') + (msg ? `: ${msg}` : ''));
-      }
-      console.error('[FloorsTab] Create error:', err);
-    } finally {
-      setCreating(false);
-    }
-  };
+  // handleCreate extracted to FloorInlineCreateForm (SSoT, ADR-284 Batch 7)
 
   const startEdit = (floor: FloorRecord) => {
     setEditingId(floor.id);
@@ -324,10 +254,8 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
 
   return {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
+    // ADR-284 Batch 7 SSoT: create state extracted to FloorInlineCreateForm component
     showCreateForm, setShowCreateForm,
-    createNumber, handleCreateNumberChange, createName, handleCreateNameChange,
-    createElevation, handleCreateElevationChange, creating, handleCreate,
-    createNameMismatch,
     editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
     editElevation, handleEditElevationChange, saving,
     editNameMismatch,

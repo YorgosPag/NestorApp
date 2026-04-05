@@ -25,6 +25,7 @@ import { getStatusColor } from '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted state hook
 import { useFloorsTabState } from './useFloorsTabState';
+import { FloorInlineCreateForm } from './FloorInlineCreateForm';
 
 // Re-export for backward compatibility
 export type { FloorRecord } from './useFloorsTabState';
@@ -42,9 +43,6 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   const {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
     showCreateForm, setShowCreateForm,
-    createNumber, handleCreateNumberChange, createName, handleCreateNameChange,
-    createElevation, handleCreateElevationChange, creating, handleCreate,
-    createNameMismatch,
     editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
     editElevation, handleEditElevationChange, saving,
     editNameMismatch,
@@ -88,39 +86,15 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
       </header>
 
       {showCreateForm && (
-        <form
-          className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2"
-          onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
-        >
-          <section className="grid grid-cols-[80px_1fr_120px_auto] items-end gap-2">
-            <fieldset className="flex flex-col gap-1">
-              <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.number')}</label>
-              <Input type="number" value={createNumber} onChange={(e) => handleCreateNumberChange(e.target.value)} placeholder={t('tabs.floors.numberPlaceholder')} className="h-9" disabled={creating} autoFocus />
-            </fieldset>
-            <fieldset className="flex flex-col gap-1">
-              <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.name')}</label>
-              <Input value={createName} onChange={(e) => handleCreateNameChange(e.target.value)} placeholder={t('tabs.floors.namePlaceholder')} className="h-9" disabled={creating} />
-            </fieldset>
-            <fieldset className="flex flex-col gap-1">
-              <label className={cn("text-xs font-medium", colors.text.muted)}>{t('tabs.floors.elevation')}</label>
-              <Input type="number" step="0.01" value={createElevation} onChange={(e) => handleCreateElevationChange(e.target.value)} placeholder={t('tabs.floors.elevationPlaceholder')} className="h-9" disabled={creating} />
-            </fieldset>
-            <nav className="flex gap-1">
-              <Button type="submit" size="sm" disabled={!createName.trim() || creating} className="h-9">
-                {creating ? <Spinner size="small" color="inherit" /> : <Check className="h-4 w-4" />}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowCreateForm(false)} disabled={creating} className="h-9">
-                <X className="h-4 w-4" />
-              </Button>
-            </nav>
-          </section>
-          {createNameMismatch && (
-            <p className={cn("flex items-center gap-1.5 text-xs", getStatusColor('warning', 'text'))}>
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {t('tabs.floors.mismatchWarning')}
-            </p>
-          )}
-        </form>
+        <FloorInlineCreateForm
+          buildingId={building.id}
+          projectId={building.projectId}
+          onCreated={() => {
+            setShowCreateForm(false);
+            void fetchFloors();
+          }}
+          onCancel={() => setShowCreateForm(false)}
+        />
       )}
 
       {floors.length === 0 ? (

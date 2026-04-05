@@ -258,7 +258,8 @@ export function PropertyDetailsContent({
       {hasPropertyWithMismatch(resolvedProperty) && resolvedProperty.buyerMismatch && !isReadOnly && <BuyerMismatchAlert />}
 
       {/* Building Link + Floor/MultiLevel + Linked Spaces — top row */}
-      {!isReadOnly && (
+      {/* ADR-284 Batch 7: Hidden when creating new unit — NewUnitHierarchySection handles Project/Building/Floor selection */}
+      {!isReadOnly && !isCreatingNewUnit && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <PropertyEntityLinks
             propertyId={resolvedProperty?.id ?? ''}

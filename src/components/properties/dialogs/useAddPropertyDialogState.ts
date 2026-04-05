@@ -115,6 +115,8 @@ export function useAddPropertyDialogState({
   // ADR-284 §3.3 (Phase 3a): Nested dialog state for inline CTAs
   const [showAddProjectDialog, setShowAddProjectDialog] = useState(false);
   const [showAddFloorDialog, setShowAddFloorDialog] = useState(false);
+  // ADR-284 §3.3 (Phase 3b): Inline fix modal for orphan Buildings
+  const [showLinkBuildingDialog, setShowLinkBuildingDialog] = useState(false);
 
   // ADR-284: Discriminator between Family A (in-building) and Family B (standalone)
   const isStandalone = isStandaloneUnitType(formData.type);
@@ -125,14 +127,29 @@ export function useAddPropertyDialogState({
     return buildings.filter((b) => b.projectId === formData.projectId);
   }, [buildings, formData.projectId]);
 
-  // ADR-284 §3.3 (Phase 3a): Empty state flags — drive inline CTAs in AddPropertyDialog
+  // ADR-284 §3.3 (Phase 3b): Orphan Building detection — Building selected but has no projectId
+  const selectedBuilding = useMemo<Building | undefined>(
+    () => buildings.find((b) => b.id === formData.buildingId),
+    [buildings, formData.buildingId],
+  );
+  const isOrphanBuilding = useMemo(
+    () =>
+      !isStandalone &&
+      !!formData.buildingId &&
+      !!selectedBuilding &&
+      !selectedBuilding.projectId,
+    [isStandalone, formData.buildingId, selectedBuilding],
+  );
+
+  // ADR-284 §3.3 (Phase 3a+3b): Empty state flags — drive inline CTAs in AddPropertyDialog
   const emptyStates = useMemo(() => ({
     noProjects: !projectsLoading && projects.length === 0,
     noBuildings:
       !isStandalone &&
       !!formData.projectId &&
       filteredBuildings.length === 0,
-  }), [projectsLoading, projects.length, isStandalone, formData.projectId, filteredBuildings.length]);
+    orphanBuilding: isOrphanBuilding,
+  }), [projectsLoading, projects.length, isStandalone, formData.projectId, filteredBuildings.length, isOrphanBuilding]);
 
   // Real-time floor subscription
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
@@ -278,5 +295,9 @@ export function useAddPropertyDialogState({
     setShowAddProjectDialog,
     showAddFloorDialog,
     setShowAddFloorDialog,
+    // ADR-284 §3.3 (Phase 3b): Orphan Building inline fix modal
+    showLinkBuildingDialog,
+    setShowLinkBuildingDialog,
+    selectedBuilding,
   };
 }

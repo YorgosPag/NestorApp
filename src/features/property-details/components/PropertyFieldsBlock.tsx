@@ -31,22 +31,22 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/property';
 import { aggregateLevelData } from '@/services/multi-level.service';
-import type {
-  ConditionType,
-  OrientationType,
-  EnergyClassType,
-  InteriorFeatureCodeType,
-  SecurityFeatureCodeType
-} from '@/constants/property-features-enterprise';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 import { ReadOnlyCompactView } from './PropertyFieldsReadOnly';
 import { PropertyFieldsEditForm } from './PropertyFieldsEditForm';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
+import { buildPropertyUpdatesFromForm } from './property-fields-form-mapper';
 import type { PropertyType } from '@/types/property';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+// ADR-284 Batch 7: SSoT hierarchy validation + inline new-unit UI
+import { NewUnitHierarchySection } from '@/components/properties/shared/NewUnitHierarchySection';
+import {
+  validatePropertyCreationFields,
+  isStandaloneUnitType,
+} from '@/hooks/properties/usePropertyCreateValidation';
 const logger = createModuleLogger('PropertyFieldsBlock');
 
 // =============================================================================
@@ -110,25 +110,6 @@ export function PropertyFieldsBlock({
     type: localType,
   });
 
-  // ADR-233: Reset code when building, floor, or type changes — request new suggestion
-  useEffect(() => {
-    const prev = prevCodeInputsRef.current;
-    const changed =
-      property.buildingId !== prev.buildingId ||
-      property.floor !== prev.floor ||
-      localType !== prev.type;
-
-    if (changed) {
-      setCodeOverridden(false);
-      setFormData(p => ({ ...p, code: '' }));
-      prevCodeInputsRef.current = {
-        buildingId: property.buildingId,
-        floor: property.floor,
-        type: localType,
-      };
-    }
-  }, [property.buildingId, property.floor, localType]);
-
   // ── Field locking based on commercialStatus ──
   // reserved: identity fields locked (code, name, type)
   // sold/rented: identity + physical fields locked (areas, layout, floor, commercialStatus)
@@ -136,30 +117,14 @@ export function PropertyFieldsBlock({
   const isReservedOrSold = (['reserved', 'sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
 
-  // ADR-233: Code suggestion requires all three inputs: building + type + explicit floor
-  const hasAllCodeInputs = !!property.buildingId && !!localType && !!property.floorId;
-
-  const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
-    entityType: 'property',
-    buildingId: property.buildingId ?? '',
-    floorLevel: property.floor ?? 0,
-    propertyType: (localType as PropertyType) || undefined,
-    disabled: codeOverridden || !hasAllCodeInputs,
-  });
-
-  // ADR-233: Contextual placeholder — tells user what's missing before code can be generated
-  const codePlaceholderHint = !property.buildingId
-    ? t('entityCode.needBuilding', { defaultValue: 'Δηλώστε κτίριο' })
-    : !localType
-      ? t('entityCode.needType', { defaultValue: 'Δηλώστε τύπο ακινήτου' })
-      : !property.floorId
-        ? t('entityCode.needFloor', { defaultValue: 'Δηλώστε όροφο' })
-        : suggestedCode || t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' });
-
   const [formData, setFormData] = useState<PropertyFieldsFormData>({
     name: property.name ?? '',
     code: property.code ?? '',
     type: property.type ?? '',
+    // ADR-284 Batch 7: Hierarchy fields
+    projectId: (property as unknown as Record<string, unknown>).projectId as string ?? '',
+    buildingId: property.buildingId ?? '',
+    floorId: property.floorId ?? '',
     operationalStatus: ((property as unknown as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
     commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
     description: property.description ?? '',
@@ -185,6 +150,50 @@ export function PropertyFieldsBlock({
     levelData: property.levelData ?? {} as Record<string, LevelData>,
     askingPrice: property.commercial?.askingPrice?.toString() ?? '',
   });
+
+  // ADR-233 + ADR-284 Batch 7: Code suggestion inputs
+  // Create mode: live inputs from formData (user editing via NewUnitHierarchySection)
+  // Edit mode: from property prop (Firestore state)
+  const codeBuildingId = isCreatingNewUnit ? formData.buildingId : (property.buildingId ?? '');
+  const codeFloorId = isCreatingNewUnit ? formData.floorId : (property.floorId ?? '');
+  const codeFloorLevel = isCreatingNewUnit ? formData.floor : (property.floor ?? 0);
+
+  // ADR-233: Reset code when building, floor, or type changes — request new suggestion
+  useEffect(() => {
+    const prev = prevCodeInputsRef.current;
+    const changed =
+      codeBuildingId !== prev.buildingId ||
+      codeFloorLevel !== prev.floor ||
+      localType !== prev.type;
+    if (changed) {
+      setCodeOverridden(false);
+      setFormData(p => ({ ...p, code: '' }));
+      prevCodeInputsRef.current = {
+        buildingId: codeBuildingId,
+        floor: codeFloorLevel,
+        type: localType,
+      };
+    }
+  }, [codeBuildingId, codeFloorLevel, localType]);
+
+  const hasAllCodeInputs = !!codeBuildingId && !!localType && !!codeFloorId;
+
+  const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
+    entityType: 'property',
+    buildingId: codeBuildingId,
+    floorLevel: codeFloorLevel,
+    propertyType: (localType as PropertyType) || undefined,
+    disabled: codeOverridden || !hasAllCodeInputs,
+  });
+
+  // ADR-233: Contextual placeholder — tells user what's missing before code can be generated
+  const codePlaceholderHint = !codeBuildingId
+    ? t('entityCode.needBuilding', { defaultValue: 'Δηλώστε κτίριο' })
+    : !localType
+      ? t('entityCode.needType', { defaultValue: 'Δηλώστε τύπο ακινήτου' })
+      : !codeFloorId
+        ? t('entityCode.needFloor', { defaultValue: 'Δηλώστε όροφο' })
+        : suggestedCode || t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A-DI-1.01' });
 
   // ── ADR-236 Phase 2: Active level tab (null = "Totals" tab) ──
   const isMultiLevel = property.isMultiLevel && (property.levels?.length ?? 0) >= 2;
@@ -227,6 +236,9 @@ export function PropertyFieldsBlock({
       name: property.name ?? '',
       code: property.code ?? '',
       type: property.type ?? '',
+      projectId: (property as unknown as Record<string, unknown>).projectId as string ?? '',
+      buildingId: property.buildingId ?? '',
+      floorId: property.floorId ?? '',
       operationalStatus: ((property as unknown as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
       commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
       description: property.description ?? '',
@@ -262,86 +274,12 @@ export function PropertyFieldsBlock({
     }
   }, [suggestedCode, codeOverridden, formData.code]);
 
-  // ── Build updates from form data ──
-  const buildUpdatesFromForm = useCallback((): Partial<Property> => {
-    // ADR-233: Use suggested code as fallback if user hasn't typed a custom one
-    const resolvedCode = formData.code || suggestedCode || undefined;
-    const updates: Partial<Property> = {
-      name: formData.name,
-      code: resolvedCode,
-      type: formData.type,
-      operationalStatus: formData.operationalStatus,
-      commercialStatus: formData.commercialStatus,
-      floor: formData.floor,
-      // 🔒 ADR-232: Include floorId from property (set via FloorSelectField)
-      ...(property.floorId ? { floorId: property.floorId } : {}),
-      layout: {
-        bedrooms: formData.bedrooms,
-        bathrooms: formData.bathrooms,
-        wc: formData.wc
-      },
-      orientations: formData.orientations as OrientationType[],
-    };
-
-    if (formData.description.trim()) {
-      updates.description = formData.description.trim();
-    }
-
-    const areasData: { gross: number; net?: number; balcony?: number; terrace?: number; garden?: number } = {
-      gross: formData.areaGross
-    };
-    if (formData.areaNet > 0) areasData.net = formData.areaNet;
-    if (formData.areaBalcony > 0) areasData.balcony = formData.areaBalcony;
-    if (formData.areaTerrace > 0) areasData.terrace = formData.areaTerrace;
-    if (formData.areaGarden > 0) areasData.garden = formData.areaGarden;
-    updates.areas = areasData;
-
-    if (formData.condition) updates.condition = formData.condition as ConditionType;
-    if (formData.energyClass) updates.energy = { class: formData.energyClass as EnergyClassType };
-
-    if (formData.heatingType || formData.coolingType) {
-      const systemsOverride: Record<string, string> = {};
-      if (formData.heatingType) systemsOverride.heatingType = formData.heatingType;
-      if (formData.coolingType) systemsOverride.coolingType = formData.coolingType;
-      updates.systemsOverride = systemsOverride as Property['systemsOverride'];
-    }
-
-    if (formData.flooring.length > 0 || formData.windowFrames || formData.glazing) {
-      const finishes: Record<string, unknown> = {};
-      if (formData.flooring.length > 0) finishes.flooring = formData.flooring;
-      if (formData.windowFrames) finishes.windowFrames = formData.windowFrames;
-      if (formData.glazing) finishes.glazing = formData.glazing;
-      updates.finishes = finishes as Property['finishes'];
-    }
-
-    if (formData.interiorFeatures.length > 0) updates.interiorFeatures = formData.interiorFeatures as InteriorFeatureCodeType[];
-    if (formData.securityFeatures.length > 0) updates.securityFeatures = formData.securityFeatures as SecurityFeatureCodeType[];
-
-    // Commercial data — preserve existing fields, update only askingPrice
-    const parsedPrice = formData.askingPrice ? Number(formData.askingPrice) : null;
-    const priceChanged = parsedPrice !== (property.commercial?.askingPrice ?? null);
-    if (priceChanged) {
-      updates.commercial = {
-        ...(property.commercial as Record<string, unknown>),
-        askingPrice: parsedPrice && parsedPrice > 0 ? parsedPrice : null,
-      } as Property['commercial'];
-    }
-
-    // ADR-236 Phase 2: Per-level data + auto-aggregation
-    if (isMultiLevel && Object.keys(formData.levelData).length > 0) {
-      (updates as Record<string, unknown>).levelData = formData.levelData;
-      const agg = aggregateLevelData(formData.levelData);
-      updates.areas = agg.areas;
-      updates.layout = {
-        bedrooms: agg.layout.bedrooms,
-        bathrooms: agg.layout.bathrooms,
-        wc: agg.layout.wc,
-      };
-      updates.orientations = agg.orientations;
-    }
-
-    return updates;
-  }, [formData, isMultiLevel, suggestedCode]);
+  // ── Build updates from form data (delegated to SSoT mapper) ──
+  const buildUpdatesFromForm = useCallback(
+    (): Partial<Property> =>
+      buildPropertyUpdatesFromForm({ formData, property, suggestedCode, isMultiLevel }),
+    [formData, property, suggestedCode, isMultiLevel],
+  );
 
   // ── Save handler ──
   const handleSave = useCallback(async () => {
@@ -350,8 +288,25 @@ export function PropertyFieldsBlock({
       const updates = buildUpdatesFromForm();
 
       if (isCreatingNewUnit) {
+        // 🏢 ENTERPRISE ADR-284 Batch 7: Client-side discriminated validation
+        // via shared SSoT hook (mirrors server policy — fail-fast UX).
+        const hierarchy = validatePropertyCreationFields({
+          name: formData.name,
+          type: formData.type as import('@/types/property').PropertyType | '',
+          projectId: formData.projectId,
+          buildingId: formData.buildingId,
+          floorId: formData.floorId,
+        });
+        if (!hierarchy.isValid) {
+          // Surface first error to user — shared i18n keys
+          const firstKey = Object.values(hierarchy.errors)[0];
+          notifyError(t(firstKey ?? 'dialog.addUnit.validation.typeRequired'));
+          return;
+        }
+
         // 🏢 ENTERPRISE: Create new unit via server-side API (Admin SDK)
         // Client-side setDoc blocked by Firestore rules — must use API endpoint
+        const standalone = isStandaloneUnitType(formData.type as import('@/types/property').PropertyType | '');
         const propertyData = {
           ...updates,
           name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
@@ -359,8 +314,13 @@ export function PropertyFieldsBlock({
           type: formData.type || 'apartment',
           status: 'reserved' as const,
           operationalStatus: 'draft' as const,
-          floor: formData.floor,
+          floor: standalone ? 0 : formData.floor,
           area: formData.areaGross,
+          // ADR-284: Hierarchy fields — Family-discriminated
+          projectId: formData.projectId,
+          ...(standalone
+            ? {}
+            : { buildingId: formData.buildingId, floorId: formData.floorId }),
         };
         const result = await createPropertyWithPolicy({ propertyData });
         if (!result.success) {
@@ -393,6 +353,9 @@ export function PropertyFieldsBlock({
     formData.floor,
     formData.name,
     formData.type,
+    formData.projectId,
+    formData.buildingId,
+    formData.floorId,
     isCreatingNewUnit,
     onExitEditMode,
     onPropertyCreated,
@@ -403,6 +366,7 @@ export function PropertyFieldsBlock({
     runExistingPropertyUpdate,
     suggestedCode,
     success,
+    notifyError,
     t,
   ]);
 
@@ -427,13 +391,45 @@ export function PropertyFieldsBlock({
     return <ReadOnlyCompactView property={property} t={t} />;
   }
 
+  // ADR-284 Batch 7: Handler για hierarchy changes από το NewUnitHierarchySection.
+  // Συγχρονίζει projectId/buildingId/floorId/type στο formData.
+  const handleHierarchyChange = useCallback(
+    (patch: Partial<{ type: PropertyType | ''; projectId: string; buildingId: string; floorId: string; floor: number }>) => {
+      setFormData((prev) => ({
+        ...prev,
+        ...(patch.type !== undefined ? { type: patch.type as string } : {}),
+        ...(patch.projectId !== undefined ? { projectId: patch.projectId } : {}),
+        ...(patch.buildingId !== undefined ? { buildingId: patch.buildingId } : {}),
+        ...(patch.floorId !== undefined ? { floorId: patch.floorId } : {}),
+        ...(patch.floor !== undefined ? { floor: patch.floor } : {}),
+      }));
+      if (patch.type !== undefined) {
+        setLocalType(patch.type);
+      }
+    },
+    [],
+  );
+
   return (
     <>
+      {isCreatingNewUnit && (
+        <NewUnitHierarchySection
+          selection={{
+            type: formData.type as PropertyType | '',
+            projectId: formData.projectId,
+            buildingId: formData.buildingId,
+            floorId: formData.floorId,
+            floor: formData.floor,
+          }}
+          onChange={handleHierarchyChange}
+        />
+      )}
       <PropertyFieldsEditForm
         formData={formData}
         setFormData={setFormData}
         property={property}
         isEditing={isEditing}
+        isCreatingNewUnit={isCreatingNewUnit}
         isReservedOrSold={isReservedOrSold}
         isSoldOrRented={isSoldOrRented}
         isMultiLevel={!!isMultiLevel}

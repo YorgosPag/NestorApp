@@ -131,6 +131,8 @@ export function PropertiesManagementContent() {
       orientations: [],
       buildingId: '',
       floorId: '',
+      // ADR-284 Batch 7: Hierarchy field (required for in-building + standalone units)
+      projectId: '',
       vertices: [],
       building: '',
       project: '',

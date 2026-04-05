@@ -54,6 +54,7 @@ export function PropertyFieldsEditForm({
   setFormData,
   property,
   isEditing,
+  isCreatingNewUnit = false,
   isReservedOrSold,
   isSoldOrRented,
   isMultiLevel,
@@ -212,27 +213,29 @@ export function PropertyFieldsEditForm({
                 <p className="text-[10px] text-amber-600">{t('entityCode.formatWarning', { defaultValue: 'Ο κωδικός δεν ακολουθεί το πρότυπο format' })}</p>
               )}
             </fieldset>
-            <fieldset className="space-y-1">
-              <Label className={cn("text-xs", colors.text.muted)}>
-                {t('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
-              </Label>
-              <Select value={formData.type} disabled={!isEditing || isReservedOrSold}
-                onValueChange={(value) => {
-                  setFormData(prev => ({ ...prev, type: value }));
-                  onTypeChange(value);
-                }}>
-                <SelectTrigger className="h-7 text-xs">
-                  <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROPERTY_TYPE_OPTIONS.map((propertyType) => (
-                    <SelectItem key={propertyType} value={propertyType} className="text-xs">
-                      {t(`types.${propertyType}`, { defaultValue: propertyType })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </fieldset>
+            {!isCreatingNewUnit && (
+              <fieldset className="space-y-1">
+                <Label className={cn("text-xs", colors.text.muted)}>
+                  {t('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
+                </Label>
+                <Select value={formData.type} disabled={!isEditing || isReservedOrSold}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, type: value }));
+                    onTypeChange(value);
+                  }}>
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROPERTY_TYPE_OPTIONS.map((propertyType) => (
+                      <SelectItem key={propertyType} value={propertyType} className="text-xs">
+                        {t(`types.${propertyType}`, { defaultValue: propertyType })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </fieldset>
+            )}
             <fieldset className="space-y-1">
               <Label className={cn("text-xs", colors.text.muted)}>
                 {t('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}

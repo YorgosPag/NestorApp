@@ -11,6 +11,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 const logger = createModuleLogger('usePolygonHandlers');
 
@@ -50,6 +53,22 @@ export function usePolygonHandlers({
 
   const selectedFloor = floors.find((floor) => floor.id === selectedFloorId) ?? null;
 
+  /**
+   * ADR-284 Batch 7: Client-side resolution του Project μέσω Building.projectId.
+   * Mirror του server-side helper `resolveProjectIdFromBuilding` στο Batch 2.
+   */
+  const resolveProjectIdFromBuilding = async (buildingId: string): Promise<string | null> => {
+    try {
+      const snap = await getDoc(doc(db, COLLECTIONS.BUILDINGS, buildingId));
+      if (!snap.exists()) return null;
+      const projectId = (snap.data()?.projectId as string) ?? null;
+      return projectId && projectId.trim().length > 0 ? projectId : null;
+    } catch (err) {
+      logger.warn('Failed to resolve projectId from Building', { buildingId, error: err });
+      return null;
+    }
+  };
+
   const handlePolygonCreated = async (newPropertyData: Omit<Property, 'id'>) => {
     const floorContext = properties.find((property) => property.floorId === selectedFloorId) ?? null;
     const resolvedBuildingId = selectedFloor?.buildingId ?? floorContext?.buildingId ?? '';
@@ -64,6 +83,18 @@ export function usePolygonHandlers({
       return;
     }
 
+    // ADR-284 Batch 7: Resolve projectId from Building (required by server policy).
+    const resolvedProjectId = await resolveProjectIdFromBuilding(resolvedBuildingId);
+    if (!resolvedProjectId) {
+      warning(t('viewer.messages.orphanBuildingBlocked', {
+        defaultValue: 'The building is not linked to a project — fix it before creating properties.',
+      }));
+      logger.warn('Blocked viewer property creation: orphan Building (no projectId)', {
+        buildingId: resolvedBuildingId,
+      });
+      return;
+    }
+
     try {
       const result = await createPropertyWithPolicy({
         propertyData: {
@@ -73,6 +104,8 @@ export function usePolygonHandlers({
           type: floorContext?.type ?? 'apartment',
           status: floorContext?.status ?? 'reserved',
           operationalStatus: floorContext?.operationalStatus ?? 'draft',
+          // ADR-284 Batch 7: Hierarchy fields (Family A — DXF viewer is always in-building)
+          projectId: resolvedProjectId,
           buildingId: resolvedBuildingId,
           building: floorContext?.building ?? '',
           floorId: selectedFloorId,
@@ -152,6 +185,17 @@ export function usePolygonHandlers({
       y: vertex.y + 12,
     }));
 
+    // ADR-284 Batch 7: Resolve projectId from source Building (required by server policy).
+    const resolvedProjectId = sourceProperty.buildingId
+      ? await resolveProjectIdFromBuilding(sourceProperty.buildingId)
+      : null;
+    if (!resolvedProjectId) {
+      notifyError(t('viewer.messages.orphanBuildingBlocked', {
+        defaultValue: 'The source building is not linked to a project — cannot duplicate.',
+      }));
+      return;
+    }
+
     try {
       const result = await createPropertyWithPolicy({
         propertyData: {
@@ -162,6 +206,8 @@ export function usePolygonHandlers({
           type: sourceProperty.type,
           status: 'reserved',
           operationalStatus: 'draft',
+          // ADR-284 Batch 7: Hierarchy fields (Family A)
+          projectId: resolvedProjectId,
           buildingId: sourceProperty.buildingId,
           building: sourceProperty.building,
           floorId: sourceProperty.floorId,

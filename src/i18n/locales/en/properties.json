@@ -457,8 +457,31 @@
         },
         "noFloors": {
           "title": "Building \"{{buildingName}}\" has no floors yet",
-          "cta": "Add a Floor to this Building"
+          "cta": "Add a Floor to this Building",
+          "inlineCta": "No floors yet — Add Floor"
+        },
+        "orphanBuilding": {
+          "title": "Building \"{{buildingName}}\" is not linked to a Project",
+          "description": "It must be linked to a Project first before you can continue.",
+          "cta": {
+            "fixNow": "Link it now",
+            "pickOther": "Pick another Building"
+          }
         }
+      }
+    },
+    "linkBuildingToProject": {
+      "title": "Link Building to Project",
+      "description": "Assign a Project to the selected Building. Only the projectId field will be updated.",
+      "buildingLabel": "Building",
+      "projectLabel": "Project",
+      "projectPlaceholder": "Select Project",
+      "validation": {
+        "projectRequired": "Project is required"
+      },
+      "messages": {
+        "success": "Building linked to Project successfully",
+        "error": "Failed to link Building to Project"
       }
     }
   },
@@ -538,6 +561,7 @@
   },
   "inlineCreate": {
     "nameRequired": "Unit name is required",
+    "standaloneNotAllowed": "Standalone units (detached house/villa) are created from the Properties page — not from here.",
     "created": "Unit created successfully",
     "createError": "Failed to create unit",
     "cancel": "Cancel",

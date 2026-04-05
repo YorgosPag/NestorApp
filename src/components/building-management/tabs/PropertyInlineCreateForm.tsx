@@ -18,6 +18,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
+import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,8 @@ import type { FloorRecord } from './property-tab-constants';
 interface PropertyInlineCreateFormProps {
   buildingId: string;
   buildingName: string;
+  /** ADR-284 Batch 7: Project that the Building belongs to (required for server policy). */
+  projectId: string;
   floors: FloorRecord[];
   onCreated: () => void;
   onCancel: () => void;
@@ -58,6 +61,7 @@ interface PropertyInlineCreateFormProps {
 export function PropertyInlineCreateForm({
   buildingId,
   buildingName,
+  projectId,
   floors,
   onCreated,
   onCancel,
@@ -90,14 +94,30 @@ export function PropertyInlineCreateForm({
       return;
     }
 
+    // ADR-284 Batch 7: Standalone type guard — this inline form is per-Building (Family A).
+    // Standalone units (villa, detached_house) attach directly to Project, not Building.
+    if (isStandaloneUnitType(type)) {
+      notifyError(tUnits('inlineCreate.standaloneNotAllowed'));
+      return;
+    }
+
+    // Resolve floorId from selected floor number (FloorRecord has id+number)
+    const floorNum = floor ? parseInt(floor, 10) : NaN;
+    const selectedFloor = Number.isFinite(floorNum)
+      ? floors.find((f) => f.number === floorNum)
+      : undefined;
+
     setCreating(true);
     try {
       const propertyData: Record<string, unknown> = {
         name: name.trim(),
         type,
+        // ADR-284 Batch 7: Hierarchy fields (Family A)
+        projectId,
         buildingId,
+        ...(selectedFloor ? { floorId: selectedFloor.id } : {}),
         building: buildingName,
-        floor: floor ? parseInt(floor, 10) : 0,
+        floor: Number.isFinite(floorNum) ? floorNum : 0,
         project: '',
         status: commercialStatus,
         operationalStatus,

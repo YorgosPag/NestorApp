@@ -27,6 +27,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyType, PropertyLevel, OperationalStatus, CommercialStatus } from '@/types/property';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+import {
+  isStandaloneUnitType,
+  validatePropertyCreationFields,
+} from '@/hooks/properties/usePropertyCreateValidation';
 
 // =============================================================================
 // CONSTANTS
@@ -34,14 +38,14 @@ import { translatePropertyMutationError } from '@/services/property/property-mut
 
 /**
  * ADR-284 — Standalone unit types (Family B).
- * These units attach directly to a Project without Building/Floor.
- * Mirror of server-side `STANDALONE_UNIT_TYPES` in property-creation-policy.ts.
+ *
+ * **Backward-compat re-exports** — the SSoT lives in
+ * `src/hooks/properties/usePropertyCreateValidation.ts` (Batch 7).
  */
-export const STANDALONE_UNIT_TYPES: readonly PropertyType[] = ['detached_house', 'villa'];
-
-export function isStandaloneUnitType(type: PropertyType | ''): boolean {
-  return type !== '' && STANDALONE_UNIT_TYPES.includes(type);
-}
+export {
+  STANDALONE_UNIT_TYPES,
+  isStandaloneUnitType,
+} from '@/hooks/properties/usePropertyCreateValidation';
 
 // =============================================================================
 // TYPES
@@ -113,45 +117,25 @@ export function usePropertyForm({
   // VALIDATION
   // ==========================================================================
 
-  // ADR-284: Discriminated validation — Family A (in-building) vs Family B (standalone)
+  // ADR-284 Batch 7: Discriminated hierarchy validation via shared SSoT hook.
+  // Area validation stays here (path-specific, not part of hierarchy SSoT).
   const validate = useCallback((): boolean => {
+    const hierarchy = validatePropertyCreationFields({
+      name: formData.name,
+      type: formData.type,
+      projectId: formData.projectId,
+      buildingId: formData.buildingId,
+      floorId: formData.floorId,
+      levels: formData.levels,
+    });
+
     const newErrors: Partial<Record<keyof PropertyFormData, string>> = {};
-
-    // Required: name
-    if (!formData.name.trim()) {
-      newErrors.name = t('dialog.addUnit.validation.nameRequired');
+    // Translate SSoT i18n keys
+    for (const [field, key] of Object.entries(hierarchy.errors) as Array<[keyof PropertyFormData, string]>) {
+      newErrors[field] = t(key);
     }
 
-    // Required: type (discriminator between Family A and Family B)
-    if (!formData.type) {
-      newErrors.type = t('dialog.addUnit.validation.typeRequired');
-    }
-
-    // Required: projectId (both families — ADR-284)
-    if (!formData.projectId) {
-      newErrors.projectId = t('dialog.addUnit.validation.projectRequired');
-    }
-
-    const isStandalone = isStandaloneUnitType(formData.type);
-
-    if (!isStandalone && formData.type) {
-      // Family A: In-building — buildingId + floor scope required
-      if (!formData.buildingId) {
-        newErrors.buildingId = t('dialog.addUnit.validation.buildingRequired');
-      }
-      // Floor scope: accept either single floorId OR multi-level selection
-      const hasFloorScope = !!formData.floorId || formData.levels.length > 0;
-      if (!hasFloorScope) {
-        newErrors.floorId = t('dialog.addUnit.validation.floorRequired');
-      }
-    } else if (isStandalone) {
-      // Family B: Standalone — buildingId + floorId MUST be empty
-      if (formData.buildingId || formData.floorId || formData.levels.length > 0) {
-        newErrors.type = t('dialog.addUnit.validation.standaloneNoBuilding');
-      }
-    }
-
-    // Validate area if provided
+    // Area validation (path-specific)
     if (formData.area !== '' && formData.area <= 0) {
       newErrors.area = t('dialog.addUnit.validation.areaPositive');
     }
@@ -165,22 +149,16 @@ export function usePropertyForm({
   // ==========================================================================
 
   const isValid = useMemo((): boolean => {
-    if (!formData.name.trim()) return false;
-    if (!formData.type) return false;
-    if (!formData.projectId) return false;
-
-    const isStandalone = isStandaloneUnitType(formData.type);
-
-    if (!isStandalone) {
-      if (!formData.buildingId) return false;
-      const hasFloorScope = !!formData.floorId || formData.levels.length > 0;
-      if (!hasFloorScope) return false;
-    } else {
-      if (formData.buildingId || formData.floorId || formData.levels.length > 0) return false;
-    }
-
+    const hierarchy = validatePropertyCreationFields({
+      name: formData.name,
+      type: formData.type,
+      projectId: formData.projectId,
+      buildingId: formData.buildingId,
+      floorId: formData.floorId,
+      levels: formData.levels,
+    });
+    if (!hierarchy.isValid) return false;
     if (formData.area !== '' && formData.area <= 0) return false;
-
     return true;
   }, [formData]);
 

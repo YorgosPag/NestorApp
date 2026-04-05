@@ -84,6 +84,8 @@ export interface Property {
     /** Χιλιοστά ιδιοκτησίας — read-only, from ownership table */
     millesimalShares?: number | null;
     project: string;
+    /** ADR-284 Batch 7: Firestore ID of the parent Project (required by server policy). */
+    projectId?: string;
     description?: string;
     buildingId: string;
     floorId: string;

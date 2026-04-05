@@ -20,6 +20,11 @@ export interface PropertyFieldsFormData {
   name: string;
   code: string;
   type: string;
+  // ADR-284 Batch 7: Hierarchy fields (required when creating new unit)
+  // For existing units these may be empty strings — not shown in edit mode.
+  projectId: string;
+  buildingId: string;
+  floorId: string;
   operationalStatus: OperationalStatus;
   commercialStatus: CommercialStatus;
   description: string;
@@ -56,6 +61,8 @@ export interface PropertyFieldsEditFormProps {
   property: Property;
   /** Whether form is in editing mode */
   isEditing: boolean;
+  /** ADR-284 Batch 7: When creating new unit, Type field is shown in NewUnitHierarchySection (above) — hide here to avoid duplicate. */
+  isCreatingNewUnit?: boolean;
   /** Reserved or sold (identity fields locked) */
   isReservedOrSold: boolean;
   /** Sold or rented (physical fields locked) */
