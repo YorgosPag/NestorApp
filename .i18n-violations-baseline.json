@@ -1,21 +1,14 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T21:44:19Z",
-    "totalViolations": 28,
-    "totalFiles": 28,
+    "generated": "2026-04-05T21:49:58Z",
+    "totalViolations": 21,
+    "totalFiles": 21,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/subapps/accounting/components/reports/ReportDetailView.tsx": 1,
-    "src/subapps/accounting/components/invoices/details/InvoiceActionsMenu.tsx": 1,
-    "src/subapps/accounting/components/dashboard/AccountingDashboard.tsx": 1,
-    "src/subapps/accounting/components/bank/MatchingPanel.tsx": 1,
-    "src/features/property-details/components/PropertyFieldsDetailCards.tsx": 1,
-    "src/features/properties-sidebar/hooks/usePropertiesSidebar.ts": 1,
     "src/config/company-gemi/sections/capital.ts": 1,
     "src/config/company-gemi/sections/basic-info.ts": 1,
-    "src/components/space-management/StoragesPage/AddStorageDialog.tsx": 1,
     "src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab.tsx": 1,
     "src/components/space-management/ParkingPage/AddParkingDialog.tsx": 1,
     "src/components/sales/tabs/SalesVideosTab.tsx": 1,
