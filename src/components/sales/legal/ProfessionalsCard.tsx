@@ -29,7 +29,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import type { EntityAssociationLink } from '@/types/entity-associations';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
@@ -171,6 +171,7 @@ export function ProfessionalsCard({
 }: ProfessionalsCardProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
+  const { success, error: notifyError } = useNotifications();
   const [editingRole, setEditingRole] = useState<LegalProfessionalRole | null>(null);
   const [saving, setSaving] = useState(false);
   const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null);
@@ -187,10 +188,10 @@ export function ProfessionalsCard({
         propertyId,
         type: notification.type,
       })
-        .then(() => toast.success(t('sales.legal.emailSent')))
-        .catch(() => toast.error(t('sales.legal.emailFailed')));
+        .then(() => success(t('sales.legal.emailSent')))
+        .catch(() => notifyError(t('sales.legal.emailFailed')));
     },
-    [propertyId, t]
+    [propertyId, t, success, notifyError]
   );
 
   // Execute the actual assignment (after validation/confirmation)
@@ -201,7 +202,7 @@ export function ProfessionalsCard({
       try {
         const linked = await onAssign(contact.id, role);
         if (!linked) {
-          toast.error(t('status.error'));
+          notifyError(t('status.error'));
           return;
         }
 
@@ -211,7 +212,7 @@ export function ProfessionalsCard({
         }
 
         setEditingRole(null);
-        toast.success(t('sales.legal.professionalAssigned'));
+        success(t('sales.legal.professionalAssigned'));
 
         // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
@@ -229,12 +230,12 @@ export function ProfessionalsCard({
           type: 'assignment',
         });
       } catch {
-        toast.error(t('status.error'));
+        notifyError(t('status.error'));
       } finally {
         setSaving(false);
       }
     },
-    [onAssign, onOverrideProfessional, drafts, t]
+    [onAssign, onOverrideProfessional, drafts, t, success, notifyError]
   );
 
   // Validate before assigning — check for conflicts
@@ -298,7 +299,7 @@ export function ProfessionalsCard({
       try {
         const removed = await onRemove(linkId);
         if (!removed) {
-          toast.error(t('status.error'));
+          notifyError(t('status.error'));
           return;
         }
 
@@ -307,7 +308,7 @@ export function ProfessionalsCard({
           await onOverrideProfessional(draft.id, role, null);
         }
 
-        toast.success(t('sales.legal.professionalRemoved'));
+        success(t('sales.legal.professionalRemoved'));
 
         // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
@@ -325,12 +326,12 @@ export function ProfessionalsCard({
           type: 'removal',
         });
       } catch {
-        toast.error(t('status.error'));
+        notifyError(t('status.error'));
       } finally {
         setSaving(false);
       }
     },
-    [onRemove, onOverrideProfessional, drafts, t]
+    [onRemove, onOverrideProfessional, drafts, t, success, notifyError]
   );
 
   return (

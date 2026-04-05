@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { LegalContract, ContractStatus } from '@/types/legal-contracts';
 import { CONTRACT_STATUS_TRANSITIONS } from '@/types/legal-contracts';
 import '@/lib/design-system';
@@ -83,6 +83,7 @@ function formatCurrency(amount: number | null): string {
 export function ContractCard({ contract, onTransition }: ContractCardProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
+  const { success, error: notifyError } = useNotifications();
   const [expanded, setExpanded] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
@@ -94,11 +95,11 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
     setTransitioning(false);
 
     if (result.success) {
-      toast.success(`Μετάβαση σε ${STATUS_LABELS[target].default}`);
+      success(`Μετάβαση σε ${STATUS_LABELS[target].default}`);
     } else {
-      toast.error(result.error ?? 'Αποτυχία μετάβασης');
+      notifyError(result.error ?? 'Αποτυχία μετάβασης');
     }
-  }, [contract.id, onTransition, toast]);
+  }, [contract.id, onTransition, success, notifyError]);
 
   return (
     <article className="rounded-lg border bg-card">

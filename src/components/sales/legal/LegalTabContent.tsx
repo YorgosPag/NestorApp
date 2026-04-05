@@ -18,7 +18,7 @@ import { ContractCard } from '@/components/sales/legal/ContractCard';
 import { ProfessionalsCard } from '@/components/sales/legal/ProfessionalsCard';
 import { BrokerageCard } from '@/components/sales/brokerage/BrokerageCard';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import {
   Select,
   SelectContent,
@@ -61,6 +61,7 @@ const CREATABLE_PHASES: { value: ContractPhase; label: string }[] = [
 export function LegalTabContent({ unit }: LegalTabContentProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
+  const { success, error: notifyError } = useNotifications();
   const {
     contracts,
     agreements,
@@ -89,16 +90,16 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
       (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? []
     );
     if (!primaryBuyerContactId) {
-      toast.error(t('sales.legal.noBuyer', { defaultValue: 'Δεν υπάρχει αγοραστής' }));
+      notifyError(t('sales.legal.noBuyer', { defaultValue: 'Δεν υπάρχει αγοραστής' }));
       return;
     }
     if (!unit.buildingId) {
-      toast.error(t('sales.errors.noBuilding', { defaultValue: 'Η μονάδα δεν είναι συνδεδεμένη με κτίριο' }));
+      notifyError(t('sales.errors.noBuilding', { defaultValue: 'Η μονάδα δεν είναι συνδεδεμένη με κτίριο' }));
       return;
     }
     const resolvedProjectId = unit.project;
     if (!resolvedProjectId) {
-      toast.error(t('sales.errors.noProject', { defaultValue: 'Η μονάδα δεν ανήκει σε έργο' }));
+      notifyError(t('sales.errors.noProject', { defaultValue: 'Η μονάδα δεν ανήκει σε έργο' }));
       return;
     }
 
@@ -113,11 +114,11 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
     setCreating(false);
 
     if (result.success) {
-      toast.success(CREATABLE_PHASES.find((p) => p.value === selectedPhase)?.label ?? t('sales.legal.created', { defaultValue: 'Δημιουργήθηκε' }));
+      success(CREATABLE_PHASES.find((p) => p.value === selectedPhase)?.label ?? t('sales.legal.created', { defaultValue: 'Δημιουργήθηκε' }));
     } else {
-      toast.error(result.error ?? t('sales.legal.createError', { defaultValue: 'Σφάλμα' }));
+      notifyError(result.error ?? t('sales.legal.createError', { defaultValue: 'Σφάλμα' }));
     }
-  }, [unit, selectedPhase, createContract, toast, t]);
+  }, [unit, selectedPhase, createContract, success, notifyError, t]);
 
   // Loading state
   if (isLoading) {
