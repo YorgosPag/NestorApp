@@ -133,7 +133,18 @@
     "onFloorPlanToSee": "στην κάτοψη για να δείτε",
     "quickInfo": "γρήγορες πληροφορίες",
     "noDataFound": "Δεν βρέθηκαν στοιχεία",
-    "forThisProperty": "για αυτό το ακίνητο"
+    "forThisProperty": "για αυτό το ακίνητο",
+    "gross": "Μικτό εμβαδόν",
+    "net": "Καθαρό εμβαδόν",
+    "balcony": "Μπαλκόνι",
+    "terrace": "Βεράντα",
+    "garden": "Κήπος",
+    "bedroomsFull": "Υπνοδωμάτια",
+    "bathroomsFull": "Μπάνια",
+    "orientation": "Προσανατολισμός",
+    "parking": "Στάθμευση",
+    "storageFull": "Αποθήκη",
+    "price": "Τιμή"
   },
   "connectionPanel": {
     "title": "Συνδέσεις & Ομαδοποίηση",

@@ -85,43 +85,43 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
         <QuickViewRow label={formatFloorLabel(property.floor)} value="" />
         {property.area && (
           <QuickViewRow
-            label={t('hoverInfo.gross', { defaultValue: 'Μικτό εμβαδόν' })}
+            label={t('hoverInfo.gross')}
             value={`${property.area} m²`}
           />
         )}
         {areas?.net && (
           <QuickViewRow
-            label={t('hoverInfo.net', { defaultValue: 'Καθαρό εμβαδόν' })}
+            label={t('hoverInfo.net')}
             value={`${areas.net} m²`}
           />
         )}
         {areas?.balcony && (
           <QuickViewRow
-            label={t('hoverInfo.balcony', { defaultValue: 'Μπαλκόνι' })}
+            label={t('hoverInfo.balcony')}
             value={`${areas.balcony} m²`}
           />
         )}
         {areas?.terrace && (
           <QuickViewRow
-            label={t('hoverInfo.terrace', { defaultValue: 'Βεράντα' })}
+            label={t('hoverInfo.terrace')}
             value={`${areas.terrace} m²`}
           />
         )}
         {areas?.garden && (
           <QuickViewRow
-            label={t('hoverInfo.garden', { defaultValue: 'Κήπος' })}
+            label={t('hoverInfo.garden')}
             value={`${areas.garden} m²`}
           />
         )}
         {layout?.bedrooms !== undefined && (
           <QuickViewRow
-            label={t('hoverInfo.bedroomsFull', { defaultValue: 'Υπνοδωμάτια' })}
+            label={t('hoverInfo.bedroomsFull')}
             value={layout.bedrooms}
           />
         )}
         {layout?.bathrooms !== undefined && (
           <QuickViewRow
-            label={t('hoverInfo.bathroomsFull', { defaultValue: 'Μπάνια' })}
+            label={t('hoverInfo.bathroomsFull')}
             value={layout.bathrooms}
           />
         )}
@@ -130,19 +130,19 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
         )}
         {translatedOrientations && (
           <QuickViewRow
-            label={t('hoverInfo.orientation', { defaultValue: 'Προσανατολισμός' })}
+            label={t('hoverInfo.orientation')}
             value={translatedOrientations}
           />
         )}
         {parkingCount > 0 && (
           <QuickViewRow
-            label={t('hoverInfo.parking', { defaultValue: 'Στάθμευση' })}
+            label={t('hoverInfo.parking')}
             value={parkingCount}
           />
         )}
         {storageCount > 0 && (
           <QuickViewRow
-            label={t('hoverInfo.storageFull', { defaultValue: 'Αποθήκη' })}
+            label={t('hoverInfo.storageFull')}
             value={storageCount}
           />
         )}
@@ -150,7 +150,7 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
           <>
             <Separator className="my-1" />
             <QuickViewRow
-              label={t('hoverInfo.price', { defaultValue: 'Τιμή' })}
+              label={t('hoverInfo.price')}
               value={
                 <span className={`${COLOR_BRIDGE.text.price} font-semibold`}>
                   {effectivePrice.toLocaleString('el-GR')}€

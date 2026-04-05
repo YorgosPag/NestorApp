@@ -133,7 +133,18 @@
     "onFloorPlanToSee": "on the floor plan to see",
     "quickInfo": "quick information",
     "noDataFound": "No data found",
-    "forThisProperty": "for this property"
+    "forThisProperty": "for this property",
+    "gross": "Gross area",
+    "net": "Net area",
+    "balcony": "Balcony",
+    "terrace": "Terrace",
+    "garden": "Garden",
+    "bedroomsFull": "Bedrooms",
+    "bathroomsFull": "Bathrooms",
+    "orientation": "Orientation",
+    "parking": "Parking",
+    "storageFull": "Storage",
+    "price": "Price"
   },
   "connectionPanel": {
     "title": "Connections & Grouping",
