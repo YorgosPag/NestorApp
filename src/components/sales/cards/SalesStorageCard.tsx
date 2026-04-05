@@ -71,19 +71,19 @@ export function SalesStorageCard({
       {
         icon: Layers,
         iconColor: 'text-teal-600',
-        label: t('storage:general.fields.type', { defaultValue: 'Τύπος' }),
+        label: t('storage:general.fields.type'),
         value: t(`storage:types.${storage.type}`, { defaultValue: storage.type }),
       },
       {
         icon: Calculator,
         iconColor: 'text-pink-600',
-        label: t('storage:general.fields.area', { defaultValue: 'Εμβαδόν' }),
+        label: t('storage:general.fields.area'),
         value: `${area} m²`,
       },
       {
         icon: DollarSign,
         iconColor: 'text-green-600',
-        label: t('storage:general.fields.price', { defaultValue: 'Τιμή' }),
+        label: t('storage:general.fields.price'),
         value: formatCurrencyWhole(price > 0 ? price : null),
       },
     ];
@@ -92,7 +92,7 @@ export function SalesStorageCard({
       items.push({
         icon: Calculator,
         iconColor: 'text-blue-600',
-        label: t('storage:general.fields.pricePerSqm', { defaultValue: '€/m²' }),
+        label: t('storage:general.fields.pricePerSqm'),
         value: `${formatCurrencyWhole(pricePerSqm)}/m²`,
       });
     }
