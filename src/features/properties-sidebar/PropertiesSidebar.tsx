@@ -165,13 +165,13 @@ export function PropertiesSidebar({
       <MobileDetailsSlideIn
         isOpen={isMobile && !!selectedProperty}
         onClose={() => onSelectProperty('__none__', false)}
-        title={selectedProperty?.name || t('mobile.unitDetails', { defaultValue: 'СлжаоЬхШ Абадулжм' })}
+        title={selectedProperty?.name || t('mobile.unitDetails')}
         actionButtons={(
           <>
             <button
               onClick={() => {}}
               className={`${spacing.padding.sm} rounded-md ${quick.input} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label={t('mobile.editUnit', { defaultValue: 'ДзЬеЬиЪШйхШ Шбадулжм' })}
+              aria-label={t('mobile.editUnit')}
             >
               <Edit className={iconSizes.sm} />
             </button>
@@ -180,7 +180,7 @@ export function PropertiesSidebar({
                 void handleDeleteProperty();
               }}
               className={`${spacing.padding.sm} rounded-md ${quick.error} ${colors.bg.primary} text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label={t('mobile.deleteUnit', { defaultValue: 'ГаШЪиШну Шбадулжм' })}
+              aria-label={t('mobile.deleteUnit')}
             >
               <Trash2 className={iconSizes.sm} />
             </button>
