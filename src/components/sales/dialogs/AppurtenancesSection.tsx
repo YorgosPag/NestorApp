@@ -56,7 +56,7 @@ export function AppurtenancesSection({
   return (
     <section className="space-y-3">
       <Label className="text-sm font-semibold">
-        {t('sales.appurtenances.title', { defaultValue: 'Παρακολουθήματα' })} ({spaces.length})
+        {t('sales.appurtenances.title')} ({spaces.length})
       </Label>
 
       <ul className="space-y-2">
@@ -92,7 +92,7 @@ export function AppurtenancesSection({
                   {space.isRented && (
                     <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
                       <AlertTriangle className={iconSizes.xs} />
-                      {t('sales.appurtenances.activeRental', { defaultValue: 'Ενεργή μίσθωση' })}
+                      {t('sales.appurtenances.activeRental')}
                     </span>
                   )}
                 </label>
@@ -108,7 +108,7 @@ export function AppurtenancesSection({
                     step={500}
                     value={space.salePrice || ''}
                     onChange={(e) => onPriceChange(space.spaceId, Number(e.target.value) || 0)}
-                    placeholder={t('sales.appurtenances.pricePlaceholder', { defaultValue: 'Τιμή €' })}
+                    placeholder={t('sales.appurtenances.pricePlaceholder')}
                     className="w-28 text-right text-sm"
                     disabled={!space.checked || hasNoArea}
                   />
@@ -117,9 +117,7 @@ export function AppurtenancesSection({
               {hasNoArea && (
                 <p className="flex items-center gap-1.5 text-xs text-destructive ml-7">
                   <Ban className="h-3 w-3 shrink-0" />
-                  {t('sales.appurtenances.noArea', {
-                    defaultValue: 'Δεν έχει εμβαδόν (τ.μ.) — δεν μπορεί να συμπεριληφθεί',
-                  })}
+                  {t('sales.appurtenances.noArea')}
                 </p>
               )}
             </li>
@@ -128,7 +126,7 @@ export function AppurtenancesSection({
       </ul>
 
       <footer className="flex justify-between border-t pt-2 text-sm font-medium">
-        <span>{t('sales.appurtenances.grandTotal', { defaultValue: 'Σύνολο (μονάδα + παρακολουθήματα)' })}</span>
+        <span>{t('sales.appurtenances.grandTotal')}</span>
         <span>{formatCurrencyWhole(grandTotal)}</span>
       </footer>
     </section>
