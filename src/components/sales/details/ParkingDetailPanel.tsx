@@ -46,7 +46,7 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
   if (!data) {
     return (
       <section className={cn("p-4 text-center text-sm", colors.text.muted)}>
-        {t('salesParking.details.noSelection', { defaultValue: 'Επιλέξτε μια θέση στάθμευσης για λεπτομέρειες.' })}
+        {t('salesParking.details.noSelection')}
       </section>
     );
   }
@@ -62,18 +62,18 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Car className={`${iconSizes.sm} ${SALES_ICON_COLORS.basicInfoSection}`} />
-            {t('parking:general.basicInfo', { defaultValue: 'Βασικές Πληροφορίες' })}
+            {t('parking:general.basicInfo')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <InfoRow icon={Car} iconColor={SALES_ICON_COLORS.type} label={t('parking:general.fields.type', { defaultValue: 'Τύπος' })} value={t(`parking:types.${data.type ?? 'standard'}`, { defaultValue: data.type ?? 'standard' })} />
-          <InfoRow icon={MapPin} iconColor={SALES_ICON_COLORS.locationZone} label={t('parking:general.fields.locationZone', { defaultValue: 'Ζώνη' })} value={data.locationZone ? t(`parking:locationZone.${data.locationZone}`, { defaultValue: data.locationZone }) : '—'} />
-          <InfoRow icon={Layers} iconColor={SALES_ICON_COLORS.floor} label={t('parking:general.fields.floor', { defaultValue: 'Επίπεδο' })} value={data.floor || '—'} />
+          <InfoRow icon={Car} iconColor={SALES_ICON_COLORS.type} label={t('parking:general.fields.type')} value={t(`parking:types.${data.type ?? 'standard'}`, { defaultValue: data.type ?? 'standard' })} />
+          <InfoRow icon={MapPin} iconColor={SALES_ICON_COLORS.locationZone} label={t('parking:general.fields.locationZone')} value={data.locationZone ? t(`parking:locationZone.${data.locationZone}`, { defaultValue: data.locationZone }) : '—'} />
+          <InfoRow icon={Layers} iconColor={SALES_ICON_COLORS.floor} label={t('parking:general.fields.floor')} value={data.floor || '—'} />
           {area > 0 && (
-            <InfoRow icon={Maximize2} iconColor={SALES_ICON_COLORS.area} label={t('parking:general.fields.area', { defaultValue: 'Εμβαδόν' })} value={`${area} m²`} />
+            <InfoRow icon={Maximize2} iconColor={SALES_ICON_COLORS.area} label={t('parking:general.fields.area')} value={`${area} m²`} />
           )}
           {data.millesimalShares != null && data.millesimalShares > 0 && (
-            <InfoRow icon={Hash} iconColor={SALES_ICON_COLORS.millesimalShares} label={t('salesParking.details.millesimalShares', { defaultValue: 'Χιλιοστά' })} value={`${data.millesimalShares}‰`} />
+            <InfoRow icon={Hash} iconColor={SALES_ICON_COLORS.millesimalShares} label={t('salesParking.details.millesimalShares')} value={`${data.millesimalShares}‰`} />
           )}
         </CardContent>
       </Card>
@@ -83,14 +83,14 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <DollarSign className={`${iconSizes.sm} ${SALES_ICON_COLORS.financialSection}`} />
-            {t('parking:general.financial', { defaultValue: 'Οικονομικά Στοιχεία' })}
+            {t('parking:general.financial')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
           <InfoRow
             icon={DollarSign}
             iconColor={SALES_ICON_COLORS.askingPrice}
-            label={t('parking:general.fields.price', { defaultValue: 'Τιμή' })}
+            label={t('parking:general.fields.price')}
             value={formatCurrencyWhole(price > 0 ? price : null)}
             valueColor={SALES_ICON_COLORS.askingPrice}
           />
@@ -98,7 +98,7 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
             <InfoRow
               icon={DollarSign}
               iconColor={SALES_ICON_COLORS.pricePerSqm}
-              label={t('parking:general.fields.pricePerSqm', { defaultValue: '€/m²' })}
+              label={t('parking:general.fields.pricePerSqm')}
               value={`${formatCurrencyWhole(pricePerSqm)}/m²`}
             />
           )}
@@ -106,7 +106,7 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
             <InfoRow
               icon={DollarSign}
               iconColor={SALES_ICON_COLORS.finalPrice}
-              label={t('salesParking.details.finalPrice', { defaultValue: 'Τελική Τιμή' })}
+              label={t('salesParking.details.finalPrice')}
               value={formatCurrencyWhole(data.commercial.finalPrice)}
               valueColor={SALES_ICON_COLORS.finalPrice}
             />
@@ -119,7 +119,7 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">
-              {t('parking:general.notes', { defaultValue: 'Σημειώσεις' })}
+              {t('parking:general.notes')}
             </CardTitle>
           </CardHeader>
           <CardContent>
