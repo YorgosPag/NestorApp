@@ -97,3 +97,8 @@
   - **Migrated**:
     - `src/types/project.ts` — inline union (6 values) → `export type { ProjectStatus } from '@/constants/project-statuses'`.
     - `src/config/report-builder/domain-definitions.ts` — local 5-value array → `const PROJECT_STATUSES = ACTIVE_PROJECT_STATUSES` (subset import excluding `deleted` για να διατηρηθεί η prior filter-dropdown συμπεριφορά).
+- **2026-04-05 (Batch 9F-2)**: `ProjectType` centralization.
+  - **Created**: `src/constants/project-types.ts` — `PROJECT_TYPES` (6), `ProjectType` union, `isProjectType()` guard. Σημείωση: παρά την επικάλυψη 4 τιμών με `BuildingType`, διατηρείται ξεχωριστό domain (project-wide classification vs individual building).
+  - **Migrated**:
+    - `src/types/project.ts` — inline union (6 values) → `export type { ProjectType } from '@/constants/project-types'`.
+    - `src/config/report-builder/domain-definitions.ts` — local `PROJECT_TYPES` array αφαιρέθηκε · imported από SSoT.

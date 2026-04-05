@@ -6,8 +6,9 @@ import type { LandownerEntry } from '@/types/ownership-table';
 // `src/constants/project-statuses.ts`. Re-export για backward-compat.
 export type { ProjectStatus } from '@/constants/project-statuses';
 
-/** 🏢 ENTERPRISE: Project types for construction industry */
-export type ProjectType = 'residential' | 'commercial' | 'industrial' | 'mixed' | 'infrastructure' | 'renovation';
+// ADR-287 — ProjectType SSoT: canonical union lives στο
+// `src/constants/project-types.ts`. Re-export για backward-compat.
+export type { ProjectType } from '@/constants/project-types';
 
 /** 🏢 ENTERPRISE: Priority levels for project management */
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical';

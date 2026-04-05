@@ -17,6 +17,7 @@ import { ENERGY_CLASSES } from '@/constants/energy-classes';
 import { BUILDING_TYPES } from '@/constants/building-types';
 import { PRIORITY_LEVELS } from '@/constants/priority-levels';
 import { ACTIVE_PROJECT_STATUSES } from '@/constants/project-statuses';
+import { PROJECT_TYPES as PROJECT_TYPES_SSOT } from '@/constants/project-types';
 import type {
   BuilderDomainId,
   DomainDefinition,
@@ -77,9 +78,9 @@ import {
 // soft-deleted `deleted` να μην εμφανίζεται στα report-builder dropdowns.
 const PROJECT_STATUSES = ACTIVE_PROJECT_STATUSES;
 
-const PROJECT_TYPES = [
-  'residential', 'commercial', 'industrial', 'mixed', 'infrastructure', 'renovation',
-] as const;
+// ADR-287 — ProjectType SSoT lives στο `@/constants/project-types`.
+// Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.
+const PROJECT_TYPES = PROJECT_TYPES_SSOT;
 
 // ADR-287 — PriorityLevel SSoT lives στο `@/constants/priority-levels`.
 // Το local `PROJECT_PRIORITIES` αντικαταστάθηκε με alias στο imported array
