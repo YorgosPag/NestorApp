@@ -145,11 +145,14 @@ export async function createProject(
     return { success: true, projectId };
 
   } catch (error) {
-    logger.error('Error creating project', { error });
+    const message = getErrorMessage(error);
+    const errorCode = ApiClientError.isApiClientError(error) ? error.errorCode : undefined;
+    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
+    logger.error('Error creating project', { message, errorCode, statusCode });
     return {
       success: false,
-      error: getErrorMessage(error),
-      errorCode: ApiClientError.isApiClientError(error) ? error.errorCode : undefined,
+      error: message,
+      errorCode,
     };
   }
 }

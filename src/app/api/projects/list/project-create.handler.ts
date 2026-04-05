@@ -63,8 +63,26 @@ export const POST = withHighRateLimit(
   withAuth<ApiSuccessResponse<ProjectCreateResponse>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        // 🏢 ENTERPRISE: Parse request body
-        const body: ProjectCreatePayload = await req.json();
+        // 🏢 ENTERPRISE: Parse request body (with diagnostics)
+        const rawText = await req.text();
+        if (!rawText) {
+          logger.warn('[Projects] Empty request body received', {
+            contentType: req.headers.get('content-type'),
+            contentLength: req.headers.get('content-length'),
+            method: req.method,
+          });
+          throw new ApiError(400, 'Empty request body — expected JSON payload', 'EMPTY_BODY');
+        }
+        let body: ProjectCreatePayload;
+        try {
+          body = JSON.parse(rawText) as ProjectCreatePayload;
+        } catch {
+          logger.warn('[Projects] Malformed JSON body', {
+            preview: rawText.slice(0, 120),
+            contentType: req.headers.get('content-type'),
+          });
+          throw new ApiError(400, 'Malformed JSON in request body', 'MALFORMED_JSON');
+        }
 
         // 🏢 ADR-284 §3.0: Layer 0 — Project Creation Policy
         // Enforce name + linkedCompanyId BEFORE any Firestore writes.

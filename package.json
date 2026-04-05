@@ -31,6 +31,8 @@
     "orchestrator": "tsx scripts/orchestrator/index.ts",
     "typecheck:strict": "tsc --noEmit --strict",
     "validate:project": "bash scripts/validate-project-rules.sh",
+    "i18n:audit": "bash scripts/i18n-audit.sh",
+    "i18n:baseline": "bash scripts/generate-i18n-baseline.sh",
     "validate:all": "npm run lint:strict && bash scripts/validate-project-rules.sh",
     "strict-mode": "node scripts/simple-strict-check.js",
     "clear-cache": "node scripts/clear-cache.js",

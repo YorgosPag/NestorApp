@@ -192,7 +192,10 @@ export function useNavigationData(): UseNavigationDataReturn {
         return { companies, projects };
 
       } catch (error) {
-        logger.error('Bootstrap failed', { error });
+        logger.error('Bootstrap failed', {
+          message: error instanceof Error ? error.message : String(error),
+          name: error instanceof Error ? error.name : undefined,
+        });
         // Fallback to legacy loading if bootstrap fails
         logger.warn('Falling back to legacy loading...');
         return loadLegacy();
