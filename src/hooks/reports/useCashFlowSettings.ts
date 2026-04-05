@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from 'react-i18next';
 import type {
   CashFlowConfig,
@@ -42,6 +42,7 @@ export function useCashFlowSettings(
   onSaved?: () => void,
 ): UseCashFlowSettingsReturn {
   const { t } = useTranslation('cash-flow');
+  const { success, error: notifyError } = useNotifications();
 
   const [config, setConfig] = useState<CashFlowConfig>(
     serverConfig ?? { ...DEFAULT_CASH_FLOW_CONFIG },
@@ -91,16 +92,16 @@ export function useCashFlowSettings(
       });
 
       setHasChanges(false);
-      toast.success(t('settings.saved'));
+      success(t('settings.saved'));
       onSaved?.();
     } catch (err) {
       // Rollback on failure
       setConfig(snapshot);
-      toast.error(getErrorMessage(err));
+      notifyError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
-  }, [config, t, onSaved]);
+  }, [config, t, onSaved, success, notifyError]);
 
   const resetConfig = useCallback((newConfig: CashFlowConfig | null) => {
     setConfig(newConfig ?? { ...DEFAULT_CASH_FLOW_CONFIG });

@@ -10,7 +10,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { getErrorMessage } from '@/lib/error-utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -68,6 +68,7 @@ function reportUrl(id: string): string {
 
 export function useSavedReports(): UseSavedReportsReturn {
   const { t } = useTranslation('saved-reports');
+  const { success, error: notifyError } = useNotifications();
   const { user } = useAuth();
   const userId = user?.uid ?? '';
 
@@ -90,11 +91,11 @@ export function useSavedReports(): UseSavedReportsReturn {
     } catch (err) {
       const msg = getErrorMessage(err);
       setError(msg);
-      toast.error(t('messages.errorFetch'));
+      notifyError(t('messages.errorFetch'));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, notifyError]);
 
   useEffect(() => {
     void fetchReports();
@@ -107,9 +108,9 @@ export function useSavedReports(): UseSavedReportsReturn {
   const createReport = useCallback(async (input: CreateSavedReportInput): Promise<SavedReport> => {
     const created = await createSavedReportWithPolicy({ input });
     setReports(prev => [created, ...prev]);
-    toast.success(t('messages.saved'));
+    success(t('messages.saved'));
     return created;
-  }, [t]);
+  }, [t, success]);
 
   // ========================================================================
   // Update
@@ -121,9 +122,9 @@ export function useSavedReports(): UseSavedReportsReturn {
   ): Promise<SavedReport> => {
     const updated = await updateSavedReportWithPolicy({ id, input });
     setReports(prev => prev.map(r => (r.id === id ? updated : r)));
-    toast.success(t('messages.updated'));
+    success(t('messages.updated'));
     return updated;
-  }, [t]);
+  }, [t, success]);
 
   // ========================================================================
   // Delete
@@ -133,13 +134,13 @@ export function useSavedReports(): UseSavedReportsReturn {
     try {
       await deleteSavedReportWithPolicy({ id });
       setReports(prev => prev.filter(r => r.id !== id));
-      toast.success(t('messages.deleted'));
+      success(t('messages.deleted'));
       return true;
     } catch (err) {
-      toast.error(t('messages.errorDelete'));
+      notifyError(t('messages.errorDelete'));
       throw err;
     }
-  }, [t]);
+  }, [t, success, notifyError]);
 
   // ========================================================================
   // Actions
@@ -167,10 +168,10 @@ export function useSavedReports(): UseSavedReportsReturn {
     } catch {
       // Revert on failure
       setReports(prevReports);
-      toast.error(t('messages.errorFavorite'));
+      notifyError(t('messages.errorFavorite'));
       return false;
     }
-  }, [reports, userId, t]);
+  }, [reports, userId, t, notifyError]);
 
   const trackRun = useCallback(async (id: string): Promise<void> => {
     try {

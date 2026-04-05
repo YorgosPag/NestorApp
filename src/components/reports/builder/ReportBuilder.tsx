@@ -12,7 +12,7 @@ import '@/lib/design-system';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, Save, FolderOpen } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { cn } from '@/lib/utils';
 import { toPng } from 'html-to-image';
 import { useReportBuilder } from '@/hooks/reports/useReportBuilder';
@@ -41,6 +41,7 @@ import type {
 
 export function ReportBuilder() {
   const { t } = useTranslation('report-builder');
+  const { success, error: notifyError } = useNotifications();
   const colors = useSemanticColors();
   const builder = useReportBuilder();
   const savedReports = useSavedReports();
@@ -98,22 +99,22 @@ export function ReportBuilder() {
           '@/services/report-engine/builder-pdf-exporter'
         );
         await exportBuilderToPdf(params);
-        toast.success(t('export.successPdf'));
+        success(t('export.successPdf'));
       } else {
         const { exportBuilderToExcel } = await import(
           '@/services/report-engine/builder-excel-exporter'
         );
         await exportBuilderToExcel(params);
-        toast.success(t('export.successExcel'));
+        success(t('export.successExcel'));
       }
 
       setExportDialogOpen(false);
     } catch {
-      toast.error(t('export.error'));
+      notifyError(t('export.error'));
     } finally {
       setExporting(false);
     }
-  }, [builder, t]);
+  }, [builder, t, success, notifyError]);
 
   const handleExportBarClick = useCallback((format: BarExportFormat) => {
     if (format === 'csv') return; // CSV deferred to Phase 4
@@ -160,8 +161,8 @@ export function ReportBuilder() {
     builder.loadSavedReport(report);
     void savedReports.trackRun(report.id);
     setShowSavedList(false);
-    toast.success(t('messages.loaded', { ns: 'saved-reports' }));
-  }, [builder, savedReports, t]);
+    success(t('messages.loaded', { ns: 'saved-reports' }));
+  }, [builder, savedReports, t, success]);
 
   const handleDuplicate = useCallback((report: Parameters<typeof builder.loadSavedReport>[0]) => {
     builder.loadSavedReport(report);
