@@ -18,6 +18,7 @@ import { BUILDING_TYPES } from '@/constants/building-types';
 import { PRIORITY_LEVELS } from '@/constants/priority-levels';
 import { ACTIVE_PROJECT_STATUSES } from '@/constants/project-statuses';
 import { PROJECT_TYPES as PROJECT_TYPES_SSOT } from '@/constants/project-types';
+import { ACTIVE_BUILDING_STATUSES } from '@/constants/building-statuses';
 import type {
   BuilderDomainId,
   DomainDefinition,
@@ -87,9 +88,10 @@ const PROJECT_TYPES = PROJECT_TYPES_SSOT;
 // ώστε να διατηρηθεί το semantic naming στα downstream field definitions.
 const PROJECT_PRIORITIES = PRIORITY_LEVELS;
 
-const BUILDING_STATUSES = [
-  'planning', 'construction', 'completed', 'active',
-] as const;
+// ADR-287 — BuildingStatus SSoT lives στο `@/constants/building-statuses`.
+// Χρησιμοποιείται το `ACTIVE_BUILDING_STATUSES` subset (4 values) ώστε το
+// soft-deleted `deleted` να μην εμφανίζεται στα report-builder dropdowns.
+const BUILDING_STATUSES = ACTIVE_BUILDING_STATUSES;
 
 // ADR-287 — BuildingType SSoT lives στο `@/constants/building-types`.
 // Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.

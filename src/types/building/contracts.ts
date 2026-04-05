@@ -5,6 +5,8 @@ import type { BuildingAddressReference, ProjectAddress } from '../project/addres
 import type { PropertyType } from '@/types/property';
 // ADR-287 — PriorityLevel SSoT (shared across Building/Project domains)
 import type { PriorityLevel } from '@/constants/priority-levels';
+// ADR-287 — BuildingStatus SSoT (value import για use στο Building interface)
+import type { BuildingStatus } from '@/constants/building-statuses';
 
 // Building hierarchy interfaces
 // NOTE: Contact → @/types/contacts, Project → @/types/project (canonical types)
@@ -13,6 +15,10 @@ import type { PriorityLevel } from '@/constants/priority-levels';
   // ADR-287 — BuildingType SSoT: canonical union lives στο
   // `src/constants/building-types.ts`. Re-export για backward-compat.
   export type { BuildingType } from '@/constants/building-types';
+
+  // ADR-287 — BuildingStatus SSoT: canonical union lives στο
+  // `src/constants/building-statuses.ts`. Re-export για backward-compat.
+  export type { BuildingStatus } from '@/constants/building-statuses';
 
   // ADR-287 — BuildingPriority: semantic alias πάνω στο shared PriorityLevel
   // (canonical στο `src/constants/priority-levels.ts`). Το ίδιο 4-value scale
@@ -54,7 +60,7 @@ import type { PriorityLevel } from '@/constants/priority-levels';
     builtArea?: number;
     floors: number;
     units?: number;
-    status: 'planning' | 'construction' | 'completed' | 'active' | 'deleted';
+    status: BuildingStatus;
     progress: number; // 0-100
     startDate?: string;
     completionDate?: string;

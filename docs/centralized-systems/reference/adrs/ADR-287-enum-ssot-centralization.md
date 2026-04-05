@@ -102,3 +102,8 @@
   - **Migrated**:
     - `src/types/project.ts` — inline union (6 values) → `export type { ProjectType } from '@/constants/project-types'`.
     - `src/config/report-builder/domain-definitions.ts` — local `PROJECT_TYPES` array αφαιρέθηκε · imported από SSoT.
+- **2026-04-05 (Batch 9F-3)**: `BuildingStatus` centralization.
+  - **Created**: `src/constants/building-statuses.ts` — `BUILDING_STATUSES` (5, incl. `deleted`), `BuildingStatus` union, `isBuildingStatus()` guard, derived subsets `ACTIVE_BUILDING_STATUSES` (4, non-deleted) + `IN_CONSTRUCTION_BUILDING_STATUSES` (2) + αντίστοιχα guards.
+  - **Migrated**:
+    - `src/types/building/contracts.ts` — inline union (5 values) στο `Building.status` → `BuildingStatus` (import + re-export από SSoT).
+    - `src/config/report-builder/domain-definitions.ts` — local 4-value array → `const BUILDING_STATUSES = ACTIVE_BUILDING_STATUSES` (subset import excluding `deleted`).
