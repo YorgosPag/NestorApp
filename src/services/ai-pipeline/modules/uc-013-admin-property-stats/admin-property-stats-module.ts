@@ -21,6 +21,7 @@ import {
   normalizeCommercialStatus,
   isListedCommercialStatus,
 } from '@/constants/commercial-statuses';
+import { isCompanyContactType } from '@/constants/contact-types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -202,10 +203,12 @@ export class AdminPropertyStatsModule implements IUCModule {
         let companies = 0;
         for (const doc of contactsSnapshot.docs) {
           const data = doc.data();
-          const type = ((data.type ?? data.contactType ?? '') as string).toLowerCase();
-          if (type === 'company' || type === 'εταιρεία' || type === 'εταιρία') {
+          // ADR-287 Batch 10B — Normalize via SSoT resolver (canonical ContactType)
+          const rawType = data.type ?? data.contactType;
+          if (isCompanyContactType(rawType)) {
             companies++;
           } else {
+            // individuals bucket includes: 'individual', 'service', null, unknown
             individuals++;
           }
         }
