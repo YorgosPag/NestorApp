@@ -107,9 +107,13 @@
   - **Migrated**:
     - `src/types/building/contracts.ts` — inline union (5 values) στο `Building.status` → `BuildingStatus` (import + re-export από SSoT).
     - `src/config/report-builder/domain-definitions.ts` — local 4-value array → `const BUILDING_STATUSES = ACTIVE_BUILDING_STATUSES` (subset import excluding `deleted`).
-- **2026-04-05 (Batch 9F-4)**: `LegalWorkflowPhase` centralization (report-builder enum).
-  - **Created**: `src/constants/legal-phases.ts` — `LEGAL_WORKFLOW_PHASES` (6), `LegalWorkflowPhase` union, `isLegalWorkflowPhase()` guard, derived subsets `IN_PROGRESS_LEGAL_PHASES` (3) + `FINALIZED_LEGAL_PHASES` (2) + αντίστοιχα guards.
-  - **Semantic note**: Διαφορετικό από το `LegalPhase` του `@/types/legal-contracts` (7 values FSM-derived). Ο report-builder enum αντικατοπτρίζει γενικό conveyancing workflow — αρμονοποίηση αποτελεί θέμα ξεχωριστού ADR.
+- **2026-04-05 (Batch 9F-4)**: `LegalWorkflowPhase` (6 values) centralization — ❌ **ΑΝΑΘΕΩΡΗΘΗΚΕ** στο 9F-5 γιατί οι 6 τιμές ήταν **λανθασμένες**: δεν ταίριαζαν ποτέ με τις πραγματικές τιμές του `property.commercial.legalPhase` field (που αποθηκεύει canonical 7-value `LegalPhase` από ADR-230). Το filter dropdown ήταν ουσιαστικά broken.
+- **2026-04-05 (Batch 9F-5)**: `LegalPhase` canonical centralization + i18n correction (διόρθωση του 9F-4).
+  - **Replaced**: `src/constants/legal-phases.ts` — τώρα περιέχει το **canonical** 7-value enum από ADR-230 (`none` → `payoff_completed`), με `getLegalPhaseRank()` helper + derived subsets `PENDING_LEGAL_PHASES` (3) + `SIGNED_LEGAL_PHASES` (3) + αντίστοιχα guards.
   - **Migrated**:
-    - `src/config/report-builder/domain-definitions.ts` — local 6-value array αφαιρέθηκε · imported από SSoT.
-    - `src/config/report-builder/domain-defs-buyers.ts` — duplicate 6-value array αφαιρέθηκε · imported από SSoT.
+    - `src/types/legal-contracts.ts` — inline 7-value union → import + re-export από SSoT.
+    - `src/config/report-builder/domain-definitions.ts` — τώρα χρησιμοποιεί το canonical `LEGAL_PHASES` (7), fixing the broken filter.
+    - `src/config/report-builder/domain-defs-buyers.ts` — same fix.
+    - `src/i18n/locales/{el,en,pseudo}/report-builder-domains.json` — i18n keys ενημερώθηκαν από τις 6 λανθασμένες (`initial`/`deedPrep`/...) στις 7 canonical (`none`/`preliminary_pending`/...). Τα ίδια labels χρησιμοποιούνταν ήδη στο `reports.json`.
+    - `src/types/i18n.ts` — regenerated.
+  - **Bonus fix**: Προστέθηκαν τα λείπον local `import type { X }` statements στα `src/types/building/contracts.ts` και `src/types/project.ts` για τα SSoT types των 9C/9D/9E/9F-1/9F-2 (`BuildingType`, `BuildingStatus`, `EnergyClass`, `RenovationStatus`, `ProjectStatus`, `ProjectType`) — `export type { X } from '...'` δεν δημιουργούσε local binding, με αποτέλεσμα pre-existing TS2304 errors στα `Building` + `Project` interfaces.

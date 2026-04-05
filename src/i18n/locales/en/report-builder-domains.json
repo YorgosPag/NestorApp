@@ -169,12 +169,13 @@
           "draft": "Draft"
         },
         "legalPhase": {
-          "initial": "Initial",
-          "deedPrep": "Deed Preparation",
-          "documentReview": "Document Review",
-          "signaturePending": "Signature Pending",
-          "completed": "Completed",
-          "cancelled": "Cancelled"
+          "none": "No Contract",
+          "preliminary_pending": "Preliminary Pending",
+          "preliminary_signed": "Preliminary Signed",
+          "final_pending": "Final Pending",
+          "final_signed": "Final Signed",
+          "payoff_pending": "Payoff Pending",
+          "payoff_completed": "Payoff Completed"
         },
         "energyClass": {
           "A+": "A+",
@@ -347,12 +348,13 @@
       },
       "enums": {
         "legalPhase": {
-          "initial": "Initial",
-          "deedPrep": "Deed Preparation",
-          "documentReview": "Document Review",
-          "signaturePending": "Signature Pending",
-          "completed": "Completed",
-          "cancelled": "Cancelled"
+          "none": "No Contract",
+          "preliminary_pending": "Preliminary Pending",
+          "preliminary_signed": "Preliminary Signed",
+          "final_pending": "Final Pending",
+          "final_signed": "Final Signed",
+          "payoff_pending": "Payoff Pending",
+          "payoff_completed": "Payoff Completed"
         }
       }
     },

@@ -7,12 +7,13 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { LEGAL_WORKFLOW_PHASES } from '@/constants/legal-phases';
+import { LEGAL_PHASES as LEGAL_PHASES_SSOT } from '@/constants/legal-phases';
 import type { DomainDefinition } from './report-builder-types';
 
-// ADR-287 — LegalWorkflowPhase SSoT lives στο `@/constants/legal-phases`.
-// Reuse του shared array αντί να διατηρούμε τοπικό αντίγραφο.
-const LEGAL_PHASES = LEGAL_WORKFLOW_PHASES;
+// ADR-287 — LegalPhase SSoT lives στο `@/constants/legal-phases`.
+// Canonical 7-value enum — αντικατοπτρίζει τις πραγματικές τιμές του
+// `property.commercial.legalPhase` field (ADR-230 FSM-derived).
+const LEGAL_PHASES = LEGAL_PHASES_SSOT;
 
 // ============================================================================
 // B3 — Buyers (Αγοραστές)

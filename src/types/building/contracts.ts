@@ -5,33 +5,26 @@ import type { BuildingAddressReference, ProjectAddress } from '../project/addres
 import type { PropertyType } from '@/types/property';
 // ADR-287 — PriorityLevel SSoT (shared across Building/Project domains)
 import type { PriorityLevel } from '@/constants/priority-levels';
-// ADR-287 — BuildingStatus SSoT (value import για use στο Building interface)
+// ADR-287 — SSoT imports (χρειάζονται locally για use στο Building interface,
+// επιπρόσθετα των κάτωθι `export type {X}` re-exports για backward-compat).
 import type { BuildingStatus } from '@/constants/building-statuses';
+import type { BuildingType } from '@/constants/building-types';
+import type { EnergyClass } from '@/constants/energy-classes';
+import type { RenovationStatus } from '@/constants/renovation-statuses';
 
 // Building hierarchy interfaces
 // NOTE: Contact → @/types/contacts, Project → @/types/project (canonical types)
 // Dead Contact/Project interfaces removed 2026-03-13 (centralization audit)
 
-  // ADR-287 — BuildingType SSoT: canonical union lives στο
-  // `src/constants/building-types.ts`. Re-export για backward-compat.
-  export type { BuildingType } from '@/constants/building-types';
-
-  // ADR-287 — BuildingStatus SSoT: canonical union lives στο
-  // `src/constants/building-statuses.ts`. Re-export για backward-compat.
-  export type { BuildingStatus } from '@/constants/building-statuses';
+  // ADR-287 — Re-export των SSoT types από τα leaf modules για backward-compat.
+  // (Τα ίδια names εισάγονται locally στην κορυφή του αρχείου για use στο
+  // Building interface.)
+  export type { BuildingType, BuildingStatus, EnergyClass, RenovationStatus };
 
   // ADR-287 — BuildingPriority: semantic alias πάνω στο shared PriorityLevel
   // (canonical στο `src/constants/priority-levels.ts`). Το ίδιο 4-value scale
   // χρησιμοποιείται και στο Project domain (domain-definitions.ts).
   export type BuildingPriority = PriorityLevel;
-
-  // ADR-287 — EnergyClass SSoT: canonical union lives στο
-  // `src/constants/energy-classes.ts`. Re-export για backward-compat.
-  export type { EnergyClass } from '@/constants/energy-classes';
-
-  // ADR-287 — RenovationStatus SSoT: canonical union lives στο
-  // `src/constants/renovation-statuses.ts`. Re-export για backward-compat.
-  export type { RenovationStatus } from '@/constants/renovation-statuses';
 
   export interface Building {
     // 🏢 ENTERPRISE: Index signature for SelectedItemBase compatibility (2026-01-20)

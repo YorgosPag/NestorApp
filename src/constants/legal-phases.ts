@@ -1,120 +1,126 @@
 /**
  * =============================================================================
- * SSoT: LegalWorkflowPhase Canonical Definitions
+ * SSoT: LegalPhase Canonical Definitions
  * =============================================================================
  *
- * **Single Source of Truth** για τις φάσεις ενός legal workflow (conveyancing
- * process) όπως εμφανίζονται σε report-builder dropdowns & filter UIs.
+ * **Single Source of Truth** για τη νομική φάση (legal phase) ενός ακινήτου.
  *
- * Pre-centralization, το ίδιο 6-value array οριζόταν σε **δύο** σημεία:
- *   - `src/config/report-builder/domain-definitions.ts` (properties domain)
- *   - `src/config/report-builder/domain-defs-buyers.ts` (buyers domain)
+ * Αντικατοπτρίζει την σύνθεση `ContractPhase` (preliminary/final/payoff) και
+ * `ContractStatus` (draft/pending_signature/signed/completed) στο υψηλότερο
+ * contract της αλυσίδας — υπολογίζεται από το `LegalContractService` (ADR-230)
+ * και αποθηκεύεται denormalized στο `property.commercial.legalPhase`.
  *
- * ⚠️ **ΠΡΟΣΟΧΗ — ΟΧΙ ΙΔΙΟ με `LegalPhase` στο `src/types/legal-contracts.ts`**:
- * Ο τύπος `LegalPhase` στο `@/types/legal-contracts` περιγράφει τη _νομική_
- * φάση ενός ακινήτου όπως υπολογίζεται από τα contracts (FSM του ADR-230), με
- * τιμές `'none' | 'preliminary_pending' | 'preliminary_signed' | 'final_pending'
- * | 'final_signed' | 'payoff_pending' | 'payoff_completed'` (7 values).
+ * Pre-centralization, το concept οριζόταν σε 3 σημεία με drift:
+ *   - canonical inline union στο `src/types/legal-contracts.ts` (7 values)
+ *   - λανθασμένο 6-value array στο `src/config/report-builder/domain-definitions.ts`
+ *     (['initial','deedPrep','documentReview','signaturePending','completed','cancelled'])
+ *   - ίδιο λανθασμένο array στο `src/config/report-builder/domain-defs-buyers.ts`
  *
- * Το τρέχον SSoT (`LegalWorkflowPhase`) περιγράφει το generic conveyancing
- * workflow για report-builder filters (6 values με διαφορετική semantics).
- * Τα δύο concepts **δεν** ταυτίζονται· η αρμονοποίηση/merge αποτελεί θέμα
- * ξεχωριστής απόφασης (πιθανό follow-up ADR).
+ * Οι 6 τιμές του παλιού report-builder **δεν ταιριάζουν ποτέ** με τα πραγματικά
+ * δεδομένα του field — filter-by-`initial` δεν επέστρεφε αποτελέσματα. Το ADR-287
+ * Batch 9F-4/5 το διορθώνει: όλα τα consumers τώρα χρησιμοποιούν το
+ * canonical 7-value enum.
  *
  * **Layering**: Leaf module — καμία εξάρτηση από components, hooks, services.
+ * Ασφαλές για import παντού (server, client, tests).
  *
  * @module constants/legal-phases
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 9)
+ * @see ADR-230 — Legal Contracts FSM (canonical origin)
  */
 
 // =============================================================================
-// 1. CANONICAL ARRAY — Ordered κατά τη ροή του conveyancing workflow
+// 1. CANONICAL ARRAY — Ordered κατά τη ροή συμβολαιογραφικής διαδικασίας
 // =============================================================================
 
 /**
- * All canonical LegalWorkflowPhase values (report-builder filter enum).
+ * All canonical LegalPhase values — ordered κατά την πρόοδο του
+ * conveyancing workflow (από `none` → `payoff_completed`).
  *
- * - `initial`           — Αρχική φάση (πριν ξεκινήσει νομική διαδικασία)
- * - `deedPrep`          — Προετοιμασία συμβολαίου
- * - `documentReview`    — Έλεγχος εγγράφων
- * - `signaturePending`  — Εκκρεμής υπογραφή
- * - `completed`         — Ολοκληρωμένη διαδικασία
- * - `cancelled`         — Ακυρωμένη
+ * - `none`                — Χωρίς σύμβαση / καμία νομική φάση
+ * - `preliminary_pending` — Προσύμφωνο σε εκκρεμότητα
+ * - `preliminary_signed`  — Προσύμφωνο υπογεγραμμένο
+ * - `final_pending`       — Οριστικό σε εκκρεμότητα
+ * - `final_signed`        — Οριστικό υπογεγραμμένο
+ * - `payoff_pending`      — Εξόφληση σε εκκρεμότητα
+ * - `payoff_completed`    — Εξόφληση ολοκληρωμένη (τερματική φάση)
  */
-export const LEGAL_WORKFLOW_PHASES = [
-  'initial',
-  'deedPrep',
-  'documentReview',
-  'signaturePending',
-  'completed',
-  'cancelled',
+export const LEGAL_PHASES = [
+  'none',
+  'preliminary_pending',
+  'preliminary_signed',
+  'final_pending',
+  'final_signed',
+  'payoff_pending',
+  'payoff_completed',
 ] as const;
 
-/**
- * Canonical TypeScript union — derived automatically από
- * `LEGAL_WORKFLOW_PHASES`.
- */
-export type LegalWorkflowPhase = (typeof LEGAL_WORKFLOW_PHASES)[number];
+/** Canonical TypeScript union — derived automatically από `LEGAL_PHASES`. */
+export type LegalPhase = (typeof LEGAL_PHASES)[number];
 
 // =============================================================================
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/**
- * Returns `true` if `value` is one of the 6 canonical legal workflow phases.
- */
-export function isLegalWorkflowPhase(
-  value: unknown,
-): value is LegalWorkflowPhase {
+/** Returns `true` if `value` is one of the 7 canonical legal phases. */
+export function isLegalPhase(value: unknown): value is LegalPhase {
   return (
     typeof value === 'string' &&
-    (LEGAL_WORKFLOW_PHASES as readonly string[]).includes(value)
+    (LEGAL_PHASES as readonly string[]).includes(value)
   );
 }
 
 // =============================================================================
-// 3. DERIVED SUBSETS — In-progress vs finalized phases
+// 3. RANK HELPER — Numeric comparison για escalation/progress ordering
 // =============================================================================
 
 /**
- * Phases που σημαίνουν ενεργή (σε εξέλιξη) νομική διαδικασία.
- * Χρησιμοποιείται για workload dashboards / pending-work reports.
+ * Returns numeric rank (0 = `none`, 6 = `payoff_completed`). Χρησιμοποιείται
+ * για sort comparisons και για να υπολογίσουμε το highest contract phase
+ * ανάμεσα σε πολλαπλά contracts (LegalContractService.syncLegalPhase).
  */
-export const IN_PROGRESS_LEGAL_PHASES = [
-  'deedPrep',
-  'documentReview',
-  'signaturePending',
-] as const satisfies readonly LegalWorkflowPhase[];
+export function getLegalPhaseRank(phase: LegalPhase): number {
+  return (LEGAL_PHASES as readonly string[]).indexOf(phase);
+}
 
-export type InProgressLegalPhase = (typeof IN_PROGRESS_LEGAL_PHASES)[number];
+// =============================================================================
+// 4. DERIVED SUBSETS
+// =============================================================================
 
-/** Returns `true` if the workflow is currently being processed. */
-export function isInProgressLegalPhase(
+/** Phases με pending contract που αναμένει υπογραφή. */
+export const PENDING_LEGAL_PHASES = [
+  'preliminary_pending',
+  'final_pending',
+  'payoff_pending',
+] as const satisfies readonly LegalPhase[];
+
+export type PendingLegalPhase = (typeof PENDING_LEGAL_PHASES)[number];
+
+/** Returns `true` if `value` is a pending (awaiting signature) phase. */
+export function isPendingLegalPhase(
   value: unknown,
-): value is InProgressLegalPhase {
+): value is PendingLegalPhase {
   return (
     typeof value === 'string' &&
-    (IN_PROGRESS_LEGAL_PHASES as readonly string[]).includes(value)
+    (PENDING_LEGAL_PHASES as readonly string[]).includes(value)
   );
 }
 
-/**
- * Phases που σημαίνουν τερματική κατάσταση του workflow
- * (completed ή cancelled).
- */
-export const FINALIZED_LEGAL_PHASES = [
-  'completed',
-  'cancelled',
-] as const satisfies readonly LegalWorkflowPhase[];
+/** Phases με υπογεγραμμένο ή ολοκληρωμένο contract. */
+export const SIGNED_LEGAL_PHASES = [
+  'preliminary_signed',
+  'final_signed',
+  'payoff_completed',
+] as const satisfies readonly LegalPhase[];
 
-export type FinalizedLegalPhase = (typeof FINALIZED_LEGAL_PHASES)[number];
+export type SignedLegalPhase = (typeof SIGNED_LEGAL_PHASES)[number];
 
-/** Returns `true` if the workflow has reached a terminal state. */
-export function isFinalizedLegalPhase(
+/** Returns `true` if `value` represents a signed/completed contract phase. */
+export function isSignedLegalPhase(
   value: unknown,
-): value is FinalizedLegalPhase {
+): value is SignedLegalPhase {
   return (
     typeof value === 'string' &&
-    (FINALIZED_LEGAL_PHASES as readonly string[]).includes(value)
+    (SIGNED_LEGAL_PHASES as readonly string[]).includes(value)
   );
 }

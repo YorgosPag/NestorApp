@@ -10,6 +10,10 @@
  * @enterprise ADR-230 - Contract Workflow & Legal Process
  */
 
+// ADR-287 — LegalPhase SSoT (canonical lives στο @/constants/legal-phases)
+import type { LegalPhase } from '@/constants/legal-phases';
+export type { LegalPhase };
+
 // ============================================================================
 // CONTRACT PHASE & STATUS
 // ============================================================================
@@ -29,19 +33,6 @@ export type ContractPhase = 'preliminary' | 'final' | 'payoff';
  * draft → pending_signature → signed → completed
  */
 export type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'completed';
-
-/**
- * Νομική φάση ακινήτου (denormalized στο Property.commercial)
- * Αντικατοπτρίζει τη σύνθεση phase + status στο υψηλότερο contract.
- */
-export type LegalPhase =
-  | 'none'
-  | 'preliminary_pending'
-  | 'preliminary_signed'
-  | 'final_pending'
-  | 'final_signed'
-  | 'payoff_pending'
-  | 'payoff_completed';
 
 // ============================================================================
 // FSM TRANSITION MAPS

@@ -23580,12 +23580,13 @@ interface I18n_ReportBuilderDomains_Domains_Units_Enums_OperationalStatus {
 }
 
 interface I18n_ReportBuilderDomains_Domains_Units_Enums_LegalPhase {
-  initial: string;
-  deedPrep: string;
-  documentReview: string;
-  signaturePending: string;
-  completed: string;
-  cancelled: string;
+  none: string;
+  preliminary_pending: string;
+  preliminary_signed: string;
+  final_pending: string;
+  final_signed: string;
+  payoff_pending: string;
+  payoff_completed: string;
 }
 
 interface I18n_ReportBuilderDomains_Domains_Units_Enums_EnergyClass {
@@ -23810,12 +23811,13 @@ interface I18n_ReportBuilderDomains_Domains_Buyers_Fields {
 }
 
 interface I18n_ReportBuilderDomains_Domains_Buyers_Enums_LegalPhase {
-  initial: string;
-  deedPrep: string;
-  documentReview: string;
-  signaturePending: string;
-  completed: string;
-  cancelled: string;
+  none: string;
+  preliminary_pending: string;
+  preliminary_signed: string;
+  final_pending: string;
+  final_signed: string;
+  payoff_pending: string;
+  payoff_completed: string;
 }
 
 interface I18n_ReportBuilderDomains_Domains_Buyers_Enums {

@@ -1,14 +1,18 @@
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { ProjectAddress } from './project/addresses';
 import type { LandownerEntry } from '@/types/ownership-table';
+// ADR-287 — SSoT imports (χρειάζονται locally για use στο Project interface,
+// επιπρόσθετα των κάτωθι `export type {X}` re-exports για backward-compat).
+import type { ProjectStatus } from '@/constants/project-statuses';
+import type { ProjectType } from '@/constants/project-types';
 
 // ADR-287 — ProjectStatus SSoT: canonical union lives στο
-// `src/constants/project-statuses.ts`. Re-export για backward-compat.
-export type { ProjectStatus } from '@/constants/project-statuses';
+// `src/constants/project-statuses.ts`. Re-exported εδώ για backward-compat.
+export type { ProjectStatus };
 
 // ADR-287 — ProjectType SSoT: canonical union lives στο
-// `src/constants/project-types.ts`. Re-export για backward-compat.
-export type { ProjectType } from '@/constants/project-types';
+// `src/constants/project-types.ts`. Re-exported εδώ για backward-compat.
+export type { ProjectType };
 
 /** 🏢 ENTERPRISE: Priority levels for project management */
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical';
