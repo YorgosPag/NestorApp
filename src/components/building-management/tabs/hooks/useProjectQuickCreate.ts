@@ -21,9 +21,15 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { getProjectsList } from '../../building-services';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/lib/api/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useProjectQuickCreate');
 
 export interface UseProjectQuickCreateResult {
+  /** null while loading OR when the last fetch failed — caller must treat
+   *  null as "unknown" and MUST NOT render an empty state on null. */
   projectsCount: number | null;
   showSheet: boolean;
   setShowSheet: (open: boolean) => void;
@@ -39,9 +45,24 @@ export function useProjectQuickCreate(
 
   useEffect(() => {
     let cancelled = false;
-    getProjectsList().then((list) => {
-      if (!cancelled) setProjectsCount(list.length);
-    });
+    // Direct API call so we can distinguish "0 projects" from "fetch failed".
+    // getProjectsList() swallows errors and returns [] → would cause a
+    // false-positive empty state on API timeout / network failure.
+    apiClient
+      .get<{ projects: unknown[] }>(API_ROUTES.PROJECTS.LIST)
+      .then((result) => {
+        if (cancelled) return;
+        const list = Array.isArray(result?.projects) ? result.projects : [];
+        setProjectsCount(list.length);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        // Keep projectsCount as null on failure — UI must NOT surface the
+        // "no projects yet" empty state when we don't actually know.
+        logger.warn('Projects count fetch failed — empty state suppressed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     return () => {
       cancelled = true;
     };
