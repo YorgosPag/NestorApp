@@ -1,13 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T21:18:01Z",
-    "totalViolations": 76,
-    "totalFiles": 52,
+    "generated": "2026-04-05T21:19:56Z",
+    "totalViolations": 74,
+    "totalFiles": 51,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/subapps/accounting/components/vat/VATPageContent.tsx": 2,
     "src/subapps/accounting/components/reports/ReportsPageContent.tsx": 2,
     "src/subapps/accounting/components/reports/ReportDateFilterBar.tsx": 2,
     "src/subapps/accounting/components/journal/JournalPageContent.tsx": 2,
