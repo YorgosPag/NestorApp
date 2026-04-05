@@ -75,7 +75,7 @@ export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProp
   if (loading) {
     return (
       <main className="min-h-screen bg-background">
-        <PageLoadingState message={t('invoices.loading', { defaultValue: 'Φόρτωση τιμολογίου...' })} layout="contained" />
+        <PageLoadingState message={t('invoices.loading')} layout="contained" />
       </main>
     );
   }
@@ -104,7 +104,7 @@ export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProp
           <CardContent className="pt-6 flex flex-col items-center gap-3">
             <AlertTriangle className="h-8 w-8 text-amber-500" />
             <p className="text-sm text-center">
-              {t('invoices.editNotAllowed', { defaultValue: 'Αυτό το τιμολόγιο δεν μπορεί να επεξεργαστεί (κατάσταση: {{status}}).', status: mydataStatus })}
+              {t('invoices.editNotAllowed', { status: mydataStatus })}
             </p>
             <Button variant="outline" onClick={() => router.back()}>
               {t('forms.back')}
@@ -124,7 +124,7 @@ export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProp
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              {t('invoices.editInvoice', { defaultValue: 'Επεξεργασία Τιμολογίου' })}
+              {t('invoices.editInvoice')}
             </h1>
             <p className={cn("text-sm mt-1", colors.text.muted)}>
               {invoice.series}-{invoice.number}

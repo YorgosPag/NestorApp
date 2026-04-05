@@ -19,6 +19,7 @@
     "editInvoice": "Edit Invoice",
     "updateInvoice": "Update",
     "editNotAllowed": "This invoice cannot be edited (status: {{status}}).",
+    "loading": "Loading invoice...",
     "invoiceDetails": "Invoice Details",
     "noInvoices": "No invoices found",
     "noInvoicesDescription": "Start by creating your first invoice",
