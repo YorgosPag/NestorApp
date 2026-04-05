@@ -35,6 +35,11 @@ export default defineConfig([
       // 🏢 CLAUDE.md SOS. N.11 — forbid hardcoded defaultValue in i18n calls
       "custom/no-i18n-defaultvalue-literals": "error",
 
+      // 🏢 ADR-219 / SPEC-251C — forbid direct sonner imports (use NotificationProvider)
+      // Warn for now (20 legacy files pending migration via SPEC-251C).
+      // Promote to "error" once all files migrated.
+      "custom/no-direct-sonner-import": "warn",
+
       // Enable custom hardcoded strings detection
       "custom/no-hardcoded-strings": ["error", {
         allowedPatterns: [

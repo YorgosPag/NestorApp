@@ -5,5 +5,7 @@ module.exports = {
     'no-console-log': require('./no-console-log'),
     // 🏢 CLAUDE.md SOS. N.11 — block hardcoded defaultValue in i18n calls
     'no-i18n-defaultvalue-literals': require('./no-i18n-defaultvalue-literals'),
+    // 🏢 ADR-219 / SPEC-251C — block direct sonner imports (use NotificationProvider)
+    'no-direct-sonner-import': require('./no-direct-sonner-import'),
   },
 };

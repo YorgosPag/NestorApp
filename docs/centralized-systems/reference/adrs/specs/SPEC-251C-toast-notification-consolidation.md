@@ -180,3 +180,4 @@ const handleSubmit = async () => {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-19 | Initial SPEC creation — full 14-file list | Claude Code |
+| 2026-04-05 | ESLint enforcement added (`custom/no-direct-sonner-import`, warn level) — will block new violations while 20 legacy files are migrated. File count grew from 14 → 20 since initial SPEC; updated baseline. Rule promoted to `error` once count hits 0. | Claude Code |
