@@ -24,11 +24,12 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FolderPlus, Building2, Layers, AlertTriangle, Link2 } from 'lucide-react';
+import { Building2, Layers, AlertTriangle, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { NoProjectsEmptyState } from '@/components/shared/empty-states/NoProjectsEmptyState';
 
 // =============================================================================
 // TYPES
@@ -78,33 +79,7 @@ export function PropertyHierarchyEmptyStates({
   return (
     <>
       {flags.noProjects && (
-        <section
-          role="status"
-          aria-label={t('dialog.addUnit.emptyState.noProjects.title')}
-          className={sectionClass}
-        >
-          <header className="flex items-start gap-3">
-            <FolderPlus className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
-            <div className="flex-1">
-              <p className={cn('font-medium', colors.text.primary)}>
-                {t('dialog.addUnit.emptyState.noProjects.title')}
-              </p>
-              <p className={cn('text-xs mt-1', colors.text.muted)}>
-                {t('dialog.addUnit.emptyState.noProjects.description')}
-              </p>
-            </div>
-          </header>
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={onCreateProject}
-            className="self-start"
-          >
-            <FolderPlus className={iconSizes.xs} aria-hidden />
-            {t('dialog.addUnit.emptyState.noProjects.cta')}
-          </Button>
-        </section>
+        <NoProjectsEmptyState context="forUnit" onCreateProject={onCreateProject} />
       )}
 
       {flags.noBuildings && (

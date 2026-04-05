@@ -36,5 +36,13 @@
       "title": "Create",
       "description": "Select an item from the list or create a new one."
     }
+  },
+  "noProjects": {
+    "title": "No projects yet",
+    "cta": "Create Project",
+    "description": {
+      "forUnit": "Every Unit must belong to a Project.",
+      "forBuilding": "Every Building must belong to a Project."
+    }
   }
 }

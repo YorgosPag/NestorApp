@@ -14,6 +14,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { FolderKanban } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
+import { NoProjectsEmptyState } from '@/components/shared/empty-states/NoProjectsEmptyState';
+import { ProjectQuickCreateSheet } from '@/components/projects/dialogs/ProjectQuickCreateSheet';
+import { useProjectQuickCreate } from './hooks/useProjectQuickCreate';
 import { RealtimeService } from '@/services/realtime';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityLink } from '@/hooks/useEntityLink';
@@ -404,6 +407,18 @@ export function GeneralTabContent({
     }
   };
 
+  // 🏢 SSoT: "No projects yet" empty state + slide-out create (mirror of
+  // properties flow). After creating a new project, auto-select it on the
+  // EntityLinkCard so the user can continue.
+  const handleNewProjectSelected = useCallback(
+    (newProjectId: string) => {
+      projectLink.setLinkedId(newProjectId);
+    },
+    [projectLink],
+  );
+  const { projectsCount, showSheet, setShowSheet, handleProjectCreated } =
+    useProjectQuickCreate(handleNewProjectSelected);
+
   // 🏢 SPEC-256A: ConflictDialog handlers
   const handleConflictReload = useCallback(() => {
     router.refresh();
@@ -458,8 +473,22 @@ export function GeneralTabContent({
           setSaveErrorCode(null);
         }}
       />
+      {/* 🏢 SSoT: "No projects yet" empty state — visible only in edit/create
+          mode when the system has zero projects. Opens the canonical
+          ProjectQuickCreateSheet (same slide-out used from properties). */}
+      {projectsCount === 0 && effectiveIsEditing && (
+        <NoProjectsEmptyState
+          context="forBuilding"
+          onCreateProject={() => setShowSheet(true)}
+        />
+      )}
       {/* ADR-200: Building → Project linking via centralized useEntityLink hook */}
       <EntityLinkCard key={projectLink.linkCardKey} {...projectLink.linkCardProps} />
+      <ProjectQuickCreateSheet
+        open={showSheet}
+        onOpenChange={setShowSheet}
+        onProjectCreated={handleProjectCreated}
+      />
       <BasicInfoCard
         formData={formData}
         updateField={updateField}
