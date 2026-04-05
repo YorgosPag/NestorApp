@@ -154,6 +154,9 @@
   "multiLevel": {
     "title": "Property Levels",
     "goTo": "Go to",
+    "floors": "Floors",
+    "noFloors": "Select at least 2 floors",
+    "noFloorHint": "Link a building first",
     "perLevel": {
       "perFloorHint": "per floor",
       "sharedHint": "shared",

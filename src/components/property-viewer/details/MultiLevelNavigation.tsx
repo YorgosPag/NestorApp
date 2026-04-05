@@ -78,7 +78,7 @@ export function MultiLevelNavigation({
       <CardHeader className="!p-2 flex flex-col space-y-2">
         <CardTitle className={cn('flex items-center', spacing.gap.sm, typography.card.titleCompact)}>
           <ChevronsUpDown className={cn(iconSizes.md, 'text-emerald-500')} />
-          {t('properties:multiLevel.title', { defaultValue: 'Επίπεδα Ακινήτου' })}
+          {t('properties:multiLevel.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="!p-2 !pt-0">
@@ -103,7 +103,7 @@ export function MultiLevelNavigation({
                   className="h-6 px-2 text-xs"
                   onClick={(e) => { e.stopPropagation(); handleSelectFloor(level.floorId); }}
                 >
-                  {t('properties:multiLevel.goTo', { defaultValue: 'Μετάβαση' })}
+                  {t('properties:multiLevel.goTo')}
                 </Button>
               </article>
             ))}
@@ -117,8 +117,8 @@ export function MultiLevelNavigation({
               buildingId={buildingId ?? null}
               value={levels ?? []}
               onChange={onLevelsChange}
-              label={t('units:multiLevel.floors', { defaultValue: 'Όροφοι' })}
-              noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
+              label={t('properties:multiLevel.floors')}
+              noBuildingHint={t('properties:multiLevel.noFloorHint')}
               disabled={false}
             />
           </div>
@@ -127,7 +127,7 @@ export function MultiLevelNavigation({
         {/* No levels yet — show hint */}
         {!hasLevels && !isEditing && (
           <p className={cn("text-xs italic", colors.text.muted)}>
-            {t('units:multiLevel.noFloors', { defaultValue: 'Επιλέξτε τουλάχιστον 2 ορόφους' })}
+            {t('properties:multiLevel.noFloors')}
           </p>
         )}
       </CardContent>
