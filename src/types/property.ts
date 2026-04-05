@@ -95,14 +95,10 @@ export type LegacySalesStatus = PropertyStatus | 'rented';
  * @example "sold" — Sale completed
  * @example "rented" — Active lease
  */
-export type CommercialStatus =
-  | 'unavailable'         // Μη διαθέσιμη (default — not on market)
-  | 'for-sale'            // Προς πώληση
-  | 'for-rent'            // Προς ενοικίαση
-  | 'for-sale-and-rent'   // Πώληση & Ενοικίαση (dual listing)
-  | 'reserved'            // Κρατημένη (προκαταβολή)
-  | 'sold'                // Πωλημένη
-  | 'rented';             // Ενοικιασμένη
+// ADR-287 — CommercialStatus SSoT: canonical union lives στο
+// `src/constants/commercial-statuses.ts`. Εδώ απλά re-export για backward-compat
+// με existing imports `import type { CommercialStatus } from '@/types/property'`.
+export type { CommercialStatus } from '@/constants/commercial-statuses';
 
 // =============================================================================
 // 🏢 COMMERCIAL DATA (Sales/Rental Pricing — ADR-197)
