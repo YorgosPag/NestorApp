@@ -116,7 +116,7 @@ export default function CoordinateCalibrationOverlay({
       <div style={getCalibrationDebugPanelStyles()}>
         <TooltipProvider>
           <header className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
-            <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.cyanAccent}`}>🔧 Καλιμπράρισμα Συντεταγμένων</h3>
+            <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.cyanAccent}`}>{t('calibration.title')}</h3>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button onClick={() => onToggle?.(false)} className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TYPOGRAPHY.XL}`}>×</button>
@@ -128,70 +128,70 @@ export default function CoordinateCalibrationOverlay({
         <section className={PANEL_LAYOUT.SPACING.GAP_MD}>
           {/* ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CoordinateTransforms */}
           <article className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
-            <p className={`${colors.text.infoLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>✅ Coordinate System:</p>
+            <p className={`${colors.text.infoLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>{t('calibration.coordinateSystem')}</p>
             <p className={colors.text.infoLighter}>Using centralized <strong>CoordinateTransforms</strong></p>
             <p className={`${colors.text.successLight} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>Single Source of Truth ✅</p>
           </article>
 
           <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
-            <p className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>📊 Κατάσταση Σκηνής:</p>
+            <p className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('calibration.sceneStatus')}</p>
             <div className="flex justify-between items-center">
               <span>
                 <span className={`inline-block ${iconSizes.xs} ${quick.button} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} ${entitiesCount > 0 ? `${colors.bg.success}` : `${colors.bg.error}`}`} />
-                <span className={`${colors.text.primary}`}>Οντότητες: {entitiesCount}</span>
+                <span className={`${colors.text.primary}`}>{t('calibration.entities', { count: entitiesCount })}</span>
               </span>
-              <span className={`${colors.text.muted}`}>Επίπεδα: {layersCount}</span>
+              <span className={`${colors.text.muted}`}>{t('calibration.layers', { count: layersCount })}</span>
             </div>
-            {entitiesCount === 0 && <p className={`${colors.text.errorLight} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>⚠️ Δεν υπάρχουν οντότητες</p>}
+            {entitiesCount === 0 && <p className={`${colors.text.errorLight} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('calibration.noEntities')}</p>}
           </article>
 
           <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
             <button onClick={() => setShowDetails(!showDetails)} className={`${PANEL_LAYOUT.SPACING.COMPACT} rounded ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${showDetails ? colors.bg.hover : colors.bg.active}`}>
-              {showDetails ? '📊 Απόκρυψη' : '📊 Εμφάνιση'}
+              {showDetails ? t('calibration.hide') : t('calibration.show')}
             </button>
           </nav>
 
           {showDetails && (
             <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
-              <p className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>📍 Συντεταγμένες:</p>
+              <p className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('calibration.coordinates')}</p>
               {mousePos ? (
                 <>
                   <p className={colors.text.successLight}>🖱️ CSS: ({mousePos.x.toFixed(1)}, {mousePos.y.toFixed(1)})</p>
-                  {worldPos && <p className={colors.text.warningLight}>🌍 Κόσμος: ({worldPos.x.toFixed(2)}, {worldPos.y.toFixed(2)})</p>}
+                  {worldPos && <p className={colors.text.warningLight}>{t('calibration.worldCoord', { x: worldPos.x.toFixed(2), y: worldPos.y.toFixed(2) })}</p>}
                   {currentRoundTripError !== null && (
                     <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${currentRoundTripError < 0.5 ? colors.text.successLighter : colors.text.orangeLight}`}>
-                      🔄 Σφάλμα round-trip: {currentRoundTripError.toFixed(2)}px {currentRoundTripError < 0.5 ? '✅' : '⚠️'}
+                      {t('calibration.roundTripError', { error: currentRoundTripError.toFixed(2) })} {currentRoundTripError < 0.5 ? '✅' : '⚠️'}
                     </p>
                   )}
                   <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>dPR: {dpr.toFixed(2)} | Ζουμ: {(100/dpr).toFixed(0)}%</p>
                 </>
-              ) : <p className={colors.text.muted}>Μετακινήστε το ποντίκι πάνω από τον καμβά...</p>}
+              ) : <p className={colors.text.muted}>{t('calibration.moveMouse')}</p>}
             </article>
           )}
 
           <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
             <div className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-              <span className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD}`}>🎯 Τεστ Κλικ:</span>
-              <button onClick={() => setClickTests([])} className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.error} ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} ${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} rounded`}>Καθαρισμός</button>
+              <span className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD}`}>{t('calibration.clickTest')}</span>
+              <button onClick={() => setClickTests([])} className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.error} ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} ${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} rounded`}>{t('calibration.clear')}</button>
             </div>
             <button
               type="button"
               className={`w-full ${PANEL_LAYOUT.SPACING.SM} ${quick.input} ${PANEL_LAYOUT.CURSOR.CROSSHAIR} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO} ${getElementBorder('input', 'focus')} text-left`}
               onClick={handleCalibrationClick}
-              aria-label="Περιοχή τεστ ακρίβειας συντεταγμένων"
+              aria-label={t('calibration.testAreaLabel')}
             >
-              <div className={`text-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.cyanLight} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Κλικ εδώ για τεστ ακρίβειας</div>
+              <div className={`text-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.cyanLight} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('calibration.clickHereForTest')}</div>
               <div className={`${PANEL_LAYOUT.MAX_HEIGHT.XS} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
                 {clickTests.length === 0 ? (
-                  <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center`}>Δεν υπάρχουν δοκιμές</div>
+                  <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center`}>{t('calibration.noTests')}</div>
                 ) : (
                   clickTests.slice(-2).map(test => (
                     <div key={test.id} className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${getElementBorder('card', 'default')} ${quick.card} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}>
                       <div className={`${colors.text.primary}`}>#{test.id} @ {test.timestamp}</div>
                       <div className={colors.text.successLight}>CSS: ({test.cssPoint.x.toFixed(1)}, {test.cssPoint.y.toFixed(1)})</div>
-                      <div className={colors.text.warningLight}>Κόσμος: ({test.worldPoint.x.toFixed(2)}, {test.worldPoint.y.toFixed(2)})</div>
+                      <div className={colors.text.warningLight}>{t('calibration.worldShort', { x: test.worldPoint.x.toFixed(2), y: test.worldPoint.y.toFixed(2) })}</div>
                       <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${test.roundTripError < 0.5 ? colors.text.successLighter : colors.text.orangeLight}`}>
-                        Error: {test.roundTripError.toFixed(2)}px {test.roundTripError < 0.5 ? 'ΤΕΛΕΙΟ ✅' : 'ΧΡΕΙΑΖΕΤΑΙ ΔΙΟΡΘΩΣΗ ⚠️'}
+                        Error: {test.roundTripError.toFixed(2)}px {test.roundTripError < 0.5 ? t('calibration.perfect') : t('calibration.needsCorrection')}
                       </div>
                     </div>
                   ))
@@ -201,12 +201,12 @@ export default function CoordinateCalibrationOverlay({
           </article>
 
           <aside className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
-            <div className={`${colors.text.infoLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Lightbulb className={iconSizes.xs} /> Συμβουλές:</div>
+            <div className={`${colors.text.infoLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Lightbulb className={iconSizes.xs} /> {t('calibration.tips')}</div>
             <ul className={`${colors.text.infoLighter} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
-              <li>• Round-trip σφάλμα &lt; 0.5px</li>
-              <li>• Δοκιμάστε σε διαφορετικά zoom</li>
-              <li>• {entitiesCount > 0 ? 'Οντότητες OK ✅' : 'Φορτώστε DXF ⚠️'}</li>
-              <li>• Χρήση κεντρικού CoordinateTransforms ✅</li>
+              <li>• {t('calibration.tipRoundTrip')}</li>
+              <li>• {t('calibration.tipTryZoom')}</li>
+              <li>• {entitiesCount > 0 ? t('calibration.tipEntitiesOk') : t('calibration.tipLoadDxf')}</li>
+              <li>• {t('calibration.tipCentralized')}</li>
             </ul>
           </aside>
         </section>

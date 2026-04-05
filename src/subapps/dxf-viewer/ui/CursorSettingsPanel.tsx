@@ -8,6 +8,7 @@
  * @since 2026-01-31
  */
 import React, { useState, useEffect } from "react";
+import { useTranslation } from '@/i18n';
 import {
   getCursorSettings,
   updateCursorSettings,
@@ -115,6 +116,7 @@ interface CursorSettingsPanelProps {
 }
 
 export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettingsPanelProps) {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { getStatusBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -170,102 +172,102 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
       }}
     >
       <FloatingPanel.Header
-        title="Ρυθμισεις Κερσορα AutoCAD"
+        title={t('cursorSettings.panelTitle')}
         icon={<Settings />}
       />
       <FloatingPanel.Content>
         <div className="space-y-4">
           {/* Crosshair Settings - Simplified */}
           <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
-            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Σταυρονημα</h4>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>{t('cursorSettings.crosshairSection')}</h4>
 
             <CheckboxRow
-              label="Ενεργοποιηση Σταυρονηματος"
+              label={t('cursorSettings.enableCrosshair')}
               checked={settings.crosshair.enabled}
               onChange={(enabled) => updateCrosshairSettings({ enabled })}
               colors={colors}
             />
 
             <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.info}`}>
-              Μεγεθος, χρωμα και παχος ρυθμιζονται απο τις Ρυθμισεις DXF
+              {t('cursorSettings.sizeColorThicknessHint')}
             </div>
           </section>
 
           {/* Behavior Settings */}
           <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
-            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Συμπεριφορα AutoCAD</h4>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>{t('cursorSettings.behaviorSection')}</h4>
             <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.warningPanel} ${getStatusBorder('warning')} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warningLighter}`}>
-              Σημειωση: Μερικες λειτουργιες ειναι σε αναπτυξη και μπορει να μην ειναι πληρως ενεργες
+              {t('cursorSettings.betaNote')}
             </div>
 
             <CheckboxRow
-              label="Ενδειξεις Snap (Συνδεδεμενο)"
+              label={t('cursorSettings.snapIndicator')}
               checked={settings.behavior.snap_indicator}
               onChange={(snap_indicator) => updateBehaviorSettings({ snap_indicator })}
               colors={colors}
             />
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-              Ενεργο: Εμφανιζει κιτρινες ενδειξεις snap στο crosshair
+              {t('cursorSettings.snapIndicatorHint')}
             </div>
 
             <CheckboxRow
-              label="Εμφανιση Συντεταγμενων (Συνδεδεμενο)"
+              label={t('cursorSettings.coordinateDisplay')}
               checked={settings.behavior.coordinate_display}
               onChange={(coordinate_display) => updateBehaviorSettings({ coordinate_display })}
               colors={colors}
             />
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-              Ενεργο: Δειχνει X,Y συντεταγμενες στο status bar
+              {t('cursorSettings.coordinateDisplayHint')}
             </div>
 
             <CheckboxRow
-              label="Δυναμικη Εισαγωγη (Συνδεδεμενο)"
+              label={t('cursorSettings.dynamicInput')}
               checked={settings.behavior.dynamic_input}
               onChange={(dynamic_input) => updateBehaviorSettings({ dynamic_input })}
               colors={colors}
             />
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-              Ενεργο: Πεδια εισαγωγης κοντα στον κερσορα κατα το σχεδιασμο
+              {t('cursorSettings.dynamicInputHint')}
             </div>
 
             <CheckboxRow
-              label="Cursor Tooltip (Συνδεδεμενο)"
+              label={t('cursorSettings.cursorTooltip')}
               checked={settings.behavior.cursor_tooltip}
               onChange={(cursor_tooltip) => updateBehaviorSettings({ cursor_tooltip })}
               colors={colors}
             />
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-              Ενεργο: Tooltip με πληροφοριες εργαλειου κοντα στον κερσορα
+              {t('cursorSettings.cursorTooltipHint')}
             </div>
           </section>
 
           {/* Performance Settings */}
           <section className={PANEL_LAYOUT.MARGIN.BOTTOM_XL}>
-            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Απόδοση</h4>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>{t('cursorSettings.performanceSection')}</h4>
 
             <CheckboxRow
-              label="✅ Χρήση RAF 60fps (Συνδεδεμένο)"
+              label={t('cursorSettings.useRaf')}
               checked={settings.performance.use_raf}
               onChange={(use_raf) => updatePerformanceSettings({ use_raf })}
               colors={colors}
             />
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-              Ενεργο: RequestAnimationFrame για ομαλοτερη κινηση crosshair
+              {t('cursorSettings.useRafHint')}
             </div>
 
             <CheckboxRow
-              label="✅ Λειτουργία Ακρίβειας (Συνδεδεμένο)"
+              label={t('cursorSettings.precisionMode')}
               checked={settings.performance.precision_mode}
               onChange={(precision_mode) => updatePerformanceSettings({ precision_mode })}
               colors={colors}
             />
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-              Ενεργο: Sub-pixel ακριβεια για crosshair και snap indicators
+              {t('cursorSettings.precisionModeHint')}
             </div>
             {settings.performance.precision_mode && (
               <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.info} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <div className={`${iconSizes.xs} ${colors.bg.info} ${quick.button} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />
-                <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικα ψηφια</span>
+                <span>{t('cursorSettings.precisionModeActive')}</span>
               </div>
             )}
           </section>
@@ -276,13 +278,13 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING} rounded ${colors.bg.warning} ${INTERACTIVE_PATTERNS.WARNING_HOVER} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS}`}
               onClick={resetSettings}
             >
-              Επαναφορά Προκαθορισμένων
+              {t('cursorSettings.resetDefaults')}
             </button>
             <button
               className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} rounded ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS}`}
               onClick={clearAndReload}
             >
-              Καθαρισμός & Επαναφόρτωση
+              {t('cursorSettings.clearReload')}
             </button>
           </nav>
         </div>
