@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePropertyViewer, DEFAULT_FILTERS } from '@/hooks/usePropertyViewer';
+import { useAuth } from '@/hooks/useAuth';
 import { ContactsService } from '@/services/contacts.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { tallyBy } from '@/utils/collection-utils';
@@ -74,19 +75,35 @@ export function usePropertiesViewerState() {
 
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
   const [allContactIds, setAllContactIds] = useState<string[]>([]);
+  const { user: authUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    // Wait until Firebase auth resolves before querying Firestore — otherwise
+    // `requireAuthContext()` throws AUTHENTICATION_ERROR on an unauthenticated
+    // cold start, producing the "Failed to fetch contact IDs" error.
+    if (authLoading || !authUser) return;
+
+    let cancelled = false;
     async function fetchContactIds() {
       try {
         const ids = await ContactsService.getAllContactIds();
-        setAllContactIds(ids);
+        if (!cancelled) setAllContactIds(ids);
       } catch (error) {
-        logger.error('Failed to fetch contact IDs', { error });
+        // Extract message/stack eagerly — some thrown values are plain
+        // objects without enumerable props, which would log as `{}`.
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorName = error instanceof Error ? error.name : typeof error;
+        logger.error('Failed to fetch contact IDs', {
+          errorMessage,
+          errorName,
+          stack: error instanceof Error ? error.stack : undefined,
+        });
       }
     }
 
     void fetchContactIds();
-  }, []);
+    return () => { cancelled = true; };
+  }, [authLoading, authUser]);
 
   useEffect(() => {
     if (!propertyIdFromUrl || properties.length === 0 || !setSelectedProperties) {
