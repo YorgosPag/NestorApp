@@ -166,7 +166,11 @@ export function BuildingGridCard({
   return (
     <GridCard
       entityType="building"
-      title={building.name || building.id}
+      title={
+        building.code && building.name && building.name !== building.code
+          ? `${building.code} — ${building.name}`
+          : (building.code || building.name || building.id)
+      }
       subtitle={categoryLabel}
       badges={badges}
       stats={stats}

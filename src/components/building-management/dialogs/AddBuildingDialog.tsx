@@ -40,6 +40,8 @@ import {
   AddBuildingDetailsTab,
   AddBuildingFeaturesTab,
 } from './add-building-dialog/AddBuildingDialogTabs';
+import { getBuildingCodesByProject } from '../building-services';
+import { suggestNextBuildingCode } from '@/config/entity-code-config';
 
 export function AddBuildingDialog({
   open,
@@ -78,6 +80,29 @@ export function AddBuildingDialog({
 
   const [activeTab, setActiveTab] = useState('basic');
 
+  // 🏢 ADR-233 §3.4: Auto-suggest next sequential building code ("Κτήριο Α", "Κτήριο Β", ...)
+  // whenever user picks/changes the parent project in CREATE mode.
+  useEffect(() => {
+    if (!open || isEditMode) return;
+    const projectId = formData.projectId;
+    if (!projectId) {
+      // Reset code when project cleared
+      setFormData((prev) => ({ ...prev, code: '' }));
+      return;
+    }
+
+    let cancelled = false;
+    getBuildingCodesByProject(projectId).then((existingCodes) => {
+      if (cancelled) return;
+      const next = suggestNextBuildingCode(existingCodes);
+      setFormData((prev) => ({ ...prev, code: next }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isEditMode, formData.projectId, setFormData]);
+
   useEffect(() => {
     const errorFields = Object.keys(errors);
     if (errorFields.length === 0) {
@@ -105,6 +130,7 @@ export function AddBuildingDialog({
     const features = editBuilding.features || [];
 
     return {
+      code: editBuilding.code || '',
       name: editBuilding.name || '',
       projectId: editBuilding.projectId || '',
       status: (editBuilding.status as BuildingStatus) || 'planning',

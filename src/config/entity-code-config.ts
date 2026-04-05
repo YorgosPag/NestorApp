@@ -119,20 +119,118 @@ const GREEK_TO_LATIN: Record<string, string> = {
 };
 
 /**
- * Extracts a single uppercase Latin letter from a building name.
+ * Greek uppercase alphabet (24 letters, Α..Ω) — used for sequential building codes.
+ * Order matches official Greek alphabet: Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω
+ */
+export const GREEK_UPPERCASE_LETTERS: readonly string[] = [
+  'Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ',
+  'Ν', 'Ξ', 'Ο', 'Π', 'Ρ', 'Σ', 'Τ', 'Υ', 'Φ', 'Χ', 'Ψ', 'Ω',
+] as const;
+
+/**
+ * Canonical prefix for the locked building code field (e.g. "Κτήριο Α").
+ * @see ADR-233 §3.4
+ */
+export const BUILDING_CODE_PREFIX = 'Κτήριο';
+
+/**
+ * Returns the Greek uppercase letter at a given index (0-based).
+ * - Index 0..23 → Α..Ω
+ * - Index ≥ 24  → numeric string (e.g. 24 → "25") for rare edge cases
+ *   (projects with more than 24 buildings).
+ *
+ * @param index - Zero-based position in the sequence
+ * @returns Greek letter (Α..Ω) or numeric fallback
+ */
+export function getGreekLetterAt(index: number): string {
+  if (index < 0) return '?';
+  if (index < GREEK_UPPERCASE_LETTERS.length) {
+    return GREEK_UPPERCASE_LETTERS[index];
+  }
+  // Beyond Ω: fall through to numeric identifiers starting at 25
+  return String(index + 1);
+}
+
+/**
+ * Builds the canonical building code string for a given sequence index.
+ *
+ * @example buildBuildingCode(0) → "Κτήριο Α"
+ * @example buildBuildingCode(1) → "Κτήριο Β"
+ * @example buildBuildingCode(25) → "Κτήριο 26"
+ */
+export function buildBuildingCode(index: number): string {
+  return `${BUILDING_CODE_PREFIX} ${getGreekLetterAt(index)}`;
+}
+
+/**
+ * Suggests the next available building code for a project, based on the
+ * codes already assigned to existing buildings. Gap-filling strategy:
+ * if "Κτήριο Α" and "Κτήριο Γ" exist, proposes "Κτήριο Β".
+ *
+ * @param existingCodes - Array of `code` values from sibling buildings
+ * @returns Next unused building code (e.g. "Κτήριο Α")
+ */
+export function suggestNextBuildingCode(existingCodes: readonly string[]): string {
+  const usedTokens = new Set<string>();
+
+  for (const raw of existingCodes) {
+    if (!raw) continue;
+    const trimmed = raw.trim();
+    // Extract trailing token (letter or number) after last space
+    const match = trimmed.match(/\s(\S+)\s*$/);
+    const token = match ? match[1].toUpperCase() : trimmed.toUpperCase();
+    usedTokens.add(token);
+  }
+
+  // Find first unused Greek letter (gap-filling)
+  for (let i = 0; i < GREEK_UPPERCASE_LETTERS.length; i++) {
+    if (!usedTokens.has(GREEK_UPPERCASE_LETTERS[i])) {
+      return buildBuildingCode(i);
+    }
+  }
+
+  // All 24 Greek letters taken → use next numeric index
+  // Find the max numeric token used (if any)
+  let maxNumeric = GREEK_UPPERCASE_LETTERS.length; // start at 24 (next = 25)
+  for (const token of usedTokens) {
+    const num = parseInt(token, 10);
+    if (!isNaN(num) && num > maxNumeric) maxNumeric = num;
+  }
+  return `${BUILDING_CODE_PREFIX} ${maxNumeric + 1}`;
+}
+
+/**
+ * Extracts a single uppercase Latin letter (or digit) from a building's
+ * identifier — used to build unit codes (e.g. "A-DI-1.01").
+ *
+ * Priority (ADR-233 §3.4):
+ *   1. `building.code` field — canonical, locked format "Κτήριο X"
+ *   2. `building.name` field — legacy free-text (pre-migration buildings)
+ *
+ * Also accepts a plain string for backward compatibility with legacy callers.
  *
  * Handles patterns:
  * - "A", "B", "C" → direct
- * - "Κτίριο Α", "Building B" → extracts trailing letter
+ * - "Κτίριο Α", "Κτήριο Α", "Building B" → extracts trailing letter
  * - "Α" (Greek) → converts to "A"
- * - "Block 1" → "1"
+ * - "Block 1", "Κτήριο 25" → extracts trailing number
  * - Fallback: first character uppercased
  *
- * @param buildingName - Free-text building name from Firestore
+ * @param input - Building object `{ code?, name? }` or raw string
  * @returns Single uppercase letter/digit for the code prefix
  */
-export function extractBuildingLetter(buildingName: string): string {
-  const trimmed = buildingName.trim();
+export function extractBuildingLetter(
+  input: string | { code?: string | null; name?: string | null }
+): string {
+  // Resolve source string: prefer code, then name, then string input
+  let source: string;
+  if (typeof input === 'string') {
+    source = input;
+  } else {
+    source = input.code?.trim() || input.name?.trim() || '';
+  }
+
+  const trimmed = source.trim();
   if (!trimmed) return '?';
 
   // Single character — use as-is (convert Greek if needed)
@@ -149,7 +247,7 @@ export function extractBuildingLetter(buildingName: string): string {
     return GREEK_TO_LATIN[letter] ?? letter;
   }
 
-  // Pattern: "Block 1", "Building 2"
+  // Pattern: "Block 1", "Building 2", "Κτήριο 25"
   const trailingNumberMatch = trimmed.match(/\s(\d+)\s*$/);
   if (trailingNumberMatch) {
     return trailingNumberMatch[1];

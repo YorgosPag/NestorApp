@@ -90,7 +90,9 @@ export const GET = withStandardRateLimit(
       }
       const buildingData = buildingDoc.data() as Record<string, unknown>;
       const buildingName = (buildingData.name as string) || '?';
-      const buildingLetter = extractBuildingLetter(buildingName);
+      const buildingCode = (buildingData.code as string) || undefined;
+      // ADR-233 §3.4: prefer locked `code` field, fall back to free-text `name`
+      const buildingLetter = extractBuildingLetter({ code: buildingCode, name: buildingName });
 
       // Floor code
       const floorCode = formatFloorCode(floorLevel);

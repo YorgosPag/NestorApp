@@ -38,6 +38,8 @@ export type BuildingCategory = 'residential' | 'commercial' | 'industrial' | 'mi
 
 export interface BuildingFormData {
   // Tab 1: Basic Info
+  /** ADR-233 §3.4: locked auto-generated identifier (e.g. "Κτήριο Α") */
+  code: string;
   name: string;
   projectId: string;
   status: BuildingStatus;
@@ -66,6 +68,7 @@ export interface BuildingFormData {
 
 const INITIAL_FORM_DATA: BuildingFormData = {
   // Tab 1: Basic Info
+  code: '',
   name: '',
   projectId: '',
   status: 'planning',
@@ -129,6 +132,11 @@ export function useBuildingForm({
   const validate = useCallback((): boolean => {
     const newErrors: Partial<Record<keyof BuildingFormData, string>> = {};
 
+    // Required: code (locked, auto-generated — ADR-233 §3.4)
+    if (!formData.code.trim()) {
+      newErrors.code = t('validation.codeRequired');
+    }
+
     // Required: name
     if (!formData.name.trim()) {
       newErrors.name = t('validation.nameRequired');
@@ -189,6 +197,7 @@ export function useBuildingForm({
           const result = await updateBuildingWithPolicy({
             buildingId: editBuilding.id,
             updates: {
+              code: formData.code,
               name: formData.name,
               description: formData.description || undefined,
               address: formData.address,
@@ -217,6 +226,7 @@ export function useBuildingForm({
           // Create new building
           const result = await createBuildingWithPolicy({
             payload: {
+              code: formData.code,
               name: formData.name,
               description: formData.description || undefined,
               address: formData.address,

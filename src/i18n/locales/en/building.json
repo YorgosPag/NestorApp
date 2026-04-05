@@ -216,6 +216,7 @@
     }
   },
   "validation": {
+    "codeRequired": "Building code is required (select a project for auto-assignment)",
     "nameRequired": "Name is required",
     "projectRequired": "Select a Project to continue",
     "areaPositive": "Area must be greater than 0",
@@ -464,8 +465,10 @@
       "features": "Features"
     },
     "fields": {
-      "name": "Building Name",
-      "namePlaceholder": "Enter building name...",
+      "code": "Building Code",
+      "codePlaceholder": "Auto-assigned",
+      "name": "Building Description",
+      "namePlaceholder": "e.g. South Offices",
       "companyFilter": "Company",
       "companyFilterPlaceholder": "All companies",
       "project": "Project",

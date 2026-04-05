@@ -341,3 +341,48 @@ Client (AddUnitDialog)           Server (API)
 **Fix 3 — Contextual placeholder:** Αν λείπει κάτι, το πεδίο κωδικού δείχνει τι χρειάζεται: "Δηλώστε κτίριο" / "Δηλώστε τύπο ακινήτου" / "Δηλώστε όροφο".
 
 **Affected files:** PropertyFieldsBlock.tsx, PropertyFieldsEditForm.tsx, property-fields-form-types.ts
+
+### 2026-04-05: Locked building `code` field as source-of-truth for unit code generation
+
+**Problem:** Ο `extractBuildingLetter()` προσπαθούσε να εξάγει το γράμμα του κτηρίου κάνοντας regex parsing πάνω στο ελεύθερο `Building.name` (π.χ. "Κτήριο Α"). Αν ο χρήστης έδινε αυθαίρετο όνομα (π.χ. "TestBuildingOK" ή "Πύργος Νότου"), η εξαγωγή έπεφτε σε fallback (πρώτος χαρακτήρας) και ο αυτόματος κωδικός μονάδας (`T-DI-1.01` αντί `A-DI-1.01`) έβγαινε λάθος.
+
+**Solution — διαχωρισμός σε δύο πεδία (ISO 19650 / BIM pattern):**
+- **`Building.code`** (νέο, locked, auto-sequenced): "Κτήριο Α", "Κτήριο Β", "Κτήριο Γ"... — αυτόματη πρόταση ανά project, read-only στο UI, **source-of-truth** για την εξαγωγή γράμματος.
+- **`Building.name`** (διατηρείται, free-text): "Κτήριο Γραφείων", "Νότιο Συγκρότημα"... — human-readable label.
+
+**Implementation:**
+- Νέοι helpers στο `config/entity-code-config.ts`: `GREEK_UPPERCASE_LETTERS` (24 γράμματα Α..Ω), `BUILDING_CODE_PREFIX`, `getGreekLetterAt()`, `buildBuildingCode()`, `suggestNextBuildingCode()` (gap-filling strategy).
+- Το `extractBuildingLetter()` αποδέχεται πλέον `{ code?, name? }` object — προτεραιοποιεί `code`, κάνει fallback στο `name` για προ-migration κτήρια. Διατηρείται backward-compat string signature.
+- `AddBuildingDialog`: όταν ο χρήστης επιλέγει project, φορτώνει τους υπάρχοντες κωδικούς κτηρίων (`getBuildingCodesByProject`) και προ-συμπληρώνει read-only πεδίο `code` με το επόμενο διαθέσιμο γράμμα.
+- UI display: `BuildingCardTitle`, `BuildingListCard`, `BuildingGridCard`, `BuildingDetailsHeader` δείχνουν `{code}` ως κύριο τίτλο και `{name}` ως υπότιτλο (όταν διαφέρουν).
+- Migration endpoint `POST /api/admin/backfill-building-code`: αναθέτει κωδικούς σε υπάρχοντα κτήρια ανά project κατά σειρά `createdAt`, σεβόμενο υπάρχοντα patterns "Κτήριο X" στα legacy `name`.
+
+**Affected files:** types/building/contracts.ts, config/entity-code-config.ts, services/entity-code.service.ts, lib/firestore/entity-creation.service.ts, lib/firestore/entity-creation.types.ts, app/api/entity-code/suggest/route.ts, app/api/buildings/route.ts, app/api/buildings/building-update.handler.ts, app/api/admin/backfill-building-code/route.ts (new), components/building-management/hooks/useBuildingForm.ts, components/building-management/dialogs/AddBuildingDialog.tsx, components/building-management/dialogs/add-building-dialog/AddBuildingDialogTabs.tsx, components/building-management/dialogs/add-building-dialog/add-building-dialog.config.ts, components/building-management/building-services.ts, components/building-management/BuildingCard/BuildingCardContent.tsx, components/building-management/BuildingCard/BuildingCardContent/BuildingCardTitle.tsx, components/building-management/BuildingDetails/BuildingDetailsHeader.tsx, domain/cards/building/BuildingListCard.tsx, domain/cards/building/BuildingGridCard.tsx, i18n/locales/{el,en}/building.json
+
+**⏸️ PENDING ITEMS (για επόμενη συνεδρία — 2026-04-05):**
+
+Τα παρακάτω είχαν προγραμματιστεί στο plan αλλά **δεν υλοποιήθηκαν** στην αρχική pass:
+
+1. **[HIGH] Server-side uniqueness validation στο `code` per project**
+   - Θέση: `src/app/api/buildings/route.ts` στο POST handler, πριν το `createEntity()`.
+   - Τι χρειάζεται: query `collection(buildings).where(projectId==X).where(code==body.code)` → αν υπάρχει match, throw `ApiError(409, 'Building code already exists in this project')`.
+   - Γιατί: race condition protection — αν 2 χρήστες δημιουργούν ταυτόχρονα, θα πάρουν το ίδιο auto-suggested code.
+   - Πρέπει επίσης να προστεθεί στο PATCH handler (`building-update.handler.ts`) όταν αλλάζει το `code`.
+
+2. **[MEDIUM] UI display στο `BuildingsList.tsx` (γραμμή 66)**
+   - Θέση: `src/components/building-management/BuildingsList.tsx:66`
+   - Τι χρειάζεται: αλλαγή από `building.name` σε `building.code && building.name && building.name !== building.code ? \`${building.code} — ${building.name}\` : (building.code || building.name)`.
+   - Γιατί: consistency με τα υπόλοιπα building display components (BuildingCardTitle, BuildingListCard, BuildingGridCard, BuildingDetailsHeader).
+
+3. **[LOW] Unit tests για τους νέους helpers**
+   - Θέση: νέο αρχείο `src/config/__tests__/entity-code-config.test.ts` (δεν υπάρχει test infra στο module σήμερα).
+   - Test cases για `suggestNextBuildingCode()`:
+     - `[]` → "Κτήριο Α"
+     - `["Κτήριο Α"]` → "Κτήριο Β"
+     - `["Κτήριο Α", "Κτήριο Γ"]` → "Κτήριο Β" (gap-filling)
+     - `["Κτήριο Α", ..., "Κτήριο Ω"]` (24 entries) → "Κτήριο 25"
+   - Test cases για `extractBuildingLetter()` με object signature:
+     - `{ code: "Κτήριο Α", name: "Foo" }` → "A" (code wins)
+     - `{ name: "Κτήριο Γ" }` → "G" (fallback)
+     - `{ name: "TestBuildingOK" }` → "T" (legacy fallback)
+     - Backward-compat: `"Κτήριο Α"` (string) → "A"

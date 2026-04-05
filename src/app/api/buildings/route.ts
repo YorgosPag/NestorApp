@@ -22,6 +22,7 @@ import {
 
 const CreateBuildingSchema = z.object({
   name: z.string().min(1).max(200),
+  code: z.string().min(1).max(50),
   description: z.string().max(2000).optional(),
   address: z.string().max(500).optional(),
   city: z.string().max(200).optional(),
@@ -147,6 +148,7 @@ export const GET = withStandardRateLimit(
  */
 interface BuildingCreatePayload {
   name: string;
+  code: string;
   description?: string;
   address?: string;
   city?: string;

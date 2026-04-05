@@ -72,6 +72,7 @@ async function fetchParentData(
     return {
       companyId: (data.companyId as string) || '',
       name: (data.name as string) || undefined,
+      code: (data.code as string) || undefined,
       projectId: (data.projectId as string) || undefined,
     };
   }
@@ -164,11 +165,12 @@ function buildCommonFields(ctx: AuthContext, companyId: string): Record<string, 
 async function generateEntityCode(
   entry: EntityRegistryEntry,
   buildingName: string | undefined,
+  buildingCode: string | undefined,
   buildingId: string,
   codeOptions: EntityCreationParams['codeOptions']
 ): Promise<string | null> {
   if (!entry.codeType) return null;
-  if (!buildingName) return null;
+  if (!buildingName && !buildingCode) return null;
   if (!codeOptions) return null;
 
   // Skip if current value already follows ADR-233 format
@@ -177,7 +179,8 @@ async function generateEntityCode(
   }
 
   try {
-    const buildingLetter = extractBuildingLetter(buildingName);
+    // ADR-233 §3.4: prefer locked `code` field, fall back to free-text `name`
+    const buildingLetter = extractBuildingLetter({ code: buildingCode, name: buildingName });
     const typeCode = resolveTypeCode(
       entry.codeType,
       codeOptions.unitType,
@@ -284,6 +287,7 @@ export async function createEntity(
     generatedCode = await generateEntityCode(
       entry,
       parentData.name,
+      parentData.code,
       parentId,
       codeOptions
     );

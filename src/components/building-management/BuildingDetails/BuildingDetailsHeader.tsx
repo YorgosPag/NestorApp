@@ -83,7 +83,11 @@ export function BuildingDetailsHeader({
             <div className="hidden md:block">
                 <EntityDetailsHeader
                     icon={NAVIGATION_ENTITIES.building.icon}
-                    title={building.name}
+                    title={
+                        building.code && building.name && building.name !== building.code
+                            ? `${building.code} — ${building.name}`
+                            : (building.code || building.name)
+                    }
                     actions={actions}
                     variant="detailed"
                 />

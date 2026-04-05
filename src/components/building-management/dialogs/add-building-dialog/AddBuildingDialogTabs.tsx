@@ -46,6 +46,21 @@ export function AddBuildingBasicInfoTab({
 }: BasicInfoTabProps) {
   return (
     <FormGrid>
+      <FormField label={t('dialog.fields.code')} htmlFor="code" required>
+        <FormInput>
+          <Input
+            id="code"
+            name="code"
+            value={formData.code}
+            readOnly
+            placeholder={t('dialog.fields.codePlaceholder')}
+            disabled={loading}
+            className={errors.code ? 'border-destructive bg-muted' : 'bg-muted'}
+          />
+          {errors.code ? <p className="mt-1 text-xs text-destructive">{errors.code}</p> : null}
+        </FormInput>
+      </FormField>
+
       <FormField label={t('dialog.fields.name')} htmlFor="name" required>
         <FormInput>
           <Input

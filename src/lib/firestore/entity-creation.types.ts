@@ -236,5 +236,7 @@ export interface EntityCreationResult {
 export interface ParentData {
   companyId: string;
   name?: string;
+  /** ADR-233 §3.4: locked building identifier (preferred over `name` for unit code generation) */
+  code?: string;
   projectId?: string;
 }

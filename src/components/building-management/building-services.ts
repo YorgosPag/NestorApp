@@ -24,6 +24,8 @@ const logger = createModuleLogger('BuildingServices');
  * Type-safe updates for building modifications
  */
 export interface BuildingUpdatePayload {
+  /** ADR-233 §3.4: locked building identifier (e.g. "Κτήριο Α") */
+  code?: string;
   name?: string;
   description?: string;
   totalArea?: number;
@@ -104,6 +106,8 @@ export async function updateBuilding(
  * Type-safe data for building creation
  */
 export interface BuildingCreatePayload {
+  /** ADR-233 §3.4: locked building identifier (e.g. "Κτήριο Α") */
+  code: string;
   name: string;
   description?: string;
   address?: string;
@@ -278,6 +282,34 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
  *
  * @see src/app/api/projects/[projectId]/route.ts (GET handler)
  */
+/**
+ * 🏢 ENTERPRISE: Fetch existing building `code` values for a project (ADR-233 §3.4).
+ *
+ * Used by AddBuildingDialog to auto-suggest the next sequential code
+ * ("Κτήριο Α", "Κτήριο Β", ...) when creating a new building.
+ *
+ * @param projectId - Parent project ID
+ * @returns Array of codes (omits buildings without a `code` field)
+ */
+export async function getBuildingCodesByProject(projectId: string): Promise<string[]> {
+  try {
+    interface BuildingsListResponse {
+      buildings: Array<{ code?: string; name?: string }>;
+      count: number;
+    }
+    const result = await apiClient.get<BuildingsListResponse>(
+      `${API_ROUTES.BUILDINGS.LIST}?projectId=${encodeURIComponent(projectId)}`
+    );
+    if (!result?.buildings) return [];
+    return result.buildings
+      .map((building) => (building.code || '').trim())
+      .filter((code) => code.length > 0);
+  } catch (error) {
+    logger.error('getBuildingCodesByProject failed', { error, projectId });
+    return [];
+  }
+}
+
 export async function getProjectAddresses(
   projectId: string
 ): Promise<{ addresses: ProjectAddress[]; legacyAddress?: string; legacyCity?: string }> {

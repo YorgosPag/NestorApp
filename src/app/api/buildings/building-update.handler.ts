@@ -28,6 +28,8 @@ const logger = createModuleLogger('BuildingUpdate');
 // ============================================================================
 
 interface BuildingUpdatePayload {
+  /** ADR-233 §3.4: locked building identifier (e.g. "Κτήριο Α") */
+  code?: string;
   name?: string;
   description?: string;
   address?: string;

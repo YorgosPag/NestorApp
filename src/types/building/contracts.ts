@@ -31,6 +31,14 @@ import type { RenovationStatus } from '@/constants/renovation-statuses';
     [key: string]: unknown;
     id: string;
     name: string;
+    /**
+     * 🏢 ENTERPRISE: Locked system identifier (ADR-233 §3.4).
+     * Auto-generated sequential code per project: "Κτήριο Α", "Κτήριο Β", ...
+     * Used as source-of-truth for unit code generation (e.g. "A-DI-1.01").
+     * Optional during migration phase; required for newly created buildings.
+     * @see suggestNextBuildingCode() in entity-code-config.ts
+     */
+    code?: string;
     projectId: string; // References Project
     description?: string;
 

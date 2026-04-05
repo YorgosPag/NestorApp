@@ -68,6 +68,7 @@ export const PRIORITY_OPTIONS: SelectOption<BuildingPriority>[] = [
 export const ENERGY_CLASS_OPTIONS: EnergyClass[] = ['A+', 'A', 'B+', 'B', 'C', 'D', 'E', 'F', 'G'];
 
 export const BASIC_TAB_ERROR_FIELDS: Array<keyof BuildingFormData> = [
+  'code',
   'name',
   'projectId',
   'status',
