@@ -1,16 +1,13 @@
 'use client';
 import { useCallback } from 'react';
-import {
-  deleteDoc,
-  doc,
-  writeBatch,
-  updateDoc,
-} from 'firebase/firestore';
-import { db } from '../../../../../lib/firebase';
 import { getErrorMessage } from '@/lib/error-utils';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
 import { LevelOperations, FloorplanOperations } from '../utils';
-import { createDxfLevelWithPolicy } from '@/services/dxf-level-mutation-gateway';
+import {
+  createDxfLevelWithPolicy,
+  updateDxfLevelWithPolicy,
+  deleteDxfLevelWithPolicy,
+} from '@/services/dxf-level-mutation-gateway';
 import type { DxfLevelCreateResponse } from '@/app/api/dxf-levels/dxf-levels.types';
 import type { Level, FloorplanDoc, LevelSystemSettings } from '../config';
 
@@ -23,7 +20,6 @@ interface UseLevelOperationsParams {
   setCurrentLevelId: (levelId: string | null) => void;
   setFloorplans: React.Dispatch<React.SetStateAction<Record<string, FloorplanDoc>>>;
   enableFirestore: boolean;
-  firestoreCollection: string;
   settings: LevelSystemSettings;
   sceneManager: SceneManager;
   setIsLoading: (loading: boolean) => void;
@@ -52,6 +48,10 @@ export interface UseLevelOperationsResult {
  *  - Propagates failures through `handleError` (centralised error UX).
  *  - Keeps `currentLevelId` consistent when the active level is removed.
  *
+ * 🔒 SSOT (ADR-286): All Firestore mutations route through the DXF level
+ * mutation gateway → /api/dxf-levels → createEntity pipeline. No direct
+ * client-side Firestore writes — enforces audit, tenancy, and enterprise IDs.
+ *
  * The hook is pure orchestration: it owns no state of its own — all state is
  * injected via params, so the caller (LevelsSystem) remains the SSoT.
  */
@@ -62,7 +62,6 @@ export function useLevelOperations({
   setCurrentLevelId,
   setFloorplans,
   enableFirestore,
-  firestoreCollection,
   settings,
   sceneManager,
   setIsLoading,
@@ -139,7 +138,8 @@ export function useLevelOperations({
         sceneManager.clearLevelScene(levelId);
 
         if (enableFirestore) {
-          await deleteDoc(doc(db, firestoreCollection, levelId));
+          // 🏢 ENTERPRISE (ADR-286): Route delete through gateway → /api/dxf-levels DELETE
+          await deleteDxfLevelWithPolicy({ levelId });
         } else {
           setLevels(prev => LevelOperations.removeLevel(prev, levelId));
         }
@@ -158,7 +158,7 @@ export function useLevelOperations({
         setIsLoading(false);
       }
     },
-    [levels, currentLevelId, enableFirestore, firestoreCollection, sceneManager, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]
+    [levels, currentLevelId, enableFirestore, sceneManager, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]
   );
 
   const deleteLevel = useCallback(
@@ -173,11 +173,10 @@ export function useLevelOperations({
       setIsLoading(true);
 
       if (enableFirestore) {
-        const batch = writeBatch(db);
-        levels.forEach(level => {
-          batch.delete(doc(db, firestoreCollection, level.id));
-        });
-        await batch.commit();
+        // 🏢 ENTERPRISE (ADR-286): Parallel gateway deletes — each call audited + tenant-scoped
+        await Promise.all(
+          levels.map(level => deleteDxfLevelWithPolicy({ levelId: level.id }))
+        );
       } else {
         setLevels([]);
       }
@@ -191,17 +190,18 @@ export function useLevelOperations({
     } finally {
       setIsLoading(false);
     }
-  }, [levels, enableFirestore, firestoreCollection, sceneManager, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]);
+  }, [levels, enableFirestore, sceneManager, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]);
 
   const reorderLevels = useCallback(
     async (levelIds: string[]): Promise<void> => {
       try {
         if (enableFirestore) {
-          const batch = writeBatch(db);
-          levelIds.forEach((id, index) => {
-            batch.update(doc(db, firestoreCollection, id), { order: index });
-          });
-          await batch.commit();
+          // 🏢 ENTERPRISE (ADR-286): Parallel gateway updates for order
+          await Promise.all(
+            levelIds.map((id, index) =>
+              updateDxfLevelWithPolicy({ payload: { levelId: id, order: index } })
+            )
+          );
         } else {
           setLevels(prev => LevelOperations.reorderLevels(prev, levelIds));
         }
@@ -209,7 +209,7 @@ export function useLevelOperations({
         handleError(getErrorMessage(err, 'Failed to reorder levels'));
       }
     },
-    [enableFirestore, firestoreCollection, handleError, setLevels]
+    [enableFirestore, handleError, setLevels]
   );
 
   const renameLevel = useCallback(
@@ -225,7 +225,8 @@ export function useLevelOperations({
         }
 
         if (enableFirestore) {
-          await updateDoc(doc(db, firestoreCollection, levelId), { name });
+          // 🏢 ENTERPRISE (ADR-286): Route rename through gateway → /api/dxf-levels PATCH
+          await updateDxfLevelWithPolicy({ payload: { levelId, name } });
         } else {
           setLevels(prev => LevelOperations.renameLevel(prev, levelId, name));
         }
@@ -233,7 +234,7 @@ export function useLevelOperations({
         handleError(getErrorMessage(err, 'Failed to rename level'));
       }
     },
-    [levels, enableFirestore, firestoreCollection, handleError, setLevels]
+    [levels, enableFirestore, handleError, setLevels]
   );
 
   const setCurrentLevel = useCallback(
@@ -251,7 +252,10 @@ export function useLevelOperations({
         if (!level) return;
 
         if (enableFirestore) {
-          await updateDoc(doc(db, firestoreCollection, levelId), { visible: !level.visible });
+          // 🏢 ENTERPRISE (ADR-286): Route visibility toggle through gateway
+          await updateDxfLevelWithPolicy({
+            payload: { levelId, visible: !level.visible },
+          });
         } else {
           setLevels(prev => LevelOperations.toggleLevelVisibility(prev, levelId));
         }
@@ -259,20 +263,21 @@ export function useLevelOperations({
         handleError(getErrorMessage(err, 'Failed to toggle level visibility'));
       }
     },
-    [levels, enableFirestore, firestoreCollection, handleError, setLevels]
+    [levels, enableFirestore, handleError, setLevels]
   );
 
   const setDefaultLevel = useCallback(
     async (levelId: string): Promise<void> => {
       try {
         if (enableFirestore) {
-          const batch = writeBatch(db);
-          levels.forEach(level => {
-            batch.update(doc(db, firestoreCollection, level.id), {
-              isDefault: level.id === levelId,
-            });
-          });
-          await batch.commit();
+          // 🏢 ENTERPRISE (ADR-286): Parallel gateway updates — flip isDefault flag per level
+          await Promise.all(
+            levels.map(level =>
+              updateDxfLevelWithPolicy({
+                payload: { levelId: level.id, isDefault: level.id === levelId },
+              })
+            )
+          );
         } else {
           setLevels(prev => LevelOperations.setDefaultLevel(prev, levelId));
         }
@@ -280,7 +285,7 @@ export function useLevelOperations({
         handleError(getErrorMessage(err, 'Failed to set default level'));
       }
     },
-    [levels, enableFirestore, firestoreCollection, handleError, setLevels]
+    [levels, enableFirestore, handleError, setLevels]
   );
 
   const duplicateLevel = useCallback(

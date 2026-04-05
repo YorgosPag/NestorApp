@@ -125,7 +125,6 @@ function useLevelsSystemState({
     setCurrentLevelId,
     setFloorplans,
     enableFirestore,
-    firestoreCollection,
     settings,
     sceneManager,
     setIsLoading,

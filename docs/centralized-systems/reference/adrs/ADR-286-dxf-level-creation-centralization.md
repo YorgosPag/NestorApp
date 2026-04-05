@@ -127,6 +127,21 @@ const enterpriseId = response?.levelId;
 
 Το `companyId`/`createdBy`/`createdAt` γράφονται πλέον server-side από `createEntity()`. Αφαιρέθηκε το `useAuth()` import (περιττό).
 
+**Full CRUD SSOT (2026-04-05 extension):** Όλες οι mutation functions του hook (`removeLevel`, `clearAllLevels`, `reorderLevels`, `renameLevel`, `toggleLevelVisibility`, `setDefaultLevel`) πλέον δρομολογούνται μέσω του gateway αντί για direct Firestore writes:
+
+```typescript
+// removeLevel
+await deleteDxfLevelWithPolicy({ levelId });
+
+// renameLevel / toggleLevelVisibility
+await updateDxfLevelWithPolicy({ payload: { levelId, name } });
+
+// Batch operations (clearAll, reorder, setDefault) → N parallel gateway calls
+await Promise.all(levels.map(l => updateDxfLevelWithPolicy({ ... })));
+```
+
+Αφαιρέθηκαν τελείως τα imports `deleteDoc`, `doc`, `writeBatch`, `updateDoc`, `db` και το unused prop `firestoreCollection`. **Zero direct client-side Firestore writes** για DXF levels.
+
 ### 3.6 Admin seed refactor
 
 `src/app/api/admin/seed-floors/route.ts` — ο creation loop αντικαταστάθηκε:
@@ -168,13 +183,13 @@ for (const template of FLOOR_TEMPLATES) {
 
 - ⚠️ Extra HTTP roundtrip για κάθε level creation (vs direct setDoc) — ~100-200ms latency
 - ⚠️ Existing `dxf-viewer-levels` documents (pre-migration) δεν έχουν audit entries — acceptable, no back-fill
-- ⚠️ Update/delete/reorder/rename operations **παραμένουν direct-write** προς το παρόν (next iteration)
+- ⚠️ Batch operations (`clearAllLevels`, `reorderLevels`, `setDefaultLevel`) κάνουν N parallel HTTP calls αντί για 1 Firestore batch — acceptable γιατί τα levels είναι λίγα (<20) και security > perf
 
 ### Out of Scope
 
 - ❌ Data migration για back-fill audit events σε existing DXF levels
 - ❌ Collection rename (`dxf-viewer-levels` → `floor_scenes`) — breaking change
-- ❌ Refactor update/delete/reorder operations μέσω `/api/dxf-levels` PATCH/DELETE (gateway έτοιμο αλλά `useLevelOperations` δεν το χρησιμοποιεί ακόμα)
+- ❌ Dedicated batch endpoint (`POST /api/dxf-levels/batch`) — YAGNI, θα προστεθεί αν/όταν γίνει bottleneck
 
 ---
 
@@ -193,8 +208,12 @@ for (const template of FLOOR_TEMPLATES) {
 - `src/lib/firestore/entity-creation.service.ts` (support `'tenant-scoped'` path)
 - `src/config/firestore-collections.ts` (align `DXF_VIEWER_LEVELS` default)
 - `src/config/domain-constants.ts` (add `API_ROUTES.DXF_LEVELS`)
-- `src/subapps/dxf-viewer/systems/levels/hooks/useLevelOperations.ts` (use gateway)
+- `src/subapps/dxf-viewer/systems/levels/hooks/useLevelOperations.ts` (use gateway — full CRUD)
+- `src/subapps/dxf-viewer/systems/levels/LevelsSystem.tsx` (drop unused `firestoreCollection` prop)
 - `src/app/api/admin/seed-floors/route.ts` (use `createEntity('floor', …)`)
+
+### Deleted
+- `scripts/seed-floors-cli.js` (obsolete one-time bootstrapping — bypassed SSOT)
 
 ---
 
@@ -213,4 +232,5 @@ for (const template of FLOOR_TEMPLATES) {
 
 | Date | Change |
 |---|---|
-| 2026-04-05 | Initial draft — ADR accepted, implementation complete |
+| 2026-04-05 | Initial draft — ADR accepted, creation pipeline centralized |
+| 2026-04-05 | Scope extended to **full CRUD**: `removeLevel`, `clearAllLevels`, `reorderLevels`, `renameLevel`, `toggleLevelVisibility`, `setDefaultLevel` now route through gateway → `/api/dxf-levels` PATCH/DELETE. Zero direct client-side Firestore writes remaining in `useLevelOperations.ts`. Deleted obsolete `scripts/seed-floors-cli.js`. |
