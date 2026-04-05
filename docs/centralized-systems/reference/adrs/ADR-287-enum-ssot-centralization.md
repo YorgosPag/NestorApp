@@ -150,3 +150,16 @@
   - **Rename**: Το local `normalizeCommercialStatus()` helper (που διάβαζε το current state για field locking) μετονομάστηκε σε `readCurrentCommercialStatus()` για να αποφευχθεί naming collision με το imported SSoT resolver `normalizeCommercialStatusSSoT`.
   - **Consumers (όλα περνούν από το gateway — επιβεβαιώθηκε με grep)**: `PropertyInlineCreateForm`, `usePropertyForm`, `PropertyFieldsBlock`, `useGuardedPropertyMutation`, `usePolygonHandlers` (4 write sites). Όλες οι UI mutations καλύπτονται — **zero bypass paths**.
   - **Purpose**: Google-level data integrity pattern (clean-by-design Firestore). Αντί query-time normalization μόνο (που καλύπτει existing dirty data), τα writes πλέον εγγυώνται canonical tokens κατά την εισαγωγή → reports/BI/AI δουλεύουν σε clean data χωρίς να βασίζονται σε downstream fixup. Παράλληλα, αποτυχημένα writes δίνουν clear error messages που δείχνουν ποιο SSoT module παραβιάστηκε.
+- **2026-04-05 (Batch 14)**: Backfill migration script για existing Firestore records.
+  - **Created**: `scripts/migrate-property-enums.ts` — one-off ts-node script που διαβάζει όλα τα documents στο `properties` collection, εφαρμόζει `normalizePropertyType()` + `normalizeCommercialStatus()` στα legacy values, γράφει πίσω τα canonical tokens σε batched writes (400 ops/batch, Firestore limit 500).
+  - **Zero drift**: Το script κάνει direct import από τα leaf SSoT modules (`src/constants/property-types.ts` + `src/constants/commercial-statuses.ts`) — ίδιοι normalizers με το runtime gateway (Batch 13) + το AI pipeline (Batch 10A/11A/11B).
+  - **Safety**: **Dry-run by default** (δείχνει τι θα άλλαζε χωρίς writes). `--apply` flag required για actual Firestore mutations. Separate **unresolvable values report** για manual review cases (π.χ. typos, legacy tokens εκτός alias map).
+  - **Usage**:
+    ```bash
+    # Dry-run (default)
+    npx ts-node scripts/migrate-property-enums.ts
+    # Apply
+    npx ts-node scripts/migrate-property-enums.ts --apply
+    ```
+  - **Συμπλήρωση Batch 13**: Το write-time middleware προστατεύει ΝΕΑ writes. Το migration script καθαρίζει ΥΠΑΡΧΟΝΤΑ legacy records που γράφτηκαν πριν το Batch 13 ή απευθείας μέσω Firestore console/admin SDK bypass. Μαζί: **100% canonical data** στο collection.
+  - **Scope περιορισμένο σε properties**: Buildings/contacts δεν έχουν ακόμα write-time middleware (άλλο gateway). Αν χρειαστεί, extending pattern (same normalize-read-write loop, different resolvers from `building-types.ts` / `contact-types.ts`).
