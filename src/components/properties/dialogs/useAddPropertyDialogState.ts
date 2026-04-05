@@ -20,6 +20,7 @@ import { isMultiLevelCapableType } from '@/config/domain-constants';
 import { getProjectsList, type ProjectListItem } from '@/components/building-management/building-services';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyType, OperationalStatus, CommercialStatus } from '@/types/property';
+import { PROPERTY_TYPES } from '@/constants/property-types';
 import type { Building } from '@/types/building/contracts';
 
 const logger = createModuleLogger('AddPropertyDialogState');
@@ -28,22 +29,9 @@ const logger = createModuleLogger('AddPropertyDialogState');
 // CONSTANTS
 // =============================================================================
 
-export const PROPERTY_TYPE_OPTIONS: PropertyType[] = [
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'apartment_2br',
-  'apartment_3br',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-  'shop',
-  'office',
-  'hall',
-  'storage',
-];
+// ADR-145: Derived από canonical SSoT (@/constants/property-types).
+// Previously: hardcoded 14-item list που ήταν εύκολο να βγει εκτός sync.
+export const PROPERTY_TYPE_OPTIONS: PropertyType[] = [...PROPERTY_TYPES];
 
 export const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
   'draft',

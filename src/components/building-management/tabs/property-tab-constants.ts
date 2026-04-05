@@ -11,28 +11,24 @@
 
 import type { TFunction } from 'i18next';
 import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
+import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 
 // ============================================================================
 // TYPE LABELS & OPTIONS (i18n keys — resolve with t())
 // ============================================================================
 
-/** Maps unit type value → i18n key in "properties" namespace */
-export const UNIT_TYPE_LABEL_KEYS: Record<string, string> = {
-  apartment: 'types.apartment',
-  studio: 'types.studio',
-  apartment_1br: 'types.apartment_1br',
-  apartment_2br: 'types.apartment_2br',
-  apartment_3br: 'types.apartment_3br',
-  maisonette: 'types.maisonette',
-  shop: 'types.shop',
-  office: 'types.office',
-  storage: 'types.storage',
-};
+/**
+ * Maps unit type value → i18n key in "properties" namespace.
+ * ADR-145: Derived από canonical SSoT — αυτόματα complete με όλους τους 14 τύπους.
+ */
+export const UNIT_TYPE_LABEL_KEYS: Record<string, string> = { ...PROPERTY_TYPE_I18N_KEYS };
 
-export const UNIT_TYPES_FOR_FILTER: PropertyType[] = [
-  'studio', 'apartment_1br', 'apartment', 'apartment_2br', 'apartment_3br',
-  'maisonette', 'shop', 'office', 'storage',
-];
+/**
+ * Full list των 14 canonical types για το Properties tab filter dropdown.
+ * ADR-145: Derived από canonical SSoT — fixes previous missing penthouse/loft/
+ * villa/detached_house/hall (ADR-233 additions που δεν είχαν propagate εδώ).
+ */
+export const UNIT_TYPES_FOR_FILTER: PropertyType[] = [...PROPERTY_TYPES];
 
 // ============================================================================
 // STATUS LABELS & OPTIONS (i18n keys — resolve with t())

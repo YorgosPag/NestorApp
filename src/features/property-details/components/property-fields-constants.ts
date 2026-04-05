@@ -11,6 +11,7 @@
  */
 
 import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
+import { PROPERTY_TYPES } from '@/constants/property-types';
 import type {
   OrientationType,
   ConditionType,
@@ -66,11 +67,10 @@ export const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [
   'alarm', 'security-door', 'cctv', 'access-control', 'intercom', 'motion-sensors',
 ];
 
-export const PROPERTY_TYPE_OPTIONS: PropertyType[] = [
-  'studio', 'apartment_1br', 'apartment', 'apartment_2br',
-  'apartment_3br', 'maisonette', 'penthouse', 'loft',
-  'detached_house', 'villa', 'shop', 'office', 'hall', 'storage',
-];
+// ADR-145: PropertyType options derived from SSoT (@/constants/property-types).
+// Widened to PropertyType[] (which includes legacy Greek values) so existing
+// callers that accept the broader union remain type-compatible.
+export const PROPERTY_TYPE_OPTIONS: PropertyType[] = [...PROPERTY_TYPES];
 
 // Transaction statuses (reserved, sold, rented) require buyer/tenant selection
 // and can ONLY be set through SalesActionDialogs (ReserveDialog/SellDialog).

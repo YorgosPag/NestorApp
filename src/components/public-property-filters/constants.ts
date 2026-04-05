@@ -1,13 +1,19 @@
-import { EXTENDED_PROPERTY_TYPE_LABELS, PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
+import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
+import {
+  PROPERTY_TYPES as CANONICAL_PROPERTY_TYPES,
+  PROPERTY_TYPE_I18N_KEYS,
+} from '@/constants/property-types';
 
-export const PROPERTY_TYPES = [
-  { value: "studio", label: EXTENDED_PROPERTY_TYPE_LABELS.studio },
-  { value: "bedsit", label: EXTENDED_PROPERTY_TYPE_LABELS.bedsit },
-  { value: "apartment-2br", label: EXTENDED_PROPERTY_TYPE_LABELS['apartment-2br'] },
-  { value: "maisonette", label: EXTENDED_PROPERTY_TYPE_LABELS.maisonette },
-  { value: "shop", label: EXTENDED_PROPERTY_TYPE_LABELS.shop },
-  { value: "storage", label: EXTENDED_PROPERTY_TYPE_LABELS.storage },
-] as const;
+// ADR-145: Derived από canonical SSoT. Όλα τα values χρησιμοποιούν underscore
+// form (π.χ. `apartment_2br`) ώστε να ταιριάζουν με τον `PropertyType` union.
+// Πριν (buggy): hyphenated values (`apartment-2br`) που δεν ταίριαζαν με τύπο.
+export const PROPERTY_TYPES = CANONICAL_PROPERTY_TYPES.map((value) => ({
+  value,
+  label: `properties.${PROPERTY_TYPE_I18N_KEYS[value]}`,
+})) as ReadonlyArray<{
+  value: (typeof CANONICAL_PROPERTY_TYPES)[number];
+  label: string;
+}>;
 
 export const AVAILABILITY = [
   { value: "for-sale", label: PROPERTY_STATUS_LABELS['for-sale'] },

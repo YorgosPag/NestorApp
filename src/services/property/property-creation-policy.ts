@@ -24,6 +24,10 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PropertyType } from '@/types/property';
+import {
+  STANDALONE_UNIT_TYPES as CANONICAL_STANDALONE_UNIT_TYPES,
+  isStandaloneUnitType,
+} from '@/constants/property-types';
 
 // =============================================================================
 // ERRORS
@@ -37,18 +41,18 @@ export class PropertyCreationPolicyError extends Error {
 }
 
 // =============================================================================
-// CONSTANTS
+// CONSTANTS (ADR-145: re-export από SSoT)
 // =============================================================================
 
 /**
  * Standalone unit types (Family B) — connect directly to Project, with no
  * building/floor placement. All other PropertyType values belong to Family A
  * (in-building) and require the full building/floor chain.
+ *
+ * ADR-145: Canonical definition ζει στο `@/constants/property-types`.
  */
-export const STANDALONE_UNIT_TYPES: readonly PropertyType[] = [
-  'detached_house',
-  'villa',
-] as const;
+export const STANDALONE_UNIT_TYPES: readonly PropertyType[] =
+  CANONICAL_STANDALONE_UNIT_TYPES;
 
 // =============================================================================
 // INTERNAL HELPERS
@@ -59,10 +63,7 @@ function isBlank(value: unknown): boolean {
 }
 
 function isStandaloneType(type: unknown): boolean {
-  return (
-    typeof type === 'string' &&
-    (STANDALONE_UNIT_TYPES as readonly string[]).includes(type)
-  );
+  return isStandaloneUnitType(type);
 }
 
 // =============================================================================

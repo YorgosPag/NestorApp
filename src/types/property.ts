@@ -207,28 +207,25 @@ export interface LevelData {
 // =============================================================================
 // 🏢 UNIT TYPE - CANONICAL ENGLISH CODES
 // =============================================================================
-// 📅 Updated 2026-01-24: Changed to canonical English codes
+// 📅 Updated 2026-01-24: Changed to canonical English codes (ADR-233)
+// 📅 Updated 2026-04-05: Centralized to SSoT at @/constants/property-types (ADR-145)
 // 🏢 ENTERPRISE: Data layer uses English codes, i18n handles translations
 // Legacy Greek values ('Στούντιο', 'Διαμέρισμα 2Δ', etc.) may still exist in Firestore
 // UI should use i18n mapping: t(`types.${unit.type}`, { defaultValue: unit.type })
+//
+// The canonical 14-type list και Family A/B discriminator ζουν στο SSoT module.
+// Αυτό το type union προσθέτει απλώς τα legacy Greek Firestore values (backward compat).
+
+import type {
+  PropertyTypeCanonical,
+  LegacyGreekPropertyType,
+  DeprecatedPropertyType,
+} from '@/constants/property-types';
 
 export type PropertyType =
-  | 'studio'          // Στούντιο
-  | 'apartment_1br'   // Γκαρσονιέρα
-  | 'apartment'       // Διαμέρισμα (generic)
-  | 'apartment_2br'   // Διαμέρισμα 2Δ
-  | 'apartment_3br'   // Διαμέρισμα 3Δ
-  | 'maisonette'      // Μεζονέτα
-  | 'penthouse'       // Ρετιρέ (ADR-233)
-  | 'loft'            // Loft (ADR-233)
-  | 'detached_house'  // Μονοκατοικία (ADR-233)
-  | 'villa'           // Βίλα (ADR-233)
-  | 'shop'            // Κατάστημα
-  | 'office'          // Γραφείο
-  | 'hall'            // Αίθουσα (ADR-233)
-  | 'storage'         // Αποθήκη
-  // Legacy Greek values (backward compatibility)
-  | 'Στούντιο' | 'Γκαρσονιέρα' | 'Διαμέρισμα 2Δ' | 'Διαμέρισμα 3Δ' | 'Μεζονέτα' | 'Κατάστημα' | 'Αποθήκη';
+  | PropertyTypeCanonical
+  | DeprecatedPropertyType
+  | LegacyGreekPropertyType;
 
 // =============================================================================
 // 🏢 COVERAGE INTERFACE (Documentation Completeness)

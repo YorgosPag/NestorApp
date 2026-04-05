@@ -32,27 +32,19 @@ import type {
 } from '@/types/property-creation';
 
 // =============================================================================
-// DISCRIMINATOR (SSoT — mirrors server-side STANDALONE_UNIT_TYPES)
+// DISCRIMINATOR (re-exported από SSoT — ADR-145)
 // =============================================================================
+//
+// ADR-284 — Standalone unit types (Family B): attach directly to a Project
+// χωρίς Building/Floor. Client-side mirror του server-side policy.
+// Single definition ζει πλέον στο SSoT module (@/constants/property-types).
 
-/**
- * ADR-284 — Standalone unit types (Family B).
- *
- * These units attach directly to a Project without Building/Floor. Mirror of
- * server-side `STANDALONE_UNIT_TYPES` in `property-creation-policy.ts`.
- */
-export const STANDALONE_UNIT_TYPES: readonly PropertyType[] = [
-  'detached_house',
-  'villa',
-];
+import {
+  STANDALONE_UNIT_TYPES,
+  isStandaloneUnitType,
+} from '@/constants/property-types';
 
-/**
- * Discriminator function — determines whether a type is Family B (standalone).
- * Returns `false` for empty string (undecided state).
- */
-export function isStandaloneUnitType(type: PropertyType | ''): boolean {
-  return type !== '' && STANDALONE_UNIT_TYPES.includes(type);
-}
+export { STANDALONE_UNIT_TYPES, isStandaloneUnitType };
 
 // =============================================================================
 // PURE VALIDATOR (no React dependencies)

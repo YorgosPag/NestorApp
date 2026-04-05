@@ -28,12 +28,8 @@ import { Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useRealtimeBuildings } from '@/services/realtime/hooks/useRealtimeBuildings';
 import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
-// ADR-284 Batch 7: Inlined (avoid circular dep risk με useAddPropertyDialogState)
-const PROPERTY_TYPE_OPTIONS = [
-  'studio', 'apartment_1br', 'apartment', 'apartment_2br', 'apartment_3br',
-  'maisonette', 'penthouse', 'loft', 'detached_house', 'villa',
-  'shop', 'office', 'hall', 'storage',
-] as const;
+// ADR-145: Import από centralized SSoT (leaf module — δεν δημιουργεί circular dep).
+import { PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/constants/property-types';
 import { AddProjectDialog } from '@/components/projects/dialogs/AddProjectDialog';
 import { FloorInlineCreateForm } from '@/components/building-management/tabs/FloorInlineCreateForm';
 import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';

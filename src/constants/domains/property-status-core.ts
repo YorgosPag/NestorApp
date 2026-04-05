@@ -63,33 +63,34 @@ export const DEFAULT_PROPERTY_STATUS: PropertyStatus = 'for-sale';
 // PROPERTY TYPES & LABELS
 // ============================================================================
 
-export type PropertyType =
-  | 'apartment'
-  | 'studio'
-  | 'maisonette'
-  | 'shop'
-  | 'office'
-  | 'storage';
+// ADR-145: PropertyType SSoT lives at @/constants/property-types.
+// This module re-exports the canonical type for backward compatibility —
+// legacy consumers (TypeSelect.tsx, features/property-grid) continue to work.
+import {
+  PROPERTY_TYPES,
+  PROPERTY_TYPE_I18N_KEYS,
+  type PropertyTypeCanonical,
+} from '@/constants/property-types';
 
-export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
-  'apartment': 'properties.types.apartment',
-  'studio': 'properties.types.studio',
-  'maisonette': 'properties.types.maisonette',
-  'shop': 'properties.types.shop',
-  'office': 'properties.types.office',
-  'storage': 'properties.types.storage',
-};
+export type PropertyType = PropertyTypeCanonical;
 
-// Extended Property Type Variations (supplements PROPERTY_TYPE_LABELS)
-export const EXTENDED_PROPERTY_TYPE_LABELS = {
-  ...PROPERTY_TYPE_LABELS,
-  'bedsit': 'properties.types.bedsit',
-  'apartment-2br': 'properties.types.apartment2br',
-  'apartment-3br': 'properties.types.apartment3br',
-  'apartment-4br': 'properties.types.apartment4br',
-  'loft': 'properties.types.loft',
-  'penthouse': 'properties.types.penthouse'
-} as const;
+/**
+ * i18n label keys για όλους τους 14 canonical property types.
+ * ADR-145: Derived από SSoT. Keys χρησιμοποιούν UNDERSCORES αποκλειστικά
+ * (π.χ. `apartment_2br`, ΟΧΙ `apartment-2br`). Prefix `properties.` για
+ * το UI resolution: `t(`properties.${PROPERTY_TYPE_LABELS[type]}`)`.
+ */
+export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = Object.fromEntries(
+  PROPERTY_TYPES.map((type) => [type, `properties.${PROPERTY_TYPE_I18N_KEYS[type]}`]),
+) as Record<PropertyType, string>;
+
+/**
+ * @deprecated ADR-145: Use `PROPERTY_TYPE_LABELS` directly (τώρα πλήρες — 14 types).
+ * Διατηρείται ως alias για καλύτερη backward compatibility. Προηγούμενες εκδόσεις
+ * αυτού του map είχαν hyphenated keys (`apartment-2br`) που ΔΕΝ ήταν συμβατά με
+ * τον canonical PropertyType union (underscore form).
+ */
+export const EXTENDED_PROPERTY_TYPE_LABELS = PROPERTY_TYPE_LABELS;
 
 // Legacy status mapping for compatibility
 export const LEGACY_STATUS_MAPPING: Record<string, PropertyStatus> = {
