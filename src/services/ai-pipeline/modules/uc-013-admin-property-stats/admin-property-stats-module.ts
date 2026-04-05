@@ -17,6 +17,10 @@
 import 'server-only';
 
 import { PROPERTY_TYPE_LABELS_EL } from '@/constants/property-types';
+import {
+  normalizeCommercialStatus,
+  isListedCommercialStatus,
+} from '@/constants/commercial-statuses';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -264,14 +268,17 @@ export class AdminPropertyStatsModule implements IUCModule {
             totalStats.byType[typeKey] = (totalStats.byType[typeKey] ?? 0) + 1;
           }
 
-          const status = ((data.status ?? '') as string).toLowerCase();
-          if (status === 'sold' || status === 'πωλημένο') {
+          // ADR-287 Batch 10A — Normalize via SSoT resolver (canonical CommercialStatus)
+          const canonicalStatus = normalizeCommercialStatus(data.status);
+          if (canonicalStatus === 'sold') {
             stats.sold++; totalStats.sold++;
-          } else if (status === 'available' || status === 'διαθέσιμο') {
+          } else if (canonicalStatus && isListedCommercialStatus(canonicalStatus)) {
+            // for-sale / for-rent / for-sale-and-rent → διαθέσιμο bucket
             stats.available++; totalStats.available++;
-          } else if (status === 'reserved' || status === 'κρατημένο') {
+          } else if (canonicalStatus === 'reserved') {
             stats.reserved++; totalStats.reserved++;
           } else {
+            // rented / unavailable / null (unknown) → λοιπά
             stats.other++; totalStats.other++;
           }
         }
