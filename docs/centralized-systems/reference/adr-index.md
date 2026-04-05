@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 274 ADRs | Last Updated: 2026-04-05
+**📊 Stats**: 275 ADRs | Last Updated: 2026-04-05
 
 ---
 
@@ -309,6 +309,7 @@
 | **ADR-288** | CAD File Metadata Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-288-cad-file-metadata-centralization.md) |
 | **ADR-289** | DXF Overlay Item Centralization (SSOT API Gateway) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-289-dxf-overlay-item-centralization.md) |
 | **ADR-290** | Building Creation SSoT Enforcement | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-290-building-creation-ssot-enforcement.md) |
+| **ADR-291** | Notification Pattern Selection Strategy (Google Material Design 3) | ✅ APPROVED | 2026-04-05 | UI Components / Design System | [📄](./adrs/ADR-291-notification-pattern-selection-strategy.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

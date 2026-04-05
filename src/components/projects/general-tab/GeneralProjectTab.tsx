@@ -205,6 +205,15 @@ export function GeneralProjectTab({
     { saveFn: autoSaveFn }
   );
 
+  // 🏢 ADR-284 §3.0: Clear the company-required policy error as soon as the
+  // user links a company — no stale banner sticking around after the fix.
+  useEffect(() => {
+    if (saveErrorCode === 'POLICY_COMPANY_REQUIRED' && companyLink.linkedId) {
+      setSaveError(null);
+      setSaveErrorCode(null);
+    }
+  }, [companyLink.linkedId, saveErrorCode]);
+
   useEffect(() => {
     setProjectData(prev => ({
       ...prev,
@@ -243,6 +252,15 @@ export function GeneralProjectTab({
       if (isCreateMode) {
         const companyPayload = companyLink.getPayload();
         const effectiveLinkedCompanyId = companyPayload.linkedCompanyId ?? null;
+
+        // 🏢 ADR-284 §3.0: Pre-flight company policy check — avoids API round-trip
+        // and surfaces the same PolicyErrorBanner + recovery action immediately.
+        if (!effectiveLinkedCompanyId) {
+          setSaveError('Company (linkedCompanyId) is required — every project must belong to a company.');
+          setSaveErrorCode('POLICY_COMPANY_REQUIRED');
+          return;
+        }
+
         logger.info('Creating new project...', { data: projectData, linkedCompanyId: effectiveLinkedCompanyId });
 
         const result = await createProjectWithPolicy({
@@ -361,7 +379,14 @@ export function GeneralProjectTab({
       />
 
       <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>
-        <EntityLinkCard key={companyLink.linkCardKey} {...companyLink.linkCardProps} />
+        {/* 🏢 ADR-291 Scenario 6b: hasError links the top-level PolicyErrorBanner
+            with the exact field — red border + auto-scroll-into-view. User sees
+            WHAT is wrong (banner) AND WHERE to fix it (inline). */}
+        <EntityLinkCard
+          key={companyLink.linkCardKey}
+          {...companyLink.linkCardProps}
+          hasError={saveErrorCode === 'POLICY_COMPANY_REQUIRED'}
+        />
 
         <BasicProjectInfoTab
           data={projectData}

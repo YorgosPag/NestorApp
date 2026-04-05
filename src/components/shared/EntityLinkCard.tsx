@@ -91,6 +91,13 @@ export interface EntityLinkCardProps {
   autoSave?: boolean;
   /** Incrementing counter that triggers options re-fetch (driven by realtime events) */
   refreshSignal?: number;
+  /**
+   * External error flag (e.g. from a policy error banner).
+   * When true, the select gets a red border + the card auto-scrolls into view.
+   * Use this to link a top-level <PolicyErrorBanner /> with the exact field
+   * the user must fix (ADR-291 Scenario 6b: banner + inline combo).
+   */
+  hasError?: boolean;
 }
 
 // =============================================================================
@@ -115,6 +122,7 @@ export function EntityLinkCard({
   autoSave = true,
   onValueChange,
   refreshSignal,
+  hasError = false,
 }: EntityLinkCardProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -136,6 +144,16 @@ export function EntityLinkCard({
   // Track the last successfully saved value locally (autoSave mode ONLY).
   // When autoSave=false, parent controls state via currentValue — no internal tracking needed.
   const [savedValue, setSavedValue] = useState<string | undefined>(undefined);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // 🏢 ADR-291 Scenario 6b: Auto-scroll into view when external error is raised.
+  // Pairs with <PolicyErrorBanner /> at the top of the form — user sees the
+  // message AND the exact field they must fix, without hunting.
+  useEffect(() => {
+    if (hasError && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [hasError]);
 
   // Effective saved value: only use savedValue in autoSave mode
   const effectiveSavedValue = autoSave ? savedValue : undefined;
@@ -254,8 +272,9 @@ export function EntityLinkCard({
             !isEditing && 'bg-muted',
             !selectedName && selectedId === NONE_VALUE && colors.text.muted,
             saveStatus === 'success' && getStatusBorder('success'),
-            saveStatus === 'error' && getStatusBorder('error')
+            (saveStatus === 'error' || hasError) && getStatusBorder('error')
           )}
+          aria-invalid={hasError || undefined}
         >
           <span className="truncate">
             {selectedId === NONE_VALUE
@@ -344,10 +363,11 @@ export function EntityLinkCard({
     >
       <SelectTrigger
         id={cardId}
+        aria-invalid={hasError || undefined}
         className={cn(
           !isEditing && 'bg-muted',
           saveStatus === 'success' && getStatusBorder('success'),
-          saveStatus === 'error' && getStatusBorder('error')
+          (saveStatus === 'error' || hasError) && getStatusBorder('error')
         )}
       >
         <SelectValue placeholder={labels.placeholder} />
@@ -370,7 +390,7 @@ export function EntityLinkCard({
   // ==========================================================================
 
   return (
-    <Card>
+    <Card ref={cardRef}>
       <CardHeader className="p-2">
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <Icon className={iconSizes.md} />
