@@ -32,6 +32,9 @@ export default defineConfig([
         caughtErrorsIgnorePattern: "^_",
       }],
 
+      // 🏢 CLAUDE.md SOS. N.11 — forbid hardcoded defaultValue in i18n calls
+      "custom/no-i18n-defaultvalue-literals": "error",
+
       // Enable custom hardcoded strings detection
       "custom/no-hardcoded-strings": ["error", {
         allowedPatterns: [

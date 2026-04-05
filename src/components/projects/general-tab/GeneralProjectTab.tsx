@@ -24,6 +24,7 @@ import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useGuardedProjectMutation } from '@/hooks/useGuardedProjectMutation';
 import { createProjectWithPolicy, updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
+import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralProjectTab');
@@ -105,6 +106,8 @@ export function GeneralProjectTab({
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // 🏢 ADR-284 §3.0: track policy error code for the shared <PolicyErrorBanner>
+  const [saveErrorCode, setSaveErrorCode] = useState<string | null>(null);
   const { ImpactDialog, runExistingProjectUpdate } = useGuardedProjectMutation(project.id, {
     onBlockDismiss: () => {
       companyLink.reset();
@@ -235,6 +238,7 @@ export function GeneralProjectTab({
     try {
       setIsSaving(true);
       setSaveError(null);
+      setSaveErrorCode(null);
 
       if (isCreateMode) {
         const companyPayload = companyLink.getPayload();
@@ -253,7 +257,10 @@ export function GeneralProjectTab({
         });
 
         if (!result.success || !result.projectId) {
-          throw new Error(result.error || 'Failed to create project');
+          // 🏢 ADR-284: surface raw server message + errorCode for <PolicyErrorBanner>
+          setSaveError(result.error || 'Failed to create project');
+          setSaveErrorCode(result.errorCode ?? null);
+          return;
         }
 
         logger.info('Project created successfully', { projectId: result.projectId });
@@ -277,6 +284,7 @@ export function GeneralProjectTab({
     } catch (error) {
       logger.error('Error saving project:', { error });
       setSaveError(error instanceof Error ? error.message : 'Failed to save project');
+      setSaveErrorCode(null);
     } finally {
       setIsSaving(false);
     }
@@ -329,11 +337,27 @@ export function GeneralProjectTab({
         projectCode={project.projectCode}
         projectId={project.id}
         isSaving={isSaving}
-        saveError={saveError}
         isEditing={isEditing}
         autoSaveStatus={autoSaveStatus}
         autoSaveError={autoSaveError}
         onAutoSaveRetry={autoSaveRetry}
+      />
+
+      {/* 🏢 ADR-284: Shared policy banner — auto i18n + auto recovery action.
+          If the recovery produced a new companyId (e.g. user created one on
+          the fly), auto-wire it into the EntityLinkCard so the user doesn't
+          have to pick it manually. */}
+      <PolicyErrorBanner
+        errorCode={saveErrorCode}
+        rawMessage={saveError}
+        onRecovered={(payload) => {
+          const newCompanyId = typeof payload?.companyId === 'string' ? payload.companyId : null;
+          if (newCompanyId) {
+            companyLink.setLinkedId(newCompanyId);
+          }
+          setSaveError(null);
+          setSaveErrorCode(null);
+        }}
       />
 
       <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>

@@ -230,6 +230,7 @@
     "projectRequired": "Select a Project — the entity must belong to a project.",
     "projectNotFound": "The selected Project was not found.",
     "projectOrphanNoCompany": "The selected Project is not linked to a Company. First link the Project to a Company (edit Project → Linked company), then try again.",
+    "companyRequired": "Select a Company — every project must belong to a company.",
     "companyNotFound": "Linked Company not found — data integrity violation.",
     "companyInvalidType": "Linked Company is not a valid company-type contact.",
     "buildingRequired": "Select a Building — in-building units must belong to a building.",
@@ -244,6 +245,12 @@
     "multilevelFloorMismatch": "All levels must share the same Building.",
     "standaloneWithBuilding": "Standalone units ({type}) cannot have a Building/Floor — they connect directly to the Project.",
     "duplicateCode": "The code already exists. Please try again."
+  },
+  "recoveries": {
+    "createCompany": {
+      "hint": "No companies yet. Every project must belong to a company.",
+      "action": "Create Company"
+    }
   },
   "details": {
     "newBuilding": "New Building",

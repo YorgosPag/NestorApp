@@ -35,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
 import { Home, ClipboardList } from 'lucide-react';
-import { AddProjectDialog as NestedAddProjectDialog } from '@/components/projects/dialogs/AddProjectDialog';
+import { ProjectQuickCreateSheet } from '@/components/projects/dialogs/ProjectQuickCreateSheet';
 import { AddFloorDialog } from '@/components/building-management/dialogs/AddFloorDialog';
 import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';
 import { PropertyHierarchyEmptyStates } from '@/components/properties/shared/PropertyHierarchyEmptyStates';
@@ -255,7 +255,7 @@ export function AddPropertyDialog({
                 {!isStandalone && (
                 <FormField
                   label={isMultiLevelType
-                    ? t('multiLevel.floors', { defaultValue: 'Όροφοι' })
+                    ? t('multiLevel.floors')
                     : t('dialog.addUnit.fields.floor')}
                   htmlFor="floorId"
                   required
@@ -388,11 +388,11 @@ export function AddPropertyDialog({
         </form>
       </DialogContent>
 
-      {/* 🔐 ADR-284 §3.3 Phase 3a: Nested inline dialogs (zero context switching) */}
-      <NestedAddProjectDialog
+      {/* 🔐 ADR-284 §3.3 Phase 3a: SSoT — reuses the canonical Project editor */}
+      <ProjectQuickCreateSheet
         open={showAddProjectDialog}
         onOpenChange={setShowAddProjectDialog}
-        onProjectAdded={() => {
+        onProjectCreated={() => {
           reloadProjects();
         }}
       />

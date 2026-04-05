@@ -18,7 +18,7 @@ interface GuardedProjectUpdateInput {
 
 export async function createProjectWithPolicy({
   payload,
-}: GuardedProjectCreateInput): Promise<{ success: boolean; projectId?: string; error?: string }> {
+}: GuardedProjectCreateInput): Promise<{ success: boolean; projectId?: string; error?: string; errorCode?: string }> {
   return createProject(payload);
 }
 

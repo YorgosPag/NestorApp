@@ -17,8 +17,14 @@
 
 import { POLICY_ERROR_CODES, registerPolicyRecovery } from '@/lib/policy';
 import { ProjectCompanyRecoveryLink } from './ProjectCompanyRecoveryLink';
+import { CreateCompanyQuickLink } from './CreateCompanyQuickLink';
 
 registerPolicyRecovery(
   POLICY_ERROR_CODES.PROJECT_ORPHAN_NO_COMPANY,
   ProjectCompanyRecoveryLink,
+);
+
+registerPolicyRecovery(
+  POLICY_ERROR_CODES.COMPANY_REQUIRED,
+  CreateCompanyQuickLink,
 );

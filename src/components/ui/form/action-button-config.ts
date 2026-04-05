@@ -96,6 +96,12 @@ export interface BaseButtonProps {
   size?: 'sm' | 'default' | 'lg';
   variant?: 'default' | 'outline' | 'destructive' | 'ghost';
   badge?: number;
+  /**
+   * HTML `form` attribute — associates a submit button with a form by id
+   * when the button lives OUTSIDE the `<form>` tag (e.g. in a header
+   * toolbar). Native browser behaviour, no JS required.
+   */
+  form?: string;
 }
 
 export interface FilterButtonProps extends BaseButtonProps {

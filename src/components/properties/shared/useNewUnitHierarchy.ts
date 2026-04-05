@@ -27,7 +27,8 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { getProjectsList, type ProjectListItem } from '@/components/building-management/building-services';
+import type { ProjectListItem } from '@/components/building-management/building-services';
+import { useProjectsList } from '@/hooks/useProjectsList';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 import type { PropertyType } from '@/types/property';
@@ -97,22 +98,19 @@ export function useNewUnitHierarchy({
 }: UseNewUnitHierarchyOptions): UseNewUnitHierarchyResult {
   const { user } = useAuth();
 
-  // ── Projects ──
-  const [projects, setProjects] = useState<ProjectListItem[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState(false);
-
+  // ── Projects (stale-while-revalidate cache — Google pattern) ──
+  // The cache is shared across every component that calls `useProjectsList`,
+  // so opening this form after the list was already loaded elsewhere shows
+  // the projects instantly (no 20-second API wait on dev server cold calls).
+  const {
+    projects: cachedProjects,
+    loading: projectsLoading,
+    refetch: refetchProjects,
+  } = useProjectsList({ enabled });
+  const projects = cachedProjects;
   const reloadProjects = useCallback(() => {
-    setProjectsLoading(true);
-    getProjectsList()
-      .then(setProjects)
-      .catch((err: unknown) => logger.error('Failed to load projects', { error: err }))
-      .finally(() => setProjectsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (!enabled) return;
-    reloadProjects();
-  }, [enabled, reloadProjects]);
+    refetchProjects().catch((err: unknown) => logger.error('Failed to load projects', { error: err }));
+  }, [refetchProjects]);
 
   // ── Derived: isStandalone ──
   const isStandalone = useMemo(

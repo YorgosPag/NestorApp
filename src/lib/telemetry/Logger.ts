@@ -119,6 +119,38 @@ export class CompositeOutput implements LogOutput {
 }
 
 // ============================================================================
+// ERROR NORMALIZATION
+// ============================================================================
+
+/**
+ * Replaces any `Error` instance found at the top level of a metadata object
+ * with `{ message, stack, name }` — ordinary `Error` objects serialize to
+ * `{}` via JSON.stringify because their own props are non-enumerable, which
+ * hides the actual failure reason from logs.
+ *
+ * Non-recursive by design: the common bug is `logger.error('msg', { error })`
+ * with the Error at depth 1. Deeper nesting is a code smell we don't paper
+ * over.
+ */
+function normalizeNestedErrors(
+  meta: Record<string, unknown>,
+): Record<string, unknown> {
+  let replaced: Record<string, unknown> | null = null;
+  for (const key of Object.keys(meta)) {
+    const value = meta[key];
+    if (value instanceof Error) {
+      if (!replaced) replaced = { ...meta };
+      replaced[key] = {
+        message: value.message,
+        name: value.name,
+        stack: value.stack,
+      };
+    }
+  }
+  return replaced ?? meta;
+}
+
+// ============================================================================
 // GLOBAL OUTPUT REGISTRY (for server-side outputs like Telegram alerts)
 // ============================================================================
 
@@ -287,7 +319,9 @@ export class Logger {
         !Array.isArray(single) &&
         !(single instanceof Error)
       ) {
-        return single as Record<string, unknown>;
+        // 🏢 Normalize nested Error values so their message/stack survive
+        // JSON serialization (Error's own props are non-enumerable).
+        return normalizeNestedErrors(single as Record<string, unknown>);
       }
 
       // Error objects → structured metadata
@@ -304,7 +338,7 @@ export class Logger {
     args.forEach((arg, index) => {
       result[`arg${index}`] = arg;
     });
-    return result;
+    return normalizeNestedErrors(result);
   }
 
   private log(

@@ -158,10 +158,10 @@ export const POST = withHighRateLimit(
         );
 
       } catch (error) {
-        // 🏢 ADR-284: Policy violations → 400 Bad Request
+        // 🏢 ADR-284: Policy violations → 400 Bad Request (with stable code)
         if (error instanceof ProjectMutationPolicyError) {
-          logger.warn('[Projects] Policy violation on create', { error: error.message });
-          throw new ApiError(400, error.message);
+          logger.warn('[Projects] Policy violation on create', { error: error.message, code: error.code });
+          throw new ApiError(400, error.message, error.code);
         }
         logger.error('[Projects] Error creating project', { error });
         throw new ApiError(500, getErrorMessage(error, 'Failed to create project'));

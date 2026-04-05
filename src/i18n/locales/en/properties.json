@@ -2,6 +2,9 @@
   "list": {
     "title": "Properties"
   },
+  "multiLevel": {
+    "floors": "Floors"
+  },
   "header": {
     "title": "Property Management",
     "subtitle": "Manage and track project properties",
@@ -414,11 +417,17 @@
     "addUnit": {
       "fields": {
         "status": "Operational Status",
-        "project": "Project"
+        "project": "Project",
+        "type": "Unit Type",
+        "building": "Building",
+        "floor": "Floor"
       },
       "placeholders": {
         "status": "Select...",
-        "project": "Select Project..."
+        "project": "Select Project...",
+        "type": "Select type...",
+        "building": "Select Building...",
+        "floor": "Select Floor..."
       },
       "statusOptions": {
         "draft": "Draft",

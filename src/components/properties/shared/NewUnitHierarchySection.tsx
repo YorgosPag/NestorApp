@@ -30,7 +30,7 @@ import { useRealtimeBuildings } from '@/services/realtime/hooks/useRealtimeBuild
 import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 // ADR-145: Import από centralized SSoT (leaf module — δεν δημιουργεί circular dep).
 import { PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/constants/property-types';
-import { AddProjectDialog } from '@/components/projects/dialogs/AddProjectDialog';
+import { ProjectQuickCreateSheet } from '@/components/projects/dialogs/ProjectQuickCreateSheet';
 import { FloorInlineCreateForm } from '@/components/building-management/tabs/FloorInlineCreateForm';
 import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';
 import { PropertyHierarchyEmptyStates } from './PropertyHierarchyEmptyStates';
@@ -163,11 +163,11 @@ export function NewUnitHierarchySection({
         />
       )}
       <FormGrid>
-        <FormField label={t('dialog.addUnit.fields.type', { defaultValue: 'Τύπος Μονάδας' })} htmlFor="new-unit-type" required>
+        <FormField label={t('dialog.addUnit.fields.type')} htmlFor="new-unit-type" required>
           <FormInput>
             <Select value={selection.type} onValueChange={handleTypeChange}>
               <SelectTrigger id="new-unit-type">
-                <SelectValue placeholder={t('dialog.addUnit.placeholders.type', { defaultValue: 'Επιλέξτε τύπο...' })} />
+                <SelectValue placeholder={t('dialog.addUnit.placeholders.type')} />
               </SelectTrigger>
               <SelectContent>
                 {PROPERTY_TYPE_OPTIONS.map((pt) => (
@@ -179,7 +179,7 @@ export function NewUnitHierarchySection({
         </FormField>
 
         {isStandalone && (
-          <FormField label={t('dialog.addUnit.fields.project', { defaultValue: 'Έργο' })} htmlFor="new-unit-project" required>
+          <FormField label={t('dialog.addUnit.fields.project')} htmlFor="new-unit-project" required>
             <FormInput>
               <Select
                 value={selection.projectId}
@@ -187,7 +187,7 @@ export function NewUnitHierarchySection({
                 disabled={projectsLoading}
               >
                 <SelectTrigger id="new-unit-project">
-                  <SelectValue placeholder={t('dialog.addUnit.placeholders.project', { defaultValue: 'Επιλέξτε Έργο...' })} />
+                  <SelectValue placeholder={t('dialog.addUnit.placeholders.project')} />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map((p) => (
@@ -200,11 +200,11 @@ export function NewUnitHierarchySection({
         )}
 
         {!isStandalone && (
-          <FormField label={t('dialog.addUnit.fields.building', { defaultValue: 'Κτίριο' })} htmlFor="new-unit-building" required>
+          <FormField label={t('dialog.addUnit.fields.building')} htmlFor="new-unit-building" required>
             <FormInput>
               <Select value={selection.buildingId} onValueChange={handleBuildingChange}>
                 <SelectTrigger id="new-unit-building">
-                  <SelectValue placeholder={t('dialog.addUnit.placeholders.building', { defaultValue: 'Επιλέξτε Κτίριο...' })} />
+                  <SelectValue placeholder={t('dialog.addUnit.placeholders.building')} />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredBuildings.map((b) => (
@@ -217,7 +217,7 @@ export function NewUnitHierarchySection({
         )}
 
         {!isStandalone && (
-          <FormField label={t('dialog.addUnit.fields.floor', { defaultValue: 'Όροφος' })} htmlFor="new-unit-floor" required>
+          <FormField label={t('dialog.addUnit.fields.floor')} htmlFor="new-unit-floor" required>
             <FormInput>
               {emptyStates.noFloors ? (
                 <Button
@@ -227,7 +227,7 @@ export function NewUnitHierarchySection({
                   onClick={() => setShowInlineFloorForm(true)}
                   className="w-full justify-between border-dashed"
                 >
-                  <span>{t('dialog.addUnit.emptyState.noFloors.inlineCta', { defaultValue: 'Δεν υπάρχουν όροφοι — Πρόσθεσε Όροφο' })}</span>
+                  <span>{t('dialog.addUnit.emptyState.noFloors.inlineCta')}</span>
                   <Plus className="h-4 w-4" />
                 </Button>
               ) : (
@@ -237,7 +237,7 @@ export function NewUnitHierarchySection({
                   disabled={!selection.buildingId || floorsLoading}
                 >
                   <SelectTrigger id="new-unit-floor">
-                    <SelectValue placeholder={t('dialog.addUnit.placeholders.floor', { defaultValue: 'Επιλέξτε Όροφο...' })} />
+                    <SelectValue placeholder={t('dialog.addUnit.placeholders.floor')} />
                   </SelectTrigger>
                   <SelectContent>
                     {floorOptions.map((f) => (
@@ -253,11 +253,11 @@ export function NewUnitHierarchySection({
         )}
       </FormGrid>
 
-      {/* Nested dialogs */}
-      <AddProjectDialog
+      {/* Nested dialogs — SSoT: reuses the canonical Project editor */}
+      <ProjectQuickCreateSheet
         open={showAddProjectDialog}
         onOpenChange={setShowAddProjectDialog}
-        onProjectAdded={() => reloadProjects()}
+        onProjectCreated={() => reloadProjects()}
       />
       {selection.buildingId && selectedBuilding && (
         <LinkBuildingToProjectDialog

@@ -28,7 +28,6 @@ interface GeneralProjectHeaderProps {
     projectCode?: string;
     projectId?: string;
     isSaving?: boolean;
-    saveError?: string | null;
     /** ADR-248: Centralized auto-save status */
     autoSaveStatus?: SaveStatus;
     /** ADR-248: Auto-save error message */
@@ -44,7 +43,6 @@ export function GeneralProjectHeader({
     projectCode,
     projectId,
     isSaving = false,
-    saveError = null,
     autoSaveStatus,
     autoSaveError,
     onAutoSaveRetry,
@@ -133,11 +131,6 @@ export function GeneralProjectHeader({
                     <AnimatedSpinner size="small" />
                     <span className={cn(typography.body.xs, colors.text.info)}>{t('projectHeader.saving')}</span>
                 </div>
-            )}
-            {saveError && (
-                <span className={cn(typography.body.xs, colors.text.error)}>
-                    {saveError}
-                </span>
             )}
         </div>
     );

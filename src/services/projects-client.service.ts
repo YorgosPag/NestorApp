@@ -23,6 +23,7 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
+import { invalidateProjectsList } from '@/hooks/useProjectsList';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -110,7 +111,7 @@ export interface ProjectUpdatePayload {
  */
 export async function createProject(
   data: ProjectCreatePayload
-): Promise<{ success: boolean; projectId?: string; error?: string }> {
+): Promise<{ success: boolean; projectId?: string; error?: string; errorCode?: string }> {
   try {
     logger.info('Creating new project via API');
 
@@ -123,6 +124,11 @@ export async function createProject(
 
     const projectId = result?.projectId;
     logger.info('Project created', { projectId });
+
+    // 🏢 Invalidate client-side projects cache — every useProjectsList
+    // consumer (forms, dropdowns, pickers) will auto-refetch and show the
+    // new project without a manual reload.
+    invalidateProjectsList();
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatch('PROJECT_CREATED', {
@@ -142,7 +148,8 @@ export async function createProject(
     logger.error('Error creating project', { error });
     return {
       success: false,
-      error: getErrorMessage(error)
+      error: getErrorMessage(error),
+      errorCode: ApiClientError.isApiClientError(error) ? error.errorCode : undefined,
     };
   }
 }

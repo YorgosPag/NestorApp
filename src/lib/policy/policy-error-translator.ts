@@ -32,6 +32,7 @@ const CODE_TO_I18N_KEY: Record<PolicyErrorCode, string> = {
   [POLICY_ERROR_CODES.PROJECT_REQUIRED]: 'policyErrors.projectRequired',
   [POLICY_ERROR_CODES.PROJECT_NOT_FOUND]: 'policyErrors.projectNotFound',
   [POLICY_ERROR_CODES.PROJECT_ORPHAN_NO_COMPANY]: 'policyErrors.projectOrphanNoCompany',
+  [POLICY_ERROR_CODES.COMPANY_REQUIRED]: 'policyErrors.companyRequired',
   [POLICY_ERROR_CODES.COMPANY_NOT_FOUND]: 'policyErrors.companyNotFound',
   [POLICY_ERROR_CODES.COMPANY_INVALID_TYPE]: 'policyErrors.companyInvalidType',
   [POLICY_ERROR_CODES.BUILDING_REQUIRED]: 'policyErrors.buildingRequired',

@@ -13,14 +13,23 @@
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { EntityPolicyError, POLICY_ERROR_CODES } from '@/lib/policy';
 
 // =============================================================================
 // ERRORS
 // =============================================================================
 
-export class ProjectMutationPolicyError extends Error {
-  constructor(message: string) {
-    super(message);
+/**
+ * Thin wrapper — fixes `entity: 'project'` so callers don't need to pass it.
+ * All cross-entity codes live in `POLICY_ERROR_CODES` (SSoT).
+ */
+export class ProjectMutationPolicyError extends EntityPolicyError {
+  constructor(
+    code: (typeof POLICY_ERROR_CODES)[keyof typeof POLICY_ERROR_CODES],
+    message: string,
+    params?: Record<string, string>,
+  ) {
+    super(code, 'project', message, params);
     this.name = 'ProjectMutationPolicyError';
   }
 }
@@ -44,13 +53,17 @@ function isBlank(value: unknown): boolean {
  */
 export function assertProjectCreatePolicy(projectData: Record<string, unknown>): void {
   if (isBlank(projectData.name)) {
-    throw new ProjectMutationPolicyError('Project name is required.');
+    throw new ProjectMutationPolicyError(
+      POLICY_ERROR_CODES.NAME_REQUIRED,
+      'Project name is required.',
+    );
   }
 
   // ADR-284: linkedCompanyId REQUIRED (supersedes ADR-232)
   if (isBlank(projectData.linkedCompanyId)) {
     throw new ProjectMutationPolicyError(
-      'Company (linkedCompanyId) is required — every project must belong to a company.'
+      POLICY_ERROR_CODES.COMPANY_REQUIRED,
+      'Company (linkedCompanyId) is required — every project must belong to a company.',
     );
   }
 }
@@ -70,7 +83,8 @@ export async function assertLinkedCompanyExists(
 ): Promise<void> {
   if (isBlank(linkedCompanyId)) {
     throw new ProjectMutationPolicyError(
-      'Company (linkedCompanyId) is required — every project must belong to a company.'
+      POLICY_ERROR_CODES.COMPANY_REQUIRED,
+      'Company (linkedCompanyId) is required — every project must belong to a company.',
     );
   }
 
@@ -81,14 +95,16 @@ export async function assertLinkedCompanyExists(
 
   if (!contactSnap.exists) {
     throw new ProjectMutationPolicyError(
-      'Linked Company not found — the referenced company does not exist.'
+      POLICY_ERROR_CODES.COMPANY_NOT_FOUND,
+      'Linked Company not found — the referenced company does not exist.',
     );
   }
 
   const data = contactSnap.data();
   if (data?.type !== 'company') {
     throw new ProjectMutationPolicyError(
-      'Linked Company is not a valid company contact.'
+      POLICY_ERROR_CODES.COMPANY_INVALID_TYPE,
+      'Linked Company is not a valid company contact.',
     );
   }
 }

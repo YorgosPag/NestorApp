@@ -12,6 +12,12 @@ export interface AddNewContactDialogProps {
   allowedContactTypes?: ContactType[];
   /** Personas to auto-activate on new contact creation */
   defaultPersonas?: PersonaType[];
+  /**
+   * Shell style. `dialog` (default) = centered modal; `sheet` = right-side
+   * slide-over. Use `sheet` when nesting under another slide-over (e.g.
+   * creating a Company while creating a Project) for consistent UX.
+   */
+  presentation?: 'dialog' | 'sheet';
 }
 
 // Import Contact type

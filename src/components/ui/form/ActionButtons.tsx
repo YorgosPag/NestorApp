@@ -44,7 +44,8 @@ export function SaveButton({
   loading = false,
   disabled = false,
   onClick,
-  className
+  className,
+  form,
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
   const actions = useActionTranslations();
@@ -54,6 +55,7 @@ export function SaveButton({
   return (
     <Button
       type="submit"
+      form={form}
       onClick={onClick}
       disabled={disabled || loading}
       className={cn(BUTTON_STYLES.variants.save, className)}

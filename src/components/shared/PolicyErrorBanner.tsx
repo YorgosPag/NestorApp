@@ -40,8 +40,10 @@ export interface PolicyErrorBannerProps {
   readonly context?: Readonly<Record<string, unknown>>;
   /** Optional params for i18n interpolation (e.g. `{ code: "Κτήριο Α" }`). */
   readonly params?: Record<string, string>;
-  /** Fired by the recovery component after a successful fix. */
-  readonly onRecovered?: () => void;
+  /** Fired by the recovery component after a successful fix. Optional payload
+   *  carries newly-created entity IDs (e.g. `{ companyId }`) so the parent
+   *  can auto-wire the result without extra user steps. */
+  readonly onRecovered?: (payload?: Readonly<Record<string, unknown>>) => void;
   /** Translation namespace that owns the `policyErrors.*` keys (default: `building`). */
   readonly namespace?: string;
 }

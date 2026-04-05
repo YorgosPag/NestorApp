@@ -28,8 +28,12 @@ import type { PolicyErrorCode } from './policy-error-codes';
 export interface PolicyRecoveryContext {
   /** Free-form payload the domain UI provides (e.g. `{ projectId, buildingId }`). */
   readonly context: Readonly<Record<string, unknown>>;
-  /** Called after a successful recovery — parent should dismiss the error. */
-  readonly onRecovered: () => void;
+  /**
+   * Called after a successful recovery. Optional payload lets the recovery
+   * component return newly-created entity IDs to the parent (e.g.
+   * `{ companyId: "cont_..." }` so the parent can auto-select it).
+   */
+  readonly onRecovered: (payload?: Readonly<Record<string, unknown>>) => void;
 }
 
 export type PolicyRecoveryComponent = ComponentType<PolicyRecoveryContext>;
