@@ -7,12 +7,12 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { LEGAL_WORKFLOW_PHASES } from '@/constants/legal-phases';
 import type { DomainDefinition } from './report-builder-types';
 
-// Reuse enums from domain-definitions (units domain)
-const LEGAL_PHASES = [
-  'initial', 'deedPrep', 'documentReview', 'signaturePending', 'completed', 'cancelled',
-] as const;
+// ADR-287 — LegalWorkflowPhase SSoT lives στο `@/constants/legal-phases`.
+// Reuse του shared array αντί να διατηρούμε τοπικό αντίγραφο.
+const LEGAL_PHASES = LEGAL_WORKFLOW_PHASES;
 
 // ============================================================================
 // B3 — Buyers (Αγοραστές)

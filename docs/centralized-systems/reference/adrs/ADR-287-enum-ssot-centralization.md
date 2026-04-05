@@ -107,3 +107,9 @@
   - **Migrated**:
     - `src/types/building/contracts.ts` — inline union (5 values) στο `Building.status` → `BuildingStatus` (import + re-export από SSoT).
     - `src/config/report-builder/domain-definitions.ts` — local 4-value array → `const BUILDING_STATUSES = ACTIVE_BUILDING_STATUSES` (subset import excluding `deleted`).
+- **2026-04-05 (Batch 9F-4)**: `LegalWorkflowPhase` centralization (report-builder enum).
+  - **Created**: `src/constants/legal-phases.ts` — `LEGAL_WORKFLOW_PHASES` (6), `LegalWorkflowPhase` union, `isLegalWorkflowPhase()` guard, derived subsets `IN_PROGRESS_LEGAL_PHASES` (3) + `FINALIZED_LEGAL_PHASES` (2) + αντίστοιχα guards.
+  - **Semantic note**: Διαφορετικό από το `LegalPhase` του `@/types/legal-contracts` (7 values FSM-derived). Ο report-builder enum αντικατοπτρίζει γενικό conveyancing workflow — αρμονοποίηση αποτελεί θέμα ξεχωριστού ADR.
+  - **Migrated**:
+    - `src/config/report-builder/domain-definitions.ts` — local 6-value array αφαιρέθηκε · imported από SSoT.
+    - `src/config/report-builder/domain-defs-buyers.ts` — duplicate 6-value array αφαιρέθηκε · imported από SSoT.

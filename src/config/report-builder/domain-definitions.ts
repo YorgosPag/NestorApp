@@ -19,6 +19,7 @@ import { PRIORITY_LEVELS } from '@/constants/priority-levels';
 import { ACTIVE_PROJECT_STATUSES } from '@/constants/project-statuses';
 import { PROJECT_TYPES as PROJECT_TYPES_SSOT } from '@/constants/project-types';
 import { ACTIVE_BUILDING_STATUSES } from '@/constants/building-statuses';
+import { LEGAL_WORKFLOW_PHASES } from '@/constants/legal-phases';
 import type {
   BuilderDomainId,
   DomainDefinition,
@@ -108,9 +109,9 @@ const UNIT_TYPES = ALL_PROPERTY_TYPES_WITH_DEPRECATED;
 // ADR-287 — OperationalStatus SSoT lives στο `@/constants/operational-statuses`.
 // Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.
 
-const LEGAL_PHASES = [
-  'initial', 'deedPrep', 'documentReview', 'signaturePending', 'completed', 'cancelled',
-] as const;
+// ADR-287 — LegalWorkflowPhase SSoT lives στο `@/constants/legal-phases`.
+// Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.
+const LEGAL_PHASES = LEGAL_WORKFLOW_PHASES;
 
 // ============================================================================
 // Domain Definitions
