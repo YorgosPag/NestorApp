@@ -95,8 +95,8 @@ export function PropertyFieldsEditForm({
           <Lock className="h-4 w-4" />
           <AlertDescription className="text-xs">
             {isSoldOrRented
-              ? t('fieldLocking.soldBanner', { defaultValue: 'Η μονάδα έχει πωληθεί/ενοικιαστεί — κρίσιμα πεδία κλειδωμένα (συμβόλαια, κτηματολόγιο)' })
-              : t('fieldLocking.reservedBanner', { defaultValue: 'Η μονάδα είναι κρατημένη — βασικά πεδία ταυτότητας κλειδωμένα' })
+              ? t('fieldLocking.soldBanner')
+              : t('fieldLocking.reservedBanner')
             }
           </AlertDescription>
         </Alert>
@@ -115,7 +115,7 @@ export function PropertyFieldsEditForm({
             <span className="flex items-center gap-1">
               <Layers className="h-3 w-3" />
               <span className="font-medium">{t('multiLevel.perLevel.perFloorHint')}</span>:
-              {' '}{t('fields.areas.sectionTitle')}, {t('fields.layout.sectionTitle', { defaultValue: 'Διάταξη' })}, {t('orientation.sectionTitle')}, {t('finishes.sectionTitle')}
+              {' '}{t('fields.areas.sectionTitle')}, {t('fields.layout.sectionTitle')}, {t('orientation.sectionTitle')}, {t('finishes.sectionTitle')}
             </span>
             <span className="text-muted-foreground/60">|</span>
             <span>
@@ -133,26 +133,26 @@ export function PropertyFieldsEditForm({
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <FileText className={cn(iconSizes.sm, 'text-blue-500')} />
-              {t('fields.identity.sectionTitle', { defaultValue: 'Ταυτότητα Μονάδας' })}
+              {t('fields.identity.sectionTitle')}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0 space-y-2">
             <fieldset className="space-y-1">
               <Label className={cn("text-xs", colors.text.muted)}>
-                {t('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })}
+                {t('fields.identity.name')}
               </Label>
               <Input
                 id="unit-name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 className={cn('h-7 text-xs', quick.input)}
-                placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
+                placeholder={t('fields.identity.namePlaceholder')}
                 disabled={!isEditing || isReservedOrSold}
               />
             </fieldset>
             <fieldset className="space-y-1">
               <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
-                {t('fields.identity.code', { defaultValue: 'Κωδικός Μονάδας' })}
+                {t('fields.identity.code')}
                 <Popover>
                   <PopoverTrigger asChild>
                     <button type="button" className={`${colors.text.muted} hover:text-foreground transition-colors`} aria-label="Info">
@@ -160,15 +160,15 @@ export function PropertyFieldsEditForm({
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 text-xs" side="right" align="start">
-                    <h4 className="font-semibold mb-2">{t('entityCode.infoTitle', { defaultValue: 'Σύστημα Κωδικοποίησης' })}</h4>
-                    <p className={cn("mb-2", colors.text.muted)}>{t('entityCode.infoFormat', { defaultValue: 'Μορφή: [Κτίριο]-[Τύπος]-[Όροφος].[ΑΑ]' })}</p>
-                    <p className={cn("mb-3", colors.text.muted)}>{t('entityCode.infoExample', { defaultValue: 'π.χ. A-DI-1.01' })}</p>
+                    <h4 className="font-semibold mb-2">{t('entityCode.infoTitle')}</h4>
+                    <p className={cn("mb-2", colors.text.muted)}>{t('entityCode.infoFormat')}</p>
+                    <p className={cn("mb-3", colors.text.muted)}>{t('entityCode.infoExample')}</p>
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left py-1 font-medium">{t('entityCode.infoResidential', { defaultValue: 'Κατοικίες' })}</th>
-                          <th className="text-left py-1 font-medium">{t('entityCode.infoCommercial', { defaultValue: 'Εμπορικά' })}</th>
-                          <th className="text-left py-1 font-medium">{t('entityCode.infoAuxiliary', { defaultValue: 'Βοηθητικά' })}</th>
+                          <th className="text-left py-1 font-medium">{t('entityCode.infoResidential')}</th>
+                          <th className="text-left py-1 font-medium">{t('entityCode.infoCommercial')}</th>
+                          <th className="text-left py-1 font-medium">{t('entityCode.infoAuxiliary')}</th>
                         </tr>
                       </thead>
                       <tbody className={colors.text.muted}>
@@ -182,7 +182,7 @@ export function PropertyFieldsEditForm({
                         <tr><td>BI = {t('types.villa')}</td></tr>
                       </tbody>
                     </table>
-                    <p className={cn("mt-2 text-[10px]", colors.text.muted)}>{t('entityCode.infoFloors', { defaultValue: 'Υπόγεια: Y1, Y2... | Ισόγειο: 0 | Όροφοι: 1, 2...' })}</p>
+                    <p className={cn("mt-2 text-[10px]", colors.text.muted)}>{t('entityCode.infoFloors')}</p>
                   </PopoverContent>
                 </Popover>
               </Label>
@@ -201,22 +201,22 @@ export function PropertyFieldsEditForm({
                 disabled={!isEditing || isReservedOrSold}
               />
               {formData.code && isValidEntityCodeFormat(formData.code) && (
-                <p className="text-[10px] text-emerald-600">{t('entityCode.autoGenerated', { defaultValue: 'Αυτόματη κωδικοποίηση ADR-233' })}</p>
+                <p className="text-[10px] text-emerald-600">{t('entityCode.autoGenerated')}</p>
               )}
               {codeLoading && isEditing && (
-                <p className={cn("text-[10px]", colors.text.muted)}>{t('entityCode.loading', { defaultValue: 'Υπολογισμός κωδικού...' })}</p>
+                <p className={cn("text-[10px]", colors.text.muted)}>{t('entityCode.loading')}</p>
               )}
               {suggestedCode && codeOverridden && formData.code !== suggestedCode && isEditing && (
                 <p className={cn("text-[10px]", colors.text.muted)}>{t('entityCode.suggested', { code: suggestedCode, defaultValue: `Προτεινόμενος: ${suggestedCode}` })}</p>
               )}
               {formData.code && !isValidEntityCodeFormat(formData.code) && isEditing && (
-                <p className="text-[10px] text-amber-600">{t('entityCode.formatWarning', { defaultValue: 'Ο κωδικός δεν ακολουθεί το πρότυπο format' })}</p>
+                <p className="text-[10px] text-amber-600">{t('entityCode.formatWarning')}</p>
               )}
             </fieldset>
             {!isCreatingNewUnit && (
               <fieldset className="space-y-1">
                 <Label className={cn("text-xs", colors.text.muted)}>
-                  {t('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
+                  {t('fields.identity.type')}
                 </Label>
                 <Select value={formData.type} disabled={!isEditing || isReservedOrSold}
                   onValueChange={(value) => {
@@ -224,7 +224,7 @@ export function PropertyFieldsEditForm({
                     onTypeChange(value);
                   }}>
                   <SelectTrigger className="h-7 text-xs">
-                    <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
+                    <SelectValue placeholder={t('fields.identity.typePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {PROPERTY_TYPE_OPTIONS.map((propertyType) => (
@@ -238,12 +238,12 @@ export function PropertyFieldsEditForm({
             )}
             <fieldset className="space-y-1">
               <Label className={cn("text-xs", colors.text.muted)}>
-                {t('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}
+                {t('fields.identity.commercialStatus')}
               </Label>
               <Select value={formData.commercialStatus} disabled={!isEditing || isReservedOrSold}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, commercialStatus: value as CommercialStatus }))}>
                 <SelectTrigger className="h-7 text-xs">
-                  <SelectValue placeholder={t('fields.identity.commercialStatusPlaceholder', { defaultValue: 'Επιλέξτε κατάσταση...' })} />
+                  <SelectValue placeholder={t('fields.identity.commercialStatusPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {COMMERCIAL_STATUS_OPTIONS.map((status) => (
@@ -256,7 +256,7 @@ export function PropertyFieldsEditForm({
             </fieldset>
             <fieldset className="space-y-1">
               <Label className={cn("text-xs", colors.text.muted)}>
-                {t('fields.commercial.askingPrice', { defaultValue: 'Ζητούμενη Τιμή (€)' })}
+                {t('fields.commercial.askingPrice')}
               </Label>
               <Input
                 id="unit-asking-price"
@@ -272,12 +272,12 @@ export function PropertyFieldsEditForm({
             </fieldset>
             <fieldset className="space-y-1">
               <Label className={cn("text-xs", colors.text.muted)}>
-                {t('dialog.addUnit.fields.status', { defaultValue: 'Λειτουργική Κατάσταση' })}
+                {t('dialog.addUnit.fields.status')}
               </Label>
               <Select value={formData.operationalStatus} disabled={!isEditing}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, operationalStatus: value as OperationalStatus }))}>
                 <SelectTrigger className="h-7 text-xs">
-                  <SelectValue placeholder={t('dialog.addUnit.placeholders.status', { defaultValue: 'Επιλέξτε...' })} />
+                  <SelectValue placeholder={t('dialog.addUnit.placeholders.status')} />
                 </SelectTrigger>
                 <SelectContent>
                   {OPERATIONAL_STATUS_OPTIONS.map((status) => (
@@ -290,14 +290,14 @@ export function PropertyFieldsEditForm({
             </fieldset>
             <fieldset className="space-y-1">
               <Label className={cn("text-xs", colors.text.muted)}>
-                {t('fields.identity.description', { defaultValue: 'Περιγραφή' })}
+                {t('fields.identity.description')}
               </Label>
               <Textarea
                 id="unit-description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 className="h-16 text-xs resize-none"
-                placeholder={t('fields.identity.descriptionPlaceholder', { defaultValue: 'Προσθέστε περιγραφή για τη μονάδα...' })}
+                placeholder={t('fields.identity.descriptionPlaceholder')}
                 disabled={!isEditing}
               />
             </fieldset>
@@ -380,7 +380,7 @@ export function PropertyFieldsEditForm({
               <dl className="flex items-baseline gap-1.5 mt-2 pt-2 border-t border-border">
                 <dt className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   <Lock className="h-3 w-3" />
-                  {t('fields.millesimalShares', { defaultValue: 'Χιλιοστά (‰)' })}:
+                  {t('fields.millesimalShares')}:
                 </dt>
                 <dd className="text-xs font-semibold">{property.millesimalShares}‰</dd>
               </dl>
