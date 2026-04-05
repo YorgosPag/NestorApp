@@ -113,6 +113,24 @@
     "note": "Σημείωση:",
     "warning": "Αυτή η λειτουργία κάνει πραγματικές αλλαγές στη βάση δεδομένων. Σιγουρέψου ότι έχεις backup πριν προχωρήσεις."
   },
+  "linkPropertiesPage": {
+    "backToAdmin": "Πίσω στη Διαχείριση",
+    "pageTitle": "Σύνδεση Sold Units με Customers",
+    "loadingProject": "Φόρτωση στοιχείων έργου...",
+    "fixDescription": "Διόρθωση του προβλήματος με τους πελάτες του {{project}}",
+    "projectFallback": "έργου",
+    "currentStatus": "📊 Τρέχουσα Κατάσταση Units",
+    "toolTitle": "🔧 Εργαλείο Σύνδεσης",
+    "goal": "🎯 Στόχος",
+    "goalDescription": "Να συνδέσουμε τα units που έχουν status «sold» με τους αντίστοιχους πελάτες ώστε να εμφανίζονται στο tab «Πελάτες Έργου».",
+    "whatHappens": "⚙️ Τι θα γίνει",
+    "steps": {
+      "findSold": "• Εύρεση sold units χωρίς soldTo field",
+      "autoLink": "• Αυτόματη σύνδεση με υπάρχοντα contacts",
+      "updateDb": "• Ενημέρωση της βάσης δεδομένων",
+      "showUi": "• Άμεση εμφάνιση πελατών στο UI"
+    }
+  },
   "claimsRepair": {
     "title": "Διόρθωση Claims - Μόνο Super Admin",
     "description": "Ορισμός custom claims για χρήστες με ελλιπή companyId ή globalRole.",

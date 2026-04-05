@@ -113,6 +113,24 @@
     "note": "Note:",
     "warning": "This function makes real changes to the database. Make sure you have a backup before proceeding."
   },
+  "linkPropertiesPage": {
+    "backToAdmin": "Back to Admin",
+    "pageTitle": "Link Sold Units to Customers",
+    "loadingProject": "Loading project details...",
+    "fixDescription": "Fixing the customer association problem for {{project}}",
+    "projectFallback": "project",
+    "currentStatus": "📊 Current Units Status",
+    "toolTitle": "🔧 Linking Tool",
+    "goal": "🎯 Goal",
+    "goalDescription": "Link units with \"sold\" status to their corresponding customers so they appear in the \"Project Customers\" tab.",
+    "whatHappens": "⚙️ What will happen",
+    "steps": {
+      "findSold": "• Find sold units without soldTo field",
+      "autoLink": "• Automatically link to existing contacts",
+      "updateDb": "• Update the database",
+      "showUi": "• Immediate display of customers in UI"
+    }
+  },
   "claimsRepair": {
     "title": "Claims Repair - Super Admin Only",
     "description": "Set custom claims for users with missing companyId or globalRole.",
