@@ -150,6 +150,7 @@ export const ALLOWED_READ_COLLECTIONS = new Set([
   COLLECTIONS.ACCOUNTING_FIXED_ASSETS,
   COLLECTIONS.FILES,        // SPEC-257F: file delivery
   COLLECTIONS.FLOORPLANS,   // SPEC-257F: floorplan delivery
+  COLLECTIONS.PURCHASE_ORDERS,  // ADR-267 Phase C: AI procurement tools
 ]);
 
 export const ALLOWED_WRITE_COLLECTIONS = new Set([
@@ -164,6 +165,7 @@ export const ALLOWED_WRITE_COLLECTIONS = new Set([
   COLLECTIONS.CONSTRUCTION_PHASES,
   COLLECTIONS.CONSTRUCTION_TASKS,
   COLLECTIONS.FILES,
+  COLLECTIONS.PURCHASE_ORDERS,  // ADR-267 Phase C: AI procurement tools
   // FINDING-006: contact_links REMOVED — requires dedicated tool with validation
   // COLLECTIONS.CONTACT_LINKS,
 ]);

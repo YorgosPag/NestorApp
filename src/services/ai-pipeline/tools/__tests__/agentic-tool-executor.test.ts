@@ -122,6 +122,13 @@ jest.mock('../handlers/attachment-handler', () => ({
   })),
 }));
 
+jest.mock('../handlers/procurement-handler', () => ({
+  ProcurementHandler: jest.fn().mockImplementation(() => ({
+    toolNames: ['create_purchase_order', 'list_purchase_orders', 'get_purchase_order_status'],
+    execute: jest.fn(),
+  })),
+}));
+
 // ── Imports ──
 import { AgenticToolExecutor } from '../agentic-tool-executor';
 import type { AgenticContext } from '../executor-shared';

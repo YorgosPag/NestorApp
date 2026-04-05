@@ -140,6 +140,12 @@ export interface ReceivedExpenseDocument {
   /** User who created this document */
   createdBy?: string;
 
+  // — PO Matching (ADR-267 Phase C) —
+  /** Suggested PO match (auto-detected from issuer VAT + amounts) */
+  suggestedPOId: string | null;
+  /** Confidence score of PO match (0-100) */
+  poMatchConfidence: number | null;
+
   // — Metadata —
   /** Σημειώσεις χρήστη */
   notes: string | null;

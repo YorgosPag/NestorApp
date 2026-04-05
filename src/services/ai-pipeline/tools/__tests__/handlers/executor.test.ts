@@ -8,6 +8,14 @@
 
 import '../setup';
 
+// Procurement service transitively imports next/server via auth/middleware
+// → must be mocked BEFORE importing the executor (which loads ProcurementHandler).
+jest.mock('@/services/procurement', () => ({
+  createPO: jest.fn(),
+  getPO: jest.fn(),
+  listPOs: jest.fn(),
+}));
+
 import { AgenticToolExecutor } from '../../agentic-tool-executor';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createMockFirestore, type MockFirestoreKit } from '../test-utils/mock-firestore';

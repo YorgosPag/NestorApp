@@ -143,5 +143,28 @@
     "OIK-10": "Χρωματισμοί",
     "OIK-11": "Μηχανολογικά",
     "OIK-12": "Λοιπά"
+  },
+  "supplierMetrics": {
+    "title": "Απόδοση Προμηθευτή",
+    "comparison": "Σύγκριση Προμηθευτών",
+    "totalOrders": "Παραγγελίες",
+    "totalSpend": "Συνολική Δαπάνη",
+    "averageOrder": "Μ.Ο. Παραγγελίας",
+    "onTimeRate": "Εγκαιρότητα",
+    "avgLeadTime": "Μ.Ο. Χρόνου",
+    "cancellationRate": "Ακυρώσεις",
+    "categoryBreakdown": "Κατανομή ανά Κατηγορία",
+    "days": "ημ.",
+    "noSuppliers": "Δεν υπάρχουν προμηθευτές με παραγγελίες",
+    "suppliers": "προμηθευτές",
+    "rank": "Κατάταξη"
+  },
+  "invoiceMatch": {
+    "title": "Αντιστοίχιση Τιμολογίου",
+    "candidates": "Υποψήφια PO",
+    "confidence": "Εμπιστοσύνη",
+    "autoMatched": "Αυτόματη αντιστοίχιση",
+    "noMatch": "Δεν βρέθηκε αντιστοίχιση",
+    "matchReasons": "Λόγοι αντιστοίχισης"
   }
 }

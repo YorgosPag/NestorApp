@@ -78,6 +78,15 @@ export type AttachmentPurpose = typeof ATTACHMENT_PURPOSES[number];
 export const ACTIVITY_OPERATIONS = ['add', 'list', 'remove', 'set_primary'] as const;
 export type ActivityOperation = typeof ACTIVITY_OPERATIONS[number];
 
+/** ADR-267 Phase C: Purchase order operations (SSoT — tool def enum + handler validation) */
+export const PO_TOOL_OPERATIONS = ['create', 'list', 'get_status'] as const;
+export type POToolOperation = typeof PO_TOOL_OPERATIONS[number];
+
+/** Valid PO status values for filtering */
+export const PO_STATUS_FILTER_VALUES = [
+  'draft', 'approved', 'ordered', 'partially_delivered', 'delivered', 'closed', 'cancelled',
+] as const;
+
 // ============================================================================
 // AGENTIC TOOL DEFINITIONS (Chat Completions API format)
 // ============================================================================
@@ -1021,6 +1030,136 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
         },
         required: ['fileRecordId', 'question'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── ADR-267 Phase C: Procurement Tools ──
+
+  // ── create_purchase_order: Create a new PO ──
+  {
+    type: 'function',
+    function: {
+      name: 'create_purchase_order',
+      description:
+        'Create a new purchase order (PO) for a supplier. Resolves supplier and project by name if IDs not known. '
+        + 'Items must include description, quantity, unit (e.g. τεμ, m², kg), unitPrice, and categoryCode (ATOE code like OIK-1). '
+        + 'Returns the created PO number. Admin-only.',
+      parameters: {
+        type: 'object',
+        properties: {
+          supplierId: {
+            type: ['string', 'null'],
+            description: 'Supplier contact ID (if already known from a previous query). Pass null to resolve by name.',
+          },
+          supplierName: {
+            type: ['string', 'null'],
+            description: 'Supplier name to search for (used when supplierId is null).',
+          },
+          projectId: {
+            type: ['string', 'null'],
+            description: 'Project ID (if already known). Pass null to resolve by name.',
+          },
+          projectName: {
+            type: ['string', 'null'],
+            description: 'Project name to search for (used when projectId is null).',
+          },
+          items: {
+            type: 'array',
+            description: 'Line items for the purchase order.',
+            items: {
+              type: 'object',
+              properties: {
+                description: { type: 'string', description: 'Item description (e.g. Τσιμεντοσανίδα 12mm)' },
+                quantity: { type: 'number', description: 'Quantity to order' },
+                unit: { type: 'string', description: 'Unit of measure (τεμ, m, m², m³, kg, ton, lt, σακ, κουτ, παλ, ρολ, ζεύγ, δοχ, σετ)' },
+                unitPrice: { type: 'number', description: 'Price per unit in EUR' },
+                categoryCode: { type: 'string', description: 'ATOE category code (OIK-1 through OIK-12)' },
+              },
+              required: ['description', 'quantity', 'unit', 'unitPrice', 'categoryCode'],
+              additionalProperties: false,
+            },
+          },
+          taxRate: {
+            type: ['number', 'null'],
+            description: 'VAT rate: 24 (default), 13, 6, or 0 (intra-community). Null defaults to 24.',
+          },
+          dateNeeded: {
+            type: ['string', 'null'],
+            description: 'ISO date when delivery is needed (e.g. 2026-04-15). Null if no specific date.',
+          },
+          supplierNotes: {
+            type: ['string', 'null'],
+            description: 'Notes visible to the supplier on the PDF.',
+          },
+          internalNotes: {
+            type: ['string', 'null'],
+            description: 'Internal notes (not visible on PDF).',
+          },
+        },
+        required: [
+          'supplierId', 'supplierName', 'projectId', 'projectName',
+          'items', 'taxRate', 'dateNeeded', 'supplierNotes', 'internalNotes',
+        ],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── list_purchase_orders: Query POs ──
+  {
+    type: 'function',
+    function: {
+      name: 'list_purchase_orders',
+      description:
+        'List purchase orders with optional filters. Returns summary: poNumber, supplier, project, status, total, dates. Admin-only.',
+      parameters: {
+        type: 'object',
+        properties: {
+          status: {
+            type: ['string', 'null'],
+            description: 'Filter by status: draft, approved, ordered, partially_delivered, delivered, closed, cancelled. Null for all.',
+          },
+          supplierId: {
+            type: ['string', 'null'],
+            description: 'Filter by supplier contact ID. Null for all suppliers.',
+          },
+          projectId: {
+            type: ['string', 'null'],
+            description: 'Filter by project ID. Null for all projects.',
+          },
+          limit: {
+            type: ['number', 'null'],
+            description: 'Max results to return (default 20, max 50).',
+          },
+        },
+        required: ['status', 'supplierId', 'projectId', 'limit'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── get_purchase_order_status: Get detailed PO info ──
+  {
+    type: 'function',
+    function: {
+      name: 'get_purchase_order_status',
+      description:
+        'Get detailed status and information for a specific purchase order by ID or PO number. '
+        + 'Returns: status, supplier, project, items with delivery progress, totals, dates. Admin-only.',
+      parameters: {
+        type: 'object',
+        properties: {
+          poId: {
+            type: 'string',
+            description: 'Purchase order document ID (po_XXXXX) or PO number (PO-NNNN).',
+          },
+        },
+        required: ['poId'],
         additionalProperties: false,
       },
       strict: true,

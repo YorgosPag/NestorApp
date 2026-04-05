@@ -150,7 +150,9 @@ ADMIN INTENT TYPES (choose the most specific match — PREFER specific intents o
 
 - admin_general_question: General questions, advice, translation, or knowledge requests that don't map to a specific business ACTION but can be answered conversationally. Covers: "πώς γράφεται...", "τι σημαίνει...", "ποια η διαφορά...", "πώς μεταφράζεται...", casual conversation, greetings, thanks. Use this INSTEAD of general_inquiry for admin messages.
 
-- general_inquiry: LAST RESORT — use ONLY when the message truly does not relate to contacts, projects, properties, email, or conversational questions. If there is ANY reasonable match to the above intents, prefer that intent instead.
+- admin_procurement: Any request to CREATE, LIST, or CHECK purchase orders (POs). Covers: "δημιούργησε παραγγελία", "φτιάξε PO", "παράγγειλε υλικά", "τι παραγγελίες έχουμε", "πόσα PO τρέχουν", "τι κατάσταση έχει η PO-0042", "παράγγειλε 200 τσιμεντοσανίδες στον Παπαδόπουλο". Use create_purchase_order, list_purchase_orders, or get_purchase_order_status tools. For supplier/project resolution, use the supplier name or project name — the tool resolves them automatically.
+
+- general_inquiry: LAST RESORT — use ONLY when the message truly does not relate to contacts, projects, properties, email, procurement, or conversational questions. If there is ANY reasonable match to the above intents, prefer that intent instead.
 
 ENTITY EXTRACTION RULES:
 - For admin_contact_search: Extract person name in "contactName" (empty string if listing all). Extract "contactType" as "individual" or "company" if specified.

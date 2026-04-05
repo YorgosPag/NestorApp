@@ -143,5 +143,28 @@
     "OIK-10": "Painting",
     "OIK-11": "Mechanical",
     "OIK-12": "Other"
+  },
+  "supplierMetrics": {
+    "title": "Supplier Performance",
+    "comparison": "Supplier Comparison",
+    "totalOrders": "Orders",
+    "totalSpend": "Total Spend",
+    "averageOrder": "Avg. Order",
+    "onTimeRate": "On-Time Rate",
+    "avgLeadTime": "Avg. Lead Time",
+    "cancellationRate": "Cancellations",
+    "categoryBreakdown": "Breakdown by Category",
+    "days": "days",
+    "noSuppliers": "No suppliers with orders",
+    "suppliers": "suppliers",
+    "rank": "Rank"
+  },
+  "invoiceMatch": {
+    "title": "Invoice Matching",
+    "candidates": "PO Candidates",
+    "confidence": "Confidence",
+    "autoMatched": "Auto-matched",
+    "noMatch": "No match found",
+    "matchReasons": "Match reasons"
   }
 }
