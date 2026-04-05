@@ -1,13 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T19:58:55Z",
-    "totalViolations": 239,
-    "totalFiles": 80,
+    "generated": "2026-04-05T20:04:40Z",
+    "totalViolations": 228,
+    "totalFiles": 79,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/features/property-hover/components/PropertyQuickView.tsx": 11,
     "src/features/read-only-viewer/components/ReadOnlyMediaViewer.tsx": 9,
     "src/components/sales/legal/ContractCard.tsx": 9,
     "src/components/sales/dialogs/ChangePriceDialog.tsx": 9,
