@@ -1,4 +1,7 @@
 {
+  "associations": {
+    "loading": "Loading..."
+  },
   "header": {
     "title": "Building Management",
     "titleWithCount": "Building Management ({count})",

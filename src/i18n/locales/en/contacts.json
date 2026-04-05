@@ -1,1 +1,11 @@
-{}
+{
+  "individual": {
+    "sections": {
+      "projectParticipation": {
+        "saveFirst": "Please save the contact first",
+        "empty": "Not participating in any project",
+        "info": "Linking is managed from Project Management"
+      }
+    }
+  }
+}

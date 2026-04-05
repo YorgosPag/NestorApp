@@ -27,7 +27,7 @@ export function ProjectParticipationSection({ contactId }: ProjectParticipationS
   if (!contactId) {
     return (
       <div className={cn('p-6 text-center text-sm', colors.text.muted)}>
-        {tContacts('individual.sections.projectParticipation.saveFirst', { defaultValue: 'Αποθηκεύστε πρώτα την επαφή' })}
+        {tContacts('individual.sections.projectParticipation.saveFirst')}
       </div>
     );
   }
@@ -54,7 +54,7 @@ function ProjectLinks({
   if (isLoading) {
     return (
       <div className={cn('p-4 text-center text-sm animate-pulse', colors.text.muted)}>
-        {t('associations.loading', { defaultValue: 'Φόρτωση...' })}
+        {t('associations.loading')}
       </div>
     );
   }
@@ -116,7 +116,7 @@ function EmptyState({
 }) {
   return (
     <p className={cn('text-sm italic', colors.text.muted)}>
-      {tContacts('individual.sections.projectParticipation.empty', { defaultValue: 'Δεν συμμετέχει σε κανένα έργο' })}
+      {tContacts('individual.sections.projectParticipation.empty')}
     </p>
   );
 }
@@ -131,7 +131,7 @@ function InfoFooter({
   return (
     <p className={cn('flex items-center gap-1.5 text-xs', colors.text.muted)}>
       <Info className="h-3.5 w-3.5 shrink-0" />
-      {tContacts('individual.sections.projectParticipation.info', { defaultValue: 'Η σύνδεση γίνεται από τη Διαχείριση Έργων' })}
+      {tContacts('individual.sections.projectParticipation.info')}
     </p>
   );
 }

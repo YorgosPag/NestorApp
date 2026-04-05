@@ -1,4 +1,7 @@
 {
+  "associations": {
+    "loading": "Φόρτωση..."
+  },
   "header": {
     "title": "Διαχείριση Κτιρίων",
     "titleWithCount": "Διαχείριση Κτιρίων ({count})",
