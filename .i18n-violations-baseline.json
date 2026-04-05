@@ -1,19 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T21:57:33Z",
-    "totalViolations": 14,
-    "totalFiles": 14,
+    "generated": "2026-04-05T22:03:56Z",
+    "totalViolations": 7,
+    "totalFiles": 7,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/config/company-gemi/sections/capital.ts": 1,
-    "src/config/company-gemi/sections/basic-info.ts": 1,
-    "src/components/projects/ika/components/EmploymentRecordDialog.tsx": 1,
-    "src/components/projects/ika/ApdPaymentsTabContent.tsx": 1,
-    "src/components/NotificationBell.enterprise.tsx": 1,
-    "src/components/crm/dashboard/CRMDashboardPageContent.tsx": 1,
-    "src/components/contacts/relationships/RelationshipFormFields.tsx": 1,
     "src/components/contacts/personas/PersonaSelector.tsx": 1,
     "src/components/contacts/ContactsPageContent.tsx": 1,
     "src/components/communications/hooks/useCommunicationsHistory.ts": 1,
