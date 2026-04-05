@@ -1,13 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T18:28:37Z",
-    "totalViolations": 473,
-    "totalFiles": 94,
+    "generated": "2026-04-05T18:50:05Z",
+    "totalViolations": 439,
+    "totalFiles": 93,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/components/sales/legal/ProfessionalsCard.tsx": 34,
     "src/features/property-details/components/PropertyFieldsEditForm.tsx": 27,
     "src/features/property-details/components/LinkedSpacesCard.tsx": 21,
     "src/components/sales/dialogs/SellDialog.tsx": 20,
