@@ -34,7 +34,7 @@ import { getStatusColor } from '@/lib/design-system';
 import { formatFloorLabel } from '@/lib/intl-domain';
 import { createFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import { ApiClientError } from '@/lib/api/enterprise-api-client';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 // =============================================================================
 // CONSTANTS
@@ -83,6 +83,7 @@ export function FloorInlineCreateForm({
   onCancel,
 }: FloorInlineCreateFormProps) {
   const { t } = useTranslation('building');
+  const { success, error: notifyError } = useNotifications();
   const colors = useSemanticColors();
 
   // ── State ──
@@ -127,7 +128,7 @@ export function FloorInlineCreateForm({
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
     if (!createName.trim()) {
-      toast.error(t('tabs.floors.validationNameRequired'));
+      notifyError(t('tabs.floors.validationNameRequired'));
       return;
     }
     setCreating(true);
@@ -141,20 +142,20 @@ export function FloorInlineCreateForm({
           ...(projectId ? { projectId } : {}),
         },
       });
-      toast.success(t('tabs.floors.createSuccess'));
+      success(t('tabs.floors.createSuccess'));
       const createdId = result?.floorId ?? result?.data?.floorId;
       onCreated(createdId);
     } catch (err) {
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        toast.error(t('tabs.floors.duplicateNumber'));
+        notifyError(t('tabs.floors.duplicateNumber'));
       } else {
         const msg = err instanceof Error ? err.message : '';
-        toast.error(t('tabs.floors.createError') + (msg ? `: ${msg}` : ''));
+        notifyError(t('tabs.floors.createError') + (msg ? `: ${msg}` : ''));
       }
     } finally {
       setCreating(false);
     }
-  }, [buildingId, projectId, createName, createNumber, createElevation, onCreated, t]);
+  }, [buildingId, projectId, createName, createNumber, createElevation, onCreated, t, success, notifyError]);
 
   return (
     <form

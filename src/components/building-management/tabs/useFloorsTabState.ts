@@ -13,7 +13,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { deleteFloorWithPolicy, updateFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { formatFloorLabel } from '@/lib/intl-domain';
 
 // ============================================================================
@@ -50,6 +50,7 @@ interface FloorMutationResponse {
 
 export function useFloorsTabState(buildingId: string, projectId?: string) {
   const { t } = useTranslation('building');
+  const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();
   const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('floor');
 
@@ -192,19 +193,19 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
       const result = await updateFloorWithPolicy<FloorMutationResponse>({ payload });
       if (result?.success) {
         setEditingId(null);
-        toast.success(t('tabs.floors.editSuccess'));
+        success(t('tabs.floors.editSuccess'));
         await fetchFloors();
       } else {
-        toast.error(result?.error ?? t('tabs.floors.editError'));
+        notifyError(result?.error ?? t('tabs.floors.editError'));
       }
     } catch (err) {
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        toast.error(t('tabs.floors.versionConflict'));
+        notifyError(t('tabs.floors.versionConflict'));
         setEditingId(null);
         await fetchFloors();
         return;
       }
-      toast.error(t('tabs.floors.editError'));
+      notifyError(t('tabs.floors.editError'));
       console.error('[FloorsTab] Edit error:', err);
     } finally {
       setSaving(false);
@@ -217,7 +218,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
       if (!allowed) return;
     } catch (guardErr) {
       console.error('[FloorsTab] Deletion guard error:', guardErr);
-      toast.error(t('tabs.floors.deleteGuardError'));
+      notifyError(t('tabs.floors.deleteGuardError'));
       return;
     }
 
@@ -232,14 +233,14 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     try {
       const result = await deleteFloorWithPolicy<FloorMutationResponse>({ floorId: floor.id });
       if (result?.success) {
-        toast.success(t('tabs.floors.deleteSuccess'));
+        success(t('tabs.floors.deleteSuccess'));
         await fetchFloors();
       } else {
-        toast.error(result?.error ?? t('tabs.floors.deleteError'));
+        notifyError(result?.error ?? t('tabs.floors.deleteError'));
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      toast.error(t('tabs.floors.deleteError') + (msg ? `: ${msg}` : ''));
+      notifyError(t('tabs.floors.deleteError') + (msg ? `: ${msg}` : ''));
       console.error('[FloorsTab] Delete error:', err);
     } finally {
       setDeletingId(null);

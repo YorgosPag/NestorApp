@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { DIALOG_SIZES } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import { createFloorWithPolicy } from '@/services/floor-mutation-gateway';
 
@@ -74,6 +74,7 @@ const LEVEL_MAX = 100;
 
 export function AddFloorDialog({ buildingId, open, onClose, onSuccess }: AddFloorDialogProps) {
   const { t } = useTranslation('building');
+  const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
 
   const [formData, setFormData] = useState<AddFloorFormData>(INITIAL_FORM_DATA);
@@ -145,20 +146,20 @@ export function AddFloorDialog({ buildingId, open, onClose, onSuccess }: AddFloo
       });
 
       const createdId = result?.floorId ?? result?.data?.floorId;
-      toast.success(t('dialog.addFloor.messages.success'));
+      success(t('dialog.addFloor.messages.success'));
       onSuccess?.(createdId ?? '');
       onClose();
     } catch (err) {
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        toast.error(t('dialog.addFloor.messages.duplicate'));
+        notifyError(t('dialog.addFloor.messages.duplicate'));
       } else {
         const message = err instanceof Error ? err.message : '';
-        toast.error(t('dialog.addFloor.messages.error') + (message ? `: ${message}` : ''));
+        notifyError(t('dialog.addFloor.messages.error') + (message ? `: ${message}` : ''));
       }
     } finally {
       setLoading(false);
     }
-  }, [buildingId, formData.name, onClose, onSuccess, t, validate]);
+  }, [buildingId, formData.name, onClose, onSuccess, t, validate, success, notifyError]);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     if (!nextOpen) {

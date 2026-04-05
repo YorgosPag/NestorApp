@@ -28,7 +28,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { RealtimeService } from '@/services/realtime';
 import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
 import type { ContactLinkCreatedPayload, ContactLinkDeletedPayload } from '@/services/realtime';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { maybeFillProfessionFromRole } from '@/services/profession-bridge.service';
@@ -74,6 +74,7 @@ export function useEntityContactLinks(
   options?: UseEntityContactLinksOptions
 ): UseEntityContactLinksReturn {
   const { user } = useAuth();
+  const { info } = useNotifications();
   const [links, setLinks] = useState<EntityAssociationLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -198,7 +199,7 @@ export function useEntityContactLinks(
         maybeFillProfessionFromRole(contactId, role)
           .then((bridgeResult) => {
             if (bridgeResult.updated && bridgeResult.profession) {
-              toast.info(`Το επάγγελμα ορίστηκε αυτόματα: ${bridgeResult.profession}`);
+              info(`Το επάγγελμα ορίστηκε αυτόματα: ${bridgeResult.profession}`);
             }
           })
           .catch((err) => {
@@ -211,7 +212,7 @@ export function useEntityContactLinks(
 
     logger.error('Failed to add contact link', { error: result });
     return false;
-  }, [entityType, entityId, user, refresh]);
+  }, [entityType, entityId, user, refresh, info]);
 
   // Remove (deactivate) a contact link
   const removeLink = useCallback(async (linkId: string): Promise<boolean> => {

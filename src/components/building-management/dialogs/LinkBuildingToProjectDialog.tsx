@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 import { DIALOG_SIZES } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { toast } from 'sonner';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { ProjectListItem } from '@/components/building-management/building-services';
@@ -85,6 +85,7 @@ export function LinkBuildingToProjectDialog({
   onSuccess,
 }: LinkBuildingToProjectDialogProps) {
   const { t } = useTranslation('properties');
+  const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
 
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -123,7 +124,7 @@ export function LinkBuildingToProjectDialog({
         throw new Error(response.error || 'Failed to link Building to Project');
       }
 
-      toast.success(t('dialog.linkBuildingToProject.messages.success'));
+      success(t('dialog.linkBuildingToProject.messages.success'));
       onSuccess?.(selectedProjectId);
       onOpenChange(false);
     } catch (err) {
@@ -137,11 +138,11 @@ export function LinkBuildingToProjectDialog({
         t('dialog.linkBuildingToProject.messages.error') +
           (message ? `: ${message}` : ''),
       );
-      toast.error(t('dialog.linkBuildingToProject.messages.error'));
+      notifyError(t('dialog.linkBuildingToProject.messages.error'));
     } finally {
       setLoading(false);
     }
-  }, [buildingId, onOpenChange, onSuccess, selectedProjectId, t]);
+  }, [buildingId, onOpenChange, onSuccess, selectedProjectId, t, success, notifyError]);
 
   const canSubmit = !loading && !!selectedProjectId;
 
