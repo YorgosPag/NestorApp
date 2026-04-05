@@ -131,14 +131,14 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
             <dt className={cn("flex items-center gap-1", colors.text.muted)}>
               <Euro className="h-3 w-3" />
-              {t('sales.legal.amount', { defaultValue: 'Ποσό' })}
+              {t('sales.legal.amount')}
             </dt>
             <dd className="font-medium">{formatCurrency(contract.contractAmount)}</dd>
 
             {contract.depositAmount !== null && (
               <>
                 <dt className={colors.text.muted}>
-                  {t('sales.legal.deposit', { defaultValue: 'Αρραβώνας' })}
+                  {t('sales.legal.deposit')}
                 </dt>
                 <dd className="font-medium">{formatCurrency(contract.depositAmount)}</dd>
               </>
@@ -146,14 +146,14 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
 
             <dt className={cn("flex items-center gap-1", colors.text.muted)}>
               <CalendarDays className="h-3 w-3" />
-              {t('sales.legal.createdAt', { defaultValue: 'Δημιουργία' })}
+              {t('sales.legal.createdAt')}
             </dt>
             <dd>{formatDate(contract.createdAt)}</dd>
 
             {contract.signedAt && (
               <>
                 <dt className={colors.text.muted}>
-                  {t('sales.legal.signedAt', { defaultValue: 'Υπογραφή' })}
+                  {t('sales.legal.signedAt')}
                 </dt>
                 <dd>{formatDate(contract.signedAt)}</dd>
               </>
@@ -163,19 +163,19 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
           {/* Professionals */}
           <section className="space-y-1">
             <h4 className={cn("text-xs font-medium", colors.text.muted)}>
-              {t('sales.legal.professionals', { defaultValue: 'Επαγγελματίες' })}
+              {t('sales.legal.professionals')}
             </h4>
             <ul className="space-y-0.5 text-xs">
               {[
-                { label: t('sales.legal.sellerLawyer', { defaultValue: 'Δικ. Πωλητή' }), snap: contract.sellerLawyer },
-                { label: t('sales.legal.buyerLawyer', { defaultValue: 'Δικ. Αγοραστή' }), snap: contract.buyerLawyer },
-                { label: t('sales.legal.notary', { defaultValue: 'Συμβολαιογράφος' }), snap: contract.notary },
+                { label: t('sales.legal.sellerLawyer'), snap: contract.sellerLawyer },
+                { label: t('sales.legal.buyerLawyer'), snap: contract.buyerLawyer },
+                { label: t('sales.legal.notary'), snap: contract.notary },
               ].map(({ label, snap }) => (
                 <li key={label} className="flex items-center gap-1">
                   <User className={cn("h-3 w-3", colors.text.muted)} />
                   <span className={colors.text.muted}>{label}:</span>
                   <span className="font-medium">
-                    {snap?.displayName ?? t('sales.legal.unassigned', { defaultValue: 'Μη ανατεθ.' })}
+                    {snap?.displayName ?? t('sales.legal.unassigned')}
                   </span>
                 </li>
               ))}
