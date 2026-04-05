@@ -86,14 +86,14 @@ export function ParkingQuickFilters({
         selectedTypes={selectedStatus === 'all' ? [] : [selectedStatus]}
         onTypeChange={handleStatusChange}
         compact
-        ariaLabel={t('salesParking.quickFilters.statusAriaLabel', { defaultValue: 'Φίλτρο κατάστασης θέσης' })}
+        ariaLabel={t('salesParking.quickFilters.statusAriaLabel')}
       />
       <TypeQuickFilters
         options={TYPE_OPTIONS}
         selectedTypes={selectedType === 'all' ? [] : [selectedType]}
         onTypeChange={handleTypeChange}
         compact
-        ariaLabel={t('salesParking.quickFilters.typeAriaLabel', { defaultValue: 'Φίλτρο τύπου θέσης' })}
+        ariaLabel={t('salesParking.quickFilters.typeAriaLabel')}
       />
     </div>
   );

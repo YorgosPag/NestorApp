@@ -179,7 +179,8 @@
         "description": "Add professional relationships, employees and collaborators."
       },
       "viewManage": "View & Manage",
-      "editRelationships": "Edit Relationships"
+      "editRelationships": "Edit Relationships",
+      "projectRoles": "Project Involvement"
     },
     "organizationTree": {
       "loading": "Loading...",

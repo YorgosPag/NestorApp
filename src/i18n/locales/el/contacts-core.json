@@ -243,6 +243,7 @@
   },
   "common": {
     "select": "Επιλέξτε",
+    "loading": "Φόρτωση...",
     "fields": {
       "street": {
         "placeholder": "π.χ. Λεωφόρος Αθηνών",

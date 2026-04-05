@@ -60,7 +60,7 @@ export function ProjectRolesSection({ contactId, className = 'mb-6' }: ProjectRo
       <header className="mb-3 flex items-center gap-2">
         <Landmark className={cn(iconSizes.sm, COLOR_BRIDGE.text.muted)} />
         <h4 className="text-sm font-medium">
-          {t('relationships.summary.projectRoles', { defaultValue: 'Συμμετοχή σε Έργα' })}
+          {t('relationships.summary.projectRoles')}
         </h4>
       </header>
 
@@ -68,7 +68,7 @@ export function ProjectRolesSection({ contactId, className = 'mb-6' }: ProjectRo
         <article className="flex items-center gap-2 py-2">
           <Loader2 className={cn(iconSizes.sm, 'animate-spin', COLOR_BRIDGE.text.muted)} />
           <span className={cn('text-xs', COLOR_BRIDGE.text.muted)}>
-            {t('common.loading', { defaultValue: 'Φόρτωση...' })}
+            {t('common.loading')}
           </span>
         </article>
       ) : (

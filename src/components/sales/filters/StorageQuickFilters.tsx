@@ -83,14 +83,14 @@ export function StorageQuickFilters({
         selectedTypes={selectedStatus === 'all' ? [] : [selectedStatus]}
         onTypeChange={handleStatusChange}
         compact
-        ariaLabel={t('salesStorage.quickFilters.statusAriaLabel', { defaultValue: 'Φίλτρο κατάστασης αποθήκης' })}
+        ariaLabel={t('salesStorage.quickFilters.statusAriaLabel')}
       />
       <TypeQuickFilters
         options={TYPE_OPTIONS}
         selectedTypes={selectedType === 'all' ? [] : [selectedType]}
         onTypeChange={handleTypeChange}
         compact
-        ariaLabel={t('salesStorage.quickFilters.typeAriaLabel', { defaultValue: 'Φίλτρο τύπου αποθήκης' })}
+        ariaLabel={t('salesStorage.quickFilters.typeAriaLabel')}
       />
     </div>
   );

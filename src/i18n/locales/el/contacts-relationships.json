@@ -179,7 +179,8 @@
         "description": "Προσθέστε επαγγελματικές σχέσεις, εργαζόμενους και συνεργάτες."
       },
       "viewManage": "Προβολή & Διαχείριση",
-      "editRelationships": "Επεξεργασία Σχέσεων"
+      "editRelationships": "Επεξεργασία Σχέσεων",
+      "projectRoles": "Συμμετοχή σε Έργα"
     },
     "organizationTree": {
       "loading": "Φόρτωση...",

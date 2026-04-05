@@ -243,6 +243,7 @@
   },
   "common": {
     "select": "Select",
+    "loading": "Loading...",
     "fields": {
       "street": {
         "placeholder": "e.g. Main Street",

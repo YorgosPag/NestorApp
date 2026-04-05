@@ -10,7 +10,9 @@
       "duplicateFailed": "The property could not be duplicated from the viewer.",
       "duplicateSuccess": "Property duplicated successfully.",
       "deleteSuccess": "Property deleted successfully.",
-      "updateFailed": "The property update could not be saved. Refresh and try again."
+      "updateFailed": "The property update could not be saved. Refresh and try again.",
+      "deleteUseGuardedFlow": "Use the property details or list delete action so dependency guards can run before deletion.",
+      "duplicateBlocked": "Property duplication from the floorplan viewer is blocked until the guarded create flow is completed."
     },
     "defaults": {
       "newPropertyName": "New property",

@@ -229,11 +229,11 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
 
   // ADR-229 Phase 2: Centralized loading/error states
   if (loading) {
-    return <PageLoadingState icon={Clock} message={t('tasks.loading', { defaultValue: 'Φόρτωση εργασιών...' })} layout="contained" />;
+    return <PageLoadingState icon={Clock} message={t('tasks.loading')} layout="contained" />;
   }
 
   if (error) {
-    return <PageErrorState title={t('tasks.errorTitle', { defaultValue: 'Σφάλμα φόρτωσης' })} message={error} layout="contained" />;
+    return <PageErrorState title={t('tasks.errorTitle')} message={error} layout="contained" />;
   }
 
   return (

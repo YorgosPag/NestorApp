@@ -121,7 +121,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
             {loading && (
               <div className={cn("flex items-center gap-2 py-2 justify-center", colors.text.muted)}>
                 <Spinner size="small" />
-                <span className={typography.body.sm}>{t('timelineTab.loading', { defaultValue: 'Φόρτωση κτιρίων...' })}</span>
+                <span className={typography.body.sm}>{t('timelineTab.loading')}</span>
               </div>
             )}
 
@@ -132,7 +132,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
             {!loading && !error && buildings.length === 0 && (
               <div className={cn("flex flex-col items-center gap-2 py-2", colors.text.muted)}>
                 <Building2 className={iconSizes.lg} />
-                <p className={typography.body.sm}>{t('timelineTab.noBuildings', { defaultValue: 'Δεν υπάρχουν κτίρια σε αυτό το έργο.' })}</p>
+                <p className={typography.body.sm}>{t('timelineTab.noBuildings')}</p>
               </div>
             )}
 

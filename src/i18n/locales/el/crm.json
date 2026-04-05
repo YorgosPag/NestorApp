@@ -184,7 +184,8 @@
       "thisWeek": "Αυτή την Εβδομάδα",
       "thisWeekDesc": "Λήγουν αυτή την εβδομάδα"
     },
-    "loading": "Φόρτωση...",
+    "loading": "Φόρτωση εργασιών...",
+    "errorTitle": "Σφάλμα φόρτωσης",
     "searchPlaceholder": "Αναζήτηση...",
     "clearFilters": "Καθαρισμός",
     "noDate": "Χωρίς ημερομηνία",

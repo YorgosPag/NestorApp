@@ -54,7 +54,7 @@ export default function ObligationsPage() {
   if (!isNamespaceReady || loading) {
     return (
       <PageLayout>
-        <PageLoadingState icon={ClipboardList} message={t('workspace.register.loading', { defaultValue: 'Φόρτωση υποχρεώσεων...' })} layout="contained" />
+        <PageLoadingState icon={ClipboardList} message={t('workspace.register.loading')} layout="contained" />
       </PageLayout>
     );
   }
@@ -63,7 +63,7 @@ export default function ObligationsPage() {
     return (
       <PageLayout>
         <PageErrorState
-          title={t('workspace.register.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+          title={t('workspace.register.loadError')}
           message={error}
           layout="contained"
         />

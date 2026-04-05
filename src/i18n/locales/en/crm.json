@@ -184,7 +184,8 @@
       "thisWeek": "This Week",
       "thisWeekDesc": "Due this week"
     },
-    "loading": "Loading...",
+    "loading": "Loading tasks...",
+    "errorTitle": "Loading error",
     "searchPlaceholder": "Search...",
     "clearFilters": "Clear",
     "noDate": "No date",

@@ -157,9 +157,7 @@ export function ViewerTools({
     if (!confirmed) return;
 
     if (!onDeleteSelected) {
-      warning(t('viewer.messages.deleteUseGuardedFlow', {
-        defaultValue: 'Use the property details or list delete action so dependency guards can run before deletion.',
-      }));
+      warning(t('viewer.messages.deleteUseGuardedFlow'));
       logger.info('Blocked viewer delete because canonical delete handler is not wired.', { selectedPropertyId });
       return;
     }
@@ -171,9 +169,7 @@ export function ViewerTools({
     if (!selectedPropertyId || isReadOnly) return;
 
     if (!onDuplicateSelected) {
-      warning(t('viewer.messages.duplicateBlocked', {
-        defaultValue: 'Property duplication from the floorplan viewer is blocked until the guarded create flow is completed.',
-      }));
+      warning(t('viewer.messages.duplicateBlocked'));
       logger.info('Blocked viewer copy because canonical duplicate handler is not wired.', { selectedPropertyId });
       return;
     }
