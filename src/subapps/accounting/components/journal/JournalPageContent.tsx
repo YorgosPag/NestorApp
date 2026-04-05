@@ -225,10 +225,10 @@ export function JournalPageContent() {
         {showForm ? (
           <JournalEntryForm onSuccess={handleFormSuccess} onCancel={handleFormCancel} />
         ) : loading ? (
-          <PageLoadingState icon={BookOpen} message={t('journal.loading', { defaultValue: 'Φόρτωση ημερολογίου...' })} layout="contained" />
+          <PageLoadingState icon={BookOpen} message={t('journal.loading')} layout="contained" />
         ) : error ? (
           <PageErrorState
-            title={t('journal.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            title={t('journal.loadError')}
             message={error}
             onRetry={refetch}
             retryLabel={t('common.retry')}

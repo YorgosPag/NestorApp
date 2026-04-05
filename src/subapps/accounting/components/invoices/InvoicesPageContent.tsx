@@ -262,10 +262,10 @@ export function InvoicesPageContent() {
       {/* Content */}
       <section className="p-6">
         {loading ? (
-          <PageLoadingState icon={Receipt} message={t('invoices.loading', { defaultValue: 'Φόρτωση τιμολογίων...' })} layout="contained" />
+          <PageLoadingState icon={Receipt} message={t('invoices.loading')} layout="contained" />
         ) : error ? (
           <PageErrorState
-            title={t('invoices.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            title={t('invoices.loadError')}
             message={error}
             onRetry={fetchInvoices}
             retryLabel={t('common.retry')}

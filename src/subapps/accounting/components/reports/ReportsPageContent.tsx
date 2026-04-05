@@ -72,7 +72,7 @@ export function ReportsPageContent() {
           loading,
         },
         {
-          title: t('setup.corporateTax.totalObligation', { defaultValue: 'Φορολογική Υποχρέωση' }),
+          title: t('setup.corporateTax.totalObligation'),
           value: formatCurrency(corporateResult.corporateTax.totalObligation),
           icon: DollarSign,
           color: 'orange' as const,
@@ -155,7 +155,7 @@ export function ReportsPageContent() {
   if (loading) {
     return (
       <main className="min-h-screen bg-background">
-        <PageLoadingState icon={FileBarChart} message={t('reports.loading', { defaultValue: 'Φόρτωση αναφορών...' })} layout="contained" />
+        <PageLoadingState icon={FileBarChart} message={t('reports.loading')} layout="contained" />
       </main>
     );
   }

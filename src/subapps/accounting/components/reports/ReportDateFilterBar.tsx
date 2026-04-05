@@ -84,7 +84,7 @@ export function ReportDateFilterBar({ value, onValueChange, disabled }: ReportDa
             onChange={(e) => onValueChange({ ...value, customFrom: e.target.value })}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             disabled={disabled}
-            aria-label={t('reports.detail.from', { defaultValue: 'From' })}
+            aria-label={t('reports.detail.from')}
           />
           <span className="text-sm text-muted-foreground">—</span>
           <input
@@ -93,7 +93,7 @@ export function ReportDateFilterBar({ value, onValueChange, disabled }: ReportDa
             onChange={(e) => onValueChange({ ...value, customTo: e.target.value })}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             disabled={disabled}
-            aria-label={t('reports.detail.to', { defaultValue: 'To' })}
+            aria-label={t('reports.detail.to')}
           />
         </>
       )}

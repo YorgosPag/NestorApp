@@ -20,6 +20,7 @@
     "updateInvoice": "Update",
     "editNotAllowed": "This invoice cannot be edited (status: {{status}}).",
     "loading": "Loading invoice...",
+    "loadError": "Loading error",
     "invoiceDetails": "Invoice Details",
     "noInvoices": "No invoices found",
     "noInvoicesDescription": "Start by creating your first invoice",
@@ -68,6 +69,8 @@
   "journal": {
     "title": "Income & Expenses Book",
     "description": "Manage income and expense entries",
+    "loading": "Loading journal...",
+    "loadError": "Loading error",
     "newEntry": "New Entry",
     "editEntry": "Edit Entry",
     "noEntries": "No entries found",
@@ -139,6 +142,8 @@
   "efka": {
     "title": "EFKA Contributions",
     "description": "Track social security contributions",
+    "loading": "Loading EFKA...",
+    "loadError": "Loading error",
     "annualSummary": "Annual Summary",
     "monthlyBreakdown": "Monthly Breakdown",
     "totalPaid": "Total Paid",

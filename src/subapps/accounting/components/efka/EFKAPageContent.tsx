@@ -212,10 +212,10 @@ export function EFKAPageContent() {
       {/* Content */}
       <section className="p-6 space-y-6">
         {loading ? (
-          <PageLoadingState icon={PiggyBank} message={t('efka.loading', { defaultValue: 'Φόρτωση ΕΦΚΑ...' })} layout="contained" />
+          <PageLoadingState icon={PiggyBank} message={t('efka.loading')} layout="contained" />
         ) : error ? (
           <PageErrorState
-            title={t('efka.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            title={t('efka.loadError')}
             message={error}
             onRetry={refetch}
             retryLabel={t('common.retry')}
