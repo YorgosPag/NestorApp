@@ -209,7 +209,7 @@ export function GeneralTabContent({
         return rest;
       });
       setSaveError((prev) =>
-        prev && prev === t('validation.projectRequired', { defaultValue: 'Select a Project to continue' })
+        prev && prev === t('validation.projectRequired')
           ? null
           : prev,
       );
@@ -285,15 +285,13 @@ export function GeneralTabContent({
     // Validation: name always required; projectId required in create mode (ADR-284 §3.0.5)
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) {
-      newErrors.name = t('validation.nameRequired', { defaultValue: 'Name is required' });
+      newErrors.name = t('validation.nameRequired');
     }
     if (isCreateMode) {
       const projectPayloadForValidation = projectLink.getPayload();
       const projectIdValue = projectPayloadForValidation.projectId;
       if (typeof projectIdValue !== 'string' || projectIdValue.trim().length === 0) {
-        newErrors.projectId = t('validation.projectRequired', {
-          defaultValue: 'Select a Project to continue',
-        });
+        newErrors.projectId = t('validation.projectRequired');
       }
     }
     if (Object.keys(newErrors).length > 0) {
