@@ -106,10 +106,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       if (!completed) {
         return;
       }
-      success(t('viewer.messages.updateSuccess', {
-        ns: 'properties',
-        defaultValue: 'Property changes were saved.',
-      }));
+      success(t('viewer.messages.updateSuccess', { ns: 'properties' }));
       onOpenChange(false);
       onSuccess?.();
 
@@ -180,7 +177,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       const rawMsg = errorObj?.error ?? errorObj?.message ?? '';
       const msg = rawMsg
         ? translateServerError(rawMsg, t)
-        : t('sales.dialogs.reserve.unknownError', { defaultValue: 'Σφάλμα κατά την κράτηση' });
+        : t('sales.dialogs.reserve.unknownError');
       setSaveError(msg);
       notifyError(msg);
       logger.warn('Reserve failed', { error: rawMsg });
@@ -196,12 +193,10 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserCheck className={cn(iconSizes.sm, colors.text.accent)} />
-              {t('sales.dialogs.reserve.title', { defaultValue: 'Κράτηση Μονάδας' })}
+              {t('sales.dialogs.reserve.title')}
             </DialogTitle>
             <DialogDescription>
-              {t('sales.dialogs.reserve.description', {
-                defaultValue: 'Καταχωρήστε τα στοιχεία κράτησης',
-              })}
+              {t('sales.dialogs.reserve.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -210,9 +205,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
             {buyerContactId && !buyerHasEmail && (
               <p className={cn("flex items-center gap-1.5 text-xs", colors.text.warning)}>
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                {t('sales.dialogs.reserve.noEmailWarning', {
-                  defaultValue: 'Ο αγοραστής δεν έχει email — δεν θα σταλεί επιβεβαίωση κράτησης. Ενημερώστε την καρτέλα του.',
-                })}
+                {t('sales.dialogs.reserve.noEmailWarning')}
               </p>
             )}
             <Button
@@ -223,12 +216,12 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
               onClick={handleOpenNewContact}
             >
               <UserPlus className={iconSizes.xs} />
-              {t('sales.dialogs.reserve.newContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
+              {t('sales.dialogs.reserve.newContact')}
             </Button>
 
             <fieldset className="space-y-1">
               <Label className="text-sm font-medium">
-                {t('sales.dialogs.reserve.deposit', { defaultValue: 'Προκαταβολή (€)' })}
+                {t('sales.dialogs.reserve.deposit')}
               </Label>
               <Input
                 type="number"
@@ -236,7 +229,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
                 step={500}
                 value={deposit}
                 onChange={(e) => setDeposit(e.target.value)}
-                placeholder={t('sales.dialogs.reserve.depositPlaceholder', { defaultValue: 'π.χ. 5000' })}
+                placeholder={t('sales.dialogs.reserve.depositPlaceholder')}
                 className="text-right"
               />
             </fieldset>
@@ -257,13 +250,13 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
               {!hasAskingPrice && (
                 <p className="flex items-center gap-1.5 text-sm text-destructive">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
-                  {t('sales.errors.noAskingPrice', { defaultValue: 'Η μονάδα δεν έχει ζητούμενη τιμή. Ορίστε τιμή πριν την κράτηση.' })}
+                  {t('sales.errors.noAskingPrice')}
                 </p>
               )}
               {!hasArea && (
                 <p className="flex items-center gap-1.5 text-sm text-destructive">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
-                  {t('sales.errors.noArea', { defaultValue: 'Η μονάδα δεν έχει εμβαδόν (τ.μ.). Ορίστε καθαρά ή μικτά τ.μ. πριν την κράτηση.' })}
+                  {t('sales.errors.noArea')}
                 </p>
               )}
             </aside>
@@ -289,12 +282,12 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-              {t('common.cancel', { defaultValue: 'Ακύρωση' })}
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={saving || previewChecking || !isOwnersValid(owners) || !hierarchy.isValid || !hasAskingPrice || !hasArea}>
               {saving
-                ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
-                : t('sales.dialogs.reserve.confirm', { defaultValue: 'Κράτηση' })}
+                ? t('common.saving')
+                : t('sales.dialogs.reserve.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
