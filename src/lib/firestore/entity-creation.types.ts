@@ -29,7 +29,8 @@ export type ServerEntityType =
   | 'storage'
   | 'parking'
   | 'dxfLevel'
-  | 'cadFile';
+  | 'cadFile'
+  | 'dxfOverlayItem';
 
 /**
  * Determines how companyId is resolved.
@@ -46,7 +47,8 @@ export type EntityIdGeneratorName =
   | 'generateStorageId'
   | 'generateParkingId'
   | 'generateLevelId'
-  | 'generateFileId';
+  | 'generateFileId'
+  | 'generateOverlayId';
 
 /** Entity types that support ADR-233 code generation */
 export type EntityCodeType = 'property' | 'parking' | 'storage';
@@ -163,6 +165,25 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     hierarchy: 'tenant-scoped',
     parentField: null,
     idGenerator: 'generateFileId',
+    codeType: null,
+    codeField: null,
+    tenantCheck: false,
+    auditTargetType: 'api',
+  },
+  /**
+   * 🔷 ADR-289: DXF Overlay polygon item. Stored under the
+   * `dxf-overlay-levels/{levelId}/items/{overlayId}` subcollection (NOT a
+   * top-level collection — the `collection` field below records the parent
+   * prefix for SSOT documentation only). Because createEntity() assumes flat
+   * collections, the dedicated /api/dxf-overlay-items handler uses direct
+   * adminDb writes against the subcollection path. This registry entry exists
+   * purely for SSOT discoverability.
+   */
+  dxfOverlayItem: {
+    collection: COLLECTIONS.DXF_OVERLAY_LEVELS,
+    hierarchy: 'tenant-scoped',
+    parentField: null,
+    idGenerator: 'generateOverlayId',
     codeType: null,
     codeField: null,
     tenantCheck: false,

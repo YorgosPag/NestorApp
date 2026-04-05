@@ -1,9 +1,14 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { db } from '../../../lib/firebase';
-import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
-import { generateOverlayId } from '@/services/enterprise-id.service';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/auth/hooks/useAuth';
+import {
+  createOverlayItemWithPolicy,
+  updateOverlayItemWithPolicy,
+  deleteOverlayItemWithPolicy,
+  upsertOverlayItemWithPolicy,
+} from '@/services/dxf-overlay-item-mutation-gateway';
 import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind } from './types';
 // 🏢 ENTERPRISE: Debug system for production-silent logging
 import { dlog, dwarn, derr } from '../debug';
@@ -124,63 +129,52 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       throw new Error('Cannot create overlay without authenticated user');
     }
 
-    // 🔧 FIX (2026-01-24): Convert nested array [[x,y], ...] to array of objects [{x,y}, ...]
+    // 🔧 Convert nested array [[x,y], ...] to array of objects [{x,y}, ...]
     // Firebase doesn't support nested arrays, but supports array of objects
     const polygonForFirestore = overlayData.polygon.map(([x, y]) => ({ x, y }));
 
-    // 🔧 FIX (2026-01-24): Build object without undefined values - Firebase rejects undefined
-    // 🔧 FIX (2026-02-13): Include companyId + createdBy from auth — Firestore rules require these
-    const newOverlay: Record<string, unknown> = {
+    // 🔒 ADR-289: Route overlay creation through centralized API gateway.
+    // Server handles companyId/createdBy stamping + enterprise ID generation.
+    // ADR-258: status δεν αποθηκεύεται πλέον σε νέα overlays (only if provided).
+    const result = await createOverlayItemWithPolicy({
       levelId: state.currentLevelId,
-      companyId: user?.companyId ?? null,
-      // ADR-258: status δεν αποθηκεύεται πλέον σε νέα overlays — χρωματισμός βάσει entity.commercialStatus
-      ...(overlayData.status ? { status: overlayData.status } : {}),
       kind: overlayData.kind || 'property',
       polygon: polygonForFirestore,
-      createdBy: user.uid,
-    };
-
-    // Only add optional fields if they have values
-    if (overlayData.label !== undefined) newOverlay.label = overlayData.label;
-    if (overlayData.linked !== undefined) newOverlay.linked = overlayData.linked;
-
-    // 🏢 ADR-210: Enterprise ID generation — deterministic, prefixed IDs
-    const overlayId = generateOverlayId();
-    const docRef = doc(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`, overlayId);
-    await setDoc(docRef, {
-      ...newOverlay,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      ...(overlayData.status ? { status: overlayData.status } : {}),
+      ...(overlayData.label !== undefined ? { label: overlayData.label } : {}),
+      ...(overlayData.linked !== undefined ? { linked: overlayData.linked } : {}),
     });
 
-    return overlayId;
+    return result.overlayId;
   }, [state.currentLevelId, user]);
 
   const update = useCallback(async (id: string, patch: UpdateOverlayData): Promise<void> => {
     if (!state.currentLevelId) return;
-    const docRef = doc(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`, id);
 
-    // Filter out undefined values to prevent Firebase errors
-    // 🎯 TYPE-SAFE: Build clean patch object without undefined values
-    const cleanPatch = Object.entries(patch).reduce((acc, [key, value]) => {
-      if (value !== undefined) {
-        // 🔧 FIX (2026-01-24): Convert polygon to Firebase-compatible format
-        if (key === 'polygon' && Array.isArray(value)) {
-          acc[key] = (value as [number, number][]).map(([x, y]) => ({ x, y }));
-        } else {
-          acc[key] = value;
-        }
-      }
-      return acc;
-    }, {} as Record<string, unknown>);
+    // 🔒 ADR-289: Route update through centralized API gateway. The gateway
+    // payload supports polygon/kind/status/label/linked/style; unknown/undefined
+    // fields are skipped. `linked: null` explicitly clears the link.
+    const payload: Parameters<typeof updateOverlayItemWithPolicy>[0] = {
+      levelId: state.currentLevelId,
+      overlayId: id,
+    };
 
-    await updateDoc(docRef, { ...cleanPatch, updatedAt: serverTimestamp() });
+    if (patch.polygon !== undefined) {
+      payload.polygon = (patch.polygon as [number, number][]).map(([x, y]) => ({ x, y }));
+    }
+    if (patch.kind !== undefined) payload.kind = patch.kind;
+    if (patch.status !== undefined) payload.status = patch.status;
+    if (patch.label !== undefined) payload.label = patch.label;
+    if (patch.linked !== undefined) payload.linked = patch.linked;
+    if (patch.style !== undefined) payload.style = patch.style;
+
+    await updateOverlayItemWithPolicy(payload);
   }, [state.currentLevelId]);
 
   const remove = useCallback(async (id: string): Promise<void> => {
     if (!state.currentLevelId) return;
-    const docRef = doc(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`, id);
-    await deleteDoc(docRef);
+    // 🔒 ADR-289: Delete via centralized API gateway.
+    await deleteOverlayItemWithPolicy({ levelId: state.currentLevelId, overlayId: id });
   }, [state.currentLevelId]);
 
   /**
@@ -197,28 +191,21 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     // 🔧 Convert polygon to Firebase-compatible format
     const polygonForFirestore = overlay.polygon.map(([x, y]) => ({ x, y }));
 
-    // 🏢 ENTERPRISE: Build clean document without undefined values
-    // 🔧 FIX (2026-02-13): Include companyId for Firestore rules compliance
-    const overlayDoc: Record<string, unknown> = {
+    // 🔒 ADR-289: Route restore through centralized API gateway upsert endpoint.
+    // Preserves original overlayId + createdAt to keep chronology intact.
+    // Server stamps companyId; createdBy falls back to original then to ctx.uid.
+    await upsertOverlayItemWithPolicy({
       levelId: overlay.levelId,
-      companyId: user?.companyId ?? null,
-      // ADR-258: status δεν αποθηκεύεται σε νέα overlays — backward compat για restore
-      ...(overlay.status ? { status: overlay.status } : {}),
+      overlayId: overlay.id,
       kind: overlay.kind || 'property',
       polygon: polygonForFirestore,
+      // ADR-258: status δεν αποθηκεύεται σε νέα overlays — backward compat για restore
+      ...(overlay.status ? { status: overlay.status } : {}),
+      ...(overlay.label !== undefined ? { label: overlay.label } : {}),
+      ...(overlay.linked !== undefined ? { linked: overlay.linked } : {}),
+      ...(typeof overlay.createdAt === 'number' ? { createdAtMs: overlay.createdAt } : {}),
       createdBy: overlay.createdBy || user?.uid || SYSTEM_IDENTITY.ID,
-      restoredAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-
-    // Add optional fields if they exist
-    if (overlay.label !== undefined) overlayDoc.label = overlay.label;
-    if (overlay.linked !== undefined) overlayDoc.linked = overlay.linked;
-    if (overlay.createdAt !== undefined) overlayDoc.createdAt = overlay.createdAt;
-
-    // 🏢 CRITICAL: Use setDoc with original ID to restore exact document
-    const docRef = doc(db, `${COLLECTION_PREFIX}/${overlay.levelId}/items`, overlay.id);
-    await setDoc(docRef, overlayDoc);
+    });
 
     dlog('OverlayStore', `✅ restore: Overlay ${overlay.id} restored successfully`);
   }, [user]);

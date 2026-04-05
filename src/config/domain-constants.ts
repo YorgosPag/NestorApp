@@ -609,6 +609,11 @@ export const API_ROUTES = {
     LIST: '/api/cad-files',
   },
 
+  // ── DXF Overlay Items (ADR-289) ───────────────────────────────────────
+  DXF_OVERLAY_ITEMS: {
+    LIST: '/api/dxf-overlay-items',
+  },
+
   // ── Properties ────────────────────────────────────────────────────────
   PROPERTIES: {
     LIST: '/api/properties',
