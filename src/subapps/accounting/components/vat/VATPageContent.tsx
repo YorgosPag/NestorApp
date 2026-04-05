@@ -201,10 +201,10 @@ export function VATPageContent() {
       {/* Content Area */}
       <section className="p-6 space-y-8">
         {loading ? (
-          <PageLoadingState icon={DollarSign} message={t('vat.loading', { defaultValue: 'Φόρτωση ΦΠΑ...' })} layout="contained" />
+          <PageLoadingState icon={DollarSign} message={t('vat.loading')} layout="contained" />
         ) : error ? (
           <PageErrorState
-            title={t('vat.loadError', { defaultValue: 'Σφάλμα φόρτωσης' })}
+            title={t('vat.loadError')}
             message={error}
             onRetry={refetch}
             retryLabel={t('common.retry')}

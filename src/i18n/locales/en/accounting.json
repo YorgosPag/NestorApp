@@ -91,6 +91,8 @@
   "vat": {
     "title": "VAT Management",
     "description": "Track VAT obligations and quarterly returns",
+    "loading": "Loading VAT...",
+    "loadError": "Loading error",
     "quarterCard": "Quarter {quarter}",
     "status": "Status",
     "outputVat": "Output VAT (Sales)",
