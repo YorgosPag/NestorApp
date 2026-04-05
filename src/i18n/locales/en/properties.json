@@ -615,5 +615,28 @@
     "success": "Saved!",
     "error": "Error",
     "noLinkedSpaces": "No linked spaces"
+  },
+  "mutationPreview": {
+    "confirm": "Continue",
+    "commercial": {
+      "title": "Confirm commercial status change",
+      "description": "This change affects the market disposition of the property and may cascade to downstream commercial workflows."
+    },
+    "identity": {
+      "title": "Confirm property identity change",
+      "description": "You are changing core property identity fields. Review the change carefully before saving."
+    },
+    "buildingUnlink": {
+      "title": "Confirm building unlink",
+      "description": "Removing the building link also detaches the property from its structural context. Continue only if this is intentional."
+    },
+    "buildingRelink": {
+      "title": "Confirm building/floor reassignment",
+      "description": "This property will be reassigned to a different structural location. Verify that linked floor and building data remain correct."
+    },
+    "linkedSpaces": {
+      "title": "Confirm linked space change",
+      "description": "You are removing or replacing linked parking/storage spaces. Confirm the allocation impact before continuing."
+    }
   }
 }

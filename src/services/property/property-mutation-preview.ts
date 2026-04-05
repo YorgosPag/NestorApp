@@ -27,27 +27,19 @@ export function buildPropertyFormPreview(
 
   if (commercialChanged) {
     return {
-      title: t('mutationPreview.commercial.title', {
-        defaultValue: 'Confirm commercial status change',
-      }),
-      description: t('mutationPreview.commercial.description', {
-        defaultValue: 'This change affects the market disposition of the property and may cascade to downstream commercial workflows.',
-      }),
+      title: t('mutationPreview.commercial.title'),
+      description: t('mutationPreview.commercial.description'),
       variant: 'warning',
-      confirmText: t('mutationPreview.confirm', { defaultValue: 'Continue' }),
+      confirmText: t('mutationPreview.confirm'),
     };
   }
 
   if (identityChanged) {
     return {
-      title: t('mutationPreview.identity.title', {
-        defaultValue: 'Confirm property identity change',
-      }),
-      description: t('mutationPreview.identity.description', {
-        defaultValue: 'You are changing core property identity fields. Review the change carefully before saving.',
-      }),
+      title: t('mutationPreview.identity.title'),
+      description: t('mutationPreview.identity.description'),
       variant: 'warning',
-      confirmText: t('mutationPreview.confirm', { defaultValue: 'Continue' }),
+      confirmText: t('mutationPreview.confirm'),
     };
   }
 
@@ -63,14 +55,10 @@ export function buildBuildingLinkPreview(
 ): PropertyMutationPreview | null {
   if (currentBuildingId && !nextBuildingId) {
     return {
-      title: t('mutationPreview.buildingUnlink.title', {
-        defaultValue: 'Confirm building unlink',
-      }),
-      description: t('mutationPreview.buildingUnlink.description', {
-        defaultValue: 'Removing the building link also detaches the property from its structural context. Continue only if this is intentional.',
-      }),
+      title: t('mutationPreview.buildingUnlink.title'),
+      description: t('mutationPreview.buildingUnlink.description'),
       variant: 'warning',
-      confirmText: t('mutationPreview.confirm', { defaultValue: 'Continue' }),
+      confirmText: t('mutationPreview.confirm'),
     };
   }
 
@@ -80,14 +68,10 @@ export function buildBuildingLinkPreview(
     (currentBuildingId !== nextBuildingId || currentFloorId !== nextFloorId)
   ) {
     return {
-      title: t('mutationPreview.buildingRelink.title', {
-        defaultValue: 'Confirm building/floor reassignment',
-      }),
-      description: t('mutationPreview.buildingRelink.description', {
-        defaultValue: 'This property will be reassigned to a different structural location. Verify that linked floor and building data remain correct.',
-      }),
+      title: t('mutationPreview.buildingRelink.title'),
+      description: t('mutationPreview.buildingRelink.description'),
       variant: 'warning',
-      confirmText: t('mutationPreview.confirm', { defaultValue: 'Continue' }),
+      confirmText: t('mutationPreview.confirm'),
     };
   }
 
@@ -105,14 +89,10 @@ export function buildLinkedSpacesPreview(
 
   if (removedCount > 0) {
     return {
-      title: t('mutationPreview.linkedSpaces.title', {
-        defaultValue: 'Confirm linked space change',
-      }),
-      description: t('mutationPreview.linkedSpaces.description', {
-        defaultValue: 'You are removing or replacing linked parking/storage spaces. Confirm the allocation impact before continuing.',
-      }),
+      title: t('mutationPreview.linkedSpaces.title'),
+      description: t('mutationPreview.linkedSpaces.description'),
       variant: 'warning',
-      confirmText: t('mutationPreview.confirm', { defaultValue: 'Continue' }),
+      confirmText: t('mutationPreview.confirm'),
     };
   }
 
