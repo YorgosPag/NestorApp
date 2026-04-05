@@ -35,6 +35,7 @@
       "typePlaceholder": "Επιλέξτε τύπο...",
       "commercialStatus": "Εμπορική Κατάσταση",
       "commercialStatusPlaceholder": "Επιλέξτε κατάσταση...",
+      "propertyStatus": "Λειτουργική Κατάσταση",
       "description": "Περιγραφή",
       "descriptionPlaceholder": "Προσθέστε περιγραφή για τη μονάδα..."
     },

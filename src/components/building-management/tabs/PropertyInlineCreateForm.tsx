@@ -169,7 +169,7 @@ export function PropertyInlineCreateForm({
       <fieldset className="grid grid-cols-6 gap-2">
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {tUnits('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })} *
+            {tUnits('fields.identity.name')} *
           </span>
           <Input
             value={name}
@@ -187,7 +187,7 @@ export function PropertyInlineCreateForm({
           buildingId={buildingId}
           floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
           propertyType={type || undefined}
-          label={tUnits('fields.identity.code', { defaultValue: 'Κωδικός Μονάδας' })}
+          label={tUnits('fields.identity.code')}
           placeholderFallback="A-DI-1.01"
           infoExample={tUnits('inlineCreate.codeInfoExample')}
           disabled={creating}
@@ -196,7 +196,7 @@ export function PropertyInlineCreateForm({
         />
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {tUnits('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
+            {tUnits('fields.identity.type')}
           </span>
           <Select value={type} onValueChange={(v) => setType(v as PropertyType)} disabled={creating}>
             <SelectTrigger className="h-9">
@@ -211,7 +211,7 @@ export function PropertyInlineCreateForm({
         </label>
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {tUnits('fields.identity.commercialStatus', { defaultValue: 'Εμπορική Κατάσταση' })}
+            {tUnits('fields.identity.commercialStatus')}
           </span>
           <Select value={commercialStatus} onValueChange={(v) => setCommercialStatus(v as CommercialStatus)} disabled={creating}>
             <SelectTrigger className="h-9">
@@ -240,7 +240,7 @@ export function PropertyInlineCreateForm({
         </label>
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {tUnits('fields.identity.propertyStatus', { defaultValue: 'Λειτουργική Κατάσταση' })}
+            {tUnits('fields.identity.propertyStatus')}
           </span>
           <Select value={operationalStatus} onValueChange={(v) => setOperationalStatus(v as OperationalStatus)} disabled={creating}>
             <SelectTrigger className="h-9">

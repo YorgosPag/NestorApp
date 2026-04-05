@@ -35,6 +35,7 @@
       "typePlaceholder": "Select type...",
       "commercialStatus": "Commercial Status",
       "commercialStatusPlaceholder": "Select status...",
+      "propertyStatus": "Operational Status",
       "description": "Description",
       "descriptionPlaceholder": "Add a description for this unit..."
     },
