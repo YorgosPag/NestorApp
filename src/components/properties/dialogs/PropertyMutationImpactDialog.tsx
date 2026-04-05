@@ -37,12 +37,12 @@ export function PropertyMutationImpactDialog({
   const Icon = isBlocked ? ShieldAlert : TriangleAlert;
 
   const message = preview?.messageKey === 'mutationImpact.block'
-    ? t('impactGuard.messages.block', { defaultValue: 'This change is blocked because dependent property workflows would be put at risk.' })
+    ? t('impactGuard.messages.block')
     : preview?.messageKey === 'mutationImpact.warn'
-      ? t('impactGuard.messages.warn', { defaultValue: 'This change affects downstream property workflows. Review the impact before continuing.' })
+      ? t('impactGuard.messages.warn')
       : preview?.messageKey === 'mutationImpact.unavailable'
-        ? t('impactGuard.messages.unavailable', { defaultValue: 'The impact preview could not complete reliably. Saving was blocked to protect linked records.' })
-        : t('impactGuard.messages.allow', { defaultValue: 'No downstream impact was detected.' });
+        ? t('impactGuard.messages.unavailable')
+        : t('impactGuard.messages.allow');
 
   const getFieldLabel = (field: string): string => t(`impactGuard.fields.${field}`, { defaultValue: field });
   const getKindLabel = (kind: string): string => t(`impactGuard.kinds.${kind}`, { defaultValue: kind });
@@ -57,8 +57,8 @@ export function PropertyMutationImpactDialog({
           <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-amber-600 dark:text-amber-400')}>
             <Icon className={iconSizes.md} />
             {mode === 'block'
-              ? t('impactGuard.titles.block', { defaultValue: 'Property change blocked' })
-              : t('impactGuard.titles.warn', { defaultValue: 'Review property impact' })}
+              ? t('impactGuard.titles.block')
+              : t('impactGuard.titles.warn')}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <section className="space-y-4">
@@ -67,7 +67,7 @@ export function PropertyMutationImpactDialog({
               {preview && preview.changes.length > 0 && (
                 <article className="space-y-2">
                   <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground">
-                    {t('impactGuard.sections.changes', { defaultValue: 'Changes' })}
+                    {t('impactGuard.sections.changes')}
                   </h4>
                   <ul className="space-y-2">
                     {preview.changes.map((change) => (
@@ -77,7 +77,7 @@ export function PropertyMutationImpactDialog({
                           <span className="text-xs text-muted-foreground">{getKindLabel(change.kind)}</span>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {(change.previousValue ?? t('impactGuard.emptyValue', { defaultValue: 'empty' }))} {'->'} {(change.nextValue ?? t('impactGuard.emptyValue', { defaultValue: 'empty' }))}
+                          {(change.previousValue ?? t('impactGuard.emptyValue'))} {'->'} {(change.nextValue ?? t('impactGuard.emptyValue'))}
                         </p>
                       </li>
                     ))}
@@ -88,7 +88,7 @@ export function PropertyMutationImpactDialog({
               {preview && preview.dependencies.length > 0 && (
                 <article className="space-y-2">
                   <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground">
-                    {t('impactGuard.sections.dependencies', { defaultValue: 'Dependencies' })}
+                    {t('impactGuard.sections.dependencies')}
                   </h4>
                   <ul className="space-y-2">
                     {preview.dependencies.map((dependency) => (
@@ -108,13 +108,13 @@ export function PropertyMutationImpactDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t('impactGuard.actions.cancel', { defaultValue: 'Cancel' })}</AlertDialogCancel>
+          <AlertDialogCancel>{t('impactGuard.actions.cancel')}</AlertDialogCancel>
           {preview?.mode === 'warn' ? (
             <AlertDialogAction onClick={onConfirm} className="bg-amber-600 text-white hover:bg-amber-700">
-              {t('impactGuard.actions.confirm', { defaultValue: 'Continue' })}
+              {t('impactGuard.actions.confirm')}
             </AlertDialogAction>
           ) : (
-            <AlertDialogAction>{t('impactGuard.actions.understood', { defaultValue: 'Understood' })}</AlertDialogAction>
+            <AlertDialogAction>{t('impactGuard.actions.understood')}</AlertDialogAction>
           )}
         </AlertDialogFooter>
       </AlertDialogContent>
