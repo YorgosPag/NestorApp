@@ -541,5 +541,45 @@
     "fileBatchTrash": "Batch move file to trash",
     "fileArchive": "File archive",
     "fileRestore": "Restore file from trash"
+  },
+  "fileMutationPreview": {
+    "lastFloorplan": {
+      "title": "Confirm last floorplan removal",
+      "description": "This will remove the last floorplan linked to the property. Floorplan coverage and downstream floorplan workflows will be affected."
+    },
+    "lastDocument": {
+      "title": "Confirm last document removal",
+      "description": "This will remove the last document linked to the property. Documentation completeness and downstream review workflows will be affected."
+    },
+    "lastPhoto": {
+      "title": "Confirm last photo removal",
+      "description": "This will remove the last photo linked to the property. Media coverage for the property will drop to zero."
+    },
+    "lastVideo": {
+      "title": "Confirm last video removal",
+      "description": "This will remove the last video linked to the property. Confirm that this media removal is intentional."
+    },
+    "sensitive": {
+      "title": "Confirm sensitive file removal",
+      "description": "The file \"{{displayName}}\" is classified as sensitive or belongs to a regulated domain. Removing it may affect legal, accounting, or compliance workflows."
+    },
+    "batchLast": {
+      "description": "This batch action will remove all remaining \"{{category}}\" files linked to the property."
+    },
+    "batchSensitive": {
+      "title": "Confirm sensitive batch removal",
+      "description": "This batch action includes {{count}} sensitive or regulated files. Confirm that this removal is intentional."
+    },
+    "unlink": {
+      "title": "Confirm file unlink",
+      "description": "Unlinking \"{{displayName}}\" removes it from this property without deleting the underlying file. Confirm that the property should lose access to it."
+    },
+    "removeFloorplan": "Remove floorplan",
+    "removeDocument": "Remove document",
+    "removePhoto": "Remove photo",
+    "removeVideo": "Remove video",
+    "removeFile": "Remove file",
+    "removeFiles": "Remove files",
+    "unlinkFile": "Unlink file"
   }
 }

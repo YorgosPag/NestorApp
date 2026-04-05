@@ -9,7 +9,7 @@ export interface PropertyFileMutationPreview {
 }
 
 interface PropertyFileMutationPreviewTranslator {
-  (key: string, options?: { defaultValue?: string }): string;
+  (key: string, options?: Record<string, unknown>): string;
 }
 
 interface BuildPropertyFileDeletePreviewInput {
@@ -46,39 +46,31 @@ function buildLastFilePreview(
   switch (category) {
     case 'floorplans':
       return {
-        title: t('fileMutationPreview.lastFloorplan.title', { defaultValue: 'Confirm last floorplan removal' }),
-        description: t('fileMutationPreview.lastFloorplan.description', {
-          defaultValue: 'This will remove the last floorplan linked to the property. Floorplan coverage and downstream floorplan workflows will be affected.',
-        }),
+        title: t('fileMutationPreview.lastFloorplan.title'),
+        description: t('fileMutationPreview.lastFloorplan.description'),
         variant: 'destructive',
-        confirmText: t('fileMutationPreview.confirmDelete', { defaultValue: 'Remove floorplan' }),
+        confirmText: t('fileMutationPreview.removeFloorplan'),
       };
     case 'documents':
       return {
-        title: t('fileMutationPreview.lastDocument.title', { defaultValue: 'Confirm last document removal' }),
-        description: t('fileMutationPreview.lastDocument.description', {
-          defaultValue: 'This will remove the last document linked to the property. Documentation completeness and downstream review workflows will be affected.',
-        }),
+        title: t('fileMutationPreview.lastDocument.title'),
+        description: t('fileMutationPreview.lastDocument.description'),
         variant: 'destructive',
-        confirmText: t('fileMutationPreview.confirmDelete', { defaultValue: 'Remove document' }),
+        confirmText: t('fileMutationPreview.removeDocument'),
       };
     case 'photos':
       return {
-        title: t('fileMutationPreview.lastPhoto.title', { defaultValue: 'Confirm last photo removal' }),
-        description: t('fileMutationPreview.lastPhoto.description', {
-          defaultValue: 'This will remove the last photo linked to the property. Media coverage for the property will drop to zero.',
-        }),
+        title: t('fileMutationPreview.lastPhoto.title'),
+        description: t('fileMutationPreview.lastPhoto.description'),
         variant: 'warning',
-        confirmText: t('fileMutationPreview.confirmDelete', { defaultValue: 'Remove photo' }),
+        confirmText: t('fileMutationPreview.removePhoto'),
       };
     case 'videos':
       return {
-        title: t('fileMutationPreview.lastVideo.title', { defaultValue: 'Confirm last video removal' }),
-        description: t('fileMutationPreview.lastVideo.description', {
-          defaultValue: 'This will remove the last video linked to the property. Confirm that this media removal is intentional.',
-        }),
+        title: t('fileMutationPreview.lastVideo.title'),
+        description: t('fileMutationPreview.lastVideo.description'),
         variant: 'warning',
-        confirmText: t('fileMutationPreview.confirmDelete', { defaultValue: 'Remove video' }),
+        confirmText: t('fileMutationPreview.removeVideo'),
       };
     default:
       return null;
@@ -90,12 +82,10 @@ function buildSensitiveFilePreview(
   t: PropertyFileMutationPreviewTranslator,
 ): PropertyFileMutationPreview {
   return {
-    title: t('fileMutationPreview.sensitive.title', { defaultValue: 'Confirm sensitive file removal' }),
-    description: t('fileMutationPreview.sensitive.description', {
-      defaultValue: `The file "${file.displayName}" is classified as sensitive or belongs to a regulated domain. Removing it may affect legal, accounting, or compliance workflows.`,
-    }),
+    title: t('fileMutationPreview.sensitive.title'),
+    description: t('fileMutationPreview.sensitive.description', { displayName: file.displayName }),
     variant: 'destructive',
-    confirmText: t('fileMutationPreview.confirmDelete', { defaultValue: 'Remove file' }),
+    confirmText: t('fileMutationPreview.removeFile'),
   };
 }
 
@@ -131,10 +121,8 @@ export function buildPropertyFileBatchDeletePreview({
     if (lastFilePreview) {
       return {
         ...lastFilePreview,
-        description: t('fileMutationPreview.batchLast.description', {
-          defaultValue: `This batch action will remove all remaining ${category} files linked to the property.`,
-        }),
-        confirmText: t('fileMutationPreview.confirmBatchDelete', { defaultValue: 'Remove files' }),
+        description: t('fileMutationPreview.batchLast.description', { category }),
+        confirmText: t('fileMutationPreview.removeFiles'),
       };
     }
   }
@@ -142,12 +130,10 @@ export function buildPropertyFileBatchDeletePreview({
   const sensitiveCount = filesToDelete.filter(isSensitiveFile).length;
   if (sensitiveCount > 0) {
     return {
-      title: t('fileMutationPreview.batchSensitive.title', { defaultValue: 'Confirm sensitive batch removal' }),
-      description: t('fileMutationPreview.batchSensitive.description', {
-        defaultValue: `This batch action includes ${sensitiveCount} sensitive or regulated files. Confirm that this removal is intentional.`,
-      }),
+      title: t('fileMutationPreview.batchSensitive.title'),
+      description: t('fileMutationPreview.batchSensitive.description', { count: sensitiveCount }),
       variant: 'destructive',
-      confirmText: t('fileMutationPreview.confirmBatchDelete', { defaultValue: 'Remove files' }),
+      confirmText: t('fileMutationPreview.removeFiles'),
     };
   }
 
@@ -161,12 +147,10 @@ export function buildPropertyFileUnlinkPreview({
 }: BuildPropertyFileUnlinkPreviewInput): PropertyFileMutationPreview | null {
   if (category === 'floorplans' || category === 'documents' || isSensitiveFile(file)) {
     return {
-      title: t('fileMutationPreview.unlink.title', { defaultValue: 'Confirm file unlink' }),
-      description: t('fileMutationPreview.unlink.description', {
-        defaultValue: `Unlinking "${file.displayName}" removes it from this property without deleting the underlying file. Confirm that the property should lose access to it.`,
-      }),
+      title: t('fileMutationPreview.unlink.title'),
+      description: t('fileMutationPreview.unlink.description', { displayName: file.displayName }),
       variant: 'warning',
-      confirmText: t('fileMutationPreview.confirmUnlink', { defaultValue: 'Unlink file' }),
+      confirmText: t('fileMutationPreview.unlinkFile'),
     };
   }
 
