@@ -1,14 +1,13 @@
 {
   "_meta": {
     "description": "i18n hardcoded UI strings baseline (JSX text, attrs, errors, toasts)",
-    "generated": "2026-04-05T23:02:16Z",
-    "totalViolations": 222,
-    "totalFiles": 84,
+    "generated": "2026-04-05T23:07:50Z",
+    "totalViolations": 214,
+    "totalFiles": 83,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "patterns": ["JSX text", "attributes", "throw/alert/confirm", "toast calls"]
   },
   "files": {
-    "src/subapps/dxf-viewer/debug/TestResultsModal.tsx": 8,
     "src/services/measurements/boq-service.ts": 8,
     "src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx": 7,
     "src/services/payment-plan-installments.service.ts": 7,

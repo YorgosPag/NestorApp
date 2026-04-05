@@ -77,5 +77,15 @@
     "precisionModeActive": "PRECISION MODE ACTIVE - 4 decimal places",
     "resetDefaults": "Reset Defaults",
     "clearReload": "Clear & Reload"
+  },
+  "testResults": {
+    "title": "Unified Test Execution System - Results",
+    "passed": "Passed",
+    "failed": "Failed",
+    "warnings": "Warnings",
+    "successRate": "Success Rate",
+    "summary": "Summary:",
+    "details": "Details:",
+    "timestamp": "Timestamp:"
   }
 }

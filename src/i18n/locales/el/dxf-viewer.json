@@ -77,5 +77,15 @@
     "precisionModeActive": "PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικά ψηφία",
     "resetDefaults": "Επαναφορά Προκαθορισμένων",
     "clearReload": "Καθαρισμός & Επαναφόρτωση"
+  },
+  "testResults": {
+    "title": "Ενιαίο Σύστημα Εκτέλεσης Τεστ - Αποτελέσματα",
+    "passed": "Επιτυχία",
+    "failed": "Αποτυχία",
+    "warnings": "Προειδοποιήσεις",
+    "successRate": "Ποσοστό Επιτυχίας",
+    "summary": "Περίληψη:",
+    "details": "Λεπτομέρειες:",
+    "timestamp": "Χρονοσήμανση:"
   }
 }

@@ -16,6 +16,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // ✅ ENTERPRISE: Centralized copy-to-clipboard hook
@@ -49,6 +50,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder, getMultiDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const { t } = useTranslationLazy('dxf-viewer');
   const { copy, copied } = useCopyToClipboard(PANEL_LAYOUT.TIMING.COPY_FEEDBACK_RESET);
   const [activeTab, setActiveTab] = React.useState<'summary' | 'details' | 'raw'>('summary');
 
@@ -149,7 +151,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
             <span className={PANEL_LAYOUT.TYPOGRAPHY['2XL']}>🧪</span>
             <div>
-              <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.WHITE}`}>Ενιαίο Σύστημα Εκτέλεσης Τεστ - Αποτελέσματα</h2>
+              <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.WHITE}`}>{t('testResults.title')}</h2>
               <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
                 {new Date(report.timestamp).toLocaleString()} • {report.totalDuration.toFixed(0)}ms σύνολο
               </p>
@@ -168,19 +170,19 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           <div className={`flex ${PANEL_LAYOUT.GAP.XL}`}>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <span className={`${colors.text.success} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{report.passed}</span>
-              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επιτυχία</span>
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('testResults.passed')}</span>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <span className={`${colors.text.danger} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{report.failed}</span>
-              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Αποτυχία</span>
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('testResults.failed')}</span>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <span className={`${colors.text.warning} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{report.warnings}</span>
-              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Προειδοποιήσεις</span>
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('testResults.warnings')}</span>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <span className={`${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{passRate}%</span>
-              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Ποσοστό Επιτυχίας</span>
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('testResults.successRate')}</span>
             </div>
           </div>
 
@@ -383,19 +385,19 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
               <div className={`${PANEL_LAYOUT.SPACING.COMFORTABLE} ${PANEL_LAYOUT.PADDING.TOP_SM} ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
                 <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
                   <div>
-                    <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.disabled}`}>Περίληψη:</span>
+                    <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.disabled}`}>{t('testResults.summary')}</span>
                     <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{test.summary}</p>
                   </div>
                   {test.details && (
                     <div>
-                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.disabled}`}>Λεπτομέρειες:</span>
+                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.disabled}`}>{t('testResults.details')}</span>
                       <pre className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.OVERFLOW.X_AUTO}`}>
                         {JSON.stringify(test.details, null, 2)}
                       </pre>
                     </div>
                   )}
                   <div>
-                    <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.disabled}`}>Χρονοσήμανση:</span>
+                    <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.disabled}`}>{t('testResults.timestamp')}</span>
                     <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{new Date(test.timestamp).toLocaleString()}</p>
                   </div>
                 </div>
