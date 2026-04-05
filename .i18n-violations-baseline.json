@@ -1,16 +1,12 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-05T21:24:49Z",
-    "totalViolations": 64,
-    "totalFiles": 46,
+    "generated": "2026-04-05T21:28:20Z",
+    "totalViolations": 56,
+    "totalFiles": 42,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
-    "src/subapps/accounting/components/documents/DocumentsPageContent.tsx": 2,
-    "src/subapps/accounting/components/bank/BankPageContent.tsx": 2,
-    "src/subapps/accounting/components/assets/AssetsPageContent.tsx": 2,
-    "src/hooks/usePropertyViewer.ts": 2,
     "src/features/read-only-viewer/components/ReadOnlyMediaSubTabs.tsx": 2,
     "src/features/properties-toolbar/hooks/useBulkAssign.ts": 2,
     "src/components/ui/enterprise-contact-dropdown.tsx": 2,
