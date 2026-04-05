@@ -299,6 +299,7 @@
 | **ADR-279** | Google-Grade i18n Governance & Localization Operating Model | ✅ ACTIVE | 2026-04-03 | Infrastructure / Data & State | [📄](./adrs/ADR-279-google-grade-i18n-governance.md) |
 | **ADR-280** | i18n Namespace Splitting Implementation Plan | ✅ APPROVED | 2026-04-03 | Infrastructure / i18n | [📄](./adrs/ADR-280-i18n-namespace-splitting-plan.md) |
 | **ADR-281** | SSOT Soft-Delete System — Google-Level Enterprise Trash Lifecycle | ✅ IMPLEMENTED (Batches 1-5) | 2026-04-03 | Backend Systems / Data Safety | [📄](./adrs/ADR-281-ssot-soft-delete-system.md) |
+| **ADR-286** | DXF Level Creation Centralization (SSOT) | ✅ IMPLEMENTED | 2026-04-05 | Entity Systems / DXF Viewer | [📄](./adrs/ADR-286-dxf-level-creation-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

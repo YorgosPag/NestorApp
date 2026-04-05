@@ -1,19 +1,17 @@
 'use client';
 import { useCallback } from 'react';
 import {
-  setDoc,
   deleteDoc,
   doc,
   writeBatch,
-  serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '../../../../../lib/firebase';
 import { getErrorMessage } from '@/lib/error-utils';
-import { withStorageErrorHandling } from '../../../utils/storage-utils';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
-import { useAuth } from '@/auth/hooks/useAuth';
 import { LevelOperations, FloorplanOperations } from '../utils';
+import { createDxfLevelWithPolicy } from '@/services/dxf-level-mutation-gateway';
+import type { DxfLevelCreateResponse } from '@/app/api/dxf-levels/dxf-levels.types';
 import type { Level, FloorplanDoc, LevelSystemSettings } from '../config';
 
 type SceneManager = ReturnType<typeof useAutoSaveSceneManager>;
@@ -71,9 +69,8 @@ export function useLevelOperations({
   handleError,
   onLevelChange,
 }: UseLevelOperationsParams): UseLevelOperationsResult {
-  // 🔒 TENANT SCOPING (Sentry NESTOR-APP-3): write companyId + createdBy on new
-  // level docs so Firestore rules allow cross-user reads of their items subcollection.
-  const { user } = useAuth();
+  // 🔒 TENANT SCOPING (ADR-286): companyId + createdBy are set server-side by
+  // createEntity('dxfLevel', …) — no client-side auth plumbing required.
 
   const addLevel = useCallback(
     async (name: string, setAsDefault = false, floorId?: string): Promise<string | null> => {
@@ -87,24 +84,23 @@ export function useLevelOperations({
         }
 
         if (enableFirestore) {
-          const newLevelData = {
-            name,
-            order: levels.length,
-            isDefault: setAsDefault,
-            visible: true,
-            createdAt: serverTimestamp(),
-            companyId: user?.companyId ?? null,
-            createdBy: user?.uid ?? null,
-            ...(floorId ? { floorId } : {}),
-          };
+          // 🏢 ENTERPRISE (ADR-286): Route creation through centralized API
+          // → /api/dxf-levels → createEntity('dxfLevel', …) → audit + enterprise ID + tenancy
+          const response = await createDxfLevelWithPolicy<DxfLevelCreateResponse>({
+            payload: {
+              name,
+              order: levels.length,
+              isDefault: setAsDefault,
+              visible: true,
+              ...(floorId ? { floorId } : {}),
+            },
+          });
 
-          const { generateLevelId } = await import('@/services/enterprise-id.service');
-          const enterpriseId = generateLevelId();
-          const docRef = doc(db, firestoreCollection, enterpriseId);
-          await withStorageErrorHandling(
-            () => setDoc(docRef, newLevelData),
-            'Failed to add level to Firestore'
-          );
+          const enterpriseId = response?.levelId;
+          if (!enterpriseId) {
+            handleError('Failed to add level to Firestore');
+            return null;
+          }
 
           if (setAsDefault || settings.autoSelectNewLevel) {
             setCurrentLevelId(enterpriseId);
@@ -133,7 +129,7 @@ export function useLevelOperations({
         setIsLoading(false);
       }
     },
-    [levels, enableFirestore, firestoreCollection, settings.autoSelectNewLevel, handleError, onLevelChange, setIsLoading, setLevels, setCurrentLevelId, user]
+    [levels, enableFirestore, settings.autoSelectNewLevel, handleError, onLevelChange, setIsLoading, setLevels, setCurrentLevelId]
   );
 
   const removeLevel = useCallback(

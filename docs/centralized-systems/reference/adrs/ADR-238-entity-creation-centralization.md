@@ -417,6 +417,7 @@ createEntity(entityType, params):
 | 2026-03-17 | ADR Created — audit complete, architecture designed, 9 bugs documented | Γιώργος Παγώνης + Claude Code |
 | 2026-03-17 | Phase 1 IMPLEMENTED — types, service, parking canary migration. No utils file (reused existing sanitize). Single parent read optimization. | Γιώργος Παγώνης + Claude Code |
 | 2026-03-17 | Phase 2 COMPLETE — All 4 remaining endpoints migrated (storages, buildings, floors, units). 5 bugs auto-fixed. Unit codeField corrected to 'code'. Frontend FloorsTabContent adapted to canonical response format. Net -300 lines. | Γιώργος Παγώνης + Claude Code |
+| 2026-04-05 | **ADR-286** extension — Added `dxfLevel` entity type + new `'tenant-scoped'` hierarchy (standalone entities using auth.companyId directly). Registry now covers 7 entity types. Admin `/api/admin/seed-floors` migrated to `createEntity('floor', …)`. | Γιώργος Παγώνης + Claude Code |
 
 ---
 

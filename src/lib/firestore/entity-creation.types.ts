@@ -21,10 +21,21 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // =============================================================================
 
 /** Entity types handled by the centralized creation service */
-export type ServerEntityType = 'building' | 'floor' | 'unit' | 'property' | 'storage' | 'parking';
+export type ServerEntityType =
+  | 'building'
+  | 'floor'
+  | 'unit'
+  | 'property'
+  | 'storage'
+  | 'parking'
+  | 'dxfLevel';
 
-/** Determines how companyId is resolved */
-export type EntityHierarchy = 'project-child' | 'building-child';
+/**
+ * Determines how companyId is resolved.
+ * - 'project-child' / 'building-child': companyId inherited from parent document
+ * - 'tenant-scoped': companyId taken directly from auth context (no parent fetch)
+ */
+export type EntityHierarchy = 'project-child' | 'building-child' | 'tenant-scoped';
 
 /** Function names from enterprise-id.service (used for dynamic import) */
 export type EntityIdGeneratorName =
@@ -32,7 +43,8 @@ export type EntityIdGeneratorName =
   | 'generateFloorId'
   | 'generatePropertyId'
   | 'generateStorageId'
-  | 'generateParkingId';
+  | 'generateParkingId'
+  | 'generateLevelId';
 
 /** Entity types that support ADR-233 code generation */
 export type EntityCodeType = 'property' | 'parking' | 'storage';
@@ -47,8 +59,8 @@ export interface EntityRegistryEntry {
   readonly collection: string;
   /** How this entity relates to its parent (project vs building) */
   readonly hierarchy: EntityHierarchy;
-  /** Field name that holds the parent reference */
-  readonly parentField: 'projectId' | 'buildingId';
+  /** Field name that holds the parent reference (null for tenant-scoped entities) */
+  readonly parentField: 'projectId' | 'buildingId' | 'floorId' | null;
   /** Enterprise ID generator function name */
   readonly idGenerator: EntityIdGeneratorName;
   /** ADR-233 entity code type (null = no auto-code) */
@@ -125,6 +137,16 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeType: 'parking',
     codeField: 'code',
     tenantCheck: true,
+    auditTargetType: 'api',
+  },
+  dxfLevel: {
+    collection: COLLECTIONS.DXF_VIEWER_LEVELS,
+    hierarchy: 'tenant-scoped',
+    parentField: 'floorId',
+    idGenerator: 'generateLevelId',
+    codeType: null,
+    codeField: null,
+    tenantCheck: false,
     auditTargetType: 'api',
   },
 } as const;

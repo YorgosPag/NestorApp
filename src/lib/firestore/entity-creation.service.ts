@@ -76,15 +76,33 @@ async function fetchParentData(
     };
   }
 
-  // project-child
-  const doc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(parentId).get();
-  if (!doc.exists) {
-    throw new ApiError(404, 'Project not found');
+  if (entry.hierarchy === 'project-child') {
+    const doc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(parentId).get();
+    if (!doc.exists) {
+      throw new ApiError(404, 'Project not found');
+    }
+    const data = doc.data() as Record<string, unknown>;
+    return {
+      companyId: (data.companyId as string) || '',
+    };
   }
-  const data = doc.data() as Record<string, unknown>;
-  return {
-    companyId: (data.companyId as string) || '',
-  };
+
+  // tenant-scoped: optional parent reference (e.g. dxfLevel.floorId).
+  // We do not resolve companyId from the parent — it comes from auth ctx.
+  // We only verify the referenced doc exists (if provided) to prevent dangling FKs.
+  if (entry.parentField === 'floorId') {
+    const doc = await adminDb.collection(COLLECTIONS.FLOORS).doc(parentId).get();
+    if (!doc.exists) {
+      throw new ApiError(404, 'Floor not found');
+    }
+    const data = doc.data() as Record<string, unknown>;
+    return {
+      companyId: (data.companyId as string) || '',
+    };
+  }
+
+  // Unknown tenant-scoped parent — no validation, no data extraction.
+  return { companyId: '' };
 }
 
 // =============================================================================
@@ -239,6 +257,7 @@ export async function createEntity(
   const entry = ENTITY_REGISTRY[entityType];
 
   // --- Step 1: Fetch parent data (single read) ---
+  // For tenant-scoped entities, companyId comes from auth context, not from parent.
   let parentData: ParentData | null = null;
   if (parentId) {
     parentData = await fetchParentData(entry, parentId);
@@ -250,7 +269,11 @@ export async function createEntity(
   }
 
   // --- Step 3: Resolve companyId ---
-  const companyId = parentData?.companyId || auth.companyId;
+  // Tenant-scoped entities always derive companyId from auth (ignore parent companyId).
+  const companyId =
+    entry.hierarchy === 'tenant-scoped'
+      ? auth.companyId
+      : parentData?.companyId || auth.companyId;
 
   // --- Step 4: Common fields ---
   const commonFields = buildCommonFields(auth, companyId);

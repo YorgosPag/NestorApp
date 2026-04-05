@@ -599,6 +599,11 @@ export const API_ROUTES = {
     BY_ID: (id: string) => `/api/floors/${id}` as const,
   },
 
+  // ── DXF Levels (ADR-286) ──────────────────────────────────────────────
+  DXF_LEVELS: {
+    LIST: '/api/dxf-levels',
+  },
+
   // ── Properties ────────────────────────────────────────────────────────
   PROPERTIES: {
     LIST: '/api/properties',
