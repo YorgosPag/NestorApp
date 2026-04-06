@@ -13,6 +13,7 @@ import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import type { RealtimeBuilding, SubscriptionStatus } from '../types';
 import { REALTIME_EVENTS } from '../types';
+import { useAuth } from '@/auth/contexts/AuthContext';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useRealtimeBuildings');
@@ -66,6 +67,11 @@ interface UseRealtimeBuildingsReturn {
  * ```
  */
 export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn {
+  // 🔐 ENTERPRISE: Wait for auth before subscribing — prevents silent
+  // subscription failure when requireAuthContext() throws on cold start.
+  const { user } = useAuth();
+  const authReady = !!user;
+
   // State
   const [allBuildings, setAllBuildings] = useState<RealtimeBuilding[]>([]);
   const [buildingsByProject, setBuildingsByProject] = useState<BuildingsByProject>({});
@@ -128,8 +134,10 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
   // ==========================================================================
 
   useEffect(() => {
-    // 🔐 ENTERPRISE: Skip subscription when disabled (no auth yet)
-    if (!enabled) {
+    // 🔐 ENTERPRISE: Skip subscription when disabled OR auth not ready.
+    // Without authReady guard, requireAuthContext() throws silently inside
+    // firestoreQueryService.subscribe() and the onSnapshot is never set up.
+    if (!enabled || !authReady) {
       setStatus('idle');
       setLoading(false);
       return;
@@ -179,7 +187,7 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
       logger.info('Cleaning up subscription');
       unsubscribe();
     };
-  }, [enabled, refreshTriggerRef.current, groupBuildingsByProject]);
+  }, [enabled, authReady, refreshTriggerRef.current, groupBuildingsByProject]);
 
   // ==========================================================================
   // LISTEN FOR EXTERNAL EVENTS
