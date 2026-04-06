@@ -14,6 +14,7 @@ import { PANEL_TOKENS, PANEL_LAYOUT } from '../config/panel-tokens';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { ENHANCED_STATUS_LABELS as REGION_STATUS_LABELS } from '../../../constants/property-statuses-enterprise';
 import { groupByKey } from '@/utils/collection-utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface OverlayPanelProps {
   isDrawingMode: boolean;
@@ -36,6 +37,7 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
     selectRegion,
     clearSelection 
   } = useOverlayManager();
+  const { t } = useTranslation('dxf-viewer-panels');
 
   const regionsByStatus = groupByKey(visibleRegions, region => region.status) as Record<RegionStatus, typeof visibleRegions>;
 
@@ -58,18 +60,18 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
         <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
           <Checkbox defaultChecked />
           <Eye className={iconSizes.sm} />
-          <span className={semanticColors.text.tertiary}>Εμφάνιση Χερουλιών</span>
+          <span className={semanticColors.text.tertiary}>{t('overlayPanel.showHandles')}</span>
         </label>
         <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
           <Checkbox defaultChecked />
           <Palette className={iconSizes.sm} />
-          <span className={semanticColors.text.tertiary}>Εμφάνιση Ετικετών</span>
+          <span className={semanticColors.text.tertiary}>{t('overlayPanel.showLabels')}</span>
         </label>
       </div>
 
       {/* Status Filter */}
       <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-        <h4 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${semanticColors.text.muted} uppercase`}>Φίλτρο Κατάστασης</h4>
+        <h4 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${semanticColors.text.muted} uppercase`}>{t('overlayPanel.statusFilter')}</h4>
         {Object.entries(STATUS_COLORS_MAPPING).map(([status, statusColors]) => {
           const regions = regionsByStatus[status as RegionStatus] || [];
 

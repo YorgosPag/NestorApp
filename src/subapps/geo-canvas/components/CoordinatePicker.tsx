@@ -11,6 +11,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Square, Clipboard, Globe, ClipboardList, MapPin, RefreshCw } from 'lucide-react';
 // 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
 import { createSmartActionGroup } from '@/core/actions/SmartActionFactory';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // COORDINATE PICKER COMPONENT TYPES
@@ -38,6 +39,7 @@ export function CoordinatePicker({
   onCancel,
   className = ''
 }: CoordinatePickerProps) {
+  const { t } = useTranslation('geo-canvas');
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
   const colors = useSemanticColors();
@@ -481,9 +483,9 @@ export function CoordinatePicker({
         </h4>
         <ol className={`text-sm ${colors.text.info} space-y-1`}>
           <li>1. Enter DXF coordinates (X, Y, optional Z)</li>
-          <li>2. Click on map για geographic coordinates</li>
-          <li>3. Set accuracy και optional description</li>
-          <li>4. Click "Add Control Point" για save</li>
+          <li>{t('coordinatePicker.instructions.step2')}</li>
+          <li>{t('coordinatePicker.instructions.step3')}</li>
+          <li>{t('coordinatePicker.instructions.step4')}</li>
         </ol>
       </div>
     </div>

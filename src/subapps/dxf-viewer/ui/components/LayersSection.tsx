@@ -22,6 +22,7 @@ import { useColorGroups } from './layers/hooks/useColorGroups';
 import { useSearchFilter } from './layers/hooks/useSearchFilter';
 import { useLayersCallbacks } from './layers/hooks/useLayersCallbacks';
 import { useKeyboardNavigation } from './layers/hooks/useKeyboardNavigation';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ✅ ENTERPRISE: Inline type definitions (matching LevelPanel.tsx)
 interface LayersSectionProps {
@@ -76,6 +77,7 @@ export function LayersSection({
   const effectiveOnExpandChange = onExpandChange ?? noopExpandChange;
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-panels');
 
   // Use custom hooks for state management
   const state = useLayersState(scene);
@@ -218,7 +220,7 @@ export function LayersSection({
       {/* COLOR PICKERS */}
       {state.colorPickerColorGroup && (
         <ColorPickerModal
-          title="🎨 Αλλαγή Χρώματος Color Group"
+          title={t('layerColorPicker.changeGroupColor')}
           onColorSelect={(color) => {
             const colorGroupName = state.colorPickerColorGroup!;
             const layersInGroup = colorGroups.get(colorGroupName) || [];
@@ -230,7 +232,7 @@ export function LayersSection({
 
       {state.colorPickerLayer && (
         <ColorPickerModal
-          title="🎨 Αλλαγή Χρώματος Layer"
+          title={t('layerColorPicker.changeLayerColor')}
           onColorSelect={(color) => onLayerColorChange?.(state.colorPickerLayer!, color)}
           onClose={() => state.setColorPickerLayer(null)}
         />
@@ -238,7 +240,7 @@ export function LayersSection({
 
       {state.colorPickerEntity && (
         <ColorPickerModal
-          title="🎨 Αλλαγή Χρώματος Entity"
+          title={t('layerColorPicker.changeEntityColor')}
           onColorSelect={(color) => onEntityColorChange?.(state.colorPickerEntity!, color)}
           onClose={() => state.setColorPickerEntity(null)}
         />

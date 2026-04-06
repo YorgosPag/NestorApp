@@ -45,6 +45,9 @@
     "availableProperties": "Διαθέσιμα Ακίνητα",
     "propertyDetails": "Επιλεγμένο Ακίνητο",
     "propertyInfo": "Γρήγορη Προβολή",
+    "propertyList": "Λίστα Ακινήτων",
+    "propertyDetailsTitle": "Λεπτομέρειες Ακινήτου",
+    "quickInfoTitle": "Γρήγορες Πληροφορίες",
     "confirm": {
       "deleteProperty": "Θέλετε να μεταφέρετε το επιλεγμένο ακίνητο στον κάδο;"
     },

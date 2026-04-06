@@ -45,6 +45,9 @@
     "availableProperties": "Available Properties",
     "propertyDetails": "Selected Property",
     "propertyInfo": "Quick View",
+    "propertyList": "Property List",
+    "propertyDetailsTitle": "Property Details",
+    "quickInfoTitle": "Quick Info",
     "confirm": {
       "deleteProperty": "Move the selected property to trash?"
     },

@@ -183,6 +183,10 @@
         "analyze": "The DXF file will be analyzed and imported"
       },
       "newLevelWarning": "New level will be created:"
+    },
+    "error": {
+      "title": "Error",
+      "unknownStep": "Unknown import step"
     }
   },
   "dxfViewer": {

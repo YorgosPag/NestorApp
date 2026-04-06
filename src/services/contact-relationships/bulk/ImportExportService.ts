@@ -285,7 +285,7 @@ export class ImportExportService {
   private static parseCSV(csvData: string): CSVRow[] {
     const lines = csvData.trim().split('\n');
     if (lines.length < 2) {
-      throw new Error('CSV must have at least header και one data row');
+      throw new Error('CSV must have at least a header and one data row');
     }
 
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
@@ -352,7 +352,7 @@ export class ImportExportService {
     }
 
     if (!sourceContact) {
-      throw new Error(`Source contact not found για email: ${row.sourceEmail}`);
+      throw new Error(`Source contact not found for email: ${row.sourceEmail}`);
     }
 
     // Find ή create target contact (if not organization)
@@ -365,7 +365,7 @@ export class ImportExportService {
       }
 
       if (!targetContact) {
-        throw new Error(`Target contact not found για email: ${row.targetEmail}`);
+        throw new Error(`Target contact not found for email: ${row.targetEmail}`);
       }
 
       if (!targetContact.id) throw new Error('Target contact must have an id for relationship import');

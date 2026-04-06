@@ -12,6 +12,7 @@ import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized layout tokens
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ImportWizardProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const { importWizard } = useLevels();
   const navigation = useWizardNavigation({ onComplete, onClose });
+  const { t } = useTranslation('dxf-viewer-wizard');
   const stepInfo = navigation.getStepInfo();
   
   if (!isOpen) return null;
@@ -40,8 +42,8 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
       default:
         return (
           <div className={`${PANEL_LAYOUT.SPACING.XXL} text-center`}>
-            <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>Σφάλμα</h3>
-            <p className={`${colors.text.muted} ${PANEL_LAYOUT.SPACING.XXL}`}>Άγνωστο βήμα εισαγωγής</p>
+            <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>{t('importWizard.error.title')}</h3>
+            <p className={`${colors.text.muted} ${PANEL_LAYOUT.SPACING.XXL}`}>{t('importWizard.error.unknownStep')}</p>
             <button
               onClick={onClose}
               className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS}`}
@@ -60,7 +62,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
         {/* Header */}
         <header className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.MD} ${getDirectionalBorder('muted', 'bottom')}`}>
           <div>
-            <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary}`}>Εισαγωγή DXF</h2>
+            <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary}`}>{t('import.fileDialog.title')}</h2>
             <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.text.muted}`}>
               Βήμα {stepInfo.number} από {stepInfo.totalSteps}: {stepInfo.title}
               {importWizard.file && ` • ${importWizard.file.name}`}

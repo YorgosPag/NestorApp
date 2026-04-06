@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface HierarchicalDestinationSelectorProps {
   onDestinationSelect: (destId: string) => void;
@@ -38,6 +39,7 @@ export function HierarchicalDestinationSelector({
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-panels');
   const {
     companies,
     selectedCompany,
@@ -181,7 +183,7 @@ export function HierarchicalDestinationSelector({
     return (
       <section className={`${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
         <AnimatedSpinner size="large" className={`mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
-        <p className={`${colors.text.muted}`}>Φόρτωση δεδομένων...</p>
+        <p className={`${colors.text.muted}`}>{t('panels.hierarchy.loadingData')}</p>
       </section>
     );
   }
@@ -279,7 +281,7 @@ export function HierarchicalDestinationSelector({
         {/* Project Selection */}
         {currentStep === 'project' && selectedCompany && (
           <fieldset className={PANEL_LAYOUT.SPACING.GAP_MD}>
-            <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Επιλέξτε Έργο</label>
+            <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('panels.hierarchy.selectProjectLabel')}</label>
             {projects.length === 0 ? (
               <p className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
                 Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
@@ -287,7 +289,7 @@ export function HierarchicalDestinationSelector({
             ) : (
               <Select onValueChange={handleProjectSelect}>
                 <SelectTrigger className={`w-full ${colors.bg.hover} ${getStatusBorder('muted')} ${colors.text.primary}`}>
-                  <SelectValue placeholder="-- Επιλέξτε Έργο --" />
+                  <SelectValue placeholder={t('panels.hierarchy.selectProjectPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map(project => (

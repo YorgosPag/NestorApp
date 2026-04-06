@@ -777,5 +777,12 @@
     "region": "Region",
     "municipality": "Municipality",
     "selectToView": "Select a result to view the boundary"
+  },
+  "coordinatePicker": {
+    "instructions": {
+      "step2": "2. Click on map for geographic coordinates",
+      "step3": "3. Set accuracy and optional description",
+      "step4": "4. Click \"Add Control Point\" to save"
+    }
   }
 }

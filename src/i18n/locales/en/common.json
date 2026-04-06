@@ -134,7 +134,9 @@
     "bold": "Bold (Ctrl+B)",
     "italic": "Italic (Ctrl+I)",
     "underline": "Underline (Ctrl+U)",
-    "preview": "Preview"
+    "preview": "Preview",
+    "fontColor": "Font color",
+    "fontColors": "Font colors"
   },
   "pdf": {
     "preview": "Preview",
@@ -332,7 +334,8 @@
     "centimeters": "Centimeters",
     "meters": "Meters",
     "inches": "Inches",
-    "feet": "Feet"
+    "feet": "Feet",
+    "monthsValue": "{{value}} months"
   },
   "trends": {
     "increase": "Increase",
@@ -619,7 +622,10 @@
     "changeHistory": "Change History",
     "noHistory": "No change history",
     "changesWillAppear": "Changes will appear here automatically",
-    "noFilterResults": "No changes found for this filter"
+    "noFilterResults": "No changes found for this filter",
+    "noEntityId": "Entity ID not found",
+    "totalLabel": "Total",
+    "historyFilters": "History Filters"
   },
   "fullscreen": {
     "enter": "Fullscreen",

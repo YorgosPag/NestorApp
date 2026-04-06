@@ -91,7 +91,7 @@ export function ActivityTab({
         )}
       >
         <History className="mr-2 h-5 w-5" />
-        <span>Δεν βρέθηκε αναγνωριστικό οντότητας</span>
+        <span>{t('audit.noEntityId')}</span>
       </section>
     );
   }
@@ -201,6 +201,7 @@ export function ActivityTab({
 // ============================================================================
 
 function StatsPanel({ stats }: { stats: Stats }) {
+  const { t } = useTranslation("common");
   const visibleActions: AuditAction[] = [
     "updated",
     "created",
@@ -226,7 +227,7 @@ function StatsPanel({ stats }: { stats: Stats }) {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
       <StatsCard
-        title="Συνολικά"
+        title={t('audit.totalLabel')}
         value={stats.total}
         icon={BarChart3}
         color="gray"
@@ -263,8 +264,9 @@ function QuickFilters({
   stats: Stats;
 }) {
   const colors = useSemanticColors();
+  const { t } = useTranslation("common");
   return (
-    <nav className="flex flex-wrap gap-1.5" aria-label="Φίλτρα ιστορικού">
+    <nav className="flex flex-wrap gap-1.5" aria-label={t('audit.historyFilters')}>
       {FILTER_OPTIONS.map(({ value, label }) => {
         const isActive = active === value;
         const count =

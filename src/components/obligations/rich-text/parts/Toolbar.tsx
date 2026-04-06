@@ -134,17 +134,17 @@ export function Toolbar({
                     variant="ghost"
                     size="sm"
                     className={`${iconSizes.xl} p-0`}
-                    aria-label="Χρώμα γραμματοσειράς"
+                    aria-label={t('richText.fontColor')}
                     disabled={isPreview || disabled}
                   >
                     <Palette className={iconSizes.sm} />
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent>Χρώμα γραμματοσειράς</TooltipContent>
+              <TooltipContent>{t('richText.fontColor')}</TooltipContent>
             </Tooltip>
             <PopoverContent className="w-auto p-3" align="start">
-              <nav aria-label="Χρώματα γραμματοσειράς" className="grid grid-cols-4 gap-2">
+              <nav aria-label={t('richText.fontColors')} className="grid grid-cols-4 gap-2">
                 {DOCUMENT_COLORS.map((color) => (
                   <Tooltip key={color.className}>
                     <TooltipTrigger asChild>

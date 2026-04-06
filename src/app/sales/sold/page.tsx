@@ -120,7 +120,7 @@ export default function SoldPropertiesPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
-                    <span className="font-medium">4.2 μήνες</span>
+                    <span className="font-medium">{t('units.monthsValue', { value: 4.2 })}</span>
                   </div>
                 </div>
               </div>
@@ -148,7 +148,7 @@ export default function SoldPropertiesPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
-                    <span className="font-medium">6.1 μήνες</span>
+                    <span className="font-medium">{t('units.monthsValue', { value: 6.1 })}</span>
                   </div>
                 </div>
               </div>
@@ -176,7 +176,7 @@ export default function SoldPropertiesPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
-                    <span className="font-medium">3.8 μήνες</span>
+                    <span className="font-medium">{t('units.monthsValue', { value: 3.8 })}</span>
                   </div>
                 </div>
               </div>
