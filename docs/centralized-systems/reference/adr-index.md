@@ -625,6 +625,7 @@
 | **ADR-289** | DXF Overlay Item Centralization (SSOT API Gateway) | ✅ APPROVED | [View](./adrs/ADR-289-dxf-overlay-item-centralization.md) |
 | **ADR-290** | Building Creation SSoT Enforcement | ✅ APPROVED | [View](./adrs/ADR-290-building-creation-ssot-enforcement.md) |
 | **ADR-034** | Guide Commands Split — SRP Refactoring (1876 lines -> 7 files) | ✅ IMPLEMENTED | [View](./adrs/ADR-034-guide-commands-split.md) |
+| **ADR-065** | TestingPipeline Split — SRP Refactoring (1768 lines -> 4 files) | ✅ IMPLEMENTED | [View](./adrs/ADR-065-testing-pipeline-split.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
@@ -634,7 +635,7 @@
 ### 🔢 ΔΙΑΘΕΣΙΜΑ IDs (χρησιμοποίησε αυτά ΠΡΩΤΑ):
 
 ```
-065, 066, 067, 068, 070, 071, 072, 073, 074,
+066, 067, 068, 070, 071, 072, 073, 074,
 077, 078, 079, 080, 089, 090, 100, 103, 121, 131,
 132, 134, 145, 156, 161, 164
 ```
