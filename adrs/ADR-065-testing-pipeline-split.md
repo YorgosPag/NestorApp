@@ -89,6 +89,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-07 | Phase 4 #18: AdminBoundariesPerformanceAnalytics split: 1 file (763 lines) -> 3 files (146+163+394) — types, calculators, main class |
 | 2026-04-07 | Phase 4 #19: GeometrySimplificationEngine split: 1 file (742 lines) -> 2 files (172+331) — DP algorithm+LOD+types, main engine |
 | 2026-04-07 | Phase 4 #20: invoice-pdf-template split: 1 file (709 lines) -> 3 files (166+344+99) — constants, section renderers, main render |
+| 2026-04-07 | Phase 5 #1: AnalyticsBridge split: 1 file (696 lines) -> 3 files (118+136+446) — types, monitoring (DI), core class+hook |
+| 2026-04-07 | Phase 5 #2: admin-guards split: 1 file (682 lines) -> 3 files (131+108+414) — types+constants, page auth, API auth+audit |
+| 2026-04-07 | Phase 5 #3: EnterpriseTwoFactorService split: 1 file (678 lines) -> 2 files (254+446) — backup+sign-in helpers, main service |
+| 2026-04-07 | Phase 5 #4: ContactNameResolver split: 1 file (656 lines) -> 3 files (144+168+308) — types+extractors, mapper, resolver class |
+| 2026-04-07 | Phase 5 #5: EnterpriseFileSystemService split: 1 file (655 lines) -> 3 files (83+185+339) — types, fallback config, core service |
+| 2026-04-07 | Phase 5 #6: ai-reply-generator split: 1 file (655 lines) -> 3 files (230+149+257) — prompts+types, OpenAI API layer, public functions |
+| 2026-04-07 | Phase 5 #7: constraints/utils split: 1 file (696 lines) -> 3 files (156+228+250) — geometry, ortho+polar, application+validation |
+| 2026-04-07 | Phase 5 #8: LayerCanvas split: 1 file (697 lines) -> 2 files (370+295) — hit test + rendering hooks extracted to layer-canvas-hooks.ts |
+| 2026-04-07 | Phase 5 #9: bounds split: 1 file (689 lines) -> 2 files (352+347) — entity bounds + normalization extracted to bounds-entity.ts |
+| 2026-04-07 | Phase 5 #10: geometry-rendering-utils split: 1 file (681 lines) -> 2 files (280+219) — pure math extracted to geometry-vector-utils.ts |
+| 2026-04-07 | Phase 5 #11: DxfCanvas split: 1 file (675 lines) -> 2 files (330+223) — renderScene + RAF extracted to dxf-canvas-renderer.ts |
+| 2026-04-07 | Phase 5 #12: RulersGridSystem split: 1 file (668 lines) -> 2 files (465+205) — state init + operations extracted to rulers-grid-state-init.ts |
+| 2026-04-07 | Phase 5 #13: toolbars/utils split: 1 file (663 lines) -> 2 files (360+247) — runner+customization+hotkey+hooks extracted to toolbars-extended-utils.ts |
+| 2026-04-07 | Phase 5 #14: FormatterRegistry split: 1 file (659 lines) -> 2 files (224+179) — unit-specific formatters extracted to formatter-unit-formats.ts |
+| 2026-04-07 | Phase 5 #15: EntitiesSettings split: 1 file (656 lines) -> 2 files (461+185) — tool settings panel extracted to EntitiesToolSettings.tsx |
 
 ## BaseEntityRenderer Split
 

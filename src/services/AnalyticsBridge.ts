@@ -4,117 +4,45 @@
  * Connects GEO-ALERT components με το existing EventAnalyticsEngine
  * Centralizes user behavior tracking, performance monitoring, και error analytics
  *
- * Features:
- * - Bridge between ErrorTracker και EventAnalyticsEngine
- * - User behavior tracking για GEO-ALERT specific actions
- * - Performance monitoring integration
- * - Custom events για geo/mapping operations
+ * Split (ADR-065 Phase 5):
+ * - analytics-bridge-types.ts      → Types, interfaces, config
+ * - analytics-bridge-monitoring.ts  → Performance/network monitoring (DI)
+ * - AnalyticsBridge.ts (this file) → Core class, singleton, hook
  */
 
 'use client';
 
-// TODO: EventAnalyticsEngine not implemented yet - temporarily disabled
-// import { EventAnalyticsEngine } from '@geo-alert/core/alert-engine/analytics/EventAnalyticsEngine';
 import { safeJsonParse } from '@/lib/json-utils';
-import { getErrorMessage } from '@/lib/error-utils';
 import { generateSessionId as generateEnterpriseSessionId, generateEventId as generateEnterpriseEventId } from '@/services/enterprise-id.service';
+import { startPerformanceMonitoring } from './analytics-bridge-monitoring';
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+// Re-export all types for backward compatibility
+export type {
+  UserType,
+  GeoAlertEventType,
+  GeoAlertEvent,
+  UserSession,
+  PerformanceMetrics,
+  AnalyticsBridgeConfig,
+  EventAnalyticsEnginePlaceholder,
+  PerformanceTrackable,
+} from './analytics-bridge-types';
 
-export type UserType = 'citizen' | 'professional' | 'technical';
-
-export type GeoAlertEventType =
-  | 'user_login'
-  | 'user_type_selected'
-  | 'polygon_drawn'
-  | 'polygon_completed'
-  | 'map_interaction'
-  | 'floor_plan_uploaded'
-  | 'alert_created'
-  | 'alert_triggered'
-  | 'dashboard_opened'
-  | 'error_occurred'
-  | 'performance_issue'
-  | 'feature_used'
-  | 'session_started'
-  | 'session_ended';
-
-export interface GeoAlertEvent {
-  id: string;
-  type: GeoAlertEventType;
-  timestamp: Date;
-  userId?: string;
-  userType?: UserType;
-  sessionId: string;
-
-  // Event specific data
-  data: {
-    component?: string;
-    action?: string;
-    feature?: string;
-    duration?: number;
-    success?: boolean;
-    errorId?: string;
-    metadata?: Record<string, unknown>;
-  };
-
-  // Performance data
-  performance?: {
-    loadTime?: number;
-    renderTime?: number;
-    memoryUsage?: number;
-    networkLatency?: number;
-  };
-
-  // Geographic context
-  geoContext?: {
-    coordinates?: [number, number];
-    zoom?: number;
-    bounds?: [[number, number], [number, number]];
-    mapProvider?: string;
-  };
-}
-
-export interface UserSession {
-  sessionId: string;
-  userId?: string;
-  userType?: UserType;
-  startTime: Date;
-  endTime?: Date;
-  duration?: number;
-  pageViews: number;
-  events: GeoAlertEvent[];
-  errors: string[];
-  features: string[];
-}
-
-export interface PerformanceMetrics {
-  pageLoadTime: number;
-  firstContentfulPaint: number;
-  largestContentfulPaint: number;
-  cumulativeLayoutShift: number;
-  firstInputDelay: number;
-  timeToInteractive: number;
-  memoryUsage: number;
-  jsHeapSizeUsed: number;
-  jsHeapSizeTotal: number;
-}
+import type {
+  UserType,
+  GeoAlertEventType,
+  GeoAlertEvent,
+  UserSession,
+  AnalyticsBridgeConfig,
+  EventAnalyticsEnginePlaceholder,
+} from './analytics-bridge-types';
 
 // ============================================================================
 // ANALYTICS BRIDGE CLASS
 // ============================================================================
 
-/** Placeholder type for future EventAnalyticsEngine */
-interface EventAnalyticsEnginePlaceholder {
-  logEvent?: (event: unknown) => void;
-}
-
 export class AnalyticsBridge {
-  // TODO: Temporarily disabled until EventAnalyticsEngine is implemented
-  // private analyticsEngine: EventAnalyticsEngine;
-  private analyticsEngine: EventAnalyticsEnginePlaceholder | null; // Temporary placeholder
+  private analyticsEngine: EventAnalyticsEnginePlaceholder | null;
   private currentSession: UserSession | null = null;
   private eventQueue: GeoAlertEvent[] = [];
   private isOnline = true;
@@ -124,7 +52,7 @@ export class AnalyticsBridge {
     this.config = {
       enabled: true,
       batchSize: 10,
-      flushInterval: 30000, // 30 seconds
+      flushInterval: 30000,
       enablePerformanceMonitoring: true,
       enableUserBehaviorTracking: true,
       enableErrorTracking: true,
@@ -132,17 +60,14 @@ export class AnalyticsBridge {
       ...config
     };
 
-    // TODO: EventAnalyticsEngine to be implemented
-    // this.analyticsEngine = new EventAnalyticsEngine();
-    this.analyticsEngine = null; // Temporary placeholder
+    this.analyticsEngine = null;
 
     // Defer initialization to prevent setState during render warning
     if (typeof window !== 'undefined') {
-      // Use setTimeout to defer initialization until after current render cycle
       setTimeout(() => {
         this.initializeSession();
         this.setupEventListeners();
-        this.startPerformanceMonitoring();
+        startPerformanceMonitoring(this, this.config);
       }, 0);
     }
   }
@@ -169,7 +94,6 @@ export class AnalyticsBridge {
       features: []
     };
 
-    // Track session start
     this.trackEvent('session_started', {
       component: 'AnalyticsBridge',
       action: 'Session Initialization',
@@ -187,7 +111,6 @@ export class AnalyticsBridge {
   }
 
   private generateSessionId(): string {
-    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     return generateEnterpriseSessionId();
   }
 
@@ -213,9 +136,6 @@ export class AnalyticsBridge {
   // EVENT TRACKING
   // ============================================================================
 
-  /**
-   * Track a GEO-ALERT specific event
-   */
   trackEvent(
     type: GeoAlertEventType,
     data: GeoAlertEvent['data'],
@@ -224,7 +144,6 @@ export class AnalyticsBridge {
   ): string {
     if (!this.config.enabled) return '';
 
-    // If session not initialized yet (deferred initialization), create minimal session
     if (!this.currentSession) {
       this.currentSession = {
         sessionId: this.generateSessionId(),
@@ -250,20 +169,15 @@ export class AnalyticsBridge {
       geoContext
     };
 
-    // Add to session
     this.currentSession.events.push(event);
-
-    // Add to queue για batch processing
     this.eventQueue.push(event);
 
-    // Track feature usage
     if (data.feature && !this.currentSession.features.includes(data.feature)) {
       this.currentSession.features.push(data.feature);
     }
 
     this.log('Event tracked', { type, eventId: event.id });
 
-    // Flush if batch size reached
     if (this.eventQueue.length >= this.config.batchSize) {
       this.flushEvents();
     }
@@ -271,9 +185,6 @@ export class AnalyticsBridge {
     return event.id;
   }
 
-  /**
-   * Track user behavior events
-   */
   trackUserBehavior(action: string, component: string, metadata?: Record<string, unknown>): string {
     return this.trackEvent('feature_used', {
       component,
@@ -283,9 +194,6 @@ export class AnalyticsBridge {
     });
   }
 
-  /**
-   * Track polygon drawing events
-   */
   trackPolygonEvent(action: 'start' | 'point_added' | 'completed' | 'cancelled', metadata?: Record<string, unknown>): string {
     const type = action === 'completed' ? 'polygon_completed' : 'polygon_drawn';
 
@@ -298,9 +206,6 @@ export class AnalyticsBridge {
     });
   }
 
-  /**
-   * Track map interactions
-   */
   trackMapInteraction(
     action: string,
     coordinates?: [number, number],
@@ -319,9 +224,6 @@ export class AnalyticsBridge {
     });
   }
 
-  /**
-   * Track error events (integration με ErrorTracker)
-   */
   trackError(errorId: string, error: Error, component?: string): string {
     if (this.currentSession) {
       this.currentSession.errors.push(errorId);
@@ -336,14 +238,11 @@ export class AnalyticsBridge {
       metadata: {
         errorMessage: error.message,
         errorName: error.name,
-        errorStack: error.stack?.substring(0, 500) // Truncate για performance
+        errorStack: error.stack?.substring(0, 500)
       }
     });
   }
 
-  /**
-   * Track performance issues
-   */
   trackPerformanceIssue(metric: string, value: number, threshold: number): string {
     return this.trackEvent('performance_issue', {
       component: 'PerformanceMonitor',
@@ -364,113 +263,6 @@ export class AnalyticsBridge {
   }
 
   // ============================================================================
-  // PERFORMANCE MONITORING
-  // ============================================================================
-
-  private startPerformanceMonitoring(): void {
-    if (!this.config.enablePerformanceMonitoring || typeof window === 'undefined') return;
-
-    // Monitor Web Vitals
-    this.monitorWebVitals();
-
-    // Monitor memory usage
-    setInterval(() => {
-      this.monitorMemoryUsage();
-    }, 60000); // Every minute
-
-    // Monitor network performance
-    this.monitorNetworkPerformance();
-  }
-
-  private monitorWebVitals(): void {
-    // First Contentful Paint
-    const observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        if (entry.entryType === 'paint' && entry.name === 'first-contentful-paint') {
-          this.trackEvent('performance_issue', {
-            component: 'WebVitals',
-            action: 'First Contentful Paint',
-            feature: 'performance_monitoring',
-            metadata: { value: entry.startTime }
-          }, { loadTime: entry.startTime });
-        }
-      }
-    });
-
-    observer.observe({ entryTypes: ['paint'] });
-
-    // Page Load Time
-    window.addEventListener('load', () => {
-      const pageLoadTime = performance.now();
-      this.trackEvent('feature_used', {
-        component: 'PageLoad',
-        action: 'Page Loaded',
-        feature: 'page_navigation',
-        duration: pageLoadTime,
-        metadata: { loadTime: pageLoadTime }
-      }, { loadTime: pageLoadTime });
-    });
-  }
-
-  private monitorMemoryUsage(): void {
-    if ('memory' in performance) {
-      const memory = (performance as unknown as { memory: { usedJSHeapSize: number } }).memory;
-      const memoryUsage = memory.usedJSHeapSize;
-      const threshold = 50 * 1024 * 1024; // 50MB
-
-      if (memoryUsage > threshold) {
-        this.trackPerformanceIssue('memoryUsage', memoryUsage, threshold);
-      }
-    }
-  }
-
-  private monitorNetworkPerformance(): void {
-    // Monitor fetch requests
-    const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-      const startTime = performance.now();
-      try {
-        const response = await originalFetch(...args);
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-
-        this.trackEvent('feature_used', {
-          component: 'NetworkRequest',
-          action: 'API Call',
-          feature: 'network_request',
-          duration,
-          success: response.ok,
-          metadata: {
-            url: args[0]?.toString(),
-            status: response.status,
-            duration
-          }
-        });
-
-        return response;
-      } catch (error) {
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-
-        this.trackEvent('error_occurred', {
-          component: 'NetworkRequest',
-          action: 'API Call Failed',
-          feature: 'network_request',
-          duration,
-          success: false,
-          metadata: {
-            url: args[0]?.toString(),
-            error: getErrorMessage(error),
-            duration
-          }
-        });
-
-        throw error;
-      }
-    };
-  }
-
-  // ============================================================================
   // EVENT PROCESSING
   // ============================================================================
 
@@ -478,7 +270,6 @@ export class AnalyticsBridge {
     if (this.eventQueue.length === 0) return;
 
     try {
-      // Convert GeoAlertEvents to format που δέχεται το EventAnalyticsEngine
       const analyticsEvents = this.eventQueue.map(event => ({
         id: event.id,
         type: event.type,
@@ -495,20 +286,16 @@ export class AnalyticsBridge {
         }
       }));
 
-      // Send to analytics engine
       // TODO: Re-enable when EventAnalyticsEngine is implemented
       // analyticsEvents.forEach(event => {
       //   this.analyticsEngine.logEvent(event);
       // });
 
-      // For now, just log to console in dev mode
       if (this.config.debug) {
-        // Debug logging removed //('[AnalyticsBridge] Would send events:', analyticsEvents);
+        void analyticsEvents; // suppress unused variable in debug builds
       }
 
       this.log('Events flushed', { count: this.eventQueue.length });
-
-      // Clear queue
       this.eventQueue = [];
     } catch (error) {
       this.log('Failed to flush events', error);
@@ -520,7 +307,6 @@ export class AnalyticsBridge {
       case 'error_occurred':
         return 'error';
       case 'performance_issue':
-        return 'warning';
       case 'alert_triggered':
         return 'warning';
       default:
@@ -529,13 +315,11 @@ export class AnalyticsBridge {
   }
 
   private setupEventListeners(): void {
-    // Flush events before page unload
     window.addEventListener('beforeunload', () => {
       this.endSession();
       this.flushEvents();
     });
 
-    // Online/offline detection
     window.addEventListener('online', () => {
       this.isOnline = true;
       this.flushEvents();
@@ -545,17 +329,12 @@ export class AnalyticsBridge {
       this.isOnline = false;
     });
 
-    // Auto-flush interval
     setInterval(() => {
       if (this.isOnline) {
         this.flushEvents();
       }
     }, this.config.flushInterval);
   }
-
-  // ============================================================================
-  // SESSION MANAGEMENT
-  // ============================================================================
 
   private endSession(): void {
     if (!this.currentSession) return;
@@ -586,13 +365,13 @@ export class AnalyticsBridge {
   // ============================================================================
 
   private generateEventId(): string {
-    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     return generateEnterpriseEventId();
   }
 
   private log(message: string, data?: unknown): void {
     if (this.config.debug) {
-      // Debug logging removed //(`[AnalyticsBridge] ${message}`, data || '');
+      void message;
+      void data;
     }
   }
 
@@ -600,23 +379,14 @@ export class AnalyticsBridge {
   // PUBLIC API
   // ============================================================================
 
-  /**
-   * Get current session information
-   */
   getCurrentSession(): UserSession | null {
     return this.currentSession;
   }
 
-  /**
-   * Get analytics engine instance
-   */
-  getAnalyticsEngine(): EventAnalyticsEnginePlaceholder | null { // TODO: Return type to be EventAnalyticsEngine when implemented
+  getAnalyticsEngine(): EventAnalyticsEnginePlaceholder | null {
     return this.analyticsEngine;
   }
 
-  /**
-   * Update user information
-   */
   updateUser(userId: string, userType?: UserType): void {
     if (this.currentSession) {
       this.currentSession.userId = userId;
@@ -633,9 +403,6 @@ export class AnalyticsBridge {
     }
   }
 
-  /**
-   * Clear all analytics data
-   */
   clearData(): void {
     this.eventQueue = [];
     if (this.currentSession) {
@@ -645,20 +412,6 @@ export class AnalyticsBridge {
     }
     this.log('Analytics data cleared');
   }
-}
-
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-interface AnalyticsBridgeConfig {
-  enabled: boolean;
-  batchSize: number;
-  flushInterval: number;
-  enablePerformanceMonitoring: boolean;
-  enableUserBehaviorTracking: boolean;
-  enableErrorTracking: boolean;
-  debug: boolean;
 }
 
 // ============================================================================
@@ -676,12 +429,9 @@ export const analyticsBridge = new AnalyticsBridge({
 });
 
 // ============================================================================
-// REACT HOOKS
+// REACT HOOK
 // ============================================================================
 
-/**
- * React hook για analytics tracking
- */
 export function useAnalytics() {
   return {
     trackEvent: analyticsBridge.trackEvent.bind(analyticsBridge),

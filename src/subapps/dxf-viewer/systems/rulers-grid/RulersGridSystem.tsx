@@ -1,7 +1,5 @@
 'use client';
-// DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_RULERS_GRID = false;
-import { safeJsonParse } from '@/lib/json-utils';
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Point2D, ViewTransform } from './config';
 import {
@@ -19,9 +17,16 @@ import {
   RulersGridOperationResult,
   RulersGridOperation
 } from './config';
-import { UI_COLORS } from '../../config/color-config';
-// 🏢 ADR-092: Centralized localStorage Service
-import { storageGet, storageSet } from '../../utils/storage-utils';
+import { storageSet } from '../../utils/storage-utils';
+import {
+  loadPersistedData,
+  createInitialRulerSettings,
+  createInitialGridSettings,
+  validateRulersGridSettings,
+  executeRulersGridOperation,
+  exportRulersGridSettings,
+  parseImportedSettings,
+} from './rulers-grid-state-init';
 
 // ✅ ENTERPRISE: Window interface extension for debug globals
 declare global {
@@ -30,7 +35,7 @@ declare global {
     __RULER_SETTINGS__?: RulerSettings;
   }
 }
-import { RulersGridCalculations, PerformanceUtilities, UnitConversion, SettingsValidationUtils } from './utils';
+import { RulersGridCalculations, PerformanceUtilities, UnitConversion } from './utils';
 // 🏢 ADR-125: Types imported from types.ts to prevent circular dependencies
 import type { RulersGridHookReturn, RulersGridContextType } from './types';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
@@ -55,130 +60,17 @@ function useRulersGridSystemIntegration({
   canvasBounds
 }: Omit<RulersGridSystemProps, 'children'>): RulersGridHookReturn {
 
-  // Load persisted settings if enabled
-  // 🏢 ADR-092: Using centralized storage-utils
-  interface PersistedRulersGridData {
-    rulers?: Partial<RulerSettings>;
-    grid?: Partial<GridSettings>;
-    origin?: Point2D;
-    isVisible?: boolean;
-    timestamp?: number;
-  }
+  // Load persisted settings (ADR-065: initialization extracted to rulers-grid-state-init.ts)
+  const persistedData = loadPersistedData(enablePersistence, persistenceKey);
 
-  const loadPersistedSettings = useCallback(() => {
-    if (!enablePersistence) return null;
-    return storageGet<PersistedRulersGridData | null>(persistenceKey, null);
-  }, [enablePersistence, persistenceKey]);
+  // State initialization with deep merge + property migration (ADR-065: logic in rulers-grid-state-init.ts)
+  const [rulers, setRulersInternal] = useState<RulerSettings>(() =>
+    createInitialRulerSettings(initialRulerSettings, persistedData?.rulers)
+  );
 
-  const persistedData = loadPersistedSettings();
-
-  const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-    typeof value === 'object' && value !== null && !Array.isArray(value);
-
-  // Deep merge helper for nested objects
-  const deepMerge = <T extends object>(target: T, source?: Partial<T>): T => {
-    if (!source) return target;
-    const result = { ...target } as T;
-    for (const key of Object.keys(source as object)) {
-      const typedKey = key as keyof T;
-      const sourceValue = source[typedKey];
-      const resultValue = result[typedKey];
-      if (isPlainObject(sourceValue) && isPlainObject(resultValue)) {
-        const merged = deepMerge(
-          resultValue as Record<string, unknown>,
-          sourceValue as Record<string, unknown>
-        );
-        result[typedKey] = merged as T[typeof typedKey];
-      } else if (sourceValue !== undefined) {
-        result[typedKey] = sourceValue as T[typeof typedKey];
-      }
-    }
-    return result;
-  };
-
-  // State initialization with deep merge
-  const [rulers, setRulersInternal] = useState<RulerSettings>(() => {
-    let result: RulerSettings = { ...DEFAULT_RULER_SETTINGS };
-    if (persistedData?.rulers) {
-      result = deepMerge(result, persistedData.rulers);
-    }
-    if (initialRulerSettings) {
-      result = deepMerge(result, initialRulerSettings);
-    }
-
-    // ✅ RESPECT DEFAULT SETTINGS - Let button control visibility properly
-    // result.horizontal.enabled = true;  // REMOVED: Causing button synchronization issue
-    // result.vertical.enabled = true;    // REMOVED: Causing button synchronization issue
-    
-    // ✅ ENSURE NEW PROPERTIES EXIST - Migration for showLabels, showUnits and showBackground
-    if (result.horizontal.showLabels === undefined) {
-      result.horizontal.showLabels = true;
-    }
-    if (result.horizontal.showUnits === undefined) {
-      result.horizontal.showUnits = true;
-    }
-    if (result.horizontal.showBackground === undefined) {
-      result.horizontal.showBackground = true;
-    }
-    if (result.horizontal.unitsFontSize === undefined) {
-      result.horizontal.unitsFontSize = result.horizontal.fontSize || 10;
-    }
-    if (result.horizontal.showMajorTicks === undefined) {
-      result.horizontal.showMajorTicks = true;
-    }
-    if (result.horizontal.majorTickColor === undefined) {
-      result.horizontal.majorTickColor = result.horizontal.tickColor || UI_COLORS.WHITE;
-    }
-    if (result.horizontal.minorTickColor === undefined) {
-      result.horizontal.minorTickColor = UI_COLORS.WHITE;
-    }
-    if (result.vertical.showLabels === undefined) {
-      result.vertical.showLabels = true;
-    }
-    if (result.vertical.showUnits === undefined) {
-      result.vertical.showUnits = true;
-    }
-    if (result.vertical.showBackground === undefined) {
-      result.vertical.showBackground = true;
-    }
-    if (result.vertical.unitsFontSize === undefined) {
-      result.vertical.unitsFontSize = result.vertical.fontSize || 10;
-    }
-    if (result.vertical.showMajorTicks === undefined) {
-      result.vertical.showMajorTicks = true;
-    }
-    if (result.vertical.majorTickColor === undefined) {
-      result.vertical.majorTickColor = result.vertical.tickColor || UI_COLORS.WHITE;
-    }
-    if (result.vertical.minorTickColor === undefined) {
-      result.vertical.minorTickColor = UI_COLORS.WHITE;
-    }
-    if (result.horizontal.unitsColor === undefined) {
-      result.horizontal.unitsColor = result.horizontal.textColor || UI_COLORS.WHITE;
-    }
-    if (result.vertical.unitsColor === undefined) {
-      result.vertical.unitsColor = result.vertical.textColor || UI_COLORS.WHITE;
-    }
-
-    return result;
-  });
-
-  const [grid, setGridInternal] = useState<GridSettings>(() => {
-    let result: GridSettings = { ...DEFAULT_GRID_SETTINGS };
-    if (persistedData?.grid) {
-      result = deepMerge(result, persistedData.grid);
-    }
-    if (initialGridSettings) {
-      result = deepMerge(result, initialGridSettings);
-    }
-
-    // ✅ ENSURE STYLE PROPERTY EXISTS - Migration for grid style
-    if (result.visual.style === undefined) {
-      result.visual.style = 'lines'; // Default to lines if not set
-    }
-
-    return result;
-  });
+  const [grid, setGridInternal] = useState<GridSettings>(() =>
+    createInitialGridSettings(initialGridSettings, persistedData?.grid)
+  );
 
   const [origin, setOriginState] = useState<Point2D>(() => {
     // ✅ FORCE ORIGIN TO BOTTOM-LEFT (0,0) - User requested rulers to show 0-0 at bottom-left
@@ -190,9 +82,6 @@ function useRulersGridSystemIntegration({
     persistedData?.isVisible ?? initialVisibility
   );
 
-  // 🆕 UNIFIED AUTOSAVE: Wrapped setters για integration με DxfSettingsProvider
-  // ✅ CLEANUP (2026-02-01): Removed unused CustomEvent dispatch - nobody listens to 'dxf-grid-settings-update'
-  // Sync now happens via globalGridStore subscription pattern (lines 310-333)
   const setGrid = useCallback((updater: React.SetStateAction<GridSettings>) => {
     setGridInternal(prev => {
       const newGrid = typeof updater === 'function' ? updater(prev) : updater;
@@ -200,8 +89,6 @@ function useRulersGridSystemIntegration({
     });
   }, []);
 
-  // ✅ CLEANUP (2026-02-01): Removed unused CustomEvent dispatch - nobody listens to 'dxf-ruler-settings-update'
-  // Sync now happens via globalRulerStore subscription pattern (lines 310-333)
   const setRulers = useCallback((updater: React.SetStateAction<RulerSettings>) => {
     setRulersInternal(prev => {
       const newRulers = typeof updater === 'function' ? updater(prev) : updater;
@@ -297,21 +184,10 @@ function useRulersGridSystemIntegration({
     setGrid(DEFAULT_GRID_SETTINGS);
   }, [setGrid]);
 
-  const validateSettings = useCallback((settings: unknown): { valid: boolean; errors: string[] } => {
-    if (!isPlainObject(settings)) {
-      return { valid: false, errors: ['Invalid settings object'] };
-    }
-
-    if ('horizontal' in settings && 'vertical' in settings) {
-      return SettingsValidationUtils.validateRulerSettings(settings as unknown as RulerSettings);
-    }
-
-    if ('visual' in settings && 'behavior' in settings) {
-      return SettingsValidationUtils.validateGridSettings(settings as unknown as GridSettings);
-    }
-
-    return { valid: false, errors: ['Unknown settings shape'] };
-  }, []);
+  const validateSettings = useCallback(
+    (settings: unknown) => validateRulersGridSettings(settings),
+    [],
+  );
 
   const getOptimalGridStep = useCallback(
     (transform: ViewTransform): number =>
@@ -330,15 +206,9 @@ function useRulersGridSystemIntegration({
     []
   );
 
-  // ✅ CLEANUP (2026-02-01): Removed unused bidirectional sync event listeners
-  // Events 'dxf-provider-grid-sync' and 'dxf-provider-ruler-sync' were never dispatched by any component.
-  // Actual sync happens via globalGridStore/globalRulerStore subscription pattern below.
-  // This cleanup removes ~40 lines of dead code.
-
-  // 🎯 DEBUG: Expose grid settings to window για enterprise testing
+  // Expose grid settings to window for testing
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // ✅ ENSURE STYLE PROPERTY EXISTS before exposing to window
       const gridWithStyle = {
         ...grid,
         visual: {
@@ -382,50 +252,29 @@ function useRulersGridSystemIntegration({
   );
   const renderingMethods = useRenderingCalculations(rulers, grid, origin);
 
-  // ===== ΣΥΓΧΡΟΝΙΣΜΟΣ ΜΕ DXFSETTINGSPROVIDER =====
-  // Ακούει αλλαγές από τα global stores και ενημερώνει το τοπικό state
-  // 🛡️ ΠΡΟΣΤΑΣΙΑ ΑΠΟ CIRCULAR UPDATES με useRef
+  // Global store sync (bidirectional, with circular-update protection)
   const isUpdatingFromGlobalRef = useRef(false);
 
   useEffect(() => {
     const unsubscribeGrid = globalGridStore.subscribe((newGridSettings) => {
-      // ✅ REMOVED DEBUG LOG to prevent excessive logging during store sync
-
-      // 🛡️ ΠΡΟΣΤΑΣΙΑ: Μόνο αν δεν ενημερώνουμε εμείς τα global stores
-      if (!isUpdatingFromGlobalRef.current) {
-        setGrid(newGridSettings);
-      }
+      if (!isUpdatingFromGlobalRef.current) setGrid(newGridSettings);
     });
-
     const unsubscribeRuler = globalRulerStore.subscribe((newRulerSettings) => {
-      // ✅ REMOVED DEBUG LOG to prevent excessive logging during store sync
-
-      // 🛡️ ΠΡΟΣΤΑΣΙΑ: Μόνο αν δεν ενημερώνουμε εμείς τα global stores
-      if (!isUpdatingFromGlobalRef.current) {
-        setRulers(newRulerSettings);
-      }
+      if (!isUpdatingFromGlobalRef.current) setRulers(newRulerSettings);
     });
+    return () => { unsubscribeGrid(); unsubscribeRuler(); };
+  }, []);
 
-    return () => {
-      unsubscribeGrid();
-      unsubscribeRuler();
-    };
-  }, []); // ✅ STABILIZATION: Remove setGrid/setRulers deps to prevent infinite recreations
-
-  // ===== REVERSE ΣΥΓΧΡΟΝΙΣΜΟΣ =====
-  // Όταν αλλάζουν τοπικά οι ρυθμίσεις, ενημερώνει τα global stores
-  // 🛡️ ΠΡΟΣΤΑΣΙΑ: Χρήση ref για αποφυγή circular updates
+  // Reverse sync: local → global stores
   useEffect(() => {
     isUpdatingFromGlobalRef.current = true;
     globalGridStore.update(grid);
-    // ✅ REMOVED DEBUG LOG to prevent excessive logging during reverse sync
     isUpdatingFromGlobalRef.current = false;
   }, [grid]);
 
   useEffect(() => {
     isUpdatingFromGlobalRef.current = true;
     globalRulerStore.update(rulers);
-    // ✅ REMOVED DEBUG LOG to prevent excessive logging during reverse sync
     isUpdatingFromGlobalRef.current = false;
   }, [rulers]);
 
@@ -444,8 +293,7 @@ function useRulersGridSystemIntegration({
     }
   }, [rulers, grid, origin, isVisible, enablePersistence, persistenceKey]);
 
-  // Calculations and updates when view changes
-  // 🛡️ ΣΤΑΘΕΡΟΠΟΙΗΣΗ: Χωρίζουμε το bounds calculation από τα snap points
+  // Bounds calculation when view changes
   useEffect(() => {
     if (viewTransform && canvasBounds) {
       const bounds = RulersGridCalculations.calculateVisibleBounds(
@@ -457,28 +305,14 @@ function useRulersGridSystemIntegration({
     }
   }, [viewTransform, canvasBounds, grid.visual.step]);
 
-  // 🛡️ ΣΤΑΘΕΡΟΠΟΙΗΣΗ: Ruler snap points μόνο όταν χρειάζεται
+  // Ruler snap points (TODO: implement calculateRulerSnapPoints)
   useEffect(() => {
-    if (lastCalculatedBounds && rulers.snap.enabled) {
-      // TODO: Implement calculateRulerSnapPoints method
-      // const rulerSnaps = RulersGridCalculations.calculateRulerSnapPoints(rulers, lastCalculatedBounds);
-      // setRulerSnapPoints(rulerSnaps);
-      setRulerSnapPoints([]); // Temporary: empty array until method is implemented
-    } else {
-      setRulerSnapPoints([]);
-    }
+    setRulerSnapPoints(lastCalculatedBounds && rulers.snap.enabled ? [] : []);
   }, [rulers.snap.enabled, lastCalculatedBounds, rulers.horizontal, rulers.vertical]);
 
-  // 🛡️ ΣΤΑΘΕΡΟΠΟΙΗΣΗ: Grid snap points μόνο όταν χρειάζεται
+  // Grid snap points (TODO: implement calculateGridSnapPoints)
   useEffect(() => {
-    if (lastCalculatedBounds && grid.snap.enabled) {
-      // TODO: Implement calculateGridSnapPoints method
-      // const gridSnaps = RulersGridCalculations.calculateGridSnapPoints(grid, origin, lastCalculatedBounds);
-      // setGridSnapPoints(gridSnaps);
-      setGridSnapPoints([]); // Temporary: empty array until method is implemented
-    } else {
-      setGridSnapPoints([]);
-    }
+    setGridSnapPoints(lastCalculatedBounds && grid.snap.enabled ? [] : []);
   }, [grid.snap.enabled, lastCalculatedBounds, grid.visual, origin]);
 
   // Settings change effects
@@ -502,68 +336,31 @@ function useRulersGridSystemIntegration({
 
   const getOrigin = useCallback(() => origin, [origin]);
 
-  // Utility operations
-  const performOperation = useCallback(async (operation: RulersGridOperation): Promise<RulersGridOperationResult> => {
-    try {
-      switch (operation) {
-        case 'toggle-rulers':
-          rulerMethods.toggleRulers();
-          break;
-        case 'toggle-grid':
-          gridMethods.toggleGrid();
-          break;
-        case 'toggle-ruler-snap':
-          snapMethods.toggleRulerSnap();
-          break;
-        case 'toggle-grid-snap':
-          snapMethods.toggleGridSnap();
-          break;
-        case 'reset-origin':
-          resetOrigin();
-          break;
-        default:
-          throw new Error(`Unknown operation: ${operation}`);
-      }
-      
-      return { success: true, operation };
-    } catch (error) {
-      return {
-        success: false,
-        operation,
-        error: error instanceof Error ? error.message : 'Operation failed'
-      };
-    }
-  }, [rulerMethods, gridMethods, snapMethods, resetOrigin]);
+  // Operations (ADR-065: logic extracted to rulers-grid-state-init.ts)
+  const performOperation = useCallback(
+    (operation: RulersGridOperation) =>
+      executeRulersGridOperation(operation, {
+        toggleRulers: rulerMethods.toggleRulers,
+        toggleGrid: gridMethods.toggleGrid,
+        toggleRulerSnap: snapMethods.toggleRulerSnap,
+        toggleGridSnap: snapMethods.toggleGridSnap,
+        resetOrigin,
+      }),
+    [rulerMethods, gridMethods, snapMethods, resetOrigin],
+  );
 
-  const exportSettings = useCallback((): string => {
-    const payload = {
-      rulers,
-      grid,
-      origin,
-      isVisible,
-      version: '1.0',
-      timestamp: Date.now()
-    };
-    return JSON.stringify(payload);
-  }, [rulers, grid, origin, isVisible]);
+  const exportSettings = useCallback(
+    () => exportRulersGridSettings(rulers, grid, origin, isVisible),
+    [rulers, grid, origin, isVisible],
+  );
 
   const importSettings = useCallback(async (data: string): Promise<RulersGridOperationResult> => {
-    const parsed = safeJsonParse<{
-      rulers?: RulerSettings;
-      grid?: GridSettings;
-      origin?: Point2D;
-      isVisible?: boolean;
-    }>(data, null as unknown as { rulers?: RulerSettings; grid?: GridSettings; origin?: Point2D; isVisible?: boolean });
-
-    if (parsed === null) {
-      return { success: false, operation: 'import-settings', error: 'Import failed: invalid JSON' };
-    }
-
+    const parsed = parseImportedSettings(data);
+    if (!parsed) return { success: false, operation: 'import-settings', error: 'Import failed: invalid JSON' };
     if (parsed.rulers) setRulers({ ...DEFAULT_RULER_SETTINGS, ...parsed.rulers });
     if (parsed.grid) setGrid({ ...DEFAULT_GRID_SETTINGS, ...parsed.grid });
     if (parsed.origin) setOrigin(parsed.origin);
     if (parsed.isVisible !== undefined) setIsVisible(parsed.isVisible);
-
     return { success: true, operation: 'import-settings' };
   }, [setOrigin]);
 

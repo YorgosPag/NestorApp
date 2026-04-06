@@ -1,7 +1,18 @@
 'use client';
 
+/**
+ * 🏢 GEO-ALERT Phase 2.5.3: Enhanced Professional Drawing Interface
+ *
+ * Monitoring dashboard extracted to professional-drawing-dashboard.tsx (ADR-065).
+ *
+ * Interface for professionals (μεσίτες, κατασκευαστές) with:
+ * - Floor Plan Upload (DXF, PDF, DWG, PNG, JPG)
+ * - Auto-detection algorithms for floor plans
+ * - Batch polygon creation
+ * - Real Estate Monitoring Integration
+ */
+
 import React, { useState, useCallback } from 'react';
-import { formatDateShort } from '@/lib/intl-utils';
 // ✅ ENTERPRISE FIX: Remove mapbox-gl dependency - use local type definition
 interface MapRef {
   current: unknown | null;
@@ -15,16 +26,18 @@ import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { GEO_COLORS } from '../config/color-config';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
+import { MonitoringDashboard } from './professional-drawing-dashboard';
 import { generateLayerId } from '@/services/enterprise-id.service';
+import type { ParserResult } from '../floor-plan-system/types';
+import type { EnhancedPropertyStatus as PropertyStatus } from '@/constants/property-statuses-enterprise';
+import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
+
 // TODO: Implement real estate monitoring integration
-// import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
-// import type { RealEstatePolygon } from '@geo-alert/core';
 type RealEstatePolygon = {
   id: string;
   polygon: Array<[number, number]>;
   settings: Record<string, unknown>;
   createdAt: string;
-  // ✅ ENTERPRISE FIX: Add properties used in handleBatchRealEstateMonitoring
   type?: string;
   alertSettings?: {
     enabled: boolean;
@@ -33,9 +46,6 @@ type RealEstatePolygon = {
     includeExclude: 'include' | 'exclude';
   };
 };
-import type { ParserResult } from '../floor-plan-system/types';
-import type { EnhancedPropertyStatus as PropertyStatus } from '@/constants/property-statuses-enterprise';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface ProfessionalDrawingInterfaceProps {
   mapRef: React.RefObject<unknown | null>;
@@ -44,24 +54,6 @@ interface ProfessionalDrawingInterfaceProps {
   onRealEstateAlertCreated?: (alert: RealEstatePolygon) => void;
 }
 
-/**
- * 🏢 GEO-ALERT Phase 2.5.3: Enhanced Professional Drawing Interface
- *
- * Interface για επαγγελματίες (μεσίτες, κατασκευαστές) με:
- * - Floor Plan Upload (DXF, PDF, DWG, PNG, JPG)
- * - Auto-detection algorithms για κατόψεις
- * - Batch polygon creation
- * - Integration με existing floor-plan-system
- * - 🏠 Real Estate Monitoring Integration (Phase 2.5.3)
- *
- * Professional features:
- * - Upload κατόψεων (image/PDF)
- * - Auto-detection of rooms/properties
- * - Batch polygon creation
- * - Advanced georeferencing
- * - Real Estate Alert Management
- * - Market Monitoring Dashboard
- */
 export function ProfessionalDrawingInterface({
   mapRef,
   onPolygonComplete,
@@ -73,74 +65,34 @@ export function ProfessionalDrawingInterface({
   const colors = useSemanticColors();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
-  // ✅ ENTERPRISE: Combine local and centralized drawing state
   const [isDrawing, setIsDrawing] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
   const [isParsing, setIsParsing] = useState(false);
-
-  // 🏠 Phase 2.5: Property Status Management
   const [showPropertyManager, setShowPropertyManager] = useState(false);
   const [currentPropertyStatus, setCurrentPropertyStatus] = useState<PropertyStatus>('for-sale');
-
-  // 🏠 Phase 2.5.3: Real Estate Monitoring Integration
   const [showMonitoringDashboard, setShowMonitoringDashboard] = useState(false);
   const [batchMonitoringMode, setBatchMonitoringMode] = useState(false);
 
   // Real Estate Monitoring Integration (TODO: Replace with real implementation)
-  const {
-    addRealEstatePolygon,
-    getRealEstateAlerts,
-    getStatistics,
-    exportMatches
-  } = {
+  const { addRealEstatePolygon, getRealEstateAlerts, getStatistics, exportMatches } = {
     addRealEstatePolygon: (_polygon: RealEstatePolygon) => {},
     getRealEstateAlerts: () => [] as RealEstatePolygon[],
-    getStatistics: () => ({
-      totalPolygons: 0,
-      totalAlerts: 0,
-      activeAlerts: 0,
-      totalMatches: 0,
-      averageConfidence: 0.85,
-      lastCheck: new Date().toISOString()
-    }),
+    getStatistics: () => ({ totalPolygons: 0, totalAlerts: 0, activeAlerts: 0, totalMatches: 0, averageConfidence: 0.85, lastCheck: new Date().toISOString() }),
     exportMatches: () => Promise.resolve('')
   };
-
-  // ✅ ENTERPRISE FIX: Get statistics as object, not function
   const realEstateStats = getStatistics();
 
-  // ✅ ENTERPRISE: Use centralized polygon system with Professional role
-  const {
-    polygons,
-    stats,
-    startDrawing,
-    finishDrawing,
-    cancelDrawing,
-    clearAll,
-    isDrawing: systemIsDrawing,
-    currentRole
-  } = useCentralizedPolygonSystem();
+  const { polygons, stats, startDrawing, finishDrawing, cancelDrawing, clearAll, isDrawing: systemIsDrawing } = useCentralizedPolygonSystem();
   const actualIsDrawing = isDrawing || systemIsDrawing;
 
-  // 🏠 Phase 2.5: Property Status Management Handlers
   const handlePropertyStatusChange = useCallback((status: PropertyStatus) => {
     setCurrentPropertyStatus(status);
     console.debug('🏢 Professional: Property status changed to', status);
-    // TODO: Update active polygon/property status
   }, []);
 
-  const handlePropertyManagerToggle = useCallback(() => {
-    setShowPropertyManager(!showPropertyManager);
-    setSelectedTool(showPropertyManager ? null : 'property-manager');
-  }, [showPropertyManager]);
-
-  // Professional batch real estate monitoring handler
-  // 🏢 ENTERPRISE: Type-safe polygon array using local RealEstatePolygon type
   const handleBatchRealEstateMonitoring = useCallback((polygons: Array<Partial<RealEstatePolygon>>) => {
-    console.debug('🏢 Professional: Setting up batch real estate monitoring for', polygons.length, 'polygons');
-
     polygons.forEach((polygon) => {
       const polygonId = typeof polygon.id === 'string' ? polygon.id : generateLayerId();
       const realEstatePolygon: RealEstatePolygon = {
@@ -149,304 +101,121 @@ export function ProfessionalDrawingInterface({
         settings: polygon.settings ?? {},
         createdAt: typeof polygon.createdAt === 'string' ? polygon.createdAt : new Date().toISOString(),
         type: 'real-estate',
-        alertSettings: {
-          enabled: true,
-          priceRange: { min: 100000, max: 1000000 }, // Professional range
-          propertyTypes: ['apartment', 'house', 'commercial'],
-          includeExclude: 'include'
-        }
+        alertSettings: { enabled: true, priceRange: { min: 100000, max: 1000000 }, propertyTypes: ['apartment', 'house', 'commercial'], includeExclude: 'include' }
       };
-
       addRealEstatePolygon(realEstatePolygon);
-
-      if (onRealEstateAlertCreated) {
-        onRealEstateAlertCreated(realEstatePolygon);
-      }
+      if (onRealEstateAlertCreated) onRealEstateAlertCreated(realEstatePolygon);
     });
-
-    console.debug('✅ Professional: Batch monitoring setup completed');
   }, [addRealEstatePolygon, onRealEstateAlertCreated]);
 
-  // Tool selection handler
   const handleToolSelect = useCallback((tool: 'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard') => {
-    if (actualIsDrawing) {
-      // Cancel current drawing
-      cancelDrawing();
-      setIsDrawing(false);
-    }
-
+    if (actualIsDrawing) { cancelDrawing(); setIsDrawing(false); }
     setSelectedTool(tool);
 
-    // Start appropriate tool mode
     switch (tool) {
-      case 'upload':
-        // Open floor plan upload modal
-        setShowUploadModal(true);
-        console.debug('🏢 Professional: Floor plan upload mode');
-        break;
-
+      case 'upload': setShowUploadModal(true); break;
       case 'polygon':
-        // Professional polygon mode (more precise)
-        startDrawing('simple', {
-          fillColor: GEO_COLORS.USER_INTERFACE.PROFESSIONAL_FILL, // Green professional fill
-          strokeColor: GEO_COLORS.USER_INTERFACE.PROFESSIONAL_STROKE,
-          strokeWidth: 2
-        });
+        startDrawing('simple', { fillColor: GEO_COLORS.USER_INTERFACE.PROFESSIONAL_FILL, strokeColor: GEO_COLORS.USER_INTERFACE.PROFESSIONAL_STROKE, strokeWidth: 2 });
         setIsDrawing(true);
-        console.debug('🔷 Professional: Precision polygon mode started');
         break;
-
       case 'auto-detect':
-        // Auto-detection mode (requires floor plan to be uploaded first)
-        if (!parserResult) {
-          console.warn('⚠️ Professional: Auto-detection requires a floor plan upload first');
-          // Fallback to upload mode
-          setShowUploadModal(true);
-        } else {
-          console.debug('🤖 Professional: Auto-detection mode activated');
-          // TODO: Implement auto-detection algorithm
-        }
-        break;
-
-      case 'property-manager':
-        // 🏠 Phase 2.5: Property Management mode
-        setShowPropertyManager(true);
-        console.debug('🏢 Professional: Property management mode activated');
-        break;
-
-      case 'monitoring-dashboard':
-        // 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard
-        setShowMonitoringDashboard(true);
-        console.debug('📊 Professional: Real estate monitoring dashboard opened');
-        break;
+        if (!parserResult) { setShowUploadModal(true); } break;
+      case 'property-manager': setShowPropertyManager(true); break;
+      case 'monitoring-dashboard': setShowMonitoringDashboard(true); break;
     }
   }, [actualIsDrawing, startDrawing, cancelDrawing, parserResult]);
 
-  // Floor plan upload handlers
   const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
     setIsParsing(true);
-
-    // TODO: Parse the file using floor-plan-system parsers
-    // For now, mock the parsing
     setTimeout(() => {
-      const mockResult: ParserResult = {
-        success: true,
-        format: 'PNG',
-        bounds: {
-          minX: 0,
-          minY: 0,
-          maxX: 1000,
-          maxY: 1000
-        },
-        imageUrl: URL.createObjectURL(file)
-      };
-
+      const mockResult: ParserResult = { success: true, format: 'PNG', bounds: { minX: 0, minY: 0, maxX: 1000, maxY: 1000 }, imageUrl: URL.createObjectURL(file) };
       setParserResult(mockResult);
       setIsParsing(false);
-
-      if (onFloorPlanUploaded) {
-        onFloorPlanUploaded(mockResult);
-      }
-
-      console.debug('📁 Professional: Floor plan uploaded and parsed', mockResult);
+      if (onFloorPlanUploaded) onFloorPlanUploaded(mockResult);
     }, 2000);
   }, [onFloorPlanUploaded]);
 
-  const handleUploadModalClose = useCallback(() => {
-    setShowUploadModal(false);
-    setSelectedTool(null);
-  }, []);
-
-  // Complete drawing
   const handleComplete = useCallback(() => {
     const polygon = finishDrawing();
-    if (polygon && onPolygonComplete) {
-      onPolygonComplete(polygon);
-      console.debug('✅ Professional: Drawing completed', polygon);
-    }
+    if (polygon && onPolygonComplete) onPolygonComplete(polygon);
     setIsDrawing(false);
     setSelectedTool(null);
   }, [finishDrawing, onPolygonComplete]);
 
-  // Cancel drawing
   const handleCancel = useCallback(() => {
     cancelDrawing();
     setIsDrawing(false);
     setSelectedTool(null);
-    console.debug('❌ Professional: Drawing cancelled');
   }, [cancelDrawing]);
 
-  // Auto-detect rooms/properties
   const handleAutoDetect = useCallback(() => {
-    if (!parserResult) {
-      console.warn('⚠️ No floor plan available for auto-detection');
-      return;
-    }
-
-    // Mock auto-detection of 3 polygons
-    console.debug('🤖 Professional: Running auto-detection algorithm...');
-
-    // Simulate auto-detection delay
+    if (!parserResult) return;
     setTimeout(() => {
-      // Create 3 mock detected polygons
       for (let i = 1; i <= 3; i++) {
-        const mockPolygon = {
-          id: `auto-detected-${i}`,
-          type: 'property',
-          coordinates: [
-            [100 * i, 100 * i],
-            [200 * i, 100 * i],
-            [200 * i, 200 * i],
-            [100 * i, 200 * i],
-            [100 * i, 100 * i]
-          ],
-          metadata: {
-            detectedType: i === 1 ? 'living-room' : i === 2 ? 'bedroom' : 'kitchen',
-            confidence: 0.85 + (i * 0.05),
-            autoDetected: true
-          }
-        };
-
         if (onPolygonComplete) {
-          onPolygonComplete(mockPolygon);
+          onPolygonComplete({
+            id: `auto-detected-${i}`, type: 'property',
+            coordinates: [[100 * i, 100 * i], [200 * i, 100 * i], [200 * i, 200 * i], [100 * i, 200 * i], [100 * i, 100 * i]],
+            metadata: { detectedType: i === 1 ? 'living-room' : i === 2 ? 'bedroom' : 'kitchen', confidence: 0.85 + (i * 0.05), autoDetected: true }
+          });
         }
       }
-
-      console.debug('✅ Professional: Auto-detection completed - 3 properties detected');
     }, 1500);
-
     setSelectedTool(null);
   }, [parserResult, onPolygonComplete]);
 
   return (
     <>
       <div className={`${colors.bg.primary} ${quick.card} shadow-lg p-4`}>
-        {/* Header */}
         <div className="mb-4">
-          <h3 className={`text-lg font-semibold ${colors.text.foreground}`}>
-            {t('drawingInterfaces.professional.title')}
-          </h3>
-          <p className={`text-sm ${colors.text.muted}`}>
-            {t('drawingInterfaces.professional.subtitle')}
-          </p>
+          <h3 className={`text-lg font-semibold ${colors.text.foreground}`}>{t('drawingInterfaces.professional.title')}</h3>
+          <p className={`text-sm ${colors.text.muted}`}>{t('drawingInterfaces.professional.subtitle')}</p>
         </div>
 
         {/* Tool Buttons */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-          {/* Floor Plan Upload */}
-          <button
-            onClick={() => handleToolSelect('upload')}
-            disabled={actualIsDrawing}
-            className={`
-              flex flex-col items-center justify-center p-4 ${quick.card}
-              transition-all duration-200 min-h-[100px]
-              ${selectedTool === 'upload'
-                ? `${getStatusBorder('success')} ${colors.bg.success}`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
-              }
-              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
-            `}
-          >
+          <button onClick={() => handleToolSelect('upload')} disabled={actualIsDrawing}
+            className={`flex flex-col items-center justify-center p-4 ${quick.card} transition-all duration-200 min-h-[100px] ${selectedTool === 'upload' ? `${getStatusBorder('success')} ${colors.bg.success}` : `border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`} ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}`}>
             <Upload className={`${iconSizes.lg} mb-2 ${colors.text.success}`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.upload')}</span>
-            <span className={`text-xs ${colors.text.muted}`}>Κάτοψη</span>
           </button>
 
-          {/* Precision Polygon */}
-          <button
-            onClick={() => handleToolSelect('polygon')}
-            disabled={actualIsDrawing && selectedTool !== 'polygon'}
-            className={`
-              flex flex-col items-center justify-center p-4 ${quick.card}
-              transition-all duration-200 min-h-[100px]
-              ${selectedTool === 'polygon'
-                ? `${getStatusBorder('success')} ${colors.bg.success}`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
-              }
-              ${actualIsDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
-            `}
-          >
+          <button onClick={() => handleToolSelect('polygon')} disabled={actualIsDrawing && selectedTool !== 'polygon'}
+            className={`flex flex-col items-center justify-center p-4 ${quick.card} transition-all duration-200 min-h-[100px] ${selectedTool === 'polygon' ? `${getStatusBorder('success')} ${colors.bg.success}` : `border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`} ${actualIsDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}`}>
             <Building className={`${iconSizes.lg} mb-2 ${colors.text.info}`} />
             <span className="text-sm font-medium">{t('drawingInterfaces.professional.tools.property')}</span>
-            <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.professional.tools.propertyManual')}</span>
           </button>
 
-          {/* Auto-Detection */}
-          <button
-            onClick={() => handleToolSelect('auto-detect')}
-            disabled={actualIsDrawing || !parserResult}
-            className={`
-              flex flex-col items-center justify-center p-4 ${quick.card}
-              transition-all duration-200 min-h-[100px]
-              ${selectedTool === 'auto-detect'
-                ? `${getStatusBorder('success')} ${colors.bg.success}`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
-              }
-              ${(actualIsDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
-            `}
-          >
+          <button onClick={() => handleToolSelect('auto-detect')} disabled={actualIsDrawing || !parserResult}
+            className={`flex flex-col items-center justify-center p-4 ${quick.card} transition-all duration-200 min-h-[100px] ${selectedTool === 'auto-detect' ? `${getStatusBorder('success')} ${colors.bg.success}` : `border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`} ${(actualIsDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}`}>
             <Layers className={`${iconSizes.lg} mb-2 ${colors.text.accent}`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.autoDetect')}</span>
-            <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.professional.tools.autoDetectAuto')}</span>
           </button>
 
-          {/* 🏠 Phase 2.5: Property Status Manager */}
-          <button
-            onClick={() => handleToolSelect('property-manager')}
-            disabled={actualIsDrawing}
-            className={`
-              flex flex-col items-center justify-center p-4 ${quick.card}
-              transition-all duration-200 min-h-[100px]
-              ${selectedTool === 'property-manager'
-                ? `${getStatusBorder('warning')} ${colors.bg.warning}`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
-              }
-              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
-            `}
-          >
+          <button onClick={() => handleToolSelect('property-manager')} disabled={actualIsDrawing}
+            className={`flex flex-col items-center justify-center p-4 ${quick.card} transition-all duration-200 min-h-[100px] ${selectedTool === 'property-manager' ? `${getStatusBorder('warning')} ${colors.bg.warning}` : `border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`} ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}`}>
             <Building className={`${iconSizes.lg} mb-2 ${colors.text.warning}`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.properties')}</span>
-            <span className={`text-xs ${colors.text.muted}`}>{t('hardcodedTexts.ui.status')}</span>
           </button>
 
-          {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
-          <button
-            onClick={() => handleToolSelect('monitoring-dashboard')}
-            disabled={actualIsDrawing}
-            className={`
-              flex flex-col items-center justify-center p-4 ${quick.card}
-              transition-all duration-200 min-h-[100px]
-              ${selectedTool === 'monitoring-dashboard'
-                ? `${getStatusBorder('info')} ${colors.bg.info}`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
-              }
-              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
-            `}
-          >
+          <button onClick={() => handleToolSelect('monitoring-dashboard')} disabled={actualIsDrawing}
+            className={`flex flex-col items-center justify-center p-4 ${quick.card} transition-all duration-200 min-h-[100px] ${selectedTool === 'monitoring-dashboard' ? `${getStatusBorder('info')} ${colors.bg.info}` : `border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`} ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}`}>
             <BarChart className={`${iconSizes.lg} mb-2 ${colors.text.info}`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.monitor')}</span>
-            <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.professional.tools.monitoringMarket')}</span>
           </button>
         </div>
 
         {/* Action Buttons */}
         {actualIsDrawing && (
           <div className="flex gap-2 mb-4">
-            <button
-              onClick={handleComplete}
-              className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.success} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
-            >
-              <Check className={iconSizes.md} />
-              <span className="font-medium">Ολοκλήρωση</span>
+            <button onClick={handleComplete}
+              className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.success} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}>
+              <Check className={iconSizes.md} /><span className="font-medium">{t('drawingInterfaces.professional.tools.complete', { defaultValue: '' })}</span>
             </button>
-
-            <button
-              onClick={handleCancel}
-              className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.error} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
-            >
-              <X className={iconSizes.md} />
-              <span className="font-medium">Ακύρωση</span>
+            <button onClick={handleCancel}
+              className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.error} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}>
+              <X className={iconSizes.md} /><span className="font-medium">{t('drawingInterfaces.professional.tools.cancel', { defaultValue: '' })}</span>
             </button>
           </div>
         )}
@@ -454,12 +223,9 @@ export function ProfessionalDrawingInterface({
         {/* Auto-Detection Button */}
         {selectedTool === 'auto-detect' && parserResult && (
           <div className="mb-4">
-            <button
-              onClick={handleAutoDetect}
-              className={`w-full flex items-center justify-center gap-2 ${colors.bg.accent} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}
-            >
-              <Layers className={iconSizes.md} />
-              <span className="font-medium">Ανίχνευση Δωματίων</span>
+            <button onClick={handleAutoDetect}
+              className={`w-full flex items-center justify-center gap-2 ${colors.bg.accent} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}>
+              <Layers className={iconSizes.md} /><span className="font-medium">{t('drawingInterfaces.professional.tools.detectRooms', { defaultValue: '' })}</span>
             </button>
           </div>
         )}
@@ -468,12 +234,10 @@ export function ProfessionalDrawingInterface({
         {parserResult && (
           <div className={`mb-4 p-3 ${colors.bg.success} ${quick.card} ${getStatusBorder('success')}`}>
             <p className={`text-sm ${colors.text.success}`}>
-              <span className="font-medium">Κάτοψη:</span> {selectedFile?.name || 'Uploaded'} ✅
+              <span className="font-medium">{t('drawingInterfaces.professional.floorPlanLabel', { defaultValue: '' })}:</span> {selectedFile?.name || 'Uploaded'} ✅
             </p>
             {selectedFile && (
-              <p className={`text-xs ${colors.text.success}`}>
-                Μέγεθος: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
+              <p className={`text-xs ${colors.text.success}`}>{t('drawingInterfaces.professional.sizeLabel', { defaultValue: '' })}: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
             )}
           </div>
         )}
@@ -495,155 +259,44 @@ export function ProfessionalDrawingInterface({
         {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
           <div className={`mt-4 p-3 ${colors.bg.secondary} rounded-md space-y-1`}>
             {stats.totalPolygons > 0 && (
-              <p className={`text-xs ${colors.text.muted}`}>
-                <span className="font-medium">Ακίνητα:</span> {stats.totalPolygons}
-              </p>
+              <p className={`text-xs ${colors.text.muted}`}><span className="font-medium">{t('hardcodedTexts.labels.properties', { defaultValue: '' })}:</span> {stats.totalPolygons}</p>
             )}
-
             {realEstateStats.totalAlerts > 0 && (
               <div className={`text-xs ${colors.text.info}`}>
-                <p>
-                  <span className="font-medium">{t('hardcodedTexts.labels.monitoringZones')}</span> {realEstateStats.totalAlerts}
-                </p>
-                {realEstateStats.totalMatches > 0 && (
-                  <p>
-                    <span className="font-medium">{t('hardcodedTexts.labels.detectedProperties')}</span> {realEstateStats.totalMatches}
-                  </p>
-                )}
-                {realEstateStats.lastCheck && (
-                  <p>
-                    <span className="font-medium">{t('hardcodedTexts.labels.lastScan')}</span> {new Date(realEstateStats.lastCheck).toLocaleTimeString('el-GR')}
-                  </p>
-                )}
+                <p><span className="font-medium">{t('hardcodedTexts.labels.monitoringZones')}</span> {realEstateStats.totalAlerts}</p>
+                {realEstateStats.totalMatches > 0 && <p><span className="font-medium">{t('hardcodedTexts.labels.detectedProperties')}</span> {realEstateStats.totalMatches}</p>}
+                {realEstateStats.lastCheck && <p><span className="font-medium">{t('hardcodedTexts.labels.lastScan')}</span> {new Date(realEstateStats.lastCheck).toLocaleTimeString('el-GR')}</p>}
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Floor Plan Upload Modal */}
-      <FloorPlanUploadModal
-        isOpen={showUploadModal}
-        onClose={handleUploadModalClose}
-        onFileSelect={handleFileSelect}
-        parserResult={parserResult}
-        selectedFile={selectedFile}
-        isParsing={isParsing}
-      />
+      <FloorPlanUploadModal isOpen={showUploadModal} onClose={() => { setShowUploadModal(false); setSelectedTool(null); }} onFileSelect={handleFileSelect} parserResult={parserResult} selectedFile={selectedFile} isParsing={isParsing} />
 
-      {/* 🏠 Phase 2.5: Property Status Manager */}
       {showPropertyManager && (
         <div className="mt-4">
           <PropertyStatusManager
             onStatusChange={handlePropertyStatusChange}
-            onColorSchemeChange={(scheme) => {
-              console.debug('🏢 Professional: Color scheme changed to', scheme);
-              // TODO: Apply color scheme to floor plan visualization
-            }}
-            onLayerVisibilityChange={(statuses, visible) => {
-              console.debug('🏢 Professional: Layer visibility changed', { statuses, visible });
-              // TODO: Toggle property layer visibility
-            }}
+            onColorSchemeChange={(scheme) => { console.debug('🏢 Professional: Color scheme changed to', scheme); }}
+            onLayerVisibilityChange={(statuses, visible) => { console.debug('🏢 Professional: Layer visibility changed', { statuses, visible }); }}
             className="max-w-md"
           />
         </div>
       )}
 
-      {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
       {showMonitoringDashboard && (
-        <div className={`mt-4 ${colors.bg.primary} rounded-lg shadow-lg ${quick.card} p-4`}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className={`text-lg font-semibold ${colors.text.foreground} flex items-center gap-2`}>
-              <BarChart className={`${iconSizes.md} ${colors.text.info}`} />
-              {t('realEstateMonitoring.title')}
-            </h3>
-            <button
-              onClick={() => {
-                setShowMonitoringDashboard(false);
-                setSelectedTool(null);
-              }}
-              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            >
-              <X className={iconSizes.md} />
-            </button>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className={`${colors.bg.info} p-3 rounded-md`}>
-              <p className={`text-sm font-medium ${colors.text.info}`}>{t('realEstateMonitoring.stats.monitoringZones')}</p>
-              <p className={`text-2xl font-bold ${colors.text.info}`}>{realEstateStats.totalAlerts}</p>
-            </div>
-            <div className={`${colors.bg.success} p-3 rounded-md`}>
-              <p className={`text-sm font-medium ${colors.text.success}`}>{t('realEstateMonitoring.stats.propertiesFound')}</p>
-              <p className={`text-2xl font-bold ${colors.text.success}`}>{realEstateStats.totalMatches}</p>
-            </div>
-            <div className={`${colors.bg.warning} p-3 rounded-md`}>
-              <p className={`text-sm font-medium ${colors.text.warning}`}>{t('realEstateMonitoring.stats.avgConfidence')}</p>
-              <p className={`text-2xl font-bold ${colors.text.warning}`}>
-                {realEstateStats.averageConfidence ? `${Math.round(realEstateStats.averageConfidence * 100)}%` : '-'}
-              </p>
-            </div>
-            <div className={`${colors.bg.accent} p-3 rounded-md`}>
-              <p className={`text-sm font-medium ${colors.text.accent}`}>{t('realEstateMonitoring.stats.lastScan')}</p>
-              <p className={`text-sm font-bold ${colors.text.accent}`}>
-                {realEstateStats.lastCheck ? formatDateShort(new Date(realEstateStats.lastCheck)) : '-'}
-              </p>
-            </div>
-          </div>
-
-          {/* Professional Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-            <button
-              onClick={() => setBatchMonitoringMode(!batchMonitoringMode)}
-              className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg border transition-colors ${
-                batchMonitoringMode
-                  ? `${colors.bg.info} ${getStatusBorder('info')} ${colors.text.info}`
-                  : `${colors.bg.secondary} border-border ${colors.text.muted} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
-              }`}
-            >
-              <Settings className={iconSizes.sm} />
-              <span className="text-sm font-medium">{t('realEstateMonitoring.actions.batchMode')}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (polygons.length > 0) {
-                  handleBatchRealEstateMonitoring(polygons);
-                }
-              }}
-              disabled={polygons.length === 0}
-              className={`flex items-center justify-center gap-2 ${colors.bg.success} ${colors.text.foreground} py-2 px-4 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors disabled:opacity-50`}
-            >
-              <Bell className={iconSizes.sm} />
-              <span className="text-sm font-medium">{t('realEstateMonitoring.actions.monitorAll', { count: polygons.length })}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                exportMatches();
-                console.debug('📊 Professional: Exporting data to CSV');
-              }}
-              disabled={realEstateStats.totalMatches === 0}
-              className={`flex items-center justify-center gap-2 ${colors.bg.muted} ${colors.text.foreground} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors disabled:opacity-50`}
-            >
-              <FileText className={iconSizes.sm} />
-              <span className="text-sm font-medium">{t('realEstateMonitoring.actions.exportCsv')}</span>
-            </button>
-          </div>
-
-          {/* Professional Tips */}
-          <div className={`${colors.bg.info} ${quick.info} p-3`}>
-            <h4 className={`text-sm font-semibold ${colors.text.info} mb-2`}>{t('realEstateMonitoring.tips.title')}</h4>
-            <ul className={`text-xs ${colors.text.info} space-y-1`}>
-              <li>{t('realEstateMonitoring.tips.batchMode')}</li>
-              <li>{t('realEstateMonitoring.tips.export')}</li>
-              <li>{t('realEstateMonitoring.tips.realtime')}</li>
-            </ul>
-          </div>
-        </div>
+        <MonitoringDashboard
+          t={t}
+          realEstateStats={realEstateStats}
+          polygonCount={polygons.length}
+          batchMonitoringMode={batchMonitoringMode}
+          onBatchModeToggle={() => setBatchMonitoringMode(!batchMonitoringMode)}
+          onMonitorAll={() => { if (polygons.length > 0) handleBatchRealEstateMonitoring(polygons); }}
+          onExport={() => { exportMatches(); }}
+          onClose={() => { setShowMonitoringDashboard(false); setSelectedTool(null); }}
+        />
       )}
     </>
   );
 }
-

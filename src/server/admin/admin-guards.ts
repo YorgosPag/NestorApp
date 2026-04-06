@@ -1,22 +1,7 @@
 import 'server-only';
 
-import type { DecodedIdToken } from 'firebase-admin/auth';
-import type { NextRequest } from 'next/server';
-import {
-  isApiAccessAllowed,
-  validateEnvironmentForOperation,
-  getCurrentRuntimeEnvironment,
-} from '@/config/environment-security-config';
-import { getDevCompanyId } from '@/config/dev-environment';
-import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
-import {
-  getAdminAuth,
-} from '@/lib/firebaseAdmin';
-import { createModuleLogger } from '@/lib/telemetry';
-const logger = createModuleLogger('AdminGuards');
-
 /**
- * ENTERPRISE: Centralized Admin Guards Module
+ * 🔐 ENTERPRISE: Centralized Admin Guards Module
  *
  * Server-only module providing:
  * - Firebase Admin SDK initialization (Auth + Firestore)
@@ -25,135 +10,65 @@ const logger = createModuleLogger('AdminGuards');
  * - Structured audit logging
  * - Server-only collection names (zero hardcoded strings in routes)
  *
+ * Split (ADR-065 Phase 5):
+ * - admin-guards-types.ts      → Types, interfaces, constants
+ * - admin-guards-page-auth.ts  → Server Component auth (requireAdminForPage)
+ * - admin-guards.ts (this)     → API auth, verification, audit
+ *
  * @serverOnly This module must only be used in server-side code (API routes)
- * @author Enterprise Architecture Team
- *
- * ARCHITECTURE UPDATE (2026-01-16):
- * - Migrated to centralized environment-security-config.ts
- * - Removed hardcoded ALLOWED_ENVIRONMENTS array
- * - Implements graduated security policies (development/staging/test/production)
- * - Enables production deployment με proper security controls
  */
 
-// ============================================================================
-// TYPES
-// ============================================================================
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import type { NextRequest } from 'next/server';
+import {
+  isApiAccessAllowed,
+  validateEnvironmentForOperation,
+  getCurrentRuntimeEnvironment,
+} from '@/config/environment-security-config';
+import {
+  getAdminAuth,
+} from '@/lib/firebaseAdmin';
+import { createModuleLogger } from '@/lib/telemetry';
 
-/**
- * Admin context returned after successful authentication
- */
-export interface AdminContext {
-  uid: string;
-  email: string;
-  role: AdminRole;
-  operationId: string;
-  environment: string;
-  mfaEnrolled: boolean;
-  companyId?: string; // 🏢 ENTERPRISE: Tenant isolation - from Firebase Auth custom claims
-}
+const logger = createModuleLogger('AdminGuards');
 
-/**
- * User context returned after successful authentication (no admin role required)
- * @enterprise Used for endpoints that require authenticated users but not admin privileges
- */
-export interface UserContext {
-  uid: string;
-  email: string;
-  role: AdminRole | null;
-  operationId: string;
-  environment: string;
-}
+// Re-export all types for backward compatibility
+export type {
+  AdminContext,
+  UserContext,
+  UserAuthResult,
+  AdminRole,
+  AuthResult,
+  AuditEntry,
+  StaffContext,
+  StaffAuthResult,
+  ServerCollectionKey,
+} from './admin-guards-types';
 
-/**
- * User authentication result
- */
-export interface UserAuthResult {
-  success: boolean;
-  error?: string;
-  context?: UserContext;
-}
+export {
+  ADMIN_ROLES,
+  roleRequiresMfa,
+  SERVER_COLLECTIONS,
+} from './admin-guards-types';
 
-/**
- * Supported admin roles from Firebase custom claims
- */
-export type AdminRole = 'admin' | 'broker' | 'builder' | 'super_admin';
+// Re-export page auth for backward compatibility
+export { requireAdminForPage } from './admin-guards-page-auth';
 
-/**
- * Authentication result
- */
-export interface AuthResult {
-  success: boolean;
-  error?: string;
-  context?: AdminContext;
-}
+import type {
+  AdminContext,
+  AdminRole,
+  AuthResult,
+  AuditEntry,
+  UserAuthResult,
+  StaffAuthResult,
+} from './admin-guards-types';
 
-/**
- * Audit log entry structure
- */
-export interface AuditEntry {
-  timestamp: string;
-  operationId: string;
-  operation: string;
-  environment: string;
-  uid?: string;
-  role?: AdminRole;
-  details: Record<string, unknown>;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const ADMIN_ROLES: AdminRole[] = ['admin', 'broker', 'builder', 'super_admin'];
-const AUTHORIZATION_HEADER = 'authorization';
-
-/**
- * 🔐 PR-1B: MFA ENFORCEMENT CONFIGURATION
- *
- * Roles that REQUIRE MFA enrollment for access.
- * Per Local_Protocol: mandatory MFA for broker/builder/admin.
- *
- * @since 2026-01-29 - Security Gate Phase 1 (PR-1B)
- */
-const MFA_REQUIRED_ROLES: AdminRole[] = ['admin', 'broker', 'builder', 'super_admin'];
-
-/**
- * Check if a role requires MFA enrollment
- */
-function roleRequiresMfa(role: AdminRole): boolean {
-  return MFA_REQUIRED_ROLES.includes(role);
-}
-
-// ============================================================================
-// SERVER-ONLY COLLECTIONS (ZERO HARDCODED STRINGS IN ROUTES)
-// ============================================================================
-
-/**
- * Server-only Firestore collection names
- * These collections should NEVER be imported in client code
- * Routes MUST use these constants instead of hardcoded strings
- */
-export const SERVER_COLLECTIONS = {
-  /** Admin building templates - source of truth for seed/populate */
-  ADMIN_BUILDING_TEMPLATES: 'admin_building_templates',
-  /** Buildings collection - main buildings data */
-  BUILDINGS: 'buildings',
-  /** Audit logs */
-  AUDIT_LOGS: 'audit_logs',
-} as const;
-
-export type ServerCollectionKey = keyof typeof SERVER_COLLECTIONS;
+import { ADMIN_ROLES, roleRequiresMfa } from './admin-guards-types';
 
 // ============================================================================
 // FIREBASE ADMIN — DELEGATED TO CANONICAL MODULE
 // ============================================================================
 // ADR-077: All Firebase Admin initialization is handled by src/lib/firebaseAdmin.ts
-// This module re-exports for backward compatibility of existing consumers.
-//
-// getAdminFirestore() and getAdminAuth() are imported from '@/lib/firebaseAdmin'
-// and re-exported below for any code that imports from this module.
-// ============================================================================
-
 export { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 // ============================================================================
@@ -162,7 +77,6 @@ export { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 /**
  * Check if current environment allows API access
- * @enterprise Uses centralized environment-security-config
  * @deprecated Use isApiAccessAllowed() from environment-security-config directly
  */
 export function isAllowedEnvironment(): boolean {
@@ -171,7 +85,6 @@ export function isAllowedEnvironment(): boolean {
 
 /**
  * Assert environment allows operation, throws if not
- * @enterprise Uses centralized environment-security-config
  * @deprecated Use validateEnvironmentForOperation() from environment-security-config
  */
 export function assertAllowedEnvironment(): void {
@@ -187,9 +100,9 @@ export function assertAllowedEnvironment(): void {
 // FIREBASE AUTH VERIFICATION
 // ============================================================================
 
-/**
- * Extract Bearer token from Authorization header
- */
+const AUTHORIZATION_HEADER = 'authorization';
+
+/** Extract Bearer token from Authorization header */
 function extractBearerToken(request: NextRequest): string | null {
   const authHeader = request.headers.get(AUTHORIZATION_HEADER);
   if (!authHeader) {
@@ -222,9 +135,9 @@ async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
 /**
  * Verify Firebase session cookie and extract claims.
  * Used for Server Component auth via __session cookie.
- * ADR-077: Uses canonical getAdminAuth() from firebaseAdmin.ts
+ * Exported for use by admin-guards-page-auth.ts
  */
-async function verifySessionCookieToken(sessionCookie: string): Promise<DecodedIdToken | null> {
+export async function verifySessionCookieToken(sessionCookie: string): Promise<DecodedIdToken | null> {
   try {
     const auth = getAdminAuth();
     const decodedToken = await auth.verifySessionCookie(sessionCookie, false);
@@ -237,10 +150,10 @@ async function verifySessionCookieToken(sessionCookie: string): Promise<DecodedI
 
 /**
  * Check if decoded token has admin role claim
+ * Exported for use by admin-guards-page-auth.ts
  * 🏢 ENTERPRISE: Email-based role checking (matches EnterpriseSecurityService)
  */
-function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
-  // Check custom claims for role - including super_admin
+export function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
   const role = decodedToken.role as string | undefined;
   const globalRole = (decodedToken as Record<string, unknown>).globalRole as string | undefined;
 
@@ -262,7 +175,6 @@ function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
   }
 
   // 🏢 ENTERPRISE: Email-based admin check (PRIMARY METHOD)
-  // This matches the behavior of EnterpriseSecurityService.checkUserRole()
   const email = decodedToken.email;
   if (!email) {
     return null;
@@ -285,31 +197,17 @@ function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
 }
 
 // ============================================================================
-// MAIN AUTHENTICATION FUNCTION
+// MAIN AUTHENTICATION — requireAdminContext
 // ============================================================================
 
 /**
  * Require admin authentication for a request
  *
- * This function:
- * 1. Checks environment allowlist
- * 2. Extracts Bearer token from Authorization header
- * 3. Verifies token with Firebase Auth
- * 4. Checks for admin role in custom claims
- * 5. Returns AdminContext on success
+ * Gates: Environment → Token → Firebase verify → Admin role → MFA
  *
  * @param request - NextRequest object
  * @param operationId - Unique operation ID for audit trail
  * @returns AuthResult with success status and context or error
- *
- * @example
- * ```typescript
- * const authResult = await requireAdminContext(request, operationId);
- * if (!authResult.success) {
- *   return NextResponse.json({ error: authResult.error }, { status: 403 });
- * }
- * const { uid, role } = authResult.context!;
- * ```
  */
 export async function requireAdminContext(
   request: NextRequest,
@@ -317,7 +215,7 @@ export async function requireAdminContext(
 ): Promise<AuthResult> {
   const environment = getCurrentRuntimeEnvironment();
 
-  // Gate 1: Environment check (uses centralized security config)
+  // Gate 1: Environment check
   const envValidation = validateEnvironmentForOperation('requireAdminContext');
   if (!envValidation.allowed) {
     return {
@@ -340,7 +238,7 @@ export async function requireAdminContext(
         role: 'admin',
         operationId,
         environment,
-        mfaEnrolled: true, // Dev bypass assumes MFA enrolled
+        mfaEnrolled: true,
       },
     };
   }
@@ -371,20 +269,16 @@ export async function requireAdminContext(
   }
 
   // Gate 5: MFA Enforcement (PR-1B)
-  // 🔐 SECURITY: Mandatory MFA for broker/builder/admin roles
   const mfaEnrolled = decodedToken.mfaEnrolled === true;
 
   if (roleRequiresMfa(role) && !mfaEnrolled) {
-    // Log MFA denial for audit
     logger.info(`🔐 [ADMIN_GUARDS] MFA DENIED: User ${decodedToken.email} (${role}) - MFA not enrolled`);
-
     return {
       success: false,
       error: `MFA enrollment required for ${role} role. Please enable two-factor authentication.`,
     };
   }
 
-  // Success - return admin context
   return {
     success: true,
     context: {
@@ -405,25 +299,11 @@ export async function requireAdminContext(
 /**
  * Require user authentication for a request (no admin role required)
  *
- * This function:
- * 1. Checks environment allowlist
- * 2. Extracts Bearer token from Authorization header
- * 3. Verifies token with Firebase Auth
- * 4. Returns UserContext on success (does NOT require admin role)
+ * Gates: Environment → Token → Firebase verify → Return context (role optional)
  *
  * @param request - NextRequest object
  * @param operationId - Unique operation ID for audit trail
  * @returns UserAuthResult with success status and context or error
- *
- * @enterprise Use this for endpoints that require authenticated users but not admin privileges
- * @example
- * ```typescript
- * const authResult = await requireUserContext(request, operationId);
- * if (!authResult.success) {
- *   return NextResponse.json({ error: authResult.error }, { status: 401 });
- * }
- * const { uid, email } = authResult.context!;
- * ```
  */
 export async function requireUserContext(
   request: NextRequest,
@@ -431,7 +311,7 @@ export async function requireUserContext(
 ): Promise<UserAuthResult> {
   const environment = getCurrentRuntimeEnvironment();
 
-  // Gate 1: Environment check (uses centralized security config)
+  // Gate 1: Environment check
   const envValidation = validateEnvironmentForOperation('requireUserContext');
   if (!envValidation.allowed) {
     return {
@@ -459,7 +339,6 @@ export async function requireUserContext(
     };
   }
 
-  // Success - return user context (role is optional, can be null)
   const role = hasAdminRole(decodedToken);
 
   return {
@@ -467,7 +346,7 @@ export async function requireUserContext(
     context: {
       uid: decodedToken.uid,
       email: decodedToken.email || 'unknown',
-      role, // Can be null if user has no admin role
+      role,
       operationId,
       environment,
     },
@@ -479,56 +358,22 @@ export async function requireUserContext(
 // ============================================================================
 
 /**
- * Staff context returned after successful authentication
- * @enterprise EPIC Δ - Staff-only Inbox endpoints
- */
-export interface StaffContext {
-  uid: string;
-  email: string;
-  role: AdminRole;
-  operationId: string;
-  environment: string;
-}
-
-/**
- * Staff authentication result
- */
-export interface StaffAuthResult {
-  success: boolean;
-  error?: string;
-  context?: StaffContext;
-}
-
-/**
  * Require staff authentication for a request (admin/broker/builder roles)
  *
- * This is a thin wrapper around requireAdminContext that provides:
- * - Staff-specific error semantics (STAFF_REQUIRED)
- * - 403 status for denial (instead of generic auth errors)
+ * Thin wrapper around requireAdminContext with staff-specific error semantics.
  *
  * @param request - NextRequest object
  * @param operationId - Unique operation ID for audit trail
  * @returns StaffAuthResult with success status and context or error
- *
  * @enterprise EPIC Δ - Staff-only Inbox endpoints
- * @example
- * ```typescript
- * const authResult = await requireStaffContext(request, operationId);
- * if (!authResult.success) {
- *   throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
- * }
- * const { uid, role } = authResult.context!;
- * ```
  */
 export async function requireStaffContext(
   request: NextRequest,
   operationId: string
 ): Promise<StaffAuthResult> {
-  // Delegate to existing requireAdminContext (which checks admin/broker/builder roles)
   const adminResult = await requireAdminContext(request, operationId);
 
   if (!adminResult.success) {
-    // Map error to staff-specific semantics
     const isRoleError = adminResult.error?.includes('admin privileges');
     return {
       success: false,
@@ -536,116 +381,9 @@ export async function requireStaffContext(
     };
   }
 
-  // Success - return staff context
   return {
     success: true,
     context: adminResult.context,
-  };
-}
-
-// ============================================================================
-// SERVER COMPONENT AUTHENTICATION (THIN WRAPPER)
-// ============================================================================
-
-/**
- * Require admin authentication for Server Components (Next.js App Router)
- *
- * Thin wrapper around requireAdminContext for use in Server Components.
- * Extracts token from cookies and performs same admin verification.
- *
- * @param operationId - Unique operation ID for audit trail
- * @returns AdminContext on success
- * @throws Error with specific message if authentication fails
- *
- * @enterprise Server Component only - uses cookies() from next/headers
- * @example
- * ```typescript
- * // In page.tsx (Server Component)
- * import { requireAdminForPage } from '@/server/admin/admin-guards';
- *
- * export default async function AdminPage() {
- *   try {
- *     const adminCtx = await requireAdminForPage('ADMIN_PAGE_ACCESS');
- *     return <AdminPageClient adminContext={adminCtx} />;
- *   } catch (error) {
- *     return <UnauthorizedView error={error.message} />;
- *   }
- * }
- * ```
- */
-export async function requireAdminForPage(
-  operationId: string
-): Promise<AdminContext> {
-  const environment = getCurrentRuntimeEnvironment();
-
-  // Gate 1: Environment check
-  const envValidation = validateEnvironmentForOperation('requireAdminForPage');
-  if (!envValidation.allowed) {
-    throw new Error(
-      envValidation.reason || `Operation not allowed in ${environment} environment`
-    );
-  }
-
-  // Gate 2: Extract token from cookies
-  // Dynamic import to avoid client-side bundling
-  const { cookies } = await import('next/headers');
-
-  // Firebase Auth stores session token in __session cookie (production)
-  // or in localStorage (development - client-side only)
-  // ⚠️ Next.js 15: cookies() must be awaited
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_CONFIG.NAME)?.value;
-
-  // Development bypass (when no token and in development)
-  if (!sessionCookie && environment === 'development') {
-    logger.info('[ADMIN_GUARDS] Development mode: bypassing page auth (no session cookie)');
-    return {
-      uid: 'dev-admin',
-      email: 'dev@localhost',
-      role: 'admin',
-      operationId,
-      environment,
-      mfaEnrolled: true,
-      companyId: await getDevCompanyId(), // 🏢 ENTERPRISE: Dev tenant isolation (SSoT - dynamic Firestore lookup)
-    };
-  }
-
-  if (!sessionCookie) {
-    throw new Error('Not authenticated - no session cookie found');
-  }
-
-  // Gate 3: Verify token with Firebase Admin
-  const decodedToken = await verifySessionCookieToken(sessionCookie);
-  if (!decodedToken) {
-    throw new Error('Invalid or expired authentication token');
-  }
-
-  // Gate 4: Check admin role
-  const role = hasAdminRole(decodedToken);
-  if (!role) {
-    throw new Error('User does not have admin privileges');
-  }
-
-  // Gate 5: MFA Enforcement
-  const mfaEnrolled = decodedToken.mfaEnrolled === true;
-
-  if (roleRequiresMfa(role) && !mfaEnrolled) {
-    logger.info(`🔐 [ADMIN_GUARDS] MFA DENIED (Page): User ${decodedToken.email} (${role}) - MFA not enrolled`);
-    throw new Error(`MFA enrollment required for ${role} role`);
-  }
-
-  // 🏢 ENTERPRISE: Extract companyId from Firebase Auth custom claims for tenant isolation
-  const companyId = decodedToken.companyId as string | undefined;
-
-  // Success - return admin context
-  return {
-    uid: decodedToken.uid,
-    email: decodedToken.email || 'unknown',
-    role,
-    operationId,
-    environment,
-    mfaEnrolled,
-    companyId, // 🏢 ENTERPRISE: Tenant-scoped admin context
   };
 }
 
@@ -655,11 +393,6 @@ export async function requireAdminForPage(
 
 /**
  * Create structured audit log entry
- *
- * @param operationId - Unique operation ID
- * @param operation - Operation name (e.g., 'SEED_BUILDINGS_START')
- * @param details - Additional details to log
- * @param context - Optional admin context for authenticated operations
  */
 export function audit(
   operationId: string,
@@ -677,6 +410,5 @@ export function audit(
     details,
   };
 
-  // Structured logging for parsing compatibility
   logger.info(`[AUDIT] ${JSON.stringify(entry)}`);
 }

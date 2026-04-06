@@ -6,6 +6,8 @@
  * Implements IGridHeadlessAPI from the AI assistant interface so
  * AI tools can operate on guides when activated.
  *
+ * Group and batch operations are delegated to guide-store-group-ops.ts (ADR-065 SRP).
+ *
  * @see ADR-189 (Construction Grid & Guide System)
  * @since 2026-02-19
  */
@@ -25,6 +27,21 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Guide, GuideGroup } from './guide-types';
 import { GUIDE_LIMITS, pointToSegmentDistance } from './guide-types';
 import { generateEntityId } from '../entity-creation/utils';
+import {
+  batchRemoveGuides,
+  batchSetGuidesLocked,
+  batchSetGuidesColor,
+  replaceGuideWithRotated as replaceRotatedOp,
+  restoreGuideSnapshot as restoreSnapshotOp,
+  removeTemporaryGuides as removeTempOp,
+  createGroup as createGroupOp,
+  removeGroup as removeGroupOp,
+  removeGroupWithGuides as removeGroupWithGuidesOp,
+  renameGroup as renameGroupOp,
+  setGroupLocked as setGroupLockedOp,
+  setGroupVisible as setGroupVisibleOp,
+  setGroupColor as setGroupColorOp,
+} from './guide-store-group-ops';
 
 // ============================================================================
 // TYPES
@@ -51,13 +68,11 @@ export class GuideStore implements IGridHeadlessAPI {
 
   // ── Observer Pattern ──
 
-  /** Subscribe to store changes. Returns unsubscribe function. */
   subscribe(listener: StoreListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
-  /** Notify all subscribers of a state change */
   private notify(): void {
     this.version++;
     this.listeners.forEach(listener => {
@@ -69,29 +84,24 @@ export class GuideStore implements IGridHeadlessAPI {
     });
   }
 
-  /** Current version (increments on every mutation — for React memoization) */
   getVersion(): number {
     return this.version;
   }
 
   // ── Read Operations ──
 
-  /** Get all guides (readonly snapshot) */
   getGuides(): readonly Guide[] {
     return this.guides;
   }
 
-  /** Get a guide by ID */
   getGuideById(id: string): Guide | undefined {
     return this.guides.find(g => g.id === id);
   }
 
-  /** Get guides by axis type */
   getGuidesByAxis(axis: GridAxis): readonly Guide[] {
     return this.guides.filter(g => g.axis === axis);
   }
 
-  /** Find the nearest guide to a world position */
   findNearestGuide(worldX: number, worldY: number, maxDistance: number): Guide | undefined {
     let nearest: Guide | undefined;
     let bestDist = maxDistance;
@@ -101,7 +111,6 @@ export class GuideStore implements IGridHeadlessAPI {
 
       let dist: number;
       if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-        // Diagonal guide: perpendicular distance to segment
         dist = pointToSegmentDistance({ x: worldX, y: worldY }, guide.startPoint, guide.endPoint);
       } else {
         dist = guide.axis === 'X'
@@ -118,37 +127,30 @@ export class GuideStore implements IGridHeadlessAPI {
     return nearest;
   }
 
-  /** Whether guides are globally visible */
   isVisible(): boolean {
     return this.visible;
   }
 
-  /** Whether snap-to-grid is enabled */
   isSnapEnabled(): boolean {
     return this.snapToGrid;
   }
 
-  /** Total number of guides */
   get count(): number {
     return this.guides.length;
   }
 
-  // ── Write Operations ──
+  // ── Write Operations (Individual) ──
 
-  /** Add a guide. Returns the created guide or undefined if limit reached. */
   addGuideRaw(axis: GridAxis, offset: number, label: string | null = null, parentId: string | null = null, groupId: string | null = null, temporary = false): Guide | undefined {
     if (this.guides.length >= GUIDE_LIMITS.MAX_GUIDES) {
       console.warn(`[GuideStore] Max guides limit reached (${GUIDE_LIMITS.MAX_GUIDES})`);
       return undefined;
     }
 
-    // Check for near-duplicate on same axis
     const duplicate = this.guides.find(
       g => g.axis === axis && Math.abs(g.offset - offset) < GUIDE_LIMITS.MIN_OFFSET_DELTA
     );
-    if (duplicate) {
-      return undefined; // Silently skip duplicate
-    }
+    if (duplicate) return undefined;
 
     const guide: Guide = {
       id: `guide_${generateEntityId()}`,
@@ -164,36 +166,26 @@ export class GuideStore implements IGridHeadlessAPI {
       ...(temporary ? { temporary: true } : {}),
     };
 
-    // CRITICAL: Create new array — useSyncExternalStore uses Object.is()
-    // Mutating in-place (push) keeps the same reference → React won't re-render
+    // CRITICAL: New array — useSyncExternalStore uses Object.is()
     this.guides = [...this.guides, guide];
     this.notify();
     return guide;
   }
 
-  /** Add a diagonal (XZ) guide defined by start and end points. Returns created guide or undefined. */
-  addDiagonalGuideRaw(
-    startPoint: Point2D,
-    endPoint: Point2D,
-    label: string | null = null,
-  ): Guide | undefined {
+  addDiagonalGuideRaw(startPoint: Point2D, endPoint: Point2D, label: string | null = null): Guide | undefined {
     if (this.guides.length >= GUIDE_LIMITS.MAX_GUIDES) {
       console.warn(`[GuideStore] Max guides limit reached (${GUIDE_LIMITS.MAX_GUIDES})`);
       return undefined;
     }
 
-    // Validate minimum length (avoid zero-length diagonals)
     const dx = endPoint.x - startPoint.x;
     const dy = endPoint.y - startPoint.y;
-    const length = Math.sqrt(dx * dx + dy * dy);
-    if (length < GUIDE_LIMITS.MIN_OFFSET_DELTA) {
-      return undefined;
-    }
+    if (Math.sqrt(dx * dx + dy * dy) < GUIDE_LIMITS.MIN_OFFSET_DELTA) return undefined;
 
     const guide: Guide = {
       id: `guide_${generateEntityId()}`,
       axis: 'XZ',
-      offset: 0,  // Not used for diagonal guides
+      offset: 0,
       label,
       style: null,
       visible: true,
@@ -210,48 +202,33 @@ export class GuideStore implements IGridHeadlessAPI {
     return guide;
   }
 
-  /** Re-add a previously created guide (for redo) */
   restoreGuide(guide: Guide): void {
-    // Avoid duplicates
     if (this.guides.some(g => g.id === guide.id)) return;
-    // CRITICAL: New array for useSyncExternalStore referential equality check
     this.guides = [...this.guides, { ...guide }];
     this.notify();
   }
 
-  /** Remove a guide by ID. Returns the removed guide or undefined. */
   removeGuideById(id: string): Guide | undefined {
     const index = this.guides.findIndex(g => g.id === id);
     if (index === -1) return undefined;
-
     const guide = this.guides[index];
-    if (guide.locked) return undefined; // Cannot remove locked guide
-
-    // CRITICAL: New array for useSyncExternalStore referential equality check
+    if (guide.locked) return undefined;
     this.guides = this.guides.filter(g => g.id !== id);
     this.notify();
     return guide;
   }
 
-  /** Move a guide to a new offset. Returns true if successful. */
   moveGuideById(id: string, newOffset: number): boolean {
     const guide = this.guides.find(g => g.id === id);
     if (!guide || guide.locked) return false;
-
-    // CRITICAL: New array with updated guide — useSyncExternalStore needs new reference
-    this.guides = this.guides.map(g =>
-      g.id === id ? { ...g, offset: newOffset } : g
-    );
+    this.guides = this.guides.map(g => g.id === id ? { ...g, offset: newOffset } : g);
     this.notify();
     return true;
   }
 
-  /** Move a diagonal (XZ) guide to new start/end points. Returns true if successful. */
   moveDiagonalGuideById(id: string, newStart: Point2D, newEnd: Point2D): boolean {
     const guide = this.guides.find(g => g.id === id);
     if (!guide || guide.locked || guide.axis !== 'XZ') return false;
-
-    // CRITICAL: New array with updated guide — useSyncExternalStore needs new reference
     this.guides = this.guides.map(g =>
       g.id === id ? { ...g, startPoint: { x: newStart.x, y: newStart.y }, endPoint: { x: newEnd.x, y: newEnd.y } } : g
     );
@@ -259,197 +236,95 @@ export class GuideStore implements IGridHeadlessAPI {
     return true;
   }
 
-  /** Set individual guide visibility (separate from global visibility) */
   setGuideVisible(id: string, visible: boolean): boolean {
     const guide = this.guides.find(g => g.id === id);
     if (!guide || guide.visible === visible) return false;
-
-    this.guides = this.guides.map(g =>
-      g.id === id ? { ...g, visible } : g
-    );
+    this.guides = this.guides.map(g => g.id === id ? { ...g, visible } : g);
     this.notify();
     return true;
   }
 
-  /** Set guide locked state */
   setGuideLocked(id: string, locked: boolean): boolean {
     const guide = this.guides.find(g => g.id === id);
     if (!guide || guide.locked === locked) return false;
-
-    this.guides = this.guides.map(g =>
-      g.id === id ? { ...g, locked } : g
-    );
+    this.guides = this.guides.map(g => g.id === id ? { ...g, locked } : g);
     this.notify();
     return true;
   }
 
-  /** Set guide label */
   setGuideLabel(id: string, label: string | null): boolean {
     const guide = this.guides.find(g => g.id === id);
     if (!guide || guide.label === label) return false;
-
-    this.guides = this.guides.map(g =>
-      g.id === id ? { ...g, label } : g
-    );
+    this.guides = this.guides.map(g => g.id === id ? { ...g, label } : g);
     this.notify();
     return true;
   }
 
-  /** Set guide color override (B6: per-guide color customization) */
   setGuideColor(id: string, color: string | null): boolean {
     const guide = this.guides.find(g => g.id === id);
     if (!guide) return false;
-
     const newStyle = color
       ? { color, lineWidth: guide.style?.lineWidth ?? 0.5, dashPattern: guide.style?.dashPattern ?? [6, 3] }
       : null;
-
-    this.guides = this.guides.map(g =>
-      g.id === id ? { ...g, style: newStyle } : g
-    );
+    this.guides = this.guides.map(g => g.id === id ? { ...g, style: newStyle } : g);
     this.notify();
     return true;
   }
 
-  // ── B14: Batch Operations ──
+  // ── Batch Operations (delegated to guide-store-group-ops) ──
 
-  /** Remove multiple guides by ID. Returns removed guides (locked guides are skipped). */
   removeGuidesById(ids: readonly string[]): Guide[] {
-    const idSet = new Set(ids);
-    const removed: Guide[] = [];
-    const remaining: Guide[] = [];
-    for (const g of this.guides) {
-      if (idSet.has(g.id) && !g.locked) {
-        removed.push(g);
-      } else {
-        remaining.push(g);
-      }
-    }
-    if (removed.length > 0) {
-      this.guides = remaining;
-      this.notify();
-    }
+    const { remaining, removed } = batchRemoveGuides(this.guides, ids);
+    if (removed.length > 0) { this.guides = remaining; this.notify(); }
     return removed;
   }
 
-  /** Set locked state for multiple guides at once. */
   setGuidesLocked(ids: readonly string[], locked: boolean): void {
-    const idSet = new Set(ids);
-    let changed = false;
-    this.guides = this.guides.map(g => {
-      if (idSet.has(g.id) && g.locked !== locked) {
-        changed = true;
-        return { ...g, locked };
-      }
-      return g;
-    });
-    if (changed) this.notify();
+    const result = batchSetGuidesLocked(this.guides, ids, locked);
+    if (result.changed) { this.guides = result.guides; this.notify(); }
   }
 
-  /** Set color for multiple guides at once. null = reset to default. */
   setGuidesColor(ids: readonly string[], color: string | null): void {
-    const idSet = new Set(ids);
-    let changed = false;
-    this.guides = this.guides.map(g => {
-      if (idSet.has(g.id)) {
-        changed = true;
-        const newStyle = color
-          ? { color, lineWidth: g.style?.lineWidth ?? 0.5, dashPattern: g.style?.dashPattern ?? [6, 3] }
-          : null;
-        return { ...g, style: newStyle };
-      }
-      return g;
-    });
-    if (changed) this.notify();
+    const result = batchSetGuidesColor(this.guides, ids, color);
+    if (result.changed) { this.guides = result.guides; this.notify(); }
   }
 
-  /**
-   * Replace a guide with a rotated version (always becomes XZ diagonal).
-   * Preserves id, label, style, visible, locked, createdAt, parentId.
-   * Returns the old guide snapshot (for undo) or undefined if not found/locked.
-   *
-   * @see ADR-189 B28 (Guide Rotation)
-   */
   replaceGuideWithRotated(id: string, newStart: Point2D, newEnd: Point2D): Guide | undefined {
-    const index = this.guides.findIndex(g => g.id === id);
-    if (index === -1) return undefined;
-
-    const oldGuide = this.guides[index];
-    if (oldGuide.locked) return undefined;
-
-    // Deep copy of old guide for undo snapshot
-    const snapshot: Guide = {
-      ...oldGuide,
-      startPoint: oldGuide.startPoint ? { ...oldGuide.startPoint } : undefined,
-      endPoint: oldGuide.endPoint ? { ...oldGuide.endPoint } : undefined,
-      style: oldGuide.style ? { ...oldGuide.style, dashPattern: [...oldGuide.style.dashPattern] } : null,
-    };
-
-    // Replace with rotated XZ guide preserving all metadata
-    const rotated: Guide = {
-      id: oldGuide.id,
-      axis: 'XZ',
-      offset: 0,
-      label: oldGuide.label,
-      style: oldGuide.style,
-      visible: oldGuide.visible,
-      locked: oldGuide.locked,
-      createdAt: oldGuide.createdAt,
-      parentId: oldGuide.parentId,
-      groupId: oldGuide.groupId,
-      startPoint: { x: newStart.x, y: newStart.y },
-      endPoint: { x: newEnd.x, y: newEnd.y },
-    };
-
-    this.guides = this.guides.map(g => g.id === id ? rotated : g);
+    const result = replaceRotatedOp(this.guides, id, newStart, newEnd);
+    if (!result) return undefined;
+    this.guides = result.guides;
     this.notify();
-    return snapshot;
+    return result.snapshot;
   }
 
-  /**
-   * Restore a guide to its exact previous state (for undo).
-   * Replaces the guide with matching ID with the full snapshot.
-   *
-   * @see ADR-189 B28 (Guide Rotation — undo)
-   */
   restoreGuideSnapshot(snapshot: Guide): boolean {
-    const index = this.guides.findIndex(g => g.id === snapshot.id);
-    if (index === -1) return false;
-
-    this.guides = this.guides.map(g =>
-      g.id === snapshot.id ? { ...snapshot } : g
-    );
+    const result = restoreSnapshotOp(this.guides, snapshot);
+    if (!result) return false;
+    this.guides = result;
     this.notify();
     return true;
   }
 
-  // ── B35: Temporary Guide Cleanup ──
-
-  /** Remove all temporary guides. Returns the removed guides (for event logging). */
   removeTemporaryGuides(): Guide[] {
-    const removed = this.guides.filter(g => g.temporary);
-    if (removed.length === 0) return [];
-
-    this.guides = this.guides.filter(g => !g.temporary);
-    this.notify();
+    const { remaining, removed } = removeTempOp(this.guides);
+    if (removed.length > 0) { this.guides = remaining; this.notify(); }
     return removed;
   }
 
-  /** Toggle global visibility */
+  // ── Global State ──
+
   setVisible(visible: boolean): void {
     if (this.visible === visible) return;
     this.visible = visible;
     this.notify();
   }
 
-  /** Toggle snap-to-grid */
   setSnapEnabled(enabled: boolean): void {
     if (this.snapToGrid === enabled) return;
     this.snapToGrid = enabled;
     this.notify();
   }
 
-  /** Clear all guides and groups */
   clear(): void {
     if (this.guides.length === 0 && this.groups.length === 0) return;
     this.guides = [];
@@ -457,130 +332,69 @@ export class GuideStore implements IGridHeadlessAPI {
     this.notify();
   }
 
-  // ── B7: Guide Group Operations ──
+  // ── Group Operations (delegated to guide-store-group-ops) ──
 
-  /** Get all groups (readonly snapshot) */
-  getGroups(): readonly GuideGroup[] {
-    return this.groups;
-  }
+  getGroups(): readonly GuideGroup[] { return this.groups; }
+  getGroupById(id: string): GuideGroup | undefined { return this.groups.find(g => g.id === id); }
+  getGuidesByGroupId(groupId: string): readonly Guide[] { return this.guides.filter(g => g.groupId === groupId); }
 
-  /** Get a group by ID */
-  getGroupById(id: string): GuideGroup | undefined {
-    return this.groups.find(g => g.id === id);
-  }
-
-  /** Get all guides belonging to a group */
-  getGuidesByGroupId(groupId: string): readonly Guide[] {
-    return this.guides.filter(g => g.groupId === groupId);
-  }
-
-  /** Create a named guide group. Returns the created group. */
   addGroup(name: string, color = '#6366F1'): GuideGroup {
-    const group: GuideGroup = {
-      id: `grp_${generateEntityId()}`,
-      name,
-      color,
-      locked: false,
-      visible: true,
-    };
+    const group = createGroupOp(name, color);
     this.groups = [...this.groups, group];
     this.notify();
     return group;
   }
 
-  /** Remove a group and ungroup all its guides (guides are NOT deleted). */
   removeGroup(groupId: string): boolean {
-    const index = this.groups.findIndex(g => g.id === groupId);
-    if (index === -1) return false;
-
-    this.groups = this.groups.filter(g => g.id !== groupId);
-    // Ungroup all member guides (set groupId to null)
-    this.guides = this.guides.map(g =>
-      g.groupId === groupId ? { ...g, groupId: null } : g
-    );
-    this.notify();
+    const result = removeGroupOp(this.guides, this.groups, groupId);
+    if (!result) return false;
+    this.guides = result.guides; this.groups = result.groups; this.notify();
     return true;
   }
 
-  /** Remove a group AND delete all its member guides. Returns removed guides. */
   removeGroupWithGuides(groupId: string): readonly Guide[] {
-    const index = this.groups.findIndex(g => g.id === groupId);
-    if (index === -1) return [];
-
-    const removed = this.guides.filter(g => g.groupId === groupId && !g.locked);
-    this.groups = this.groups.filter(g => g.id !== groupId);
-    this.guides = this.guides.filter(g => g.groupId !== groupId || g.locked);
-    this.notify();
-    return removed;
+    const result = removeGroupWithGuidesOp(this.guides, this.groups, groupId);
+    if (!result) return [];
+    this.guides = result.guides; this.groups = result.groups; this.notify();
+    return result.removed;
   }
 
-  /** Rename a group */
   renameGroup(groupId: string, name: string): boolean {
-    const group = this.groups.find(g => g.id === groupId);
-    if (!group || group.name === name) return false;
-
-    this.groups = this.groups.map(g =>
-      g.id === groupId ? { ...g, name } : g
-    );
-    this.notify();
+    const result = renameGroupOp(this.groups, groupId, name);
+    if (!result) return false;
+    this.groups = result; this.notify();
     return true;
   }
 
-  /** Set group locked state — also locks/unlocks all member guides */
   setGroupLocked(groupId: string, locked: boolean): boolean {
-    const group = this.groups.find(g => g.id === groupId);
-    if (!group || group.locked === locked) return false;
-
-    this.groups = this.groups.map(g =>
-      g.id === groupId ? { ...g, locked } : g
-    );
-    this.guides = this.guides.map(g =>
-      g.groupId === groupId ? { ...g, locked } : g
-    );
-    this.notify();
+    const result = setGroupLockedOp(this.guides, this.groups, groupId, locked);
+    if (!result) return false;
+    this.guides = result.guides; this.groups = result.groups; this.notify();
     return true;
   }
 
-  /** Set group visibility — also shows/hides all member guides */
   setGroupVisible(groupId: string, visible: boolean): boolean {
-    const group = this.groups.find(g => g.id === groupId);
-    if (!group || group.visible === visible) return false;
-
-    this.groups = this.groups.map(g =>
-      g.id === groupId ? { ...g, visible } : g
-    );
-    this.guides = this.guides.map(g =>
-      g.groupId === groupId ? { ...g, visible } : g
-    );
-    this.notify();
+    const result = setGroupVisibleOp(this.guides, this.groups, groupId, visible);
+    if (!result) return false;
+    this.guides = result.guides; this.groups = result.groups; this.notify();
     return true;
   }
 
-  /** Set group color */
   setGroupColor(groupId: string, color: string): boolean {
-    const group = this.groups.find(g => g.id === groupId);
-    if (!group || group.color === color) return false;
-
-    this.groups = this.groups.map(g =>
-      g.id === groupId ? { ...g, color } : g
-    );
-    this.notify();
+    const result = setGroupColorOp(this.groups, groupId, color);
+    if (!result) return false;
+    this.groups = result; this.notify();
     return true;
   }
 
-  /** Assign a guide to a group (or ungroup by passing null) */
   setGuideGroupId(guideId: string, groupId: string | null): boolean {
     const guide = this.guides.find(g => g.id === guideId);
     if (!guide || guide.groupId === groupId) return false;
-
-    this.guides = this.guides.map(g =>
-      g.id === guideId ? { ...g, groupId } : g
-    );
+    this.guides = this.guides.map(g => g.id === guideId ? { ...g, groupId } : g);
     this.notify();
     return true;
   }
 
-  /** Restore a group (for undo) */
   restoreGroup(group: GuideGroup): void {
     if (this.groups.some(g => g.id === group.id)) return;
     this.groups = [...this.groups, { ...group }];
@@ -611,7 +425,6 @@ export class GuideStore implements IGridHeadlessAPI {
   }
 
   createGroup(_args: CreateGridGroupArgs): GridOperationResult {
-    // Phase 1A: Groups not yet implemented
     return { success: false, affectedGuides: [], affectedGroups: [], message: 'Grid groups not yet implemented (Phase 1B)' };
   }
 
@@ -626,7 +439,7 @@ export class GuideStore implements IGridHeadlessAPI {
 
   getSnapshot(): GridContextSnapshot {
     return {
-      groups: [], // Phase 1A: No groups yet
+      groups: [],
       activeGroupId: null,
       snapToGrid: this.snapToGrid,
       gridVisible: this.visible,
@@ -640,7 +453,6 @@ export class GuideStore implements IGridHeadlessAPI {
 
 let globalInstance: GuideStore | null = null;
 
-/** Get the global GuideStore singleton */
 export function getGlobalGuideStore(): GuideStore {
   if (!globalInstance) {
     globalInstance = new GuideStore();

@@ -9,18 +9,10 @@ import type {
   ToolDefinition,
   ActionDefinition,
   ToolbarConfig,
-  ToolbarOperation,
-  ToolbarOperationResult,
-  ToolbarCustomization,
-  ToolRunner,
-  ToolStep
 } from './config';
 import { DEFAULT_TOOLBAR_STYLE, TOOLBAR_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
-import { generateCustomizationId } from '@/services/enterprise-id.service';
-// 🏢 ADR-095: Centralized Snap Tolerance
-// 🏢 ADR-167: Centralized UI Positioning Constants
-import { SNAP_TOLERANCE, UI_POSITIONING } from '../../config/tolerance-config';
+import { UI_POSITIONING } from '../../config/tolerance-config';
 
 // ===== TOOL DEFINITION UTILITIES =====
 export const ToolUtils = {
@@ -341,323 +333,28 @@ export const ToolbarUtils = {
   }
 };
 
-// ===== TOOL RUNNER UTILITIES =====
-export const ToolRunnerUtils = {
-  /**
-   * Creates a new tool runner instance
-   */
-  createToolRunner: (): ToolRunner => {
-    return {
-      currentTool: null,
-      isActive: false,
-      inputPoints: [],
-      requiredPoints: 0,
-      minPoints: 0,
-      maxPoints: 0,
-      previewData: null,
-      stepIndex: 0,
-      steps: [],
-      context: {
-        snapSettings: {
-          enabled: true,
-          types: ['endpoint', 'midpoint', 'center'],
-          tolerance: SNAP_TOLERANCE // 🏢 ADR-095
-        },
-        inputSettings: {
-          ortho: false,
-          polar: false,
-          tracking: false,
-          dynamicInput: true
-        },
-        displaySettings: {
-          preview: true,
-          constraints: true,
-          feedback: true
-        }
-      }
-    };
-  },
-
-  /**
-   * Validates tool input based on step requirements
-   * 🏢 ENTERPRISE: Using unknown for type-safe input validation
-   */
-  validateToolInput: (step: ToolStep, input: unknown): { valid: boolean; error?: string } => {
-    if (step.required && (input === null || input === undefined)) {
-      return { valid: false, error: 'This input is required' };
-    }
-
-    if (step.validation) {
-      return step.validation(input);
-    }
-
-    return { valid: true };
-  },
-
-  /**
-   * Calculates tool progress
-   */
-  calculateProgress: (runner: ToolRunner): { current: number; total: number; percentage: number } => {
-    const current = runner.stepIndex + 1;
-    const total = runner.steps.length;
-    const percentage = total > 0 ? (current / total) * 100 : 0;
-    
-    return { current, total, percentage };
-  },
-
-  /**
-   * Gets current tool step
-   */
-  getCurrentStep: (runner: ToolRunner): ToolStep | null => {
-    if (runner.stepIndex >= 0 && runner.stepIndex < runner.steps.length) {
-      return runner.steps[runner.stepIndex];
-    }
-    return null;
-  },
-
-  /**
-   * Checks if tool can proceed to next step
-   * 🏢 ENTERPRISE: Using unknown for type-safe input validation
-   */
-  canProceed: (runner: ToolRunner, input?: unknown): boolean => {
-    const currentStep = ToolRunnerUtils.getCurrentStep(runner);
-    if (!currentStep) return false;
-
-    if (currentStep.required && (input === null || input === undefined)) {
-      return false;
-    }
-
-    if (currentStep.validation) {
-      const validation = currentStep.validation(input);
-      return validation.valid;
-    }
-
-    return true;
-  }
-};
-
-// ===== CUSTOMIZATION UTILITIES =====
-export const CustomizationUtils = {
-  /**
-   * Creates a new toolbar customization
-   * 🏢 ENTERPRISE: Using unknown for type-safe changes tracking
-   */
-  createCustomization: (
-    name: string,
-    description: string,
-    toolbarId: string,
-    changes: ToolbarCustomization['changes'],
-    createdBy: string = 'user'
-  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
-  ): ToolbarCustomization => {
-    return {
-      id: generateCustomizationId(),
-      name,
-      description,
-      toolbarId,
-      changes,
-      createdAt: new Date(),
-      createdBy,
-      active: false
-    };
-  },
-
-  /**
-   * Applies customization to toolbar configuration
-   */
-  applyCustomization: (
-    config: ToolbarConfig,
-    customization: ToolbarCustomization
-  ): ToolbarConfig => {
-    const { changes } = customization;
-    let modifiedConfig = { ...config };
-
-    // Add new tools
-    if (changes.addedTools?.length > 0) {
-      modifiedConfig.tools = [...modifiedConfig.tools, ...changes.addedTools];
-    }
-
-    // Remove tools
-    if (changes.removedTools?.length > 0) {
-      modifiedConfig.tools = modifiedConfig.tools.filter(
-        toolId => !changes.removedTools.includes(toolId)
-      );
-    }
-
-    // Reorder tools
-    if (changes.reorderedTools?.length > 0) {
-      changes.reorderedTools.forEach((reorder: { from: number; to: number }) => {
-        const tools = [...modifiedConfig.tools];
-        const [movedTool] = tools.splice(reorder.from, 1);
-        tools.splice(reorder.to, 0, movedTool);
-        modifiedConfig.tools = tools;
-      });
-    }
-
-    // Apply property modifications
-    if (changes.modifiedProperties) {
-      modifiedConfig = { ...modifiedConfig, ...changes.modifiedProperties };
-    }
-
-    return modifiedConfig;
-  },
-
-  /**
-   * Validates customization data
-   */
-  validateCustomization: (customization: ToolbarCustomization): { valid: boolean; errors: string[] } => {
-    const errors: string[] = [];
-
-    if (!customization.name || typeof customization.name !== 'string') {
-      errors.push('Customization name is required and must be a string');
-    }
-
-    if (!customization.toolbarId || typeof customization.toolbarId !== 'string') {
-      errors.push('Toolbar ID is required and must be a string');
-    }
-
-    if (!customization.changes || typeof customization.changes !== 'object') {
-      errors.push('Changes object is required');
-    }
-
-    return { valid: errors.length === 0, errors };
-  }
-};
-
-// ===== HOTKEY UTILITIES =====
-export const HotkeyUtils = {
-  /**
-   * Parses hotkey string into components
-   */
-  parseHotkey: (hotkey: string): { 
-    key: string; 
-    ctrl: boolean; 
-    alt: boolean; 
-    shift: boolean; 
-    meta: boolean 
-  } => {
-    const parts = hotkey.toLowerCase().split('+');
-    const key = parts[parts.length - 1];
-    
-    return {
-      key,
-      ctrl: parts.includes('ctrl'),
-      alt: parts.includes('alt'),
-      shift: parts.includes('shift'),
-      meta: parts.includes('meta') || parts.includes('cmd')
-    };
-  },
-
-  /**
-   * Formats hotkey for display
-   */
-  formatHotkey: (hotkey: string): string => {
-    const parsed = HotkeyUtils.parseHotkey(hotkey);
-    const parts: string[] = [];
-
-    if (parsed.ctrl) parts.push('Ctrl');
-    if (parsed.alt) parts.push('Alt');
-    if (parsed.shift) parts.push('Shift');
-    if (parsed.meta) parts.push('⌘');
-    
-    parts.push(parsed.key.toUpperCase());
-
-    return parts.join('+');
-  },
-
-  /**
-   * Checks if hotkey matches keyboard event
-   */
-  matchesEvent: (hotkey: string, event: KeyboardEvent): boolean => {
-    const parsed = HotkeyUtils.parseHotkey(hotkey);
-    
-    return (
-      event.key.toLowerCase() === parsed.key &&
-      event.ctrlKey === parsed.ctrl &&
-      event.altKey === parsed.alt &&
-      event.shiftKey === parsed.shift &&
-      event.metaKey === parsed.meta
-    );
-  }
-};
-
-// ===== COMMON HOOK PATTERNS =====
-export const HookPatternUtils = {
-  /**
-   * Creates safe error handler for hooks
-   */
-  createErrorHandler: (onError?: (error: string) => void) => {
-    return (operation: string, error: unknown): string => {
-      const errorMsg = error instanceof Error ? error.message : `Failed to ${operation}`;
-      onError?.(errorMsg);
-      return errorMsg;
-    };
-  },
-
-  /**
-   * Creates operation result factory
-   * 🏢 ENTERPRISE: Using unknown for type-safe data passing
-   */
-  createOperationResult: (
-    operation: ToolbarOperation,
-    success: boolean,
-    data?: unknown,
-    error?: string,
-    toolbarId?: string
-  ): ToolbarOperationResult => {
-    return {
-      success,
-      operation,
-      ...(toolbarId ? { toolbarId } : {}),
-      ...(data !== undefined ? { data } : {}),
-      ...(error ? { error } : {})
-    };
-  },
-
-  /**
-   * Creates safe state updater with error handling
-   */
-  createSafeStateUpdater: <T>(
-    setState: React.Dispatch<React.SetStateAction<T>>,
-    onError?: (error: string) => void
-  ) => {
-    return (updater: (prev: T) => T, operation: string = 'update state') => {
-      try {
-        setState(updater);
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : `Failed to ${operation}`;
-        onError?.(errorMsg);
-      }
-    };
-  },
-
-  /**
-   * Creates common callback with error boundary
-   */
-  createSafeCallback: <T extends unknown[], R>(
-    callback: (...args: T) => R,
-    onError?: (error: string) => void,
-    operation: string = 'execute callback'
-  ) => {
-    return (...args: T): R | undefined => {
-      try {
-        return callback(...args);
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : `Failed to ${operation}`;
-        onError?.(errorMsg);
-        return undefined;
-      }
-    };
-  }
-};
+// ===== RE-EXPORTS from toolbars-extended-utils.ts (ADR-065 split) =====
+export {
+  ToolRunnerUtils,
+  CustomizationUtils,
+  HotkeyUtils,
+  HookPatternUtils,
+} from './toolbars-extended-utils';
 
 // ===== COMBINED UTILITY EXPORT =====
+import {
+  ToolRunnerUtils as _ToolRunnerUtils,
+  CustomizationUtils as _CustomizationUtils,
+  HotkeyUtils as _HotkeyUtils,
+  HookPatternUtils as _HookPatternUtils,
+} from './toolbars-extended-utils';
+
 export const ToolbarSystemUtils = {
   ...ToolUtils,
   ...ActionUtils,
   ...ToolbarUtils,
-  ...ToolRunnerUtils,
-  ...CustomizationUtils,
-  ...HotkeyUtils,
-  ...HookPatternUtils
+  ..._ToolRunnerUtils,
+  ..._CustomizationUtils,
+  ..._HotkeyUtils,
+  ..._HookPatternUtils
 };
