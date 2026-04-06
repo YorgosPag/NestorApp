@@ -57,6 +57,7 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | useCentralizedMouseHandlers split: 1 file (988 lines) -> 4 files (all compliant) |
 | 2026-04-06 | UnifiedFrameScheduler split: 1 file (973 lines) -> 4 files (all compliant) |
 | 2026-04-06 | HitTester split: 1 file (960 lines) -> 4 files (all compliant) |
+| 2026-04-06 | PreviewRenderer split: 1 file (958 lines) -> 3 files (all compliant) |
 
 ## useCentralizedMouseHandlers Split
 
