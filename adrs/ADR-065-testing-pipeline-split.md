@@ -48,6 +48,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | GeoCanvasContent split: 1 file (1207 lines) -> 3 files (all compliant) |
 | 2026-04-06 | DxfViewerContent split: 1 file (1182 lines) -> 3 files (all compliant) |
 | 2026-04-06 | photo-upload.service split: 1 file (1083 lines) -> 3 files (all compliant) |
+| 2026-04-06 | EnterpriseNotificationService split: 1 file (1023 lines) -> 3 files (all compliant) |
+
+## EnterpriseNotificationService Split
+
+`EnterpriseNotificationService.ts` contained 1023 lines — 2x over the 500-line limit. Production service mixing types/interfaces, static fallback data, and DB-driven configuration logic.
+
+Split into 3 files in `src/services/notification/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `notification-types.ts` | 8 interfaces, 2 type aliases | 194 | Yes (types-only) |
+| `notification-defaults.ts` | Fallback priorities, channels, mappings, retry/rate/processing configs | 263 | Yes (config/data) |
+| `EnterpriseNotificationService.ts` | Service class: DB operations, caching, helpers, singleton | 476 | No |
+
+Consumer Impact: 1 consumer (NotificationDispatchEngine.ts) — zero import path changes (main file re-exports types via `export type *`).
 
 ## photo-upload.service Split
 
