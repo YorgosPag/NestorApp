@@ -31,5 +31,10 @@ export function translatePropertyMutationError(
     return t('save.areaRequired');
   }
 
-  return t(fallbackKey);
+  const translated = t(fallbackKey);
+  // If translation failed (returned raw key), surface the actual server error
+  if (translated === fallbackKey || translated.includes(fallbackKey)) {
+    return errorMessage || translated;
+  }
+  return translated;
 }

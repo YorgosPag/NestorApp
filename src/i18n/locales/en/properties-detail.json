@@ -218,5 +218,21 @@
   },
   "buildingSelector": {
     "save": "Save"
+  },
+  "save": {
+    "success": "Property saved successfully",
+    "createSuccess": "Unit created successfully",
+    "error": "Failed to save property changes.",
+    "permissionDenied": "You do not have permission to update this property.",
+    "askingPriceRequired": "An asking price is required before reserving or selling this property.",
+    "buyerRequired": "A buyer contact is required before reserving or selling this property.",
+    "buildingRequired": "This property must be linked to a building before it can be reserved or sold.",
+    "areaRequired": "This property must have an area defined before it can be reserved or sold."
+  },
+  "fieldLocking": {
+    "serverReject": "This property contains locked fields that cannot be changed in its current commercial state."
+  },
+  "inlineEdit": {
+    "updated": "Property updated successfully"
   }
 }
