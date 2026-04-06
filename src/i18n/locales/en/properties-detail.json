@@ -175,6 +175,10 @@
       "yes": "Yes, multiple levels",
       "no": "No, single floor"
     },
+    "createFloor": "Create new floor",
+    "primaryFloor": "Primary floor",
+    "setPrimary": "Set as primary",
+    "removeFloor": "Remove floor",
     "noBuildingOrFloor": "Link a building and floor first to enable automatic level creation.",
     "perLevel": {
       "perFloorHint": "per floor",
