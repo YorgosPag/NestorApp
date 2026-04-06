@@ -11,37 +11,33 @@ import type { GripSettings } from '../../types/gripSettings';
 import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
-// 🏢 ADR-085: Centralized Split Line Rendering
-import {
-  renderSplitLineWithGap as renderSplitLineWithGapUtil,
-  renderContinuousLine as renderContinuousLineUtil
-} from './shared/line-rendering-utils';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 // 🏢 ADR-119: Centralized Opacity Constants
 import { UI_COLORS, OPACITY } from '../../config/color-config';
-// 🏢 ADR-044: Centralized Line Widths
-// 🏢 ADR-048: Centralized Rendering Geometry (2027-01-27)
-// 🏢 ADR-083: Centralized Line Dash Patterns
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
-// 🏢 ADR-141: Arc Label Positioning Constants
-import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY, LINE_DASH_PATTERNS, buildUIFont, ARC_LABEL_POSITIONING } from '../../config/text-rendering-config';
+import { buildUIFont } from '../../config/text-rendering-config';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../grips/constants';
-// 🏢 ADR-065: Centralized Distance Calculation & Vector Operations
-// 🏢 ADR-070: Centralized Vector Magnitude
-// 🏢 ADR-078: Centralized Vector Angle
-import { renderSquareGrip, calculateDistance, vectorMagnitude, calculateAngle, vectorAngle, getUnitVector } from './shared/geometry-rendering-utils';
-// 🏢 ADR-067: Centralized Radians/Degrees Conversion
-// 🏢 ADR-073: Centralized Bisector Angle, Midpoint
-// 🏢 ADR-112: Centralized Text Rotation Pattern
-import { radToDeg, bisectorAngle, calculateMidpoint, normalizeTextAngle } from './shared/geometry-utils';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { renderSquareGrip, calculateDistance } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
-import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
-// 🏢 ADR-058: Centralized Canvas Primitives
-// 🏢 ADR-077: Centralized TAU Constant
-import { addArcPath, TAU } from '../primitives/canvasPaths';
-// 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance, formatAngle } from './shared/distance-label-utils';
+// 🏢 ADR-065: Extracted rendering helpers (arc/angle + distance text)
+import {
+  type BaseRenderingContext,
+  calculateDistanceTextPositionImpl,
+  renderDistanceTextCommonImpl,
+  renderInlineDistanceTextImpl,
+  renderDistanceTextCentralizedImpl,
+  renderDistanceTextPhaseAwareImpl,
+  shouldRenderSplitLineImpl,
+  shouldRenderLinesImpl,
+  renderSplitLineWithGapImpl,
+  applyArcStyleToCtx,
+  drawCentralizedArcImpl,
+  drawInternalAngleArcImpl,
+  renderAngleAtVertexImpl,
+  drawInternalArcOnCanvas,
+} from './base-entity-rendering-helpers';
 
 // Interfaces moved to PhaseManager to avoid circular dependency
 
@@ -78,6 +74,18 @@ export abstract class BaseEntityRenderer {
 
   public setGripInteractionState(next: typeof this.gripInteraction) {
     this.gripInteraction = next || {};
+  }
+
+  /** 🏢 ADR-065: Rendering context for delegated helper functions */
+  protected get rc(): BaseRenderingContext {
+    return {
+      ctx: this.ctx,
+      transform: this.transform,
+      worldToScreen: this.worldToScreen.bind(this),
+      phaseManager: this.phaseManager,
+      applyAngleMeasurementTextStyle: this.applyAngleMeasurementTextStyle.bind(this),
+      applyDistanceTextStyle: this.applyDistanceTextStyle.bind(this),
+    };
   }
 
   // ✅ ΦΑΣΗ 7: Unified coordinate transformations
@@ -369,235 +377,59 @@ export abstract class BaseEntityRenderer {
     this.cleanupStyle();
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΤΟΠΟΘΈΤΗΣΗ ΚΕΙΜΈΝΩΝ ΑΠΟΣΤΆΣΕΩΝ
-   * Υπολογίζει τη θέση του κειμένου ΕΣΩΤΕΡΙΚΑ της γραμμής
-   * για να μη κρύβει το midpoint grip
-   */
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected calculateDistanceTextPosition(screenStart: Point2D, screenEnd: Point2D, offsetDistance: number = 15): Point2D {
-    // 🏢 ADR-065: Use centralized distance calculation
-    const length = calculateDistance(screenStart, screenEnd);
-
-    if (length === 0) {
-      return { x: screenStart.x, y: screenStart.y };
-    }
-
-    // 🏢 ADR-065: Use centralized unit vector calculation
-    const unit = getUnitVector(screenStart, screenEnd);
-    // Perpendicular to the left (rotated 90° CCW)
-    const perpX = -unit.y;
-    const perpY = unit.x;
-
-    // 🏢 ADR-073: Use centralized midpoint calculation
-    const mid = calculateMidpoint(screenStart, screenEnd);
-
-    // Offset the text position INSIDE the line (perpendicular offset)
-    // Positive offset moves text to the "left" side of the line direction
-    return {
-      x: mid.x + perpX * offsetDistance,
-      y: mid.y + perpY * offsetDistance
-    };
+    return calculateDistanceTextPositionImpl(screenStart, screenEnd, offsetDistance);
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΜΈΘΟΔΟΣ INLINE DISTANCE TEXT ΓΙΑ ΠΡΟΕΠΙΣΚΌΠΗΣΗ
-   * Σχεδιάζει το κείμενο απόστασης ΣΤΗΝ ΊΔΙΑ ΕΥΘΕΊΑ της γραμμής (όχι έκκεντρα)
-   */
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected renderInlineDistanceText(worldStart: Point2D, worldEnd: Point2D, screenStart: Point2D, screenEnd: Point2D): void {
-    // 🏢 ADR-073: Use centralized midpoint calculation
-    const textPosition = calculateMidpoint(screenStart, screenEnd);
-
-    // Use common distance text rendering
-    this.renderDistanceTextCommon(worldStart, worldEnd, screenStart, screenEnd, textPosition);
+    renderInlineDistanceTextImpl(this.rc, worldStart, worldEnd, screenStart, screenEnd);
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΜΈΘΟΔΟΣ ΑΠΌΣΤΑΣΗΣ ΓΙΑ ΌΛΕΣ ΤΙΣ ΓΡΑΜΜΈΣ
-   * Σχεδιάζει το κείμενο απόστασης με περιστροφή στο εσωτερικό της γραμμής
-   */
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected renderDistanceTextCentralized(worldStart: Point2D, worldEnd: Point2D, screenStart: Point2D, screenEnd: Point2D, offsetDistance: number = 15): void {
-    // Get text position inside the line
-    const textPos = this.calculateDistanceTextPosition(screenStart, screenEnd, offsetDistance);
-    
-    // Use common distance text rendering
-    this.renderDistanceTextCommon(worldStart, worldEnd, screenStart, screenEnd, textPos);
+    renderDistanceTextCentralizedImpl(this.rc, worldStart, worldEnd, screenStart, screenEnd, offsetDistance);
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΜΈΘΟΔΟΣ DISTANCE TEXT ΜΕ PHASE-AWARE POSITIONING
-   * Επιλέγει την κατάλληλη μέθοδος ανάλογα με τη φάση (inline για preview, offset για measurements)
-   */
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected renderDistanceTextPhaseAware(worldStart: Point2D, worldEnd: Point2D, screenStart: Point2D, screenEnd: Point2D, entity: EntityModel, options: RenderOptions): void {
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-    
-    if (phaseState.phase === 'preview') {
-      // Στη φάση προεπισκόπησης: inline positioning (στην ίδια ευθεία)
-      this.renderInlineDistanceText(worldStart, worldEnd, screenStart, screenEnd);
-    } else {
-      // Στις άλλες φάσεις: offset positioning (έκκεντρα)
-      this.renderDistanceTextCentralized(worldStart, worldEnd, screenStart, screenEnd);
-    }
+    renderDistanceTextPhaseAwareImpl(this.rc, worldStart, worldEnd, screenStart, screenEnd, entity, options);
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟΣ ΈΛΕΓΧΟΣ SPLIT LINE
-   * Καθορίζει αν μια οντότητα χρειάζεται split line με distance text
-   */
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected shouldRenderSplitLine(entity: EntityModel, options: RenderOptions = {}): boolean {
-    // Αν είναι preview phase και έχει showEdgeDistances flag
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-    const hasDistanceFlag = ('showEdgeDistances' in entity && entity.showEdgeDistances === true);
-
-    return phaseState.phase === 'preview' && hasDistanceFlag;
+    return shouldRenderSplitLineImpl(this.rc, entity, options);
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟΣ ΈΛΕΓΧΟΣ ΓΡΑΜΜΏΝ - PHASE AWARE
-   * Καθορίζει αν οι γραμμές είναι ενεργοποιημένες με υποστήριξη override
-   */
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected shouldRenderLines(entity: EntityModel, options: RenderOptions = {}): boolean {
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    const lineStyle = phaseState.phase === 'preview'
-      ? getLinePreviewStyleWithOverride()
-      : getLinePreviewStyleWithOverride(); // ✅ ΔΙΟΡΘΩΣΗ: Χρήση WithOverride και για NORMAL phase
-
-    return lineStyle.enabled;
+    return shouldRenderLinesImpl();
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΜΈΘΟΔΟΣ ΣΠΑΣΜΈΝΗΣ ΓΡΑΜΜΉΣ ΓΙΑ ΌΛΕΣ ΤΙΣ ΟΝΤΌΤΗΤΕΣ
-   * Σχεδιάζει γραμμή με κενό στο κέντρο για distance text - για όλες τις οντότητες κατά την προεπισκόπηση
-   *
-   * 🏢 ADR-085: Centralized Split Line Rendering
-   * Delegates to line-rendering-utils.ts for single source of truth.
-   * Uses RENDER_GEOMETRY.SPLIT_LINE_GAP (30px) for consistent gap size.
-   */
-  protected renderSplitLineWithGap(screenStart: Point2D, screenEnd: Point2D, entity: EntityModel, options: RenderOptions = {}, gapSize: number = RENDER_GEOMETRY.SPLIT_LINE_GAP): void {
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    // ✅ PHASE AWARE: Χρήση WithOverride για preview phase
-    const textStyle = phaseState.phase === 'preview'
-      ? getTextPreviewStyleWithOverride()
-      : getTextPreviewStyleWithOverride(); // ✅ ΔΙΟΡΘΩΣΗ: Χρήση WithOverride και για NORMAL phase
-
-    if (textStyle.enabled) {
-      // 🏢 ADR-085: Delegate to centralized utility
-      renderSplitLineWithGapUtil(this.ctx, screenStart, screenEnd, gapSize);
-    } else {
-      // 🏢 ADR-085: Delegate to centralized utility
-      renderContinuousLineUtil(this.ctx, screenStart, screenEnd);
-    }
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
+  protected renderSplitLineWithGap(screenStart: Point2D, screenEnd: Point2D, entity: EntityModel, options: RenderOptions = {}): void {
+    renderSplitLineWithGapImpl(this.rc, screenStart, screenEnd, entity, options);
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΣΤΙΛ ΤΌΞΩΝ - πορτοκαλί χρώμα με διακεκομμένες γραμμές
-   */
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected applyArcStyle(): void {
-    this.ctx.strokeStyle = UI_COLORS.DRAWING_TEMP; // Πορτοκαλί χρώμα
-    this.ctx.setLineDash([...LINE_DASH_PATTERNS.ARC]); // 🏢 ADR-083
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
+    applyArcStyleToCtx(this.ctx);
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΜΈΘΟΔΟΣ ΣΧΕΔΊΑΣΗΣ ΤΌΞΩΝ
-   * - Πάντοτε ΕΣΩΤΕΡΙΚΆ τόξα (μικρότερη γωνία)
-   * - Πάντα ορατά στη φάση προεπισκόπησης
-   * - Για όλες τις οντότητες (σχεδίασης & μέτρησης)
-   */
-    // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΜΕΘΟΔΟΣ ΓΙΑ ΚΥΚΛΑ/ΤΟΞΑ (χωρίς γωνίες)
-  protected drawCentralizedArc(
-    centerX: number,
-    centerY: number,
-    radius: number,
-    startAngle: number,
-    endAngle: number
-  ): void {
-    this.ctx.save();
-    this.applyArcStyle();
-
-    const screenCenter = this.worldToScreen({ x: centerX, y: centerY });
-    const screenRadius = radius * this.transform.scale;
-
-    // Για κύκλα/τόξα χωρίς γωνίες, χρησιμοποιούμε απλή λογική
-    // 🏢 ADR-058: Use centralized canvas primitives
-    this.ctx.beginPath();
-    addArcPath(this.ctx, screenCenter, screenRadius, startAngle, endAngle);
-    this.ctx.stroke();
-
-    this.ctx.restore();
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
+  protected drawCentralizedArc(centerX: number, centerY: number, radius: number, startAngle: number, endAngle: number): void {
+    drawCentralizedArcImpl(this.rc, centerX, centerY, radius, startAngle, endAngle);
   }
 
-  /**
-   * 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΜΕΘΟΔΟΣ ΓΙΑ ΕΣΩΤΕΡΙΚΑ ΤΟΞΑ ΓΩΝΙΩΝ
-   * Χρησιμοποιεί τη σωστή λογική με dot product για να σχεδιάσει
-   * ΠΑΝΤΑ το εσωτερικό τόξο της γωνίας (μικρότερη γωνία)
-   *
-   * @param vertex - Κορυφή της γωνίας (world coordinates)
-   * @param point1 - Πρώτο σημείο (world coordinates)
-   * @param point2 - Δεύτερο σημείο (world coordinates)
-   * @param radiusWorld - Ακτίνα τόξου σε world units
-   */
-  protected drawInternalAngleArc(
-    vertex: Point2D,
-    point1: Point2D,
-    point2: Point2D,
-    radiusWorld: number
-  ): void {
-    // Υπολογισμός unit vectors από vertex προς κάθε σημείο
-    const toPoint1 = { x: point1.x - vertex.x, y: point1.y - vertex.y };
-    const toPoint2 = { x: point2.x - vertex.x, y: point2.y - vertex.y };
-
-    // 🏢 ADR-070: Use centralized vector magnitude
-    const len1 = vectorMagnitude(toPoint1);
-    const len2 = vectorMagnitude(toPoint2);
-
-    if (len1 === 0 || len2 === 0) return;
-
-    const prevUnit = { x: toPoint1.x / len1, y: toPoint1.y / len1 };
-    const nextUnit = { x: toPoint2.x / len2, y: toPoint2.y / len2 };
-
-    // Χρήση της υπάρχουσας σωστής λογικής για εσωτερικό τόξο
-    const rPx = radiusWorld * this.transform.scale;
-    this.drawInternalArc(vertex, prevUnit, nextUnit, rPx);
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
+  protected drawInternalAngleArc(vertex: Point2D, point1: Point2D, point2: Point2D, radiusWorld: number): void {
+    drawInternalAngleArcImpl(this.rc, vertex, point1, point2, radiusWorld);
   }
 
-  /**
-   * Common distance text rendering setup - eliminates duplication
-   */
-  private renderDistanceTextCommon(
-    worldStart: Point2D, 
-    worldEnd: Point2D, 
-    screenStart: Point2D, 
-    screenEnd: Point2D,
-    textPosition: Point2D
-  ): void {
-    // Calculate world distance
-    // 🏢 ADR-109: Use centralized distance calculation
-    const worldDistance = calculateDistance(worldStart, worldEnd);
-    
-    // Calculate line angle for text rotation
-    // 🏢 ADR-078: Use centralized calculateAngle
-    const angle = calculateAngle(screenStart, screenEnd);
-
-    // 🏢 ADR-090: Centralized number formatting
-    const text = formatDistance(worldDistance);
-    
-    // Save context for rotation
-    this.ctx.save();
-
-    // Move to text position and rotate
-    this.ctx.translate(textPosition.x, textPosition.y);
-
-    // 🏢 ADR-110: Use centralized text rotation normalization (keeps text readable)
-    this.ctx.rotate(normalizeTextAngle(angle));
-    
-    // Apply distance text styling - χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    this.applyDistanceTextStyle();
-    renderStyledTextWithOverride(this.ctx, text, 0, 0);
-    
-    // Restore context
-    this.ctx.restore();
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
+  private renderDistanceTextCommon(worldStart: Point2D, worldEnd: Point2D, screenStart: Point2D, screenEnd: Point2D, textPosition: Point2D): void {
+    renderDistanceTextCommonImpl(this.rc, worldStart, worldEnd, screenStart, screenEnd, textPosition);
   }
 
   /**
@@ -623,111 +455,18 @@ export abstract class BaseEntityRenderer {
   }
 
 
-  // 🔺 ΚΟΙΝΕΣ ΜΕΘΟΔΟΙ ΓΙΑ ΤΟΞΑ ΓΩΝΙΩΝ - Χρησιμοποιούνται από Rectangle, Polyline, AngleMeasurement
-  // Χρήση ακριβούς λογικής από TODO.md με dot product για σωστή επιλογή τεταρτημορίου
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected renderAngleAtVertex(
-    prevVertex: Point2D, 
-    currentVertex: Point2D, 
-    nextVertex: Point2D,
-    prevScreen: Point2D,
-    currentScreen: Point2D,
-    nextScreen: Point2D,
-    arcRadius: number = 30, // Μεγαλύτερη default τιμή
-    labelOffset: number = 15
+    prevVertex: Point2D, currentVertex: Point2D, nextVertex: Point2D,
+    prevScreen: Point2D, currentScreen: Point2D, nextScreen: Point2D,
+    arcRadius: number = 30, labelOffset: number = 15
   ): void {
-    // Calculate unit vectors in world coordinates
-    const toPrev = {
-      x: prevVertex.x - currentVertex.x,
-      y: prevVertex.y - currentVertex.y
-    };
-    const toNext = {
-      x: nextVertex.x - currentVertex.x,  
-      y: nextVertex.y - currentVertex.y
-    };
-    
-    // Normalize vectors
-    // 🏢 ADR-070: Use centralized vector magnitude
-    const prevLength = vectorMagnitude(toPrev);
-    const nextLength = vectorMagnitude(toNext);
-    
-    if (prevLength === 0 || nextLength === 0) return;
-    
-    const prevUnit = { x: toPrev.x / prevLength, y: toPrev.y / prevLength };
-    const nextUnit = { x: toNext.x / nextLength, y: toNext.y / nextLength };
-    
-    // Calculate angle in degrees for label
-    // 🏢 ADR-078: Use centralized vectorAngle
-    const angle1 = vectorAngle(prevUnit);
-    const angle2 = vectorAngle(nextUnit);
-    let angleDiff = angle2 - angle1;
-    if (angleDiff < 0) angleDiff += TAU;
-    if (angleDiff > Math.PI) angleDiff = TAU - angleDiff;
-    // 🏢 ADR-067: Use centralized angle conversion
-    const degrees = radToDeg(angleDiff);
-    
-    // 🔺 ΕΦΑΡΜΟΓΗ ΑΚΡΙΒΟΥΣ ΛΟΓΙΚΗΣ ΑΠΟ TODO.MD
-    this.drawInternalArc(currentVertex, prevUnit, nextUnit, arcRadius);
-    
-    // 🏢 ADR-073: Use centralized bisector angle calculation
-    const bisectorAngleValue = bisectorAngle(angle1, angle2);
-    // 🏢 ADR-141: Centralized arc label positioning constants
-    const rTextPx = Math.max(
-      arcRadius * ARC_LABEL_POSITIONING.OFFSET_RATIO,
-      ARC_LABEL_POSITIONING.MIN_OFFSET_PX
-    );
-    const rWorld = rTextPx / this.transform.scale;
-    
-    const worldLabelX = currentVertex.x + Math.cos(bisectorAngleValue) * rWorld;
-    const worldLabelY = currentVertex.y + Math.sin(bisectorAngleValue) * rWorld;
-    const screenLabel = this.worldToScreen({ x: worldLabelX, y: worldLabelY });
-    
-    // Draw label
-    this.ctx.save();
-    // 🏢 ENTERPRISE: Use centralized angle measurement text style (fuchsia color)
-    // NOT renderStyledTextWithOverride which would override with white
-    this.applyAngleMeasurementTextStyle();
-
-    // 🏢 ADR-090: Centralized number formatting
-    const angleText = formatAngle(degrees, 1);
-    this.ctx.fillText(angleText, screenLabel.x, screenLabel.y);
-    this.ctx.restore();
+    renderAngleAtVertexImpl(this.rc, prevVertex, currentVertex, nextVertex, prevScreen, currentScreen, nextScreen, arcRadius, labelOffset);
   }
 
-  // 🔺 ΑΠΛΟΠΟΙΗΜΕΝΗ ΛΟΓΙΚΗ - Πάντα σχεδιάζει το ΜΙΚΡΟΤΕΡΟ τόξο (εσωτερική γωνία)
-  private drawInternalArc(
-    vertex: Point2D,
-    prevUnit: Point2D,
-    nextUnit: Point2D,
-    rPx: number
-  ): void {
-    const v = this.worldToScreen(vertex);
-
-    // Μετατροπή σε screen-space (flip Y για canvas coordinate system)
-    const u1 = { x: prevUnit.x, y: -prevUnit.y };
-    const u2 = { x: nextUnit.x, y: -nextUnit.y };
-
-    // 🏢 ADR-078: Use centralized vectorAngle
-    const a1 = vectorAngle(u1);
-    const a2 = vectorAngle(u2);
-
-    // Υπολογισμός διαφοράς γωνιών (normalized 0 to 2π)
-    const norm = (t: number) => (t % (TAU) + TAU) % (TAU);
-    const dCCW = norm(a2 - a1);  // Counter-clockwise distance
-    const dCW = TAU - dCCW;       // Clockwise distance
-
-    // 🎯 FIX (2026-02-13): Επιλέγουμε την κατεύθυνση που δίνει το ΜΙΚΡΟΤΕΡΟ τόξο (εσωτερική γωνία)
-    // dCCW = CW angular distance (canvas Y-down: increasing angle = clockwise)
-    // - Αν dCCW < π, η CW πορεία είναι κοντή → useCCW = false (σχέδιασε CW = μικρό τόξο)
-    // - Αν dCCW > π, η CW πορεία είναι μακρά → useCCW = true (σχέδιασε CCW = μικρό τόξο)
-    const useCCW = dCCW > Math.PI;
-
-    this.ctx.save();
-    this.applyArcStyle();
-    this.ctx.beginPath();
-    // 🏢 ADR-058: Use centralized canvas primitives
-    addArcPath(this.ctx, v, rPx, a1, a2, useCCW);
-    this.ctx.stroke();
-    this.ctx.restore();
+  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
+  private drawInternalArc(vertex: Point2D, prevUnit: Point2D, nextUnit: Point2D, rPx: number): void {
+    drawInternalArcOnCanvas(this.rc, vertex, prevUnit, nextUnit, rPx);
   }
 
 }

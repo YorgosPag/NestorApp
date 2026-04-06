@@ -69,6 +69,79 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | Phase 3 #16: CitizenDrawingInterface split: 1 file (834 lines) -> 3 files (324+170+130) |
 | 2026-04-06 | Phase 3 #17: PerformanceMonitor split: 1 file (791 lines) -> 3 files (277+126+187) |
 | 2026-04-06 | Phase 3 #18: EnterprisePerformanceManager split: 1 file (810 lines) -> 3 files (320+38+152) |
+| 2026-04-06 | Phase 4 #1: channel-reply-dispatcher split: 1 file (748 lines) -> 3 files (128+425+239) |
+| 2026-04-06 | Phase 4 #2: email-inbound-service split: 1 file (724 lines) -> 2 files (432+337) |
+| 2026-04-06 | Phase 4 #3: audit.ts split: 1 file (773 lines) -> 3 files (273+304+39 barrel) |
+| 2026-04-06 | Phase 4 #4: ApiErrorHandler.ts split: 1 file (723 lines) -> 3 files (95+162+425) |
+| 2026-04-06 | Phase 4 #5: EnterpriseUserPreferencesService split: 1 file (735 lines) -> 2 files (223+427) |
+| 2026-04-06 | Phase 4 #6: OrganizationHierarchyService split: 1 file (736 lines) -> 2 files (331+307) |
+| 2026-04-07 | Phase 4 #7: EnterprisePolygonStyleService split: 1 file (704 lines) -> 2 files (283+416) |
+| 2026-04-07 | Phase 4 #8: EnterpriseLayerStyleService split: 1 file (701 lines) -> 2 files (250+492) |
+| 2026-04-07 | Phase 4 #9: dxf-entity-converters split: 1 file (770 lines) -> 2 files (389+300) |
+| 2026-04-07 | Phase 4 #10: dxf-entity-parser split: 1 file (756 lines) -> 3 files (156+257+227) |
+| 2026-04-07 | Phase 4 #11: AccordionSection split: 1 file (755 lines) -> 3 files (118+188+301) |
+| 2026-04-07 | Phase 4 #12: BaseEntityRenderer split: 1 file (732 lines) -> 2 files (471+344) — arc/angle + distance text helpers |
+| 2026-04-07 | Phase 4 #13: useCanvasMouse split: 1 file (728 lines) -> 3 files (459+194+178) — types + drag handlers |
+| 2026-04-07 | Phase 4 #14: migrationRegistry split: 1 file (725 lines) -> 2 files (441+189) — migration transformation helpers with shared applyToAllLevels |
+| 2026-04-07 | Phase 4 #15: TextSettings split: 1 file (701 lines) -> 2 files (485+259) — icons, constants, sub-components, FactoryResetModal |
+| 2026-04-07 | Phase 4 #16: hardcoded-values-migration split: 1 file (777 lines) -> 3 files (172+321+254) — types+data, operations, orchestrator |
+| 2026-04-07 | Phase 4 #17: SecurityCompliance split: 1 file (766 lines) -> 3 files (187+117+412) — types, mock data, main class |
+| 2026-04-07 | Phase 4 #18: AdminBoundariesPerformanceAnalytics split: 1 file (763 lines) -> 3 files (146+163+394) — types, calculators, main class |
+| 2026-04-07 | Phase 4 #19: GeometrySimplificationEngine split: 1 file (742 lines) -> 2 files (172+331) — DP algorithm+LOD+types, main engine |
+| 2026-04-07 | Phase 4 #20: invoice-pdf-template split: 1 file (709 lines) -> 3 files (166+344+99) — constants, section renderers, main render |
+
+## BaseEntityRenderer Split
+
+`BaseEntityRenderer.ts` contained 732 lines — 1.5x over the 500-line limit. Abstract base class mixing core rendering framework, distance text positioning/rendering, and arc/angle geometry in a single file.
+
+Split into 2 files in `src/subapps/dxf-viewer/rendering/entities/`:
+
+| File | Content | Lines |
+|------|---------|-------|
+| `base-entity-rendering-helpers.ts` | `BaseRenderingContext` interface, 13 standalone functions for distance text + arc/angle rendering | 344 |
+| `BaseEntityRenderer.ts` | Core class: constructor, grips, style/phase management, thin delegation wrappers | 471 |
+
+**Pattern**: Delegation via `BaseRenderingContext` — helper functions receive `{ctx, transform, worldToScreen, phaseManager, applyAngleMeasurementTextStyle, applyDistanceTextStyle}` instead of `this`. Class methods become 1-line wrappers. 14 subclasses unchanged (still call `this.renderAngleAtVertex()` etc.).
+
+## useCanvasMouse Split
+
+`useCanvasMouse.ts` contained 728 lines — 1.5x over the 500-line limit. Hook mixing 10+ type definitions, mouse event handlers, and complex drag-end logic.
+
+Split into 3 files in `src/subapps/dxf-viewer/hooks/canvas/`:
+
+| File | Content | Lines |
+|------|---------|-------|
+| `canvas-mouse-types.ts` | 10 interfaces (VertexHoverInfo, DraggingVertexState, UseCanvasMouseProps, etc.) | 194 |
+| `canvas-mouse-drag-handlers.ts` | 3 async drag-end handlers (vertex, edge-midpoint, overlay body) with `DragEndContext` | 178 |
+| `useCanvasMouse.ts` | Hook: state, refs, mousemove/enter/leave handlers, thin mouseUp wrapper + re-exports | 459 |
+
+Consumer Impact: All types re-exported from main file — zero import path changes.
+
+## migrationRegistry Split
+
+`migrationRegistry.ts` contained 725 lines — 1.5x over the 500-line limit. Registry mixing migration entries with 7 property transformation helper functions sharing identical structure.
+
+Split into 2 files in `src/subapps/dxf-viewer/settings/io/`:
+
+| File | Content | Lines |
+|------|---------|-------|
+| `migration-helpers.ts` | 7 exported helpers (fix/revert Line/Text/Grip + renameField) with shared `applyToAllLevels` DRY utility | 189 |
+| `migrationRegistry.ts` | Migration entries (v1→v5), migrateToVersion, needsMigration, rollback, validate | 441 |
+
+**Bonus**: Introduced `applyToAllLevels()` shared utility — eliminated ~130 lines of duplicated `Object.fromEntries(Object.entries(...).map(...))` pattern across 6 functions.
+
+## TextSettings Split
+
+`TextSettings.tsx` contained 701 lines — 1.4x over the 500-line limit. Component mixing SVG icons, font constants, 2 sub-components (TextStyleButtons, ScriptStyleButtons), and a factory reset modal.
+
+Split into 2 files in `src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/`:
+
+| File | Content | Lines |
+|------|---------|-------|
+| `text-settings-helpers.tsx` | 4 SVG icons, FREE_FONTS/FONT_SIZE_OPTIONS constants, TextStyleButtons, ScriptStyleButtons, FactoryResetModal | 259 |
+| `TextSettings.tsx` | Main component: hooks, handlers, 4 accordion sections, conditional wrapper | 485 |
+
+Consumer Impact: Zero — all extracted items are internal to TextSettings.
 
 ## useCentralizedMouseHandlers Split
 

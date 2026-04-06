@@ -4,14 +4,9 @@
  * Database-driven polygon styling configuration για multi-tenant deployments.
  * Αντικατέστησε τα hardcoded DEFAULT_POLYGON_STYLES με configurable Firebase collections.
  *
- * Features:
- * - Multi-tenant style configurations
- * - Brand-specific styling themes
- * - Environment-specific styles
- * - Real-time style updates
- * - Theme inheritance & overrides
- * - Accessibility compliance (WCAG colors)
- * - Performance-optimized caching
+ * Split into 2 files for SRP compliance (ADR-065 Phase 4):
+ * - polygon-style-config.ts              — Types + theme data (EXEMPT: config/data)
+ * - EnterprisePolygonStyleService.ts      — Service class (this file)
  */
 
 import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
@@ -19,264 +14,21 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
+// Re-export everything from config for backward compatibility
+export type { PolygonType, PolygonStyle } from './polygon-style-config';
+export type { EnterprisePolygonStyleConfig, StyleTheme } from './polygon-style-config';
+export { FALLBACK_POLYGON_STYLES, DARK_THEME_STYLES, HIGH_CONTRAST_STYLES } from './polygon-style-config';
+
+import type { PolygonType, PolygonStyle } from './polygon-style-config';
+import type { EnterprisePolygonStyleConfig } from './polygon-style-config';
+import {
+  FALLBACK_POLYGON_STYLES,
+  DARK_THEME_STYLES,
+  HIGH_CONTRAST_STYLES,
+  getFallbackPolygonStyles,
+} from './polygon-style-config';
+
 const logger = createModuleLogger('EnterprisePolygonStyleService');
-
-// Re-export types from core package (canonical path alias)
-export type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
-import type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
-
-// ============================================================================
-// ENTERPRISE STYLE TYPES
-// ============================================================================
-
-export interface EnterprisePolygonStyleConfig {
-  id: string;
-  polygonType: PolygonType;
-  style: PolygonStyle;
-  tenantId?: string;
-  environment?: 'development' | 'staging' | 'production' | 'all';
-  theme?: string; // 'default' | 'dark' | 'high-contrast' | 'brand-a' | 'brand-b'
-  isEnabled: boolean;
-  priority: number;
-  metadata?: {
-    displayName?: string;
-    description?: string;
-    category?: 'system' | 'brand' | 'accessibility' | 'custom';
-    accessibility?: {
-      wcagCompliant?: boolean;
-      contrastRatio?: number;
-      colorBlindSafe?: boolean;
-    };
-    createdBy?: string;
-    createdAt?: Date;
-    updatedAt?: Date;
-  };
-}
-
-export interface StyleTheme {
-  id: string;
-  name: string;
-  displayName: string;
-  description?: string;
-  isDefault: boolean;
-  tenantId?: string;
-  polygonStyles: Record<PolygonType, PolygonStyle>;
-  metadata?: {
-    category?: 'system' | 'brand' | 'accessibility';
-    accessibility?: {
-      wcagLevel?: 'A' | 'AA' | 'AAA';
-      contrastRatio?: number;
-      colorBlindFriendly?: boolean;
-    };
-    brandGuidelines?: {
-      primaryColor?: string;
-      secondaryColor?: string;
-      accentColors?: string[];
-    };
-  };
-}
-
-// ============================================================================
-// DEFAULT/FALLBACK CONFIGURATION
-// ============================================================================
-
-/**
- * 🎨 Fallback style configuration (WCAG AA compliant)
- */
-const BASE_FALLBACK_POLYGON_STYLES: Record<Exclude<PolygonType, 'freehand' | 'point'>, PolygonStyle> = {
-  simple: {
-    strokeColor: '#1e40af',    // Enhanced blue (WCAG AA)
-    fillColor: '#3b82f6',
-    strokeWidth: 2,
-    fillOpacity: 0.25,
-    strokeOpacity: 1,
-    pointRadius: 4,
-    pointColor: '#1d4ed8'
-  },
-  georeferencing: {
-    strokeColor: '#d97706',    // Enhanced amber (WCAG AA)
-    fillColor: '#f59e0b',
-    strokeWidth: 2,
-    fillOpacity: 0.15,
-    strokeOpacity: 1,
-    pointRadius: 6,
-    pointColor: '#b45309'
-  },
-  'alert-zone': {
-    strokeColor: '#dc2626',    // Enhanced red (WCAG AA)
-    fillColor: '#ef4444',
-    strokeWidth: 3,
-    fillOpacity: 0.2,
-    strokeOpacity: 1,
-    pointRadius: 5,
-    pointColor: '#b91c1c'
-  },
-  'real-estate': {
-    strokeColor: '#0891b2',    // Enhanced cyan (WCAG AA)
-    fillColor: '#06b6d4',
-    strokeWidth: 2,
-    fillOpacity: 0.15,
-    strokeOpacity: 1,
-    pointRadius: 5,
-    pointColor: '#0e7490'
-  },
-  measurement: {
-    strokeColor: '#059669',    // Enhanced green (WCAG AA)
-    fillColor: '#10b981',
-    strokeWidth: 2,
-    fillOpacity: 0.15,
-    strokeOpacity: 1,
-    pointRadius: 4,
-    pointColor: '#047857'
-  },
-  annotation: {
-    strokeColor: '#7c3aed',    // Enhanced purple (WCAG AA)
-    fillColor: '#8b5cf6',
-    strokeWidth: 2,
-    fillOpacity: 0.15,
-    strokeOpacity: 1,
-    pointRadius: 4,
-    pointColor: '#6d28d9'
-  }
-};
-
-const FALLBACK_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
-  ...BASE_FALLBACK_POLYGON_STYLES,
-  freehand: BASE_FALLBACK_POLYGON_STYLES.simple,
-  point: BASE_FALLBACK_POLYGON_STYLES.annotation
-};
-
-/**
- * 🌙 Dark theme polygon styles
- */
-const BASE_DARK_THEME_STYLES: Record<Exclude<PolygonType, 'freehand' | 'point'>, PolygonStyle> = {
-  simple: {
-    strokeColor: '#60a5fa',
-    fillColor: '#3b82f6',
-    strokeWidth: 2,
-    fillOpacity: 0.3,
-    strokeOpacity: 1,
-    pointRadius: 4,
-    pointColor: '#93c5fd'
-  },
-  georeferencing: {
-    strokeColor: '#fbbf24',
-    fillColor: '#f59e0b',
-    strokeWidth: 2,
-    fillOpacity: 0.2,
-    strokeOpacity: 1,
-    pointRadius: 6,
-    pointColor: '#fcd34d'
-  },
-  'alert-zone': {
-    strokeColor: '#f87171',
-    fillColor: '#ef4444',
-    strokeWidth: 3,
-    fillOpacity: 0.25,
-    strokeOpacity: 1,
-    pointRadius: 5,
-    pointColor: '#fca5a5'
-  },
-  'real-estate': {
-    strokeColor: '#22d3ee',
-    fillColor: '#06b6d4',
-    strokeWidth: 2,
-    fillOpacity: 0.2,
-    strokeOpacity: 1,
-    pointRadius: 5,
-    pointColor: '#67e8f9'
-  },
-  measurement: {
-    strokeColor: '#34d399',
-    fillColor: '#10b981',
-    strokeWidth: 2,
-    fillOpacity: 0.2,
-    strokeOpacity: 1,
-    pointRadius: 4,
-    pointColor: '#6ee7b7'
-  },
-  annotation: {
-    strokeColor: '#a78bfa',
-    fillColor: '#8b5cf6',
-    strokeWidth: 2,
-    fillOpacity: 0.2,
-    strokeOpacity: 1,
-    pointRadius: 4,
-    pointColor: '#c4b5fd'
-  }
-};
-
-const DARK_THEME_STYLES: Record<PolygonType, PolygonStyle> = {
-  ...BASE_DARK_THEME_STYLES,
-  freehand: BASE_DARK_THEME_STYLES.simple,
-  point: BASE_DARK_THEME_STYLES.annotation
-};
-
-/**
- * ♿ High contrast theme (WCAG AAA compliant)
- */
-const BASE_HIGH_CONTRAST_STYLES: Record<Exclude<PolygonType, 'freehand' | 'point'>, PolygonStyle> = {
-  simple: {
-    strokeColor: '#000000',
-    fillColor: '#0066cc',
-    strokeWidth: 3,
-    fillOpacity: 0.4,
-    strokeOpacity: 1,
-    pointRadius: 6,
-    pointColor: '#000000'
-  },
-  georeferencing: {
-    strokeColor: '#cc6600',
-    fillColor: '#ff8800',
-    strokeWidth: 3,
-    fillOpacity: 0.3,
-    strokeOpacity: 1,
-    pointRadius: 8,
-    pointColor: '#cc6600'
-  },
-  'alert-zone': {
-    strokeColor: '#cc0000',
-    fillColor: '#ff3333',
-    strokeWidth: 4,
-    fillOpacity: 0.4,
-    strokeOpacity: 1,
-    pointRadius: 7,
-    pointColor: '#cc0000'
-  },
-  'real-estate': {
-    strokeColor: '#006666',
-    fillColor: '#00aaaa',
-    strokeWidth: 3,
-    fillOpacity: 0.3,
-    strokeOpacity: 1,
-    pointRadius: 6,
-    pointColor: '#006666'
-  },
-  measurement: {
-    strokeColor: '#006600',
-    fillColor: '#00aa00',
-    strokeWidth: 3,
-    fillOpacity: 0.3,
-    strokeOpacity: 1,
-    pointRadius: 6,
-    pointColor: '#006600'
-  },
-  annotation: {
-    strokeColor: '#6600cc',
-    fillColor: '#9933ff',
-    strokeWidth: 3,
-    fillOpacity: 0.3,
-    strokeOpacity: 1,
-    pointRadius: 6,
-    pointColor: '#6600cc'
-  }
-};
-
-const HIGH_CONTRAST_STYLES: Record<PolygonType, PolygonStyle> = {
-  ...BASE_HIGH_CONTRAST_STYLES,
-  freehand: BASE_HIGH_CONTRAST_STYLES.simple,
-  point: BASE_HIGH_CONTRAST_STYLES.annotation
-};
 
 // ============================================================================
 // ENTERPRISE POLYGON STYLE SERVICE CLASS
@@ -430,14 +182,7 @@ export class EnterprisePolygonStyleService {
    * 🔄 Get fallback styles based on theme
    */
   getFallbackStyles(theme: string): Record<PolygonType, PolygonStyle> {
-    switch (theme) {
-      case 'dark':
-        return DARK_THEME_STYLES;
-      case 'high-contrast':
-        return HIGH_CONTRAST_STYLES;
-      default:
-        return FALLBACK_POLYGON_STYLES;
-    }
+    return getFallbackPolygonStyles(theme);
   }
 
   /**
@@ -538,73 +283,40 @@ export class EnterprisePolygonStyleService {
       logger.info('Initializing default polygon styles in Firebase');
 
       const configs: Omit<EnterprisePolygonStyleConfig, 'id'>[] = [];
+      const themeMap = {
+        default: FALLBACK_POLYGON_STYLES,
+        dark: DARK_THEME_STYLES,
+        'high-contrast': HIGH_CONTRAST_STYLES,
+      };
 
-      // Create configurations για κάθε polygon type
+      // Create configurations για κάθε polygon type × theme
       Object.entries(FALLBACK_POLYGON_STYLES).forEach(([type, style], index) => {
-        // Default theme config
-        configs.push({
-          polygonType: type as PolygonType,
-          style,
-          tenantId,
-          environment: (environment || 'all') as EnterprisePolygonStyleConfig['environment'],
-          theme: 'default',
-          isEnabled: true,
-          priority: index + 1,
-          metadata: {
-            displayName: `${type} - Default Theme`,
-            description: `Default styling για ${type} polygons`,
-            category: 'system',
-            accessibility: {
-              wcagCompliant: true,
-              contrastRatio: 4.5,
-              colorBlindSafe: true
-            },
-            createdBy: SYSTEM_IDENTITY.ID
-          }
-        });
+        const polygonType = type as PolygonType;
 
-        // Dark theme config
-        configs.push({
-          polygonType: type as PolygonType,
-          style: DARK_THEME_STYLES[type as PolygonType],
-          tenantId,
-          environment: (environment || 'all') as EnterprisePolygonStyleConfig['environment'],
-          theme: 'dark',
-          isEnabled: true,
-          priority: index + 1,
-          metadata: {
-            displayName: `${type} - Dark Theme`,
-            description: `Dark theme styling για ${type} polygons`,
-            category: 'system',
-            accessibility: {
-              wcagCompliant: true,
-              contrastRatio: 3.0,
-              colorBlindSafe: true
-            },
-            createdBy: SYSTEM_IDENTITY.ID
-          }
-        });
+        Object.entries(themeMap).forEach(([themeName, themeStyles]) => {
+          const category = themeName === 'high-contrast' ? 'accessibility' : 'system';
+          const wcagRatio = themeName === 'high-contrast' ? 7.0 : themeName === 'dark' ? 3.0 : 4.5;
 
-        // High contrast theme config
-        configs.push({
-          polygonType: type as PolygonType,
-          style: HIGH_CONTRAST_STYLES[type as PolygonType],
-          tenantId,
-          environment: (environment || 'all') as EnterprisePolygonStyleConfig['environment'],
-          theme: 'high-contrast',
-          isEnabled: true,
-          priority: index + 1,
-          metadata: {
-            displayName: `${type} - High Contrast`,
-            description: `High contrast styling για ${type} polygons (WCAG AAA)`,
-            category: 'accessibility',
-            accessibility: {
-              wcagCompliant: true,
-              contrastRatio: 7.0,
-              colorBlindSafe: true
-            },
-            createdBy: SYSTEM_IDENTITY.ID
-          }
+          configs.push({
+            polygonType,
+            style: themeStyles[polygonType] ?? style,
+            tenantId,
+            environment: (environment || 'all') as EnterprisePolygonStyleConfig['environment'],
+            theme: themeName,
+            isEnabled: true,
+            priority: index + 1,
+            metadata: {
+              displayName: `${type} - ${themeName.charAt(0).toUpperCase() + themeName.slice(1)} Theme`,
+              description: `${themeName} theme styling για ${type} polygons`,
+              category,
+              accessibility: {
+                wcagCompliant: true,
+                contrastRatio: wcagRatio,
+                colorBlindSafe: true
+              },
+              createdBy: SYSTEM_IDENTITY.ID
+            }
+          });
         });
       });
 

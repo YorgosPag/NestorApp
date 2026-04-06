@@ -12,30 +12,13 @@ import {
   DEFAULTS,
   SYSTEM_IDENTITY,
   PLATFORMS,
-  FILE_CATEGORIES,
-  FILE_STATUS,
-  type FileCategory,
 } from '@/config/domain-constants';
-import {
-  ATTACHMENT_TYPES,
-  detectAttachmentType,
-  type MessageAttachment,
-} from '@/types/conversations';
-import {
-  buildIngestionFileRecordData,
-  buildFinalizeFileRecordUpdate,
-  type FileSourceMetadata,
-} from '@/services/file-record';
 import { sanitizeHtmlForStorage } from '@/lib/security/path-sanitizer';
 import { createAIAnalysisProvider } from '@/services/ai-analysis/providers/ai-provider-factory';
 import {
-  isDocumentClassifyAnalysis,
   isMessageIntentAnalysis,
-  type DocumentClassifyAnalysis,
 } from '@/schemas/ai-analysis';
 import { generateGlobalMessageDocId } from '@/server/lib/id-generation';
-import { FILE_TYPE_CONFIG, type FileType } from '@/config/file-upload-config';
-import type { IAIAnalysisProvider } from '@/services/ai-analysis/providers/IAIAnalysisProvider';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import {
   NOTIFICATION_EVENT_TYPES,
@@ -47,13 +30,17 @@ import type { GlobalRole } from '@/lib/auth/types';
 import type {
   InboundEmailInput,
   InboundEmailResult,
-  InboundEmailAttachment,
   ParsedAddress,
   InboundRoutingRule,
   RoutingResolution,
 } from './types';
+import { processAttachments } from './email-inbound-attachments';
 
 const logger = createModuleLogger('EMAIL_INBOUND_SERVICE');
+
+// ============================================================================
+// EMAIL ADDRESS UTILITIES
+// ============================================================================
 
 export function normalizeEmail(email: string): string {
   return email.toLowerCase().trim();
@@ -96,6 +83,10 @@ export function resolveProviderMessageId(prefix: string, fallbackKey: string, ..
   const hash = createHash('sha256').update(fallbackKey).digest('hex').substring(0, 32);
   return `${prefix}_${hash}`;
 }
+
+// ============================================================================
+// ROUTING — INBOUND EMAIL → COMPANY
+// ============================================================================
 
 function normalizePattern(pattern: string): string {
   return pattern.trim().toLowerCase();
@@ -157,6 +148,10 @@ export async function resolveCompanyIdFromRecipients(recipients: string[]): Prom
 
   return { companyId: null };
 }
+
+// ============================================================================
+// CONTACT RESOLUTION
+// ============================================================================
 
 async function findContactByEmail(companyId: string, email: string): Promise<string | null> {
   const adminDb = getAdminFirestore();
@@ -234,277 +229,9 @@ async function ensureContactForSender(companyId: string, sender: ParsedAddress):
   return enterpriseId;
 }
 
-function mapAttachmentTypeToCategory(type: MessageAttachment['type']): FileCategory {
-  switch (type) {
-    case ATTACHMENT_TYPES.IMAGE:
-      return FILE_CATEGORIES.PHOTOS;
-    case ATTACHMENT_TYPES.VIDEO:
-      return FILE_CATEGORIES.VIDEOS;
-    case ATTACHMENT_TYPES.AUDIO:
-      return FILE_CATEGORIES.AUDIO;
-    case ATTACHMENT_TYPES.DOCUMENT:
-    default:
-      return FILE_CATEGORIES.DOCUMENTS;
-  }
-}
-
-function mapAttachmentTypeToFileType(type: MessageAttachment['type']): FileType {
-  switch (type) {
-    case ATTACHMENT_TYPES.IMAGE:
-      return 'image';
-    case ATTACHMENT_TYPES.VIDEO:
-      return 'video';
-    case ATTACHMENT_TYPES.AUDIO:
-      return 'any';
-    case ATTACHMENT_TYPES.DOCUMENT:
-    default:
-      return 'document';
-  }
-}
-
-function getMaxAllowedSize(attachmentType: MessageAttachment['type']): number {
-  const fileType = mapAttachmentTypeToFileType(attachmentType);
-  return FILE_TYPE_CONFIG[fileType].maxSize;
-}
-
-function shouldClassifyAttachment(attachmentType: MessageAttachment['type']): boolean {
-  return attachmentType === ATTACHMENT_TYPES.DOCUMENT || attachmentType === ATTACHMENT_TYPES.IMAGE;
-}
-
-async function uploadToFirebaseStorage(params: {
-  buffer: Buffer;
-  storagePath: string;
-  contentType: string;
-  metadata?: Record<string, string>;
-  expectedSize?: number;
-}): Promise<{
-  downloadUrl: string | null;
-  verified: boolean;
-  storageSizeBytes?: number;
-}> {
-  const { buffer, storagePath, contentType, metadata } = params;
-
-  const { getStorage } = await import('firebase-admin/storage');
-  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-  if (!storageBucket) {
-    logger.error('Firebase storage bucket not configured');
-    return { downloadUrl: null, verified: false };
-  }
-
-  const bucket = getStorage().bucket(storageBucket);
-  const file = bucket.file(storagePath);
-
-  await file.save(buffer, {
-    metadata: {
-      contentType,
-      metadata,
-    },
-  });
-
-  await file.makePublic();
-  const [exists] = await file.exists();
-  const [fileMetadata] = await file.getMetadata().catch(() => [undefined]);
-  const metadataSize = fileMetadata?.size ? Number(fileMetadata.size) : undefined;
-  const expectedSize = params.expectedSize;
-  const verified =
-    exists &&
-    (expectedSize === undefined || metadataSize === undefined || metadataSize === expectedSize);
-
-  if (!verified) {
-    logger.warn('Storage verification failed for attachment', {
-      storagePath,
-      expectedSize,
-      metadataSize,
-    });
-  }
-
-  return {
-    downloadUrl: `https://storage.googleapis.com/${storageBucket}/${storagePath}`,
-    verified,
-    storageSizeBytes: metadataSize,
-  };
-}
-
-async function ingestAttachment(params: {
-  companyId: string;
-  sender: ParsedAddress;
-  messageId: string;
-  receivedAt?: string;
-  attachment: InboundEmailAttachment;
-  provider: string;
-  aiProvider: IAIAnalysisProvider;
-}): Promise<MessageAttachment | null> {
-  const { attachment } = params;
-  const filename = attachment.filename || `attachment_${params.messageId}`;
-  const contentType = attachment.contentType || 'application/octet-stream';
-  const sizeBytes = attachment.sizeBytes;
-
-  const attachmentType = detectAttachmentType(contentType);
-  const maxAllowedSize = getMaxAllowedSize(attachmentType);
-  if (sizeBytes && sizeBytes > maxAllowedSize) {
-    logger.warn('Attachment exceeds max allowed size, skipping', {
-      filename,
-      sizeBytes,
-      maxAllowedSize,
-    });
-    return null;
-  }
-
-  const downloadResult = await attachment.download();
-  if (!downloadResult) return null;
-
-  const extension = filename.includes('.') ? filename.split('.').pop() || '' : '';
-  const cleanExt = extension || 'bin';
-
-  const source: FileSourceMetadata = {
-    type: 'email',
-    messageId: params.messageId,
-    fromUserId: params.sender.email,
-    senderName: params.sender.name || params.sender.email,
-    receivedAt: params.receivedAt || new Date().toISOString(),
-    fileUniqueId: params.messageId,
-  };
-
-  const category = mapAttachmentTypeToCategory(attachmentType);
-
-  const { fileId, storagePath, recordBase } = buildIngestionFileRecordData({
-    companyId: params.companyId,
-    category,
-    filename,
-    contentType,
-    ext: cleanExt,
-    source,
-  });
-
-  const adminDb = getAdminFirestore();
-  await adminDb.collection(COLLECTIONS.FILES).doc(fileId).set({
-    ...recordBase,
-    createdAt: new Date(),
-  });
-
-  const classification = shouldClassifyAttachment(attachmentType)
-    ? await classifyAttachment({
-        aiProvider: params.aiProvider,
-        contentBuffer: downloadResult.buffer,
-        filename,
-        mimeType: contentType,
-        sizeBytes: downloadResult.buffer.length,
-      })
-    : null;
-
-  if (classification) {
-    await adminDb.collection(COLLECTIONS.FILES).doc(fileId).update({
-      ingestion: {
-        ...recordBase.ingestion,
-        analysis: classification,
-        stateChangedAt: new Date().toISOString(),
-      },
-      updatedAt: new Date(),
-    });
-  }
-
-  const uploadResult = await uploadToFirebaseStorage({
-    buffer: downloadResult.buffer,
-    storagePath,
-    contentType: downloadResult.contentType,
-    metadata: {
-      source: PLATFORMS.EMAIL,
-      fileRecordId: fileId,
-      messageId: params.messageId,
-      provider: params.provider,
-    },
-    expectedSize: downloadResult.buffer.length,
-  });
-
-  if (!uploadResult.downloadUrl) return null;
-
-  const finalizeUpdate = buildFinalizeFileRecordUpdate({
-    sizeBytes: downloadResult.buffer.length,
-    downloadUrl: uploadResult.downloadUrl,
-    nextStatus: FILE_STATUS.PENDING,
-  });
-
-  await adminDb.collection(COLLECTIONS.FILES).doc(fileId).update({
-    ...finalizeUpdate,
-    updatedAt: new Date(),
-  });
-
-  const attachmentMetadata: Record<string, unknown> = {
-    fileRecordId: fileId,
-    quarantined: true,
-    storageVerified: uploadResult.verified,
-  };
-
-  if (uploadResult.storageSizeBytes !== undefined) {
-    attachmentMetadata.storageSizeBytes = uploadResult.storageSizeBytes;
-  }
-
-  if (classification) {
-    attachmentMetadata.analysis = classification;
-  }
-
-  return {
-    type: attachmentType,
-    url: uploadResult.downloadUrl,
-    filename,
-    mimeType: contentType,
-    size: downloadResult.buffer.length,
-    metadata: attachmentMetadata,
-  };
-}
-
-async function processAttachments(params: {
-  companyId: string;
-  sender: ParsedAddress;
-  messageId: string;
-  receivedAt?: string;
-  attachments?: InboundEmailAttachment[];
-  provider: string;
-  aiProvider: IAIAnalysisProvider;
-}): Promise<MessageAttachment[]> {
-  const list = params.attachments || [];
-  const results: MessageAttachment[] = [];
-
-  for (const attachment of list) {
-    const result = await ingestAttachment({
-      companyId: params.companyId,
-      sender: params.sender,
-      messageId: params.messageId,
-      receivedAt: params.receivedAt,
-      attachment,
-      provider: params.provider,
-      aiProvider: params.aiProvider,
-    });
-
-    if (result) {
-      results.push(result);
-    }
-  }
-
-  return results;
-}
-
-async function classifyAttachment(params: {
-  aiProvider: IAIAnalysisProvider;
-  contentBuffer: Buffer;
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
-}): Promise<DocumentClassifyAnalysis | null> {
-  const analysis = await params.aiProvider.analyze({
-    kind: 'document_classify',
-    content: params.contentBuffer,
-    filename: params.filename,
-    mimeType: params.mimeType,
-    sizeBytes: params.sizeBytes,
-  });
-
-  if (!isDocumentClassifyAnalysis(analysis)) {
-    return null;
-  }
-
-  return analysis;
-}
+// ============================================================================
+// MAIN PROCESSOR
+// ============================================================================
 
 export async function processInboundEmail(input: InboundEmailInput): Promise<InboundEmailResult> {
   const routing = await resolveCompanyIdFromRecipients(input.recipients);
@@ -538,7 +265,6 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
   const intentAnalysis = isMessageIntentAnalysis(analysis) ? analysis : undefined;
 
   // 🏢 ENTERPRISE: ALL inbound emails go to 'pending' for manual triage review
-  // This ensures admins review every incoming email before it becomes a task
   const triageStatus: 'pending' = 'pending';
 
   const attachments = await processAttachments({
@@ -560,20 +286,16 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     raw: input.raw || {},
   };
 
-  // Only add routingPattern if it exists
   if (routing.matchedPattern) {
     metadata.routingPattern = routing.matchedPattern;
   }
 
   // 🏢 ENTERPRISE: Dual-content storage pattern (Gmail/Outlook/Salesforce)
-  // Priority: HTML with formatting > Plain text > Subject as fallback
   // HTML content preserves colors, fonts, and formatting from the original email
   // 🔒 SECURITY (ADR-252 SV-H1): Server-side sanitization BEFORE storage (defense-in-depth)
-  // Client-side DOMPurify still runs at render time (ADR-072) as second layer
   const sanitizedHtml = sanitizeHtmlForStorage(input.contentHtml);
   const emailContent = sanitizedHtml || input.contentText || input.subject;
 
-  // Build communication object, excluding undefined values for Firestore compatibility
   const communication: Omit<Communication, 'id' | 'createdAt' | 'updatedAt'> = {
     companyId: routing.companyId,
     contactId,
@@ -582,23 +304,20 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     from: input.sender.email,
     to: input.recipients.join(', '),
     subject: input.subject,
-    content: emailContent,  // 🏢 ENTERPRISE: HTML preferred for formatting preservation
+    content: emailContent,
     createdBy: SYSTEM_IDENTITY.ID,
     status: 'pending',
     attachments: attachments.map((attachment) => attachment.url || '').filter(Boolean),
-    triageStatus: triageStatus ?? 'pending',  // Guaranteed non-undefined value
+    triageStatus: triageStatus ?? 'pending',
     metadata,
-    // Only include intentAnalysis if it exists (Firestore doesn't accept undefined)
     ...(intentAnalysis && { intentAnalysis }),
   };
 
-  // Debug logging - verify data before Firestore write
   logger.info('Preparing to write communication to Firestore', {
     messageDocId,
     triageStatusValue: communication.triageStatus,
     triageStatusType: typeof communication.triageStatus,
     hasIntentAnalysis: Boolean(intentAnalysis),
-    // 🏢 ENTERPRISE: Track content type for debugging
     contentType: input.contentHtml ? 'html' : 'text',
     hasHtmlFormatting: Boolean(input.contentHtml),
   });
@@ -609,9 +328,7 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     updatedAt: new Date(),
   });
 
-  // 🏢 ENTERPRISE: Log audit event for communication creation (2026-02-06)
-  // Note: Using logWebhookEvent() because this is triggered by external Mailgun webhook
-  // (no authenticated user context). The audit log goes to system_audit_logs collection.
+  // 🏢 ENTERPRISE: Log audit event for communication creation
   try {
     await logWebhookEvent(
       'mailgun_inbound',
@@ -631,7 +348,6 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
         intentType: intentAnalysis?.intentType,
         needsTriage: intentAnalysis?.needsTriage,
       },
-      // Mock request object for metadata extraction (no actual request in background worker)
       {
         headers: { get: () => null },
         url: undefined,
@@ -644,7 +360,6 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
       companyId: routing.companyId,
     });
   } catch (auditError) {
-    // Never throw on audit failure - just log
     logger.error('Failed to log communication creation audit', {
       communicationId: messageDocId,
       error: auditError,
@@ -652,9 +367,7 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
   }
 
   // 🏢 ENTERPRISE: Dispatch bell notifications via orchestrator (ADR-026)
-  // Dynamic recipient resolution: notify all admins of the tenant company
   try {
-    // Resolve admin recipients for this company
     const ADMIN_GLOBAL_ROLES: GlobalRole[] = ['super_admin', 'company_admin'];
     const usersSnapshot = await adminDb
       .collection(COLLECTIONS.USERS)
@@ -664,8 +377,6 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
       .get();
 
     const adminUserIds = usersSnapshot.docs.map((doc) => doc.id);
-
-    // Fallback: if no admins found, notify system identity (prevents silent failure)
     const recipientIds = adminUserIds.length > 0 ? adminUserIds : [SYSTEM_IDENTITY.ID];
 
     const senderDisplay = input.sender.name || input.sender.email;
@@ -673,16 +384,14 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     const notificationBody = input.subject || '(No subject)';
     const severity = intentAnalysis?.needsTriage ? 'warning' as const : 'info' as const;
 
-    // Dispatch to each recipient via enterprise orchestrator
-    // Orchestrator handles: dedupe key, user preferences, atomic write, email queuing
     const results = await Promise.allSettled(
       recipientIds.map((recipientId) =>
         dispatchNotification({
           eventType: NOTIFICATION_EVENT_TYPES.CRM_NEW_COMMUNICATION,
           recipientId,
-          tenantId: routing.companyId!, // Non-null: early return at line 509 guarantees non-null
-          title: notificationTitle, // English fallback
-          titleKey: 'notifications.email.newFrom', // i18n key for client-side translation
+          tenantId: routing.companyId!,
+          title: notificationTitle,
+          titleKey: 'notifications.email.newFrom',
           titleParams: { sender: senderDisplay },
           body: notificationBody,
           severity,
@@ -691,7 +400,7 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
             feature: 'ai-inbox',
             env: getCurrentEnvironment(),
           },
-          eventId: messageDocId, // Idempotency: same email = same dedupe key per recipient
+          eventId: messageDocId,
           entityId: contactId,
           entityType: NOTIFICATION_ENTITY_TYPES.CONTACT,
           actions: [
@@ -713,7 +422,6 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
       failed,
     });
   } catch (notificationError) {
-    // Never throw on notification failure - just log
     logger.error('Failed to dispatch email bell notifications', {
       communicationId: messageDocId,
       error: notificationError,

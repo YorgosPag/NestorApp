@@ -42,6 +42,8 @@ interface UseAutoLevelCreationParams {
   /** Whether levels already exist on this property */
   hasExistingLevels: boolean;
   onUpdateProperty: (updates: Partial<Property>) => void;
+  /** Called when "no next floor" warning is dismissed — parent should clear floor selection */
+  onWarningDismiss?: () => void;
 }
 
 interface AutoLevelDialogState {
@@ -71,6 +73,7 @@ export function useAutoLevelCreation({
   currentFloorNumber,
   hasExistingLevels,
   onUpdateProperty,
+  onWarningDismiss,
 }: UseAutoLevelCreationParams): UseAutoLevelCreationReturn {
   const { t } = useTranslation(['properties-detail']);
   const { info, warning } = useNotifications();
@@ -201,16 +204,22 @@ export function useAutoLevelCreation({
 
   // ── Dialog handlers ──
   const handleDialogConfirm = useCallback(() => {
+    const wasWarning = dialogState.type === 'warning';
     setDialogState({ type: null, pendingType: null });
     if (dialogState.type === 'confirm') {
       createLevelsForCurrentAndNext();
+    } else if (wasWarning) {
+      onWarningDismiss?.();
     }
-    // For 'warning' type, confirm just dismisses
-  }, [createLevelsForCurrentAndNext, dialogState.type]);
+  }, [createLevelsForCurrentAndNext, dialogState.type, onWarningDismiss]);
 
   const handleDialogDismiss = useCallback(() => {
+    const wasWarning = dialogState.type === 'warning';
     setDialogState({ type: null, pendingType: null });
-  }, []);
+    if (wasWarning) {
+      onWarningDismiss?.();
+    }
+  }, [dialogState.type, onWarningDismiss]);
 
   return {
     triggerAutoLevelCreation,

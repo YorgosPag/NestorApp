@@ -4,113 +4,37 @@
  * Database-driven layer styling system για multi-tenant deployments.
  * Replaces hardcoded DEFAULT_LAYER_STYLES με configurable, tenant-specific solutions.
  *
- * Features:
- * - Database-driven layer styles (Firestore)
- * - Multi-tenant styling support
- * - Theme system (default, dark, high-contrast)
- * - Environment-specific configurations
- * - Performance-optimized caching
- * - WCAG accessibility compliance
- * - Real-time style updates
- * - Fallback style support
- *
- * @version 1.0.0
- * @enterprise-ready true
+ * Split into 2 files for SRP compliance (ADR-065 Phase 4):
+ * - layer-style-types.ts              — Types + fallback data (EXEMPT: types/config)
+ * - EnterpriseLayerStyleService.ts     — Service class (this file)
  */
 
 import { db } from '@/lib/firebase';
 import { where } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import { designTokens } from '@/styles/design-tokens';
 import { createModuleLogger } from '@/lib/telemetry';
 
+// Re-export all types for backward compatibility
+export type {
+  LayerElementType,
+  LayerCategory,
+  EnterpriseLayerStyle,
+  LayerCategoryConfig,
+  EnterpriseLayerStyleConfig,
+  EnterpriseLayerCategoryConfig,
+} from './layer-style-types';
+
+import type {
+  LayerElementType,
+  LayerCategory,
+  EnterpriseLayerStyle,
+  LayerCategoryConfig,
+  EnterpriseLayerStyleConfig,
+  EnterpriseLayerCategoryConfig,
+} from './layer-style-types';
+import { getFallbackLayerStyles, getFallbackLayerCategories } from './layer-style-types';
+
 const logger = createModuleLogger('EnterpriseLayerStyleService');
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-/**
- * Layer element types που υποστηρίζουμε
- */
-export type LayerElementType = 'property' | 'annotation' | 'measurement' | 'line' | 'circle' | 'rectangle';
-
-/**
- * Layer categories που υποστηρίζουμε
- */
-export type LayerCategory = 'structural' | 'electrical' | 'plumbing' | 'hvac' | 'furniture' | 'annotations' | 'measurements';
-
-/**
- * Enterprise layer style interface
- */
-export interface EnterpriseLayerStyle {
-  strokeColor: string;
-  fillColor: string;
-  strokeWidth: number;
-  opacity: number;
-  dashArray?: string;
-}
-
-/**
- * Layer category configuration
- */
-export interface LayerCategoryConfig {
-  name: string;
-  icon: string;
-  color: string;
-  description?: string;
-  isEnabled?: boolean;
-}
-
-/**
- * Complete layer style configuration για Firebase
- */
-export interface EnterpriseLayerStyleConfig {
-  id: string;
-  layerElementType: LayerElementType;
-  style: EnterpriseLayerStyle;
-  theme: string;
-  tenantId?: string;
-  environment?: string;
-  isEnabled: boolean;
-  priority: number;
-  metadata?: {
-    displayName?: string;
-    description?: string;
-    category?: string;
-    version?: string;
-    accessibility?: {
-      wcagCompliant: boolean;
-      contrastRatio?: number;
-      colorBlindSafe?: boolean;
-    };
-    createdBy?: string;
-    createdAt?: Date;
-    updatedAt?: Date;
-  };
-}
-
-/**
- * Layer category configuration για Firebase
- */
-export interface EnterpriseLayerCategoryConfig {
-  id: string;
-  category: LayerCategory;
-  config: LayerCategoryConfig;
-  theme: string;
-  tenantId?: string;
-  environment?: string;
-  isEnabled: boolean;
-  priority: number;
-  metadata?: {
-    displayName?: string;
-    description?: string;
-    version?: string;
-    createdBy?: string;
-    createdAt?: Date;
-    updatedAt?: Date;
-  };
-}
 
 // ============================================================================
 // ENTERPRISE LAYER STYLE SERVICE
@@ -159,14 +83,12 @@ class EnterpriseLayerStyleService {
   clearCacheForTenant(tenantId: string): void {
     const keysToDelete: string[] = [];
 
-    // Find all cache keys που περιέχουν το tenantId
     for (const key of this.cacheTimestamps.keys()) {
       if (key.includes(tenantId)) {
         keysToDelete.push(key);
       }
     }
 
-    // Delete matching entries
     keysToDelete.forEach(key => {
       this.styleCache.delete(key);
       this.categoryCache.delete(key);
@@ -231,7 +153,7 @@ class EnterpriseLayerStyleService {
       });
 
       // Ensure all layer types have styles (use fallbacks if needed)
-      const completeStyles = await this.ensureCompleteStyles(styles, theme);
+      const completeStyles = this.ensureCompleteStyles(styles, theme);
 
       // Cache the results
       this.setCache(this.styleCache, cacheKey, completeStyles);
@@ -322,7 +244,7 @@ class EnterpriseLayerStyleService {
       });
 
       // Ensure all categories have configs (use fallbacks if needed)
-      const completeCategories = await this.ensureCompleteCategories(categories, theme);
+      const completeCategories = this.ensureCompleteCategories(categories, theme);
 
       // Cache the results
       this.setCache(this.categoryCache, cacheKey, completeCategories);
@@ -477,160 +399,30 @@ class EnterpriseLayerStyleService {
   }
 
   // ========================================================================
-  // FALLBACK SYSTEMS
+  // FALLBACK & COMPLETION HELPERS
   // ========================================================================
 
   /**
-   * 🛡️ Get fallback styles για specific theme
+   * 🛡️ Get fallback styles — delegates to extracted config module
    */
   getFallbackStyles(theme: string): Record<LayerElementType, EnterpriseLayerStyle> {
-    const baseStyles: Record<LayerElementType, EnterpriseLayerStyle> = {
-      property: {
-        strokeColor: designTokens.colors.blue['500'],
-        fillColor: designTokens.colors.blue['500'],
-        strokeWidth: 2,
-        opacity: 0.3
-      },
-      annotation: {
-        strokeColor: designTokens.colors.green['500'],
-        fillColor: designTokens.colors.green['500'],
-        strokeWidth: 1,
-        opacity: 1
-      },
-      measurement: {
-        strokeColor: designTokens.colors.yellow['500'],
-        fillColor: designTokens.colors.yellow['500'],
-        strokeWidth: 2,
-        opacity: 1,
-        dashArray: '5,5'
-      },
-      line: {
-        strokeColor: designTokens.colors.gray['500'],
-        fillColor: designTokens.colors.background.transparent,
-        strokeWidth: 2,
-        opacity: 1
-      },
-      circle: {
-        strokeColor: designTokens.colors.purple['500'],
-        fillColor: designTokens.colors.purple['500'],
-        strokeWidth: 2,
-        opacity: 0.2
-      },
-      rectangle: {
-        strokeColor: designTokens.colors.red['500'],
-        fillColor: designTokens.colors.red['500'],
-        strokeWidth: 2,
-        opacity: 0.2
-      }
-    };
-
-    // Theme-specific adjustments
-    if (theme === 'dark') {
-      // Adjust colors για dark theme
-      Object.keys(baseStyles).forEach(key => {
-        const style = baseStyles[key as LayerElementType];
-        style.strokeColor = this.adjustColorForDarkTheme(style.strokeColor);
-        if (style.fillColor !== designTokens.colors.background.transparent) {
-          style.fillColor = this.adjustColorForDarkTheme(style.fillColor);
-        }
-      });
-    } else if (theme === 'high-contrast') {
-      // High contrast colors για accessibility
-      baseStyles.property.strokeColor = designTokens.colors.text.inverse;
-      baseStyles.property.fillColor = designTokens.colors.text.primary;
-      baseStyles.annotation.strokeColor = designTokens.colors.yellow['500'];
-      baseStyles.annotation.fillColor = designTokens.colors.yellow['500'];
-      baseStyles.measurement.strokeColor = designTokens.colors.red['500'];
-      baseStyles.measurement.fillColor = designTokens.colors.red['500'];
-      baseStyles.line.strokeColor = designTokens.colors.text.inverse;
-      baseStyles.circle.strokeColor = designTokens.colors.green['500'];
-      baseStyles.circle.fillColor = designTokens.colors.green['500'];
-      baseStyles.rectangle.strokeColor = designTokens.colors.blue['500'];
-      baseStyles.rectangle.fillColor = designTokens.colors.blue['500'];
-    }
-
-    return baseStyles;
+    return getFallbackLayerStyles(theme);
   }
 
   /**
-   * 🛡️ Get fallback categories για specific theme
+   * 🛡️ Get fallback categories — delegates to extracted config module
    */
   getFallbackCategories(theme: string): Record<LayerCategory, LayerCategoryConfig> {
-    const baseCategories: Record<LayerCategory, LayerCategoryConfig> = {
-      structural: {
-        name: 'Δομικά Στοιχεία',
-        icon: 'Building',
-        color: designTokens.colors.text.secondary
-      },
-      electrical: {
-        name: 'Ηλεκτρολογικά',
-        icon: 'Zap',
-        color: designTokens.colors.yellow['500']
-      },
-      plumbing: {
-        name: 'Υδραυλικά',
-        icon: 'Droplets',
-        color: designTokens.colors.blue['500']
-      },
-      hvac: {
-        name: 'Κλιματισμός',
-        icon: 'Wind',
-        color: designTokens.colors.green['500']
-      },
-      furniture: {
-        name: 'Έπιπλα',
-        icon: 'Armchair',
-        color: designTokens.colors.purple['500']
-      },
-      annotations: {
-        name: 'Σημειώσεις',
-        icon: 'MessageSquare',
-        color: designTokens.colors.orange['500']
-      },
-      measurements: {
-        name: 'Μετρήσεις',
-        icon: 'Ruler',
-        color: designTokens.colors.red['500']
-      }
-    };
-
-    // Theme-specific adjustments
-    if (theme === 'dark') {
-      Object.keys(baseCategories).forEach(key => {
-        const category = baseCategories[key as LayerCategory];
-        category.color = this.adjustColorForDarkTheme(category.color);
-      });
-    }
-
-    return baseCategories;
-  }
-
-  /**
-   * 🎨 Adjust color για dark theme
-   */
-  private adjustColorForDarkTheme(color: string): string {
-    // Simple color adjustment για dark theme (could be more sophisticated)
-    const colorMap: Record<string, string> = {
-      [designTokens.colors.blue['500']]: designTokens.colors.blue['400'],
-      [designTokens.colors.green['500']]: designTokens.colors.green['400'],
-      [designTokens.colors.yellow['500']]: designTokens.colors.yellow['400'],
-      [designTokens.colors.gray['500']]: designTokens.colors.text.muted,
-      [designTokens.colors.purple['500']]: designTokens.colors.purple['400'],
-      [designTokens.colors.red['500']]: designTokens.colors.red['300'],
-      [designTokens.colors.text.secondary]: designTokens.colors.text.muted,
-      [designTokens.colors.orange['500']]: designTokens.colors.orange['300']
-    };
-
-    return colorMap[color] || color;
+    return getFallbackLayerCategories(theme);
   }
 
   /**
    * 🔧 Ensure all layer types have styles
    */
-  private async ensureCompleteStyles(
+  private ensureCompleteStyles(
     styles: Record<LayerElementType, EnterpriseLayerStyle>,
     theme: string
-  ): Promise<Record<LayerElementType, EnterpriseLayerStyle>> {
+  ): Record<LayerElementType, EnterpriseLayerStyle> {
     const fallbackStyles = this.getFallbackStyles(theme);
     const completeStyles = { ...fallbackStyles };
 
@@ -647,10 +439,10 @@ class EnterpriseLayerStyleService {
   /**
    * 🔧 Ensure all layer categories have configs
    */
-  private async ensureCompleteCategories(
+  private ensureCompleteCategories(
     categories: Record<LayerCategory, LayerCategoryConfig>,
     theme: string
-  ): Promise<Record<LayerCategory, LayerCategoryConfig>> {
+  ): Record<LayerCategory, LayerCategoryConfig> {
     const fallbackCategories = this.getFallbackCategories(theme);
     const completeCategories = { ...fallbackCategories };
 
@@ -698,4 +490,3 @@ class EnterpriseLayerStyleService {
 
 export const layerStyleService = new EnterpriseLayerStyleService();
 export default layerStyleService;
-

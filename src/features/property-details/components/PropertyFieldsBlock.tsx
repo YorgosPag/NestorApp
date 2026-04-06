@@ -63,13 +63,11 @@ export function PropertyFieldsBlock({
   onAutoSaveFields,
 }: PropertyFieldsBlockProps) {
   const { t } = useTranslation('properties');
-  // ADR-284: policy errors live in the shared `building` i18n namespace
   const { t: tPolicy } = useTranslation('building');
-  useSpacingTokens(); // reserved — hook must be called for React consistency
+  useSpacingTokens();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const typography = useTypography();
-
   const { success, error: notifyError } = useNotifications();
   const { runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(property);
   const [localEditing, setLocalEditing] = useState(false);
@@ -188,12 +186,19 @@ export function PropertyFieldsBlock({
     }));
     onActiveLevelChange?.(newLevels[0]?.floorId ?? null);
   }, [onActiveLevelChange]);
+  // ADR-236: Clear floor + levels when "no next floor" warning is dismissed
+  const handleWarningDismiss = useCallback(() => {
+    setFormData(prev => ({ ...prev, floorId: '', floor: 0, levels: [], levelData: {} }));
+    onActiveLevelChange?.(null);
+  }, [onActiveLevelChange]);
+
   const autoLevel = useAutoLevelCreation({
     buildingId: isCreatingNewUnit ? (formData.buildingId || null) : null,
     currentFloorId: isCreatingNewUnit ? (formData.floorId || null) : null,
     currentFloorNumber: isCreatingNewUnit ? formData.floor : null,
     hasExistingLevels: formData.levels.length >= 2,
     onUpdateProperty: (updates) => { if (updates.levels) handleLevelsChange(updates.levels as PropertyLevel[]); },
+    onWarningDismiss: isCreatingNewUnit ? handleWarningDismiss : undefined,
   });
 
   const isStandalone = isStandaloneUnitType(formData.type as PropertyType | '');
@@ -290,8 +295,7 @@ export function PropertyFieldsBlock({
       const updates = buildUpdatesFromForm();
 
       if (isCreatingNewUnit) {
-        // 🏢 ENTERPRISE ADR-284 Batch 7: Client-side discriminated validation
-        // via shared SSoT hook (mirrors server policy — fail-fast UX).
+        // ADR-284 Batch 7: Client-side discriminated validation (mirrors server policy)
         const hierarchy = validatePropertyCreationFields({
           name: formData.name,
           type: formData.type as import('@/types/property').PropertyType | '',
@@ -306,7 +310,6 @@ export function PropertyFieldsBlock({
           return;
         }
 
-        // 🏢 ENTERPRISE: Create new unit via server-side API (Admin SDK)
         const propertyData = buildCreationPayload({
           formData, updates, suggestedCode: suggestedCode || '',
           defaultName: t('navigation.actions.newUnit.defaultName'),
@@ -333,7 +336,6 @@ export function PropertyFieldsBlock({
         }
         success(t('save.createSuccess'));
       } else {
-        // Normal update
         await runExistingPropertyUpdate({
           commercialStatus: property.commercialStatus,
           buildingId: property.buildingId,
@@ -369,8 +371,6 @@ export function PropertyFieldsBlock({
     });
   }, []);
 
-  // ── Read-Only Compact Mode (Ευρετήριο Ακινήτων) ──
-  // Plain text, 2-column grid, no form fields — all hooks above are called unconditionally
   if (isReadOnly) {
     return <ReadOnlyCompactView property={property} t={t} />;
   }

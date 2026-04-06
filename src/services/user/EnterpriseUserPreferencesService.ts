@@ -1,188 +1,45 @@
 /**
  * 👤 ENTERPRISE USER PREFERENCES SERVICE
  *
- * Database-driven user preferences system για personalized experiences.
- * Replaces hardcoded DEFAULT_FILTERS, DEFAULT_STATS με configurable, user-specific solutions.
+ * Database-driven user preferences system for personalized experiences.
  *
- * Features:
- * - Database-driven user preferences (Firestore)
- * - User-specific settings storage
- * - Company default preferences
- * - Real-time preferences sync
- * - Performance-optimized caching
- * - Cross-device preferences sync
- * - Preference versioning
- * - Fallback system για offline mode
- *
- * @version 1.0.0
- * @enterprise-ready true
+ * Split into 2 files for SRP compliance (ADR-065 Phase 4):
+ * - user-preferences-types.ts              — Types + defaults factory (EXEMPT)
+ * - EnterpriseUserPreferencesService.ts     — Service class (this file)
  */
 
 import { db } from '@/lib/firebase';
 import { doc, setDoc, where } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+
+// Re-export all types for backward compatibility
+export type {
+  PropertyViewerFilters,
+  PropertyViewerStats,
+  PropertyViewerPreferences,
+  EditorToolPreferences,
+  DisplayPreferences,
+  NotificationPreferences,
+  UserPreferences,
+  EnterpriseUserPreferencesConfig,
+  CompanyDefaultPreferencesConfig,
+} from './user-preferences-types';
+
+import type {
+  UserPreferences,
+  PropertyViewerPreferences,
+  EditorToolPreferences,
+  DisplayPreferences,
+  NotificationPreferences,
+  EnterpriseUserPreferencesConfig,
+  CompanyDefaultPreferencesConfig,
+} from './user-preferences-types';
+import { getDefaultUserPreferences } from './user-preferences-types';
+
 const logger = createModuleLogger('EnterpriseUserPreferencesService');
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-/**
- * Property viewer filter state
- */
-export interface PropertyViewerFilters {
-  searchTerm: string;
-  project: string[];
-  building: string[];
-  floor: string[];
-  propertyType: string[];
-  status: string[];
-  priceRange: { min: number | null; max: number | null };
-  areaRange: { min: number | null; max: number | null };
-  features: string[];
-}
-
-/**
- * Property viewer statistics structure
- */
-export interface PropertyViewerStats {
-  totalProperties: number;
-  availableProperties: number;
-  soldProperties: number;
-  totalValue: number;
-  totalArea: number;
-  averagePrice: number;
-  propertiesByStatus: Record<string, number>;
-  propertiesByType: Record<string, number>;
-  propertiesByFloor: Record<string, number>;
-  totalStorageUnits: number;
-  availableStorageUnits: number;
-  soldStorageUnits: number;
-  uniqueBuildings: number;
-  reserved: number;
-}
-
-/**
- * Property viewer preferences
- */
-export interface PropertyViewerPreferences {
-  defaultFilters: PropertyViewerFilters;
-  defaultStats: PropertyViewerStats;
-  fallbackFloorId: string;
-  viewMode: 'grid' | 'list' | 'map';
-  showGrid: boolean;
-  snapToGrid: boolean;
-  gridSize: number;
-  showMeasurements: boolean;
-  scale: number;
-  showDashboard: boolean;
-  autoSaveFilters: boolean;
-  rememberLastView: boolean;
-}
-
-/**
- * Editor tool preferences
- */
-export interface EditorToolPreferences {
-  defaultTool: string;
-  showToolTips: boolean;
-  keyboardShortcuts: Record<string, string>;
-  toolbarLayout: 'horizontal' | 'vertical' | 'compact';
-  showAdvancedTools: boolean;
-}
-
-/**
- * Display preferences
- */
-export interface DisplayPreferences {
-  theme: 'light' | 'dark' | 'auto';
-  colorScheme: string;
-  fontSize: 'small' | 'medium' | 'large';
-  density: 'compact' | 'comfortable' | 'spacious';
-  animations: boolean;
-  highContrast: boolean;
-  reduceMotion: boolean;
-}
-
-/**
- * Notification preferences
- */
-export interface NotificationPreferences {
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  soundEnabled: boolean;
-  notificationTypes: {
-    propertyUpdates: boolean;
-    systemMessages: boolean;
-    taskReminders: boolean;
-    collaborationUpdates: boolean;
-  };
-}
-
-/**
- * Complete user preferences interface
- */
-export interface UserPreferences {
-  propertyViewer: PropertyViewerPreferences;
-  editorTools: EditorToolPreferences;
-  display: DisplayPreferences;
-  notifications: NotificationPreferences;
-  customSettings: Record<string, unknown>;
-}
-
-/**
- * User preferences configuration για Firebase
- */
-export interface EnterpriseUserPreferencesConfig {
-  id: string;
-  userId: string;
-  tenantId?: string;
-  preferences: UserPreferences;
-  isEnabled: boolean;
-  version: string;
-  metadata: {
-    displayName?: string;
-    description?: string;
-    lastSyncedAt?: Date;
-    deviceInfo?: {
-      deviceType: string;
-      browserInfo: string;
-      screenResolution: string;
-    };
-    migrationInfo?: {
-      migratedFrom?: string;
-      migrationDate?: Date;
-    };
-    createdBy?: string;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-}
-
-/**
- * Company default preferences configuration
- */
-export interface CompanyDefaultPreferencesConfig {
-  id: string;
-  tenantId: string;
-  category: 'propertyViewer' | 'editorTools' | 'display' | 'notifications';
-  defaults: Record<string, unknown>;
-  isEnabled: boolean;
-  priority: number;
-  environment?: string;
-  metadata: {
-    displayName?: string;
-    description?: string;
-    version?: string;
-    createdBy?: string;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-}
 
 // ============================================================================
 // ENTERPRISE USER PREFERENCES SERVICE
@@ -193,89 +50,67 @@ class EnterpriseUserPreferencesService {
   private readonly USER_PREFERENCES_COLLECTION = COLLECTIONS.USER_PREFERENCES;
   private readonly preferencesCache = new Map<string, UserPreferences>();
   private readonly companyDefaultsCache = new Map<string, Record<string, unknown>>();
-  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes για user preferences
+  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes
   private cacheTimestamps = new Map<string, number>();
 
   // ========================================================================
   // CACHE MANAGEMENT
   // ========================================================================
 
-  /**
-   * Check if cache is valid για specific key
-   */
   private isCacheValid(cacheKey: string): boolean {
     const timestamp = this.cacheTimestamps.get(cacheKey);
     if (!timestamp) return false;
     return Date.now() - timestamp < this.cacheTTL;
   }
 
-  /**
-   * Set cache με timestamp
-   */
   private setCache<T>(cacheMap: Map<string, T>, cacheKey: string, data: T): void {
     cacheMap.set(cacheKey, data);
     this.cacheTimestamps.set(cacheKey, Date.now());
   }
 
-  /**
-   * Invalidate all caches
-   */
   invalidateCache(): void {
     this.preferencesCache.clear();
     this.companyDefaultsCache.clear();
     this.cacheTimestamps.clear();
-    logger.info('🗑️ User preferences caches invalidated');
+    logger.info('User preferences caches invalidated');
   }
 
-  /**
-   * Clear cache για specific user
-   */
   clearCacheForUser(userId: string): void {
     const keysToDelete: string[] = [];
 
-    // Find all cache keys που περιέχουν το userId
     for (const key of this.cacheTimestamps.keys()) {
       if (key.includes(userId)) {
         keysToDelete.push(key);
       }
     }
 
-    // Delete matching entries
     keysToDelete.forEach(key => {
       this.preferencesCache.delete(key);
       this.companyDefaultsCache.delete(key);
       this.cacheTimestamps.delete(key);
     });
 
-    logger.info(`🗑️ Cleared user preferences cache for user: ${userId}`);
+    logger.info(`Cleared user preferences cache for user: ${userId}`);
   }
 
   // ========================================================================
   // USER PREFERENCES - CORE FUNCTIONALITY
   // ========================================================================
 
-  /**
-   * 👤 Load user preferences με company defaults fallback
-   */
   async loadUserPreferences(
     userId: string,
     tenantId?: string
   ): Promise<UserPreferences> {
     const cacheKey = `user_prefs_${userId}_${tenantId || 'default'}`;
 
-    // Check cache first
     if (this.isCacheValid(cacheKey)) {
       const cached = this.preferencesCache.get(cacheKey);
       if (cached) {
-        logger.info('✅ User preferences loaded from cache:', cacheKey);
         return cached;
       }
     }
 
     try {
-      logger.info('🔄 Loading user preferences from Firebase:', { userId, tenantId });
-
-      // Try to load user-specific preferences
       const userData = await firestoreQueryService.getById<EnterpriseUserPreferencesConfig>(
         'USER_PREFERENCES', `${userId}_${tenantId || 'default'}`
       );
@@ -286,16 +121,12 @@ class EnterpriseUserPreferencesService {
         userPrefs = userData.preferences;
       }
 
-      // Load company defaults για missing preferences
       const companyDefaults = await this.loadCompanyDefaults(tenantId);
+      const completePreferences = this.mergePreferences(userPrefs, companyDefaults);
 
-      // Merge user preferences με company defaults
-      const completePreferences = await this.mergePreferences(userPrefs, companyDefaults);
-
-      // Cache the results
       this.setCache(this.preferencesCache, cacheKey, completePreferences);
 
-      logger.info('✅ User preferences loaded successfully:', {
+      logger.info('User preferences loaded', {
         userId,
         tenantId,
         hasUserPrefs: !!userPrefs,
@@ -305,17 +136,11 @@ class EnterpriseUserPreferencesService {
       return completePreferences;
 
     } catch (error) {
-      logger.error('❌ Error loading user preferences:', error);
-
-      // Return fallback preferences
-      logger.info('🔄 Using fallback user preferences for user:', userId);
+      logger.error('Error loading user preferences:', error);
       return this.getFallbackPreferences();
     }
   }
 
-  /**
-   * 💾 Save user preferences
-   */
   async saveUserPreferences(
     userId: string,
     preferences: UserPreferences,
@@ -348,10 +173,8 @@ class EnterpriseUserPreferencesService {
 
       await setDoc(doc(db, this.USER_PREFERENCES_COLLECTION, docId), config, { merge: true });
 
-      // Invalidate cache για this user
       this.clearCacheForUser(userId);
 
-      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatch('USER_SETTINGS_UPDATED', {
         userId,
         updates: {
@@ -363,16 +186,13 @@ class EnterpriseUserPreferencesService {
         timestamp: Date.now(),
       });
 
-      logger.info('✅ User preferences saved successfully:', docId);
+      logger.info('User preferences saved:', docId);
     } catch (error) {
-      logger.error('❌ Error saving user preferences:', error);
+      logger.error('Error saving user preferences:', error);
       throw error;
     }
   }
 
-  /**
-   * 📝 Update specific preference category
-   */
   async updateUserPreferences(
     userId: string,
     category: keyof UserPreferences,
@@ -390,10 +210,8 @@ class EnterpriseUserPreferencesService {
 
       await firestoreQueryService.update('USER_PREFERENCES', docId, updateData);
 
-      // Invalidate cache για this user
       this.clearCacheForUser(userId);
 
-      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatch('USER_SETTINGS_UPDATED', {
         userId,
         updates: {
@@ -406,9 +224,9 @@ class EnterpriseUserPreferencesService {
         timestamp: Date.now(),
       });
 
-      logger.info('✅ User preferences updated successfully:', { userId, category });
+      logger.info('User preferences updated:', { userId, category });
     } catch (error) {
-      logger.error('❌ Error updating user preferences:', error);
+      logger.error('Error updating user preferences:', error);
       throw error;
     }
   }
@@ -417,25 +235,17 @@ class EnterpriseUserPreferencesService {
   // COMPANY DEFAULTS MANAGEMENT
   // ========================================================================
 
-  /**
-   * 🏢 Load company default preferences
-   */
   async loadCompanyDefaults(tenantId?: string): Promise<Record<string, unknown>> {
     const cacheKey = `company_defaults_${tenantId || 'default'}`;
 
-    // Check cache first
     if (this.isCacheValid(cacheKey)) {
       const cached = this.companyDefaultsCache.get(cacheKey);
       if (cached) {
-        logger.info('✅ Company defaults loaded from cache:', cacheKey);
         return cached;
       }
     }
 
     try {
-      logger.info('🔄 Loading company defaults from Firebase:', { tenantId });
-
-      // Build query constraints
       const constraints = [
         where('type', '==', 'company-defaults'),
         where('isEnabled', '==', true)
@@ -445,7 +255,6 @@ class EnterpriseUserPreferencesService {
         constraints.push(where('tenantId', '==', tenantId));
       }
 
-      // Query Firestore via centralized service
       const result = await firestoreQueryService.getAll<CompanyDefaultPreferencesConfig>(
         'CONFIG', { constraints, tenantOverride: 'skip' }
       );
@@ -458,10 +267,9 @@ class EnterpriseUserPreferencesService {
         }
       });
 
-      // Cache the results
       this.setCache(this.companyDefaultsCache, cacheKey, defaults);
 
-      logger.info('✅ Company defaults loaded successfully:', {
+      logger.info('Company defaults loaded', {
         tenantId,
         categoriesCount: Object.keys(defaults).length
       });
@@ -469,21 +277,16 @@ class EnterpriseUserPreferencesService {
       return defaults;
 
     } catch (error) {
-      logger.error('❌ Error loading company defaults:', error);
+      logger.error('Error loading company defaults:', error);
       return {};
     }
   }
 
-  /**
-   * 🔧 Merge user preferences με company defaults
-   */
-  private async mergePreferences(
+  private mergePreferences(
     userPrefs: UserPreferences | null,
     companyDefaults: Record<string, unknown>
-  ): Promise<UserPreferences> {
+  ): UserPreferences {
     const fallbackPrefs = this.getFallbackPreferences();
-
-    // Start με fallback preferences
     let mergedPrefs: UserPreferences = { ...fallbackPrefs };
 
     const applyCategoryDefaults = <TKey extends keyof UserPreferences>(
@@ -499,7 +302,6 @@ class EnterpriseUserPreferencesService {
       };
     };
 
-    // Apply company defaults
     Object.keys(companyDefaults).forEach((category) => {
       const key = category as keyof UserPreferences;
       const defaultsForCategory = companyDefaults[category];
@@ -514,7 +316,6 @@ class EnterpriseUserPreferencesService {
       }
     });
 
-    // Apply user-specific preferences (highest priority)
     if (userPrefs) {
       mergedPrefs = {
         ...mergedPrefs,
@@ -529,9 +330,6 @@ class EnterpriseUserPreferencesService {
   // SPECIALIZED GETTERS
   // ========================================================================
 
-  /**
-   * 🏠 Get property viewer preferences
-   */
   async getPropertyViewerPreferences(
     userId: string,
     tenantId?: string
@@ -540,9 +338,6 @@ class EnterpriseUserPreferencesService {
     return preferences.propertyViewer;
   }
 
-  /**
-   * 🔧 Get editor tool preferences
-   */
   async getEditorToolPreferences(
     userId: string,
     tenantId?: string
@@ -551,9 +346,6 @@ class EnterpriseUserPreferencesService {
     return preferences.editorTools;
   }
 
-  /**
-   * 🎨 Get display preferences
-   */
   async getDisplayPreferences(
     userId: string,
     tenantId?: string
@@ -562,9 +354,6 @@ class EnterpriseUserPreferencesService {
     return preferences.display;
   }
 
-  /**
-   * 🔔 Get notification preferences
-   */
   async getNotificationPreferences(
     userId: string,
     tenantId?: string
@@ -574,97 +363,13 @@ class EnterpriseUserPreferencesService {
   }
 
   // ========================================================================
-  // FALLBACK SYSTEMS
+  // FALLBACK & UTILITIES
   // ========================================================================
 
-  /**
-   * 🛡️ Get fallback preferences για offline/error scenarios
-   */
   getFallbackPreferences(): UserPreferences {
-    return {
-      propertyViewer: {
-        // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
-        defaultFilters: {
-          searchTerm: '',
-          project: [],
-          building: [],
-          floor: [],
-          propertyType: [],
-          status: [],
-          priceRange: { min: null, max: null },
-          areaRange: { min: null, max: null },
-          features: []
-        },
-        defaultStats: {
-          totalProperties: 0,
-          availableProperties: 0,
-          soldProperties: 0,
-          totalValue: 0,
-          totalArea: 0,
-          averagePrice: 0,
-          propertiesByStatus: {},
-          propertiesByType: {},
-          propertiesByFloor: {},
-          totalStorageUnits: 0,
-          availableStorageUnits: 0,
-          soldStorageUnits: 0,
-          uniqueBuildings: 0,
-          reserved: 0
-        },
-        fallbackFloorId: process.env.NEXT_PUBLIC_DEFAULT_FLOOR_ID || 'floor-1',
-        viewMode: 'grid',
-        showGrid: true,
-        snapToGrid: false,
-        gridSize: 20,
-        showMeasurements: true,
-        scale: 1,
-        showDashboard: true,
-        autoSaveFilters: true,
-        rememberLastView: true
-      },
-      editorTools: {
-        defaultTool: 'select',
-        showToolTips: true,
-        keyboardShortcuts: {
-          'ctrl+z': 'undo',
-          'ctrl+y': 'redo',
-          'delete': 'delete',
-          'escape': 'deselect'
-        },
-        toolbarLayout: 'horizontal',
-        showAdvancedTools: false
-      },
-      display: {
-        theme: 'light',
-        colorScheme: 'blue',
-        fontSize: 'medium',
-        density: 'comfortable',
-        animations: true,
-        highContrast: false,
-        reduceMotion: false
-      },
-      notifications: {
-        emailNotifications: true,
-        pushNotifications: true,
-        soundEnabled: true,
-        notificationTypes: {
-          propertyUpdates: true,
-          systemMessages: true,
-          taskReminders: true,
-          collaborationUpdates: false
-        }
-      },
-      customSettings: {}
-    };
+    return getDefaultUserPreferences();
   }
 
-  // ========================================================================
-  // UTILITY METHODS
-  // ========================================================================
-
-  /**
-   * 📱 Get device type
-   */
   private getDeviceType(): string {
     if (typeof window === 'undefined') return 'server';
 
@@ -677,9 +382,6 @@ class EnterpriseUserPreferencesService {
     return 'desktop';
   }
 
-  /**
-   * 🌐 Get browser info
-   */
   private getBrowserInfo(): string {
     if (typeof window === 'undefined') return 'unknown';
 
@@ -694,18 +396,11 @@ class EnterpriseUserPreferencesService {
     return browserName;
   }
 
-  /**
-   * 🖥️ Get screen resolution
-   */
   private getScreenResolution(): string {
     if (typeof window === 'undefined') return 'unknown';
-
     return `${window.screen.width}x${window.screen.height}`;
   }
 
-  /**
-   * 🧪 Check if service is ready
-   */
   isReady(): boolean {
     try {
       return !!db;
@@ -714,9 +409,6 @@ class EnterpriseUserPreferencesService {
     }
   }
 
-  /**
-   * 📊 Get cache statistics
-   */
   getCacheStats() {
     return {
       preferencesCacheSize: this.preferencesCache.size,

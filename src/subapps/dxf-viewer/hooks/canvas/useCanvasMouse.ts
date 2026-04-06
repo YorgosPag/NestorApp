@@ -17,203 +17,24 @@
  */
 
 import { useRef, useState, useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import {
   getPointerSnapshotFromElement,
   getScreenPosFromEvent,
   screenToWorldWithSnapshot
 } from '../../rendering/core/CoordinateTransforms';
-import type { ICommand } from '../../core/commands/interfaces';
-import type { VertexMovement } from '../../core/commands';
-import type { useOverlayStore } from '../../overlays/overlay-store';
-import type { UniversalSelectionHook } from '../../systems/selection';
-import type { GridAxis } from '../../ai-assistant/grid-types';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
-/**
- * Hover information for vertex grips
- */
-export interface VertexHoverInfo {
-  overlayId: string;
-  vertexIndex: number;
-}
-
-/**
- * Hover information for edge midpoint grips
- */
-export interface EdgeHoverInfo {
-  overlayId: string;
-  edgeIndex: number;
-}
-
-/**
- * Selected grip state
- */
-export interface SelectedGrip {
-  type: 'vertex' | 'edge-midpoint';
-  overlayId: string;
-  index: number; // vertexIndex for vertex, edgeIndex for edge-midpoint
-}
-
-/**
- * Dragging vertex state
- */
-export interface DraggingVertexState {
-  overlayId: string;
-  vertexIndex: number;
-  startPoint: Point2D;
-  originalPosition: Point2D; // Original vertex position for delta calculation
-}
-
-/**
- * Dragging edge midpoint state
- */
-export interface DraggingEdgeMidpointState {
-  overlayId: string;
-  edgeIndex: number;
-  insertIndex: number;
-  startPoint: Point2D;
-  newVertexCreated: boolean; // True after vertex has been inserted
-}
-
-/**
- * Dragging overlay body state (for move tool)
- */
-export interface DraggingOverlayBodyState {
-  overlayId: string;
-  startPoint: Point2D;    // Mouse start position in world coordinates
-  startPolygon: Array<[number, number]>; // Original polygon for delta calculation
-}
-
-/**
- * Dragging guide state (for guide-move tool) — ADR-189 B5
- */
-export interface DraggingGuideState {
-  guideId: string;
-  axis: GridAxis;
-  startMouseWorld: Point2D;    // Mouse world pos at drag start
-  // X/Y: original offset
-  originalOffset: number;
-  // XZ: original endpoints
-  originalStartPoint?: Point2D;
-  originalEndPoint?: Point2D;
-}
-
-/**
- * Props για useCanvasMouse hook
- */
-/**
- * Grip hover throttle ref type for performance optimization
- * SHARED TYPE: Same as in useGripSystem - refs are injected, NOT created here
- */
-export interface GripHoverThrottle {
-  lastCheckTime: number;
-  lastWorldPoint: Point2D | null;
-}
-
-export interface UseCanvasMouseProps {
-  /** Current view transform (scale, offset) */
-  transform: ViewTransform;
-  /** Current viewport dimensions */
-  viewport: { width: number; height: number };
-  /** Current active tool */
-  activeTool: string;
-  /** Callback when cursor position should update */
-  updatePosition: (pos: Point2D | null) => void;
-  /** Callback when cursor active state should update */
-  setActive: (active: boolean) => void;
-  /** Container element ref */
-  containerRef: React.RefObject<HTMLDivElement>;
-  // 🏢 ENTERPRISE (2026-02-02): onMouseCoordinatesChange REMOVED - ToolbarStatusBar uses CursorContext (SSoT)
-  /** Hovered vertex info (for grip system) */
-  hoveredVertexInfo: VertexHoverInfo | null;
-  /** Hovered edge info (for grip system) */
-  hoveredEdgeInfo: EdgeHoverInfo | null;
-  /** Selected grips array */
-  selectedGrips: SelectedGrip[];
-  /** Callback to set selected grips */
-  setSelectedGrips: (grips: SelectedGrip[]) => void;
-  /** Dragging vertices state */
-  draggingVertices: DraggingVertexState[] | null;
-  /** Callback to set dragging vertices */
-  setDraggingVertices: (state: DraggingVertexState[] | null) => void;
-  /** Dragging edge midpoint state */
-  draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
-  /** Callback to set dragging edge midpoint */
-  setDraggingEdgeMidpoint: (state: DraggingEdgeMidpointState | null) => void;
-  /** Dragging overlay body state */
-  draggingOverlayBody: DraggingOverlayBodyState | null;
-  /** Callback to set dragging overlay body */
-  setDraggingOverlayBody: (state: DraggingOverlayBodyState | null) => void;
-  /** Drag preview position */
-  dragPreviewPosition: Point2D | null;
-  /** Callback to set drag preview position */
-  setDragPreviewPosition: (pos: Point2D | null) => void;
-  /** Universal selection ref for checking selection
-   * Note: Uses MutableRefObject to be compatible with useRef pattern in CanvasSection
-   */
-  universalSelectionRef: React.MutableRefObject<UniversalSelectionHook>;
-  /** Overlay store ref for getting overlay data
-   * Note: Uses generic Record type to be compatible with command interfaces
-   */
-  overlayStoreRef: React.MutableRefObject<ReturnType<typeof useOverlayStore>>;
-  /** Command execution function
-   * Note: Uses broader type to be compatible with ICommand pattern
-   */
-  executeCommand: (command: ICommand) => void;
-  /** Movement detection threshold */
-  movementDetectionThreshold: number;
-
-  // ============================================================================
-  // ADR-189 B5: Guide drag & drop
-  // ============================================================================
-  /** Dragging guide state (for guide-move tool) */
-  draggingGuide: DraggingGuideState | null;
-  /** Callback to set dragging guide state */
-  setDraggingGuide: (state: DraggingGuideState | null) => void;
-  /** Callback when guide drag completes (CanvasSection creates MoveGuideCommand) */
-  onGuideDragComplete: (guideId: string, axis: GridAxis, oldOffset: number, newOffset: number, oldStart?: Point2D, oldEnd?: Point2D, newStart?: Point2D, newEnd?: Point2D) => void;
-
-  // ============================================================================
-  // 🏢 ENTERPRISE: Refs από useGripSystem (INJECTED - NOT created here)
-  // Pattern: Dependency Injection - refs are CANONICAL in useGripSystem
-  // ============================================================================
-  /** Throttle ref for grip hover detection (from useGripSystem) */
-  gripHoverThrottleRef: React.MutableRefObject<GripHoverThrottle>;
-  /** Flag to prevent click event immediately after drag (from useGripSystem) */
-  justFinishedDragRef: React.MutableRefObject<boolean>;
-  /** Function to mark drag as finished (from useGripSystem) */
-  markDragFinished: () => void;
-}
-
-/**
- * Return type of useCanvasMouse hook
- */
-export interface UseCanvasMouseReturn {
-  // Mouse position states
-  mouseCss: Point2D | null;
-  mouseWorld: Point2D | null;
-
-  // Update functions
-  updateMouseCss: (point: Point2D) => void;
-  updateMouseWorld: (point: Point2D) => void;
-
-  // Refs (mouse-specific only - grip refs come from useGripSystem)
-  lastMouseCssRef: React.RefObject<Point2D | null>;
-  lastMouseWorldRef: React.RefObject<Point2D | null>;
-
-  // Event handlers
-  handleContainerMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
-  handleContainerMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
-  handleContainerMouseUp: (e: React.MouseEvent<HTMLDivElement>) => Promise<void>;
-  handleContainerMouseEnter: () => void;
-  handleContainerMouseLeave: () => void;
-}
+// 🏢 ADR-065: Extracted types and drag handlers
+import type { UseCanvasMouseProps, UseCanvasMouseReturn, SelectedGrip, DraggingVertexState } from './canvas-mouse-types';
+import { handleVertexDragEnd, handleEdgeMidpointDragEnd, handleOverlayBodyDragEnd } from './canvas-mouse-drag-handlers';
+// Re-export all types for backward compatibility (86+ importers)
+export type {
+  VertexHoverInfo, EdgeHoverInfo, SelectedGrip,
+  DraggingVertexState, DraggingEdgeMidpointState, DraggingOverlayBodyState,
+  DraggingGuideState, GripHoverThrottle,
+  UseCanvasMouseProps, UseCanvasMouseReturn,
+} from './canvas-mouse-types';
 
 // ============================================================================
 // HOOK IMPLEMENTATION
@@ -569,120 +390,30 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
   /**
    * 🏢 ENTERPRISE: Mouse up handler for MULTI-grip drag end
    * ADR-031: Multi-Grip Selection System - updates all dragged vertices
+   * 🏢 ADR-065: Handler bodies delegated to canvas-mouse-drag-handlers.ts
    */
   const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
-    const overlayStore = overlayStoreRef.current;
+    const dragCtx = {
+      e, transform, containerRef, overlayStoreRef, executeCommand,
+      setDragPreviewPosition, markDragFinished, movementDetectionThreshold,
+    };
 
     // Handle MULTI-vertex drag end
-    if (draggingVertices && draggingVertices.length > 0 && overlayStore) {
-      const container = containerRef.current;
-      if (container) {
-        const snap = getPointerSnapshotFromElement(container);
-        if (!snap) return;
-        const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-
-        // Calculate delta from first grip's start point
-        const delta = {
-          x: worldPos.x - draggingVertices[0].startPoint.x,
-          y: worldPos.y - draggingVertices[0].startPoint.y
-        };
-
-        // Command Pattern for multi-grip movement (imported dynamically to avoid circular deps)
-        const movements: VertexMovement[] = draggingVertices.map(drag => ({
-          overlayId: drag.overlayId,
-          vertexIndex: drag.vertexIndex,
-          oldPosition: [drag.originalPosition.x, drag.originalPosition.y] as [number, number],
-          newPosition: [
-            drag.originalPosition.x + delta.x,
-            drag.originalPosition.y + delta.y
-          ] as [number, number]
-        }));
-
-        // Execute through command history
-        const { MoveMultipleOverlayVerticesCommand } = await import('../../core/commands');
-        const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
-        executeCommand(command);
-      }
-
-      // Clear drag states but NOT selectedGrips
-      setDraggingVertices(null);
-      setDragPreviewPosition(null);
-      // 🏢 ENTERPRISE: Use injected markDragFinished from useGripSystem
-      markDragFinished();
+    if (draggingVertices && draggingVertices.length > 0 && overlayStoreRef.current) {
+      await handleVertexDragEnd(dragCtx, draggingVertices, setDraggingVertices);
     }
 
     // Handle edge midpoint drag end
-    if (draggingEdgeMidpoint && overlayStore) {
-      const container = containerRef.current;
-      if (container) {
-        const snap = getPointerSnapshotFromElement(container);
-        if (!snap) return;
-        const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-
-        if (!draggingEdgeMidpoint.newVertexCreated) {
-          // First time - insert new vertex
-          await overlayStore.addVertex(
-            draggingEdgeMidpoint.overlayId,
-            draggingEdgeMidpoint.insertIndex,
-            [worldPos.x, worldPos.y]
-          );
-        } else {
-          // Vertex already created - just update position
-          await overlayStore.updateVertex(
-            draggingEdgeMidpoint.overlayId,
-            draggingEdgeMidpoint.insertIndex,
-            [worldPos.x, worldPos.y]
-          );
-        }
-      }
-
-      setDraggingEdgeMidpoint(null);
-      setDragPreviewPosition(null);
-      // 🏢 ENTERPRISE: Use injected markDragFinished from useGripSystem
-      markDragFinished();
+    if (draggingEdgeMidpoint && overlayStoreRef.current) {
+      await handleEdgeMidpointDragEnd(dragCtx, draggingEdgeMidpoint, setDraggingEdgeMidpoint);
     }
 
     // Handle overlay body drag end (move tool)
-    if (draggingOverlayBody && overlayStore) {
-      const container = containerRef.current;
-      if (container) {
-        const snap = getPointerSnapshotFromElement(container);
-        if (!snap) return;
-        const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-
-        // Calculate delta from start position
-        const delta = {
-          x: worldPos.x - draggingOverlayBody.startPoint.x,
-          y: worldPos.y - draggingOverlayBody.startPoint.y
-        };
-
-        // Only execute if there was actual movement
-        const hasMovement = Math.abs(delta.x) > movementDetectionThreshold ||
-                           Math.abs(delta.y) > movementDetectionThreshold;
-
-        if (hasMovement) {
-          const { MoveOverlayCommand } = await import('../../core/commands');
-          const command = new MoveOverlayCommand(
-            draggingOverlayBody.overlayId,
-            delta,
-            overlayStore,
-            true // isDragging = true
-          );
-          executeCommand(command);
-        }
-      }
-
-      setDraggingOverlayBody(null);
-      setDragPreviewPosition(null);
-      // 🏢 ENTERPRISE: Use injected markDragFinished from useGripSystem
-      markDragFinished();
+    if (draggingOverlayBody && overlayStoreRef.current) {
+      await handleOverlayBodyDragEnd(dragCtx, draggingOverlayBody, setDraggingOverlayBody);
     }
 
     // ADR-189 B5: Guide drag end is handled in CanvasSection.handleContainerMouseUp
-    // (useCanvasMouse.handleContainerMouseUp is NOT used for guide-move)
   }, [
     draggingVertices,
     draggingEdgeMidpoint,
@@ -696,7 +427,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     setDragPreviewPosition,
     overlayStoreRef,
     movementDetectionThreshold,
-    markDragFinished, // 🏢 ENTERPRISE: Injected from useGripSystem
+    markDragFinished,
   ]);
 
   // ============================================================================

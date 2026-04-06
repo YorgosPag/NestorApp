@@ -123,6 +123,10 @@ export function NewUnitHierarchySection({
   }, [buildings, onChange]);
 
   const handleFloorChange = useCallback((value: string) => {
+    if (value === '__clear__') {
+      onChange({ floorId: '', floor: 0 });
+      return;
+    }
     const f = floorOptions.find((opt) => opt.id === value);
     onChange({ floorId: value, floor: f?.number ?? 0 });
   }, [floorOptions, onChange]);
@@ -231,7 +235,7 @@ export function NewUnitHierarchySection({
                 </Button>
               ) : (
                 <Select
-                  value={selection.floorId}
+                  value={selection.floorId || '__clear__'}
                   onValueChange={handleFloorChange}
                   disabled={!selection.buildingId || floorsLoading}
                 >
@@ -239,6 +243,7 @@ export function NewUnitHierarchySection({
                     <SelectValue placeholder={t('dialog.addUnit.placeholders.floor')} />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__clear__">—</SelectItem>
                     {floorOptions.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.name} ({t('dialog.addUnit.floorLevel')} {f.number})
