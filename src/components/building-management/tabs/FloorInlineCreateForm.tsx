@@ -167,8 +167,7 @@ export function FloorInlineCreateForm({
   }, [createNumber, createName, createNameManuallyEdited]);
 
   // ── Submit ──
-  const handleSubmit = useCallback(async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = useCallback(async () => {
     if (!createName.trim()) {
       notifyError(t('tabs.floors.validationNameRequired'));
       return;
@@ -200,9 +199,9 @@ export function FloorInlineCreateForm({
   }, [buildingId, projectId, createName, createNumber, createElevation, onCreated, t, success, notifyError]);
 
   return (
-    <form
+    <div
       className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2"
-      onSubmit={handleSubmit}
+      role="group"
     >
       <section className="grid grid-cols-[80px_1fr_120px_auto] items-end gap-2">
         <fieldset className="flex flex-col gap-1">
@@ -257,10 +256,11 @@ export function FloorInlineCreateForm({
         </fieldset>
         <nav className="flex gap-1">
           <Button
-            type="submit"
+            type="button"
             size="sm"
             disabled={!createName.trim() || creating}
             className="h-9"
+            onClick={handleSubmit}
           >
             {creating ? <Spinner size="small" color="inherit" /> : <Check className="h-4 w-4" />}
           </Button>
@@ -282,7 +282,7 @@ export function FloorInlineCreateForm({
           {t('tabs.floors.mismatchWarning')}
         </p>
       )}
-    </form>
+    </div>
   );
 }
 
