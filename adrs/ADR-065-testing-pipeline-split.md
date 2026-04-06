@@ -38,6 +38,7 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | Initial split: TestingPipeline 1 file (1768 lines) -> 4 files (all compliant) |
 | 2026-04-06 | DockerOrchestrator split: 1 file (1761 lines) -> 5 files (all compliant) |
 | 2026-04-06 | TestSuite split: 1 file (1949 lines) -> 6 files (all compliant) |
+| 2026-04-06 | PerformanceProfiler split: 1 file (1663 lines) -> 5 files (all compliant) |
 
 ## DockerOrchestrator Split
 
@@ -71,3 +72,19 @@ Split into 6 files in `src/subapps/geo-canvas/testing/`:
 | `TestSuite.ts` | Main class: singleton, registration, execution, public API | 333 | No |
 
 Consumer Impact: Main file keeps same name and exports — zero import path changes needed.
+
+## PerformanceProfiler Split
+
+`PerformanceProfiler.ts` contained 1663 lines — 3.3x over the 500-line limit. **Actively used** by index.ts and testing-pipeline-tasks.ts.
+
+Split into 5 files in `src/subapps/geo-canvas/profiling/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `performance-profiler-types.ts` | 20+ interfaces/types (browser APIs, metrics, analysis, config) | 366 | Yes (types-only) |
+| `performance-profiler-collectors.ts` | Metric initializers, entry processors, browser/session metadata | 414 | No |
+| `performance-profiler-analysis.ts` | Bottleneck detection, recommendations, scoring, trends | 220 | No |
+| `performance-profiler-reporting.ts` | Export formats (Chrome DevTools, Flame Graph) + HTML report | 171 | No |
+| `PerformanceProfiler.ts` | Main class: singleton, session mgmt, monitoring loops, trace, public API | 400 | No |
+
+Consumer Impact: Main file keeps same name and re-exports all types — zero import path changes needed.
