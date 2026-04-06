@@ -31,6 +31,7 @@ import { translatePolicyError, isKnownPolicyErrorCode } from '@/lib/policy';
 // ADR-284 Batch 7: SSoT hierarchy validation + inline new-unit UI
 import { NewUnitHierarchySection } from '@/components/properties/shared/NewUnitHierarchySection';
 import { validatePropertyCreationFields, isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
+import { isMultiLevelCapableType } from '@/config/domain-constants';
 const logger = createModuleLogger('PropertyFieldsBlock');
 
 interface PropertyFieldsBlockProps {
@@ -91,7 +92,6 @@ export function PropertyFieldsBlock({
     }
     return typeLabel;
   }, [t]);
-
   const prevCodeInputsRef = useRef({
     buildingId: property.buildingId,
     floor: property.floor,
@@ -102,8 +102,6 @@ export function PropertyFieldsBlock({
   const prevServerNameRef = useRef(property.name);
   const prevServerTypeRef = useRef(property.type);
   const codeRegenerationPending = useRef(false);
-
-  // Field locking based on commercialStatus
   const currentCommercialStatus = (property.commercialStatus ?? 'unavailable') as CommercialStatus;
   const isReservedOrSold = (['reserved', 'sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
@@ -182,34 +180,28 @@ export function PropertyFieldsBlock({
       : !codeFloorId
         ? t('entityCode.needFloor')
         : suggestedCode || t('fields.identity.codePlaceholder');
-
-  // ADR-236 Phase 4: Auto-create levels during creation mode
+  const handleLevelsChange = useCallback((newLevels: PropertyLevel[]) => {
+    setFormData(prev => ({
+      ...prev,
+      levels: newLevels,
+      levelData: Object.fromEntries(newLevels.map(l => [l.floorId, prev.levelData[l.floorId] ?? {}])),
+    }));
+    onActiveLevelChange?.(newLevels[0]?.floorId ?? null);
+  }, [onActiveLevelChange]);
   const autoLevel = useAutoLevelCreation({
     buildingId: isCreatingNewUnit ? (formData.buildingId || null) : null,
     currentFloorId: isCreatingNewUnit ? (formData.floorId || null) : null,
     currentFloorNumber: isCreatingNewUnit ? formData.floor : null,
     hasExistingLevels: formData.levels.length >= 2,
-    onUpdateProperty: (updates) => {
-      if (updates.levels) {
-        const newLevels = updates.levels as PropertyLevel[];
-        setFormData(prev => ({
-          ...prev,
-          levels: newLevels,
-          levelData: Object.fromEntries(
-            newLevels.map(l => [l.floorId, prev.levelData[l.floorId] ?? {}])
-          ),
-        }));
-        // Auto-select first level tab
-        onActiveLevelChange?.(newLevels[0]?.floorId ?? null);
-      }
-    },
+    onUpdateProperty: (updates) => { if (updates.levels) handleLevelsChange(updates.levels as PropertyLevel[]); },
   });
 
-  // ADR-236: Hierarchy lock (creation) + multi-level detection
   const isStandalone = isStandaloneUnitType(formData.type as PropertyType | '');
   const isHierarchyComplete = isStandalone ? !!formData.type : !!(formData.type && formData.buildingId && formData.floorId);
   const isHierarchyLocked = !!isCreatingNewUnit && !isHierarchyComplete;
-  const isMultiLevel = isCreatingNewUnit ? formData.levels.length >= 2 : !!(property.isMultiLevel && (property.levels?.length ?? 0) >= 2);
+  const isMultiLevel = isCreatingNewUnit
+    ? (isMultiLevelCapableType(formData.type) && formData.levels.length >= 2)
+    : !!(property.isMultiLevel && (property.levels?.length ?? 0) >= 2);
   const effectiveLevels: PropertyLevel[] = isCreatingNewUnit ? formData.levels : (property.levels ?? []);
 
   const activeLevelId = controlledLevelId ?? null;
@@ -286,14 +278,12 @@ export function PropertyFieldsBlock({
     }
   }, [suggestedCode, codeOverridden, formData.code, onAutoSaveFields]);
 
-  // ── Build updates from form data (delegated to SSoT mapper) ──
   const buildUpdatesFromForm = useCallback(
     (): Partial<Property> =>
       buildPropertyUpdatesFromForm({ formData, property, suggestedCode, isMultiLevel }),
     [formData, property, suggestedCode, isMultiLevel],
   );
 
-  // ── Save handler ──
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
@@ -365,7 +355,6 @@ export function PropertyFieldsBlock({
     property.commercialStatus, property.floorId, runExistingPropertyUpdate, suggestedCode,
     success, notifyError, t]);
 
-  // ── Toggle multi-select ──
   const toggleArrayItem = useCallback(<T extends string>(
     field: 'orientations' | 'flooring' | 'interiorFeatures' | 'securityFeatures',
     value: T
@@ -400,13 +389,18 @@ export function PropertyFieldsBlock({
           ...(patch.floor !== undefined ? { floor: patch.floor } : {}),
         };
         if (shouldSuggestName) {
-          const area = prev.areaGross;
-          updated.name = buildSuggestedName(patch.type as string, area);
+          updated.name = buildSuggestedName(patch.type as string, prev.areaGross);
+        }
+        // ADR-236: Clear levels when switching to non-multi-level type
+        if (patch.type !== undefined && !isMultiLevelCapableType(patch.type)) {
+          updated.levels = [];
+          updated.levelData = {};
         }
         return updated;
       });
       if (patch.type !== undefined) {
         setLocalType(patch.type);
+        if (!isMultiLevelCapableType(patch.type)) onActiveLevelChange?.(null);
       }
       // ADR-236 Phase 4: Trigger auto-level with FRESH values (avoids stale closures)
       if (isCreatingNewUnit && formData.levels.length < 2) {
@@ -418,19 +412,25 @@ export function PropertyFieldsBlock({
         }
       }
     },
-    [autoLevel, buildSuggestedName, formData.levels.length, formData.floorId, formData.floor, isCreatingNewUnit, localType],
+    [autoLevel, buildSuggestedName, formData.levels.length, formData.floorId, formData.floor, isCreatingNewUnit, localType, onActiveLevelChange],
   );
 
   const handleTypeChange = useCallback((newType: string) => {
     setLocalType(newType);
     nameUserEdited.current = false;
     const newName = buildSuggestedName(newType, formData.areaGross);
-    setFormData(prev => ({ ...prev, name: newName }));
+    // ADR-236: Clear levels when switching to non-multi-level type
+    if (!isMultiLevelCapableType(newType)) {
+      setFormData(prev => ({ ...prev, name: newName, levels: [], levelData: {} }));
+      onActiveLevelChange?.(null);
+    } else {
+      setFormData(prev => ({ ...prev, name: newName }));
+    }
     if (onAutoSaveFields) onAutoSaveFields({ type: newType, name: newName });
     if (isCreatingNewUnit && formData.floorId) {
       autoLevel.triggerAutoLevelCreation(newType, formData.floorId, formData.floor);
     }
-  }, [autoLevel, buildSuggestedName, formData.areaGross, formData.floor, formData.floorId, isCreatingNewUnit, onAutoSaveFields]);
+  }, [autoLevel, buildSuggestedName, formData.areaGross, formData.floor, formData.floorId, isCreatingNewUnit, onActiveLevelChange, onAutoSaveFields]);
 
   const handleNameManualEdit = useCallback((value: string) => {
     nameUserEdited.current = true;
@@ -465,6 +465,8 @@ export function PropertyFieldsBlock({
         isCreatingNewUnit={isCreatingNewUnit}
         isReservedOrSold={isReservedOrSold}
         isHierarchyLocked={isHierarchyLocked}
+        onLevelsChange={isCreatingNewUnit ? handleLevelsChange : undefined}
+        creationBuildingId={isCreatingNewUnit ? (formData.buildingId || null) : null}
         isSoldOrRented={isSoldOrRented}
         isMultiLevel={!!isMultiLevel}
         effectiveLevels={effectiveLevels}

@@ -69,6 +69,10 @@ export interface PropertyFieldsEditFormProps {
   isReservedOrSold: boolean;
   /** ADR-236: Fields locked until hierarchy (type + building + floor) is selected during creation */
   isHierarchyLocked: boolean;
+  /** ADR-236: Callback when floors change via FloorMultiSelectField (creation only) */
+  onLevelsChange?: (levels: PropertyLevel[]) => void;
+  /** ADR-236: Building ID for FloorMultiSelectField (creation only) */
+  creationBuildingId?: string | null;
   /** Sold or rented (physical fields locked) */
   isSoldOrRented: boolean;
   /** Multi-level unit */

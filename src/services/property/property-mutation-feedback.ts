@@ -31,6 +31,10 @@ export function translatePropertyMutationError(
     return t('save.areaRequired');
   }
 
+  if (errorMessage.includes('unsaved')) {
+    return t('save.unsavedProperty');
+  }
+
   const translated = t(fallbackKey);
   // If translation failed (returned raw key), surface the actual server error
   if (translated === fallbackKey || translated.includes(fallbackKey)) {

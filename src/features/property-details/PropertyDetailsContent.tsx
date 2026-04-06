@@ -368,7 +368,7 @@ export function PropertyDetailsContent({
         activeLevelId={activeLevelId}
         onActiveLevelChange={setActiveLevelId}
         onAutoSaveFields={(fields) => {
-          if (safeOnUpdateProperty && resolvedProperty?.id) {
+          if (safeOnUpdateProperty && resolvedProperty?.id && resolvedProperty.id !== '__new__') {
             void safeOnUpdateProperty(resolvedProperty.id, fields);
           }
         }}

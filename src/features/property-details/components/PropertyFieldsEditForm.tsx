@@ -43,6 +43,8 @@ import {
 import type { CommercialStatus, OperationalStatus } from '@/types/property';
 import { isValidEntityCodeFormat } from '@/services/entity-code.service';
 import { LevelTabStrip } from './PropertyFieldsReadOnly';
+import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
+import { isMultiLevelCapableType } from '@/config/domain-constants';
 import {
   PROPERTY_TYPE_OPTIONS, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
   PROPERTY_CARD_COLORS, PROPERTY_MICRO_TEXT,
@@ -59,6 +61,8 @@ export function PropertyFieldsEditForm({
   isReservedOrSold,
   isSoldOrRented,
   isHierarchyLocked,
+  onLevelsChange,
+  creationBuildingId,
   isMultiLevel,
   effectiveLevels,
   activeLevelId,
@@ -139,6 +143,17 @@ export function PropertyFieldsEditForm({
             </span>
           </aside>
         </>
+      )}
+
+      {/* ─── Floor selector for multi-level creation (ADR-236) ─── */}
+      {isCreatingNewUnit && isMultiLevelCapableType(formData.type) && onLevelsChange && (
+        <FloorMultiSelectField
+          buildingId={creationBuildingId}
+          value={effectiveLevels}
+          onChange={onLevelsChange}
+          label={t('multiLevel.floors', { ns: 'properties-detail' })}
+          noBuildingHint={t('multiLevel.noFloorHint', { ns: 'properties-detail' })}
+        />
       )}
 
       {/* ─── Identity + Location Row ─── */}
