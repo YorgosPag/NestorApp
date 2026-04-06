@@ -37,6 +37,7 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 |------|--------|
 | 2026-04-06 | Initial split: TestingPipeline 1 file (1768 lines) -> 4 files (all compliant) |
 | 2026-04-06 | DockerOrchestrator split: 1 file (1761 lines) -> 5 files (all compliant) |
+| 2026-04-06 | TestSuite split: 1 file (1949 lines) -> 6 files (all compliant) |
 
 ## DockerOrchestrator Split
 
@@ -53,3 +54,20 @@ Split into 5 files in `src/subapps/geo-canvas/deployment/`:
 | `DockerOrchestrator.ts` | Main class: singleton, orchestration, scaling, public API | 396 | No |
 
 Consumer Impact: File not imported anywhere in codebase — zero risk.
+
+## TestSuite Split
+
+`TestSuite.ts` contained 1949 lines — 3.9x over the 500-line limit. **Actively used** by index.ts and testing-pipeline-tasks.ts.
+
+Split into 6 files in `src/subapps/geo-canvas/testing/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `test-suite-types.ts` | 12 interfaces/types | 157 | Yes (types-only) |
+| `test-suite-phase2-3-tests.ts` | 8 transformation+mapping tests + helpers | 298 | No |
+| `test-suite-phase4-5-tests.ts` | 8 database+alerts tests + helpers | 265 | No |
+| `test-suite-phase6-7-e2e-tests.ts` | 14 UI+perf+integration+e2e tests + helpers | 407 | No |
+| `test-suite-reporting.ts` | Report generation (console, CSV, HTML) | 201 | No |
+| `TestSuite.ts` | Main class: singleton, registration, execution, public API | 333 | No |
+
+Consumer Impact: Main file keeps same name and exports — zero import path changes needed.
