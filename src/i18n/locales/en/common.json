@@ -97,6 +97,7 @@
     "searchProperty": "Search property...",
     "searchCompany": "Search company...",
     "searchProperties": "Search properties...",
+    "searchUnits": "Search units...",
     "searchBuildings": "Search buildings...",
     "searchProjects": "Search projects...",
     "searchContacts": "Search contacts...",
@@ -655,7 +656,22 @@
   "noDataToDisplay": "No data to display",
   "filters": {
     "priceRange": "Price Range",
-    "area": "Area (m²)"
+    "area": "Area (m²)",
+    "unitTypes": {
+      "ariaLabel": "Unit type filters",
+      "all": "All",
+      "allTooltip": "Show all types",
+      "studio": "Studio",
+      "studioTooltip": "Studio",
+      "apartment": "Apartment",
+      "apartmentTooltip": "Apartment",
+      "maisonette": "Maisonette",
+      "maisonetteTooltip": "Maisonette",
+      "shop": "Shop",
+      "shopTooltip": "Shop",
+      "office": "Office",
+      "officeTooltip": "Office"
+    }
   },
   "photos": {
     "notFound": "Photo not found"

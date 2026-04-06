@@ -45,11 +45,13 @@ import {
   updatePropertyBuildingLinkWithPolicy,
 } from '@/services/property/property-mutation-gateway';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
 
 type PropertyConfirmAction = { type: 'unlink'; item: Property };
 
 interface PropertiesApiResponse {
-  units: Property[];
+  /** API returns `properties` — not `units` */
+  properties: Property[];
   count?: number;
 }
 
@@ -118,8 +120,8 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
       const result = await apiClient.get<PropertiesApiResponse>(
         `${API_ROUTES.PROPERTIES.LIST}?buildingId=${building.id}`
       );
-      if (result?.units) {
-        setUnits(result.units as Property[]);
+      if (result?.properties) {
+        setUnits(result.properties);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load units');
@@ -132,6 +134,14 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     fetchProperties();
     fetchFloors();
   }, [fetchProperties, fetchFloors]);
+
+  // Real-time: refetch when properties change via RealtimeService events
+  useEffect(() => {
+    const unsubCreate = RealtimeService.subscribe('UNIT_CREATED', () => fetchProperties());
+    const unsubUpdate = RealtimeService.subscribe('UNIT_UPDATED', () => fetchProperties());
+    const unsubDelete = RealtimeService.subscribe('UNIT_DELETED', () => fetchProperties());
+    return () => { unsubCreate(); unsubUpdate(); unsubDelete(); };
+  }, [fetchProperties]);
 
   const edit = usePropertyInlineEdit(fetchProperties);
 
@@ -272,7 +282,10 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   ], [t, tUnits]);
 
   const unitCardFields: SpaceCardField<Property>[] = useMemo(() => [
-    { label: tUnits('card.stats.type'), render: (u) => getPropertyTypeLabel(u.type, tUnits) },
+    { label: tUnits('card.stats.type'), render: (u) => {
+      const typeLabel = getPropertyTypeLabel(u.type, tUnits);
+      return u.code ? `${typeLabel} · ${u.code}` : typeLabel;
+    }},
     { label: tUnits('card.stats.floor'), render: (u) => u.floor || '—' },
     { label: 'm²', render: (u) => u.area || '—' },
     { label: tUnits('table.price'), render: (u) => formatCurrencyWhole(u.price) },

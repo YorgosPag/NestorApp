@@ -350,9 +350,9 @@ export function PropertyDetailsContent({
         onPropertyCreated={onPropertyCreated}
         activeLevelId={activeLevelId}
         onActiveLevelChange={setActiveLevelId}
-        onAutoSaveCode={(code) => {
+        onAutoSaveFields={(fields) => {
           if (safeOnUpdateProperty && resolvedProperty?.id) {
-            void safeOnUpdateProperty(resolvedProperty.id, { code });
+            void safeOnUpdateProperty(resolvedProperty.id, fields);
           }
         }}
       />

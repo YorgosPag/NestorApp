@@ -97,6 +97,7 @@
     "searchProperty": "Αναζήτηση ακινήτου...",
     "searchCompany": "Αναζήτηση εταιρείας...",
     "searchProperties": "Αναζήτηση ακινήτων...",
+    "searchUnits": "Αναζήτηση μονάδων...",
     "searchBuildings": "Αναζήτηση κτιρίων...",
     "searchProjects": "Αναζήτηση έργων...",
     "searchContacts": "Αναζήτηση επαφών...",
@@ -655,7 +656,22 @@
   "noDataToDisplay": "Δεν υπάρχουν δεδομένα για προβολή",
   "filters": {
     "priceRange": "Εύρος Τιμής",
-    "area": "Εμβαδόν (m²)"
+    "area": "Εμβαδόν (m²)",
+    "unitTypes": {
+      "ariaLabel": "Φίλτρα τύπου μονάδας",
+      "all": "Όλες",
+      "allTooltip": "Εμφάνιση όλων των τύπων",
+      "studio": "Studio",
+      "studioTooltip": "Studio / Γκαρσονιέρα",
+      "apartment": "Διαμέρισμα",
+      "apartmentTooltip": "Διαμέρισμα",
+      "maisonette": "Μεζονέτα",
+      "maisonetteTooltip": "Μεζονέτα",
+      "shop": "Κατάστημα",
+      "shopTooltip": "Κατάστημα",
+      "office": "Γραφείο",
+      "officeTooltip": "Γραφείο"
+    }
   },
   "photos": {
     "notFound": "Η φωτογραφία δεν βρέθηκε"

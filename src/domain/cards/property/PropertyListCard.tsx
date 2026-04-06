@@ -167,13 +167,14 @@ export function PropertyListCard({
       });
     }
 
-    // Price - 🏢 ENTERPRISE: Using centralized price icon/color
-    if (property.price && property.price > 0) {
+    // Price - 🏢 ENTERPRISE: ADR-197 commercial.askingPrice → fallback to deprecated price
+    const displayPrice = property.commercial?.askingPrice ?? property.price;
+    if (displayPrice && displayPrice > 0) {
       items.push({
         icon: NAVIGATION_ENTITIES.price.icon,
         iconColor: NAVIGATION_ENTITIES.price.color,
         label: t('card.stats.price'),
-        value: formatCurrency(property.price, 'EUR', {
+        value: formatCurrency(displayPrice, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
         }),
@@ -182,7 +183,7 @@ export function PropertyListCard({
     }
 
     return items;
-  }, [property.building, property.floor, property.area, property.price, t]);
+  }, [property.building, property.floor, property.area, property.price, property.commercial?.askingPrice, t]);
 
   /** Build badges from operational status (no more sales statuses) */
   const badges = useMemo(() => {
@@ -195,13 +196,16 @@ export function PropertyListCard({
     return [{ label: statusLabel, variant }];
   }, [property.operationalStatus, property.status, t]);
 
-  /** Get subtitle - type and project */
+  /** Get subtitle - type, code, and project */
   const subtitle = useMemo(() => {
     const parts: string[] = [];
-    if (property.type) parts.push(t(`types.${property.type}`, { ns: 'properties', defaultValue: property.type }));
+    if (property.type) {
+      const typeLabel = t(`types.${property.type}`, { ns: 'properties', defaultValue: property.type });
+      parts.push(property.code ? `${typeLabel} · ${property.code}` : typeLabel);
+    }
     if (property.project) parts.push(property.project);
     return parts.join(' • ') || undefined;
-  }, [property.type, property.project]);
+  }, [property.type, property.code, property.project]);
 
   // ==========================================================================
   // 🏢 HANDLERS

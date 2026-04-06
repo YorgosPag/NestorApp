@@ -41,7 +41,7 @@
           "for-sale-and-rent": "For sale and rent"
         },
         "statusOptions": {
-          "draft": "Draft",
+          "draft": "Incomplete",
           "under-construction": "Under construction",
           "inspection": "Inspection",
           "ready": "Ready",
@@ -446,7 +446,7 @@
         "floor": "Select Floor..."
       },
       "statusOptions": {
-        "draft": "Draft",
+        "draft": "Incomplete",
         "under-construction": "Under construction",
         "inspection": "Inspection",
         "ready": "Ready",

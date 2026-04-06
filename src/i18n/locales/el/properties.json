@@ -41,7 +41,7 @@
           "for-sale-and-rent": "Προς πώληση και ενοικίαση"
         },
         "statusOptions": {
-          "draft": "Πρόχειρο",
+          "draft": "Ημιτελές",
           "under-construction": "Υπό κατασκευή",
           "inspection": "Σε επιθεώρηση",
           "ready": "Έτοιμο",
@@ -446,7 +446,7 @@
         "floor": "Επιλέξτε Όροφο..."
       },
       "statusOptions": {
-        "draft": "Πρόχειρο",
+        "draft": "Ημιτελές",
         "under-construction": "Υπό κατασκευή",
         "inspection": "Σε επιθεώρηση",
         "ready": "Έτοιμο",

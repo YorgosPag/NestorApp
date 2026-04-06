@@ -50,8 +50,8 @@ interface PropertyFieldsBlockProps {
   activeLevelId?: string | null;
   /** Callback when user selects a level tab — updates shared state in parent */
   onActiveLevelChange?: (levelId: string | null) => void;
-  /** ADR-233: Auto-save code to Firestore when suggestion arrives after floor/type change */
-  onAutoSaveCode?: (code: string) => void;
+  /** ADR-233: Auto-save fields to Firestore on floor/type change (code, name, type) */
+  onAutoSaveFields?: (fields: Partial<Record<string, unknown>>) => void;
 }
 
 export function PropertyFieldsBlock({
@@ -63,7 +63,7 @@ export function PropertyFieldsBlock({
   onPropertyCreated,
   activeLevelId: controlledLevelId,
   onActiveLevelChange,
-  onAutoSaveCode,
+  onAutoSaveFields,
 }: PropertyFieldsBlockProps) {
   const { t } = useTranslation('properties');
   // ADR-284: policy errors live in the shared `building` i18n namespace
@@ -87,9 +87,7 @@ export function PropertyFieldsBlock({
     setLocalType(property.type ?? '');
   }, [property.type]);
 
-  // Auto-suggest name — tracks whether user manually edited the name field
   const nameUserEdited = useRef(!isCreatingNewUnit);
-
   const buildSuggestedName = useCallback((unitType: string, areaNet: number): string => {
     const typeKey = PROPERTY_TYPE_I18N_KEYS[unitType as keyof typeof PROPERTY_TYPE_I18N_KEYS];
     const typeLabel = typeKey ? t(typeKey) : unitType;
@@ -99,7 +97,6 @@ export function PropertyFieldsBlock({
     return typeLabel;
   }, [t]);
 
-  // ADR-233: Track building/floor/type to detect changes requiring code regeneration
   const prevCodeInputsRef = useRef({
     buildingId: property.buildingId,
     floor: property.floor,
@@ -107,6 +104,8 @@ export function PropertyFieldsBlock({
   });
 
   const prevServerCodeRef = useRef(property.code);
+  const prevServerNameRef = useRef(property.name);
+  const prevServerTypeRef = useRef(property.type);
   const codeRegenerationPending = useRef(false);
 
   // Field locking based on commercialStatus
@@ -155,7 +154,6 @@ export function PropertyFieldsBlock({
   const codeFloorId = isCreatingNewUnit ? formData.floorId : (property.floorId ?? '');
   const codeFloorLevel = isCreatingNewUnit ? formData.floor : (property.floor ?? 0);
 
-  // ADR-233: Reset code when building, floor, or type changes — request new suggestion
   useEffect(() => {
     const prev = prevCodeInputsRef.current;
     const changed =
@@ -224,17 +222,19 @@ export function PropertyFieldsBlock({
     }));
   }, [activeLevelId]);
 
-  // ── Sync form data when property changes externally (e.g. floor via FloorSelectField) ──
   useEffect(() => {
-    // ADR-233: Only sync code when it actually changed server-side, not on floor/building re-renders
     const serverCodeChanged = property.code !== prevServerCodeRef.current;
+    const serverNameChanged = property.name !== prevServerNameRef.current;
+    const serverTypeChanged = property.type !== prevServerTypeRef.current;
     prevServerCodeRef.current = property.code;
+    prevServerNameRef.current = property.name;
+    prevServerTypeRef.current = property.type;
 
     setFormData(prev => ({
       ...prev,
-      name: property.name ?? '',
+      ...(serverNameChanged ? { name: property.name ?? '' } : {}),
       ...(serverCodeChanged ? { code: property.code ?? '' } : {}),
-      type: property.type ?? '',
+      ...(serverTypeChanged ? { type: property.type ?? '' } : {}),
       projectId: (property as unknown as Record<string, unknown>).projectId as string ?? '',
       buildingId: property.buildingId ?? '',
       floorId: property.floorId ?? '',
@@ -265,16 +265,15 @@ export function PropertyFieldsBlock({
     }));
   }, [property]);
 
-  // ADR-233: Auto-populate code + auto-save on floor/type-triggered suggestion
   useEffect(() => {
     if (suggestedCode && !codeOverridden && !formData.code) {
       setFormData(prev => ({ ...prev, code: suggestedCode }));
-      if (codeRegenerationPending.current && onAutoSaveCode) {
+      if (codeRegenerationPending.current && onAutoSaveFields) {
         codeRegenerationPending.current = false;
-        onAutoSaveCode(suggestedCode);
+        onAutoSaveFields({ code: suggestedCode });
       }
     }
-  }, [suggestedCode, codeOverridden, formData.code, onAutoSaveCode]);
+  }, [suggestedCode, codeOverridden, formData.code, onAutoSaveFields]);
 
   // ── Build updates from form data (delegated to SSoT mapper) ──
   const buildUpdatesFromForm = useCallback(
@@ -406,11 +405,8 @@ export function PropertyFieldsBlock({
     return <ReadOnlyCompactView property={property} t={t} />;
   }
 
-  // ADR-284 Batch 7: Handler για hierarchy changes από το NewUnitHierarchySection.
-  // Συγχρονίζει projectId/buildingId/floorId/type στο formData.
   const handleHierarchyChange = useCallback(
     (patch: Partial<{ type: PropertyType | ''; projectId: string; buildingId: string; floorId: string; floor: number }>) => {
-      // Auto-suggest name when type changes via hierarchy section (new unit creation)
       const shouldSuggestName = patch.type !== undefined && patch.type && !nameUserEdited.current;
 
       setFormData((prev) => {
@@ -472,9 +468,11 @@ export function PropertyFieldsBlock({
         codeLoading={codeLoading}
         onTypeChange={(newType) => {
           setLocalType(newType);
-          if (!nameUserEdited.current) {
-            const area = formData.areaGross;
-            setFormData(prev => ({ ...prev, name: buildSuggestedName(newType, area) }));
+          nameUserEdited.current = false;
+          const newName = buildSuggestedName(newType, formData.areaGross);
+          setFormData(prev => ({ ...prev, name: newName }));
+          if (onAutoSaveFields) {
+            onAutoSaveFields({ type: newType, name: newName });
           }
         }}
         onNameManualEdit={(value) => {

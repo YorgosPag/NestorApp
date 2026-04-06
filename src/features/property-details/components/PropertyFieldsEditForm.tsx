@@ -263,11 +263,15 @@ export function PropertyFieldsEditForm({
               </Label>
               <Input
                 id="unit-asking-price"
-                type="number"
-                min={0}
-                step={1000}
-                value={formData.askingPrice}
-                onChange={(e) => setFormData(prev => ({ ...prev, askingPrice: e.target.value }))}
+                type="text"
+                inputMode="decimal"
+                value={formData.askingPrice ? Number(formData.askingPrice).toLocaleString('el-GR') : ''}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\./g, '').replace(/,/g, '.');
+                  if (raw === '' || /^\d+\.?\d*$/.test(raw)) {
+                    setFormData(prev => ({ ...prev, askingPrice: raw }));
+                  }
+                }}
                 size="sm" className="text-xs text-right"
                 placeholder={t('placeholders.priceExample')}
                 disabled={!isEditing || isSoldOrRented}
