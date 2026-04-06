@@ -22,129 +22,24 @@
  * ```
  */
 
-import type { EntityType } from '../types';
 import { generateAuditId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { DEFAULT_AUDIT_CONFIG } from './audit-types';
+import type {
+  AuditAction,
+  AuditSeverity,
+  AuditLogEntry,
+  AuditLogParams,
+  AuditConfig,
+} from './audit-types';
+
+// Re-export types for backward compatibility
+export type { AuditAction, AuditSeverity, AuditLogEntry, AuditLogParams, AuditConfig } from './audit-types';
+export { DEFAULT_AUDIT_CONFIG } from './audit-types';
+
+import type { EntityType } from '../types';
 
 const auditModuleLogger = createModuleLogger('AuditLogger');
-
-// ============================================================================
-// 🏢 ENTERPRISE: Audit Types
-// ============================================================================
-
-/**
- * Audit action types for entity linking
- */
-export type AuditAction =
-  | 'LINK_ENTITY'
-  | 'UNLINK_ENTITY'
-  | 'GET_AVAILABLE_ENTITIES'
-  | 'VALIDATION_FAILED'
-  | 'CACHE_HIT'
-  | 'CACHE_MISS'
-  | 'RETRY_ATTEMPT'
-  | 'OPERATION_FAILED';
-
-/**
- * Audit log severity levels
- */
-export type AuditSeverity = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
-
-/**
- * Audit log entry structure
- */
-export interface AuditLogEntry {
-  /** Unique log entry ID */
-  readonly id: string;
-  /** Timestamp in ISO format */
-  readonly timestamp: string;
-  /** Unix timestamp for sorting */
-  readonly timestampMs: number;
-  /** The action being logged */
-  readonly action: AuditAction;
-  /** Severity level */
-  readonly severity: AuditSeverity;
-  /** Entity type involved */
-  readonly entityType?: EntityType;
-  /** Entity ID involved */
-  readonly entityId?: string;
-  /** Target entity ID (for linking) */
-  readonly targetId?: string;
-  /** Target entity type (for linking) */
-  readonly targetType?: EntityType;
-  /** Previous value (for changes) */
-  readonly previousValue?: string | null;
-  /** New value (for changes) */
-  readonly newValue?: string | null;
-  /** Operation success status */
-  readonly success: boolean;
-  /** Error message if failed */
-  readonly errorMessage?: string;
-  /** Error code if failed */
-  readonly errorCode?: string;
-  /** Duration in milliseconds */
-  readonly durationMs?: number;
-  /** Additional metadata */
-  readonly metadata?: Record<string, unknown>;
-  /** Session/request ID for correlation */
-  readonly correlationId?: string;
-  /** User agent or client info */
-  readonly clientInfo?: string;
-}
-
-/**
- * Parameters for creating an audit log entry
- */
-export interface AuditLogParams {
-  readonly action: AuditAction;
-  readonly entityType?: EntityType;
-  readonly entityId?: string;
-  readonly targetId?: string;
-  readonly targetType?: EntityType;
-  readonly previousValue?: string | null;
-  readonly newValue?: string | null;
-  readonly success: boolean;
-  readonly errorMessage?: string;
-  readonly errorCode?: string;
-  readonly durationMs?: number;
-  readonly metadata?: Record<string, unknown>;
-}
-
-// ============================================================================
-// 🏢 ENTERPRISE: Audit Configuration
-// ============================================================================
-
-/**
- * Audit logger configuration
- */
-export interface AuditConfig {
-  /** Whether logging is enabled */
-  readonly enabled: boolean;
-  /** Minimum severity level to log */
-  readonly minSeverity: AuditSeverity;
-  /** Whether to include in console */
-  readonly consoleOutput: boolean;
-  /** Whether to store in memory buffer */
-  readonly memoryBuffer: boolean;
-  /** Maximum buffer size */
-  readonly maxBufferSize: number;
-  /** Whether to send to remote endpoint */
-  readonly remoteLogging: boolean;
-  /** Remote logging endpoint */
-  readonly remoteEndpoint?: string;
-}
-
-/**
- * Default audit configuration
- */
-const DEFAULT_AUDIT_CONFIG: AuditConfig = {
-  enabled: true,
-  minSeverity: 'INFO',
-  consoleOutput: true,
-  memoryBuffer: true,
-  maxBufferSize: 1000,
-  remoteLogging: false,
-} as const;
 
 // ============================================================================
 // 🏢 ENTERPRISE: Audit Logger Class
