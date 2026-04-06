@@ -22,11 +22,11 @@
  * @enterprise SSoT — Google-level reusable form (Γιώργος 2026-04-05)
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, type MouseEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { Check, X, AlertTriangle } from 'lucide-react';
+import { Check, X, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -61,6 +61,8 @@ export interface FloorInlineCreateFormProps {
   onCreated: (floorId?: string) => void;
   /** Callback όταν ο user κάνει cancel. */
   onCancel: () => void;
+  /** Existing floor numbers — stepper skips these (optional, SSoT). */
+  existingFloorNumbers?: ReadonlySet<number>;
 }
 
 // =============================================================================
@@ -72,29 +74,57 @@ function computeDefaultElevation(floorNumber: number): string {
   return (floorNumber * DEFAULT_STOREY_HEIGHT).toFixed(2);
 }
 
+/** Find next available floor number in a direction, skipping existing. */
+function findNextAvailable(current: number, dir: 1 | -1, existing: ReadonlySet<number>): number {
+  let next = current + dir;
+  // Safety: max 100 iterations to avoid infinite loop
+  for (let i = 0; i < 100; i++) {
+    if (!existing.has(next)) return next;
+    next += dir;
+  }
+  return next;
+}
+
+/** Find first available number starting from max+1 (or 0 if no existing). */
+function firstAvailableNumber(existing: ReadonlySet<number>): number {
+  if (existing.size === 0) return 0;
+  const max = Math.max(...existing);
+  return findNextAvailable(max, 1, existing);
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
+
+const EMPTY_SET = new Set<number>();
 
 export function FloorInlineCreateForm({
   buildingId,
   projectId,
   onCreated,
   onCancel,
+  existingFloorNumbers = EMPTY_SET,
 }: FloorInlineCreateFormProps) {
   const { t } = useTranslation('building');
   const { success, error: notifyError } = useNotifications();
   const colors = useSemanticColors();
 
-  // ── State ──
-  const [createNumber, setCreateNumber] = useState('0');
-  const [createName, setCreateName] = useState(formatFloorLabel(0));
+  // ── State — initialize to first available number ──
+  const initNum = useMemo(() => firstAvailableNumber(existingFloorNumbers), [existingFloorNumbers]);
+  const [createNumber, setCreateNumber] = useState(String(initNum));
+  const [createName, setCreateName] = useState(formatFloorLabel(initNum));
   const [createNameManuallyEdited, setCreateNameManuallyEdited] = useState(false);
-  const [createElevation, setCreateElevation] = useState(computeDefaultElevation(0));
+  const [createElevation, setCreateElevation] = useState(computeDefaultElevation(initNum));
   const [createElevationManuallyEdited, setCreateElevationManuallyEdited] = useState(false);
   const [creating, setCreating] = useState(false);
 
   // ── Handlers with auto-suggest (Revit/ArchiCAD pattern) ──
+  const applyNumber = useCallback((num: number) => {
+    setCreateNumber(String(num));
+    if (!createNameManuallyEdited) setCreateName(formatFloorLabel(num));
+    if (!createElevationManuallyEdited) setCreateElevation(computeDefaultElevation(num));
+  }, [createNameManuallyEdited, createElevationManuallyEdited]);
+
   const handleNumberChange = useCallback((value: string) => {
     setCreateNumber(value);
     const num = parseInt(value, 10);
@@ -105,6 +135,18 @@ export function FloorInlineCreateForm({
       setCreateElevation(Number.isNaN(num) ? '' : computeDefaultElevation(num));
     }
   }, [createNameManuallyEdited, createElevationManuallyEdited]);
+
+  const handleStepUp = useCallback((e: MouseEvent) => {
+    e.preventDefault();
+    const cur = parseInt(createNumber, 10) || 0;
+    applyNumber(findNextAvailable(cur, 1, existingFloorNumbers));
+  }, [createNumber, existingFloorNumbers, applyNumber]);
+
+  const handleStepDown = useCallback((e: MouseEvent) => {
+    e.preventDefault();
+    const cur = parseInt(createNumber, 10) || 0;
+    applyNumber(findNextAvailable(cur, -1, existingFloorNumbers));
+  }, [createNumber, existingFloorNumbers, applyNumber]);
 
   const handleNameChange = useCallback((value: string) => {
     setCreateName(value);
@@ -167,15 +209,25 @@ export function FloorInlineCreateForm({
           <label className={cn('text-xs font-medium', colors.text.muted)}>
             {t('tabs.floors.number')}
           </label>
-          <Input
-            type="number"
-            value={createNumber}
-            onChange={(e) => handleNumberChange(e.target.value)}
-            placeholder={t('tabs.floors.numberPlaceholder')}
-            className="h-9"
-            disabled={creating}
-            autoFocus
-          />
+          <section className="flex items-center gap-0.5">
+            <Input
+              type="number"
+              value={createNumber}
+              onChange={(e) => handleNumberChange(e.target.value)}
+              placeholder={t('tabs.floors.numberPlaceholder')}
+              className="h-9 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+              disabled={creating}
+              autoFocus
+            />
+            <nav className="flex flex-col">
+              <button type="button" onClick={handleStepUp} disabled={creating} className="h-[18px] w-5 flex items-center justify-center rounded-t-sm border border-border hover:bg-muted">
+                <ChevronUp className="h-3 w-3" />
+              </button>
+              <button type="button" onClick={handleStepDown} disabled={creating} className="h-[18px] w-5 flex items-center justify-center rounded-b-sm border border-t-0 border-border hover:bg-muted">
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </nav>
+          </section>
         </fieldset>
         <fieldset className="flex flex-col gap-1">
           <label className={cn('text-xs font-medium', colors.text.muted)}>

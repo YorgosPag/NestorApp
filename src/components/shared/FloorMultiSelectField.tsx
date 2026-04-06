@@ -10,7 +10,7 @@
  * @since ADR-236 — Multi-Level Property Management
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -120,6 +120,7 @@ export function FloorMultiSelectField({
   }, [allFloors, value, onChange]);
 
   const isDisabled = disabled || !buildingId;
+  const existingFloorNumbers = useMemo(() => new Set(allFloors.map(f => f.number)), [allFloors]);
 
   // SSoT: FloorInlineCreateForm callback — auto-add when Firestore updates
   const handleFloorCreated = useCallback((floorId?: string) => {
@@ -157,6 +158,7 @@ export function FloorMultiSelectField({
             projectId={projectId ?? undefined}
             onCreated={handleFloorCreated}
             onCancel={() => setShowCreateForm(false)}
+            existingFloorNumbers={existingFloorNumbers}
           />
         ) : null
       ) : null}
