@@ -49,6 +49,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | DxfViewerContent split: 1 file (1182 lines) -> 3 files (all compliant) |
 | 2026-04-06 | photo-upload.service split: 1 file (1083 lines) -> 3 files (all compliant) |
 | 2026-04-06 | EnterpriseNotificationService split: 1 file (1023 lines) -> 3 files (all compliant) |
+| 2026-04-06 | file-record.service split: 1 file (1002 lines) -> 3 files (all compliant) |
+
+## file-record.service Split
+
+`file-record.service.ts` contained 1002 lines — 2x over the 500-line limit. Production service mixing CRUD operations, trash lifecycle, entity linking, rename, and utility queries.
+
+Split into 3 files in `src/services/`:
+
+| File | Content | Lines |
+|------|---------|-------|
+| `file-record-lifecycle.ts` | Trash system (moveToTrash, restore, purge, hold) | 290 |
+| `file-record-links.ts` | Entity linking, rename, description, findByHash | 246 |
+| `file-record.service.ts` | Core class (create, finalize, read, query) + static delegates | 448 |
+
+Consumer Impact: 12 consumers — zero import path changes. Class delegates static methods to extracted functions.
 
 ## EnterpriseNotificationService Split
 
