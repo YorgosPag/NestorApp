@@ -50,6 +50,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | photo-upload.service split: 1 file (1083 lines) -> 3 files (all compliant) |
 | 2026-04-06 | EnterpriseNotificationService split: 1 file (1023 lines) -> 3 files (all compliant) |
 | 2026-04-06 | file-record.service split: 1 file (1002 lines) -> 3 files (all compliant) |
+| 2026-04-06 | EnterpriseBusinessRulesService split: 1 file (996 lines) -> 3 files (all compliant) |
+
+## EnterpriseBusinessRulesService Split
+
+`EnterpriseBusinessRulesService.ts` contained 996 lines — 2x over the 500-line limit. Service mixing types, default config factories, centralized data converters, and DB-driven business rules logic. Also contained 155 lines of commented-out dead code (removed).
+
+Split into 3 files in `src/services/business/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `business-rules-types.ts` | 6 interfaces, 3 raw data types, cache types | 199 | Yes (types-only) |
+| `business-rules-defaults.ts` | Centralized data converters, default config factory | 138 | Yes (config/data) |
+| `EnterpriseBusinessRulesService.ts` | Service class: cache, DB ops, validation | 374 | No |
+
+Consumer Impact: 3 consumers — zero import path changes (re-exports types via `export type *`).
 
 ## file-record.service Split
 
