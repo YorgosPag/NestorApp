@@ -77,8 +77,9 @@ function buildTenantConstraints(
   // System collections — no tenant filter
   if (config.mode === 'none') return [];
 
-  // Super admin without companyId → sees everything
-  if (ctx.isSuperAdmin && !ctx.companyId) return [];
+  // Super admin → sees everything (consistent with server-side API routes
+  // which also skip tenant filter for super_admin — e.g. /api/projects/list)
+  if (ctx.isSuperAdmin) return [];
 
   const value = resolveTenantValue(config.mode, ctx);
   if (!value) return [];
