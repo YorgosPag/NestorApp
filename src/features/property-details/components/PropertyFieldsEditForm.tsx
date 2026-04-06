@@ -112,7 +112,7 @@ export function PropertyFieldsEditForm({
         <Alert className="py-2 px-3 border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-200 dark:border-blue-700">
           <Lock className={iconSizes.sm} />
           <AlertDescription className="text-xs">
-            {t('multiLevel.selectHierarchyFirst')}
+            {t('multiLevel.selectHierarchyFirst', { ns: 'properties-detail' })}
           </AlertDescription>
         </Alert>
       )}

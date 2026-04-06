@@ -163,6 +163,7 @@
     "floors": "Floors",
     "noFloors": "Select at least 2 floors",
     "noFloorHint": "Link a building first",
+    "selectHierarchyFirst": "Select unit type, building and floor first to unlock the fields.",
     "perLevel": {
       "perFloorHint": "per floor",
       "sharedHint": "shared",
