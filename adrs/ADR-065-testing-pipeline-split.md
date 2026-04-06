@@ -58,6 +58,11 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | UnifiedFrameScheduler split: 1 file (973 lines) -> 4 files (all compliant) |
 | 2026-04-06 | HitTester split: 1 file (960 lines) -> 4 files (all compliant) |
 | 2026-04-06 | PreviewRenderer split: 1 file (958 lines) -> 3 files (all compliant) |
+| 2026-04-06 | MemoryLeakDetector split: 1 file (1132 lines) -> 4 files (all compliant) |
+| 2026-04-06 | BundleOptimizer split: 1 file (1061 lines) -> 4 files (all compliant) |
+| 2026-04-06 | PerformanceComponents split: 1 file (1016 lines) -> 3 files (all compliant) |
+| 2026-04-06 | OverpassApiService split: 1 file (977 lines) -> 3 files (all compliant) |
+| 2026-04-06 | AdvancedCharts split: 1 file (973 lines) -> 3 files (all compliant) |
 
 ## useCentralizedMouseHandlers Split
 
