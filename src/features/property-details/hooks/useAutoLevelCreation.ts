@@ -133,13 +133,13 @@ export function useAutoLevelCreation({
   const createLevelsForCurrentAndNext = useCallback(() => {
     const floors = floorsRef.current;
     if (!currentFloorId || currentFloorNumber == null || floors.length === 0) {
-      info(t('properties:multiLevel.noBuildingOrFloor'));
+      info(t('multiLevel.noBuildingOrFloor'));
       return;
     }
 
     const currentIdx = floors.findIndex((f) => f.id === currentFloorId);
     if (currentIdx === -1) {
-      info(t('properties:multiLevel.noBuildingOrFloor'));
+      info(t('multiLevel.noBuildingOrFloor'));
       return;
     }
 
@@ -166,7 +166,7 @@ export function useAutoLevelCreation({
       floorId: derived.floorId,
     });
 
-    info(t('properties:multiLevel.autoCreated', { count: 2 }));
+    info(t('multiLevel.autoCreated', { count: 2 }));
   }, [currentFloorId, currentFloorNumber, info, onUpdateProperty, t]);
 
   // ── Trigger: called on type change ──
@@ -178,7 +178,7 @@ export function useAutoLevelCreation({
       // No building/floor → can't auto-create, just inform
       if (!buildingId || !currentFloorId) {
         if (isAlwaysMultiLevelType(newType) || isOptionallyMultiLevelType(newType)) {
-          info(t('properties:multiLevel.noBuildingOrFloor'));
+          info(t('multiLevel.noBuildingOrFloor'));
         }
         return;
       }
