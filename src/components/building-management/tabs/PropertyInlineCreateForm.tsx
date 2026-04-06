@@ -93,13 +93,12 @@ export function PropertyInlineCreateForm({
   // If not, name auto-updates when type or areaNet changes.
   const userEditedName = useRef(false);
 
-  const buildSuggestedName = useCallback((unitType: PropertyType, area: string): string => {
+  const buildSuggestedName = useCallback((unitType: PropertyType, grossArea: number): string => {
     const typeLabel = UNIT_TYPE_LABEL_KEYS[unitType]
       ? tUnits(UNIT_TYPE_LABEL_KEYS[unitType])
       : unitType;
-    const parsedArea = parseFloat(area);
-    if (parsedArea > 0) {
-      return `${typeLabel} ${parsedArea} ${tUnits('units.sqm')}`;
+    if (grossArea > 0) {
+      return `${typeLabel} ${grossArea} ${tUnits('units.sqm')}`;
     }
     return typeLabel;
   }, [tUnits]);
@@ -107,14 +106,14 @@ export function PropertyInlineCreateForm({
   const handleTypeChange = (newType: PropertyType) => {
     setType(newType);
     if (!userEditedName.current) {
-      setName(buildSuggestedName(newType, areaNet));
+      setName(buildSuggestedName(newType, parseFloat(areaGross) || 0));
     }
   };
 
-  const handleAreaNetChange = (newArea: string) => {
-    setAreaNet(newArea);
+  const handleAreaGrossChange = (newArea: string) => {
+    setAreaGross(newArea);
     if (!userEditedName.current) {
-      setName(buildSuggestedName(type, newArea));
+      setName(buildSuggestedName(type, parseFloat(newArea) || 0));
     }
   };
 
@@ -321,11 +320,11 @@ export function PropertyInlineCreateForm({
         </label>
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.netArea')}</span>
-          <Input type="number" step="0.1" value={areaNet} onChange={(e) => handleAreaNetChange(e.target.value)} placeholder="75" className="h-9" disabled={creating} />
+          <Input type="number" step="0.1" value={areaNet} onChange={(e) => setAreaNet(e.target.value)} placeholder="75" className="h-9" disabled={creating} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.grossArea')}</span>
-          <Input type="number" step="0.1" value={areaGross} onChange={(e) => setAreaGross(e.target.value)} placeholder="90" className="h-9" disabled={creating} />
+          <Input type="number" step="0.1" value={areaGross} onChange={(e) => handleAreaGrossChange(e.target.value)} placeholder="90" className="h-9" disabled={creating} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.bedrooms')}</span>

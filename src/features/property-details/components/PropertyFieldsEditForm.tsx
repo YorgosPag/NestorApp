@@ -73,7 +73,7 @@ export function PropertyFieldsEditForm({
   codeLoading,
   onTypeChange,
   onNameManualEdit,
-  onAreaNetChange,
+  onAreaChange,
   t,
   typography,
   iconSizes,
@@ -369,7 +369,7 @@ export function PropertyFieldsEditForm({
                             const flatKey = `area${areaKey.charAt(0).toUpperCase()}${areaKey.slice(1)}`;
                             setFormData(prev => ({ ...prev, [flatKey]: num }));
                           }
-                          if (areaKey === 'net') onAreaNetChange(num);
+                          if (areaKey === 'net' || areaKey === 'gross') onAreaChange(areaKey, num);
                         }}
                         size="sm" className="text-xs"
                         disabled={!isEditing || isSoldOrRented}

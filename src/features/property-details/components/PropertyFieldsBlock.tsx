@@ -1,16 +1,6 @@
 /**
- * =============================================================================
  * 🏢 ENTERPRISE: Property Fields Block Component
- * =============================================================================
- *
  * Displays and edits extended property fields (layout, areas, orientations, etc.)
- * View mode: clean text values. Edit mode: inputs/selects.
- * Consistent with Parking/Building Card pattern.
- *
- * @module features/property-details/components/PropertyFieldsBlock
- * @enterprise Fortune 500 compliant - ZERO hardcoded values
- * @since 2026-01-24
- * @updated 2026-02-17 — View/Edit mode split + Card containers
  */
 
 /* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors, custom/no-hardcoded-strings */
@@ -18,10 +8,6 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
-
-
-
-
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -38,6 +24,7 @@ import { PropertyFieldsEditForm } from './PropertyFieldsEditForm';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
 import { buildPropertyUpdatesFromForm } from './property-fields-form-mapper';
 import type { PropertyType } from '@/types/property';
+import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
@@ -49,10 +36,6 @@ import {
   isStandaloneUnitType,
 } from '@/hooks/properties/usePropertyCreateValidation';
 const logger = createModuleLogger('PropertyFieldsBlock');
-
-// =============================================================================
-// TYPES
-// =============================================================================
 
 interface PropertyFieldsBlockProps {
   property: Property;
@@ -105,6 +88,19 @@ export function PropertyFieldsBlock({
   useEffect(() => {
     setLocalType(property.type ?? '');
   }, [property.type]);
+
+  // ── Auto-suggest name based on type + area ──
+  // Tracks whether user manually edited the name field.
+  const nameUserEdited = useRef(!isCreatingNewUnit); // Existing units: don't auto-overwrite
+
+  const buildSuggestedName = useCallback((unitType: string, areaNet: number): string => {
+    const typeKey = PROPERTY_TYPE_I18N_KEYS[unitType as keyof typeof PROPERTY_TYPE_I18N_KEYS];
+    const typeLabel = typeKey ? t(typeKey) : unitType;
+    if (areaNet > 0) {
+      return `${typeLabel} ${areaNet} ${t('units.sqm')}`;
+    }
+    return typeLabel;
+  }, [t]);
 
   // ADR-233: Track building/floor/type to detect changes requiring code regeneration
   const prevCodeInputsRef = useRef({
@@ -411,19 +407,29 @@ export function PropertyFieldsBlock({
   // Συγχρονίζει projectId/buildingId/floorId/type στο formData.
   const handleHierarchyChange = useCallback(
     (patch: Partial<{ type: PropertyType | ''; projectId: string; buildingId: string; floorId: string; floor: number }>) => {
-      setFormData((prev) => ({
-        ...prev,
-        ...(patch.type !== undefined ? { type: patch.type as string } : {}),
-        ...(patch.projectId !== undefined ? { projectId: patch.projectId } : {}),
-        ...(patch.buildingId !== undefined ? { buildingId: patch.buildingId } : {}),
-        ...(patch.floorId !== undefined ? { floorId: patch.floorId } : {}),
-        ...(patch.floor !== undefined ? { floor: patch.floor } : {}),
-      }));
+      // Auto-suggest name when type changes via hierarchy section (new unit creation)
+      const shouldSuggestName = patch.type !== undefined && patch.type && !nameUserEdited.current;
+
+      setFormData((prev) => {
+        const updated = {
+          ...prev,
+          ...(patch.type !== undefined ? { type: patch.type as string } : {}),
+          ...(patch.projectId !== undefined ? { projectId: patch.projectId } : {}),
+          ...(patch.buildingId !== undefined ? { buildingId: patch.buildingId } : {}),
+          ...(patch.floorId !== undefined ? { floorId: patch.floorId } : {}),
+          ...(patch.floor !== undefined ? { floor: patch.floor } : {}),
+        };
+        if (shouldSuggestName) {
+          const area = prev.areaGross;
+          updated.name = buildSuggestedName(patch.type as string, area);
+        }
+        return updated;
+      });
       if (patch.type !== undefined) {
         setLocalType(patch.type);
       }
     },
-    [],
+    [buildSuggestedName],
   );
 
   return (
@@ -461,7 +467,22 @@ export function PropertyFieldsBlock({
         codeOverridden={codeOverridden}
         setCodeOverridden={setCodeOverridden}
         codeLoading={codeLoading}
-        onTypeChange={setLocalType}
+        onTypeChange={(newType) => {
+          setLocalType(newType);
+          if (!nameUserEdited.current) {
+            const area = formData.areaGross;
+            setFormData(prev => ({ ...prev, name: buildSuggestedName(newType, area) }));
+          }
+        }}
+        onNameManualEdit={(value) => {
+          nameUserEdited.current = true;
+          setFormData(prev => ({ ...prev, name: value }));
+        }}
+        onAreaChange={(areaKey, value) => {
+          if (areaKey === 'gross' && !nameUserEdited.current) {
+            setFormData(prev => ({ ...prev, name: buildSuggestedName(localType, value) }));
+          }
+        }}
         t={t}
         typography={typography}
         iconSizes={iconSizes}
@@ -471,8 +492,6 @@ export function PropertyFieldsBlock({
     </>
   );
 }
-
-// Extracted to: PropertyFieldsEditForm.tsx, PropertyFieldsReadOnly.tsx, property-fields-constants.ts
 
 export default PropertyFieldsBlock;
 

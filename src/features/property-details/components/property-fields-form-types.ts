@@ -101,7 +101,7 @@ export interface PropertyFieldsEditFormProps {
   /** Notify parent when user manually edits the name — disables auto-suggestion */
   onNameManualEdit: (value: string) => void;
   /** Notify parent when area changes — triggers name auto-suggestion if not user-edited */
-  onAreaNetChange: (areaNet: number) => void;
+  onAreaChange: (areaKey: 'net' | 'gross', value: number) => void;
   /** Translation function (scoped to 'units') */
   t: TFunction;
   /** Typography tokens */
