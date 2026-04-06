@@ -1,10 +1,9 @@
 /**
  * =============================================================================
- * EXECUTOR SHARED — Types, Constants, Security & Utilities for Tool Handlers
+ * EXECUTOR SHARED — Security, RBAC & Utility Functions for Tool Handlers
  * =============================================================================
  *
- * Single source of truth for all shared infrastructure used by tool handlers.
- * Extracted from the monolithic agentic-tool-executor.ts (Strategy Pattern refactor).
+ * Types/constants extracted to executor-shared-types.ts (ADR-065 Phase 6).
  *
  * @module services/ai-pipeline/tools/executor-shared
  * @see ADR-171 (Autonomous AI Agent)
@@ -18,88 +17,43 @@ import { resolveAccessConfig, UNLINKED_ACCESS, deriveBlockedFieldSet } from '@/c
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// Re-export all types and constants for backward compatibility
+export type {
+  AgenticContext,
+  ToolResult,
+  QueryFilter,
+  ToolHandler,
+} from './executor-shared-types';
 
-export interface AgenticContext {
-  companyId: string;
-  isAdmin: boolean;
-  /** Communication channel: telegram, email, in_app */
-  channel: string;
-  channelSenderId: string;
-  requestId: string;
-  /** Telegram chatId for send_telegram_message */
-  telegramChatId?: string;
-  /** RBAC: Resolved contact with project roles */
-  contactMeta?: import('@/types/ai-pipeline').ContactMeta | null;
-  /** RBAC cache: resolved once per request by resolveRoleAccess(), reused by redactRoleBlockedFields() */
-  _resolvedAccess?: import('@/config/ai-role-access-matrix').RoleAccessConfig;
-  /** File attachments from the current message (Telegram photos/documents) */
-  attachments?: Array<{
-    fileRecordId: string;
-    filename: string;
-    contentType: string;
-    storageUrl: string;
-  }>;
-  /**
-   * FIND-U guardrail: Tracks which fields were updated per contact within
-   * the current agentic loop execution. Key = contactId, Value = Set of field names.
-   * Prevents AI from auto-setting taxOffice when vatNumber was just written.
-   */
-  _updatedContactFields?: Map<string, Set<string>>;
-  /** Invoice entity data extracted from document preview (Phase 2).
-   *  Used by create_contact handler to auto-enrich contacts with ΑΦΜ/ΔΟΥ/τηλ/κλπ. */
-  invoiceEntities?: import('@/services/ai-pipeline/invoice-entity-extractor').InvoiceEntityResult | null;
-  /** ADR-265: Base64-encoded document images for vision-in-the-loop.
-   *  Passed as multipart content to Chat Completions so the AI sees the actual document. */
-  documentImages?: Array<{
-    base64DataUri: string;
-    filename: string;
-    contentType: string;
-    fileRecordId: string;
-  }>;
-  /** True when the user sent ONLY a file without text command.
-   *  Guardrail A (write-claim without tools) is skipped — describing a document IS the correct response. */
-  isDocumentPreviewOnly?: boolean;
-}
+export {
+  AI_ERRORS,
+  ALLOWED_READ_COLLECTIONS,
+  ALLOWED_WRITE_COLLECTIONS,
+  SENSITIVE_FIELDS,
+  COLLECTION_TO_SYNC_ENTITY,
+  MAX_QUERY_RESULTS,
+  DEFAULT_QUERY_LIMIT,
+  MAX_RESULT_JSON_LENGTH,
+} from './executor-shared-types';
 
-export interface ToolResult {
-  success: boolean;
-  data?: unknown;
-  error?: string;
-  /** Number of results returned (for queries) */
-  count?: number;
-  /** Flags degraded results (e.g., FAILED_PRECONDITION fallback — AI should caveat its answer) */
-  warning?: string;
-}
+import type { AgenticContext, ToolResult, QueryFilter } from './executor-shared-types';
+import {
+  SENSITIVE_FIELDS,
+  ALLOWED_READ_COLLECTIONS,
+  ALLOWED_WRITE_COLLECTIONS,
+  COLLECTION_TO_SYNC_ENTITY,
+  MAX_RESULT_JSON_LENGTH,
+  AI_ERRORS,
+} from './executor-shared-types';
 
-export interface QueryFilter {
-  field: string;
-  operator: string;
-  value: string | number | boolean | null | string[];
-}
-
-/**
- * Strategy Pattern: Each domain handler implements this interface.
- * The executor auto-registers handlers by iterating toolNames.
- */
-export interface ToolHandler {
-  readonly toolNames: readonly string[];
-  execute(toolName: string, args: Record<string, unknown>, ctx: AgenticContext): Promise<ToolResult>;
-}
+export const logger = createModuleLogger('AGENTIC_TOOL_EXECUTOR');
 
 // ============================================================================
-// ATTRIBUTION — Human-readable "who did this" for document createdBy/lastModifiedBy
+// ATTRIBUTION
 // ============================================================================
 
 /**
  * Builds a human-readable attribution string for document audit fields.
- *
- * Examples:
- *   "AI Agent (Γιώργος via telegram)"
- *   "AI Agent (buyer: Δημήτρης via whatsapp)"
- *   "AI Agent (unknown via email)"
  */
 export function buildAttribution(ctx: AgenticContext): string {
   const name = ctx.contactMeta?.displayName ?? ctx.channelSenderId;
@@ -108,105 +62,7 @@ export function buildAttribution(ctx: AgenticContext): string {
 }
 
 // ============================================================================
-// AI-FACING ERROR MESSAGES (SSoT — returned to AI inside ToolResult.error)
-// ============================================================================
-
-export const AI_ERRORS = {
-  NO_LINKED_UNITS: 'Δεν βρέθηκαν συνδεδεμένα ακίνητα. Επικοινωνήστε με τον διαχειριστή.',
-  UNRECOGNIZED_USER: 'Πρέπει να είστε αναγνωρισμένος χρήστης.',
-} as const;
-
-// ============================================================================
-// SECURITY: COLLECTION WHITELISTS
-// ============================================================================
-
-export const ALLOWED_READ_COLLECTIONS = new Set([
-  COLLECTIONS.PROJECTS,
-  COLLECTIONS.BUILDINGS,
-  COLLECTIONS.PROPERTIES,
-  COLLECTIONS.FLOORS,
-  COLLECTIONS.CONTACTS,
-  COLLECTIONS.CONSTRUCTION_PHASES,
-  COLLECTIONS.CONSTRUCTION_TASKS,
-  COLLECTIONS.LEADS,
-  COLLECTIONS.OPPORTUNITIES,
-  COLLECTIONS.APPOINTMENTS,
-  COLLECTIONS.TASKS,
-  COLLECTIONS.OBLIGATIONS,
-  COLLECTIONS.MESSAGES,
-  COLLECTIONS.COMMUNICATIONS,
-  COLLECTIONS.INVOICES,
-  COLLECTIONS.PAYMENTS,
-  COLLECTIONS.CONTACT_LINKS,
-  COLLECTIONS.EMPLOYMENT_RECORDS,
-  COLLECTIONS.ATTENDANCE_EVENTS,
-  COLLECTIONS.CONVERSATIONS,
-  COLLECTIONS.ACTIVITIES,
-  COLLECTIONS.FILES,
-  COLLECTIONS.PARKING_SPACES,
-  COLLECTIONS.ACCOUNTING_INVOICES,
-  COLLECTIONS.ACCOUNTING_BANK_TRANSACTIONS,
-  COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES,
-  COLLECTIONS.ACCOUNTING_FIXED_ASSETS,
-  COLLECTIONS.FILES,        // SPEC-257F: file delivery
-  COLLECTIONS.FLOORPLANS,   // SPEC-257F: floorplan delivery
-  COLLECTIONS.PURCHASE_ORDERS,  // ADR-267 Phase C: AI procurement tools
-]);
-
-export const ALLOWED_WRITE_COLLECTIONS = new Set([
-  COLLECTIONS.CONTACTS,
-  COLLECTIONS.TASKS,
-  COLLECTIONS.APPOINTMENTS,
-  COLLECTIONS.ACTIVITIES,
-  COLLECTIONS.LEADS,
-  COLLECTIONS.PROPERTIES,
-  COLLECTIONS.PROJECTS,
-  COLLECTIONS.BUILDINGS,
-  COLLECTIONS.CONSTRUCTION_PHASES,
-  COLLECTIONS.CONSTRUCTION_TASKS,
-  COLLECTIONS.FILES,
-  COLLECTIONS.PURCHASE_ORDERS,  // ADR-267 Phase C: AI procurement tools
-  // FINDING-006: contact_links REMOVED — requires dedicated tool with validation
-  // COLLECTIONS.CONTACT_LINKS,
-]);
-
-export const SENSITIVE_FIELDS = new Set([
-  'password',
-  'passwordHash',
-  'token',
-  'apiKey',
-  'secret',
-  'refreshToken',
-  'accessToken',
-  'privateKey',
-]);
-
-/**
- * Map Firestore collections → SyncEntityType for AI sync bridge.
- * When a write happens to a mapped collection, emitEntitySyncSignal is called
- * so the client UI refreshes in real-time.
- */
-export const COLLECTION_TO_SYNC_ENTITY: Record<string, import('@/services/realtime/types').SyncEntityType> = {
-  [COLLECTIONS.CONTACTS]: 'contacts',
-  [COLLECTIONS.TASKS]: 'tasks',
-  [COLLECTIONS.BUILDINGS]: 'buildings',
-  [COLLECTIONS.PROJECTS]: 'projects',
-  [COLLECTIONS.OPPORTUNITIES]: 'opportunities',
-  [COLLECTIONS.COMMUNICATIONS]: 'communications',
-};
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-export const MAX_QUERY_RESULTS = 50;
-export const DEFAULT_QUERY_LIMIT = 20;
-export const MAX_RESULT_JSON_LENGTH = 8000; // ~3000 tokens
-
-export const logger = createModuleLogger('AGENTIC_TOOL_EXECUTOR');
-
-// ============================================================================
-// RBAC: Role-Based Access Enforcement (SSoT: ai-role-access-matrix.ts)
+// RBAC: Role-Based Access Enforcement
 // ============================================================================
 
 /**
@@ -536,7 +392,6 @@ export async function auditWrite(
 
 /**
  * Emit a sync signal if the collection has a corresponding SyncEntityType.
- * Fire-and-forget — non-blocking.
  */
 export function emitSyncSignalIfMapped(
   collection: string,

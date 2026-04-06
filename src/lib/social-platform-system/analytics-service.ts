@@ -1,138 +1,35 @@
-// ============================================================================
-// 📊 ENTERPRISE ANALYTICS SERVICE - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΔΙΑΧΕΙΡΙΣΗ ANALYTICS
-// ============================================================================
-//
-// 🎯 PURPOSE: Single source για ΟΛΕΣ τις analytics & tracking operations
-// 🔗 REPLACES: Scattered UTM logic από share-utils.ts + tracking functions
-// 🏢 STANDARDS: Enterprise analytics layer, centralized tracking, GDPR compliance
-//
-// 📋 FEATURES UNIFIED:
-// - UTM parameter generation & management
-// - Share event tracking & analytics
-// - URL parameter handling
-// - Social media campaign tracking
-// - Performance metrics collection
-//
+/**
+ * Enterprise Analytics Service
+ *
+ * Types extracted to analytics-types.ts (ADR-065 Phase 6).
+ *
+ * @module lib/social-platform-system/analytics-service
+ */
+
 import { generateShareId } from '@/services/enterprise-id.service';
 import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage/safe-storage';
-// ============================================================================
 
 import { type SocialPlatformType } from './platform-config';
 import { createModuleLogger } from '@/lib/telemetry';
+
+import type {
+  UtmParameters,
+  ShareAnalyticsEvent,
+  CampaignConfig,
+  UrlGenerationOptions,
+  AnalyticsSummary,
+} from './analytics-types';
+
+// Re-export types for backward compatibility
+export type {
+  UtmParameters,
+  ShareAnalyticsEvent,
+  CampaignConfig,
+  UrlGenerationOptions,
+  AnalyticsSummary,
+} from './analytics-types';
+
 const logger = createModuleLogger('analytics-service');
-
-// ============================================================================
-// ANALYTICS SERVICE TYPE DEFINITIONS
-// ============================================================================
-
-/**
- * 📊 UTM Parameters - Standard Interface
- *
- * Standard UTM parameters για marketing campaign tracking
- */
-export interface UtmParameters {
-  /** Traffic source (e.g., 'facebook', 'email', 'direct') */
-  source: string;
-  /** Marketing medium (e.g., 'social', 'email', 'cpc', 'organic') */
-  medium: string;
-  /** Campaign name (e.g., 'spring_sale', 'product_launch') */
-  campaign: string;
-  /** Campaign content (optional, για A/B testing) */
-  content?: string;
-  /** Campaign term (optional, για paid search) */
-  term?: string;
-}
-
-/**
- * 🎯 Share Analytics Event
- *
- * Event data για social sharing analytics
- */
-export interface ShareAnalyticsEvent {
-  /** Event timestamp */
-  timestamp: string;
-  /** Shared content type */
-  contentType: 'property' | 'photo' | 'article' | 'profile' | 'general';
-  /** Content identifier */
-  contentId: string;
-  /** Sharing platform */
-  platform: SocialPlatformType;
-  /** Share method used */
-  method: 'native_share' | 'external_url' | 'clipboard' | 'email';
-  /** Share result */
-  success: boolean;
-  /** Error message (if failed) */
-  error?: string;
-  /** Additional metadata */
-  metadata?: Record<string, unknown>;
-}
-
-/**
- * 📈 Campaign Configuration
- *
- * Configuration για marketing campaigns
- */
-export interface CampaignConfig {
-  /** Campaign identifier */
-  id: string;
-  /** Campaign name */
-  name: string;
-  /** Default UTM parameters */
-  defaultUtm: UtmParameters;
-  /** Campaign tags για categorization */
-  tags?: string[];
-  /** Campaign start date */
-  startDate?: Date;
-  /** Campaign end date */
-  endDate?: Date;
-  /** Campaign status */
-  status: 'draft' | 'active' | 'paused' | 'completed';
-}
-
-/**
- * 🔗 Enhanced URL Generation Options
- *
- * Options για URL generation με analytics
- */
-export interface UrlGenerationOptions {
-  /** Base UTM parameters */
-  utm?: Partial<UtmParameters>;
-  /** Additional query parameters */
-  additionalParams?: Record<string, string>;
-  /** Force production domain για social sharing */
-  forceProductionDomain?: boolean;
-  /** Custom domain override */
-  customDomain?: string;
-  /** Include tracking pixel */
-  includeTracking?: boolean;
-  /** Campaign configuration */
-  campaign?: string | CampaignConfig;
-}
-
-/**
- * 📊 Analytics Summary
- *
- * Summary data για analytics reporting
- */
-export interface AnalyticsSummary {
-  /** Total share events */
-  totalShares: number;
-  /** Successful shares */
-  successfulShares: number;
-  /** Failed shares */
-  failedShares: number;
-  /** Success rate percentage */
-  successRate: number;
-  /** Platform breakdown */
-  platformBreakdown: Record<SocialPlatformType, number>;
-  /** Content type breakdown */
-  contentTypeBreakdown: Record<string, number>;
-  /** Time period */
-  period: {
-    start: Date;
-    end: Date;
-  };
-}
 
 // ============================================================================
 // ENTERPRISE ANALYTICS SERVICE - MAIN CLASS
