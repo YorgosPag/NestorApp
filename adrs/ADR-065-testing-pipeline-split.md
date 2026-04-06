@@ -47,6 +47,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | CICDPipeline split: 1 file (1224 lines) -> 3 files (all compliant) |
 | 2026-04-06 | GeoCanvasContent split: 1 file (1207 lines) -> 3 files (all compliant) |
 | 2026-04-06 | DxfViewerContent split: 1 file (1182 lines) -> 3 files (all compliant) |
+| 2026-04-06 | photo-upload.service split: 1 file (1083 lines) -> 3 files (all compliant) |
+
+## photo-upload.service Split
+
+`photo-upload.service.ts` contained 1083 lines — 2.2x over the 500-line limit. Production service mixing legacy pipeline (retry/fallback), canonical pipeline, delete methods, types, and utilities.
+
+Split into 3 files in `src/services/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `photo-upload-types.ts` | Interfaces, loggers, utility functions | 124 | Yes (types/config) |
+| `photo-upload-legacy-pipeline.ts` | Legacy upload with compression, retry, server fallback | 386 | No |
+| `photo-upload.service.ts` | PhotoUploadService class: routing, canonical pipeline, delete methods | 462 | No |
+
+Consumer Impact: 9 consumers — zero import path changes (main file re-exports types, class keeps same name).
 
 ## DxfViewerContent Split
 

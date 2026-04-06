@@ -370,6 +370,10 @@ export const FILE_STORAGE_ERROR_MESSAGES = {
   MISSING_CANONICAL_FIELDS: 'Missing required canonical fields: companyId, contactId, or createdBy.',
   /** Invalid storage path */
   INVALID_STORAGE_PATH: 'Invalid storage path parameters provided.',
+  /** Upload service error (legacy pipeline catch-all) */
+  UPLOAD_SERVICE_ERROR: 'Σφάλμα υπηρεσίας ανεβάσματος',
+  /** Fallback upload also failed */
+  FALLBACK_UPLOAD_FAILED: 'Αποτυχία και της εναλλακτικής μεθόδου ανεβάσματος',
 } as const;
 
 /**
