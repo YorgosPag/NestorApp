@@ -11,7 +11,7 @@
  */
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/property';
+import type { CommercialStatus, OperationalStatus, LevelData, PropertyLevel } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 import type { TFunction } from 'i18next';
 
@@ -48,6 +48,8 @@ export interface PropertyFieldsFormData {
   interiorFeatures: string[];
   securityFeatures: string[];
   levelData: Record<string, LevelData>;
+  /** ADR-236 Phase 4: Multi-level floors (populated during creation, read from property during edit) */
+  levels: PropertyLevel[];
   askingPrice: string;
 }
 
@@ -69,6 +71,8 @@ export interface PropertyFieldsEditFormProps {
   isSoldOrRented: boolean;
   /** Multi-level unit */
   isMultiLevel: boolean;
+  /** ADR-236 Phase 4: SSoT levels source — formData.levels (creation) OR property.levels (edit) */
+  effectiveLevels: PropertyLevel[];
   /** Active level tab (null = totals) */
   activeLevelId: string | null;
   /** Set active level */

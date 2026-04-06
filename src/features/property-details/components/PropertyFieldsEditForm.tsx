@@ -59,6 +59,7 @@ export function PropertyFieldsEditForm({
   isReservedOrSold,
   isSoldOrRented,
   isMultiLevel,
+  effectiveLevels,
   activeLevelId,
   setActiveLevelId,
   currentLevelData,
@@ -106,10 +107,10 @@ export function PropertyFieldsEditForm({
       )}
 
       {/* ─── Level Tab Strip (ADR-236 Phase 2) ─── */}
-      {isMultiLevel && property.levels && property.levels.length >= 2 && (
+      {isMultiLevel && effectiveLevels.length >= 2 && (
         <>
           <LevelTabStrip
-            levels={property.levels}
+            levels={effectiveLevels}
             activeLevelId={activeLevelId}
             onSelectLevel={setActiveLevelId}
             t={t}

@@ -15,14 +15,17 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { Property } from '@/types/property-viewer';
-import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/property';
+import type { CommercialStatus, OperationalStatus, LevelData, PropertyLevel } from '@/types/property';
 import { aggregateLevelData } from '@/services/multi-level.service';
+import { useAutoLevelCreation } from '../hooks/useAutoLevelCreation';
+import { AutoLevelDialogs } from './AutoLevelDialogs';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 import { ReadOnlyCompactView } from './PropertyFieldsReadOnly';
 import { PropertyFieldsEditForm } from './PropertyFieldsEditForm';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
 import { buildPropertyUpdatesFromForm } from './property-fields-form-mapper';
+import { buildCreationPayload } from './property-fields-save-handler';
 import type { PropertyType } from '@/types/property';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
@@ -31,10 +34,7 @@ import { translatePropertyMutationError } from '@/services/property/property-mut
 import { translatePolicyError, isKnownPolicyErrorCode } from '@/lib/policy';
 // ADR-284 Batch 7: SSoT hierarchy validation + inline new-unit UI
 import { NewUnitHierarchySection } from '@/components/properties/shared/NewUnitHierarchySection';
-import {
-  validatePropertyCreationFields,
-  isStandaloneUnitType,
-} from '@/hooks/properties/usePropertyCreateValidation';
+import { validatePropertyCreationFields } from '@/hooks/properties/usePropertyCreateValidation';
 const logger = createModuleLogger('PropertyFieldsBlock');
 
 interface PropertyFieldsBlockProps {
@@ -68,8 +68,7 @@ export function PropertyFieldsBlock({
   const { t } = useTranslation('properties');
   // ADR-284: policy errors live in the shared `building` i18n namespace
   const { t: tPolicy } = useTranslation('building');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future spacing tokens
-  const _spacing = useSpacingTokens();
+  useSpacingTokens(); // reserved — hook must be called for React consistency
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const typography = useTypography();
@@ -114,13 +113,9 @@ export function PropertyFieldsBlock({
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
 
   const [formData, setFormData] = useState<PropertyFieldsFormData>({
-    name: property.name ?? '',
-    code: property.code ?? '',
-    type: property.type ?? '',
-    // ADR-284 Batch 7: Hierarchy fields
+    name: property.name ?? '', code: property.code ?? '', type: property.type ?? '',
     projectId: (property as unknown as Record<string, unknown>).projectId as string ?? '',
-    buildingId: property.buildingId ?? '',
-    floorId: property.floorId ?? '',
+    buildingId: property.buildingId ?? '', floorId: property.floorId ?? '',
     operationalStatus: ((property as unknown as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
     commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
     description: property.description ?? '',
@@ -144,6 +139,7 @@ export function PropertyFieldsBlock({
     interiorFeatures: property.interiorFeatures ?? [],
     securityFeatures: property.securityFeatures ?? [],
     levelData: property.levelData ?? {} as Record<string, LevelData>,
+    levels: property.levels ?? [],
     askingPrice: property.commercial?.askingPrice?.toString() ?? '',
   });
 
@@ -191,7 +187,36 @@ export function PropertyFieldsBlock({
         ? t('entityCode.needFloor')
         : suggestedCode || t('fields.identity.codePlaceholder');
 
-  const isMultiLevel = property.isMultiLevel && (property.levels?.length ?? 0) >= 2;
+  // ADR-236 Phase 4: Auto-create levels during creation mode
+  const autoLevel = useAutoLevelCreation({
+    buildingId: isCreatingNewUnit ? (formData.buildingId || null) : null,
+    currentFloorId: isCreatingNewUnit ? (formData.floorId || null) : null,
+    currentFloorNumber: isCreatingNewUnit ? formData.floor : null,
+    hasExistingLevels: formData.levels.length >= 2,
+    onUpdateProperty: (updates) => {
+      if (updates.levels) {
+        const newLevels = updates.levels as PropertyLevel[];
+        setFormData(prev => ({
+          ...prev,
+          levels: newLevels,
+          levelData: Object.fromEntries(
+            newLevels.map(l => [l.floorId, prev.levelData[l.floorId] ?? {}])
+          ),
+        }));
+        // Auto-select first level tab
+        onActiveLevelChange?.(newLevels[0]?.floorId ?? null);
+      }
+    },
+  });
+
+  // SSoT: During creation use formData.levels, after creation use property
+  const isMultiLevel = isCreatingNewUnit
+    ? formData.levels.length >= 2
+    : !!(property.isMultiLevel && (property.levels?.length ?? 0) >= 2);
+  const effectiveLevels: PropertyLevel[] = isCreatingNewUnit
+    ? formData.levels
+    : (property.levels ?? []);
+
   const activeLevelId = controlledLevelId ?? null;
   const setActiveLevelId = useCallback((id: string | null) => {
     onActiveLevelChange?.(id);
@@ -242,25 +267,16 @@ export function PropertyFieldsBlock({
       commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
       description: property.description ?? '',
       floor: property.floor ?? 0,
-      bedrooms: property.layout?.bedrooms ?? 0,
-      bathrooms: property.layout?.bathrooms ?? 0,
-      wc: property.layout?.wc ?? 0,
-      areaGross: property.areas?.gross ?? 0,
-      areaNet: property.areas?.net ?? 0,
-      areaBalcony: property.areas?.balcony ?? 0,
-      areaTerrace: property.areas?.terrace ?? 0,
-      areaGarden: property.areas?.garden ?? 0,
-      orientations: property.orientations ?? [],
-      condition: property.condition ?? '',
+      bedrooms: property.layout?.bedrooms ?? 0, bathrooms: property.layout?.bathrooms ?? 0, wc: property.layout?.wc ?? 0,
+      areaGross: property.areas?.gross ?? 0, areaNet: property.areas?.net ?? 0,
+      areaBalcony: property.areas?.balcony ?? 0, areaTerrace: property.areas?.terrace ?? 0, areaGarden: property.areas?.garden ?? 0,
+      orientations: property.orientations ?? [], condition: property.condition ?? '',
       energyClass: property.energy?.class ?? '',
-      heatingType: property.systemsOverride?.heatingType ?? '',
-      coolingType: property.systemsOverride?.coolingType ?? '',
-      flooring: property.finishes?.flooring ?? [],
-      windowFrames: property.finishes?.windowFrames ?? '',
-      glazing: property.finishes?.glazing ?? '',
-      interiorFeatures: property.interiorFeatures ?? [],
-      securityFeatures: property.securityFeatures ?? [],
+      heatingType: property.systemsOverride?.heatingType ?? '', coolingType: property.systemsOverride?.coolingType ?? '',
+      flooring: property.finishes?.flooring ?? [], windowFrames: property.finishes?.windowFrames ?? '', glazing: property.finishes?.glazing ?? '',
+      interiorFeatures: property.interiorFeatures ?? [], securityFeatures: property.securityFeatures ?? [],
       levelData: property.levelData ?? {} as Record<string, LevelData>,
+      levels: property.levels ?? [],
       askingPrice: property.commercial?.askingPrice?.toString() ?? '',
     }));
   }, [property]);
@@ -306,23 +322,10 @@ export function PropertyFieldsBlock({
         }
 
         // 🏢 ENTERPRISE: Create new unit via server-side API (Admin SDK)
-        // Client-side setDoc blocked by Firestore rules — must use API endpoint
-        const standalone = isStandaloneUnitType(formData.type as import('@/types/property').PropertyType | '');
-        const propertyData = {
-          ...updates,
-          name: formData.name || t('navigation.actions.newUnit.defaultName'),
-          code: formData.code || suggestedCode || '',
-          type: formData.type || 'apartment',
-          status: 'reserved' as const,
-          operationalStatus: 'draft' as const,
-          floor: standalone ? 0 : formData.floor,
-          area: formData.areaGross,
-          // ADR-284: Hierarchy fields — Family-discriminated
-          projectId: formData.projectId,
-          ...(standalone
-            ? {}
-            : { buildingId: formData.buildingId, floorId: formData.floorId }),
-        };
+        const propertyData = buildCreationPayload({
+          formData, updates, suggestedCode: suggestedCode || '',
+          defaultName: t('navigation.actions.newUnit.defaultName'),
+        });
         const result = await createPropertyWithPolicy({ propertyData });
         if (!result.success) {
           // 🏢 ADR-284: If the server returned a known policy error code,
@@ -361,28 +364,11 @@ export function PropertyFieldsBlock({
     } finally {
       setIsSaving(false);
     }
-  }, [
-    buildUpdatesFromForm,
-    formData.areaGross,
-    formData.floor,
-    formData.name,
-    formData.type,
-    formData.projectId,
-    formData.buildingId,
-    formData.floorId,
-    isCreatingNewUnit,
-    onExitEditMode,
-    onPropertyCreated,
-    property.id,
-    property.buildingId,
-    property.commercialStatus,
-    property.floorId,
-    runExistingPropertyUpdate,
-    suggestedCode,
-    success,
-    notifyError,
-    t,
-  ]);
+  }, [buildUpdatesFromForm, formData.areaGross, formData.floor, formData.name, formData.type,
+    formData.projectId, formData.buildingId, formData.floorId, formData.levels.length,
+    isCreatingNewUnit, onExitEditMode, onPropertyCreated, property.id, property.buildingId,
+    property.commercialStatus, property.floorId, runExistingPropertyUpdate, suggestedCode,
+    success, notifyError, t]);
 
   // ── Toggle multi-select ──
   const toggleArrayItem = useCallback(<T extends string>(
@@ -426,10 +412,38 @@ export function PropertyFieldsBlock({
       });
       if (patch.type !== undefined) {
         setLocalType(patch.type);
+        // ADR-236 Phase 4: Auto-level creation when type changes via hierarchy
+        if (isCreatingNewUnit) {
+          autoLevel.triggerAutoLevelCreation(patch.type);
+        }
+      }
+      // ADR-236 Phase 4: Re-trigger auto-level when floor changes (user selected type first, floor second)
+      if (patch.floorId !== undefined && isCreatingNewUnit && formData.levels.length < 2) {
+        autoLevel.triggerAutoLevelCreation(localType);
       }
     },
-    [buildSuggestedName],
+    [autoLevel, buildSuggestedName, formData.levels.length, isCreatingNewUnit, localType],
   );
+
+  const handleTypeChange = useCallback((newType: string) => {
+    setLocalType(newType);
+    nameUserEdited.current = false;
+    const newName = buildSuggestedName(newType, formData.areaGross);
+    setFormData(prev => ({ ...prev, name: newName }));
+    if (onAutoSaveFields) onAutoSaveFields({ type: newType, name: newName });
+    if (isCreatingNewUnit) autoLevel.triggerAutoLevelCreation(newType);
+  }, [autoLevel, buildSuggestedName, formData.areaGross, isCreatingNewUnit, onAutoSaveFields]);
+
+  const handleNameManualEdit = useCallback((value: string) => {
+    nameUserEdited.current = true;
+    setFormData(prev => ({ ...prev, name: value }));
+  }, []);
+
+  const handleAreaChange = useCallback((areaKey: 'net' | 'gross', value: number) => {
+    if (areaKey === 'gross' && !nameUserEdited.current) {
+      setFormData(prev => ({ ...prev, name: buildSuggestedName(localType, value) }));
+    }
+  }, [buildSuggestedName, localType]);
 
   return (
     <>
@@ -454,6 +468,7 @@ export function PropertyFieldsBlock({
         isReservedOrSold={isReservedOrSold}
         isSoldOrRented={isSoldOrRented}
         isMultiLevel={!!isMultiLevel}
+        effectiveLevels={effectiveLevels}
         activeLevelId={activeLevelId}
         setActiveLevelId={setActiveLevelId}
         currentLevelData={currentLevelData}
@@ -466,33 +481,19 @@ export function PropertyFieldsBlock({
         codeOverridden={codeOverridden}
         setCodeOverridden={setCodeOverridden}
         codeLoading={codeLoading}
-        onTypeChange={(newType) => {
-          setLocalType(newType);
-          nameUserEdited.current = false;
-          const newName = buildSuggestedName(newType, formData.areaGross);
-          setFormData(prev => ({ ...prev, name: newName }));
-          if (onAutoSaveFields) {
-            onAutoSaveFields({ type: newType, name: newName });
-          }
-        }}
-        onNameManualEdit={(value) => {
-          nameUserEdited.current = true;
-          setFormData(prev => ({ ...prev, name: value }));
-        }}
-        onAreaChange={(areaKey, value) => {
-          if (areaKey === 'gross' && !nameUserEdited.current) {
-            setFormData(prev => ({ ...prev, name: buildSuggestedName(localType, value) }));
-          }
-        }}
+        onTypeChange={handleTypeChange}
+        onNameManualEdit={handleNameManualEdit}
+        onAreaChange={handleAreaChange}
         t={t}
         typography={typography}
         iconSizes={iconSizes}
         quick={quick}
       />
       {ImpactDialog}
+
+      <AutoLevelDialogs dialogState={autoLevel.dialogState} onConfirm={autoLevel.handleDialogConfirm} onDismiss={autoLevel.handleDialogDismiss} />
     </>
   );
 }
 
 export default PropertyFieldsBlock;
-

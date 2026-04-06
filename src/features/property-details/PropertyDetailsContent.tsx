@@ -33,6 +33,7 @@ import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
 import { useAutoLevelCreation } from './hooks/useAutoLevelCreation';
+import { AutoLevelDialogs } from './components/AutoLevelDialogs';
 import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 import type { PropertyLevel } from '@/types/property';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
@@ -408,30 +409,7 @@ export function PropertyDetailsContent({
       {ImpactDialog}
       <ConfirmDialog {...floorWarningDialogProps} />
 
-      {/* ADR-236 Phase 4: Auto-level creation dialogs */}
-      {autoLevel.dialogState.type === 'warning' && (
-        <ConfirmDialog
-          open
-          onOpenChange={(open) => { if (!open) autoLevel.handleDialogDismiss(); }}
-          title={t('properties:multiLevel.noNextFloor.title')}
-          description={t('properties:multiLevel.noNextFloor.description')}
-          variant="warning"
-          confirmText={t('common:deletionGuard.understood')}
-          onConfirm={autoLevel.handleDialogConfirm}
-        />
-      )}
-      {autoLevel.dialogState.type === 'confirm' && (
-        <ConfirmDialog
-          open
-          onOpenChange={(open) => { if (!open) autoLevel.handleDialogDismiss(); }}
-          title={t('properties:multiLevel.optionalConfirm.title')}
-          description={t('properties:multiLevel.optionalConfirm.description')}
-          variant="default"
-          confirmText={t('properties:multiLevel.optionalConfirm.yes')}
-          cancelText={t('properties:multiLevel.optionalConfirm.no')}
-          onConfirm={autoLevel.handleDialogConfirm}
-        />
-      )}
+      <AutoLevelDialogs dialogState={autoLevel.dialogState} onConfirm={autoLevel.handleDialogConfirm} onDismiss={autoLevel.handleDialogDismiss} />
     </div>
   );
 }
