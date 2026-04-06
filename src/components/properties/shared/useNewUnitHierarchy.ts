@@ -183,8 +183,12 @@ export function useNewUnitHierarchy({
   }, [enabled, selection.buildingId, user]);
 
   // ── Empty state flags ──
+  // noProjects: Show CTA immediately when project list is empty, even while
+  // loading. If projects exist they'll load within ~1s and the flag flips to
+  // false. Waiting for !projectsLoading caused the CTA to disappear during
+  // the fetch window — users saw nothing and couldn't create a project.
   const emptyStates = useMemo(() => ({
-    noProjects: enabled && !projectsLoading && projects.length === 0,
+    noProjects: enabled && projects.length === 0,
     noBuildings:
       enabled &&
       !isStandalone &&
@@ -199,7 +203,6 @@ export function useNewUnitHierarchy({
     orphanBuilding: enabled && isOrphanBuilding,
   }), [
     enabled,
-    projectsLoading,
     projects.length,
     isStandalone,
     selection.projectId,

@@ -131,7 +131,7 @@ export function useAddPropertyDialogState({
 
   // ADR-284 §3.3 (Phase 3a+3b): Empty state flags — drive inline CTAs in AddPropertyDialog
   const emptyStates = useMemo(() => ({
-    noProjects: !projectsLoading && projects.length === 0,
+    noProjects: projects.length === 0,
     noBuildings:
       !isStandalone &&
       !!formData.projectId &&
