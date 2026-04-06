@@ -254,8 +254,8 @@ export function GenericPropertiesTabsRenderer({
           ) : (
             <div className={cn("flex flex-col items-center justify-center h-full text-center", colors.text.muted)}>
               <PropertyIcon className={`${iconSizes.xl3} mb-4 opacity-50 ${propertyColor}`} />
-              <h3 className="text-lg font-semibold mb-2">Επιλέξτε μια μονάδα</h3>
-              <p className="text-sm">Επιλέξτε μια μονάδα από τη λίστα αριστερά για να δείτε τις πληροφορίες της.</p>
+              <h3 className="text-lg font-semibold mb-2">{t('selectUnit')}</h3>
+              <p className="text-sm">{t('selectUnitDescription')}</p>
             </div>
           )}
         </ScrollArea>

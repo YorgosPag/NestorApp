@@ -8,6 +8,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import '@/lib/design-system';
 
@@ -288,15 +289,16 @@ export function GenericTabRenderer({
   valueFormatters
 }: GenericTabRendererProps) {
   const colors = useSemanticColors();
+  const { t } = useTranslation('common');
   if (!section) {
     logger.warn('No section provided');
-    return <div className={cn("text-center", colors.text.muted)}>Δεν υπάρχουν διαθέσιμα δεδομένα</div>;
+    return <div className={cn("text-center", colors.text.muted)}>{t('noDataAvailable')}</div>;
   }
 
   if (!data) {
     return (
       <div className={cn("text-center p-8", colors.text.muted)}>
-        <p>Δεν υπάρχουν δεδομένα για προβολή</p>
+        <p>{t('noDataToDisplay')}</p>
       </div>
     );
   }

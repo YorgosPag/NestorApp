@@ -650,5 +650,14 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "noDataAvailable": "No data available",
+  "noDataToDisplay": "No data to display",
+  "filters": {
+    "priceRange": "Price Range",
+    "area": "Area (m²)"
+  },
+  "photos": {
+    "notFound": "Photo not found"
   }
 }

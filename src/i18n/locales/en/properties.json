@@ -232,7 +232,8 @@
     }
   },
   "placeholders": {
-    "searchUnits": "Search units..."
+    "searchUnits": "Search units...",
+    "priceExample": "e.g. 150000"
   },
   "grid": {
     "emptyState": {
@@ -659,5 +660,8 @@
       "title": "Confirm linked space change",
       "description": "You are removing or replacing linked parking/storage spaces. Confirm the allocation impact before continuing."
     }
+  },
+  "types": {
+    "outdoor": "Outdoor"
   }
 }

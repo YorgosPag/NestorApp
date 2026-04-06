@@ -9,9 +9,11 @@ import { SearchField } from "./parts/SearchField";
 import { TypeCheckboxes } from "./parts/TypeCheckboxes";
 import { StatusCheckboxes } from "./parts/StatusCheckboxes";
 import { RangeSlider } from "./parts/RangeSlider";
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 export function PublicPropertyFilters({ filters, onFiltersChange }: PublicPropertyFiltersProps) {
+  const { t } = useTranslation('common');
   const { onSearch, onTypeToggle, onStatusToggle, onPriceRange, onAreaRange } =
     usePublicPropertyFilters(filters, onFiltersChange);
 
@@ -26,7 +28,7 @@ export function PublicPropertyFilters({ filters, onFiltersChange }: PublicProper
 
         <div className="space-y-4">
           <RangeSlider
-            label={<>Εύρος Τιμής</>} // eslint-disable-line custom/no-hardcoded-strings
+            label={t('filters.priceRange')}
             icon={Euro}
             min={PRICE_MIN}
             max={PRICE_MAX}
@@ -38,7 +40,7 @@ export function PublicPropertyFilters({ filters, onFiltersChange }: PublicProper
           />
 
           <RangeSlider
-            label={<>Εμβαδόν (m²)</>} // eslint-disable-line custom/no-hardcoded-strings
+            label={t('filters.area')}
             icon={Ruler}
             min={AREA_MIN}
             max={AREA_MAX}

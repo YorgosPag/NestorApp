@@ -174,7 +174,7 @@ export function PropertyFieldsEditForm({
                       <tbody className={colors.text.muted}>
                         <tr><td>DI = {t('types.apartment')}</td><td>KA = {t('types.shop')}</td><td>AP = {t('types.storage')}</td></tr>
                         <tr><td>GK = {t('types.apartment_1br')}</td><td>GR = {t('types.office')}</td><td>PK = Parking</td></tr>
-                        <tr><td>ST = {t('types.studio')}</td><td>AI = {t('types.hall')}</td><td>PY = Υπαίθριο</td></tr>
+                        <tr><td>ST = {t('types.studio')}</td><td>AI = {t('types.hall')}</td><td>PY = {t('types.outdoor')}</td></tr>
                         <tr><td>ME = {t('types.maisonette')}</td><td colSpan={2} rowSpan={5} /></tr>
                         <tr><td>RE = {t('types.penthouse')}</td></tr>
                         <tr><td>LO = Loft</td></tr>
@@ -266,7 +266,7 @@ export function PropertyFieldsEditForm({
                 value={formData.askingPrice}
                 onChange={(e) => setFormData(prev => ({ ...prev, askingPrice: e.target.value }))}
                 className={cn('h-7 text-xs text-right', quick.input)}
-                placeholder="π.χ. 150000"
+                placeholder={t('placeholders.priceExample')}
                 disabled={!isEditing || isSoldOrRented}
               />
             </fieldset>

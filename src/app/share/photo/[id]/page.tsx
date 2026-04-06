@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
@@ -24,6 +25,7 @@ const PhotoSharePage = () => {
   const [photoData, setPhotoData] = useState<PhotoData | null>(null);
   const [loading, setLoading] = useState(true);
   const colors = useSemanticColors();
+  const { t } = useTranslation('common');
 
   useEffect(() => {
     const dataParam = searchParams.get('data');
@@ -74,9 +76,9 @@ const PhotoSharePage = () => {
     }
   }, [photoData, id]);
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center">Φόρτωση...</div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center">{t('loading.message')}</div>;
 
-  if (!photoData) return <div className="flex min-h-screen items-center justify-center">Η φωτογραφία δεν βρέθηκε</div>;
+  if (!photoData) return <div className="flex min-h-screen items-center justify-center">{t('photos.notFound')}</div>;
 
   const { url, title, description } = photoData;
 

@@ -481,6 +481,8 @@
     "selectBuilding": "Create Building",
     "selectBuildingDescription": "Select a building from the list or create a new one."
   },
+  "selectUnit": "Select a unit",
+  "selectUnitDescription": "Select a unit from the list on the left to view its information.",
   "emptyList": {
     "noUnitsFound": "No units found",
     "noUnitsDescription": "No storages or parking spaces match the search criteria."
