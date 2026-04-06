@@ -59,7 +59,7 @@ export function NewUnitHierarchySection({
   const { t } = useTranslation('properties');
 
   // Buildings via real-time hook (SSoT)
-  const { allBuildings: buildings } = useRealtimeBuildings();
+  const { allBuildings: buildings, refetch: refetchBuildings } = useRealtimeBuildings();
 
   const {
     projects,
@@ -261,6 +261,7 @@ export function NewUnitHierarchySection({
       <BuildingQuickCreateSheet
         open={showAddBuildingSheet}
         onOpenChange={setShowAddBuildingSheet}
+        onBuildingCreated={() => refetchBuildings()}
       />
       {selection.buildingId && selectedBuilding && (
         <LinkBuildingToProjectDialog
