@@ -40,6 +40,7 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | TestSuite split: 1 file (1949 lines) -> 6 files (all compliant) |
 | 2026-04-06 | PerformanceProfiler split: 1 file (1663 lines) -> 5 files (all compliant) |
 | 2026-04-06 | enterprise-id.service split: 1 file (1663 lines) -> 3 files (all compliant) |
+| 2026-04-06 | AdministrativeBoundaryService split: 1 file (1634 lines) -> 4 files (all compliant) |
 
 ## DockerOrchestrator Split
 
@@ -105,3 +106,20 @@ Split into 3 files in `src/services/`:
 Key refactoring: 90+ verbose generator methods (5-7 lines each with JSDoc) compressed to 1-line compact format using `P` alias for `ENTERPRISE_ID_PREFIXES`.
 
 Consumer Impact: Main file re-exports all names from prefixes + convenience — **zero consumer changes** across 165 files.
+
+## AdministrativeBoundaryService Split
+
+`AdministrativeBoundaryService.ts` contained 1634 lines — 3.3x over the 500-line limit. **2 consumers** (SpatialQueryService, useAdministrativeBoundaries).
+
+Split into 4 files in `src/subapps/geo-canvas/services/administrative-boundaries/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `admin-boundary-utils.ts` | Search normalization, type detection, geometry ops, fuzzy matching | 234 | No |
+| `admin-boundary-suggestions.ts` | Suggestion engine: basic, enhanced, postal, location-based | 320 | No |
+| `admin-boundary-filters.ts` | Advanced filters, spatial filtering, scoring, TTL, simplification stats | 196 | No |
+| `AdministrativeBoundaryService.ts` | Main class: search orchestration, boundary cache, simplification | 356 | No |
+
+Key refactoring: 7 identical boundary-fetch-cache patterns extracted to single `getCachedBoundary<T>()` generic helper (DRY).
+
+Consumer Impact: Main file keeps same name and exports — **zero consumer changes**.
