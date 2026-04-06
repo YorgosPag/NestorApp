@@ -11,11 +11,10 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { Plus, X, Star } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { collection, query, where, onSnapshot, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -48,8 +47,6 @@ export interface FloorMultiSelectFieldProps {
   noBuildingHint: string;
   /** Disable the field */
   disabled?: boolean;
-  /** Minimum number of levels — hides remove buttons when at minimum */
-  minLevels?: number;
 }
 
 // =============================================================================
@@ -64,7 +61,6 @@ export function FloorMultiSelectField({
   label,
   noBuildingHint,
   disabled = false,
-  minLevels = 0,
 }: FloorMultiSelectFieldProps) {
   const { t } = useTranslation(['properties']);
   const { user } = useAuth();
@@ -123,21 +119,7 @@ export function FloorMultiSelectField({
     }
   }, [allFloors, value, onChange]);
 
-  const primaryId = value.find((l) => l.isPrimary)?.floorId ?? value[0]?.floorId;
   const isDisabled = disabled || !buildingId;
-  const canRemove = !isDisabled && value.length > minLevels;
-
-  const handleRemoveFloor = useCallback((floorId: string) => {
-    const remaining = value.filter((l) => l.floorId !== floorId);
-    if (floorId === primaryId && remaining.length > 0) {
-      remaining[0] = { ...remaining[0], isPrimary: true };
-    }
-    onChange(remaining);
-  }, [value, primaryId, onChange]);
-
-  const handleSetPrimary = useCallback((floorId: string) => {
-    onChange(value.map((l) => ({ ...l, isPrimary: l.floorId === floorId })));
-  }, [value, onChange]);
 
   // SSoT: FloorInlineCreateForm callback — auto-add when Firestore updates
   const handleFloorCreated = useCallback((floorId?: string) => {
@@ -157,62 +139,27 @@ export function FloorMultiSelectField({
         <section className={cn("flex items-center gap-2 h-8", colors.text.muted)}>
           <Spinner size="small" />
         </section>
-      ) : (
-        <>
-          {/* Selected floors as badges */}
-          {value.length > 0 && (
-            <section className="flex flex-wrap gap-1.5" aria-label={t('multiLevel.floors')}>
-              {value.map((level) => (
-                <Badge
-                  key={level.floorId}
-                  variant={level.isPrimary ? 'default' : 'secondary'}
-                  className={cn('flex items-center gap-1 text-xs', !isDisabled && 'cursor-pointer')}
-                  onClick={!isDisabled && !level.isPrimary ? () => handleSetPrimary(level.floorId) : undefined}
-                  title={level.isPrimary ? t('multiLevel.primaryFloor') : t('multiLevel.setPrimary')}
-                >
-                  {level.isPrimary && <Star className="h-3 w-3" />}
-                  {level.name}
-                  {canRemove && (
-                    <button
-                      type="button"
-                      className="ml-0.5 hover:text-destructive"
-                      onClick={(e) => { e.stopPropagation(); handleRemoveFloor(level.floorId); }}
-                      aria-label={t('multiLevel.removeFloor')}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </Badge>
-              ))}
-            </section>
-          )}
-
-          {/* SSoT: FloorInlineCreateForm — only after levels exist (for 3+ floors) */}
-          {!isDisabled && value.length >= 2 && (
-            <>
-              {!showCreateForm ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setShowCreateForm(true)}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  {t('multiLevel.createFloor')}
-                </Button>
-              ) : buildingId && (
-                <FloorInlineCreateForm
-                  buildingId={buildingId}
-                  projectId={projectId ?? undefined}
-                  onCreated={handleFloorCreated}
-                  onCancel={() => setShowCreateForm(false)}
-                />
-              )}
-            </>
-          )}
-        </>
-      )}
+      ) : !isDisabled && value.length >= 2 ? (
+        !showCreateForm ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={() => setShowCreateForm(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('multiLevel.createFloor')}
+          </Button>
+        ) : buildingId ? (
+          <FloorInlineCreateForm
+            buildingId={buildingId}
+            projectId={projectId ?? undefined}
+            onCreated={handleFloorCreated}
+            onCancel={() => setShowCreateForm(false)}
+          />
+        ) : null
+      ) : null}
     </fieldset>
   );
 }

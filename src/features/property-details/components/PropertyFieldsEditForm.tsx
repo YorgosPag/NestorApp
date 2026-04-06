@@ -44,7 +44,7 @@ import type { CommercialStatus, OperationalStatus } from '@/types/property';
 import { isValidEntityCodeFormat } from '@/services/entity-code.service';
 import { LevelTabStrip } from './PropertyFieldsReadOnly';
 import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
-import { isMultiLevelCapableType, isAlwaysMultiLevelType } from '@/config/domain-constants';
+import { isMultiLevelCapableType } from '@/config/domain-constants';
 import {
   PROPERTY_TYPE_OPTIONS, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
   PROPERTY_CARD_COLORS, PROPERTY_MICRO_TEXT,
@@ -155,7 +155,6 @@ export function PropertyFieldsEditForm({
           onChange={onLevelsChange}
           label={t('multiLevel.floors', { ns: 'properties-detail' })}
           noBuildingHint={t('multiLevel.noFloorHint', { ns: 'properties-detail' })}
-          minLevels={isAlwaysMultiLevelType(formData.type) ? 2 : 0}
         />
       )}
 
