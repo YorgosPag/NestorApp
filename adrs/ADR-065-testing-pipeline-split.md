@@ -54,6 +54,22 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | EnterpriseSecurityService split: 1 file (988 lines) -> 3 files (all compliant) |
 | 2026-04-06 | email-queue-service split: 1 file (962 lines) -> 3 files (all compliant) |
 | 2026-04-06 | LineSettings split: 1 file (992 lines) -> 4 files (all compliant) |
+| 2026-04-06 | useCentralizedMouseHandlers split: 1 file (988 lines) -> 4 files (all compliant) |
+
+## useCentralizedMouseHandlers Split
+
+`useCentralizedMouseHandlers.ts` contained 988 lines — 2x over the 500-line limit. Single hook mixing types/interfaces, mouse move tracking (snap detection, hover, pan), mouse up processing (grip release, marquee selection, point-click pipeline), and wheel zoom.
+
+Split into 4 files in `src/subapps/dxf-viewer/systems/cursor/`:
+
+| File | Content | Lines |
+|------|---------|-------|
+| `mouse-handler-types.ts` | Interfaces, types (SnapResultItem, ZoomConstraints, Props, Refs, SnapAPI) | 84 |
+| `mouse-handler-move.ts` | handleMouseMove factory: position tracking, snap detection, hover, pan | 235 |
+| `mouse-handler-up.ts` | handleMouseUp factory: grip release, drawing clicks, marquee, point-click | 258 |
+| `useCentralizedMouseHandlers.ts` | Main hook: setup, mouseDown, mouseLeave, wheel, orchestration | 262 |
+
+Consumer Impact: 2 consumers (DxfCanvas.tsx, LayerCanvas.tsx) — zero import path changes (re-exports types).
 
 ## LineSettings Split
 
