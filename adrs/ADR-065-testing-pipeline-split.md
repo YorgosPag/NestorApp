@@ -53,6 +53,22 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | EnterpriseBusinessRulesService split: 1 file (996 lines) -> 3 files (all compliant) |
 | 2026-04-06 | EnterpriseSecurityService split: 1 file (988 lines) -> 3 files (all compliant) |
 | 2026-04-06 | email-queue-service split: 1 file (962 lines) -> 3 files (all compliant) |
+| 2026-04-06 | LineSettings split: 1 file (992 lines) -> 4 files (all compliant) |
+
+## LineSettings Split
+
+`LineSettings.tsx` contained 992 lines — 2x over the 500-line limit. React component mixing SVG icons, context-aware hook selection, handler logic, 5 accordion sections, and factory reset modal in a single file.
+
+Split into 4 files in `src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `line-settings-icons.tsx` | 5 SVG icon components | 35 | Yes (presentational) |
+| `useLineSettingsState.ts` | Custom hook: context selection, handlers, options, accordion state | 306 | No |
+| `LineSettingsSections.tsx` | 5 accordion section components + FactoryResetModal + RangeWithNumber | 499 | No |
+| `LineSettings.tsx` | Main orchestrator: header, enabled toggle, wrapper, section assembly | 144 | No |
+
+Consumer Impact: 2 consumers (LinesTab.tsx, SubTabRenderer.tsx) — zero import path changes.
 
 ## email-queue-service Split
 
