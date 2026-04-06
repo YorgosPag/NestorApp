@@ -471,10 +471,10 @@ export function GeneralTabContent({
           setSaveErrorCode(null);
         }}
       />
-      {/* 🏢 SSoT: "No projects yet" empty state — visible only in edit/create
-          mode when the system has zero projects OR when the fetch failed
-          (so the "Create Project" CTA is always reachable). */}
-      {(projectsCount === 0 || fetchFailed) && effectiveIsEditing && (
+      {/* 🏢 SSoT: "No projects yet" empty state — visible whenever the system
+          has zero projects OR when the fetch failed, regardless of editing mode.
+          The user must always be able to create a project from here. */}
+      {(projectsCount === 0 || fetchFailed) && (
         <NoProjectsEmptyState
           context="forBuilding"
           onCreateProject={() => setShowSheet(true)}
