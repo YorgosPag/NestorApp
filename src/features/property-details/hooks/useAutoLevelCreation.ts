@@ -72,7 +72,7 @@ export function useAutoLevelCreation({
   hasExistingLevels,
   onUpdateProperty,
 }: UseAutoLevelCreationParams): UseAutoLevelCreationReturn {
-  const { t } = useTranslation(['properties']);
+  const { t } = useTranslation(['properties-detail']);
   const { info, warning } = useNotifications();
   const { user } = useAuth();
 
@@ -141,13 +141,13 @@ export function useAutoLevelCreation({
     const effectiveFloorNumber = freshFloorNumber ?? currentFloorNumber;
 
     if (!effectiveFloorId || effectiveFloorNumber == null || floors.length === 0) {
-      info('properties.multiLevel.noBuildingOrFloor');
+      info(t('multiLevel.noBuildingOrFloor'));
       return;
     }
 
     const currentIdx = floors.findIndex((f) => f.id === effectiveFloorId);
     if (currentIdx === -1) {
-      info('properties.multiLevel.noBuildingOrFloor');
+      info(t('multiLevel.noBuildingOrFloor'));
       return;
     }
 
@@ -182,7 +182,7 @@ export function useAutoLevelCreation({
       const effectiveFloorId = freshFloorId ?? currentFloorId;
       if (!buildingId || !effectiveFloorId) {
         if (isAlwaysMultiLevelType(newType) || isOptionallyMultiLevelType(newType)) {
-          info('properties.multiLevel.noBuildingOrFloor');
+          info(t('multiLevel.noBuildingOrFloor'));
         }
         return;
       }

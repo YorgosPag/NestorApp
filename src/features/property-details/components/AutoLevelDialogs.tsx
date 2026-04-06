@@ -16,7 +16,7 @@ interface AutoLevelDialogsProps {
 }
 
 export function AutoLevelDialogs({ dialogState, onConfirm, onDismiss }: AutoLevelDialogsProps) {
-  const { t } = useTranslation(['properties', 'common']);
+  const { t } = useTranslation(['properties-detail', 'common']);
 
   if (!dialogState.type) return null;
 
@@ -25,8 +25,8 @@ export function AutoLevelDialogs({ dialogState, onConfirm, onDismiss }: AutoLeve
       <ConfirmDialog
         open
         onOpenChange={(open) => { if (!open) onDismiss(); }}
-        title={t('properties:multiLevel.noNextFloor.title')}
-        description={t('properties:multiLevel.noNextFloor.description')}
+        title={t('properties-detail:multiLevel.noNextFloor.title')}
+        description={t('properties-detail:multiLevel.noNextFloor.description')}
         variant="warning"
         confirmText={t('common:deletionGuard.understood')}
         onConfirm={onConfirm}
@@ -38,11 +38,11 @@ export function AutoLevelDialogs({ dialogState, onConfirm, onDismiss }: AutoLeve
     <ConfirmDialog
       open
       onOpenChange={(open) => { if (!open) onDismiss(); }}
-      title={t('properties:multiLevel.optionalConfirm.title')}
-      description={t('properties:multiLevel.optionalConfirm.description')}
+      title={t('properties-detail:multiLevel.optionalConfirm.title')}
+      description={t('properties-detail:multiLevel.optionalConfirm.description')}
       variant="default"
-      confirmText={t('properties:multiLevel.optionalConfirm.yes')}
-      cancelText={t('properties:multiLevel.optionalConfirm.no')}
+      confirmText={t('properties-detail:multiLevel.optionalConfirm.yes')}
+      cancelText={t('properties-detail:multiLevel.optionalConfirm.no')}
       onConfirm={onConfirm}
     />
   );
