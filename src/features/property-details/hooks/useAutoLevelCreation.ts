@@ -170,7 +170,10 @@ export function useAutoLevelCreation({
       floorId: derived.floorId,
     });
 
-    info(t('multiLevel.autoCreated', { count: 2 }));
+    const levelsCount = levels.length;
+    const msg = t('multiLevel.autoCreated', { count: levelsCount });
+    // Fallback: if t() returns raw template, resolve manually
+    info(msg.includes('{{') ? msg.replace('{{count}}', String(levelsCount)) : msg);
   }, [currentFloorId, currentFloorNumber, info, onUpdateProperty, t]);
 
   // ── Trigger: called on type/floor change ──
