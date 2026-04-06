@@ -4,21 +4,13 @@
  * Enterprise-grade session management service for tracking and managing
  * user sessions across devices. Follows Google/Microsoft/Okta patterns.
  *
- * Features:
- * - Device fingerprinting and tracking
- * - Location detection (GDPR compliant)
- * - Session lifecycle management
- * - Multi-device session control
- * - Security event notifications
- * - Audit trail logging
+ * Split into SRP modules (ADR-065):
+ * - session-device-detection.ts — device/browser/OS detection, location
+ * - session-helpers.ts — pure functions: data mapping, display, statistics
  *
  * @module services/session/EnterpriseSessionService
- * @enterprise-ready true
- * @security-critical true
- * @gdpr-compliant true
  */
 
-import { formatDateShort } from '@/lib/intl-utils';
 import { generateSessionId } from '@/services/enterprise-id.service';
 import {
   collection,
@@ -35,240 +27,33 @@ import {
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import { SUBCOLLECTIONS, COLLECTIONS } from '@/config/firestore-collections';
-import { normalizeToDate } from '@/lib/date-local';
 import type {
   UserSession,
-  SessionDeviceInfo,
-  SessionLocation,
   SessionStatus,
-  SessionMetadata,
   SessionTimestamps,
   CreateSessionInput,
   SessionQueryFilters,
   SessionStatistics,
   SessionDisplayItem,
   SessionActionResult,
-  DeviceType,
-  BrowserType,
-  OperatingSystem,
-  LoginMethod
+  SessionMetadata
 } from './session.types';
-// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { getDeviceInfo, getApproximateLocation } from './session-device-detection';
+import {
+  DEFAULT_SESSION_DURATION_HOURS,
+  EXTENDED_SESSION_DURATION_DAYS,
+  MAX_CONCURRENT_SESSIONS,
+  mapDocToSession,
+  formatSessionsForDisplay,
+  computeSessionStatistics
+} from './session-helpers';
+
 const logger = createModuleLogger('EnterpriseSessionService');
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/** Default session duration in hours */
-const DEFAULT_SESSION_DURATION_HOURS = 24;
-
-/** Extended session duration (remember me) in days */
-const EXTENDED_SESSION_DURATION_DAYS = 30;
-
-/** Maximum concurrent sessions per user */
-const MAX_CONCURRENT_SESSIONS = 10;
-
-/** Session activity update threshold (minutes) */
-const ACTIVITY_UPDATE_THRESHOLD_MINUTES = 5;
-
-/** App version for session metadata */
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0';
-
-// ============================================================================
-// DEVICE DETECTION UTILITIES
-// ============================================================================
-
-/**
- * Detect device type from user agent
- */
-function detectDeviceType(userAgent: string): DeviceType {
-  const ua = userAgent.toLowerCase();
-
-  if (/mobile|android|iphone|ipod|blackberry|windows phone/i.test(ua)) {
-    return 'mobile';
-  }
-  if (/ipad|tablet|playbook|silk/i.test(ua)) {
-    return 'tablet';
-  }
-  if (/windows|macintosh|linux|cros/i.test(ua)) {
-    return 'desktop';
-  }
-
-  return 'unknown';
-}
-
-/**
- * Detect browser type from user agent
- */
-function detectBrowser(userAgent: string): { type: BrowserType; version: string } {
-  const ua = userAgent;
-
-  // Order matters - Edge must be checked before Chrome
-  if (/Edg/i.test(ua)) {
-    const match = ua.match(/Edg\/(\d+)/);
-    return { type: 'Edge', version: match?.[1] || 'Unknown' };
-  }
-  if (/Chrome/i.test(ua) && !/Chromium/i.test(ua)) {
-    const match = ua.match(/Chrome\/(\d+)/);
-    return { type: 'Chrome', version: match?.[1] || 'Unknown' };
-  }
-  if (/Firefox/i.test(ua)) {
-    const match = ua.match(/Firefox\/(\d+)/);
-    return { type: 'Firefox', version: match?.[1] || 'Unknown' };
-  }
-  if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) {
-    const match = ua.match(/Version\/(\d+)/);
-    return { type: 'Safari', version: match?.[1] || 'Unknown' };
-  }
-  if (/OPR|Opera/i.test(ua)) {
-    const match = ua.match(/(?:OPR|Opera)\/(\d+)/);
-    return { type: 'Opera', version: match?.[1] || 'Unknown' };
-  }
-
-  return { type: 'Unknown', version: 'Unknown' };
-}
-
-/**
- * Detect operating system from user agent
- */
-function detectOS(userAgent: string): { os: OperatingSystem; version: string } {
-  const ua = userAgent;
-
-  if (/Windows NT 10/i.test(ua)) {
-    return { os: 'Windows', version: '10/11' };
-  }
-  if (/Windows/i.test(ua)) {
-    return { os: 'Windows', version: 'Unknown' };
-  }
-  if (/Mac OS X/i.test(ua)) {
-    const match = ua.match(/Mac OS X (\d+[._]\d+)/);
-    const version = match?.[1]?.replace('_', '.') || 'Unknown';
-    return { os: 'macOS', version };
-  }
-  if (/iPhone|iPad|iPod/i.test(ua)) {
-    const match = ua.match(/OS (\d+[._]\d+)/);
-    const version = match?.[1]?.replace('_', '.') || 'Unknown';
-    return { os: 'iOS', version };
-  }
-  if (/Android/i.test(ua)) {
-    const match = ua.match(/Android (\d+\.?\d*)/);
-    return { os: 'Android', version: match?.[1] || 'Unknown' };
-  }
-  if (/CrOS/i.test(ua)) {
-    return { os: 'ChromeOS', version: 'Unknown' };
-  }
-  if (/Linux/i.test(ua)) {
-    return { os: 'Linux', version: 'Unknown' };
-  }
-
-  return { os: 'Unknown', version: 'Unknown' };
-}
-
-/**
- * Get device information from browser
- */
-function getDeviceInfo(): SessionDeviceInfo {
-  if (typeof navigator === 'undefined') {
-    return {
-      type: 'unknown',
-      browser: 'Server',
-      browserType: 'Unknown',
-      os: 'Unknown',
-      osVersion: 'Unknown',
-      userAgent: 'Server-side',
-      language: 'en'
-    };
-  }
-
-  const userAgent = navigator.userAgent;
-  const browser = detectBrowser(userAgent);
-  const osInfo = detectOS(userAgent);
-
-  return {
-    type: detectDeviceType(userAgent),
-    browser: `${browser.type} ${browser.version}`,
-    browserType: browser.type,
-    os: osInfo.os,
-    osVersion: osInfo.version,
-    userAgent,
-    screenResolution: typeof screen !== 'undefined'
-      ? `${screen.width}x${screen.height}`
-      : undefined,
-    language: navigator.language || 'en'
-  };
-}
-
-// ============================================================================
-// LOCATION UTILITIES (GDPR COMPLIANT)
-// ============================================================================
-
-/**
- * Hash IP address for GDPR compliance
- * Uses SHA-256, returns first 8 characters
- */
-async function hashIP(ip: string): Promise<string> {
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
-    // Fallback for environments without crypto
-    return ip.split('.').slice(0, 2).join('.') + '.x.x';
-  }
-
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip + 'enterprise-salt-2024');
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  return hashHex.substring(0, 8);
-}
-
-/**
- * Get approximate location from IP (GDPR compliant)
- * Uses timezone as fallback for location approximation
- */
-async function getApproximateLocation(): Promise<SessionLocation> {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-  // Default location based on timezone
-  const defaultLocation: SessionLocation = {
-    ipHash: 'unknown',
-    countryCode: 'GR', // Default to Greece
-    countryName: 'Ελλάδα',
-    city: 'Unknown',
-    timezone,
-    isApproximate: true
-  };
-
-  try {
-    // Try to get location from a privacy-respecting service
-    // In production, this would use a server-side IP geolocation service
-    const response = await fetch('https://ipapi.co/json/', {
-      signal: AbortSignal.timeout(3000) // 3 second timeout
-    });
-
-    if (!response.ok) {
-      return defaultLocation;
-    }
-
-    const data = await response.json();
-
-    return {
-      ipHash: await hashIP(data.ip || 'unknown'),
-      countryCode: data.country_code || 'GR',
-      countryName: data.country_name || 'Unknown',
-      city: data.city || 'Unknown',
-      region: data.region || undefined,
-      timezone: data.timezone || timezone,
-      isApproximate: true
-    };
-  } catch {
-    // Silently fail and use default
-    return defaultLocation;
-  }
-}
 
 // ============================================================================
 // ENTERPRISE SESSION SERVICE
@@ -561,7 +346,7 @@ export class EnterpriseSessionService {
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-      sessions.push(this.mapDocToSession(data));
+      sessions.push(mapDocToSession(data));
     });
 
     return sessions;
@@ -588,7 +373,7 @@ export class EnterpriseSessionService {
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-      sessions.push(this.mapDocToSession(data));
+      sessions.push(mapDocToSession(data));
     });
 
     // Apply client-side filters
@@ -610,43 +395,7 @@ export class EnterpriseSessionService {
    */
   async getSessionStatistics(userId: string): Promise<SessionStatistics> {
     const allSessions = await this.getAllSessions(userId);
-    const activeSessions = allSessions.filter(s => s.status === 'active');
-
-    const byDeviceType: Record<DeviceType, number> = {
-      desktop: 0,
-      mobile: 0,
-      tablet: 0,
-      unknown: 0
-    };
-
-    const byLoginMethod: Record<LoginMethod, number> = {
-      email: 0,
-      google: 0,
-      microsoft: 0,
-      apple: 0,
-      phone: 0
-    };
-
-    const uniqueLocations = new Set<string>();
-
-    for (const session of allSessions) {
-      byDeviceType[session.deviceInfo.type]++;
-      byLoginMethod[session.metadata.loginMethod]++;
-      uniqueLocations.add(`${session.location.city}-${session.location.countryCode}`);
-    }
-
-    const lastLogin = allSessions.length > 0
-      ? allSessions[0].timestamps.createdAt
-      : null;
-
-    return {
-      totalSessions: allSessions.length,
-      activeSessions: activeSessions.length,
-      byDeviceType,
-      byLoginMethod,
-      lastLogin,
-      uniqueLocations: uniqueLocations.size
-    };
+    return computeSessionStatistics(allSessions);
   }
 
   // ==========================================================================
@@ -658,18 +407,7 @@ export class EnterpriseSessionService {
    */
   async getSessionsForDisplay(userId: string): Promise<SessionDisplayItem[]> {
     const sessions = await this.getActiveSessions(userId);
-
-    return sessions.map(session => ({
-      id: session.id,
-      displayLabel: `${session.deviceInfo.browser} on ${session.deviceInfo.os}`,
-      locationDisplay: `${session.location.city}, ${session.location.countryName}`,
-      lastActiveRelative: this.getRelativeTime(session.timestamps.lastActiveAt),
-      isCurrent: session.isCurrent,
-      status: session.status,
-      deviceType: session.deviceInfo.type,
-      browserType: session.deviceInfo.browserType,
-      timestamps: session.timestamps
-    }));
+    return formatSessionsForDisplay(sessions);
   }
 
   /**
@@ -732,55 +470,6 @@ export class EnterpriseSessionService {
     });
 
     await batch.commit();
-  }
-
-  /**
-   * Map Firestore document to UserSession
-   */
-  private mapDocToSession(data: Record<string, unknown>): UserSession {
-    return {
-      id: data.id as string,
-      userId: data.userId as string,
-      deviceInfo: data.deviceInfo as SessionDeviceInfo,
-      location: data.location as SessionLocation,
-      timestamps: {
-        createdAt: normalizeToDate((data.timestamps as Record<string, unknown>).createdAt) ?? new Date(),
-        lastActiveAt: normalizeToDate((data.timestamps as Record<string, unknown>).lastActiveAt) ?? new Date(),
-        expiresAt: normalizeToDate((data.timestamps as Record<string, unknown>).expiresAt) ?? new Date(),
-        revokedAt: normalizeToDate((data.timestamps as Record<string, unknown>).revokedAt) ?? undefined
-      },
-      status: data.status as SessionStatus,
-      isCurrent: data.isCurrent as boolean,
-      metadata: data.metadata as SessionMetadata,
-      revocationReason: data.revocationReason as string | undefined,
-      revokedBy: data.revokedBy as string | undefined
-    };
-  }
-
-  /**
-   * Get relative time string
-   */
-  private getRelativeTime(date: Date): string {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) {
-      return 'Τώρα';
-    }
-    if (diffMins < 60) {
-      return `${diffMins} λεπτά πριν`;
-    }
-    if (diffHours < 24) {
-      return `${diffHours} ώρες πριν`;
-    }
-    if (diffDays < 7) {
-      return `${diffDays} ημέρες πριν`;
-    }
-
-    return formatDateShort(date);
   }
 }
 

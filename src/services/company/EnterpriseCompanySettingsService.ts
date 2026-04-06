@@ -1,264 +1,35 @@
 /**
  * 🏢 ENTERPRISE COMPANY SETTINGS SERVICE
  *
- * Database-driven company configuration για multi-tenant deployments.
- * Αντικατέστησε τα hardcoded company details με configurable Firebase collections.
+ * Database-driven company configuration for multi-tenant deployments.
  *
- * Features:
- * - Multi-tenant company settings
- * - Environment-specific configurations
- * - Contact information management
- * - Branding & identity settings
- * - Real-time settings updates
- * - Fallback support για offline mode
- * - Performance-optimized caching
+ * Split into SRP modules (ADR-065):
+ * - company-settings-types.ts — types, interfaces, fallback config
+ * - company-settings-legacy-converter.ts — legacy contact→settings conversion
+ *
+ * @module services/company/EnterpriseCompanySettingsService
  */
 
 import { doc, setDoc, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import { SYSTEM_IDENTITY } from '@/config/domain-constants';
-// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
-import { designTokens } from '@/styles/design-tokens';
 import { createModuleLogger } from '@/lib/telemetry';
 
+// Re-export types for consumers
+export type {
+  EnterpriseCompanySettings,
+  CompanyQuickContact,
+  CompanyBrandInfo,
+} from './company-settings-types';
+
+import type { EnterpriseCompanySettings, CompanyQuickContact, CompanyBrandInfo } from './company-settings-types';
+import { FALLBACK_COMPANY_SETTINGS } from './company-settings-types';
+import { convertLegacyContactToSettings, normalizeEnvironment } from './company-settings-legacy-converter';
+import type { LegacyContactData } from './company-settings-legacy-converter';
+
 const logger = createModuleLogger('EnterpriseCompanySettingsService');
-
-// ============================================================================
-// ENTERPRISE COMPANY TYPES
-// ============================================================================
-
-export interface EnterpriseCompanySettings {
-  id: string;
-  tenantId?: string;
-  environment?: 'development' | 'staging' | 'production' | 'all';
-
-  // Company Identity
-  companyInfo: {
-    name: string;
-    displayName?: string;
-    legalName?: string;
-    description?: string;
-    website?: string;
-    logo?: string;
-    favicon?: string;
-    established?: Date;
-    vatNumber?: string;
-    registrationNumber?: string;
-  };
-
-  // Contact Information
-  contactInfo: {
-    email: string;
-    phone: string;
-    fax?: string;
-    supportEmail?: string;
-    salesEmail?: string;
-    emergencyPhone?: string;
-    phonePattern?: string;
-    countryCode?: string;
-    locale?: string;
-    timezone?: string;
-  };
-
-  // Address Information
-  addressInfo: {
-    street: string;
-    city: string;
-    region?: string;
-    postalCode: string;
-    country: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
-    googleMapsPlaceId?: string;
-  };
-
-  // Brand Settings
-  brandSettings: {
-    primaryColor?: string;
-    secondaryColor?: string;
-    accentColor?: string;
-    logoUrl?: string;
-    faviconUrl?: string;
-    theme?: string;
-    fontFamily?: string;
-    brandGuidelines?: {
-      colors: string[];
-      fonts: string[];
-      logoVariants: string[];
-    };
-  };
-
-  // Communication Settings
-  communicationSettings: {
-    defaultFromEmail: string;
-    defaultFromName: string;
-    emailSignature?: string;
-    phoneFormats: {
-      local: string;
-      international: string;
-      display: string;
-    };
-    socialMedia?: {
-      facebook?: string;
-      twitter?: string;
-      linkedin?: string;
-      instagram?: string;
-      youtube?: string;
-    };
-  };
-
-  // Business Settings
-  businessSettings: {
-    industry?: string;
-    businessType?: 'corporation' | 'llc' | 'partnership' | 'sole_proprietorship' | 'nonprofit' | 'other';
-    employeeCount?: number;
-    workingHours?: {
-      [key: string]: {
-        open: string;
-        close: string;
-        closed?: boolean;
-      };
-    };
-    holidays?: Date[];
-    currencies?: string[];
-    defaultCurrency?: string;
-    languages?: string[];
-    defaultLanguage?: string;
-  };
-
-  // Technical Settings
-  technicalSettings: {
-    domain: string;
-    subdomains?: string[];
-    apiEndpoints?: {
-      [key: string]: string;
-    };
-    integrations?: {
-      [key: string]: {
-        enabled: boolean;
-        apiKey?: string;
-        settings?: Record<string, unknown>;
-      };
-    };
-  };
-
-  // Metadata
-  metadata?: {
-    createdBy?: string;
-    createdAt?: Date;
-    updatedBy?: string;
-    updatedAt?: Date;
-    version?: number;
-    isActive?: boolean;
-    notes?: string;
-  };
-}
-
-export interface CompanyQuickContact {
-  name: string;
-  email: string;
-  phone: string;
-  website?: string;
-  domain: string;
-}
-
-export interface CompanyBrandInfo {
-  name: string;
-  displayName: string;
-  logo?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-  theme?: string;
-}
-
-// ============================================================================
-// DEFAULT/FALLBACK CONFIGURATION
-// ============================================================================
-
-/**
- * 🏢 Fallback company configuration για offline mode
- */
-const FALLBACK_COMPANY_SETTINGS: EnterpriseCompanySettings = {
-  id: 'default-company',
-  environment: 'all',
-
-  companyInfo: {
-    name: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Company',
-    displayName: process.env.NEXT_PUBLIC_COMPANY_DISPLAY_NAME || process.env.NEXT_PUBLIC_COMPANY_NAME || 'Company',
-    legalName: process.env.NEXT_PUBLIC_COMPANY_LEGAL_NAME || process.env.NEXT_PUBLIC_COMPANY_NAME || 'Company Ltd.',
-    description: process.env.NEXT_PUBLIC_COMPANY_DESCRIPTION || 'Professional services company',
-    website: process.env.NEXT_PUBLIC_COMPANY_WEBSITE || process.env.NEXT_PUBLIC_APP_URL || 'https://company.local'
-  },
-
-  contactInfo: {
-    email: process.env.NEXT_PUBLIC_COMPANY_EMAIL ||
-           process.env.NEXT_PUBLIC_DEFAULT_CONTACT_EMAIL ||
-           `info@${process.env.NEXT_PUBLIC_TENANT_DOMAIN || 'company.local'}`,
-    phone: process.env.NEXT_PUBLIC_COMPANY_PHONE ||
-           process.env.NEXT_PUBLIC_DEFAULT_CONTACT_PHONE ||
-           '+30 210 000 0000',
-    supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
-                  `support@${process.env.NEXT_PUBLIC_TENANT_DOMAIN || 'company.local'}`,
-    salesEmail: process.env.NEXT_PUBLIC_SALES_EMAIL ||
-                `sales@${process.env.NEXT_PUBLIC_TENANT_DOMAIN || 'company.local'}`,
-    phonePattern: process.env.NEXT_PUBLIC_DEFAULT_PHONE_PATTERN || '210 000 0000',
-    countryCode: process.env.NEXT_PUBLIC_PHONE_COUNTRY_CODE || '+30',
-    locale: process.env.NEXT_PUBLIC_LOCALE || 'el-GR',
-    timezone: process.env.NEXT_PUBLIC_TIMEZONE || 'Europe/Athens'
-  },
-
-  addressInfo: {
-    street: process.env.NEXT_PUBLIC_COMPANY_ADDRESS || 'Company Street 1',
-    city: process.env.NEXT_PUBLIC_COMPANY_CITY || 'Athens',
-    region: process.env.NEXT_PUBLIC_COMPANY_REGION || 'Attica',
-    postalCode: process.env.NEXT_PUBLIC_COMPANY_POSTAL_CODE || '10001',
-    country: process.env.NEXT_PUBLIC_COMPANY_COUNTRY || 'Greece'
-  },
-
-  brandSettings: {
-    primaryColor: process.env.NEXT_PUBLIC_BRAND_PRIMARY_COLOR || designTokens.colors.blue['500'],
-    secondaryColor: process.env.NEXT_PUBLIC_BRAND_SECONDARY_COLOR || designTokens.colors.gray['500'],
-    accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || designTokens.colors.green['500'],
-    theme: process.env.NEXT_PUBLIC_DEFAULT_THEME || 'default'
-  },
-
-  communicationSettings: {
-    defaultFromEmail: process.env.NEXT_PUBLIC_DEFAULT_FROM_EMAIL ||
-                     `noreply@${process.env.NEXT_PUBLIC_TENANT_DOMAIN || 'company.local'}`,
-    defaultFromName: process.env.NEXT_PUBLIC_DEFAULT_FROM_NAME ||
-                     process.env.NEXT_PUBLIC_COMPANY_NAME || 'Company',
-    phoneFormats: {
-      local: process.env.NEXT_PUBLIC_PHONE_FORMAT_LOCAL || '210 000 0000',
-      international: process.env.NEXT_PUBLIC_PHONE_FORMAT_INTL || '+30 210 000 0000',
-      display: process.env.NEXT_PUBLIC_PHONE_FORMAT_DISPLAY || '+30 210 000 0000'
-    }
-  },
-
-  businessSettings: {
-    industry: process.env.NEXT_PUBLIC_COMPANY_INDUSTRY || 'Professional Services',
-    businessType: (process.env.NEXT_PUBLIC_BUSINESS_TYPE as 'corporation' | 'llc' | 'partnership' | 'sole_proprietorship' | 'nonprofit' | 'other') || 'corporation',
-    defaultCurrency: process.env.NEXT_PUBLIC_DEFAULT_CURRENCY || 'EUR',
-    defaultLanguage: process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE || 'el'
-  },
-
-  technicalSettings: {
-    domain: process.env.NEXT_PUBLIC_TENANT_DOMAIN || 'company.local'
-  },
-
-  metadata: {
-    createdBy: SYSTEM_IDENTITY.ID,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    version: 1,
-    isActive: true,
-    notes: 'Fallback configuration από environment variables'
-  }
-};
 
 // ============================================================================
 // ENTERPRISE COMPANY SETTINGS SERVICE CLASS
@@ -382,9 +153,11 @@ export class EnterpriseCompanySettingsService {
       );
 
       if (!result.isEmpty && result.documents.length > 0) {
-        const companyDoc = result.documents[0];
-        const docId = typeof companyDoc.id === 'string' ? companyDoc.id : '';
-        return this.convertLegacyContactToSettings(companyDoc, docId);
+        const companyDoc = result.documents[0] as LegacyContactData;
+        const docId = typeof (companyDoc as Record<string, unknown>).id === 'string'
+          ? (companyDoc as Record<string, unknown>).id as string
+          : '';
+        return convertLegacyContactToSettings(companyDoc, docId);
       }
 
       return null;
@@ -392,160 +165,6 @@ export class EnterpriseCompanySettingsService {
       logger.error('Error loading from contacts collection', { error });
       return null;
     }
-  }
-
-  /**
-   * 🔄 Convert legacy contact document to enterprise settings
-   */
-  private convertLegacyContactToSettings(
-    contactData: {
-      tenantId?: string;
-      companyName?: string;
-      name?: string;
-      displayName?: string;
-      legalName?: string;
-      description?: string;
-      notes?: string;
-      website?: string;
-      companyWebsite?: string;
-      email?: string;
-      companyEmail?: string;
-      phone?: string;
-      companyPhone?: string;
-      supportEmail?: string;
-      salesEmail?: string;
-      address?: string;
-      street?: string;
-      city?: string;
-      region?: string;
-      postalCode?: string;
-      zipCode?: string;
-      country?: string;
-      brandColor?: string;
-      primaryColor?: string;
-      logo?: string;
-      logoUrl?: string;
-      defaultFromEmail?: string;
-      defaultFromName?: string;
-      industry?: string;
-      businessType?: string;
-      domain?: string;
-      createdAt?: { toDate?: () => Date };
-    },
-    contactId: string
-  ): EnterpriseCompanySettings {
-    const defaultFromEmail =
-      contactData.defaultFromEmail ||
-      contactData.email ||
-      contactData.companyEmail ||
-      'info@company.local';
-    const defaultFromName =
-      contactData.defaultFromName ||
-      contactData.companyName ||
-      contactData.name ||
-      'Company';
-    const businessType = this.normalizeBusinessType(contactData.businessType);
-
-    return {
-      id: `legacy-${contactId}`,
-      tenantId: contactData.tenantId,
-
-      companyInfo: {
-        name: contactData.companyName || contactData.name || 'Company',
-        displayName: contactData.displayName || contactData.companyName || contactData.name,
-        legalName: contactData.legalName || contactData.companyName,
-        description: contactData.description || contactData.notes,
-        website: contactData.website || contactData.companyWebsite
-      },
-
-      contactInfo: {
-        email: contactData.email || contactData.companyEmail || 'info@company.local',
-        phone: contactData.phone || contactData.companyPhone || '+30 210 000 0000',
-        supportEmail: contactData.supportEmail,
-        salesEmail: contactData.salesEmail,
-        countryCode: '+30',
-        phonePattern: '210 000 0000',
-        locale: 'el-GR',
-        timezone: 'Europe/Athens'
-      },
-
-      addressInfo: {
-        street: contactData.address || contactData.street || 'Company Street 1',
-        city: contactData.city || 'Athens',
-        region: contactData.region || 'Attica',
-        postalCode: contactData.postalCode || contactData.zipCode || '10001',
-        country: contactData.country || 'Greece'
-      },
-
-      brandSettings: {
-        primaryColor: contactData.brandColor || contactData.primaryColor || designTokens.colors.blue['500'],
-        logoUrl: contactData.logo || contactData.logoUrl
-      },
-
-      communicationSettings: {
-        defaultFromEmail,
-        defaultFromName,
-        phoneFormats: {
-          local: '210 000 0000',
-          international: '+30 210 000 0000',
-          display: '+30 210 000 0000'
-        }
-      },
-
-      businessSettings: {
-        industry: contactData.industry,
-        businessType,
-        defaultCurrency: 'EUR',
-        defaultLanguage: 'el'
-      },
-
-      technicalSettings: {
-        domain: contactData.domain || 'company.local'
-      },
-
-      metadata: {
-        createdBy: 'legacy-conversion',
-        createdAt: contactData.createdAt?.toDate?.() || new Date(),
-        updatedAt: new Date(),
-        version: 1,
-        isActive: true,
-        notes: 'Converted από legacy contact document'
-      }
-    };
-  }
-
-  private normalizeBusinessType(
-    value?: string
-  ): EnterpriseCompanySettings['businessSettings']['businessType'] {
-    if (!value) {
-      return 'other';
-    }
-
-    const allowed = [
-      'corporation',
-      'llc',
-      'partnership',
-      'sole_proprietorship',
-      'nonprofit',
-      'other'
-    ] as const;
-
-    return (allowed as readonly string[]).includes(value)
-      ? (value as EnterpriseCompanySettings['businessSettings']['businessType'])
-      : 'other';
-  }
-
-  private normalizeEnvironment(
-    value?: string
-  ): EnterpriseCompanySettings['environment'] {
-    if (!value) {
-      return 'all';
-    }
-
-    const allowed = ['development', 'staging', 'production', 'all'] as const;
-    return (allowed as readonly string[]).includes(value)
-      ? (value as EnterpriseCompanySettings['environment'])
-      : 'all';
   }
 
   // ========================================================================
@@ -662,7 +281,7 @@ export class EnterpriseCompanySettingsService {
       const settings = {
         ...FALLBACK_COMPANY_SETTINGS,
         tenantId,
-        environment: this.normalizeEnvironment(environment),
+        environment: normalizeEnvironment(environment),
         metadata: {
           ...FALLBACK_COMPANY_SETTINGS.metadata,
           createdAt: new Date(),

@@ -5,6 +5,9 @@
  * Split from monolithic CloudInfrastructure.ts για modular architecture
  * INTEGRATES με existing Alert Engine System για unified monitoring
  *
+ * Split into SRP modules (ADR-065):
+ * - infrastructure-metrics.ts — metrics calculations, mock data, status factories
+ *
  * @module enterprise/core/infrastructure-manager
  * @version 1.0.0 - ENTERPRISE MODULAR SPLITTING
  * @updated 2025-12-28 - Split from CloudInfrastructure.ts
@@ -12,6 +15,22 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('InfrastructureManager');
+
+// SRP modules (ADR-065)
+import {
+  getProviderComponents,
+  calculateAverageResponseTime,
+  calculateTotalThroughput,
+  createSecurityStatus,
+  createCostStatus,
+  collectStatusMetrics,
+  getRegionStatuses,
+  getProviderStatuses,
+} from './infrastructure-metrics';
+import {
+  validateProviderConfig,
+  testProviderConnection,
+} from './infrastructure-validation';
 
 // ✅ ENTERPRISE FIX: Import existing Alert Engine - Use canonical path alias
 // TODO: Verify correct path to alert engine
@@ -173,13 +192,13 @@ export class InfrastructureManager {
     this.providers.set(config.name, config.name);
 
     // Validate provider configuration
-    const validation = await this.validateProviderConfig(config);
+    const validation = await validateProviderConfig(config);
     if (!validation.isValid) {
       throw new Error(`Provider validation failed: ${validation.errors.join(', ')}`);
     }
 
     // Test provider connectivity
-    const connection = await this.testProviderConnection(config);
+    const connection = await testProviderConnection(config);
     if (!connection.isConnected) {
       throw new Error(`Provider connection failed: ${connection.error}`);
     }
@@ -206,7 +225,7 @@ export class InfrastructureManager {
 
       // Start performance monitoring
       setInterval(async () => {
-        await this.collectPerformanceMetrics();
+        await Promise.resolve();
       }, 300000); // Collect every 5 minutes
 
       console.debug('📊 Infrastructure monitoring enabled');
@@ -232,13 +251,13 @@ export class InfrastructureManager {
       const overall = this.calculateOverallStatus(components);
 
       // Get regional statuses
-      const regions = await this.getRegionStatuses();
+      const regions = await getRegionStatuses(this.config);
 
       // Get provider statuses
-      const providers = await this.getProviderStatuses();
+      const providers = await getProviderStatuses(this.providers);
 
       // Collect metrics
-      const metrics = await this.collectStatusMetrics(components);
+      const metrics = await collectStatusMetrics(components);
 
       // Get active alerts από Alert Engine
       const alerts = await this.getActiveAlerts();
@@ -277,7 +296,7 @@ export class InfrastructureManager {
         if (!provider) continue;
 
         // Simulate component discovery και status checking
-        const providerComponents = await this.getProviderComponents(provider);
+        const providerComponents = await getProviderComponents(provider);
         components.push(...providerComponents);
 
       } catch (error) {
@@ -303,8 +322,8 @@ export class InfrastructureManager {
           errorRate: 0,
           saturation: 0
         },
-        security: this.createSecurityStatus('unknown'),
-        cost: this.createCostStatus([])
+        security: createSecurityStatus('unknown'),
+        cost: createCostStatus([])
       };
     }
 
@@ -329,134 +348,17 @@ export class InfrastructureManager {
       health,
       availability,
       performance: {
-        responseTime: this.calculateAverageResponseTime(components),
-        throughput: this.calculateTotalThroughput(components),
+        responseTime: calculateAverageResponseTime(components),
+        throughput: calculateTotalThroughput(components),
         errorRate: health === 'healthy' ? 0.1 : health === 'degraded' ? 1.5 : 5.0,
         saturation: health === 'healthy' ? 45 : health === 'degraded' ? 75 : 95
       },
-      security: this.createSecurityStatus(health),
-      cost: this.createCostStatus(components)
+      security: createSecurityStatus(health),
+      cost: createCostStatus(components)
     };
   }
 
-  // ========================================================================
-  // PROVIDER INTEGRATION METHODS
-  // ========================================================================
-
-  /**
-   * Validate provider configuration
-   * Enterprise: Comprehensive provider validation
-   */
-  private async validateProviderConfig(config: CloudProvider): Promise<{
-    isValid: boolean;
-    errors: string[];
-    warnings: string[];
-  }> {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Validate required fields
-    if (!config.name) {
-      errors.push('Provider name is required');
-    }
-
-    if (!config.region) {
-      errors.push('Provider region is required');
-    }
-
-    if (!config.credentials) {
-      errors.push('Provider credentials are required');
-    }
-
-    // Validate credentials based on provider type
-    switch (config.name) {
-      case 'aws':
-        if (!config.credentials.accessKey) {
-          errors.push('AWS Access Key is required');
-        }
-        if (!config.credentials.secretKey) {
-          errors.push('AWS Secret Key is required');
-        }
-        break;
-
-      case 'azure':
-        if (!config.credentials.tenantId) {
-          errors.push('Azure Tenant ID is required');
-        }
-        if (!config.credentials.subscriptionId) {
-          errors.push('Azure Subscription ID is required');
-        }
-        break;
-
-      case 'gcp':
-        if (!config.credentials.projectId) {
-          errors.push('GCP Project ID is required');
-        }
-        if (!config.credentials.serviceAccountKey) {
-          errors.push('GCP Service Account Key is required');
-        }
-        break;
-
-      default:
-        warnings.push(`Provider ${config.name} validation not implemented`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings
-    };
-  }
-
-  /**
-   * Test provider connection
-   * Enterprise: Connection health verification
-   */
-  private async testProviderConnection(config: CloudProvider): Promise<ProviderConnectionStatus> {
-    try {
-      const startTime = Date.now();
-
-      // Simulate provider API call
-      await this.simulateProviderCall(config);
-
-      const endTime = Date.now();
-      const latency = endTime - startTime;
-
-      return {
-        provider: config.name,
-        isConnected: true,
-        connected: true,
-        lastChecked: new Date(),
-        latency,
-        capabilities: config.features
-      };
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Connection test failed';
-
-      return {
-        provider: config.name,
-        isConnected: false,
-        connected: false,
-        lastChecked: new Date(),
-        error: errorMessage,
-        capabilities: config.features
-      };
-    }
-  }
-
-  /**
-   * Simulate provider API call
-   * Enterprise: Provider-specific testing
-   */
-  private async simulateProviderCall(config: CloudProvider): Promise<void> {
-    // Simulate network latency
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-
-    // Simulate occasional failures
-    if (Math.random() < 0.05) {
-      throw new Error(`${config.name} API call failed: Network timeout`);
-    }
+  // Provider validation delegated to infrastructure-validation.ts
   }
 
   // ========================================================================
@@ -529,323 +431,6 @@ export class InfrastructureManager {
       logger.error('Failed to get active alerts', { error });
       return [];
     }
-  }
-
-  // ========================================================================
-  // UTILITY METHODS
-  // ========================================================================
-
-  /**
-   * Get provider components (simulated)
-   * Enterprise: Component discovery simulation
-   */
-  private async getProviderComponents(provider: CloudProvider): Promise<ComponentStatus[]> {
-    // Simulate component discovery
-    return [
-      {
-        id: `${provider.name}-compute-1`,
-        name: `${provider.name}-instance-1`,
-        type: 'compute-instance',
-        status: 'online',
-        health: 'healthy',
-        provider: provider.name,
-        region: provider.region,
-        metrics: {
-          cpu: 45,
-          memory: 67,
-          disk: 23,
-          network: { inbound: 1.2, outbound: 0.8 }
-        },
-        lastChecked: new Date(),
-        uptime: Math.floor(Math.random() * 86400 * 30), // Random uptime up to 30 days
-        errors: []
-      },
-      {
-        id: `${provider.name}-storage-1`,
-        name: `${provider.name}-bucket-1`,
-        type: 'storage-bucket',
-        status: 'online',
-        health: 'healthy',
-        provider: provider.name,
-        region: provider.region,
-        metrics: {
-          customMetrics: {
-            objectCount: 1250,
-            totalSize: 1024 * 1024 * 512 // 512 MB
-          }
-        },
-        lastChecked: new Date(),
-        uptime: Math.floor(Math.random() * 86400 * 60), // Random uptime up to 60 days
-        errors: []
-      }
-    ];
-  }
-
-  /**
-   * Calculate average response time
-   * Enterprise: Performance metrics calculation
-   */
-  private calculateAverageResponseTime(components: ComponentStatus[]): ResponseTimeMetrics {
-    const responseTimes = components.map(() => Math.random() * 100 + 50); // 50-150ms
-    const average = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
-    return {
-      average,
-      p50: average * 0.8,
-      p95: average * 1.5,
-      p99: average * 2.0,
-      max: average * 2.5
-    };
-  }
-
-  /**
-   * Calculate total throughput
-   * Enterprise: Throughput metrics calculation
-   */
-  private calculateTotalThroughput(components: ComponentStatus[]): ThroughputMetrics {
-    const requestsPerSecond = components.length * (Math.random() * 1000 + 500); // 500-1500 requests/second per component
-    return {
-      requestsPerSecond,
-      requestsPerMinute: requestsPerSecond * 60,
-      requestsPerHour: requestsPerSecond * 3600,
-      peakThroughput: requestsPerSecond * 1.8
-    };
-  }
-
-  /**
-   * Calculate current spend
-   * Enterprise: Cost calculation simulation
-   */
-  private calculateCurrentSpend(components: ComponentStatus[]): number {
-    return components.length * (Math.random() * 100 + 50); // $50-150 per component per month
-  }
-
-  /**
-   * Create security status object
-   * Enterprise: Security status construction
-   */
-  private createSecurityStatus(health: 'healthy' | 'degraded' | 'critical' | 'unknown'): SecurityStatus {
-    return {
-      overall: {
-        score: health === 'healthy' ? 95 : health === 'degraded' ? 75 : 50,
-        level: health === 'critical' ? 'high' : 'medium',
-        risks: [],
-        recommendations: [],
-        lastAssessment: new Date()
-      },
-      vulnerabilities: {
-        total: 0,
-        critical: 0,
-        high: 0,
-        medium: 0,
-        low: 0,
-        resolved: 0,
-        newThisWeek: 0,
-        averageResolutionTime: 0
-      },
-      compliance: {
-        frameworks: [],
-        overallScore: 90,
-        gaps: [],
-        audits: []
-      },
-      incidents: [],
-      threats: {
-        riskLevel: health === 'critical' ? 'high' : 'low',
-        activeThreatCount: 0,
-        blockedAttacks: 0,
-        sources: [],
-        indicators: [],
-        lastUpdated: new Date()
-      }
-    };
-  }
-
-  /**
-   * Create cost status object
-   * Enterprise: Cost status construction
-   */
-  private createCostStatus(components: ComponentStatus[]): CostStatus {
-    const currentSpend = this.calculateCurrentSpend(components);
-    return {
-      current: {
-        daily: currentSpend / 30,
-        monthly: currentSpend,
-        quarterly: currentSpend * 3,
-        yearly: currentSpend * 12,
-        currency: 'USD',
-        breakdown: {
-          byProvider: { aws: currentSpend * 0.5, azure: currentSpend * 0.3, gcp: currentSpend * 0.2 },
-          byRegion: { 'us-east-1': currentSpend * 0.4, 'eu-west-1': currentSpend * 0.6 },
-          byService: { compute: currentSpend * 0.4, storage: currentSpend * 0.3, networking: currentSpend * 0.3 },
-          byEnvironment: { production: currentSpend * 0.7, staging: currentSpend * 0.3 },
-          byProject: { 'geo-alert': currentSpend }
-        },
-        trending: 'stable'
-      },
-      forecast: {
-        nextMonth: currentSpend * 1.1,
-        nextQuarter: currentSpend * 3.2,
-        nextYear: currentSpend * 12.5,
-        confidence: 85,
-        factors: ['seasonal growth', 'new features'],
-        period: 'monthly',
-        estimatedCost: currentSpend * 1.1
-      },
-      budget: {
-        allocated: currentSpend * 1.5,
-        used: currentSpend,
-        remaining: currentSpend * 0.5,
-        utilization: 67,
-        status: 'on-track' as const,
-        alerts: []
-      },
-      optimization: {
-        total: 3,
-        suggestions: [],
-        lastUpdated: new Date()
-      }
-    };
-  }
-
-  /**
-   * Collect status metrics
-   * Enterprise: Comprehensive metrics collection
-   */
-  private async collectStatusMetrics(components: ComponentStatus[]): Promise<StatusMetrics> {
-    // Implementation will integrate με existing monitoring systems
-    return {
-      availability: {
-        current: 99.5,
-        slaTarget: 99.9,
-        uptime: { today: 99.8, week: 99.6, month: 99.5, quarter: 99.4, year: 99.3 },
-        downtimeEvents: [],
-        mttr: 15,
-        mtbf: 720
-      },
-      performance: {
-        responseTime: { average: 85, p50: 75, p95: 120, p99: 180, max: 250 },
-        throughput: { requestsPerSecond: 1250, requestsPerMinute: 75000, requestsPerHour: 4500000, peakThroughput: 2000 },
-        errorRate: 0.1,
-        saturation: 65
-      },
-      resource: {
-        cpu: { current: 55, average: 45, peak: 85, threshold: 80, trending: 'stable' },
-        memory: { current: 67, average: 62, peak: 78, threshold: 85, trending: 'up' },
-        storage: { used: 1024 * 1024 * 1024 * 500, total: 1024 * 1024 * 1024 * 1000, utilization: 50, iops: 1000, throughput: 50 },
-        network: { inbound: 10, outbound: 8, connections: 150, packetLoss: 0.01, latency: 25 },
-        instances: { total: components.length, running: components.filter(c => c.status === 'online').length, stopped: 0, failed: components.filter(c => c.status === 'offline').length, utilization: 65 }
-      },
-      cost: {
-        daily: 50,
-        monthly: 1500,
-        quarterly: 4500,
-        yearly: 18000,
-        currency: 'USD',
-        breakdown: {
-          byProvider: { aws: 800, azure: 400, gcp: 300 },
-          byRegion: { 'us-east-1': 600, 'eu-west-1': 500, 'ap-southeast-1': 400 },
-          byService: { compute: 600, storage: 400, networking: 300, database: 200 },
-          byEnvironment: { production: 900, staging: 400, development: 200 },
-          byProject: { 'geo-alert': 800, 'analytics': 400, 'monitoring': 300 }
-        },
-        trending: 'stable'
-      },
-      security: [
-        // SecurityRisk[] array - according to RegionStatus interface
-        {
-          id: 'risk-1',
-          type: 'vulnerability' as const,
-          severity: 'medium' as const,
-          description: 'Outdated security patches detected',
-          impact: 'Potential security vulnerabilities in production environment',
-          likelihood: 25,
-          mitigation: 'Apply latest security updates'
-        },
-        {
-          id: 'risk-2',
-          type: 'misconfiguration' as const,
-          severity: 'low' as const,
-          description: 'Non-critical configuration drift',
-          impact: 'Minor security configuration inconsistencies',
-          likelihood: 15,
-          mitigation: 'Review and standardize configurations'
-        }
-      ],
-      reliability: {
-        sli: {
-          availability: 99.5,
-          latency: 85,
-          throughput: 1250,
-          errorRate: 0.1,
-          quality: 95
-        },
-        slo: {
-          target: 99.9,
-          current: 99.5,
-          compliance: 'at-risk',
-          timeWindow: '30d',
-          remainingBudget: 40
-        },
-        errorBudget: {
-          total: 100,
-          consumed: 60,
-          remaining: 40,
-          burnRate: 2.5,
-          projectedExhaustion: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000) // 16 days
-        },
-        incidents: {
-          total: 3,
-          resolved: 2,
-          averageResolutionTime: 45,
-          p95ResolutionTime: 120,
-          escalations: 1,
-          customerImpact: 15
-        }
-      }
-    };
-  }
-
-  /**
-   * Collect performance metrics
-   * Enterprise: Performance monitoring
-   */
-  private async collectPerformanceMetrics(): Promise<void> {
-    // Implementation will integrate με existing monitoring systems
-    console.debug('📊 Collecting performance metrics...');
-  }
-
-  /**
-   * Get region statuses (simulated)
-   * Enterprise: Multi-region monitoring
-   */
-  // 🏢 ENTERPRISE: Proper return type for region statuses
-  private async getRegionStatuses(): Promise<RegionStatus[]> {
-    return this.config.regions.map(region => ({
-      name: region.name,
-      provider: region.provider,
-      status: 'active',
-      latency: { average: 25, min: 15, max: 45, p95: 35, lastMeasured: new Date() },
-      availability: 99.8,
-      components: 2,
-      healthyComponents: 2,
-      lastUpdated: new Date()
-    }));
-  }
-
-  /**
-   * Get provider statuses (simulated)
-   * Enterprise: Multi-cloud provider monitoring
-   */
-  // 🏢 ENTERPRISE: Proper return type for provider statuses
-  private async getProviderStatuses(): Promise<ProviderStatus[]> {
-    return Array.from(this.providers.keys()).map(providerName => ({
-      name: providerName,
-      status: 'operational',
-      services: [],
-      overallHealth: 98,
-      incidentCount: 0,
-      lastUpdated: new Date()
-    }));
   }
 
   // ========================================================================

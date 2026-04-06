@@ -42,60 +42,30 @@ import type { Point2D, ViewTransform } from '../rendering/types/Types';
 import type { DxfEntityUnion, DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
 import { GRIP_CONFIG, type GripInfo } from './useGripMovement';
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
-import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { useMoveEntities } from './useMoveEntities';
 import { useCommandHistory, MoveVertexCommand } from '../core/commands';
 import { useLevels } from '../systems/levels';
-import type { ISceneManager, SceneEntity } from '../core/commands/interfaces';
-import type { AnySceneEntity } from '../types/scene';
+import { createGripSceneAdapter } from './grip-scene-adapter';
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// Re-export types and pure functions for consumers
+export type {
+  GripPhase,
+  GripIdentifier,
+  DxfGripDragPreview,
+  DxfGripInteractionState,
+  UseDxfGripInteractionReturn,
+} from './grip-computation';
 
-/** Interaction phase of the grip state machine */
-type GripPhase = 'idle' | 'hovering' | 'warm' | 'dragging';
+export { computeDxfEntityGrips, computeAngleDegrees } from './grip-computation';
 
-/** Unique grip identifier for rendering pipeline */
-export interface GripIdentifier {
-  entityId: string;
-  gripIndex: number;
-}
-
-/** Drag preview data for live rendering */
-export interface DxfGripDragPreview {
-  entityId: string;
-  gripIndex: number;
-  delta: Point2D;
-  movesEntity: boolean;
-  /** For edge grips: which 2 vertex indices to move together (edge-stretch preview) */
-  edgeVertexIndices?: [number, number];
-}
-
-/** Grip interaction state for rendering pipeline */
-export interface DxfGripInteractionState {
-  hoveredGrip?: GripIdentifier;
-  activeGrip?: GripIdentifier;
-}
-
-/** Return type of useDxfGripInteraction */
-export interface UseDxfGripInteractionReturn {
-  gripInteractionState: DxfGripInteractionState;
-  /** True while user is dragging a grip (mouseDown → mouseUp) */
-  isDraggingGrip: boolean;
-  /** @deprecated Use isDraggingGrip — kept for backward compatibility */
-  isFollowingGrip: boolean;
-  handleGripMouseMove: (worldPos: Point2D, screenPos: Point2D) => boolean;
-  /** Start drag on mouseDown over a hovering/warm grip. Returns true if consumed. */
-  handleGripMouseDown: (worldPos: Point2D) => boolean;
-  /** Commit drag on mouseUp. Returns true if consumed. */
-  handleGripMouseUp: (worldPos: Point2D) => boolean;
-  /** @deprecated No-op in drag-release model — kept for backward compatibility */
-  handleGripClick: (worldPos: Point2D) => boolean;
-  handleGripEscape: () => boolean;
-  handleGripRightClick: () => boolean;
-  dragPreview: DxfGripDragPreview | null;
-}
+import type {
+  GripPhase,
+  GripIdentifier,
+  DxfGripDragPreview,
+  DxfGripInteractionState,
+  UseDxfGripInteractionReturn,
+} from './grip-computation';
+// computeAngleDegrees re-exported from grip-computation for consumers
 
 /** Options for useDxfGripInteraction */
 interface UseDxfGripInteractionOptions {
@@ -105,210 +75,10 @@ interface UseDxfGripInteractionOptions {
   enabled?: boolean;
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/** Time (ms) before a hovered grip transitions to warm (orange) */
 const WARM_DELAY_MS = 1000;
 
 // ============================================================================
-// PURE: Compute grips from DXF entity geometry
-// ============================================================================
-
-export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
-  const grips: GripInfo[] = [];
-
-  switch (entity.type) {
-    case 'line': {
-      // Start vertex
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 0,
-        type: 'vertex',
-        position: entity.start,
-        movesEntity: false,
-      });
-      // End vertex
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 1,
-        type: 'vertex',
-        position: entity.end,
-        movesEntity: false,
-      });
-      // Midpoint — edge-stretch: moves both endpoints together
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 2,
-        type: 'edge',
-        position: calculateMidpoint(entity.start, entity.end),
-        movesEntity: false,
-        edgeVertexIndices: [0, 1],
-      });
-      break;
-    }
-
-    case 'circle': {
-      // Center (moves entire entity)
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 0,
-        type: 'center',
-        position: entity.center,
-        movesEntity: true,
-      });
-      // Quadrant points (stretch radius)
-      const quadrants: Point2D[] = [
-        { x: entity.center.x + entity.radius, y: entity.center.y },
-        { x: entity.center.x, y: entity.center.y + entity.radius },
-        { x: entity.center.x - entity.radius, y: entity.center.y },
-        { x: entity.center.x, y: entity.center.y - entity.radius },
-      ];
-      quadrants.forEach((pos, i) => {
-        grips.push({
-          entityId: entity.id,
-          gripIndex: i + 1,
-          type: 'vertex',
-          position: pos,
-          movesEntity: false,
-        });
-      });
-      break;
-    }
-
-    case 'polyline': {
-      // Each vertex
-      entity.vertices.forEach((v, i) => {
-        grips.push({
-          entityId: entity.id,
-          gripIndex: i,
-          type: 'vertex',
-          position: v,
-          movesEntity: false,
-        });
-      });
-      // Midpoints of each edge — edge-stretch: moves the 2 vertices of this edge
-      const vLen = entity.vertices.length;
-      const edgeCount = entity.closed ? vLen : vLen - 1;
-      for (let i = 0; i < edgeCount; i++) {
-        const next = (i + 1) % vLen;
-        grips.push({
-          entityId: entity.id,
-          gripIndex: vLen + i,
-          type: 'edge',
-          position: calculateMidpoint(entity.vertices[i], entity.vertices[next]),
-          movesEntity: false,
-          edgeVertexIndices: [i, next],
-        });
-      }
-      break;
-    }
-
-    case 'arc': {
-      const startRad = (entity.startAngle * Math.PI) / 180;
-      const endRad = (entity.endAngle * Math.PI) / 180;
-      const midRad = (startRad + endRad) / 2;
-
-      // Center (moves entire entity)
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 0,
-        type: 'center',
-        position: entity.center,
-        movesEntity: true,
-      });
-      // Start point
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 1,
-        type: 'vertex',
-        position: {
-          x: entity.center.x + entity.radius * Math.cos(startRad),
-          y: entity.center.y + entity.radius * Math.sin(startRad),
-        },
-        movesEntity: false,
-      });
-      // End point
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 2,
-        type: 'vertex',
-        position: {
-          x: entity.center.x + entity.radius * Math.cos(endRad),
-          y: entity.center.y + entity.radius * Math.sin(endRad),
-        },
-        movesEntity: false,
-      });
-      // Mid-arc point (moves entire entity)
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 3,
-        type: 'edge',
-        position: {
-          x: entity.center.x + entity.radius * Math.cos(midRad),
-          y: entity.center.y + entity.radius * Math.sin(midRad),
-        },
-        movesEntity: true,
-      });
-      break;
-    }
-
-    case 'text': {
-      // Position grip (moves entire entity)
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 0,
-        type: 'center',
-        position: entity.position,
-        movesEntity: true,
-      });
-      break;
-    }
-
-    case 'angle-measurement': {
-      // Vertex
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 0,
-        type: 'vertex',
-        position: entity.vertex,
-        movesEntity: false,
-      });
-      // Point 1
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 1,
-        type: 'vertex',
-        position: entity.point1,
-        movesEntity: false,
-      });
-      // Point 2
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 2,
-        type: 'vertex',
-        position: entity.point2,
-        movesEntity: false,
-      });
-      break;
-    }
-  }
-
-  return grips;
-}
-
-/** Recalculate angle (degrees) between two arms meeting at a vertex */
-function computeAngleDegrees(vertex: Point2D, p1: Point2D, p2: Point2D): number {
-  const a1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
-  const a2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x);
-  let deg = Math.abs(a2 - a1) * (180 / Math.PI);
-  if (deg > 180) deg = 360 - deg;
-  return deg;
-}
-
-// ============================================================================
-// HOOK
+// HOOK (deprecated — use useUnifiedGripInteraction instead)
 // ============================================================================
 
 export function useDxfGripInteraction({
@@ -379,179 +149,9 @@ export function useDxfGripInteraction({
   );
 
   // ----- Helper: create SceneManager adapter for MoveVertexCommand -----
-  const createSceneManagerAdapter = useCallback((): ISceneManager | null => {
+  const createSceneManagerAdapter = useCallback(() => {
     if (!currentLevelId) return null;
-    return {
-      addEntity: (entity: SceneEntity) => {
-        const scene = getLevelScene(currentLevelId);
-        if (scene) {
-          setLevelScene(currentLevelId, {
-            ...scene,
-            entities: [...scene.entities, entity as unknown as AnySceneEntity],
-          });
-        }
-      },
-      removeEntity: (id: string) => {
-        const scene = getLevelScene(currentLevelId);
-        if (scene) {
-          setLevelScene(currentLevelId, {
-            ...scene,
-            entities: scene.entities.filter((e) => e.id !== id),
-          });
-        }
-      },
-      getEntity: (id: string) => {
-        const scene = getLevelScene(currentLevelId);
-        return scene?.entities?.find((e) => e.id === id) as SceneEntity | undefined;
-      },
-      updateEntity: (id: string, updates: Partial<SceneEntity>) => {
-        const scene = getLevelScene(currentLevelId);
-        if (scene) {
-          setLevelScene(currentLevelId, {
-            ...scene,
-            entities: scene.entities.map((e) =>
-              e.id === id ? ({ ...e, ...updates } as AnySceneEntity) : e
-            ),
-          });
-        }
-      },
-      updateVertex: (id: string, vertexIndex: number, position: Point2D) => {
-        const scene = getLevelScene(currentLevelId);
-        if (!scene) return;
-
-        setLevelScene(currentLevelId, {
-          ...scene,
-          entities: scene.entities.map((e) => {
-            if (e.id !== id) return e;
-
-            // Polyline/polygon: has vertices array
-            if ('vertices' in e && Array.isArray(e.vertices)) {
-              const vertices = [...e.vertices] as Point2D[];
-              if (vertexIndex >= 0 && vertexIndex < vertices.length) {
-                vertices[vertexIndex] = position;
-              }
-              return { ...e, vertices };
-            }
-
-            // Line: gripIndex 0→start, 1→end
-            if ('start' in e && 'end' in e && !('vertices' in e)) {
-              if (vertexIndex === 0) return { ...e, start: position };
-              if (vertexIndex === 1) return { ...e, end: position };
-              return e;
-            }
-
-            // Circle: gripIndex 1-4 = quadrant → update radius (center stays fixed)
-            if ('center' in e && 'radius' in e && !('startAngle' in e)) {
-              const center = e.center as Point2D;
-              return { ...e, radius: calculateDistance(center, position) };
-            }
-
-            // Arc: gripIndex 1→startAngle, 2→endAngle (+ update radius)
-            if ('center' in e && 'radius' in e && 'startAngle' in e && 'endAngle' in e) {
-              const center = e.center as Point2D;
-              const newRadius = calculateDistance(center, position);
-              let angleDeg = Math.atan2(position.y - center.y, position.x - center.x) * (180 / Math.PI);
-              if (angleDeg < 0) angleDeg += 360;
-              if (vertexIndex === 1) return { ...e, startAngle: angleDeg, radius: newRadius };
-              if (vertexIndex === 2) return { ...e, endAngle: angleDeg, radius: newRadius };
-              return e;
-            }
-
-            // Rectangle: gripIndex 0-3 → corners derived from corner1/corner2
-            if ('corner1' in e && 'corner2' in e) {
-              const c1 = e.corner1 as Point2D;
-              const c2 = e.corner2 as Point2D;
-              // 0=TL(corner1), 1=TR, 2=BR(corner2), 3=BL
-              if (vertexIndex === 0) return { ...e, corner1: position };
-              if (vertexIndex === 1) return { ...e, corner1: { x: c1.x, y: position.y }, corner2: { x: position.x, y: c2.y } };
-              if (vertexIndex === 2) return { ...e, corner2: position };
-              if (vertexIndex === 3) return { ...e, corner1: { x: position.x, y: c1.y }, corner2: { x: c2.x, y: position.y } };
-              return e;
-            }
-
-            // Angle-measurement: gripIndex 0→vertex, 1→point1, 2→point2
-            if ('vertex' in e && 'point1' in e && 'point2' in e) {
-              const vertex = vertexIndex === 0 ? position : e.vertex as Point2D;
-              const point1 = vertexIndex === 1 ? position : e.point1 as Point2D;
-              const point2 = vertexIndex === 2 ? position : e.point2 as Point2D;
-              return {
-                ...e,
-                vertex, point1, point2,
-                angle: computeAngleDegrees(vertex, point1, point2),
-              };
-            }
-
-            return e;
-          }),
-        });
-      },
-      insertVertex: (_id: string, _insertIndex: number, _position: Point2D) => {
-        // Not needed for grip editing
-      },
-      removeVertex: (_id: string, _vertexIndex: number) => {
-        // Not needed for grip editing
-      },
-      getVertices: (id: string): Point2D[] | undefined => {
-        const scene = getLevelScene(currentLevelId);
-        const entity = scene?.entities?.find((e) => e.id === id);
-        if (!entity) return undefined;
-
-        // Polyline/polygon: actual vertices array
-        if ('vertices' in entity && Array.isArray(entity.vertices)) {
-          return entity.vertices as Point2D[];
-        }
-        // Line: [start, end] — gripIndex 0=start, 1=end
-        if ('start' in entity && 'end' in entity) {
-          return [entity.start as Point2D, entity.end as Point2D];
-        }
-        // Circle: [center, E, N, W, S] — gripIndex 0-4
-        if ('center' in entity && 'radius' in entity && !('startAngle' in entity)) {
-          const c = entity.center as Point2D;
-          const r = entity.radius as number;
-          return [
-            c,
-            { x: c.x + r, y: c.y },
-            { x: c.x, y: c.y + r },
-            { x: c.x - r, y: c.y },
-            { x: c.x, y: c.y - r },
-          ];
-        }
-        // Arc: [center, startPt, endPt, midArcPt] — gripIndex 0-3
-        if ('center' in entity && 'radius' in entity && 'startAngle' in entity && 'endAngle' in entity) {
-          const c = entity.center as Point2D;
-          const r = entity.radius as number;
-          const sa = ((entity.startAngle as number) * Math.PI) / 180;
-          const ea = ((entity.endAngle as number) * Math.PI) / 180;
-          const ma = (sa + ea) / 2;
-          return [
-            c,
-            { x: c.x + r * Math.cos(sa), y: c.y + r * Math.sin(sa) },
-            { x: c.x + r * Math.cos(ea), y: c.y + r * Math.sin(ea) },
-            { x: c.x + r * Math.cos(ma), y: c.y + r * Math.sin(ma) },
-          ];
-        }
-        // Rectangle: 4 corners from corner1/corner2 — gripIndex 0-3
-        if ('corner1' in entity && 'corner2' in entity) {
-          const c1 = entity.corner1 as Point2D;
-          const c2 = entity.corner2 as Point2D;
-          return [
-            c1,                            // 0: TL
-            { x: c2.x, y: c1.y },         // 1: TR
-            c2,                            // 2: BR
-            { x: c1.x, y: c2.y },         // 3: BL
-          ];
-        }
-        // Angle-measurement: [vertex, point1, point2] — gripIndex 0-2
-        if ('vertex' in entity && 'point1' in entity && 'point2' in entity) {
-          return [
-            entity.vertex as Point2D,
-            entity.point1 as Point2D,
-            entity.point2 as Point2D,
-          ];
-        }
-        return undefined;
-      },
-    };
+    return createGripSceneAdapter({ currentLevelId, getLevelScene, setLevelScene });
   }, [currentLevelId, getLevelScene, setLevelScene]);
 
   // ----- Helper: reset to idle -----
