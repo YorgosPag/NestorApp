@@ -1,4 +1,4 @@
-# ADR-065: TestingPipeline Split — SRP Refactoring
+# ADR-065: SRP Refactoring — Geo-Canvas Large File Splits
 
 **Status**: IMPLEMENTED
 **Date**: 2026-04-06
@@ -35,4 +35,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 
 | Date | Change |
 |------|--------|
-| 2026-04-06 | Initial split: 1 file (1768 lines) -> 4 files (all compliant) |
+| 2026-04-06 | Initial split: TestingPipeline 1 file (1768 lines) -> 4 files (all compliant) |
+| 2026-04-06 | DockerOrchestrator split: 1 file (1761 lines) -> 5 files (all compliant) |
+
+## DockerOrchestrator Split
+
+`DockerOrchestrator.ts` contained 1761 lines — 3.5x over the 500-line limit. Same pattern as TestingPipeline.
+
+Split into 5 files in `src/subapps/geo-canvas/deployment/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `docker-orchestrator-types.ts` | 30+ interfaces, types | 447 | Yes (types-only) |
+| `docker-container-configs.ts` | 5 container config factories | 393 | No |
+| `docker-infrastructure-configs.ts` | 11 service/ingress/configmap/secret factories | 329 | No |
+| `docker-orchestrator-ops.ts` | Deployment, monitoring & utility functions | 246 | No |
+| `DockerOrchestrator.ts` | Main class: singleton, orchestration, scaling, public API | 396 | No |
+
+Consumer Impact: File not imported anywhere in codebase — zero risk.
