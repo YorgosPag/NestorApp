@@ -43,6 +43,7 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | AdministrativeBoundaryService split: 1 file (1634 lines) -> 4 files (all compliant) |
 | 2026-04-06 | geometry-utils split: 1 file (1361 lines) -> 5 files (all compliant) |
 | 2026-04-06 | LayerRenderer split: 1 file (1286 lines) -> 4 files (all compliant) |
+| 2026-04-06 | EnterpriseTeamsService split: 1 file (1233 lines) -> 3 files (all compliant) |
 
 ## DockerOrchestrator Split
 
@@ -167,3 +168,19 @@ Key design decisions:
 - `worldToScreenFn` passed as callback to avoid circular dependency with main class
 
 Consumer Impact: Main file keeps same class name and public API — **zero consumer changes**.
+
+## EnterpriseTeamsService Split
+
+`EnterpriseTeamsService.ts` contained 1233 lines — 2.5x over the 500-line limit. **1 consumer** (crm/teams/page.tsx).
+
+Split into 3 files in `src/services/teams/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `enterprise-teams-types.ts` | 15+ interfaces, 6 type aliases (GDPR, multi-tenant, RBAC) | 317 | Yes (types-only) |
+| `enterprise-teams-defaults.ts` | 10 fallback/default factory functions (teams, members, positions, orgChart, config, permissions, display, compliance, features) | 289 | Yes (config/data) |
+| `EnterpriseTeamsService.ts` | Main class: singleton, Firebase connection, CRUD ops, multi-level cache, re-exports | 473 | No |
+
+Key refactoring: 10 private methods converted to standalone exported factory functions with `create*` naming convention. Main class delegates to imported functions. `baseTeam` DRY pattern eliminates repeated team object boilerplate.
+
+Consumer Impact: Main file re-exports all from types + defaults — **zero consumer changes**.
