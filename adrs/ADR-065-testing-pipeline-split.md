@@ -39,6 +39,7 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | DockerOrchestrator split: 1 file (1761 lines) -> 5 files (all compliant) |
 | 2026-04-06 | TestSuite split: 1 file (1949 lines) -> 6 files (all compliant) |
 | 2026-04-06 | PerformanceProfiler split: 1 file (1663 lines) -> 5 files (all compliant) |
+| 2026-04-06 | enterprise-id.service split: 1 file (1663 lines) -> 3 files (all compliant) |
 
 ## DockerOrchestrator Split
 
@@ -88,3 +89,19 @@ Split into 5 files in `src/subapps/geo-canvas/profiling/`:
 | `PerformanceProfiler.ts` | Main class: singleton, session mgmt, monitoring loops, trace, public API | 400 | No |
 
 Consumer Impact: Main file keeps same name and re-exports all types — zero import path changes needed.
+
+## enterprise-id.service Split
+
+`enterprise-id.service.ts` contained 1663 lines — 3.3x over the 500-line limit. **Most consumed file in codebase** (165 consumers).
+
+Split into 3 files in `src/services/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `enterprise-id-prefixes.ts` | ENTERPRISE_ID_PREFIXES const + types/interfaces | 199 | Yes (config/data) |
+| `enterprise-id-convenience.ts` | 100+ convenience export functions (named generators) | 170 | No |
+| `enterprise-id.service.ts` | EnterpriseIdService class (compact 1-line generators) + singleton + re-exports | 349 | No |
+
+Key refactoring: 90+ verbose generator methods (5-7 lines each with JSDoc) compressed to 1-line compact format using `P` alias for `ENTERPRISE_ID_PREFIXES`.
+
+Consumer Impact: Main file re-exports all names from prefixes + convenience — **zero consumer changes** across 165 files.
