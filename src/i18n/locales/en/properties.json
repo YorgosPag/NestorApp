@@ -22,7 +22,12 @@
       "no": "No, single floor"
     },
     "noBuildingOrFloor": "Link a building and floor first to enable automatic level creation.",
-    "selectHierarchyFirst": "Select unit type, building and floor first to unlock the fields."
+    "selectHierarchyFirst": "Select unit type, building and floor first to unlock the fields.",
+    "createFloor": "Create new floor",
+    "primaryFloor": "Primary floor",
+    "setPrimary": "Set as primary",
+    "removeFloor": "Remove floor",
+    "noFloors": "No floors available"
   },
   "header": {
     "title": "Property Management",

@@ -103,7 +103,6 @@ export function PropertyFieldsBlock({
   const currentCommercialStatus = (property.commercialStatus ?? 'unavailable') as CommercialStatus;
   const isReservedOrSold = (['reserved', 'sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
-
   const [formData, setFormData] = useState<PropertyFieldsFormData>({
     name: property.name ?? '', code: property.code ?? '', type: property.type ?? '',
     projectId: (property as unknown as Record<string, unknown>).projectId as string ?? '',
@@ -467,6 +466,7 @@ export function PropertyFieldsBlock({
         isHierarchyLocked={isHierarchyLocked}
         onLevelsChange={isCreatingNewUnit ? handleLevelsChange : undefined}
         creationBuildingId={isCreatingNewUnit ? (formData.buildingId || null) : null}
+        creationProjectId={isCreatingNewUnit ? (formData.projectId || null) : null}
         isSoldOrRented={isSoldOrRented}
         isMultiLevel={!!isMultiLevel}
         effectiveLevels={effectiveLevels}

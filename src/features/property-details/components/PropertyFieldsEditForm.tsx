@@ -63,6 +63,7 @@ export function PropertyFieldsEditForm({
   isHierarchyLocked,
   onLevelsChange,
   creationBuildingId,
+  creationProjectId,
   isMultiLevel,
   effectiveLevels,
   activeLevelId,
@@ -149,6 +150,7 @@ export function PropertyFieldsEditForm({
       {isCreatingNewUnit && isMultiLevelCapableType(formData.type) && onLevelsChange && (
         <FloorMultiSelectField
           buildingId={creationBuildingId}
+          projectId={creationProjectId}
           value={effectiveLevels}
           onChange={onLevelsChange}
           label={t('multiLevel.floors', { ns: 'properties-detail' })}

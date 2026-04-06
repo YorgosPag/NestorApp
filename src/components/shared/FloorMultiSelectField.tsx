@@ -3,22 +3,14 @@
 /**
  * FloorMultiSelectField — Multi-floor selector for multi-level units (ADR-236)
  *
- * Allows selecting multiple floors for maisonettes, penthouses, lofts, etc.
- * Pattern: Follows LinkedSpacesCard (Select + Add → Badges with remove).
+ * SSoT: Uses FloorInlineCreateForm (canonical 3-field form from Buildings→Floors)
+ * for creating new floors. Available existing floors shown as quick-add chips.
  *
  * @module components/shared/FloorMultiSelectField
- * @pattern Radix Select (ADR-001) + Badge list
  * @since ADR-236 — Multi-Level Property Management
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -31,12 +23,11 @@ import { formatFloorLabel } from '@/lib/intl-utils';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import type { PropertyLevel } from '@/types/property';
 import type { FloorOption } from '@/services/multi-level.service';
 import { buildLevelsFromSelection } from '@/services/multi-level.service';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import '@/lib/design-system';
+import { FloorInlineCreateForm } from '@/components/building-management/tabs/FloorInlineCreateForm';
 
 // =============================================================================
 // TYPES
@@ -45,6 +36,8 @@ import '@/lib/design-system';
 export interface FloorMultiSelectFieldProps {
   /** Building ID to fetch floors for — null/undefined = disabled */
   buildingId: string | null | undefined;
+  /** Project ID for FloorInlineCreateForm (server policy) */
+  projectId?: string | null;
   /** Current levels (from unit data) */
   value: PropertyLevel[];
   /** Callback when levels change */
@@ -63,10 +56,9 @@ export interface FloorMultiSelectFieldProps {
 // COMPONENT
 // =============================================================================
 
-const NONE_VALUE = '__none__';
-
 export function FloorMultiSelectField({
   buildingId,
+  projectId,
   value,
   onChange,
   label,
@@ -76,39 +68,28 @@ export function FloorMultiSelectField({
 }: FloorMultiSelectFieldProps) {
   const { t } = useTranslation(['properties']);
   const { user } = useAuth();
-  const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
-  // Floor options from Firestore
   const [allFloors, setAllFloors] = useState<FloorOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const pendingFloorIdRef = useRef<string | null>(null);
 
-  // Selection state for the dropdown
-  const [selectValue, setSelectValue] = useState(NONE_VALUE);
-
-  // Real-time Firestore subscription for floors
+  // Real-time Firestore subscription for building floors
   useEffect(() => {
     if (!buildingId || !user) {
       setAllFloors([]);
       setLoading(false);
       return;
     }
-
     setLoading(true);
-
     const floorsCol = collection(db, COLLECTIONS.FLOORS);
-    const constraints: QueryConstraint[] = [
-      where('buildingId', '==', buildingId),
-    ];
-
-    // ADR-232: Skip companyId filter for super admin
+    const constraints: QueryConstraint[] = [where('buildingId', '==', buildingId)];
     const isSuperAdmin = user.globalRole === 'super_admin';
     if (!isSuperAdmin && user.companyId) {
       constraints.push(where('companyId', '==', user.companyId));
     }
-
     const q = query(floorsCol, ...constraints);
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -116,87 +97,65 @@ export function FloorMultiSelectField({
           .map((doc) => {
             const data = doc.data();
             const num = typeof data.number === 'number' ? data.number : 0;
-            return {
-              id: doc.id,
-              number: num,
-              name: (data.name as string) || formatFloorLabel(num),
-            };
+            return { id: doc.id, number: num, name: (data.name as string) || formatFloorLabel(num) };
           })
           .sort((a, b) => a.number - b.number);
-
         setAllFloors(options);
         setLoading(false);
       },
-      () => {
-        setAllFloors([]);
-        setLoading(false);
-      }
+      () => { setAllFloors([]); setLoading(false); }
     );
-
     return () => unsubscribe();
   }, [buildingId, user]);
 
-  // Selected floor IDs (from current value)
+  // Auto-add newly created floor when it appears in subscription
+  useEffect(() => {
+    if (!pendingFloorIdRef.current) return;
+    const found = allFloors.find(f => f.id === pendingFloorIdRef.current);
+    if (found) {
+      const selectedFloors: FloorOption[] = [
+        ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
+        found,
+      ];
+      const primary = value[0]?.floorId ?? found.id;
+      onChange(buildLevelsFromSelection(selectedFloors, primary));
+      pendingFloorIdRef.current = null;
+    }
+  }, [allFloors, value, onChange]);
+
   const selectedIds = new Set(value.map((l) => l.floorId));
-
-  // Available floors (exclude already selected)
   const availableFloors = allFloors.filter((f) => !selectedIds.has(f.id));
-
-  // Primary floor ID
   const primaryId = value.find((l) => l.isPrimary)?.floorId ?? value[0]?.floorId;
-
-  // ── Add floor handler ──
-  const handleAddFloor = useCallback(() => {
-    if (selectValue === NONE_VALUE) return;
-
-    const floor = allFloors.find((f) => f.id === selectValue);
-    if (!floor) return;
-
-    const isFirst = value.length === 0;
-    const selectedFloors: FloorOption[] = [
-      ...value.map((l) => ({
-        id: l.floorId,
-        number: l.floorNumber,
-        name: l.name,
-      })),
-      floor,
-    ];
-
-    const newPrimary = isFirst ? floor.id : (primaryId ?? floor.id);
-    const newLevels = buildLevelsFromSelection(selectedFloors, newPrimary);
-    onChange(newLevels);
-    setSelectValue(NONE_VALUE);
-  }, [selectValue, allFloors, value, primaryId, onChange]);
-
-  // ── Remove floor handler ──
-  const handleRemoveFloor = useCallback(
-    (floorId: string) => {
-      const remaining = value.filter((l) => l.floorId !== floorId);
-
-      // If we removed the primary, reassign to first remaining
-      if (floorId === primaryId && remaining.length > 0) {
-        remaining[0] = { ...remaining[0], isPrimary: true };
-      }
-
-      onChange(remaining);
-    },
-    [value, primaryId, onChange]
-  );
-
-  // ── Set primary handler ──
-  const handleSetPrimary = useCallback(
-    (floorId: string) => {
-      const updated = value.map((l) => ({
-        ...l,
-        isPrimary: l.floorId === floorId,
-      }));
-      onChange(updated);
-    },
-    [value, onChange]
-  );
-
   const isDisabled = disabled || !buildingId;
   const canRemove = !isDisabled && value.length > minLevels;
+
+  // Quick-add an existing floor as a level
+  const handleQuickAdd = useCallback((floor: FloorOption) => {
+    const selectedFloors: FloorOption[] = [
+      ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
+      floor,
+    ];
+    const primary = value.length === 0 ? floor.id : (primaryId ?? floor.id);
+    onChange(buildLevelsFromSelection(selectedFloors, primary));
+  }, [value, primaryId, onChange]);
+
+  const handleRemoveFloor = useCallback((floorId: string) => {
+    const remaining = value.filter((l) => l.floorId !== floorId);
+    if (floorId === primaryId && remaining.length > 0) {
+      remaining[0] = { ...remaining[0], isPrimary: true };
+    }
+    onChange(remaining);
+  }, [value, primaryId, onChange]);
+
+  const handleSetPrimary = useCallback((floorId: string) => {
+    onChange(value.map((l) => ({ ...l, isPrimary: l.floorId === floorId })));
+  }, [value, onChange]);
+
+  // SSoT: FloorInlineCreateForm callback — auto-add when Firestore updates
+  const handleFloorCreated = useCallback((floorId?: string) => {
+    if (floorId) pendingFloorIdRef.current = floorId;
+    setShowCreateForm(false);
+  }, []);
 
   return (
     <fieldset className="space-y-2">
@@ -212,63 +171,16 @@ export function FloorMultiSelectField({
         </section>
       ) : (
         <>
-          {/* Dropdown + Add button */}
-          {!isDisabled && (
-            <section className="flex items-center gap-2">
-              <Select
-                value={selectValue}
-                onValueChange={setSelectValue}
-                disabled={isDisabled || availableFloors.length === 0}
-              >
-                <SelectTrigger className="h-8 text-sm flex-1">
-                  <SelectValue
-                    placeholder={t('units:multiLevel.addFloor')}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_VALUE}>—</SelectItem>
-                  {availableFloors.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {f.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 shrink-0"
-                disabled={selectValue === NONE_VALUE}
-                onClick={handleAddFloor}
-                aria-label={t('units:multiLevel.addFloor')}
-              >
-                <Plus className={iconSizes.sm} />
-              </Button>
-            </section>
-          )}
-
           {/* Selected floors as badges */}
-          {value.length > 0 ? (
-            <section className="flex flex-wrap gap-1.5" aria-label={t('units:multiLevel.floors')}>
+          {value.length > 0 && (
+            <section className="flex flex-wrap gap-1.5" aria-label={t('multiLevel.floors')}>
               {value.map((level) => (
                 <Badge
                   key={level.floorId}
                   variant={level.isPrimary ? 'default' : 'secondary'}
-                  className={cn(
-                    'flex items-center gap-1 text-xs',
-                    !isDisabled && 'cursor-pointer'
-                  )}
-                  onClick={
-                    !isDisabled && !level.isPrimary
-                      ? () => handleSetPrimary(level.floorId)
-                      : undefined
-                  }
-                  title={
-                    level.isPrimary
-                      ? t('units:multiLevel.primaryFloor')
-                      : t('units:multiLevel.setPrimary')
-                  }
+                  className={cn('flex items-center gap-1 text-xs', !isDisabled && 'cursor-pointer')}
+                  onClick={!isDisabled && !level.isPrimary ? () => handleSetPrimary(level.floorId) : undefined}
+                  title={level.isPrimary ? t('multiLevel.primaryFloor') : t('multiLevel.setPrimary')}
                 >
                   {level.isPrimary && <Star className="h-3 w-3" />}
                   {level.name}
@@ -276,11 +188,8 @@ export function FloorMultiSelectField({
                     <button
                       type="button"
                       className="ml-0.5 hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveFloor(level.floorId);
-                      }}
-                      aria-label={t('units:multiLevel.removeFloor')}
+                      onClick={(e) => { e.stopPropagation(); handleRemoveFloor(level.floorId); }}
+                      aria-label={t('multiLevel.removeFloor')}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -288,12 +197,54 @@ export function FloorMultiSelectField({
                 </Badge>
               ))}
             </section>
-          ) : (
-            !isDisabled && (
-              <p className={cn("text-xs italic", colors.text.muted)}>
-                {t('units:multiLevel.noFloors')}
-              </p>
-            )
+          )}
+
+          {/* Quick-add chips for existing unselected floors */}
+          {!isDisabled && availableFloors.length > 0 && (
+            <section className="flex flex-wrap gap-1">
+              {availableFloors.map((f) => (
+                <Button
+                  key={f.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs gap-1"
+                  onClick={() => handleQuickAdd(f)}
+                >
+                  <Plus className="h-3 w-3" />
+                  {f.name}
+                </Button>
+              ))}
+            </section>
+          )}
+
+          {/* SSoT: FloorInlineCreateForm (canonical 3-field form from Buildings→Floors) */}
+          {!isDisabled && !showCreateForm && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={() => setShowCreateForm(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t('multiLevel.createFloor')}
+            </Button>
+          )}
+          {showCreateForm && buildingId && (
+            <FloorInlineCreateForm
+              buildingId={buildingId}
+              projectId={projectId ?? undefined}
+              onCreated={handleFloorCreated}
+              onCancel={() => setShowCreateForm(false)}
+            />
+          )}
+
+          {/* Empty state */}
+          {value.length === 0 && !isDisabled && availableFloors.length === 0 && !showCreateForm && (
+            <p className={cn("text-xs italic", colors.text.muted)}>
+              {t('multiLevel.noFloors')}
+            </p>
           )}
         </>
       )}

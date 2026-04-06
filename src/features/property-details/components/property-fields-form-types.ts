@@ -73,6 +73,8 @@ export interface PropertyFieldsEditFormProps {
   onLevelsChange?: (levels: PropertyLevel[]) => void;
   /** ADR-236: Building ID for FloorMultiSelectField (creation only) */
   creationBuildingId?: string | null;
+  /** ADR-236: Project ID for FloorInlineCreateForm SSoT (creation only) */
+  creationProjectId?: string | null;
   /** Sold or rented (physical fields locked) */
   isSoldOrRented: boolean;
   /** Multi-level unit */
