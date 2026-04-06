@@ -63,6 +63,12 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | PerformanceComponents split: 1 file (1016 lines) -> 3 files (all compliant) |
 | 2026-04-06 | OverpassApiService split: 1 file (977 lines) -> 3 files (all compliant) |
 | 2026-04-06 | AdvancedCharts split: 1 file (973 lines) -> 3 files (all compliant) |
+| 2026-04-06 | Phase 3 #13: FloorPlanControlPointPicker split: 1 file (863 lines) -> 3 files (497+167+281) |
+| 2026-04-06 | Phase 3 #14: ThemeProvider split: 1 file (859 lines) -> 3 files (301+143+315) |
+| 2026-04-06 | Phase 3 #15: AdminBoundariesCacheManager split: 1 file (859 lines) -> 3 files (472+89+172) |
+| 2026-04-06 | Phase 3 #16: CitizenDrawingInterface split: 1 file (834 lines) -> 3 files (324+170+130) |
+| 2026-04-06 | Phase 3 #17: PerformanceMonitor split: 1 file (791 lines) -> 3 files (277+126+187) |
+| 2026-04-06 | Phase 3 #18: EnterprisePerformanceManager split: 1 file (810 lines) -> 3 files (320+38+152) |
 
 ## useCentralizedMouseHandlers Split
 

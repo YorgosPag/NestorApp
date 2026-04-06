@@ -2,186 +2,50 @@
  * PERFORMANCE MONITORING SYSTEM
  * Geo-Alert System - Phase 7: Enterprise Performance Monitoring
  *
- * Comprehensive performance monitoring με real-time metrics collection,
- * memory tracking, render performance analysis, και automated reporting.
+ * Real-time metrics collection, memory tracking, render analysis, automated reporting
+ *
+ * Split (ADR-065 Phase 3, #17):
+ * - performance-monitor-types.ts — Types
+ * - PerformanceAlertManager.ts — Alert creation, thresholds, reporting
  */
 
-import { generateAlertId } from '@/services/enterprise-id.service';
+import { PerformanceAlertManager } from './PerformanceAlertManager';
+import type {
+  PerformanceMetrics,
+  PerformanceWithMemory,
+  PerformanceEventTimingEntry,
+  ComponentPerformanceData,
+  PerformanceThresholds,
+} from './performance-monitor-types';
 
-// ============================================================================
-// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
-// ============================================================================
-
-/**
- * ✅ ENTERPRISE: Type definition for PerformanceEventTiming (Event Timing API)
- */
-interface PerformanceEventTimingEntry extends PerformanceEntry {
-  processingStart?: number;
-  processingEnd?: number;
-  duration: number;
-  cancelable?: boolean;
-  target?: EventTarget | null;
-}
-
-/** Chrome-specific Performance.memory interface */
-interface PerformanceMemory {
-  usedJSHeapSize: number;
-  totalJSHeapSize: number;
-  jsHeapSizeLimit: number;
-}
-
-/** Extended Performance interface with Chrome-specific memory */
-interface PerformanceWithMemory extends Performance {
-  memory?: PerformanceMemory;
-}
-
-/** Performance report summary type */
-interface PerformanceReportSummary {
-  currentMemory: number;
-  currentFPS: number;
-  totalAlerts: number;
-  criticalAlerts: number;
-  slowestComponents: Array<{
-    name: string;
-    avgRenderTime: number;
-  }>;
-}
-
-// ============================================================================
-// PERFORMANCE TYPES
-// ============================================================================
-
-export interface PerformanceMetrics {
-  timestamp: number;
-
-  // Runtime Performance
-  runtime: {
-    heapUsed: number;
-    heapTotal: number;
-    heapLimit: number;
-    external: number;
-    rss?: number; // Node.js only
-  };
-
-  // Render Performance
-  rendering: {
-    fps: number;
-    frameDrops: number;
-    renderTime: number;
-    componentRenders: number;
-    lastRenderDuration: number;
-  };
-
-  // Network Performance
-  network: {
-    requests: number;
-    totalSize: number;
-    averageLatency: number;
-    failedRequests: number;
-    cacheHits: number;
-  };
-
-  // User Interaction
-  interaction: {
-    inputLatency: number;
-    clickLatency: number;
-    scrollLatency: number;
-    gestureLatency: number;
-  };
-
-  // Bundle Performance
-  bundle: {
-    initialLoadTime: number;
-    bundleSize: number;
-    chunkLoadTimes: Record<string, number>;
-    lazyLoadedModules: number;
-  };
-
-  // Memory Leaks
-  memoryLeaks: {
-    suspectedLeaks: number;
-    growingObjects: string[];
-    retainedSize: number;
-    leakScore: number; // 0-100
-  };
-}
-
-export interface PerformanceAlert {
-  id: string;
-  type: 'memory' | 'performance' | 'rendering' | 'network';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  message: string;
-  timestamp: number;
-  metrics: Partial<PerformanceMetrics>;
-  suggestion?: string;
-}
-
-export interface PerformanceThresholds {
-  memory: {
-    heapUsageWarning: number; // MB
-    heapUsageCritical: number; // MB
-    memoryLeakThreshold: number; // MB growth per minute
-  };
-  rendering: {
-    fpsWarning: number;
-    fpsCritical: number;
-    renderTimeWarning: number; // ms
-    renderTimeCritical: number; // ms
-  };
-  interaction: {
-    inputLatencyWarning: number; // ms
-    inputLatencyCritical: number; // ms
-  };
-  network: {
-    latencyWarning: number; // ms
-    latencyCritical: number; // ms
-    failureRateWarning: number; // percentage
-  };
-}
-
-export interface ComponentPerformanceData {
-  componentName: string;
-  renderCount: number;
-  totalRenderTime: number;
-  averageRenderTime: number;
-  maxRenderTime: number;
-  lastRenderTime: number;
-  propsChanges: number;
-  stateChanges: number;
-}
-
-// ============================================================================
-// PERFORMANCE MONITOR CLASS
-// ============================================================================
+// Re-export types
+export type {
+  PerformanceMetrics,
+  PerformanceAlert,
+  PerformanceThresholds,
+  ComponentPerformanceData,
+  PerformanceReportSummary,
+} from './performance-monitor-types';
 
 export class PerformanceMonitor {
   private static instance: PerformanceMonitor | null = null;
-
-  private isMonitoring: boolean = false;
+  private isMonitoring = false;
   private metricsHistory: PerformanceMetrics[] = [];
-  private componentData: Map<string, ComponentPerformanceData> = new Map();
-  private alerts: PerformanceAlert[] = [];
-  private thresholds: PerformanceThresholds;
+  private componentData = new Map<string, ComponentPerformanceData>();
+  private alertManager = new PerformanceAlertManager();
 
-  // Monitoring intervals
   private metricsInterval: NodeJS.Timeout | null = null;
   private memoryInterval: NodeJS.Timeout | null = null;
   private renderingObserver: PerformanceObserver | null = null;
 
-  // Performance tracking
-  private frameCount: number = 0;
-  private lastFrameTime: number = 0;
-  private renderStartTime: number = 0;
-  private networkRequests: Map<string, number> = new Map();
-  private memoryBaseline: number = 0;
+  private frameCount = 0;
+  private lastFrameTime = 0;
+  private renderStartTime = 0;
+  private networkRequests = new Map<string, number>();
+  private memoryBaseline = 0;
   private memoryGrowthHistory: number[] = [];
 
-  // ========================================================================
-  // SINGLETON PATTERN
-  // ========================================================================
-
   private constructor() {
-    this.thresholds = this.getDefaultThresholds();
     this.initializeMonitoring();
   }
 
@@ -192,64 +56,38 @@ export class PerformanceMonitor {
     return PerformanceMonitor.instance;
   }
 
-  // ========================================================================
-  // INITIALIZATION
-  // ========================================================================
-
   private initializeMonitoring(): void {
     if (typeof window === 'undefined') return;
-
-    // Initialize performance observers
     this.setupPerformanceObservers();
-
-    // Set memory baseline
-    // ✅ ENTERPRISE FIX: Use type assertion for Chrome-specific Performance.memory
     const perfWithMemory = performance as PerformanceWithMemory;
     if (perfWithMemory.memory) {
       this.memoryBaseline = perfWithMemory.memory.usedJSHeapSize;
     }
-
-    // Start frame counting
     this.startFrameMonitoring();
-
-    // console.log('🔍 Performance Monitor initialized'); // DISABLED - προκαλούσε loops
   }
 
   private setupPerformanceObservers(): void {
     if (typeof PerformanceObserver === 'undefined') return;
-
     try {
-      // Rendering performance observer
       this.renderingObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          if (entry.entryType === 'measure') {
-            this.recordRenderingMetric(entry);
-          } else if (entry.entryType === 'navigation') {
-            this.recordNavigationMetric(entry as PerformanceNavigationTiming);
-          } else if (entry.entryType === 'resource') {
-            this.recordNetworkMetric(entry as PerformanceResourceTiming);
-          }
+          if (entry.entryType === 'measure') this.recordRenderingMetric(entry);
+          else if (entry.entryType === 'navigation') this.recordNavigationMetric(entry as PerformanceNavigationTiming);
+          else if (entry.entryType === 'resource') this.recordNetworkMetric(entry as PerformanceResourceTiming);
         }
       });
+      this.renderingObserver.observe({ entryTypes: ['measure', 'navigation', 'resource'] });
 
-      this.renderingObserver.observe({
-        entryTypes: ['measure', 'navigation', 'resource']
-      });
-
-      // User input observer
       if ('PerformanceEventTiming' in window) {
         const inputObserver = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            // ✅ ENTERPRISE: Type guard instead of 'as any'
             if ('processingStart' in entry && 'startTime' in entry) {
               this.recordInputLatency(entry as PerformanceEventTimingEntry);
             }
           }
         });
-
         inputObserver.observe({ entryTypes: ['event'] });
       }
-
     } catch (error) {
       console.warn('Performance observers not fully supported:', error);
     }
@@ -258,103 +96,56 @@ export class PerformanceMonitor {
   private startFrameMonitoring(): void {
     const measureFrame = () => {
       const now = performance.now();
-
       if (this.lastFrameTime > 0) {
         const frameDuration = now - this.lastFrameTime;
-        if (frameDuration > 0) {
-          this.frameCount++;
-        }
+        if (frameDuration > 0) this.frameCount++;
       }
-
       this.lastFrameTime = now;
-
-      if (this.isMonitoring) {
-        requestAnimationFrame(measureFrame);
-      }
+      if (this.isMonitoring) requestAnimationFrame(measureFrame);
     };
-
     requestAnimationFrame(measureFrame);
   }
 
-  // ========================================================================
-  // MONITORING CONTROL
-  // ========================================================================
+  // --- MONITORING CONTROL ---
 
-  public startMonitoring(interval: number = 1000): void {
+  public startMonitoring(interval = 1000): void {
     if (this.isMonitoring) return;
-
     this.isMonitoring = true;
-
-    // Start metrics collection
-    this.metricsInterval = setInterval(() => {
-      this.collectMetrics();
-    }, interval);
-
-    // Start memory leak detection
-    this.memoryInterval = setInterval(() => {
-      this.detectMemoryLeaks();
-    }, 30000); // Every 30 seconds
-
-    // console.log('📊 Performance monitoring started'); // DISABLED - προκαλούσε loops
+    this.metricsInterval = setInterval(() => this.collectMetrics(), interval);
+    this.memoryInterval = setInterval(() => this.detectMemoryLeaks(), 30000);
   }
 
   public stopMonitoring(): void {
     this.isMonitoring = false;
-
-    if (this.metricsInterval) {
-      clearInterval(this.metricsInterval);
-      this.metricsInterval = null;
-    }
-
-    if (this.memoryInterval) {
-      clearInterval(this.memoryInterval);
-      this.memoryInterval = null;
-    }
-
-    if (this.renderingObserver) {
-      this.renderingObserver.disconnect();
-    }
-
-    // console.log('📊 Performance monitoring stopped'); // DISABLED - προκαλούσε loops
+    if (this.metricsInterval) { clearInterval(this.metricsInterval); this.metricsInterval = null; }
+    if (this.memoryInterval) { clearInterval(this.memoryInterval); this.memoryInterval = null; }
+    if (this.renderingObserver) this.renderingObserver.disconnect();
   }
 
-  // ========================================================================
-  // METRICS COLLECTION
-  // ========================================================================
+  // --- METRICS COLLECTION ---
 
   private collectMetrics(): void {
-    const timestamp = Date.now();
-
     const metrics: PerformanceMetrics = {
-      timestamp,
+      timestamp: Date.now(),
       runtime: this.collectRuntimeMetrics(),
       rendering: this.collectRenderingMetrics(),
       network: this.collectNetworkMetrics(),
-      interaction: this.collectInteractionMetrics(),
+      interaction: { inputLatency: 0, clickLatency: 0, scrollLatency: 0, gestureLatency: 0 },
       bundle: this.collectBundleMetrics(),
       memoryLeaks: this.collectMemoryLeakMetrics()
     };
-
     this.metricsHistory.push(metrics);
-
-    // Keep only last 1000 entries
-    if (this.metricsHistory.length > 1000) {
-      this.metricsHistory = this.metricsHistory.slice(-1000);
-    }
-
-    // Check thresholds and generate alerts
-    this.checkThresholds(metrics);
+    if (this.metricsHistory.length > 1000) this.metricsHistory = this.metricsHistory.slice(-1000);
+    this.alertManager.checkThresholds(metrics);
   }
 
   private collectRuntimeMetrics(): PerformanceMetrics['runtime'] {
-    const perfWithMemory = performance as PerformanceWithMemory;
-    const memory = perfWithMemory.memory;
-
+    const memory = (performance as PerformanceWithMemory).memory;
     return {
       heapUsed: memory ? Math.round(memory.usedJSHeapSize / 1024 / 1024) : 0,
       heapTotal: memory ? Math.round(memory.totalJSHeapSize / 1024 / 1024) : 0,
       heapLimit: memory ? Math.round(memory.jsHeapSizeLimit / 1024 / 1024) : 0,
-      external: 0 // Browser doesn't expose this
+      external: 0
     };
   }
 
@@ -362,431 +153,125 @@ export class PerformanceMonitor {
     const now = performance.now();
     const timeSinceLastFrame = now - this.lastFrameTime;
     const fps = timeSinceLastFrame > 0 ? Math.round(1000 / timeSinceLastFrame) : 0;
-
-    const totalRenderTime = Array.from(this.componentData.values())
-      .reduce((sum, data) => sum + data.totalRenderTime, 0);
-
-    const componentRenders = Array.from(this.componentData.values())
-      .reduce((sum, data) => sum + data.renderCount, 0);
-
+    const totalRenderTime = Array.from(this.componentData.values()).reduce((sum, d) => sum + d.totalRenderTime, 0);
+    const componentRenders = Array.from(this.componentData.values()).reduce((sum, d) => sum + d.renderCount, 0);
     return {
-      fps: Math.min(fps, 60), // Cap at 60 FPS
-      frameDrops: fps < 30 ? 1 : 0,
-      renderTime: totalRenderTime,
-      componentRenders,
+      fps: Math.min(fps, 60), frameDrops: fps < 30 ? 1 : 0,
+      renderTime: totalRenderTime, componentRenders,
       lastRenderDuration: this.renderStartTime > 0 ? now - this.renderStartTime : 0
     };
   }
 
   private collectNetworkMetrics(): PerformanceMetrics['network'] {
     const requests = this.networkRequests.size;
-    let totalSize = 0;
-    let totalLatency = 0;
-    let failedRequests = 0;
-
-    // Calculate from performance entries
+    let totalSize = 0, totalLatency = 0, failedRequests = 0;
     if (typeof performance !== 'undefined' && performance.getEntriesByType) {
-      const resourceEntries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-
-      for (const entry of resourceEntries) {
+      for (const entry of performance.getEntriesByType('resource') as PerformanceResourceTiming[]) {
         totalSize += entry.transferSize || 0;
         totalLatency += entry.duration;
-
-        if (entry.responseEnd === 0) {
-          failedRequests++;
-        }
+        if (entry.responseEnd === 0) failedRequests++;
       }
     }
-
-    return {
-      requests,
-      totalSize: Math.round(totalSize / 1024), // KB
-      averageLatency: requests > 0 ? Math.round(totalLatency / requests) : 0,
-      failedRequests,
-      cacheHits: 0 // Would need more sophisticated tracking
-    };
-  }
-
-  private collectInteractionMetrics(): PerformanceMetrics['interaction'] {
-    // These would be collected from event listeners
-    return {
-      inputLatency: 0,
-      clickLatency: 0,
-      scrollLatency: 0,
-      gestureLatency: 0
-    };
+    return { requests, totalSize: Math.round(totalSize / 1024), averageLatency: requests > 0 ? Math.round(totalLatency / requests) : 0, failedRequests, cacheHits: 0 };
   }
 
   private collectBundleMetrics(): PerformanceMetrics['bundle'] {
-    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-
-    return {
-      initialLoadTime: navigation ? Math.round(navigation.loadEventEnd - navigation.fetchStart) : 0,
-      bundleSize: 0, // Would need webpack stats
-      chunkLoadTimes: {},
-      lazyLoadedModules: 0
-    };
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    return { initialLoadTime: nav ? Math.round(nav.loadEventEnd - nav.fetchStart) : 0, bundleSize: 0, chunkLoadTimes: {}, lazyLoadedModules: 0 };
   }
 
   private collectMemoryLeakMetrics(): PerformanceMetrics['memoryLeaks'] {
-    const perfWithMemory = performance as PerformanceWithMemory;
-    const currentMemory = perfWithMemory.memory?.usedJSHeapSize ?? 0;
+    const currentMemory = (performance as PerformanceWithMemory).memory?.usedJSHeapSize ?? 0;
     const memoryGrowth = currentMemory - this.memoryBaseline;
-
     this.memoryGrowthHistory.push(memoryGrowth);
-    if (this.memoryGrowthHistory.length > 10) {
-      this.memoryGrowthHistory.shift();
-    }
-
+    if (this.memoryGrowthHistory.length > 10) this.memoryGrowthHistory.shift();
     const isGrowing = this.memoryGrowthHistory.length > 3 &&
-      this.memoryGrowthHistory.slice(-3).every((growth, index, arr) =>
-        index === 0 || growth > arr[index - 1]
-      );
-
+      this.memoryGrowthHistory.slice(-3).every((g, i, arr) => i === 0 || g > arr[i - 1]);
     return {
-      suspectedLeaks: isGrowing ? 1 : 0,
-      growingObjects: [], // Would need heap snapshot analysis
+      suspectedLeaks: isGrowing ? 1 : 0, growingObjects: [],
       retainedSize: Math.round(memoryGrowth / 1024 / 1024),
       leakScore: this.calculateLeakScore()
     };
   }
 
-  // ========================================================================
-  // COMPONENT PERFORMANCE TRACKING
-  // ========================================================================
+  // --- COMPONENT PERFORMANCE TRACKING ---
 
-  public recordComponentRender(
-    componentName: string,
-    renderTime: number,
-    propsChanged: boolean = false,
-    stateChanged: boolean = false
-  ): void {
+  public recordComponentRender(componentName: string, renderTime: number, propsChanged = false, stateChanged = false): void {
     let data = this.componentData.get(componentName);
-
     if (!data) {
-      data = {
-        componentName,
-        renderCount: 0,
-        totalRenderTime: 0,
-        averageRenderTime: 0,
-        maxRenderTime: 0,
-        lastRenderTime: 0,
-        propsChanges: 0,
-        stateChanges: 0
-      };
+      data = { componentName, renderCount: 0, totalRenderTime: 0, averageRenderTime: 0, maxRenderTime: 0, lastRenderTime: 0, propsChanges: 0, stateChanges: 0 };
       this.componentData.set(componentName, data);
     }
-
     data.renderCount++;
     data.totalRenderTime += renderTime;
     data.averageRenderTime = data.totalRenderTime / data.renderCount;
     data.maxRenderTime = Math.max(data.maxRenderTime, renderTime);
     data.lastRenderTime = renderTime;
-
     if (propsChanged) data.propsChanges++;
     if (stateChanged) data.stateChanges++;
-
-    // Alert για slow renders
-    if (renderTime > this.thresholds.rendering.renderTimeWarning) {
-      this.createAlert({
-        type: 'rendering',
-        severity: renderTime > this.thresholds.rendering.renderTimeCritical ? 'critical' : 'medium',
-        message: `Slow render detected in ${componentName}: ${renderTime.toFixed(2)}ms`,
-        metrics: { rendering: this.collectRenderingMetrics() },
-        suggestion: 'Consider memoization or component optimization'
-      });
-    }
+    this.alertManager.checkComponentRenderTime(componentName, renderTime, this.collectRenderingMetrics());
   }
 
-  // ========================================================================
-  // MEMORY LEAK DETECTION
-  // ========================================================================
+  // --- MEMORY LEAK DETECTION ---
 
   private detectMemoryLeaks(): void {
-    const perfWithMemory = performance as PerformanceWithMemory;
-    if (!perfWithMemory.memory) return;
-
-    const currentMemory = perfWithMemory.memory.usedJSHeapSize;
-    const growthSinceBaseline = currentMemory - this.memoryBaseline;
-    const growthMB = growthSinceBaseline / 1024 / 1024;
-
-    // Check για significant memory growth
-    if (growthMB > this.thresholds.memory.memoryLeakThreshold) {
-      this.createAlert({
-        type: 'memory',
-        severity: growthMB > this.thresholds.memory.heapUsageCritical ? 'critical' : 'high',
-        message: `Potential memory leak detected: ${growthMB.toFixed(1)}MB growth`,
-        metrics: { runtime: this.collectRuntimeMetrics() },
-        suggestion: 'Check for event listeners, timers, or circular references'
-      });
-    }
-
-    // Update baseline periodically για normal growth
-    if (this.metricsHistory.length > 60) { // After 1 minute
-      this.memoryBaseline = Math.min(this.memoryBaseline, currentMemory);
+    const mem = (performance as PerformanceWithMemory).memory;
+    if (!mem) return;
+    const growthMB = (mem.usedJSHeapSize - this.memoryBaseline) / 1024 / 1024;
+    this.alertManager.checkMemoryLeak(growthMB, this.collectRuntimeMetrics());
+    if (this.metricsHistory.length > 60) {
+      this.memoryBaseline = Math.min(this.memoryBaseline, mem.usedJSHeapSize);
     }
   }
 
   private calculateLeakScore(): number {
     if (this.memoryGrowthHistory.length < 3) return 0;
-
-    const recentGrowth = this.memoryGrowthHistory.slice(-3);
-    const isConsistentGrowth = recentGrowth.every((growth, index) =>
-      index === 0 || growth > recentGrowth[index - 1]
-    );
-
-    if (!isConsistentGrowth) return 0;
-
-    const growthRate = (recentGrowth[2] - recentGrowth[0]) / recentGrowth[0];
-    return Math.min(100, Math.max(0, growthRate * 100));
+    const recent = this.memoryGrowthHistory.slice(-3);
+    const isConsistent = recent.every((g, i) => i === 0 || g > recent[i - 1]);
+    if (!isConsistent) return 0;
+    return Math.min(100, Math.max(0, ((recent[2] - recent[0]) / recent[0]) * 100));
   }
 
-  // ========================================================================
-  // METRIC RECORDING
-  // ========================================================================
+  // --- METRIC RECORDING ---
 
   private recordRenderingMetric(entry: PerformanceEntry): void {
-    if (entry.name.includes('React')) {
-      // React-specific measurements
-      this.recordComponentRender('React', entry.duration);
-    }
+    if (entry.name.includes('React')) this.recordComponentRender('React', entry.duration);
   }
 
   private recordNavigationMetric(entry: PerformanceNavigationTiming): void {
-    const loadTime = entry.loadEventEnd - entry.fetchStart;
-
-    if (loadTime > 3000) { // 3 seconds
-      this.createAlert({
-        type: 'performance',
-        severity: 'medium',
-        message: `Slow page load: ${Math.round(loadTime)}ms`,
-        metrics: { bundle: this.collectBundleMetrics() }
-      });
-    }
+    this.alertManager.checkPageLoad(entry.loadEventEnd - entry.fetchStart, this.collectBundleMetrics());
   }
 
   private recordNetworkMetric(entry: PerformanceResourceTiming): void {
     this.networkRequests.set(entry.name, entry.duration);
-
-    if (entry.duration > this.thresholds.network.latencyWarning) {
-      this.createAlert({
-        type: 'network',
-        severity: entry.duration > this.thresholds.network.latencyCritical ? 'critical' : 'medium',
-        message: `Slow network request: ${entry.name} (${Math.round(entry.duration)}ms)`,
-        metrics: { network: this.collectNetworkMetrics() }
-      });
-    }
+    this.alertManager.checkNetworkLatency(entry.name, entry.duration, this.collectNetworkMetrics());
   }
 
   private recordInputLatency(entry: PerformanceEventTimingEntry): void {
     if (entry.processingStart && entry.startTime) {
-      const latency = entry.processingStart - entry.startTime;
-
-      if (latency > this.thresholds.interaction.inputLatencyWarning) {
-        this.createAlert({
-          type: 'performance',
-          severity: latency > this.thresholds.interaction.inputLatencyCritical ? 'critical' : 'medium',
-          message: `High input latency: ${Math.round(latency)}ms`,
-          metrics: { interaction: this.collectInteractionMetrics() }
-        });
-      }
+      this.alertManager.checkInputLatency(entry.processingStart - entry.startTime, { inputLatency: 0, clickLatency: 0, scrollLatency: 0, gestureLatency: 0 });
     }
   }
 
-  // ========================================================================
-  // THRESHOLD CHECKING
-  // ========================================================================
+  // --- PUBLIC API ---
 
-  private checkThresholds(metrics: PerformanceMetrics): void {
-    // Memory thresholds
-    if (metrics.runtime.heapUsed > this.thresholds.memory.heapUsageCritical) {
-      this.createAlert({
-        type: 'memory',
-        severity: 'critical',
-        message: `Critical memory usage: ${metrics.runtime.heapUsed}MB`,
-        metrics: { runtime: metrics.runtime },
-        suggestion: 'Consider garbage collection or memory optimization'
-      });
-    } else if (metrics.runtime.heapUsed > this.thresholds.memory.heapUsageWarning) {
-      this.createAlert({
-        type: 'memory',
-        severity: 'medium',
-        message: `High memory usage: ${metrics.runtime.heapUsed}MB`,
-        metrics: { runtime: metrics.runtime }
-      });
-    }
-
-    // FPS thresholds
-    if (metrics.rendering.fps < this.thresholds.rendering.fpsCritical) {
-      this.createAlert({
-        type: 'rendering',
-        severity: 'critical',
-        message: `Critical FPS drop: ${metrics.rendering.fps} FPS`,
-        metrics: { rendering: metrics.rendering },
-        suggestion: 'Check for expensive renders or layout thrashing'
-      });
-    } else if (metrics.rendering.fps < this.thresholds.rendering.fpsWarning) {
-      this.createAlert({
-        type: 'rendering',
-        severity: 'medium',
-        message: `Low FPS: ${metrics.rendering.fps} FPS`,
-        metrics: { rendering: metrics.rendering }
-      });
-    }
-  }
-
-  // ========================================================================
-  // ALERT MANAGEMENT
-  // ========================================================================
-
-  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
-  private createAlert(alertData: Omit<PerformanceAlert, 'id' | 'timestamp'>): void {
-    const alert: PerformanceAlert = {
-      id: generateAlertId(),
-      timestamp: Date.now(),
-      ...alertData
-    };
-
-    this.alerts.unshift(alert);
-
-    // Keep only last 100 alerts
-    if (this.alerts.length > 100) {
-      this.alerts = this.alerts.slice(0, 100);
-    }
-
-    // Log critical alerts
-    if (alert.severity === 'critical') {
-      console.error('🚨 Critical Performance Alert:', alert.message);
-    } else if (alert.severity === 'high') {
-      console.warn('⚠️ Performance Warning:', alert.message);
-    }
-  }
-
-  // ========================================================================
-  // PUBLIC API
-  // ========================================================================
-
-  public getMetrics(): PerformanceMetrics[] {
-    return [...this.metricsHistory];
-  }
-
-  public getLatestMetrics(): PerformanceMetrics | null {
-    return this.metricsHistory[this.metricsHistory.length - 1] || null;
-  }
-
-  public getComponentPerformance(): ComponentPerformanceData[] {
-    return Array.from(this.componentData.values());
-  }
-
-  public getAlerts(severity?: PerformanceAlert['severity']): PerformanceAlert[] {
-    if (severity) {
-      return this.alerts.filter(alert => alert.severity === severity);
-    }
-    return [...this.alerts];
-  }
-
-  public clearAlerts(): void {
-    this.alerts = [];
-  }
-
-  public updateThresholds(newThresholds: Partial<PerformanceThresholds>): void {
-    this.thresholds = { ...this.thresholds, ...newThresholds };
-  }
-
-  public getThresholds(): PerformanceThresholds {
-    return { ...this.thresholds };
-  }
-
-  public generateReport(): {
-    summary: PerformanceReportSummary;
-    recommendations: string[];
-    criticalIssues: PerformanceAlert[];
-  } {
-    const latestMetrics = this.getLatestMetrics();
-    const criticalAlerts = this.getAlerts('critical');
-    const componentData = this.getComponentPerformance();
-
-    const slowestComponents = componentData
-      .sort((a, b) => b.averageRenderTime - a.averageRenderTime)
-      .slice(0, 5);
-
-    const recommendations: string[] = [];
-
-    // Generate recommendations
-    if (latestMetrics) {
-      if (latestMetrics.runtime.heapUsed > 100) {
-        recommendations.push('Consider implementing memory optimization techniques');
-      }
-      if (latestMetrics.rendering.fps < 30) {
-        recommendations.push('Optimize rendering performance - consider virtualization');
-      }
-      if (slowestComponents.length > 0) {
-        recommendations.push(`Optimize slow components: ${slowestComponents.map(c => c.componentName).join(', ')}`);
-      }
-    }
-
-    return {
-      summary: {
-        currentMemory: latestMetrics?.runtime.heapUsed || 0,
-        currentFPS: latestMetrics?.rendering.fps || 0,
-        totalAlerts: this.alerts.length,
-        criticalAlerts: criticalAlerts.length,
-        slowestComponents: slowestComponents.map(c => ({
-          name: c.componentName,
-          avgRenderTime: c.averageRenderTime
-        }))
-      },
-      recommendations,
-      criticalIssues: criticalAlerts
-    };
-  }
-
-  // ========================================================================
-  // DEFAULTS
-  // ========================================================================
-
-  private getDefaultThresholds(): PerformanceThresholds {
-    return {
-      memory: {
-        heapUsageWarning: 100, // MB
-        heapUsageCritical: 200, // MB
-        memoryLeakThreshold: 50 // MB growth
-      },
-      rendering: {
-        fpsWarning: 30,
-        fpsCritical: 15,
-        renderTimeWarning: 16, // 1 frame at 60fps
-        renderTimeCritical: 33 // 2 frames at 60fps
-      },
-      interaction: {
-        inputLatencyWarning: 100, // ms
-        inputLatencyCritical: 300 // ms
-      },
-      network: {
-        latencyWarning: 1000, // ms
-        latencyCritical: 3000, // ms
-        failureRateWarning: 5 // percentage
-      }
-    };
-  }
-
-  // ========================================================================
-  // CLEANUP
-  // ========================================================================
+  public getMetrics(): PerformanceMetrics[] { return [...this.metricsHistory]; }
+  public getLatestMetrics(): PerformanceMetrics | null { return this.metricsHistory[this.metricsHistory.length - 1] || null; }
+  public getComponentPerformance(): ComponentPerformanceData[] { return Array.from(this.componentData.values()); }
+  public getAlerts(severity?: 'low' | 'medium' | 'high' | 'critical') { return this.alertManager.getAlerts(severity); }
+  public clearAlerts(): void { this.alertManager.clearAlerts(); }
+  public updateThresholds(t: Partial<PerformanceThresholds>): void { this.alertManager.updateThresholds(t); }
+  public getThresholds() { return this.alertManager.getThresholds(); }
+  public generateReport() { return this.alertManager.generateReport(this.getLatestMetrics(), this.getComponentPerformance()); }
 
   public dispose(): void {
     this.stopMonitoring();
     this.metricsHistory = [];
     this.componentData.clear();
-    this.alerts = [];
+    this.alertManager.dispose();
     this.networkRequests.clear();
     PerformanceMonitor.instance = null;
   }
 }
 
-// ============================================================================
-// SINGLETON EXPORT
-// ============================================================================
-
 export const performanceMonitor = PerformanceMonitor.getInstance();
-export default performanceMonitor;
