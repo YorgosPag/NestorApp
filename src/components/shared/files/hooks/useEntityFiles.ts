@@ -1,23 +1,6 @@
 /**
- * =============================================================================
- * 🏢 ENTERPRISE: useEntityFiles Hook
- * =============================================================================
- *
- * Centralized hook για file management operations σε entities.
- * Uses FileRecordService (ADR-031 Canonical File Storage System).
- *
+ * useEntityFiles — Centralized hook for entity file management (ADR-031).
  * @module components/shared/files/hooks/useEntityFiles
- * @enterprise ADR-031 - Single authority για entity file operations
- *
- * @example
- * ```typescript
- * const { files, loading, error, uploadFile, deleteFile, renameFile } = useEntityFiles({
- *   entityType: 'contact',
- *   entityId: 'contact_123',
- *   domain: 'admin',
- *   category: 'photos'
- * });
- * ```
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -292,10 +275,20 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
           entityId,
         });
       },
-      (err: Error) => {
-        logger.error('[realtime] Listener error', { error: err.message, entityType, entityId });
-        setError(err);
-        setLoading(false);
+      (err: unknown) => {
+        const errObj = err instanceof Error ? err : new Error(String(err));
+        const code = (err as { code?: string })?.code ?? 'unknown';
+        logger.warn('[realtime] Listener failed, falling back to one-time fetch', {
+          code,
+          message: errObj.message,
+          entityType,
+          entityId,
+        });
+        // Graceful fallback: try one-time fetch instead of leaving error state
+        void fetchFiles().catch(() => {
+          setError(errObj);
+          setLoading(false);
+        });
       },
       { constraints },
     );
