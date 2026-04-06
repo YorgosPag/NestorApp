@@ -57,8 +57,9 @@ export interface FloorInlineCreateFormProps {
   buildingId: string;
   /** Project που ανήκει το Building (για server policy — ADR-284). */
   projectId?: string;
-  /** Callback μετά από επιτυχή δημιουργία — parent refreshes list. */
-  onCreated: (floorId?: string) => void;
+  /** Callback μετά από επιτυχή δημιουργία — parent refreshes list.
+   *  Second arg: floor data for immediate use (no need to wait for subscription). */
+  onCreated: (floorId?: string, floorData?: { number: number; name: string }) => void;
   /** Callback όταν ο user κάνει cancel. */
   onCancel: () => void;
   /** Existing floor numbers — stepper skips these (optional, SSoT). */
@@ -185,7 +186,8 @@ export function FloorInlineCreateForm({
       });
       success(t('tabs.floors.createSuccess'));
       const createdId = result?.floorId ?? result?.data?.floorId;
-      onCreated(createdId);
+      const num = parseInt(createNumber, 10) || 0;
+      onCreated(createdId, { number: num, name: createName.trim() });
     } catch (err) {
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
         notifyError(t('tabs.floors.duplicateNumber'));

@@ -10,7 +10,7 @@
  * @since ADR-236 — Multi-Level Property Management
  */
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -69,15 +69,10 @@ export function FloorMultiSelectField({
   const [allFloors, setAllFloors] = useState<FloorOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const pendingFloorIdRef = useRef<string | null>(null);
 
-  // Real-time Firestore subscription for building floors
+  // Real-time Firestore subscription for building floors (for existingFloorNumbers)
   useEffect(() => {
-    if (!buildingId || !user) {
-      setAllFloors([]);
-      setLoading(false);
-      return;
-    }
+    if (!buildingId || !user) { setAllFloors([]); setLoading(false); return; }
     setLoading(true);
     const floorsCol = collection(db, COLLECTIONS.FLOORS);
     const constraints: QueryConstraint[] = [where('buildingId', '==', buildingId)];
@@ -85,9 +80,8 @@ export function FloorMultiSelectField({
     if (!isSuperAdmin && user.companyId) {
       constraints.push(where('companyId', '==', user.companyId));
     }
-    const q = query(floorsCol, ...constraints);
     const unsubscribe = onSnapshot(
-      q,
+      query(floorsCol, ...constraints),
       (snapshot) => {
         const options: FloorOption[] = snapshot.docs
           .map((doc) => {
@@ -104,29 +98,21 @@ export function FloorMultiSelectField({
     return () => unsubscribe();
   }, [buildingId, user]);
 
-  // Auto-add newly created floor when it appears in subscription
-  useEffect(() => {
-    if (!pendingFloorIdRef.current) return;
-    const found = allFloors.find(f => f.id === pendingFloorIdRef.current);
-    if (found) {
-      const selectedFloors: FloorOption[] = [
-        ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
-        found,
-      ];
-      const primary = value[0]?.floorId ?? found.id;
-      onChange(buildLevelsFromSelection(selectedFloors, primary));
-      pendingFloorIdRef.current = null;
-    }
-  }, [allFloors, value, onChange]);
-
   const isDisabled = disabled || !buildingId;
   const existingFloorNumbers = useMemo(() => new Set(allFloors.map(f => f.number)), [allFloors]);
 
-  // SSoT: FloorInlineCreateForm callback — auto-add when Firestore updates
-  const handleFloorCreated = useCallback((floorId?: string) => {
-    if (floorId) pendingFloorIdRef.current = floorId;
+  // Direct add: when floor is created, immediately add as level (no subscription wait)
+  const handleFloorCreated = useCallback((floorId?: string, floorData?: { number: number; name: string }) => {
     setShowCreateForm(false);
-  }, []);
+    if (!floorId || !floorData) return;
+    const newFloor: FloorOption = { id: floorId, number: floorData.number, name: floorData.name };
+    const selectedFloors: FloorOption[] = [
+      ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
+      newFloor,
+    ];
+    const primary = value[0]?.floorId ?? floorId;
+    onChange(buildLevelsFromSelection(selectedFloors, primary));
+  }, [value, onChange]);
 
   return (
     <fieldset className="space-y-2">
