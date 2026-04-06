@@ -13,7 +13,7 @@
  * @module components/building-management/tabs/PropertyInlineCreateForm
  */
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -87,6 +87,42 @@ export function PropertyInlineCreateForm({
   const [wc, setWC] = useState('');
 
   const [creating, setCreating] = useState(false);
+
+  // ── Auto-suggest name based on type + area ──
+  // Tracks whether user manually edited the name field.
+  // If not, name auto-updates when type or areaNet changes.
+  const userEditedName = useRef(false);
+
+  const buildSuggestedName = useCallback((unitType: PropertyType, area: string): string => {
+    const typeLabel = UNIT_TYPE_LABEL_KEYS[unitType]
+      ? tUnits(UNIT_TYPE_LABEL_KEYS[unitType])
+      : unitType;
+    const parsedArea = parseFloat(area);
+    if (parsedArea > 0) {
+      return `${typeLabel} ${parsedArea} ${tUnits('units.sqm')}`;
+    }
+    return typeLabel;
+  }, [tUnits]);
+
+  const handleTypeChange = (newType: PropertyType) => {
+    setType(newType);
+    if (!userEditedName.current) {
+      setName(buildSuggestedName(newType, areaNet));
+    }
+  };
+
+  const handleAreaNetChange = (newArea: string) => {
+    setAreaNet(newArea);
+    if (!userEditedName.current) {
+      setName(buildSuggestedName(type, newArea));
+    }
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    // Mark as manually edited if user types something different from the suggestion
+    userEditedName.current = true;
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -173,7 +209,7 @@ export function PropertyInlineCreateForm({
           </span>
           <Input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
             placeholder={tUnits('fields.identity.namePlaceholder')}
             className="h-9"
             disabled={creating}
@@ -198,7 +234,7 @@ export function PropertyInlineCreateForm({
           <span className={cn("text-xs font-medium", colors.text.muted)}>
             {tUnits('fields.identity.type')}
           </span>
-          <Select value={type} onValueChange={(v) => setType(v as PropertyType)} disabled={creating}>
+          <Select value={type} onValueChange={(v) => handleTypeChange(v as PropertyType)} disabled={creating}>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
@@ -285,7 +321,7 @@ export function PropertyInlineCreateForm({
         </label>
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.netArea')}</span>
-          <Input type="number" step="0.1" value={areaNet} onChange={(e) => setAreaNet(e.target.value)} placeholder="75" className="h-9" disabled={creating} />
+          <Input type="number" step="0.1" value={areaNet} onChange={(e) => handleAreaNetChange(e.target.value)} placeholder="75" className="h-9" disabled={creating} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>{tUnits('inlineCreate.grossArea')}</span>

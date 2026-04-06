@@ -63,6 +63,8 @@ export interface UseEntityLinkConfig {
   labels: EntityLinkLabels;
   /** Card header icon */
   icon: LucideIcon;
+  /** Icon color from NAVIGATION_ENTITIES (SSoT) */
+  iconColor?: string;
   /** Unique card ID for accessibility */
   cardId: string;
   /** Enable searchable mode (typeahead popover) */
@@ -145,6 +147,7 @@ export function useEntityLink(
     cascadingResets,
     labels,
     icon,
+    iconColor,
     cardId,
     searchable,
     hideCurrentLabel,
@@ -220,6 +223,7 @@ export function useEntityLink(
   const linkCardProps: EntityLinkCardProps = {
     cardId,
     icon,
+    iconColor,
     labels,
     currentValue: linkedId ?? undefined,
     loadOptions,

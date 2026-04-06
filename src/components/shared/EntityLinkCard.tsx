@@ -67,6 +67,8 @@ export interface EntityLinkCardProps {
   cardId: string;
   /** Icon for the card header */
   icon: LucideIcon;
+  /** Icon color from NAVIGATION_ENTITIES (SSoT). When omitted, inherits text color. */
+  iconColor?: string;
   /** All UI labels (pre-translated by caller) */
   labels: EntityLinkLabels;
   /** Current linked entity ID */
@@ -110,6 +112,7 @@ const STATUS_RESET_MS = 3000;
 export function EntityLinkCard({
   cardId,
   icon: Icon,
+  iconColor,
   labels,
   currentValue,
   loadOptions,
@@ -363,6 +366,7 @@ export function EntityLinkCard({
     >
       <SelectTrigger
         id={cardId}
+        size="sm"
         aria-invalid={hasError || undefined}
         className={cn(
           !isEditing && 'bg-muted',
@@ -393,7 +397,7 @@ export function EntityLinkCard({
     <Card ref={cardRef}>
       <CardHeader className="p-2">
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-          <Icon className={iconSizes.md} />
+          <Icon className={cn(iconSizes.md, iconColor)} />
           {labels.title}
         </CardTitle>
       </CardHeader>

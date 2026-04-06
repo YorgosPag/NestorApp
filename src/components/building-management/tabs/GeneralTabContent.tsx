@@ -11,7 +11,7 @@ import { getProjectsList, getBuildingCodesByProject } from '../building-services
 import { suggestNextBuildingCode } from '@/config/entity-code-config';
 import { createModuleLogger } from '@/lib/telemetry';
 // ENTERPRISE: Centralized EntityLinkCard (replaces ProjectSelectorCard)
-import { FolderKanban } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { NoProjectsEmptyState } from '@/components/shared/empty-states/NoProjectsEmptyState';
@@ -141,7 +141,8 @@ export function GeneralTabContent({
     loadOptions: loadProjects,
     saveMode: isCreateMode ? 'local' : 'immediate',
     onSave: isCreateMode ? undefined : saveProject,
-    icon: FolderKanban,
+    icon: NAVIGATION_ENTITIES.project.icon,
+    iconColor: NAVIGATION_ENTITIES.project.color,
     cardId: 'building-project-link',
     labels: {
       title: t('projectSelector.title'),

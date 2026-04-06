@@ -14,8 +14,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { Building } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { getBuildingsList } from '@/services/properties.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityLink } from '@/hooks/useEntityLink';
@@ -64,7 +64,8 @@ export function PropertyEntityLinks({
     loadOptions: loadBuildings,
     saveMode: 'immediate',
     onSave: saveBuilding,
-    icon: Building,
+    icon: NAVIGATION_ENTITIES.building.icon,
+    iconColor: NAVIGATION_ENTITIES.building.color,
     cardId: 'property-building-link',
     labels: {
       title: t('entityLinks.building.title'),

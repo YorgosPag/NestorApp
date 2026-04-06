@@ -49,6 +49,10 @@ export interface EntityHeaderProps {
   avatarImageUrl?: string; // Optional avatar/photo URL to display instead of icon
   onAvatarClick?: () => void; // Optional click handler for avatar image
 
+  // 🏢 ENTERPRISE: Flat icon color from NAVIGATION_ENTITIES (SSoT)
+  // When provided → flat icon with this color (like breadcrumb). When omitted → gradient bg container.
+  iconColor?: string;
+
   // Layout & Styling
   variant?: 'default' | 'compact' | 'detailed';
   className?: string;
@@ -67,6 +71,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   actions = [],
   avatarImageUrl,
   onAvatarClick,
+  iconColor,
   variant = 'default',
   className,
   children
@@ -120,12 +125,20 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600">
                 <Icon className={cn(
                   "text-white",
-                  variant === 'detailed' ? iconSizes.sm :  // 🏢 ENTERPRISE: Μικρότερο εικονίδιο (όπως το PageHeader)
+                  variant === 'detailed' ? iconSizes.sm :
                   variant === 'compact' ? iconSizes.sm :
                   iconSizes.md
                 )} />
               </AvatarFallback>
             </Avatar>
+          ) : iconColor ? (
+            <Icon
+              className={cn(
+                "flex-shrink-0",
+                iconColor,
+                iconSizeClasses[variant]
+              )}
+            />
           ) : (
             <div
               className={cn(
@@ -135,7 +148,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
             >
               <Icon className={cn(
                 "text-white",
-                variant === 'detailed' ? iconSizes.sm :  // 🏢 ENTERPRISE: Μικρότερο εικονίδιο (όπως το PageHeader)
+                variant === 'detailed' ? iconSizes.sm :
                 variant === 'compact' ? iconSizes.sm :
                 iconSizes.md
               )} />

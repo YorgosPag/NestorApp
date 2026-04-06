@@ -8,8 +8,9 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Centralized Property Icon & Color
+// 🏢 ENTERPRISE: Centralized Property Icon & Color (SSoT)
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 interface PropertyDetailsHeaderProps {
   property: Property | null;
@@ -56,6 +57,7 @@ export function PropertyDetailsHeader({
       <div className="hidden md:block">
         <EntityDetailsHeader
           icon={PropertyIcon}
+          iconColor={propertyColor}
           title={t('details.selectProperty')}
           subtitle={t('details.noUnitSelected')}
           variant="detailed"
@@ -91,6 +93,7 @@ export function PropertyDetailsHeader({
       <div className="hidden md:block">
         <EntityDetailsHeader
           icon={PropertyIcon}
+          iconColor={propertyColor}
           title={headerTitle}
           actions={actions}
           variant="detailed"

@@ -25,7 +25,7 @@
  */
 
 import { useCallback } from 'react';
-import { Building2 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -84,7 +84,8 @@ export function ProjectCompanyRecoveryLink({
     saveMode: 'immediate',
     onSave: saveCompanyLink,
     hideCurrentLabel: true,
-    icon: Building2,
+    icon: NAVIGATION_ENTITIES.company.icon,
+    iconColor: NAVIGATION_ENTITIES.company.color,
     cardId: `orphan-project-company-link-${projectId}`,
     labels: {
       title: t('basicInfo.companyLink.title'),

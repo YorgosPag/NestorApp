@@ -13,7 +13,7 @@ import {
   STORAGE_STATUSES,
   buildFormState,
 } from './storage-general-tab-config';
-import { MapPin, StickyNote, Building2, Lock } from 'lucide-react';
+import { MapPin, StickyNote, Lock } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -98,7 +98,8 @@ export function StorageGeneralTab({
     saveMode: 'form',
     cascadingResets: [{ resetField: 'floor' }],
     onCascadingReset: (resets) => resets.forEach(r => updateField(r.field as keyof StorageFormState, r.value)),
-    icon: Building2,
+    icon: NAVIGATION_ENTITIES.building.icon,
+    iconColor: NAVIGATION_ENTITIES.building.color,
     cardId: 'storage-building-link',
     labels: {
       title: t('entityLinks.building.title'),

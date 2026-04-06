@@ -16,7 +16,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { ConflictDialog } from '@/components/shared/ConflictDialog';
 import { useRouter } from 'next/navigation';
-import { Building2 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
 import { getAllCompaniesForSelect } from '@/services/companies.service';
@@ -128,7 +128,8 @@ export function GeneralProjectTab({
     loadOptions: loadCompanies,
     saveMode: isCreateMode ? 'local' : 'form',
     hideCurrentLabel: true,
-    icon: Building2,
+    icon: NAVIGATION_ENTITIES.company.icon,
+    iconColor: NAVIGATION_ENTITIES.company.color,
     cardId: 'project-company-link',
     labels: {
       title: t('basicInfo.companyLink.title'),

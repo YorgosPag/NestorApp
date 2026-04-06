@@ -12,7 +12,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
-import { Car, MapPin, Building2 } from 'lucide-react';
+import { Car, MapPin } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -168,7 +169,8 @@ export function ParkingGeneralTab({
     saveMode: 'form',
     cascadingResets: [{ resetField: 'floor' }],
     onCascadingReset: (resets) => resets.forEach(r => updateField(r.field as keyof ParkingFormState, r.value)),
-    icon: Building2,
+    icon: NAVIGATION_ENTITIES.building.icon,
+    iconColor: NAVIGATION_ENTITIES.building.color,
     cardId: 'parking-building-link',
     labels: {
       title: t('entityLinks.building.title'),

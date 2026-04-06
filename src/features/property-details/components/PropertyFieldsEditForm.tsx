@@ -72,6 +72,8 @@ export function PropertyFieldsEditForm({
   setCodeOverridden,
   codeLoading,
   onTypeChange,
+  onNameManualEdit,
+  onAreaNetChange,
   t,
   typography,
   iconSizes,
@@ -145,7 +147,7 @@ export function PropertyFieldsEditForm({
               <Input
                 id="unit-name"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => onNameManualEdit(e.target.value)}
                 size="sm" className="text-xs"
                 placeholder={t('fields.identity.namePlaceholder')}
                 disabled={!isEditing || isReservedOrSold}
@@ -367,6 +369,7 @@ export function PropertyFieldsEditForm({
                             const flatKey = `area${areaKey.charAt(0).toUpperCase()}${areaKey.slice(1)}`;
                             setFormData(prev => ({ ...prev, [flatKey]: num }));
                           }
+                          if (areaKey === 'net') onAreaNetChange(num);
                         }}
                         size="sm" className="text-xs"
                         disabled={!isEditing || isSoldOrRented}
