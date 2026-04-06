@@ -123,21 +123,9 @@ export function FloorMultiSelectField({
     }
   }, [allFloors, value, onChange]);
 
-  const selectedIds = new Set(value.map((l) => l.floorId));
-  const availableFloors = allFloors.filter((f) => !selectedIds.has(f.id));
   const primaryId = value.find((l) => l.isPrimary)?.floorId ?? value[0]?.floorId;
   const isDisabled = disabled || !buildingId;
   const canRemove = !isDisabled && value.length > minLevels;
-
-  // Quick-add an existing floor as a level
-  const handleQuickAdd = useCallback((floor: FloorOption) => {
-    const selectedFloors: FloorOption[] = [
-      ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
-      floor,
-    ];
-    const primary = value.length === 0 ? floor.id : (primaryId ?? floor.id);
-    onChange(buildLevelsFromSelection(selectedFloors, primary));
-  }, [value, primaryId, onChange]);
 
   const handleRemoveFloor = useCallback((floorId: string) => {
     const remaining = value.filter((l) => l.floorId !== floorId);
@@ -199,52 +187,29 @@ export function FloorMultiSelectField({
             </section>
           )}
 
-          {/* Quick-add chips for existing unselected floors */}
-          {!isDisabled && availableFloors.length > 0 && (
-            <section className="flex flex-wrap gap-1">
-              {availableFloors.map((f) => (
+          {/* SSoT: FloorInlineCreateForm — only after levels exist (for 3+ floors) */}
+          {!isDisabled && value.length >= 2 && (
+            <>
+              {!showCreateForm ? (
                 <Button
-                  key={f.id}
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-xs gap-1"
-                  onClick={() => handleQuickAdd(f)}
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setShowCreateForm(true)}
                 >
-                  <Plus className="h-3 w-3" />
-                  {f.name}
+                  <Plus className="h-3.5 w-3.5" />
+                  {t('multiLevel.createFloor')}
                 </Button>
-              ))}
-            </section>
-          )}
-
-          {/* SSoT: FloorInlineCreateForm (canonical 3-field form from Buildings→Floors) */}
-          {!isDisabled && !showCreateForm && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs gap-1"
-              onClick={() => setShowCreateForm(true)}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {t('multiLevel.createFloor')}
-            </Button>
-          )}
-          {showCreateForm && buildingId && (
-            <FloorInlineCreateForm
-              buildingId={buildingId}
-              projectId={projectId ?? undefined}
-              onCreated={handleFloorCreated}
-              onCancel={() => setShowCreateForm(false)}
-            />
-          )}
-
-          {/* Empty state */}
-          {value.length === 0 && !isDisabled && availableFloors.length === 0 && !showCreateForm && (
-            <p className={cn("text-xs italic", colors.text.muted)}>
-              {t('multiLevel.noFloors')}
-            </p>
+              ) : buildingId && (
+                <FloorInlineCreateForm
+                  buildingId={buildingId}
+                  projectId={projectId ?? undefined}
+                  onCreated={handleFloorCreated}
+                  onCancel={() => setShowCreateForm(false)}
+                />
+              )}
+            </>
           )}
         </>
       )}
