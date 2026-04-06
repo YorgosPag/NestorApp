@@ -14,9 +14,17 @@ export { isDiagonalGuide, pointToSegmentDistance, projectPointOnSegment } from '
 export { GuideStore, getGlobalGuideStore } from './guide-store';
 export { ConstructionPointStore, getGlobalConstructionPointStore } from './construction-point-store';
 
-// Commands
-export { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, GuideFromEntityCommand, BatchDeleteGuidesCommand, CopyGuidePatternCommand, GuideOffsetFromEntityCommand, CreateGridFromPresetCommand, BatchGuideFromEntitiesCommand } from './guide-commands';
-export type { EntityGuideParams } from './guide-commands';
+// Commands (split into semantic modules under commands/)
+export {
+  CreateGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, CreateGridFromPresetCommand,
+  DeleteGuideCommand, BatchDeleteGuidesCommand,
+  MoveGuideCommand,
+  RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand,
+  ScaleAllGuidesCommand, EqualizeGuidesCommand,
+  MirrorGuidesCommand, PolarArrayGuidesCommand, CopyGuidePatternCommand,
+  GuideFromEntityCommand, GuideOffsetFromEntityCommand, BatchGuideFromEntitiesCommand,
+} from './commands';
+export type { EntityGuideParams } from './commands';
 export { AddConstructionPointCommand, AddConstructionPointBatchCommand, DeleteConstructionPointCommand } from './construction-point-commands';
 
 // Presets (B23 + B72 + B95 + B98 + B101)

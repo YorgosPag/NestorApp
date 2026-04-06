@@ -21,7 +21,7 @@ import type { UniversalSelectionHook } from '../../systems/selection/SelectionSy
 import type { SelectedGrip } from '../grips/useGripSystem';
 import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
-import type { CreateGuideCommand, DeleteGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/guide-commands';
+import type { CreateGuideCommand, DeleteGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/commands';
 import type { AddConstructionPointCommand, DeleteConstructionPointCommand } from '../../systems/guides/construction-point-commands';
 
 // ============================================================================

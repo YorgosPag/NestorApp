@@ -13,7 +13,7 @@
 import { useSyncExternalStore, useCallback, useState } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand, GuideFromEntityCommand, BatchDeleteGuidesCommand, CopyGuidePatternCommand, GuideOffsetFromEntityCommand, CreateGridFromPresetCommand, BatchGuideFromEntitiesCommand, type EntityGuideParams } from '../../systems/guides/guide-commands';
+import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand, GuideFromEntityCommand, BatchDeleteGuidesCommand, CopyGuidePatternCommand, GuideOffsetFromEntityCommand, CreateGridFromPresetCommand, BatchGuideFromEntitiesCommand, type EntityGuideParams } from '../../systems/guides/commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';

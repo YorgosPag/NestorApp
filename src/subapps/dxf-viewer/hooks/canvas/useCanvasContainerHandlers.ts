@@ -10,7 +10,7 @@ import { useState, useCallback, useRef } from 'react';
 import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import type { GridAxis } from '../../systems/guides/guide-types';
-import { MoveGuideCommand } from '../../systems/guides/guide-commands';
+import { MoveGuideCommand } from '../../systems/guides/commands';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { Point2D } from '../../rendering/types/Types';
 import {
