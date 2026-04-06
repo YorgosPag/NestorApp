@@ -46,6 +46,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | EnterpriseTeamsService split: 1 file (1233 lines) -> 3 files (all compliant) |
 | 2026-04-06 | CICDPipeline split: 1 file (1224 lines) -> 3 files (all compliant) |
 | 2026-04-06 | GeoCanvasContent split: 1 file (1207 lines) -> 3 files (all compliant) |
+| 2026-04-06 | DxfViewerContent split: 1 file (1182 lines) -> 3 files (all compliant) |
+
+## DxfViewerContent Split
+
+`DxfViewerContent.tsx` contained 1182 lines — 2.4x over the 500-line limit. It's a monolith UI component mixing 17+ useEffect blocks, 9+ useCallback handlers, and JSX rendering.
+
+Split into 3 files in `src/subapps/dxf-viewer/app/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `useDxfViewerCallbacks.ts` | 9 useCallback/useMemo definitions + SVG origin indicator helper | 398 | No |
+| `useDxfViewerEffects.ts` | 17 useEffect blocks (event bus, sync, init, keyboard shortcuts) | 409 | No |
+| `DxfViewerContent.tsx` | Main orchestrator: hook calls, state init, JSX rendering | 400 | No |
+
+Consumer Impact: Only 1 consumer (`DxfViewerApp.tsx`) — no import path changes needed (main file keeps same name, re-exports).
 
 ## DockerOrchestrator Split
 
