@@ -364,7 +364,7 @@ async function fallbackToServerUpload(
 /**
  * Maps Firebase Storage error codes to user-facing messages
  */
-function resolveStorageErrorMessage(code: string, message: string | undefined, retriesExhausted: boolean): string {
+export function resolveStorageErrorMessage(code: string, message: string | undefined, retriesExhausted: boolean): string {
   switch (code) {
     case 'storage/unauthorized':
       return 'Δεν έχετε άδεια για ανέβασμα αρχείων';
