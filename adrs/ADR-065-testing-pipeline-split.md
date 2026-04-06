@@ -51,6 +51,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | EnterpriseNotificationService split: 1 file (1023 lines) -> 3 files (all compliant) |
 | 2026-04-06 | file-record.service split: 1 file (1002 lines) -> 3 files (all compliant) |
 | 2026-04-06 | EnterpriseBusinessRulesService split: 1 file (996 lines) -> 3 files (all compliant) |
+| 2026-04-06 | EnterpriseSecurityService split: 1 file (988 lines) -> 3 files (all compliant) |
+
+## EnterpriseSecurityService Split
+
+`EnterpriseSecurityService.ts` contained 988 lines — 2x over the 500-line limit. Service mixing types/interfaces, fallback security data, and DB-driven role/policy management.
+
+Split into 3 files in `src/services/security/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `security-types.ts` | 7 interfaces, cache types | 209 | Yes (types-only) |
+| `security-defaults.ts` | Default roles, email policies, country policies | 230 | Yes (config/data) |
+| `EnterpriseSecurityService.ts` | Service class: cache, DB ops, validation | 397 | No |
+
+Consumer Impact: 1 consumer (UserRoleContext.tsx) — zero import path changes.
 
 ## EnterpriseBusinessRulesService Split
 
