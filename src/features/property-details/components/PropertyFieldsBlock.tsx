@@ -50,11 +50,9 @@ interface PropertyFieldsBlockProps {
   activeLevelId?: string | null;
   /** Callback when user selects a level tab — updates shared state in parent */
   onActiveLevelChange?: (levelId: string | null) => void;
+  /** ADR-233: Auto-save code to Firestore when suggestion arrives after floor/type change */
+  onAutoSaveCode?: (code: string) => void;
 }
-
-// =============================================================================
-// COMPONENT
-// =============================================================================
 
 export function PropertyFieldsBlock({
   property,
@@ -65,6 +63,7 @@ export function PropertyFieldsBlock({
   onPropertyCreated,
   activeLevelId: controlledLevelId,
   onActiveLevelChange,
+  onAutoSaveCode,
 }: PropertyFieldsBlockProps) {
   const { t } = useTranslation('properties');
   // ADR-284: policy errors live in the shared `building` i18n namespace
@@ -82,16 +81,14 @@ export function PropertyFieldsBlock({
   const [, setIsSaving] = useState(false);
   const [codeOverridden, setCodeOverridden] = useState(!!property.code);
 
-  // ADR-233: Track type locally — responds instantly to form dropdown changes
-  // (property.type only updates after Firestore save, but code suggestion needs immediate response)
+  // ADR-233: Track type locally for instant code suggestion response
   const [localType, setLocalType] = useState(property.type ?? '');
   useEffect(() => {
     setLocalType(property.type ?? '');
   }, [property.type]);
 
-  // ── Auto-suggest name based on type + area ──
-  // Tracks whether user manually edited the name field.
-  const nameUserEdited = useRef(!isCreatingNewUnit); // Existing units: don't auto-overwrite
+  // Auto-suggest name — tracks whether user manually edited the name field
+  const nameUserEdited = useRef(!isCreatingNewUnit);
 
   const buildSuggestedName = useCallback((unitType: string, areaNet: number): string => {
     const typeKey = PROPERTY_TYPE_I18N_KEYS[unitType as keyof typeof PROPERTY_TYPE_I18N_KEYS];
@@ -109,9 +106,10 @@ export function PropertyFieldsBlock({
     type: localType,
   });
 
-  // ── Field locking based on commercialStatus ──
-  // reserved: identity fields locked (code, name, type)
-  // sold/rented: identity + physical fields locked (areas, layout, floor, commercialStatus)
+  const prevServerCodeRef = useRef(property.code);
+  const codeRegenerationPending = useRef(false);
+
+  // Field locking based on commercialStatus
   const currentCommercialStatus = (property.commercialStatus ?? 'unavailable') as CommercialStatus;
   const isReservedOrSold = (['reserved', 'sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
@@ -165,6 +163,7 @@ export function PropertyFieldsBlock({
       codeFloorLevel !== prev.floor ||
       localType !== prev.type;
     if (changed) {
+      codeRegenerationPending.current = true;
       setCodeOverridden(false);
       setFormData(p => ({ ...p, code: '' }));
       prevCodeInputsRef.current = {
@@ -194,15 +193,12 @@ export function PropertyFieldsBlock({
         ? t('entityCode.needFloor')
         : suggestedCode || t('fields.identity.codePlaceholder');
 
-  // ── ADR-236 Phase 2: Active level tab (null = "Totals" tab) ──
   const isMultiLevel = property.isMultiLevel && (property.levels?.length ?? 0) >= 2;
-  // Use controlled state from parent (bidirectional sync with MultiLevelNavigation)
   const activeLevelId = controlledLevelId ?? null;
   const setActiveLevelId = useCallback((id: string | null) => {
     onActiveLevelChange?.(id);
   }, [onActiveLevelChange]);
 
-  // ── Computed: current level's data OR aggregated totals ──
   const currentLevelData: LevelData | null = activeLevelId
     ? (formData.levelData[activeLevelId] ?? {})
     : null;
@@ -230,10 +226,14 @@ export function PropertyFieldsBlock({
 
   // ── Sync form data when property changes externally (e.g. floor via FloorSelectField) ──
   useEffect(() => {
+    // ADR-233: Only sync code when it actually changed server-side, not on floor/building re-renders
+    const serverCodeChanged = property.code !== prevServerCodeRef.current;
+    prevServerCodeRef.current = property.code;
+
     setFormData(prev => ({
       ...prev,
       name: property.name ?? '',
-      code: property.code ?? '',
+      ...(serverCodeChanged ? { code: property.code ?? '' } : {}),
       type: property.type ?? '',
       projectId: (property as unknown as Record<string, unknown>).projectId as string ?? '',
       buildingId: property.buildingId ?? '',
@@ -265,13 +265,16 @@ export function PropertyFieldsBlock({
     }));
   }, [property]);
 
-  // ADR-233: Auto-populate code when suggestion arrives and code is empty
-  // Runs regardless of isEditing so the code is visible immediately
+  // ADR-233: Auto-populate code + auto-save on floor/type-triggered suggestion
   useEffect(() => {
     if (suggestedCode && !codeOverridden && !formData.code) {
       setFormData(prev => ({ ...prev, code: suggestedCode }));
+      if (codeRegenerationPending.current && onAutoSaveCode) {
+        codeRegenerationPending.current = false;
+        onAutoSaveCode(suggestedCode);
+      }
     }
-  }, [suggestedCode, codeOverridden, formData.code]);
+  }, [suggestedCode, codeOverridden, formData.code, onAutoSaveCode]);
 
   // ── Build updates from form data (delegated to SSoT mapper) ──
   const buildUpdatesFromForm = useCallback(

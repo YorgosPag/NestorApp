@@ -76,15 +76,15 @@ export interface TypeQuickFiltersProps {
 /**
  * Unit Type Options (για Μονάδες/Διαμερίσματα)
  * Icons follow enterprise standards (Zillow, Rightmove, JLL patterns)
- * 🏢 ENTERPRISE: Labels and tooltips use i18n keys (filters.unitTypes.*)
+ * 🏢 ENTERPRISE: Labels and tooltips use i18n keys (filters.propertyTypes.*)
  */
 export const PROPERTY_TYPE_OPTIONS: TypeFilterOption[] = [
-  { value: 'all', label: 'filters.unitTypes.all', icon: LayoutGrid, tooltip: 'filters.unitTypes.allTooltip' },
-  { value: 'studio', label: 'filters.unitTypes.studio', icon: BedSingle, tooltip: 'filters.unitTypes.studioTooltip' },
-  { value: 'apartment', label: 'filters.unitTypes.apartment', icon: Building2, tooltip: 'filters.unitTypes.apartmentTooltip' },
-  { value: 'maisonette', label: 'filters.unitTypes.maisonette', icon: NAVIGATION_ENTITIES.building.icon, tooltip: 'filters.unitTypes.maisonetteTooltip' },
-  { value: 'shop', label: 'filters.unitTypes.shop', icon: Store, tooltip: 'filters.unitTypes.shopTooltip' },
-  { value: 'office', label: 'filters.unitTypes.office', icon: Briefcase, tooltip: 'filters.unitTypes.officeTooltip' },
+  { value: 'all', label: 'filters.propertyTypes.all', icon: LayoutGrid, tooltip: 'filters.propertyTypes.allTooltip' },
+  { value: 'studio', label: 'filters.propertyTypes.studio', icon: BedSingle, tooltip: 'filters.propertyTypes.studioTooltip' },
+  { value: 'apartment', label: 'filters.propertyTypes.apartment', icon: Building2, tooltip: 'filters.propertyTypes.apartmentTooltip' },
+  { value: 'maisonette', label: 'filters.propertyTypes.maisonette', icon: NAVIGATION_ENTITIES.building.icon, tooltip: 'filters.propertyTypes.maisonetteTooltip' },
+  { value: 'shop', label: 'filters.propertyTypes.shop', icon: Store, tooltip: 'filters.propertyTypes.shopTooltip' },
+  { value: 'office', label: 'filters.propertyTypes.office', icon: Briefcase, tooltip: 'filters.propertyTypes.officeTooltip' },
 ];
 
 /**
@@ -94,9 +94,9 @@ export const PROPERTY_TYPE_OPTIONS: TypeFilterOption[] = [
  */
 export const CONTACT_TYPE_OPTIONS: TypeFilterOption[] = [
   { value: 'all', label: 'filters.contactTypes.all', icon: Users, tooltip: 'filters.contactTypes.allTooltip' },
-  { value: 'individual', label: 'filters.contactTypes.individual', icon: NAVIGATION_ENTITIES.contactIndividual.icon, tooltip: 'contactTypes.individual' },
-  { value: 'company', label: 'filters.contactTypes.company', icon: NAVIGATION_ENTITIES.contactCompany.icon, tooltip: 'contactTypes.company' },
-  { value: 'service', label: 'filters.contactTypes.service', icon: NAVIGATION_ENTITIES.contactService.icon, tooltip: 'contactTypes.service' },
+  { value: 'individual', label: 'filters.contactTypes.individual', icon: NAVIGATION_ENTITIES.contactIndividual.icon, tooltip: 'filters.contactTypes.individual' },
+  { value: 'company', label: 'filters.contactTypes.company', icon: NAVIGATION_ENTITIES.contactCompany.icon, tooltip: 'filters.contactTypes.company' },
+  { value: 'service', label: 'filters.contactTypes.service', icon: NAVIGATION_ENTITIES.contactService.icon, tooltip: 'filters.contactTypes.service' },
 ];
 
 /**
@@ -242,7 +242,7 @@ export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options
     <TypeQuickFilters
       {...props}
       options={PROPERTY_TYPE_OPTIONS}
-      ariaLabel={props.ariaLabel ?? t('filters.unitTypes.ariaLabel')}
+      ariaLabel={props.ariaLabel ?? t('filters.propertyTypes.ariaLabel')}
     />
   );
 }

@@ -46,12 +46,12 @@ const COMMERCIAL_STATUS_OPTIONS: TypeFilterOption[] = [
 ];
 
 const PROPERTY_TYPE_OPTIONS: TypeFilterOption[] = [
-  { value: 'all',        label: 'filters.unitTypes.all',        icon: LayoutGrid, tooltip: 'filters.unitTypes.allTooltip' },
-  { value: 'studio',     label: 'filters.unitTypes.studio',     icon: BedSingle,  tooltip: 'filters.unitTypes.studioTooltip' },
-  { value: 'apartment',  label: 'filters.unitTypes.apartment',  icon: Building2,  tooltip: 'filters.unitTypes.apartmentTooltip' },
-  { value: 'maisonette', label: 'filters.unitTypes.maisonette', icon: Building2,  tooltip: 'filters.unitTypes.maisonetteTooltip' },
-  { value: 'shop',       label: 'filters.unitTypes.shop',       icon: Store,      tooltip: 'filters.unitTypes.shopTooltip' },
-  { value: 'office',     label: 'filters.unitTypes.office',     icon: Briefcase,  tooltip: 'filters.unitTypes.officeTooltip' },
+  { value: 'all',        label: 'filters.propertyTypes.all',        icon: LayoutGrid, tooltip: 'filters.propertyTypes.allTooltip' },
+  { value: 'studio',     label: 'filters.propertyTypes.studio',     icon: BedSingle,  tooltip: 'filters.propertyTypes.studioTooltip' },
+  { value: 'apartment',  label: 'filters.propertyTypes.apartment',  icon: Building2,  tooltip: 'filters.propertyTypes.apartmentTooltip' },
+  { value: 'maisonette', label: 'filters.propertyTypes.maisonette', icon: Building2,  tooltip: 'filters.propertyTypes.maisonetteTooltip' },
+  { value: 'shop',       label: 'filters.propertyTypes.shop',       icon: Store,      tooltip: 'filters.propertyTypes.shopTooltip' },
+  { value: 'office',     label: 'filters.propertyTypes.office',     icon: Briefcase,  tooltip: 'filters.propertyTypes.officeTooltip' },
 ];
 
 // =============================================================================

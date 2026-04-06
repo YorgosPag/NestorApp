@@ -350,6 +350,11 @@ export function PropertyDetailsContent({
         onPropertyCreated={onPropertyCreated}
         activeLevelId={activeLevelId}
         onActiveLevelChange={setActiveLevelId}
+        onAutoSaveCode={(code) => {
+          if (safeOnUpdateProperty && resolvedProperty?.id) {
+            void safeOnUpdateProperty(resolvedProperty.id, { code });
+          }
+        }}
       />
 
       {/* Share Button removed per user request */}
