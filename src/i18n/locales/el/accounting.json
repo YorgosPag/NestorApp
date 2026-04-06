@@ -66,6 +66,7 @@
       "city": "Πόλη",
       "postalCode": "ΤΚ"
     },
+    "vatLabel": "ΦΠΑ",
     "summary": {
       "totalIssued": "Σύνολο Εκδοθέντων",
       "unpaidBalance": "Ανεξόφλητο Υπόλοιπο",

@@ -32,7 +32,9 @@
       "overlayType": "Overlay type",
       "overlayActions": "Overlay actions",
       "historyControls": "History controls"
-    }
+    },
+    "importFloorplan": "Import Floorplan",
+    "importFloorplanWizard": "Import Floorplan (Wizard)"
   },
   "toolbarStatus": {
     "tool": "Tool",

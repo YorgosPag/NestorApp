@@ -342,6 +342,10 @@
     "area": "Επιφάνεια",
     "totalProjectValue": "Συνολική αξία έργου"
   },
+  "attendance": {
+    "siteAttendance": "Παρουσιολόγιο Εργοταξίου",
+    "scanForCheckInOut": "Σκανάρετε για check-in/check-out"
+  },
   "impactGuard": {
     "titles": {
       "allow": "Καμία επίπτωση",

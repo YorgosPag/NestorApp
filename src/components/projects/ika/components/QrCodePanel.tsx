@@ -128,15 +128,15 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
         </head>
         <body>
           <img src="${qrData.qrDataUrl}" alt="QR Code" />
-          <h2>Παρουσιολόγιο Εργοταξίου</h2>
+          <h2>${t('attendance.siteAttendance')}</h2>
           <p>Ημερομηνία: ${qrData.validDate}</p>
-          <p>Σκανάρετε για check-in/check-out</p>
+          <p>${t('attendance.scanForCheckInOut')}</p>
           <script>window.print();</script>
         </body>
       </html>
     `);
     printWindow.document.close();
-  }, [qrData]);
+  }, [qrData, t]);
 
   // =========================================================================
   // RENDER

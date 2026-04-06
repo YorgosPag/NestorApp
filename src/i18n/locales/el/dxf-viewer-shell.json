@@ -32,7 +32,9 @@
       "overlayType": "Τύπος επικάλυψης",
       "overlayActions": "Ενέργειες επικάλυψης",
       "historyControls": "Έλεγχοι ιστορικού"
-    }
+    },
+    "importFloorplan": "Εισαγωγή Κάτοψης",
+    "importFloorplanWizard": "Εισαγωγή Κάτοψης (Wizard)"
   },
   "toolbarStatus": {
     "tool": "Εργαλείο",

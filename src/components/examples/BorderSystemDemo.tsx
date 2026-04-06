@@ -260,8 +260,8 @@ export function BorderSystemDemo() {
       <div className={`${quick.card} p-4`}>
         <h3 className="font-medium mb-2">✨ Enterprise Achievement</h3>
         <p className={cn("text-sm", colors.text.muted)}>
-          🎯 <strong>Single Source of Truth:</strong> Όλα τα borders ελέγχονται από ένα σημείο<br />
-          🎨 <strong>Design Consistency:</strong> Semantic naming και predictable patterns<br />
+          🎯 <strong>Single Source of Truth:</strong> All borders are controlled from a single source<br />
+          🎨 <strong>Design Consistency:</strong> Semantic naming and predictable patterns<br />
           🏢 <strong>Enterprise Quality:</strong> Type-safe, responsive, accessible<br />
           🚀 <strong>Developer Experience:</strong> IntelliSense support και comprehensive API
         </p>

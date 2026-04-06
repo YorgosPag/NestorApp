@@ -362,7 +362,7 @@ export class StorageErrorHandler {
       
       if (shouldClear) {
         await StorageManager.clearAllStorage();
-        alert('✅ Storage καθαρίστηκε! Παρακαλώ ανανεώστε τη σελίδα.');
+        alert('✅ Storage cleared! Please refresh the page.');
         window.location.reload();
         return true;
       }
@@ -370,7 +370,7 @@ export class StorageErrorHandler {
       return false;
     } catch (cleanupError) {
       derr('Storage', 'Error during storage cleanup:', cleanupError);
-      alert('Δεν μπόρεσα να καθαρίσω το storage. Παρακαλώ καθαρίστε το browser cache manually από τις ρυθμίσεις.');
+      alert('Could not clear storage. Please clear the browser cache manually from settings.');
       return false;
     }
   }

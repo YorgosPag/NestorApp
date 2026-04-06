@@ -25,6 +25,7 @@ import { FolderUp, FileUp, Maximize2, Minimize2 } from 'lucide-react';
 import { DXF_ACTION_COLORS } from '../../config/toolbar-colors';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut, DXF_GUIDE_CHORD_MAP, GUIDE_CHORD_TIMEOUT_MS } from '../../config/keyboard-shortcuts';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import UploadDxfButton from '../UploadDxfButton';
 import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 // 🏢 ADR-050: Overlay Toolbar Integration
@@ -89,6 +90,8 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   // ADR-241: Fullscreen state
   isFullscreen,
 }) => {
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer-shell');
   // 🏢 ENTERPRISE HOOKS: Design system integration
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
@@ -357,13 +360,13 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowImportWizard(true)}
-                  aria-label="Εισαγωγή Κάτοψης"
+                  aria-label={t('toolbar.importFloorplan')}
                   className={`${iconSizes.xl} p-0`}
                 >
                   <FileUp className={`${iconSizes.sm} text-emerald-500`} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Εισαγωγή Κάτοψης (Wizard)</TooltipContent>
+              <TooltipContent>{t('toolbar.importFloorplanWizard')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
 

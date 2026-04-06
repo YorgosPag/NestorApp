@@ -158,7 +158,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
               <fieldset>
-                <Label>ΦΠΑ</Label>
+                <Label>{t('invoices.vatLabel')}</Label>
                 <VATRateSelector
                   value={item.vatRate}
                   onValueChange={(rate) => updateItem(index, 'vatRate', rate)}
@@ -171,7 +171,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
               </div>
 
               <div className="flex flex-col justify-end">
-                <span className={cn("text-xs", colors.text.muted)}>ΦΠΑ</span>
+                <span className={cn("text-xs", colors.text.muted)}>{t('invoices.vatLabel')}</span>
                 <span className="text-sm font-medium">{formatCurrency(vatAmount)}</span>
               </div>
 

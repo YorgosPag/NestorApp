@@ -157,7 +157,7 @@ export function PurchaseOrderItemsTable({
                     disabled={readOnly}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="ΑΤΟΕ" />
+                      <SelectValue placeholder={t('contributionTypePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {ATOE_CODES.map((code) => (
@@ -273,7 +273,7 @@ export function PurchaseOrderItemsTable({
                 disabled={readOnly}
               >
                 <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="ΑΤΟΕ" />
+                  <SelectValue placeholder={t('contributionTypePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {ATOE_MASTER_CATEGORIES.map((c) => (

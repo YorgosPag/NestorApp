@@ -66,6 +66,7 @@
       "city": "City",
       "postalCode": "Postal Code"
     },
+    "vatLabel": "VAT",
     "summary": {
       "totalIssued": "Total Issued",
       "unpaidBalance": "Unpaid Balance",

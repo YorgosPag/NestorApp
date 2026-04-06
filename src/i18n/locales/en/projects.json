@@ -342,6 +342,10 @@
     "area": "Area",
     "totalProjectValue": "Total project value"
   },
+  "attendance": {
+    "siteAttendance": "Site Attendance",
+    "scanForCheckInOut": "Scan for check-in/check-out"
+  },
   "impactGuard": {
     "titles": {
       "allow": "No impact detected",
