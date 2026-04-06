@@ -28,44 +28,55 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('useProjectQuickCreate');
 
 export interface UseProjectQuickCreateResult {
-  /** null while loading OR when the last fetch failed — caller must treat
-   *  null as "unknown" and MUST NOT render an empty state on null. */
+  /** null while loading, number after successful fetch, or 0 after all retries exhausted. */
   projectsCount: number | null;
+  /** true when the fetch failed after retries — caller can show a retry CTA. */
+  fetchFailed: boolean;
   showSheet: boolean;
   setShowSheet: (open: boolean) => void;
   handleProjectCreated: (newProjectId: string) => void;
 }
 
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1500;
+
 export function useProjectQuickCreate(
   onCreated: (newProjectId: string) => void,
 ): UseProjectQuickCreateResult {
   const [projectsCount, setProjectsCount] = useState<number | null>(null);
+  const [fetchFailed, setFetchFailed] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const [showSheet, setShowSheet] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    // Direct API call so we can distinguish "0 projects" from "fetch failed".
-    // getProjectsList() swallows errors and returns [] → would cause a
-    // false-positive empty state on API timeout / network failure.
-    apiClient
-      .get<{ projects: unknown[] }>(API_ROUTES.PROJECTS.LIST)
-      .then((result) => {
+
+    async function fetchWithRetry(attempt: number): Promise<void> {
+      try {
+        const result = await apiClient.get<{ projects: unknown[] }>(API_ROUTES.PROJECTS.LIST);
         if (cancelled) return;
         const list = Array.isArray(result?.projects) ? result.projects : [];
         setProjectsCount(list.length);
-      })
-      .catch((error) => {
+        setFetchFailed(false);
+      } catch (error) {
         if (cancelled) return;
-        // Keep projectsCount as null on failure — UI must NOT surface the
-        // "no projects yet" empty state when we don't actually know.
-        logger.warn('Projects count fetch failed — empty state suppressed', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
+        const msg = error instanceof Error ? error.message : String(error);
+
+        if (attempt < MAX_RETRIES) {
+          logger.warn(`Projects fetch attempt ${attempt + 1} failed, retrying...`, { error: msg });
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+          if (!cancelled) return fetchWithRetry(attempt + 1);
+        } else {
+          // All retries exhausted — surface the failure so the UI can
+          // still offer the "Create Project" CTA instead of showing nothing.
+          logger.warn('Projects fetch failed after retries — showing fallback CTA', { error: msg });
+          setFetchFailed(true);
+        }
+      }
+    }
+
+    fetchWithRetry(0);
+    return () => { cancelled = true; };
   }, [refreshTick]);
 
   const handleProjectCreated = useCallback(
@@ -76,5 +87,5 @@ export function useProjectQuickCreate(
     [onCreated],
   );
 
-  return { projectsCount, showSheet, setShowSheet, handleProjectCreated };
+  return { projectsCount, fetchFailed, showSheet, setShowSheet, handleProjectCreated };
 }

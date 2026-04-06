@@ -414,7 +414,7 @@ export function GeneralTabContent({
     },
     [projectLink],
   );
-  const { projectsCount, showSheet, setShowSheet, handleProjectCreated } =
+  const { projectsCount, fetchFailed, showSheet, setShowSheet, handleProjectCreated } =
     useProjectQuickCreate(handleNewProjectSelected);
 
   // 🏢 SPEC-256A: ConflictDialog handlers
@@ -472,9 +472,9 @@ export function GeneralTabContent({
         }}
       />
       {/* 🏢 SSoT: "No projects yet" empty state — visible only in edit/create
-          mode when the system has zero projects. Opens the canonical
-          ProjectQuickCreateSheet (same slide-out used from properties). */}
-      {projectsCount === 0 && effectiveIsEditing && (
+          mode when the system has zero projects OR when the fetch failed
+          (so the "Create Project" CTA is always reachable). */}
+      {(projectsCount === 0 || fetchFailed) && effectiveIsEditing && (
         <NoProjectsEmptyState
           context="forBuilding"
           onCreateProject={() => setShowSheet(true)}
