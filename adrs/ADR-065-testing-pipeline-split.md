@@ -44,6 +44,7 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | geometry-utils split: 1 file (1361 lines) -> 5 files (all compliant) |
 | 2026-04-06 | LayerRenderer split: 1 file (1286 lines) -> 4 files (all compliant) |
 | 2026-04-06 | EnterpriseTeamsService split: 1 file (1233 lines) -> 3 files (all compliant) |
+| 2026-04-06 | CICDPipeline split: 1 file (1224 lines) -> 3 files (all compliant) |
 
 ## DockerOrchestrator Split
 
@@ -184,3 +185,19 @@ Split into 3 files in `src/services/teams/`:
 Key refactoring: 10 private methods converted to standalone exported factory functions with `create*` naming convention. Main class delegates to imported functions. `baseTeam` DRY pattern eliminates repeated team object boilerplate.
 
 Consumer Impact: Main file re-exports all from types + defaults — **zero consumer changes**.
+
+## CICDPipeline Split
+
+`CICDPipeline.ts` contained 1224 lines — 2.4x over the 500-line limit. **0 consumers** (not imported anywhere).
+
+Split into 3 files in `src/subapps/geo-canvas/automation/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `cicd-pipeline-types.ts` | 30+ interfaces, PipelineStatus type alias | 338 | Yes (types-only) |
+| `cicd-pipeline-config.ts` | `createDefaultPipelineConfiguration()` factory — 7 stages, security, monitoring, deployment | 213 | Yes (config/data) |
+| `CICDPipeline.ts` | Main class: singleton, pipeline execution, deployment, monitoring, rollback | 388 | No |
+
+Key refactoring: 400-line `getDefaultPipelineConfiguration()` private method extracted as standalone factory. Config data compacted with inline object literals.
+
+Consumer Impact: No consumers — **zero risk**.
