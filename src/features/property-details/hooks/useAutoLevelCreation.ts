@@ -50,8 +50,9 @@ interface AutoLevelDialogState {
 }
 
 interface UseAutoLevelCreationReturn {
-  /** Call when property type changes to check if auto-creation is needed */
-  triggerAutoLevelCreation: (newType: string) => void;
+  /** Call when property type changes to check if auto-creation is needed.
+   *  Pass fresh values to avoid stale closure issues during creation. */
+  triggerAutoLevelCreation: (newType: string, freshFloorId?: string | null, freshFloorNumber?: number | null) => void;
   /** Dialog state for rendering ConfirmDialog */
   dialogState: AutoLevelDialogState;
   /** Handle dialog confirm */
@@ -130,32 +131,35 @@ export function useAutoLevelCreation({
   }, [buildingId, user]);
 
   // ── Core: create levels from current + next floor ──
-  const createLevelsForCurrentAndNext = useCallback(() => {
+  // Accepts optional fresh overrides to avoid stale closure issues during creation.
+  const createLevelsForCurrentAndNext = useCallback((
+    freshFloorId?: string | null,
+    freshFloorNumber?: number | null,
+  ) => {
     const floors = floorsRef.current;
-    if (!currentFloorId || currentFloorNumber == null || floors.length === 0) {
+    const effectiveFloorId = freshFloorId ?? currentFloorId;
+    const effectiveFloorNumber = freshFloorNumber ?? currentFloorNumber;
+
+    if (!effectiveFloorId || effectiveFloorNumber == null || floors.length === 0) {
       info('properties.multiLevel.noBuildingOrFloor');
       return;
     }
 
-    const currentIdx = floors.findIndex((f) => f.id === currentFloorId);
+    const currentIdx = floors.findIndex((f) => f.id === effectiveFloorId);
     if (currentIdx === -1) {
       info('properties.multiLevel.noBuildingOrFloor');
       return;
     }
 
     const nextFloor = floors[currentIdx + 1];
-
     if (!nextFloor) {
-      // Last floor — show warning dialog
       setDialogState({ type: 'warning', pendingType: null });
       return;
     }
 
-    // Build 2 levels: current (primary) + next
-    const currentFloor = floors[currentIdx];
     const levels = buildLevelsFromSelection(
-      [currentFloor, nextFloor],
-      currentFloorId
+      [floors[currentIdx], nextFloor],
+      effectiveFloorId
     );
     const derived = deriveMultiLevelFields(levels);
 
@@ -169,14 +173,14 @@ export function useAutoLevelCreation({
     info(t('multiLevel.autoCreated', { count: 2 }));
   }, [currentFloorId, currentFloorNumber, info, onUpdateProperty, t]);
 
-  // ── Trigger: called on type change ──
+  // ── Trigger: called on type/floor change ──
+  // Fresh args bypass stale closures — critical for creation flow.
   const triggerAutoLevelCreation = useCallback(
-    (newType: string) => {
-      // Don't auto-create if levels already exist
+    (newType: string, freshFloorId?: string | null, freshFloorNumber?: number | null) => {
       if (hasExistingLevels) return;
 
-      // No building/floor → can't auto-create, just inform
-      if (!buildingId || !currentFloorId) {
+      const effectiveFloorId = freshFloorId ?? currentFloorId;
+      if (!buildingId || !effectiveFloorId) {
         if (isAlwaysMultiLevelType(newType) || isOptionallyMultiLevelType(newType)) {
           info('properties.multiLevel.noBuildingOrFloor');
         }
@@ -184,12 +188,12 @@ export function useAutoLevelCreation({
       }
 
       if (isAlwaysMultiLevelType(newType)) {
-        createLevelsForCurrentAndNext();
+        createLevelsForCurrentAndNext(freshFloorId, freshFloorNumber);
       } else if (isOptionallyMultiLevelType(newType)) {
         setDialogState({ type: 'confirm', pendingType: newType });
       }
     },
-    [buildingId, createLevelsForCurrentAndNext, currentFloorId, hasExistingLevels, info, t]
+    [buildingId, createLevelsForCurrentAndNext, currentFloorId, hasExistingLevels, info]
   );
 
   // ── Dialog handlers ──

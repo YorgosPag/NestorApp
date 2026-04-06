@@ -1,8 +1,4 @@
-/**
- * 🏢 ENTERPRISE: Property Fields Block Component
- * Displays and edits extended property fields (layout, areas, orientations, etc.)
- */
-
+/** 🏢 ENTERPRISE: Property Fields Block — Displays and edits property fields */
 /* eslint-disable design-system/prefer-design-system-imports, design-system/enforce-semantic-colors, custom/no-hardcoded-strings */
 'use client';
 
@@ -34,7 +30,7 @@ import { translatePropertyMutationError } from '@/services/property/property-mut
 import { translatePolicyError, isKnownPolicyErrorCode } from '@/lib/policy';
 // ADR-284 Batch 7: SSoT hierarchy validation + inline new-unit UI
 import { NewUnitHierarchySection } from '@/components/properties/shared/NewUnitHierarchySection';
-import { validatePropertyCreationFields } from '@/hooks/properties/usePropertyCreateValidation';
+import { validatePropertyCreationFields, isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 const logger = createModuleLogger('PropertyFieldsBlock');
 
 interface PropertyFieldsBlockProps {
@@ -209,13 +205,12 @@ export function PropertyFieldsBlock({
     },
   });
 
-  // SSoT: During creation use formData.levels, after creation use property
-  const isMultiLevel = isCreatingNewUnit
-    ? formData.levels.length >= 2
-    : !!(property.isMultiLevel && (property.levels?.length ?? 0) >= 2);
-  const effectiveLevels: PropertyLevel[] = isCreatingNewUnit
-    ? formData.levels
-    : (property.levels ?? []);
+  // ADR-236: Hierarchy lock (creation) + multi-level detection
+  const isStandalone = isStandaloneUnitType(formData.type as PropertyType | '');
+  const isHierarchyComplete = isStandalone ? !!formData.type : !!(formData.type && formData.buildingId && formData.floorId);
+  const isHierarchyLocked = !!isCreatingNewUnit && !isHierarchyComplete;
+  const isMultiLevel = isCreatingNewUnit ? formData.levels.length >= 2 : !!(property.isMultiLevel && (property.levels?.length ?? 0) >= 2);
+  const effectiveLevels: PropertyLevel[] = isCreatingNewUnit ? formData.levels : (property.levels ?? []);
 
   const activeLevelId = controlledLevelId ?? null;
   const setActiveLevelId = useCallback((id: string | null) => {
@@ -412,17 +407,18 @@ export function PropertyFieldsBlock({
       });
       if (patch.type !== undefined) {
         setLocalType(patch.type);
-        // ADR-236 Phase 4: Auto-level creation when type changes via hierarchy
-        if (isCreatingNewUnit) {
-          autoLevel.triggerAutoLevelCreation(patch.type);
+      }
+      // ADR-236 Phase 4: Trigger auto-level with FRESH values (avoids stale closures)
+      if (isCreatingNewUnit && formData.levels.length < 2) {
+        const effectiveType = (patch.type as string) ?? localType;
+        const effectiveFloorId = patch.floorId ?? formData.floorId || null;
+        const effectiveFloor = patch.floor ?? formData.floor;
+        if (effectiveType && effectiveFloorId) {
+          autoLevel.triggerAutoLevelCreation(effectiveType, effectiveFloorId, effectiveFloor);
         }
       }
-      // ADR-236 Phase 4: Re-trigger auto-level when floor changes (user selected type first, floor second)
-      if (patch.floorId !== undefined && isCreatingNewUnit && formData.levels.length < 2) {
-        autoLevel.triggerAutoLevelCreation(localType);
-      }
     },
-    [autoLevel, buildSuggestedName, formData.levels.length, isCreatingNewUnit, localType],
+    [autoLevel, buildSuggestedName, formData.levels.length, formData.floorId, formData.floor, isCreatingNewUnit, localType],
   );
 
   const handleTypeChange = useCallback((newType: string) => {
@@ -431,8 +427,10 @@ export function PropertyFieldsBlock({
     const newName = buildSuggestedName(newType, formData.areaGross);
     setFormData(prev => ({ ...prev, name: newName }));
     if (onAutoSaveFields) onAutoSaveFields({ type: newType, name: newName });
-    if (isCreatingNewUnit) autoLevel.triggerAutoLevelCreation(newType);
-  }, [autoLevel, buildSuggestedName, formData.areaGross, isCreatingNewUnit, onAutoSaveFields]);
+    if (isCreatingNewUnit && formData.floorId) {
+      autoLevel.triggerAutoLevelCreation(newType, formData.floorId, formData.floor);
+    }
+  }, [autoLevel, buildSuggestedName, formData.areaGross, formData.floor, formData.floorId, isCreatingNewUnit, onAutoSaveFields]);
 
   const handleNameManualEdit = useCallback((value: string) => {
     nameUserEdited.current = true;
@@ -466,6 +464,7 @@ export function PropertyFieldsBlock({
         isEditing={isEditing}
         isCreatingNewUnit={isCreatingNewUnit}
         isReservedOrSold={isReservedOrSold}
+        isHierarchyLocked={isHierarchyLocked}
         isSoldOrRented={isSoldOrRented}
         isMultiLevel={!!isMultiLevel}
         effectiveLevels={effectiveLevels}

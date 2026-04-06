@@ -67,6 +67,8 @@ export interface PropertyFieldsEditFormProps {
   isCreatingNewUnit?: boolean;
   /** Reserved or sold (identity fields locked) */
   isReservedOrSold: boolean;
+  /** ADR-236: Fields locked until hierarchy (type + building + floor) is selected during creation */
+  isHierarchyLocked: boolean;
   /** Sold or rented (physical fields locked) */
   isSoldOrRented: boolean;
   /** Multi-level unit */

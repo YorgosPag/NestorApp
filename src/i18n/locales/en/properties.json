@@ -21,7 +21,8 @@
       "yes": "Yes, multiple levels",
       "no": "No, single floor"
     },
-    "noBuildingOrFloor": "Link a building and floor first to enable automatic level creation."
+    "noBuildingOrFloor": "Link a building and floor first to enable automatic level creation.",
+    "selectHierarchyFirst": "Select unit type, building and floor first to unlock the fields."
   },
   "header": {
     "title": "Property Management",
