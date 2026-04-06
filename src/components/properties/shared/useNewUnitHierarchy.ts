@@ -152,9 +152,11 @@ export function useNewUnitHierarchy({
 
     setFloorsLoading(true);
     const floorsCol = collection(db, COLLECTIONS.FLOORS);
+    const isSuperAdmin = user.globalRole === 'super_admin';
     const constraints = [
       where('buildingId', '==', selection.buildingId),
-      ...(user.companyId ? [where('companyId', '==', user.companyId)] : []),
+      // Super admin sees all floors (consistent with buildTenantConstraints)
+      ...(!isSuperAdmin && user.companyId ? [where('companyId', '==', user.companyId)] : []),
     ];
     const q = query(floorsCol, ...constraints);
 
