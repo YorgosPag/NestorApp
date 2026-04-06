@@ -362,6 +362,7 @@ export function BuildingSelectorCard({
             >
               <SelectTrigger
                 id="building-selector"
+                size="sm"
                 className={cn(
                   !isEditing && 'bg-muted',
                   saveStatus === 'success' && getStatusBorder('success'),
@@ -412,6 +413,7 @@ export function BuildingSelectorCard({
               >
                 <SelectTrigger
                   id="floor-selector"
+                  size="sm"
                   className={cn(
                     !isEditing && 'bg-muted',
                     saveStatus === 'success' && getStatusBorder('success'),
@@ -472,13 +474,13 @@ export function BuildingSelectorCard({
 
             {/* Status indicators */}
             {saveStatus === 'success' && (
-              <span className={`flex items-center ${spacing.gap.sm} text-sm text-green-600 dark:text-green-400`}>
+              <span className={cn("flex items-center text-sm", spacing.gap.sm, colors.text.success)}>
                 <CheckCircle className={iconSizes.sm} />
                 {t('buildingSelector.success')}
               </span>
             )}
             {saveStatus === 'error' && (
-              <span className={`flex items-center ${spacing.gap.sm} text-sm text-red-600 dark:text-red-400`}>
+              <span className={cn("flex items-center text-sm", spacing.gap.sm, colors.text.error)}>
                 <AlertCircle className={iconSizes.sm} />
                 {t('buildingSelector.error')}
               </span>
