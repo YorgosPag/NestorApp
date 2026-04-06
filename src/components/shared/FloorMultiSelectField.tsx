@@ -55,6 +55,8 @@ export interface FloorMultiSelectFieldProps {
   noBuildingHint: string;
   /** Disable the field */
   disabled?: boolean;
+  /** Minimum number of levels — hides remove buttons when at minimum */
+  minLevels?: number;
 }
 
 // =============================================================================
@@ -70,6 +72,7 @@ export function FloorMultiSelectField({
   label,
   noBuildingHint,
   disabled = false,
+  minLevels = 0,
 }: FloorMultiSelectFieldProps) {
   const { t } = useTranslation(['properties']);
   const { user } = useAuth();
@@ -193,6 +196,7 @@ export function FloorMultiSelectField({
   );
 
   const isDisabled = disabled || !buildingId;
+  const canRemove = !isDisabled && value.length > minLevels;
 
   return (
     <fieldset className="space-y-2">
@@ -268,7 +272,7 @@ export function FloorMultiSelectField({
                 >
                   {level.isPrimary && <Star className="h-3 w-3" />}
                   {level.name}
-                  {!isDisabled && (
+                  {canRemove && (
                     <button
                       type="button"
                       className="ml-0.5 hover:text-destructive"
