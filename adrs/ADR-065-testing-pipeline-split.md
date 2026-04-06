@@ -104,6 +104,11 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-07 | Phase 5 #13: toolbars/utils split: 1 file (663 lines) -> 2 files (360+247) — runner+customization+hotkey+hooks extracted to toolbars-extended-utils.ts |
 | 2026-04-07 | Phase 5 #14: FormatterRegistry split: 1 file (659 lines) -> 2 files (224+179) — unit-specific formatters extracted to formatter-unit-formats.ts |
 | 2026-04-07 | Phase 5 #15: EntitiesSettings split: 1 file (656 lines) -> 2 files (461+185) — tool settings panel extracted to EntitiesToolSettings.tsx |
+| 2026-04-07 | Phase 5 #16: guide-store split: 1 file (649 lines) -> 2 files (461+235) — group+batch ops as pure functions to guide-store-group-ops.ts |
+| 2026-04-07 | Phase 5 #17: ProductTour split: 1 file (701 lines) -> 3 files (233+342+28) — SpotlightOverlay+TourTooltip to product-tour-overlay.tsx, constants to product-tour-constants.ts |
+| 2026-04-07 | Phase 5 #18: ImageParser split: 1 file (649 lines) -> 2 files (298+208) — contact photo compression to image-parser-compression.ts |
+| 2026-04-07 | Phase 5 #19: ProfessionalDrawingInterface split: 1 file (649 lines) -> 2 files (302+143) — monitoring dashboard to professional-drawing-dashboard.tsx |
+| 2026-04-07 | Phase 5 #20: useMessageReactions split: 1 file (642 lines) -> 2 files (294+119) — types+helpers to message-reactions-types.ts |
 
 ## BaseEntityRenderer Split
 
