@@ -32,6 +32,7 @@ import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
+import { useAutoLevelCreation } from './hooks/useAutoLevelCreation';
 import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 import type { PropertyLevel } from '@/types/property';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
@@ -169,11 +170,26 @@ export function PropertyDetailsContent({
     [isReadOnly, resolvedProperty, runExistingPropertyUpdate]
   );
 
+  // ADR-236 Phase 4: Auto-create levels when type changes to multi-level capable
+  const autoLevel = useAutoLevelCreation({
+    buildingId: resolvedProperty.buildingId ?? null,
+    currentFloorId: resolvedProperty.floorId ?? null,
+    currentFloorNumber: resolvedProperty.floor ?? null,
+    hasExistingLevels: (resolvedProperty.levels?.length ?? 0) >= 2,
+    onUpdateProperty: (updates) => {
+      if (resolvedProperty.id) {
+        void baseSafeUpdate(resolvedProperty.id, updates);
+      }
+    },
+  });
+
   // ADR-236: Intercept updates to track type changes locally for instant UI response
   const safeOnUpdateProperty = useCallback(
     async (id: string, updates: Partial<Property>) => {
       if (updates.type && typeof updates.type === 'string') {
         setLocalType(updates.type);
+        // ADR-236 Phase 4: Trigger auto-level creation on type change
+        autoLevel.triggerAutoLevelCreation(updates.type);
       }
       try {
         await baseSafeUpdate(id, updates);
@@ -181,7 +197,7 @@ export function PropertyDetailsContent({
         notifyError(translatePropertyMutationError(error, t));
       }
     },
-    [baseSafeUpdate, notifyError, t]
+    [autoLevel, baseSafeUpdate, notifyError, t]
   );
 
   // 🏢 ENTERPRISE: Contextual floor validation (Google Contacts pattern)
@@ -391,6 +407,31 @@ export function PropertyDetailsContent({
       )}
       {ImpactDialog}
       <ConfirmDialog {...floorWarningDialogProps} />
+
+      {/* ADR-236 Phase 4: Auto-level creation dialogs */}
+      {autoLevel.dialogState.type === 'warning' && (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => { if (!open) autoLevel.handleDialogDismiss(); }}
+          title={t('properties:multiLevel.noNextFloor.title')}
+          description={t('properties:multiLevel.noNextFloor.description')}
+          variant="warning"
+          confirmText={t('common:deletionGuard.understood')}
+          onConfirm={autoLevel.handleDialogConfirm}
+        />
+      )}
+      {autoLevel.dialogState.type === 'confirm' && (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => { if (!open) autoLevel.handleDialogDismiss(); }}
+          title={t('properties:multiLevel.optionalConfirm.title')}
+          description={t('properties:multiLevel.optionalConfirm.description')}
+          variant="default"
+          confirmText={t('properties:multiLevel.optionalConfirm.yes')}
+          cancelText={t('properties:multiLevel.optionalConfirm.no')}
+          onConfirm={autoLevel.handleDialogConfirm}
+        />
+      )}
     </div>
   );
 }

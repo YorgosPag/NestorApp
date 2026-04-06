@@ -970,12 +970,40 @@ export const MULTI_LEVEL_CAPABLE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Types that are ALWAYS multi-level (≥2 levels required by definition).
+ * When user selects one of these, system auto-creates 2 levels.
+ */
+export const ALWAYS_MULTI_LEVEL_TYPES: ReadonlySet<string> = new Set([
+  'maisonette', 'penthouse', 'loft',
+]);
+
+/**
+ * Types that CAN be multi-level but user must confirm.
+ * System asks "does this unit span multiple floors?" before creating levels.
+ */
+export const OPTIONALLY_MULTI_LEVEL_TYPES: ReadonlySet<string> = new Set([
+  'shop', 'hall',
+]);
+
+/**
  * Check if a property type supports multi-level floors.
  * @param type — PropertyType value (canonical or legacy)
  */
 export function isMultiLevelCapableType(type: string | undefined | null): boolean {
   if (!type) return false;
   return MULTI_LEVEL_CAPABLE_TYPES.has(type);
+}
+
+/** Check if a property type is ALWAYS multi-level (auto-create levels). */
+export function isAlwaysMultiLevelType(type: string | undefined | null): boolean {
+  if (!type) return false;
+  return ALWAYS_MULTI_LEVEL_TYPES.has(type);
+}
+
+/** Check if a property type is OPTIONALLY multi-level (ask user). */
+export function isOptionallyMultiLevelType(type: string | undefined | null): boolean {
+  if (!type) return false;
+  return OPTIONALLY_MULTI_LEVEL_TYPES.has(type);
 }
 
 // ============================================================================

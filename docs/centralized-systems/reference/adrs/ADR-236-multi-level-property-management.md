@@ -161,7 +161,40 @@ Single-level: 4 tabs (unchanged)
 | `src/components/shared/files/hooks/useEntityFiles.ts` | Added `levelFloorId` param |
 | `src/features/read-only-viewer/components/ReadOnlyMediaViewer.tsx` | Multi-level unit FP tabs + `UnitFloorplanTabContent` + tab reordering |
 
+## Phase 4: Auto-Level Creation on Type Change (ADR-236 Phase 4)
+
+### Problem
+When user changed property type to multi-level (e.g. maisonette), levels had to be created manually via FloorMultiSelectField. This was a poor UX for types that are always multi-level.
+
+### Decision
+Auto-create levels on type change with three behaviors:
+- **Always multi-level** (maisonette, penthouse, loft): Auto-create 2 levels (current floor + next) + info toast
+- **Optionally multi-level** (shop, hall): Show confirm dialog asking user if unit spans multiple floors
+- **No next floor available** (last floor in building): Show warning dialog explaining the limitation
+
+### New Constants
+- `ALWAYS_MULTI_LEVEL_TYPES` — Set of types that always require ≥2 levels
+- `OPTIONALLY_MULTI_LEVEL_TYPES` — Set of types where user decides
+- `isAlwaysMultiLevelType()` / `isOptionallyMultiLevelType()` — checker functions
+
+### New Hook
+- **Location**: `src/features/property-details/hooks/useAutoLevelCreation.ts`
+- Subscribes to building floors via onSnapshot (same pattern as FloorMultiSelectField)
+- Exposes `triggerAutoLevelCreation(newType)` called from `safeOnUpdateProperty` on type change
+- Reuses `buildLevelsFromSelection()` + `deriveMultiLevelFields()` from multi-level.service.ts
+- Skips auto-creation if levels already exist (prevents overwriting manual selections)
+
+### Files Changed (Phase 4)
+| File | Action |
+|------|--------|
+| `src/config/domain-constants.ts` | Added `ALWAYS_MULTI_LEVEL_TYPES`, `OPTIONALLY_MULTI_LEVEL_TYPES` + checker functions |
+| `src/features/property-details/hooks/useAutoLevelCreation.ts` | **NEW** — Auto-level creation hook |
+| `src/features/property-details/PropertyDetailsContent.tsx` | Integrated hook + dialog rendering |
+| `src/i18n/locales/el/properties.json` | Added `multiLevel.*` i18n keys |
+| `src/i18n/locales/en/properties.json` | Added `multiLevel.*` i18n keys |
+
 ## Changelog
+- **2026-04-06**: Phase 4 — Auto-level creation on type change with always/optional/warning flows
 - **2026-03-16**: Phase 3 — Per-level unit floorplan tabs with `levelFloorId` schema field
 - **2026-03-16**: Phase 2 — Per-level data entry (areas, layout, orientations, finishes) with auto-aggregation
 - **2026-03-16**: Initial implementation — all 3 phases complete

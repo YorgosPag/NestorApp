@@ -9,7 +9,19 @@
     "title": "Properties"
   },
   "multiLevel": {
-    "floors": "Floors"
+    "floors": "Floors",
+    "autoCreated": "{{count}} levels created automatically. You can add or remove levels.",
+    "noNextFloor": {
+      "title": "No next floor available",
+      "description": "This unit type requires at least 2 levels, but there is no next floor in the building. Add an additional floor to the building or select a lower floor."
+    },
+    "optionalConfirm": {
+      "title": "Multiple levels?",
+      "description": "Does this unit span more than one floor?",
+      "yes": "Yes, multiple levels",
+      "no": "No, single floor"
+    },
+    "noBuildingOrFloor": "Link a building and floor first to enable automatic level creation."
   },
   "header": {
     "title": "Property Management",
