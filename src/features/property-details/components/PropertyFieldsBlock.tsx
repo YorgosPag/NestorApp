@@ -411,7 +411,7 @@ export function PropertyFieldsBlock({
       // ADR-236 Phase 4: Trigger auto-level with FRESH values (avoids stale closures)
       if (isCreatingNewUnit && formData.levels.length < 2) {
         const effectiveType = (patch.type as string) ?? localType;
-        const effectiveFloorId = patch.floorId ?? formData.floorId || null;
+        const effectiveFloorId = patch.floorId ?? (formData.floorId || null);
         const effectiveFloor = patch.floor ?? formData.floor;
         if (effectiveType && effectiveFloorId) {
           autoLevel.triggerAutoLevelCreation(effectiveType, effectiveFloorId, effectiveFloor);
