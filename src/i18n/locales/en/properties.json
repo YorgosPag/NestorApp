@@ -469,6 +469,7 @@
         "success": "Unit created successfully",
         "error": "Error creating unit"
       },
+      "floorLevel": "Level",
       "emptyState": {
         "noProjects": {
           "title": "No Projects yet",

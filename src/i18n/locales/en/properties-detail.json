@@ -25,6 +25,10 @@
     }
   },
   "fields": {
+    "location": {
+      "floor": "Floor",
+      "noFloorHint": "Connect a building first"
+    },
     "identity": {
       "sectionTitle": "Unit Identity",
       "name": "Unit Name",

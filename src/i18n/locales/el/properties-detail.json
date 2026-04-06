@@ -25,6 +25,10 @@
     }
   },
   "fields": {
+    "location": {
+      "floor": "Όροφος",
+      "noFloorHint": "Συνδέστε πρώτα κτίριο"
+    },
     "identity": {
       "sectionTitle": "Ταυτότητα Μονάδας",
       "name": "Όνομα Μονάδας",

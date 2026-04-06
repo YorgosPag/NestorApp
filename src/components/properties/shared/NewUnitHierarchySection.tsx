@@ -165,7 +165,7 @@ export function NewUnitHierarchySection({
         <FormField label={t('dialog.addUnit.fields.type')} htmlFor="new-unit-type" required>
           <FormInput>
             <Select value={selection.type} onValueChange={handleTypeChange}>
-              <SelectTrigger id="new-unit-type">
+              <SelectTrigger size="sm" id="new-unit-type">
                 <SelectValue placeholder={t('dialog.addUnit.placeholders.type')} />
               </SelectTrigger>
               <SelectContent>
@@ -185,7 +185,7 @@ export function NewUnitHierarchySection({
                 onValueChange={handleProjectChange}
                 disabled={projectsLoading}
               >
-                <SelectTrigger id="new-unit-project">
+                <SelectTrigger size="sm" id="new-unit-project">
                   <SelectValue placeholder={t('dialog.addUnit.placeholders.project')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -202,7 +202,7 @@ export function NewUnitHierarchySection({
           <FormField label={t('dialog.addUnit.fields.building')} htmlFor="new-unit-building" required>
             <FormInput>
               <Select value={selection.buildingId} onValueChange={handleBuildingChange}>
-                <SelectTrigger id="new-unit-building">
+                <SelectTrigger size="sm" id="new-unit-building">
                   <SelectValue placeholder={t('dialog.addUnit.placeholders.building')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -235,7 +235,7 @@ export function NewUnitHierarchySection({
                   onValueChange={handleFloorChange}
                   disabled={!selection.buildingId || floorsLoading}
                 >
-                  <SelectTrigger id="new-unit-floor">
+                  <SelectTrigger size="sm" id="new-unit-floor">
                     <SelectValue placeholder={t('dialog.addUnit.placeholders.floor')} />
                   </SelectTrigger>
                   <SelectContent>

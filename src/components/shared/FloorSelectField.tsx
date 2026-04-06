@@ -178,7 +178,7 @@ export function FloorSelectField({
           onValueChange={handleValueChange}
           disabled={isDisabled}
         >
-          <SelectTrigger className="h-8 text-sm">
+          <SelectTrigger size="sm">
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>

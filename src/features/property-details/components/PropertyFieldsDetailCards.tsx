@@ -34,6 +34,7 @@ import {
   ORIENTATION_OPTIONS, CONDITION_OPTIONS, ENERGY_CLASS_OPTIONS,
   HEATING_OPTIONS, COOLING_OPTIONS, FLOORING_OPTIONS, FRAME_OPTIONS,
   GLAZING_OPTIONS, INTERIOR_FEATURE_OPTIONS, SECURITY_FEATURE_OPTIONS,
+  PROPERTY_CARD_COLORS, PROPERTY_MICRO_TEXT,
 } from './property-fields-constants';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 
@@ -58,10 +59,10 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Bed className={cn(iconSizes.sm, 'text-violet-500')} />
+              <Bed className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.layout)} />
               {t('fields.layout.sectionTitle')}
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
+                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.success)}>
                   {t('multiLevel.perLevel.perFloorHint')}
                 </span>
               )}
@@ -70,7 +71,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
           <CardContent className="p-2 pt-0">
             {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
               <div className="space-y-1.5">
-                <p className={cn("text-[10px] italic", colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
+                <p className={cn("italic", PROPERTY_MICRO_TEXT.helper, colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
                 {aggregatedTotals.layout.bedrooms > 0 && (
                   <dl className="flex items-baseline gap-1.5">
                     <dt className={cn("text-xs", colors.text.muted)}>{t('card.stats.bedrooms')}:</dt>
@@ -93,9 +94,9 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
             ) : (
               <div className="space-y-2">
                 {([
-                  ['bedrooms', 'card.stats.bedrooms', Bed, 'text-violet-600', 20],
-                  ['bathrooms', 'card.stats.bathrooms', Bath, 'text-cyan-600', 10],
-                  ['wc', 'fields.layout.wc', Bath, 'text-sky-500', 5],
+                  ['bedrooms', 'card.stats.bedrooms', Bed, PROPERTY_CARD_COLORS.bedrooms, 20],
+                  ['bathrooms', 'card.stats.bathrooms', Bath, PROPERTY_CARD_COLORS.bathrooms, 10],
+                  ['wc', 'fields.layout.wc', Bath, PROPERTY_CARD_COLORS.wc, 5],
                 ] as const).map(([layoutKey, labelKey, Icon, iconColor, max]) => {
                   const value = isMultiLevel && activeLevelId
                     ? (currentLevelData?.layout?.[layoutKey] ?? 0)
@@ -118,7 +119,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                             setFormData(prev => ({ ...prev, [layoutKey]: num }));
                           }
                         }}
-                        className={cn('h-7 text-xs', quick.input)} disabled={!isEditing || isSoldOrRented} />
+                        size="sm" className="text-xs" disabled={!isEditing || isSoldOrRented} />
                     </fieldset>
                   );
                 })}
@@ -131,10 +132,10 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Compass className={cn(iconSizes.sm, 'text-amber-500')} />
+              <Compass className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.orientation)} />
               {t('orientation.sectionTitle')}
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
+                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.success)}>
                   {t('multiLevel.perLevel.perFloorHint')}
                 </span>
               )}
@@ -143,7 +144,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
           <CardContent className="p-2 pt-0 space-y-2">
             {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
               <div className="space-y-1.5">
-                <p className={cn("text-[10px] italic", colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
+                <p className={cn("italic", PROPERTY_MICRO_TEXT.helper, colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
                 {aggregatedTotals.orientations.length > 0 && (
                   <p className="text-xs font-medium">
                     {aggregatedTotals.orientations.map(o => t(`orientation.short.${o}`, { defaultValue: o })).join(', ')}
@@ -191,11 +192,11 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Wrench className={cn(iconSizes.sm, 'text-orange-500')} />
+              <Wrench className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.condition)} />
               {t('condition.sectionTitle')}
-              <Zap className={cn(iconSizes.sm, 'text-green-500')} />
+              <Zap className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.energy)} />
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal ${colors.text.muted}">
+                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.muted)}>
                   {t('multiLevel.perLevel.sharedHint')}
                 </span>
               )}
@@ -205,12 +206,12 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
             <div className="space-y-2">
               <fieldset className="space-y-1">
                 <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
-                  <Wrench className={cn(iconSizes.xs, 'text-orange-600')} />
+                  <Wrench className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.conditionIcon)} />
                   {t('condition.sectionTitle')}
                 </Label>
                 <Select value={formData.condition} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}>
-                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('condition.sectionTitle')} /></SelectTrigger>
+                  <SelectTrigger size="sm"><SelectValue placeholder={t('condition.sectionTitle')} /></SelectTrigger>
                   <SelectContent>
                     {CONDITION_OPTIONS.map((c) => (
                       <SelectItem key={c} value={c} className="text-xs">{t(`condition.${c}`)}</SelectItem>
@@ -220,12 +221,12 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
               </fieldset>
               <fieldset className="space-y-1">
                 <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
-                  <Zap className={cn(iconSizes.xs, 'text-green-600')} />
+                  <Zap className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.energyIcon)} />
                   {t('energy.class')}
                 </Label>
                 <Select value={formData.energyClass} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}>
-                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('energy.class')} /></SelectTrigger>
+                  <SelectTrigger size="sm"><SelectValue placeholder={t('energy.class')} /></SelectTrigger>
                   <SelectContent>
                     {ENERGY_CLASS_OPTIONS.map((e) => (
                       <SelectItem key={e} value={e} className="text-xs">{e}</SelectItem>
@@ -247,10 +248,10 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Thermometer className={cn(iconSizes.sm, 'text-red-500')} />
+              <Thermometer className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.systems)} />
               {t('systems.sectionTitle')}
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal ${colors.text.muted}">
+                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.muted)}>
                   {t('multiLevel.perLevel.sharedHint')}
                 </span>
               )}
@@ -260,12 +261,12 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
             <div className="space-y-2">
               <fieldset className="space-y-1">
                 <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
-                  <Flame className={cn(iconSizes.xs, 'text-orange-500')} />
+                  <Flame className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.heating)} />
                   {t('systems.heating.label')}
                 </Label>
                 <Select value={formData.heatingType} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}>
-                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('systems.heating.label')} /></SelectTrigger>
+                  <SelectTrigger size="sm"><SelectValue placeholder={t('systems.heating.label')} /></SelectTrigger>
                   <SelectContent>
                     {HEATING_OPTIONS.map((h) => (
                       <SelectItem key={h} value={h} className="text-xs">{t(`systems.heating.${h}`)}</SelectItem>
@@ -275,12 +276,12 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
               </fieldset>
               <fieldset className="space-y-1">
                 <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
-                  <Snowflake className={cn(iconSizes.xs, 'text-blue-500')} />
+                  <Snowflake className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.cooling)} />
                   {t('systems.cooling.label')}
                 </Label>
                 <Select value={formData.coolingType} disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}>
-                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('systems.cooling.label')} /></SelectTrigger>
+                  <SelectTrigger size="sm"><SelectValue placeholder={t('systems.cooling.label')} /></SelectTrigger>
                   <SelectContent>
                     {COOLING_OPTIONS.map((c) => (
                       <SelectItem key={c} value={c} className="text-xs">{t(`systems.cooling.${c}`)}</SelectItem>
@@ -295,10 +296,10 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Home className={cn(iconSizes.sm, 'text-teal-500')} />
+              <Home className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.finishes)} />
               {t('finishes.sectionTitle')}
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal text-emerald-600 dark:text-emerald-400">
+                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.success)}>
                   {t('multiLevel.perLevel.perFloorHint')}
                 </span>
               )}
@@ -364,7 +365,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                             setFormData(prev => ({ ...prev, windowFrames: value }));
                           }
                         }}>
-                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
+                        <SelectTrigger size="sm"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
                         <SelectContent>
                           {FRAME_OPTIONS.map((f) => (
                             <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
@@ -385,7 +386,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                             setFormData(prev => ({ ...prev, glazing: value }));
                           }
                         }}>
-                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
+                        <SelectTrigger size="sm"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
                         <SelectContent>
                           {GLAZING_OPTIONS.map((g) => (
                             <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>
@@ -404,10 +405,10 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Shield className={cn(iconSizes.sm, 'text-purple-500')} />
+              <Shield className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.features)} />
               {t('features.sectionTitle')}
               {isMultiLevel && (
-                <span className="ml-auto text-[9px] font-normal ${colors.text.muted}">
+                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.muted)}>
                   {t('multiLevel.perLevel.sharedHint')}
                 </span>
               )}

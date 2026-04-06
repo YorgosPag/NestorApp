@@ -27,6 +27,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PROPERTY_CARD_COLORS } from './property-fields-constants';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -404,7 +405,7 @@ export function LinkedSpacesCard({
     <Card className={cn(quick.card, colors.bg.card)}>
       <CardHeader className="!p-2 flex flex-col space-y-2">
         <CardTitle className={cn('flex items-center', spacing.gap.sm, typography.card.titleCompact)}>
-          <Package className={cn(iconSizes.md, 'text-purple-600')} />
+          <Package className={cn(iconSizes.md, PROPERTY_CARD_COLORS.linkedSpaces)} />
           {t('linkedSpaces.title')}
         </CardTitle>
       </CardHeader>
@@ -423,9 +424,9 @@ export function LinkedSpacesCard({
                     className={`flex items-center ${spacing.gap.sm} pr-1`}
                   >
                     {space.spaceType === 'parking' ? (
-                      <Car className={cn(iconSizes.xs, 'text-blue-600')} />
+                      <Car className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.parking)} />
                     ) : (
-                      <Package className={cn(iconSizes.xs, 'text-amber-600')} />
+                      <Package className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.storage)} />
                     )}
                     <span>{getSpaceName(space)}</span>
                     <span className={cn("text-xs", colors.text.muted)}>
@@ -464,7 +465,7 @@ export function LinkedSpacesCard({
                 value={selectedInclusion}
                 onValueChange={(value: SpaceInclusionType) => setSelectedInclusion(value)}
               >
-                <SelectTrigger id="inclusion-selector" className="h-8 text-sm">
+                <SelectTrigger id="inclusion-selector" size="sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -484,7 +485,7 @@ export function LinkedSpacesCard({
             {/* Parking selector */}
             <fieldset className={spacing.spaceBetween.sm}>
               <Label className="text-xs flex items-center gap-1">
-                <Car className={cn(iconSizes.xs, 'text-blue-600')} />
+                <Car className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.parking)} />
                 {t('linkedSpaces.addParking')}
               </Label>
               {loadingParking ? (
@@ -501,7 +502,7 @@ export function LinkedSpacesCard({
                   value={selectedParkingId}
                   onValueChange={handleParkingSelected}
                 >
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger size="sm">
                     <SelectValue placeholder={t('linkedSpaces.selectParking')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -523,7 +524,7 @@ export function LinkedSpacesCard({
             {/* Storage selector */}
             <fieldset className={spacing.spaceBetween.sm}>
               <Label className="text-xs flex items-center gap-1">
-                <Package className={cn(iconSizes.xs, 'text-amber-600')} />
+                <Package className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.storage)} />
                 {t('linkedSpaces.addStorage')}
               </Label>
               {loadingStorage ? (
@@ -540,7 +541,7 @@ export function LinkedSpacesCard({
                   value={selectedStorageId}
                   onValueChange={handleStorageSelected}
                 >
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger size="sm">
                     <SelectValue placeholder={t('linkedSpaces.selectStorage')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -569,13 +570,13 @@ export function LinkedSpacesCard({
                   </span>
                 )}
                 {saveStatus === 'success' && (
-                  <span className={`flex items-center ${spacing.gap.sm} text-sm text-green-600 dark:text-green-400`}>
+                  <span className={cn("flex items-center text-sm", spacing.gap.sm, colors.text.success)}>
                     <CheckCircle className={iconSizes.sm} />
                     {t('linkedSpaces.success')}
                   </span>
                 )}
                 {saveStatus === 'error' && (
-                  <span className={`flex items-center ${spacing.gap.sm} text-sm text-red-600 dark:text-red-400`}>
+                  <span className={cn("flex items-center text-sm", spacing.gap.sm, colors.text.error)}>
                     <AlertCircle className={iconSizes.sm} />
                     {t('linkedSpaces.error')}
                   </span>

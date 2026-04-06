@@ -82,3 +82,41 @@ export const COMMERCIAL_STATUS_OPTIONS: CommercialStatus[] = [
 export const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
   'draft', 'under-construction', 'inspection', 'ready', 'maintenance',
 ];
+
+// =============================================================================
+// SSoT: Visual tokens for property detail cards (SALES_ICON_COLORS pattern)
+// =============================================================================
+
+/** Icon colors per card section — SSoT so every card header is defined once. */
+export const PROPERTY_CARD_COLORS = {
+  // Card headers
+  identity: 'text-blue-500',
+  areas: 'text-pink-600',
+  layout: 'text-violet-500',
+  orientation: 'text-amber-500',
+  condition: 'text-orange-500',
+  energy: 'text-green-500',
+  systems: 'text-red-500',
+  finishes: 'text-teal-500',
+  features: 'text-purple-500',
+  floor: 'text-emerald-500',
+  linkedSpaces: 'text-purple-600',
+  // Sub-icons inside cards
+  conditionIcon: 'text-orange-600',
+  energyIcon: 'text-green-600',
+  heating: 'text-orange-500',
+  cooling: 'text-blue-500',
+  bedrooms: 'text-violet-600',
+  bathrooms: 'text-cyan-600',
+  wc: 'text-sky-500',
+  parking: 'text-blue-600',
+  storage: 'text-amber-600',
+} as const;
+
+/** Micro typography for compact property cards — below Tailwind's text-xs (12px). */
+export const PROPERTY_MICRO_TEXT = {
+  /** 10px — helper text, hints, metadata */
+  helper: 'text-[0.625rem]',
+  /** 9px — multi-level indicators, ultra-compact labels */
+  micro: 'text-[0.5625rem]',
+} as const;

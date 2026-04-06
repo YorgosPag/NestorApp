@@ -46,6 +46,7 @@ import { translatePropertyMutationError } from '@/services/property/property-mut
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { evaluateFloorTypeCompatibility } from '@/services/property/property-field-rules';
+import { PROPERTY_CARD_COLORS } from './components/property-fields-constants';
 import '@/lib/design-system';
 
 export function PropertyDetailsContent({
@@ -276,7 +277,7 @@ export function PropertyDetailsContent({
             <Card>
               <CardHeader className="p-2">
                 <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-                  <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
+                  <MapPin className={cn(iconSizes.md, PROPERTY_CARD_COLORS.floor)} />
                   {t('properties:fields.location.floor')}
                 </CardTitle>
               </CardHeader>
