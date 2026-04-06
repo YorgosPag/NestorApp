@@ -476,9 +476,9 @@
           "cta": "Create a Project"
         },
         "noBuildings": {
-          "title": "Project \"{{projectName}}\" has no Buildings yet",
-          "description": "For this unit type you need: Project → Building → Floor",
-          "cta": "Create a Building in this Project"
+          "title": "No Buildings yet",
+          "description": "This unit type requires a Building.",
+          "cta": "Create Building"
         },
         "noFloors": {
           "title": "Building \"{{buildingName}}\" has no floors yet",

@@ -92,7 +92,7 @@ export function PropertyHierarchyEmptyStates({
             <Building2 className={cn(iconSizes.md, colors.text.muted)} aria-hidden />
             <div className="flex-1">
               <p className={cn('font-medium', colors.text.primary)}>
-                {`Το Έργο "${selectedProjectName || '—'}" δεν έχει Κτίρια ακόμη`}
+                {t('dialog.addUnit.emptyState.noBuildings.title')}
               </p>
               <p className={cn('text-xs mt-1', colors.text.muted)}>
                 {t('dialog.addUnit.emptyState.noBuildings.description')}

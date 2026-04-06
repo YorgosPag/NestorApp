@@ -189,10 +189,13 @@ export function useNewUnitHierarchy({
   // the fetch window — users saw nothing and couldn't create a project.
   const emptyStates = useMemo(() => ({
     noProjects: enabled && projects.length === 0,
+    // noBuildings: For Family A (in-building) units, show CTA when there are
+    // zero buildings available — regardless of project selection. The user
+    // picks Building first (project derives from it), so an empty building
+    // list leaves them stuck with no way to proceed.
     noBuildings:
       enabled &&
       !isStandalone &&
-      !!selection.projectId &&
       filteredBuildings.length === 0,
     noFloors:
       enabled &&

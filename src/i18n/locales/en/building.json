@@ -256,6 +256,7 @@
     }
   },
   "details": {
+    "addBuildingTitle": "Add New Building",
     "newBuilding": "New Building",
     "viewBuilding": "View Building",
     "editBuilding": "Edit",

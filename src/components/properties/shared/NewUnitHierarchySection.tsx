@@ -20,7 +20,6 @@
  */
 
 import React, { useCallback, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormField, FormGrid, FormInput } from '@/components/ui/form/FormComponents';
 import { Button } from '@/components/ui/button';
@@ -31,6 +30,7 @@ import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValida
 // ADR-145: Import από centralized SSoT (leaf module — δεν δημιουργεί circular dep).
 import { PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/constants/property-types';
 import { ProjectQuickCreateSheet } from '@/components/projects/dialogs/ProjectQuickCreateSheet';
+import { BuildingQuickCreateSheet } from '@/components/building-management/dialogs/BuildingQuickCreateSheet';
 import { FloorInlineCreateForm } from '@/components/building-management/tabs/FloorInlineCreateForm';
 import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';
 import { PropertyHierarchyEmptyStates } from './PropertyHierarchyEmptyStates';
@@ -57,7 +57,6 @@ export function NewUnitHierarchySection({
   onChange,
 }: NewUnitHierarchySectionProps) {
   const { t } = useTranslation('properties');
-  const router = useRouter();
 
   // Buildings via real-time hook (SSoT)
   const { allBuildings: buildings } = useRealtimeBuildings();
@@ -79,6 +78,7 @@ export function NewUnitHierarchySection({
 
   // Nested dialog state
   const [showAddProjectDialog, setShowAddProjectDialog] = useState(false);
+  const [showAddBuildingSheet, setShowAddBuildingSheet] = useState(false);
   const [showInlineFloorForm, setShowInlineFloorForm] = useState(false);
   const [showLinkBuildingDialog, setShowLinkBuildingDialog] = useState(false);
 
@@ -127,11 +127,10 @@ export function NewUnitHierarchySection({
     onChange({ floorId: value, floor: f?.number ?? 0 });
   }, [floorOptions, onChange]);
 
-  // Navigate to /buildings page with project preselected
-  const handleNavigateToCreateBuilding = useCallback(() => {
-    const params = selection.projectId ? `?projectId=${encodeURIComponent(selection.projectId)}` : '';
-    router.push(`/buildings${params}`);
-  }, [router, selection.projectId]);
+  // SSoT: Open BuildingQuickCreateSheet (same pattern as ProjectQuickCreateSheet)
+  const handleOpenCreateBuilding = useCallback(() => {
+    setShowAddBuildingSheet(true);
+  }, []);
 
   // Auto-refresh floors via onSnapshot — no manual reload needed.
   // Auto-select project after linking orphan building (hook flag flips).
@@ -149,7 +148,7 @@ export function NewUnitHierarchySection({
         selectedProjectName={selectedProjectName}
         selectedBuildingName={selectedBuildingName}
         onCreateProject={() => setShowAddProjectDialog(true)}
-        onCreateBuilding={handleNavigateToCreateBuilding}
+        onCreateBuilding={handleOpenCreateBuilding}
         onLinkBuildingToProject={() => setShowLinkBuildingDialog(true)}
         onPickAnotherBuilding={() => onChange({ buildingId: '', floorId: '', floor: 0 })}
         onCreateFloor={() => setShowInlineFloorForm(true)}
@@ -253,11 +252,15 @@ export function NewUnitHierarchySection({
         )}
       </FormGrid>
 
-      {/* Nested dialogs — SSoT: reuses the canonical Project editor */}
+      {/* Nested dialogs — SSoT: reuses the canonical editors */}
       <ProjectQuickCreateSheet
         open={showAddProjectDialog}
         onOpenChange={setShowAddProjectDialog}
         onProjectCreated={() => reloadProjects()}
+      />
+      <BuildingQuickCreateSheet
+        open={showAddBuildingSheet}
+        onOpenChange={setShowAddBuildingSheet}
       />
       {selection.buildingId && selectedBuilding && (
         <LinkBuildingToProjectDialog

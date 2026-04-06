@@ -256,6 +256,7 @@
     }
   },
   "details": {
+    "addBuildingTitle": "Προσθήκη Νέου Κτιρίου",
     "newBuilding": "Νέο Κτίριο",
     "viewBuilding": "Προβολή Κτιρίου",
     "editBuilding": "Επεξεργασία",
