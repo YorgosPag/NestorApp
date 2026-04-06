@@ -52,6 +52,21 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | file-record.service split: 1 file (1002 lines) -> 3 files (all compliant) |
 | 2026-04-06 | EnterpriseBusinessRulesService split: 1 file (996 lines) -> 3 files (all compliant) |
 | 2026-04-06 | EnterpriseSecurityService split: 1 file (988 lines) -> 3 files (all compliant) |
+| 2026-04-06 | email-queue-service split: 1 file (962 lines) -> 3 files (all compliant) |
+
+## email-queue-service Split
+
+`email-queue-service.ts` contained 962 lines — 1.9x over the 500-line limit. Service mixing attachment serialization, worker claim/process logic, status updates, and monitoring stats.
+
+Split into 3 files in `src/services/communications/inbound/`:
+
+| File | Content | Lines |
+|------|---------|-------|
+| `email-queue-attachments.ts` | Serialize/deserialize attachments, deferred Mailgun fetch | 248 |
+| `email-queue-worker.ts` | Claim, process, status updates, stale recovery | 412 |
+| `email-queue-service.ts` | Enqueue (fast path), stats, monitoring + re-exports | 252 |
+
+Consumer Impact: 1 consumer (barrel index) — zero import path changes (re-exports worker functions).
 
 ## EnterpriseSecurityService Split
 
