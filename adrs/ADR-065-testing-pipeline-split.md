@@ -45,6 +45,7 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-06 | LayerRenderer split: 1 file (1286 lines) -> 4 files (all compliant) |
 | 2026-04-06 | EnterpriseTeamsService split: 1 file (1233 lines) -> 3 files (all compliant) |
 | 2026-04-06 | CICDPipeline split: 1 file (1224 lines) -> 3 files (all compliant) |
+| 2026-04-06 | GeoCanvasContent split: 1 file (1207 lines) -> 3 files (all compliant) |
 
 ## DockerOrchestrator Split
 
@@ -201,3 +202,19 @@ Split into 3 files in `src/subapps/geo-canvas/automation/`:
 Key refactoring: 400-line `getDefaultPipelineConfiguration()` private method extracted as standalone factory. Config data compacted with inline object literals.
 
 Consumer Impact: No consumers — **zero risk**.
+
+## GeoCanvasContent Split
+
+`GeoCanvasContent.tsx` contained 1207 lines — 2.4x over the 500-line limit. **1 consumer** (GeoCanvasApp.tsx). React UI component.
+
+Split into 3 files in `src/subapps/geo-canvas/app/`:
+
+| File | Content | Lines | Exempt? |
+|------|---------|-------|---------|
+| `useBoundaryLayers.ts` | Custom hook: boundary layer state + 8 handlers + types | 230 | No |
+| `GeoCanvasPanels.tsx` | `SystemStatusPanel` + `FoundationView` sub-components | 202 | No |
+| `GeoCanvasContent.tsx` | Main component: hooks orchestration, map layout, mobile sheets | 325 | No |
+
+Key refactoring: 8 boundary handlers + state extracted to custom hook `useBoundaryLayers(mapRef)`. Sidebar content and foundation view extracted as presentational components. DRY `syncAdministrativeBoundaries` helper eliminates 4x duplicate sync code.
+
+Consumer Impact: Main file keeps same named export + default export — **zero consumer changes**.

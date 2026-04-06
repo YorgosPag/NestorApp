@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * GeoCanvasContent — Main component for the Geo-Alert system interface.
+ * @see useBoundaryLayers.ts — boundary layer state + handlers
+ * @see GeoCanvasPanels.tsx — SystemStatusPanel + FoundationView sub-components
+ */
+
 import React, { useState, useCallback, useRef } from 'react';
 import { InteractiveMap } from '../components/InteractiveMap';
 import { FloorPlanUploadButton } from '../floor-plan-system/components/FloorPlanUploadButton';
@@ -7,7 +13,6 @@ import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanU
 import { FloorPlanCanvasLayer } from '../floor-plan-system/rendering/FloorPlanCanvasLayer';
 import { FloorPlanControls } from '../floor-plan-system/rendering/FloorPlanControls';
 import { FloorPlanControlPointPicker } from '../floor-plan-system/components/FloorPlanControlPointPicker';
-import { UserTypeSelector } from '../components/UserTypeSelector';
 import { CitizenDrawingInterface } from '../components/CitizenDrawingInterface';
 import { ProfessionalDrawingInterface } from '../components/ProfessionalDrawingInterface';
 import { TechnicalDrawingInterface } from '../components/TechnicalDrawingInterface';
@@ -15,11 +20,7 @@ import { AlertManagementPanel } from '../components/AlertManagementPanel';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../dxf-viewer/components/modal/ModalLoadingStates';
-
-// ✅ NEW: Enterprise Centralized Polygon System Provider
 import { PolygonSystemProvider } from '../systems/polygon-system';
-import { GEO_COLORS } from '../config/color-config';
-
 import { useFloorPlanUpload } from '../floor-plan-system/hooks/useFloorPlanUpload';
 import { useFloorPlanControlPoints } from '../floor-plan-system/hooks/useFloorPlanControlPoints';
 import { useGeoTransformation } from '../floor-plan-system/hooks/useGeoTransformation';
@@ -33,64 +34,21 @@ import { useAnalytics } from '@/services/AnalyticsBridge';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { useIsMobile } from '@/hooks/useMobile';
-import {
-  draggablePanelContainer,
-  fixedSidebarPanel
-} from '../components/InteractiveMap.styles';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw, Menu, SlidersHorizontal } from 'lucide-react';
-import type { GeoCanvasAppProps } from '../types';
-import type { GeoCoordinate } from '../types';
-import { generateLayerId } from '@/services/enterprise-id.service';
+import { draggablePanelContainer, fixedSidebarPanel } from '../components/InteractiveMap.styles';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Globe, AlertCircle, Menu, SlidersHorizontal } from 'lucide-react';
+import type { GeoCanvasAppProps, GeoCoordinate } from '../types';
 import type { MapInstance } from '../hooks/map/useMapInteractions';
 
-// ============================================================================
-// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
-// ============================================================================
+import { useBoundaryLayers } from './useBoundaryLayers';
+import { SystemStatusPanel, FoundationView } from './GeoCanvasPanels';
 
-/** MapLibre GL JS map instance type */
 type MapLibreMapInstance = MapInstance | null;
 
-/** Boundary layer style type */
-interface BoundaryLayerStyle {
-  strokeColor: string;
-  strokeWidth: number;
-  fillColor: string;
-  fillOpacity: number;
-}
-
-/** Administrative boundary result type */
-interface AdminBoundaryResult {
-  name: string;
-  adminLevel: number;
-  [key: string]: unknown;
-}
-
-/**
- * GEO-CANVAS CONTENT COMPONENT
- * Κεντρικό component για το Geo-Alert system interface
- *
- * Phase 1: Basic skeleton και structure
- * Phase 2: DXF transformation engine
- * Phase 3: MapLibre GL JS integration
- * Phase 4-8: Advanced features από roadmap
- */
 export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder } = useBorderTokens();
+  const borders = useBorderTokens();
   const colors = useSemanticColors();
   const isMobile = useIsMobile();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
@@ -100,670 +58,84 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const [showAlertDashboard, setShowAlertDashboard] = useState(false);
   const [mobileStatusOpen, setMobileStatusOpen] = useState(false);
   const [mobileWorkspaceOpen, setMobileWorkspaceOpen] = useState(false);
+  const mapRef = useRef<MapLibreMapInstance>(null);
 
-  // ✅ NEW: Address Search Marker State
-  const [searchMarker, setSearchMarker] = useState<{
-    lat: number;
-    lng: number;
-    address?: string;
-  } | null>(null);
+  // Extracted hooks
+  const boundary = useBoundaryLayers(mapRef);
 
-  // ✅ NEW: Administrative Boundaries State (Enhanced for Layer Management)
-  const [administrativeBoundaries, setAdministrativeBoundaries] = useState<{
-    feature: GeoJSON.Feature | GeoJSON.FeatureCollection;
-    visible: boolean;
-    style?: {
-      strokeColor?: string;
-      strokeWidth?: number;
-      strokeOpacity?: number;
-      fillColor?: string;
-      fillOpacity?: number;
-    };
-  }[]>([]);
-
-  // ✅ NEW: Boundary Layer Management State
-  const [boundaryLayers, setBoundaryLayers] = useState<Array<{
-    id: string;
-    name: string;
-    type: 'region' | 'municipality' | 'municipal_unit' | 'community';
-    visible: boolean;
-    opacity: number;
-    style: {
-      strokeColor: string;
-      strokeWidth: number;
-      fillColor: string;
-      fillOpacity: number;
-    };
-    boundary: {
-      feature: GeoJSON.Feature | GeoJSON.FeatureCollection;
-      result: AdminBoundaryResult;
-    };
-  }>>([]);
-  const [selectedBoundaryResult, setSelectedBoundaryResult] = useState<AdminBoundaryResult | null>(null);
-
-  // **📊 ANALYTICS INTEGRATION**
+  // Analytics
   const analytics = useAnalytics();
   const [pendingUserType, setPendingUserType] = useState<string | null>(null);
 
-  // Handle analytics tracking after state changes (prevents setState during render warning)
   React.useEffect(() => {
     if (pendingUserType && user?.userType === pendingUserType) {
-      // Defer analytics tracking to next tick to prevent setState during render
       setTimeout(() => {
-        // Track analytics after render cycle is complete
-        analytics.trackUserBehavior('user_type_selected', 'UserTypeSelector', {
-          selectedUserType: pendingUserType,
-          previousUserType: null // We don't track previous anymore to avoid race conditions
-        });
-
-        // Update user analytics context
+        analytics.trackUserBehavior('user_type_selected', 'UserTypeSelector', { selectedUserType: pendingUserType, previousUserType: null });
         const userId = user?.uid || 'anonymous';
-        // ✅ ENTERPRISE: Type guard instead of 'as any'
-        if (pendingUserType && (pendingUserType === 'citizen' || pendingUserType === 'professional' || pendingUserType === 'technical')) {
+        if (pendingUserType === 'citizen' || pendingUserType === 'professional' || pendingUserType === 'technical') {
           analytics.updateUser(userId, pendingUserType);
         }
-
-        console.debug('🎭 User type analytics tracked:', pendingUserType);
       }, 0);
-
-      // Clear pending state immediately
       setPendingUserType(null);
     }
-  }, [user?.userType, pendingUserType]); // ✅ Removed analytics and user?.email from deps
+  }, [user?.userType, pendingUserType]);
 
-  // Simplified user type selection (no analytics in render cycle)
   const handleUserTypeSelect = useCallback((userType: 'citizen' | 'professional' | 'technical') => {
-    // Set pending analytics tracking
     setPendingUserType(userType);
-
-    // Update state immediately
     setUserType(userType);
-
-    console.debug('🎭 User type selected:', userType);
   }, [setUserType]);
 
-  // 🏢 ENTERPRISE: SINGLE SOURCE OF TRUTH for Control Points
-  // Floor Plan Upload hook
+  // Floor plan hooks
   const floorPlanUpload = useFloorPlanUpload();
-
-  // Floor Plan Control Points hook (STEP 2.2) - OFFICIAL SYSTEM
   const controlPoints = useFloorPlanControlPoints();
-
-  // Floor Plan Geo-Transformation hook (STEP 2.3) - OFFICIAL SYSTEM
-  // ❗ CRITICAL: Memoize options to prevent infinite re-renders
-  const transformOpts = React.useMemo(() => ({ debug: false }), []); // ✅ Disabled debug to prevent console logs
+  const transformOpts = React.useMemo(() => ({ debug: false }), []);
   const transformation = useGeoTransformation(controlPoints.points, transformOpts);
+  const snapEngine = useSnapEngine(floorPlanUpload.result, { debug: false });
 
-  // Snap Engine hook (STEP 3: Snap-to-Point)
-  const snapEngine = useSnapEngine(floorPlanUpload.result, {
-    debug: false // ✅ Disabled debug to prevent console logs
-  });
-
-  // 🎯 ENTERPRISE: Unified Transform State (Single Source of Truth)
   const transformState = React.useMemo(() => ({
     controlPoints: controlPoints.points,
     isCalibrated: transformation.isValid,
     quality: transformation.quality,
     rmsError: transformation.rmsError,
-    matrix: transformation.matrix
+    matrix: transformation.matrix,
   }), [controlPoints.points, transformation.isValid, transformation.quality, transformation.rmsError, transformation.matrix]);
 
-  // 🚨 CRITICAL DEBUGGING για GeoCanvasContent (removed to prevent render loops)
-  // console.log('🏢 GeoCanvasContent transformState:', {
-  //   controlPointsCount: transformState.controlPoints.length,
-  //   controlPoints: transformState.controlPoints,
-  //   isCalibrated: transformState.isCalibrated,
-  //   timestamp: Date.now()
-  // });
-
-  // Floor Plan Layer state
   const [floorPlanVisible, setFloorPlanVisible] = useState(true);
   const [floorPlanOpacity, setFloorPlanOpacity] = useState(0.8);
-  const mapRef = useRef<MapLibreMapInstance>(null); // MapLibre map instance
 
-  // ✅ NEW: Handle location selection από address search/GPS
-  const handleLocationSelected = useCallback((lat: number, lng: number, address?: string | { fullAddress?: string; street?: string; number?: string; area?: string; municipality?: string; display_name?: string }) => {
-    console.debug('Location selected, centering map:', { lat, lng, address });
-
-    // Set search marker
-    let displayAddress = 'Αναζητημένη θέση';
-
-    // Handle different address formats
-    if (typeof address === 'string') {
-      displayAddress = address;
-    } else if (address && typeof address === 'object') {
-      // Handle GreekAddress format: {street, number, area, municipality, postalCode, region, country, fullAddress}
-      if (address.fullAddress) {
-        displayAddress = address.fullAddress;
-      } else if (address.street) {
-        // Build address from components
-        const parts = [
-          address.street,
-          address.number,
-          address.area,
-          address.municipality
-        ].filter(Boolean);
-        displayAddress = parts.join(' ') || 'Αναζητημένη θέση';
-      } else {
-        // Fallback για άλλα object formats (π.χ. Nominatim)
-        displayAddress = address.display_name || 'Αναζητημένη θέση';
-      }
-    }
-
-    setSearchMarker({
-      lat,
-      lng,
-      address: displayAddress
-    });
-
-    // Auto-hide marker after 30 seconds
-    setTimeout(() => {
-      setSearchMarker(null);
-      console.debug('🗑️ Search marker auto-cleared after 30 seconds');
-    }, 30000);
-
-    if (mapRef.current) {
-      // Center και zoom στη νέα θέση
-      mapRef.current.flyTo({
-        center: [lng, lat],
-        zoom: 16, // Κατάλληλο zoom level για διεύθυνση
-        duration: 2000, // 2 seconds animation
-        essential: true
-      });
-
-      console.debug('🗺️ Map centered to selected location');
-    } else {
-      console.warn('⚠️ Map reference not available yet');
-    }
-  }, []);
-
-  // ✅ NEW: Handle administrative boundary selection (Enhanced for Layer Management)
-  const handleAdminBoundarySelected = useCallback((boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: Record<string, unknown>) => {
-    const boundaryResult = result as AdminBoundaryResult;
-    console.debug('??? Administrative boundary selected:', { boundary, result: boundaryResult });
-    setSelectedBoundaryResult(boundaryResult);
-
-    // Determine boundary type και default style
-    let type: 'region' | 'municipality' | 'municipal_unit' | 'community';
-    let defaultStyle: BoundaryLayerStyle;
-
-    if (boundaryResult.adminLevel === 4) { // Region
-      type = 'region';
-      defaultStyle = {
-        strokeColor: GEO_COLORS.POLYGON.ADMINISTRATIVE,
-        strokeWidth: 3,
-        fillColor: GEO_COLORS.POLYGON.ADMINISTRATIVE,
-        fillOpacity: 0.15
-      };
-    } else if (boundaryResult.adminLevel === 8) { // Municipality
-      type = 'municipality';
-      defaultStyle = {
-        strokeColor: GEO_COLORS.POLYGON.DRAFT,
-        strokeWidth: 2,
-        fillColor: GEO_COLORS.POLYGON.DRAFT,
-        fillOpacity: 0.1
-      };
-    } else if (boundaryResult.adminLevel === 9) { // Municipal Unit
-      type = 'municipal_unit';
-      defaultStyle = {
-        strokeColor: GEO_COLORS.POLYGON.COMPLETED,
-        strokeWidth: 2,
-        fillColor: GEO_COLORS.POLYGON.COMPLETED,
-        fillOpacity: 0.1
-      };
-    } else { // Community or other
-      type = 'community';
-      defaultStyle = {
-        strokeColor: GEO_COLORS.POLYGON.WARNING,
-        strokeWidth: 2,
-        fillColor: GEO_COLORS.POLYGON.WARNING,
-        fillOpacity: 0.1
-      };
-    }
-
-    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
-    const layerId = generateLayerId();
-    const newLayer = {
-      id: layerId,
-      name: typeof boundaryResult.name === 'string' ? boundaryResult.name : 'Unknown',
-      type,
-      visible: true,
-      opacity: 1.0,
-      style: defaultStyle,
-      boundary: {
-        feature: boundary,
-        result: boundaryResult
-      }
-    };
-
-    // Add layer to boundary layers
-    setBoundaryLayers(prev => [...prev, newLayer]);
-
-    // Update administrative boundaries για backwards compatibility
-    setAdministrativeBoundaries(prev => [...prev, {
-      feature: boundary,
-      visible: true,
-      style: {
-        strokeColor: defaultStyle.strokeColor,
-        strokeWidth: defaultStyle.strokeWidth,
-        strokeOpacity: 0.8,
-        fillColor: defaultStyle.fillColor,
-        fillOpacity: defaultStyle.fillOpacity
-      }
-    }]);
-
-    // Calculate boundary center για map centering
-    if (mapRef.current && boundary) {
-      try {
-        let center: [number, number] | null = null;
-        let zoom = 10;
-
-        if (boundary.type === 'Feature' && boundary.geometry) {
-          // Simple center calculation for demo - production would use turf.js
-          if (boundary.geometry.type === 'Polygon' && boundary.geometry.coordinates?.[0]) {
-            const coords = boundary.geometry.coordinates[0] as [number, number][];
-            if (coords.length > 0) {
-              const avgLng = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
-              const avgLat = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
-              center = [avgLng, avgLat];
-              zoom = boundaryResult.adminLevel === 4 ? 8 : 12; // Regions wider view, municipalities closer
-            }
-          }
-        } else if (boundary.type === 'FeatureCollection' && boundary.features.length > 0) {
-          // For FeatureCollection, use first feature's center
-          const firstFeature = boundary.features[0];
-          if (firstFeature.geometry?.type === 'Polygon' && firstFeature.geometry.coordinates?.[0]) {
-            const coords = firstFeature.geometry.coordinates[0] as [number, number][];
-            if (coords.length > 0) {
-              const avgLng = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
-              const avgLat = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
-              center = [avgLng, avgLat];
-              zoom = 10;
-            }
-          }
-        }
-
-        if (center) {
-          mapRef.current.flyTo({
-            center,
-            zoom,
-            duration: 2000,
-            essential: true
-          });
-          console.debug(`🗺️ Map centered to ${result.name}:`, center);
-        }
-      } catch (error) {
-        console.warn('⚠️ Failed to center map on boundary:', error);
-      }
-    }
-
-    console.debug(`✅ Boundary layer "${result.name}" added with ID: ${layerId}`);
-  }, []);
-
-  // ✅ NEW: Boundary Layer Control Handlers
-  const handleLayerToggle = useCallback((layerId: string, visible: boolean) => {
-    setBoundaryLayers(prev =>
-      prev.map(layer =>
-        layer.id === layerId ? { ...layer, visible } : layer
-      )
-    );
-
-    // Update administrative boundaries για compatibility με InteractiveMap
-    setBoundaryLayers(prev => {
-      const visibleLayers = prev.filter(layer => layer.visible);
-      setAdministrativeBoundaries(visibleLayers.map(layer => ({
-        feature: layer.boundary.feature,
-        visible: layer.visible,
-        style: {
-          strokeColor: layer.style.strokeColor,
-          strokeWidth: layer.style.strokeWidth,
-          strokeOpacity: layer.opacity,
-          fillColor: layer.style.fillColor,
-          fillOpacity: layer.style.fillOpacity * layer.opacity
-        }
-      })));
-      return prev;
-    });
-
-    console.debug(`Layer ${layerId} visibility: ${visible}`);
-  }, []);
-
-  const handleLayerOpacityChange = useCallback((layerId: string, opacity: number) => {
-    setBoundaryLayers(prev =>
-      prev.map(layer =>
-        layer.id === layerId ? { ...layer, opacity } : layer
-      )
-    );
-
-    // Update administrative boundaries
-    setBoundaryLayers(prev => {
-      const visibleLayers = prev.filter(layer => layer.visible);
-      setAdministrativeBoundaries(visibleLayers.map(layer => ({
-        feature: layer.boundary.feature,
-        visible: layer.visible,
-        style: {
-          strokeColor: layer.style.strokeColor,
-          strokeWidth: layer.style.strokeWidth,
-          strokeOpacity: layer.opacity,
-          fillColor: layer.style.fillColor,
-          fillOpacity: layer.style.fillOpacity * layer.opacity
-        }
-      })));
-      return prev;
-    });
-
-    console.debug(`🎨 Layer ${layerId} opacity: ${opacity}`);
-  }, []);
-
-  const handleLayerStyleChange = useCallback((layerId: string, styleChanges: Partial<BoundaryLayerStyle>) => {
-    setBoundaryLayers(prev =>
-      prev.map(layer =>
-        layer.id === layerId
-          ? { ...layer, style: { ...layer.style, ...styleChanges } }
-          : layer
-      )
-    );
-
-    // Update administrative boundaries
-    setBoundaryLayers(prev => {
-      const visibleLayers = prev.filter(layer => layer.visible);
-      setAdministrativeBoundaries(visibleLayers.map(layer => ({
-        feature: layer.boundary.feature,
-        visible: layer.visible,
-        style: {
-          strokeColor: layer.style.strokeColor,
-          strokeWidth: layer.style.strokeWidth,
-          strokeOpacity: layer.opacity,
-          fillColor: layer.style.fillColor,
-          fillOpacity: layer.style.fillOpacity * layer.opacity
-        }
-      })));
-      return prev;
-    });
-
-    console.debug(`🎨 Layer ${layerId} style updated:`, styleChanges);
-  }, []);
-
-  const handleLayerRemove = useCallback((layerId: string) => {
-    setBoundaryLayers(prev => {
-      const updated = prev.filter(layer => layer.id !== layerId);
-
-      // Update administrative boundaries
-      const visibleLayers = updated.filter(layer => layer.visible);
-      setAdministrativeBoundaries(visibleLayers.map(layer => ({
-        feature: layer.boundary.feature,
-        visible: layer.visible,
-        style: {
-          strokeColor: layer.style.strokeColor,
-          strokeWidth: layer.style.strokeWidth,
-          strokeOpacity: layer.opacity,
-          fillColor: layer.style.fillColor,
-          fillOpacity: layer.style.fillOpacity * layer.opacity
-        }
-      })));
-
-      return updated;
-    });
-
-    console.debug(`🗑️ Layer ${layerId} removed`);
-  }, []);
-
-  const handleAddNewBoundary = useCallback(() => {
-    // This will trigger the address search panel to open boundaries tab
-    console.debug('➕ Add new boundary requested');
-    // We can implement this later to programmatically open the search panel
-  }, []);
-
-  // Floor Plan Upload handler - uses hook
   const handleFloorPlanUploadClick = useCallback(() => {
-    floorPlanUpload.clearUpload(); // Clear previous state
+    floorPlanUpload.clearUpload();
     floorPlanUpload.openModal();
-    console.debug('🏗️ Floor Plan Upload button clicked - Modal will open');
   }, [floorPlanUpload]);
 
-  // Floor Plan file selection handler - uses hook
   const handleFloorPlanFileSelect = useCallback(async (file: File) => {
     await floorPlanUpload.uploadFile(file);
   }, [floorPlanUpload]);
 
-  // ===================================================================
-  // CONTROL POINT PICKING HANDLERS (STEP 2.2)
-  // ===================================================================
-
-  /**
-   * Handle floor plan canvas click
-   * STEP 1: User clicks on floor plan to select local coordinate
-   *
-   * ❗ CRITICAL FIX: Only allow clicks when in 'picking-floor' state
-   * This prevents canvas from stealing clicks when we're waiting for map click
-   */
-  const handleFloorPlanClick = useCallback((x: number, y: number, event: React.MouseEvent) => {
-    console.debug('🗺️ Floor plan clicked:', { x, y });
-    console.debug('🎯 Current pickingState:', controlPoints.pickingState);
-
-    // Only process if we're waiting for floor plan point
+  const handleFloorPlanClick = useCallback((x: number, y: number, _event: React.MouseEvent) => {
     if (controlPoints.pickingState === 'picking-floor') {
-      console.debug('✅ Valid state - calling addFloorPlanPoint');
       controlPoints.addFloorPlanPoint(x, y);
-    } else {
-      console.debug('⏭️ Ignoring click - not in picking-floor state');
     }
   }, [controlPoints.pickingState, controlPoints.addFloorPlanPoint]);
 
-  // Draggable panel state - Positioned to avoid map controls (left: accuracy legend, right: coordinates)
-  const [panelPosition, setPanelPosition] = useState({ x: 320, y: 16 }); // Center-left position
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // 🏢 ENTERPRISE: Map coordinate picking handler (SINGLE SOURCE OF TRUTH)
   const handleCoordinateClick = useCallback(async (coordinate: GeoCoordinate) => {
-    console.debug('🗺️ Coordinate picked:', coordinate);
-
-    // ✅ OFFICIAL: Check if we're in control point picking mode (STEP 2.2)
     if (controlPoints.pickingState === 'picking-geo') {
       controlPoints.addGeoPoint(coordinate.lng, coordinate.lat);
-      return;
     }
   }, [controlPoints.pickingState, controlPoints.addGeoPoint]);
-
-  // Drag handlers for panel (FloorPlanControlPointPicker)
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - panelPosition.x,
-      y: e.clientY - panelPosition.y
-    });
-  }, [panelPosition]);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-
-    // Ensure panel doesn't cover map controls:
-    // - Left edge: avoid accuracy legend (300px from left)
-    // - Right edge: avoid coordinate display (350px from right)
-    // - Top edge: keep 16px margin
-    // - Bottom: keep 100px margin
-    const minX = 16;
-    const maxX = window.innerWidth - 350; // Keep away from right controls
-    const minY = 16;
-    const maxY = window.innerHeight - 100;
-
-    const newX = Math.max(minX, Math.min(maxX, e.clientX - dragStart.x));
-    const newY = Math.max(minY, Math.min(maxY, e.clientY - dragStart.y));
-
-    setPanelPosition({ x: newX, y: newY });
-  }, [isDragging, dragStart]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // Add global mouse event listeners for dragging
-  React.useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const hasFloorPlanResult = Boolean(floorPlanUpload.result && floorPlanUpload.result.success);
 
   const roleWorkspacePanel = isCitizen
-    ? (
-      <CitizenDrawingInterface
-        mapRef={mapRef}
-        onPolygonComplete={(polygon) => {
-          console.debug('🏘️ Citizen polygon completed:', polygon);
-          // TODO: Integrate με alert system
-        }}
-        onLocationSelected={handleLocationSelected}
-        onAdminBoundarySelected={handleAdminBoundarySelected}
-        boundaryLayers={boundaryLayers}
-        onLayerToggle={handleLayerToggle}
-        onLayerOpacityChange={handleLayerOpacityChange}
-        onLayerStyleChange={handleLayerStyleChange}
-        onLayerRemove={handleLayerRemove}
-        onAddNewBoundary={handleAddNewBoundary}
-      />
-    )
+    ? <CitizenDrawingInterface mapRef={mapRef} onPolygonComplete={() => {}} onLocationSelected={boundary.handleLocationSelected} onAdminBoundarySelected={boundary.handleAdminBoundarySelected} boundaryLayers={boundary.boundaryLayers} onLayerToggle={boundary.handleLayerToggle} onLayerOpacityChange={boundary.handleLayerOpacityChange} onLayerStyleChange={boundary.handleLayerStyleChange} onLayerRemove={boundary.handleLayerRemove} onAddNewBoundary={boundary.handleAddNewBoundary} />
     : isProfessional
-      ? (
-        <ProfessionalDrawingInterface
-          mapRef={mapRef}
-          onPolygonComplete={(polygon) => {
-            console.debug('🏢 Professional polygon completed:', polygon);
-            // TODO: Integrate με alert system
-          }}
-          onFloorPlanUploaded={(floorPlan) => {
-            console.debug('📁 Professional floor plan uploaded:', floorPlan);
-            // TODO: Integrate με georeferencing system
-          }}
-        />
-      )
+      ? <ProfessionalDrawingInterface mapRef={mapRef} onPolygonComplete={() => {}} onFloorPlanUploaded={() => {}} />
       : isTechnical
-        ? (
-          <TechnicalDrawingInterface
-            mapRef={mapRef}
-            onPolygonComplete={(polygon) => {
-              console.debug('🛠️ Technical polygon completed:', polygon);
-              // TODO: Integrate με alert system και DXF precision system
-            }}
-          />
-        )
+        ? <TechnicalDrawingInterface mapRef={mapRef} onPolygonComplete={() => {}} />
         : null;
 
-  const systemStatusContent = (
-    <div className="space-y-6">
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-blue-400">
-          {t('sidebar.phaseProgress.title')}
-        </h3>
-        <div className="space-y-3">
-          <div className={`p-3 ${colors.bg.success}/20 ${quick.card} ${getStatusBorder('success')}`}>
-            <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase1Title')}</div>
-            <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase1Description')}</div>
-          </div>
-          <div className={`p-3 ${colors.bg.success}/20 ${quick.card} ${getStatusBorder('success')}`}>
-            <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase2Title')}</div>
-            <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase2Description')}</div>
-          </div>
-          <div className={`p-3 ${colors.bg.hover} rounded`}>
-            <div className="text-sm font-medium text-yellow-400">{t('sidebar.phaseProgress.phase3Title')}</div>
-            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase3Description')}</div>
-          </div>
-          <div className={`p-3 ${colors.bg.hover} rounded`}>
-            <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase4Title')}</div>
-            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase4Description')}</div>
-          </div>
-          <div className={`p-3 ${colors.bg.hover} rounded`}>
-            <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase5Title')}</div>
-            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase5Description')}</div>
-          </div>
-        </div>
-      </section>
+  const statusPanel = <SystemStatusPanel t={t} colors={colors} borders={borders} iconSizes={iconSizes} />;
 
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-green-400">
-          {t('sidebar.availableFeatures.title')}
-        </h3>
-        <ul className="space-y-2 text-sm list-none">
-          <li className="flex items-center space-x-2">
-            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-            <span>{t('sidebar.availableFeatures.controlPointManagement')}</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-            <span>{t('sidebar.availableFeatures.affineTransformation')}</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-            <span>{t('sidebar.availableFeatures.accuracyValidation')}</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-            <span>{t('sidebar.availableFeatures.spatialDistributionAnalysis')}</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-            <span>{t('sidebar.availableFeatures.rmsErrorCalculation')}</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-            <span>{t('sidebar.availableFeatures.coordinateTransformation')}</span>
-          </li>
-        </ul>
-      </section>
-
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-blue-400">
-          {t('sidebar.technicalSpecs.title')}
-        </h3>
-        <dl className="space-y-2 text-sm text-gray-300">
-          <div className="flex justify-between">
-            <dt>{t('sidebar.technicalSpecs.transformation')}</dt>
-            <dd className="text-blue-300">{t('sidebar.technicalSpecs.transformationValue')}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt>{t('sidebar.technicalSpecs.accuracy')}</dt>
-            <dd className="text-green-300">{t('sidebar.technicalSpecs.accuracyValue')}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt>{t('sidebar.technicalSpecs.crsSupport')}</dt>
-            <dd className="text-purple-300">{t('sidebar.technicalSpecs.crsSupportValue')}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt>{t('sidebar.technicalSpecs.mathEngine')}</dt>
-            <dd className="text-yellow-300">{t('sidebar.technicalSpecs.mathEngineValue')}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt>{t('sidebar.technicalSpecs.standards')}</dt>
-            <dd className="text-blue-300">{t('sidebar.technicalSpecs.standardsValue')}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-yellow-400">
-          {t('sidebar.comingNext.title')}
-        </h3>
-        <div className="space-y-2 text-sm text-gray-300">
-          <div>{t('sidebar.comingNext.maplibreIntegration')}</div>
-          <div>{t('sidebar.comingNext.interactiveCoordinatePicking')}</div>
-          <div>{t('sidebar.comingNext.realtimeTransformationPreview')}</div>
-          <div>{t('sidebar.comingNext.multipleBasemapLayers')}</div>
-          <div>{t('sidebar.comingNext.visualAccuracyIndicators')}</div>
-        </div>
-      </section>
-    </div>
-  );
-
-  // Show loading while translations are being loaded
   if (isLoading) {
     return (
       <div className={`w-full h-full flex items-center justify-center ${colors.bg.secondary} text-white`}>
@@ -774,96 +146,51 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       </div>
     );
   }
+
   return (
     <PolygonSystemProvider initialRole="citizen">
       <div className={`w-full h-full flex flex-col ${colors.bg.secondary} text-white`}>
-      {/* HEADER SECTION */}
-      <header className={`${colors.bg.primary} ${quick.separatorH} p-3 sm:p-4`}>
+      {/* HEADER */}
+      <header className={`${colors.bg.primary} ${borders.quick.separatorH} p-3 sm:p-4`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
               <Globe className={iconSizes.lg} />
               {t('title')}
             </h1>
-            <p className="text-gray-400 text-sm">
-              {t('subtitle')} ({t('phases.foundation')})
-            </p>
+            <p className="text-gray-400 text-sm">{t('subtitle')} ({t('phases.foundation')})</p>
           </div>
-
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            {/* Phase 2.3: Alert Management Dashboard */}
             <button
               onClick={() => setShowAlertDashboard(!showAlertDashboard)}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
-                showAlertDashboard
-                  ? `${colors.bg.warning} text-white`
-                  : `${colors.bg.hover} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
-              }`}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${showAlertDashboard ? `${colors.bg.warning} text-white` : `${colors.bg.hover} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`}`}
             >
               <AlertCircle className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('alertDashboard.title')}</span>
             </button>
-
-            {/* Phase 2.2: Show Floor Plan Upload ONLY for Professional/Technical users */}
-            {(isProfessional || isTechnical) && (
-              <FloorPlanUploadButton onClick={handleFloorPlanUploadClick} />
-            )}
-
-            <div className={`px-3 py-1 ${colors.bg.success} rounded-full text-xs`}>
-              {t('phases.transformation')}
-            </div>
-            <div className={`px-3 py-1 ${colors.bg.info} rounded-full text-xs`}>
-              {t('status.transformationReady')}
-            </div>
+            {(isProfessional || isTechnical) && <FloorPlanUploadButton onClick={handleFloorPlanUploadClick} />}
+            <div className={`px-3 py-1 ${colors.bg.success} rounded-full text-xs`}>{t('phases.transformation')}</div>
+            <div className={`px-3 py-1 ${colors.bg.info} rounded-full text-xs`}>{t('status.transformationReady')}</div>
           </div>
         </div>
       </header>
 
-      {/* 🗺️ MAIN CONTENT AREA */}
+      {/* MAIN */}
       <main className="flex-1 flex min-h-0">
-
-        {/* 🎯 CENTER AREA - Map/Canvas */}
         <div className="flex-1 flex flex-col min-h-0">
-          {/* 🔧 TOP TOOLBAR */}
-          <nav className={`${colors.bg.primary} ${quick.separatorH} p-2 sm:p-3`} role="toolbar">
+          {/* TOOLBAR */}
+          <nav className={`${colors.bg.primary} ${borders.quick.separatorH} p-2 sm:p-3`} role="toolbar">
             <ul className="flex flex-wrap items-center gap-2 sm:gap-4 list-none">
               {isMobile && activeView === 'georeferencing' && (
                 <>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => setMobileWorkspaceOpen(true)}
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
-                    >
-                      <Menu className={iconSizes.sm} />
-                      Panels
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => setMobileStatusOpen(true)}
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
-                    >
-                      <SlidersHorizontal className={iconSizes.sm} />
-                      Status
-                    </button>
-                  </li>
+                  <li><button type="button" onClick={() => setMobileWorkspaceOpen(true)} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}><Menu className={iconSizes.sm} />Panels</button></li>
+                  <li><button type="button" onClick={() => setMobileStatusOpen(true)} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}><SlidersHorizontal className={iconSizes.sm} />Status</button></li>
                 </>
               )}
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.view')}</span>
-                <Select
-                  value={activeView}
-                  onValueChange={(value) => {
-                    if (value === 'foundation' || value === 'georeferencing' || value === 'map') {
-                      setActiveView(value);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[150px] sm:w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={activeView} onValueChange={(v) => { if (v === 'foundation' || v === 'georeferencing' || v === 'map') setActiveView(v); }}>
+                  <SelectTrigger className="w-[150px] sm:w-[180px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="georeferencing">{t('views.georeferencing')}</SelectItem>
                     <SelectItem value="foundation">{t('views.foundation')}</SelectItem>
@@ -871,13 +198,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   </SelectContent>
                 </Select>
               </li>
-
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.crs')}</span>
                 <Select defaultValue="epsg4326">
-                  <SelectTrigger className="w-[150px] sm:w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-[150px] sm:w-[180px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="epsg4326">{t('coordinateSystems.epsg4326')}</SelectItem>
                     <SelectItem value="epsg2100">{t('coordinateSystems.epsg2100')}</SelectItem>
@@ -888,313 +212,109 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             </ul>
           </nav>
 
-          {/* 🖥️ MAIN CONTENT - Canvas/Map Area */}
+          {/* CANVAS / MAP AREA */}
           <div className={`flex-1 ${colors.bg.backgroundSecondary} relative`}>
             {activeView === 'foundation' && (
-              /* Phase 1: Foundation Display */
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center max-w-4xl p-4 sm:p-8 w-full">
-                  <div className="flex justify-center mb-6">
-                    <Globe className="w-32 h-32 text-blue-400" />
-                  </div>
-                  <h2 className="text-3xl font-bold mb-4 text-blue-400">
-                    {t('title')}
-                  </h2>
-                  <p className="text-xl text-gray-400 mb-8">
-                    {t('subtitle')}
-                  </p>
-
-                  {/* Phase 2.2: User Type Selector */}
-                  <div className="mb-8">
-                    <ComponentErrorBoundary componentName="UserTypeSelector">
-                      <UserTypeSelector
-                        currentType={user?.userType}
-                        onSelect={handleUserTypeSelect}
-                      />
-                    </ComponentErrorBoundary>
-
-                    {/* Reset Button - If user already selected type */}
-                    {user?.userType && (
-                      <div className="mt-4 text-center">
-                        <button
-                          onClick={() => {
-                            // ✅ ENTERPRISE: Clear user type by setting to a valid empty state
-                            window.location.reload(); // Reload to reset all user state
-                          }}
-                          className={`px-4 py-2 ${colors.bg.muted} text-white rounded-md text-sm flex items-center gap-2 ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
-                        >
-                          <RefreshCcw className={iconSizes.sm} />
-                          {t('userActions.changeUserType')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-6 text-left lg:grid-cols-2">
-                    <div className={`${colors.bg.primary} p-6 rounded-lg`}>
-                      <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
-                        <CheckCircle className={iconSizes.md} />
-                        Phase 1 Complete
-                      </h3>
-                      <ul className="space-y-2 text-sm text-gray-300">
-                        <li>{isLoading ? '• Δομή θεμελίων' : t('phaseDetails.phase1Features.foundationStructure')}</li>
-                        <li>{isLoading ? '• Σύστημα τύπων Enterprise' : t('phaseDetails.phase1Features.enterpriseTypeSystem')}</li>
-                        <li>{isLoading ? '• Ρύθμιση διαμόρφωσης' : t('phaseDetails.phase1Features.configurationSetup')}</li>
-                        <li>{isLoading ? '• Ενσωμάτωση router έτοιμη' : t('phaseDetails.phase1Features.routerIntegrationReady')}</li>
-                      </ul>
-                    </div>
-
-                    <div className={`${colors.bg.primary} p-6 rounded-lg`}>
-                      <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
-                        <CheckCircle className={iconSizes.md} />
-                        Phase 2 Complete
-                      </h3>
-                      <ul className="space-y-2 text-sm text-gray-300">
-                        <li>{isLoading ? '• Μηχανή μετασχηματισμού DXF' : t('phaseDetails.phase2Features.dxfTransformationEngine')}</li>
-                        <li>{isLoading ? '• Υποστήριξη συστήματος συντεταγμένων' : t('phaseDetails.phase2Features.coordinateSystemSupport')}</li>
-                        <li>{isLoading ? '• Εργαλεία γεωαναφοράς' : t('phaseDetails.phase2Features.georeferencingTools')}</li>
-                        <li>{isLoading ? '• Διαχείριση σημείων ελέγχου' : t('phaseDetails.phase2Features.controlPointManagement')}</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Architecture Overview */}
-                  <div className={`mt-8 p-6 ${colors.bg.primary} rounded-lg`}>
-                    <h3 className="text-lg font-semibold mb-4 text-blue-400 flex items-center gap-2">
-                      <Construction className={iconSizes.md} />
-                      {isLoading ? 'Επισκόπηση Αρχιτεκτονικής' : t('phaseDetails.architectureOverview.title')}
-                    </h3>
-                    <div className="text-sm text-gray-300 space-y-2">
-                      <p>
-                        <strong>{isLoading ? 'Κεντρικοποιημένο Σύστημα: Ενσωματωμένο στο οικοσύστημα DXF Viewer' : t('phaseDetails.architectureOverview.centralizedSystem')}</strong>
-                      </p>
-                      <p>
-                        <strong>{isLoading ? 'Στοίβα Τεχνολογίας: React + TypeScript + MapLibre GL JS' : t('phaseDetails.architectureOverview.technologyStack')}</strong>
-                      </p>
-                      <p>
-                        <strong>{isLoading ? 'Ροή Δεδομένων: DXF → Μετασχηματισμός → GeoJSON → Χάρτης → Ειδοποιήσεις' : t('phaseDetails.architectureOverview.dataFlow')}</strong>
-                      </p>
-                      <p>
-                        <strong>{isLoading ? 'Πρότυπα: ISO 19107, OGC, συμβάσεις AutoCAD' : t('phaseDetails.architectureOverview.standards')}</strong>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <FoundationView t={t} isLoading={isLoading} colors={colors} iconSizes={iconSizes} userType={user?.userType} onUserTypeSelect={handleUserTypeSelect} />
             )}
 
             {activeView === 'georeferencing' && (
-              /* Phase 3: Interactive MapLibre GL JS Workspace */
               <div className="absolute inset-0">
                 <ComponentErrorBoundary componentName="InteractiveMap">
-                  <InteractiveMap
-                    className="w-full h-full"
-                    onCoordinateClick={handleCoordinateClick}
-                    showControlPoints
-                    showTransformationPreview
-                    isPickingCoordinates={controlPoints.pickingState === 'picking-geo'}
-                    transformState={transformState}
-                    enablePolygonDrawing
-                    searchMarker={searchMarker}
-                    administrativeBoundaries={administrativeBoundaries}
-                    onPolygonComplete={() => {
-                      console.debug('🎯 Polygon completed');
-                    }}
-                    onMapReady={(map) => {
-                      console.debug('🗺️ Map ready - storing reference');
-                      mapRef.current = map;
-                  }}
-                  />
+                  <InteractiveMap className="w-full h-full" onCoordinateClick={handleCoordinateClick} showControlPoints showTransformationPreview isPickingCoordinates={controlPoints.pickingState === 'picking-geo'} transformState={transformState} enablePolygonDrawing searchMarker={boundary.searchMarker} administrativeBoundaries={boundary.administrativeBoundaries} onPolygonComplete={() => {}} onMapReady={(map) => { mapRef.current = map; }} />
                 </ComponentErrorBoundary>
 
-                {/* 🗺️ FLOOR PLAN CANVAS LAYER */}
                 {floorPlanUpload.result && floorPlanUpload.result.success && (
-                    <FloorPlanCanvasLayer
-                      map={mapRef.current}
-                      floorPlan={floorPlanUpload.result}
-                      visible={floorPlanVisible}
-                      style={{ opacity: floorPlanOpacity }}
-                      zIndex={100}
-                      onClick={handleFloorPlanClick}
-                      disableInteractions={controlPoints.pickingState === 'picking-geo'}
-                    transformMatrix={transformation.matrix}
-                    snapEngine={controlPoints.pickingState === 'picking-floor' ? snapEngine : undefined}
-                  />
+                  <FloorPlanCanvasLayer map={mapRef.current} floorPlan={floorPlanUpload.result} visible={floorPlanVisible} style={{ opacity: floorPlanOpacity }} zIndex={100} onClick={handleFloorPlanClick} disableInteractions={controlPoints.pickingState === 'picking-geo'} transformMatrix={transformation.matrix} snapEngine={controlPoints.pickingState === 'picking-floor' ? snapEngine : undefined} />
                 )}
 
-                {/* 🎛️ FLOOR PLAN CONTROLS */}
                 {hasFloorPlanResult && !isMobile && (
-                  <div
-                    style={canvasUtilities.geoInteractive.positioning.topRight}
-                  >
-                    <FloorPlanControls
-                      visible={floorPlanVisible}
-                      opacity={floorPlanOpacity}
-                      fileName={floorPlanUpload.file?.name}
-                      onVisibilityChange={setFloorPlanVisible}
-                      onOpacityChange={setFloorPlanOpacity}
-                    />
+                  <div style={canvasUtilities.geoInteractive.positioning.topRight}>
+                    <FloorPlanControls visible={floorPlanVisible} opacity={floorPlanOpacity} fileName={floorPlanUpload.file?.name} onVisibilityChange={setFloorPlanVisible} onOpacityChange={setFloorPlanOpacity} />
                   </div>
                 )}
 
-                {/* CONTROL POINT PICKER (STEP 2.2) */}
                 {hasFloorPlanResult && !isMobile && (isProfessional || isTechnical) && (
-                  <div
-                    style={draggablePanelContainer(
-                      { x: 16, y: 16 },
-                      false,
-                      350
-                    )}
-                  >
+                  <div style={draggablePanelContainer({ x: 16, y: 16 }, false, 350)}>
                     <FloorPlanControlPointPicker controlPoints={controlPoints} />
                   </div>
                 )}
 
-                {/* Role-specific drawing interface */}
                 {roleWorkspacePanel && !isMobile && (
-                  <div
-                    style={draggablePanelContainer(
-                      { x: 16, y: 16 },
-                      false,
-                      350
-                    )}
-                  >
-                    {roleWorkspacePanel}
-                  </div>
+                  <div style={draggablePanelContainer({ x: 16, y: 16 }, false, 350)}>{roleWorkspacePanel}</div>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR - System Status */}
         {!isMobile && (
-          <aside className={`w-80 ${colors.bg.primary} ${quick.separatorV} p-4`}>
-            {systemStatusContent}
-          </aside>
+          <aside className={`w-80 ${colors.bg.primary} ${borders.quick.separatorV} p-4`}>{statusPanel}</aside>
         )}
       </main>
 
-      {/* 📋 FOOTER STATUS */}
+      {/* FOOTER */}
       {!isMobile && (
-        <footer className={`${colors.bg.primary} ${quick.separatorH} p-3`}>
+        <footer className={`${colors.bg.primary} ${borders.quick.separatorH} p-3`}>
           <nav className="flex items-center justify-between text-sm">
             <ul className="flex flex-wrap items-center gap-2 sm:gap-4 list-none">
               <li className="text-green-400">● {t('footer.status.active')}</li>
               <li className="text-green-400">{t('footer.status.phase2DxfTransformation')}</li>
               <li className="text-blue-400">{t('footer.status.georeferencingReady')}</li>
             </ul>
-
             <section className="flex items-center space-x-4">
-              <span className="text-gray-400">
-                {t('sidebar.technicalSpecs.standardsValue')} | OGC Standards | {t('sidebar.technicalSpecs.mathEngineValue')}
-              </span>
-              <span className="text-blue-400 flex items-center gap-2">
-                <Globe className={iconSizes.sm} />
-                Pagonis-Nestor Geo-Canvas v2.0
-              </span>
+              <span className="text-gray-400">{t('sidebar.technicalSpecs.standardsValue')} | OGC Standards | {t('sidebar.technicalSpecs.mathEngineValue')}</span>
+              <span className="text-blue-400 flex items-center gap-2"><Globe className={iconSizes.sm} />Pagonis-Nestor Geo-Canvas v2.0</span>
             </section>
           </nav>
         </footer>
       )}
 
+      {/* MOBILE SHEETS */}
       {isMobile && activeView === 'georeferencing' && (
         <>
           <Sheet open={mobileWorkspaceOpen} onOpenChange={setMobileWorkspaceOpen}>
             <SheetContent side="bottom" className="h-[78vh] p-0" aria-label="GeoCanvas Workspace Panels">
-              <SheetHeader className="p-4 pb-0">
-                <SheetTitle>GeoCanvas Panels</SheetTitle>
-                <SheetDescription>Touch-friendly access to tools and drawing panels.</SheetDescription>
-              </SheetHeader>
+              <SheetHeader className="p-4 pb-0"><SheetTitle>GeoCanvas Panels</SheetTitle><SheetDescription>Touch-friendly access to tools and drawing panels.</SheetDescription></SheetHeader>
               <div className="h-[calc(78vh-64px)] overflow-y-auto p-4 space-y-4">
-                {hasFloorPlanResult && (
-                  <section className={`p-3 rounded-lg ${colors.bg.primary} ${quick.card}`}>
-                    <FloorPlanControls
-                      visible={floorPlanVisible}
-                      opacity={floorPlanOpacity}
-                      fileName={floorPlanUpload.file?.name}
-                      onVisibilityChange={setFloorPlanVisible}
-                      onOpacityChange={setFloorPlanOpacity}
-                    />
-                  </section>
-                )}
-                {hasFloorPlanResult && (isProfessional || isTechnical) && (
-                  <section className={`p-3 rounded-lg ${colors.bg.primary} ${quick.card}`}>
-                    <FloorPlanControlPointPicker controlPoints={controlPoints} />
-                  </section>
-                )}
-                {roleWorkspacePanel && (
-                  <section className={`p-3 rounded-lg ${colors.bg.primary} ${quick.card}`}>
-                    {roleWorkspacePanel}
-                  </section>
-                )}
+                {hasFloorPlanResult && (<section className={`p-3 rounded-lg ${colors.bg.primary} ${borders.quick.card}`}><FloorPlanControls visible={floorPlanVisible} opacity={floorPlanOpacity} fileName={floorPlanUpload.file?.name} onVisibilityChange={setFloorPlanVisible} onOpacityChange={setFloorPlanOpacity} /></section>)}
+                {hasFloorPlanResult && (isProfessional || isTechnical) && (<section className={`p-3 rounded-lg ${colors.bg.primary} ${borders.quick.card}`}><FloorPlanControlPointPicker controlPoints={controlPoints} /></section>)}
+                {roleWorkspacePanel && (<section className={`p-3 rounded-lg ${colors.bg.primary} ${borders.quick.card}`}>{roleWorkspacePanel}</section>)}
               </div>
             </SheetContent>
           </Sheet>
-
           <Sheet open={mobileStatusOpen} onOpenChange={setMobileStatusOpen}>
             <SheetContent side="bottom" className="h-[78vh] p-0" aria-label="GeoCanvas Status">
-              <SheetHeader className="p-4 pb-0">
-                <SheetTitle>System Status</SheetTitle>
-                <SheetDescription>Operational and technical status for GeoCanvas.</SheetDescription>
-              </SheetHeader>
-              <div className="h-[calc(78vh-64px)] overflow-y-auto p-4">
-                {systemStatusContent}
-              </div>
+              <SheetHeader className="p-4 pb-0"><SheetTitle>System Status</SheetTitle><SheetDescription>Operational and technical status for GeoCanvas.</SheetDescription></SheetHeader>
+              <div className="h-[calc(78vh-64px)] overflow-y-auto p-4">{statusPanel}</div>
             </SheetContent>
           </Sheet>
         </>
       )}
 
-      {/* 📁 FLOOR PLAN UPLOAD MODAL */}
-      <FloorPlanUploadModal
-        isOpen={floorPlanUpload.isModalOpen}
-        onClose={floorPlanUpload.closeModal}
-        onFileSelect={handleFloorPlanFileSelect}
-        parserResult={floorPlanUpload.result}
-        selectedFile={floorPlanUpload.file}
-        isParsing={floorPlanUpload.isParsing}
-      />
+      {/* MODALS & OVERLAYS */}
+      <FloorPlanUploadModal isOpen={floorPlanUpload.isModalOpen} onClose={floorPlanUpload.closeModal} onFileSelect={handleFloorPlanFileSelect} parserResult={floorPlanUpload.result} selectedFile={floorPlanUpload.file} isParsing={floorPlanUpload.isParsing} />
 
-      {/* 🚨 ALERT MANAGEMENT DASHBOARD (Phase 2.3) */}
       {showAlertDashboard && !isMobile && (
-        <div
-          style={fixedSidebarPanel('right', '480px')}
-        >
+        <div style={fixedSidebarPanel('right', '480px')}>
           <ComponentErrorBoundary componentName="AlertManagementPanel">
-            <AlertManagementPanel
-              onClose={() => setShowAlertDashboard(false)}
-              className="shadow-2xl"
-            />
+            <AlertManagementPanel onClose={() => setShowAlertDashboard(false)} className="shadow-2xl" />
           </ComponentErrorBoundary>
         </div>
       )}
 
-      {/* 🛠️ DEVELOPMENT ERROR REPORTING DASHBOARD */}
       <ErrorReportingDashboard position="bottom-right" minimized />
     </div>
     </PolygonSystemProvider>
   );
 }
 
-// **ENTERPRISE ERROR BOUNDARY WRAPPER**
-// Wrap το GeoCanvasContent με PageErrorBoundary για enterprise error handling
+// Enterprise error boundary wrapper
 const GeoCanvasContentWithErrorBoundary = (props: GeoCanvasAppProps) => (
-  <PageErrorBoundary
-    componentName="GeoCanvasContent"
-    enableRetry
-    maxRetries={2}
-    enableReporting
+  <PageErrorBoundary componentName="GeoCanvasContent" enableRetry maxRetries={2} enableReporting
     onError={(error, errorInfo, errorId) => {
-      // ✅ ENTERPRISE FIX: Defer error logging to avoid setState during render
       setTimeout(() => {
-        console.error('GEO-ALERT Error Captured:', {
-          errorId,
-          component: 'GeoCanvasContent',
-          error: error.message,
-          stack: error.stack,
-          componentStack: errorInfo.componentStack
-        });
+        console.error('GEO-ALERT Error Captured:', { errorId, component: 'GeoCanvasContent', error: error.message, stack: error.stack, componentStack: errorInfo.componentStack });
       }, 0);
     }}
   >
@@ -1202,6 +322,4 @@ const GeoCanvasContentWithErrorBoundary = (props: GeoCanvasAppProps) => (
   </PageErrorBoundary>
 );
 
-// Export το wrapped component
 export default GeoCanvasContentWithErrorBoundary;
-
