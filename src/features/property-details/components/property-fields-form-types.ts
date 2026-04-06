@@ -75,6 +75,8 @@ export interface PropertyFieldsEditFormProps {
   creationBuildingId?: string | null;
   /** ADR-236: Project ID for FloorInlineCreateForm SSoT (creation only) */
   creationProjectId?: string | null;
+  /** ADR-236: True when user confirmed "no next floor" warning — show create form immediately */
+  needsFloorCreation?: boolean;
   /** Sold or rented (physical fields locked) */
   isSoldOrRented: boolean;
   /** Multi-level unit */

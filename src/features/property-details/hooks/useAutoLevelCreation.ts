@@ -61,6 +61,8 @@ interface UseAutoLevelCreationReturn {
   handleDialogConfirm: () => void;
   /** Handle dialog dismiss */
   handleDialogDismiss: () => void;
+  /** True when user confirmed "no next floor" warning — show FloorInlineCreateForm */
+  needsFloorCreation: boolean;
 }
 
 // =============================================================================
@@ -84,6 +86,7 @@ export function useAutoLevelCreation({
     type: null,
     pendingType: null,
   });
+  const [needsFloorCreation, setNeedsFloorCreation] = useState(false);
 
   // Ref to prevent stale closure issues
   const floorsRef = useRef(buildingFloors);
@@ -179,6 +182,19 @@ export function useAutoLevelCreation({
     info(msg.includes('{{') ? msg.replace('{{count}}', String(levelsCount)) : msg);
   }, [currentFloorId, currentFloorNumber, info, onUpdateProperty, t]);
 
+  // ── Auto-retry: when user creates a new floor after "no next floor" warning ──
+  useEffect(() => {
+    if (!needsFloorCreation || !currentFloorId) return;
+    const floors = floorsRef.current;
+    const currentIdx = floors.findIndex((f) => f.id === currentFloorId);
+    if (currentIdx === -1) return;
+    const nextFloor = floors[currentIdx + 1];
+    if (nextFloor) {
+      setNeedsFloorCreation(false);
+      createLevelsForCurrentAndNext();
+    }
+  }, [needsFloorCreation, buildingFloors, currentFloorId, createLevelsForCurrentAndNext]);
+
   // ── Trigger: called on type/floor change ──
   // Fresh args bypass stale closures — critical for creation flow.
   const triggerAutoLevelCreation = useCallback(
@@ -204,19 +220,18 @@ export function useAutoLevelCreation({
 
   // ── Dialog handlers ──
   const handleDialogConfirm = useCallback(() => {
-    const wasWarning = dialogState.type === 'warning';
     setDialogState({ type: null, pendingType: null });
     if (dialogState.type === 'confirm') {
       createLevelsForCurrentAndNext();
-    } else if (wasWarning) {
-      onWarningDismiss?.();
+    } else if (dialogState.type === 'warning') {
+      // User acknowledged "no next floor" → show FloorInlineCreateForm
+      setNeedsFloorCreation(true);
     }
-  }, [createLevelsForCurrentAndNext, dialogState.type, onWarningDismiss]);
+  }, [createLevelsForCurrentAndNext, dialogState.type]);
 
   const handleDialogDismiss = useCallback(() => {
-    const wasWarning = dialogState.type === 'warning';
     setDialogState({ type: null, pendingType: null });
-    if (wasWarning) {
+    if (dialogState.type === 'warning') {
       onWarningDismiss?.();
     }
   }, [dialogState.type, onWarningDismiss]);
@@ -226,5 +241,6 @@ export function useAutoLevelCreation({
     dialogState,
     handleDialogConfirm,
     handleDialogDismiss,
+    needsFloorCreation,
   };
 }

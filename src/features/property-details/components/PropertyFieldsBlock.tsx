@@ -185,12 +185,11 @@ export function PropertyFieldsBlock({
     }));
     onActiveLevelChange?.(newLevels[0]?.floorId ?? null);
   }, [onActiveLevelChange]);
-  // ADR-236: Clear floor + levels when "no next floor" warning is dismissed
+  // ADR-236: Clear floor + levels when "no next floor" warning cancel is pressed
   const handleWarningDismiss = useCallback(() => {
     setFormData(prev => ({ ...prev, floorId: '', floor: 0, levels: [], levelData: {} }));
     onActiveLevelChange?.(null);
   }, [onActiveLevelChange]);
-
   const autoLevel = useAutoLevelCreation({
     buildingId: isCreatingNewUnit ? (formData.buildingId || null) : null,
     currentFloorId: isCreatingNewUnit ? (formData.floorId || null) : null,
@@ -467,6 +466,7 @@ export function PropertyFieldsBlock({
         onLevelsChange={isCreatingNewUnit ? handleLevelsChange : undefined}
         creationBuildingId={isCreatingNewUnit ? (formData.buildingId || null) : null}
         creationProjectId={isCreatingNewUnit ? (formData.projectId || null) : null}
+        needsFloorCreation={autoLevel.needsFloorCreation}
         isSoldOrRented={isSoldOrRented}
         isMultiLevel={!!isMultiLevel}
         effectiveLevels={effectiveLevels}

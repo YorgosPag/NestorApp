@@ -47,6 +47,8 @@ export interface FloorMultiSelectFieldProps {
   noBuildingHint: string;
   /** Disable the field */
   disabled?: boolean;
+  /** Open the create form immediately (e.g. after "no next floor" warning) */
+  initiallyOpen?: boolean;
 }
 
 // =============================================================================
@@ -61,6 +63,7 @@ export function FloorMultiSelectField({
   label,
   noBuildingHint,
   disabled = false,
+  initiallyOpen = false,
 }: FloorMultiSelectFieldProps) {
   const { t } = useTranslation(['properties']);
   const { user } = useAuth();
@@ -68,7 +71,10 @@ export function FloorMultiSelectField({
 
   const [allFloors, setAllFloors] = useState<FloorOption[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(initiallyOpen);
+
+  // Sync initiallyOpen prop → show create form
+  useEffect(() => { if (initiallyOpen) setShowCreateForm(true); }, [initiallyOpen]);
 
   // Real-time Firestore subscription for building floors (for existingFloorNumbers)
   useEffect(() => {
@@ -126,27 +132,25 @@ export function FloorMultiSelectField({
         <section className={cn("flex items-center gap-2 h-8", colors.text.muted)}>
           <Spinner size="small" />
         </section>
+      ) : !isDisabled && showCreateForm && buildingId ? (
+        <FloorInlineCreateForm
+          buildingId={buildingId}
+          projectId={projectId ?? undefined}
+          onCreated={handleFloorCreated}
+          onCancel={() => setShowCreateForm(false)}
+          existingFloorNumbers={existingFloorNumbers}
+        />
       ) : !isDisabled && value.length >= 2 ? (
-        !showCreateForm ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={() => setShowCreateForm(true)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t('multiLevel.createFloor')}
-          </Button>
-        ) : buildingId ? (
-          <FloorInlineCreateForm
-            buildingId={buildingId}
-            projectId={projectId ?? undefined}
-            onCreated={handleFloorCreated}
-            onCancel={() => setShowCreateForm(false)}
-            existingFloorNumbers={existingFloorNumbers}
-          />
-        ) : null
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={() => setShowCreateForm(true)}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {t('multiLevel.createFloor')}
+        </Button>
       ) : null}
     </fieldset>
   );

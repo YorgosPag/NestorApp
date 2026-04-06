@@ -64,6 +64,7 @@ export function PropertyFieldsEditForm({
   onLevelsChange,
   creationBuildingId,
   creationProjectId,
+  needsFloorCreation,
   isMultiLevel,
   effectiveLevels,
   activeLevelId,
@@ -155,6 +156,7 @@ export function PropertyFieldsEditForm({
           onChange={onLevelsChange}
           label={t('multiLevel.floors', { ns: 'properties-detail' })}
           noBuildingHint={t('multiLevel.noFloorHint', { ns: 'properties-detail' })}
+          initiallyOpen={needsFloorCreation}
         />
       )}
 
