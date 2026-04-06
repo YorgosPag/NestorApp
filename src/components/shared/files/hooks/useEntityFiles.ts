@@ -209,9 +209,11 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
 
       setFiles(mergedFiles);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error fetching files');
-      logger.error('Failed to fetch files', {
-        error: error.message,
+      const error = err instanceof Error ? err : new Error(String(err));
+      const code = (err as { code?: string })?.code ?? 'unknown';
+      logger.warn('Failed to fetch files', {
+        code,
+        message: error.message,
         entityType,
         entityId,
       });

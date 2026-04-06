@@ -19,7 +19,15 @@ import 'server-only';
 
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { extractPhoneFromText, extractEmailFromText, extractVatFromText } from '@/lib/validation/phone-validation';
+import {
+  FIELD_KEYWORDS,
+  detectRemoveAction,
+  detectField,
+  extractFieldValue,
+  extractContactName,
+  type FieldMapping,
+  type UpdateAction,
+} from './admin-update-contact-helpers';
 import {
   findContactByName,
   updateContactField,
@@ -49,52 +57,8 @@ import type {
 const logger = createModuleLogger('UC_016_ADMIN_UPDATE_CONTACT');
 
 // ============================================================================
-// FIELD KEYWORD MAPPING
-// ============================================================================
-
-interface FieldMapping {
-  field: string;
-  firestoreField: string;
-  greekLabel: string;
-  keywords: readonly string[];
-}
-
-const FIELD_KEYWORDS: readonly FieldMapping[] = [
-  { field: 'phone', firestoreField: 'phone', greekLabel: 'Τηλέφωνο', keywords: ['τηλεφωνο', 'τηλ', 'κινητο', 'phone', 'tel', 'mobile'] },
-  { field: 'email', firestoreField: 'email', greekLabel: 'Email', keywords: ['email', 'mail', 'ηλεκτρονικο', 'μειλ'] },
-  { field: 'vatNumber', firestoreField: 'vatNumber', greekLabel: 'ΑΦΜ', keywords: ['αφμ', 'afm', 'vat', 'α.φ.μ.'] },
-  { field: 'profession', firestoreField: 'profession', greekLabel: 'Επάγγελμα', keywords: ['επαγγελμα', 'δουλεια', 'profession', 'εργασια'] },
-  { field: 'birthDate', firestoreField: 'birthDate', greekLabel: 'Ημερομηνία γέννησης', keywords: ['γεννηση', 'ημερομηνια γεννησης', 'birthday', 'birth'] },
-  { field: 'fatherName', firestoreField: 'fatherName', greekLabel: 'Πατρώνυμο', keywords: ['πατρωνυμο', 'ονομα πατερα', 'πατερας'] },
-  { field: 'taxOffice', firestoreField: 'taxOffice', greekLabel: 'ΔΟΥ', keywords: ['δου', 'εφορια', 'δ.ο.υ.', 'tax office'] },
-  { field: 'address', firestoreField: 'address', greekLabel: 'Διεύθυνση', keywords: ['διευθυνση', 'address', 'οδος', 'δρομος'] },
-  { field: 'registrationNumber', firestoreField: 'registrationNumber', greekLabel: 'Αριθμός ΓΕΜΗ', keywords: ['γεμη', 'αριθμος μητρωου', 'registration'] },
-  { field: 'legalForm', firestoreField: 'legalForm', greekLabel: 'Νομική μορφή', keywords: ['νομικη μορφη', 'legal form', 'μορφη'] },
-  { field: 'employer', firestoreField: 'employer', greekLabel: 'Εργοδότης', keywords: ['εργοδοτης', 'employer'] },
-  { field: 'position', firestoreField: 'position', greekLabel: 'Θέση', keywords: ['θεση', 'ρολος', 'position', 'role'] },
-  { field: 'idNumber', firestoreField: 'idNumber', greekLabel: 'Αριθμός Ταυτότητας', keywords: ['ταυτοτητα', 'αδτ', 'adt', 'id number', 'αριθμο ταυτοτητας', 'αριθμος ταυτοτητας', 'δελτιο ταυτοτητας'] },
-] as const;
-
-// ============================================================================
 // TYPES
 // ============================================================================
-
-/** Action mode: add/update value, or remove/clear it */
-type UpdateAction = 'set' | 'remove';
-
-/** Keywords that indicate a REMOVE/DELETE operation */
-const REMOVE_KEYWORDS: readonly string[] = [
-  'αφαίρεσε', 'αφαιρεσε', 'αφαιρέσεις', 'αφαιρεσεις',
-  'σβήσε', 'σβησε', 'διέγραψε', 'διεγραψε',
-  'βγάλε', 'βγαλε', 'αφαίρεση', 'αφαιρεση',
-  'διαγραφή', 'διαγραφη', 'remove', 'delete', 'clear',
-];
-
-/** Detect if the message asks to REMOVE a field */
-function detectRemoveAction(message: string): boolean {
-  const lower = message.toLowerCase();
-  return REMOVE_KEYWORDS.some(kw => lower.includes(kw));
-}
 
 interface UpdateContactLookupData {
   detectedField: FieldMapping | null;
@@ -444,143 +408,4 @@ export class AdminUpdateContactModule implements IUCModule {
   }
 }
 
-// ============================================================================
-// HELPERS: Field Detection & Value Extraction
-// ============================================================================
-
-/**
- * Strip accents from Greek text for keyword matching.
- * Converts: ά→α, έ→ε, ή→η, ί→ι, ό→ο, ύ→υ, ώ→ω
- */
-function stripAccents(text: string): string {
-  const map: Record<string, string> = {
-    'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι', 'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω',
-    'ΐ': 'ι', 'ΰ': 'υ', 'ϊ': 'ι', 'ϋ': 'υ',
-    'Ά': 'α', 'Έ': 'ε', 'Ή': 'η', 'Ί': 'ι', 'Ό': 'ο', 'Ύ': 'υ', 'Ώ': 'ω',
-  };
-  return text.replace(/[άέήίόύώΐΰϊϋΆΈΉΊΌΎΏ]/g, ch => map[ch] ?? ch);
-}
-
-/**
- * Detect which field the admin wants to update based on keywords in the message.
- */
-function detectField(message: string): FieldMapping | null {
-  const normalized = stripAccents(message.toLowerCase());
-
-  for (const mapping of FIELD_KEYWORDS) {
-    for (const keyword of mapping.keywords) {
-      const normalizedKeyword = stripAccents(keyword.toLowerCase());
-      if (normalized.includes(normalizedKeyword)) {
-        return mapping;
-      }
-    }
-  }
-
-  return null;
-}
-
-/**
- * Extract the value for a detected field from the raw message.
- * ✅ ADR-212: Uses centralized extraction for phone/email/VAT
- */
-function extractFieldValue(message: string, fieldMapping: FieldMapping): string | null {
-  const field = fieldMapping.field;
-
-  // Field-specific extractors — ADR-212: centralized
-  if (field === 'phone') {
-    return extractPhoneFromText(message);
-  }
-
-  if (field === 'email') {
-    return extractEmailFromText(message);
-  }
-
-  if (field === 'vatNumber') {
-    return extractVatFromText(message);
-  }
-
-  // Generic extraction: find value after the keyword or after ':'
-  // Pattern: "keyword ... value" or "keyword: value" or "keyword στον X: value"
-  return extractGenericValue(message, fieldMapping.keywords);
-}
-
-/**
- * Generic value extractor: finds the value that appears after a keyword.
- *
- * Strategies:
- * 1. "keyword: value" → take everything after ':'
- * 2. "keyword Ονομα: value" → take everything after ':'
- * 3. "keyword value στον/στη Ονομα" → take text between keyword and στον/στη
- */
-function extractGenericValue(message: string, keywords: readonly string[]): string | null {
-  const normalized = stripAccents(message.toLowerCase());
-
-  for (const keyword of keywords) {
-    const normalizedKeyword = stripAccents(keyword.toLowerCase());
-    const idx = normalized.indexOf(normalizedKeyword);
-    if (idx === -1) continue;
-
-    const afterKeyword = message.substring(idx + keyword.length).trim();
-
-    // Strategy 1: "Keyword: value" or "Keyword Ονομα: value"
-    const colonIdx = afterKeyword.indexOf(':');
-    if (colonIdx !== -1) {
-      const value = afterKeyword.substring(colonIdx + 1).trim();
-      // Remove trailing contact name references
-      const cleanedValue = value
-        .replace(/\s+(?:στον|στη|στο|για τον|για τη|του|της)\s+.*$/i, '')
-        .trim();
-      if (cleanedValue) return cleanedValue;
-    }
-
-    // Strategy 2: Take the remaining text, strip contact name patterns
-    const cleanedAfter = afterKeyword
-      .replace(/^[:\s]+/, '')
-      .replace(/\s+(?:στον|στη|στο|για τον|για τη|του|της)\s+.*$/i, '')
-      .replace(/[,;]+\s*$/, '')
-      .trim();
-
-    if (cleanedAfter) return cleanedAfter;
-  }
-
-  return null;
-}
-
-/**
- * Extract the contact name from the message.
- * Strips command keywords, field keywords, and the detected value.
- *
- * Common patterns:
- * - "Πρόσθεσε τηλέφωνο 697... στον Νέστορα" → "Νέστορα"
- * - "Βάλε ΑΦΜ 123456789 στον Παγώνη" → "Παγώνη"
- * - "Επάγγελμα Νέστορα: Μηχανικός" → "Νέστορα"
- * - "ΑΦΜ 123456789" → null (will use session)
- */
-function extractContactName(
-  message: string,
-  fieldMapping: FieldMapping | null,
-  value: string | null
-): string | null {
-  // Pattern 1: "... στον/στη/στο [Name]"
-  const prepositionMatch = message.match(
-    /(?:στον|στη|στο|για τον|για τη|του|της)\s+(.+?)(?:\s*$|[,;.])/i
-  );
-  if (prepositionMatch) {
-    const name = prepositionMatch[1].trim();
-    // Strip any trailing value that might have slipped in
-    if (name && name.length > 0) return name;
-  }
-
-  // Pattern 2: "field Name: value" (e.g., "Επάγγελμα Νέστορα: Μηχανικός")
-  if (fieldMapping) {
-    for (const keyword of fieldMapping.keywords) {
-      const regex = new RegExp(keyword + '\\s+([\\p{L}]+(?:\\s+[\\p{L}]+)?)\\s*:', 'iu');
-      const match = message.match(regex);
-      if (match) {
-        return match[1].trim();
-      }
-    }
-  }
-
-  return null;
-}
+// Helpers extracted to admin-update-contact-helpers.ts (ADR-065 Phase 6)
