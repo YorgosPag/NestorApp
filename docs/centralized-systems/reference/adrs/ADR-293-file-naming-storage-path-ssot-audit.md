@@ -143,11 +143,11 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 | Service | Total Usages | Canonical | Violations | Rate |
 |---------|-------------|-----------|-----------|------|
-| `buildStoragePath()` | 36 | 33 | 3 (legacy fallbacks) | 92% |
+| `buildStoragePath()` | 36 | 36 | 0 | 100% |
 | `buildFileDisplayName()` | 15 | 15 | 0 | 100% |
-| `generateFileId()` | 12 | 10 | 2 (`Date.now()` bypasses) | 83% |
-| `file-mutation-gateway` | 9 | 8 | 1 (CRM bypass) | 89% |
-| **Total** | **50** | **46** | **8** | **92%** |
+| `generateFileId()` | 12 | 12 | 0 | 100% |
+| `file-mutation-gateway` | 9 | 9 | 0 | 100% |
+| **Total** | **50** | **50** | **0** | **100%** |
 
 ### What's Centralized
 
@@ -159,10 +159,7 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 ### What's Scattered
 
-- ~~**CRM communications** still uses legacy `PhotoUploadService` with hardcoded paths~~ **FIXED (Phase 3)** — migrated to canonical `useCrmAttachmentUpload` hook
-- **ImageProcessor** generates filenames with `Date.now()` instead of `generateFileId()`
-- ~~**Legacy fallbacks** in DXF/CAD services~~ **FIXED (Phase 4)** — `canonicalScenePath` now required, fallbacks removed
-- ~~**Photo upload API route** accepts legacy paths as fallback~~ **FIXED (Phase 2)** — `generateFileId()` replaces `Date.now()`
+**Nothing.** All violations fixed (Phases 1-6). Legacy pipeline deleted. Zero scattered code remaining.
 
 ---
 
