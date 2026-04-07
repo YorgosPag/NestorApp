@@ -31,50 +31,13 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { createModuleLogger } from '@/lib/telemetry';
+
+import type { QueryFilter, QuerySort, QueryPagination, QueryFilterValue, CompiledQuery } from './relationship-query-types';
+
+// Re-export types for backward compatibility
+export type { QueryFilterValue, QueryFilter, QuerySort, QueryPagination, CompiledQuery } from './relationship-query-types';
+
 const logger = createModuleLogger('RelationshipQueryBuilder');
-
-// ============================================================================
-// QUERY BUILDER TYPES
-// ============================================================================
-
-/**
- * 🏢 ENTERPRISE: Type-safe query filter value types
- * Supports all Firestore-compatible primitive and array types
- */
-export type QueryFilterValue =
-  | string
-  | number
-  | boolean
-  | Date
-  | null
-  | string[]
-  | number[]
-  | boolean[];
-
-export interface QueryFilter {
-  field: string;
-  operator: WhereFilterOp;
-  value: QueryFilterValue;
-}
-
-export interface QuerySort {
-  field: string;
-  direction: 'asc' | 'desc';
-}
-
-export interface QueryPagination {
-  limit?: number;
-  startAfter?: DocumentSnapshot;
-  endBefore?: DocumentSnapshot;
-}
-
-export interface CompiledQuery {
-  firestoreQuery: Query;
-  filters: QueryFilter[];
-  sorts: QuerySort[];
-  pagination?: QueryPagination;
-  estimatedCost: number;
-}
 
 // ============================================================================
 // QUERY BUILDER CLASS
@@ -104,16 +67,11 @@ export class RelationshipQueryBuilder {
   // FACTORY METHODS
   // ========================================================================
 
-  /**
-   * 🏗️ Create New Query Builder
-   */
   static create(): RelationshipQueryBuilder {
     return new RelationshipQueryBuilder();
   }
 
-  /**
-   * 🔍 Quick Contact Query
-   */
+  /** @see relationship-query-factories.ts for convenience factories */
   static forContact(contactId: string): RelationshipQueryBuilder {
     return new RelationshipQueryBuilder()
       .where('sourceContactId', '==', contactId)
@@ -121,9 +79,6 @@ export class RelationshipQueryBuilder {
       .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE);
   }
 
-  /**
-   * 🏢 Quick Organization Query
-   */
   static forOrganization(organizationId: string): RelationshipQueryBuilder {
     return new RelationshipQueryBuilder()
       .where('targetContactId', '==', organizationId)
@@ -134,9 +89,6 @@ export class RelationshipQueryBuilder {
       .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE);
   }
 
-  /**
-   * 🏢 Quick Department Query
-   */
   static forDepartment(department: string): RelationshipQueryBuilder {
     return new RelationshipQueryBuilder()
       .where('department', '==', department)
@@ -148,64 +100,38 @@ export class RelationshipQueryBuilder {
   // FILTER METHODS (Fluent API)
   // ========================================================================
 
-  /**
-   * 📝 Add Where Filter
-   */
   where(field: string, operator: WhereFilterOp, value: QueryFilterValue): RelationshipQueryBuilder {
     this.filters.push({ field, operator, value });
     return this;
   }
 
-  /**
-   * 📝 Add OR Where Filter (simulated με separate query)
-   */
   orWhere(field: string, operator: WhereFilterOp, value: QueryFilterValue): RelationshipQueryBuilder {
-    // Note: Firestore doesn't support OR directly, so this is για future implementation
-    // που θα combine multiple queries
-    logger.warn('⚠️ OR queries require special handling με multiple Firestore queries');
+    logger.warn('OR queries require special handling with multiple Firestore queries');
     return this.where(field, operator, value);
   }
 
-  /**
-   * 🎯 Where Equal
-   */
   whereEqual(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, '==', value);
   }
 
-  /**
-   * 🎯 Where In Array
-   */
   whereIn(field: string, values: QueryFilterValue[]): RelationshipQueryBuilder {
     if (values.length === 0) return this;
     if (values.length === 1) return this.where(field, '==', values[0]);
     return this.where(field, 'in', values as QueryFilterValue);
   }
 
-  /**
-   * 🎯 Where Not Equal
-   */
   whereNotEqual(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, '!=', value);
   }
 
-  /**
-   * 🎯 Where Greater Than
-   */
   whereGreaterThan(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, '>', value);
   }
 
-  /**
-   * 🎯 Where Less Than
-   */
   whereLessThan(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, '<', value);
   }
 
-  /**
-   * 🎯 Where Array Contains
-   */
   whereArrayContains(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, 'array-contains', value);
   }
@@ -214,177 +140,65 @@ export class RelationshipQueryBuilder {
   // SPECIALIZED FILTER METHODS
   // ========================================================================
 
-  /**
-   * 👤 Filter by Source Contact
-   */
-  fromContact(contactId: string): RelationshipQueryBuilder {
-    return this.whereEqual('sourceContactId', contactId);
-  }
+  fromContact(contactId: string): RelationshipQueryBuilder { return this.whereEqual('sourceContactId', contactId); }
+  toContact(contactId: string): RelationshipQueryBuilder { return this.whereEqual('targetContactId', contactId); }
+  ofType(relationshipType: RelationshipType): RelationshipQueryBuilder { return this.whereEqual('relationshipType', relationshipType); }
+  ofTypes(relationshipTypes: RelationshipType[]): RelationshipQueryBuilder { return this.whereIn('relationshipType', relationshipTypes); }
+  withStatus(status: RelationshipStatus): RelationshipQueryBuilder { return this.whereEqual('status', status); }
+  activeOnly(): RelationshipQueryBuilder { return this.withStatus('active'); }
+  inDepartment(department: string): RelationshipQueryBuilder { return this.whereEqual('department', department); }
+  inDepartments(departments: string[]): RelationshipQueryBuilder { return this.whereIn('department', departments); }
+  withPosition(position: string): RelationshipQueryBuilder { return this.whereEqual('position', position); }
 
-  /**
-   * 🎯 Filter by Target Contact
-   */
-  toContact(contactId: string): RelationshipQueryBuilder {
-    return this.whereEqual('targetContactId', contactId);
-  }
-
-  /**
-   * 🔗 Filter by Relationship Type
-   */
-  ofType(relationshipType: RelationshipType): RelationshipQueryBuilder {
-    return this.whereEqual('relationshipType', relationshipType);
-  }
-
-  /**
-   * 🔗 Filter by Multiple Types
-   */
-  ofTypes(relationshipTypes: RelationshipType[]): RelationshipQueryBuilder {
-    return this.whereIn('relationshipType', relationshipTypes);
-  }
-
-  /**
-   * ✅ Filter by Status
-   */
-  withStatus(status: RelationshipStatus): RelationshipQueryBuilder {
-    return this.whereEqual('status', status);
-  }
-
-  /**
-   * ✅ Active Relationships Only
-   */
-  activeOnly(): RelationshipQueryBuilder {
-    return this.withStatus('active');
-  }
-
-  /**
-   * 🏢 Filter by Department
-   */
-  inDepartment(department: string): RelationshipQueryBuilder {
-    return this.whereEqual('department', department);
-  }
-
-  /**
-   * 🏢 Filter by Multiple Departments
-   */
-  inDepartments(departments: string[]): RelationshipQueryBuilder {
-    return this.whereIn('department', departments);
-  }
-
-  /**
-   * 💼 Filter by Position
-   */
-  withPosition(position: string): RelationshipQueryBuilder {
-    return this.whereEqual('position', position);
-  }
-
-  /**
-   * 📅 Filter by Date Range
-   */
   createdBetween(startDate: Date, endDate: Date): RelationshipQueryBuilder {
-    return this
-      .whereGreaterThan('createdAt', startDate)
-      .whereLessThan('createdAt', endDate);
+    return this.whereGreaterThan('createdAt', startDate).whereLessThan('createdAt', endDate);
   }
 
-  /**
-   * 📅 Filter by Start Date Range
-   */
   startedBetween(startDate: string, endDate: string): RelationshipQueryBuilder {
-    return this
-      .whereGreaterThan('startDate', startDate)
-      .whereLessThan('startDate', endDate);
+    return this.whereGreaterThan('startDate', startDate).whereLessThan('startDate', endDate);
   }
 
-  /**
-   * 🔍 Text Search (simulated με multiple field search)
-   */
   textSearch(searchTerm: string): RelationshipQueryBuilder {
-    // Note: Firestore doesn't have full-text search
-    // This would need to be implemented με algolia ή elasticsearch
-    logger.warn('⚠️ Text search requires external search service (Algolia, Elasticsearch)');
-
-    // For now, search in position field only
+    logger.warn('Text search requires external search service (Algolia, Elasticsearch)');
     const term = searchTerm.toLowerCase();
-    return this
-      .whereGreaterThan('position', term)
-      .whereLessThan('position', term + '\uf8ff');
+    return this.whereGreaterThan('position', term).whereLessThan('position', term + '\uf8ff');
   }
 
   // ========================================================================
   // SORTING METHODS
   // ========================================================================
 
-  /**
-   * 📊 Add Order By
-   */
   orderBy(field: string, direction: 'asc' | 'desc' = 'asc'): RelationshipQueryBuilder {
     this.sorts.push({ field, direction });
     return this;
   }
 
-  /**
-   * 📊 Order by Created Date (newest first)
-   */
-  newest(): RelationshipQueryBuilder {
-    return this.orderBy(FIELDS.CREATED_AT, 'desc');
-  }
-
-  /**
-   * 📊 Order by Created Date (oldest first)
-   */
-  oldest(): RelationshipQueryBuilder {
-    return this.orderBy(FIELDS.CREATED_AT, 'asc');
-  }
-
-  /**
-   * 📊 Order by Position (alphabetical)
-   */
-  byPosition(): RelationshipQueryBuilder {
-    return this.orderBy('position', 'asc');
-  }
-
-  /**
-   * 📊 Order by Department
-   */
-  byDepartment(): RelationshipQueryBuilder {
-    return this.orderBy('department', 'asc');
-  }
+  newest(): RelationshipQueryBuilder { return this.orderBy(FIELDS.CREATED_AT, 'desc'); }
+  oldest(): RelationshipQueryBuilder { return this.orderBy(FIELDS.CREATED_AT, 'asc'); }
+  byPosition(): RelationshipQueryBuilder { return this.orderBy('position', 'asc'); }
+  byDepartment(): RelationshipQueryBuilder { return this.orderBy('department', 'asc'); }
 
   // ========================================================================
   // PAGINATION METHODS
   // ========================================================================
 
-  /**
-   * 📄 Set Limit
-   */
   limit(limitCount: number): RelationshipQueryBuilder {
     this.pagination.limit = limitCount;
     return this;
   }
 
-  /**
-   * 📄 Start After Document
-   */
   startAfter(doc: DocumentSnapshot): RelationshipQueryBuilder {
     this.pagination.startAfter = doc;
     return this;
   }
 
-  /**
-   * 📄 End Before Document
-   */
   endBefore(doc: DocumentSnapshot): RelationshipQueryBuilder {
     this.pagination.endBefore = doc;
     return this;
   }
 
-  /**
-   * 📄 Page Offset (simulated)
-   */
   offset(offsetCount: number): RelationshipQueryBuilder {
-    // Note: Firestore doesn't support offset directly
-    // This would need special implementation
-    logger.warn('⚠️ Offset requires special pagination handling με Firestore');
+    logger.warn('Offset requires special pagination handling with Firestore');
     return this;
   }
 
