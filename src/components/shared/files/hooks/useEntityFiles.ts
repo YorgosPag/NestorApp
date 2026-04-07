@@ -209,15 +209,17 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
 
       setFiles(mergedFiles);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const errObj = err instanceof Error ? err : new Error(String(err));
       const code = (err as { code?: string })?.code ?? 'unknown';
-      logger.warn('Failed to fetch files', {
-        code,
-        message: error.message,
-        entityType,
-        entityId,
-      });
-      setError(error);
+      // Permission errors are expected (auth loading, unsaved entities) — don't show to user
+      if (code === 'permission-denied' || errObj.message.includes('permissions')) {
+        logger.warn('Files permission denied (expected during auth/creation)', { entityType, entityId });
+        setFiles([]);
+        setLoading(false);
+        return;
+      }
+      logger.warn('Failed to fetch files', { code, message: errObj.message, entityType, entityId });
+      setError(errObj);
     } finally {
       setLoading(false);
     }
@@ -278,19 +280,16 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
         });
       },
       (err: unknown) => {
-        const errObj = err instanceof Error ? err : new Error(String(err));
         const code = (err as { code?: string })?.code ?? 'unknown';
-        logger.warn('[realtime] Listener failed, falling back to one-time fetch', {
-          code,
-          message: errObj.message,
-          entityType,
-          entityId,
-        });
-        // Graceful fallback: try one-time fetch instead of leaving error state
-        void fetchFiles().catch(() => {
-          setError(errObj);
+        // Permission errors are expected (auth loading, unsaved entities)
+        if (code === 'permission-denied') {
+          logger.warn('[realtime] Permission denied (expected)', { entityType, entityId });
+          setFiles([]);
           setLoading(false);
-        });
+          return;
+        }
+        logger.warn('[realtime] Listener failed, falling back to one-time fetch', { code, entityType, entityId });
+        void fetchFiles().catch(() => { setLoading(false); });
       },
       { constraints },
     );
