@@ -208,10 +208,14 @@ Service        Service            Service
 - [x] Server-side cadFiles endpoint (ADR-288)
 - [x] Tenant scoping on all collections (ADR-285)
 - [x] companyId in linked files queries (2026-04-07)
+- [x] companyId propagation to all photo upload consumers (2026-04-07)
+- [x] EnterprisePhotoUpload canonical fields passed from PhotosTabBase, UnifiedPhotoManager, MultiplePhotos* (2026-04-07)
 - [ ] Verify all upload paths use `file-mutation-gateway.ts`
 
 ### Phase 2: Simplify Hooks
-- [ ] Extract shared validation from upload hooks into gateway
+- [x] Extract shared auth validation (`validateUploadAuth`) to `file-mutation-gateway.ts` (2026-04-07)
+- [x] Remove inline `validateAuthAndClaims` from `useFloorplanUpload` — uses gateway SSoT (2026-04-07)
+- [x] Enhance `useFileUpload` auth to validate companyId claims via `validateUploadAuth` (2026-04-07)
 - [ ] Reduce `useFloorplanUpload` to thin wrapper over gateway + FloorplanSaveOrchestrator
 - [ ] Document which hook to use for which scenario (decision matrix)
 
@@ -256,5 +260,6 @@ Service        Service            Service
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | **Phase 1+2 Implementation**: (1) Added canonical fields (companyId/contactId/createdBy) to `UseEnterpriseFileUploadConfig` + fallback path to `PhotoUploadService.uploadPhoto()`. (2) Propagated canonical fields from all consumers: `PhotosTabBase`, `UnifiedPhotoManager` (Company/Service/Individual), `MultiplePhotosCompact`, `MultiplePhotosFull`, `EnterprisePhotoUpload`. (3) Extracted `validateUploadAuth()` SSoT to `file-mutation-gateway.ts` — removed inline `validateAuthAndClaims()` from `useFloorplanUpload`. (4) Enhanced `useFileUpload` auth to use `validateUploadAuth(companyId)` with companyId claim validation. | Claude Code |
 | 2026-04-07 | Added Related Documents section with ADR-293 back-reference | Claude Code |
 | 2026-04-07 | Initial consolidation map created | Claude Code |

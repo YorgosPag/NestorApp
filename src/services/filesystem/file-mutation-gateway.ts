@@ -10,6 +10,9 @@ import { API_ROUTES, type EntityType } from '@/config/domain-constants';
 import type { FileClassification } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { auth } from '@/lib/firebase';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('file-mutation-gateway');
 
 interface BatchDownloadFileInput {
   url: string;
@@ -28,6 +31,66 @@ interface FileUploadAuthContext {
   uid: string;
   hasEmail: boolean;
   tokenLength: number;
+}
+
+// ============================================================================
+// 🏢 ADR-292: CANONICAL UPLOAD AUTH VALIDATION (SSoT)
+// ============================================================================
+
+/** Result of canonical upload auth validation */
+export interface UploadAuthResult {
+  uid: string;
+  companyId: string;
+  globalRole: string | null;
+  isSuperAdmin: boolean;
+}
+
+/**
+ * Canonical upload auth validation — SSoT for all upload hooks (ADR-292).
+ *
+ * Validates:
+ * 1. User is authenticated
+ * 2. User has companyId custom claim
+ * 3. If expectedCompanyId provided: claim matches (super_admin bypass)
+ *
+ * Replaces inline validateAuthAndClaims() in useFloorplanUpload.
+ */
+export async function validateUploadAuth(
+  expectedCompanyId?: string,
+): Promise<UploadAuthResult> {
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    throw new Error('UPLOAD_AUTH_REQUIRED');
+  }
+
+  const idTokenResult = await currentUser.getIdTokenResult(true);
+  const claims = idTokenResult.claims;
+
+  const companyId = typeof claims.companyId === 'string' ? claims.companyId : null;
+  const globalRole = typeof claims.globalRole === 'string' ? claims.globalRole : null;
+  const isSuperAdmin = globalRole === 'super_admin';
+
+  if (!companyId) {
+    logger.error('User missing companyId claim', { uid: currentUser.uid });
+    throw new Error('UPLOAD_AUTH_MISSING_COMPANY');
+  }
+
+  if (expectedCompanyId && !isSuperAdmin && companyId !== expectedCompanyId) {
+    logger.error('Company mismatch in upload auth', {
+      claim: companyId,
+      expected: expectedCompanyId,
+    });
+    throw new Error('UPLOAD_AUTH_COMPANY_MISMATCH');
+  }
+
+  logger.info('Upload auth validated', {
+    uid: currentUser.uid,
+    companyId,
+    isSuperAdmin,
+  });
+
+  return { uid: currentUser.uid, companyId, globalRole, isSuperAdmin };
 }
 
 async function mutateJson<T>(url: string, init: RequestInit): Promise<T> {
@@ -133,6 +196,10 @@ export async function createFileShareWithPolicy(input: CreateShareInput): Promis
   return FileShareService.createShare(input);
 }
 
+/**
+ * @deprecated Use `validateUploadAuth()` instead (ADR-292).
+ * This function only checks if user exists — no companyId claim validation.
+ */
 export async function verifyFileUploadAuthWithPolicy(): Promise<FileUploadAuthContext> {
   const currentUser = auth.currentUser;
 

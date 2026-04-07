@@ -20,10 +20,11 @@
 
 import { useState, useCallback } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, auth } from '@/lib/firebase';
+import { storage } from '@/lib/firebase';
 import {
   createPendingFileRecordWithPolicy,
   finalizeFileRecordWithPolicy,
+  validateUploadAuth,
 } from '@/services/filesystem/file-mutation-gateway';
 import { isFloorplanFile } from '@/services/floorplans/FloorplanProcessor';
 import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
@@ -111,44 +112,7 @@ function getFileExtension(filename: string): string {
   return lastDot > 0 ? filename.substring(lastDot + 1).toLowerCase() : '';
 }
 
-interface AuthValidationResult {
-  valid: boolean;
-  errorCode?: UploadErrorCode;
-  companyId?: string;
-  globalRole?: string;
-}
-
-async function validateAuthAndClaims(expectedCompanyId: string): Promise<AuthValidationResult> {
-  const currentUser = auth.currentUser;
-
-  if (!currentUser) {
-    return { valid: false, errorCode: 'AUTH_NOT_AUTHENTICATED' };
-  }
-
-  try {
-    const idTokenResult = await currentUser.getIdTokenResult(true);
-    const claims = idTokenResult.claims;
-    const companyIdFromClaim = typeof claims.companyId === 'string' ? claims.companyId : null;
-    const globalRole = typeof claims.globalRole === 'string' ? claims.globalRole : null;
-
-    if (!companyIdFromClaim) {
-      logger.error('User missing companyId claim', { uid: currentUser.uid });
-      return { valid: false, errorCode: 'AUTH_MISSING_COMPANY_CLAIM' };
-    }
-
-    const isSuperAdmin = globalRole === 'super_admin';
-    if (!isSuperAdmin && companyIdFromClaim !== expectedCompanyId) {
-      logger.error('Company mismatch', { claim: companyIdFromClaim, expected: expectedCompanyId });
-      return { valid: false, errorCode: 'AUTH_COMPANY_MISMATCH' };
-    }
-
-    logger.info('Auth validated', { uid: currentUser.uid, companyId: companyIdFromClaim });
-    return { valid: true, companyId: companyIdFromClaim, globalRole: globalRole || undefined };
-
-  } catch {
-    return { valid: false, errorCode: 'AUTH_NOT_AUTHENTICATED' };
-  }
-}
+// 🏢 ADR-292: Auth validation extracted to validateUploadAuth() in file-mutation-gateway.ts (SSoT)
 
 function getErrorCodeFromError(error: Error): UploadErrorCode {
   const msg = error.message.toLowerCase();
@@ -196,10 +160,16 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
         return { success: false, error: ERROR_MESSAGES.FILE_TOO_LARGE, errorCode: 'FILE_TOO_LARGE' };
       }
 
-      // Phase 2: Validate auth (CRITICAL - checks custom claims)
-      const authResult = await validateAuthAndClaims(companyId);
-      if (!authResult.valid) {
-        const code = authResult.errorCode!;
+      // Phase 2: Validate auth (CRITICAL - SSoT from file-mutation-gateway ADR-292)
+      try {
+        await validateUploadAuth(companyId);
+      } catch (authError) {
+        const msg = authError instanceof Error ? authError.message : 'AUTH_NOT_AUTHENTICATED';
+        const code: UploadErrorCode = msg.includes('COMPANY_MISMATCH')
+          ? 'AUTH_COMPANY_MISMATCH'
+          : msg.includes('MISSING_COMPANY')
+            ? 'AUTH_MISSING_COMPANY_CLAIM'
+            : 'AUTH_NOT_AUTHENTICATED';
         setError(ERROR_MESSAGES[code]);
         setErrorCode(code);
         return { success: false, error: ERROR_MESSAGES[code], errorCode: code };

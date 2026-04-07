@@ -12,6 +12,9 @@ import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterprise
 import type { PhotoSlot } from './MultiplePhotosUpload';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 
+// 🏢 ADR-292: Auth + tenant context for canonical upload pipeline
+import { useCompanyId } from '@/hooks/useCompanyId';
+import { useAuth } from '@/auth/hooks/useAuth';
 
 import { openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
@@ -175,6 +178,12 @@ function CompanyPhotoManager({
   const { t } = useTranslation('common');
   const handleLogoChange = handlers.handleLogoChange ?? (() => {});
 
+  // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
+  const companyIdResult = useCompanyId();
+  const { user } = useAuth();
+  const canonicalCompanyId = companyIdResult?.companyId;
+  const canonicalCreatedBy = user?.uid;
+
 
   // 🔍 DEBUG: Log formData photo fields
   React.useEffect(() => {
@@ -213,10 +222,14 @@ function CompanyPhotoManager({
                 handlers.handleUploadedLogoURL?.(result.url);
               }}
               disabled={disabled}
-              contactData={formData} // 🏷️ Pass contact data for filename generation
+              contactData={formData}
               compact
               showProgress
               className="w-full"
+              companyId={canonicalCompanyId}
+              contactId={formData.id}
+              createdBy={canonicalCreatedBy}
+              contactName={formData.companyName || formData.tradeName}
             />
           </CardContent>
         </Card>
@@ -266,10 +279,14 @@ function CompanyPhotoManager({
                 }
               }}
               disabled={disabled}
-              contactData={formData} // 🏷️ Pass contact data for filename generation
+              contactData={formData}
               compact
               showProgress
               className="w-full"
+              companyId={canonicalCompanyId}
+              contactId={formData.id}
+              createdBy={canonicalCreatedBy}
+              contactName={formData.firstName ? `${formData.firstName} ${formData.lastName || ''}`.trim() : undefined}
             />
           </CardContent>
         </Card>
@@ -296,6 +313,13 @@ function ServicePhotoManager({
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
   const { t } = useTranslation('common');
+
+  // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
+  const companyIdResult = useCompanyId();
+  const { user } = useAuth();
+  const canonicalCompanyId = companyIdResult?.companyId;
+  const canonicalCreatedBy = user?.uid;
+
   return (
     <Card className="mt-4">
       <CardHeader>
@@ -334,6 +358,10 @@ function ServicePhotoManager({
           disabled={disabled}
           compact
           showProgress
+          companyId={canonicalCompanyId}
+          contactId={formData.id}
+          createdBy={canonicalCreatedBy}
+          contactName={formData.companyName || formData.tradeName}
         />
       </CardContent>
     </Card>

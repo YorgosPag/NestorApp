@@ -10,6 +10,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
+// 🏢 ADR-292: Auth + tenant context for canonical upload pipeline
+import { useCompanyId } from '@/hooks/useCompanyId';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('MultiplePhotosCompact');
@@ -131,6 +134,12 @@ export function MultiplePhotosCompact({
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('common');
+
+  // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
+  const companyIdResult = useCompanyId();
+  const { user } = useAuth();
+  const canonicalCompanyId = companyIdResult?.companyId;
+  const canonicalCreatedBy = user?.uid;
 
   // 🔧 FIX: Refs to avoid stale closures in async onUploadComplete callbacks.
   const normalizedPhotosRef = React.useRef(normalizedPhotos);
@@ -339,7 +348,10 @@ export function MultiplePhotosCompact({
                     onPhotoClick(index);
                   }
                 }}
-// Enterprise standard - let EnterprisePhotoUpload handle uploads naturally
+                companyId={canonicalCompanyId}
+                contactId={contactData?.id}
+                createdBy={canonicalCreatedBy}
+                contactName={contactData?.name as string | undefined}
               />
             </article>
           );

@@ -146,7 +146,12 @@ export function EnterprisePhotoUpload({
     showToasts,
     contactData,
     photoIndex,
-    customFileName
+    customFileName,
+    // 🏢 ADR-292: Pass canonical fields for tenant-isolated storage
+    companyId,
+    contactId,
+    createdBy,
+    contactName,
   });
 
   // 🔥 DEBUG: Log photoFile value to identify undefined issues

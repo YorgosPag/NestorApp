@@ -20,7 +20,7 @@
 
 import { useCallback, useState } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, storage } from '@/lib/firebase';
+import { storage } from '@/lib/firebase';
 import app from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,7 +29,7 @@ import {
   classifyFileWithPolicy,
   createPendingFileRecordWithPolicy,
   finalizeFileRecordWithPolicy,
-  verifyFileUploadAuthWithPolicy,
+  validateUploadAuth,
 } from '@/services/filesystem/file-mutation-gateway';
 import { getFileExtension } from '@/services/upload';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
@@ -108,20 +108,22 @@ export function useFileUpload({
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     // =========================================================================
-    // AUTH GATE — Centralized upload auth preflight
+    // AUTH GATE — Canonical upload auth with companyId validation (ADR-292)
     // =========================================================================
-    let authContext: Awaited<ReturnType<typeof verifyFileUploadAuthWithPolicy>>;
+    let authContext: Awaited<ReturnType<typeof validateUploadAuth>>;
 
     try {
-      authContext = await verifyFileUploadAuthWithPolicy();
-      logger.info('AUTH_VERIFIED', authContext);
+      authContext = await validateUploadAuth(companyId);
+      logger.info('AUTH_VERIFIED', { uid: authContext.uid, companyId: authContext.companyId });
     } catch (authError) {
       logger.error('AUTH_PRECHECK_FAILED', { error: String(authError) });
       const errorMessage = authError instanceof Error ? authError.message : '';
       showError(
-        errorMessage === 'FILE_UPLOAD_AUTH_REQUIRED'
+        errorMessage.includes('AUTH_REQUIRED')
           ? t('upload.errors.notAuthenticated')
-          : t('upload.errors.authFailed'),
+          : errorMessage.includes('COMPANY')
+            ? t('upload.errors.authFailed')
+            : t('upload.errors.authFailed'),
       );
       return;
     }

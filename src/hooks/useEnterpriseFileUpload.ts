@@ -50,6 +50,23 @@ export interface UseEnterpriseFileUploadConfig {
   photoIndex?: number;
   /** Custom filename override (optional) */
   customFileName?: string;
+
+  // =========================================================================
+  // 🏢 CANONICAL PIPELINE FIELDS (ADR-031 / ADR-292)
+  // =========================================================================
+  // When provided, PhotoUploadService routes to canonical pipeline
+  // (createPendingFileRecord → upload → finalize) with tenant isolation.
+  // Without these, uploads fall through to LEGACY pipeline (no FileRecord).
+  // =========================================================================
+
+  /** 🏢 CANONICAL: Company ID for multi-tenant isolation */
+  companyId?: string;
+  /** 🏢 CANONICAL: Entity ID for FileRecord linkage (e.g. contactId) */
+  contactId?: string;
+  /** 🏢 CANONICAL: User ID who is uploading */
+  createdBy?: string;
+  /** 🏢 CANONICAL: Entity name for display name generation */
+  contactName?: string;
 }
 
 export interface UseEnterpriseFileUploadActions {
@@ -158,6 +175,19 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
 
   const notifications = useNotifications();
   const { t } = useTranslation('files');
+
+  // ========================================================================
+  // 🏢 CANONICAL PIPELINE DEPRECATION CHECK (ADR-292)
+  // ========================================================================
+
+  if (!config.companyId || !config.createdBy) {
+    logger.warn('DEPRECATION: useEnterpriseFileUpload called without canonical fields (companyId/createdBy). Upload will use legacy pipeline without tenant isolation. Pass canonical fields for enterprise storage.', {
+      hasCompanyId: !!config.companyId,
+      hasCreatedBy: !!config.createdBy,
+      hasContactId: !!config.contactId,
+      purpose: config.purpose,
+    });
+  }
 
   // ========================================================================
   // CORE STATE MANAGEMENT
@@ -306,15 +336,23 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
         }
 
         // Upload with PhotoUploadService
-        // 🏢 ENTERPRISE: Use centralized legacy path constants (SSoT: domain-constants.ts)
+        // 🏢 ADR-293: Canonical pipeline uses buildStoragePath() — folderPath only for legacy fallback.
+        // PhotoUploadService routes to canonical when companyId+contactId+createdBy are present.
+        const hasCanonicalFields = !!(config.companyId && config.contactId && config.createdBy);
+
         result = await PhotoUploadService.uploadPhoto(fileToUpload, {
-          folderPath: config.fileType === 'image' ? LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS : LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
+          // ADR-293: Only pass legacy folderPath when canonical fields are absent
+          ...(hasCanonicalFields ? {} : { folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS }),
           onProgress,
-          enableCompression: config.fileType === 'image', // Only compress images
+          enableCompression: config.fileType === 'image',
           compressionUsage,
           contactData: config.contactData,
           purpose: config.purpose,
-          photoIndex: config.photoIndex
+          photoIndex: config.photoIndex,
+          companyId: config.companyId,
+          contactId: config.contactId,
+          createdBy: config.createdBy,
+          contactName: config.contactName,
         });
 
         logger.info('ENTERPRISE: PhotoUploadService completed', {

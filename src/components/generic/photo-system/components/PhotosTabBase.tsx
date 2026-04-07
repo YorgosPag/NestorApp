@@ -29,6 +29,10 @@ import { Camera, Upload, Image } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+// 🏢 ADR-292: Auth + tenant context for canonical upload pipeline
+import { useCompanyId } from '@/hooks/useCompanyId';
+import { useAuth } from '@/auth/hooks/useAuth';
+
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -215,6 +219,8 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
   className,
   onPhotoClick: _onPhotoClick,
   onPhotoDelete: _onPhotoDelete,
+  companyId: propCompanyId,
+  createdBy: propCreatedBy,
 }: PhotosTabBaseProps<TEntity>) {
   // ---------------------------------------------------------------------------
   // Design system hooks
@@ -224,6 +230,14 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
 
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
+
+  // ---------------------------------------------------------------------------
+  // 🏢 ADR-292: Resolve canonical fields (prop > hook fallback)
+  // ---------------------------------------------------------------------------
+  const companyIdResult = useCompanyId();
+  const { user } = useAuth();
+  const resolvedCompanyId = propCompanyId || companyIdResult?.companyId;
+  const resolvedCreatedBy = propCreatedBy || user?.uid;
 
   // ---------------------------------------------------------------------------
   // Get merged configuration
@@ -264,6 +278,9 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
     config,
     entityId: entity.id,
     entityName: resolvedEntityName,
+    // 🏢 ADR-292: Canonical pipeline fields for tenant-isolated storage
+    companyId: resolvedCompanyId,
+    createdBy: resolvedCreatedBy,
   });
 
   // ---------------------------------------------------------------------------
@@ -326,6 +343,9 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
             onFileChange={uploadLogic.handleFileChange}
             onUploadComplete={uploadLogic.handleUploadComplete}
             disabled={disabled || isLoading}
+            companyId={resolvedCompanyId}
+            contactId={entity.id}
+            createdBy={resolvedCreatedBy}
           />
         </section>
       )}

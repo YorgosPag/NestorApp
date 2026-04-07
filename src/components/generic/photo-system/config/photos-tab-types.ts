@@ -222,6 +222,12 @@ export interface PhotosTabBaseProps<TEntity extends BaseEntity> {
 
   /** Photo delete handler */
   onPhotoDelete?: (photo: Photo) => void;
+
+  // 🏢 CANONICAL PIPELINE FIELDS (ADR-292)
+  /** Company ID for multi-tenant isolated upload */
+  companyId?: string;
+  /** User ID performing the upload */
+  createdBy?: string;
 }
 
 // =============================================================================

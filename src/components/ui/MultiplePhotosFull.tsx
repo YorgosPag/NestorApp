@@ -8,6 +8,9 @@ import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { FILE_TYPE_CONFIG, type UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+// 🏢 ADR-292: Auth + tenant context for canonical upload pipeline
+import { useCompanyId } from '@/hooks/useCompanyId';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('MultiplePhotosFull');
@@ -113,6 +116,12 @@ export function MultiplePhotosFull({
 }: MultiplePhotosFullProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+
+  // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
+  const companyIdResult = useCompanyId();
+  const { user } = useAuth();
+  const canonicalCompanyId = companyIdResult?.companyId;
+  const canonicalCreatedBy = user?.uid;
 
   // 🔧 FIX: Refs to avoid stale closures in async onUploadComplete callbacks.
   // The upload completes asynchronously — by then, normalizedPhotos and onPhotosChange
@@ -360,7 +369,10 @@ export function MultiplePhotosFull({
                     onPhotoClick(index);
                   }
                 }}
-// Enterprise standard - let EnterprisePhotoUpload handle uploads naturally
+                companyId={canonicalCompanyId}
+                contactId={contactData?.id}
+                createdBy={canonicalCreatedBy}
+                contactName={contactData?.name as string | undefined}
               />
             </div>
           );

@@ -49,6 +49,12 @@ export interface UsePhotosTabUploadProps {
   entityId: string;
   /** Entity name for file naming */
   entityName?: string;
+
+  // 🏢 CANONICAL PIPELINE FIELDS (ADR-292)
+  /** Company ID for multi-tenant isolation */
+  companyId?: string;
+  /** User ID who is uploading */
+  createdBy?: string;
 }
 
 // =============================================================================
@@ -90,6 +96,8 @@ export function usePhotosTabUpload({
   config,
   entityId,
   entityName,
+  companyId,
+  createdBy,
 }: UsePhotosTabUploadProps): UsePhotosTabUploadReturn {
   // ---------------------------------------------------------------------------
   // USE EXISTING ENTERPRISE HOOK - NO DUPLICATION!
@@ -100,6 +108,10 @@ export function usePhotosTabUpload({
     maxSize: config.maxFileSize,
     acceptedTypes: config.acceptedTypes,
     showToasts: true,
+    // 🏢 ADR-292: Pass canonical fields for tenant-isolated storage
+    companyId,
+    contactId: entityId,
+    createdBy,
   });
 
   // ---------------------------------------------------------------------------
