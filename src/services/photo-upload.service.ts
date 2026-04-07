@@ -2,11 +2,10 @@
 
 /**
  * photo-upload.service — Main PhotoUploadService class.
- * ADR-065 SRP split: delegates legacy pipeline to photo-upload-legacy-pipeline.ts.
+ * ADR-293: Legacy pipeline eliminated — all uploads use canonical pipeline.
  *
  * Related files:
  * - photo-upload-types.ts (shared types, loggers, utilities)
- * - photo-upload-legacy-pipeline.ts (legacy upload pipeline)
  */
 
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -26,7 +25,6 @@ import {
   ENTITY_TYPES,
   FILE_DOMAINS,
   FILE_CATEGORIES,
-  LEGACY_STORAGE_PATHS,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -50,8 +48,6 @@ import {
   type PhotoUploadResult,
 } from './photo-upload-types';
 
-// ✅ ADR-065 SRP: Legacy pipeline extracted to dedicated module
-import { executeLegacyUpload } from './photo-upload-legacy-pipeline';
 
 // ============================================================================
 // MAIN SERVICE
@@ -122,8 +118,13 @@ export class PhotoUploadService {
       };
     }
 
-    // ✅ ADR-065 SRP: Delegate to extracted legacy pipeline
-    return executeLegacyUpload(file, options);
+    // 🚨 ADR-293: Legacy pipeline eliminated — canonical fields REQUIRED
+    legacyLogger.error('Upload rejected: canonical fields (companyId, contactId, createdBy) are REQUIRED. Legacy pipeline has been removed.', {
+      hasCompanyId: !!options.companyId,
+      hasContactId: !!options.contactId,
+      hasCreatedBy: !!options.createdBy,
+    });
+    throw new Error('Upload requires canonical fields (companyId, contactId, createdBy). Legacy upload pipeline has been removed (ADR-293).');
   }
 
   /**
@@ -217,43 +218,6 @@ export class PhotoUploadService {
    */
   static isFirebaseStorageURL(url: string): boolean {
     return url.includes('firebasestorage.googleapis.com') || url.includes('appspot.com');
-  }
-
-  /**
-   * @deprecated ADR-054: Use uploadContactPhotoCanonical() instead.
-   */
-  static async uploadContactPhoto(
-    file: File,
-    contactId?: string,
-    onProgress?: (progress: FileUploadProgress) => void,
-    compressionUsage: UsageContext = 'profile-modal'
-  ): Promise<PhotoUploadResult> {
-    return this.uploadPhoto(file, {
-      folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
-      fileName: file.name,
-      onProgress,
-      enableCompression: true,
-      compressionUsage
-    });
-  }
-
-  /**
-   * @deprecated ADR-054: Consider using uploadPhoto() with canonical fields.
-   */
-  static async uploadCompanyLogo(
-    file: File,
-    companyId?: string,
-    onProgress?: (progress: FileUploadProgress) => void
-  ): Promise<PhotoUploadResult> {
-    const prefix = companyId ? `company_${companyId}` : process.env.NEXT_PUBLIC_DEFAULT_COMPANY_PREFIX || 'company';
-
-    return this.uploadPhoto(file, {
-      folderPath: LEGACY_STORAGE_PATHS.COMPANIES_LOGOS,
-      fileName: `${prefix}_${file.name}`,
-      onProgress,
-      enableCompression: true,
-      compressionUsage: 'company-logo'
-    });
   }
 
   /** Deletes contact photo */
@@ -461,11 +425,4 @@ export class PhotoUploadService {
     return files;
   }
 
-  /**
-   * 🏢 ENTERPRISE: Check if URL is legacy contact photo path
-   */
-  static isLegacyContactPhotoPath(path: string): boolean {
-    const legacyPrefix = LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS;
-    return path.startsWith(`${legacyPrefix}/`) || path.includes(`/${legacyPrefix}/`);
-  }
 }

@@ -21,7 +21,6 @@ import {
 import { FileNamingService } from '@/services/FileNamingService';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { UsageContext } from '@/config/photo-compression-config';
-import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -335,14 +334,8 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
             compressionUsage = 'profile-modal';
         }
 
-        // Upload with PhotoUploadService
-        // 🏢 ADR-293: Canonical pipeline uses buildStoragePath() — folderPath only for legacy fallback.
-        // PhotoUploadService routes to canonical when companyId+contactId+createdBy are present.
-        const hasCanonicalFields = !!(config.companyId && config.contactId && config.createdBy);
-
+        // 🏢 ADR-293: All uploads use canonical pipeline (legacy eliminated)
         result = await PhotoUploadService.uploadPhoto(fileToUpload, {
-          // ADR-293: Only pass legacy folderPath when canonical fields are absent
-          ...(hasCanonicalFields ? {} : { folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS }),
           onProgress,
           enableCompression: config.fileType === 'image',
           compressionUsage,

@@ -6,7 +6,7 @@ import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { FileNamingService } from '@/services/FileNamingService';
 import { generateFileId } from '@/services/enterprise-id.service';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
-import { LEGACY_STORAGE_PATHS, type EntityType, type FileDomain, type FileCategory } from '@/config/domain-constants';
+import { type EntityType, type FileDomain, type FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeStoragePath } from '@/lib/security/path-sanitizer';
@@ -76,7 +76,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const rawFolderPath = formData.get('folderPath') as string || LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS;
+    const rawFolderPath = formData.get('folderPath') as string || 'uploads';
 
     // 🔒 SECURITY (ADR-252 SV-C1): Sanitize folder path to prevent path traversal
     const pathCheck = sanitizeStoragePath(rawFolderPath);
@@ -193,7 +193,10 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
       // Update fileName to use fileId for consistency
       fileName = `${fileId}.${ext}`;
     } else {
-      // Legacy path — maintained for backward compatibility
+      // 🚨 ADR-293: Legacy path — canonical params preferred but server must handle legacy clients
+      logger.warn('[Upload/Photo] Using legacy folderPath — canonical params (entityType, entityId) recommended', {
+        folderPath, companyId: ctx.companyId,
+      });
       storagePath = `${folderPath}/${fileName}`;
     }
     logger.info('[Upload/Photo] Upload path', { storagePath, canonical: !!(ctx.companyId && canonicalEntityType && canonicalEntityId) });

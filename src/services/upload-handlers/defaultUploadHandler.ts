@@ -3,7 +3,6 @@
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
 import type { UsageContext } from '@/config/photo-compression-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -22,8 +21,8 @@ export type UploadHandler = (
  * Configuration for creating an upload handler
  */
 export interface UploadHandlerConfig {
-  /** Storage folder path (e.g., 'contacts/photos') */
-  folderPath: string;
+  /** Storage folder path — legacy, ignored by canonical pipeline (ADR-293) */
+  folderPath?: string;
   /** Enable image compression (default: true for images) */
   enableCompression?: boolean;
   /** Compression usage context for smart compression */
@@ -70,36 +69,30 @@ export type UploadPreset =
  */
 const UPLOAD_PRESETS: Record<UploadPreset, Partial<UploadHandlerConfig>> = {
   'contact-photo': {
-    folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
     enableCompression: true,
     compressionUsage: 'profile-modal',
     purpose: 'photo',
   },
   'contact-representative': {
-    folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
     enableCompression: true,
     compressionUsage: 'profile-modal',
     purpose: 'representative',
   },
   'company-logo': {
-    folderPath: LEGACY_STORAGE_PATHS.COMPANIES_LOGOS,
     enableCompression: true,
     compressionUsage: 'company-logo',
     purpose: 'logo',
   },
   'document': {
-    folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
     enableCompression: false,
     purpose: 'document',
   },
   'floor-plan': {
-    folderPath: LEGACY_STORAGE_PATHS.FLOOR_PLANS,
     enableCompression: true,
     compressionUsage: 'document-scan',
     purpose: 'floor-plan',
   },
   'dxf-file': {
-    folderPath: LEGACY_STORAGE_PATHS.DXF_SCENES,
     enableCompression: false,
     purpose: 'dxf',
   },
@@ -178,7 +171,6 @@ export function createUploadHandlerFromPreset(
 ): UploadHandler {
   const presetConfig = UPLOAD_PRESETS[preset];
   const mergedConfig: UploadHandlerConfig = {
-    folderPath: presetConfig.folderPath || LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
     ...presetConfig,
     ...overrides,
   };
@@ -189,24 +181,6 @@ export function createUploadHandlerFromPreset(
 // ============================================================================
 // DEFAULT HANDLERS
 // ============================================================================
-
-/**
- * Default upload handler for contact photos
- * Uses Firebase Storage with automatic compression
- *
- * @deprecated Prefer createUploadHandlerFromPreset('contact-photo', { ...canonicalFields })
- * for new code to ensure canonical pipeline is used.
- */
-export const defaultContactPhotoHandler: UploadHandler = createUploadHandlerFromPreset('contact-photo');
-
-/**
- * Default upload handler for company logos
- * Uses Firebase Storage with logo-specific compression
- *
- * @deprecated Prefer createUploadHandlerFromPreset('company-logo', { ...canonicalFields })
- * for new code to ensure canonical pipeline is used.
- */
-export const defaultCompanyLogoHandler: UploadHandler = createUploadHandlerFromPreset('company-logo');
 
 // ============================================================================
 // CANONICAL UPLOAD HANDLER

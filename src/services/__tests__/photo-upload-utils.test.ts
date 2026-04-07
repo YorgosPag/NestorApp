@@ -6,11 +6,9 @@
  * - generateUniqueFileName (filename generation with prefix/extension)
  * - resolveContactName (priority resolution: explicit > contactData > undefined)
  * - resolvePhotoPurpose (validation against PHOTO_PURPOSES constants)
- * - resolveStorageErrorMessage (Firebase error code → user-facing message)
  */
 
 import { generateUniqueFileName, resolveContactName, resolvePhotoPurpose } from '../photo-upload-types';
-import { resolveStorageErrorMessage } from '../photo-upload-legacy-pipeline';
 
 // ============================================================================
 // generateUniqueFileName
@@ -147,43 +145,3 @@ describe('resolvePhotoPurpose', () => {
   });
 });
 
-// ============================================================================
-// resolveStorageErrorMessage
-// ============================================================================
-
-describe('resolveStorageErrorMessage', () => {
-  it('returns unauthorized message for storage/unauthorized', () => {
-    const msg = resolveStorageErrorMessage('storage/unauthorized', undefined, false);
-    expect(msg).toContain('άδεια');
-  });
-
-  it('returns canceled message when not retries exhausted', () => {
-    const msg = resolveStorageErrorMessage('storage/canceled', undefined, false);
-    expect(msg).toContain('ακυρώθηκε');
-  });
-
-  it('returns network message for storage/canceled when retries exhausted', () => {
-    const msg = resolveStorageErrorMessage('storage/canceled', undefined, true);
-    expect(msg).toContain('δικτύου');
-  });
-
-  it('returns network message for storage/retry-limit-exceeded', () => {
-    const msg = resolveStorageErrorMessage('storage/retry-limit-exceeded', undefined, false);
-    expect(msg).toContain('δικτύου');
-  });
-
-  it('returns network message for storage/unknown with retry hint in message', () => {
-    const msg = resolveStorageErrorMessage('storage/unknown', 'Max retry time exceeded', false);
-    expect(msg).toContain('δικτύου');
-  });
-
-  it('returns unknown error for storage/unknown without retry hint', () => {
-    const msg = resolveStorageErrorMessage('storage/unknown', 'Something else', false);
-    expect(msg).toContain('Άγνωστο');
-  });
-
-  it('returns generic error for unrecognized error code', () => {
-    const msg = resolveStorageErrorMessage('storage/other', undefined, false);
-    expect(msg).toContain('Σφάλμα');
-  });
-});

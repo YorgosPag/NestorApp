@@ -4,7 +4,6 @@
  *
  * Related files:
  * - photo-upload.service.ts (main service class)
- * - photo-upload-legacy-pipeline.ts (legacy upload pipeline)
  */
 
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';

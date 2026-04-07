@@ -3,7 +3,7 @@ import 'server-only';
 import { getAdminFirestore, getAdminStorage, Timestamp } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
-import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
+// ADR-293: Legacy path constant for migration reads (not new writes)
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { extractRequestMetadata, logMigrationExecuted } from '@/lib/auth';
@@ -129,7 +129,7 @@ export class DxfMigrationAPI {
           const data = actualDoc.data() as LegacyDxfData;
           const sceneJson = JSON.stringify(data.scene);
           const sceneBytes = new TextEncoder().encode(sceneJson);
-          const storagePath = `${LEGACY_STORAGE_PATHS.DXF_SCENES}/${fileInfo.id}/scene.json`;
+          const storagePath = `dxf-scenes/${fileInfo.id}/scene.json`;
           const bucket = getAdminStorage().bucket();
           const file = bucket.file(storagePath);
 

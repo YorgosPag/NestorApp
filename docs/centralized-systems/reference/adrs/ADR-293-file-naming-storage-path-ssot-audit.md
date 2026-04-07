@@ -215,6 +215,34 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 - [x] **Decision rationale:** All Firestore/Storage data is test/draft — will be wiped before production. No backward compatibility needed.
 - [x] **Target achieved: 100% centralization rate**
 
+### Phase 5: Dead Code Elimination & Legacy Lock -- COMPLETED 2026-04-07
+
+- [x] Removed deprecated methods: `uploadContactPhoto()`, `uploadCompanyLogo()`, `isLegacyContactPhotoPath()` from `PhotoUploadService`
+- [x] Removed deprecated methods chain: `ImageProcessor.uploadContactPhoto/Logo()`, `UnifiedUploadService.uploadContactPhoto/Logo()`
+- [x] Removed deprecated default handlers: `defaultContactPhotoHandler`, `defaultCompanyLogoHandler`
+- [x] Migrated `PDFProcessor.getStoragePath()` from `LEGACY_STORAGE_PATHS.FLOOR_PLANS` → `buildStoragePath()` SSoT
+- [x] Migrated `CADProcessor.getStoragePath()` from `LEGACY_STORAGE_PATHS.DXF_SCENES` → `buildStoragePath()` SSoT
+- [x] Removed `isLegacyFloorplanPath()` dead code from `PDFProcessor`
+- [x] Removed attendance legacy fallback — `companyId` now required for `uploadAttendancePhoto()`
+- [x] **Enabled `BLOCK_LEGACY_WRITES: true`** — legacy pipeline throws on any write attempt
+- [x] Added `companyId` to `BaseUploadOptions` and `StoragePathOptions` interfaces
+- [x] Made `folderPath` optional in `BaseUploadOptions` and `StoragePathOptions`
+- [x] Cleaned LEGACY_STORAGE_PATHS imports from 4 files
+- [x] Updated JSDoc examples to use canonical `companyId` instead of legacy paths
+
+### Phase 6: Full Legacy Pipeline Elimination -- COMPLETED 2026-04-07
+
+- [x] Deleted `photo-upload-legacy-pipeline.ts` — entire file removed (was 300+ lines of dead code)
+- [x] Replaced legacy fallback in `PhotoUploadService.uploadPhoto()` with explicit throw (canonical fields required)
+- [x] Removed `LEGACY_STORAGE_PATHS` constant from `domain-constants.ts` — zero imports remaining
+- [x] Removed `FILE_STORAGE_FLAGS`, `FILE_STORAGE_ERROR_MESSAGES`, `DEPRECATION_MESSAGES` — all dead after pipeline removal
+- [x] Cleaned `useEnterpriseFileUpload.ts` — removed conditional `folderPath`, all uploads canonical
+- [x] Cleaned `upload/photo/route.ts` — removed `LEGACY_STORAGE_PATHS` import
+- [x] Cleaned `defaultUploadHandler.ts` — removed `folderPath` from presets, `folderPath` now optional
+- [x] Cleaned `migration-operations.ts` — inline string for admin migration reads
+- [x] Updated test file — removed `resolveStorageErrorMessage` tests (dead code)
+- [x] **ZERO legacy upload code remaining in the codebase**
+
 ---
 
 ## Decision
@@ -237,6 +265,8 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | Phase 6 COMPLETED — legacy pipeline fully eliminated: deleted `photo-upload-legacy-pipeline.ts`, removed `LEGACY_STORAGE_PATHS`/`FILE_STORAGE_FLAGS`/`DEPRECATION_MESSAGES`/`FILE_STORAGE_ERROR_MESSAGES` from domain-constants, cleaned all legacy imports. Zero legacy code remaining. | Claude Code |
+| 2026-04-07 | Phase 5 COMPLETED — dead code elimination: removed 7 deprecated methods, migrated 2 processors to `buildStoragePath()`, enabled `BLOCK_LEGACY_WRITES: true`, attendance `companyId` required | Claude Code |
 | 2026-04-07 | Phase 4 COMPLETED — violations #6, #7 fixed: legacy `dxf-scenes/` fallbacks removed, `canonicalScenePath` and `storagePath` now required. 100% centralization achieved. | Claude Code |
 | 2026-04-07 | Phase 3 COMPLETED — violations #2, #3 fixed: CRM communications migrated to canonical pipeline via `useCrmAttachmentUpload` hook, added `CONVERSATION` entity type | Claude Code |
 | 2026-04-07 | Phase 2 COMPLETED — violations #4, #5 fixed: conditional folderPath, Date.now() replaced, folderPath optional | Claude Code |
