@@ -28,7 +28,8 @@ export type { DxfSaveContext, DxfFileMetadata, DxfFileRecord };
  * the heavy lifting lives in testable, single-responsibility modules.
  */
 export class DxfFirestoreService {
-  private static readonly COLLECTION_NAME = COLLECTIONS.CAD_FILES;
+  /** @deprecated ADR-292 Phase 3: All reads/writes now go through `files` collection */
+  private static readonly COLLECTION_NAME = COLLECTIONS.FILES;
 
   /**
    * Auto-save scene.

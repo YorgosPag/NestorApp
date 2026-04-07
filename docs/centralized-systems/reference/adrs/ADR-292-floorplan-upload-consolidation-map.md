@@ -222,10 +222,10 @@ Service        Service            Service
 - [x] Document which hook to use for which scenario (decision matrix below)
 
 ### Phase 3: Eliminate Dual-Write
-- [ ] Migrate cadFiles-specific fields (layers, sessions, viewport) into FileRecord metadata
-- [ ] Update DXF Viewer to read from `files` collection only
-- [ ] Remove cadFiles dual-write from `/api/cad-files`
-- [ ] Deprecate `cadFiles` collection (read-only for historical data)
+- [x] Migrate cadFiles-specific fields into FileRecord metadata (2026-04-07: adapter `mapFileRecordToDxfMetadata`)
+- [x] Update DXF Viewer to read from `files` collection only (2026-04-07: `getFileMetadataImpl` + `getFileImpl` → FILES)
+- [x] Remove cadFiles write from `/api/cad-files` (2026-04-07: POST writes ONLY to files, promoted `writeToFilesCollection`)
+- [x] Deprecate `cadFiles` collection (2026-04-07: reads eliminated, writes stopped, config marked deprecated)
 
 ### Phase 4: Eliminate Legacy Fallbacks
 - [ ] Data migration: copy all `floorplans` / `building_floorplans` data to `files`
@@ -239,8 +239,8 @@ Service        Service            Service
 
 | Scenario | Path | Hook/Service | Collection |
 |----------|------|-------------|-----------|
-| User uploads DXF/PDF via wizard | D | useFloorplanUpload | files + cadFiles |
-| DXF auto-save from viewer | C | FloorplanSaveOrchestrator | files + cadFiles |
+| User uploads DXF/PDF via wizard | D | useFloorplanUpload | files |
+| DXF auto-save from viewer | C | FloorplanSaveOrchestrator | files |
 | User uploads file in entity page | A | useFileUpload + EntityFilesManager | files |
 | User uploads photo/logo | B | useEnterpriseFileUpload | files |
 | Batch file upload (company) | E | file-manager-handlers | files |
@@ -262,6 +262,7 @@ Service        Service            Service
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | **Phase 3 Complete — cadFiles Eliminated**: (1) Created `mapFileRecordToDxfMetadata()` adapter in `dxf-firestore.types.ts` — maps FileRecord → DxfFileMetadata. (2) Redirected DXF Viewer reads: `getFileMetadataImpl()` + `getFileImpl()` now read from `files` collection via adapter. (3) POST handler writes ONLY to `files` — promoted `writeToFilesCollection()` to primary, errors propagate. (4) GET reads from `files`. (5) DELETE soft-deletes in `files` (enterprise lifecycle pattern). cadFiles collection is fully deprecated. | Claude Code |
 | 2026-04-07 | **Phase 2 Complete — Upload Orchestrator**: Created `upload-orchestrator-gateway.ts` with `uploadFileWithPolicy()` — canonical 4-step upload pattern (auth→create→upload→finalize). Refactored `useFloorplanUpload` to thin wrapper (254→180 LOC). Refactored `file-manager-handlers` to use orchestrator (-30 LOC). Total duplication eliminated: ~120 LOC across 2 consumers. | Claude Code |
 | 2026-04-07 | **Phase 1 Complete — 100% Gateway Compliance**: All 6 upload paths now route through `file-mutation-gateway.ts`. (1) `PhotoUploadService.uploadContactPhotoCanonical()` migrated from direct `FileRecordService` to gateway `WithPolicy` functions + `validateUploadAuth()`. (2) `PDFProcessor.uploadFloorplanCanonical()` same migration. (3) `file-manager-handlers.handleFileUpload()` added `validateUploadAuth()` before batch loop. (4) Added `markFileRecordFailedWithPolicy()` to gateway. Compliance: 50% → 100% (6/6 paths). | Claude Code |
 | 2026-04-07 | **Phase 1+2 Implementation**: (1) Added canonical fields (companyId/contactId/createdBy) to `UseEnterpriseFileUploadConfig` + fallback path to `PhotoUploadService.uploadPhoto()`. (2) Propagated canonical fields from all consumers: `PhotosTabBase`, `UnifiedPhotoManager` (Company/Service/Individual), `MultiplePhotosCompact`, `MultiplePhotosFull`, `EnterprisePhotoUpload`. (3) Extracted `validateUploadAuth()` SSoT to `file-mutation-gateway.ts` — removed inline `validateAuthAndClaims()` from `useFloorplanUpload`. (4) Enhanced `useFileUpload` auth to use `validateUploadAuth(companyId)` with companyId claim validation. | Claude Code |

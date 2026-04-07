@@ -83,7 +83,7 @@ export const COLLECTIONS = {
   ATTACHMENTS: process.env.NEXT_PUBLIC_ATTACHMENTS_COLLECTION || 'attachments',
 
   // 🎨 CAD & TECHNICAL DRAWINGS (Enterprise Unified)
-  /** @deprecated Use FILES collection instead. cadFiles retained for legacy backward compatibility only. Dual-write active. */
+  /** @deprecated ADR-292 Phase 3: Writes stopped, reads eliminated. All DXF metadata lives in FILES collection. */
   CAD_FILES: process.env.NEXT_PUBLIC_CAD_FILES_COLLECTION || 'cadFiles',
   CAD_LAYERS: process.env.NEXT_PUBLIC_CAD_LAYERS_COLLECTION || 'cadLayers',
   CAD_SESSIONS: process.env.NEXT_PUBLIC_CAD_SESSIONS_COLLECTION || 'cadSessions',

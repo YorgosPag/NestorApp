@@ -12,6 +12,8 @@ import { generateFileId as enterpriseGenerateFileId } from '@/services/enterpris
 import { upsertCadFileWithPolicy } from '@/services/cad-file-mutation-gateway';
 import { dxfLogger, isExpectedError } from './dxf-firestore-logger';
 import type { DxfSaveContext, DxfFileMetadata, DxfFileRecord } from './dxf-firestore.types';
+import { mapFileRecordToDxfMetadata } from './dxf-firestore.types';
+import type { FileRecord } from '@/types/file-record';
 
 // =============================================================================
 // 🏢 ENTERPRISE STORAGE IMPLEMENTATION MODULE
@@ -43,18 +45,30 @@ export function generateSceneChecksum(scene: SceneModel): string {
 
 /**
  * Get file metadata only (without scene data)
- * 🏢 ADR-214 Phase 10: Migrated to firestoreQueryService.getById
+ * 🏢 ADR-292 Phase 3: Reads from canonical `files` collection (was cadFiles)
  */
 export async function getFileMetadataImpl(fileId: string): Promise<DxfFileMetadata | null> {
-  return firestoreQueryService.getById<DxfFileMetadata>('CAD_FILES', fileId);
+  const record = await firestoreQueryService.getById<FileRecord>('FILES', fileId);
+  if (!record) return null;
+  return mapFileRecordToDxfMetadata(record);
 }
 
 /**
- * Internal method to get document
- * 🏢 ADR-214 Phase 10: Migrated to firestoreQueryService.getById
+ * Internal method to get document (metadata only — scene loaded from Storage)
+ * 🏢 ADR-292 Phase 3: Reads from canonical `files` collection (was cadFiles)
  */
 export async function getFileImpl(fileId: string): Promise<DxfFileRecord | null> {
-  return firestoreQueryService.getById<DxfFileRecord>('CAD_FILES', fileId);
+  const metadata = await getFileMetadataImpl(fileId);
+  if (!metadata) return null;
+  // DxfFileRecord.scene is loaded separately by loadFromStorageImpl
+  return {
+    id: metadata.id,
+    fileName: metadata.fileName,
+    scene: {} as SceneModel, // Placeholder — real scene loaded from Storage
+    lastModified: metadata.lastModified,
+    version: metadata.version,
+    checksum: metadata.checksum,
+  };
 }
 
 /**

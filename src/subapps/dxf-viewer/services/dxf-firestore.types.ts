@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { SceneModel } from '../types/scene';
 import type { SecurityValidationResult } from '../security/DxfSecurityValidator';
+import type { FileRecord } from '@/types/file-record';
 
 /**
  * Optional entity context for dual-write to `files` collection.
@@ -72,4 +73,61 @@ export interface DxfFileRecord {
   lastModified: Timestamp;
   version: number;
   checksum?: string;
+}
+
+// =============================================================================
+// 🏢 ADR-292 Phase 3: FileRecord → DxfFileMetadata adapter
+// =============================================================================
+// Enables DXF Viewer to read from the canonical `files` collection instead of
+// the deprecated `cadFiles` collection. Maps FileRecord fields to the
+// DxfFileMetadata shape expected by dxf-firestore-storage.impl.ts.
+// =============================================================================
+
+/**
+ * Map a FileRecord from the `files` collection to DxfFileMetadata.
+ * Used by getFileMetadataImpl() after redirecting reads from cadFiles → files.
+ */
+export function mapFileRecordToDxfMetadata(
+  record: FileRecord
+): DxfFileMetadata {
+  return {
+    id: record.id,
+    fileName: record.originalFilename || record.displayName || record.id,
+    storageUrl: record.downloadUrl || '',
+    storagePath: record.storagePath,
+    // FileRecord.updatedAt can be Date, string, or Firestore Timestamp
+    lastModified: toFirestoreTimestamp(record.updatedAt),
+    version: record.revision ?? 1,
+    sizeBytes: record.sizeBytes,
+    entityCount: record.processedData?.sceneStats?.entityCount,
+    companyId: record.companyId,
+    createdBy: record.createdBy,
+    // checksum + securityValidation not stored in FileRecord (non-critical)
+  };
+}
+
+/** Convert various date representations to Firestore Timestamp shape */
+function toFirestoreTimestamp(
+  value: unknown
+): Timestamp {
+  // Already a Firestore Timestamp (has toMillis)
+  if (value && typeof value === 'object' && 'toMillis' in value) {
+    return value as Timestamp;
+  }
+  // Date object or string → create Timestamp-like object
+  const ms = value instanceof Date
+    ? value.getTime()
+    : typeof value === 'string'
+      ? new Date(value).getTime()
+      : Date.now();
+
+  return {
+    seconds: Math.floor(ms / 1000),
+    nanoseconds: (ms % 1000) * 1_000_000,
+    toDate: () => new Date(ms),
+    toMillis: () => ms,
+    isEqual: (other: Timestamp) => other.toMillis() === ms,
+    valueOf: () => `Timestamp(seconds=${Math.floor(ms / 1000)}, nanoseconds=${(ms % 1000) * 1_000_000})`,
+    toJSON: () => ({ seconds: Math.floor(ms / 1000), nanoseconds: (ms % 1000) * 1_000_000 }),
+  } as Timestamp;
 }

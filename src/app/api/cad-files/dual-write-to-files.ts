@@ -1,15 +1,16 @@
 /**
- * 📐 CAD FILES → `files` collection dual-write (server-side, ADR-288)
+ * 📐 DXF FileRecord writer — canonical `files` collection (server-side)
  *
- * Ported from the browser-side `writeToFilesCollection` helper in
- * `dxf-firestore-storage.impl.ts`. Produces an enterprise FileRecord in the
- * `files` collection so CAD uploads appear in the shared Files UI
- * (EntityFilesManager / BuildingFloorplanTab / FloorFloorplanService).
+ * 🏢 ADR-292 Phase 3: This is now the PRIMARY and ONLY write target for DXF
+ * metadata. The `cadFiles` collection is fully deprecated — no reads or writes.
  *
- * Non-blocking: failures here never fail the cadFiles upsert — they are logged
- * and swallowed so the primary metadata write remains authoritative.
+ * Produces an enterprise FileRecord in the `files` collection so DXF uploads
+ * appear in the shared Files UI (EntityFilesManager / BuildingFloorplanTab /
+ * FloorFloorplanService / DXF Viewer).
  *
- * @see ADR-031 — File Storage Consolidation (cadFiles → files)
+ * Errors PROPAGATE to the caller (was non-blocking when cadFiles was primary).
+ *
+ * @see ADR-292 — Floorplan Upload Consolidation Map
  * @see ADR-240 — Wizard dual-write entityType/floorId/purpose propagation
  */
 
@@ -71,8 +72,18 @@ function resolveEntityId(
 /**
  * Write the enterprise FileRecord to the `files` collection.
  * Always uses `merge: true` so repeated auto-saves update rather than overwrite.
+ *
+ * 🏢 ADR-292 Phase 3: This is the PRIMARY write (was dual-write). Errors propagate.
+ *
+ * @deprecated alias — use `writeToFilesCollection` directly
  */
-export async function dualWriteToFilesCollection(params: DualWriteParams): Promise<void> {
+export const dualWriteToFilesCollection = writeToFilesCollection;
+
+/**
+ * Write the enterprise FileRecord to the `files` collection (PRIMARY).
+ * Always uses `merge: true` so repeated auto-saves update rather than overwrite.
+ */
+export async function writeToFilesCollection(params: DualWriteParams): Promise<void> {
   const {
     fileId,
     fileName,
@@ -148,11 +159,13 @@ export async function dualWriteToFilesCollection(params: DualWriteParams): Promi
     const adminDb = getAdminFirestore();
     await adminDb.collection(COLLECTIONS.FILES).doc(fileId).set(fileRecord, { merge: true });
 
-    logger.debug('Dual-write to files collection succeeded', { fileId });
+    logger.debug('FileRecord written to files collection', { fileId });
   } catch (error) {
-    logger.warn('Dual-write to files collection failed (non-blocking)', {
+    // 🏢 ADR-292 Phase 3: Errors propagate (this is the primary write now)
+    logger.error('Failed to write FileRecord to files collection', {
       fileId: params.fileId,
       error: getErrorMessage(error),
     });
+    throw error;
   }
 }

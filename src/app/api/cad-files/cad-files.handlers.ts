@@ -27,7 +27,7 @@ import { isRoleBypass } from '@/lib/auth/roles';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { UpsertCadFileSchema } from './cad-files.schemas';
-import { dualWriteToFilesCollection } from './dual-write-to-files';
+import { writeToFilesCollection } from './dual-write-to-files';
 import type {
   CadFileDeleteResponse,
   CadFileDocument,
@@ -38,11 +38,11 @@ import type {
 const logger = createModuleLogger('CadFilesRoute');
 
 /**
- * POST /api/cad-files — Upsert cadFile metadata (client-supplied fileId).
+ * POST /api/cad-files — Upsert DXF file metadata.
  *
- * Upsert semantics: identical fileId = update existing doc (version++);
- * new fileId = create fresh doc with version=1. Also dual-writes to the
- * `files` collection (non-blocking) for ADR-031 consolidation.
+ * 🏢 ADR-292 Phase 3: Writes ONLY to `files` collection (was cadFiles + dual-write).
+ * The `cadFiles` collection is deprecated — all reads/writes go through `files`.
+ * API route name preserved for backward compatibility with client mutation gateway.
  */
 export async function handleUpsertCadFile(
   request: NextRequest,
@@ -56,14 +56,16 @@ export async function handleUpsertCadFile(
     const body = parsed.data;
 
     const adminDb = getAdminFirestore();
-    const docRef = adminDb.collection(COLLECTIONS.CAD_FILES).doc(body.fileId);
-    const snapshot = await docRef.get();
+
+    // Read existing FileRecord to compute version + tenant isolation
+    const fileDocRef = adminDb.collection(COLLECTIONS.FILES).doc(body.fileId);
+    const fileSnapshot = await fileDocRef.get();
 
     let newVersion: number;
     let created: boolean;
 
-    if (snapshot.exists) {
-      const existing = snapshot.data() as Record<string, unknown> | undefined;
+    if (fileSnapshot.exists) {
+      const existing = fileSnapshot.data() as Record<string, unknown> | undefined;
       const existingCompanyId = existing?.companyId as string | null | undefined;
 
       // Tenant isolation: bypass only for super_admin
@@ -75,48 +77,22 @@ export async function handleUpsertCadFile(
         await logAuditEvent(ctx, 'access_denied', body.fileId, 'api', {
           metadata: {
             path: '/api/cad-files (POST upsert)',
-            reason: 'Tenant isolation violation — cadFiles companyId mismatch',
+            reason: 'Tenant isolation violation — files companyId mismatch',
           },
         });
         throw new ApiError(403, 'Access denied — tenant isolation violation');
       }
 
-      const existingVersion = (existing?.version as number | undefined) ?? 0;
-      newVersion = existingVersion + 1;
+      const existingRevision = (existing?.revision as number | undefined) ?? 0;
+      newVersion = existingRevision + 1;
       created = false;
     } else {
       newVersion = 1;
       created = true;
     }
 
-    const metadata: Record<string, unknown> = {
-      id: body.fileId,
-      fileName: body.fileName,
-      storageUrl: body.storageUrl,
-      storagePath: body.storagePath,
-      sizeBytes: body.sizeBytes,
-      entityCount: body.entityCount,
-      checksum: body.checksum ?? null,
-      version: newVersion,
-      lastModified: FieldValue.serverTimestamp(),
-      // 🔒 TENANT SCOPING (ADR-285, Sentry NESTOR-APP-3)
-      companyId: ctx.companyId,
-      createdBy: ctx.uid,
-      securityValidation: body.securityValidation
-        ? {
-            validatedAt: FieldValue.serverTimestamp(),
-            validationResults: body.securityValidation.validationResults,
-            isSecure: body.securityValidation.isSecure,
-          }
-        : null,
-      updatedAt: FieldValue.serverTimestamp(),
-      ...(created ? { createdAt: FieldValue.serverTimestamp() } : {}),
-    };
-
-    await docRef.set(metadata, { merge: true });
-
-    // 🔄 Dual-write to `files` collection (non-blocking)
-    await dualWriteToFilesCollection({
+    // 🏢 ADR-292 Phase 3: Write to `files` collection (primary — was dual-write)
+    await writeToFilesCollection({
       fileId: body.fileId,
       fileName: body.fileName,
       downloadUrl: body.storageUrl,
@@ -142,12 +118,12 @@ export async function handleUpsertCadFile(
       metadata: {
         path: '/api/cad-files (POST upsert)',
         reason: created
-          ? 'cadFile created via centralized SSOT pipeline'
-          : 'cadFile updated via centralized SSOT pipeline',
+          ? 'DXF FileRecord created (ADR-292 Phase 3)'
+          : 'DXF FileRecord updated (ADR-292 Phase 3)',
       },
     });
 
-    logger.info('[CadFiles/Upsert] Metadata written', {
+    logger.info('[CadFiles/Upsert] FileRecord written', {
       fileId: body.fileId,
       version: newVersion,
       created,
@@ -190,8 +166,9 @@ export async function handleGetCadFile(
       );
     }
 
+    // 🏢 ADR-292 Phase 3: Read from `files` collection (was cadFiles)
     const adminDb = getAdminFirestore();
-    const snapshot = await adminDb.collection(COLLECTIONS.CAD_FILES).doc(fileId).get();
+    const snapshot = await adminDb.collection(COLLECTIONS.FILES).doc(fileId).get();
 
     if (!snapshot.exists) {
       return NextResponse.json(
@@ -252,8 +229,9 @@ export async function handleDeleteCadFile(
       );
     }
 
+    // 🏢 ADR-292 Phase 3: Soft-delete in `files` collection (was hard-delete in cadFiles)
     const adminDb = getAdminFirestore();
-    const docRef = adminDb.collection(COLLECTIONS.CAD_FILES).doc(fileId);
+    const docRef = adminDb.collection(COLLECTIONS.FILES).doc(fileId);
     const snapshot = await docRef.get();
 
     if (!snapshot.exists) {
@@ -274,16 +252,24 @@ export async function handleDeleteCadFile(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
 
-    await docRef.delete();
+    // Soft-delete via enterprise lifecycle pattern (ADR-191)
+    await docRef.update({
+      isDeleted: true,
+      lifecycleState: 'deleted',
+      status: 'deleted',
+      trashedAt: FieldValue.serverTimestamp(),
+      trashedBy: ctx.uid,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
 
     await logAuditEvent(ctx, 'data_deleted', fileId, 'api', {
       metadata: {
         path: '/api/cad-files (DELETE)',
-        reason: 'cadFile metadata deleted via centralized SSOT pipeline',
+        reason: 'DXF FileRecord soft-deleted (ADR-292 Phase 3)',
       },
     });
 
-    logger.info('[CadFiles/Delete] Metadata deleted', { fileId, userId: ctx.uid });
+    logger.info('[CadFiles/Delete] FileRecord soft-deleted', { fileId, userId: ctx.uid });
 
     return NextResponse.json({
       success: true,
