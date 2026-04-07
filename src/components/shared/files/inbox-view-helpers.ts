@@ -13,6 +13,7 @@ import { FileImage, FileVideo, FileText, File } from 'lucide-react';
 import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
 import { FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToISO } from '@/lib/date-local';
 
@@ -90,6 +91,7 @@ export function groupFilesByChatId(files: InboxFileRecord[]): ChatGroup[] {
 // ============================================================================
 
 export function useInboxFiles(companyId: string) {
+  const { user } = useAuth();
   const [inboxFiles, setInboxFiles] = useState<InboxFileRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -123,8 +125,8 @@ export function useInboxFiles(companyId: string) {
   }, [companyId]);
 
   useEffect(() => {
-    if (companyId) fetchInboxFiles();
-  }, [companyId, fetchInboxFiles]);
+    if (companyId && user) fetchInboxFiles();
+  }, [companyId, user, fetchInboxFiles]);
 
   return { inboxFiles, loading, error, fetchInboxFiles };
 }
