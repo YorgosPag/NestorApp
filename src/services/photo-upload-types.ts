@@ -14,7 +14,7 @@ import {
   PHOTO_PURPOSES,
   type PhotoPurpose,
 } from '@/config/domain-constants';
-import { generateTempId } from '@/services/enterprise-id.service';
+import { generateFileId } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 
 // ============================================================================
@@ -32,8 +32,8 @@ export const legacyLogger = createModuleLogger('PHOTO_UPLOAD');
 // ============================================================================
 
 export interface PhotoUploadOptions {
-  /** Folder path in Firebase Storage (e.g., 'contacts', 'projects') */
-  folderPath: string;
+  /** Folder path in Firebase Storage — ONLY for legacy pipeline (omit when using canonical fields) */
+  folderPath?: string;
   /** Optional custom filename (will use original if not provided) */
   fileName?: string;
   /** Progress callback */
@@ -84,16 +84,15 @@ export interface PhotoUploadResult extends FileUploadResult {
  * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
  */
 export function generateUniqueFileName(originalName: string, prefix?: string): string {
-  const timestamp = Date.now();
-  const uniqueId = generateTempId();
+  const fileId = generateFileId();
   const extension = originalName.substring(originalName.lastIndexOf('.'));
   const baseName = originalName.substring(0, originalName.lastIndexOf('.'))
     .replace(/[^a-zA-Z0-9]/g, '_')
     .substring(0, 50);
 
   return prefix
-    ? `${prefix}_${baseName}_${timestamp}_${uniqueId}${extension}`
-    : `${baseName}_${timestamp}_${uniqueId}${extension}`;
+    ? `${prefix}_${baseName}_${fileId}${extension}`
+    : `${baseName}_${fileId}${extension}`;
 }
 
 /**

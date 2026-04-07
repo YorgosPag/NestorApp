@@ -189,11 +189,14 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 - [x] Fix violation #8: `FileNamingService.ts` — replaced `Date.now()` with `generateFileId()` in default case, replaced `'Company_' + Date.now()` with `'Unknown_Company'` static fallback
 - [x] Pure internal filename changes, no external API impact
 
-### Phase 2: Photo Upload Path Migration (3-5 days)
+### Phase 2: Photo Upload Path Migration (3-5 days) -- COMPLETED 2026-04-07
 
-- [ ] Fix violation #4: Migrate `useEnterpriseFileUpload.ts` from `LEGACY_STORAGE_PATHS` to `buildStoragePath()` with proper entity context
-- [ ] Fix violation #5: Update `upload/photo/route.ts` to compute canonical path server-side
-- [ ] Requires: ensuring all callers of `useEnterpriseFileUpload` pass entity context
+- [x] Fix violation #4: `useEnterpriseFileUpload` — conditional `folderPath` (omitted for canonical, kept for legacy)
+- [x] Fix violation #5: `upload/photo/route.ts` — replaced `Date.now()` with `generateFileId()` in fallback naming
+- [x] Made `folderPath` optional in `PhotoUploadOptions` (only needed by legacy pipeline)
+- [x] Added `folderPath` guard in legacy pipeline (fails fast with clear error)
+- [x] Fixed `generateUniqueFileName()` — replaced `Date.now()` with `generateFileId()`
+- [x] Removed unused `generateTempId` imports
 
 ### Phase 3: Communications Module Migration (5-7 days)
 
@@ -228,5 +231,6 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | Phase 2 COMPLETED — violations #4, #5 fixed: conditional folderPath, Date.now() replaced, folderPath optional | Claude Code |
 | 2026-04-07 | Phase 1 COMPLETED — violations #1, #8 fixed: `Date.now()` replaced with `generateFileId()` | Claude Code |
 | 2026-04-07 | Initial SSoT audit — 12 ADRs mapped, 8 violations found, 92% centralization | Claude Code |

@@ -4,7 +4,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { FileNamingService } from '@/services/FileNamingService';
-import { generateTempId, generateFileId } from '@/services/enterprise-id.service';
+import { generateFileId } from '@/services/enterprise-id.service';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { LEGACY_STORAGE_PATHS, type EntityType, type FileDomain, type FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -161,20 +161,18 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
       } catch (error) {
         logger.error('[Upload/Photo] FileNamingService failed, using fallback', { error: getErrorMessage(error) });
 
-        // 🏢 ENTERPRISE: Fallback with crypto-secure ID generation
-        const timestamp = Date.now();
-        const uniqueId = generateTempId(); // Crypto-secure temp ID
+        // 🏢 ADR-293: Use canonical generateFileId() for fallback naming
+        const fileId = generateFileId();
         const extension = file.name.split('.').pop();
-        fileName = `${timestamp}_${uniqueId}.${extension}`;
+        fileName = `${fileId}.${extension}`;
       }
     } else {
-      // 🏢 ENTERPRISE: No contact data - use crypto-secure fallback naming
-      const timestamp = Date.now();
-      const uniqueId = generateTempId(); // Crypto-secure temp ID
+      // 🏢 ADR-293: No contact data — use canonical generateFileId() for naming
+      const fileId = generateFileId();
       const extension = file.name.split('.').pop();
-      fileName = `${timestamp}_${uniqueId}.${extension}`;
+      fileName = `${fileId}.${extension}`;
 
-      logger.warn('[Upload/Photo] No contact data provided, using fallback naming');
+      logger.warn('[Upload/Photo] No contact data provided, using generateFileId() fallback');
     }
 
     // 🏢 ENTERPRISE: Prefer canonical path when full params provided

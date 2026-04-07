@@ -45,6 +45,12 @@ export async function executeLegacyUpload(
   file: File,
   options: PhotoUploadOptions,
 ): Promise<PhotoUploadResult> {
+  // 🚨 ADR-293: Guard — folderPath is required for legacy pipeline
+  if (!options.folderPath) {
+    legacyLogger.error('folderPath is required for legacy upload pipeline. Pass canonical fields (companyId/contactId/createdBy) to use the enterprise pipeline instead.');
+    throw new Error('folderPath is required for legacy upload pipeline. Use canonical fields for enterprise storage.');
+  }
+
   // 🚨 PRODUCTION LOCK: Block legacy writes if feature flag is enabled
   if (FILE_STORAGE_FLAGS.BLOCK_LEGACY_WRITES) {
     legacyLogger.error(FILE_STORAGE_ERROR_MESSAGES.PRODUCTION_LOCK);
