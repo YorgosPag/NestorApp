@@ -355,3 +355,4 @@ Phase 5: ████████░░░░░░░░░░░ PARTIAL  — 
 | **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Consumer | 4-step save pattern that calls createPendingFileRecord/finalizeFileRecord from this model |
 | **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Consumer | Unit floorplan migration — adopted this FileRecord model to replace legacy collection |
 | **[ADR-288](./ADR-288-cad-file-metadata-centralization.md)** | Consumer | CAD metadata — dual-writes back to `files` collection using this model |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — maps which services populate FileRecord.displayName and FileRecord.storagePath |

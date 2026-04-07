@@ -306,3 +306,4 @@ onComplete={(file, meta) => {
 | **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Upstream | Unit FileRecord migration — prerequisite that exposed the wizard disconnect bug |
 | **[ADR-179](./ADR-179-ifc-compliant-floorplan-hierarchy.md)** | Upstream | IFC hierarchy — structural change that created the floor-tab visibility gap |
 | **[ADR-288](./ADR-288-cad-file-metadata-centralization.md)** | Downstream | CAD metadata centralization — server-side solution for cadFiles dual-write identified here |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — wizard context propagation confirmed as fixing naming/path correctness |

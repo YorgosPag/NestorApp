@@ -26,3 +26,4 @@
 | **[ADR-191](./ADR-191-enterprise-document-management.md)** | Downstream | FileRecord data model (586 lines) — the document lifecycle this service creates |
 | **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Downstream | 4-step canonical save pattern for floorplans built on this service |
 | **[ADR-190](./ADR-190-photo-upload-ssot-consolidation.md)** | Sibling | Photo upload deduplication — eliminated 3 parallel upload paths |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — verifies which upload strategies correctly use `buildStoragePath()` |

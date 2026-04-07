@@ -79,3 +79,4 @@ All callers (wizard, toolbar, migrations, auto-save manager, floorplan service) 
 | **[ADR-288](./ADR-288-cad-file-metadata-centralization.md)** | Supersedes (partial) | Server-side cadFiles endpoint — replaced client-side writes introduced here |
 | **[ADR-060](./ADR-060-building-floorplan-enterprise-storage.md)** | Upstream | Building floorplan storage — the service this ADR split into smaller modules |
 | **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Sibling | Unit FileRecord — parallel companyId/tenant fix at unit level |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — tenant scoping confirmed as prerequisite for canonical `buildStoragePath()` in DXF |

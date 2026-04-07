@@ -151,3 +151,4 @@ loadFloorplan(buildingId, type)
 | **[ADR-179](./ADR-179-ifc-compliant-floorplan-hierarchy.md)** | Extends | IFC hierarchy (Site>Building>Storey>Space) that restructured floor plan types |
 | **[ADR-285](./ADR-285-dxf-tenant-scoping-and-module-split.md)** | Extends | Tenant isolation added to cadFiles/dxf-levels written by this service |
 | **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Sibling | Unit-level equivalent — migrated unit floorplans to FileRecord pattern |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — violation #6: legacy `dxf-scenes/` fallback still active in this service |

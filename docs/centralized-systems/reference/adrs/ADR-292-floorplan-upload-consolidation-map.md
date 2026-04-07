@@ -242,8 +242,19 @@ Service        Service            Service
 
 ---
 
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | **Sibling** | Naming/path-specific audit — complements this upload flow map with centralization metrics and violations |
+| **[ADR-054](./ADR-054-enterprise-upload-system-consolidation.md)** | Foundation | `buildStoragePath()` SSoT and `LEGACY_STORAGE_PATHS` — path patterns all upload paths must use |
+| **[ADR-191](./ADR-191-enterprise-document-management.md)** | Foundation | FileRecord model — the data model all upload paths write to |
+
+---
+
 ## Changelog
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | Added Related Documents section with ADR-293 back-reference | Claude Code |
 | 2026-04-07 | Initial consolidation map created | Claude Code |

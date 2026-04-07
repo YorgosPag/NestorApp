@@ -83,3 +83,4 @@
 | **[ADR-060](./ADR-060-building-floorplan-enterprise-storage.md)** | Consumer | Building floorplan service — one of 3 services refactored to use this orchestrator |
 | **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Consumer | Unit floorplan migration — adopted this orchestrator pattern |
 | **[ADR-240](./ADR-240-floorplan-pipeline-unification.md)** | Downstream | Pipeline unification — extends this orchestrator with DxfSaveContext propagation |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — confirmed as compliant consumer of `buildStoragePath()` + `buildFileDisplayName()` |

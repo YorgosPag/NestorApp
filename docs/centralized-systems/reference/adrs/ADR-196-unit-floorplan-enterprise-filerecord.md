@@ -155,3 +155,4 @@ Enterprise pattern (same as Google Drive / SAP DMS):
 | **[ADR-240](./ADR-240-floorplan-pipeline-unification.md)** | Downstream | Pipeline unification — fixed visibility issues revealed by this migration |
 | **[ADR-179](./ADR-179-ifc-compliant-floorplan-hierarchy.md)** | Sibling | IFC hierarchy — defines the floor/unit structure this ADR integrates with |
 | **[ADR-285](./ADR-285-dxf-tenant-scoping-and-module-split.md)** | Sibling | Tenant scoping — parallel fix for companyId issues in cadFiles/levels |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — Unicode path validation coverage and `companyId` enforcement status verified |

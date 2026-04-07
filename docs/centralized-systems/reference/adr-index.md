@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 276 ADRs | Last Updated: 2026-04-07
+**📊 Stats**: 277 ADRs | Last Updated: 2026-04-07
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 86 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 88 | [View](#uncategorized) |
 
 ---
 
@@ -310,7 +310,8 @@
 | **ADR-289** | DXF Overlay Item Centralization (SSOT API Gateway) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-289-dxf-overlay-item-centralization.md) |
 | **ADR-290** | Building Creation SSoT Enforcement | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-290-building-creation-ssot-enforcement.md) |
 | **ADR-291** | Notification Pattern Selection Strategy (Google Material Design 3) | ✅ APPROVED | 2026-04-05 | UI Components / Design System | [📄](./adrs/ADR-291-notification-pattern-selection-strategy.md) |
-| **ADR-292** | Floorplan Upload Consolidation Map | ✅ APPROVED | 2026-04-07 | Entity Systems / Upload | [📄](./adrs/ADR-292-floorplan-upload-consolidation-map.md) |
+| **ADR-292** | Floorplan Upload Consolidation Map | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-292-floorplan-upload-consolidation-map.md) |
+| **ADR-293** | File Naming & Storage Path SSoT Audit | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-293-file-naming-storage-path-ssot-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -625,8 +626,8 @@
 | **ADR-288** | CAD File Metadata Centralization | ✅ APPROVED | [View](./adrs/ADR-288-cad-file-metadata-centralization.md) |
 | **ADR-289** | DXF Overlay Item Centralization (SSOT API Gateway) | ✅ APPROVED | [View](./adrs/ADR-289-dxf-overlay-item-centralization.md) |
 | **ADR-290** | Building Creation SSoT Enforcement | ✅ APPROVED | [View](./adrs/ADR-290-building-creation-ssot-enforcement.md) |
-| **ADR-034** | Guide Commands Split — SRP Refactoring (1876 lines -> 7 files) | ✅ IMPLEMENTED | [View](./adrs/ADR-034-guide-commands-split.md) |
-| **ADR-065** | TestingPipeline Split — SRP Refactoring (1768 lines -> 4 files) | ✅ IMPLEMENTED | [View](./adrs/ADR-065-testing-pipeline-split.md) |
+| **ADR-292** | Floorplan Upload Consolidation Map | ✅ APPROVED | [View](./adrs/ADR-292-floorplan-upload-consolidation-map.md) |
+| **ADR-293** | File Naming & Storage Path SSoT Audit | ✅ APPROVED | [View](./adrs/ADR-293-file-naming-storage-path-ssot-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
@@ -636,7 +637,7 @@
 ### 🔢 ΔΙΑΘΕΣΙΜΑ IDs (χρησιμοποίησε αυτά ΠΡΩΤΑ):
 
 ```
-066, 067, 068, 070, 071, 072, 073, 074,
+034, 065, 066, 067, 068, 070, 071, 072, 073, 074,
 077, 078, 079, 080, 089, 090, 100, 103, 121, 131,
 132, 134, 145, 156, 161, 164
 ```

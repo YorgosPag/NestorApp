@@ -132,3 +132,4 @@ Step 3: "Επιλέξτε Όροφο & Φόρτωση Κάτοψης"
 | **[ADR-240](./ADR-240-floorplan-pipeline-unification.md)** | Downstream | Pipeline unification that fixed wizard-to-floor-tab disconnect caused by hierarchy changes |
 | **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Sibling | Unit-level FileRecord migration — applies same hierarchy at property/unit level |
 | **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Sibling | Save orchestrator — canonical save pattern used across all hierarchy levels |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — IFC entity hierarchy feeds `entityType` parameter in `buildStoragePath()` |

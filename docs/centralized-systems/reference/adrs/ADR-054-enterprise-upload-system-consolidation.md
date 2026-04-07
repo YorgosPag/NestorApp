@@ -171,3 +171,4 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 | **[ADR-190](./ADR-190-photo-upload-ssot-consolidation.md)** | Extends | Photo upload deduplication — applies SSoT principle to photo/logo handlers |
 | **[ADR-191](./ADR-191-enterprise-document-management.md)** | Downstream | FileRecord lifecycle model — documents stored via paths defined here |
 | **[ADR-060](./ADR-060-building-floorplan-enterprise-storage.md)** | Sibling | Building floorplan storage migration — parallel consolidation effort |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — adoption metrics (33 call sites) and remaining violations for patterns defined here |

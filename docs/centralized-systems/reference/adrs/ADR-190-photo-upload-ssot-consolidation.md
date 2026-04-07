@@ -86,3 +86,4 @@ UI Components:   EnterprisePhotoUpload -> MultiplePhotosUpload -> UnifiedPhotoMa
 | **[ADR-054](./ADR-054-enterprise-upload-system-consolidation.md)** | Upstream | Enterprise upload consolidation — parent initiative this ADR refines for photos |
 | **[ADR-018](./ADR-018-unified-upload-service.md)** | Upstream | Unified Upload Service — Gateway + Strategy foundation |
 | **[ADR-191](./ADR-191-enterprise-document-management.md)** | Downstream | FileRecord model — photo uploads create records following this lifecycle |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — violation #4: `useEnterpriseFileUpload` still uses legacy paths for new photo uploads |

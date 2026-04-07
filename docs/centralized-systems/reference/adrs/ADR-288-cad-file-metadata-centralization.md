@@ -160,3 +160,4 @@ config update.
 | **[ADR-240](./ADR-240-floorplan-pipeline-unification.md)** | Upstream | Pipeline unification — identified dual-write as root cause of visibility bugs |
 | **[ADR-191](./ADR-191-enterprise-document-management.md)** | Upstream | FileRecord model — dual-write target collection defined by this model |
 | **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Sibling | Save orchestrator — parallel canonical save path that also writes to `files` |
+| **[ADR-293](./ADR-293-file-naming-storage-path-ssot-audit.md)** | Audit | Naming/path SSoT audit — violation #7: dual-write legacy fallback documented as transitional |
