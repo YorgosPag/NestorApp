@@ -36,6 +36,7 @@ import { LinkBuildingToProjectDialog } from '@/components/building-management/di
 import { PropertyHierarchyEmptyStates } from './PropertyHierarchyEmptyStates';
 import { useNewUnitHierarchy, type NewUnitHierarchySelection } from './useNewUnitHierarchy';
 import type { PropertyType } from '@/types/property';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 // =============================================================================
 // TYPES
@@ -211,7 +212,9 @@ export function NewUnitHierarchySection({
                 </SelectTrigger>
                 <SelectContent>
                   {filteredBuildings.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    <SelectItem key={b.id} value={b.id}>
+                      {formatBuildingLabel((b as { code?: string }).code, b.name)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
