@@ -159,7 +159,7 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 ### What's Scattered
 
-- **CRM communications** still uses legacy `PhotoUploadService` with hardcoded paths
+- ~~**CRM communications** still uses legacy `PhotoUploadService` with hardcoded paths~~ **FIXED (Phase 3)** — migrated to canonical `useCrmAttachmentUpload` hook
 - **ImageProcessor** generates filenames with `Date.now()` instead of `generateFileId()`
 - **Legacy fallbacks** in DXF/CAD services (with migration paths, but still active)
 - **Photo upload API route** accepts legacy paths as fallback
@@ -198,10 +198,14 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 - [x] Fixed `generateUniqueFileName()` — replaced `Date.now()` with `generateFileId()`
 - [x] Removed unused `generateTempId` imports
 
-### Phase 3: Communications Module Migration (5-7 days)
+### Phase 3: Communications Module Migration (5-7 days) -- COMPLETED 2026-04-07
 
-- [ ] Fix violations #2, #3: Refactor `useCommunicationsPageController.ts` and `UnifiedInbox.tsx` to use `file-mutation-gateway` + canonical upload flow
-- [ ] Largest effort — communications subsystem was built independently
+- [x] Fix violation #2: `useCommunicationsPageController.ts` — replaced legacy `PhotoUploadService` with canonical `useCrmAttachmentUpload` hook
+- [x] Fix violation #3: `UnifiedInbox.tsx` — same migration to canonical hook
+- [x] Created shared `useCrmAttachmentUpload` hook (`src/hooks/inbox/`) — DRY, canonical 3-step pipeline
+- [x] Added `CONVERSATION` entity type to `ENTITY_TYPES` in `domain-constants.ts`
+- [x] Canonical flow: `validateUploadAuth()` → `createPendingFileRecordWithPolicy()` → `uploadBytesResumable()` → `finalizeFileRecordWithPolicy()`
+- [x] FileRecord created in Firestore with tenant isolation, entity linking, and audit trail
 
 ### Phase 4: Legacy Fallback Elimination (ongoing, tied to ADR-292 Phase 3-4)
 
@@ -231,6 +235,7 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | Phase 3 COMPLETED — violations #2, #3 fixed: CRM communications migrated to canonical pipeline via `useCrmAttachmentUpload` hook, added `CONVERSATION` entity type | Claude Code |
 | 2026-04-07 | Phase 2 COMPLETED — violations #4, #5 fixed: conditional folderPath, Date.now() replaced, folderPath optional | Claude Code |
 | 2026-04-07 | Phase 1 COMPLETED — violations #1, #8 fixed: `Date.now()` replaced with `generateFileId()` | Claude Code |
 | 2026-04-07 | Initial SSoT audit — 12 ADRs mapped, 8 violations found, 92% centralization | Claude Code |

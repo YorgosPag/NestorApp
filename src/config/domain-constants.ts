@@ -112,6 +112,8 @@ export const ENTITY_TYPES = {
   PARKING_SPOT: 'parking_spot',
   /** Storage entity */
   STORAGE: 'storage',
+  /** Conversation entity (CRM communications — ADR-293) */
+  CONVERSATION: 'conversation',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];

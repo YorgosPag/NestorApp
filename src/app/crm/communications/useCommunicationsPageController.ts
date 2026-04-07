@@ -9,8 +9,7 @@ import { useMessageEdit } from '@/hooks/inbox/useMessageEdit';
 import { useMessagePin } from '@/hooks/inbox/useMessagePin';
 import { useMessageReactions } from '@/hooks/inbox/useMessageReactions';
 import { createModuleLogger } from '@/lib/telemetry';
-import { PhotoUploadService } from '@/services/photo-upload.service';
-import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
+import { useCrmAttachmentUpload } from '@/hooks/inbox/useCrmAttachmentUpload';
 import { CONVERSATION_STATUS, type MessageAttachment } from '@/types/conversations';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { defaultCommunicationsFilters, type CommunicationsFilterState } from '@/components/core/AdvancedFilters';
@@ -170,29 +169,8 @@ export function useCommunicationsPageController() {
     };
   }, [getReactions]);
 
-  const handleUploadAttachment = useCallback(async (
-    file: File,
-    onProgress: (progress: number) => void,
-  ): Promise<{ url: string; thumbnailUrl?: string } | null> => {
-    try {
-      logger.info('Uploading attachment', { name: file.name, type: file.type });
-      const result = await PhotoUploadService.uploadPhoto(file, {
-        folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
-        onProgress: (progress) => {
-          const percent = progress.phase === 'complete' ? 100 : progress.progress;
-          onProgress(percent);
-        },
-        enableCompression: file.type.startsWith('image/'),
-        compressionUsage: 'document-scan',
-      });
-
-      logger.info('Attachment uploaded', { url: result.url });
-      return { url: result.url };
-    } catch (error) {
-      logger.error('[Communications] Attachment upload failed', { error });
-      return null;
-    }
-  }, []);
+  // 🏢 ADR-293 Phase 3: Canonical upload via file-mutation-gateway
+  const { handleUploadAttachment } = useCrmAttachmentUpload({ conversationId: selectedConversationId });
 
   const handleSendWithReply = useCallback(async (
     text: string,
