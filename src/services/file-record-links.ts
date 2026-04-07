@@ -119,12 +119,16 @@ export async function unlinkFileFromEntity(
 export async function getLinkedFiles(
   targetEntityType: EntityType,
   targetEntityId: string,
-  _companyId: string // kept for API compat — auto-injected by FirestoreQueryService
+  companyId: string // Required for Firestore Security Rules (tenant isolation)
 ): Promise<FileRecord[]> {
   const linkTag = `${targetEntityType}:${targetEntityId}`;
 
+  // 🔒 SECURITY: companyId constraint is REQUIRED for Firestore Security Rules.
+  // Without it, super admin queries fail with permission-denied because rules
+  // require resource.data.keys().hasAny(['companyId']).
   const constraints = [
     where('linkedTo', 'array-contains', linkTag),
+    where('companyId', '==', companyId),
     where('status', '==', FILE_STATUS.READY),
     where('isDeleted', '==', false),
   ];

@@ -146,30 +146,26 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       logger.info('Fetching files for entity', {
         entityType,
         entityId,
+        companyId,
         domain,
         category,
         purpose,
         levelFloorId,
       });
 
-      // 🔗 ENTERPRISE: Parallel queries for owned + linked files
+      // 🔗 ENTERPRISE: Parallel queries — linked files failure is non-blocking
       const [fetchedFiles, linkedFiles] = await Promise.all([
-        // Query 1: Files directly owned by this entity
-        FileRecordService.getFilesByEntity(
-          entityType,
-          entityId,
-          {
-            companyId,
-            domain,
-            category,
-            levelFloorId,
-            includeDeleted: false,
-          }
-        ),
-        // Query 2: Files linked to this entity from other entities
+        FileRecordService.getFilesByEntity(entityType, entityId, {
+          companyId, domain, category, levelFloorId, includeDeleted: false,
+        }),
         companyId
           ? FileRecordService.getLinkedFiles(entityType, entityId, companyId)
-          : Promise.resolve([]),
+              .catch((err: unknown) => {
+                const code = (err as { code?: string })?.code ?? '';
+                logger.warn('Linked files query failed (non-blocking)', { code, entityType, entityId });
+                return [] as FileRecord[];
+              })
+          : Promise.resolve([] as FileRecord[]),
       ]);
 
       // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
