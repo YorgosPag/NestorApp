@@ -2,7 +2,6 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { storage } from '../../../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import type { SceneModel } from '../types/scene';
 import {
   DxfSecurityValidator,
@@ -28,7 +27,6 @@ import type { DxfSaveContext, DxfFileMetadata, DxfFileRecord } from './dxf-fires
 // keeping its surface area thin and enabling testability of each concern.
 // =============================================================================
 
-const STORAGE_FOLDER = LEGACY_STORAGE_PATHS.DXF_SCENES;
 
 /**
  * Generate a simple checksum for change detection
@@ -152,14 +150,12 @@ export async function saveToStorageImpl(
     const sceneBytes = new TextEncoder().encode(sceneJson);
 
     // 2. Upload to Firebase Storage
-    // 🏢 ENTERPRISE: Canonical path required — legacy dxf-scenes/ fallback eliminated
-    const storagePath = context?.canonicalScenePath ?? `${STORAGE_FOLDER}/${fileId}/scene.json`;
+    // 🏢 ADR-293: canonicalScenePath is REQUIRED — no legacy dxf-scenes/ fallback
     if (!context?.canonicalScenePath) {
-      dxfLogger.warn(
-        'No canonicalScenePath provided — using legacy path as fallback. New saves should always provide canonicalScenePath via DxfSaveContext.',
-        { fileId }
-      );
+      dxfLogger.error('canonicalScenePath is required for DXF scene saves (ADR-293). Pass it via DxfSaveContext.', { fileId });
+      throw new Error('canonicalScenePath is required for DXF scene saves (ADR-293)');
     }
+    const storagePath = context.canonicalScenePath;
     const storageRef = ref(storage, storagePath);
 
     const snapshot = await uploadBytes(storageRef, sceneBytes, {
@@ -274,8 +270,12 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
     }
 
     // 2. Download scene from Storage
-    // 🏢 ENTERPRISE: Use persisted storagePath (reliable), fallback to legacy for old records
-    const storagePath = metadata.storagePath ?? `${STORAGE_FOLDER}/${fileId}/scene.json`;
+    // 🏢 ADR-293: storagePath is REQUIRED — no legacy dxf-scenes/ fallback
+    if (!metadata.storagePath) {
+      dxfLogger.error('DXF document missing storagePath — legacy document without canonical path (ADR-293)', { fileId });
+      return null;
+    }
+    const storagePath = metadata.storagePath;
     const storageRef = ref(storage, storagePath);
     const sceneBytes = await getBytes(storageRef);
     const sceneJson = new TextDecoder().decode(sceneBytes);

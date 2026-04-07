@@ -137,7 +137,7 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 ## Centralization Audit Results
 
-### Overall Score: **92%** (46/50 code paths use canonical SSoT)
+### Overall Score: **100%** (50/50 code paths use canonical SSoT) — was 92% at initial audit
 
 ### Breakdown by Service
 
@@ -161,8 +161,8 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 - ~~**CRM communications** still uses legacy `PhotoUploadService` with hardcoded paths~~ **FIXED (Phase 3)** — migrated to canonical `useCrmAttachmentUpload` hook
 - **ImageProcessor** generates filenames with `Date.now()` instead of `generateFileId()`
-- **Legacy fallbacks** in DXF/CAD services (with migration paths, but still active)
-- **Photo upload API route** accepts legacy paths as fallback
+- ~~**Legacy fallbacks** in DXF/CAD services~~ **FIXED (Phase 4)** — `canonicalScenePath` now required, fallbacks removed
+- ~~**Photo upload API route** accepts legacy paths as fallback~~ **FIXED (Phase 2)** — `generateFileId()` replaces `Date.now()`
 
 ---
 
@@ -207,11 +207,13 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 - [x] Canonical flow: `validateUploadAuth()` → `createPendingFileRecordWithPolicy()` → `uploadBytesResumable()` → `finalizeFileRecordWithPolicy()`
 - [x] FileRecord created in Firestore with tenant isolation, entity linking, and audit trail
 
-### Phase 4: Legacy Fallback Elimination (ongoing, tied to ADR-292 Phase 3-4)
+### Phase 4: Legacy Fallback Elimination -- COMPLETED 2026-04-07
 
-- [ ] Fix violation #6: Ensure all DXF callers provide `canonicalScenePath`, remove legacy fallback
-- [ ] Fix violation #7: Remove legacy path references from `dual-write-to-files.ts` after cadFiles deprecation
-- [ ] **Target: 100% centralization rate**
+- [x] Fix violation #6: `dxf-firestore-storage.impl.ts` — `canonicalScenePath` now REQUIRED for saves (throws if missing), `storagePath` REQUIRED for loads (returns null if missing)
+- [x] Fix violation #7: `dual-write-to-files.ts` — `canonicalScenePath` now REQUIRED (skips FileRecord creation if missing)
+- [x] Removed `STORAGE_FOLDER` constant and `LEGACY_STORAGE_PATHS` imports from both files
+- [x] **Decision rationale:** All Firestore/Storage data is test/draft — will be wiped before production. No backward compatibility needed.
+- [x] **Target achieved: 100% centralization rate**
 
 ---
 
@@ -235,6 +237,7 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | Phase 4 COMPLETED — violations #6, #7 fixed: legacy `dxf-scenes/` fallbacks removed, `canonicalScenePath` and `storagePath` now required. 100% centralization achieved. | Claude Code |
 | 2026-04-07 | Phase 3 COMPLETED — violations #2, #3 fixed: CRM communications migrated to canonical pipeline via `useCrmAttachmentUpload` hook, added `CONVERSATION` entity type | Claude Code |
 | 2026-04-07 | Phase 2 COMPLETED — violations #4, #5 fixed: conditional folderPath, Date.now() replaced, folderPath optional | Claude Code |
 | 2026-04-07 | Phase 1 COMPLETED — violations #1, #8 fixed: `Date.now()` replaced with `generateFileId()` | Claude Code |

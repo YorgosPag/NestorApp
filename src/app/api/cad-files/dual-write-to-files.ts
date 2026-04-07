@@ -18,7 +18,6 @@ import 'server-only';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
-  LEGACY_STORAGE_PATHS,
   type EntityType,
   type FileDomain,
   type FileCategory,
@@ -87,8 +86,12 @@ export async function dualWriteToFilesCollection(params: DualWriteParams): Promi
   } = params;
 
   try {
-    const scenePath =
-      context?.canonicalScenePath ?? `${LEGACY_STORAGE_PATHS.DXF_SCENES}/${fileId}/scene.json`;
+    // 🏢 ADR-293: canonicalScenePath is REQUIRED — no legacy dxf-scenes/ fallback
+    if (!context?.canonicalScenePath) {
+      logger.error('canonicalScenePath missing in dual-write — skipping FileRecord creation (ADR-293)', { fileId });
+      return;
+    }
+    const scenePath = context.canonicalScenePath;
 
     const resolvedEntityType = (context?.entityType ?? 'building') as
       | 'building'
