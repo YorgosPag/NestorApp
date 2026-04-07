@@ -40,7 +40,6 @@ import {
 import {
   FILE_DOMAINS,
   FILE_CATEGORIES,
-  LEGACY_STORAGE_PATHS,
   type EntityType,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
@@ -157,17 +156,25 @@ export class PDFProcessor implements FileProcessor {
   }
 
   /**
-   * 🏢 ENTERPRISE: Get storage path for floor plan PDF (interface contract).
-   * For new uploads, prefer `getCanonicalStoragePath()` which uses buildStoragePath() SSoT.
+   * 🏢 ADR-293: Get storage path for floor plan PDF via canonical buildStoragePath() SSoT.
    */
   getStoragePath(options: StoragePathOptions): string {
-    const { buildingId, floorId } = options;
+    const { buildingId, floorId, companyId } = options;
 
     if (!buildingId || !floorId) {
       throw new Error('buildingId and floorId are required for PDF storage path');
     }
 
-    return `${LEGACY_STORAGE_PATHS.FLOOR_PLANS}/${buildingId}/${floorId}/${FIXED_FLOORPLAN_FILENAME}`;
+    const { path } = buildStoragePath({
+      companyId: companyId ?? 'unknown',
+      entityType: 'building' as EntityType,
+      entityId: buildingId,
+      domain: FILE_DOMAINS.CONSTRUCTION,
+      category: FILE_CATEGORIES.FLOORPLANS,
+      fileId: `${floorId}_${FIXED_FLOORPLAN_FILENAME.replace('.pdf', '')}`,
+      ext: 'pdf',
+    });
+    return path;
   }
 
   /**
@@ -447,13 +454,6 @@ export class PDFProcessor implements FileProcessor {
     return files;
   }
 
-  /**
-   * 🏢 ENTERPRISE: Check if path is legacy floorplan path
-   */
-  isLegacyFloorplanPath(path: string): boolean {
-    const legacyPrefix = LEGACY_STORAGE_PATHS.FLOOR_PLANS;
-    return path.startsWith(`${legacyPrefix}/`) || path.includes(`/${legacyPrefix}/`);
-  }
 }
 
 // ============================================================================

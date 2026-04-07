@@ -25,7 +25,8 @@ import type {
   ProgressCallback,
 } from '../types/upload.types';
 import { UPLOAD_DEFAULTS } from '../types/upload.types';
-import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
+import { buildStoragePath } from '@/services/upload/utils/storage-path';
+import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('CADProcessor');
@@ -125,13 +126,22 @@ export class CADProcessor implements FileProcessor {
    * Get storage path for DXF scene
    */
   getStoragePath(options: StoragePathOptions): string {
-    const { fileId } = options;
+    const { fileId, companyId } = options;
 
     if (!fileId) {
       throw new Error('fileId is required for DXF storage path');
     }
 
-    return `${LEGACY_STORAGE_PATHS.DXF_SCENES}/${fileId}/scene.json`;
+    const { path } = buildStoragePath({
+      companyId: companyId ?? 'unknown',
+      entityType: 'building' as EntityType,
+      entityId: fileId,
+      domain: 'construction' as FileDomain,
+      category: 'drawings' as FileCategory,
+      fileId: 'scene',
+      ext: 'json',
+    });
+    return path;
   }
 
   /**
@@ -274,7 +284,7 @@ export class CADProcessor implements FileProcessor {
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type || 'application/dxf',
-        storagePath: `${LEGACY_STORAGE_PATHS.DXF_SCENES}/${fileId}/scene.json`,
+        storagePath: this.getStoragePath({ fileId, companyId: options.companyId }),
         dxfMetadata: {
           sceneId: fileId,
         },

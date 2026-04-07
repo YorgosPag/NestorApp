@@ -132,7 +132,7 @@ class FileTypeRouter {
  *
  * // Explicit image upload
  * const imageResult = await UnifiedUploadService.uploadImage(file, {
- *   folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
+ *   companyId: 'company_xyz',
  *   enableCompression: true,
  * });
  *
@@ -290,56 +290,6 @@ export class UnifiedUploadService {
   // ==========================================================================
   // CONVENIENCE METHODS
   // ==========================================================================
-
-  /**
-   * Upload contact photo (convenience wrapper)
-   */
-  static async uploadContactPhoto(
-    file: File,
-    contactId?: string,
-    onProgress?: ProgressCallback
-  ): Promise<UnifiedUploadResult> {
-    const result = await imageProcessor.uploadContactPhoto(file, contactId, onProgress);
-
-    return {
-      url: result.url,
-      fileName: result.fileName,
-      fileSize: result.fileSize,
-      mimeType: result.mimeType,
-      storagePath: result.storagePath,
-      processorUsed: 'image',
-      processingInfo: {
-        wasCompressed: result.compressionInfo?.wasCompressed,
-        compressionRatio: result.compressionInfo?.compressionRatio,
-        validationPassed: true,
-      },
-    };
-  }
-
-  /**
-   * Upload company logo (convenience wrapper)
-   */
-  static async uploadCompanyLogo(
-    file: File,
-    companyId?: string,
-    onProgress?: ProgressCallback
-  ): Promise<UnifiedUploadResult> {
-    const result = await imageProcessor.uploadCompanyLogo(file, companyId, onProgress);
-
-    return {
-      url: result.url,
-      fileName: result.fileName,
-      fileSize: result.fileSize,
-      mimeType: result.mimeType,
-      storagePath: result.storagePath,
-      processorUsed: 'image',
-      processingInfo: {
-        wasCompressed: result.compressionInfo?.wasCompressed,
-        compressionRatio: result.compressionInfo?.compressionRatio,
-        validationPassed: true,
-      },
-    };
-  }
 
   // ==========================================================================
   // CLEANUP METHODS

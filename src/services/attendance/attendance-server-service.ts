@@ -19,7 +19,7 @@ import 'server-only';
 import { getAdminFirestore, getAdminStorage, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES, LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -180,25 +180,21 @@ export async function uploadAttendancePhoto(
     const base64Data = matches[2];
     const buffer = Buffer.from(base64Data, 'base64');
 
-    // 🏢 ENTERPRISE: Canonical storage path when companyId available, legacy fallback for backward compat
-    let storagePath: string;
-    if (companyId) {
-      const { path } = buildStoragePath({
-        companyId,
-        projectId,
-        entityType: ENTITY_TYPES.PROJECT,
-        entityId: projectId,
-        domain: FILE_DOMAINS.ADMIN,
-        category: FILE_CATEGORIES.PHOTOS,
-        fileId: eventId,
-        ext: 'jpg',
-      });
-      storagePath = path;
-    } else {
-      // Legacy fallback — will be removed when all callers provide companyId
-      console.warn('[DEPRECATION] uploadAttendancePhoto() without companyId uses legacy path. Provide companyId for canonical storage.');
-      storagePath = `${LEGACY_STORAGE_PATHS.ATTENDANCE}/${projectId}/${date}/${eventId}.jpg`;
+    // 🏢 ADR-293: Canonical storage path via buildStoragePath() SSoT
+    if (!companyId) {
+      logger.error('companyId is required for attendance photo upload (ADR-293)');
+      throw new Error('companyId is required for attendance photo upload');
     }
+    const { path: storagePath } = buildStoragePath({
+      companyId,
+      projectId,
+      entityType: ENTITY_TYPES.PROJECT,
+      entityId: projectId,
+      domain: FILE_DOMAINS.ADMIN,
+      category: FILE_CATEGORIES.PHOTOS,
+      fileId: eventId,
+      ext: 'jpg',
+    });
     const file = bucket.file(storagePath);
 
     await file.save(buffer, {

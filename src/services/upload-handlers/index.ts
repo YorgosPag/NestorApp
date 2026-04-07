@@ -34,10 +34,6 @@ export {
   createUploadHandlerFromPreset,
   createCanonicalUploadHandler,
 
-  // Default handlers (deprecated - use factory functions)
-  defaultContactPhotoHandler,
-  defaultCompanyLogoHandler,
-
   // Constants
   UPLOAD_PRESETS,
 } from './defaultUploadHandler';

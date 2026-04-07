@@ -106,8 +106,8 @@ export interface ProcessedFile {
 }
 
 export interface StoragePathOptions {
-  /** Base folder path */
-  folderPath: string;
+  /** Base folder path (legacy — prefer canonical buildStoragePath()) */
+  folderPath?: string;
   /** Optional custom filename */
   fileName?: string;
   /** Building ID (for floor plans) */
@@ -116,6 +116,8 @@ export interface StoragePathOptions {
   floorId?: string;
   /** File ID (for DXF) */
   fileId?: string;
+  /** Company ID for canonical paths (ADR-293) */
+  companyId?: string;
 }
 
 // ============================================================================
@@ -126,14 +128,16 @@ export interface StoragePathOptions {
  * Base options for all upload types
  */
 export interface BaseUploadOptions {
-  /** Folder path in Firebase Storage */
-  folderPath: string;
+  /** Folder path in Firebase Storage (legacy — prefer canonical pipeline) */
+  folderPath?: string;
   /** Optional custom filename */
   fileName?: string;
   /** Progress callback */
   onProgress?: ProgressCallback;
   /** Additional metadata to store */
   metadata?: Record<string, unknown>;
+  /** Company ID for canonical path generation (ADR-293) */
+  companyId?: string;
 }
 
 /**

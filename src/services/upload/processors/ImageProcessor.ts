@@ -228,63 +228,6 @@ export class ImageProcessor implements FileProcessor {
     };
   }
 
-  /**
-   * Upload contact photo (convenience method)
-   */
-  async uploadContactPhoto(
-    file: File,
-    contactId?: string,
-    onProgress?: ProgressCallback
-  ): Promise<ImageUploadResult> {
-    const result = await PhotoUploadService.uploadContactPhoto(
-      file,
-      contactId,
-      onProgress ? (p) => {
-        onProgress({
-          progress: p.progress,
-          phase: p.phase as 'upload' | 'processing' | 'complete',
-        });
-      } : undefined
-    );
-
-    return {
-      url: result.url,
-      fileName: result.fileName,
-      fileSize: result.fileSize,
-      mimeType: result.mimeType,
-      storagePath: result.storagePath,
-      compressionInfo: result.compressionInfo,
-    };
-  }
-
-  /**
-   * Upload company logo (convenience method)
-   */
-  async uploadCompanyLogo(
-    file: File,
-    companyId?: string,
-    onProgress?: ProgressCallback
-  ): Promise<ImageUploadResult> {
-    const result = await PhotoUploadService.uploadCompanyLogo(
-      file,
-      companyId,
-      onProgress ? (p) => {
-        onProgress({
-          progress: p.progress,
-          phase: p.phase as 'upload' | 'processing' | 'complete',
-        });
-      } : undefined
-    );
-
-    return {
-      url: result.url,
-      fileName: result.fileName,
-      fileSize: result.fileSize,
-      mimeType: result.mimeType,
-      storagePath: result.storagePath,
-      compressionInfo: result.compressionInfo,
-    };
-  }
 
   /**
    * Delete image from storage
