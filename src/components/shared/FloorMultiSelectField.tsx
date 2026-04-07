@@ -163,29 +163,29 @@ export function FloorMultiSelectField({
         <section className="flex flex-col gap-1.5">
           {/* Add existing adjacent floors (UP and/or DOWN) */}
           {hasAdjacentExisting && (
-            <section className="flex flex-wrap gap-1.5">
-              {floorAbove && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => handleAddFloor(floorAbove)}
-                >
-                  <ChevronUp className="h-3.5 w-3.5" />
-                  {t('multiLevel.addExistingFloor')}: {floorAbove.name}
-                </Button>
-              )}
+            <section className="flex gap-1.5">
               {floorBelow && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 text-xs gap-1"
+                  className="h-7 text-xs gap-1 flex-1"
                   onClick={() => handleAddFloor(floorBelow)}
                 >
                   <ChevronDown className="h-3.5 w-3.5" />
-                  {t('multiLevel.addExistingFloor')}: {floorBelow.name}
+                  {floorBelow.name}
+                </Button>
+              )}
+              {floorAbove && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1 flex-1"
+                  onClick={() => handleAddFloor(floorAbove)}
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  {floorAbove.name}
                 </Button>
               )}
             </section>
