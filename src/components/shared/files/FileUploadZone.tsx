@@ -377,7 +377,9 @@ export function FileUploadZone({
   /**
    * Programmatic file selection
    */
-  const handleClickUpload = useCallback(() => {
+  const handleClickUpload = useCallback((e?: React.MouseEvent) => {
+    // Stop propagation to prevent <section onClick> from firing a second time
+    e?.stopPropagation();
     if (fileInputRef.current && !disabled && !uploading && !isProcessing) {
       fileInputRef.current.click();
     }
