@@ -1,6 +1,6 @@
 {
   "title": "Συνθέσεις",
-  "description": "Σύνθετα components και showcase",
+  "description": "Σύνθετα στοιχεία και επίδειξη",
   "showcase": {
     "title": "Επίδειξη Σύνθεσης Στοιχείων",
     "subtitle": "Παρουσίαση των νέων σύνθετων στοιχείων που χρησιμοποιούν το σύστημα BaseCard",
@@ -13,35 +13,35 @@
   },
   "cards": {
     "task": {
-      "title": "TaskCard",
+      "title": "Κάρτα Εργασίας",
       "description": "Κάρτες εργασιών για CRM διαχείριση"
     },
     "user": {
-      "title": "UserCard",
+      "title": "Κάρτα Χρήστη",
       "description": "Κάρτες χρηστών με στατιστικά"
     },
     "building": {
-      "title": "BuildingCard",
+      "title": "Κάρτα Κτιρίου",
       "description": "Κάρτες κτιρίων με πληροφορίες"
     },
     "project": {
-      "title": "ProjectCard",
+      "title": "Κάρτα Έργου",
       "description": "Κάρτες έργων με πρόοδο"
     },
     "contact": {
-      "title": "ContactCard",
+      "title": "Κάρτα Επαφής",
       "description": "Κάρτες επαφών με στοιχεία"
     },
     "storage": {
-      "title": "StorageCard",
+      "title": "Κάρτα Αποθήκευσης",
       "description": "Κάρτες χώρων αποθήκευσης"
     },
     "property": {
-      "title": "PropertyCard", 
+      "title": "Κάρτα Ακινήτου",
       "description": "Κάρτες ακινήτων με λεπτομέρειες"
     },
     "notification": {
-      "title": "NotificationCard",
+      "title": "Κάρτα Ειδοποίησης",
       "description": "Κάρτες ειδοποιήσεων"
     }
   },
@@ -74,15 +74,15 @@
   },
   "toolbars": {
     "building": {
-      "title": "BuildingToolbar",
+      "title": "Γραμμή Εργαλείων Κτιρίων",
       "description": "Εργαλειοθήκη διαχείρισης κτιρίων"
     },
     "project": {
-      "title": "ProjectToolbar",
+      "title": "Γραμμή Εργαλείων Έργων",
       "description": "Εργαλειοθήκη διαχείρισης έργων"
     },
     "contacts": {
-      "title": "ContactsToolbar",
+      "title": "Γραμμή Εργαλείων Επαφών",
       "description": "Εργαλειοθήκη διαχείρισης επαφών"
     }
   },

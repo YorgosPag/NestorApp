@@ -563,6 +563,6 @@
     "feature3": "Πρόσφατη δραστηριότητα emails",
     "feature4": "Στατιστικά ανά ακίνητο",
     "activationNote": "Τα αναλυτικά θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.",
-    "templatesNote": "Τώρα διαθέσιμα 3 πρότυπα email στο Share Modal!"
+    "templatesNote": "Τώρα διαθέσιμα 3 πρότυπα email στο Παράθυρο Κοινοποίησης!"
   }
 }

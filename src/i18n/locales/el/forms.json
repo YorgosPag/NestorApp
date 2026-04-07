@@ -275,7 +275,7 @@
     "issuePaper": "Όνομα επίσημου φύλλου (π.χ. ΦΕΚ)",
     "announcementSubject": "Περιγραφή θέματος ανακοίνωσης",
     "announcementSummary": "Σύντομη περίληψη ανακοίνωσης",
-    "announcementFile": "Link ή path αρχείου ανακοίνωσης",
+    "announcementFile": "Σύνδεσμος ή διαδρομή αρχείου ανακοίνωσης",
     "currentStatus": "Τρέχουσα κατάσταση εταιρείας",
     "statusChangeDate": "Ημερομηνία αλλαγής κατάστασης",
     "statusReason": "Αιτιολογία αλλαγής κατάστασης",

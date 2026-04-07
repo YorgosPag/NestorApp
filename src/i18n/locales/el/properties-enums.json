@@ -54,7 +54,7 @@
     "apartment2br": "Διαμέρισμα 2 Υ/Δ",
     "apartment3br": "Διαμέρισμα 3 Υ/Δ",
     "apartment4br": "Διαμέρισμα 4 Υ/Δ",
-    "loft": "Loft",
+    "loft": "Σοφίτα",
     "penthouse": "Ρετιρέ",
     "apartment_1br": "Γκαρσονιέρα",
     "apartment_2br": "Διαμέρισμα 2 Υ/Δ",
@@ -162,8 +162,8 @@
     "cooling": {
       "label": "Ψύξη",
       "central-air": "Κεντρικός αέρας",
-      "split-units": "Split units",
-      "fan-coil": "Fan coil",
+      "split-units": "Διαιρούμενες μονάδες",
+      "fan-coil": "Ανεμιστήρας κλιματισμού",
       "none": "Καμία"
     }
   },
@@ -198,7 +198,7 @@
       "fireplace": "Τζάκι",
       "jacuzzi": "Τζακούζι",
       "sauna": "Σάουνα",
-      "smart-home": "Smart home",
+      "smart-home": "Έξυπνο σπίτι",
       "solar-panels": "Ηλιακά πάνελ",
       "underfloor-heating": "Ενδοδαπέδια θέρμανση",
       "air-conditioning": "Κλιματισμός",

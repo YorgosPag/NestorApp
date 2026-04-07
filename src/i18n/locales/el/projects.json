@@ -15,7 +15,7 @@
     "description": "Επιλέξτε ένα έργο από τη λίστα ή δημιουργήστε νέο."
   },
   "projectHeader": {
-    "technicalIdLabel": "Technical ID (για support):",
+    "technicalIdLabel": "Τεχνικό ID (για υποστήριξη):",
     "copied": "Αντιγράφηκε!",
     "residentialBadge": "Οικιστικό",
     "saving": "Αποθήκευση...",

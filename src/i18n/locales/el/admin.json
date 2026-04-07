@@ -136,8 +136,8 @@
     "description": "Ορισμός ιδιοτήτων χρήστη για λογαριασμούς με ελλιπή αναγνωριστικά εταιρείας ή καθολικό ρόλο.",
     "fields": {
       "uid": {
-        "label": "User UID",
-        "placeholder": "Firebase Auth UID"
+        "label": "UID Χρήστη",
+        "placeholder": "UID Πιστοποίησης Firebase"
       },
       "email": {
         "label": "Email",

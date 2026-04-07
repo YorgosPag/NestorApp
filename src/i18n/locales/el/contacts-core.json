@@ -177,7 +177,7 @@
     "shortcutActions": {
       "new": "Νέα Επαφή (Ctrl+N)",
       "edit": "Επεξεργασία Επιλεγμένης (Ctrl+E)",
-      "delete": "Διαγραφή Επιλεγμένης (Delete)"
+      "delete": "Διαγραφή Επιλεγμένης"
     },
     "tabs": {
       "actions": "Ενέργειες",
@@ -291,7 +291,7 @@
   "placeholderTab": {
     "comingSoon": "- Σύντομα Διαθέσιμο",
     "contactIdLabel": "Αναγνωριστικό Επαφής:",
-    "typeLabel": "| Type:"
+    "typeLabel": "| Τύπος:"
   },
   "navigation": {
     "positionKeywords": {

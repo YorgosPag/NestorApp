@@ -202,7 +202,7 @@
         "measurements": "Μετρήσεις",
         "draft": "Προσχέδιο",
         "completion": "Ολοκλήρωση",
-        "hover": "Hover",
+        "hover": "Αιώρηση",
         "selection": "Επιλογή"
       }
     },
@@ -235,7 +235,7 @@
       "css": "CSS",
       "world": "Κόσμος",
       "roundTripError": "Σφάλμα round-trip",
-      "zoom": "Zoom",
+      "zoom": "Μεγέθυνση",
       "moveMouseHint": "Μετακινήστε το ποντίκι πάνω από τον καμβά..."
     },
     "clickTest": {

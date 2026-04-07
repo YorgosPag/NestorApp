@@ -185,7 +185,7 @@
     }
   },
   "mapLayers": {
-    "pinPreviewTitle": "Πινέζα Preview - Ακτίνα: {{radius}}m",
+    "pinPreviewTitle": "Πινέζα Προεπισκόπηση - Ακτίνα: {{radius}}m",
     "pinRadiusTitle": "Πινέζα - Ακτίνα: {{radius}}m"
   }
 }

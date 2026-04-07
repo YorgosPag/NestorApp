@@ -93,7 +93,7 @@
         "familiesOwnerOccupied": "Οικογένειες (owner-occupied)",
         "ofTotal": "{percent}% του συνόλου",
         "performanceMetrics": "Δείκτες Απόδοσης",
-        "successRate": "Success Rate (λιστάρισμα → πώληση)",
+        "successRate": "Ποσοστό Επιτυχίας (λιστάρισμα → πώληση)",
         "avgDiscount": "Μέσο discount από αρχική τιμή",
         "fastestSale": "Ταχύτερη πώληση",
         "slowestSale": "Αργότερη πώληση",
@@ -161,7 +161,7 @@
         "appointments": "{count} ραντεβού",
         "offersUnderReview": "Προσφορές υπό εξέταση",
         "offers": "{count} προσφορές",
-        "hotProperties": "Hot Properties (>{count} προβολές/εβδομάδα)",
+        "hotProperties": "Δημοφιλή Ακίνητα (>{count} προβολές/εβδομάδα)",
         "properties": "{count} ακίνητα"
       },
       "info": {

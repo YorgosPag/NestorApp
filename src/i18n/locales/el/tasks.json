@@ -86,7 +86,7 @@
       "projectId": "Έργο",
       "unitId": "Μονάδα"
     },
-    "loadingPlaceholder": "Loading..."
+    "loadingPlaceholder": "Φόρτωση..."
   },
   "time": {
     "overdue": "Εκπρόθεσμη",

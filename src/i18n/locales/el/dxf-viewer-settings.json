@@ -195,7 +195,7 @@
       "measurements": "Μετρήσεις",
       "draft": "Προσχέδιο",
       "completion": "Ολοκλήρωση",
-      "hover": "Hover",
+      "hover": "Αιώρηση",
       "selection": "Επιλογή"
     },
     "generalTabs": {
@@ -640,7 +640,7 @@
         "description": "Ρυθμίσεις επιλογής αντικειμένων"
       },
       "cursor": {
-        "title": "Κέρσορας (Cursor)",
+        "title": "Κέρσορας",
         "description": "Ρυθμίσεις κέρσορα και σταυρονήματος"
       },
       "grid": {

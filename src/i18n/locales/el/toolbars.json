@@ -57,7 +57,7 @@
     "shortcuts": {
       "newItem": "(Ctrl+N)",
       "editItem": "(Ctrl+E)",
-      "deleteItem": "(Delete)",
+      "deleteItem": "(Διαγραφή)",
       "refresh": "(F5)",
       "help": "(F1)"
     }

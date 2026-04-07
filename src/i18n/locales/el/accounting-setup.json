@@ -213,7 +213,7 @@
     "status": "Κατάσταση",
     "confidence": "Βεβαιότητα",
     "amountDifference": "Διαφορά Ποσού",
-    "batchAcceptAll": "Αποδοχή Όλων Auto",
+    "batchAcceptAll": "Αυτόματη Αποδοχή Όλων",
     "batchAcceptSelected": "Αποδοχή Επιλεγμένων",
     "batchConfirm": "Αποδοχή {{count}} αυτόματων αντιστοιχίσεων;",
     "batchProgress": "Επεξεργασία {{completed}}/{{total}}...",

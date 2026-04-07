@@ -457,8 +457,8 @@
       "mapLoading": "Φόρτωση...",
       "points": "Σημεία",
       "controlPoints": "Σημεία Ελέγχου",
-      "avgAccuracy": "Avg Accuracy:",
-      "best": "Best:",
+      "avgAccuracy": "Μέση Ακρίβεια:",
+      "best": "Καλύτερη:",
       "accuracy": "±{value}m"
     },
     "coordinates": {
@@ -508,7 +508,7 @@
   "floorPlanControlPoints": {
     "title": "Σημεία Ελέγχου",
     "description": "Απαιτούνται τουλάχιστον 3 σημεία για γεωαναφορά",
-    "dragHandle": "Drag",
+    "dragHandle": "Σύρσιμο",
     "tabs": {
       "visualPicking": "Οπτική Επιλογή",
       "manualInput": "Χειροκίνητη Εισαγωγή"
@@ -520,10 +520,10 @@
       "clear": "Καθαρισμός"
     },
     "status": {
-      "points": "Points:",
-      "readyForGeoreferencing": "Ready for georeferencing",
-      "needMorePoints": "Need {count} more point{plural}",
-      "transformationQuality": "Transformation Quality:"
+      "points": "Σημεία:",
+      "readyForGeoreferencing": "Έτοιμο για γεωαναφορά",
+      "needMorePoints": "Χρειάζονται {count} ακόμα σημεία",
+      "transformationQuality": "Ποιότητα Μετασχηματισμού:"
     },
     "instructions": {
       "idle": "Κάντε κλικ στο 'Προσθήκη Σημείου Ελέγχου' για να ξεκινήσετε",
