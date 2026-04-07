@@ -853,8 +853,12 @@ export const API_ROUTES = {
   DXF_AI: { COMMAND: '/api/dxf-ai/command' },
 
   // ── Entity Activity (generic) ─────────────────────────────────────────
-  ENTITY_ACTIVITY: (entityType: string, entityId: string) =>
-    `/api/${entityType}s/${entityId}/activity` as const,
+  ENTITY_ACTIVITY: (entityType: string, entityId: string) => {
+    const plural = entityType.endsWith('y')
+      ? `${entityType.slice(0, -1)}ies`
+      : `${entityType}s`;
+    return `/api/${plural}/${entityId}/activity` as const;
+  },
 } as const;
 
 // ── Backward-compatible flat aliases (DEPRECATED — migrate to nested form) ──
