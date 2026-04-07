@@ -1,15 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Ruler, ExternalLink, Settings, Database, AlertTriangle, Monitor, Zap, X, Building, Sparkles } from 'lucide-react';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Ruler, ExternalLink, Settings, Database, AlertTriangle, X } from 'lucide-react';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
@@ -21,6 +13,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { GEO_COLORS } from '../config/color-config';
 import type { UniversalPolygon } from '@geo-alert/core/polygon-system/types';
+import { TechnicalAlertConfigPanel } from './TechnicalAlertConfigPanel';
+import type { AlertConfiguration } from './TechnicalAlertConfigPanel';
 
 // 🏢 ENTERPRISE: Type-safe polygon props
 type BasePolygonData = UniversalPolygon;
@@ -34,20 +28,8 @@ interface TechnicalDrawingInterfaceProps {
 /**
  * 🛠️ GEO-ALERT Phase 2.5.3: Enhanced Technical Drawing Interface
  *
- * Interface για τεχνικούς/μηχανικούς με:
- * - Full DXF/DWG support (redirect to existing /dxf/viewer)
- * - CAD-level precision tools
- * - Advanced georeferencing
- * - Professional grade accuracy
- * - 🚨 Automated Real Estate Alerts (Phase 2.5.3)
- *
- * Technical features:
- * - DXF/DWG viewer integration
- * - Millimeter-level precision
- * - Advanced CAD tools
- * - Professional workflows
- * - Real-time automated monitoring
- * - Advanced alert configuration
+ * Interface για τεχνικούς/μηχανικούς με DXF/DWG support,
+ * CAD-level precision, advanced georeferencing, και automated alerts.
  */
 export function TechnicalDrawingInterface({
   mapRef,
@@ -59,46 +41,40 @@ export function TechnicalDrawingInterface({
   const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
-  // ✅ ENTERPRISE: Combine local and centralized drawing state
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // 🚨 Phase 2.5.3: Automated Alerts Integration
+  // Automated Alerts state
   const [showAutomatedAlerts, setShowAutomatedAlerts] = useState(false);
-  const [alertConfiguration, setAlertConfiguration] = useState({
-    sensitivity: 'high' as 'low' | 'medium' | 'high',
-    monitoringInterval: 15, // minutes
-    alertThreshold: 0.95, // confidence threshold
-    enabledPlatforms: ['spitogatos', 'xe'] as string[]
+  const [alertConfiguration, setAlertConfiguration] = useState<AlertConfiguration>({
+    sensitivity: 'high',
+    monitoringInterval: 15,
+    alertThreshold: 0.95,
+    enabledPlatforms: ['spitogatos', 'xe']
   });
 
   // Real Estate Monitoring Integration
   const {
     addRealEstatePolygon,
-    getRealEstateAlerts,
     getStatistics,
     startPeriodicCheck,
     stopPeriodicCheck
   } = useRealEstateMatching();
 
-  // ✅ ENTERPRISE FIX: Get statistics as object, not function
   const realEstateStats = getStatistics();
 
-  // ✅ ENTERPRISE: Use centralized polygon system with Technical role
+  // Centralized polygon system with Technical role
   const {
     polygons,
     stats,
     startDrawing,
     finishDrawing,
     cancelDrawing,
-    clearAll,
     isDrawing: systemIsDrawing,
-    currentRole
   } = useCentralizedPolygonSystem();
 
-  // ✅ ENTERPRISE: Combine local and centralized drawing state
   const actualIsDrawing = isDrawing || systemIsDrawing;
 
-  // Advanced automated alert creation
+  // Automated alert creation
   const handleAutomatedAlertCreation = useCallback((polygon: BasePolygonData) => {
     const priority = alertConfiguration.sensitivity === 'high'
       ? 4
@@ -111,7 +87,7 @@ export function TechnicalDrawingInterface({
       type: 'real-estate',
       alertSettings: {
         enabled: true,
-        priceRange: { min: 50000, max: 2000000 }, // Technical range - wide spectrum
+        priceRange: { min: 50000, max: 2000000 },
         propertyTypes: ['apartment', 'house', 'land', 'commercial', 'industrial'],
         includeExclude: 'include',
         priority
@@ -119,93 +95,68 @@ export function TechnicalDrawingInterface({
     };
 
     addRealEstatePolygon(technicalRealEstatePolygon);
-
-    if (onRealEstateAlertCreated) {
-      onRealEstateAlertCreated(technicalRealEstatePolygon);
-    }
-
-    // Start automated monitoring with technical precision
+    onRealEstateAlertCreated?.(technicalRealEstatePolygon);
     startPeriodicCheck(alertConfiguration.monitoringInterval);
-
-    console.debug('🚨 Technical: Advanced automated alert created', technicalRealEstatePolygon);
   }, [alertConfiguration, addRealEstatePolygon, onRealEstateAlertCreated, startPeriodicCheck]);
 
   // Tool selection handler
   const handleToolSelect = useCallback((tool: 'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts') => {
     if (actualIsDrawing) {
-      // Cancel current drawing
       cancelDrawing();
       setIsDrawing(false);
     }
 
     setSelectedTool(tool);
 
-    // Start appropriate tool mode
     switch (tool) {
       case 'dxf-viewer':
-        // Redirect to full DXF Viewer
-        console.debug('🛠️ Technical: Opening DXF Viewer');
         window.open('/dxf/viewer', '_blank');
         break;
-
       case 'precision':
-        // Ultra-precision polygon mode
         startDrawing('simple', {
-          fillColor: GEO_COLORS.withOpacity(GEO_COLORS.USER_INTERFACE.TECHNICAL_STROKE, 0.2), // Purple fill (technical theme)
+          fillColor: GEO_COLORS.withOpacity(GEO_COLORS.USER_INTERFACE.TECHNICAL_STROKE, 0.2),
           strokeColor: GEO_COLORS.USER_INTERFACE.TECHNICAL_STROKE,
-          strokeWidth: 1 // Thin lines για precision
+          strokeWidth: 1
         });
         setIsDrawing(true);
-        console.debug('📐 Technical: Ultra-precision mode activated');
         break;
-
       case 'settings':
-        // Technical settings (mock)
-        console.debug('⚙️ Technical: Advanced settings mode');
         break;
-
       case 'automated-alerts':
-        // 🚨 Phase 2.5.3: Automated Alerts Configuration
         setShowAutomatedAlerts(true);
-        console.debug('🚨 Technical: Automated alerts configuration opened');
         break;
     }
   }, [actualIsDrawing, startDrawing, cancelDrawing]);
 
-  // Complete drawing
   const handleComplete = useCallback(() => {
     const polygon = finishDrawing();
     if (polygon && onPolygonComplete) {
       onPolygonComplete(polygon);
-      console.debug('✅ Technical: Ultra-precision drawing completed', polygon);
     }
     setIsDrawing(false);
     setSelectedTool(null);
   }, [finishDrawing, onPolygonComplete]);
 
-  // Cancel drawing
   const handleCancel = useCallback(() => {
     cancelDrawing();
     setIsDrawing(false);
     setSelectedTool(null);
-    console.debug('❌ Technical: Drawing cancelled');
   }, [cancelDrawing]);
 
   return (
     <div className={`${colors.bg.primary} ${quick.card} shadow-lg p-4`}>
       {/* Header */}
-      <div className="mb-4">
+      <header className="mb-4">
         <h3 className={`text-lg font-semibold ${colors.text.foreground}`}>
           {t('drawingInterfaces.technical.title')}
         </h3>
         <p className={`text-sm ${colors.text.muted}`}>
           {t('drawingInterfaces.technical.subtitle')}
         </p>
-      </div>
+      </header>
 
       {/* Tool Buttons */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        {/* DXF Viewer */}
+      <nav className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <button
           onClick={() => handleToolSelect('dxf-viewer')}
           disabled={actualIsDrawing}
@@ -224,7 +175,6 @@ export function TechnicalDrawingInterface({
           <span className={`text-xs ${colors.text.muted}`}>{t('hardcodedTexts.ui.fullCad')}</span>
         </button>
 
-        {/* Ultra-Precision Polygon */}
         <button
           onClick={() => handleToolSelect('precision')}
           disabled={actualIsDrawing && selectedTool !== 'precision'}
@@ -243,7 +193,6 @@ export function TechnicalDrawingInterface({
           <span className={`text-xs ${colors.text.muted}`}>mm-level</span>
         </button>
 
-        {/* Technical Settings */}
         <button
           onClick={() => handleToolSelect('settings')}
           disabled={actualIsDrawing}
@@ -262,7 +211,6 @@ export function TechnicalDrawingInterface({
           <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.technical.tools.settingsAdvanced')}</span>
         </button>
 
-        {/* 🚨 Phase 2.5.3: Automated Alerts */}
         <button
           onClick={() => handleToolSelect('automated-alerts')}
           disabled={actualIsDrawing}
@@ -280,7 +228,7 @@ export function TechnicalDrawingInterface({
           <span className="text-sm font-medium">{t('hardcodedTexts.ui.alerts')}</span>
           <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.technical.tools.alertsAuto')}</span>
         </button>
-      </div>
+      </nav>
 
       {/* Action Buttons για Precision Mode */}
       {actualIsDrawing && selectedTool === 'precision' && (
@@ -303,7 +251,7 @@ export function TechnicalDrawingInterface({
       )}
 
       {/* Technical Specs Panel */}
-      <div className={`mb-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('muted')}`}>
+      <section className={`mb-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('muted')}`}>
         <h4 className="text-sm font-medium text-purple-800 mb-2">
           🔬 {t('drawingInterfaces.technical.specifications.title')}
         </h4>
@@ -321,7 +269,7 @@ export function TechnicalDrawingInterface({
             <span className="font-medium">{t('hardcodedTexts.labels.cadTools')}</span> {t('hardcodedTexts.values.full')}
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Instructions */}
       {selectedTool && (
@@ -365,7 +313,6 @@ export function TechnicalDrawingInterface({
               <span className="font-medium">{t('drawingInterfaces.technical.stats.technicalDrawings')}:</span> {stats.totalPolygons}
             </p>
           )}
-
           {realEstateStats.totalAlerts > 0 && (
             <div className="text-xs text-red-700">
               <p>
@@ -386,175 +333,23 @@ export function TechnicalDrawingInterface({
         </div>
       )}
 
-      {/* 🚨 Phase 2.5.3: Automated Alerts Configuration Panel */}
+      {/* Automated Alerts Config Panel (extracted) */}
       {showAutomatedAlerts && (
-        <div className={`mt-4 ${colors.bg.primary} ${quick.card} shadow-lg ${getStatusBorder('error')} p-4`}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <AlertTriangle className={`${iconSizes.md} text-red-600`} />
-              {t('drawingInterfaces.technical.automatedAlerts.title')}
-            </h3>
-            <button
-              onClick={() => {
-                setShowAutomatedAlerts(false);
-                setSelectedTool(null);
-              }}
-              className={`text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            >
-              <X className={iconSizes.md} />
-            </button>
-          </div>
-
-          {/* Alert Configuration */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            {/* Sensitivity Settings */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-gray-900">{t('hardcodedTexts.labels.technicalSensitivity')}</h4>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  {t('drawingInterfaces.technical.automatedAlerts.detectionSensitivity')}
-                </label>
-                <Select
-                  value={alertConfiguration.sensitivity}
-                  onValueChange={(val) => setAlertConfiguration(prev => ({
-                    ...prev,
-                    sensitivity: val as 'low' | 'medium' | 'high'
-                  }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.high')}</SelectItem>
-                    <SelectItem value="medium">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.medium')}</SelectItem>
-                    <SelectItem value="low">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.low')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  {t('drawingInterfaces.technical.automatedAlerts.monitoringInterval')}
-                </label>
-                <Select
-                  value={String(alertConfiguration.monitoringInterval)}
-                  onValueChange={(val) => setAlertConfiguration(prev => ({
-                    ...prev,
-                    monitoringInterval: Number(val)
-                  }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">{t('drawingInterfaces.technical.automatedAlerts.intervals.realtime')}</SelectItem>
-                    <SelectItem value="15">{t('drawingInterfaces.technical.automatedAlerts.intervals.frequent')}</SelectItem>
-                    <SelectItem value="30">{t('drawingInterfaces.technical.automatedAlerts.intervals.standard')}</SelectItem>
-                    <SelectItem value="60">{t('drawingInterfaces.technical.automatedAlerts.intervals.hourly')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Platform Settings */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-gray-900">{t('hardcodedTexts.labels.monitoringPlatforms')}</h4>
-
-              <div className="space-y-2">
-                {[
-                  { id: 'spitogatos', name: t('hardcodedTexts.values.spitogatosGr'), icon: NAVIGATION_ENTITIES.property.icon },
-                  { id: 'xe', name: t('hardcodedTexts.values.xeGr'), icon: Building },
-                  { id: 'future-platform', name: t('drawingInterfaces.technical.automatedAlerts.morePlatforms'), icon: Sparkles, disabled: true }
-                ].map((platform) => (
-                  <label key={platform.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={alertConfiguration.enabledPlatforms.includes(platform.id)}
-                      disabled={platform.disabled}
-                      onChange={(e) => {
-                        if (platform.disabled) return;
-                        setAlertConfiguration(prev => ({
-                          ...prev,
-                          enabledPlatforms: e.target.checked
-                            ? [...prev.enabledPlatforms, platform.id]
-                            : prev.enabledPlatforms.filter(p => p !== platform.id)
-                        }));
-                      }}
-                      className="rounded border-border text-red-600 focus:ring-red-500"
-                    />
-                    <span className="text-sm text-gray-700 flex items-center gap-1">
-                      <platform.icon className={iconSizes.sm} />
-                      {platform.name}
-                      {platform.disabled && <span className="text-xs text-gray-400">{t('hardcodedTexts.values.comingSoon')}</span>}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Technical Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-            <button
-              onClick={() => {
-                if (polygons.length > 0) {
-                  polygons.forEach((polygon) => {
-                    handleAutomatedAlertCreation(polygon);
-                  });
-                }
-              }}
-              disabled={polygons.length === 0}
-              className={`flex items-center justify-center gap-2 ${colors.bg.error} text-white py-2 px-4 rounded-lg transition-colors disabled:opacity-50 ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
-            >
-              <Zap className={iconSizes.sm} />
-              <span className="text-sm font-medium">{t('hardcodedTexts.actions.automateAll')} ({polygons.length})</span>
-            </button>
-
-            <button
-              onClick={() => {
-                startPeriodicCheck(alertConfiguration.monitoringInterval);
-                console.debug('🚨 Technical: Automated monitoring started');
-              }}
-              className={`flex items-center justify-center gap-2 ${colors.bg.success} text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON}`}
-            >
-              <Monitor className={iconSizes.sm} />
-              <span className="text-sm font-medium">{t('hardcodedTexts.actions.startMonitoring')}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                stopPeriodicCheck();
-                console.debug('🚨 Technical: Automated monitoring stopped');
-              }}
-              className={`flex items-center justify-center gap-2 ${colors.bg.muted} text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`}
-            >
-              <Settings className={iconSizes.sm} />
-              <span className="text-sm font-medium">{t('hardcodedTexts.actions.stopAll')}</span>
-            </button>
-          </div>
-
-          {/* Technical Specifications */}
-          <div className={`${colors.bg.error} ${quick.error} p-3`}>
-            <h4 className="text-sm font-semibold text-red-900 mb-2">{t('drawingInterfaces.technical.automatedAlerts.technicalSpecifications')}</h4>
-            <div className="grid grid-cols-2 gap-2 text-xs text-red-700">
-              <div>
-                <span className="font-medium">{t('hardcodedTexts.ui.precision')}:</span> {t('hardcodedTexts.values.millimeterLevel')}
-              </div>
-              <div>
-                <span className="font-medium">{t('hardcodedTexts.labels.georeferencing')}</span> {t('hardcodedTexts.values.wgs84LocalGrid')}
-              </div>
-              <div>
-                <span className="font-medium">{t('hardcodedTexts.labels.confidenceThreshold')}</span> {Math.round(alertConfiguration.alertThreshold * 100)}%
-              </div>
-              <div>
-                <span className="font-medium">{t('hardcodedTexts.labels.processingLabel')}</span> {t('hardcodedTexts.values.realtimeAutomated')}
-              </div>
-            </div>
-          </div>
-        </div>
+        <TechnicalAlertConfigPanel
+          alertConfiguration={alertConfiguration}
+          onConfigurationChange={setAlertConfiguration}
+          onClose={() => {
+            setShowAutomatedAlerts(false);
+            setSelectedTool(null);
+          }}
+          polygons={polygons}
+          onAutomateAll={() => {
+            polygons.forEach((polygon) => handleAutomatedAlertCreation(polygon));
+          }}
+          onStartMonitoring={() => startPeriodicCheck(alertConfiguration.monitoringInterval)}
+          onStopMonitoring={() => stopPeriodicCheck()}
+        />
       )}
     </div>
   );
 }
-
