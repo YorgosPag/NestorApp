@@ -91,10 +91,14 @@ export function useAutoUploadEffect({
   purpose = 'photo',
   debug = false,
 }: UseAutoUploadEffectConfig): void {
-  // 🏢 ENTERPRISE: Track the last successfully uploaded file to prevent re-upload loops.
-  // When uploadHandler or formData changes after a successful upload, the effect re-fires
-  // but we must NOT re-upload the same file — that causes flickering + repeated notifications.
+  // 🏢 ENTERPRISE: Track uploaded files to prevent re-upload loops.
   const uploadedFileRef = useRef<File | null>(null);
+
+  // 🏢 ENTERPRISE: Synchronous in-flight guard — immune to React batching/timing.
+  // setState (isUploading) is batched and may not be committed before next effect run.
+  // This ref is set SYNCHRONOUSLY inside the effect body, BEFORE any async call,
+  // so re-entries always see the guard regardless of React render timing.
+  const uploadingFileRef = useRef<File | null>(null);
 
   // 🏢 ENTERPRISE: Stable refs for callbacks to prevent re-trigger on handler recreation
   const uploadHandlerRef = useRef(uploadHandler);
@@ -139,13 +143,26 @@ export function useAutoUploadEffect({
       return;
     }
 
-    // 🏢 ENTERPRISE: Prevent re-uploading the same file (breaks flickering loop)
+    // 🏢 ENTERPRISE: Prevent re-uploading the same file (post-upload guard)
     if (file === uploadedFileRef.current) {
       if (debug) {
         logger.info('AUTO-UPLOAD: Skipping — same file already uploaded', { fileName: file.name });
       }
       return;
     }
+
+    // 🏢 ENTERPRISE: Prevent duplicate in-flight upload (synchronous ref guard).
+    // This catches cases where React re-renders trigger the effect before
+    // upload.isUploading state has been committed (batching timing issue).
+    if (file === uploadingFileRef.current) {
+      if (debug) {
+        logger.info('AUTO-UPLOAD: Skipping — same file already in-flight', { fileName: file.name });
+      }
+      return;
+    }
+
+    // Mark as in-flight IMMEDIATELY (sync, before any async operation)
+    uploadingFileRef.current = file;
 
     if (debug) {
       logger.info('AUTO-UPLOAD: Starting upload', { fileName: file.name });
@@ -185,7 +202,6 @@ export function useAutoUploadEffect({
         }
       } catch (err) {
         // 🏢 ENTERPRISE: Mark file as attempted to prevent infinite retry loop.
-        // Without this, the effect re-fires on the same file → same error → browser freeze.
         uploadedFileRef.current = file;
 
         logger.error('AUTO-UPLOAD: Failed', { error: err, purpose, fileName: file?.name });
@@ -202,6 +218,12 @@ export function useAutoUploadEffect({
             fileSize: fallbackFileSize,
             mimeType: fallbackMimeType,
           });
+        }
+      } finally {
+        // Clear in-flight guard only if this file is still the current in-flight file
+        // (a newer file selection may have superseded this upload)
+        if (uploadingFileRef.current === file) {
+          uploadingFileRef.current = null;
         }
       }
     };
