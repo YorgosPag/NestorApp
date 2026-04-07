@@ -28,10 +28,14 @@ const logger = createModuleLogger('PropertyCoverageRecalculator');
 /** Supported coverage flags on a property document */
 type CoverageFlag = 'hasPhotos' | 'hasFloorplans' | 'hasDocuments';
 
-/** Maps a coverage flag to its corresponding storage collection */
+/**
+ * Maps a coverage flag to its corresponding storage collection.
+ * ADR-292 Phase 4: hasFloorplans now checks `files` collection
+ * (was `unit_floorplans` — legacy collection eliminated).
+ */
 const FLAG_TO_COLLECTION: Record<CoverageFlag, string> = {
   hasPhotos: 'unit_photos',
-  hasFloorplans: 'unit_floorplans',
+  hasFloorplans: 'files',
   hasDocuments: 'unit_documents',
 };
 

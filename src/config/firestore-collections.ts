@@ -266,7 +266,7 @@ export const COLLECTIONS = {
   // 📊 OWNERSHIP PERCENTAGE TABLE (ADR-235: Πίνακας Χιλιοστών Συνιδιοκτησίας)
   OWNERSHIP_TABLES: process.env.NEXT_PUBLIC_OWNERSHIP_TABLES_COLLECTION || 'ownership_tables',
 
-  // 📐 FLOOR FLOORPLANS (Legacy — embedded PDF floorplans per floor)
+  /** @deprecated ADR-292 Phase 4: Legacy reads eliminated. All floor floorplans in FILES collection. */
   FLOOR_FLOORPLANS: process.env.NEXT_PUBLIC_FLOOR_FLOORPLANS_COLLECTION || 'floor_floorplans',
 
   // 🔗 FILE WEBHOOKS (ADR-191: Enterprise Document Management — Phase 5.4)

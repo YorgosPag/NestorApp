@@ -7,20 +7,16 @@
  *
  * Loads floor-level floorplans using FloorFloorplanService (Enterprise pattern).
  *
- * Strategy order (V2 — enterprise-first):
- * 1. PRIMARY: FloorFloorplanService.loadFloorplan() → `files` collection (FileRecord)
- * 2. FALLBACK: Legacy `floor_floorplans` collection (for old embedded PDF data)
+ * Strategy: FloorFloorplanService.loadFloorplan() → `files` collection (FileRecord)
  *
- * Removed: cadFiles full-collection scan (was downloading ALL docs without WHERE)
+ * 🏢 ADR-292 Phase 4: Legacy `floor_floorplans` fallback eliminated.
+ * All reads go through the `files` collection exclusively.
  *
  * @module hooks/useFloorFloorplans
  * @enterprise ADR-060 - DXF Scene Storage Architecture
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { FloorFloorplanService, type FloorFloorplanData } from '@/services/floorplans/FloorFloorplanService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -53,20 +49,6 @@ interface UseFloorFloorplansReturn {
   error: string | null;
   /** Manual refetch function */
   refetch: () => Promise<void>;
-}
-
-/** Legacy floor_floorplans metadata */
-interface FloorFloorplanMetadata {
-  buildingId: string;
-  floorId: string;
-  floorNumber?: number;
-  type: 'floor';
-  fileName: string;
-  timestamp: number;
-  fileType?: 'dxf' | 'pdf';
-  pdfImageUrl?: string;
-  pdfDimensions?: { width: number; height: number } | null;
-  deleted?: boolean;
 }
 
 /** Floor document from floors collection */
@@ -156,54 +138,6 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   }, [companyId]);
 
   /**
-   * FALLBACK: Search legacy floor_floorplans collection
-   * Only useful for old PDF floorplans with embedded pdfImageUrl
-   */
-  const searchLegacyFloorFloorplans = useCallback(async (floorIdStr: string): Promise<FloorFloorplanData | null> => {
-    try {
-      const floorplansRef = collection(db, COLLECTIONS.FLOOR_FLOORPLANS);
-      const q = query(floorplansRef, where('floorId', '==', floorIdStr));
-      const snapshot = await getDocs(q);
-
-      if (!snapshot.empty) {
-        const docData = snapshot.docs[0].data() as FloorFloorplanMetadata;
-
-        if (docData.deleted) {
-          return null;
-        }
-
-        // Only return PDF data from legacy collection — DXF scenes should come from FileRecord
-        if (docData.fileType === 'pdf' || docData.pdfImageUrl) {
-          logger.info('Found legacy PDF floorplan', { floorId: floorIdStr });
-          return {
-            buildingId: docData.buildingId,
-            floorId: docData.floorId,
-            floorNumber: docData.floorNumber || 0,
-            type: 'floor',
-            fileName: docData.fileName,
-            timestamp: docData.timestamp,
-            fileType: 'pdf',
-            pdfImageUrl: docData.pdfImageUrl,
-            pdfDimensions: docData.pdfDimensions,
-          };
-        }
-
-        // For DXF entries in legacy collection, try enterprise path
-        if (companyId) {
-          return await FloorFloorplanService.loadFloorplan({ companyId, floorId: floorIdStr });
-        }
-
-        return null;
-      }
-
-      return null;
-    } catch (err) {
-      logger.warn('Error searching legacy floor_floorplans', { error: err });
-      return null;
-    }
-  }, [companyId]);
-
-  /**
    * Main fetch function — enterprise-first strategy.
    *
    * Uses the floor document's companyId for FileRecord queries when available.
@@ -252,14 +186,8 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
 
       logger.debug('START fetch', { data: { floorId: effectiveFloorId, floorCompanyId, callerCompanyId: companyId, buildingId, floorNumber } });
 
-      // Step 2: PRIMARY — Enterprise FileRecord path (use floor's companyId first)
-      let floorplanData = await loadEnterprise(effectiveFloorId, floorCompanyId);
-
-      // Step 3: FALLBACK — Legacy floor_floorplans (old PDF data)
-      if (!floorplanData) {
-        floorplanData = await searchLegacyFloorFloorplans(effectiveFloorId);
-      }
-
+      // 🏢 ADR-292 Phase 4: Enterprise FileRecord path ONLY (legacy fallback eliminated)
+      const floorplanData = await loadEnterprise(effectiveFloorId, floorCompanyId);
       setFloorFloorplan(floorplanData);
 
       if (floorplanData) {

@@ -16,18 +16,17 @@
  * - Firestore: `files` collection (FileRecord documents)
  * - Storage: `companies/{companyId}/.../entities/property/{propertyId}/domains/construction/categories/floorplans/files/{fileId}.*`
  *
- * Legacy Fallback:
- * - Reads from `unit_floorplans/{propertyId}_unit` for backward compatibility with old data
+ * 🏢 ADR-292 Phase 4: Legacy `unit_floorplans` fallback eliminated.
+ * All reads/writes go through the `files` collection exclusively.
  *
  * @see FloorFloorplanService for the gold-standard reference implementation
  * @see FileRecordService for the core file operations
  */
 
 import { safeJsonParse } from '@/lib/json-utils';
-import { doc, getDoc } from 'firebase/firestore';
 import { ref, getBytes } from 'firebase/storage';
 import pako from 'pako';
-import { db, storage } from '@/lib/firebase';
+import { storage } from '@/lib/firebase';
 import { FileRecordService } from '@/services/file-record.service';
 import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';
 import { RealtimeService } from '@/services/realtime';
@@ -102,8 +101,6 @@ export interface LoadPropertyFloorplanParams {
 // ============================================================================
 
 export class PropertyFloorplanService {
-  /** @deprecated Legacy collection — kept for backward-compatible reads only */
-  private static readonly LEGACY_COLLECTION = 'unit_floorplans';
 
   /**
    * 🏢 ENTERPRISE: Save unit floorplan using FileRecordService
@@ -254,20 +251,7 @@ export class PropertyFloorplanService {
         };
       }
 
-      // ── Fallback: Legacy collection (backward compat for old data) ──
-      const docId = `${propertyId}_unit`;
-      const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-
-        // Only return if scene is embedded (truly old data)
-        if (data.scene && !data.sceneStoredInStorage) {
-          logger.warn('Loaded property floorplan from LEGACY collection (embedded scene)', { propertyId });
-          return data as PropertyFloorplanData;
-        }
-      }
-
+      // 🏢 ADR-292 Phase 4: Legacy unit_floorplans fallback eliminated
       logger.debug('No floorplan found for property', { propertyId });
       return null;
     } catch (error) {
@@ -296,14 +280,8 @@ export class PropertyFloorplanService {
         }
       );
 
-      if (fileRecords.length > 0) {
-        return true;
-      }
-
-      // Fallback: check legacy collection
-      const docId = `${propertyId}_unit`;
-      const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
-      return docSnap.exists() && !docSnap.data()?.deleted;
+      // 🏢 ADR-292 Phase 4: Legacy unit_floorplans fallback eliminated
+      return fileRecords.length > 0;
     } catch (error) {
       logger.warn('Error checking property floorplan', {
         propertyId,
