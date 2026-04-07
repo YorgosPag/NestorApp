@@ -259,7 +259,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
           </div>
         )}
 
-        <form ref={formRef} id={formId} onSubmit={handleSubmit} className={isSheet ? 'flex-1 overflow-y-auto p-4' : undefined}>
+        <form ref={formRef} id={formId} onSubmit={handleSubmit} noValidate className={isSheet ? 'flex-1 overflow-y-auto p-4' : undefined}>
           {/* 🏢 In Sheet mode, wrap content in bg-card so the visual hierarchy
               matches the canonical DetailsContainer (used by ProjectDetails /
               BuildingDetails). Dialog mode already ships its own card shell. */}

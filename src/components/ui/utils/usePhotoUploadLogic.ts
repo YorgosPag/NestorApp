@@ -122,8 +122,13 @@ export function usePhotoUploadLogic({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purpose, photoIndex, customFileName, contactId, companyId, createdBy, contactName]);
 
-  // Select handler: custom or default
-  const uploadHandler = customUploadHandler || defaultUploadHandler;
+  // 🏢 ENTERPRISE: When canonical fields (companyId, contactId, createdBy) are provided,
+  // prefer the defaultUploadHandler which embeds them in the upload config.
+  // The customUploadHandler from getPhotoUploadHandlers may lack canonical fields
+  // if canonicalUploadContext was undefined at creation time (timing issue).
+  const uploadHandler = (companyId && contactId && createdBy)
+    ? defaultUploadHandler
+    : (customUploadHandler || defaultUploadHandler);
 
   // ========================================================================
   // FILE SELECTION HANDLERS (ADR-054: Using extracted hook)

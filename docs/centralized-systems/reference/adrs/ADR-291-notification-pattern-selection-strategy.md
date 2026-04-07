@@ -195,6 +195,7 @@ const errorCount = Object.keys(form.formState.errors).length;
 | File | Status | Notes |
 |------|--------|-------|
 | SPEC-251C legacy files (20 files) | 🔄 Pending | Direct `sonner` imports → `useNotifications()` (ADR-219, gradual) |
+| `TabbedAddNewContactDialog.tsx` | ✅ Fixed | Native browser validation → `noValidate` + JS inline validation (2026-04-07) |
 
 **Boy Scout Rule**: Όταν ένας developer αγγίζει ένα αρχείο με παραβίαση, διορθώνει το pattern πριν commit.
 
@@ -222,6 +223,7 @@ const errorCount = Object.keys(form.formState.errors).length;
 |------|----------|--------|
 | 2026-04-05 | ADR Created — Pattern selection rules defined | Claude Code |
 | 2026-04-05 | Status: APPROVED | Γιώργος Παγώνης |
+| 2026-04-07 | Contact form: replaced native browser validation with `noValidate` + JS inline validation (Scenario 5 compliance) | Claude Code |
 
 ---
 

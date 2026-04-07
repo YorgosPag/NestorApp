@@ -184,6 +184,10 @@ export function useAutoUploadEffect({
           });
         }
       } catch (err) {
+        // 🏢 ENTERPRISE: Mark file as attempted to prevent infinite retry loop.
+        // Without this, the effect re-fires on the same file → same error → browser freeze.
+        uploadedFileRef.current = file;
+
         logger.error('AUTO-UPLOAD: Failed', { error: err, purpose, fileName: file?.name });
 
         // Call onUploadComplete even on failure to prevent hanging
