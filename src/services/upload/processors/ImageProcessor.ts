@@ -29,6 +29,7 @@ import { PhotoUploadService, type PhotoUploadOptions as OriginalPhotoUploadOptio
 import { validateImageFile } from '@/utils/file-validation';
 import { smartCompressContactPhoto } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
 import compressionConfig, { type UsageContext } from '@/config/photo-compression-config';
+import { generateFileId } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('ImageProcessor');
 
@@ -163,7 +164,7 @@ export class ImageProcessor implements FileProcessor {
       throw new Error('folderPath is required for image storage path');
     }
 
-    const finalFileName = fileName || `image_${Date.now()}.jpg`;
+    const finalFileName = fileName || `${generateFileId()}.jpg`;
     return `${folderPath}/${finalFileName}`.replace(/\/+/g, '/');
   }
 

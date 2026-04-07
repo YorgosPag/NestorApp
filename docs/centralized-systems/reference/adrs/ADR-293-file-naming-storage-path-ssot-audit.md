@@ -183,10 +183,11 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 ## Remediation Roadmap
 
-### Phase 1: Quick Wins (1-2 days, no behavior change)
+### Phase 1: Quick Wins (1-2 days, no behavior change) -- COMPLETED 2026-04-07
 
-- [ ] Fix violations #1, #8: Replace `Date.now()` with `generateFileId()` in `ImageProcessor.ts` and `FileNamingService.ts`
-- [ ] Pure internal filename changes, no external API impact
+- [x] Fix violation #1: `ImageProcessor.ts` — replaced `Date.now()` with `generateFileId()` for fallback filename
+- [x] Fix violation #8: `FileNamingService.ts` — replaced `Date.now()` with `generateFileId()` in default case, replaced `'Company_' + Date.now()` with `'Unknown_Company'` static fallback
+- [x] Pure internal filename changes, no external API impact
 
 ### Phase 2: Photo Upload Path Migration (3-5 days)
 
@@ -227,4 +228,5 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | Phase 1 COMPLETED — violations #1, #8 fixed: `Date.now()` replaced with `generateFileId()` | Claude Code |
 | 2026-04-07 | Initial SSoT audit — 12 ADRs mapped, 8 violations found, 92% centralization | Claude Code |

@@ -4,6 +4,7 @@
 import type { ContactFormData } from '@/types/ContactFormTypes';
 // 🏢 ENTERPRISE: Import shared utilities from canonical naming module
 import { sanitizeForFilename } from '@/services/upload/utils/file-display-name';
+import { generateFileId } from '@/services/upload/utils/storage-path';
 
 // 🌐 i18n: Fallback labels as i18n keys (to be translated by consuming component)
 const FALLBACK_LABELS = {
@@ -93,7 +94,7 @@ export class FileNamingService {
     // 🌐 i18n: Use English fallback (filenames should be language-neutral)
     const companyName = formData.companyName?.trim()
       ? formData.companyName
-      : (formData.tradeName || formData.name || 'Company_' + Date.now());
+      : (formData.tradeName || formData.name || 'Unknown_Company');
     const extension = this.getFileExtension(originalFilename);
 
     const purposeLabel = purpose === 'logo' ? 'logo' : 'representative';
@@ -166,10 +167,10 @@ export class FileNamingService {
         break;
 
       default:
-        // Fallback - χρήση original name με timestamp
-        const timestamp = Date.now();
+        // Fallback - χρήση canonical ID generation (ADR-293)
+        const fallbackId = generateFileId();
         const extension = this.getFileExtension(file.name);
-        newFilename = `upload_${timestamp}${extension}`;
+        newFilename = `${fallbackId}${extension}`;
     }
 
     // Create new File object με το νέο όνομα
