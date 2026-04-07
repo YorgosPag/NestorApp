@@ -294,10 +294,14 @@
       "fileTooSmall": "[[~~~~~~~ Το αρχείο {{fileName}} είναι πολύ μικρό ~~~~~~~]]"
     },
     "compressed": "[[~~~~~~~~~~~~ {{fileName}}: Συμπιέστηκε κατά {{savings}}% ({{originalSize}} → {{compressedSize}}) ~~~~~~~~~~~~]]",
+    "fileTypesHintPrefix": "[[~~~~ Υποστηριζόμενοι τύποι ~~~~]]",
     "fileTypes": {
       "images": "[[~~ Εικόνες ~~]]",
       "pdf": "[[~~ PDF ~~]]",
-      "documents": "[[~~ Έγγραφα ~~]]"
+      "documents": "[[~~ Έγγραφα ~~]]",
+      "dxf": "[[~~ DXF ~~]]",
+      "word": "[[~~ Word ~~]]",
+      "excel": "[[~~ Excel ~~]]"
     }
   },
   "pathSegments": {

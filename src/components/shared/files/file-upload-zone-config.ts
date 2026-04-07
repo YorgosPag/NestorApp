@@ -96,3 +96,36 @@ export function getMaxSizeForType(fileType: FileType): number {
 
 /** Format bytes to human-readable string — delegates to centralized formatFileSize */
 export const formatBytes = formatFileSize;
+
+// ============================================================================
+// ACCEPT → HINT MAPPING (SSoT for dynamic file type hints)
+// ============================================================================
+
+/**
+ * Maps accept string tokens to i18n file type keys.
+ * Order matters — determines display order in the hint.
+ */
+const ACCEPT_TO_TYPE_KEY: ReadonlyArray<{ pattern: RegExp; key: string }> = [
+  { pattern: /image\/\*|\.jpg|\.jpeg|\.png|\.gif|\.webp|image\/jpeg|image\/png/, key: 'images' },
+  { pattern: /\.dxf|application\/dxf|image\/vnd\.dxf/, key: 'dxf' },
+  { pattern: /\.pdf|application\/pdf/, key: 'pdf' },
+  { pattern: /\.docx?|application\/msword|wordprocessingml/, key: 'word' },
+  { pattern: /\.xlsx?|application\/vnd\.ms-excel|spreadsheetml/, key: 'excel' },
+];
+
+/**
+ * Derive human-readable file type keys from an `accept` string.
+ *
+ * @example
+ * deriveTypeKeys('.dxf,.pdf,.jpg') → ['images', 'dxf', 'pdf']
+ * deriveTypeKeys('image/*,.pdf,.doc,.docx,.xls,.xlsx') → ['images', 'pdf', 'word', 'excel']
+ */
+export function deriveTypeKeys(accept: string): string[] {
+  const keys: string[] = [];
+  for (const { pattern, key } of ACCEPT_TO_TYPE_KEY) {
+    if (pattern.test(accept) && !keys.includes(key)) {
+      keys.push(key);
+    }
+  }
+  return keys;
+}

@@ -304,10 +304,14 @@
       "fileTooSmall": "File {{fileName}} is too small"
     },
     "compressed": "{{fileName}}: Compressed by {{savings}}% ({{originalSize}} → {{compressedSize}})",
+    "fileTypesHintPrefix": "Supported types",
     "fileTypes": {
       "images": "Images",
       "pdf": "PDF",
-      "documents": "Documents"
+      "documents": "Documents",
+      "dxf": "DXF",
+      "word": "Word",
+      "excel": "Excel"
     }
   },
   "pathSegments": {

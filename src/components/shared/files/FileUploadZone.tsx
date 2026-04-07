@@ -39,6 +39,7 @@ import {
   IMAGE_MIME_TYPES,
   detectFileType,
   formatBytes,
+  deriveTypeKeys,
   COMPRESSION_USAGE,
   type FileUploadZoneProps,
   type UsageContext,
@@ -436,7 +437,7 @@ export function FileUploadZone({
               {t('uploadZone.orDragAndDrop')}
             </div>
             <p className={cn("text-xs", `${colors.text.muted}/80`)}>
-              {typesHint ?? t('uploadZone.fileTypesHint')} • {t('uploadZone.maxSize', { size: `${Math.round(maxSize / 1024 / 1024)}MB` })}
+              {typesHint ?? `${t('uploadZone.fileTypesHintPrefix')}: ${deriveTypeKeys(accept).map(k => t(`uploadZone.fileTypes.${k}`)).join(', ')}`} • {t('uploadZone.maxSize', { size: `${Math.round(maxSize / 1024 / 1024)}MB` })}
             </p>
             {/* 🏢 ENTERPRISE: Show type-specific limits */}
             <p className={cn("text-xs", `${colors.text.muted}/60`)}>
