@@ -50,6 +50,8 @@ interface UseFileUploadParams {
   category: FileCategory;
   entityLabel?: string;
   purpose?: string;
+  /** ADR-236 Phase 3: Tag uploaded file with multi-level floor ID */
+  levelFloorId?: string;
   currentUserId: string;
   selectedEntryPoint: UploadEntryPoint | null;
   customTitle: string;
@@ -90,6 +92,7 @@ export function useFileUpload({
   category,
   entityLabel,
   purpose,
+  levelFloorId,
   currentUserId,
   selectedEntryPoint,
   customTitle,
@@ -162,6 +165,7 @@ export function useFileUpload({
             category: uploadCategory,
             entityLabel,
             purpose: uploadPurpose,
+            ...(levelFloorId ? { levelFloorId } : {}),
             originalFilename: file.name,
             ext,
             contentType: file.type,
@@ -237,7 +241,7 @@ export function useFileUpload({
       setUploading(false);
     }
   }, [
-    companyId, projectId, entityType, entityId, domain, category, entityLabel, purpose,
+    companyId, projectId, entityType, entityId, domain, category, entityLabel, purpose, levelFloorId,
     currentUserId, selectedEntryPoint, customTitle, refetch, recordFileActivity,
     onUploadComplete, success, showError, warning, t,
   ]);

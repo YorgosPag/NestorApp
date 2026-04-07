@@ -98,6 +98,8 @@ export interface EntityFilesManagerProps {
   onNavigateToFloors?: () => void;
   navigateToFloorsLabel?: string;
   fetchAllDomains?: boolean;
+  /** ADR-236 Phase 3: Filter/tag files by multi-level floor ID */
+  levelFloorId?: string;
 }
 
 // ============================================================================
@@ -128,6 +130,7 @@ export function EntityFilesManager({
   onNavigateToFloors,
   navigateToFloorsLabel,
   fetchAllDomains,
+  levelFloorId,
 }: EntityFilesManagerProps) {
   const { t } = useTranslation('files');
   const { activeWorkspace } = useWorkspace();
@@ -168,6 +171,7 @@ export function EntityFilesManager({
     domain: fetchAllDomains ? undefined : domain,
     category: fetchAllDomains ? undefined : category,
     purpose: fetchAllDomains ? undefined : purpose,
+    levelFloorId,
     autoFetch: true,
     realtime: displayStyle === 'floorplan-gallery',
   });
@@ -203,7 +207,7 @@ export function EntityFilesManager({
 
   const { handleUpload, handleCapture, uploading } = useFileUpload({
     companyId, projectId, entityType, entityId,
-    domain, category, entityLabel, purpose, currentUserId,
+    domain, category, entityLabel, purpose, levelFloorId, currentUserId,
     selectedEntryPoint, customTitle, refetch, recordFileActivity,
     onUploadComplete: () => {
       setShowUploadZone(false);

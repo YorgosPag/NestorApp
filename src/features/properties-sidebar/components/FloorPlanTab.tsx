@@ -1,26 +1,18 @@
 /**
- * =============================================================================
- * 🏢 ENTERPRISE: Unit Floorplan Tab
- * =============================================================================
+ * Unit Floorplan Tab — ADR-031, ADR-033, ADR-236 Phase 3
  *
- * Uses centralized EntityFilesManager for floorplan upload with:
- * - Same UI as Photos/Videos tabs (Αρχεία | Κάδος, Gallery/List/Tree views)
- * - Full-width FloorplanGallery for DXF/PDF display
- * - Enterprise naming convention (ΔΟΜΗ.txt pattern)
- * - Multi-tenant Storage Rules
+ * Multi-level properties (maisonettes, shops) show level sub-tabs
+ * so the admin can upload/view one floorplan per level.
+ * Single-level properties: no sub-tabs, unchanged behavior.
  *
  * @module features/properties-sidebar/components/FloorPlanTab
- * @enterprise ADR-031 - Canonical File Storage System
- * @enterprise ADR-033 - Floorplan Processing Pipeline
- *
- * Storage Path:
- * companies/{companyId}/entities/unit/{propertyId}/domains/construction/categories/floorplans/files/
  */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { LevelTabStrip } from '@/features/property-details/components/PropertyFieldsReadOnly';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -35,11 +27,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 const logger = createModuleLogger('FloorPlanTab');
 
-// =============================================================================
-// PROPS
-// =============================================================================
-
-// 🏢 ENTERPRISE: Centralized Property Icon & Color
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 const propertyColor = NAVIGATION_ENTITIES.property.color;
 
@@ -47,106 +34,101 @@ interface FloorPlanTabProps {
   selectedProperty: Property | null;
 }
 
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Accepted file types for floorplans (DXF, PDF, images) */
 const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
 
-// =============================================================================
-// COMPONENT
-// =============================================================================
-
-/**
- * 🏢 ENTERPRISE: Unit Floorplan Tab
- *
- * Displays unit floorplans using centralized EntityFilesManager with:
- * - Domain: construction
- * - Category: floorplans
- * - DisplayStyle: floorplan-gallery (full-width DXF/PDF viewer)
- * - Purpose: 'unit-floorplan' for filtering
- */
-export function FloorPlanTab({
-  selectedProperty,
-}: FloorPlanTabProps) {
+export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const fallbackCompanyId = useCompanyId()?.companyId;
 
-  // 🏢 ENTERPRISE: Use unit's companyId (from Firestore) if available,
-  // fallback to auth context. This ensures super_admin sees files
-  // for units belonging to other companies.
   const unitCompanyId = (selectedProperty as Record<string, unknown> | null)?.companyId as string | undefined;
   const companyId = unitCompanyId || fallbackCompanyId;
   const currentUserId = user?.uid;
 
-  // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
   const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);
+
+  // Multi-level: active level selection
+  const levels = selectedProperty?.levels ?? [];
+  const isMultiLevel = !!selectedProperty?.isMultiLevel && levels.length >= 2;
+  const [activeLevelId, setActiveLevelId] = useState<string | null>(null);
+
+  // Reset level selection when property changes
+  useEffect(() => {
+    if (isMultiLevel && levels.length > 0) {
+      const sorted = [...levels].sort((a, b) => a.floorNumber - b.floorNumber);
+      setActiveLevelId(sorted[0].floorId);
+    } else {
+      setActiveLevelId(null);
+    }
+  }, [selectedProperty?.id, isMultiLevel, levels.length]);
 
   useEffect(() => {
     const fetchCompanyName = async () => {
-      if (!companyId) {
-        setCompanyDisplayName(undefined);
-        return;
-      }
-
+      if (!companyId) { setCompanyDisplayName(undefined); return; }
       try {
         const company = await getCompanyById(companyId);
         if (company && company.type === 'company') {
-          // 🏢 ENTERPRISE: Use companyName or tradeName as fallback
-          const displayName = company.companyName || company.tradeName || companyId;
-          setCompanyDisplayName(displayName);
+          setCompanyDisplayName(company.companyName || company.tradeName || companyId);
         } else {
-          setCompanyDisplayName(companyId); // Fallback to ID if company not found
+          setCompanyDisplayName(companyId);
         }
       } catch (error) {
-        logger.error('[FloorPlanTab] Failed to fetch company name:', { error: error });
-        setCompanyDisplayName(companyId); // Fallback to ID on error
+        logger.error('[FloorPlanTab] Failed to fetch company name:', { error });
+        setCompanyDisplayName(companyId);
       }
     };
-
     fetchCompanyName();
   }, [companyId]);
 
-  // If no unit selected, show placeholder
   if (!selectedProperty) {
     return (
       <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
         <PropertyIcon className={`${iconSizes['2xl']} ${propertyColor} mb-4 opacity-50`} />
         <h3 className="text-xl font-semibold mb-2">{t('floorplan.selectProperty')}</h3>
-        <p className="text-sm max-w-sm">
-          {t('floorplan.selectUnitDescription')}
-        </p>
+        <p className="text-sm max-w-sm">{t('floorplan.selectUnitDescription')}</p>
       </div>
     );
   }
 
-  // If no companyId or userId, show auth placeholder
   if (!companyId || !currentUserId) {
     return (
       <section className={cn("p-6 text-center", colors.text.muted)}>
-        <p>{t('floorplan.noAuth', 'Απαιτείται σύνδεση για να δείτε τις κατόψεις.')}</p>
+        <p>{t('floorplan.noAuth', { defaultValue: '' })}</p>
       </section>
     );
   }
 
   return (
-    <EntityFilesManager
-      companyId={companyId}
-      currentUserId={currentUserId}
-      entityType="property"
-      entityId={String(selectedProperty.id)}
-      entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
-      domain="construction"
-      category="floorplans"
-      purpose={FLOORPLAN_PURPOSES.PROPERTY}
-      entryPointCategoryFilter="floorplans"
-      displayStyle="floorplan-gallery"
-      acceptedTypes={FLOORPLAN_ACCEPT}
-      companyName={companyDisplayName}
-    />
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Level sub-tabs for multi-level properties (ADR-236 Phase 3) */}
+      {isMultiLevel && (
+        <div className="px-2 pt-2 pb-1">
+          <LevelTabStrip
+            levels={levels}
+            activeLevelId={activeLevelId}
+            onSelectLevel={setActiveLevelId}
+            t={t}
+          />
+        </div>
+      )}
+
+      <EntityFilesManager
+        companyId={companyId}
+        currentUserId={currentUserId}
+        entityType="property"
+        entityId={String(selectedProperty.id)}
+        entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
+        domain="construction"
+        category="floorplans"
+        purpose={FLOORPLAN_PURPOSES.PROPERTY}
+        entryPointCategoryFilter="floorplans"
+        displayStyle="floorplan-gallery"
+        acceptedTypes={FLOORPLAN_ACCEPT}
+        companyName={companyDisplayName}
+        levelFloorId={activeLevelId ?? undefined}
+      />
+    </div>
   );
 }
