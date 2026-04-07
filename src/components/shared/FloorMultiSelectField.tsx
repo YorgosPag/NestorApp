@@ -3,10 +3,13 @@
 /**
  * FloorMultiSelectField — Multi-floor selector for multi-level units (ADR-236)
  *
- * Contiguity rule: a maisonette spans consecutive floors (2→3→4, not 2→3→5).
- * Only the NEXT contiguous floor (above highest level) can be added.
- * If that floor exists in the building → one-click add button.
- * If it doesn't → FloorInlineCreateForm to create it.
+ * Contiguity rule: a maisonette spans consecutive floors (1→2→3, not 1→3→5).
+ * Expansion allowed in BOTH directions:
+ *   - UP:   floor with number = max(current) + 1
+ *   - DOWN: floor with number = min(current) - 1
+ * If the adjacent floor exists → "Add existing floor" button.
+ * If not → "Create new floor" (does NOT auto-add as level; user must
+ * then click the contiguous add button once the floor appears).
  *
  * @module components/shared/FloorMultiSelectField
  * @since ADR-236 — Multi-Level Property Management
@@ -16,7 +19,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { Plus } from 'lucide-react';
+import { ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import { collection, query, where, onSnapshot, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -100,44 +103,41 @@ export function FloorMultiSelectField({
   const isDisabled = disabled || !buildingId;
   const existingFloorNumbers = useMemo(() => new Set(allFloors.map(f => f.number)), [allFloors]);
 
-  // Contiguity: find the next floor above the highest current level
-  const nextContiguousFloor = useMemo<FloorOption | null>(() => {
-    if (value.length < 2) return null;
-    const maxNumber = Math.max(...value.map(l => l.floorNumber));
-    const nextNumber = maxNumber + 1;
-    return allFloors.find(f => f.number === nextNumber) ?? null;
+  // Contiguity: find adjacent floors (UP = max+1, DOWN = min-1)
+  const { floorAbove, floorBelow, canCreateAbove, canCreateBelow } = useMemo(() => {
+    if (value.length < 2) return { floorAbove: null, floorBelow: null, canCreateAbove: false, canCreateBelow: false };
+    const numbers = value.map(l => l.floorNumber);
+    const maxNum = Math.max(...numbers);
+    const minNum = Math.min(...numbers);
+    const above = allFloors.find(f => f.number === maxNum + 1) ?? null;
+    const below = allFloors.find(f => f.number === minNum - 1) ?? null;
+    return {
+      floorAbove: above,
+      floorBelow: below,
+      canCreateAbove: !above,  // next floor up doesn't exist → can create
+      canCreateBelow: !below,  // next floor down doesn't exist → can create
+    };
   }, [value, allFloors]);
 
-  // Does the next contiguous floor need to be CREATED (doesn't exist in building)?
-  const needsNewFloor = useMemo(() => {
-    if (value.length < 2) return false;
-    const maxNumber = Math.max(...value.map(l => l.floorNumber));
-    return !allFloors.some(f => f.number === maxNumber + 1);
-  }, [value, allFloors]);
-
-  // Add the next contiguous existing floor as a level
-  const handleAddNextFloor = useCallback(() => {
-    if (!nextContiguousFloor) return;
+  // Add an existing adjacent floor as a level
+  const handleAddFloor = useCallback((floor: FloorOption) => {
     const selectedFloors: FloorOption[] = [
       ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
-      nextContiguousFloor,
+      floor,
     ];
-    const primary = value[0]?.floorId ?? nextContiguousFloor.id;
-    onChange(buildLevelsFromSelection(selectedFloors, primary));
-  }, [value, onChange, nextContiguousFloor]);
-
-  // When a new floor is created via inline form, add it as level
-  const handleFloorCreated = useCallback((floorId?: string, floorData?: { number: number; name: string }) => {
-    setShowCreateForm(false);
-    if (!floorId || !floorData) return;
-    const newFloor: FloorOption = { id: floorId, number: floorData.number, name: floorData.name };
-    const selectedFloors: FloorOption[] = [
-      ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
-      newFloor,
-    ];
-    const primary = value[0]?.floorId ?? floorId;
+    const primary = value[0]?.floorId ?? floor.id;
     onChange(buildLevelsFromSelection(selectedFloors, primary));
   }, [value, onChange]);
+
+  // Floor created via inline form — do NOT auto-add as level.
+  // The new floor will appear in allFloors via subscription,
+  // then the contiguous "add" button will show it.
+  const handleFloorCreated = useCallback(() => {
+    setShowCreateForm(false);
+  }, []);
+
+  const hasAdjacentExisting = !!floorAbove || !!floorBelow;
+  const hasAdjacentMissing = canCreateAbove || canCreateBelow;
 
   return (
     <fieldset className="space-y-2">
@@ -160,22 +160,38 @@ export function FloorMultiSelectField({
           existingFloorNumbers={existingFloorNumbers}
         />
       ) : !isDisabled && value.length >= 2 ? (
-        <section className="flex flex-wrap gap-2">
-          {/* Case A: next contiguous floor EXISTS in building → one-click add */}
-          {nextContiguousFloor && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs gap-1"
-              onClick={handleAddNextFloor}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {t('multiLevel.addExistingFloor')}: {nextContiguousFloor.name}
-            </Button>
+        <section className="flex flex-col gap-1.5">
+          {/* Add existing adjacent floors (UP and/or DOWN) */}
+          {hasAdjacentExisting && (
+            <section className="flex flex-wrap gap-1.5">
+              {floorAbove && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => handleAddFloor(floorAbove)}
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  {t('multiLevel.addExistingFloor')}: {floorAbove.name}
+                </Button>
+              )}
+              {floorBelow && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => handleAddFloor(floorBelow)}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  {t('multiLevel.addExistingFloor')}: {floorBelow.name}
+                </Button>
+              )}
+            </section>
           )}
-          {/* Case B: next contiguous floor DOES NOT exist → create new */}
-          {needsNewFloor && (
+          {/* Create new floor — only when adjacent floor doesn't exist */}
+          {hasAdjacentMissing && (
             <Button
               type="button"
               variant="ghost"
