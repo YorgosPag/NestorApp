@@ -175,6 +175,7 @@
       "yes": "Yes, multiple levels",
       "no": "No, single floor"
     },
+    "addExistingFloor": "Add existing floor",
     "createFloor": "Create new floor",
     "primaryFloor": "Primary floor",
     "setPrimary": "Set as primary",

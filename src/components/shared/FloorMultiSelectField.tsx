@@ -3,8 +3,8 @@
 /**
  * FloorMultiSelectField — Multi-floor selector for multi-level units (ADR-236)
  *
- * SSoT: Uses FloorInlineCreateForm (canonical 3-field form from Buildings→Floors)
- * for creating new floors. Available existing floors shown as quick-add chips.
+ * Shows quick-add chips for existing building floors (not yet selected),
+ * plus FloorInlineCreateForm for creating new floors when needed.
  *
  * @module components/shared/FloorMultiSelectField
  * @since ADR-236 — Multi-Level Property Management
@@ -76,7 +76,7 @@ export function FloorMultiSelectField({
   // Sync initiallyOpen prop → show create form
   useEffect(() => { if (initiallyOpen) setShowCreateForm(true); }, [initiallyOpen]);
 
-  // Real-time Firestore subscription for building floors (for existingFloorNumbers)
+  // Real-time Firestore subscription for building floors
   useEffect(() => {
     if (!buildingId || !user) { setAllFloors([]); setLoading(false); return; }
     setLoading(true);
@@ -107,7 +107,24 @@ export function FloorMultiSelectField({
   const isDisabled = disabled || !buildingId;
   const existingFloorNumbers = useMemo(() => new Set(allFloors.map(f => f.number)), [allFloors]);
 
-  // Direct add: when floor is created, immediately add as level (no subscription wait)
+  // Available floors = building floors NOT already selected as levels
+  const selectedFloorIds = useMemo(() => new Set(value.map(l => l.floorId)), [value]);
+  const availableFloors = useMemo(
+    () => allFloors.filter(f => !selectedFloorIds.has(f.id)),
+    [allFloors, selectedFloorIds],
+  );
+
+  // Quick-add an existing floor as a new level
+  const handleQuickAdd = useCallback((floor: FloorOption) => {
+    const selectedFloors: FloorOption[] = [
+      ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
+      floor,
+    ];
+    const primary = value[0]?.floorId ?? floor.id;
+    onChange(buildLevelsFromSelection(selectedFloors, primary));
+  }, [value, onChange]);
+
+  // Direct add: when floor is created via inline form
   const handleFloorCreated = useCallback((floorId?: string, floorData?: { number: number; name: string }) => {
     setShowCreateForm(false);
     if (!floorId || !floorData) return;
@@ -132,7 +149,7 @@ export function FloorMultiSelectField({
         <section className={cn("flex items-center gap-2 h-8", colors.text.muted)}>
           <Spinner size="small" />
         </section>
-      ) : !isDisabled && showCreateForm && buildingId ? (
+      ) : showCreateForm && !isDisabled && buildingId ? (
         <FloorInlineCreateForm
           buildingId={buildingId}
           projectId={projectId ?? undefined}
@@ -141,16 +158,37 @@ export function FloorMultiSelectField({
           existingFloorNumbers={existingFloorNumbers}
         />
       ) : !isDisabled && value.length >= 2 ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs gap-1"
-          onClick={() => setShowCreateForm(true)}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          {t('multiLevel.createFloor')}
-        </Button>
+        <section className="space-y-2">
+          {/* Quick-add chips for existing unselected floors */}
+          {availableFloors.length > 0 && (
+            <section className="flex flex-wrap gap-1">
+              {availableFloors.map((f) => (
+                <Button
+                  key={f.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs gap-1"
+                  onClick={() => handleQuickAdd(f)}
+                >
+                  <Plus className="h-3 w-3" />
+                  {f.name}
+                </Button>
+              ))}
+            </section>
+          )}
+          {/* Create new floor — secondary action */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={() => setShowCreateForm(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('multiLevel.createFloor')}
+          </Button>
+        </section>
       ) : null}
     </fieldset>
   );
