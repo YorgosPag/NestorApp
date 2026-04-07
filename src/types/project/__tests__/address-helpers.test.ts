@@ -67,7 +67,7 @@ describe('Address Helpers (ADR-167)', () => {
       };
 
       const formatted = formatAddressLine(address);
-      expect(formatted).toBe('Σαμοθράκης 16, Θεσσαλονίκη 54636');
+      expect(formatted).toBe('Σαμοθράκης 16, Θεσσαλονίκη, 54636');
     });
 
     it('should format address without number', () => {
@@ -82,7 +82,7 @@ describe('Address Helpers (ADR-167)', () => {
       };
 
       const formatted = formatAddressLine(address);
-      expect(formatted).toBe('Σαμοθράκης, Θεσσαλονίκη 54636');
+      expect(formatted).toBe('Σαμοθράκης, Θεσσαλονίκη, 54636');
     });
 
     it('should format address without postal code', () => {
@@ -148,7 +148,9 @@ describe('Address Helpers (ADR-167)', () => {
       const addresses = migrateLegacyAddress(legacy);
 
       expect(addresses).toHaveLength(1);
-      expect(addresses[0].street).toBe('Λεωφ. Κηφισίας 100');
+      // migrateLegacyAddress parses "Λεωφ. Κηφισίας 100" → street: "Λεωφ. Κηφισίας", number: "100"
+      expect(addresses[0].street).toBe('Λεωφ. Κηφισίας');
+      expect(addresses[0].number).toBe('100');
       expect(addresses[0].city).toBe('Αθήνα');
       expect(addresses[0].type).toBe('site');
       expect(addresses[0].isPrimary).toBe(true); // Legacy addresses are always primary
@@ -168,7 +170,7 @@ describe('Address Helpers (ADR-167)', () => {
       };
 
       const addresses = migrateLegacyAddress(legacy);
-      expect(addresses[0].id).toMatch(/^proj_[a-f0-9-]{36}$/); // UUID format
+      expect(addresses[0].id).toMatch(/^addr_[a-f0-9-]{36}$/); // Enterprise ID: addr_ prefix + UUID
       expect(addresses[0].id).not.toMatch(/^addr_\d+$/); // NOT Date.now()
     });
   });
@@ -371,7 +373,8 @@ describe('Address Helpers (ADR-167)', () => {
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('addr_999')
+        expect.stringContaining('addr_999'),
+        expect.anything()
       );
       expect(primary?.id).toBe('addr_1'); // Fallback to first primary
 

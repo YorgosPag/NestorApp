@@ -194,7 +194,7 @@ describe('ReportDataAggregator', () => {
             createdAt: '2026-03-10',
           },
         ],
-        units: [],
+        properties: [],
       });
 
       const result = await ReportDataAggregator.getContactsReport(baseFilter);
@@ -208,7 +208,7 @@ describe('ReportDataAggregator', () => {
     });
 
     it('returns zero metrics when no contacts exist', async () => {
-      setupFirestoreMock({ contacts: [], units: [] });
+      setupFirestoreMock({ contacts: [], properties: [] });
 
       const result = await ReportDataAggregator.getContactsReport(baseFilter);
 
@@ -223,7 +223,7 @@ describe('ReportDataAggregator', () => {
           { id: 'c1', createdAt: '2026-06-15', type: 'individual', status: 'active' },
           { id: 'c2', createdAt: '2025-06-15', type: 'individual', status: 'active' },
         ],
-        units: [],
+        properties: [],
       });
 
       const result = await ReportDataAggregator.getContactsReport(baseFilter);
@@ -242,7 +242,7 @@ describe('ReportDataAggregator', () => {
           { id: 'proj_1', name: 'Project A', status: 'active', type: 'residential', totalValue: 500000, progress: 60 },
           { id: 'proj_2', name: 'Project B', status: 'planning', type: 'commercial', totalValue: 800000, progress: 20 },
         ],
-        units: [
+        properties: [
           { commercialStatus: 'sold', project: 'proj_1' },
           { commercialStatus: 'for_sale', project: 'proj_1' },
         ],
@@ -263,7 +263,7 @@ describe('ReportDataAggregator', () => {
     });
 
     it('returns zero progress when no projects', async () => {
-      setupFirestoreMock({ projects: [], units: [], buildings: [], boq_items: [] });
+      setupFirestoreMock({ projects: [], properties: [], buildings: [], boq_items: [] });
 
       const result = await ReportDataAggregator.getProjectsReport(baseFilter);
 
@@ -280,7 +280,7 @@ describe('ReportDataAggregator', () => {
   describe('getSalesReport', () => {
     it('returns aggregated sales data', async () => {
       setupFirestoreMock({
-        units: [
+        properties: [
           {
             commercialStatus: 'sold',
             commercial: { finalPrice: 150000, paymentSummary: { paidPercentage: 80 } },
@@ -307,7 +307,7 @@ describe('ReportDataAggregator', () => {
     });
 
     it('returns zero when no units', async () => {
-      setupFirestoreMock({ units: [], cheques: [] });
+      setupFirestoreMock({ properties: [], cheques: [] });
 
       const result = await ReportDataAggregator.getSalesReport(baseFilter);
 
@@ -494,7 +494,7 @@ describe('ReportDataAggregator', () => {
   describe('getFinancialReport', () => {
     it('returns aggregated financial data', async () => {
       setupFirestoreMock({
-        units: [
+        properties: [
           {
             commercial: {
               paymentSummary: { totalAmount: 200000, paidAmount: 150000 },
@@ -517,7 +517,7 @@ describe('ReportDataAggregator', () => {
 
     it('returns zero receivables when no units', async () => {
       setupFirestoreMock({
-        units: [],
+        properties: [],
         construction_phases: [],
         building_milestones: [],
         boq_items: [],

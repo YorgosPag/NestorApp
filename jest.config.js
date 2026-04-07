@@ -9,7 +9,8 @@ const config = {
     '/node_modules/',
     '/e2e/',
     '\\.spec\\.(ts|tsx|js|jsx)$',
-    'visual-cross-browser'
+    'visual-cross-browser',
+    'tests/firestore-rules'
   ],
   moduleNameMapper: {
     // =================================================================

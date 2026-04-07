@@ -182,6 +182,8 @@ describe('useContactMutationImpactGuard', () => {
       birthCountry: 'GR',
       gender: 'female',
       amka: '12345678901',
+      vatNumber: '012345678',
+      taxOffice: 'Athens',
       documentType: 'identity_card',
       documentIssuer: 'Athens Police',
       documentNumber: 'AB123456',

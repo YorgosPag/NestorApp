@@ -48,28 +48,32 @@ describe('🎯 Line Drawing Smoke Test (CRITICAL)', () => {
       }
     });
 
-    it('🐛 Fix #2: previewEntity is added to scene in CanvasSection', () => {
-      const filePath = path.join(__dirname, '../components/dxf-layout/CanvasSection.tsx');
+    it('🐛 Fix #2: previewEntity rendering is handled by PreviewCanvas + useDrawingHandlers', () => {
+      // 🔧 UPDATED 2026-04-07: Preview entity logic was refactored out of CanvasSection
+      // into useDrawingHandlers (which calls getLatestPreviewEntity) and PreviewCanvas.
+      // Verify the preview rendering chain exists in useDrawingHandlers.
+      const filePath = path.join(__dirname, '../hooks/drawing/useDrawingHandlers.ts');
 
       if (fs.existsSync(filePath)) {
         const content = fs.readFileSync(filePath, 'utf-8');
 
-        // Verify previewEntity is spread into entities array
-        // 🔧 FIX: Updated to match current code structure (drawingState instead of state)
-        expect(content).toContain('drawingHandlers.drawingState.previewEntity');
-        expect(content).toContain('ADD PREVIEW ENTITY');
+        // Verify previewEntity is accessed and rendered via PreviewCanvas
+        expect(content).toContain('getLatestPreviewEntity');
+        expect(content).toContain('drawPreview');
       }
     });
 
-    it('🐛 Fix #3: onMouseMove calls onDrawingHover in DxfCanvas', () => {
-      const filePath = path.join(__dirname, '../components/dxf-layout/CanvasSection.tsx');
+    it('🐛 Fix #3: onDrawingHover handler exists in useDrawingHandlers and is exported', () => {
+      // 🔧 UPDATED 2026-04-07: onDrawingHover is now defined in useDrawingHandlers
+      // and wired through useDxfViewerState, not directly in CanvasSection.
+      const filePath = path.join(__dirname, '../hooks/drawing/useDrawingHandlers.ts');
 
       if (fs.existsSync(filePath)) {
         const content = fs.readFileSync(filePath, 'utf-8');
 
-        // Verify onDrawingHover is called in onMouseMove
+        // Verify onDrawingHover is defined and calls updatePreview
         expect(content).toContain('onDrawingHover');
-        expect(content).toContain('Call onDrawingHover');
+        expect(content).toContain('updatePreview');
       }
     });
   });
@@ -82,8 +86,8 @@ describe('🎯 Line Drawing Smoke Test (CRITICAL)', () => {
  * Ελέγχει ότι τα ΚΡΙΣΙΜΑ fixes είναι παρόντα στον κώδικα:
  *
  * ✅ Fix #1: onDrawingHover connection
- * ✅ Fix #2: previewEntity added to scene
- * ✅ Fix #3: onMouseMove calls onDrawingHover
+ * ✅ Fix #2: previewEntity rendering via PreviewCanvas + useDrawingHandlers
+ * ✅ Fix #3: onDrawingHover handler exists and calls updatePreview
  *
  * Αν αυτό το test ΑΠΟΤΥΧΕΙ, σημαίνει ότι κάποιος:
  * - Διέγραψε τα critical fixes

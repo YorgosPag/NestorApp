@@ -15,6 +15,16 @@
  * @see local_5_TELEGRAM.txt - Test requirements
  */
 
+// Mock Firebase auth before any imports that trigger enterprise-api-client
+// (ThreadView → useMessageActions → enterprise-api-client → firebase auth)
+jest.mock('@/lib/firebase', () => ({
+  db: {},
+  auth: { onAuthStateChanged: jest.fn() },
+  functions: {},
+  storage: {},
+  default: {},
+}));
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 // 🏢 ENTERPRISE: Import jest-dom matchers for toBeInTheDocument, toHaveClass, etc.

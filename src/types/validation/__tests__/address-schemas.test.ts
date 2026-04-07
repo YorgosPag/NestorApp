@@ -7,6 +7,8 @@
 import {
   projectAddressSchema,
   projectAddressCreateSchema,
+} from '@/types/project/address-schemas';
+import {
   projectAddressesSchema,
   buildingAddressReferenceSchema,
   buildingAddressConfigsSchema,

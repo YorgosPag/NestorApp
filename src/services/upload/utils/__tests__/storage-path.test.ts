@@ -222,17 +222,15 @@ describe('generateFileId', () => {
     expect(id.startsWith('file_')).toBe(true);
   });
 
-  it('should contain timestamp', () => {
-    const before = Date.now();
+  it('should follow enterprise UUID format (file_{uuid})', () => {
     const id = generateFileId();
-    const after = Date.now();
 
-    // Extract timestamp from id (format: file_{timestamp}_{random})
-    const parts = id.split('_');
-    const timestamp = parseInt(parts[1], 10);
+    // Format: file_{xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx}
+    // After "file_" prefix, the rest is a UUID v4
+    const uuidPart = id.slice('file_'.length);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-    expect(timestamp).toBeGreaterThanOrEqual(before);
-    expect(timestamp).toBeLessThanOrEqual(after);
+    expect(uuidRegex.test(uuidPart)).toBe(true);
   });
 });
 

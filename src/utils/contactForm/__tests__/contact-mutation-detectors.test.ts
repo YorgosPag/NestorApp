@@ -91,6 +91,8 @@ describe('contact mutation detectors', () => {
         birthCountry: 'GR',
         gender: 'female',
         amka: '10987654321',
+        vatNumber: '012345678',
+        taxOffice: 'Athens',
         documentType: 'identity_card',
         documentIssuer: 'Athens Police',
         documentNumber: 'AB123456',

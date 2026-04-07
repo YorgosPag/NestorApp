@@ -174,7 +174,7 @@ describe('buildFiltersText', () => {
 describe('buildExportFilename', () => {
   it('generates PDF filename with domain and date', () => {
     const filename = buildExportFilename('properties', 'pdf');
-    expect(filename).toMatch(/^Nestor_Units_Report_\d{4}-\d{2}-\d{2}\.pdf$/);
+    expect(filename).toMatch(/^Nestor_Properties_Report_\d{4}-\d{2}-\d{2}\.pdf$/);
   });
 
   it('generates Excel filename with domain and date', () => {
@@ -388,10 +388,10 @@ describe('Export — Negative & Boundary Cases', () => {
 
   it('handles zero rows in results', () => {
     const params = buildTestParams({
-      results: { rows: [], totalCount: 0, resolvedRefs: {} } as BuilderQueryResponse,
+      results: { rows: [], totalMatched: 0, truncated: false, resolvedRefs: {}, generatedAt: new Date().toISOString() },
     });
     expect(params.results.rows).toHaveLength(0);
-    expect(params.results.totalCount).toBe(0);
+    expect(params.results.totalMatched).toBe(0);
   });
 
   it('grand totals are zero when no groups', () => {

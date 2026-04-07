@@ -3,6 +3,20 @@
  * Tests filter planning, post-filtering, ref resolution logic, and utilities.
  */
 
+// ── server-only + Firebase Admin mocks (must be before imports) ──
+jest.mock('server-only', () => ({}));
+jest.mock('@/lib/firebaseAdmin', () => ({
+  getAdminFirestore: jest.fn(),
+}));
+jest.mock('@/lib/telemetry', () => ({
+  createModuleLogger: () => ({
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  }),
+}));
+
 import {
   planFilterExecution,
   applyPostFilters,

@@ -12,15 +12,19 @@ describe('communications channel hardening', () => {
     expect(getImplementedChannels()).toEqual([
       COMMUNICATION_CHANNELS.EMAIL,
       COMMUNICATION_CHANNELS.TELEGRAM,
+      COMMUNICATION_CHANNELS.WHATSAPP,
+      COMMUNICATION_CHANNELS.MESSENGER,
+      COMMUNICATION_CHANNELS.INSTAGRAM,
     ]);
   });
 
   it('isChannelImplemented() is true only for implemented channels', () => {
     expect(isChannelImplemented(COMMUNICATION_CHANNELS.EMAIL)).toBe(true);
     expect(isChannelImplemented(COMMUNICATION_CHANNELS.TELEGRAM)).toBe(true);
+    expect(isChannelImplemented(COMMUNICATION_CHANNELS.WHATSAPP)).toBe(true);
+    expect(isChannelImplemented(COMMUNICATION_CHANNELS.MESSENGER)).toBe(true);
+    expect(isChannelImplemented(COMMUNICATION_CHANNELS.INSTAGRAM)).toBe(true);
 
-    expect(isChannelImplemented(COMMUNICATION_CHANNELS.MESSENGER)).toBe(false);
-    expect(isChannelImplemented(COMMUNICATION_CHANNELS.WHATSAPP)).toBe(false);
     expect(isChannelImplemented(COMMUNICATION_CHANNELS.SMS)).toBe(false);
   });
 
@@ -29,8 +33,6 @@ describe('communications channel hardening', () => {
 
     expect(unimplemented).toEqual(
       expect.arrayContaining([
-        COMMUNICATION_CHANNELS.MESSENGER,
-        COMMUNICATION_CHANNELS.WHATSAPP,
         COMMUNICATION_CHANNELS.SMS,
       ])
     );
@@ -39,6 +41,9 @@ describe('communications channel hardening', () => {
       expect.not.arrayContaining([
         COMMUNICATION_CHANNELS.EMAIL,
         COMMUNICATION_CHANNELS.TELEGRAM,
+        COMMUNICATION_CHANNELS.WHATSAPP,
+        COMMUNICATION_CHANNELS.MESSENGER,
+        COMMUNICATION_CHANNELS.INSTAGRAM,
       ])
     );
   });
