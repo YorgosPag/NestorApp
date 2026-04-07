@@ -7,6 +7,36 @@ import type { FileUploadResult, FileUploadProgress } from '@/hooks/useFileUpload
 import { createUploadHandlerFromPreset } from '@/services/upload-handlers';
 
 // ============================================================================
+// 🏢 SSoT: CONTACT NAME RESOLUTION — SINGLE SOURCE OF TRUTH
+// ============================================================================
+// ALL contact name resolution MUST go through this function.
+// DO NOT compute contactName inline anywhere else in the codebase.
+// Priority: explicit override → firstName+lastName → companyName → serviceName → name
+
+/**
+ * 🏢 SSoT: Resolve contact display name from form data.
+ *
+ * This is the SINGLE SOURCE OF TRUTH for contact name resolution.
+ * Used by: upload handlers, file display names, tree builders.
+ *
+ * @param formData - Contact form data (individual, company, or service)
+ * @param override - Optional explicit name (takes precedence over formData)
+ * @returns Resolved contact name, or undefined if unavailable
+ */
+export function resolveContactName(
+  formData: Pick<ContactFormData, 'type' | 'firstName' | 'lastName' | 'companyName' | 'serviceName' | 'name'>,
+  override?: string,
+): string | undefined {
+  if (override) return override;
+
+  if (formData.type === 'individual') {
+    const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
+    return fullName || formData.name || undefined;
+  }
+  return formData.companyName || formData.serviceName || formData.name || undefined;
+}
+
+// ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
@@ -86,19 +116,7 @@ export function getPhotoUploadHandlers(
   formData: ContactFormData,
   canonicalContext?: CanonicalUploadContext
 ): PhotoUploadHandlers {
-  // 🏢 SSoT: SINGLE SOURCE OF TRUTH for contact name resolution
-  // All callers delegate to this function — NO duplicate logic elsewhere.
-  // Priority: explicit override → firstName+lastName → companyName → serviceName → name
-  const resolveContactName = (): string | undefined => {
-    if (canonicalContext?.contactName) {
-      return canonicalContext.contactName;
-    }
-    if (formData.type === 'individual') {
-      const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
-      return fullName || formData.name || undefined;
-    }
-    return formData.companyName || formData.serviceName || formData.name || undefined;
-  };
+  const resolvedName = resolveContactName(formData, canonicalContext?.contactName);
 
   // 🏢 ENTERPRISE: Build contactData for FileNamingService compatibility
   const contactData = {
@@ -113,7 +131,7 @@ export function getPhotoUploadHandlers(
         companyId: canonicalContext.companyId,
         createdBy: canonicalContext.createdBy,
         contactId: canonicalContext.contactId,
-        contactName: resolveContactName(),
+        contactName: resolvedName,
       }
     : {};
 

@@ -352,7 +352,7 @@ export function MultiplePhotosCompact({
                 companyId={canonicalCompanyId}
                 contactId={contactData?.id}
                 createdBy={canonicalCreatedBy}
-                contactName={contactData?.name as string | undefined}
+                contactName={undefined} /* SSoT: resolved by usePhotoUploadLogic via resolveContactName() */
               />
             </article>
           );

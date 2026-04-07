@@ -7,6 +7,7 @@ import { useAutoUploadEffect } from '@/hooks/upload/useAutoUploadEffect';
 import { useFileSelectionHandlers } from '@/hooks/upload/useFileSelectionHandlers';
 import { createUploadHandlerFromPreset } from '@/services/upload-handlers';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { resolveContactName } from '@/components/ContactFormSections/utils/PhotoUploadConfiguration';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('usePhotoUploadLogic');
@@ -116,7 +117,7 @@ export function usePhotoUploadLogic({
       contactId,
       companyId,
       createdBy,
-      contactName: contactName || (contactDataRef.current?.name as string),
+      contactName: contactName || (contactDataRef.current ? resolveContactName(contactDataRef.current) : undefined),
       purpose,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

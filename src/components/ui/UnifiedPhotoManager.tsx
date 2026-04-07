@@ -229,7 +229,7 @@ function CompanyPhotoManager({
               companyId={canonicalCompanyId}
               contactId={formData.id}
               createdBy={canonicalCreatedBy}
-              contactName={formData.companyName || formData.tradeName}
+              contactName={undefined} /* SSoT: resolved by usePhotoUploadLogic via resolveContactName() */
             />
           </CardContent>
         </Card>
@@ -286,7 +286,7 @@ function CompanyPhotoManager({
               companyId={canonicalCompanyId}
               contactId={formData.id}
               createdBy={canonicalCreatedBy}
-              contactName={formData.firstName ? `${formData.firstName} ${formData.lastName || ''}`.trim() : undefined}
+              contactName={undefined} /* SSoT: resolved by usePhotoUploadLogic via resolveContactName() */
             />
           </CardContent>
         </Card>
@@ -361,7 +361,7 @@ function ServicePhotoManager({
           companyId={canonicalCompanyId}
           contactId={formData.id}
           createdBy={canonicalCreatedBy}
-          contactName={formData.companyName || formData.tradeName}
+          contactName={undefined} /* SSoT: resolved by usePhotoUploadLogic via resolveContactName() */
         />
       </CardContent>
     </Card>
