@@ -12,7 +12,7 @@
  *
  * ENTERPRISE SOLUTIONS:
  * 1. ✅ Unified Collections: Single 'floorplans' collection με entityType field
- * 2. ✅ PascalCase Naming: cadFiles, cadLayers, obligationSections
+ * 2. ✅ PascalCase Naming: cadFiles, cadLayers
  * 3. ✅ Centralized Configuration: All collections in firestore-collections.ts
  * 4. ✅ Enterprise Metadata: createdAt, updatedAt, version, status fields
  * 5. ✅ 3NF Normalization: Proper foreign keys και referential integrity
@@ -28,79 +28,14 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import type {
+  EnterpriseFloorplan,
+  EnterpriseCADFile,
+  EnterpriseCADLayer,
+  MigrationStats,
+} from './003_types';
+
 const logger = createModuleLogger('Migration003');
-
-// Enterprise Document Interfaces
-interface EnterpriseDocument {
-  id: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  createdBy: string;
-  version: number;
-  status: 'active' | 'archived' | 'deleted';
-  migrationInfo: {
-    migrationId: string;
-    migratedAt: Timestamp;
-    sourceCollection: string;
-    sourceDocumentId: string;
-  };
-}
-
-interface EnterpriseFloorplan extends EnterpriseDocument {
-  entityType: 'building' | 'project' | 'unit';
-  entityId: string;
-  entityName: string;
-  floorLevel?: number;
-  planType: 'architectural' | 'structural' | 'electrical' | 'mechanical';
-  fileUrl?: string;
-  fileName?: string;
-  metadata?: Record<string, unknown>;
-}
-
-// 🏢 ENTERPRISE: Type-safe legacy scene structure for backward compatibility
-interface LegacySceneData {
-  entities?: unknown[];
-  layers?: unknown[];
-  blocks?: unknown[];
-  [key: string]: unknown;
-}
-
-interface EnterpriseCADFile extends EnterpriseDocument {
-  fileName: string;
-  fileType: 'dxf' | 'dwg' | 'ifc' | 'step';
-  entityId: string;
-  entityType: string;
-  storageUrl?: string;
-  layerCount?: number;
-  entityCount?: number;
-  sizeBytes?: number;
-  checksum?: string;
-  scene?: LegacySceneData; // For backward compatibility
-}
-
-interface EnterpriseCADLayer extends EnterpriseDocument {
-  fileId: string;
-  layerName: string;
-  layerType: 'overlay' | 'base' | 'annotation' | 'dimension';
-  visibility: boolean;
-  color?: string;
-  lineType?: string;
-  properties?: Record<string, unknown>;
-}
-
-interface MigrationStats {
-  collectionsToMigrate: number;
-  documentsAnalyzed: number;
-  documentsToMigrate: number;
-  documentsMigrated: number;
-  errors: string[];
-  collections: Record<string, {
-    sourceCollection: string;
-    targetCollection: string;
-    documentCount: number;
-    migratedCount: number;
-  }>;
-}
 
 class EnterpriseArchitectureConsolidationSteps {
   private stats: MigrationStats = {
@@ -130,7 +65,6 @@ class EnterpriseArchitectureConsolidationSteps {
           { source: 'dxf_files', target: COLLECTIONS.CAD_FILES, entityType: 'mixed' },
           { source: 'dxf-overlay-levels', target: COLLECTIONS.CAD_LAYERS, entityType: 'overlay' },
           { source: 'dxf-viewer-levels', target: COLLECTIONS.CAD_LAYERS, entityType: 'viewer' },
-          { source: 'obligation-sections', target: COLLECTIONS.OBLIGATION_SECTIONS, entityType: 'section' },
           { source: 'parking_spots', target: COLLECTIONS.PARKING_SPACES, entityType: 'parking' }
         ];
 

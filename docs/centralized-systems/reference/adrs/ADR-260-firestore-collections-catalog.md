@@ -59,8 +59,8 @@
 | 15 | `OBLIGATIONS` | `obligations` | — | Υποχρεώσεις πληρωμών |
 | 16 | `OBLIGATION_TEMPLATES` | `obligationTemplates` | — | Templates υποχρεώσεων |
 | 17 | `OBLIGATION_TRANSMITTALS` | `obligation_transmittals` | — | Transmittals PDFs |
-| 18 | `OBLIGATION_SECTIONS` | `obligationSections` | — | Enterprise sections |
-| 19 | `ASSIGNMENT_POLICIES` | `assignment_policies` | — | Routing policies |
+| ~~18~~ | ~~`OBLIGATION_SECTIONS`~~ | ~~`obligationSections`~~ | — | **ΑΦΑΙΡΕΘΗΚΕ** (2026-04-07): Orphan collection — sections αποθηκεύονται ως nested array σε obligations |
+| 18 | `ASSIGNMENT_POLICIES` | `assignment_policies` | — | Routing policies |
 
 ### 3.3 Communications & Omnichannel (5)
 
@@ -376,23 +376,16 @@
 | 1 | `accounting_invoice_counters` | 1 | `COLLECTIONS.ACCOUNTING_INVOICE_COUNTERS` | OK |
 | 2 | `accounting_settings` | 1 | `COLLECTIONS.ACCOUNTING_SETTINGS` | OK |
 | 3 | `config` | 5 | `COLLECTIONS.CONFIG` | OK |
-| 4 | `obligation-sections` | 2 | `COLLECTIONS.OBLIGATION_SECTIONS` | **MISMATCH** |
+| ~~4~~ | ~~`obligation-sections`~~ | ~~2~~ | — | **ΑΦΑΙΡΕΘΗΚΕ** (2026-04-07): Orphan — sections nested σε obligations |
 | 5 | `obligations` | 8 | `COLLECTIONS.OBLIGATIONS` | OK |
 | 6 | `settings` | 3 | `COLLECTIONS.SETTINGS` | OK |
 | 7 | `system` | 1 | `COLLECTIONS.SYSTEM` | OK |
 | 8 | `user_2fa_settings` | 1 | `COLLECTIONS.USER_2FA_SETTINGS` | OK |
 | 9 | `users` | 2 | `COLLECTIONS.USERS` | OK |
 
-### 6.2 ΚΡΙΣΙΜΗ ΑΣΥΝΕΠΕΙΑ: `obligation-sections` vs `obligationSections`
+### 6.2 ~~ΚΡΙΣΙΜΗ ΑΣΥΝΕΠΕΙΑ~~: `obligation-sections` — ✅ RESOLVED (2026-04-07)
 
-| Πηγή | Όνομα Collection |
-|------|-----------------|
-| **Live Firestore** | `obligation-sections` (kebab-case) |
-| **Κώδικας** (`COLLECTIONS.OBLIGATION_SECTIONS`) | `obligationSections` (camelCase) |
-
-**Κίνδυνος**: Ο κώδικας γράφει στο `obligationSections` αλλά τα 2 υπάρχοντα documents βρίσκονται στο `obligation-sections`. Δημιουργήθηκαν από παλαιότερη έκδοση κώδικα ή χειροκίνητα.
-
-**Προτεινόμενη Δράση**: Migration ή ενημέρωση `COLLECTIONS.OBLIGATION_SECTIONS` → `obligation-sections`.
+**Λύση**: `OBLIGATION_SECTIONS` αφαιρέθηκε εντελώς από `firestore-collections.ts` και migration script. Τα sections αποθηκεύονται ως nested array μέσα στα `obligations` documents — δεν χρειάζεται standalone collection. Τα orphan data στο Firestore θα διαγραφούν χειροκίνητα.
 
 ### 6.3 Γιατί μόνο 9 collections;
 
@@ -532,7 +525,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 
 ### 10.2 Συστάσεις
 
-1. **ΑΜΕΣΟ — obligation-sections fix**: Migration ή ενημέρωση `COLLECTIONS.OBLIGATION_SECTIONS` → `obligation-sections`
+1. ~~**ΑΜΕΣΟ — obligation-sections fix**~~ ✅ **RESOLVED 2026-04-07**: Collection αφαιρέθηκε — sections αποθηκεύονται ως nested array σε obligations. Orphan data διαγράφονται χειροκίνητα.
 2. ~~**ΑΜΕΣΟ — Enterprise ID violations fix**~~ ✅ **FIXED 2026-03-24**: Όλα τα enterprise ID violations διορθώθηκαν (11 call sites σε 9 αρχεία). Νέοι generators: `generateEmploymentRecordId()` (`emprec`), `generateAppointmentId()` (`appt`), `generateRouteConfigId()` (`rcfg`)
 3. **Deprecation Plan**: Ορισμός χρονοδιαγράμματος sunset για `CAD_FILES` → `FILES`
 4. **Legacy Cleanup**: Αξιολόγηση αν τα 4 layer collections χρησιμοποιούνται ακόμα
