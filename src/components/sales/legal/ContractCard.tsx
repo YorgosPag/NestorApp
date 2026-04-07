@@ -39,17 +39,17 @@ interface ContractCardProps {
 // HELPERS
 // ============================================================================
 
-const PHASE_LABELS: Record<string, string> = {
-  preliminary: 'Προσύμφωνο',
-  final: 'Οριστικό Συμβόλαιο',
-  payoff: 'Εξοφλητήριο',
+const PHASE_KEYS: Record<string, string> = {
+  preliminary: 'sales.legal.preliminary',
+  final: 'sales.legal.final',
+  payoff: 'sales.legal.payoff',
 };
 
-const STATUS_LABELS: Record<ContractStatus, { key: string; default: string }> = {
-  draft: { key: 'sales.legal.draft', default: 'Πρόχειρο' },
-  pending_signature: { key: 'sales.legal.pendingSig', default: 'Αναμονή Υπογραφής' },
-  signed: { key: 'sales.legal.signed', default: 'Υπογεγραμμένο' },
-  completed: { key: 'sales.legal.completed', default: 'Ολοκληρωμένο' },
+const STATUS_KEYS: Record<ContractStatus, string> = {
+  draft: 'sales.legal.draft',
+  pending_signature: 'sales.legal.pendingSig',
+  signed: 'sales.legal.signed',
+  completed: 'sales.legal.completed',
 };
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
@@ -59,10 +59,10 @@ const STATUS_COLORS: Record<ContractStatus, string> = {
   completed: 'bg-blue-100 text-blue-800',
 };
 
-const NEXT_STATUS_LABELS: Record<ContractStatus, string> = {
-  draft: 'Αποστολή για Υπογραφή',
-  pending_signature: 'Σημείωση ως Υπογεγραμμένο',
-  signed: 'Ολοκλήρωση',
+const NEXT_STATUS_KEYS: Record<ContractStatus, string> = {
+  draft: 'sales.legal.sendForSignature',
+  pending_signature: 'sales.legal.markAsSigned',
+  signed: 'sales.legal.complete',
   completed: '',
 };
 
@@ -95,9 +95,9 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
     setTransitioning(false);
 
     if (result.success) {
-      success(`Μετάβαση σε ${STATUS_LABELS[target].default}`);
+      success(t('sales.legal.transitionSuccess', { status: t(STATUS_KEYS[target]) }));
     } else {
-      notifyError(result.error ?? 'Αποτυχία μετάβασης');
+      notifyError(result.error ?? t('sales.legal.transitionError'));
     }
   }, [contract.id, onTransition, success, notifyError]);
 
@@ -112,13 +112,13 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
         <span className="flex items-center gap-2 min-w-0">
           <FileSignature className={cn("h-4 w-4 shrink-0", colors.text.muted)} />
           <span className="font-medium text-sm truncate">
-            {t(`sales.legal.${contract.phase}`, { defaultValue: PHASE_LABELS[contract.phase] })}
+            {t(PHASE_KEYS[contract.phase])}
           </span>
         </span>
 
         <span className="flex items-center gap-2 shrink-0">
           <Badge variant="secondary" className={cn('text-[10px]', STATUS_COLORS[contract.status])}>
-            {t(STATUS_LABELS[contract.status].key, { defaultValue: STATUS_LABELS[contract.status].default })}
+            {t(STATUS_KEYS[contract.status])}
           </Badge>
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
@@ -202,7 +202,7 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
                   className="text-xs gap-1"
                 >
                   <ArrowRight className="h-3 w-3" />
-                  {NEXT_STATUS_LABELS[contract.status]}
+                  {t(NEXT_STATUS_KEYS[contract.status])}
                 </Button>
               ))}
             </footer>

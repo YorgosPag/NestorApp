@@ -183,5 +183,9 @@
     "priceRange": {
       "label": "Εύρος Τιμής (€)"
     }
+  },
+  "mapLayers": {
+    "pinPreviewTitle": "Πινέζα Preview - Ακτίνα: {{radius}}m",
+    "pinRadiusTitle": "Πινέζα - Ακτίνα: {{radius}}m"
   }
 }

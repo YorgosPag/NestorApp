@@ -776,7 +776,8 @@
     "noResults": "No results found",
     "region": "Region",
     "municipality": "Municipality",
-    "selectToView": "Select a result to view the boundary"
+    "selectToView": "Select a result to view the boundary",
+    "searchPlaceholder": "e.g. Municipality of Athens, Attica, Thessaloniki..."
   },
   "coordinatePicker": {
     "instructions": {
@@ -784,5 +785,13 @@
       "step3": "3. Set accuracy and optional description",
       "step4": "4. Click \"Add Control Point\" to save"
     }
+  },
+  "page": {
+    "checkingPermissions": "Checking permissions...",
+    "adminOnly": "Admin Access Only",
+    "noPermission": "You do not have the required permissions to access the Geo-Canvas System.",
+    "loginAsAdmin": "Please log in with an admin account.",
+    "initializing": "Initializing Geo-Canvas...",
+    "loading": "Loading Geo-Canvas..."
   }
 }

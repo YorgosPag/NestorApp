@@ -87,5 +87,11 @@
     "summary": "Summary:",
     "details": "Details:",
     "timestamp": "Timestamp:"
+  },
+  "contextMenu": {
+    "flipArc": "Reverse"
+  },
+  "breadcrumb": {
+    "ariaLabel": "Drawing location"
   }
 }

@@ -343,5 +343,16 @@
       "boqItem": "Στοιχείο BOQ",
       "budgetAmount": "Ποσό Προϋπολογισμού"
     }
+  },
+  "toolbar": {
+    "colors": {
+      "red": "Κόκκινο",
+      "blue": "Μπλε",
+      "green": "Πράσινο",
+      "purple": "Μωβ",
+      "orange": "Πορτοκαλί",
+      "gray": "Γκρι",
+      "removeColor": "Αφαίρεση χρώματος"
+    }
   }
 }

@@ -46,12 +46,12 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
       <div className="flex items-center justify-between">
         <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${semanticColors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Square className={iconSizes.sm} />
-          Περιοχές Επικάλυψης
+          {t('overlayPanel.title')}
         </h3>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.text.muted}`}>
-          <span>Περιοχές: {visibleRegions.length}</span>
+          <span>{t('overlayPanel.regionsCount', { count: visibleRegions.length })}</span>
           <span>•</span>
-          <span>Επιλεγμένες: {selectedRegionIds.length}</span>
+          <span>{t('overlayPanel.selectedCount', { count: selectedRegionIds.length })}</span>
         </div>
       </div>
 
@@ -100,13 +100,13 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
       {/* Instructions */}
       <div className={PANEL_TOKENS.OVERLAY_PANEL.INFO_SECTION.BASE}>
         <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.text.muted}`}>
-          • Κλικ για επιλογή περιοχών
+          • {t('overlayPanel.instructionClick')}
         </div>
         <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.text.muted}`}>
-          • Δεξί κλικ κατά τη σχεδίαση για τέλος
+          • {t('overlayPanel.instructionRightClick')}
         </div>
         <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.text.muted}`}>
-          • Σύρετε χερούλια για επεξεργασία
+          • {t('overlayPanel.instructionDrag')}
         </div>
       </div>
     </div>

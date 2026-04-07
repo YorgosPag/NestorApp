@@ -18,6 +18,7 @@ import React, { memo, useMemo } from 'react';
 import { Source, Layer, Marker } from 'react-map-gl/maplibre';
 import type { GeoCoordinate } from '../../types';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
@@ -65,6 +66,8 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
   hoveredCoordinate,
   getCurrentDrawing
 }) => {
+  const { t } = useTranslation('geo-canvas-drawing');
+
   // Early return για performance
   if (!enablePolygonDrawing || !systemIsDrawing) {
     return null;
@@ -192,7 +195,7 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
         >
           <div
             style={interactiveMapStyles.markers.pin(pointModePreview.radius, 0.7)}
-            title={`Πινέζα Preview - Ακτίνα: ${pointModePreview.radius}m`}
+            title={t('mapLayers.pinPreviewTitle', { radius: pointModePreview.radius })}
           >
             {/* Pin center dot */}
             <div

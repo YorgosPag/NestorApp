@@ -18,6 +18,7 @@ import React, { memo, useMemo } from 'react';
 import { Source, Layer, Marker } from 'react-map-gl/maplibre';
 import type { UniversalPolygon } from '@geo-alert/core';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -91,6 +92,8 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
   exportAsGeoJSON,
   enablePolygonDrawing = false
 }) => {
+  const { t } = useTranslation('geo-canvas-drawing');
+
   // Early return για performance
   if (!enablePolygonDrawing || !polygons || polygons.length === 0) {
     return null;
@@ -208,7 +211,7 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
                     polygon.style.strokeColor,
                     polygon.style.fillColor
                   )}
-                  title={`Πινέζα - Ακτίνα: ${pointRadius}m`}
+                  title={t('mapLayers.pinRadiusTitle', { radius: pointRadius })}
                 >
                   {/* Pin center dot */}
                   <div

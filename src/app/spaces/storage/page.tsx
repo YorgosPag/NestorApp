@@ -333,10 +333,10 @@ function StoragePageContent() {
                     <div className="hidden md:block">
                       <EntityDetailsHeader
                         icon={Warehouse}
-                        title={tStorage('header.newStorage', 'Νέα Αποθήκη')} // eslint-disable-line custom/no-hardcoded-strings
+                        title={tStorage('header.newStorage')}
                         actions={[
-                          createEntityAction('save', tStorage('storages.form.create', 'Δημιουργία'), () => createSaveRef.current?.()), // eslint-disable-line custom/no-hardcoded-strings
-                          createEntityAction('cancel', tStorage('storages.form.cancel', 'Ακύρωση'), resetCreateForm), // eslint-disable-line custom/no-hardcoded-strings
+                          createEntityAction('save', tStorage('storages.form.create'), () => createSaveRef.current?.()),
+                          createEntityAction('cancel', tStorage('storages.form.cancel'), resetCreateForm),
                         ]}
                         variant="detailed"
                       />
@@ -383,7 +383,7 @@ function StoragePageContent() {
         <DeleteConfirmDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
-          title={t('pages.storage.deleteDialog.title', 'Διαγραφή Αποθήκης')}
+          title={t('pages.storage.deleteDialog.title')}
           description={t('pages.storage.deleteDialog.description', { name: selectedStorage?.name ?? '' })}
           onConfirm={handleDeleteStorage}
           loading={isDeleting}

@@ -187,7 +187,7 @@ export function CompanyAddressesSection({
                     size="icon"
                     onClick={() => setBranchDeleteIndex(i)}
                     disabled={disabled}
-                    aria-label="Αφαίρεση Διεύθυνσης"
+                    aria-label={t('addressesSection.removeAddress')}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />

@@ -303,11 +303,49 @@
   "overlayPanel": {
     "showHandles": "Εμφάνιση Χερουλιών",
     "showLabels": "Εμφάνιση Ετικετών",
-    "statusFilter": "Φίλτρο Κατάστασης"
+    "statusFilter": "Φίλτρο Κατάστασης",
+    "title": "Περιοχές Επικάλυψης",
+    "regionsCount": "Περιοχές: {count}",
+    "selectedCount": "Επιλεγμένες: {count}",
+    "instructionClick": "Κλικ για επιλογή περιοχών",
+    "instructionRightClick": "Δεξί κλικ κατά τη σχεδίαση για τέλος",
+    "instructionDrag": "Σύρετε χερούλια για επεξεργασία"
   },
   "layerColorPicker": {
     "changeGroupColor": "🎨 Αλλαγή Χρώματος Color Group",
     "changeLayerColor": "🎨 Αλλαγή Χρώματος Layer",
     "changeEntityColor": "🎨 Αλλαγή Χρώματος Entity"
+  },
+  "destinationSelector": {
+    "floorsCount": "{{count}} όροφοι",
+    "stepTitle": {
+      "company": "Επιλέξτε Εταιρεία",
+      "project": "Επιλέξτε Έργο",
+      "building": "Επιλέξτε Κτίριο",
+      "floor": "Επιλέξτε Όροφο",
+      "destination": "Επιλέξτε Προορισμό"
+    },
+    "stepDescription": {
+      "company": "Επιλέξτε την εταιρεία που διαχειρίζεται το έργο",
+      "project": "Επιλέξτε το έργο στο οποίο ανήκει η κάτοψη",
+      "building": "Επιλέξτε το κτίριο της κάτοψης",
+      "floor": "Επιλέξτε τον όροφο της κάτοψης",
+      "destination": "Επιλέξτε τον τελικό προορισμό για την αποθήκευση"
+    },
+    "generalFloorPlan": "{name} - Γενική Κάτοψη",
+    "parkingSpots": "{name} - Θέσεις Στάθμευσης",
+    "storageAreas": "{project} → {building} → Αποθήκες",
+    "errorPrefix": "Σφάλμα: {error}",
+    "retry": "Ξαναδοκιμή",
+    "noCompanies": "Δεν βρέθηκαν εταιρείες στο σύστημα.",
+    "vatPrefix": "ΑΦΜ: {vatNumber}",
+    "noProjects": "Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.",
+    "buildingsCount": "({count} κτίρια)",
+    "noBuildings": "Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.",
+    "noFloors": "Δεν βρέθηκαν όροφοι για το επιλεγμένο κτίριο.",
+    "unitsCount": "{count} μονάδες"
+  },
+  "importCategory": {
+    "placeholder": "Εισαγωγή (Import) Category (Placeholder)"
   }
 }

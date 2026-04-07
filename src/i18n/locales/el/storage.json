@@ -16,6 +16,21 @@
     },
     "accessibility": {
       "toggleFilters": "Εμφάνιση/Απόκρυψη φίλτρων"
+    },
+    "form": {
+      "create": "Δημιουργία",
+      "cancel": "Ακύρωση",
+      "name": "Όνομα",
+      "namePlaceholder": "π.χ. Αποθήκη 1",
+      "type": "Τύπος",
+      "status": "Κατάσταση",
+      "floor": "Όροφος",
+      "area": "Εμβαδόν (m²)",
+      "price": "Τιμή (€)",
+      "description": "Περιγραφή",
+      "descriptionPlaceholder": "Προαιρετική περιγραφή...",
+      "notes": "Σημειώσεις",
+      "notesPlaceholder": "Προαιρετικές σημειώσεις..."
     }
   },
   "sizes": {
@@ -198,7 +213,8 @@
     "viewStorage": "Προβολή Αποθήκης",
     "edit": "Επεξεργασία",
     "print": "Εκτύπωση",
-    "ownerLabel": "Ιδιοκτήτης:"
+    "ownerLabel": "Ιδιοκτήτης:",
+    "newStorage": "Νέα Αποθήκη"
   },
   "page": {
     "backToProjects": "Επιστροφή στα Έργα",
@@ -305,6 +321,14 @@
       "ground": "Ισόγεια Αποθήκη",
       "special": "Ειδική Αποθήκη",
       "unknown": "Άγνωστο"
+    }
+  },
+  "pages": {
+    "storage": {
+      "deleteDialog": {
+        "title": "Διαγραφή Αποθήκης",
+        "description": "Είστε σίγουροι ότι θέλετε να διαγράψετε την αποθήκη {{name}};"
+      }
     }
   }
 }

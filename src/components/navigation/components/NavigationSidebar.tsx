@@ -12,6 +12,7 @@ import { NavigationTree } from './NavigationTree';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES } from '../config';
 import '@/lib/design-system';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface NavigationSidebarProps {
   isExpanded?: boolean;
@@ -24,6 +25,7 @@ export function NavigationSidebar({
 }: NavigationSidebarProps) {
   // 🏢 ENTERPRISE: Icon from centralized config - ZERO hardcoded values
   const LocationIcon = NAVIGATION_ENTITIES.location.icon;
+  const { t } = useTranslation('navigation');
 
   return (
     <div className="space-y-2">
@@ -38,7 +40,7 @@ export function NavigationSidebar({
           )}
         >
           <LocationIcon className="h-4 w-4" />
-          <span className="font-medium">Ιεραρχία</span> {/* eslint-disable-line custom/no-hardcoded-strings */}
+          <span className="font-medium">{t('sidebar.hierarchyLabel')}</span>
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 ml-auto" />
           ) : (

@@ -54,7 +54,8 @@
     },
     "searchBar": {
       "placeholder": "Αναζήτηση επαφών... (⌘K)"
-    }
+    },
+    "changeLanguage": "Αλλαγή γλώσσας - {language}"
   },
   "storage": {
     "title": "Χώρος Αποθήκευσης",
@@ -675,5 +676,33 @@
   },
   "photos": {
     "notFound": "Η φωτογραφία δεν βρέθηκε"
+  },
+  "forms": {
+    "selectPlaceholder": "Επιλέξτε {{label}}"
+  },
+  "sales": {
+    "legal": {
+      "preliminary": "Προσύμφωνο",
+      "final": "Οριστικό Συμβόλαιο",
+      "payoff": "Εξοφλητήριο",
+      "draft": "Πρόχειρο",
+      "pendingSig": "Αναμονή Υπογραφής",
+      "signed": "Υπογεγραμμένο",
+      "completed": "Ολοκληρωμένο",
+      "sendForSignature": "Αποστολή για Υπογραφή",
+      "markAsSigned": "Σημείωση ως Υπογεγραμμένο",
+      "complete": "Ολοκλήρωση",
+      "transitionSuccess": "Μετάβαση σε {status}",
+      "transitionError": "Αποτυχία μετάβασης",
+      "amount": "Ποσό",
+      "deposit": "Προκαταβολή",
+      "createdAt": "Ημερομηνία",
+      "signedAt": "Υπογραφή",
+      "professionals": "Επαγγελματίες",
+      "sellerLawyer": "Δικηγόρος Πωλητή",
+      "buyerLawyer": "Δικηγόρος Αγοραστή",
+      "notary": "Συμβολαιογράφος",
+      "unassigned": "Μη ανατεθειμένος"
+    }
   }
 }

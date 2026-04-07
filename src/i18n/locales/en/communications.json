@@ -74,5 +74,8 @@
       "average": "Average:",
       "median": "Median:"
     }
+  },
+  "messagePreview": {
+    "ariaLabel": "Message Preview"
   }
 }

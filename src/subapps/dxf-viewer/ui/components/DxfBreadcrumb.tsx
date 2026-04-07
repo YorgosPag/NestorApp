@@ -6,6 +6,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * DxfBreadcrumb — Ιεραρχία τοποθεσίας σχεδίου
@@ -25,6 +26,7 @@ export function DxfBreadcrumb(): React.ReactElement | null {
   const { selectedCompany, selectedProject, selectedBuilding, selectedFloor } = useProjectHierarchy();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
+  const { t } = useTranslation('dxf-viewer');
 
   // Αν δεν υπάρχει τίποτα επιλεγμένο, δεν εμφανίζουμε τίποτα
   if (!selectedCompany && !selectedProject && !selectedBuilding && !selectedFloor) {
@@ -39,7 +41,7 @@ export function DxfBreadcrumb(): React.ReactElement | null {
   return (
     <nav
       className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${quick.borderB} px-3 py-1.5`}
-      aria-label="Τοποθεσία σχεδίου"
+      aria-label={t('breadcrumb.ariaLabel')}
     >
       <ol className={`flex items-center flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
         {selectedCompany && (

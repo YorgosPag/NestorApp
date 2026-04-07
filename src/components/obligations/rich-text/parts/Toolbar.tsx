@@ -14,13 +14,13 @@ import { cn } from '@/lib/design-system';
 
 /** Predefined document text colors using CSS classes from globals.css */
 const DOCUMENT_COLORS = [
-  { className: 'doc-text-red', swatch: 'bg-red-800 dark:bg-red-400', label: 'Κόκκινο' },
-  { className: 'doc-text-blue', swatch: 'bg-blue-800 dark:bg-blue-400', label: 'Μπλε' },
-  { className: 'doc-text-green', swatch: 'bg-green-800 dark:bg-green-400', label: 'Πράσινο' },
-  { className: 'doc-text-purple', swatch: 'bg-purple-800 dark:bg-purple-400', label: 'Μωβ' },
-  { className: 'doc-text-orange', swatch: 'bg-orange-700 dark:bg-orange-400', label: 'Πορτοκαλί' },
-  { className: 'doc-text-gray', swatch: 'bg-gray-600 dark:bg-gray-400', label: 'Γκρι' },
-  { className: 'doc-text-reset', swatch: 'bg-foreground', label: 'Αφαίρεση χρώματος' },
+  { className: 'doc-text-red', swatch: 'bg-red-800 dark:bg-red-400', labelKey: 'toolbar.colors.red' },
+  { className: 'doc-text-blue', swatch: 'bg-blue-800 dark:bg-blue-400', labelKey: 'toolbar.colors.blue' },
+  { className: 'doc-text-green', swatch: 'bg-green-800 dark:bg-green-400', labelKey: 'toolbar.colors.green' },
+  { className: 'doc-text-purple', swatch: 'bg-purple-800 dark:bg-purple-400', labelKey: 'toolbar.colors.purple' },
+  { className: 'doc-text-orange', swatch: 'bg-orange-700 dark:bg-orange-400', labelKey: 'toolbar.colors.orange' },
+  { className: 'doc-text-gray', swatch: 'bg-gray-600 dark:bg-gray-400', labelKey: 'toolbar.colors.gray' },
+  { className: 'doc-text-reset', swatch: 'bg-foreground', labelKey: 'toolbar.colors.removeColor' },
 ] as const;
 
 interface ToolbarProps {
@@ -64,7 +64,7 @@ export function Toolbar({
 }: ToolbarProps) {
   const iconSizes = useIconSizes();
   const ariaLabels = getAriaLabels();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'obligations']);
   const [colorOpen, setColorOpen] = useState(false);
 
   return (
@@ -156,14 +156,14 @@ export function Toolbar({
                           color.swatch,
                           color.className === 'doc-text-reset' && 'flex items-center justify-center'
                         )}
-                        aria-label={color.label}
+                        aria-label={t(color.labelKey)}
                       >
                         {color.className === 'doc-text-reset' && (
                           <X className="h-3 w-3 text-background" />
                         )}
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>{color.label}</TooltipContent>
+                    <TooltipContent>{t(color.labelKey)}</TooltipContent>
                   </Tooltip>
                 ))}
               </nav>

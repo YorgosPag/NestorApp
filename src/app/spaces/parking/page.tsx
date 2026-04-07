@@ -327,10 +327,10 @@ function ParkingPageContent() {
                     <div className="hidden md:block">
                       <EntityDetailsHeader
                         icon={Car}
-                        title={tParking('header.newParking', 'Νέα Θέση Στάθμευσης')} // eslint-disable-line custom/no-hardcoded-strings
+                        title={tParking('header.newParking')}
                         actions={[
-                          createEntityAction('save', tParking('form.create', 'Δημιουργία'), () => createSaveRef.current?.()), // eslint-disable-line custom/no-hardcoded-strings
-                          createEntityAction('cancel', tParking('form.cancel', 'Ακύρωση'), resetCreateForm), // eslint-disable-line custom/no-hardcoded-strings
+                          createEntityAction('save', tParking('form.create'), () => createSaveRef.current?.()),
+                          createEntityAction('cancel', tParking('form.cancel'), resetCreateForm),
                         ]}
                         variant="detailed"
                       />

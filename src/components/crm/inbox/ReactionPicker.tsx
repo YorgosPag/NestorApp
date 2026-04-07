@@ -126,7 +126,7 @@ export function ReactionPicker({
         className
       )}
       role="group"
-      aria-label={t('inbox.reactions.pickReaction', 'Επιλέξτε αντίδραση')}
+      aria-label={t('inbox.reactions.pickReaction')}
     >
       {QUICK_REACTION_EMOJIS.map((emoji) => {
         const isSelected = userReactions.has(emoji);

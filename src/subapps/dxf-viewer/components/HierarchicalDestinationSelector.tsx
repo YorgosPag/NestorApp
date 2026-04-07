@@ -110,14 +110,14 @@ export function HierarchicalDestinationSelector({
       destinations.push({
         id: selectedProject.id,
         type: 'project',
-        label: `${selectedProject.name} - Γενική Κάτοψη`
+        label: t('destinationSelector.generalFloorPlan', { name: selectedProject.name })
       });
 
       if (selectedProject.parkingSpots && selectedProject.parkingSpots.length > 0) {
         destinations.push({
           id: `${selectedProject.id}_parking`,
           type: 'parking',
-          label: `${selectedProject.name} - Θέσεις Στάθμευσης`
+          label: t('destinationSelector.parkingSpots', { name: selectedProject.name })
         });
       }
     }
@@ -133,7 +133,7 @@ export function HierarchicalDestinationSelector({
         destinations.push({
           id: `${selectedBuilding.id}_storage`,
           type: 'storage',
-          label: `${selectedProject?.name} → ${selectedBuilding.name} → Αποθήκες`
+          label: t('destinationSelector.storageAreas', { project: selectedProject?.name, building: selectedBuilding.name })
         });
       }
     }
@@ -149,25 +149,9 @@ export function HierarchicalDestinationSelector({
     return destinations;
   };
 
-  const getStepTitle = () => {
-    switch (currentStep) {
-      case 'company': return 'Επιλέξτε Εταιρεία';
-      case 'project': return 'Επιλέξτε Έργο';
-      case 'building': return 'Επιλέξτε Κτίριο';
-      case 'floor': return 'Επιλέξτε Όροφο';
-      case 'destination': return 'Επιλέξτε Προορισμό';
-    }
-  };
+  const getStepTitle = () => t(`destinationSelector.stepTitle.${currentStep}`);
 
-  const getStepDescription = () => {
-    switch (currentStep) {
-      case 'company': return 'Επιλέξτε την εταιρεία που διαχειρίζεται το έργο';
-      case 'project': return 'Επιλέξτε το έργο στο οποίο ανήκει η κάτοψη';
-      case 'building': return 'Επιλέξτε το κτίριο της κάτοψης';
-      case 'floor': return 'Επιλέξτε τον όροφο της κάτοψης';
-      case 'destination': return 'Επιλέξτε τον τελικό προορισμό για την αποθήκευση';
-    }
-  };
+  const getStepDescription = () => t(`destinationSelector.stepDescription.${currentStep}`);
 
   const getDestinationIcon = (type: string) => {
     switch (type) {
@@ -192,12 +176,12 @@ export function HierarchicalDestinationSelector({
   if (error) {
     return (
       <section className={`${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
-        <p className={`${colors.text.error} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>Σφάλμα: {error}</p>
+        <p className={`${colors.text.error} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>{t('destinationSelector.errorPrefix', { error })}</p>
         <button
           onClick={() => loadCompanies()}
           className={`${PANEL_LAYOUT.SPACING.COMFORTABLE} ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.LG}`}
         >
-          Ξαναδοκιμή
+          {t('destinationSelector.retry')}
         </button>
       </section>
     );
@@ -262,7 +246,7 @@ export function HierarchicalDestinationSelector({
           <>
             {companies.length === 0 ? (
               <p className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
-                Δεν βρέθηκαν εταιρείες στο σύστημα.
+                {t('destinationSelector.noCompanies')}
               </p>
             ) : (
               companies.map(company => (
@@ -272,7 +256,7 @@ export function HierarchicalDestinationSelector({
                   icon={<BuildingIcon className={iconSizes.md} />}
                   title={company.companyName}
                   subtitle={company.industry}
-                  extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
+                  extraInfo={company.vatNumber ? t('destinationSelector.vatPrefix', { vatNumber: company.vatNumber }) : undefined}
                 />
               ))
             )}
@@ -285,7 +269,7 @@ export function HierarchicalDestinationSelector({
             <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('panels.hierarchy.selectProjectLabel')}</label>
             {projects.length === 0 ? (
               <p className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
-                Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
+                {t('destinationSelector.noProjects')}
               </p>
             ) : (
               <Select onValueChange={handleProjectSelect}>
@@ -298,7 +282,7 @@ export function HierarchicalDestinationSelector({
                       <span className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                         <Folder className={`${iconSizes.sm} ${colors.text.info}`} />
                         <span>{project.name}</span>
-                        <span className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>({project.buildings.length} κτίρια)</span>
+                        <span className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('destinationSelector.buildingsCount', { count: project.buildings.length })}</span>
                       </span>
                     </SelectItem>
                   ))}
@@ -313,7 +297,7 @@ export function HierarchicalDestinationSelector({
           <>
             {selectedProject.buildings.length === 0 ? (
               <div className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
-                Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
+                {t('destinationSelector.noBuildings')}
               </div>
             ) : (
               selectedProject.buildings.map(building => (
@@ -322,7 +306,7 @@ export function HierarchicalDestinationSelector({
                   onClick={() => handleBuildingSelect(building.id)}
                   icon={<Building className={iconSizes.md} />}
                   title={formatBuildingLabel(building.code, building.name)}
-                  subtitle={`${building.floors.length} όροφοι`}
+                  subtitle={t('destinationSelector.floorsCount', { count: building.floors.length })}
                 />
               ))
             )}
@@ -334,7 +318,7 @@ export function HierarchicalDestinationSelector({
           <>
             {selectedBuilding.floors.length === 0 ? (
               <div className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
-                Δεν βρέθηκαν όροφοι για το επιλεγμένο κτίριο.
+                {t('destinationSelector.noFloors')}
               </div>
             ) : (
               selectedBuilding.floors.map(floor => (
@@ -348,7 +332,7 @@ export function HierarchicalDestinationSelector({
                     <div>
                       <div className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{floor.name}</div>
                       <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
-                        {floor.units.length} μονάδες
+                        {t('destinationSelector.unitsCount', { count: floor.units.length })}
                       </div>
                     </div>
                   </div>

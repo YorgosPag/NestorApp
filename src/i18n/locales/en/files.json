@@ -96,6 +96,16 @@
       "unknown": "Unknown error while processing PDF",
       "partialSuccess": "{success} succeeded, {fail} failed out of {total} files",
       "allFailed": "{count, plural, =1 {Failed to upload 1 file} other {Failed to upload {count} files}}"
+    },
+    "toast": {
+      "invalidFile": "Invalid file",
+      "fileFallback": "File",
+      "selectedSuccess": "✅ {name} selected successfully",
+      "uploadSuccess": "🎉 {name} uploaded successfully!",
+      "compressed": "🗜️ Compressed: {originalKB}KB → {compressedKB}KB ({savingsPercent}% savings)",
+      "uploadError": "Error during upload",
+      "errorPrefix": "❌ Error: {message}",
+      "uploadCancelled": "⚠️ Upload cancelled"
     }
   },
   "header": {
@@ -420,7 +430,12 @@
       "public": "Public",
       "internal": "Internal",
       "confidential": "Confidential"
-    }
+    },
+    "selectedLabel": "selected",
+    "aiClassify": "AI Classify",
+    "aiClassifyTooltip": "Auto-detect document type with AI",
+    "archive": "Archive",
+    "archiveTooltip": "Move to archive"
   },
   "comments": {
     "title": "Comments",

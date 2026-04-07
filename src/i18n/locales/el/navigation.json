@@ -221,7 +221,8 @@
     "availableStorage": "Διαθέσιμες Αποθήκες",
     "availableParking": "Διαθέσιμες Θέσεις Στάθμευσης",
     "soldProperties": "Πωληθέντα",
-    "financialIntelligence": "Χρηματοοικονομική Ανάλυση"
+    "financialIntelligence": "Χρηματοοικονομική Ανάλυση",
+    "hierarchyLabel": "Ιεραρχία"
   },
   "reports": {
     "overview": "Διοικητική Σύνοψη",

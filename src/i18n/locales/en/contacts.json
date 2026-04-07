@@ -1,4 +1,7 @@
 {
+  "addressesSection": {
+    "removeAddress": "Remove Address"
+  },
   "individual": {
     "sections": {
       "projectParticipation": {

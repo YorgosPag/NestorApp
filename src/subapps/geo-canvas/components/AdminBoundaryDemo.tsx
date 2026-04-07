@@ -82,7 +82,7 @@ export function AdminBoundaryDemo() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="π.χ. Δήμος Αθηναίων, Αττική, Θεσσαλονίκη..."
+            placeholder={t('adminBoundary.searchPlaceholder')}
             className={`flex-1 px-4 py-2 ${quick.input} focus:ring-2 focus:ring-blue-500 ${quick.focus}`}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           />

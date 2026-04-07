@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -96,7 +96,7 @@ function emptyForm(): CategoryFormState {
 // ============================================================================
 
 export function CustomCategoriesSection() {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup']);
   const colors = useSemanticColors();
   const { categories, loading, error, createCategory, updateCategory, deleteCategory } =
     useCustomCategories({ includeInactive: true });
@@ -263,7 +263,7 @@ export function CustomCategoriesSection() {
                         variant="ghost"
                         size="icon"
                         onClick={() => openEdit(cat)}
-                        aria-label={`Επεξεργασία ${cat.label}`}
+                        aria-label={t('setup.customCategories.editAriaLabel', { name: cat.label })}
                       >
                         <Pencil className="size-4" />
                       </Button>
@@ -271,7 +271,7 @@ export function CustomCategoriesSection() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(cat.categoryId)}
-                        aria-label={`Διαγραφή ${cat.label}`}
+                        aria-label={t('setup.customCategories.deleteAriaLabel', { name: cat.label })}
                       >
                         <Trash2 className="size-4" />
                       </Button>

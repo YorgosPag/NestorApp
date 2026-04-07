@@ -11,9 +11,10 @@
  */
 
 import React from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
- * ImportCategory - Εισαγωγή (Import) settings category
+ * ImportCategory - Import settings category
  *
  * Contains:
  * - Import settings, file preferences, etc.
@@ -31,9 +32,11 @@ export interface ImportCategoryProps {
 export const ImportCategory: React.FC<ImportCategoryProps> = ({
   className = '',
 }) => {
+  const { t } = useTranslation('dxf-viewer-panels');
+
   return (
     <div className={`import-category ${className}`}>
-      <h4>Εισαγωγή (Import) Category (Placeholder)</h4>
+      <h4>{t('importCategory.placeholder')}</h4>
       <p>🚧 Under Construction - Phase 3 Step 3.7</p>
     </div>
   );

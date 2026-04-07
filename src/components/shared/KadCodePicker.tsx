@@ -114,8 +114,8 @@ export function KadCodePicker({
         }
       }}
       options={options}
-      placeholder={t('kad.searchPlaceholder', 'Αναζήτηση ΚΑΔ (κωδικός ή περιγραφή)...')}
-      emptyMessage={t('kad.noResults', 'Δεν βρέθηκε ΚΑΔ')}
+      placeholder={t('kad.searchPlaceholder')}
+      emptyMessage={t('kad.noResults')}
       isLoading={isLoading}
       allowFreeText
       maxDisplayed={30}

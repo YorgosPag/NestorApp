@@ -343,5 +343,16 @@
       "boqItem": "BOQ Item",
       "budgetAmount": "Budget Amount"
     }
+  },
+  "toolbar": {
+    "colors": {
+      "red": "Red",
+      "blue": "Blue",
+      "green": "Green",
+      "purple": "Purple",
+      "orange": "Orange",
+      "gray": "Gray",
+      "removeColor": "Remove color"
+    }
   }
 }

@@ -16,6 +16,21 @@
     },
     "accessibility": {
       "toggleFilters": "Toggle filters"
+    },
+    "form": {
+      "create": "Create",
+      "cancel": "Cancel",
+      "name": "Name",
+      "namePlaceholder": "e.g. Storage 1",
+      "type": "Type",
+      "status": "Status",
+      "floor": "Floor",
+      "area": "Area (m²)",
+      "price": "Price (€)",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description...",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional notes..."
     }
   },
   "sizes": {
@@ -198,7 +213,8 @@
     "viewStorage": "View Storage",
     "edit": "Edit",
     "print": "Print",
-    "ownerLabel": "Owner:"
+    "ownerLabel": "Owner:",
+    "newStorage": "New Storage"
   },
   "page": {
     "backToProjects": "Back to Projects",
@@ -305,6 +321,14 @@
       "ground": "Ground Floor Storage",
       "special": "Special Storage",
       "unknown": "Unknown"
+    }
+  },
+  "pages": {
+    "storage": {
+      "deleteDialog": {
+        "title": "Delete Storage",
+        "description": "Are you sure you want to delete storage {{name}}?"
+      }
     }
   }
 }

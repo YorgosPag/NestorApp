@@ -136,7 +136,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
         onOpenChange(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('storages.form.createError', 'Σφάλμα δημιουργίας'));
+      setError(err instanceof Error ? err.message : t('storages.form.createError'));
     } finally {
       setCreating(false);
     }
@@ -149,10 +149,10 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {t('storages.header.newStorage', 'Νέα Αποθήκη')}
+            {t('storages.header.newStorage')}
           </DialogTitle>
           <DialogDescription>
-            {t('storages.form.createDescription', 'Συμπλήρωσε τα στοιχεία για τη νέα αποθήκη')}
+            {t('storages.form.createDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -202,19 +202,19 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
           <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
-                {t('storages.form.name', 'Όνομα')} *
+                {t('storages.form.name')} *
               </span>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={t('storages.form.namePlaceholder', 'π.χ. Αποθήκη 1')}
+                placeholder={t('storages.form.namePlaceholder')}
                 disabled={creating}
                 autoFocus
               />
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
-                {t('storages.form.type', 'Τύπος')}
+                {t('storages.form.type')}
               </span>
               <Select value={type} onValueChange={(v) => setType(v as StorageType)} disabled={creating}>
                 <SelectTrigger>
@@ -235,7 +235,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
           <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
-                {t('storages.form.status', 'Κατάσταση')}
+                {t('storages.form.status')}
               </span>
               <Select value={status} onValueChange={(v) => setStatus(v as StorageStatus)} disabled={creating}>
                 <SelectTrigger>
@@ -252,7 +252,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
-                {t('storages.form.floor', 'Όροφος')}
+                {t('storages.form.floor')}
               </span>
               <Input
                 value={floor}
@@ -267,7 +267,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
           <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
-                {t('storages.form.area', 'Εμβαδόν (m²)')}
+                {t('storages.form.area')}
               </span>
               <Input
                 type="number"
@@ -280,7 +280,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
-                {t('storages.form.price', 'Τιμή (€)')}
+                {t('storages.form.price')}
               </span>
               <Input
                 type="number"
@@ -296,12 +296,12 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
           {/* Description */}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">
-              {t('storages.form.description', 'Περιγραφή')}
+              {t('storages.form.description')}
             </span>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('storages.form.descriptionPlaceholder', 'Προαιρετική περιγραφή...')}
+              placeholder={t('storages.form.descriptionPlaceholder')}
               className="h-16 resize-none"
               disabled={creating}
             />
@@ -310,12 +310,12 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
           {/* Notes */}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">
-              {t('storages.form.notes', 'Σημειώσεις')}
+              {t('storages.form.notes')}
             </span>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={t('storages.form.notesPlaceholder', 'Προαιρετικές σημειώσεις...')}
+              placeholder={t('storages.form.notesPlaceholder')}
               className="h-16 resize-none"
               disabled={creating}
             />
@@ -333,14 +333,14 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
             onClick={handleClose}
             disabled={creating}
           >
-            {t('storages.form.cancel', 'Ακύρωση')}
+            {t('storages.form.cancel')}
           </Button>
           <Button
             onClick={handleCreate}
             disabled={!isValid || creating}
           >
             {creating && <Spinner size="small" color="inherit" className="mr-2" />}
-            {t('storages.form.create', 'Δημιουργία')}
+            {t('storages.form.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

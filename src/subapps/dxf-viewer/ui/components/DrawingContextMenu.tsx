@@ -41,6 +41,7 @@ import {
   CancelIcon,
   FlipArcIcon,
 } from '../icons/MenuIcons';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ===== TYPES =====
 
@@ -118,6 +119,7 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
   onCancel,
   onFlipArc,
 }, ref) => {
+  const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -243,7 +245,7 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
             onClick={handleFlipArc}
           >
             <span className={styles.menuItemIcon}><FlipArcIcon /></span>
-            <span className={styles.menuItemLabel}>Αντιστροφή</span>
+            <span className={styles.menuItemLabel}>{t('contextMenu.flipArc')}</span>
             <span className={styles.menuItemShortcut}>X</span>
           </DropdownMenuItem>
         )}

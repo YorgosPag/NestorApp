@@ -3,6 +3,7 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 interface LabeledSelectProps {
@@ -16,6 +17,8 @@ interface LabeledSelectProps {
 }
 
 export function LabeledSelect({ id, icon, label, value, onValueChange, options, placeholder }: LabeledSelectProps) {
+  const { t } = useTranslation('common');
+
   return (
     <div className="space-y-2">
       <Label htmlFor={id} className="text-xs font-medium flex items-center gap-1">
@@ -24,7 +27,7 @@ export function LabeledSelect({ id, icon, label, value, onValueChange, options, 
       </Label>
       <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger id={id} className="h-9">
-          <SelectValue placeholder={placeholder || `Επιλέξτε ${label.toLowerCase()}`} />
+          <SelectValue placeholder={placeholder || t('forms.selectPlaceholder', { label: label.toLowerCase() })} />
         </SelectTrigger>
         <SelectContent>
           {options.map((opt) => (

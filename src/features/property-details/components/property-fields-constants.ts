@@ -115,8 +115,8 @@ export const PROPERTY_CARD_COLORS = {
 
 /** Micro typography for compact property cards — below Tailwind's text-xs (12px). */
 export const PROPERTY_MICRO_TEXT = {
-  /** 11px — helper text, hints, metadata */
-  helper: 'text-[0.6875rem]',
-  /** 11px — multi-level indicators (ανά όροφο / κοινά) */
-  micro: 'text-[0.6875rem]',
+  /** 12px — helper text, hints, metadata */
+  helper: 'text-xs',
+  /** 12px — multi-level indicators (ανά όροφο / κοινά) */
+  micro: 'text-xs',
 } as const;

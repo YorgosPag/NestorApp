@@ -11,7 +11,7 @@
  */
 
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,7 +54,7 @@ function createEmptySeries(): InvoiceSeries {
 // ============================================================================
 
 export function InvoiceSeriesSection({ data, onChange }: InvoiceSeriesSectionProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup']);
   const colors = useSemanticColors();
   const [showNewForm, setShowNewForm] = useState(false);
   const [newSeries, setNewSeries] = useState<InvoiceSeries>(createEmptySeries);
@@ -167,7 +167,7 @@ export function InvoiceSeriesSection({ data, onChange }: InvoiceSeriesSectionPro
                       onChange={(e) =>
                         setNewSeries((prev) => ({ ...prev, prefix: e.target.value }))
                       }
-                      placeholder="ΤΠΥ-Α"
+                      placeholder={t('setup.seriesPrefixPlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">

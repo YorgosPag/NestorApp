@@ -96,6 +96,16 @@
       "unknown": "Άγνωστο σφάλμα κατά τη διαχείριση του PDF",
       "partialSuccess": "{success} επιτυχία, {fail} αποτυχία από {total} αρχεία",
       "allFailed": "Αποτυχία αποστολής {count, plural, =1 {1 αρχείου} other {{count} αρχείων}}"
+    },
+    "toast": {
+      "invalidFile": "Μη έγκυρο αρχείο",
+      "fileFallback": "Αρχείο",
+      "selectedSuccess": "✅ {name} επιλέχθηκε επιτυχώς",
+      "uploadSuccess": "🎉 {name} ανέβηκε επιτυχώς!",
+      "compressed": "🗜️ Συμπιέστηκε: {originalKB}KB → {compressedKB}KB ({savingsPercent}% εξοικονόμηση)",
+      "uploadError": "Σφάλμα κατά το ανέβασμα",
+      "errorPrefix": "❌ Σφάλμα: {message}",
+      "uploadCancelled": "⚠️ Το ανέβασμα ακυρώθηκε"
     }
   },
   "header": {
@@ -420,7 +430,12 @@
       "public": "Δημόσιο",
       "internal": "Εσωτερικό",
       "confidential": "Εμπιστευτικό"
-    }
+    },
+    "selectedLabel": "επιλεγμένα",
+    "aiClassify": "AI Ταξινόμηση",
+    "aiClassifyTooltip": "Αυτόματη αναγνώριση τύπου εγγράφου με AI",
+    "archive": "Αρχειοθέτηση",
+    "archiveTooltip": "Μεταφορά σε αρχειοθήκη"
   },
   "comments": {
     "title": "Σχόλια",

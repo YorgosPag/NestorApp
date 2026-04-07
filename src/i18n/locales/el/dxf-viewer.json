@@ -87,5 +87,11 @@
     "summary": "Περίληψη:",
     "details": "Λεπτομέρειες:",
     "timestamp": "Χρονοσήμανση:"
+  },
+  "contextMenu": {
+    "flipArc": "Αντιστροφή"
+  },
+  "breadcrumb": {
+    "ariaLabel": "Τοποθεσία σχεδίου"
   }
 }

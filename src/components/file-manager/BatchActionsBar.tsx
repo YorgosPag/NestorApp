@@ -123,11 +123,11 @@ export function BatchActionsBar({
   return (
     <nav
       className="flex items-center gap-3 px-4 py-2 bg-primary/10 border border-primary/20 rounded-lg"
-      aria-label={t('batch.toolbar', 'Μαζικές ενέργειες')}
+      aria-label={t('batch.toolbar')}
     >
       {/* Selection info */}
       <span className="text-sm font-medium tabular-nums">
-        {`${selectedCount} / ${totalCount} ${t('batch.selectedLabel', 'επιλεγμένα')}`}
+        {`${selectedCount} / ${totalCount} ${t('batch.selectedLabel')}`}
       </span>
 
       {/* Select all / Clear */}
@@ -141,8 +141,8 @@ export function BatchActionsBar({
           >
             <CheckSquare className="h-3.5 w-3.5 mr-1" />
             {allSelected
-              ? t('batch.deselectAll', 'Αποεπιλογή')
-              : t('batch.selectAll', 'Επιλογή όλων')}
+              ? t('batch.deselectAll')
+              : t('batch.selectAll')}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
@@ -155,7 +155,7 @@ export function BatchActionsBar({
       {/* Classification dropdown */}
       <Select onValueChange={handleClassify}>
         <SelectTrigger className="h-7 w-[160px] text-xs">
-          <SelectValue placeholder={t('batch.classify', 'Ταξινόμηση')} />
+          <SelectValue placeholder={t('batch.classify')} />
         </SelectTrigger>
         <SelectContent>
           {CLASSIFICATION_OPTIONS.map(({ value, icon: Icon }) => (
@@ -185,10 +185,10 @@ export function BatchActionsBar({
               ) : (
                 <Sparkles className="h-3.5 w-3.5 mr-1" />
               )}
-              {t('batch.aiClassify', 'AI Ταξινόμηση')}
+              {t('batch.aiClassify')}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('batch.aiClassifyTooltip', 'Αυτόματη αναγνώριση τύπου εγγράφου με AI')}</TooltipContent>
+          <TooltipContent>{t('batch.aiClassifyTooltip')}</TooltipContent>
         </Tooltip>
       )}
 
@@ -211,10 +211,10 @@ export function BatchActionsBar({
               ) : (
                 <Archive className="h-3.5 w-3.5 mr-1" />
               )}
-              {t('batch.archive', 'Αρχειοθέτηση')}
+              {t('batch.archive')}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('batch.archiveTooltip', 'Μεταφορά σε αρχειοθήκη')}</TooltipContent>
+          <TooltipContent>{t('batch.archiveTooltip')}</TooltipContent>
         </Tooltip>
       )}
 
@@ -235,7 +235,7 @@ export function BatchActionsBar({
             ) : (
               <Download className="h-3.5 w-3.5 mr-1" />
             )}
-            {t('batch.downloadZip', 'Λήψη ZIP')}
+            {t('batch.downloadZip')}
           </Button>
         </TooltipTrigger>
         <TooltipContent>{t('batch.downloadZip')}</TooltipContent>
@@ -256,7 +256,7 @@ export function BatchActionsBar({
             ) : (
               <Trash2 className="h-3.5 w-3.5 mr-1" />
             )}
-            {t('batch.delete', 'Διαγραφή')}
+            {t('batch.delete')}
           </Button>
         </TooltipTrigger>
         <TooltipContent>{t('batch.delete')}</TooltipContent>
@@ -274,7 +274,7 @@ export function BatchActionsBar({
             <X className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{t('batch.clearSelection', 'Κλείσιμο επιλογής')}</TooltipContent>
+        <TooltipContent>{t('batch.clearSelection')}</TooltipContent>
       </Tooltip>
     </nav>
   );

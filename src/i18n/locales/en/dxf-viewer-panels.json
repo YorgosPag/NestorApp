@@ -303,11 +303,49 @@
   "overlayPanel": {
     "showHandles": "Show Handles",
     "showLabels": "Show Labels",
-    "statusFilter": "Status Filter"
+    "statusFilter": "Status Filter",
+    "title": "Overlay Regions",
+    "regionsCount": "Regions: {count}",
+    "selectedCount": "Selected: {count}",
+    "instructionClick": "Click to select regions",
+    "instructionRightClick": "Right-click while drawing to finish",
+    "instructionDrag": "Drag handles to edit"
   },
   "layerColorPicker": {
     "changeGroupColor": "🎨 Change Color Group Color",
     "changeLayerColor": "🎨 Change Layer Color",
     "changeEntityColor": "🎨 Change Entity Color"
+  },
+  "destinationSelector": {
+    "floorsCount": "{{count}} floors",
+    "stepTitle": {
+      "company": "Select Company",
+      "project": "Select Project",
+      "building": "Select Building",
+      "floor": "Select Floor",
+      "destination": "Select Destination"
+    },
+    "stepDescription": {
+      "company": "Select the company that manages the project",
+      "project": "Select the project the floor plan belongs to",
+      "building": "Select the building of the floor plan",
+      "floor": "Select the floor of the floor plan",
+      "destination": "Select the final destination for storage"
+    },
+    "generalFloorPlan": "{name} - General Floor Plan",
+    "parkingSpots": "{name} - Parking Spots",
+    "storageAreas": "{project} → {building} → Storage",
+    "errorPrefix": "Error: {error}",
+    "retry": "Retry",
+    "noCompanies": "No companies found in the system.",
+    "vatPrefix": "VAT: {vatNumber}",
+    "noProjects": "No projects found for the selected company.",
+    "buildingsCount": "({count} buildings)",
+    "noBuildings": "No buildings found for the selected project.",
+    "noFloors": "No floors found for the selected building.",
+    "unitsCount": "{count} units"
+  },
+  "importCategory": {
+    "placeholder": "Import Category (Placeholder)"
   }
 }

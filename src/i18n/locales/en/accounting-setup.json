@@ -177,7 +177,14 @@
       "boardMemberOnlyEfka": "Only compensated board members pay EFKA contributions",
       "efkaEmployeeExplain": "Employee: shares <3% of total → 33.60% on compensation",
       "efkaSelfEmployedExplain": "Self-employed: shares ≥3% → self-employed EFKA categories"
-    }
+    },
+    "vatLabel": "VAT",
+    "efkaLabel": "EFKA",
+    "customCategories": {
+      "editAriaLabel": "Edit {{name}}",
+      "deleteAriaLabel": "Delete {{name}}"
+    },
+    "seriesPrefixPlaceholder": "INV-A"
   },
   "reconciliation": {
     "title": "Bank Reconciliation",

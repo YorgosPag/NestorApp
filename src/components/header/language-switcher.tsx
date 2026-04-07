@@ -30,7 +30,7 @@ const languages = [
 export function LanguageSwitcher() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation('common');
   const [isChanging, setIsChanging] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(languages[0]);
 
@@ -89,7 +89,7 @@ export function LanguageSwitcher() {
         >
           <Globe className={`${iconSizes.sm} ${isChanging ? 'animate-spin' : ''}`} />
           <span className="absolute -bottom-0.5 -right-0.5 text-xs leading-none">{currentLanguage.flag}</span>
-          <span className="sr-only">Αλλαγή γλώσσας - {currentLanguage.name}</span>
+          <span className="sr-only">{t('header.changeLanguage', { language: currentLanguage.name })}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

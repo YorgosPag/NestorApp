@@ -129,5 +129,9 @@
       "reserved": "Reserved",
       "sold": "Sold"
     }
+  },
+  "form": {
+    "create": "Create",
+    "cancel": "Cancel"
   }
 }

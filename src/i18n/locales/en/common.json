@@ -54,7 +54,8 @@
     },
     "searchBar": {
       "placeholder": "Search contacts... (⌘K)"
-    }
+    },
+    "changeLanguage": "Change language - {language}"
   },
   "storage": {
     "title": "Storage Space",
@@ -675,5 +676,33 @@
   },
   "photos": {
     "notFound": "Photo not found"
+  },
+  "forms": {
+    "selectPlaceholder": "Select {{label}}"
+  },
+  "sales": {
+    "legal": {
+      "preliminary": "Preliminary Agreement",
+      "final": "Final Contract",
+      "payoff": "Payoff Certificate",
+      "draft": "Draft",
+      "pendingSig": "Pending Signature",
+      "signed": "Signed",
+      "completed": "Completed",
+      "sendForSignature": "Send for Signature",
+      "markAsSigned": "Mark as Signed",
+      "complete": "Complete",
+      "transitionSuccess": "Transitioned to {status}",
+      "transitionError": "Transition failed",
+      "amount": "Amount",
+      "deposit": "Deposit",
+      "createdAt": "Date",
+      "signedAt": "Signed At",
+      "professionals": "Professionals",
+      "sellerLawyer": "Seller's Lawyer",
+      "buyerLawyer": "Buyer's Lawyer",
+      "notary": "Notary",
+      "unassigned": "Unassigned"
+    }
   }
 }

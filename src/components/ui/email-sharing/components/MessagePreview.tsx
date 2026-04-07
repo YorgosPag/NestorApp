@@ -16,6 +16,7 @@ import { MessageCircle, Eye } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Types
 import type { MessagePreviewProps } from '../types';
@@ -43,12 +44,13 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('communications');
 
   // Early return if hidden or no message
   if (!show || !message.trim()) return null;
 
   return (
-    <section className="space-y-2" role="region" aria-label="Προεπισκόπηση Μηνύματος">
+    <section className="space-y-2" role="region" aria-label={t('messagePreview.ariaLabel')}>
       {/* Preview Header */}
       <header className={designSystem.cn(
         'flex items-center gap-2',

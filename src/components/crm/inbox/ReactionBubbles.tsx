@@ -132,7 +132,7 @@ export function ReactionBubbles({
         className
       )}
       role="group"
-      aria-label={t('inbox.reactions.messageReactions', 'Αντιδράσεις μηνύματος')}
+      aria-label={t('inbox.reactions.messageReactions')}
     >
       {visibleReactions.map(([emoji, reaction]) => {
         const isUserReacted = userReactions.has(emoji);

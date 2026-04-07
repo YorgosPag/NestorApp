@@ -76,47 +76,47 @@ export function PurchaseOrderForm({
         <CardHeader>
           <CardTitle>
             {isEditMode
-              ? t('form.editTitle', 'Επεξεργασία PO')
-              : t('form.createTitle', 'Νέα Παραγγελία')}
+              ? t('form.editTitle')
+              : t('form.createTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Project */}
             <div className="space-y-1.5">
-              <Label>{t('form.project', 'Έργο')} *</Label>
+              <Label>{t('form.project')} *</Label>
               <Input
                 value={form.projectId}
                 onChange={(e) => setField('projectId', e.target.value)}
-                placeholder={t('form.projectPlaceholder', 'ID Έργου')}
+                placeholder={t('form.projectPlaceholder')}
               />
             </div>
 
             {/* Supplier */}
             <div className="space-y-1.5">
-              <Label>{t('form.supplier', 'Προμηθευτής')} *</Label>
+              <Label>{t('form.supplier')} *</Label>
               <Input
                 value={form.supplierId}
                 onChange={(e) => setField('supplierId', e.target.value)}
-                placeholder={t('form.supplierPlaceholder', 'ID Προμηθευτή')}
+                placeholder={t('form.supplierPlaceholder')}
               />
             </div>
 
             {/* Building (optional) */}
             <div className="space-y-1.5">
-              <Label>{t('form.building', 'Κτίριο')}</Label>
+              <Label>{t('form.building')}</Label>
               <Input
                 value={form.buildingId ?? ''}
                 onChange={(e) =>
                   setField('buildingId', e.target.value || null)
                 }
-                placeholder={t('form.buildingPlaceholder', 'Προαιρετικό')}
+                placeholder={t('form.buildingPlaceholder')}
               />
             </div>
 
             {/* Date needed */}
             <div className="space-y-1.5">
-              <Label>{t('form.dateNeeded', 'Ημ. Παράδοσης')}</Label>
+              <Label>{t('form.dateNeeded')}</Label>
               <Input
                 type="date"
                 value={form.dateNeeded}
@@ -126,7 +126,7 @@ export function PurchaseOrderForm({
 
             {/* VAT Rate */}
             <div className="space-y-1.5">
-              <Label>{t('form.vatRate', 'ΦΠΑ')}</Label>
+              <Label>{t('form.vatRate')}</Label>
               <Select
                 value={String(form.taxRate)}
                 onValueChange={(v) =>
@@ -148,7 +148,7 @@ export function PurchaseOrderForm({
 
             {/* Payment terms */}
             <div className="space-y-1.5">
-              <Label>{t('form.paymentTerms', 'Όροι Πληρωμής (ημέρες)')}</Label>
+              <Label>{t('form.paymentTerms')}</Label>
               <Input
                 type="number"
                 min={0}
@@ -161,11 +161,11 @@ export function PurchaseOrderForm({
 
             {/* Delivery address */}
             <div className="space-y-1.5 md:col-span-2">
-              <Label>{t('form.deliveryAddress', 'Διεύθυνση Παράδοσης')}</Label>
+              <Label>{t('form.deliveryAddress')}</Label>
               <Input
                 value={form.deliveryAddress}
                 onChange={(e) => setField('deliveryAddress', e.target.value)}
-                placeholder={t('form.deliveryPlaceholder', 'Auto-fill από έργο')}
+                placeholder={t('form.deliveryPlaceholder')}
               />
             </div>
           </div>
@@ -175,7 +175,7 @@ export function PurchaseOrderForm({
       {/* Line Items */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('form.items', 'Είδη Παραγγελίας')}</CardTitle>
+          <CardTitle>{t('form.items')}</CardTitle>
         </CardHeader>
         <CardContent>
           <PurchaseOrderItemsTable
@@ -190,18 +190,18 @@ export function PurchaseOrderForm({
             <div className="w-full max-w-xs space-y-1 text-right">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {t('form.subtotal', 'Υποσύνολο')}
+                  {t('form.subtotal')}
                 </span>
                 <span className="tabular-nums">{formatCurrency(totals.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {t('form.vatRate', 'ΦΠΑ')} {form.taxRate}%
+                  {t('form.vatRate')} {form.taxRate}%
                 </span>
                 <span className="tabular-nums">{formatCurrency(totals.taxAmount)}</span>
               </div>
               <div className="flex justify-between border-t pt-1 font-semibold">
-                <span>{t('form.total', 'Σύνολο')}</span>
+                <span>{t('form.total')}</span>
                 <span className="tabular-nums">{formatCurrency(totals.total)}</span>
               </div>
             </div>
@@ -212,25 +212,25 @@ export function PurchaseOrderForm({
       {/* Notes */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('form.notes', 'Σημειώσεις')}</CardTitle>
+          <CardTitle>{t('form.notes')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>{t('form.supplierNotes', 'Σημειώσεις Προμηθευτή (PDF)')}</Label>
+              <Label>{t('form.supplierNotes')}</Label>
               <Textarea
                 value={form.supplierNotes}
                 onChange={(e) => setField('supplierNotes', e.target.value)}
-                placeholder={t('form.supplierNotesPlaceholder', 'Εμφανίζονται στο PDF')}
+                placeholder={t('form.supplierNotesPlaceholder')}
                 rows={3}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>{t('form.internalNotes', 'Εσωτερικές Σημειώσεις')}</Label>
+              <Label>{t('form.internalNotes')}</Label>
               <Textarea
                 value={form.internalNotes}
                 onChange={(e) => setField('internalNotes', e.target.value)}
-                placeholder={t('form.internalNotesPlaceholder', 'Δεν εμφανίζονται στο PDF')}
+                placeholder={t('form.internalNotesPlaceholder')}
                 rows={3}
               />
             </div>
@@ -244,7 +244,7 @@ export function PurchaseOrderForm({
           <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm font-medium">
-              {t('form.validationErrors', 'Σφάλματα')}
+              {t('form.validationErrors')}
             </span>
           </div>
           <ul className="mt-1 ml-6 list-disc text-sm text-destructive">
@@ -274,15 +274,15 @@ export function PurchaseOrderForm({
         >
           <Save className="mr-1.5 h-4 w-4" />
           {submitting
-            ? t('form.saving', 'Αποθήκευση...')
+            ? t('form.saving')
             : isEditMode
-              ? t('form.save', 'Αποθήκευση')
-              : t('form.create', 'Δημιουργία PO')}
+              ? t('form.save')
+              : t('form.create')}
         </Button>
         {onCancel && (
           <Button variant="outline" onClick={onCancel}>
             <X className="mr-1.5 h-4 w-4" />
-            {t('form.cancel', 'Ακύρωση')}
+            {t('form.cancel')}
           </Button>
         )}
       </div>

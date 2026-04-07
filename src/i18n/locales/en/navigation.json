@@ -221,7 +221,8 @@
     "availableStorage": "Available Storage",
     "availableParking": "Available Parking",
     "soldProperties": "Sold Properties",
-    "financialIntelligence": "Financial Intelligence"
+    "financialIntelligence": "Financial Intelligence",
+    "hierarchyLabel": "Hierarchy"
   },
   "reports": {
     "overview": "Executive Summary",

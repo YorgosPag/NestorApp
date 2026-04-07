@@ -117,13 +117,13 @@ export function PurchaseOrderList({
           <Input
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={t('list.search', 'Αναζήτηση PO, προμηθευτή, υλικού...')}
+            placeholder={t('list.search')}
             className="pl-9"
           />
         </div>
         <Button onClick={onCreateNew}>
           <Plus className="mr-1.5 h-4 w-4" />
-          {t('list.createPO', 'Νέα Παραγγελία')}
+          {t('list.createPO')}
         </Button>
       </div>
 
@@ -133,7 +133,7 @@ export function PurchaseOrderList({
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
               <AlertTriangle className="h-4 w-4" />
-              {t('list.requiresAction', 'Απαιτούν ενέργεια')}
+              {t('list.requiresAction')}
               <Badge variant="secondary" className="ml-auto">
                 {actionRequired.length}
               </Badge>
@@ -154,7 +154,7 @@ export function PurchaseOrderList({
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2">
-            {t('list.allOrders', 'Όλες οι παραγγελίες')}
+            {t('list.allOrders')}
             <Badge variant="secondary" className="ml-auto">
               {purchaseOrders.length}
             </Badge>
@@ -301,14 +301,14 @@ function EmptyState({ onCreateNew }: { onCreateNew: () => void }) {
         <Plus className="h-8 w-8 text-muted-foreground" />
       </div>
       <h3 className="text-lg font-semibold">
-        {t('list.emptyTitle', 'Δεν υπάρχουν παραγγελίες')}
+        {t('list.emptyTitle')}
       </h3>
       <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-        {t('list.emptyDescription', 'Δημιουργήστε την πρώτη παραγγελία αγοράς για να ξεκινήσετε.')}
+        {t('list.emptyDescription')}
       </p>
       <Button onClick={onCreateNew} className="mt-4">
         <Plus className="mr-1.5 h-4 w-4" />
-        {t('list.createFirst', 'Δημιουργία Πρώτης Παραγγελίας')}
+        {t('list.createFirst')}
       </Button>
     </div>
   );

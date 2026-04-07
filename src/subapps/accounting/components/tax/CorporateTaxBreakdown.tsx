@@ -10,7 +10,7 @@
  * @compliance CLAUDE.md — no inline styles, semantic HTML, zero `any`
  */
 
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { EPETaxResult, AETaxResult } from '../../types/tax';
@@ -33,7 +33,7 @@ interface CorporateTaxBreakdownProps {
 // ============================================================================
 
 export function CorporateTaxBreakdown({ result, entityType }: CorporateTaxBreakdownProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup']);
   const colors = useSemanticColors();
   const { corporateTax, profitAfterTax, distributedDividends, retainedEarnings, totalDividendTax } = result;
 
@@ -82,7 +82,7 @@ export function CorporateTaxBreakdown({ result, entityType }: CorporateTaxBreakd
               <dd className="font-medium">-{formatCurrency(corporateTax.deductibleExpenses)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className={colors.text.muted}>ΕΦΚΑ</dt>
+              <dt className={colors.text.muted}>{t('setup.efkaLabel')}</dt>
               <dd className="font-medium">-{formatCurrency(corporateTax.efkaContributions)}</dd>
             </div>
             <hr />

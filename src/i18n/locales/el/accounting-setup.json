@@ -177,7 +177,14 @@
       "boardMemberOnlyEfka": "Μόνο τα αμειβόμενα μέλη ΔΣ πληρώνουν ΕΦΚΑ",
       "efkaEmployeeExplain": "Μισθωτός: μετοχές <3% του συνόλου → 33,60% επί αμοιβής",
       "efkaSelfEmployedExplain": "Αυτοαπ.: μετοχές ≥3% → κατηγορίες ΕΦΚΑ αυτοαπασχολούμενου"
-    }
+    },
+    "vatLabel": "ΦΠΑ",
+    "efkaLabel": "ΕΦΚΑ",
+    "customCategories": {
+      "editAriaLabel": "Επεξεργασία {{name}}",
+      "deleteAriaLabel": "Διαγραφή {{name}}"
+    },
+    "seriesPrefixPlaceholder": "ΤΠΥ-Α"
   },
   "reconciliation": {
     "title": "Συμφωνία Τράπεζας",

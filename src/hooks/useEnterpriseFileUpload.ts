@@ -25,6 +25,7 @@ import { LEGACY_STORAGE_PATHS } from '@/config/domain-constants';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('useEnterpriseFileUpload');
 
@@ -156,6 +157,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
   // ========================================================================
 
   const notifications = useNotifications();
+  const { t } = useTranslation('files');
 
   // ========================================================================
   // CORE STATE MANAGEMENT
@@ -208,7 +210,8 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       setFileWithPreview(file, false); // File μόνο, όχι preview για invalid files
 
       if (config.showToasts !== false) {
-        notifications.error(`❌ ${validation.error || 'Μη έγκυρο αρχείο'}`);
+        notifications.error(`❌ ${validation.error || t('upload.toast.invalidFile')}`);
+
       }
 
       return validation;
@@ -228,12 +231,12 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
     setFileWithPreview(processedFile, createPreview);
 
     if (config.showToasts !== false) {
-      const displayName = customFilename !== file.name ? customFilename : PURPOSE_CONFIG[config.purpose]?.label || 'Αρχείο';
-      notifications.success(`✅ ${displayName} επιλέχθηκε επιτυχώς`);
+      const displayName = customFilename !== file.name ? customFilename : PURPOSE_CONFIG[config.purpose]?.label || t('upload.toast.fileFallback');
+      notifications.success(t('upload.toast.selectedSuccess', { name: displayName }));
     }
 
     return validation;
-  }, [config, clearAllErrors, setFileWithPreview, notifications]);
+  }, [config, clearAllErrors, setFileWithPreview, notifications, t]);
 
   // ========================================================================
   // FILE UPLOAD
@@ -332,7 +335,8 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       completeUpload(result);
 
       if (config.showToasts !== false) {
-        const baseMessage = `🎉 ${PURPOSE_CONFIG[config.purpose]?.label || 'Αρχείο'} ανέβηκε επιτυχώς!`;
+        const uploadName = PURPOSE_CONFIG[config.purpose]?.label || t('upload.toast.fileFallback');
+        const baseMessage = t('upload.toast.uploadSuccess', { name: uploadName });
 
         // Add compression info if available
         if (result.compressionInfo?.wasCompressed) {
@@ -341,7 +345,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
           const savingsPercent = result.compressionInfo.compressionRatio;
 
           notifications.success(
-            `${baseMessage}\n🗜️ Συμπιέστηκε: ${originalKB}KB → ${compressedKB}KB (${savingsPercent}% εξοικονόμηση)`
+            `${baseMessage}\n${t('upload.toast.compressed', { originalKB, compressedKB, savingsPercent })}`
           );
         } else {
           notifications.success(baseMessage);
@@ -351,17 +355,17 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       return result;
 
     } catch (error) {
-      const errorMessage = getErrorMessage(error, 'Σφάλμα κατά το ανέβασμα');
+      const errorMessage = getErrorMessage(error, t('upload.toast.uploadError'));
 
       failUpload(errorMessage);
 
       if (config.showToasts !== false) {
-        notifications.error(`❌ Σφάλμα: ${errorMessage}`);
+        notifications.error(t('upload.toast.errorPrefix', { message: errorMessage }));
       }
 
       return null;
     }
-  }, [config, startUpload, setUploadProgress, completeUpload, failUpload, uploadControllerRef, notifications]);
+  }, [config, startUpload, setUploadProgress, completeUpload, failUpload, uploadControllerRef, notifications, t]);
 
   // ========================================================================
   // ACTION WRAPPERS (Backward Compatibility)
@@ -388,9 +392,9 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
     cancelUploadState();
 
     if (config.showToasts !== false) {
-      notifications.warning('⚠️ Το ανέβασμα ακυρώθηκε');
+      notifications.warning(t('upload.toast.uploadCancelled'));
     }
-  }, [cancelUploadState, config.showToasts, notifications]);
+  }, [cancelUploadState, config.showToasts, notifications, t]);
 
   /**
    * Cleanup wrapper (Delegates to state management)

@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -77,7 +77,7 @@ const INITIAL_FORM: NewPresetFormState = {
 // ============================================================================
 
 export function ServicePresetsSection() {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup']);
   const colors = useSemanticColors();
   const { presets, loading, saving, error, savePresets } = useServicePresets();
 
@@ -260,7 +260,7 @@ export function ServicePresetsSection() {
               </div>
               <div className="flex items-end gap-3">
                 <fieldset>
-                  <Label>ΦΠΑ</Label>
+                  <Label>{t('setup.vatLabel')}</Label>
                   <VATRateSelector
                     value={form.vatRate}
                     onValueChange={(rate) => setForm((f) => ({ ...f, vatRate: rate }))}

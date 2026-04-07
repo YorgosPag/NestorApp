@@ -205,7 +205,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
                 onContactSelect={handleContactSelect}
                 excludeContactIds={excludeContactIds}
                 allowedContactTypes={['individual']}
-                placeholder="Αναζήτηση επαφής με όνομα, ειδικότητα ή ΑΜΚΑ..."
+                placeholder={t('ika.workers.searchPlaceholder')}
                 searchConfig={{ autoLoadContacts: true, maxResults: 20 }}
               />
 

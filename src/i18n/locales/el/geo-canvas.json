@@ -776,7 +776,8 @@
     "noResults": "Δεν βρέθηκαν αποτελέσματα",
     "region": "Περιφέρεια",
     "municipality": "Δήμος",
-    "selectToView": "Επιλέξτε ένα αποτέλεσμα για να δείτε το boundary"
+    "selectToView": "Επιλέξτε ένα αποτέλεσμα για να δείτε το boundary",
+    "searchPlaceholder": "π.χ. Δήμος Αθηναίων, Αττική, Θεσσαλονίκη..."
   },
   "coordinatePicker": {
     "instructions": {
@@ -784,5 +785,13 @@
       "step3": "3. Ρύθμιση ακρίβειας και προαιρετικής περιγραφής",
       "step4": "4. Κλικ \"Add Control Point\" για αποθήκευση"
     }
+  },
+  "page": {
+    "checkingPermissions": "Έλεγχος δικαιωμάτων...",
+    "adminOnly": "Πρόσβαση Μόνο για Διαχειριστές",
+    "noPermission": "Δεν έχετε τα απαραίτητα δικαιώματα για πρόσβαση στο Geo-Canvas System.",
+    "loginAsAdmin": "Παρακαλώ συνδεθείτε με λογαριασμό διαχειριστή.",
+    "initializing": "Αρχικοποίηση Geo-Canvas...",
+    "loading": "Φόρτωση Geo-Canvas..."
   }
 }

@@ -183,5 +183,9 @@
     "priceRange": {
       "label": "Price Range (€)"
     }
+  },
+  "mapLayers": {
+    "pinPreviewTitle": "Pin Preview - Radius: {{radius}}m",
+    "pinRadiusTitle": "Pin - Radius: {{radius}}m"
   }
 }

@@ -351,5 +351,6 @@
     "fireplace": "Fireplace",
     "view": "View",
     "pool": "Pool"
-  }
+  },
+  "availability": "Availability"
 }

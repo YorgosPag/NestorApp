@@ -218,11 +218,11 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       <DeleteConfirmDialog
         open={loc.deleteDialogOpen}
         onOpenChange={loc.setDeleteDialogOpen}
-        title="Διαγραφή Διεύθυνσης"
-        description="Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη διεύθυνση;"
+        title={t('deleteDialog.title')}
+        description={t('deleteDialog.description')}
         onConfirm={loc.handleConfirmDelete}
-        confirmText="Διαγραφή"
-        cancelText="Ακύρωση"
+        confirmText={t('deleteDialog.confirm')}
+        cancelText={t('deleteDialog.cancel')}
       />
     </section>
   );

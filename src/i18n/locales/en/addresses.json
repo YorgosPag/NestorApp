@@ -105,5 +105,11 @@
     "noAddresses": "No addresses",
     "noAddressesHint": "Use the \"New Address\" button to add an address",
     "projectAddresses": "Project Addresses"
+  },
+  "deleteDialog": {
+    "title": "Delete Address",
+    "description": "Are you sure you want to delete this address?",
+    "confirm": "Delete",
+    "cancel": "Cancel"
   }
 }
