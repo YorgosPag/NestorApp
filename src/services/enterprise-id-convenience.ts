@@ -150,6 +150,12 @@ export const generateQueryStrategyDocId = (collection: string, failedFilters: st
 export const generateChatHistoryDocId = (channel: string, senderId: string) =>
   enterpriseIdService.generateChatHistoryDocId(channel, senderId);
 
+// Ownership Tables — Deterministic Composite Keys (ADR-235)
+export const generateOwnershipTableId = (projectId: string) =>
+  enterpriseIdService.generateOwnershipTableId(projectId);
+export const generateOwnershipRevisionId = (version: number) =>
+  enterpriseIdService.generateOwnershipRevisionId(version);
+
 // Procurement (ADR-267)
 export const generatePurchaseOrderId = () => enterpriseIdService.generatePurchaseOrderId();
 export const generatePOItemId = () => enterpriseIdService.generatePOItemId();

@@ -25,6 +25,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import {
+  generateOwnershipTableId,
+  generateOwnershipRevisionId,
+} from '@/services/enterprise-id.service';
 import type {
   OwnershipPercentageTable,
   MutableOwnershipPercentageTable,
@@ -37,11 +41,14 @@ import {
 } from './ownership-calculation-engine';
 
 // ============================================================================
-// HELPERS
+// LEGACY MIGRATION — Google graceful migration pattern
 // ============================================================================
 
-function generateTableId(projectId: string): string {
-  return `ownership_${projectId}`;
+/** Legacy ID format — reads only, never creates new */
+const LEGACY_TABLE_ID_PREFIX = 'ownership_';
+
+function legacyTableId(projectId: string): string {
+  return `${LEGACY_TABLE_ID_PREFIX}${projectId}`;
 }
 
 // ============================================================================
@@ -49,18 +56,31 @@ function generateTableId(projectId: string): string {
 // ============================================================================
 
 /**
- * Get ownership table for a project (one per project)
+ * Get ownership table for a project (one per project).
+ * Checks enterprise ID first, falls back to legacy format for migration.
  */
 export async function getTable(
   projectId: string,
 ): Promise<OwnershipPercentageTable | null> {
-  const tableId = generateTableId(projectId);
+  // 1. Try enterprise ID (SSoT)
+  const tableId = generateOwnershipTableId(projectId);
   const docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, tableId);
   const snapshot = await getDoc(docRef);
 
-  if (!snapshot.exists()) return null;
+  if (snapshot.exists()) {
+    return { id: snapshot.id, ...snapshot.data() } as OwnershipPercentageTable;
+  }
 
-  return { id: snapshot.id, ...snapshot.data() } as OwnershipPercentageTable;
+  // 2. Fallback: legacy ID format (graceful migration)
+  const legacyId = legacyTableId(projectId);
+  const legacyRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, legacyId);
+  const legacySnapshot = await getDoc(legacyRef);
+
+  if (legacySnapshot.exists()) {
+    return { id: legacySnapshot.id, ...legacySnapshot.data() } as OwnershipPercentageTable;
+  }
+
+  return null;
 }
 
 /**
@@ -151,7 +171,7 @@ export async function createTable(
   projectId: string,
   buildingIds: string[],
 ): Promise<OwnershipPercentageTable> {
-  const tableId = generateTableId(projectId);
+  const tableId = generateOwnershipTableId(projectId);
   const now = Timestamp.now();
 
   const table: Omit<OwnershipPercentageTable, 'id'> = {
@@ -234,8 +254,8 @@ export async function finalizeTable(
       );
     }
 
-    // Create revision
-    const revisionId = `rev_v${currentData.version}`;
+    // Create revision — enterprise deterministic key (ADR-235)
+    const revisionId = generateOwnershipRevisionId(currentData.version);
     const revisionRef = doc(
       db,
       COLLECTIONS.OWNERSHIP_TABLES,
@@ -360,9 +380,16 @@ export async function unlockTable(
  * Throws if table is finalized/registered.
  */
 export async function deleteDraftTable(projectId: string): Promise<void> {
-  const tableId = generateTableId(projectId);
-  const docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, tableId);
-  const snapshot = await getDoc(docRef);
+  // Try enterprise ID first, fallback to legacy
+  const tableId = generateOwnershipTableId(projectId);
+  let docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, tableId);
+  let snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) {
+    const legacyId = legacyTableId(projectId);
+    docRef = doc(db, COLLECTIONS.OWNERSHIP_TABLES, legacyId);
+    snapshot = await getDoc(docRef);
+  }
 
   if (!snapshot.exists()) return;
 

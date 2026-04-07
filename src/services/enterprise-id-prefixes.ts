@@ -24,6 +24,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   RELATIONSHIP: 'rel',
   MEMBER: 'mbr',
   LANDOWNER: 'lown',         // ADR-244: Property ownership
+  OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
 
   // Legal Documents & Obligations
   SECTION: 'sec',

@@ -644,11 +644,28 @@ interface OwnershipTableRevision {
 
 ---
 
+## 10.5 Document ID Generation (Enterprise SSoT — ADR-017)
+
+**Πηγή αλήθειας**: `enterprise-id.service.ts` — deterministic composite key pattern.
+
+| Entity | Generator | Pattern | Παράδειγμα |
+|--------|-----------|---------|------------|
+| Ownership Table | `generateOwnershipTableId(projectId)` | `owntbl_{projectId}` | `owntbl_proj_a1b2c3d4-...` |
+| Revision | `generateOwnershipRevisionId(version)` | `owntbl_rev_v{N}` | `owntbl_rev_v3` |
+
+**Prefix**: `owntbl` (registered in `enterprise-id-prefixes.ts`)
+
+**Γιατί deterministic**: Σχέση 1:1 table↔project. Deterministic key = O(1) direct document access χωρίς Firestore query. Google Bigtable composite key pattern.
+
+> **ΚΑΝΟΝΑΣ**: ΑΠΑΓΟΡΕΥΕΤΑΙ inline ID generation (`ownership_{projectId}`). Μόνο μέσω `generateOwnershipTableId()`.
+
+---
+
 ## 11. Firestore Collection (Proposed)
 
 ```
 ownership_tables/
-  └── {tableId}/
+  └── {tableId}/     ← owntbl_{projectId} (enterprise deterministic key)
       ├── projectId: string (= οικόπεδο — ΕΝΑΣ πίνακας ανά project)
       ├── buildingIds: string[] (κτήρια που συμμετέχουν)
       ├── zonePrice: number (€/τ.μ. — χειροκίνητη εισαγωγή)
@@ -697,4 +714,5 @@ ownership_tables/
 | Ημερομηνία | Αλλαγή | Συντάκτης |
 |-----------|--------|-----------|
 | 2026-03-15 | Initial ADR creation — Documentation only | Claude Code + Γιώργος |
+| 2026-04-07 | Enterprise ID SSoT: Migrated ID generation from inline `ownership_{projectId}` to centralized `generateOwnershipTableId()` + `generateOwnershipRevisionId()` in `enterprise-id.service.ts`. Prefix `owntbl` registered. ADR-017 compliance. | Claude Code |
 | 2026-03-16 | Phase 1+2 IMPLEMENTED: Types, Calculation Engine (3 methods + Largest Remainder), Firestore CRUD service, Hook, UI Tab with auto-populate, inline edit, finalize/unlock, revision history. New files: `src/types/ownership-table.ts`, `src/services/ownership/` (3 files), `src/hooks/ownership/useOwnershipTable.ts`, `src/components/projects/tabs/OwnershipTableTab.tsx`. Modified: `firestore-collections.ts`, `project-tabs-config.ts`, `projectMappings.ts`, `property-statuses-enterprise.ts`, i18n (el+en). | Claude Code |

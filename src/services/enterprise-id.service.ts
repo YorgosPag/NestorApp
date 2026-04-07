@@ -49,7 +49,8 @@ export {
   generateEmploymentRecordId, generateAppointmentId, generateFolderId,
   generateCommentId, generateApprovalId, generateBankAccountId,
   generateDebtMaturityId, generateBudgetVarianceId, generateQueryStrategyDocId,
-  generateChatHistoryDocId, generatePurchaseOrderId, generatePOItemId,
+  generateChatHistoryDocId, generateOwnershipTableId, generateOwnershipRevisionId,
+  generatePurchaseOrderId, generatePOItemId,
   generatePOAttachmentId, generateSavedReportId, generateRecurringPaymentId,
   generateOptimisticId, generateTempId, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId,
@@ -293,6 +294,16 @@ export class EnterpriseIdService {
 
   generateChatHistoryDocId(channel: string, senderId: string): string {
     return `${P.AI_CHAT_HISTORY}_${channel}_${senderId}`;
+  }
+
+  /** ADR-235: Deterministic 1:1 key — one ownership table per project */
+  generateOwnershipTableId(projectId: string): string {
+    return `${P.OWNERSHIP_TABLE}_${projectId}`;
+  }
+
+  /** ADR-235: Deterministic revision key — one revision per version */
+  generateOwnershipRevisionId(version: number): string {
+    return `${P.OWNERSHIP_TABLE}_rev_v${version}`;
   }
 
   // --- Utility Methods ---
