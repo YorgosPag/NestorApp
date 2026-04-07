@@ -789,7 +789,7 @@
   "page": {
     "checkingPermissions": "Έλεγχος δικαιωμάτων...",
     "adminOnly": "Πρόσβαση Μόνο για Διαχειριστές",
-    "noPermission": "Δεν έχετε τα απαραίτητα δικαιώματα για πρόσβαση στο Geo-Canvas System.",
+    "noPermission": "Δεν έχετε τα απαραίτητα δικαιώματα για πρόσβαση στο Σύστημα Geo-Canvas.",
     "loginAsAdmin": "Παρακαλώ συνδεθείτε με λογαριασμό διαχειριστή.",
     "initializing": "Αρχικοποίηση Geo-Canvas...",
     "loading": "Φόρτωση Geo-Canvas..."

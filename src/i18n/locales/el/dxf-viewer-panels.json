@@ -2,7 +2,7 @@
   "panels": {
     "properties": {
       "title": "Ιδιότητες",
-      "description": "{selectedCount} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {layerCount} DXF layers}}"
+      "description": "{selectedCount} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {layerCount} DXF επίπεδα}}"
     },
     "overlay": {
       "title": "Overlay",
@@ -25,7 +25,7 @@
     },
     "hierarchy": {
       "title": "Ιεραρχία",
-      "description": "Project Hierarchy & Destinations",
+      "description": "Ιεραρχία Έργων & Προορισμοί",
       "projectHierarchy": "Ιεραρχία Έργων",
       "loading": "Φόρτωση έργων...",
       "error": "Ιεραρχία Έργων - Σφάλμα",
@@ -47,44 +47,44 @@
       "selectProjectPlaceholder": "-- Επιλέξτε Έργο --"
     },
     "layers": {
-      "title": "Layers",
-      "description": "Layer Drawing & Status Management"
+      "title": "Επίπεδα",
+      "description": "Σχεδίαση Επιπέδων & Διαχείριση Κατάστασης"
     }
   },
   "layerActions": {
     "changeColor": "Αλλαγή χρώματος",
-    "rename": "Μετονομασία layer",
+    "rename": "Μετονομασία επιπέδου",
     "delete": "Διαγραφή",
-    "changeColorEntity": "Αλλαγή χρώματος entity",
-    "renameEntity": "Μετονομασία entity",
-    "changeColorGroup": "Αλλαγή χρώματος Color Group",
-    "renameGroup": "Μετονομασία Color Group",
-    "deleteGroup": "Διαγραφή Color Group",
-    "toggleVisibility": "Toggle ορατότητας",
-    "mergeEntities": "Συγχώνευση επιλεγμένων entities",
-    "mergeLayers": "Συγχώνευση επιλεγμένων layers",
-    "mergeColorGroups": "Συγχώνευση επιλεγμένων color groups",
-    "selectAllEntities": "Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection",
+    "changeColorEntity": "Αλλαγή χρώματος οντότητας",
+    "renameEntity": "Μετονομασία οντότητας",
+    "changeColorGroup": "Αλλαγή χρώματος Ομάδας Χρωμάτων",
+    "renameGroup": "Μετονομασία Ομάδας Χρωμάτων",
+    "deleteGroup": "Διαγραφή Ομάδας Χρωμάτων",
+    "toggleVisibility": "Εναλλαγή ορατότητας",
+    "mergeEntities": "Συγχώνευση επιλεγμένων οντοτήτων",
+    "mergeLayers": "Συγχώνευση επιλεγμένων επιπέδων",
+    "mergeColorGroups": "Συγχώνευση επιλεγμένων ομάδων χρωμάτων",
+    "selectAllEntities": "Κλικ για επιλογή όλων των οντοτήτων, Ctrl+Κλικ για πολλαπλή επιλογή",
     "expand": "Ανάπτυξη",
     "collapse": "Σύμπτυξη",
     "expandEntities": "Ανάπτυξη στοιχείων",
     "collapseEntities": "Σύμπτυξη στοιχείων",
     "show": "Εμφάνιση",
     "hide": "Απόκρυψη",
-    "doubleClickToRename": "Double-click για μετονομασία"
+    "doubleClickToRename": "Διπλό κλικ για μετονομασία"
   },
   "search": {
-    "layersAndEntities": "Αναζήτηση layers και entities..."
+    "layersAndEntities": "Αναζήτηση επιπέδων και οντοτήτων..."
   },
   "mergePanel": {
     "title": "🔗 Πολλαπλή Επιλογή Ενεργή",
-    "entitiesSelected": "{count} entities επιλεγμένες",
-    "layersSelected": "{count} layers επιλεγμένα",
-    "colorGroupsSelected": "{count} color groups επιλεγμένα",
-    "mergeEntitiesButton": "Συγχώνευση Entities",
-    "mergeLayersButton": "Συγχώνευση Layers",
-    "mergeColorGroupsButton": "Συγχώνευση Color Groups",
-    "tip": "Συμβουλή: Ctrl+Click για πολλαπλή επιλογή"
+    "entitiesSelected": "{count} οντότητες επιλεγμένες",
+    "layersSelected": "{count} επίπεδα επιλεγμένα",
+    "colorGroupsSelected": "{count} ομάδες χρωμάτων επιλεγμένες",
+    "mergeEntitiesButton": "Συγχώνευση Οντοτήτων",
+    "mergeLayersButton": "Συγχώνευση Επιπέδων",
+    "mergeColorGroupsButton": "Συγχώνευση Ομάδων Χρωμάτων",
+    "tip": "Συμβουλή: Ctrl+Κλικ για πολλαπλή επιλογή"
   },
   "levelPanel": {
     "title": "Επίπεδα Έργου",
@@ -235,14 +235,14 @@
     }
   },
   "layerManager": {
-    "title": "Διαχείριση Layers",
-    "loading": "Φόρτωση layers...",
+    "title": "Διαχείριση Επιπέδων",
+    "loading": "Φόρτωση επιπέδων...",
     "createDialog": {
-      "title": "Δημιουργία νέου Layer",
-      "nameLabel": "Όνομα Layer",
+      "title": "Δημιουργία νέου Επιπέδου",
+      "nameLabel": "Όνομα Επιπέδου",
       "namePlaceholder": "π.χ. Ηλεκτρολογικά στοιχεία",
       "descriptionLabel": "Περιγραφή (προαιρετικό)",
-      "descriptionPlaceholder": "Περιγραφή του layer...",
+      "descriptionPlaceholder": "Περιγραφή του επιπέδου...",
       "categoryLabel": "Κατηγορία",
       "colorLabel": "Χρώμα",
       "cancel": "Ακύρωση",
@@ -255,19 +255,19 @@
       "unlock": "Ξεκλείδωμα",
       "rename": "Μετονομασία",
       "duplicate": "Αντιγραφή",
-      "exportLayer": "Export Layer",
+      "exportLayer": "Εξαγωγή Επιπέδου",
       "delete": "Διαγραφή",
-      "exportAll": "Export όλα τα Layers",
-      "importLayers": "Import Layers",
-      "hideSystemLayers": "Απόκρυψη System Layers",
-      "showSystemLayers": "Εμφάνιση System Layers"
+      "exportAll": "Εξαγωγή όλων των Επιπέδων",
+      "importLayers": "Εισαγωγή Επιπέδων",
+      "hideSystemLayers": "Απόκρυψη Επιπέδων Συστήματος",
+      "showSystemLayers": "Εμφάνιση Επιπέδων Συστήματος"
     },
     "labels": {
       "opacity": "Διαφάνεια:",
       "moreElements": "+{count} περισσότερα στοιχεία",
-      "noLayersFound": "Δεν βρέθηκαν layers",
-      "createNewOrChangeFilters": "Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα",
-      "searchLayers": "Αναζήτηση layers...",
+      "noLayersFound": "Δεν βρέθηκαν επίπεδα",
+      "createNewOrChangeFilters": "Δημιουργήστε ένα νέο επίπεδο ή αλλάξτε τα φίλτρα",
+      "searchLayers": "Αναζήτηση επιπέδων...",
       "other": "Άλλα"
     },
     "stats": {
@@ -276,26 +276,26 @@
       "elements": "Στοιχεία:"
     },
     "sync": {
-      "status": "Κατάσταση Sync:",
+      "status": "Κατάσταση Συγχρονισμού:",
       "connected": "Συνδεδεμένο",
       "disconnected": "Αποσυνδεδεμένο",
-      "lastSync": "Τελευταία Sync:",
+      "lastSync": "Τελευταίος Συγχρονισμός:",
       "errors": "Σφάλματα:",
-      "connectedTooltip": "Συνδεδεμένο - Real-time sync ενεργό",
+      "connectedTooltip": "Συνδεδεμένο - Συγχρονισμός σε πραγματικό χρόνο",
       "disconnectedTooltip": "Αποσυνδεδεμένο"
     },
     "badges": {
       "system": "Σύστημα"
     },
     "readOnly": {
-      "title": "Layers",
+      "title": "Επίπεδα",
       "viewModeOnly": "Λειτουργία προβολής μόνο",
       "canOnlyChangeVisibility": "Μπορείτε να αλλάξετε μόνο την ορατότητα",
       "connectedRealtime": "Συνδεδεμένο - Ενημερώσεις σε πραγματικό χρόνο",
       "disconnectedNoUpdates": "Αποσυνδεδεμένο - Δεν υπάρχουν ενημερώσεις",
       "lastUpdate": "Τελευταία ενημέρωση:",
       "visibleHidden": "Ορατό|Κρυφό",
-      "waitForAdmins": "Περιμένετε να δημιουργηθούν layers από τους διαχειριστές",
+      "waitForAdmins": "Περιμένετε να δημιουργηθούν επίπεδα από τους διαχειριστές",
       "checkConnection": "Ελέγξτε τη σύνδεσή σας",
       "dbConnectionError": "Σφάλμα σύνδεσης με τη βάση δεδομένων"
     }
@@ -312,9 +312,9 @@
     "instructionDrag": "Σύρετε χερούλια για επεξεργασία"
   },
   "layerColorPicker": {
-    "changeGroupColor": "🎨 Αλλαγή Χρώματος Color Group",
-    "changeLayerColor": "🎨 Αλλαγή Χρώματος Layer",
-    "changeEntityColor": "🎨 Αλλαγή Χρώματος Entity"
+    "changeGroupColor": "🎨 Αλλαγή Χρώματος Ομάδας",
+    "changeLayerColor": "🎨 Αλλαγή Χρώματος Επιπέδου",
+    "changeEntityColor": "🎨 Αλλαγή Χρώματος Οντότητας"
   },
   "destinationSelector": {
     "floorsCount": "{{count}} όροφοι",
@@ -346,6 +346,6 @@
     "unitsCount": "{count} μονάδες"
   },
   "importCategory": {
-    "placeholder": "Εισαγωγή (Import) Category (Placeholder)"
+    "placeholder": "Κατηγορία Εισαγωγής (Placeholder)"
   }
 }

@@ -277,9 +277,9 @@
   "tools": {
     "legal": "Νομικά Έγγραφα",
     "obligations": "Συγγραφή Υποχρεώσεων",
-    "dxf": "DXF Panel",
+    "dxf": "Πίνακας DXF",
     "shortcuts": "Συντομεύσεις",
-    "geoCanvas": "Geo-Canvas System",
+    "geoCanvas": "Σύστημα Geo-Canvas",
     "fileManager": "Διαχείριση Αρχείων"
   },
   "admin": {

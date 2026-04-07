@@ -28,7 +28,7 @@
   "calibration": {
     "title": "🔧 Καλιμπράρισμα Συντεταγμένων",
     "close": "Κλείσιμο",
-    "coordinateSystem": "✅ Coordinate System:",
+    "coordinateSystem": "✅ Σύστημα Συντεταγμένων:",
     "sceneStatus": "📊 Κατάσταση Σκηνής:",
     "entities": "Οντότητες: {{count}}",
     "layers": "Επίπεδα: {{count}}",

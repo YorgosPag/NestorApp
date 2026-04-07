@@ -61,13 +61,13 @@
     "title": "Χώρος Αποθήκευσης",
     "used": "Χρησιμοποιημένος",
     "availableSpace": "Έχετε {size} διαθέσιμο χώρο για επαφές και αρχεία",
-    "clearConfirm": "Θέλετε να καθαρίσετε το cached storage data?\n\nΑυτό θα διαγράψει:\n• Cached DXF files\n• Temporary data\n• Browser cache\n\nΤα αποθηκευμένα projects δεν θα επηρεαστούν.",
-    "clearedSuccess": "Storage καθαρίστηκε! Ανανεώνω τη σελίδα...",
-    "clearError": "Σφάλμα κατά τον καθαρισμό storage.",
-    "clearing": "Clearing...",
-    "clear": "Clear",
-    "criticalWarning": "Storage σχεδόν γεμάτο! Καθαρίστε το για να αποφύγετε errors.",
-    "lowWarning": "Storage σε χαμηλά επίπεδα. Σκεφτείτε καθαρισμό."
+    "clearConfirm": "Θέλετε να καθαρίσετε τα αποθηκευμένα δεδομένα;\n\nΑυτό θα διαγράψει:\n• Αποθηκευμένα αρχεία DXF\n• Προσωρινά δεδομένα\n• Προσωρινή μνήμη φυλλομετρητή\n\nΤα αποθηκευμένα έργα δεν θα επηρεαστούν.",
+    "clearedSuccess": "Ο αποθηκευτικός χώρος καθαρίστηκε! Ανανεώνω τη σελίδα...",
+    "clearError": "Σφάλμα κατά τον καθαρισμό αποθηκευτικού χώρου.",
+    "clearing": "Καθαρισμός...",
+    "clear": "Καθαρισμός",
+    "criticalWarning": "Ο αποθηκευτικός χώρος είναι σχεδόν γεμάτος! Καθαρίστε τον για να αποφύγετε σφάλματα.",
+    "lowWarning": "Ο αποθηκευτικός χώρος είναι σε χαμηλά επίπεδα. Σκεφτείτε καθαρισμό."
   },
   "contactTypes": {
     "company": "Εταιρεία",
@@ -173,7 +173,7 @@
     "settingsSaved": "Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς"
   },
   "modal": {
-    "closeModal": "Κλείσιμο modal",
+    "closeModal": "Κλείσιμο παραθύρου",
     "confirm": "Επιβεβαίωση",
     "cancel": "Άκυρο",
     "loading": "Φόρτωση...",
@@ -268,22 +268,22 @@
     "pleaseLoginAsAdmin": "Παρακαλώ συνδεθείτε με λογαριασμό διαχειριστή."
   },
   "layerManager": {
-    "title": "Layers Διαχείρισης",
+    "title": "Διαχείριση Επιπέδων",
     "itemCount": "{count} στοιχεία",
-    "searchPlaceholder": "Αναζήτηση layer...",
-    "searchAriaLabel": "Αναζήτηση Layer",
+    "searchPlaceholder": "Αναζήτηση επιπέδου...",
+    "searchAriaLabel": "Αναζήτηση Επιπέδου",
     "typeFilterAriaLabel": "Φίλτρο τύπου",
     "typePlaceholder": "Τύπος",
     "statusFilterAriaLabel": "Φίλτρο κατάστασης",
     "statusPlaceholder": "Κατάσταση",
     "showAll": "Εμφάνιση Όλων",
     "hideAll": "Απόκρυψη Όλων",
-    "noLayersFound": "Δεν βρέθηκαν layers",
+    "noLayersFound": "Δεν βρέθηκαν επίπεδα",
     "noResultsFor": "Δεν βρέθηκαν αποτελέσματα για \"{query}\"",
     "tryChangingFilters": "Δοκιμάστε να αλλάξετε τα φίλτρα"
   },
   "copy": {
-    "copyLink": "Αντιγραφή Link",
+    "copyLink": "Αντιγραφή Συνδέσμου",
     "copyText": "Αντιγραφή Κειμένου",
     "copyError": "Σφάλμα αντιγραφής",
     "copySuccess": "Επιτυχής αντιγραφή",
@@ -542,26 +542,26 @@
     "infoFormat": "Μορφή: {Κτίριο}-{Τύπος}-{Όροφος}.{ΑΑ}"
   },
   "debug": {
-    "title": "Debug",
-    "description": "Diagnostic tools and internal utilities",
-    "note": "These tools are intended for development and support.",
+    "title": "Εργαλεία Ανάπτυξης",
+    "description": "Διαγνωστικά εργαλεία και εσωτερικές βοηθητικές λειτουργίες",
+    "note": "Αυτά τα εργαλεία προορίζονται για ανάπτυξη και υποστήριξη.",
     "links": {
-      "tokenInfo": "Token Info"
+      "tokenInfo": "Πληροφορίες Διαπιστευτηρίου"
     },
     "tokenInfo": {
-      "loading": "Loading token info...",
-      "notAuthenticated": "Not authenticated",
-      "loginPrompt": "Please log in to view token information.",
-      "title": "Token Info - Custom Claims",
-      "userObject": "User Object",
-      "fullUserObject": "Full User Object (Raw)",
-      "keyInfo": "Key Debug Info",
+      "loading": "Φόρτωση πληροφοριών διαπιστευτηρίου...",
+      "notAuthenticated": "Μη πιστοποιημένος",
+      "loginPrompt": "Συνδεθείτε για να δείτε πληροφορίες διαπιστευτηρίου.",
+      "title": "Πληροφορίες Διαπιστευτηρίου - Ιδιότητες Χρήστη",
+      "userObject": "Αντικείμενο Χρήστη",
+      "fullUserObject": "Πλήρες Αντικείμενο Χρήστη (Ακατέργαστο)",
+      "keyInfo": "Βασικές Πληροφορίες",
       "uid": "UID",
       "email": "Email",
-      "globalRole": "Global Role",
-      "companyId": "Company ID",
-      "permissionsCount": "Permissions Count",
-      "missing": "MISSING"
+      "globalRole": "Παγκόσμιος Ρόλος",
+      "companyId": "Αναγνωριστικό Εταιρείας",
+      "permissionsCount": "Αριθμός Δικαιωμάτων",
+      "missing": "ΛΕΙΠΕΙ"
     }
   },
   "months": {

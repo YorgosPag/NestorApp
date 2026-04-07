@@ -5,10 +5,10 @@
     "title": "Component Composition Showcase",
     "subtitle": "Demonstration των νέων composition components που χρησιμοποιούν το BaseCard system",
     "sections": {
-      "cards": "Card Components",
-      "toolbars": "Toolbar Components",
-      "integration": "Integration Demo",
-      "benefits": "Design System Benefits"
+      "cards": "Στοιχεία Καρτών",
+      "toolbars": "Στοιχεία Γραμμών Εργαλείων",
+      "integration": "Επίδειξη Ενσωμάτωσης",
+      "benefits": "Οφέλη Συστήματος Σχεδίασης"
     }
   },
   "cards": {
@@ -105,10 +105,10 @@
     }
   },
   "benefits": {
-    "title": "Design System Benefits",
+    "title": "Οφέλη Συστήματος Σχεδίασης",
     "consistency": {
-      "title": "Consistency",
-      "description": "Όλα τα cards χρησιμοποιούν το ίδιο BaseCard system για unified look & feel"
+      "title": "Συνέπεια",
+      "description": "Όλες οι κάρτες χρησιμοποιούν το ίδιο σύστημα βασικής κάρτας για ενιαία εμφάνιση"
     },
     "modularity": {
       "title": "Modularity",
