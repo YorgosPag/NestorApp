@@ -208,7 +208,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
     } finally {
       setLoading(false);
     }
-  }, [floorId, buildingId, floorNumber, companyId, findFloor, loadEnterprise, searchLegacyFloorFloorplans]);
+  }, [floorId, buildingId, floorNumber, companyId, findFloor, loadEnterprise]);
 
   useEffect(() => {
     fetchFloorplans();
