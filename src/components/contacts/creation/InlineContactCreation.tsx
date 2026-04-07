@@ -80,15 +80,14 @@ export function InlineContactCreation({ contactType, onContactAdded, onCancel, o
     if (!user?.uid || !user?.companyId) return undefined;
 
     const contactId = formData.id || preGeneratedContactId;
+    // 🏢 SSoT: contactName NOT computed here — resolveContactName() in
+    // PhotoUploadConfiguration.ts is the SINGLE SOURCE OF TRUTH for name resolution
     return {
       companyId: user.companyId,
       createdBy: user.uid,
       contactId,
-      contactName: isIndividual
-        ? `${formData.firstName || ''} ${formData.lastName || ''}`.trim()
-        : formData.companyName || formData.serviceName || formData.name,
     };
-  }, [user, formData.id, preGeneratedContactId, formData.firstName, formData.lastName, formData.companyName, formData.serviceName, formData.name, isIndividual]);
+  }, [user, formData.id, preGeneratedContactId]);
 
   const TypeIcon = CONTACT_ICONS[contactType];
   const typeColors = CONTACT_COLORS[contactType];

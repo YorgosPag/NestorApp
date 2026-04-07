@@ -203,10 +203,10 @@ export function CompanyFileTree({
 
   const treeData = useMemo(() => {
     if (groupingMode === 'entity') {
-      return buildTreeByEntity(files, companyName, translateDisplayName, lang);
+      return buildTreeByEntity(files, companyName, translateDisplayName, lang, t);
     }
-    return buildTreeByCategory(files, companyName, translateDisplayName, lang);
-  }, [files, companyName, groupingMode, translateDisplayName, lang]);
+    return buildTreeByCategory(files, companyName, translateDisplayName, lang, t);
+  }, [files, companyName, groupingMode, translateDisplayName, lang, t]);
 
   const toggleNode = useCallback((nodeId: string) => {
     setExpandedNodes(prev => {

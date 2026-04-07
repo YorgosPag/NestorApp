@@ -262,6 +262,7 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-08 | SSoT contact name resolution — centralized `resolveContactName()` as sole authority for contact name in display names. Removed duplicate logic from TabbedAddNewContactDialog + InlineContactCreation. Fixed file tree: entity type labels now i18n-translated ("contact" → "Επαφές"), missing entityLabel shows friendly fallback ("Επαφή #dd01473a" instead of raw ID). | Claude Code |
 | 2026-04-07 | Phase 6 COMPLETED — legacy pipeline fully eliminated: deleted `photo-upload-legacy-pipeline.ts`, removed `LEGACY_STORAGE_PATHS`/`FILE_STORAGE_FLAGS`/`DEPRECATION_MESSAGES`/`FILE_STORAGE_ERROR_MESSAGES` from domain-constants, cleaned all legacy imports. Zero legacy code remaining. | Claude Code |
 | 2026-04-07 | Phase 5 COMPLETED — dead code elimination: removed 7 deprecated methods, migrated 2 processors to `buildStoragePath()`, enabled `BLOCK_LEGACY_WRITES: true`, attendance `companyId` required | Claude Code |
 | 2026-04-07 | Phase 4 COMPLETED — violations #6, #7 fixed: legacy `dxf-scenes/` fallbacks removed, `canonicalScenePath` and `storagePath` now required. 100% centralization achieved. | Claude Code |

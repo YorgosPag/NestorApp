@@ -99,11 +99,19 @@ export function getFileIcon(file: FileRecord): React.ReactNode {
 // ============================================================================
 
 export const ENTITY_LABELS: Record<FileEntityType, string> = {
-  project: 'files.entities.projects',
-  building: 'files.entities.buildings',
-  property: 'files.entities.properties',
-  contact: 'files.entities.contacts',
-  company: 'files.entities.company',
+  project: 'entities.projects',
+  building: 'entities.buildings',
+  property: 'entities.properties',
+  contact: 'entities.contacts',
+  company: 'entities.company',
+};
+
+export const ENTITY_SINGULAR_LABELS: Record<FileEntityType, string> = {
+  project: 'entities.projectSingular',
+  building: 'entities.buildingSingular',
+  property: 'entities.propertySingular',
+  contact: 'entities.contactSingular',
+  company: 'entities.companySingular',
 };
 
 export const CATEGORY_LABELS: Partial<Record<FileCategory | 'other', string>> = {
@@ -125,11 +133,15 @@ function createEmptyEntityBuckets(): Record<FileEntityType, Record<string, FileR
   return { project: {}, building: {}, property: {}, contact: {}, company: {} };
 }
 
+/** Translation function type (from useTranslation) */
+export type TranslationFn = (key: string) => string;
+
 export function buildTreeByEntity(
   files: FileRecord[],
   companyName: string,
   translateDisplayName?: DisplayNameTranslator,
   lang: string = 'el',
+  t?: TranslationFn,
 ): TreeNodeData {
   const groupedByType = createEmptyEntityBuckets();
 
@@ -156,7 +168,10 @@ export function buildTreeByEntity(
     const entityFolders: TreeNodeData[] = entityIds.map(entityId => {
       const entityFiles = entitiesMap[entityId];
       const firstFile = entityFiles[0];
-      const entityLabel = (firstFile as { entityLabel?: string })?.entityLabel || entityId;
+      const storedLabel = (firstFile as { entityLabel?: string })?.entityLabel;
+      const shortId = entityId.includes('_') ? entityId.substring(entityId.indexOf('_') + 1, entityId.indexOf('_') + 9) : entityId.substring(0, 8);
+      const singularLabel = t ? t(ENTITY_SINGULAR_LABELS[entityType]) : entityType;
+      const entityLabel = storedLabel || `${singularLabel} #${shortId}`;
 
       // Group by study group within entity (ADR-191)
       const studyGroupBuckets = new Map<string, { meta: StudyGroupMeta | null; files: FileRecord[] }>();
@@ -210,7 +225,7 @@ export function buildTreeByEntity(
 
     entityChildren.push({
       id: `entity-${entityType}`,
-      label: entityType,
+      label: t ? t(ENTITY_LABELS[entityType]) : entityType,
       type: 'folder' as const,
       icon: ENTITY_ICONS[entityType],
       path: [companyName, entityType],
@@ -234,6 +249,7 @@ export function buildTreeByCategory(
   companyName: string,
   translateDisplayName?: DisplayNameTranslator,
   lang: string = 'el',
+  t?: TranslationFn,
 ): TreeNodeData {
   const groupedByStudyGroup = new Map<
     string,
@@ -272,7 +288,7 @@ export function buildTreeByCategory(
 
       entityFolders.push({
         id: `${key}-${entityType}`,
-        label: entityType,
+        label: t ? t(ENTITY_LABELS[entityType]) : entityType,
         type: 'folder' as const,
         icon: ENTITY_ICONS[entityType],
         path: [companyName, key, entityType],

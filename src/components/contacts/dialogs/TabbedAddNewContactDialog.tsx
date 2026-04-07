@@ -152,15 +152,14 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     // Use pre-generated ID for new contacts, existing ID for edits
     const contactId = formData.id || preGeneratedContactId;
 
+    // 🏢 SSoT: contactName NOT computed here — resolveContactName() in
+    // PhotoUploadConfiguration.ts is the SINGLE SOURCE OF TRUTH for name resolution
     return {
       companyId: user.companyId,
       createdBy: user.uid,
       contactId,
-      contactName: isIndividual
-        ? `${formData.firstName || ''} ${formData.lastName || ''}`.trim()
-        : formData.companyName || formData.serviceName || formData.name,
     };
-  }, [user, formData.id, preGeneratedContactId, formData.firstName, formData.lastName, formData.companyName, formData.serviceName, formData.name, isIndividual]);
+  }, [user, formData.id, preGeneratedContactId]);
 
   // 🏷️ GET CONTACT NAME: Helper function to get contact name based on type
   const getContactName = () => {

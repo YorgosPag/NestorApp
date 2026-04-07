@@ -199,7 +199,13 @@
     "projects": "Έργα",
     "buildings": "Κτίρια",
     "properties": "Ακίνητα",
-    "contacts": "Επαφές"
+    "contacts": "Επαφές",
+    "company": "Εταιρείες",
+    "projectSingular": "Έργο",
+    "buildingSingular": "Κτίριο",
+    "propertySingular": "Ακίνητο",
+    "contactSingular": "Επαφή",
+    "companySingular": "Εταιρεία"
   },
   "list": {
     "file": "Αρχείο",

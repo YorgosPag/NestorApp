@@ -199,7 +199,13 @@
     "projects": "Projects",
     "buildings": "Buildings",
     "properties": "Properties",
-    "contacts": "Contacts"
+    "contacts": "Contacts",
+    "company": "Companies",
+    "projectSingular": "Project",
+    "buildingSingular": "Building",
+    "propertySingular": "Property",
+    "contactSingular": "Contact",
+    "companySingular": "Company"
   },
   "list": {
     "file": "File",

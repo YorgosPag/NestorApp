@@ -25,7 +25,11 @@ export interface CanonicalUploadContext {
   createdBy: string;
   /** Contact ID for FileRecord linkage (pre-generated for new, existing for edits) */
   contactId: string;
-  /** Contact name for display name generation */
+  /**
+   * Optional override for contact name. DO NOT compute this in callers.
+   * SSoT: resolveContactName() in getPhotoUploadHandlers() resolves from formData.
+   * Use this ONLY for edge cases where formData is unavailable.
+   */
   contactName?: string;
 }
 
@@ -71,26 +75,27 @@ export interface UnifiedPhotoHandlers {
  * @returns Photo upload handlers for logo and representative photo
  *
  * @example
- * // Canonical usage (recommended)
+ * // Canonical usage (recommended) — contactName resolved automatically from formData
  * const handlers = getPhotoUploadHandlers(formData, {
  *   companyId: user.companyId,
  *   createdBy: user.uid,
  *   contactId: formData.id || generatedContactId,
- *   contactName: formData.firstName + ' ' + formData.lastName,
  * });
  */
 export function getPhotoUploadHandlers(
   formData: ContactFormData,
   canonicalContext?: CanonicalUploadContext
 ): PhotoUploadHandlers {
-  // 🏢 ENTERPRISE: Resolve contact name based on contact type
+  // 🏢 SSoT: SINGLE SOURCE OF TRUTH for contact name resolution
+  // All callers delegate to this function — NO duplicate logic elsewhere.
+  // Priority: explicit override → firstName+lastName → companyName → serviceName → name
   const resolveContactName = (): string | undefined => {
     if (canonicalContext?.contactName) {
       return canonicalContext.contactName;
     }
     if (formData.type === 'individual') {
       const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
-      return fullName || undefined;
+      return fullName || formData.name || undefined;
     }
     return formData.companyName || formData.serviceName || formData.name || undefined;
   };
