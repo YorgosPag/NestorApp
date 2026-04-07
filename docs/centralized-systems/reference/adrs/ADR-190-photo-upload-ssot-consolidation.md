@@ -78,6 +78,15 @@ UI Components:   EnterprisePhotoUpload -> MultiplePhotosUpload -> UnifiedPhotoMa
 
 ---
 
+## Changelog
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-03-06 | ADR Created — SSoT consolidation for photo/logo upload | Claude Code |
+| 2026-04-07 | Bugfix: clear `file: null` after successful upload in MultiplePhotosFull + MultiplePhotosCompact to prevent duplicate uploads (file object persisted → useAutoUploadEffect re-triggered) | Claude Code |
+
+---
+
 ## Related Documents (Upload Architecture)
 
 | Document | Relationship | Context |

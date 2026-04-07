@@ -308,9 +308,10 @@ export function MultiplePhotosCompact({
                     const newPhotos = [...currentPhotos];
 
                     if (result.url) {
-                      // Upload successful — store URL
+                      // Upload successful — store URL, clear file to prevent re-upload
                       newPhotos[index] = {
                         ...newPhotos[index],
+                        file: null,
                         uploadUrl: result.url,
                         preview: result.url,
                         isUploading: false,
