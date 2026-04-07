@@ -31,6 +31,7 @@ import { ContextualNavigationService, type NavigableEntityType } from '@/service
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 interface NavigationBreadcrumbProps {
   className?: string;
@@ -98,7 +99,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     if (selectedBuilding) {
       items.push({
         id: selectedBuilding.id,
-        label: selectedBuilding.name,
+        label: formatBuildingLabel(selectedBuilding.code, selectedBuilding.name),
         icon: NAVIGATION_ENTITIES.building.icon,
         color: NAVIGATION_ENTITIES.building.color,
         level: 'buildings',

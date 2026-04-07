@@ -21,6 +21,7 @@ import { useNavigation } from '../core/NavigationContext';
 import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 // Extracted modules
 import {
@@ -427,7 +428,7 @@ export function DesktopMultiColumn({
                   icon={NAVIGATION_ENTITIES.building.icon}
                   iconColor={NAVIGATION_ENTITIES.building.color}
                   title={t('columns.actions.buildingDetails')}
-                  subtitle={selectedBuilding.name}
+                  subtitle={formatBuildingLabel(selectedBuilding.code, selectedBuilding.name)}
                   variant="compact"
                 />
               </li>

@@ -19,6 +19,7 @@ import { NavigationBreadcrumb } from './NavigationBreadcrumb';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 interface NavigationTreeProps {
   className?: string;
@@ -240,7 +241,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
               icon={NAVIGATION_ENTITIES.building.icon}
               iconColor={NAVIGATION_ENTITIES.building.color}
               title={t('tree.destinations.buildingDetails')}
-              subtitle={selectedBuilding.name}
+              subtitle={formatBuildingLabel(selectedBuilding.code, selectedBuilding.name)}
               variant="compact"
             />
 

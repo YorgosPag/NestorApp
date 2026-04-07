@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 interface HierarchicalDestinationSelectorProps {
   onDestinationSelect: (destId: string) => void;
@@ -320,7 +321,7 @@ export function HierarchicalDestinationSelector({
                   key={building.id}
                   onClick={() => handleBuildingSelect(building.id)}
                   icon={<Building className={iconSizes.md} />}
-                  title={building.name}
+                  title={formatBuildingLabel(building.code, building.name)}
                   subtitle={`${building.floors.length} όροφοι`}
                 />
               ))

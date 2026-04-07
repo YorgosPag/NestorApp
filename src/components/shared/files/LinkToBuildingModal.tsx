@@ -40,6 +40,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 // ============================================================================
 // MODULE LOGGER
@@ -55,6 +56,7 @@ const logger = createModuleLogger('LinkToBuildingModal');
 interface BuildingOption {
   id: string;
   name: string;
+  code?: string;
   status?: string;
 }
 
@@ -251,7 +253,7 @@ export function LinkToBuildingModal({
               />
               <div className="flex items-center gap-2">
                 <Building2 className={cn("h-4 w-4", colors.text.muted)} aria-hidden="true" />
-                <span className="text-sm font-medium">{building.name}</span>
+                <span className="text-sm font-medium">{formatBuildingLabel(building.code, building.name)}</span>
               </div>
             </Label>
           ))}

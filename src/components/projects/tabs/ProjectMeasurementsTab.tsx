@@ -31,6 +31,7 @@ import {
   ChevronDown, ChevronRight, Layers,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,7 @@ interface ProjectMeasurementsTabProps {
 interface BuildingInfo {
   id: string;
   name: string;
+  code?: string;
 }
 
 interface BuildingAggregation {
@@ -118,6 +120,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
       const buildingList: BuildingInfo[] = (buildingsData?.buildings ?? []).map(b => ({
         id: b.id,
         name: b.name || `Κτίριο ${b.id.slice(0, 6)}`,
+        code: b.code,
       }));
       setBuildings(buildingList);
 
@@ -354,7 +357,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                     ) : (
                       <Building2 className={cn("h-4 w-4", colors.text.muted)} />
                     )}
-                    {building.name}
+                    {formatBuildingLabel(building.code, building.name)}
                     <Badge variant="secondary" className="ml-1">
                       {items.length === 1
                         ? t('measurements.worksCount', { count: items.length })

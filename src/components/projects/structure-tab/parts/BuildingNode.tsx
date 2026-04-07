@@ -33,6 +33,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { BuildingModel, StorageModel, ParkingModel, PropertyModel } from '../types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 // =============================================================================
 // TYPES
@@ -106,7 +107,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   // RENDER
   // ==========================================================================
 
-  const buildingName = typeof building.name === 'string' ? building.name : String(building.name ?? '');
+  const buildingName = formatBuildingLabel(building.code, typeof building.name === 'string' ? building.name : String(building.name ?? ''));
 
   return (
     <article>

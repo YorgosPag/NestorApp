@@ -22,11 +22,13 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { Building2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 /** 🏢 ENTERPRISE: Building data from API */
 interface ProjectBuilding {
   id: string;
   name: string;
+  code?: string;
   progress: number;
   status: BuildingStatus;
 }
@@ -36,6 +38,7 @@ interface BuildingsApiResponse {
   buildings: Array<{
     id: string;
     name?: string;
+    code?: string;
     progress?: number;
     status?: string;
   }>;
@@ -71,6 +74,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
         const mapped: ProjectBuilding[] = (result?.buildings || []).map(b => ({
           id: b.id,
           name: b.name || b.id,
+          code: b.code,
           progress: b.progress ?? 0,
           status: (b.status as BuildingStatus) || 'planning',
         }));
@@ -141,7 +145,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
-                            <span className={typography.label.md}>{building.name}</span>
+                            <span className={typography.label.md}>{formatBuildingLabel(building.code, building.name)}</span>
                         </div>
                         <BuildingBadge
                           status={building.status}

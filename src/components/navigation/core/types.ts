@@ -28,6 +28,7 @@ export interface NavigationProject {
 export interface NavigationBuilding {
   id: string;
   name: string;
+  code?: string;
   floors: NavigationFloor[];
   storageAreas?: NavigationProperty[];
   /** 🏢 ENTERPRISE: Direct properties for buildings without floors */
@@ -245,6 +246,7 @@ export interface NavigationActions {
 export interface RealtimeBuildingRef {
   id: string;
   name: string;
+  code?: string;
   projectId: string | null;
 }
 

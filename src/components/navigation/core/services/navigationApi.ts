@@ -154,6 +154,7 @@ export class NavigationApiService {
       return (buildingsResult?.buildings || []).map((building) => ({
         id: building.id,
         name: building.name || 'Unnamed Building',
+        code: building.code,
         floors: [] // Loaded on-demand
       }));
 

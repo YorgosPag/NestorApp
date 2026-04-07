@@ -13,6 +13,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import type { CompanyContact } from '../../../types/contacts';
 // 🔐 ENTERPRISE: Auth hook for authentication-ready gating
 import { useAuth } from '@/auth/hooks/useAuth';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload, type ContactCreatedPayload } from '@/services/realtime';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
@@ -42,6 +43,7 @@ export interface Floor {
 export interface Building {
   id: string;
   name: string;
+  code?: string;
   companyId?: string; // 🏢 ENTERPRISE: Inherited from Firestore — used for FileRecord save companyId resolution
   floors: Floor[];
   storageAreas?: Unit[]; // Αποθήκες (συνήθως υπόγεια)
@@ -143,13 +145,6 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
 
     try {
       dlog('ProjectHierarchy', 'Starting to load companies via Enterprise API Client...');
-
-      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      // apiClient automatically:
-      // - Adds Firebase ID token to Authorization header
-      // - Handles token refresh
-      // - Provides retry logic for server errors
-      // - Normalizes error responses
       interface CompaniesApiResponse {
         companies: CompanyContact[];
         count: number;
@@ -159,29 +154,17 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       const url = forceRefresh ? `${API_ROUTES.COMPANIES.LIST}?refresh=true` : API_ROUTES.COMPANIES.LIST;
       const result = await apiClient.get<CompaniesApiResponse>(url);
 
-      // apiClient.get() unwraps the canonical { success: true, data: T } response automatically
       const companies = result?.companies || [];
       dlog('ProjectHierarchy', 'Companies loaded successfully:', companies.length);
 
-      // Remove duplicates by id AND by companyName (multiple deduplication strategies)
       const uniqueCompanies = companies.reduce((unique: CompanyContact[], company: CompanyContact) => {
-        // Check for duplicate by ID
         const duplicateById = unique.find((c: CompanyContact) => c.id === company.id);
-        // Check for duplicate by company name
         const duplicateByName = unique.find((c: CompanyContact) => c.companyName === company.companyName);
-        
         if (!duplicateById && !duplicateByName) {
           unique.push(company);
         } else {
-          if (duplicateById) {
-            dwarn('ProjectHierarchy', `Duplicate company by ID found: ${company.companyName} (${company.id})`);
-          }
-          if (duplicateByName) {
-            // Only log first occurrence to reduce noise
-            if (!unique.some(u => u.companyName === company.companyName)) {
-              dwarn('ProjectHierarchy', `Duplicate company by NAME found: ${company.companyName}`);
-            }
-          }
+          if (duplicateById) dwarn('ProjectHierarchy', `Duplicate company by ID: ${company.companyName} (${company.id})`);
+          if (duplicateByName) dwarn('ProjectHierarchy', `Duplicate company by NAME: ${company.companyName}`);
         }
         return unique;
       }, [] as typeof companies);
@@ -191,8 +174,6 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
         companies: uniqueCompanies,
         loading: false
       }));
-
-      // Mark as successfully loaded
       companiesLoadedRef.current = true;
 
     } catch (error) {
@@ -250,21 +231,17 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
           id: string | number;
           name: string;
           company?: string;
-          buildings?: Array<{ id: string; name: string; floors?: unknown[] }>;
+          buildings?: Array<{ id: string; name: string; code?: string; floors?: unknown[] }>;
         }>;
         count: number;
       }
 
       const result = await apiClient.get<ProjectsApiResponse>(API_ROUTES.PROJECTS.BY_COMPANY(companyId));
-
-      // apiClient.get() unwraps the canonical response automatically
       const projectsData = result?.projects || [];
 
       // Transform to our structure with buildings data
-      const projects: Project[] = projectsData.map((project: { id: string | number; name: string; company?: string; buildings?: Array<{ id: string; name: string; floors?: unknown[] }> }) => {
-
-        // Transform buildings if they exist in the project data
-        const buildings: Building[] = (project.buildings || []).map((building: { id: string; name: string; floors?: unknown[] }) => {
+      const projects: Project[] = projectsData.map((project: { id: string | number; name: string; company?: string; buildings?: Array<{ id: string; name: string; code?: string; floors?: unknown[] }> }) => {
+        const buildings: Building[] = (project.buildings || []).map((building: { id: string; name: string; code?: string; floors?: unknown[] }) => {
           const floors: Floor[] = Array.isArray(building.floors)
             ? building.floors.reduce<Floor[]>((acc, floor) => {
               if (!floor || typeof floor !== 'object') {
@@ -289,6 +266,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
           return {
             id: building.id,
             name: building.name,
+            code: building.code,
             floors
           };
         });
@@ -396,16 +374,17 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       project.buildings.forEach(building => {
         destinations.push({
           id: building.id,
-          label: `${project.name} → ${building.name}`,
+          label: `${project.name} → ${formatBuildingLabel(building.code, building.name)}`,
           type: 'building',
           parentId: project.id
         });
 
         // Floor level destinations
+        const bLabel = formatBuildingLabel(building.code, building.name);
         building.floors.forEach(floor => {
           destinations.push({
             id: floor.id,
-            label: `${project.name} → ${building.name} → ${floor.name}`,
+            label: `${project.name} → ${bLabel} → ${floor.name}`,
             type: 'floor',
             parentId: building.id,
             metadata: { floorNumber: floor.number }
@@ -416,7 +395,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
         if (building.storageAreas && building.storageAreas.length > 0) {
           destinations.push({
             id: `${building.id}_storage`,
-            label: `${project.name} → ${building.name} → Αποθήκες`,
+            label: `${project.name} → ${bLabel} → Αποθήκες`,
             type: 'storage',
             parentId: building.id,
             metadata: { category: 'storage' }

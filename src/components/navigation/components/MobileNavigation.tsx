@@ -22,6 +22,7 @@ import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 interface MobileNavigationProps {
   /** 🏢 ENTERPRISE: 'floors' αφαιρέθηκε από navigation levels (Επιλογή Α) */
@@ -250,7 +251,7 @@ export function MobileNavigation({
               icon={NAVIGATION_ENTITIES.building.icon}
               iconColor={NAVIGATION_ENTITIES.building.color}
               title={t('columns.actions.buildingDetails')}
-              subtitle={selectedBuilding.name}
+              subtitle={formatBuildingLabel(selectedBuilding.code, selectedBuilding.name)}
               variant="compact"
             />
 

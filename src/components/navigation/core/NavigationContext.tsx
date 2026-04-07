@@ -204,6 +204,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     const building: NavigationBuilding = {
       id: realtimeBuildingRef.id,
       name: realtimeBuildingRef.name,
+      code: realtimeBuildingRef.code,
       floors: [],
       properties: []
     };
@@ -257,7 +258,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const getBuildingsForProjectTyped = (projectId: string): RealtimeBuildingRef[] => {
     const buildings = getBuildingsForProject(projectId);
-    return buildings.map(b => ({ id: b.id, name: b.name, projectId: b.projectId }));
+    return buildings.map(b => ({ id: b.id, name: b.name, code: b.code, projectId: b.projectId }));
   };
 
   const getBuildingCountOptimized = useCallback((projectId: string): number => {

@@ -16,6 +16,7 @@ import {
 } from './modal/ModalContainer';
 import { InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 // ── Shared Types ───────────────────────────────────────────────
 interface CompanyData {
@@ -230,7 +231,7 @@ export function BuildingStep({
               <SelectItem key={building.id} value={building.id}>
                 <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                   <Building2 className={`${getIconSize('field')} ${getModalIconColor('warning')}`} />
-                  <span>{building.name}</span>
+                  <span>{formatBuildingLabel(building.code, building.name)}</span>
                   {building.floors && (
                     <span className={typography.body.sm}>
                       ({t('wizard.counts.floors', { count: building.floors.length })})

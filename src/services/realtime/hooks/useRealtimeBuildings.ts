@@ -154,6 +154,7 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
         const buildings: RealtimeBuilding[] = result.documents.map(doc => ({
           id: doc.id,
           name: (doc.name as string) || '',
+          code: (doc.code as string) || undefined,
           projectId: (doc.projectId as string) || null,
           address: doc.address as string | undefined,
           city: doc.city as string | undefined,
