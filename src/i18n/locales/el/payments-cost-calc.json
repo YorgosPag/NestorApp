@@ -8,7 +8,7 @@
     "detailAnalysis": "Λεπτομερής Ανάλυση",
     "noData": "Δεν υπάρχουν δεδομένα.",
     "tabs": {
-      "cashFlow": "Cash Flow",
+      "cashFlow": "Ταμειακές Ροές",
       "cashFlowTooltip": "Ανάλυση ανά δόση — δείτε πώς κάθε πληρωμή χάνει αξία με τον χρόνο",
       "scenarios": "Σενάρια",
       "scenariosTooltip": "Συγκρίνετε 4 τρόπους πληρωμής (μετρητά, off-plan, δάνειο, τρέχον) δίπλα-δίπλα",
@@ -481,8 +481,8 @@
       "infoBanner": "Η καμπύλη επιτοκίων δείχνει τις προσδοκίες της αγοράς για μελλοντικά επιτόκια. Τα spot rates είναι τρέχοντα Euribor ΕΚΤ· τα forward rates υπολογίζονται με τον τύπο no-arbitrage.",
       "chartTitleTooltip": "Αυτό το γράφημα δείχνει τρέχοντα και αναμενόμενα μελλοντικά επιτόκια. Χρήσιμο για αποφάσεις κλειδώματος επιτοκίου.",
       "chartTitle": "Καμπύλη Απόδοσης — Spot vs Forward",
-      "spotLine": "Spot Rate",
-      "forwardLine": "Forward Rate",
+      "spotLine": "Τρέχουσα Τιμή",
+      "forwardLine": "Προθεσμιακή Τιμή",
       "rateTableTitle": "Πίνακας Επιτοκίων",
       "tenor": "Διάρκεια",
       "tenorTooltip": "Η χρονική περίοδος του επιτοκίου (π.χ. 1Μ = 1 μήνας, 12Μ = 1 χρόνος). Μεγαλύτερες διάρκειες συνήθως = υψηλότερα επιτόκια.",
@@ -550,7 +550,7 @@
       "scenarioRate": "Επιτόκιο Σεναρίου"
     },
     "waterfall": {
-      "title": "Equity Waterfall",
+      "title": "Καταρράκτης Κεφαλαίου",
       "infoBanner": "Μοντελοποιήστε τη διανομή κερδών μεταξύ LP (Limited Partner) και GP (General Partner) μέσω δομών waterfall.",
       "lpEquity": "Κεφάλαιο Επενδυτή — LP (€)",
       "lpEquityTooltip": "Κεφάλαιο Limited Partner — τα χρήματα του παθητικού επενδυτή (π.χ. εσείς, ο ιδιοκτήτης ακινήτου).",

@@ -289,8 +289,8 @@
     "noInfoFound": "Δεν βρέθηκαν βασικές πληροφορίες για αυτόν τον τύπο επαφής."
   },
   "placeholderTab": {
-    "comingSoon": "- Coming Soon",
-    "contactIdLabel": "Contact ID:",
+    "comingSoon": "- Σύντομα Διαθέσιμο",
+    "contactIdLabel": "Αναγνωριστικό Επαφής:",
     "typeLabel": "| Type:"
   },
   "navigation": {

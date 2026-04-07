@@ -1105,7 +1105,7 @@
     },
     "opportunities": {
       "label": "Ευκαιρίες",
-      "description": "Pipeline πωλήσεων — deals, leads, prospects με σταθμισμένες αξίες και ταχύτητα",
+      "description": "Ροή πωλήσεων — συμφωνίες, ενδιαφερόμενοι, υποψήφιοι με σταθμισμένες αξίες και ταχύτητα",
       "fields": {
         "title": "Τίτλος",
         "stage": "Στάδιο",
@@ -1155,7 +1155,7 @@
           "website": "Ιστοσελίδα",
           "referral": "Σύσταση",
           "agent": "Μεσίτης",
-          "social": "Social Media",
+          "social": "Κοινωνικά Δίκτυα",
           "phone": "Τηλέφωνο",
           "walkin": "Walk-in"
         },
@@ -1171,7 +1171,7 @@
     },
     "crmTasks": {
       "label": "Εργασίες CRM",
-      "description": "Εργασίες πωλήσεων & follow-up — παρακολούθηση εκπρόθεσμων, κατηγορίες ηλικίας",
+      "description": "Εργασίες πωλήσεων & παρακολούθησης — παρακολούθηση εκπρόθεσμων, κατηγορίες ηλικίας",
       "fields": {
         "title": "Τίτλος",
         "type": "Τύπος",
@@ -1201,7 +1201,7 @@
           "meeting": "Συνάντηση",
           "viewing": "Επίσκεψη",
           "document": "Έγγραφο",
-          "follow_up": "Follow-up",
+          "follow_up": "Παρακολούθηση",
           "complaint": "Παράπονο",
           "other": "Άλλο"
         },
@@ -1238,8 +1238,8 @@
         "to": "Προς",
         "duration": "Διάρκεια (δευτ.)",
         "location": "Τοποθεσία",
-        "requiresFollowUp": "Απαιτεί Follow-up",
-        "followUpDate": "Ημ. Follow-up",
+        "requiresFollowUp": "Απαιτεί Παρακολούθηση",
+        "followUpDate": "Ημ. Παρακολούθησης",
         "triageStatus": "Triage",
         "createdAt": "Δημιουργία",
         "contact": "Επαφή",

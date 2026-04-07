@@ -91,7 +91,7 @@
     "kpis": {
       "title": "Επισκόπηση Πωλήσεων",
       "totalRevenue": "Συνολικά Έσοδα",
-      "pipelineValue": "Αξία Pipeline",
+      "pipelineValue": "Αξία Ροής",
       "soldProperties": "Πωληθέντα",
       "forSaleProperties": "Διαθέσιμα",
       "conversionRate": "Ποσοστό Μετατροπής",
@@ -201,7 +201,7 @@
       "activeProjects": "Ενεργά Έργα",
       "availableProperties": "Διαθέσιμα Ακίνητα",
       "pendingPayments": "Εκκρεμείς Εργασίες",
-      "pipelineValue": "Αξία Pipeline"
+      "pipelineValue": "Αξία Ροής"
     },
     "projectHealth": {
       "title": "Υγεία Έργων",
@@ -228,7 +228,7 @@
       "noOverdue": "Δεν υπάρχουν πωληθέντα ακίνητα"
     },
     "pipeline": {
-      "title": "Pipeline Πωλήσεων",
+      "title": "Ροή Πωλήσεων",
       "description": "Ευκαιρίες ανά στάδιο",
       "value": "Αξία (€)",
       "count": "Πλήθος",
@@ -454,7 +454,7 @@
     "contacts": "Επαφές & Πελάτες",
     "projects": "Έργα & Κτίρια",
     "sales": "Πωλήσεις & Οικονομικά",
-    "crm": "CRM & Pipeline",
+    "crm": "CRM & Ροή",
     "spaces": "Χώροι",
     "construction": "Κατασκευή & Χρονοδιάγραμμα",
     "compliance": "Συμμόρφωση & Εργατικά",

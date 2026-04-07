@@ -647,7 +647,7 @@
     "actions": {
       "markReceived": "Ελήφθη",
       "exportPdf": "PDF",
-      "sendReminder": "Reminder"
+      "sendReminder": "Υπενθύμιση"
     },
     "provider": {
       "title": "Πάροχος (Εσείς)"
@@ -682,7 +682,7 @@
     },
     "notesHeading": "Σημειώσεις",
     "emailHistory": {
-      "heading": "Ιστορικό Αποστολών Reminder ({{count}})",
+      "heading": "Ιστορικό Αποστολών Υπενθυμίσεων ({{count}})",
       "date": "Ημερομηνία",
       "recipient": "Παραλήπτης",
       "subject": "Θέμα",
@@ -697,7 +697,7 @@
       "viewExisting": "Προβολή υπάρχουσας βεβαίωσης →"
     },
     "reminderEmail": {
-      "title": "Αποστολή Reminder — Βεβαίωση {{year}}",
+      "title": "Αποστολή Υπενθύμισης — Βεβαίωση {{year}}",
       "to": "Προς",
       "subject": "Θέμα",
       "language": "Γλώσσα",

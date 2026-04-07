@@ -71,7 +71,7 @@
       "categories": {
         "crm": {
           "title": "CRM",
-          "description": "Ειδοποιήσεις για leads και επαφές",
+          "description": "Ειδοποιήσεις για ενδιαφερόμενους και επαφές",
           "newLead": "Νέο lead",
           "leadStatusChange": "Αλλαγή κατάστασης lead",
           "taskAssigned": "Ανάθεση εργασίας",

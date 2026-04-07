@@ -225,7 +225,7 @@
       "title": "Ιστορικό Εντολών",
       "commands": {
         "fit": "Εντολή: FIT",
-        "zoomWindow": "Εντολή: ZOOM Window",
+        "zoomWindow": "Εντολή: ZOOM Παράθυρο",
         "line": "Εντολή: LINE"
       },
       "ready": "Έτοιμο για εντολή..."

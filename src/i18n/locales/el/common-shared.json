@@ -424,9 +424,9 @@
     "helperText": "Πατήστε Enter για προσθήκη νέου email • Backspace σε άδειο πεδίο για διαγραφή",
     "recipientsCount": "Παραλήπτες ({count})",
     "valid": "έγκυρα",
-    "compactLabel": "Compact Recipients Management",
-    "compactEmailLabel": "Compact Email {number}",
-    "compactInputsLabel": "Compact Email Inputs"
+    "compactLabel": "Συμπαγής Διαχείριση Παραληπτών",
+    "compactEmailLabel": "Συμπαγές Email {number}",
+    "compactInputsLabel": "Συμπαγή Πεδία Email"
   },
   "email": {
     "template": "Πρότυπο Email",

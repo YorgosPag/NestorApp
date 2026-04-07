@@ -221,7 +221,7 @@
       "phones": "Τηλέφωνα",
       "emails": "E-mails",
       "websites": "Ιστοσελίδες",
-      "socialMedia": "Social Media",
+      "socialMedia": "Κοινωνικά Δίκτυα",
       "identity": "Ταυτότητα"
     },
     "phoneTypes": {
@@ -337,7 +337,7 @@
       "addPhone": "Προσθήκη Τηλεφώνου",
       "addEmail": "Προσθήκη E-mail",
       "addWebsite": "Προσθήκη Ιστοσελίδας",
-      "addSocial": "Προσθήκη Social Media"
+      "addSocial": "Προσθήκη Κοινωνικού Δικτύου"
     },
     "tableHeaders": {
       "type": "Τύπος",

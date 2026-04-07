@@ -1,6 +1,6 @@
 {
   "crm": {
-    "description": "Pipeline CRM, διαχείριση εργασιών, επικοινωνίες και απόδοση ομάδας",
+    "description": "Ροή CRM, διαχείριση εργασιών, επικοινωνίες και απόδοση ομάδας",
     "kpis": {
       "title": "Επισκόπηση CRM",
       "opportunities": "Ευκαιρίες",
@@ -13,8 +13,8 @@
       "lostDeals": "Χαμένες"
     },
     "pipeline": {
-      "title": "Pipeline ανά Στάδιο",
-      "description": "Πλήθος και αξία ευκαιριών ανά στάδιο pipeline",
+      "title": "Ροή ανά Στάδιο",
+      "description": "Πλήθος και αξία ευκαιριών ανά στάδιο ροής",
       "count": "Πλήθος",
       "value": "Αξία"
     },
@@ -63,14 +63,14 @@
       "unknown": "Άγνωστο"
     },
     "leads": {
-      "title": "Leads ανά Πηγή",
+      "title": "Ενδιαφερόμενοι ανά Πηγή",
       "description": "Ανάλυση πηγών ευκαιριών"
     },
     "sources": {
       "website": "Ιστοσελίδα",
       "referral": "Σύσταση",
       "social_media": "Κοινωνικά Δίκτυα",
-      "cold_call": "Cold Call",
+      "cold_call": "Ψυχρή Κλήση",
       "advertising": "Διαφήμιση",
       "event": "Εκδήλωση",
       "unknown": "Άγνωστο"

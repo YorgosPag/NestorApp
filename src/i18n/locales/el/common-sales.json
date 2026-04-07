@@ -86,13 +86,13 @@
         "avgPrice": "Μέση τιμή"
       },
       "marketInsights": {
-        "title": "Market Insights",
+        "title": "Αναλύσεις Αγοράς",
         "topBuyerCategories": "Top Κατηγορίες Αγοραστών",
         "privateInvestors": "Ιδιώτες επενδυτές",
         "developmentCompanies": "Εταιρείες ανάπτυξης",
         "familiesOwnerOccupied": "Οικογένειες (owner-occupied)",
         "ofTotal": "{percent}% του συνόλου",
-        "performanceMetrics": "Performance Metrics",
+        "performanceMetrics": "Δείκτες Απόδοσης",
         "successRate": "Success Rate (λιστάρισμα → πώληση)",
         "avgDiscount": "Μέσο discount από αρχική τιμή",
         "fastestSale": "Ταχύτερη πώληση",

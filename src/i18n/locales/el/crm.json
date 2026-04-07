@@ -1,7 +1,7 @@
 {
   "overview": {
     "stats": {
-      "newLeads": "Νέα Leads",
+      "newLeads": "Νέοι Ενδιαφερόμενοι",
       "activeOpportunities": "Ενεργές Ευκαιρίες",
       "scheduledViewings": "Προγραμματισμένες Ξεναγήσεις",
       "pendingTasks": "Εκκρεμείς Εργασίες"
@@ -9,7 +9,7 @@
   },
   "page": {
     "title": "Πίνακας CRM",
-    "subtitle": "Διαχείριση πελατειακών σχέσεων και pipeline πωλήσεων",
+    "subtitle": "Διαχείριση πελατειακών σχέσεων και ροής πωλήσεων",
     "loading": "Φόρτωση CRM..."
   },
   "tabs": {
@@ -18,8 +18,8 @@
       "description": "Κύριες μετρήσεις και τάσεις του CRM"
     },
     "pipeline": {
-      "label": "Pipeline",
-      "description": "Διαχείριση pipeline και ευκαιριών"
+      "label": "Ροή Πωλήσεων",
+      "description": "Διαχείριση ροής πωλήσεων και ευκαιριών"
     },
     "contacts": {
       "label": "Επαφές",
@@ -31,7 +31,7 @@
     },
     "tasks": {
       "label": "Εργασίες",
-      "description": "Εργασίες, υπενθυμίσεις και follow-ups"
+      "description": "Εργασίες, υπενθυμίσεις και παρακολουθήσεις"
     },
     "calendar": {
       "label": "Ημερολόγιο",
@@ -139,7 +139,7 @@
     "tabs": {
       "overview": "Επισκόπηση",
       "contacts": "Επαφές",
-      "pipeline": "Pipeline",
+      "pipeline": "Ροή Πωλήσεων",
       "tasks": "Εργασίες",
       "calendar": "Ημερολόγιο",
       "communications": "Επικοινωνίες"
@@ -161,7 +161,7 @@
       "title": "Απόδοση Ομάδας",
       "columns": {
         "member": "Μέλος",
-        "leadsWeek": "Leads (Εβδομάδα)",
+        "leadsWeek": "Ενδιαφερόμενοι (Εβδομάδα)",
         "closedSales": "Κλεισμένες Πωλήσεις"
       }
     }
@@ -243,19 +243,19 @@
     }
   },
   "leads": {
-    "title": "Leads",
-    "description": "Διαχείριση leads και ευκαιριών πωλήσεων",
+    "title": "Ενδιαφερόμενοι",
+    "description": "Διαχείριση ενδιαφερομένων και ευκαιριών πωλήσεων",
     "stats": {
-      "totalLeads": "Σύνολο Leads",
-      "activeLeads": "Ενεργά Leads",
+      "totalLeads": "Σύνολο Ενδιαφερομένων",
+      "activeLeads": "Ενεργοί Ενδιαφερόμενοι",
       "inNegotiation": "Σε Διαπραγμάτευση",
       "won": "Κερδισμένα"
     },
-    "loading": "Φόρτωση leads...",
+    "loading": "Φόρτωση ενδιαφερομένων...",
     "retry": "Δοκιμή ξανά",
     "refresh": "Ανανέωση",
     "empty": {
-      "title": "Δεν υπάρχουν leads",
+      "title": "Δεν υπάρχουν ενδιαφερόμενοι",
       "subtitle": "Προσθέστε το πρώτο σας lead για να ξεκινήσετε!"
     },
     "confirm": {
@@ -268,18 +268,18 @@
       "deleteSuccess": "Το lead \"{name}\" διαγράφηκε επιτυχώς"
     },
     "errors": {
-      "loadFailed": "Αποτυχία φόρτωσης leads",
+      "loadFailed": "Αποτυχία φόρτωσης ενδιαφερομένων",
       "deleteFailed": "Δεν ήταν δυνατή η διαγραφή του lead",
       "noEmail": "Δεν υπάρχει διαθέσιμο email για το συγκεκριμένο lead"
     }
   },
   "pipeline": {
-    "title": "Sales Pipeline",
+    "title": "Ροή Πωλήσεων",
     "viewList": "Προβολή Λίστας",
-    "viewPipeline": "Προβολή Pipeline",
+    "viewPipeline": "Προβολή Ροής",
     "refresh": "Ανανέωση",
     "newLead": "Νέο Lead",
-    "loading": "Φόρτωση pipeline...",
+    "loading": "Φόρτωση ροής...",
     "retry": "Δοκιμή ξανά",
     "empty": {
       "title": "Δεν υπάρχουν ευκαιρίες",
@@ -306,9 +306,9 @@
         "subject": "Καλώς ήρθατε"
       },
       "followup": {
-        "name": "Follow-up",
+        "name": "Παρακολούθηση",
         "description": "Υπενθύμιση επαφής",
-        "subject": "Follow-up για τη συνεργασία μας"
+        "subject": "Παρακολούθηση για τη συνεργασία μας"
       },
       "appointment": {
         "name": "Ραντεβού",
@@ -430,7 +430,7 @@
       "description": "Παρακολούθηση απόδοσης email"
     },
     "leads": {
-      "title": "Leads & Ευκαιρίες",
+      "title": "Ενδιαφερόμενοι & Ευκαιρίες",
       "description": "Παρακολούθηση και διαχείριση ευκαιριών πώλησης"
     },
     "tasks": {
@@ -442,8 +442,8 @@
       "description": "Δείτε και διαχειριστείτε το πρόγραμμα, τα ραντεβού και τις εργασίες σας"
     },
     "pipeline": {
-      "title": "Pipeline Πωλήσεων",
-      "description": "Οπτικοποίηση και διαχείριση pipeline πωλήσεων"
+      "title": "Ροή Πωλήσεων",
+      "description": "Οπτικοποίηση και διαχείριση ροής πωλήσεων"
     },
     "teams": {
       "title": "Ομάδες & Ρόλοι",
@@ -471,7 +471,7 @@
     "loading": "Φόρτωση lead...",
     "errorTitle": "Σφάλμα",
     "notFound": "Το lead δεν βρέθηκε",
-    "backToLeads": "Πίσω στα Leads",
+    "backToLeads": "Πίσω στους Ενδιαφερόμενους",
     "navAria": "Πλοήγηση προφίλ lead",
     "backAria": "Πίσω",
     "headerTitle": "Προφίλ Lead",
@@ -555,14 +555,14 @@
     "clicks": "0 κλικ",
     "backToCRM": "Πίσω στο CRM",
     "subtitle": "Αναλυτικά στοιχεία email marketing",
-    "comingSoonTitle": "Email Analytics - Σύντομα Διαθέσιμο",
-    "underConstruction": "Πίνακας Ελέγχου Analytics Υπό Κατασκευή",
+    "comingSoonTitle": "Αναλυτικά Email - Σύντομα Διαθέσιμο",
+    "underConstruction": "Πίνακας Ελέγχου Αναλυτικών Υπό Κατασκευή",
     "comingSoonDesc": "Σύντομα θα μπορείτε να δείτε:",
     "feature1": "Αναλυτικά στοιχεία email campaigns",
     "feature2": "Ποσοστά ανοίγματος και κλικ",
     "feature3": "Πρόσφατη δραστηριότητα emails",
     "feature4": "Στατιστικά ανά ακίνητο",
-    "activationNote": "Τα analytics θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.",
+    "activationNote": "Τα αναλυτικά θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.",
     "templatesNote": "Τώρα διαθέσιμα 3 πρότυπα email στο Share Modal!"
   }
 }

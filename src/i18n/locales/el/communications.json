@@ -27,14 +27,14 @@
     }
   },
   "telegram": {
-    "title": "Telegram Messages",
+    "title": "Μηνύματα Telegram",
     "newMessage": "Νέο Telegram μήνυμα",
     "noMessages": "Δεν υπάρχουν νέα μηνύματα",
     "newBadge": "Νέο",
     "viewAll": "Δείτε όλα τα μηνύματα"
   },
   "center": {
-    "title": "Communications Center",
+    "title": "Κέντρο Επικοινωνιών",
     "subtitle": "Διαχείριση επικοινωνιών μέσω όλων των channels",
     "initSuccess": "Το σύστημα επικοινωνιών αρχικοποιήθηκε επιτυχώς",
     "initError": "Σφάλμα κατά την αρχικοποίηση του συστήματος επικοινωνιών",
@@ -55,9 +55,9 @@
       "inactive": "Ανενεργό"
     },
     "tabs": {
-      "inbox": "Inbox",
+      "inbox": "Εισερχόμενα",
       "channels": "Channels",
-      "analytics": "Analytics"
+      "analytics": "Αναλυτικά"
     },
     "stats": {
       "totalMessages": "Συνολικά Μηνύματα",

@@ -135,7 +135,7 @@
       "methods": {
         "affine": "Affine (6 παράμετροι)",
         "polynomial": "Πολυωνυμικός",
-        "tps": "Thin Plate Spline"
+        "tps": "Λεπτή Πλάκα Spline"
       },
       "execute": "Εκτέλεση Μετασχηματισμού",
       "calibrate": "Βαθμονόμηση Μετασχηματισμού",
@@ -399,8 +399,8 @@
     "subtitle": "Κάτι πήγε στραβά με το σύστημα Geo-Alert",
     "errorDetails": "Λεπτομέρειες Σφάλματος",
     "errorMessage": "Μήνυμα Σφάλματος:",
-    "stackTrace": "Stack Trace:",
-    "componentStack": "Component Stack:",
+    "stackTrace": "Ίχνος Στοίβας:",
+    "componentStack": "Στοίβα Στοιχείων:",
     "recoveryOptions": "Επιλογές Ανάκαμψης",
     "tryAgain": "🔄 Δοκίμασε Ξανά",
     "reloadPage": "🔃 Επαναφόρτωση Σελίδας",
@@ -510,8 +510,8 @@
     "description": "Απαιτούνται τουλάχιστον 3 σημεία για γεωαναφορά",
     "dragHandle": "Drag",
     "tabs": {
-      "visualPicking": "Visual Picking",
-      "manualInput": "Manual Input"
+      "visualPicking": "Οπτική Επιλογή",
+      "manualInput": "Χειροκίνητη Εισαγωγή"
     },
     "actions": {
       "calibrate": "Βαθμονόμηση",

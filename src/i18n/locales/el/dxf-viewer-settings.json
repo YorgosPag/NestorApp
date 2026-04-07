@@ -22,7 +22,7 @@
         "warmColor": "Χρώμα Warm (Hover)",
         "hotColor": "Χρώμα Hot (Επιλεγμένα)",
         "contourColor": "Χρώμα Περιγράμματος",
-        "pickBoxSize": "Μέγεθος Pick Box",
+        "pickBoxSize": "Μέγεθος Πλαισίου Επιλογής",
         "apertureSize": "Μέγεθος Aperture",
         "maxGrips": "Μέγιστα Χερούλια ανά Οντότητα"
       },
@@ -422,7 +422,7 @@
       "colorDescription": "Χρώμα γραμμών σταυρώνυματος",
       "opacityTitle": "Διαφάνεια Σταυρονήματος",
       "opacityDescription": "Επίπεδο διαφάνειας του σταυρονήματος",
-      "cursorGapTitle": "Cursor Gap",
+      "cursorGapTitle": "Κενό Δρομέα",
       "cursorGapDescription": "Οι γραμμές ξεκινάνε έξω από τον κέρσορα"
     },
     "lineStyles": {
