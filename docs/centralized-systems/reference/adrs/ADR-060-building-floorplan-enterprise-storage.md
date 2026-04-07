@@ -139,3 +139,15 @@ loadFloorplan(buildingId, type)
 
 - `62db9cc` - perf(floorplans): migrate BuildingFloorplanService to enterprise storage architecture
 - `32547fd2` - fix(floorplans): replace console.error debug spam in FloorFloorplanService
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Downstream | 4-step canonical save pattern that replaced inline save logic in this service |
+| **[ADR-179](./ADR-179-ifc-compliant-floorplan-hierarchy.md)** | Extends | IFC hierarchy (Site>Building>Storey>Space) that restructured floor plan types |
+| **[ADR-285](./ADR-285-dxf-tenant-scoping-and-module-split.md)** | Extends | Tenant isolation added to cadFiles/dxf-levels written by this service |
+| **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Sibling | Unit-level equivalent — migrated unit floorplans to FileRecord pattern |

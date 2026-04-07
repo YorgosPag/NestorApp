@@ -343,3 +343,15 @@ Phase 5: ████████░░░░░░░░░░░ PARTIAL  — 
 | 2026-03-26 | **AI Document Auto-Classification** — New `contact-document-classifier.ts` uses OpenAI vision to classify uploaded documents into 117 contact-specific purposes (e.g., 'id', 'cv-resume', 'health-certificate'). Integrated transparently in `attachment-handler.ts` `handleDocument()`. Sets `FileRecord.purpose` field so files appear in the correct UI card instead of "Άλλο Γενικό". Fallback to 'generic' on low confidence or API error. |
 | 2026-03-26 | **Orphan PENDING File Cleanup** — New `file-purge-helpers.ts` shared module with `purgeFileRecord()` + `isFileHeld()`. Cron `file-purge` route extended with Phase B: auto-purge PENDING/FAILED files older than 48h (configurable via `PENDING_FILE_TTL_HOURS` env). New AI agent tool `discard_pending_file` for immediate deletion when user says "μην το καταχωρείς". Firestore composite index `status+createdAt` on `files` collection. |
 | 2026-04-01 | **Contact Soft Delete (ADR-191 pattern reuse)** — Εφαρμογή του lifecycle pattern `active → deleted → purged` στα Contacts. Ίδια collection (`contacts`) με `status='deleted'` + `deletedAt`/`deletedBy`/`previousStatus` metadata. Restore επαναφέρει στο `previousStatus`. Auto-purge cron (`/api/cron/purge-deleted-contacts`, daily 03:00 UTC, 30-day retention) καλεί `executeDeletion()` (ADR-226). Undo toast 5sec. Αυτό αποδεικνύει ότι το ADR-191 lifecycle pattern είναι **reusable** πέρα από files. |
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-018](./ADR-018-unified-upload-service.md)** | Upstream | Unified Upload Service — the gateway that routes files into this lifecycle |
+| **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Consumer | 4-step save pattern that calls createPendingFileRecord/finalizeFileRecord from this model |
+| **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Consumer | Unit floorplan migration — adopted this FileRecord model to replace legacy collection |
+| **[ADR-288](./ADR-288-cad-file-metadata-centralization.md)** | Consumer | CAD metadata — dual-writes back to `files` collection using this model |

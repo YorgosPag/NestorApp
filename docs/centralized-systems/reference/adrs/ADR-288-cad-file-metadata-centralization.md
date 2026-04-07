@@ -148,3 +148,15 @@ permissions introduced.
 ## Files Changed
 10 files — 1 new ADR, 6 new source files, 3 modified source files, +1 trivial
 config update.
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-285](./ADR-285-dxf-tenant-scoping-and-module-split.md)** | Upstream | Tenant scoping — identified the client-side write problem this ADR solves server-side |
+| **[ADR-240](./ADR-240-floorplan-pipeline-unification.md)** | Upstream | Pipeline unification — identified dual-write as root cause of visibility bugs |
+| **[ADR-191](./ADR-191-enterprise-document-management.md)** | Upstream | FileRecord model — dual-write target collection defined by this model |
+| **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Sibling | Save orchestrator — parallel canonical save path that also writes to `files` |

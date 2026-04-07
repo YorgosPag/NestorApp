@@ -75,3 +75,14 @@ UI Components:   EnterprisePhotoUpload -> MultiplePhotosUpload -> UnifiedPhotoMa
 - **Positive**: Single path for upload handler creation, no duplicate validation, less dead code
 - **Negative**: None — external interfaces unchanged, all consumers unaffected
 - **Risk**: Low — validation still happens in `useEnterpriseFileUpload`, factory presets match previous config exactly
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-054](./ADR-054-enterprise-upload-system-consolidation.md)** | Upstream | Enterprise upload consolidation — parent initiative this ADR refines for photos |
+| **[ADR-018](./ADR-018-unified-upload-service.md)** | Upstream | Unified Upload Service — Gateway + Strategy foundation |
+| **[ADR-191](./ADR-191-enterprise-document-management.md)** | Downstream | FileRecord model — photo uploads create records following this lifecycle |

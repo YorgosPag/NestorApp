@@ -294,3 +294,15 @@ onComplete={(file, meta) => {
 |------|--------|
 | 2026-03-17 | Initial implementation — Phase 1 (DxfSaveContext + writeToFilesCollection fix) + Phase 3 (EntityFilesManager auto-processing). Phase 2 (Wizard context propagation) pending next session. |
 | 2026-03-17 | ADR δημιουργήθηκε — ευρήματα + βήματα υλοποίησης |
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Upstream | 4-step save orchestrator — canonical save pattern this ADR builds upon |
+| **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Upstream | Unit FileRecord migration — prerequisite that exposed the wizard disconnect bug |
+| **[ADR-179](./ADR-179-ifc-compliant-floorplan-hierarchy.md)** | Upstream | IFC hierarchy — structural change that created the floor-tab visibility gap |
+| **[ADR-288](./ADR-288-cad-file-metadata-centralization.md)** | Downstream | CAD metadata centralization — server-side solution for cadFiles dual-write identified here |

@@ -71,3 +71,15 @@
 | Date | Change |
 |------|--------|
 | 2026-03-12 | Initial implementation — centralized 4-step pattern |
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-191](./ADR-191-enterprise-document-management.md)** | Upstream | FileRecord model — this orchestrator calls createPendingFileRecord/finalizeFileRecord |
+| **[ADR-060](./ADR-060-building-floorplan-enterprise-storage.md)** | Consumer | Building floorplan service — one of 3 services refactored to use this orchestrator |
+| **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Consumer | Unit floorplan migration — adopted this orchestrator pattern |
+| **[ADR-240](./ADR-240-floorplan-pipeline-unification.md)** | Downstream | Pipeline unification — extends this orchestrator with DxfSaveContext propagation |

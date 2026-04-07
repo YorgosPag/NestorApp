@@ -120,3 +120,15 @@ Step 3: "Επιλέξτε Όροφο & Φόρτωση Κάτοψης"
 |------|--------|
 | 2026-02-14 | Initial implementation — IFC 4.3 compliant hierarchy |
 | 2026-03-12 | **FIX: companyId mismatch for super_admin floor floorplan upload/query** — `FloorFloorplanInline` now receives `buildingCompanyId` prop from `FloorsTabContent` to ensure files are stored under the building's tenant, not the super_admin's personal companyId. `useFloorFloorplans` now reads `companyId` from the floor document (authoritative) instead of relying on caller's companyId. Cleaned `console.error` debug spam from `FloorFloorplanService`, `useFloorFloorplans`, and `ReadOnlyMediaViewer`. Fixed empty-string `floorId`/`buildingId`/`companyId` props in `ListLayout` (`?? null` → `\|\| null`). See commits: `7874effb`, `d522394d`, `5371fc71`, `32547fd2`. |
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-060](./ADR-060-building-floorplan-enterprise-storage.md)** | Upstream | Building floorplan storage — base architecture this ADR restructures |
+| **[ADR-240](./ADR-240-floorplan-pipeline-unification.md)** | Downstream | Pipeline unification that fixed wizard-to-floor-tab disconnect caused by hierarchy changes |
+| **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Sibling | Unit-level FileRecord migration — applies same hierarchy at property/unit level |
+| **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Sibling | Save orchestrator — canonical save pattern used across all hierarchy levels |

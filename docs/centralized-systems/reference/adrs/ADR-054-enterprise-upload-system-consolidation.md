@@ -159,3 +159,15 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 - **Λόγος**: Zero active imports. Όλη η λειτουργικότητα έχει μεταφερθεί στο `PDFProcessor.ts` + `UnifiedUploadService`
 - **Επίδραση**: Κανένα — κανένα αρχείο δεν εισήγαγε functions από αυτό το module
 - **Αρχιτεκτονική**: Εξάλειψη τελευταίου legacy PDF upload module — πλέον μόνο canonical pipeline
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-018](./ADR-018-unified-upload-service.md)** | Upstream | Foundation — Gateway + Strategy pattern this ADR builds upon |
+| **[ADR-190](./ADR-190-photo-upload-ssot-consolidation.md)** | Extends | Photo upload deduplication — applies SSoT principle to photo/logo handlers |
+| **[ADR-191](./ADR-191-enterprise-document-management.md)** | Downstream | FileRecord lifecycle model — documents stored via paths defined here |
+| **[ADR-060](./ADR-060-building-floorplan-enterprise-storage.md)** | Sibling | Building floorplan storage migration — parallel consolidation effort |

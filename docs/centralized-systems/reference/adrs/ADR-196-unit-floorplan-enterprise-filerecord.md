@@ -143,3 +143,15 @@ Enterprise pattern (same as Google Drive / SAP DMS):
 - **NEVER** write to `unit_floorplans` without `companyId` field
 - All `*_floorplans` collections MUST have `|| isSuperAdminOnly()` in CREATE rules
 - `isValidPathSegment()` MUST support Unicode (`\p{L}`) for Greek entity IDs
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-202](./ADR-202-floorplan-save-orchestrator.md)** | Upstream | 4-step save orchestrator — canonical pattern this migration adopted |
+| **[ADR-240](./ADR-240-floorplan-pipeline-unification.md)** | Downstream | Pipeline unification — fixed visibility issues revealed by this migration |
+| **[ADR-179](./ADR-179-ifc-compliant-floorplan-hierarchy.md)** | Sibling | IFC hierarchy — defines the floor/unit structure this ADR integrates with |
+| **[ADR-285](./ADR-285-dxf-tenant-scoping-and-module-split.md)** | Sibling | Tenant scoping — parallel fix for companyId issues in cadFiles/levels |

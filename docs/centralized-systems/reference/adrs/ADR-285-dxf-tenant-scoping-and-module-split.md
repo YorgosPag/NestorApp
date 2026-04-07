@@ -68,3 +68,14 @@ All callers (wizard, toolbar, migrations, auto-save manager, floorplan service) 
 - **2026-04-05 — ADR-286**: `useLevelOperations.addLevel` no longer writes client-side. All DXF level CRUD now routes through `/api/dxf-levels` (server stamps `companyId`/`createdBy`).
 - **2026-04-05 — ADR-288**: `saveToStorageImpl` no longer writes `cadFiles` client-side. Metadata upserts now route through `/api/cad-files` (server stamps `companyId`/`createdBy`).
 - **2026-04-05 — ADR-289**: `overlay-store.tsx` no longer writes overlay items client-side. All `dxf-overlay-levels/{levelId}/items/*` mutations now route through `/api/dxf-overlay-items` (server stamps `companyId`/`createdBy`; audit events emitted per mutation). The CL #2 client-side `companyId`/`createdBy` stamping in `overlay-store.tsx` is obsolete and has been removed.
+
+---
+
+## Related Documents (Upload Architecture)
+
+| Document | Relationship | Context |
+|----------|-------------|---------|
+| **[ADR-292](./ADR-292-floorplan-upload-consolidation-map.md)** | **Hub** | Full upload architecture map — all 6 paths, service diagram, consolidation roadmap |
+| **[ADR-288](./ADR-288-cad-file-metadata-centralization.md)** | Supersedes (partial) | Server-side cadFiles endpoint — replaced client-side writes introduced here |
+| **[ADR-060](./ADR-060-building-floorplan-enterprise-storage.md)** | Upstream | Building floorplan storage — the service this ADR split into smaller modules |
+| **[ADR-196](./ADR-196-unit-floorplan-enterprise-filerecord.md)** | Sibling | Unit FileRecord — parallel companyId/tenant fix at unit level |
