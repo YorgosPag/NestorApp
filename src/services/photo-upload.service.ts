@@ -17,6 +17,12 @@ import compressionConfig, { type UsageContext } from '@/config/photo-compression
 import { validateImageFile } from '@/utils/file-validation';
 import { FileRecordService } from '@/services/file-record.service';
 import {
+  validateUploadAuth,
+  createPendingFileRecordWithPolicy,
+  finalizeFileRecordWithPolicy,
+  markFileRecordFailedWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
+import {
   ENTITY_TYPES,
   FILE_DOMAINS,
   FILE_CATEGORIES,
@@ -306,14 +312,17 @@ export class PhotoUploadService {
       fileSize: file.size,
     });
 
+    // ADR-292: Canonical auth validation via gateway SSoT
+    await validateUploadAuth(options.companyId);
+
     const validation = validateImageFile(file);
     if (!validation.isValid) {
       canonicalLogger.error('File validation failed', { error: validation.error });
       throw new Error(validation.error || 'Invalid file');
     }
 
-    // Step A: Create pending FileRecord
-    const { fileId, storagePath, fileRecord } = await FileRecordService.createPendingFileRecord({
+    // Step A: Create pending FileRecord (via gateway — ADR-292)
+    const { fileId, storagePath, fileRecord } = await createPendingFileRecordWithPolicy({
       companyId: options.companyId,
       entityType: ENTITY_TYPES.CONTACT,
       entityId: options.contactId,
@@ -403,8 +412,8 @@ export class PhotoUploadService {
 
       canonicalLogger.info('Binary uploaded successfully');
 
-      // Step C: Finalize FileRecord
-      await FileRecordService.finalizeFileRecord({
+      // Step C: Finalize FileRecord (via gateway — ADR-292)
+      await finalizeFileRecordWithPolicy({
         fileId,
         sizeBytes: fileToUpload.size,
         downloadUrl: uploadResult.url,
@@ -425,7 +434,7 @@ export class PhotoUploadService {
       };
     } catch (error) {
       canonicalLogger.error('Upload failed, marking FileRecord as failed');
-      await FileRecordService.markFileRecordFailed(fileId, getErrorMessage(error));
+      await markFileRecordFailedWithPolicy(fileId, getErrorMessage(error));
       throw error;
     }
   }

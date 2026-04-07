@@ -228,6 +228,13 @@ export async function finalizeFileRecordWithPolicy(
   return FileRecordService.finalizeFileRecord(input);
 }
 
+export async function markFileRecordFailedWithPolicy(
+  fileId: string,
+  errorMessage?: string,
+): Promise<void> {
+  return FileRecordService.markFileRecordFailed(fileId, errorMessage);
+}
+
 export async function renameFileWithPolicy(
   fileId: string,
   newDisplayName: string,

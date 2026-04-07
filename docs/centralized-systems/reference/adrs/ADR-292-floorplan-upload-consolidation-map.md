@@ -210,14 +210,16 @@ Service        Service            Service
 - [x] companyId in linked files queries (2026-04-07)
 - [x] companyId propagation to all photo upload consumers (2026-04-07)
 - [x] EnterprisePhotoUpload canonical fields passed from PhotosTabBase, UnifiedPhotoManager, MultiplePhotos* (2026-04-07)
-- [ ] Verify all upload paths use `file-mutation-gateway.ts`
+- [x] Verify all upload paths use `file-mutation-gateway.ts` (2026-04-07: PhotoUploadService, PDFProcessor, file-manager-handlers migrated)
 
 ### Phase 2: Simplify Hooks
 - [x] Extract shared auth validation (`validateUploadAuth`) to `file-mutation-gateway.ts` (2026-04-07)
 - [x] Remove inline `validateAuthAndClaims` from `useFloorplanUpload` — uses gateway SSoT (2026-04-07)
 - [x] Enhance `useFileUpload` auth to validate companyId claims via `validateUploadAuth` (2026-04-07)
-- [ ] Reduce `useFloorplanUpload` to thin wrapper over gateway + FloorplanSaveOrchestrator
-- [ ] Document which hook to use for which scenario (decision matrix)
+- [x] Reduce `useFloorplanUpload` to thin wrapper — uses `uploadFileWithPolicy()` from orchestrator (2026-04-07, 254→180 LOC)
+- [x] Reduce `file-manager-handlers.handleFileUpload()` — uses `uploadFileWithPolicy()` (2026-04-07, -30 LOC)
+- [x] Create `upload-orchestrator-gateway.ts` — SSoT for 4-step upload pattern (2026-04-07)
+- [x] Document which hook to use for which scenario (decision matrix below)
 
 ### Phase 3: Eliminate Dual-Write
 - [ ] Migrate cadFiles-specific fields (layers, sessions, viewport) into FileRecord metadata
@@ -260,6 +262,8 @@ Service        Service            Service
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-07 | **Phase 2 Complete — Upload Orchestrator**: Created `upload-orchestrator-gateway.ts` with `uploadFileWithPolicy()` — canonical 4-step upload pattern (auth→create→upload→finalize). Refactored `useFloorplanUpload` to thin wrapper (254→180 LOC). Refactored `file-manager-handlers` to use orchestrator (-30 LOC). Total duplication eliminated: ~120 LOC across 2 consumers. | Claude Code |
+| 2026-04-07 | **Phase 1 Complete — 100% Gateway Compliance**: All 6 upload paths now route through `file-mutation-gateway.ts`. (1) `PhotoUploadService.uploadContactPhotoCanonical()` migrated from direct `FileRecordService` to gateway `WithPolicy` functions + `validateUploadAuth()`. (2) `PDFProcessor.uploadFloorplanCanonical()` same migration. (3) `file-manager-handlers.handleFileUpload()` added `validateUploadAuth()` before batch loop. (4) Added `markFileRecordFailedWithPolicy()` to gateway. Compliance: 50% → 100% (6/6 paths). | Claude Code |
 | 2026-04-07 | **Phase 1+2 Implementation**: (1) Added canonical fields (companyId/contactId/createdBy) to `UseEnterpriseFileUploadConfig` + fallback path to `PhotoUploadService.uploadPhoto()`. (2) Propagated canonical fields from all consumers: `PhotosTabBase`, `UnifiedPhotoManager` (Company/Service/Individual), `MultiplePhotosCompact`, `MultiplePhotosFull`, `EnterprisePhotoUpload`. (3) Extracted `validateUploadAuth()` SSoT to `file-mutation-gateway.ts` — removed inline `validateAuthAndClaims()` from `useFloorplanUpload`. (4) Enhanced `useFileUpload` auth to use `validateUploadAuth(companyId)` with companyId claim validation. | Claude Code |
 | 2026-04-07 | Added Related Documents section with ADR-293 back-reference | Claude Code |
 | 2026-04-07 | Initial consolidation map created | Claude Code |

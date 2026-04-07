@@ -11,21 +11,18 @@
  */
 
 import { useCallback } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
 import {
   archiveFilesWithPolicy,
   batchDownloadFilesWithPolicy,
   classifyFileWithPolicy,
-  createPendingFileRecordWithPolicy,
-  finalizeFileRecordWithPolicy,
   moveFileToTrashWithPolicy,
   renameFileWithPolicy,
   updateFileDescriptionWithPolicy,
   updateFileClassificationWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
+import { uploadFileWithPolicy } from '@/services/filesystem/upload-orchestrator-gateway';
+import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { getFileExtension } from '@/services/upload/utils/storage-path';
-import { generateUploadThumbnail, buildThumbnailPath } from '@/components/shared/files/utils/generate-upload-thumbnail';
 import { isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
 import { defaultFileFilters } from '@/components/core/AdvancedFilters';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -157,46 +154,22 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
       try {
         const ext = getFileExtension(file.name);
 
-        const { fileId, storagePath } = await createPendingFileRecordWithPolicy({
+        // ADR-292: Canonical 4-step upload via orchestrator (auth + create + upload + finalize)
+        const result = await uploadFileWithPolicy(file, {
           companyId,
-          entityType: 'company',
+          entityType: 'company' as EntityType,
           entityId: companyId,
-          domain: 'admin',
-          category: 'documents',
+          domain: 'admin' as FileDomain,
+          category: 'documents' as FileCategory,
           originalFilename: file.name,
           ext,
           contentType: file.type,
           createdBy: user.uid,
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        const storageRef = ref(storage, storagePath);
-        await uploadBytes(storageRef, file);
-        const downloadUrl = await getDownloadURL(storageRef);
-
-        let thumbnailUrl: string | undefined;
-        try {
-          const thumbBlob = await generateUploadThumbnail(file, file.type);
-          if (thumbBlob) {
-            const thumbPath = buildThumbnailPath(storagePath);
-            const thumbRef = ref(storage, thumbPath);
-            await uploadBytes(thumbRef, thumbBlob, { contentType: 'image/webp' });
-            thumbnailUrl = await getDownloadURL(thumbRef);
-          }
-        } catch {
-          // Non-blocking
-        }
-
-        await finalizeFileRecordWithPolicy({
-          fileId,
-          sizeBytes: file.size,
-          downloadUrl,
-          thumbnailUrl,
+          generateThumbnail: true,
         });
 
         if (isAIClassifiable(file.type)) {
-          classifyFileWithPolicy(fileId).catch(() => { /* non-blocking */ });
+          classifyFileWithPolicy(result.fileId).catch(() => { /* non-blocking */ });
         }
 
         successCount++;
@@ -204,7 +177,6 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
         failCount++;
         const msg = err instanceof Error ? err.message : String(err);
         logger.error('Upload failed', { file: file.name, error: msg });
-        console.error('[FileManager] Upload error:', err);
       }
     }
 

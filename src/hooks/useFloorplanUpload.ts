@@ -19,13 +19,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
-import {
-  createPendingFileRecordWithPolicy,
-  finalizeFileRecordWithPolicy,
-  validateUploadAuth,
-} from '@/services/filesystem/file-mutation-gateway';
+import { uploadFileWithPolicy } from '@/services/filesystem/upload-orchestrator-gateway';
 import { isFloorplanFile } from '@/services/floorplans/FloorplanProcessor';
 import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 import type { FileRecord } from '@/types/file-record';
@@ -115,10 +109,16 @@ function getFileExtension(filename: string): string {
 // 🏢 ADR-292: Auth validation extracted to validateUploadAuth() in file-mutation-gateway.ts (SSoT)
 
 function getErrorCodeFromError(error: Error): UploadErrorCode {
-  const msg = error.message.toLowerCase();
-  if (msg.includes('permission') || msg.includes('unauthorized')) return 'STORAGE_PERMISSION_DENIED';
-  if (msg.includes('network') || msg.includes('timeout')) return 'STORAGE_NETWORK_ERROR';
-  if (msg.includes('firestore')) return 'FIRESTORE_ERROR';
+  const msg = error.message;
+  // Auth errors from validateUploadAuth (thrown by orchestrator)
+  if (msg.includes('COMPANY_MISMATCH')) return 'AUTH_COMPANY_MISMATCH';
+  if (msg.includes('MISSING_COMPANY')) return 'AUTH_MISSING_COMPANY_CLAIM';
+  if (msg.includes('AUTH_REQUIRED')) return 'AUTH_NOT_AUTHENTICATED';
+  // Storage/network errors
+  const lower = msg.toLowerCase();
+  if (lower.includes('permission') || lower.includes('unauthorized')) return 'STORAGE_PERMISSION_DENIED';
+  if (lower.includes('network') || lower.includes('timeout')) return 'STORAGE_NETWORK_ERROR';
+  if (lower.includes('firestore')) return 'FIRESTORE_ERROR';
   return 'UNKNOWN_ERROR';
 }
 
@@ -146,7 +146,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
     setErrorCode(null);
 
     try {
-      // Phase 1: Validate file
+      // Phase 1: Validate file (pre-check before any network calls)
       const ext = getFileExtension(file.name);
       if (!isFloorplanFile(file.type, ext)) {
         setError(ERROR_MESSAGES.FILE_INVALID_TYPE);
@@ -160,78 +160,27 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
         return { success: false, error: ERROR_MESSAGES.FILE_TOO_LARGE, errorCode: 'FILE_TOO_LARGE' };
       }
 
-      // Phase 2: Validate auth (CRITICAL - SSoT from file-mutation-gateway ADR-292)
-      try {
-        await validateUploadAuth(companyId);
-      } catch (authError) {
-        const msg = authError instanceof Error ? authError.message : 'AUTH_NOT_AUTHENTICATED';
-        const code: UploadErrorCode = msg.includes('COMPANY_MISMATCH')
-          ? 'AUTH_COMPANY_MISMATCH'
-          : msg.includes('MISSING_COMPANY')
-            ? 'AUTH_MISSING_COMPANY_CLAIM'
-            : 'AUTH_NOT_AUTHENTICATED';
-        setError(ERROR_MESSAGES[code]);
-        setErrorCode(code);
-        return { success: false, error: ERROR_MESSAGES[code], errorCode: code };
-      }
-
-      setProgress(10);
-      logger.info('Creating FileRecord');
-
-      // Phase 3: Create pending FileRecord
-      const { fileId, storagePath, fileRecord } = await createPendingFileRecordWithPolicy({
+      // Phase 2: Upload via orchestrator (auth → create → delay → upload → finalize)
+      const result = await uploadFileWithPolicy(file, {
         companyId, projectId, entityType, entityId, domain, category,
         entityLabel, purpose, originalFilename: file.name, ext,
         contentType: file.type, createdBy: userId,
         ...(linkedTo && linkedTo.length > 0 ? { linkedTo } : {}),
+        firestoreDelayMs: 2000,
+        onProgress: (p) => setProgress(p.percent),
       });
 
-      logger.info('FileRecord created', { fileId });
-      setProgress(25);
+      // Phase 3: Fire-and-forget DXF/PDF processing
+      processFloorplanWithPolicy({ fileId: result.fileId, forceReprocess: false })
+        .then(() => logger.info('Floorplan processing started', { fileId: result.fileId }))
+        .catch((err) => logger.warn('Processing request failed', { fileId: result.fileId, error: String(err) }));
 
-      // Phase 4: Wait for Firestore propagation (2s for cross-service consistency)
-      logger.info('Waiting for consistency');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setProgress(30);
-
-      // Phase 5: Upload to Storage
-      logger.info('Uploading to Storage', { storagePath });
-      const storageRef = ref(storage, storagePath);
-
-      try {
-        await uploadBytes(storageRef, file);
-      } catch (uploadErr) {
-        const err = uploadErr instanceof Error ? uploadErr : new Error(String(uploadErr));
-        const code = getErrorCodeFromError(err);
-        logger.error('Storage failed', { error: err.message });
-        setError(ERROR_MESSAGES[code]);
-        setErrorCode(code);
-        return { success: false, error: ERROR_MESSAGES[code], errorCode: code };
-      }
-
-      logger.info('Uploaded to Storage');
-      setProgress(50);
-
-      // Phase 6: Get download URL
-      const downloadUrl = await getDownloadURL(storageRef);
-      setProgress(60);
-
-      // Phase 7: Finalize FileRecord
-      await finalizeFileRecordWithPolicy({ fileId, sizeBytes: file.size, downloadUrl });
-      logger.info('FileRecord finalized');
-      setProgress(90);
-
-      // Phase 8: Trigger server-side DXF processing immediately (fire-and-forget)
-      // Do NOT await — processing takes 15-60s. User can close wizard; API continues.
-      processFloorplanWithPolicy({ fileId, forceReprocess: false })
-        .then(() => {
-          logger.info('Floorplan processing started successfully', { fileId });
-        })
-        .catch((err) => logger.warn('Floorplan processing request failed', { fileId, error: String(err) }));
-      setProgress(100);
-
-      const finalFileRecord: FileRecord = { ...fileRecord, downloadUrl, sizeBytes: file.size, status: 'ready' };
-      logger.info('Upload complete (processing delegated to useFloorplanFiles)', { fileId });
+      const finalFileRecord: FileRecord = {
+        ...result.fileRecord,
+        downloadUrl: result.downloadUrl,
+        sizeBytes: file.size,
+        status: 'ready',
+      };
 
       return { success: true, fileRecord: finalFileRecord };
 
@@ -239,9 +188,9 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
       const error = err instanceof Error ? err : new Error(String(err));
       const code = getErrorCodeFromError(error);
       logger.error('Upload error', { error: error.message });
-      setError(error.message);
+      setError(ERROR_MESSAGES[code]);
       setErrorCode(code);
-      return { success: false, error: error.message, errorCode: code };
+      return { success: false, error: ERROR_MESSAGES[code], errorCode: code };
 
     } finally {
       setIsUploading(false);
