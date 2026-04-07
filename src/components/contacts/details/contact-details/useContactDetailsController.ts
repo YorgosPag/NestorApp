@@ -14,6 +14,7 @@ import {
 } from '@/utils/contactForm/contact-validation';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { ContactsService } from '@/services/contacts.service';
+import { validateUploadState } from '@/utils/contactForm/validators/upload-state';
 import { PendingRelationshipGuard } from '@/utils/pending-relationship-guard';
 import { openGalleryPhotoModal } from '@/core/modals';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -21,8 +22,6 @@ import { useGuardedContactMutation } from '@/hooks/useGuardedContactMutation';
 import { useContactPhotoHandlers } from '../useContactPhotoHandlers';
 import type { ContactDetailsProps } from './contact-details-types';
 import {
-  getFilledPhotoSlotCount,
-  getMultiplePhotoURLs,
   optimisticPersonasMatchContact,
   OptimisticPersonaState,
   SUBCOLLECTION_TABS,
@@ -73,6 +72,7 @@ export function useContactDetailsController({
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [optimisticPersonas, setOptimisticPersonas] = useState<OptimisticPersonaState | null>(null);
   const [savedPhotoURLs, setSavedPhotoURLs] = useState<{ logoURL?: string; photoURL?: string }>({});
+  const [pendingSave, setPendingSave] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined' && contact?.id) {
       return sessionStorage.getItem(`contact-tab-${contact.id}`) || 'basicInfo';
@@ -93,6 +93,7 @@ export function useContactDetailsController({
     setValidationErrors({});
     setSavedPhotoURLs({});
     setOptimisticPersonas(null);
+    setPendingSave(false);
   }, [contact?.id]);
 
   useEffect(() => {
@@ -119,38 +120,12 @@ export function useContactDetailsController({
     }
   }, [contact, optimisticPersonas]);
 
-  useEffect(() => {
-    const multiplePhotos = (editedData as ContactFormData).multiplePhotos;
-    const filledCount = getFilledPhotoSlotCount(multiplePhotos);
-    if (filledCount > 0) {
-      console.log('🔴 PHOTO DEBUG [ContactDetails] editedData.multiplePhotos UPDATED', {
-        length: multiplePhotos?.length ?? 0,
-        filled: filledCount,
-        slots: (multiplePhotos ?? []).map((photo, index) => ({
-          i: index,
-          f: !!photo.file,
-          u: !!photo.uploadUrl,
-          p: !!photo.preview,
-        })),
-      });
-    }
-  }, [(editedData as ContactFormData).multiplePhotos]);
-
   const enhancedFormData = useMemo(() => {
     if (!contact) {
       return {} as ContactFormData;
     }
 
     const mappingResult = mapContactToFormData(contact);
-    logger.info('Using mapper for contact type', {
-      contactType: contact.type,
-      contactId: contact.id,
-      mappingWarnings: mappingResult.warnings,
-      email: mappingResult.formData.email,
-      phone: mappingResult.formData.phone,
-      website: mappingResult.formData.website,
-    });
-
     let formData = mappingResult.formData;
 
     if (savedPhotoURLs.logoURL && !formData.logoURL) {
@@ -235,6 +210,7 @@ export function useContactDetailsController({
     setIsEditing(false);
     setEditedData({});
     setValidationErrors({});
+    setPendingSave(false);
   }, []);
 
   const handleFieldBlur = useCallback((fieldName: string) => {
@@ -277,6 +253,24 @@ export function useContactDetailsController({
       notifications.error('contacts-form.validation.individual.reviewHighlightedFields');
       focusField(validationResult.firstErrorField);
       return;
+    }
+
+    // 🏢 ENTERPRISE: Check for pending uploads before saving (ADR-031)
+    const uploadValidation = validateUploadState(mergedFormData);
+    if (!uploadValidation.isValid) {
+      if (uploadValidation.failedUploads > 0) {
+        logger.error('DETAILS SAVE BLOCKED: Failed uploads detected', { uploadValidation });
+        notifications.error('contacts-form.submission.failedUploads');
+        return;
+      }
+      if (uploadValidation.pendingUploads > 0) {
+        logger.info('DETAILS SAVE DEFERRED: Uploads in progress — will auto-save on completion', {
+          pendingUploads: uploadValidation.pendingUploads,
+        });
+        notifications.info('contacts-form.submission.pendingUploads', { duration: 3000 });
+        setPendingSave(true);
+        return;
+      }
     }
 
     try {
@@ -334,6 +328,28 @@ export function useContactDetailsController({
       }
     }
   }, [contact, editedData, focusField, getEditedFormData, getValidationResult, notifications, onContactUpdated, runExistingContactFormUpdate]);
+
+  // 🏢 ENTERPRISE: Deferred save — auto-submit when pending uploads complete (Google-style)
+  useEffect(() => {
+    if (!pendingSave || !isEditing) return;
+
+    const mergedFormData = getEditedFormData();
+    if (!mergedFormData) return;
+
+    const uploadValidation = validateUploadState(mergedFormData);
+    if (uploadValidation.failedUploads > 0) {
+      logger.info('DEFERRED SAVE: Cancelled — failed uploads detected');
+      setPendingSave(false);
+      notifications.error('contacts-form.submission.failedUploads');
+      return;
+    }
+
+    if (uploadValidation.isValid) {
+      logger.info('DEFERRED SAVE: All uploads complete — auto-submitting');
+      setPendingSave(false);
+      handleSaveEdit();
+    }
+  }, [editedData, pendingSave, isEditing, getEditedFormData, handleSaveEdit, notifications]);
 
   const clearFieldError = useCallback((fieldName: string) => {
     setValidationErrors((previous) => {
@@ -444,22 +460,12 @@ export function useContactDetailsController({
   }, [contact, editedData, enhancedFormData, isEditing, onContactUpdated, runExistingContactPartialFormUpdate]);
 
   const handlePhotoClick = useCallback((index: number) => {
-    logger.info('Photo click triggered', {
-      index,
-      contactExists: !!contact,
-      photoModalExists: !!photoModal,
-      openModalExists: !!photoModal?.openModal,
-      multiplePhotoURLs: contact ? getMultiplePhotoURLs(contact).length : 0,
-    });
-
     if (contact) {
       openGalleryPhotoModal(photoModal, contact, index);
     }
   }, [contact, photoModal]);
 
-  const handleUnitAdded = useCallback(() => {
-    // TODO: Refresh data when unit is added
-  }, []);
+  const handleUnitAdded = useCallback(() => { /* refresh on unit add */ }, []);
 
   return {
     activeTab,
