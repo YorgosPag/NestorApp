@@ -545,6 +545,33 @@
       "dependencies": "Εξαρτήσεις"
     },
     "emptyValue": "κενό",
+    "fields": {
+      "code": "Κωδικός",
+      "name": "Όνομα",
+      "type": "Τύπος",
+      "status": "Κατάσταση",
+      "floor": "Όροφος",
+      "building": "Κτίριο",
+      "area": "Εμβαδόν",
+      "price": "Τιμή"
+    },
+    "kinds": {
+      "identity": "Αναγνωριστικό",
+      "status": "Κατάσταση",
+      "hierarchy": "Ιεραρχία",
+      "data": "Δεδομένα"
+    },
+    "dependencies": {
+      "files": { "label": "Αρχεία" },
+      "contacts": { "label": "Επαφές" },
+      "contracts": { "label": "Συμβόλαια" },
+      "invoices": { "label": "Τιμολόγια" },
+      "tasks": { "label": "Εργασίες" }
+    },
+    "severity": {
+      "warn": "Προειδοποίηση ({{count}})",
+      "block": "Αποκλεισμός ({{count}})"
+    },
     "actions": {
       "cancel": "Ακύρωση",
       "confirm": "Συνέχεια",

@@ -545,6 +545,33 @@
       "dependencies": "Dependencies"
     },
     "emptyValue": "empty",
+    "fields": {
+      "code": "Code",
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "floor": "Floor",
+      "building": "Building",
+      "area": "Area",
+      "price": "Price"
+    },
+    "kinds": {
+      "identity": "Identifier",
+      "status": "Status",
+      "hierarchy": "Hierarchy",
+      "data": "Data"
+    },
+    "dependencies": {
+      "files": { "label": "Files" },
+      "contacts": { "label": "Contacts" },
+      "contracts": { "label": "Contracts" },
+      "invoices": { "label": "Invoices" },
+      "tasks": { "label": "Tasks" }
+    },
+    "severity": {
+      "warn": "Warning ({{count}})",
+      "block": "Blocked ({{count}})"
+    },
     "actions": {
       "cancel": "Cancel",
       "confirm": "Continue",
