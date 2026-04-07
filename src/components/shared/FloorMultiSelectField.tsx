@@ -3,8 +3,10 @@
 /**
  * FloorMultiSelectField — Multi-floor selector for multi-level units (ADR-236)
  *
- * Shows quick-add chips for existing building floors (not yet selected),
- * plus FloorInlineCreateForm for creating new floors when needed.
+ * Contiguity rule: a maisonette spans consecutive floors (2→3→4, not 2→3→5).
+ * Only the NEXT contiguous floor (above highest level) can be added.
+ * If that floor exists in the building → one-click add button.
+ * If it doesn't → FloorInlineCreateForm to create it.
  *
  * @module components/shared/FloorMultiSelectField
  * @since ADR-236 — Multi-Level Property Management
@@ -33,21 +35,13 @@ import { FloorInlineCreateForm } from '@/components/building-management/tabs/Flo
 // =============================================================================
 
 export interface FloorMultiSelectFieldProps {
-  /** Building ID to fetch floors for — null/undefined = disabled */
   buildingId: string | null | undefined;
-  /** Project ID for FloorInlineCreateForm (server policy) */
   projectId?: string | null;
-  /** Current levels (from unit data) */
   value: PropertyLevel[];
-  /** Callback when levels change */
   onChange: (levels: PropertyLevel[]) => void;
-  /** Field label */
   label: string;
-  /** Hint shown when no building is linked */
   noBuildingHint: string;
-  /** Disable the field */
   disabled?: boolean;
-  /** Open the create form immediately (e.g. after "no next floor" warning) */
   initiallyOpen?: boolean;
 }
 
@@ -73,7 +67,6 @@ export function FloorMultiSelectField({
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(initiallyOpen);
 
-  // Sync initiallyOpen prop → show create form
   useEffect(() => { if (initiallyOpen) setShowCreateForm(true); }, [initiallyOpen]);
 
   // Real-time Firestore subscription for building floors
@@ -107,24 +100,33 @@ export function FloorMultiSelectField({
   const isDisabled = disabled || !buildingId;
   const existingFloorNumbers = useMemo(() => new Set(allFloors.map(f => f.number)), [allFloors]);
 
-  // Available floors = building floors NOT already selected as levels
-  const selectedFloorIds = useMemo(() => new Set(value.map(l => l.floorId)), [value]);
-  const availableFloors = useMemo(
-    () => allFloors.filter(f => !selectedFloorIds.has(f.id)),
-    [allFloors, selectedFloorIds],
-  );
+  // Contiguity: find the next floor above the highest current level
+  const nextContiguousFloor = useMemo<FloorOption | null>(() => {
+    if (value.length < 2) return null;
+    const maxNumber = Math.max(...value.map(l => l.floorNumber));
+    const nextNumber = maxNumber + 1;
+    return allFloors.find(f => f.number === nextNumber) ?? null;
+  }, [value, allFloors]);
 
-  // Quick-add an existing floor as a new level
-  const handleQuickAdd = useCallback((floor: FloorOption) => {
+  // Does the next contiguous floor need to be CREATED (doesn't exist in building)?
+  const needsNewFloor = useMemo(() => {
+    if (value.length < 2) return false;
+    const maxNumber = Math.max(...value.map(l => l.floorNumber));
+    return !allFloors.some(f => f.number === maxNumber + 1);
+  }, [value, allFloors]);
+
+  // Add the next contiguous existing floor as a level
+  const handleAddNextFloor = useCallback(() => {
+    if (!nextContiguousFloor) return;
     const selectedFloors: FloorOption[] = [
       ...value.map(l => ({ id: l.floorId, number: l.floorNumber, name: l.name })),
-      floor,
+      nextContiguousFloor,
     ];
-    const primary = value[0]?.floorId ?? floor.id;
+    const primary = value[0]?.floorId ?? nextContiguousFloor.id;
     onChange(buildLevelsFromSelection(selectedFloors, primary));
-  }, [value, onChange]);
+  }, [value, onChange, nextContiguousFloor]);
 
-  // Direct add: when floor is created via inline form
+  // When a new floor is created via inline form, add it as level
   const handleFloorCreated = useCallback((floorId?: string, floorData?: { number: number; name: string }) => {
     setShowCreateForm(false);
     if (!floorId || !floorData) return;
@@ -158,36 +160,33 @@ export function FloorMultiSelectField({
           existingFloorNumbers={existingFloorNumbers}
         />
       ) : !isDisabled && value.length >= 2 ? (
-        <section className="space-y-2">
-          {/* Quick-add chips for existing unselected floors */}
-          {availableFloors.length > 0 && (
-            <section className="flex flex-wrap gap-1">
-              {availableFloors.map((f) => (
-                <Button
-                  key={f.id}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs gap-1"
-                  onClick={() => handleQuickAdd(f)}
-                >
-                  <Plus className="h-3 w-3" />
-                  {f.name}
-                </Button>
-              ))}
-            </section>
+        <section className="flex flex-wrap gap-2">
+          {/* Case A: next contiguous floor EXISTS in building → one-click add */}
+          {nextContiguousFloor && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={handleAddNextFloor}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t('multiLevel.addExistingFloor')}: {nextContiguousFloor.name}
+            </Button>
           )}
-          {/* Create new floor — secondary action */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={() => setShowCreateForm(true)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t('multiLevel.createFloor')}
-          </Button>
+          {/* Case B: next contiguous floor DOES NOT exist → create new */}
+          {needsNewFloor && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={() => setShowCreateForm(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t('multiLevel.createFloor')}
+            </Button>
+          )}
         </section>
       ) : null}
     </fieldset>
