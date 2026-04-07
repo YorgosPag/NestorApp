@@ -41,6 +41,7 @@ import { isFileRecord } from '@/types/file-record';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_STATUS } from '@/config/domain-constants';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { normalizeToISO } from '@/lib/date-local';
 // 🏢 ENTERPRISE: Helpers extracted for SRP compliance (ADR-261)
 import {
@@ -132,6 +133,7 @@ const toISOStringOrPassthrough = (value: unknown): string | undefined =>
  * - Automatic cleanup on unmount
  */
 export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllCompanyFilesReturn {
+  const { user } = useAuth();
   const {
     companyId,
     autoFetch = true,
@@ -151,7 +153,7 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
   // =========================================================================
 
   useEffect(() => {
-    if (!autoFetch || !companyId) {
+    if (!autoFetch || !companyId || !user) {
       setLoading(false);
       return;
     }
@@ -231,14 +233,14 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
       unsubscribe();
       unsubscribeRef.current = null;
     };
-  }, [autoFetch, companyId]);
+  }, [autoFetch, companyId, user]);
 
   // =========================================================================
   // TRASHED FILES (one-time fetch + manual refetch)
   // =========================================================================
 
   const fetchTrashedFiles = useCallback(async () => {
-    if (!companyId) return;
+    if (!companyId || !user) return;
 
     try {
       const trashed = await FileRecordService.getTrashedFiles({ companyId });
@@ -249,14 +251,14 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
         companyId,
       });
     }
-  }, [companyId]);
+  }, [companyId, user]);
 
   // Fetch trashed files on mount
   useEffect(() => {
-    if (autoFetch && companyId) {
+    if (autoFetch && companyId && user) {
       fetchTrashedFiles();
     }
-  }, [autoFetch, companyId, fetchTrashedFiles]);
+  }, [autoFetch, companyId, user, fetchTrashedFiles]);
 
   // =========================================================================
   // REFETCH (for manual refresh — re-fetches trashed only, active is real-time)
