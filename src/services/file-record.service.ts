@@ -128,6 +128,7 @@ export class FileRecordService {
       revision: input.revision,
       customTitle: input.customTitle,
       linkedTo: input.linkedTo,
+      levelFloorId: input.levelFloorId,
       language: 'el',
     };
 

@@ -415,10 +415,12 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   // =========================================================================
 
   /**
-   * Auto-fetch files on mount or when params change
+   * Auto-fetch files on mount or when params change.
+   * Skip when realtime=true — the onSnapshot listener handles data delivery.
+   * Running both causes race conditions where one overwrites the other.
    */
   useEffect(() => {
-    if (autoFetch && entityId) {
+    if (autoFetch && entityId && !realtime) {
       fetchFiles();
     }
   }, [autoFetch, entityId, fetchFiles]);
