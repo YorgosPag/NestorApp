@@ -178,11 +178,16 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
           error: undefined
         };
       } else {
-        // ΚΑΝΟΝΙΚΟ UPLOAD
+        // ΚΑΝΟΝΙΚΟ UPLOAD — full slot reset to prevent re-upload race conditions
         newPhotos[index] = {
           ...newPhotos[index],
+          file: null,
           uploadUrl: result.url,
-          fileName: result.fileName // 🔥 ΔΙΟΡΘΩΣΗ: Αποθήκευση custom filename για UI εμφάνιση
+          preview: result.url,
+          fileName: result.fileName,
+          isUploading: false,
+          uploadProgress: 100,
+          error: undefined
         };
       }
     }

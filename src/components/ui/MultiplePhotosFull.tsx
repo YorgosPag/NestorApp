@@ -318,42 +318,43 @@ export function MultiplePhotosFull({
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
-                  // 🔧 FIX: Use refs to avoid stale closures
-                  const currentPhotos = normalizedPhotosRef.current;
-                  const currentHandler = onPhotosChangeRef.current;
-
-                  if (result.success && currentHandler) {
-                    const newPhotos = [...currentPhotos];
-
-                    if (result.url) {
-                      // Upload successful — store URL, clear file to prevent re-upload
-                      newPhotos[index] = {
-                        ...newPhotos[index],
-                        file: null,
-                        uploadUrl: result.url,
-                        preview: result.url,
-                        isUploading: false,
-                        uploadProgress: 100,
-                        error: undefined
-                      };
-                    } else {
-                      // 🏢 FIX (2026-02-16): Photo removal — empty URL means delete
-                      newPhotos[index] = {
-                        file: null,
-                        preview: undefined,
-                        uploadUrl: undefined,
-                        fileName: undefined,
-                        isUploading: false,
-                        uploadProgress: 0,
-                        error: undefined
-                      };
-                    }
-
-                    currentHandler(newPhotos);
-                  }
-
+                  // 🏢 SINGLE STATE UPDATE: One event → one update (no competing calls)
+                  // handleUploadComplete (via useUploadCompletion) does the authoritative
+                  // formData update including fileName and selectedProfilePhotoIndex logic.
+                  // onPhotosChange is the fallback when no dedicated handler exists.
                   if (handleUploadComplete) {
                     handleUploadComplete(index, result);
+                  } else {
+                    const currentPhotos = normalizedPhotosRef.current;
+                    const currentHandler = onPhotosChangeRef.current;
+
+                    if (result.success && currentHandler) {
+                      const newPhotos = [...currentPhotos];
+
+                      if (result.url) {
+                        newPhotos[index] = {
+                          ...newPhotos[index],
+                          file: null,
+                          uploadUrl: result.url,
+                          preview: result.url,
+                          isUploading: false,
+                          uploadProgress: 100,
+                          error: undefined
+                        };
+                      } else {
+                        newPhotos[index] = {
+                          file: null,
+                          preview: undefined,
+                          uploadUrl: undefined,
+                          fileName: undefined,
+                          isUploading: false,
+                          uploadProgress: 0,
+                          error: undefined
+                        };
+                      }
+
+                      currentHandler(newPhotos);
+                    }
                   }
                 }}
                 disabled={disabled}
