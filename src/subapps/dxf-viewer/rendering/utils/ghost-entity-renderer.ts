@@ -13,13 +13,12 @@
  *
  * Features:
  * - Ghost outline rendering (semi-transparent)
- * - Delta indicator line (original → new position)
+ * - Delta indicator line (original -> new position)
  * - Coordinate readout during drag
  * - Performance optimized for large selections
  *
  * Usage:
  * ```tsx
- * // In canvas render loop
  * if (isDragging && selectedEntities.length > 0) {
  *   renderGhostEntities(ctx, selectedEntities, delta, {
  *     ghostColor: 'rgba(0, 120, 255, 0.5)',
@@ -32,379 +31,36 @@
  * @see hooks/useEntityDrag.ts
  */
 
-import type { Point2D } from '../types/Types';
-// 🏢 ADR-044: Centralized line widths
-// 🏢 ADR-083: Centralized line dash patterns
-// 🏢 ADR-090: Centralized UI Fonts
-// 🏢 ADR-091: Centralized Text Label Offsets
-import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS, UI_FONTS, TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
-// 🏢 ADR-166: Centralized Ghost Entity Colors
-import { GHOST_COLORS } from '../../config/color-config';
-// 🏢 ADR-058: Centralized Canvas Primitives
-import { addCirclePath } from '../primitives/canvasPaths';
+import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-066: Centralized Angle Calculation
-// 🏢 ADR-080: Centralized Rectangle Bounds
-import { calculateAngle, rectFromTwoPoints } from '../entities/shared/geometry-rendering-utils';
+import { calculateAngle } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { ARROW_ANGLE } from '../entities/shared/geometry-utils';
 // 🏢 ADR-150: Centralized Arrow Head Size
 import { OVERLAY_DIMENSIONS } from '../../utils/hover/config';
+// 🏢 ADR-080: Centralized Rectangle Bounds
+import { rectFromTwoPoints } from '../entities/shared/geometry-rendering-utils';
+
+import {
+  GHOST_RENDER_CONFIG,
+  LINE_DASH_PATTERNS,
+  TEXT_LABEL_OFFSETS,
+  applyDelta,
+  defaultWorldToScreen,
+  getEntityBounds,
+  mergeBounds,
+  renderSingleGhostEntity,
+} from './ghost-entity-shapes';
+
+// Re-export types and config for consumers
+export type { GhostableEntity, GhostRenderOptions, BoundingBox } from './ghost-entity-shapes';
+export { GHOST_RENDER_CONFIG } from './ghost-entity-shapes';
+
+import type { GhostableEntity, GhostRenderOptions, BoundingBox } from './ghost-entity-shapes';
 
 // ============================================================================
-// 🏢 ENTERPRISE: Configuration
+// 🏢 ENTERPRISE: Overlay Renderers
 // ============================================================================
-
-/**
- * Ghost rendering configuration
- */
-export const GHOST_RENDER_CONFIG = {
-  /** Default ghost fill color - 🏢 ADR-166: Centralized ghost colors */
-  GHOST_FILL: GHOST_COLORS.FILL,
-  /** Default ghost stroke color - 🏢 ADR-166 */
-  GHOST_STROKE: GHOST_COLORS.STROKE,
-  /** Ghost stroke width (pixels) - 🏢 ADR-044: Use centralized constant */
-  GHOST_STROKE_WIDTH: RENDER_LINE_WIDTHS.GHOST,
-  /** Delta line color - 🏢 ADR-166 */
-  DELTA_LINE_COLOR: GHOST_COLORS.DELTA_LINE,
-  /** Delta line width - 🏢 ADR-044: Use centralized constant */
-  DELTA_LINE_WIDTH: RENDER_LINE_WIDTHS.DELTA,
-  /** Delta line dash pattern - 🏢 ADR-083: Use centralized pattern */
-  DELTA_LINE_DASH: LINE_DASH_PATTERNS.GHOST,
-  /** Coordinate readout font - 🏢 ADR-090: Centralized font */
-  READOUT_FONT: UI_FONTS.MONOSPACE.SMALL,
-  /** Coordinate readout color - 🏢 ADR-166 */
-  READOUT_COLOR: GHOST_COLORS.READOUT_TEXT,
-  /** Coordinate readout background - 🏢 ADR-166 */
-  READOUT_BG: GHOST_COLORS.READOUT_BG,
-  /** @deprecated Use TEXT_LABEL_OFFSETS.LABEL_BOX_PADDING - 🏢 ADR-137 */
-  READOUT_PADDING: 4, // Kept for backward compatibility, use TEXT_LABEL_OFFSETS instead
-  /** Maximum entities to render detailed ghost (performance) */
-  DETAIL_THRESHOLD: 50,
-  /** Simplified box rendering for large selections - 🏢 ADR-166 */
-  SIMPLIFIED_BOX_COLOR: GHOST_COLORS.SIMPLIFIED_BOX,
-} as const;
-
-// ============================================================================
-// 🏢 ENTERPRISE: Type Definitions
-// ============================================================================
-
-/**
- * Entity geometry for ghost rendering
- */
-export interface GhostableEntity {
-  id: string;
-  type: string;
-  // Geometry properties (union of all entity types)
-  start?: Point2D;
-  end?: Point2D;
-  center?: Point2D;
-  radius?: number;
-  corner1?: Point2D;
-  corner2?: Point2D;
-  vertices?: Point2D[];
-  position?: Point2D;
-}
-
-/**
- * Ghost rendering options
- */
-export interface GhostRenderOptions {
-  /** Fill color for ghost entities */
-  ghostFill?: string;
-  /** Stroke color for ghost entities */
-  ghostStroke?: string;
-  /** Stroke width for ghost entities */
-  strokeWidth?: number;
-  /** Show delta indicator line */
-  showDeltaLine?: boolean;
-  /** Show coordinate readout */
-  showReadout?: boolean;
-  /** Transform world to screen coordinates */
-  worldToScreen?: (point: Point2D) => Point2D;
-  /** Current zoom scale (for line width adjustment) */
-  scale?: number;
-}
-
-/**
- * Bounding box for entity
- */
-interface BoundingBox {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
-
-// ============================================================================
-// 🏢 ENTERPRISE: Utility Functions
-// ============================================================================
-
-/**
- * Apply delta to a point
- */
-function applyDelta(point: Point2D, delta: Point2D): Point2D {
-  return {
-    x: point.x + delta.x,
-    y: point.y + delta.y,
-  };
-}
-
-/**
- * Default world to screen transform (identity)
- */
-function defaultWorldToScreen(point: Point2D): Point2D {
-  return point;
-}
-
-/**
- * Calculate bounding box for an entity
- */
-function getEntityBounds(entity: GhostableEntity): BoundingBox | null {
-  switch (entity.type) {
-    case 'line':
-      if (entity.start && entity.end) {
-        return {
-          minX: Math.min(entity.start.x, entity.end.x),
-          minY: Math.min(entity.start.y, entity.end.y),
-          maxX: Math.max(entity.start.x, entity.end.x),
-          maxY: Math.max(entity.start.y, entity.end.y),
-        };
-      }
-      break;
-
-    case 'circle':
-      if (entity.center && entity.radius !== undefined) {
-        return {
-          minX: entity.center.x - entity.radius,
-          minY: entity.center.y - entity.radius,
-          maxX: entity.center.x + entity.radius,
-          maxY: entity.center.y + entity.radius,
-        };
-      }
-      break;
-
-    case 'rectangle':
-      if (entity.corner1 && entity.corner2) {
-        return {
-          minX: Math.min(entity.corner1.x, entity.corner2.x),
-          minY: Math.min(entity.corner1.y, entity.corner2.y),
-          maxX: Math.max(entity.corner1.x, entity.corner2.x),
-          maxY: Math.max(entity.corner1.y, entity.corner2.y),
-        };
-      }
-      break;
-
-    case 'polyline':
-    case 'polygon':
-      if (entity.vertices && entity.vertices.length > 0) {
-        let minX = entity.vertices[0].x;
-        let minY = entity.vertices[0].y;
-        let maxX = entity.vertices[0].x;
-        let maxY = entity.vertices[0].y;
-
-        for (const v of entity.vertices) {
-          minX = Math.min(minX, v.x);
-          minY = Math.min(minY, v.y);
-          maxX = Math.max(maxX, v.x);
-          maxY = Math.max(maxY, v.y);
-        }
-
-        return { minX, minY, maxX, maxY };
-      }
-      break;
-
-    case 'text':
-    case 'point':
-      if (entity.position) {
-        return {
-          minX: entity.position.x - 5,
-          minY: entity.position.y - 5,
-          maxX: entity.position.x + 5,
-          maxY: entity.position.y + 5,
-        };
-      }
-      break;
-  }
-
-  return null;
-}
-
-/**
- * Merge multiple bounding boxes
- */
-function mergeBounds(boxes: BoundingBox[]): BoundingBox | null {
-  if (boxes.length === 0) return null;
-
-  let minX = boxes[0].minX;
-  let minY = boxes[0].minY;
-  let maxX = boxes[0].maxX;
-  let maxY = boxes[0].maxY;
-
-  for (const box of boxes) {
-    minX = Math.min(minX, box.minX);
-    minY = Math.min(minY, box.minY);
-    maxX = Math.max(maxX, box.maxX);
-    maxY = Math.max(maxY, box.maxY);
-  }
-
-  return { minX, minY, maxX, maxY };
-}
-
-// ============================================================================
-// 🏢 ENTERPRISE: Render Functions
-// ============================================================================
-
-/**
- * Render ghost line
- */
-function renderGhostLine(
-  ctx: CanvasRenderingContext2D,
-  start: Point2D,
-  end: Point2D,
-  delta: Point2D,
-  options: GhostRenderOptions
-): void {
-  const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
-
-  const ghostStart = worldToScreen(applyDelta(start, delta));
-  const ghostEnd = worldToScreen(applyDelta(end, delta));
-
-  ctx.beginPath();
-  ctx.moveTo(ghostStart.x, ghostStart.y);
-  ctx.lineTo(ghostEnd.x, ghostEnd.y);
-  ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
-  ctx.lineWidth = options.strokeWidth ?? GHOST_RENDER_CONFIG.GHOST_STROKE_WIDTH;
-  ctx.stroke();
-}
-
-/**
- * Render ghost circle
- */
-function renderGhostCircle(
-  ctx: CanvasRenderingContext2D,
-  center: Point2D,
-  radius: number,
-  delta: Point2D,
-  options: GhostRenderOptions
-): void {
-  const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
-  const scale = options.scale ?? 1;
-
-  const ghostCenter = worldToScreen(applyDelta(center, delta));
-  const screenRadius = radius * scale;
-
-  // 🏢 ADR-058: Use centralized canvas primitives
-  ctx.beginPath();
-  addCirclePath(ctx, ghostCenter, screenRadius);
-  ctx.fillStyle = options.ghostFill ?? GHOST_RENDER_CONFIG.GHOST_FILL;
-  ctx.fill();
-  ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
-  ctx.lineWidth = options.strokeWidth ?? GHOST_RENDER_CONFIG.GHOST_STROKE_WIDTH;
-  ctx.stroke();
-}
-
-/**
- * Render ghost rectangle
- */
-function renderGhostRectangle(
-  ctx: CanvasRenderingContext2D,
-  corner1: Point2D,
-  corner2: Point2D,
-  delta: Point2D,
-  options: GhostRenderOptions
-): void {
-  const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
-
-  const ghostCorner1 = worldToScreen(applyDelta(corner1, delta));
-  const ghostCorner2 = worldToScreen(applyDelta(corner2, delta));
-
-  // 🏢 ADR-080: Centralized Rectangle Bounds
-  const { x, y, width, height } = rectFromTwoPoints(ghostCorner1, ghostCorner2);
-
-  ctx.beginPath();
-  ctx.rect(x, y, width, height);
-  ctx.fillStyle = options.ghostFill ?? GHOST_RENDER_CONFIG.GHOST_FILL;
-  ctx.fill();
-  ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
-  ctx.lineWidth = options.strokeWidth ?? GHOST_RENDER_CONFIG.GHOST_STROKE_WIDTH;
-  ctx.stroke();
-}
-
-/**
- * Render ghost polyline/polygon
- */
-function renderGhostPolyline(
-  ctx: CanvasRenderingContext2D,
-  vertices: Point2D[],
-  delta: Point2D,
-  closed: boolean,
-  options: GhostRenderOptions
-): void {
-  if (vertices.length < 2) return;
-
-  const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
-
-  ctx.beginPath();
-  const firstPoint = worldToScreen(applyDelta(vertices[0], delta));
-  ctx.moveTo(firstPoint.x, firstPoint.y);
-
-  for (let i = 1; i < vertices.length; i++) {
-    const point = worldToScreen(applyDelta(vertices[i], delta));
-    ctx.lineTo(point.x, point.y);
-  }
-
-  if (closed) {
-    ctx.closePath();
-    ctx.fillStyle = options.ghostFill ?? GHOST_RENDER_CONFIG.GHOST_FILL;
-    ctx.fill();
-  }
-
-  ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
-  ctx.lineWidth = options.strokeWidth ?? GHOST_RENDER_CONFIG.GHOST_STROKE_WIDTH;
-  ctx.stroke();
-}
-
-/**
- * Render ghost for single entity
- */
-function renderSingleGhostEntity(
-  ctx: CanvasRenderingContext2D,
-  entity: GhostableEntity,
-  delta: Point2D,
-  options: GhostRenderOptions
-): void {
-  switch (entity.type) {
-    case 'line':
-      if (entity.start && entity.end) {
-        renderGhostLine(ctx, entity.start, entity.end, delta, options);
-      }
-      break;
-
-    case 'circle':
-      if (entity.center && entity.radius !== undefined) {
-        renderGhostCircle(ctx, entity.center, entity.radius, delta, options);
-      }
-      break;
-
-    case 'rectangle':
-      if (entity.corner1 && entity.corner2) {
-        renderGhostRectangle(ctx, entity.corner1, entity.corner2, delta, options);
-      }
-      break;
-
-    case 'polyline':
-      if (entity.vertices) {
-        renderGhostPolyline(ctx, entity.vertices, delta, false, options);
-      }
-      break;
-
-    case 'polygon':
-      if (entity.vertices) {
-        renderGhostPolyline(ctx, entity.vertices, delta, true, options);
-      }
-      break;
-  }
-}
 
 /**
  * Render simplified bounding box for large selections
@@ -420,23 +76,19 @@ function renderSimplifiedGhost(
 
   const ghostMin = worldToScreen(applyDelta({ x: bounds.minX, y: bounds.minY }, delta));
   const ghostMax = worldToScreen(applyDelta({ x: bounds.maxX, y: bounds.maxY }, delta));
-
-  // 🏢 ADR-080: Centralized Rectangle Bounds
   const { x, y, width, height } = rectFromTwoPoints(ghostMin, ghostMax);
 
-  // Draw simplified box
   ctx.beginPath();
   ctx.rect(x, y, width, height);
   ctx.fillStyle = GHOST_RENDER_CONFIG.SIMPLIFIED_BOX_COLOR;
   ctx.fill();
   ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
   ctx.lineWidth = options.strokeWidth ?? GHOST_RENDER_CONFIG.GHOST_STROKE_WIDTH;
-  // 🏢 ADR-083: Use centralized line dash pattern
   ctx.setLineDash([...GHOST_RENDER_CONFIG.DELTA_LINE_DASH]);
   ctx.stroke();
   ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
 
-  // Draw entity count label
+  // Entity count label
   ctx.font = GHOST_RENDER_CONFIG.READOUT_FONT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -444,7 +96,6 @@ function renderSimplifiedGhost(
   const textX = x + width / 2;
   const textY = y + height / 2;
 
-  // Background - 🏢 ADR-139: Centralized label box dimensions
   const metrics = ctx.measureText(label);
   const pad = TEXT_LABEL_OFFSETS.LABEL_BOX_PADDING;
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_BG;
@@ -455,13 +106,12 @@ function renderSimplifiedGhost(
     TEXT_LABEL_OFFSETS.LABEL_BOX_HEIGHT
   );
 
-  // Text
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_COLOR;
   ctx.fillText(label, textX, textY);
 }
 
 /**
- * Render delta indicator line
+ * Render delta indicator line with arrow head
  */
 function renderDeltaLine(
   ctx: CanvasRenderingContext2D,
@@ -472,7 +122,6 @@ function renderDeltaLine(
   if (delta.x === 0 && delta.y === 0) return;
 
   const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
-
   const startScreen = worldToScreen(originalCenter);
   const endScreen = worldToScreen(applyDelta(originalCenter, delta));
 
@@ -485,11 +134,8 @@ function renderDeltaLine(
   ctx.stroke();
   ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
 
-  // Draw arrow head
-  // 🏢 ADR-066: Use centralized angle calculation
-  // 🏢 ADR-XXX: Use centralized ARROW_ANGLE constant (30° = π/6)
+  // Arrow head
   const angle = calculateAngle(startScreen, endScreen);
-  // 🏢 ADR-150: Centralized arrow head size from OVERLAY_DIMENSIONS
   const arrowSize = OVERLAY_DIMENSIONS.ARROW_HEAD;
 
   ctx.beginPath();
@@ -507,7 +153,7 @@ function renderDeltaLine(
 }
 
 /**
- * Render coordinate readout
+ * Render coordinate readout near cursor
  */
 function renderCoordinateReadout(
   ctx: CanvasRenderingContext2D,
@@ -521,12 +167,10 @@ function renderCoordinateReadout(
   ctx.textBaseline = 'bottom';
 
   const metrics = ctx.measureText(label);
-  const padding = TEXT_LABEL_OFFSETS.LABEL_BOX_PADDING; // 🏢 ADR-139
-  // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
+  const padding = TEXT_LABEL_OFFSETS.LABEL_BOX_PADDING;
   const x = screenPosition.x + TEXT_LABEL_OFFSETS.TOOLTIP_HORIZONTAL;
   const y = screenPosition.y - TEXT_LABEL_OFFSETS.TOOLTIP_VERTICAL;
 
-  // Background - 🏢 ADR-139: Centralized label box dimensions
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_BG;
   ctx.fillRect(
     x - padding,
@@ -535,7 +179,6 @@ function renderCoordinateReadout(
     TEXT_LABEL_OFFSETS.LABEL_BOX_HEIGHT
   );
 
-  // Text
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_COLOR;
   ctx.fillText(label, x, y);
 }
@@ -546,11 +189,6 @@ function renderCoordinateReadout(
 
 /**
  * Render ghost entities during drag operation
- *
- * @param ctx - Canvas 2D rendering context
- * @param entities - Entities to render as ghosts
- * @param delta - Movement delta (world coordinates)
- * @param options - Rendering options
  */
 export function renderGhostEntities(
   ctx: CanvasRenderingContext2D,
@@ -562,9 +200,7 @@ export function renderGhostEntities(
 
   ctx.save();
 
-  // Check if we should use simplified rendering
   if (entities.length > GHOST_RENDER_CONFIG.DETAIL_THRESHOLD) {
-    // Calculate combined bounds
     const allBounds = entities
       .map(e => getEntityBounds(e))
       .filter((b): b is BoundingBox => b !== null);
@@ -574,15 +210,13 @@ export function renderGhostEntities(
       renderSimplifiedGhost(ctx, combinedBounds, delta, entities.length, options);
     }
   } else {
-    // Render each entity as ghost
     for (const entity of entities) {
       renderSingleGhostEntity(ctx, entity, delta, options);
     }
   }
 
-  // Render delta line if enabled
+  // Delta line
   if (options.showDeltaLine) {
-    // Calculate center of all entities
     const allBounds = entities
       .map(e => getEntityBounds(e))
       .filter((b): b is BoundingBox => b !== null);
@@ -597,10 +231,9 @@ export function renderGhostEntities(
     }
   }
 
-  // Render coordinate readout if enabled
+  // Coordinate readout
   if (options.showReadout && options.worldToScreen) {
     const worldToScreen = options.worldToScreen;
-    // Position readout near the cursor (approximate)
     const allBounds = entities
       .map(e => getEntityBounds(e))
       .filter((b): b is BoundingBox => b !== null);

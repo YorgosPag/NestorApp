@@ -15,61 +15,23 @@
  * - Graceful degradation (falls back to localStorage)
  * - Connection pooling (reuse DB connections)
  *
- * **ARCHITECTURE:**
- * - Object Store: 'settings' (key-value pairs)
- * - Indexes: None (simple key-value store)
- * - Transactions: readwrite for writes, readonly for reads
- * - Version: Incremental (v1, v2, v3, ...)
- *
  *  - Module #4
  */
 
-import { sleep } from '@/lib/async-utils';
 import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('IndexedDbDriver');
 import type { StorageDriver } from './StorageDriver';
 import { StorageError, StorageQuotaError, StorageUnavailableError } from './StorageDriver';
-import { validateSettingsState } from './schema';
+import {
+  type IndexedDbConfig,
+  type IndexedDbMetrics,
+  DEFAULT_CONFIG,
+  createInitialMetrics,
+  retryOperation,
+  isQuotaExceeded,
+  validateWriteData,
+} from './indexed-db-utils';
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-interface IndexedDbConfig {
-  dbName: string;
-  version: number;           // Schema version
-  storeName: string;         // Object store name
-  retryAttempts: number;
-  retryDelay: number;
-  telemetry: boolean;
-  quotaWarningThreshold: number; // Warn when usage > threshold (%)
-}
-
-const DEFAULT_CONFIG: IndexedDbConfig = {
-  dbName: 'dxf_settings_db',
-  version: 1,
-  storeName: 'settings',
-  retryAttempts: 3,
-  retryDelay: 100,
-  telemetry: true,
-  quotaWarningThreshold: 80
-};
-
-// ============================================================================
-// TELEMETRY
-// ============================================================================
-
-interface IndexedDbMetrics {
-  reads: number;
-  writes: number;
-  deletes: number;
-  errors: number;
-  transactionFailures: number;
-  totalLatency: number;
-  quotaUsage: number;        // Current quota usage (bytes)
-  quotaLimit: number;        // Total quota limit (bytes)
-}
+const logger = createModuleLogger('IndexedDbDriver');
 
 // ============================================================================
 // ENTERPRISE INDEXEDDB DRIVER
@@ -85,18 +47,8 @@ export class IndexedDbDriver implements StorageDriver {
   constructor(config: Partial<IndexedDbConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.available = this.checkAvailability();
-    this.metrics = {
-      reads: 0,
-      writes: 0,
-      deletes: 0,
-      errors: 0,
-      transactionFailures: 0,
-      totalLatency: 0,
-      quotaUsage: 0,
-      quotaLimit: 0
-    };
+    this.metrics = createInitialMetrics();
 
-    // Initialize DB connection
     if (this.available) {
       void this.initDatabase();
     }
@@ -114,7 +66,7 @@ export class IndexedDbDriver implements StorageDriver {
     }
 
     try {
-      const result = await this.retryOperation(async () => {
+      const result = await retryOperation(async () => {
         const db = await this.getDatabase();
         const transaction = db.transaction(this.config.storeName, 'readonly');
         const store = transaction.objectStore(this.config.storeName);
@@ -136,9 +88,8 @@ export class IndexedDbDriver implements StorageDriver {
             reject(new StorageError('Transaction failed', transaction.error));
           };
         });
-      });
+      }, this.config);
 
-      // Update metrics
       if (this.config.telemetry) {
         this.metrics.reads++;
         this.metrics.totalLatency += performance.now() - startTime;
@@ -146,7 +97,7 @@ export class IndexedDbDriver implements StorageDriver {
 
       return result;
     } catch (error) {
-      this.trackError(error);
+      this.trackError();
       logger.error(`Failed to get key "${key}"`, { error });
       return null;
     }
@@ -159,11 +110,10 @@ export class IndexedDbDriver implements StorageDriver {
       throw new StorageUnavailableError('IndexedDB not available');
     }
 
-    // ENTERPRISE ENFORCEMENT: Mandatory validation before write
-    this.validateData(value);
+    validateWriteData(value);
 
     try {
-      await this.retryOperation(async () => {
+      await retryOperation(async () => {
         const db = await this.getDatabase();
         const transaction = db.transaction(this.config.storeName, 'readwrite');
         const store = transaction.objectStore(this.config.storeName);
@@ -176,8 +126,7 @@ export class IndexedDbDriver implements StorageDriver {
           };
 
           request.onerror = () => {
-            // Check if quota exceeded
-            if (this.isQuotaExceeded(request.error)) {
+            if (isQuotaExceeded(request.error)) {
               reject(new StorageQuotaError(
                 `IndexedDB quota exceeded for key "${key}"`,
                 request.error
@@ -196,29 +145,24 @@ export class IndexedDbDriver implements StorageDriver {
             resolve();
           };
         });
-      });
+      }, this.config);
 
-      // Update metrics
       if (this.config.telemetry) {
         this.metrics.writes++;
         this.metrics.totalLatency += performance.now() - startTime;
-
-        // Update quota usage
         void this.updateQuotaMetrics();
       }
     } catch (error) {
-      this.trackError(error);
+      this.trackError();
       throw error;
     }
   }
 
   async delete(key: string): Promise<void> {
-    if (!this.available) {
-      return;
-    }
+    if (!this.available) return;
 
     try {
-      await this.retryOperation(async () => {
+      await retryOperation(async () => {
         const db = await this.getDatabase();
         const transaction = db.transaction(this.config.storeName, 'readwrite');
         const store = transaction.objectStore(this.config.storeName);
@@ -226,9 +170,7 @@ export class IndexedDbDriver implements StorageDriver {
         return new Promise<void>((resolve, reject) => {
           const request = store.delete(key);
 
-          request.onsuccess = () => {
-            resolve();
-          };
+          request.onsuccess = () => resolve();
 
           request.onerror = () => {
             reject(new StorageError(`Failed to delete key "${key}"`, request.error));
@@ -239,25 +181,22 @@ export class IndexedDbDriver implements StorageDriver {
             reject(new StorageError('Transaction failed', transaction.error));
           };
         });
-      });
+      }, this.config);
 
-      // Update metrics
       if (this.config.telemetry) {
         this.metrics.deletes++;
       }
     } catch (error) {
-      this.trackError(error);
+      this.trackError();
       logger.error(`Failed to delete key "${key}"`, { error });
     }
   }
 
   async keys(): Promise<string[]> {
-    if (!this.available) {
-      return [];
-    }
+    if (!this.available) return [];
 
     try {
-      return await this.retryOperation(async () => {
+      return await retryOperation(async () => {
         const db = await this.getDatabase();
         const transaction = db.transaction(this.config.storeName, 'readonly');
         const store = transaction.objectStore(this.config.storeName);
@@ -266,8 +205,7 @@ export class IndexedDbDriver implements StorageDriver {
           const request = store.getAllKeys();
 
           request.onsuccess = () => {
-            const keys = request.result.map(k => String(k));
-            resolve(keys);
+            resolve(request.result.map(k => String(k)));
           };
 
           request.onerror = () => {
@@ -279,21 +217,19 @@ export class IndexedDbDriver implements StorageDriver {
             reject(new StorageError('Transaction failed', transaction.error));
           };
         });
-      });
+      }, this.config);
     } catch (error) {
-      this.trackError(error);
+      this.trackError();
       logger.error('Failed to get keys', { error });
       return [];
     }
   }
 
   async clear(): Promise<void> {
-    if (!this.available) {
-      return;
-    }
+    if (!this.available) return;
 
     try {
-      await this.retryOperation(async () => {
+      await retryOperation(async () => {
         const db = await this.getDatabase();
         const transaction = db.transaction(this.config.storeName, 'readwrite');
         const store = transaction.objectStore(this.config.storeName);
@@ -301,9 +237,7 @@ export class IndexedDbDriver implements StorageDriver {
         return new Promise<void>((resolve, reject) => {
           const request = store.clear();
 
-          request.onsuccess = () => {
-            resolve();
-          };
+          request.onsuccess = () => resolve();
 
           request.onerror = () => {
             reject(new StorageError('Failed to clear', request.error));
@@ -314,9 +248,9 @@ export class IndexedDbDriver implements StorageDriver {
             reject(new StorageError('Transaction failed', transaction.error));
           };
         });
-      });
+      }, this.config);
     } catch (error) {
-      this.trackError(error);
+      this.trackError();
       logger.error('Failed to clear', { error });
     }
   }
@@ -329,45 +263,27 @@ export class IndexedDbDriver implements StorageDriver {
   // ENTERPRISE FEATURES
   // ==========================================================================
 
-  /**
-   * Get telemetry metrics
-   */
   getMetrics(): Readonly<IndexedDbMetrics> {
     return { ...this.metrics };
   }
 
-  /**
-   * Reset telemetry metrics
-   */
   resetMetrics(): void {
     this.metrics = {
-      reads: 0,
-      writes: 0,
-      deletes: 0,
-      errors: 0,
-      transactionFailures: 0,
-      totalLatency: 0,
+      ...createInitialMetrics(),
       quotaUsage: this.metrics.quotaUsage,
       quotaLimit: this.metrics.quotaLimit
     };
   }
 
-  /**
-   * Get estimated storage size (bytes)
-   */
   async getStorageSize(): Promise<number> {
-    if (!this.available) {
-      return 0;
-    }
+    if (!this.available) return 0;
 
     try {
-      // Use Storage API if available
       if ('estimate' in navigator.storage) {
         const estimate = await navigator.storage.estimate();
         return estimate.usage || 0;
       }
 
-      // Fallback: approximate by counting values
       const db = await this.getDatabase();
       const transaction = db.transaction(this.config.storeName, 'readonly');
       const store = transaction.objectStore(this.config.storeName);
@@ -376,9 +292,7 @@ export class IndexedDbDriver implements StorageDriver {
         const request = store.getAll();
 
         request.onsuccess = () => {
-          const values = request.result;
-          // Rough estimate: JSON size
-          const size = JSON.stringify(values).length * 2; // UTF-16
+          const size = JSON.stringify(request.result).length * 2;
           resolve(size);
         };
 
@@ -386,23 +300,17 @@ export class IndexedDbDriver implements StorageDriver {
           reject(new StorageError('Failed to estimate size', request.error));
         };
       });
-    } catch (error) {
-      this.trackError(error);
+    } catch {
+      this.trackError();
       return 0;
     }
   }
 
-  /**
-   * Check if key exists
-   */
   async has(key: string): Promise<boolean> {
     const value = await this.get(key);
     return value !== null;
   }
 
-  /**
-   * Get quota information
-   */
   async getQuotaInfo(): Promise<{ usage: number; limit: number; percentage: number }> {
     if (!this.available || !('estimate' in navigator.storage)) {
       return { usage: 0, limit: 0, percentage: 0 };
@@ -413,18 +321,12 @@ export class IndexedDbDriver implements StorageDriver {
       const usage = estimate.usage || 0;
       const limit = estimate.quota || 0;
       const percentage = limit > 0 ? (usage / limit) * 100 : 0;
-
       return { usage, limit, percentage };
     } catch {
       return { usage: 0, limit: 0, percentage: 0 };
     }
   }
 
-  /**
-   * Close database connection
-   *
-   * Call this when app is shutting down or navigating away
-   */
   async close(): Promise<void> {
     if (this.db) {
       this.db.close();
@@ -442,7 +344,6 @@ export class IndexedDbDriver implements StorageDriver {
       return this.db;
     }
 
-    // Reuse existing connection promise if opening
     if (this.dbPromise) {
       return this.dbPromise;
     }
@@ -458,7 +359,6 @@ export class IndexedDbDriver implements StorageDriver {
       request.onsuccess = () => {
         this.db = request.result;
 
-        // Handle unexpected close
         this.db.onversionchange = () => {
           this.db?.close();
           this.db = null;
@@ -469,14 +369,12 @@ export class IndexedDbDriver implements StorageDriver {
       };
 
       request.onerror = () => {
-        this.trackError(request.error);
+        this.trackError();
         reject(new StorageError('Failed to open database', request.error));
       };
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = () => {
         const db = request.result;
-
-        // Create object store if it doesn't exist
         if (!db.objectStoreNames.contains(this.config.storeName)) {
           db.createObjectStore(this.config.storeName);
         }
@@ -489,13 +387,11 @@ export class IndexedDbDriver implements StorageDriver {
   }
 
   private checkAvailability(): boolean {
-    // SSR check
     if (typeof window === 'undefined' || !('indexedDB' in window)) {
       return false;
     }
 
     try {
-      // Check if IndexedDB is actually usable (not blocked by private mode)
       return indexedDB !== null && indexedDB !== undefined;
     } catch {
       return false;
@@ -503,47 +399,10 @@ export class IndexedDbDriver implements StorageDriver {
   }
 
   // ==========================================================================
-  // PRIVATE HELPERS - RETRY & ERROR HANDLING
+  // PRIVATE HELPERS - TELEMETRY
   // ==========================================================================
 
-  private async retryOperation<T>(
-    operation: () => Promise<T>,
-    attempt = 0
-  ): Promise<T> {
-    try {
-      return await operation();
-    } catch (error) {
-      if (attempt >= this.config.retryAttempts - 1) {
-        throw error;
-      }
-
-      // Don't retry quota errors (they won't fix themselves)
-      if (error instanceof StorageQuotaError) {
-        throw error;
-      }
-
-      // Exponential backoff
-      const delay = this.config.retryDelay * Math.pow(2, attempt);
-      await sleep(delay);
-
-      return this.retryOperation(operation, attempt + 1);
-    }
-  }
-
-  // sleep() → imported from @/lib/async-utils (ADR-212)
-
-  private isQuotaExceeded(error: unknown): boolean {
-    if (!error) return false;
-
-    // DOMException with name 'QuotaExceededError'
-    if (error instanceof Error && 'name' in error) {
-      return error.name === 'QuotaExceededError';
-    }
-
-    return false;
-  }
-
-  private trackError(error: unknown): void {
+  private trackError(): void {
     if (this.config.telemetry) {
       this.metrics.errors++;
     }
@@ -556,16 +415,13 @@ export class IndexedDbDriver implements StorageDriver {
   }
 
   private async updateQuotaMetrics(): Promise<void> {
-    if (!this.config.telemetry) {
-      return;
-    }
+    if (!this.config.telemetry) return;
 
     try {
       const { usage, limit, percentage } = await this.getQuotaInfo();
       this.metrics.quotaUsage = usage;
       this.metrics.quotaLimit = limit;
 
-      // Warn if approaching quota limit
       if (percentage > this.config.quotaWarningThreshold) {
         logger.warn(
           `Storage quota usage at ${percentage.toFixed(1)}% ` +
@@ -574,33 +430,6 @@ export class IndexedDbDriver implements StorageDriver {
       }
     } catch {
       // Ignore quota check errors
-    }
-  }
-
-  /**
-   * Validate data with Zod schema
-   *
-   * **ENTERPRISE ENFORCEMENT:** Mandatory validation on all writes
-   */
-  private validateData<T>(data: T): void {
-    // Basic validation: ensure it's not null/undefined
-    if (data === null || data === undefined) {
-      throw new StorageError('Invalid data: null or undefined');
-    }
-
-    // Zod schema validation (mandatory)
-    // Only validate if data looks like SettingsState
-    if (typeof data === 'object' && data !== null && '__standards_version' in data) {
-      const validationResult = validateSettingsState(data);
-
-      if (!validationResult.success) {
-        const errors = 'error' in validationResult ? validationResult.error.errors : [];
-        const errorMsg = errors
-          .map(e => `${e.path.join('.')}: ${e.message}`)
-          .join(', ');
-
-        throw new StorageError(`Schema validation failed: ${errorMsg}`);
-      }
     }
   }
 }
