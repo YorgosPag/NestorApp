@@ -59,7 +59,7 @@ export interface CardGridProps {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-const getResponsiveValue = (
+export const getResponsiveValue = (
   value: number | Record<string, number> | undefined,
   breakpoint: string,
   defaultValue: number = 1
