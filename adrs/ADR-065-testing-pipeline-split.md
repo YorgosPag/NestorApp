@@ -109,6 +109,16 @@ Only 1 consumer: `src/subapps/geo-canvas/index.ts` — no import path changes ne
 | 2026-04-07 | Phase 5 #18: ImageParser split: 1 file (649 lines) -> 2 files (298+208) — contact photo compression to image-parser-compression.ts |
 | 2026-04-07 | Phase 5 #19: ProfessionalDrawingInterface split: 1 file (649 lines) -> 2 files (302+143) — monitoring dashboard to professional-drawing-dashboard.tsx |
 | 2026-04-07 | Phase 5 #20: useMessageReactions split: 1 file (642 lines) -> 2 files (294+119) — types+helpers to message-reactions-types.ts |
+| 2026-04-07 | Phase 6 #1: query-middleware split: 1 file (641 lines) -> 2 files (386+160) — types+errors to query-middleware-types.ts |
+| 2026-04-07 | Phase 6 #2: firebaseAdmin split: 1 file (603 lines) -> 3 files (232+264+60) — credential chain + types extracted |
+| 2026-04-07 | Phase 6 #3: pipeline-queue-service split: 1 file (598 lines) -> 2 files (447+183) — operator inbox to pipeline-queue-operator.ts |
+| 2026-04-07 | Phase 6 #4: esco.service split: 1 file (595 lines) -> 2 files (430+236) — skills to esco-skill.service.ts |
+| 2026-04-07 | Phase 6 #5: admin-update-contact-module split: 1 file (586 lines) -> 2 files (411+202) — helpers extracted |
+| 2026-04-07 | Phase 6 #6: entity-linking audit.ts split: 1 file (581 lines) -> 2 files (476+102) — types to audit-types.ts |
+| 2026-04-07 | Phase 6 #7: executor-shared split: 1 file (581 lines) -> 2 files (436+156) — types+constants to executor-shared-types.ts |
+| 2026-04-07 | Phase 6 #8: analytics-service split: 1 file (574 lines) -> 2 files (471+79) — types to analytics-types.ts |
+| 2026-04-07 | Phase 6 #9: RelationshipQueryBuilder split: 1 file (571 lines) -> 3 files (385+52+50) — types+factories extracted |
+| 2026-04-07 | Phase 6 #10: platform-config split: 1 file (633 lines) -> 3 files (473+64+65) — icons+utils+types extracted |
 
 ## BaseEntityRenderer Split
 
@@ -462,3 +472,35 @@ Split into 3 files in `src/subapps/geo-canvas/app/`:
 Key refactoring: 8 boundary handlers + state extracted to custom hook `useBoundaryLayers(mapRef)`. Sidebar content and foundation view extracted as presentational components. DRY `syncAdministrativeBoundaries` helper eliminates 4x duplicate sync code.
 
 Consumer Impact: Main file keeps same named export + default export — **zero consumer changes**.
+
+## Phase 6 Splits (2026-04-07) — HIGH PRIORITY #1–#10
+
+### #1 query-middleware.ts (641→386+160)
+Split: types/errors → `query-middleware-types.ts`. 1 consumer (re-exports errors). Zero risk.
+
+### #2 firebaseAdmin.ts (603→232+264+60)
+Split: credential chain → `firebaseAdmin-credentials.ts`, types/errors → `firebaseAdmin-types.ts`. 50+ consumers, all use named exports — backward compatible via re-exports.
+
+### #3 pipeline-queue-service.ts (598→447+183)
+Split: operator inbox ops → `pipeline-queue-operator.ts`. Re-exported from main. All consumers unchanged.
+
+### #4 esco.service.ts (595→430+236)
+Split: skill search → `esco-skill.service.ts` (new `EscoSkillService` class). Main `EscoService` delegates via static methods. All consumers unchanged.
+
+### #5 admin-update-contact-module.ts (586→411+202)
+Split: field detection, value extraction, contact name parsing → `admin-update-contact-helpers.ts`. Internal module, zero external consumers.
+
+### #6 entity-linking/utils/audit.ts (581→476+102)
+Split: types/config → `audit-types.ts`. Re-exported from main. All consumers unchanged.
+
+### #7 executor-shared.ts (581→436+156)
+Split: types/constants/whitelists → `executor-shared-types.ts`. Re-exported from main. All consumers unchanged.
+
+### #8 analytics-service.ts (574→471+79)
+Split: interfaces → `analytics-types.ts`. Re-exported from main. All consumers unchanged.
+
+### #9 RelationshipQueryBuilder.ts (571→385+52+50)
+Split: types → `relationship-query-types.ts`, factory functions → `relationship-query-factories.ts`. Re-exported from main.
+
+### #10 platform-config.tsx (633→473+64+65)
+Split: SVG icons → `platform-icons.tsx`, utility functions → `platform-utils.ts`, types → `platform-config-types.ts`. Re-exported from main.
