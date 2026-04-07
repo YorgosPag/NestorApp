@@ -302,6 +302,13 @@ export class FileRecordService {
       where('status', '==', FILE_STATUS.READY),
     ];
 
+    // 🔒 SECURITY: companyId constraint required for Firestore Security Rules
+    // Rules enforce belongsToCompany(resource.data.companyId) — without this
+    // filter, queries fail with PERMISSION_DENIED for non-super-admin users.
+    if (options?.companyId) {
+      constraints.push(where('companyId', '==', options.companyId));
+    }
+
     if (options?.domain) {
       constraints.push(where('domain', '==', options.domain));
     }

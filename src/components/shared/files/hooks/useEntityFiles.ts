@@ -237,12 +237,16 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   useEffect(() => { purposeRef.current = purpose; }, [purpose]);
 
   useEffect(() => {
-    if (!realtime || !entityId) return;
+    if (!realtime || !entityId || !companyId) return;
 
     setLoading(true);
 
     // Build same constraints as getFilesByEntity
+    // 🔒 SECURITY: companyId constraint is REQUIRED for Firestore Security Rules
+    // Without it, the query fails with PERMISSION_DENIED because rules enforce
+    // belongsToCompany(resource.data.companyId) tenant isolation.
     const constraints = [
+      where('companyId', '==', companyId),
       where('entityType', '==', entityType),
       where('entityId', '==', entityId),
       where('status', '==', FILE_STATUS.READY),
@@ -297,7 +301,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     return () => {
       unsubscribe();
     };
-  }, [realtime, entityType, entityId, domain, category, levelFloorId]);
+  }, [realtime, entityType, entityId, companyId, domain, category, levelFloorId]);
 
   // =========================================================================
   // 🗑️ TRASH OPERATIONS (Enterprise Trash System - ADR-032)
