@@ -38,13 +38,13 @@
   },
   "toolbarStatus": {
     "tool": "Εργαλείο",
-    "zoom": "Ζουμ",
-    "snap": "Snap",
+    "zoom": "Μεγέθυνση",
+    "snap": "Πρόσδεση",
     "on": "ΕΝΕΡΓΟ",
     "off": "ΑΝΕΝΕΡΓΟ",
     "commands": "Εντολές",
     "coordinates": "Συντεταγμένες",
-    "shortcutsFallback": "D=Χάρακας | W=Παράθυρο Ζουμ | +/-=Ζουμ | F9=Πλέγμα | ESC=Άκυρο",
+    "shortcutsFallback": "D=Χάρακας | W=Παράθυρο Μεγέθυνσης | +/-=Μεγέθυνση | F9=Πλέγμα | ESC=Άκυρο",
     "unknownTool": "Άγνωστο"
   },
   "actionButtons": {
@@ -122,11 +122,11 @@
   "zoomControls": {
     "zoomOut": "Σμίκρυνση (-{percentage}%) - Πληκτρολόγιο: -",
     "zoomIn": "Μεγέθυνση (+{percentage}%) - Πληκτρολόγιο: +",
-    "inputTitle": "Ποσοστό zoom (1-99999%, δεκαδικά με . ή ,) - Πατήστε Enter ή κλικ εκτός για εφαρμογή",
-    "invalidInput": "Μη έγκυρη είσοδος zoom: \"{value}\". Επαναφορά σε {percentage}%"
+    "inputTitle": "Ποσοστό μεγέθυνσης (1-99999%, δεκαδικά με . ή ,) - Πατήστε Enter ή κλικ εκτός για εφαρμογή",
+    "invalidInput": "Μη έγκυρη είσοδος μεγέθυνσης: \"{value}\". Επαναφορά σε {percentage}%"
   },
   "overlayToolbar": {
-    "objectSnap": "Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)",
+    "objectSnap": "Ενεργοποίηση/Απενεργοποίηση Πρόσδεσης Αντικειμένου (F3)",
     "basicFunctions": "Ενεργοποίηση βασικών λειτουργιών"
   },
   "toolLabels": {
@@ -134,7 +134,7 @@
     "rectangle": "Ορθογώνιο",
     "circle": "Κύκλος",
     "pan": "Μετακίνηση Προβολής",
-    "zoomWindow": "Παράθυρο Zoom",
+    "zoomWindow": "Παράθυρο Μεγέθυνσης",
     "layering": "Επίπεδα"
   },
   "toolGroups": {
@@ -184,7 +184,7 @@
     "measureAngleConstraint": "Περιορισμός Γωνίας",
     "zoomIn": "Μεγέθυνση",
     "zoomOut": "Σμίκρυνση",
-    "zoomWindow": "Παράθυρο Zoom",
+    "zoomWindow": "Παράθυρο Μεγέθυνσης",
     "zoomExtents": "Εστίαση Ορίων",
     "undo": "Αναίρεση",
     "redo": "Επανάληψη",

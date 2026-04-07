@@ -264,7 +264,7 @@
   },
   "crm": {
     "overview": "Επισκόπηση",
-    "dashboard": "Dashboard",
+    "dashboard": "Πίνακας Ελέγχου",
     "customers": "Διαχείριση Πελατών",
     "communications": "Επικοινωνίες",
     "leads": "Leads & Ευκαιρίες",
@@ -297,7 +297,7 @@
   "module": {
     "home": "Αρχική",
     "crm": "CRM",
-    "crmDashboard": "Dashboard",
+    "crmDashboard": "Πίνακας Ελέγχου",
     "tasks": "Εργασίες",
     "calendar": "Ημερολόγιο",
     "leads": "Leads",

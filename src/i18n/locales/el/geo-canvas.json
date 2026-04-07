@@ -695,15 +695,15 @@
     }
   },
   "boundaryLayer": {
-    "title": "Boundary Layers",
-    "remove": "Αφαίρεση layer",
+    "title": "Επίπεδα Ορίων",
+    "remove": "Αφαίρεση επιπέδου",
     "opacity": "Διαφάνεια",
     "customizeStyle": "Προσαρμογή στυλ",
     "color": "Χρώμα:",
     "strokeWidth": "Πάχος:",
     "fill": "Γέμισμα:",
     "addBoundary": "Προσθήκη Boundary",
-    "noLayers": "Δεν υπάρχουν boundary layers",
+    "noLayers": "Δεν υπάρχουν επίπεδα ορίων",
     "clickToStart": "Κάντε κλικ «Προσθήκη Boundary» για να ξεκινήσετε",
     "hide": "Απόκρυψη",
     "show": "Εμφάνιση",
@@ -783,7 +783,7 @@
     "instructions": {
       "step2": "2. Κλικ στον χάρτη για γεωγραφικές συντεταγμένες",
       "step3": "3. Ρύθμιση ακρίβειας και προαιρετικής περιγραφής",
-      "step4": "4. Κλικ \"Add Control Point\" για αποθήκευση"
+      "step4": "4. Κλικ \"Προσθήκη Σημείου Ελέγχου\" για αποθήκευση"
     }
   },
   "page": {

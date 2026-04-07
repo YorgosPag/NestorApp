@@ -1,22 +1,22 @@
 {
   "settings": {
     "grip": {
-      "title": "Ρυθμίσεις Grips",
-      "actionsAriaLabel": "Ενέργειες ρυθμίσεων grips",
+      "title": "Ρυθμίσεις Χερουλιών",
+      "actionsAriaLabel": "Ενέργειες ρυθμίσεων χερουλιών",
       "reset": "Επαναφορά",
       "resetTitle": "Επαναφορά στις προεπιλεγμένες ρυθμίσεις",
       "factory": "Εργοστασιακές",
       "factoryTitle": "Επαναφορά στις εργοστασιακές ρυθμίσεις (CAD Standards)",
-      "enabled": "Εμφάνιση Grips",
-      "disabledWarning": "Τα grips είναι απενεργοποιημένα και δεν θα εμφανίζονται",
+      "enabled": "Εμφάνιση Χερουλιών",
+      "disabledWarning": "Τα χερούλια είναι απενεργοποιημένα και δεν θα εμφανίζονται",
       "sections": {
         "basic": "Βασικές Ρυθμίσεις",
-        "colors": "Χρώματα Grips",
-        "types": "Τύποι Grips",
+        "colors": "Χρώματα Χερουλιών",
+        "types": "Τύποι Χερουλιών",
         "advanced": "Προχωρημένες Ρυθμίσεις"
       },
       "labels": {
-        "size": "Μέγεθος Grips",
+        "size": "Μέγεθος Χερουλιών",
         "opacity": "Διαφάνεια",
         "coldColor": "Χρώμα Cold",
         "warmColor": "Χρώμα Warm (Hover)",
@@ -24,7 +24,7 @@
         "contourColor": "Χρώμα Περιγράμματος",
         "pickBoxSize": "Μέγεθος Pick Box",
         "apertureSize": "Μέγεθος Aperture",
-        "maxGrips": "Μέγιστα Grips ανά Οντότητα"
+        "maxGrips": "Μέγιστα Χερούλια ανά Οντότητα"
       },
       "colorPicker": {
         "cold": "Επιλογή Χρώματος Cold Grip",
@@ -38,7 +38,7 @@
         "showQuadrants": "Εμφάνιση Quadrants",
         "showAperture": "Εμφάνιση Aperture",
         "multiGripEdit": "Multi-Grip Επεξεργασία",
-        "snapToGrips": "Snap σε Grips"
+        "snapToGrips": "Πρόσδεση σε Χερούλια"
       },
       "presets": {
         "title": "Γρήγορα Presets",
@@ -51,7 +51,7 @@
         "warning": "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!",
         "lossTitle": "Θα χάσετε:",
         "lossList": {
-          "customSettings": "Όλες τις προσαρμοσμένες ρυθμίσεις grips",
+          "customSettings": "Όλες τις προσαρμοσμένες ρυθμίσεις χερουλιών",
           "colors": "Όλα τα χρώματα που έχετε επιλέξει",
           "changes": "Όλες τις αλλαγές που έχετε κάνει"
         },
@@ -59,10 +59,10 @@
         "confirm": "Είστε σίγουροι ότι θέλετε να συνεχίσετε;",
         "cancel": "Ακύρωση",
         "confirmButton": "Επαναφορά Εργοστασιακών",
-        "successMessage": "Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις grips επέστρεψαν στα πρότυπα CAD.",
+        "successMessage": "Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις χερουλιών επέστρεψαν στα πρότυπα CAD.",
         "cancelMessage": "Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων"
       },
-      "ariaLabel": "Ρυθμίσεις Grips"
+      "ariaLabel": "Ρυθμίσεις Χερουλιών"
     },
     "line": {
       "title": "Ρυθμίσεις Γραμμής",
@@ -201,7 +201,7 @@
     "generalTabs": {
       "lines": "Γραμμές",
       "text": "Κείμενο",
-      "grips": "Grips"
+      "grips": "Χερούλια"
     },
     "gridTabs": {
       "grid": "Πλέγμα",
@@ -210,7 +210,7 @@
     "subTabs": {
       "lineAria": "Ρυθμίσεις Γραμμής {label}",
       "textAria": "Ρυθμίσεις Κειμένου {label}",
-      "gripsAria": "Ρυθμίσεις Grips {label}"
+      "gripsAria": "Ρυθμίσεις Χερουλιών {label}"
     }
   },
   "lineSettings": {
@@ -319,25 +319,25 @@
   },
   "selectionSettings": {
     "tabs": {
-      "window": "Window Selection",
-      "crossing": "Crossing Selection"
+      "window": "Επιλογή Παραθύρου",
+      "crossing": "Επιλογή Διασταύρωσης"
     },
-    "resetButton": "Reset Selection Settings (DEBUG)",
-    "resetDescription": "Κάνει reset όλες τις ρυθμίσεις για να λειτουργήσουν τα νέα borderStyle",
+    "resetButton": "Επαναφορά Ρυθμίσεων Επιλογής (DEBUG)",
+    "resetDescription": "Επαναφέρει όλες τις ρυθμίσεις για να λειτουργήσουν τα νέα borderStyle",
     "window": {
-      "title": "Window Selection Settings",
+      "title": "Ρυθμίσεις Επιλογής Παραθύρου",
       "description": "Ρυθμίσεις για το μπλε κουτί επιλογής (αριστερά προς δεξιά)",
-      "fillColor": "Επιλογή Χρώματος Γεμίσματος Window",
+      "fillColor": "Επιλογή Χρώματος Γεμίσματος Παραθύρου",
       "fillColorLabel": "Χρώμα Γεμίσματος",
-      "borderColor": "Επιλογή Χρώματος Περιγράμματος Window",
+      "borderColor": "Επιλογή Χρώματος Περιγράμματος Παραθύρου",
       "borderColorLabel": "Χρώμα Περιγράμματος"
     },
     "crossing": {
-      "title": "Crossing Selection Settings",
+      "title": "Ρυθμίσεις Επιλογής Διασταύρωσης",
       "description": "Ρυθμίσεις για το πράσινο κουτί επιλογής (δεξιά προς αριστερά)",
-      "fillColor": "Επιλογή Χρώματος Γεμίσματος Crossing",
+      "fillColor": "Επιλογή Χρώματος Γεμίσματος Διασταύρωσης",
       "fillColorLabel": "Χρώμα Γεμίσματος",
-      "borderColor": "Επιλογή Χρώματος Περιγράμματος Crossing",
+      "borderColor": "Επιλογή Χρώματος Περιγράμματος Διασταύρωσης",
       "borderColorLabel": "Χρώμα Περιγράμματος"
     },
     "common": {
@@ -405,7 +405,7 @@
       "appearance": "Εμφάνιση",
       "behavior": "Συμπεριφορά"
     },
-    "colorPicker": "Επιλογή Χρώματος Crosshair",
+    "colorPicker": "Επιλογή Χρώματος Σταυρονήματος",
     "appearanceColorPicker": "Επιλογή Χρώματος Σταυρώνυματος",
     "appearance": {
       "colorTitle": "Χρώμα Σταυρονήματος",
@@ -574,7 +574,7 @@
     "overrideDescriptions": {
       "lineDraft": "Χρήση ειδικών ρυθμίσεων γραμμής για προσχεδίαση",
       "textDraft": "Χρήση ειδικών ρυθμίσεων κειμένου για προσχεδίαση",
-      "gripsDraft": "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση",
+      "gripsDraft": "Χρήση ειδικών ρυθμίσεων χερουλιών για προσχεδίαση",
       "lineHover": "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
       "lineSelection": "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
       "lineCompletion": "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση"
@@ -604,8 +604,8 @@
     "title": "Τρέχουσες Ρυθμίσεις",
     "line": "Γραμμή",
     "text": "Κείμενο",
-    "grips": "Grips",
-    "selectTab": "Επιλέξτε μια καρτέλα (Γραμμές, Κείμενο ή Grips) για να δείτε τις τρέχουσες ρυθμίσεις",
+    "grips": "Χερούλια",
+    "selectTab": "Επιλέξτε μια καρτέλα (Γραμμές, Κείμενο ή Χερούλια) για να δείτε τις τρέχουσες ρυθμίσεις",
     "labels": {
       "type": "Τύπος:",
       "color": "Χρώμα:",
@@ -644,7 +644,7 @@
         "description": "Ρυθμίσεις κέρσορα και σταυρονήματος"
       },
       "grid": {
-        "title": "Πλέγμα & Χάρακες (Grid & Rulers)",
+        "title": "Πλέγμα & Χάρακες",
         "description": "Ρυθμίσεις πλέγματος και χαράκων"
       },
       "layers": {
@@ -656,8 +656,8 @@
         "description": "Ρυθμίσεις οντοτήτων DXF"
       },
       "grips": {
-        "title": "Grips",
-        "description": "Ρυθμίσεις grips (σύντομα)"
+        "title": "Χερούλια",
+        "description": "Ρυθμίσεις χερουλιών (σύντομα)"
       },
       "lighting": {
         "title": "Φωτισμός (Lighting)",
@@ -701,7 +701,7 @@
     "comingSoon": "Σύντομα Διαθέσιμο",
     "comingSoonDesc": "Οι ρυθμίσεις καμβά θα περιλαμβάνο��ν:",
     "bgColor": "Χρώμα φόντου καμβά",
-    "zoomPan": "Ρυθμίσεις zoom και pan",
+    "zoomPan": "Ρυθμίσεις μεγέθυνσης και μετακίνησης",
     "gridRef": "Εμφάνιση πλέγματος αν��φοράς",
     "rendering": "Ρυθμίσ��ις rendering",
     "performance": "Προσαρμογές performance"

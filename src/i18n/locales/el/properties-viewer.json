@@ -62,8 +62,8 @@
       "floor": "Όροφος:",
       "unknown": "Άγνωστος",
       "properties": "Ακίνητα:",
-      "zoom": "Zoom:",
-      "visibleLayers": "Ορατά Layers:",
+      "zoom": "Μεγέθυνση:",
+      "visibleLayers": "Ορατά Επίπεδα:",
       "pdfFloorplan": "Κάτοψη PDF:",
       "available": "Διαθέσιμη",
       "notAvailable": "Μη διαθέσιμη"
@@ -78,7 +78,7 @@
     },
     "statusBar": {
       "floor": "Όροφος:",
-      "layers": "Layers:",
+      "layers": "Επίπεδα:",
       "liveUpdates": "Ενημερώσεις σε πραγματικό χρόνο",
       "realTimeUpdates": "Ενημερώσεις πραγματικού χρόνου"
     },
@@ -202,7 +202,7 @@
       "pdfLoading": "ΦΟΡΤΩΣΗ PDF...",
       "pdfError": "ΣΦΑΛΜΑ PDF",
       "pdfLoaded": "PDF ΦΟΡΤΩΘΗΚΕ & ΕΜΦΑΝΙΣΤΗΚΕ! Σελίδες: {count}",
-      "debugTitle": "ΠΛΗΡΟΦΟΡΙΕΣ DEBUG PDF",
+      "debugTitle": "ΠΛΗΡΟΦΟΡΙΕΣ ΕΝΤΟΠΙΣΜΟΥ ΣΦΑΛΜΑΤΩΝ PDF",
       "debugPdfUrl": "PDF URL",
       "debugPdfReady": "PDF Έτοιμο",
       "debugPages": "Σελίδες",
@@ -236,15 +236,15 @@
     "layers": {
       "hidePDF": "Απόκρυψη PDF",
       "showPDF": "Εμφάνιση PDF",
-      "hideGrid": "Απόκρυψη Grid",
-      "showGrid": "Εμφάνιση Grid",
-      "hideLayers": "Απόκρυψη Layers",
-      "showLayers": "Εμφάνιση Layers"
+      "hideGrid": "Απόκρυψη Πλέγματος",
+      "showGrid": "Εμφάνιση Πλέγματος",
+      "hideLayers": "Απόκρυψη Επιπέδων",
+      "showLayers": "Εμφάνιση Επιπέδων"
     },
     "zoom": {
       "zoomIn": "Μεγέθυνση",
       "zoomOut": "Σμίκρυνση",
-      "resetView": "Επαναφορά View"
+      "resetView": "Επαναφορά Προβολής"
     },
     "fullscreen": "Πλήρης Οθόνη",
     "export": {

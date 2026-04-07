@@ -25,8 +25,8 @@
       "shortcuts": "- | Scroll Down"
     },
     "zoom-window": {
-      "name": "Zoom Παράθυρο",
-      "description": "Zoom σε περιοχή",
+      "name": "Παράθυρο Μεγέθυνσης",
+      "description": "Μεγέθυνση σε περιοχή",
       "steps": [
         "Κάντε κλικ για την 1η γωνία",
         "Κάντε κλικ για την 2η γωνία"
@@ -34,7 +34,7 @@
       "shortcuts": "W | ESC=Ακύρωση"
     },
     "zoom-extents": {
-      "name": "Zoom Extents",
+      "name": "Μεγέθυνση Περιεχομένου",
       "description": "Εμφάνιση όλου του σχεδίου",
       "steps": ["Αυτόματη προσαρμογή"],
       "shortcuts": "E | Home"
@@ -338,9 +338,9 @@
       "shortcuts": "ESC=Ακύρωση"
     },
     "layering": {
-      "name": "Layers",
+      "name": "Επίπεδα",
       "description": "Διαχείριση επιπέδων",
-      "steps": ["Ανοίξτε τον πίνακα Layers"],
+      "steps": ["Ανοίξτε τον πίνακα Επιπέδων"],
       "shortcuts": "F7"
     },
     "guide-x": {

@@ -388,7 +388,7 @@
     "selectChannel": "Επιλογή Channel",
     "selectChannelPlaceholder": "Επιλέξτε channel",
     "template": "Πρότυπο (Προαιρετικό)",
-    "noTemplate": "Χωρίς template",
+    "noTemplate": "Χωρίς πρότυπο",
     "recipient": "Παραλήπτης",
     "subject": "Θέμα",
     "subjectPlaceholder": "Θέμα μηνύματος",
@@ -556,13 +556,13 @@
     "backToCRM": "Πίσω στο CRM",
     "subtitle": "Αναλυτικά στοιχεία email marketing",
     "comingSoonTitle": "Email Analytics - Σύντομα Διαθέσιμο",
-    "underConstruction": "Analytics Dashboard Υπό Κατασκευή",
+    "underConstruction": "Πίνακας Ελέγχου Analytics Υπό Κατασκευή",
     "comingSoonDesc": "Σύντομα θα μπορείτε να δείτε:",
     "feature1": "Αναλυτικά στοιχεία email campaigns",
     "feature2": "Ποσοστά ανοίγματος και κλικ",
     "feature3": "Πρόσφατη δραστηριότητα emails",
     "feature4": "Στατιστικά ανά ακίνητο",
     "activationNote": "Τα analytics θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.",
-    "templatesNote": "Τώρα διαθέσιμα 3 email templates στο Share Modal!"
+    "templatesNote": "Τώρα διαθέσιμα 3 πρότυπα email στο Share Modal!"
   }
 }

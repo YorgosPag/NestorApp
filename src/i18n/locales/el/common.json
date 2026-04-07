@@ -504,10 +504,10 @@
     "fileSize": "Μέγιστο μέγεθος αρχείου: {max}"
   },
   "headerActions": {
-    "dashboard": "Dashboard",
-    "toggleDashboard": "Εμφάνιση/Απόκρυψη Dashboard",
-    "hideDashboard": "Απόκρυψη Dashboard",
-    "showDashboard": "Εμφάνιση Dashboard",
+    "dashboard": "Πίνακας Ελέγχου",
+    "toggleDashboard": "Εμφάνιση/Απόκρυψη Πίνακα Ελέγχου",
+    "hideDashboard": "Απόκρυψη Πίνακα Ελέγχου",
+    "showDashboard": "Εμφάνιση Πίνακα Ελέγχου",
     "createNew": "Νέο {entity}",
     "createTooltip": "Δημιουργία νέου {entity}",
     "entities": {

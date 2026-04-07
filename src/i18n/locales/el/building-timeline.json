@@ -96,7 +96,7 @@
         "floatDays": "{days}μ float",
         "critical": "Κρίσιμο",
         "cyclicWarning": "Κυκλική εξάρτηση",
-        "viewAll": "Προβολή όλων στο Dashboard",
+        "viewAll": "Προβολή όλων στον Πίνακα Ελέγχου",
         "loading": "Υπολογισμός κρίσιμης διαδρομής..."
       },
       "views": {

@@ -1,12 +1,12 @@
 {
   "layers": {
-    "title": "DXF Layers ({count})",
+    "title": "Επίπεδα DXF ({count})",
     "clickToSelect": "Κλικ για επιλογή",
     "delete": {
-      "confirm": "{count, plural, =0 {Διαγραφή layer \"{name}\"} one {Διαγραφή # στοιχείου από το layer \"{name}\"} other {Διαγραφή # στοιχείων από το layer \"{name}\"}}",
-      "success": "Layer διαγράφηκε επιτυχώς!",
-      "error": "Σφάλμα κατά τη διαγραφή του layer",
-      "tooltip": "Διαγραφή layer \"{name}\" ({count, plural, =0 {κενό} one {# στοιχείο} other {# στοιχεία}})"
+      "confirm": "{count, plural, =0 {Διαγραφή επιπέδου \"{name}\"} one {Διαγραφή # στοιχείου από το επίπεδο \"{name}\"} other {Διαγραφή # στοιχείων από το επίπεδο \"{name}\"}}",
+      "success": "Το επίπεδο διαγράφηκε επιτυχώς!",
+      "error": "Σφάλμα κατά τη διαγραφή του επιπέδου",
+      "tooltip": "Διαγραφή επιπέδου \"{name}\" ({count, plural, =0 {κενό} one {# στοιχείο} other {# στοιχεία}})"
     },
     "colorPicker": {
       "title": "Επιλογή χρώματος:",
@@ -19,7 +19,7 @@
       "rename": "Μετονομασία"
     },
     "info": {
-      "layer": "Layer",
+      "layer": "Επίπεδο",
       "elements": "Στοιχεία",
       "visible": "Ορατά",
       "selected": "επιλεγμένα στοιχεία"
@@ -49,7 +49,7 @@
     "needsCorrection": "ΧΡΕΙΑΖΕΤΑΙ ΔΙΟΡΘΩΣΗ ⚠️",
     "tips": "Συμβουλές:",
     "tipRoundTrip": "Round-trip σφάλμα < 0.5px",
-    "tipTryZoom": "Δοκιμάστε σε διαφορετικά zoom",
+    "tipTryZoom": "Δοκιμάστε σε διαφορετικά επίπεδα μεγέθυνσης",
     "tipEntitiesOk": "Οντότητες OK ✅",
     "tipLoadDxf": "Φορτώστε DXF ⚠️",
     "tipCentralized": "Χρήση κεντρικού CoordinateTransforms ✅"
@@ -64,7 +64,7 @@
     "snapIndicator": "Ενδείξεις Snap (Συνδεδεμένο)",
     "snapIndicatorHint": "Ενεργό: Εμφανίζει κίτρινες ενδείξεις snap στο crosshair",
     "coordinateDisplay": "Εμφάνιση Συντεταγμένων (Συνδεδεμένο)",
-    "coordinateDisplayHint": "Ενεργό: Δείχνει X,Y συντεταγμένες στο status bar",
+    "coordinateDisplayHint": "Ενεργό: Δείχνει X,Y συντεταγμένες στη γραμμή κατάστασης",
     "dynamicInput": "Δυναμική Εισαγωγή (Συνδεδεμένο)",
     "dynamicInputHint": "Ενεργό: Πεδία εισαγωγής κοντά στον κέρσορα κατά το σχεδιασμό",
     "cursorTooltip": "Cursor Tooltip (Συνδεδεμένο)",

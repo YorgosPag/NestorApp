@@ -2,8 +2,8 @@
   "title": "Συνθέσεις",
   "description": "Σύνθετα components και showcase",
   "showcase": {
-    "title": "Component Composition Showcase",
-    "subtitle": "Demonstration των νέων composition components που χρησιμοποιούν το BaseCard system",
+    "title": "Επίδειξη Σύνθεσης Στοιχείων",
+    "subtitle": "Παρουσίαση των νέων σύνθετων στοιχείων που χρησιμοποιούν το σύστημα BaseCard",
     "sections": {
       "cards": "Στοιχεία Καρτών",
       "toolbars": "Στοιχεία Γραμμών Εργαλείων",
@@ -87,21 +87,21 @@
     }
   },
   "demo": {
-    "state": "Demo State",
-    "selected": "Selected",
-    "search": "Search",
-    "filters": "Filters",
-    "none": "None",
-    "simulate": "Simulate Selection",
-    "items": "items"
+    "state": "Κατάσταση Επίδειξης",
+    "selected": "Επιλεγμένα",
+    "search": "Αναζήτηση",
+    "filters": "Φίλτρα",
+    "none": "Κανένα",
+    "simulate": "Προσομοίωση Επιλογής",
+    "items": "στοιχεία"
   },
   "integration": {
-    "title": "Integration Demo",
+    "title": "Επίδειξη Ενσωμάτωσης",
     "description": "Χρήση στην εφαρμογή",
     "examples": {
-      "buildings": "Building management page",
-      "projects": "Projects page",
-      "contacts": "Contacts page"
+      "buildings": "Σελίδα διαχείρισης κτιρίων",
+      "projects": "Σελίδα έργων",
+      "contacts": "Σελίδα επαφών"
     }
   },
   "benefits": {
@@ -111,28 +111,28 @@
       "description": "Όλες οι κάρτες χρησιμοποιούν το ίδιο σύστημα βασικής κάρτας για ενιαία εμφάνιση"
     },
     "modularity": {
-      "title": "Modularity",
-      "description": "Composition pattern επιτρέπει εύκολη customization και reusability"
+      "title": "Αρθρωτότητα",
+      "description": "Το πρότυπο σύνθεσης επιτρέπει εύκολη προσαρμογή και επαναχρησιμοποίηση"
     },
     "typeSafety": {
-      "title": "Type Safety",
-      "description": "Full TypeScript support με validated props και design system integration"
+      "title": "Ασφάλεια Τύπων",
+      "description": "Πλήρης υποστήριξη TypeScript με επικυρωμένες ιδιότητες και ενσωμάτωση συστήματος σχεδίασης"
     },
     "performance": {
-      "title": "Performance",
-      "description": "Optimized rendering και semantic color system με zero runtime overhead"
+      "title": "Απόδοση",
+      "description": "Βελτιστοποιημένη απόδοση και σημασιολογικό σύστημα χρωμάτων χωρίς επιβάρυνση εκτέλεσης"
     },
     "unifiedInterface": {
-      "title": "Unified Interface",
-      "description": "Όλα τα toolbars χρησιμοποιούν το ίδιο BaseToolbar system για consistent behavior και styling"
+      "title": "Ενοποιημένη Διεπαφή",
+      "description": "Όλες οι γραμμές εργαλείων χρησιμοποιούν το ίδιο σύστημα BaseToolbar για συνεπή συμπεριφορά και στυλ"
     },
     "configurable": {
-      "title": "Configurable",
-      "description": "Flexible configuration με actions, filters, search και custom content sections"
+      "title": "Παραμετροποιήσιμο",
+      "description": "Ευέλικτη παραμετροποίηση με ενέργειες, φίλτρα, αναζήτηση και προσαρμοσμένες ενότητες περιεχομένου"
     },
     "accessible": {
-      "title": "Accessible",
-      "description": "Built-in accessibility με keyboard shortcuts, tooltips και ARIA support"
+      "title": "Προσβάσιμο",
+      "description": "Ενσωματωμένη προσβασιμότητα με συντομεύσεις πληκτρολογίου, επεξηγήσεις και υποστήριξη ARIA"
     }
   }
 }

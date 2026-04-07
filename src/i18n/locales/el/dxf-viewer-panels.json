@@ -5,8 +5,8 @@
       "description": "{selectedCount} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {layerCount} DXF επίπεδα}}"
     },
     "overlay": {
-      "title": "Overlay",
-      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}"
+      "title": "Επικάλυψη",
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} περιοχές επικάλυψης}}"
     },
     "levels": {
       "title": "Επίπεδα",
@@ -116,12 +116,12 @@
       "circle": "Κύκλοι",
       "arc": "Τόξα",
       "text": "Κείμενο",
-      "block": "Blocks"
+      "block": "Μπλοκ"
     }
   },
   "overlayProperties": {
-    "title": "Ιδιότητες Overlay",
-    "selectOverlay": "Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.",
+    "title": "Ιδιότητες Επικάλυψης",
+    "selectOverlay": "Επιλέξτε μια επικάλυψη για να δείτε τις ιδιότητές του.",
     "label": "Ετικέτα",
     "labelPlaceholder": "π.χ. Α-12, Π-034",
     "status": "Κατάσταση",
@@ -134,7 +134,7 @@
     "loadingEntities": "Φόρτωση...",
     "unlink": "Αποσύνδεση",
     "transferTitle": "Μεταφορά Σύνδεσης",
-    "transferDescription": "Αυτή η οντότητα είναι ήδη συνδεδεμένη σε άλλο polygon. Μεταφορά στο τρέχον;",
+    "transferDescription": "Αυτή η οντότητα είναι ήδη συνδεδεμένη σε άλλο πολύγωνο. Μεταφορά στο τρέχον;",
     "transferConfirm": "Μεταφορά",
     "statusLinkedHint": "Η κατάσταση καθορίζεται από τη συνδεδεμένη οντότητα",
     "geometry": "Γεωμετρία",
@@ -163,9 +163,9 @@
   "overlayList": {
     "title": "Περιοχές",
     "search": "Αναζήτηση...",
-    "deleteConfirm": "Διαγραφή overlay;",
-    "notFound": "Δεν βρέθηκαν overlays",
-    "empty": "Κανένα overlay",
+    "deleteConfirm": "Διαγραφή επικάλυψης;",
+    "notFound": "Δεν βρέθηκαν επικαλύψεις",
+    "empty": "Καμία επικάλυψη",
     "edit": "Επεξεργασία",
     "delete": "Διαγραφή",
     "hide": "Απόκρυψη",

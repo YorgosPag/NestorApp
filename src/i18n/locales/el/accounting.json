@@ -259,7 +259,7 @@
     "description": "Οικονομικές αναφορές και εκτιμήσεις φόρου",
     "vatReport": "Αναφορά ΦΠΑ",
     "taxEstimate": "Εκτίμηση Φόρου",
-    "taxDashboard": "Dashboard Φόρου",
+    "taxDashboard": "Πίνακας Ελέγχου Φόρου",
     "taxBrackets": "Κλίμακες Φόρου",
     "installments": "Δόσεις Φόρου",
     "totalIncome": "Σύνολο Εσόδων",
@@ -488,8 +488,8 @@
     "kg": "κγρ."
   },
   "dashboard": {
-    "title": "Dashboard Λογιστικού",
-    "loading": "Φόρτωση dashboard...",
+    "title": "Πίνακας Ελέγχου Λογιστικού",
+    "loading": "Φόρτωση πίνακα ελέγχου...",
     "totalIncome": "Σύνολο Εσόδων",
     "totalExpenses": "Σύνολο Εξόδων",
     "vatOwed": "Οφειλόμενο ΦΠΑ",

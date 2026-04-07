@@ -429,12 +429,12 @@
     "compactInputsLabel": "Compact Email Inputs"
   },
   "email": {
-    "template": "Email Template",
+    "template": "Πρότυπο Email",
     "templateIcon": "Εικονίδιο {name}",
     "selected": "Επιλεγμένο",
-    "selectTemplate": "Επιλογή Template Email",
-    "availableTemplates": "Διαθέσιμα Templates",
-    "selectAppropriate": "Επιλέξτε το κατάλληλο template για την αποστολή"
+    "selectTemplate": "Επιλογή Προτύπου Email",
+    "availableTemplates": "Διαθέσιμα Πρότυπα",
+    "selectAppropriate": "Επιλέξτε το κατάλληλο πρότυπο για την αποστολή"
   },
   "search": {
     "placeholder": "Αναζήτηση σε έργα, επαφές, κτίρια...",

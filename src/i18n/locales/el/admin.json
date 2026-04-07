@@ -1,26 +1,26 @@
 {
   "units": {
-    "total": "Σύνολο Units",
+    "total": "Σύνολο Μονάδων",
     "primary": "Πρωτ.",
-    "soldNoCustomer": "Sold χωρίς Customer",
-    "soldWithCustomer": "Sold με Customer",
-    "overview": "Units Overview",
+    "soldNoCustomer": "Πωλημένα χωρίς Πελάτη",
+    "soldWithCustomer": "Πωλημένα με Πελάτη",
+    "overview": "Επισκόπηση Μονάδων",
     "allLabel": "(Όλα)",
     "projectLabel": "(Έργο {project})",
     "onlyProject": "Μόνο {project}",
     "refresh": "Ανανέωση",
     "error": "Σφάλμα:",
-    "loading": "Φόρτωση units...",
-    "notFound": "Δεν βρέθηκαν units",
+    "loading": "Φόρτωση μονάδων...",
+    "notFound": "Δεν βρέθηκαν μονάδες",
     "unnamed": "Χωρίς Όνομα",
-    "noCustomer": "Χωρίς Customer",
-    "displaying": "Εμφανίζονται {displayed} από {total} συνολικά units",
+    "noCustomer": "Χωρίς Πελάτη",
+    "displaying": "Εμφανίζονται {displayed} από {total} συνολικά μονάδες",
     "filteredFor": "(φιλτραρισμένα για έργο {project})",
     "table": {
       "name": "Όνομα",
       "price": "Τιμή",
       "status": "Κατάσταση",
-      "customer": "Πελάτης (soldTo)",
+      "customer": "Πελάτης",
       "building": "Κτίριο",
       "project": "Έργο",
       "idLabel": "ID"
@@ -53,7 +53,7 @@
     "noPendingMessages": "Δεν υπάρχουν εκκρεμή μηνύματα.",
     "howItWorks": "Πώς λειτουργεί:",
     "howItWorksStep1": "Τα εισερχόμενα μηνύματα από Email/Telegram/Viber αναλύονται αυτόματα από AI.",
-    "howItWorksStep2": "Μηνύματα με χαμηλή βεβαιότητα ή needsTriage=true εμφανίζονται εδώ.",
+    "howItWorksStep2": "Μηνύματα με χαμηλή βεβαιότητα ή ανάγκη διαλογής εμφανίζονται εδώ.",
     "howItWorksStep3": "Έγκριση δημιουργεί CRM εργασία (idempotent — δεύτερο κλικ δεν δημιουργεί νέα εργασία).",
     "howItWorksStep4": "Απόρριψη αρχειοθετεί το μήνυμα χωρίς δημιουργία εργασίας.",
     "howItWorksStep5": "Το audit trail καταγράφει όλες τις ενέργειες για λόγους συμμόρφωσης.",
@@ -97,43 +97,43 @@
   },
   "link": {
     "title": "Σύνδεση Πωληθέντων Μονάδων με Πελάτες",
-    "description": "Αυτό το εργαλείο συνδέει μονάδες με status 'sold' με τους αντίστοιχους πελάτες, με βάση το πεδίο soldTo που περιέχει contact ID.",
+    "description": "Αυτό το εργαλείο συνδέει μονάδες με κατάσταση «πωλημένο» με τους αντίστοιχους πελάτες, με βάση το πεδίο αναγνωριστικού επαφής.",
     "loading": "Συνδέω μονάδες με πελάτες...",
-    "button": "Σύνδεση Sold Units με Contacts",
+    "button": "Σύνδεση Πωλημένων Μονάδων με Επαφές",
     "error": "Σφάλμα:",
     "success": "Επιτυχία!",
     "result": "{linkedUnits} μονάδες συνδέθηκαν με πελάτες",
     "results": "Αποτελέσματα Σύνδεσης",
     "unitLabel": "Μονάδα",
     "howItWorks": "Πώς λειτουργεί:",
-    "step1": "Βρίσκει όλα τα units με status 'sold' που δεν έχουν soldTo field",
-    "step2": "Συλλέγει όλους τους διαθέσιμους πελάτες από τη βάση contacts",
-    "step3": "Συνδέει αυτόματα τα sold units με υπάρχοντες πελάτες",
+    "step1": "Βρίσκει όλες τις μονάδες με κατάσταση «πωλημένο» που δεν έχουν σύνδεση πελάτη",
+    "step2": "Συλλέγει όλους τους διαθέσιμους πελάτες από τη βάση επαφών",
+    "step3": "Συνδέει αυτόματα τις πωλημένες μονάδες με υπάρχοντες πελάτες",
     "step4": "Μετά τη σύνδεση, οι πελάτες θα εμφανίζονται στο tab 'Πελάτες Έργου'",
     "note": "Σημείωση:",
     "warning": "Αυτή η λειτουργία κάνει πραγματικές αλλαγές στη βάση δεδομένων. Σιγουρέψου ότι έχεις backup πριν προχωρήσεις."
   },
   "linkPropertiesPage": {
     "backToAdmin": "Πίσω στη Διαχείριση",
-    "pageTitle": "Σύνδεση Sold Units με Customers",
+    "pageTitle": "Σύνδεση Πωλημένων Μονάδων με Πελάτες",
     "loadingProject": "Φόρτωση στοιχείων έργου...",
     "fixDescription": "Διόρθωση του προβλήματος με τους πελάτες του {{project}}",
     "projectFallback": "έργου",
-    "currentStatus": "📊 Τρέχουσα Κατάσταση Units",
+    "currentStatus": "📊 Τρέχουσα Κατάσταση Μονάδων",
     "toolTitle": "🔧 Εργαλείο Σύνδεσης",
     "goal": "🎯 Στόχος",
-    "goalDescription": "Να συνδέσουμε τα units που έχουν status «sold» με τους αντίστοιχους πελάτες ώστε να εμφανίζονται στο tab «Πελάτες Έργου».",
+    "goalDescription": "Να συνδέσουμε τις μονάδες που έχουν κατάσταση «πωλημένο» με τους αντίστοιχους πελάτες ώστε να εμφανίζονται στην καρτέλα «Πελάτες Έργου».",
     "whatHappens": "⚙️ Τι θα γίνει",
     "steps": {
-      "findSold": "• Εύρεση sold units χωρίς soldTo field",
-      "autoLink": "• Αυτόματη σύνδεση με υπάρχοντα contacts",
+      "findSold": "• Εύρεση πωλημένων μονάδων χωρίς σύνδεση πελάτη",
+      "autoLink": "• Αυτόματη σύνδεση με υπάρχουσες επαφές",
       "updateDb": "• Ενημέρωση της βάσης δεδομένων",
       "showUi": "• Άμεση εμφάνιση πελατών στο UI"
     }
   },
   "claimsRepair": {
-    "title": "Διόρθωση Claims - Μόνο Super Admin",
-    "description": "Ορισμός custom claims για χρήστες με ελλιπή companyId ή globalRole.",
+    "title": "Διόρθωση Ιδιοτήτων Χρήστη — Μόνο Υπερ-Διαχειριστής",
+    "description": "Ορισμός ιδιοτήτων χρήστη για λογαριασμούς με ελλιπή αναγνωριστικά εταιρείας ή καθολικό ρόλο.",
     "fields": {
       "uid": {
         "label": "User UID",
@@ -148,21 +148,21 @@
         "placeholder": "company-uuid"
       },
       "globalRole": {
-        "label": "Global Role",
+        "label": "Παγκόσμιος Ρόλος",
         "placeholder": "Επιλέξτε ρόλο"
       }
     },
     "actions": {
-      "submit": "Ορισμός Claims",
-      "submitting": "Ορισμός Claims..."
+      "submit": "Ορισμός Ιδιοτήτων",
+      "submitting": "Ορισμός Ιδιοτήτων..."
     },
     "help": {
       "title": "Πώς να Χρησιμοποιήσετε",
       "step1": "Λάβετε το Firebase UID του χρήστη από το Firebase Console",
       "step2": "Εισάγετε τη διεύθυνση email του για επαλήθευση",
       "step3": "Εισάγετε το σωστό Company ID",
-      "step4": "Επιλέξτε το κατάλληλο Global Role",
-      "step5": "Κάντε κλικ στο \"Ορισμός Claims\"",
+      "step4": "Επιλέξτε τον κατάλληλο Παγκόσμιο Ρόλο",
+      "step5": "Κάντε κλικ στο «Ορισμός Ιδιοτήτων»",
       "step6": "Ο χρήστης πρέπει να αποσυνδεθεί/συνδεθεί για ανανέωση του token"
     },
     "security": {
@@ -170,11 +170,11 @@
       "feature1": "ΧΩΡΙΣ έκθεση token - χρησιμοποιεί authenticated session",
       "feature2": "Αυτόματη καταγραφή ελέγχου",
       "feature3": "Κεντρικοποιημένος χειρισμός σφαλμάτων",
-      "feature4": "Πρόσβαση μόνο από Super Admin"
+      "feature4": "Πρόσβαση μόνο από Υπερ-Διαχειριστή"
     },
     "notice": {
       "title": "Σημείωση",
-      "body": "Η refreshToken() επηρεάζει μόνο ΤΗ ΔΙΚΗ ΣΑΣ (super_admin) session. Ο επηρεασμένος χρήστης πρέπει να αποσυνδεθεί/συνδεθεί ξεχωριστά για φόρτωση των νέων claims."
+      "body": "Η ανανέωση διαπιστευτηρίων επηρεάζει μόνο ΤΗ ΔΙΚΗ ΣΑΣ συνεδρία. Ο επηρεασμένος χρήστης πρέπει να αποσυνδεθεί/συνδεθεί ξεχωριστά για φόρτωση των νέων ιδιοτήτων."
     }
   },
   "inbox": {
@@ -251,7 +251,7 @@
       "toggleFilters": "Εναλλαγή φίλτρων"
     },
     "multiIntent": {
-      "detected": "intents εντοπίστηκαν",
+      "detected": "προθέσεις εντοπίστηκαν",
       "primary": "Κύρια",
       "secondary": "Δευτερεύουσα"
     },
@@ -265,7 +265,7 @@
     },
     "projectStatus": {
       "notFound": "Δεν βρέθηκε έργο με όνομα \"{searchTerm}\".",
-      "unitsLabel": "Units"
+      "unitsLabel": "Μονάδες"
     },
     "sendEmail": {
       "sent": "Email στάλθηκε στον {name} ({email}).",
@@ -286,7 +286,7 @@
       "searchHint": "\"Βρες [όνομα]\" — Αναζήτηση στοιχείων επαφής",
       "projectHint": "\"Τι γίνεται με [έργο];\" — Κατάσταση έργου",
       "emailHint": "\"Στείλε email στον [όνομα] ότι...\" — Αποστολή email",
-      "statsHint": "\"Πόσα ακίνητα έχουμε;\" — Στατιστικά units"
+      "statsHint": "\"Πόσα ακίνητα έχουμε;\" — Στατιστικά μονάδων"
     }
   },
   "databaseUpdate": {
@@ -299,7 +299,7 @@
       "updates": "Ενημερώσεις",
       "contacts": "Επαφές",
       "units": "Μονάδες",
-      "newStatuses": "Νέα Statuses",
+      "newStatuses": "Νέες Καταστάσεις",
       "relationships": "Σχέσεις"
     },
     "roleAssignmentsPreview": "Προεπισκόπηση Αναθέσεων Ρόλων",
@@ -309,18 +309,18 @@
       "execute": "Εκτέλεση Ενημέρωσης Βάσης"
     },
     "browserWarning": "Μην κλείσεις τον browser κατά τη διάρκεια της ενημέρωσης",
-    "executionLogs": "Logs Εκτέλεσης",
+    "executionLogs": "Αρχείο Εκτέλεσης",
     "logs": {
       "addingContacts": "Προσθέτοντας νέες επαφές...",
       "contactAdded": "Προστέθηκε: {name} ({id})",
       "contactsAdded": "Προστέθηκαν {count} νέες επαφές",
       "contactAddError": "Σφάλμα προσθήκης επαφών: {error}",
       "updatingContacts": "Ενημερώνοντας υφιστάμενες επαφές...",
-      "contactUpdated": "Ενημερώθηκε contact {id}: {role}",
+      "contactUpdated": "Ενημερώθηκε επαφή {id}: {role}",
       "contactsUpdated": "Ενημερώθηκαν {count} υφιστάμενες επαφές",
       "contactUpdateError": "Σφάλμα ενημέρωσης επαφών: {error}",
-      "updatingUnits": "Ενημερώνοντας μονάδες με νέα statuses...",
-      "unitUpdated": "Μονάδα {id}: {status} ← Contact {contactId}",
+      "updatingUnits": "Ενημερώνοντας μονάδες με νέες καταστάσεις...",
+      "unitUpdated": "Μονάδα {id}: {status} ← Επαφή {contactId}",
       "unitsUpdated": "Ενημερώθηκαν {count} μονάδες με σχέσεις",
       "unitUpdateError": "Σφάλμα ενημέρωσης μονάδων: {error}",
       "starting": "Ξεκινάει η ενημέρωση της βάσης δεδομένων...",
@@ -331,9 +331,9 @@
   },
   "setup": {
     "loginRequired": "Απαιτείται Σύνδεση",
-    "loginRequiredDescription": "Πρέπει να συνδεθείς για να αποκτήσεις πρόσβαση στις ρυθμίσεις admin.",
+    "loginRequiredDescription": "Πρέπει να συνδεθείς για να αποκτήσεις πρόσβαση στις ρυθμίσεις διαχειριστή.",
     "loginButton": "Σύνδεση",
-    "title": "Ρύθμιση Admin",
+    "title": "Ρύθμιση Διαχειριστή",
     "subtitle": "Διαμόρφωση των ρυθμίσεων διαχειριστή για ειδοποιήσεις σφαλμάτων",
     "currentUser": "Τρέχων Χρήστης",
     "configStatus": "Κατάσταση Ρυθμίσεων",
@@ -372,24 +372,24 @@
   },
   "propertyStatusDemo": {
     "title": "Εταιρικό Σύστημα Κατάστασης Ακινήτων",
-    "subtitle": "Live demonstration του νέου κεντρικοποιημένου συστήματος διαχείρισης καταστάσεων ακινήτων",
-    "productionReady": "Enterprise-class • Production Ready • Fully Typed",
+    "subtitle": "Ζωντανή επίδειξη του νέου κεντρικοποιημένου συστήματος διαχείρισης καταστάσεων ακινήτων",
+    "productionReady": "Εταιρικής κλάσης • Έτοιμο για παραγωγή • Πλήρης τυποποίηση",
     "cards": {
       "available": "Διαθέσιμα",
       "committed": "Δεσμευμένα",
       "offMarket": "Εκτός Αγοράς",
-      "totalStatuses": "Συνολικά Status",
-      "statusOptions": "Status options",
-      "enhancedStatuses": "Enhanced statuses"
+      "totalStatuses": "Συνολικές Καταστάσεις",
+      "statusOptions": "Επιλογές Κατάστασης",
+      "enhancedStatuses": "Ενισχυμένες καταστάσεις"
     },
-    "statusCategories": "Κατηγορίες Status",
+    "statusCategories": "Κατηγορίες Κατάστασης",
     "categoryLabels": {
       "available": "Διαθέσιμα",
       "committed": "Δεσμευμένα",
       "offMarket": "Εκτός Αγοράς",
       "inProcess": "Υπό Επεξεργασία"
     },
-    "demoProperties": "Demo Ακίνητα",
+    "demoProperties": "Δείγματα Ακινήτων",
     "demoPropertiesDescription": "Παραδείγματα ακινήτων με διαφορετικές καταστάσεις",
     "propertyFields": {
       "price": "Τιμή:",
@@ -397,7 +397,7 @@
       "location": "Τοποθεσία:",
       "category": "Κατηγορία:"
     },
-    "statusDetails": "Λεπτομέρειες Status",
+    "statusDetails": "Λεπτομέρειες Κατάστασης",
     "propertyDetails": "Λεπτομέρειες Ακινήτου",
     "fields": {
       "label": "Ετικέτα:",
@@ -413,10 +413,10 @@
     "no": "Όχι",
     "close": "Κλείσιμο",
     "usageInstructions": "Οδηγίες Χρήσης",
-    "instruction1": "Κλικ στα status badges για να δεις λεπτομέρειες",
+    "instruction1": "Κλικ στις ετικέτες κατάστασης για να δεις λεπτομέρειες",
     "instruction2": "Κλικ σε ακίνητο για να δεις τις πληροφορίες του",
     "instruction3": "Το σύστημα υποστηρίζει {count} διαφορετικές καταστάσεις",
-    "instruction4": "Πλήρης TypeScript support με type safety",
+    "instruction4": "Πλήρης υποστήριξη TypeScript με ασφάλεια τύπων",
     "instruction5": "Κεντρικοποιημένη διαχείριση με business rules",
     "demoData": {
       "apartment": "Διαμέρισμα A1",
@@ -457,7 +457,7 @@
       "selectRole": "Επιλέξτε νέο ρόλο",
       "reason": "Αιτιολογία αλλαγής",
       "reasonPlaceholder": "Εξηγήστε γιατί χρειάζεται η αλλαγή (min 10 χαρ.)...",
-      "warning": "Ο χρήστης πρέπει να κάνει re-login για να εφαρμοστούν οι αλλαγές",
+      "warning": "Ο χρήστης πρέπει να επανασυνδεθεί για να εφαρμοστούν οι αλλαγές",
       "selfProtection": "Δεν μπορείτε να αλλάξετε τον δικό σας ρόλο",
       "confirm": "Επιβεβαίωση Αλλαγής",
       "cancel": "Ακύρωση",
