@@ -8,6 +8,7 @@ import type { Building } from '../BuildingsPageContent';
 // ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 
 interface BuildingDetailsHeaderProps {
@@ -83,11 +84,7 @@ export function BuildingDetailsHeader({
             <div className="hidden md:block">
                 <EntityDetailsHeader
                     icon={NAVIGATION_ENTITIES.building.icon}
-                    title={
-                        building.code && building.name && building.name !== building.code
-                            ? `${building.code} — ${building.name}`
-                            : (building.code || building.name)
-                    }
+                    title={formatBuildingLabel(building.code, building.name)}
                     actions={actions}
                     variant="detailed"
                 />

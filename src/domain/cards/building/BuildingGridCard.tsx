@@ -35,6 +35,7 @@ import type { Building } from '@/types/building/contracts';
 // 🏢 BADGE VARIANT MAPPING
 import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 // =============================================================================
 // 🏢 TYPES
@@ -166,11 +167,7 @@ export function BuildingGridCard({
   return (
     <GridCard
       entityType="building"
-      title={
-        building.code && building.name && building.name !== building.code
-          ? `${building.code} — ${building.name}`
-          : (building.code || building.name || building.id)
-      }
+      title={formatBuildingLabel(building.code, building.name, building.id)}
       subtitle={categoryLabel}
       badges={badges}
       stats={stats}

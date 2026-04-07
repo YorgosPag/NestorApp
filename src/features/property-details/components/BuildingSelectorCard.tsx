@@ -42,6 +42,7 @@ import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 const logger = createModuleLogger('BuildingSelectorCard');
 
 // ============================================================================
@@ -51,6 +52,7 @@ const logger = createModuleLogger('BuildingSelectorCard');
 interface BuildingOption {
   id: string;
   name: string;
+  code?: string;
 }
 
 interface FloorOption {
@@ -167,9 +169,10 @@ export function BuildingSelectorCard({
           return !isLegacyId && buildingId.length >= 20;
         });
 
-        const buildingOptions: BuildingOption[] = enterpriseBuildings.map((b: { id: string; name?: string }) => ({
+        const buildingOptions: BuildingOption[] = enterpriseBuildings.map((b: { id: string; name?: string; code?: string }) => ({
           id: String(b.id),
           name: b.name || t('buildingSelector.noName'),
+          code: b.code || undefined,
         }));
         setBuildings(buildingOptions);
         logger.info(`[BuildingSelectorCard] Loaded ${buildingOptions.length} enterprise buildings`);
@@ -380,7 +383,7 @@ export function BuildingSelectorCard({
                 {/* Building options */}
                 {buildings.map((building) => (
                   <SelectItem key={building.id} value={building.id}>
-                    {building.name}
+                    {formatBuildingLabel(building.code, building.name)}
                   </SelectItem>
                 ))}
               </SelectContent>

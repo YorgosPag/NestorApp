@@ -34,6 +34,7 @@ import type { Building } from '@/types/building/contracts';
 // 🏢 BADGE VARIANT MAPPING
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
 import '@/lib/design-system';
+import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 // =============================================================================
 // 🏢 TYPES
@@ -170,11 +171,7 @@ export const BuildingListCard = React.memo(function BuildingListCard({
   return (
     <ListCard
       entityType="building"
-      title={
-        building.code && building.name && building.name !== building.code
-          ? `${building.code} — ${building.name}`
-          : (building.code || building.name || building.id)
-      }
+      title={formatBuildingLabel(building.code, building.name, building.id)}
       subtitle={categoryLabel}
       badges={badges}
       stats={stats}
