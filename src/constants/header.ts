@@ -26,12 +26,6 @@ export const quickActions: QuickAction[] = [
 
 // 🏢 ENTERPRISE: Hardcoded notifications removed - use database queries
 export const getNotifications = async (): Promise<Notification[]> => {
-  // TODO: Replace with actual database queries
-  // const notifications = await db.collection('notifications')
-  //   .where('read', '==', false)
-  //   .orderBy('createdAt', 'desc')
-  //   .limit(10)
-  //   .get();
-
+  // TODO: Replace with actual database queries using COLLECTIONS constants
   return []; // From database - no hardcoded notifications
 };

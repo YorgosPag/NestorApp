@@ -4,12 +4,7 @@ import type { QuickStats, Activity as ActivityType, Meeting } from "@/types/dash
 
 // 🏢 ENTERPRISE: Hardcoded stats removed - use database queries
 export const getQuickStats = async (): Promise<QuickStats> => {
-  // TODO: Replace with actual database queries
-  // const totalContacts = await db.collection('contacts').count();
-  // const newThisMonth = await db.collection('contacts')
-  //   .where('createdAt', '>=', startOfMonth(new Date()))
-  //   .count();
-
+  // TODO: Replace with actual database queries using COLLECTIONS constants
   return {
     totalContacts: 0, // From database
     newThisMonth: 0,  // From database
@@ -20,23 +15,12 @@ export const getQuickStats = async (): Promise<QuickStats> => {
 
 // 🏢 ENTERPRISE: Hardcoded activities removed - use database queries
 export const getRecentActivities = async (): Promise<ActivityType[]> => {
-  // TODO: Replace with actual database queries
-  // const activities = await db.collection('activities')
-  //   .orderBy('createdAt', 'desc')
-  //   .limit(5)
-  //   .get();
-
+  // TODO: Replace with actual database queries using COLLECTIONS constants
   return []; // From database - no hardcoded activities
 };
 
 // 🏢 ENTERPRISE: Hardcoded meetings removed - use database queries
 export const getUpcomingMeetings = async (): Promise<Meeting[]> => {
-  // TODO: Replace with actual database queries
-  // const meetings = await db.collection('meetings')
-  //   .where('date', '>=', new Date())
-  //   .orderBy('date', 'asc')
-  //   .limit(5)
-  //   .get();
-
+  // TODO: Replace with actual database queries using COLLECTIONS constants
   return []; // From database - no hardcoded meetings
 };

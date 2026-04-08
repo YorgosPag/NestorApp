@@ -1,5 +1,6 @@
 // stores/notificationStore.ts
 import { create } from 'zustand';
+import { generateNotificationId } from '@/services/enterprise-id-convenience';
 
 type Notification = {
   id: string;
@@ -22,7 +23,7 @@ export const useNotificationStore = create<State>((set, get) => ({
   items: [],
   unread: 0,
   add: n => set(s => {
-    const item = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), read: false, ...n };
+    const item = { id: generateNotificationId(), createdAt: new Date().toISOString(), read: false, ...n };
     return { items: [item, ...s.items], unread: s.unread + 1 };
   }),
   markRead: ids => set(s => {
@@ -35,7 +36,7 @@ export const useNotificationStore = create<State>((set, get) => ({
   }),
   loadMock: () => {
     const mock = [1, 2, 3].map(i => ({
-      id: crypto.randomUUID(),
+      id: generateNotificationId(),
       title: `Mock event ${i}`,
       body: `Payload ${i}`,
       kind: 'info' as const,
