@@ -26,6 +26,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import { FLOORPLAN_PURPOSES, ENTITY_TYPES } from '@/config/domain-constants';
+import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
 import type { Building } from '@/types/building/contracts';
 import { tryResolveCompanyId } from '@/services/company-id-resolver';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -47,14 +48,6 @@ interface BuildingFloorplanTabProps {
   /** Title for the tab */
   title?: string;
 }
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Accepted file types for floorplans (DXF, PDF, images) */
-// eslint-disable-next-line custom/no-hardcoded-strings
-const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
 
 // =============================================================================
 // COMPONENT

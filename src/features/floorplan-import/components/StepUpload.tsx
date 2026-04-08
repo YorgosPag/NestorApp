@@ -18,6 +18,7 @@ import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
 import { useFloorplanUpload } from '@/hooks/useFloorplanUpload';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
@@ -35,7 +36,6 @@ interface StepUploadProps {
 // CONSTANTS
 // =============================================================================
 
-const FLOORPLAN_ACCEPT = '.dxf,.pdf,.jpg,.jpeg,.png';
 const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 
 // =============================================================================

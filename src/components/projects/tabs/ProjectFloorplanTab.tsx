@@ -27,6 +27,7 @@ import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
 import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
 import type { Project } from '@/types/project';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -47,14 +48,6 @@ interface ProjectFloorplanTabProps {
   /** Title for the tab */
   title?: string;
 }
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Accepted file types for floorplans (DXF, PDF, images) */
-// eslint-disable-next-line custom/no-hardcoded-strings
-const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
 
 // =============================================================================
 // COMPONENT

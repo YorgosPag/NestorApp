@@ -18,6 +18,7 @@ import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -33,8 +34,6 @@ const propertyColor = NAVIGATION_ENTITIES.property.color;
 interface FloorPlanTabProps {
   selectedProperty: Property | null;
 }
-
-const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
 
 export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
   const { user } = useAuth();

@@ -484,6 +484,211 @@
       "allowlist": [
         "src/config/persona-config.ts"
       ]
+    },
+
+    "_comment_tier7": "=== TIER 7: EXPANDED CONFIG COVERAGE (v3.2 — 2026-04-09) ===",
+
+    "firestore-field-constants": {
+      "ssotFile": "src/config/firestore-field-constants.ts",
+      "description": "Firestore field names must use FIELDS constant — no inline redefinition",
+      "forbiddenPatterns": [
+        "[^_A-Z]FIELDS\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/firestore-field-constants.ts"
+      ]
+    },
+    "media-constants": {
+      "ssotFile": "src/config/media-constants.ts",
+      "description": "Avatar/media URLs must use centralized media-constants — no hardcoded placeholder URLs",
+      "forbiddenPatterns": [
+        "(DEFAULT_AVATAR_PLACEHOLDER_URL)\\s*(=|:)\\s*['\"]"
+      ],
+      "allowlist": [
+        "src/config/media-constants.ts"
+      ]
+    },
+    "file-upload-config": {
+      "ssotFile": "src/config/file-upload-config.ts",
+      "description": "Upload limits/configs must use centralized file-upload-config — no inline upload definitions",
+      "forbiddenPatterns": [
+        "(FILE_TYPE_CONFIG|UPLOAD_LIMITS|UPLOAD_PHASES|DEFAULT_DOCUMENT_ACCEPT|DEFAULT_PHOTO_ACCEPT|DEFAULT_VIDEO_ACCEPT|FLOORPLAN_ACCEPT)\\s*(=|:)\\s*(\\{|\\[|Record|['\"])"
+      ],
+      "allowlist": [
+        "src/config/file-upload-config.ts"
+      ]
+    },
+    "boq-categories": {
+      "ssotFile": "src/config/boq-categories.ts",
+      "description": "BOQ master categories must use centralized boq-categories — no inline category definitions",
+      "forbiddenPatterns": [
+        "(ATOE_MASTER_CATEGORIES)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/boq-categories.ts"
+      ]
+    },
+    "construction-templates": {
+      "ssotFile": "src/config/construction-templates.ts",
+      "description": "Construction phases/tasks must use centralized templates — no inline phase definitions",
+      "forbiddenPatterns": [
+        "(CONSTRUCTION_PHASES)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/construction-templates.ts"
+      ]
+    },
+    "individual-config": {
+      "ssotFile": "src/config/individual-config.ts",
+      "description": "Individual form sections must use centralized individual-config — no inline section definitions",
+      "forbiddenPatterns": [
+        "(INDIVIDUAL_SECTIONS|GENDER_OPTIONS|DOCUMENT_TYPE_OPTIONS|BIRTH_COUNTRY_OPTIONS)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/individual-config.ts",
+        "src/subapps/dxf-viewer/config/modal-select/"
+      ]
+    },
+    "photo-compression-config": {
+      "ssotFile": "src/config/photo-compression-config.ts",
+      "description": "Compression profiles must use centralized config — no inline compression definitions",
+      "forbiddenPatterns": [
+        "(COMPRESSION_PROFILES|COMPRESSION_USAGE|SMART_COMPRESSION_CONFIG|COMPRESSION_PERFORMANCE_CONFIG)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/photo-compression-config.ts"
+      ]
+    },
+    "procurement-units": {
+      "ssotFile": "src/config/procurement-units.ts",
+      "description": "Procurement units must use centralized config — no inline unit definitions",
+      "forbiddenPatterns": [
+        "(PROCUREMENT_UNIT_OPTIONS)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/procurement-units.ts"
+      ]
+    },
+    "environment-security-policies": {
+      "ssotFile": "src/config/environment-security-config.ts",
+      "description": "Security policies must use centralized config — no inline policy definitions",
+      "forbiddenPatterns": [
+        "(ENVIRONMENT_SECURITY_POLICIES)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/environment-security-config.ts"
+      ]
+    },
+    "legal-procedures-kb": {
+      "ssotFile": "src/config/legal-procedures-kb.ts",
+      "description": "Legal procedures must use centralized KB — no inline procedure definitions",
+      "forbiddenPatterns": [
+        "(LEGAL_PROCEDURES|DOCUMENT_SOURCE_LABELS)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/legal-procedures-kb.ts"
+      ]
+    },
+    "payment-plan-templates": {
+      "ssotFile": "src/config/payment-plan-templates.ts",
+      "description": "Payment plans must use centralized templates — no inline milestone definitions",
+      "forbiddenPatterns": [
+        "(CONSTRUCTION_MILESTONES|PAYMENT_PLAN_TEMPLATES)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/payment-plan-templates.ts"
+      ]
+    },
+    "study-groups-config": {
+      "ssotFile": "src/config/study-groups-config.ts",
+      "description": "Study groups must use centralized config — no inline group definitions",
+      "forbiddenPatterns": [
+        "(STUDY_GROUPS)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/study-groups-config.ts"
+      ]
+    },
+    "versioning-config": {
+      "ssotFile": "src/config/versioning-config.ts",
+      "description": "Versioning constants must use centralized config — no inline version definitions",
+      "forbiddenPatterns": [
+        "(VERSION_FIELD|CONFLICT_STATUS|CONFLICT_CODE|EXCLUDED_COLLECTIONS)\\s*(=|:)\\s*(\\{|\\[|Record|['\"])"
+      ],
+      "allowlist": [
+        "src/config/versioning-config.ts"
+      ]
+    },
+    "toast-config": {
+      "ssotFile": "src/constants/toast.ts",
+      "description": "Toast timing constants must use centralized config — no inline duration values",
+      "forbiddenPatterns": [
+        "(TOAST_DURATION|TOAST_LIMIT|TOAST_REMOVE_DELAY)\\s*(=|:)\\s*([0-9]|Infinity)"
+      ],
+      "allowlist": [
+        "src/constants/toast.ts"
+      ]
+    },
+    "property-statuses-enterprise": {
+      "ssotFile": "src/constants/property-statuses-enterprise.ts",
+      "description": "Property status labels must import from centralized constants — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(PROPERTY_STATUS_LABELS|PROPERTY_AVAILABILITY_LABELS|PROPERTY_LISTING_STATUS_LABELS)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/constants/property-statuses-enterprise.ts",
+        "src/constants/domains/"
+      ]
+    },
+    "role-mappings-config": {
+      "ssotFile": "src/config/role-mappings-config.ts",
+      "description": "Role mappings must use centralized config — no inline role mapping definitions",
+      "forbiddenPatterns": [
+        "(ROLE_MAPPINGS_CONFIG)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/role-mappings-config.ts"
+      ]
+    },
+    "address-config": {
+      "ssotFile": "src/config/address-config.ts",
+      "description": "Address configuration must use centralized config — no inline address definitions",
+      "forbiddenPatterns": [
+        "(ADDRESS_CONFIG)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/address-config.ts"
+      ]
+    },
+    "company-config": {
+      "ssotFile": "src/config/company-config.ts",
+      "description": "Company sections must use centralized config — no inline section definitions",
+      "forbiddenPatterns": [
+        "(COMPANY_SECTIONS)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/company-config.ts"
+      ]
+    },
+    "geographic-config": {
+      "ssotFile": "src/config/geographic-config.ts",
+      "description": "Geographic config must use centralized config — no inline geographic definitions",
+      "forbiddenPatterns": [
+        "(GEOGRAPHIC_CONFIG|LocationPresets)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/geographic-config.ts"
+      ]
+    },
+    "auto-save-config": {
+      "ssotFile": "src/config/auto-save-config.ts",
+      "description": "Auto-save timing must use centralized config — no inline timing definitions",
+      "forbiddenPatterns": [
+        "(AUTO_SAVE_TIMING)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/auto-save-config.ts"
+      ]
     }
   }
 }
