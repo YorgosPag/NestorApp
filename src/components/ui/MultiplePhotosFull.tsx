@@ -279,7 +279,10 @@ export function MultiplePhotosFull({
                   // 🚨 STOP INFINITE LOOPS: Only guard against setting the SAME non-null file.
                   // When file===null this is a DELETE request — always allow it through,
                   // even when currentFile is already null (uploaded photos have file:null + uploadUrl).
-                  const currentSlot = normalizedPhotos[index];
+                  // 🏢 FIX: Use ref to avoid stale closure — normalizedPhotos
+                  // from render may be stale if an upload completed between renders.
+                  const freshPhotos = normalizedPhotosRef.current;
+                  const currentSlot = freshPhotos[index];
                   if (file !== null && currentSlot?.file === file) {
                     return;
                   }
@@ -287,7 +290,7 @@ export function MultiplePhotosFull({
                     return; // Nothing to clear
                   }
 
-                  const newPhotos = [...normalizedPhotos];
+                  const newPhotos = [...freshPhotos];
 
                   if (file) {
                     const preview = URL.createObjectURL(file);

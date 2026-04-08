@@ -127,6 +127,17 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
 }
 
 /**
+ * Extract a short identifier from a Firebase Storage URL for audit display.
+ * e.g. "...file_f76a661d-8667-4199-8d8a-2a8cc7e9c37f.png?..." → "Φωτογραφία (f76a661d.png)"
+ */
+function formatStorageUrl(url: string): string {
+  const fileMatch = url.match(/file_([a-f0-9]{8})[^.]*(\.\w+)/);
+  if (fileMatch) return `Φωτογραφία (${fileMatch[1]}${fileMatch[2]})`;
+  const extMatch = url.match(/(\.\w{3,4})\?/);
+  return extMatch ? `Φωτογραφία (${extMatch[1]})` : "Φωτογραφία";
+}
+
+/**
  * Format a raw audit value for display.
  * @param value - Raw value from Firestore audit entry
  * @param translateValue - Optional translator for known values (e.g. status labels)
@@ -148,9 +159,10 @@ export function formatDisplayValue(
       if (Array.isArray(parsed)) {
         if (parsed.length === 0) return "—";
         const first = parsed[0];
-        // Array of URLs (photos/media) → "N φωτογραφίες"
+        // Array of URLs (photos/media) → "N φωτογραφίες (id1, id2)"
         if (typeof first === "string" && first.includes("firebasestorage.googleapis.com")) {
-          return parsed.length === 1 ? "1 φωτογραφία" : `${parsed.length} φωτογραφίες`;
+          const ids = (parsed as string[]).map(formatStorageUrl);
+          return ids.join(" | ");
         }
         if (typeof first === "object" && first !== null) {
           const formatted = (parsed as Array<Record<string, unknown>>)
@@ -168,9 +180,9 @@ export function formatDisplayValue(
     }
   }
 
-  // Firebase Storage URLs → human-readable label
+  // Firebase Storage URLs → human-readable label with short ID for diffing
   if (typeof value === "string" && value.includes("firebasestorage.googleapis.com")) {
-    return "Φωτογραφία";
+    return formatStorageUrl(value);
   }
 
   // Try translating known values (e.g. "active" → "Ενεργό")
