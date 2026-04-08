@@ -150,9 +150,11 @@ export function ReportsExecutivePageContent() { ... }
 | 2 | 8 (remaining reports) | ✅ Done | 2026-04-08 |
 | 3 | 11 (sales, spaces, procurement) | ✅ Done | 2026-04-08 |
 | 4 | 9 (account, CRM remaining, obligations) | ✅ Done | 2026-04-08 |
-| 5 | ~37 (admin, dynamic routes, light pages) | ⏳ Pending | — |
+| 5 | 8 (admin pages) | ✅ Done | 2026-04-08 |
+| 6 | ~29 (dynamic routes, light pages, cleanup) | ⏳ Pending | — |
 
-**Total lazy-loaded pages:** 59/96 (21 existing + 10 Batch 1 + 8 Batch 2 + 11 Batch 3 + 9 Batch 4)
+**Total lazy-loaded pages:** 67/96 (21 existing + 10 Batch 1 + 8 Batch 2 + 11 Batch 3 + 9 Batch 4 + 8 Batch 5)
+**Note:** ai-inbox + operator-inbox are Server Components (SSR auth) — not lazy-loaded by design
 
 ## Expected Impact
 - **-20% modules** per cold start (estimated)
@@ -160,6 +162,13 @@ export function ReportsExecutivePageContent() { ... }
 - **Better code splitting**: Separate chunks for recharts, calendar, etc.
 
 ## Changelog
+
+### 2026-04-08 — Batch 5 (8 admin pages)
+- Created 8 PageContent extraction files + 1 data file in `src/components/admin/pages/`
+- Pages: enterprise-migration, role-management, setup, property-status-demo, claims-repair, search-backfill, database-update, link-properties
+- SRP split: database-update data definitions → `database-update-data.ts` (500→248 lines)
+- Skipped: ai-inbox + operator-inbox (Server Components with SSR auth — already optimal)
+- Co-located components in app/ referenced via absolute `@/app/admin/...` paths (TODO: migrate to components/)
 
 ### 2026-04-08 — Batch 4 (9 pages: account, CRM remaining, obligations)
 - Created 9 PageContent extraction files across 3 directories:

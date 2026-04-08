@@ -415,6 +415,51 @@ export const LazyRoutes = {
     () => import('@/components/obligations/pages/ObligationsHubPageContent').then(mod => ({ default: mod.ObligationsHubPageContent })),
     { loadingType: 'list', ssr: false }
   ),
+
+  // =========================================================================
+  // ⚡ ADR-294 BATCH 5: Dynamic Imports — Admin pages
+  // Note: ai-inbox + operator-inbox are Server Components (SSR auth) — not lazy-loaded
+  // =========================================================================
+
+  AdminEnterpriseMigration: createLazyRoute(
+    () => import('@/components/admin/pages/EnterpriseMigrationPageContent').then(mod => ({ default: mod.EnterpriseMigrationPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
+  AdminRoleManagement: createLazyRoute(
+    () => import('@/components/admin/pages/RoleManagementPageContent').then(mod => ({ default: mod.RoleManagementPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  AdminSetup: createLazyRoute(
+    () => import('@/components/admin/pages/AdminSetupPageContent').then(mod => ({ default: mod.AdminSetupPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
+  AdminPropertyStatusDemo: createLazyRoute(
+    () => import('@/components/admin/pages/PropertyStatusDemoPageContent').then(mod => ({ default: mod.PropertyStatusDemoPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  AdminClaimsRepair: createLazyRoute(
+    () => import('@/components/admin/pages/ClaimsRepairPageContent').then(mod => ({ default: mod.ClaimsRepairPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
+  AdminSearchBackfill: createLazyRoute(
+    () => import('@/components/admin/pages/SearchBackfillPageContent').then(mod => ({ default: mod.SearchBackfillPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  AdminDatabaseUpdate: createLazyRoute(
+    () => import('@/components/admin/pages/DatabaseUpdatePageContent').then(mod => ({ default: mod.DatabaseUpdatePageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
+  AdminLinkProperties: createLazyRoute(
+    () => import('@/components/admin/pages/LinkPropertiesPageContent').then(mod => ({ default: mod.LinkPropertiesPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support
