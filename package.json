@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build:tokens": "node scripts/build-design-tokens.js",
-    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next dev --turbopack",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next dev --turbopack --port 3000",
     "dev:watch": "pnpm run build:tokens && concurrently -k -n next,tokens -c blue,yellow \"next dev --turbopack\" \"node scripts/build-design-tokens.js --watch\"",
     "dev:vercel": "pnpm run build:tokens && npx vercel dev",
     "dev:with-tokens": "pnpm run build:tokens && next dev --turbopack",

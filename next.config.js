@@ -85,6 +85,19 @@ const nextConfig = {
       'firebase',
       'firebase-admin',
       'class-variance-authority',
+      // Utility libraries (imported everywhere)
+      'clsx',
+      'tailwind-merge',
+      // Carousel / Panels / Date picker
+      'embla-carousel',
+      'embla-carousel-react',
+      'react-day-picker',
+      'react-resizable-panels',
+      // Notifications / PDF / AI
+      'sonner',
+      'pdfjs-dist',
+      'openai',
+      '@sentry/nextjs',
     ],
   },
 
