@@ -11,6 +11,7 @@ import {
   unlinkEntityWithPolicy,
 } from '@/services/entity-linking/entity-linking-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { EntityType } from '@/config/domain-constants';
 import type { NavigationBuilding } from '@/components/navigation/core/types';
 
 const logger = createModuleLogger('desktop-nav-handlers');
@@ -93,7 +94,7 @@ export async function executeCompanyDeletion(deps: CompanyDeletionDeps): Promise
 
 interface UnlinkDeps {
   pending: PendingEntity;
-  entityType: 'project' | 'building' | 'property';
+  entityType: EntityType;
   clearSelection: () => void;
   warning: (msg: string, opts?: { duration: number }) => void;
   t: (key: string, params?: Record<string, unknown>) => string;

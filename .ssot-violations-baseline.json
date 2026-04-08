@@ -1,9 +1,9 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-08T19:15:38Z",
-    "totalViolations": 41,
-    "totalFiles": 28,
+    "generated": "2026-04-08T19:21:10Z",
+    "totalViolations": 38,
+    "totalFiles": 26,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
@@ -13,7 +13,6 @@
     "src/services/upload/utils/storage-path.ts": 2,
     "src/services/upload/utils/file-display-name.ts": 2,
     "src/services/entity-code.service.ts": 2,
-    "src/hooks/useFloorplanFiles.ts": 2,
     "src/core/headers/EnterpriseHeaderActions.tsx": 2,
     "src/components/shared/EntityCodeField.tsx": 2,
     "src/components/generic/photo-system/hooks/usePhotosTabState.ts": 2,
@@ -24,15 +23,14 @@
     "src/services/entity-linking/utils/audit.ts": 1,
     "src/services/entity-linking/hooks/useEntityLinking.ts": 1,
     "src/services/entity-linking/EntityLinkingService.ts": 1,
+    "src/hooks/useFloorplanFiles.ts": 1,
     "src/hooks/useEntityCodeSuggestion.ts": 1,
     "src/hooks/useEnterpriseMessages.ts": 1,
-    "src/features/floorplan-import/FloorplanImportWizard.tsx": 1,
     "src/design-system/primitives/Card/CardIcon.tsx": 1,
     "src/database/migrations/003_types.ts": 1,
     "src/constants/header.ts": 1,
     "src/components/shared/files/UploadEntryPointSelector.tsx": 1,
     "src/components/shared/files/EntityFilesManager.tsx": 1,
-    "src/components/navigation/components/desktop-nav-handlers.ts": 1,
     "src/components/building-management/tabs/BuildingContactsTab.tsx": 1,
     "src/app/api/entity-code/suggest/route.ts": 1,
     "src/app/api/cad-files/dual-write-to-files.ts": 1

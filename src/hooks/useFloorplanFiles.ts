@@ -27,6 +27,7 @@ import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
+import type { EntityType } from '@/config/domain-constants';
 import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 
 // ============================================================================
@@ -37,7 +38,7 @@ export interface UseFloorplanFilesConfig {
   /** Company ID */
   companyId: string | undefined;
   /** Entity type (usually 'project') */
-  entityType: 'project' | 'building' | 'property';
+  entityType: EntityType;
   /** Entity ID */
   entityId: string | undefined;
   /** Filter by purpose (e.g., 'project-floorplan', 'parking-floorplan') */

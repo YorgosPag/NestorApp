@@ -36,6 +36,7 @@ import { StepEntitySelector } from './components/StepEntitySelector';
 import { StepPropertySelector } from './components/StepPropertySelector';
 import { StepUpload } from './components/StepUpload';
 import type { FloorplanType } from './hooks/useFloorplanImportState';
+import type { EntityType } from '@/config/domain-constants';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -46,7 +47,7 @@ import '@/lib/design-system';
 export interface WizardCompleteMeta {
   companyId: string;
   projectId?: string;
-  entityType: 'project' | 'building' | 'floor' | 'property';
+  entityType: EntityType;
   entityId: string;
   purpose: string;
   /** Human-readable entity label (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") for displayName generation */
