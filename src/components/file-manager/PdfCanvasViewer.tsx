@@ -345,7 +345,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('floorplan.previous', 'Προηγούμενη')}</TooltipContent>
+            <TooltipContent>{t('pdf.previous')}</TooltipContent>
           </Tooltip>
 
           <span className={cn("text-xs min-w-[60px] text-center tabular-nums", colors.text.muted)}>
@@ -364,7 +364,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('floorplan.next', 'Επόμενη')}</TooltipContent>
+            <TooltipContent>{t('pdf.next')}</TooltipContent>
           </Tooltip>
         </div>
 
@@ -382,7 +382,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
                 <ZoomOut className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('preview.zoomOut', 'Σμίκρυνση')}</TooltipContent>
+            <TooltipContent>{t('preview.zoomOut')}</TooltipContent>
           </Tooltip>
 
           <span className={cn("text-xs w-10 text-center tabular-nums", colors.text.muted)}>
@@ -401,7 +401,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
                 <ZoomIn className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('preview.zoomIn', 'Μεγέθυνση')}</TooltipContent>
+            <TooltipContent>{t('preview.zoomIn')}</TooltipContent>
           </Tooltip>
 
           {/* Fit to width */}
@@ -411,7 +411,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
                 <Minimize2 className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('preview.fitToWidth', 'Προσαρμογή στο πλάτος')}</TooltipContent>
+            <TooltipContent>{t('preview.fitToWidth')}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -420,7 +420,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
                 <RotateCw className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('preview.rotate', 'Περιστροφή')}</TooltipContent>
+            <TooltipContent>{t('preview.rotate')}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -429,7 +429,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
                 <Maximize className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('floorplan.fullscreen', 'Πλήρης οθόνη')}</TooltipContent>
+            <TooltipContent>{t('pdf.fullscreen')}</TooltipContent>
           </Tooltip>
         </div>
       </nav>
@@ -443,7 +443,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-muted/20">
             {state.loading && (
               <p className={cn("text-sm animate-pulse", colors.text.muted)}>
-                {t('floorplan.loading', 'Φόρτωση PDF...')}
+                {t('pdf.loading')}
               </p>
             )}
             {state.error && (

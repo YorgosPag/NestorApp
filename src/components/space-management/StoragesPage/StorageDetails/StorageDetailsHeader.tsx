@@ -53,13 +53,13 @@ export function StorageDetailsHeader({
   // Normal mode: New (green), Edit (blue), Delete (red)
   const actions: EntityHeaderAction[] = isEditing
     ? [
-        createEntityAction('save', isSaving ? t('header.saving', 'Αποθήκευση...') : t('header.save', 'Αποθήκευση'), isSaving ? () => {} : onSave),
-        createEntityAction('cancel', t('header.cancel', 'Ακύρωση'), onCancel),
+        createEntityAction('save', isSaving ? t('header.saving') : t('header.save'), isSaving ? () => {} : onSave),
+        createEntityAction('cancel', t('header.cancel'), onCancel),
       ]
     : [
-        createEntityAction('new', t('header.newStorage', 'Νέα Αποθήκη'), () => onNewStorage?.()),
-        createEntityAction('edit', t('header.edit', 'Επεξεργασία'), onStartEdit),
-        createEntityAction('delete', t('header.delete', 'Μεταφορά στον κάδο'), () => onDelete?.()),
+        createEntityAction('new', t('header.newStorage'), () => onNewStorage?.()),
+        createEntityAction('edit', t('header.edit'), onStartEdit),
+        createEntityAction('delete', t('header.delete'), () => onDelete?.()),
       ];
 
   return (

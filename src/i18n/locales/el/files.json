@@ -64,7 +64,11 @@
   "pdf": {
     "title": "Έγγραφο PDF",
     "preview": "PDF προεπισκόπηση",
-    "openInNewTab": "Άνοιγμα PDF σε νέα καρτέλα"
+    "openInNewTab": "Άνοιγμα PDF σε νέα καρτέλα",
+    "previous": "Προηγούμενη",
+    "next": "Επόμενη",
+    "loading": "Φόρτωση PDF...",
+    "fullscreen": "Πλήρης οθόνη"
   },
   "validation": {
     "onlyPdfAllowed": "Μόνο αρχεία PDF επιτρέπονται",

@@ -608,6 +608,7 @@ export const API_ROUTES = {
     SERVICE_IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/service-identity-impact-preview` as const,
     RESTORE: (id: string) => `/api/contacts/${id}/restore` as const,
     PERMANENT_DELETE: (id: string) => `/api/contacts/${id}/permanent-delete` as const,
+    CHANNELS: (contactId: string) => `/api/contacts/${contactId}/channels` as const,
   },
 
   // ── Trash (SSOT Soft-Delete — ADR-281) ─────────────────────────────────
@@ -751,6 +752,7 @@ export const API_ROUTES = {
   COMMUNICATIONS: {
     EMAIL: '/api/communications/email',
     EMAIL_PROPERTY_SHARE: '/api/communications/email/property-share/',
+    SHARE_TO_CHANNEL: '/api/communications/share-to-channel',
   },
 
   // ── Voice & Calendar ──────────────────────────────────────────────────

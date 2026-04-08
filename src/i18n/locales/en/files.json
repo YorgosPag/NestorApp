@@ -64,7 +64,11 @@
   "pdf": {
     "title": "PDF Document",
     "preview": "PDF preview",
-    "openInNewTab": "Open PDF in new tab"
+    "openInNewTab": "Open PDF in new tab",
+    "previous": "Previous",
+    "next": "Next",
+    "loading": "Loading PDF...",
+    "fullscreen": "Full screen"
   },
   "validation": {
     "onlyPdfAllowed": "Only PDF files are allowed",

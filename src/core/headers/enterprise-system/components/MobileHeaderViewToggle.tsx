@@ -22,6 +22,7 @@ import { HEADER_THEME } from '../constants';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
@@ -32,6 +33,8 @@ export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const { t } = useTranslation('common');
+
   const getViewIcon = (mode: ViewMode) => {
     const iconMap = {
       list: List,
@@ -43,13 +46,7 @@ export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   };
 
   const getViewLabel = (mode: ViewMode) => {
-    const labelMap = {
-      list: 'Προβολή λίστας',
-      grid: 'Προβολή πλέγματος',
-      byType: 'Ομαδοποίηση κατά τύπο',
-      byStatus: 'Ομαδοποίηση κατά κατάσταση'
-    };
-    return labelMap[mode] || 'Προβολή';
+    return t(`viewMode.mobile.${mode}`);
   };
 
   // Find the next view mode to toggle to

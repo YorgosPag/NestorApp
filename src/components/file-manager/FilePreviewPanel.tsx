@@ -1,4 +1,3 @@
-/* eslint-disable custom/no-hardcoded-strings */
 /**
  * =============================================================================
  * File Preview Panel — Split-panel file preview
@@ -204,7 +203,7 @@ function UnsupportedPreview({
         </p>
       </div>
       <p className={cn("text-xs max-w-xs", colors.text.muted)}>
-        {t('preview.unsupported', 'Δεν υποστηρίζεται προεπισκόπηση για αυτόν τον τύπο αρχείου.')}
+        {t('preview.unsupported')}
       </p>
       <Button variant="outline" size="sm" onClick={onDownload}>
         <Download className="h-4 w-4 mr-2" />
@@ -318,7 +317,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {t('versions.title', 'Ιστορικό εκδόσεων')} (v{file.revision})
+                {t('versions.title')} (v{file.revision})
               </TooltipContent>
             </Tooltip>
           )}
@@ -336,7 +335,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {t('share.title', 'Κοινοποίηση')}
+                {t('share.title')}
               </TooltipContent>
             </Tooltip>
           )}
@@ -354,7 +353,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {t('comments.title', 'Σχόλια')}
+                {t('comments.title')}
               </TooltipContent>
             </Tooltip>
           )}
@@ -372,7 +371,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {t('approvals.title', 'Εγκρίσεις')}
+                {t('approvals.title')}
               </TooltipContent>
             </Tooltip>
           )}
@@ -389,7 +388,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {t('audit.title', 'Ιστορικό ενεργειών')}
+              {t('audit.title')}
             </TooltipContent>
           </Tooltip>
           <Tooltip>

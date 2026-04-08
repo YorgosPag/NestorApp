@@ -91,6 +91,46 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 }
 
 /**
+ * Copy an image from URL to clipboard as PNG.
+ * Uses blob URL to avoid canvas CORS taint.
+ */
+export async function copyImageToClipboard(imageUrl: string): Promise<boolean> {
+  const response = await fetch(imageUrl);
+  const blob = await response.blob();
+
+  const blobUrl = URL.createObjectURL(blob);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+
+  return new Promise<boolean>((resolve) => {
+    img.onload = async () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(false); return; }
+        ctx.drawImage(img, 0, 0);
+
+        const pngBlob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/png'));
+        if (!pngBlob) { resolve(false); return; }
+
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': pngBlob })
+        ]);
+        resolve(true);
+      } catch {
+        resolve(false);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(false); };
+    img.src = blobUrl;
+  });
+}
+
+/**
  * Generate shareable URL with UTM parameters
  */
 export function generateShareableURL(

@@ -27,7 +27,7 @@ interface StorageNodeProps {
 }
 
 export const StorageNode = ({ storage }: StorageNodeProps) => {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation('storage');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const _spacing = useSpacingTokens();
@@ -44,11 +44,11 @@ export const StorageNode = ({ storage }: StorageNodeProps) => {
   };
 
   const statusLabels: Record<string, string> = {
-    available: t('status.available', 'Διαθέσιμη'),
-    sold: t('status.sold', 'Πωλημένη'),
-    reserved: t('status.reserved', 'Κρατημένη'),
-    occupied: t('status.occupied', 'Κατειλημμένη'),
-    maintenance: t('status.maintenance', 'Συντήρηση')
+    available: t('status.available'),
+    sold: t('status.sold'),
+    reserved: t('status.reserved'),
+    occupied: t('status.occupied'),
+    maintenance: t('status.maintenance')
   };
 
   return (
@@ -70,7 +70,7 @@ export const StorageNode = ({ storage }: StorageNodeProps) => {
         </div>
         <div className={cn(typography.body.xs, colors.text.muted)}>
           {storage.type && <span className="capitalize">{storage.type}</span>}
-          {storage.floor && <span> • {t('structure.floor', 'Όροφος')}: {storage.floor}</span>}
+          {storage.floor && <span> • {t('general.fields.floor')}: {storage.floor}</span>}
           {storage.area && <span> • {storage.area} m²</span>}
         </div>
       </div>
