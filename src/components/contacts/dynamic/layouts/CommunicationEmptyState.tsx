@@ -21,8 +21,6 @@
 
 import '@/lib/design-system';
 import React from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -37,10 +35,6 @@ import { COMMUNICATION_STYLES } from '../communication';
 export interface CommunicationEmptyStateProps {
   /** Communication configuration object */
   readonly config: CommunicationConfig;
-  /** Whether the form is disabled */
-  readonly disabled?: boolean;
-  /** Function to add new communication item */
-  readonly onAddItem: () => void;
 }
 
 /**
@@ -55,62 +49,36 @@ export interface CommunicationEmptyStateProps {
  *
  * @example
  * ```tsx
- * <CommunicationEmptyState
- *   config={COMMUNICATION_CONFIGS.phone}
- *   onAddItem={addPhoneItem}
- *   disabled={false}
- * />
+ * <CommunicationEmptyState config={COMMUNICATION_CONFIGS.phone} />
  * ```
  */
 export function CommunicationEmptyState({
   config,
-  disabled = false,
-  onAddItem
 }: CommunicationEmptyStateProps): JSX.Element {
   const iconSizes = useIconSizes();
-  // 🏢 ENTERPRISE: i18n support with namespace readiness check
   const { t, isNamespaceReady } = useTranslation('contacts');
   const IconComponent = config.icon;
 
   return (
-    <>
-      {/* 🎯 SEMANTIC SECTION: Empty state message */}
-      <section
-        className={COMMUNICATION_STYLES.groupedTable.emptyState}
-        aria-label="Empty state"
-        role="status"
-        aria-live="polite"
-      >
-        <IconComponent
-          className={`${iconSizes.xl} mb-2 mx-auto`}
-          aria-hidden="true"
-        />
-        <p className="font-medium text-gray-700">
-          {t(config.emptyStateText)}
+    <section
+      className={COMMUNICATION_STYLES.groupedTable.emptyState}
+      aria-label="Empty state"
+      role="status"
+      aria-live="polite"
+    >
+      <IconComponent
+        className={`${iconSizes.xl} mb-2 mx-auto`}
+        aria-hidden="true"
+      />
+      <p className="font-medium text-gray-700">
+        {t(config.emptyStateText)}
+      </p>
+      {isNamespaceReady && (
+        <p className="text-sm mt-1 text-gray-500">
+          {t('communication.addContactInfo')}
         </p>
-        {isNamespaceReady && (
-          <p className="text-sm mt-1 text-gray-500">
-            {t('communication.addContactInfo')}
-          </p>
-        )}
-      </section>
-
-      {/* 🎯 SEMANTIC BUTTON: Add new item action */}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={onAddItem}
-        disabled={disabled}
-        className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
-        aria-label={t('communication.addNew', { type: config.title.toLowerCase() })}
-      >
-        <Plus
-          className={`${iconSizes.sm} mr-2`}
-          aria-hidden="true"
-        />
-        {t(config.addButtonText)}
-      </Button>
-    </>
+      )}
+    </section>
   );
 }
 

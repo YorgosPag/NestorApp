@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
@@ -128,37 +130,42 @@ export function UniversalCommunicationManager({
         <h3 id="comm-manager-title">{t(config.title)}</h3>
       </header>
 
-      {/* 🏢 ENTERPRISE: Conditional rendering με extracted layout components */}
-      {isDesktop && items.length > 0 ? (
-        // 🎯 DESKTOP: Table layout για όλους τους τύπους
-        <DesktopTableLayout
-          items={items}
-          config={config}
-          disabled={disabled}
-          updateItem={updateItem}
-          removeItem={removeItem}
-          setPrimary={setPrimary}
-        />
-      ) : items.length > 0 ? (
-        // 🎯 MOBILE: Card layout για όλους τους τύπους
-        <MobileCommunicationLayout
-          items={items}
-          config={config}
-          disabled={disabled}
-          updateItem={updateItem}
-          removeItem={removeItem}
-          setPrimary={setPrimary}
-        />
-      ) : null}
-
-      {/* 🏢 ENTERPRISE: Empty state και add button */}
-      {items.length === 0 && (
-        <CommunicationEmptyState
-          config={config}
-          disabled={disabled}
-          onAddItem={addItem}
-        />
+      {/* Layout: shown only when items exist */}
+      {items.length > 0 ? (
+        isDesktop ? (
+          <DesktopTableLayout
+            items={items}
+            config={config}
+            disabled={disabled}
+            updateItem={updateItem}
+            removeItem={removeItem}
+            setPrimary={setPrimary}
+          />
+        ) : (
+          <MobileCommunicationLayout
+            items={items}
+            config={config}
+            disabled={disabled}
+            updateItem={updateItem}
+            removeItem={removeItem}
+            setPrimary={setPrimary}
+          />
+        )
+      ) : (
+        <CommunicationEmptyState config={config} />
       )}
+
+      {/* Add button: ALWAYS visible (Google Contacts pattern) */}
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={addItem}
+        disabled={disabled}
+        className="w-full justify-start text-sm text-muted-foreground hover:text-foreground gap-2"
+      >
+        <Plus className={iconSizes.sm} aria-hidden="true" />
+        {t(config.addButtonText)}
+      </Button>
     </section>
   );
 }

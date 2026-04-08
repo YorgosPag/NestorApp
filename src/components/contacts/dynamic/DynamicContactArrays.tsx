@@ -74,7 +74,7 @@ const socialToCommunicationItems = (
   defaultType: string = 'personal'
 ): CommunicationItem[] =>
   Array.isArray(socialMedia) ? socialMedia.map(social => ({
-    type: defaultType,
+    type: social.type || defaultType,
     label: social.label,
     username: social.username,
     url: social.url,
@@ -107,9 +107,10 @@ const communicationItemsToWebsites = (items: CommunicationItem[]): WebsiteInfo[]
 
 const communicationItemsToSocial = (items: CommunicationItem[]): SocialMediaInfo[] =>
   Array.isArray(items) ? items.map(item => ({
-    platform: (item.platform || item.type) as SocialMediaInfo['platform'],
+    platform: (item.platform || 'other') as SocialMediaInfo['platform'],
     username: item.username || '',
     url: item.url || '',
+    type: (item.type || 'personal') as SocialMediaInfo['type'],
     label: item.label || ''
   })) : [];
 

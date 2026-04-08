@@ -294,6 +294,7 @@ export interface SocialMediaInfo {
   platform: 'facebook' | 'twitter' | 'linkedin' | 'instagram' | 'youtube' | 'github' | 'other';
   username: string;
   url?: string;
+  type?: 'personal' | 'professional' | 'business' | 'official' | 'informational' | 'corporate' | 'marketing' | 'other';
   label?: string;
 }
 

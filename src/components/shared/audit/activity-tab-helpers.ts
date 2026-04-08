@@ -20,6 +20,33 @@ export interface Stats {
   uniqueUsers: number;
 }
 
+/** Translate enum-like type values to Greek for audit display */
+const TYPE_LABELS: Record<string, string> = {
+  // Phone types
+  mobile: "Κινητό",
+  home: "Σπίτι",
+  work: "Εργασία",
+  fax: "Φαξ",
+  other: "Άλλο",
+  // Email types
+  personal: "Προσωπικό",
+  // Address types
+  headquarters: "Έδρα",
+  branch: "Υποκατάστημα",
+  warehouse: "Αποθήκη",
+  // Website types
+  company: "Εταιρική",
+  portfolio: "Portfolio",
+  blog: "Blog",
+  // Social media types
+  professional: "Επαγγελματικό",
+  business: "Επιχειρηματικό",
+  official: "Επίσημο",
+  informational: "Ενημερωτικό",
+  corporate: "Εταιρικό",
+  marketing: "Marketing",
+};
+
 /** Nested object key labels for human-readable display */
 const NESTED_KEY_LABELS: Record<string, string> = {
   bedrooms: "Υ/Δ",
@@ -37,6 +64,67 @@ const NESTED_KEY_LABELS: Record<string, string> = {
   heatingType: "Θέρμανση",
   coolingType: "Ψύξη",
 };
+
+/**
+ * Detect and format a known entity object (address, phone, email, etc.)
+ * Returns null if not a recognized entity — caller should fallback.
+ */
+function formatKnownEntity(obj: Record<string, unknown>): string | null {
+  // AddressInfo → "Σταδίου 15, Αθήνα, 10561"
+  // MUST be checked BEFORE PhoneInfo — both have `number` + `type`
+  if ("street" in obj || "isPrimary" in obj && "country" in obj) {
+    const parts: string[] = [];
+    if (obj.street) {
+      parts.push(obj.number ? `${obj.street} ${obj.number}` : String(obj.street));
+    } else if (obj.number) {
+      parts.push(String(obj.number));
+    }
+    if (obj.city) parts.push(String(obj.city));
+    if (obj.postalCode) parts.push(String(obj.postalCode));
+    if (obj.municipality) parts.push(String(obj.municipality));
+    return parts.length > 0 ? parts.join(", ") : null;
+  }
+  // PhoneInfo → "+30 6971234567 (Κινητό, Προσωπικό)"
+  if ("number" in obj && "countryCode" in obj) {
+    const code = obj.countryCode ? `${obj.countryCode} ` : "";
+    const num = String(obj.number || "");
+    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const details = [typeLabel, obj.label].filter(Boolean).join(", ");
+    const suffix = details ? ` (${details})` : "";
+    return num ? `${code}${num}${suffix}` : null;
+  }
+  // EmailInfo → "user@example.com (Προσωπικό)"
+  if ("email" in obj) {
+    const email = String(obj.email || "");
+    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const details = [typeLabel, obj.label].filter(Boolean).join(", ");
+    const suffix = details ? ` (${details})` : "";
+    return email ? `${email}${suffix}` : null;
+  }
+  // WebsiteInfo → "https://example.com (Εταιρική, Κύρια)"
+  if ("url" in obj && !("platform" in obj)) {
+    const url = String(obj.url || "");
+    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const details = [typeLabel, obj.label].filter(Boolean).join(", ");
+    const suffix = details ? ` (${details})` : "";
+    return url ? `${url}${suffix}` : null;
+  }
+  // SocialMediaInfo → "@user (LinkedIn, Επαγγελματικό, Label) — https://linkedin.com/in/user"
+  if ("platform" in obj && ("username" in obj || "url" in obj)) {
+    const parts: string[] = [];
+    if (obj.username) parts.push(`@${obj.username}`);
+    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const details = [obj.platform, typeLabel, obj.label].filter(Boolean).join(", ");
+    if (details) parts.push(`(${details})`);
+    if (obj.url) parts.push(`— ${obj.url}`);
+    return parts.length > 0 ? parts.join(" ") : null;
+  }
+  // EscoSkillValue → "Java"
+  if ("preferredLabel" in obj) return String(obj.preferredLabel);
+  if ("label" in obj && !String(obj.label).includes(".")) return String(obj.label);
+  if ("name" in obj) return String(obj.name);
+  return null;
+}
 
 /**
  * Format a raw audit value for display.
@@ -58,7 +146,15 @@ export function formatDisplayValue(
     const parsed = safeJsonParse<unknown>(value, undefined);
     if (parsed !== undefined) {
       if (Array.isArray(parsed)) {
-        return parsed.length === 0 ? "—" : parsed.join(", ");
+        if (parsed.length === 0) return "—";
+        const first = parsed[0];
+        if (typeof first === "object" && first !== null) {
+          const formatted = (parsed as Array<Record<string, unknown>>)
+            .map((item) => formatKnownEntity(item))
+            .filter(Boolean);
+          if (formatted.length > 0) return formatted.join(" | ");
+        }
+        return parsed.join(", ");
       }
       if (typeof parsed === "object" && parsed !== null) {
         return Object.entries(parsed)
