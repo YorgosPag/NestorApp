@@ -120,7 +120,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         safeSetItem(STORAGE_KEYS.ACTIVE_WORKSPACE, workspaces[0].id);
         logger.info(`[WorkspaceContext] Auto-selected first workspace: ${workspaces[0].id}`);
       } else {
-        logger.warn('[WorkspaceContext] No workspaces available for user');
+        logger.debug('[WorkspaceContext] No workspaces available for user');
       }
     } catch (err) {
       // 🔧 FIX: Downgrade to warn — workspaces are non-critical, don't block the app
