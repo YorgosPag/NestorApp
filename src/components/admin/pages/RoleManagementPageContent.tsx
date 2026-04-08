@@ -18,10 +18,10 @@ import type { TabDefinition } from '@/components/ui/navigation/TabsComponents';
 import { Alert } from '@/components/ui/alert';
 import { Users, Shield, FileText, FolderOpen } from 'lucide-react';
 
-import { UsersTab } from '@/app/admin/role-management/components/UsersTab';
-import { RolesTab } from '@/app/admin/role-management/components/RolesTab';
-import { AuditTab } from '@/app/admin/role-management/components/AuditTab';
-import { ProjectMembersTab } from '@/app/admin/role-management/components/ProjectMembersTab';
+import { UsersTab } from '../role-management/components/UsersTab';
+import { RolesTab } from '../role-management/components/RolesTab';
+import { AuditTab } from '../role-management/components/AuditTab';
+import { ProjectMembersTab } from '../role-management/components/ProjectMembersTab';
 import type { GlobalRole } from '@/lib/auth/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
