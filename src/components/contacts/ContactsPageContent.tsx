@@ -167,6 +167,7 @@ export function ContactsPageContent() {
           onRefresh={handleContactsDeleted}
           onPermanentDelete={handlePermanentDeleteContacts}
           trashCount={trashCount}
+          activeContactId={selectedContact?.id}
         />
       )}
 

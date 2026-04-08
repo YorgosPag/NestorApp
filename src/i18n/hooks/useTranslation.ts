@@ -49,7 +49,7 @@ export const useTranslation = (namespace?: string | string[]) => {
 
       // If key wasn't found, try remapping via compat layer
       const fullKey = `${primaryNs}:${key}`;
-      const remapped = remapLegacyTranslationKey(fullKey);
+      const remapped = remapLegacyTranslationKey(fullKey, optionsOrDefault);
       if (remapped.key !== fullKey) {
         const remappedResult = rawT(remapped.key, remapped.options as TOptions, ...rest);
         if (typeof remappedResult === 'string' && remappedResult !== remapped.key) {

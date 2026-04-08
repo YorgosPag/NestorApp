@@ -11,9 +11,12 @@
 'use client';
 
 import '@/lib/design-system';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Trash2, RotateCcw, ArrowLeft, AlertTriangle } from 'lucide-react';
+
+const logger = createModuleLogger('TrashActionsBar');
 import { Button } from '@/components/ui/button';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { restoreMultipleDeletedContactsWithPolicy } from '@/services/contact-mutation-gateway';
@@ -25,6 +28,8 @@ interface TrashActionsBarProps {
   onRefresh: () => void;
   onPermanentDelete: (ids?: string[]) => void;
   trashCount: number;
+  /** ID of the contact currently viewed in the detail panel (fallback when no multi-select) */
+  activeContactId?: string | null;
 }
 
 export function TrashActionsBar({
@@ -33,19 +38,35 @@ export function TrashActionsBar({
   onRefresh,
   onPermanentDelete,
   trashCount,
+  activeContactId,
 }: TrashActionsBarProps) {
   const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { notify } = useNotifications();
 
+  /** Effective IDs to act on: multi-selected, or the single active contact */
+  const effectiveIds = selectedIds.length > 0
+    ? selectedIds
+    : activeContactId ? [activeContactId] : [];
+
+  const canAct = effectiveIds.length > 0;
+
   const handleRestoreSelected = async () => {
-    if (selectedIds.length === 0) return;
+    if (!canAct) return;
+    logger.info('Restoring contacts', { effectiveIds });
     try {
-      await restoreMultipleDeletedContactsWithPolicy({ ids: selectedIds });
-      notify(t('trash.restoreSuccess', { count: selectedIds.length }), { type: 'success' });
+      await restoreMultipleDeletedContactsWithPolicy({ ids: effectiveIds });
+      logger.info('Restore succeeded', { effectiveIds });
+      notify(
+        effectiveIds.length === 1
+          ? t('trash.restoreSuccess_one')
+          : t('trash.restoreSuccess', { count: effectiveIds.length }),
+        { type: 'success' },
+      );
       onRefresh();
-    } catch {
+    } catch (err) {
+      logger.error('Restore failed', { effectiveIds, error: err });
       notify(t('trash.restoreFailed'), { type: 'error' });
     }
   };
@@ -84,19 +105,19 @@ export function TrashActionsBar({
           size="sm"
           variant="outline"
           onClick={handleRestoreSelected}
-          disabled={selectedIds.length === 0}
+          disabled={!canAct}
           className="gap-1.5"
         >
           <RotateCcw className={iconSizes.xs} />
           {t('trash.restoreSelected')}
-          {selectedIds.length > 0 && ` (${selectedIds.length})`}
+          {effectiveIds.length > 0 && ` (${effectiveIds.length})`}
         </Button>
 
         <Button
           size="sm"
           variant="destructive"
-          onClick={() => onPermanentDelete(selectedIds.length > 0 ? selectedIds : undefined)}
-          disabled={selectedIds.length === 0}
+          onClick={() => onPermanentDelete(effectiveIds.length > 0 ? effectiveIds : undefined)}
+          disabled={!canAct}
           className="gap-1.5"
         >
           <Trash2 className={iconSizes.xs} />
