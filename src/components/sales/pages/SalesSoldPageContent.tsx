@@ -108,7 +108,7 @@ export function SalesSoldPageContent() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
-                    <span className="font-semibold ${colors.text.success}">€12.8M</span>
+                    <span className={`font-semibold ${colors.text.success}`}>€12.8M</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
@@ -135,7 +135,7 @@ export function SalesSoldPageContent() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
-                    <span className="font-semibold ${colors.text.success}">€3.2M</span>
+                    <span className={`font-semibold ${colors.text.success}`}>€3.2M</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
@@ -162,7 +162,7 @@ export function SalesSoldPageContent() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
-                    <span className="font-semibold ${colors.text.success}">€2.4M</span>
+                    <span className={`font-semibold ${colors.text.success}`}>€2.4M</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
@@ -194,7 +194,7 @@ export function SalesSoldPageContent() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
-                        <span className="${colors.text.success} font-medium">€3.2M</span>
+                        <span className={`${colors.text.success} font-medium`}>€3.2M</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
@@ -213,7 +213,7 @@ export function SalesSoldPageContent() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
-                        <span className="${colors.text.success} font-medium">€5.8M</span>
+                        <span className={`${colors.text.success} font-medium`}>€5.8M</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
@@ -232,7 +232,7 @@ export function SalesSoldPageContent() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
-                        <span className="${colors.text.success} font-medium">€6.8M</span>
+                        <span className={`${colors.text.success} font-medium`}>€6.8M</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
@@ -281,19 +281,19 @@ export function SalesSoldPageContent() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.successRate')}</span>
-                      <span className="font-medium ${colors.text.success}">78%</span>
+                      <span className={`font-medium ${colors.text.success}`}>78%</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.avgDiscount')}</span>
-                      <span className="font-medium ${colors.text.warning}">-3.2%</span>
+                      <span className={`font-medium ${colors.text.warning}`}>-3.2%</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.fastestSale')}</span>
-                      <span className="font-medium ${colors.text.info}">{t('sales.sold.marketInsights.days', { count: 8 })}</span>
+                      <span className={`font-medium ${colors.text.info}`}>{t('sales.sold.marketInsights.days', { count: 8 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.slowestSale')}</span>
-                      <span className="font-medium ${colors.text.error}">{t('sales.sold.marketInsights.months', { count: 18 })}</span>
+                      <span className={`font-medium ${colors.text.error}`}>{t('sales.sold.marketInsights.months', { count: 18 })}</span>
                     </div>
                   </div>
                 </div>
