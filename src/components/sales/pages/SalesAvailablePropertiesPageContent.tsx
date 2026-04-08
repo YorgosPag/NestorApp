@@ -1,4 +1,3 @@
-/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -22,15 +21,13 @@ import {
 } from 'lucide-react';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { PageLoadingState, StaticPageLoading } from '@/core/states';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { SalesGridCard, SalesGridEmpty } from '@/components/sales/shared/SalesGridCard';
 import type { Property } from '@/types/property';
 import '@/lib/design-system';
 
 function SalesAvailableContent() {
   const { t } = useTranslation('common');
-  const colors = useSemanticColors();
 
   const {
     filteredUnits,
@@ -171,52 +168,29 @@ function SalesAvailableContent() {
             className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
             aria-label={t('sales.available.gridLabel')}
           >
-            {(filteredUnits as Property[]).map(unit => (
-              <article
-                key={unit.id}
-                onClick={() => handleSelectProperty(unit.id)}
-                className="border border-border rounded-lg shadow-sm bg-card overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectProperty(unit.id); }}
-              >
-                <div className="aspect-[16/10] bg-muted flex items-center justify-center">
-                  <ShoppingBag className={cn("h-8 w-8", colors.text.muted)} />
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold truncate">{unit.name || unit.code || unit.id}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${
-                      unit.commercialStatus === 'for-sale' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
-                      unit.commercialStatus === 'reserved' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' :
-                      'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
-                    }`}>
-                      {unit.commercialStatus
-                        ? t(`sales.commercialStatus.${unit.commercialStatus}`)
-                        : t('sales.commercialStatus.new')}
-                    </span>
-                  </div>
-                  <p className={cn("text-xs", colors.text.muted)}>
-                    {t(`sales.unitTypes.${unit.type}`)} · {unit.areas?.gross ?? unit.area ?? '—'} m²
-                  </p>
-                  <p className="text-lg font-bold text-green-600 mt-1">
-                    {unit.commercial?.askingPrice
-                      ? formatCurrencyCompact(unit.commercial.askingPrice)
-                      : '—'}
-                  </p>
-                  <p className={cn("text-xs", colors.text.muted)}>
-                    {unit.commercial?.askingPrice && (unit.areas?.gross ?? unit.area)
-                      ? `${formatCurrencyWhole(Math.round(unit.commercial.askingPrice / (unit.areas?.gross ?? unit.area ?? 1)))}/m²`
-                      : ''}
-                  </p>
-                </div>
-              </article>
-            ))}
+            {(filteredUnits as Property[]).map(unit => {
+              const area = unit.areas?.gross ?? unit.area ?? 0;
+              const price = unit.commercial?.askingPrice ?? null;
+              return (
+                <SalesGridCard
+                  key={unit.id}
+                  id={unit.id}
+                  icon={ShoppingBag}
+                  title={unit.name || unit.code || unit.id}
+                  statusKey={unit.commercialStatus ?? 'new'}
+                  statusLabel={unit.commercialStatus
+                    ? t(`sales.commercialStatus.${unit.commercialStatus}`)
+                    : t('sales.commercialStatus.new')}
+                  description={`${t(`sales.unitTypes.${unit.type}`)} · ${area || '—'} m²`}
+                  price={price}
+                  pricePerSqm={price && area ? price / area : null}
+                  onClick={handleSelectProperty}
+                />
+              );
+            })}
 
             {filteredUnits.length === 0 && (
-              <div className={cn("col-span-full p-6 text-center text-sm", colors.text.muted)}>
-                {t('sales.available.noResults')}
-              </div>
+              <SalesGridEmpty message={t('sales.available.noResults')} />
             )}
           </section>
         )}

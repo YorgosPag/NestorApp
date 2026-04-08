@@ -254,14 +254,12 @@ export function ReportsExecutivePageContent() { ... }
 
 ## TODO — Pending Refactoring (discovered during Batch 3)
 
-### 1. 🔴 Duplicated Sales Grid View (MEDIUM priority)
-- **Problem**: `SalesAvailablePropertiesPageContent`, `SalesAvailableParkingPageContent`, `SalesAvailableStoragePageContent` each contain ~40 lines of nearly identical grid card rendering
-- **Fix**: Extract shared `SalesGridCard` component to `src/components/sales/shared/SalesGridCard.tsx`
-- **Files**: `src/components/sales/pages/SalesAvailable*.tsx` (3 files)
-- **Effort**: ~1 hour, new session
+### 1. ✅ ~~Duplicated Sales Grid View~~ (DONE — 2026-04-08)
+- **Fix**: Extracted `SalesGridCard` + `SalesGridEmpty` to `src/components/sales/shared/SalesGridCard.tsx`
+- 3 × ~40 identical card lines → 1 shared component with typed props
+- Removed 3 × `eslint-disable design-system/enforce-semantic-colors`
 
-### 2. 🟡 Hardcoded CSS Colors in Sales Grid (LOW priority)
-- **Problem**: Grid cards use hardcoded Tailwind color classes (`bg-green-100 text-green-700 dark:bg-green-900/20`) instead of semantic design tokens
-- **Fix**: Replace with semantic color tokens from design system
-- **Files**: `src/components/sales/pages/SalesAvailable*.tsx` (3 files)
-- **Effort**: ~30 min, can combine with #1
+### 2. ✅ ~~Hardcoded CSS Colors in Sales Grid~~ (DONE — 2026-04-08)
+- **Fix**: Status badge colors now use CSS variables (`hsl(var(--bg-success))`) instead of hardcoded Tailwind
+- Purple for `reserved` status kept as domain-specific (no semantic equivalent exists)
+- Price text uses `colors.text.success` instead of `text-green-600`

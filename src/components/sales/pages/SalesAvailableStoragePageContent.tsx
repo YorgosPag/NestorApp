@@ -1,4 +1,3 @@
-/* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
 /**
@@ -23,14 +22,12 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
 import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
+import { SalesGridCard, SalesGridEmpty } from '@/components/sales/shared/SalesGridCard';
 import '@/lib/design-system';
 
 function SalesStorageContent() {
   const { t } = useTranslation('common');
-  const colors = useSemanticColors();
 
   const {
     filteredItems,
@@ -172,51 +169,26 @@ function SalesStorageContent() {
             className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
             aria-label={t('salesStorage.gridLabel')}
           >
-            {filteredItems.map(item => (
-              <article
-                key={item.id}
-                onClick={() => handleSelectItem(item.id)}
-                className="border border-border rounded-lg shadow-sm bg-card overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectItem(item.id); }}
-              >
-                <div className="aspect-[16/10] bg-muted flex items-center justify-center">
-                  <Package className={cn("h-8 w-8", colors.text.muted)} />
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold truncate">{item.name || item.id}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${
-                      item.status === 'available' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
-                      item.status === 'reserved' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' :
-                      item.status === 'sold' ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
-                      'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
-                    }`}>
-                      {t(`storage:status.${item.status}`)}
-                    </span>
-                  </div>
-                  <p className={cn("text-xs", colors.text.muted)}>
-                    {t(`storage:types.${item.type}`)} · {item.area ?? '—'} m²
-                  </p>
-                  <p className="text-lg font-bold text-green-600 mt-1">
-                    {(item.commercial?.askingPrice ?? item.price)
-                      ? formatCurrencyCompact(item.commercial?.askingPrice ?? item.price ?? 0)
-                      : '—'}
-                  </p>
-                  {item.area && item.area > 0 && (item.commercial?.askingPrice ?? item.price) ? (
-                    <p className={cn("text-xs", colors.text.muted)}>
-                      {formatCurrencyWhole(Math.round((item.commercial?.askingPrice ?? item.price ?? 0) / item.area))}/m²
-                    </p>
-                  ) : null}
-                </div>
-              </article>
-            ))}
+            {filteredItems.map(item => {
+              const price = item.commercial?.askingPrice ?? item.price ?? null;
+              return (
+                <SalesGridCard
+                  key={item.id}
+                  id={item.id}
+                  icon={Package}
+                  title={item.name || item.id}
+                  statusKey={item.status ?? 'available'}
+                  statusLabel={t(`storage:status.${item.status}`)}
+                  description={`${t(`storage:types.${item.type}`)} · ${item.area ?? '—'} m²`}
+                  price={price}
+                  pricePerSqm={item.area && item.area > 0 && price ? price / item.area : null}
+                  onClick={handleSelectItem}
+                />
+              );
+            })}
 
             {filteredItems.length === 0 && (
-              <div className={cn("col-span-full p-6 text-center text-sm", colors.text.muted)}>
-                {t('salesStorage.noResults')}
-              </div>
+              <SalesGridEmpty message={t('salesStorage.noResults')} />
             )}
           </section>
         )}
