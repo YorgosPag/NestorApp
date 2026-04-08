@@ -6,6 +6,7 @@
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getBankByIBAN } from '@/constants/greek-banks';
 import { formatIBAN } from '@/types/contacts/banking';
@@ -143,7 +144,7 @@ export class BankingHandler implements ToolHandler {
     ctx: AgenticContext
   ): Promise<ToolResult> {
     const db = getAdminFirestore();
-    const contactSnap = await db.collection('contacts').doc(contactId).get();
+    const contactSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
     if (!contactSnap.exists) {
       return { success: false, error: 'Contact not found' };
     }
@@ -153,7 +154,7 @@ export class BankingHandler implements ToolHandler {
     }
 
     const snapshot = await db
-      .collection('contacts').doc(contactId)
+      .collection(COLLECTIONS.CONTACTS).doc(contactId)
       .collection('bankAccounts')
       .where('isActive', '==', true)
       .get();
@@ -216,7 +217,7 @@ export class BankingHandler implements ToolHandler {
 
     const db = getAdminFirestore();
     const accountRef = db
-      .collection('contacts').doc(contactId)
+      .collection(COLLECTIONS.CONTACTS).doc(contactId)
       .collection('bankAccounts').doc(accountId);
 
     const accountSnap = await accountRef.get();
@@ -226,7 +227,7 @@ export class BankingHandler implements ToolHandler {
 
     // Unset all other primary accounts
     const primarySnap = await db
-      .collection('contacts').doc(contactId)
+      .collection(COLLECTIONS.CONTACTS).doc(contactId)
       .collection('bankAccounts')
       .where('isPrimary', '==', true).get();
 

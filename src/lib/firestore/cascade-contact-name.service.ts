@@ -84,7 +84,7 @@ export async function propagateContactNameChange(
         const plansSnapshot = await db
           .collection(COLLECTIONS.PROPERTIES)
           .doc(unitDoc.id)
-          .collection('payment_plans')
+          .collection(COLLECTIONS.PROPERTY_PAYMENT_PLANS)
           .where('ownerContactId', '==', contactId)
           .select()
           .get();
@@ -105,7 +105,7 @@ export async function propagateContactNameChange(
       }
 
       if (planCount > 0) {
-        collections['payment_plans'] = planCount;
+        collections[COLLECTIONS.PROPERTY_PAYMENT_PLANS] = planCount;
         totalUpdated += planCount;
       }
     } else {
@@ -161,7 +161,7 @@ export async function previewContactNameCascade(
       const plansSnapshot = await db
         .collection(COLLECTIONS.PROPERTIES)
         .doc(unitDoc.id)
-        .collection('payment_plans')
+        .collection(COLLECTIONS.PROPERTY_PAYMENT_PLANS)
         .where('ownerContactId', '==', contactId)
         .select()
         .get();

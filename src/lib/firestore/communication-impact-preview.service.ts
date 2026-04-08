@@ -96,7 +96,7 @@ export async function previewCommunicationImpact(
       const ppQueries = propertiesSnapshot.docs.map((propDoc) =>
         db.collection(COLLECTIONS.PROPERTIES)
           .doc(propDoc.id)
-          .collection('payment_plans')
+          .collection(COLLECTIONS.PROPERTY_PAYMENT_PLANS)
           .where('ownerContactId', '==', contactId)
           .select()
           .get()

@@ -67,7 +67,7 @@ export async function previewAddressImpact(
       const plansSnapshot = await db
         .collection(COLLECTIONS.PROPERTIES)
         .doc(unitDoc.id)
-        .collection('payment_plans')
+        .collection(COLLECTIONS.PROPERTY_PAYMENT_PLANS)
         .where('ownerContactId', '==', contactId)
         .select()
         .get();
