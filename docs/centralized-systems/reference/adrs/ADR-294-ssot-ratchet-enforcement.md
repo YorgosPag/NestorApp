@@ -21,9 +21,9 @@
 | `scripts/generate-ssot-baseline.sh` | Baseline generator |
 | `scripts/ssot-audit.sh` | Progress report |
 
-### Modules (v2.0 — 20 modules, 3 tiers)
+### Modules (v3.0 — 40 modules, 6 tiers)
 
-**Original (v1.0):**
+**Tier 0 — Core (5 modules):**
 | Module | SSoT File | Pattern |
 |--------|-----------|---------|
 | firestore-collections | `src/config/firestore-collections.ts` | `.collection('hardcoded')` / `.doc('hardcoded')` |
@@ -58,6 +58,40 @@
 | audit-tracked-fields | `src/config/audit-tracked-fields.ts` | Re-declared `*_TRACKED_FIELDS` |
 | firestore-schema-map | `src/config/firestore-schema-map.ts` | Re-declared `FIRESTORE_SCHEMA_MAP` |
 
+**Tier 4 — Enum/Status Constants, ADR-287 (bypass = inconsistency):**
+| Module | SSoT File | Pattern |
+|--------|-----------|---------|
+| commercial-statuses | `src/constants/commercial-statuses.ts` | Re-declared `COMMERCIAL_STATUSES` / `LISTED_*` / `FINALIZED_*` |
+| operational-statuses | `src/constants/operational-statuses.ts` | Re-declared `OPERATIONAL_STATUSES` / `IN_PROGRESS_*` |
+| energy-classes | `src/constants/energy-classes.ts` | Re-declared `ENERGY_CLASSES` / `HIGH_EFFICIENCY_*` |
+| building-types | `src/constants/building-types.ts` | Re-declared `BUILDING_TYPES` / `NON_RESIDENTIAL_*` |
+| building-statuses | `src/constants/building-statuses.ts` | Re-declared `BUILDING_STATUSES` / `ACTIVE_*` / `IN_CONSTRUCTION_*` |
+| project-statuses | `src/constants/project-statuses.ts` | Re-declared `PROJECT_STATUSES` / `ACTIVE_*` / `IN_PROGRESS_*` |
+| project-types | `src/constants/project-types.ts` | Re-declared `PROJECT_TYPES` |
+| priority-levels | `src/constants/priority-levels.ts` | Re-declared `PRIORITY_LEVELS` |
+| renovation-statuses | `src/constants/renovation-statuses.ts` | Re-declared `RENOVATION_STATUSES` / `COMPLETED_*` |
+| property-types | `src/constants/property-types.ts` | Re-declared `PROPERTY_TYPES` / `PROPERTY_TYPE_ALIASES` / `STANDALONE_*` |
+| contact-types | `src/constants/contact-types.ts` | Re-declared `CONTACT_TYPES` / `CONTACT_TYPE_ALIASES` |
+| entity-status-values | `src/constants/entity-status-values.ts` | Re-declared `ENTITY_STATUS` / `QUEUE_STATUS` |
+| legal-phases | `src/constants/legal-phases.ts` | Re-declared `LEGAL_PHASES` / `PENDING_*` / `SIGNED_*` |
+| greek-banks | `src/constants/greek-banks.ts` | Re-declared `GREEK_BANKS` / `GREEK_BANK_CODES` |
+| triage-statuses | `src/constants/triage-statuses.ts` | Re-declared `TRIAGE_STATUSES` / `TRIAGE_STATUS_VALUES` |
+| property-features-enterprise | `src/constants/property-features-enterprise.ts` | Re-declared `ORIENTATION_LABELS` / `VIEW_TYPE_LABELS` / `ENERGY_CLASS_*` |
+
+**Tier 5 — Infrastructure (bypass = path inconsistency):**
+| Module | SSoT File | Pattern |
+|--------|-----------|---------|
+| storage-path-construction | `src/services/upload/utils/storage-path.ts` | Hardcoded `companies/${...}` template literals |
+| entity-creation-manual | `src/lib/firestore/entity-creation.service.ts` | Manual `createdBy: user.uid/auth.uid` assembly |
+
+**Tier 6 — Config Consolidation (bypass = config drift):**
+| Module | SSoT File | Pattern |
+|--------|-----------|---------|
+| search-index-config | `src/config/search-index-config.ts` | Re-declared `SEARCH_INDEX_CONFIG` |
+| ai-analysis-config | `src/config/ai-analysis-config.ts` | Re-declared `AI_ANALYSIS_DEFAULTS` / `AI_COST_CONFIG` / schemas |
+| admin-tool-definitions | `src/config/admin-tool-definitions.ts` | Re-declared `ADMIN_TOOL_DEFINITIONS` / `ADMIN_TOOL_SYSTEM_PROMPT` |
+| persona-config | `src/config/persona-config.ts` | Re-declared `PERSONA_METADATA` / `PERSONA_SECTIONS` |
+
 ### Ratchet Rules
 1. Per-file violation count can only **decrease** (ratchet down)
 2. New files (not in baseline) = **zero tolerance**
@@ -90,17 +124,31 @@ Batch-optimized codebase scanner — 4 phases:
 - **5.195 αρχεία** `.ts` / `.tsx`
 - **970.442 γραμμές κώδικα** (~1M lines)
 - **130 centralized files** with **1.072 exports**
-- Violation rate: **0.014%** (137 violations / 970K lines)
+- Violation rate: **0.006%** (61 violations / 970K lines)
 
-## Baseline (2026-04-08, v2.0)
-- **93 files** with violations
-- **139 total violations** across **20 modules**
-- Module breakdown:
-  - `domain-constants`: 122 violations (87.8%)
-  - `firestore-collections`: 13 violations (9.4%)
-  - `tenant-company-id`: 2 violations (1.4%)
-  - `enterprise-id`: 2 violations (1.4%)
-  - All other 16 modules: 0 violations (preventive protection)
+## Baseline (2026-04-09, v3.0)
+- **51 files** with violations
+- **61 total violations** across **40 modules**
+- Module breakdown (top):
+  - `domain-constants`: 29 violations (47.5%)
+  - `entity-creation-manual`: 17 violations (27.9%)
+  - `contact-types`: 4 violations (6.6%)
+  - `tenant-company-id`: 2 violations (3.3%)
+  - `storage-path-construction`: 2 violations (3.3%)
+  - `property-features-enterprise`: 2 violations (3.3%)
+  - 5 modules with 1 violation each (8.2%)
+  - 29 modules with 0 violations — preventive protection
+
+### ⚠️ Critical Fix: grep ERE Pattern Bug (v3.0)
+GNU grep 3.0 ERE does **NOT** support `(?:...)` non-capturing groups.
+The first alternative in every pattern was silently ignored.
+
+**Impact**: v2.0 baseline (139 violations) was artificially high due to
+broken patterns matching unrelated code. v3.0 baseline (61 violations)
+uses `(...)` capturing groups — all patterns now work correctly.
+
+**Rule**: ALL regex patterns in `.ssot-registry.json` MUST use `(...)`
+capturing groups, NEVER `(?:...)`.
 
 ## Discovery Results (2026-04-08)
 - **77 duplicate exports** (re-declared outside SSoT) — ~30-40 true positives, rest are same-name different-domain
@@ -114,3 +162,4 @@ Batch-optimized codebase scanner — 4 phases:
 | 2026-04-08 | Initial implementation — 5 modules, 92 files baseline |
 | 2026-04-08 | Added Discovery Scanner — 4-phase batch analysis, 77 duplicates found |
 | 2026-04-08 | **v2.0** — Expanded from 5 → 20 modules (3 tiers: data integrity, security, business logic) |
+| 2026-04-09 | **v3.0** — Expanded from 20 → 40 modules (6 tiers). Fixed critical grep ERE `(?:...)` bug. Added: 16 enum constants (Tier 4, ADR-287), storage-path + entity-creation (Tier 5), 4 config modules (Tier 6). Accurate baseline: 51 files, 61 violations |
