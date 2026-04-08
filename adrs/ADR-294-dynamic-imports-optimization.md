@@ -219,6 +219,12 @@ export function ReportsExecutivePageContent() { ... }
 - Converted 9 page.tsx to thin wrappers (~7 lines each)
 - Related: ADR-024 (Account Hub), ADR-025 (Notification Settings)
 
+### 2026-04-08 — Security: Admin layout auth gate (TODO #6)
+- Created `src/app/admin/layout.tsx` — Server Component with `requireAdminForPage()`
+- Protects ALL 9 admin pages with server-side authentication (1 file, 0 page changes)
+- Non-admin users see Unauthorized page without loading any admin client code
+- ai-inbox/operator-inbox keep their own `requireAdminForPage()` for AdminContext
+
 ### 2026-04-08 — SSoT Cleanup: 7 duplicates centralized (post co-location discovery)
 - **getIntentBadgeVariant()**: 3 copies (ai-inbox, operator-inbox, proposal-review-card) → 1 SSoT `admin/shared/intent-badge-utils.ts`
 - **getConfidenceBadgeVariant() + getConfidenceColor()**: co-located in same SSoT module
