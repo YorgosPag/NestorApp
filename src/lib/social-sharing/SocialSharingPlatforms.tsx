@@ -266,7 +266,7 @@ export const getEmailRequiredPlatforms = (): SharePlatform[] => {
  */
 export const generatePlatformButtonStyles = (platform: SharePlatform, variant: 'default' | 'compact' | 'minimal' = 'default') => {
   const baseStyles = designSystem.cn(
-    'group relative overflow-hidden transition-all duration-300 transform',
+    'group relative overflow-clip transition-all duration-300 transform',
     borders.variants.button.default.className,
     platform.colors.hover
   );

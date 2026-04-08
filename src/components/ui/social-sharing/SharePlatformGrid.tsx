@@ -190,7 +190,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
           // Use centralized platform button styles
           generatePlatformButtonStyles(platform, finalGridConfig.buttonVariant),
           // Additional responsive classes
-          'group relative overflow-hidden',
+          'group relative',
           INTERACTIVE_PATTERNS.BUTTON_ENHANCED,
           // Loading state
           loading && 'opacity-50 cursor-not-allowed',
