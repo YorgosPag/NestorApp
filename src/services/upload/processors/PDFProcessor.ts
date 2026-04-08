@@ -15,7 +15,7 @@
  * @version 1.0.0
  */
 
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc } from 'firebase/firestore';
 import { storage, db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -28,7 +28,8 @@ import type {
   PDFUploadResult,
   ProgressCallback,
 } from '../types/upload.types';
-import { UPLOAD_DEFAULTS, isFirebaseStorageError } from '../types/upload.types';
+import { UPLOAD_DEFAULTS } from '../types/upload.types';
+import { PhotoUploadService } from '@/services/photo-upload.service';
 // 🏢 ENTERPRISE: Canonical File Storage System imports
 import { FileRecordService } from '@/services/file-record.service';
 import {
@@ -202,16 +203,12 @@ export class PDFProcessor implements FileProcessor {
    */
   async deletePDF(storagePath: string): Promise<boolean> {
     try {
-      const storageRef = ref(storage, storagePath);
-      await deleteObject(storageRef);
-      pdfLogger.info('✅ PDF_PROCESSOR: PDF deleted successfully:', storagePath);
+      // 🏢 SSoT: Delegate to PhotoUploadService (handles object-not-found gracefully)
+      await PhotoUploadService.deletePhoto(storagePath);
+      pdfLogger.info('PDF deleted successfully', { storagePath });
       return true;
     } catch (error) {
-      if (isFirebaseStorageError(error) && error.code === 'storage/object-not-found') {
-        pdfLogger.info('⚠️ PDF_PROCESSOR: PDF not found (already deleted)');
-        return false;
-      }
-      pdfLogger.error('❌ PDF_PROCESSOR: Error deleting PDF:', error);
+      pdfLogger.error('Error deleting PDF', { storagePath, error });
       return false;
     }
   }

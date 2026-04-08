@@ -131,23 +131,21 @@ export class PhotoUploadService {
    * 🏢 ENTERPRISE: Deletes photo from Firebase Storage with smart cleanup
    */
   static async deletePhoto(storagePath: string): Promise<void> {
+    legacyLogger.info('Starting photo deletion', { storagePath });
     try {
-      legacyLogger.info('Starting photo deletion', { storagePath });
       const storageRef = ref(storage, storagePath);
       await deleteObject(storageRef);
       legacyLogger.info('Photo deleted successfully from storage');
     } catch (error: unknown) {
-      legacyLogger.error('Photo delete error', { error });
-
-      const isObjectNotFound = PhotoUploadService.isFirebaseStorageError(error) &&
-                                error.code === 'storage/object-not-found';
-
-      if (isObjectNotFound) {
-        legacyLogger.warn('File not found - probably already deleted');
-      } else {
-        legacyLogger.error('Actual deletion error', { error });
-        throw new Error('Αποτυχία διαγραφής αρχείου');
+      if (
+        PhotoUploadService.isFirebaseStorageError(error) &&
+        error.code === 'storage/object-not-found'
+      ) {
+        legacyLogger.warn('File not found — already deleted, skipping', { storagePath });
+        return;
       }
+      legacyLogger.error('Storage deletion failed', { storagePath, error });
+      throw error;
     }
   }
 
