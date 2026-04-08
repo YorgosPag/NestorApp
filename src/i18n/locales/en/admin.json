@@ -89,6 +89,8 @@
       "title": "No messages",
       "description": "No messages match the current filters."
     },
+    "newEmailSingle": "New email received!",
+    "newEmailMultiple": "{{count}} new emails received!",
     "errors": {
       "authRequired": "Login required. Please sign in again.",
       "firestoreListener": "Failed to connect to real-time database.",

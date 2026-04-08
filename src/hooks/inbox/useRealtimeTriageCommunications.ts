@@ -25,6 +25,8 @@ import { TRIAGE_STATUSES, type TriageStatus } from '@/constants/triage-statuses'
 import type { Communication, FirestoreishTimestamp } from '@/types/crm';
 import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useAuth } from '@/auth/contexts/AuthContext';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useRealtimeTriageCommunications');
@@ -180,6 +182,13 @@ export function useRealtimeTriageCommunications(
 ): UseRealtimeTriageCommunicationsResult {
   const { companyId, statusFilter, enabled = true } = options;
   const { success } = useNotifications();
+  const { t } = useTranslation('admin');
+
+  // 🔐 ENTERPRISE: Wait for Firebase Auth before subscribing — prevents
+  // silent subscription failure when requireAuthContext() throws on cold start.
+  // Pattern: Same as useRealtimeBuildings (proven fix for hydration race condition).
+  const { user } = useAuth();
+  const authReady = !!user;
 
   const [communications, setCommunications] = useState<Array<Communication & { id: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -201,8 +210,8 @@ export function useRealtimeTriageCommunications(
     previousIdsRef.current.clear();
     isInitialLoadRef.current = true;
 
-    // Guard: companyId is required for Firestore security rules
-    if (!enabled || !companyId) {
+    // Guard: companyId + auth required for Firestore security rules
+    if (!enabled || !companyId || !authReady) {
       setLoading(false);
       return;
     }
@@ -232,8 +241,8 @@ export function useRealtimeTriageCommunications(
           if (newIds.length > 0) {
             success(
               newIds.length === 1
-                ? 'New email received!'
-                : `${newIds.length} new emails received!`
+                ? t('aiInbox.newEmailSingle')
+                : t('aiInbox.newEmailMultiple', { count: newIds.length })
             );
           }
 
@@ -260,7 +269,7 @@ export function useRealtimeTriageCommunications(
     return () => {
       unsubscribe();
     };
-  }, [companyId, statusFilter, enabled]);
+  }, [companyId, statusFilter, enabled, authReady]);
 
   // =========================================================================
   // COMPUTED STATS (useMemo - replaces getTriageStats server call)
