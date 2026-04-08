@@ -103,6 +103,18 @@ export function ContactsPageContent() {
     );
   }
 
+  // 🏢 Google Pattern: Derive contact detail props ONCE based on view mode
+  // SSoT — all 3 ContactDetails instances use the same derived props
+  const contactDetailProps = showTrash
+    ? { contact: selectedContact, readOnly: true as const }
+    : {
+        contact: selectedContact,
+        onDeleteContact: () => handleDeleteContacts(),
+        onContactUpdated: handleContactUpdatedInPlace,
+        onNewContact: handleNewContact,
+        readOnly: false as const,
+      };
+
   const filterParam = searchParams.get('filter');
   const contactIdParam = searchParams.get('contactId');
 
@@ -208,13 +220,7 @@ export function ContactsPageContent() {
                   />
                 </div>
               ) : (
-                <ContactDetails
-                  contact={selectedContact}
-                  onDeleteContact={showTrash ? undefined : () => handleDeleteContacts()}
-                  onContactUpdated={showTrash ? undefined : handleContactUpdatedInPlace}
-                  onNewContact={showTrash ? undefined : handleNewContact}
-                  readOnly={showTrash}
-                />
+                <ContactDetails {...contactDetailProps} />
               )}
             </section>
 
@@ -263,13 +269,7 @@ export function ContactsPageContent() {
                   onBack={handleBackToTypeSelection}
                 />
               ) : selectedContact ? (
-                <ContactDetails
-                  contact={selectedContact}
-                  onDeleteContact={showTrash ? undefined : () => handleDeleteContacts()}
-                  onContactUpdated={showTrash ? undefined : handleContactUpdatedInPlace}
-                  onNewContact={showTrash ? undefined : handleNewContact}
-                  readOnly={showTrash}
-                />
+                <ContactDetails {...contactDetailProps} />
               ) : null}
             </MobileDetailsSlideIn>
           </>
@@ -317,13 +317,7 @@ export function ContactsPageContent() {
               }
             >
               {selectedContact && (
-                <ContactDetails
-                  contact={selectedContact}
-                  onDeleteContact={showTrash ? undefined : () => handleDeleteContacts()}
-                  onContactUpdated={showTrash ? undefined : handleContactUpdatedInPlace}
-                  onNewContact={showTrash ? undefined : handleNewContact}
-                  readOnly={showTrash}
-                />
+                <ContactDetails {...contactDetailProps} />
               )}
             </MobileDetailsSlideIn>
           </>
