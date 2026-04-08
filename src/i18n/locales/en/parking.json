@@ -130,6 +130,10 @@
       "sold": "Sold"
     }
   },
+  "structure": {
+    "parkingSpot": "Spot",
+    "level": "Level"
+  },
   "form": {
     "create": "Create",
     "cancel": "Cancel"

@@ -1,4 +1,3 @@
-/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
@@ -76,24 +75,23 @@ interface SalesTabConfig {
   id: string;
   icon: React.ElementType;
   labelKey: string;
-  defaultLabel: string;
 }
 
 /** Base tabs — always visible */
 const BASE_SALES_TABS: SalesTabConfig[] = [
-  { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo', defaultLabel: 'Πώληση' },
-  { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary', defaultLabel: 'Μονάδα' },
-  { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', defaultLabel: 'Έγγραφα' },
-  { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos', defaultLabel: 'Φωτογραφίες' },
-  { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos', defaultLabel: 'Βίντεο' },
-  { id: 'history', icon: Clock, labelKey: 'sales.tabs.history', defaultLabel: 'Ιστορικό' },
+  { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo' },
+  { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary' },
+  { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents' },
+  { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos' },
+  { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos' },
+  { id: 'history', icon: Clock, labelKey: 'sales.tabs.history' },
 ];
 
 /** Legal tab — conditional, visible ONLY for reserved/sold units (ADR-230) */
-const LEGAL_TAB: SalesTabConfig = { id: 'legal', icon: Scale, labelKey: 'sales.tabs.legal', defaultLabel: 'Νομικά' };
+const LEGAL_TAB: SalesTabConfig = { id: 'legal', icon: Scale, labelKey: 'sales.tabs.legal' };
 
 /** Payment tab — conditional, visible ONLY for reserved/sold units (ADR-234) */
-const PAYMENT_TAB: SalesTabConfig = { id: 'payments', icon: CreditCard, labelKey: 'sales.tabs.payments', defaultLabel: 'Πληρωμές' };
+const PAYMENT_TAB: SalesTabConfig = { id: 'payments', icon: CreditCard, labelKey: 'sales.tabs.payments' };
 
 /** Check if unit has reserved/sold status → show legal tab */
 function shouldShowLegalTab(unit: Property | null): boolean {

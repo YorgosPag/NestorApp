@@ -227,6 +227,39 @@
     "contactSelected": "Επιλέχθηκε: {name}",
     "searchingContacts": "Αναζήτηση επαφών..."
   },
+  "channelShare": {
+    "sendToContact": "Αποστολή σε Επαφή",
+    "selectChannel": "Επιλέξτε κανάλι αποστολής",
+    "searchContact": "Αναζήτηση επαφής...",
+    "searchingContacts": "Αναζήτηση επαφών...",
+    "noResults": "Δεν βρέθηκαν επαφές",
+    "channels": {
+      "email": "Email",
+      "telegram": "Telegram",
+      "whatsapp": "WhatsApp",
+      "messenger": "Messenger",
+      "instagram": "Instagram"
+    },
+    "capability": {
+      "photo": "Φωτογραφία",
+      "linkFallback": "Σύνδεσμος",
+      "attachment": "Συνημμένο"
+    },
+    "verified": "Επαληθευμένο",
+    "noChannels": "Δεν βρέθηκαν κανάλια επικοινωνίας για αυτή την επαφή",
+    "sendVia": "Αποστολή μέσω {channel}",
+    "sending": "Αποστολή...",
+    "sendSuccess": "Η φωτογραφία στάλθηκε μέσω {channel}!",
+    "sendError": "Αποτυχία αποστολής μέσω {channel}: {error}",
+    "linkFallbackNotice": "Η φωτογραφία θα σταλεί ως σύνδεσμος λήψης",
+    "messageLabel": "Μήνυμα (προαιρετικό)",
+    "messagePlaceholder": "Γράψτε ένα μήνυμα...",
+    "back": "Πίσω",
+    "selectPhotos": "Επιλέξτε φωτογραφίες",
+    "contactName": "Επαφή: {name}",
+    "loadingChannels": "Φόρτωση καναλιών...",
+    "errorLoadingChannels": "Αποτυχία φόρτωσης καναλιών"
+  },
   "loading": {
     "ariaLabel": "Φόρτωση σελίδας",
     "spinnerLabel": "Φόρτωση",
@@ -769,6 +802,9 @@
   },
   "noDataAvailable": "Δεν υπάρχουν διαθέσιμα δεδομένα",
   "noDataToDisplay": "Δεν υπάρχουν δεδομένα για προβολή",
+  "notSet": "Δεν έχει οριστεί",
+  "invalidDate": "Άκυρη ημερομηνία",
+  "invalidValue": "Άκυρη τιμή",
   "filters": {
     "priceRange": "Εύρος Τιμής",
     "area": "Εμβαδόν (m²)",

@@ -135,6 +135,10 @@
     "errors": {
       "fileSelection": "File selection error"
     },
+    "dragDropLogo": "Drag logo here or click",
+    "dragDropPhotos": "Drag multiple photos here or click",
+    "logoOnly": "Only one logo (JPG, PNG - up to 5MB)",
+    "addMorePhotosInfo": "You can add {count} more photos (JPG, PNG - up to 5MB each)",
     "success": {
       "photoUploaded": "Photo uploaded successfully!",
       "logoUploaded": "Logo uploaded successfully!"

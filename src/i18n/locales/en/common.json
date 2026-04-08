@@ -227,6 +227,39 @@
     "contactSelected": "Selected: {name}",
     "searchingContacts": "Searching contacts..."
   },
+  "channelShare": {
+    "sendToContact": "Send to Contact",
+    "selectChannel": "Select delivery channel",
+    "searchContact": "Search contact...",
+    "searchingContacts": "Searching contacts...",
+    "noResults": "No contacts found",
+    "channels": {
+      "email": "Email",
+      "telegram": "Telegram",
+      "whatsapp": "WhatsApp",
+      "messenger": "Messenger",
+      "instagram": "Instagram"
+    },
+    "capability": {
+      "photo": "Photo",
+      "linkFallback": "Link",
+      "attachment": "Attachment"
+    },
+    "verified": "Verified",
+    "noChannels": "No communication channels found for this contact",
+    "sendVia": "Send via {channel}",
+    "sending": "Sending...",
+    "sendSuccess": "Photo sent via {channel}!",
+    "sendError": "Failed to send via {channel}: {error}",
+    "linkFallbackNotice": "Photo will be sent as a download link",
+    "messageLabel": "Message (optional)",
+    "messagePlaceholder": "Write a message...",
+    "back": "Back",
+    "selectPhotos": "Select photos",
+    "contactName": "Contact: {name}",
+    "loadingChannels": "Loading channels...",
+    "errorLoadingChannels": "Failed to load channels"
+  },
   "loading": {
     "ariaLabel": "Loading page",
     "spinnerLabel": "Loading",
@@ -769,6 +802,9 @@
   },
   "noDataAvailable": "No data available",
   "noDataToDisplay": "No data to display",
+  "notSet": "Not set",
+  "invalidDate": "Invalid date",
+  "invalidValue": "Invalid value",
   "filters": {
     "priceRange": "Price Range",
     "area": "Area (m²)",

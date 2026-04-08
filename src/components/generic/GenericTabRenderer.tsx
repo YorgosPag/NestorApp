@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable custom/no-hardcoded-strings */
 
 import React from 'react';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
@@ -47,31 +46,36 @@ export interface GenericTabRendererProps {
 // VALUE FORMATTING FUNCTIONS
 // ============================================================================
 
+/** i18n labels for value formatting */
+interface FormatLabels {
+  notSet: string;
+  invalidDate: string;
+  invalidValue: string;
+}
+
 /**
- * ✅ ENTERPRISE MIGRATION: Using centralized formatDate for consistent formatting
  * Formats a date value for display
  */
-function formatDateValue(value: FieldValue): string {
-  if (!value) return 'Δεν έχει οριστεί';
+function formatDateValue(value: FieldValue, labels: FormatLabels): string {
+  if (!value) return labels.notSet;
 
   try {
     const date = value instanceof Date ? value : new Date(String(value));
-    return formatDate(date); // ✅ Using centralized function
+    return formatDate(date);
   } catch {
-    return 'Άκυρη ημερομηνία';
+    return labels.invalidDate;
   }
 }
 
 /**
  * Formats a number value for display
  */
-function formatNumberValue(value: FieldValue, field: FieldConfig): string {
-  if (!value && value !== 0) return 'Δεν έχει οριστεί';
+function formatNumberValue(value: FieldValue, field: FieldConfig, labels: FormatLabels): string {
+  if (!value && value !== 0) return labels.notSet;
 
   const numValue = Number(value);
-  if (isNaN(numValue)) return 'Άκυρη τιμή';
+  if (isNaN(numValue)) return labels.invalidValue;
 
-  // Special formatting for currency amounts
   if (field.id.includes('capital') || field.id.includes('amount')) {
     return formatCurrency(numValue, 'EUR');
   }
@@ -82,8 +86,8 @@ function formatNumberValue(value: FieldValue, field: FieldConfig): string {
 /**
  * Formats a select value for display
  */
-function formatSelectValue(value: FieldValue, field: FieldConfig): string {
-  if (!value) return 'Δεν έχει οριστεί';
+function formatSelectValue(value: FieldValue, field: FieldConfig, labels: FormatLabels): string {
+  if (!value) return labels.notSet;
 
   if (field.options) {
     const option = field.options.find(opt => opt.value === value);
@@ -99,30 +103,27 @@ function formatSelectValue(value: FieldValue, field: FieldConfig): string {
 function formatFieldValue(
   value: FieldValue,
   field: FieldConfig,
+  labels: FormatLabels,
   customFormatters?: Record<string, ValueFormatter>
 ): string {
-  // Check for custom formatter
   if (customFormatters && customFormatters[field.id]) {
     return customFormatters[field.id](value, field);
   }
 
-  // Handle empty values
   if (value === null || value === undefined || value === '') {
-    return 'Δεν έχει οριστεί';
+    return labels.notSet;
   }
 
-  // Format based on field type
   switch (field.type) {
     case 'date':
-      return formatDateValue(value);
+      return formatDateValue(value, labels);
     case 'number':
-      return formatNumberValue(value, field);
+      return formatNumberValue(value, field, labels);
     case 'select':
-      return formatSelectValue(value, field);
+      return formatSelectValue(value, field, labels);
     case 'email':
-      return value ? String(value) : 'Δεν έχει οριστεί';
     case 'tel':
-      return value ? String(value) : 'Δεν έχει οριστεί';
+      return value ? String(value) : labels.notSet;
     default:
       return String(value);
   }
@@ -139,29 +140,28 @@ function DisplayField({
   field,
   data,
   customRenderers,
-  valueFormatters
+  valueFormatters,
+  formatLabels
 }: {
   field: FieldConfig;
   data: TabDataRecord;
   customRenderers?: Record<string, CustomFieldRenderer>;
   valueFormatters?: Record<string, ValueFormatter>;
+  formatLabels: FormatLabels;
 }) {
   const colors = useSemanticColors();
-  // Check for custom renderer
   if (customRenderers && customRenderers[field.id]) {
     return customRenderers[field.id](field, data);
   }
 
-  // 🔍 Enhanced value lookup: Check both root level and customFields
   let value = data[field.id] as FieldValue;
 
-  // If value not found at root level, check customFields
   if ((value === undefined || value === null || value === '') && data.customFields) {
     const customFields = data.customFields as Record<string, FieldValue>;
     value = customFields[field.id];
   }
 
-  const formattedValue = formatFieldValue(value, field, valueFormatters);
+  const formattedValue = formatFieldValue(value, field, formatLabels, valueFormatters);
 
   return (
     <div>
@@ -181,12 +181,14 @@ function CompactSectionRenderer({
   section,
   data,
   customRenderers,
-  valueFormatters
+  valueFormatters,
+  formatLabels
 }: {
   section: SectionConfig;
   data: TabDataRecord;
   customRenderers?: Record<string, CustomFieldRenderer>;
   valueFormatters?: Record<string, ValueFormatter>;
+  formatLabels: FormatLabels;
 }) {
   const iconSizes = useIconSizes();
   const _colors = useSemanticColors();
@@ -206,6 +208,7 @@ function CompactSectionRenderer({
             data={data}
             customRenderers={customRenderers}
             valueFormatters={valueFormatters}
+            formatLabels={formatLabels}
           />
         ))}
       </div>
@@ -220,12 +223,14 @@ function FullSectionRenderer({
   section,
   data,
   customRenderers,
-  valueFormatters
+  valueFormatters,
+  formatLabels
 }: {
   section: SectionConfig;
   data: TabDataRecord;
   customRenderers?: Record<string, CustomFieldRenderer>;
   valueFormatters?: Record<string, ValueFormatter>;
+  formatLabels: FormatLabels;
 }) {
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
@@ -248,6 +253,7 @@ function FullSectionRenderer({
             data={data}
             customRenderers={customRenderers}
             valueFormatters={valueFormatters}
+            formatLabels={formatLabels}
           />
         ))}
       </div>
@@ -290,6 +296,13 @@ export function GenericTabRenderer({
 }: GenericTabRendererProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation('common');
+
+  const formatLabels: FormatLabels = {
+    notSet: t('notSet'),
+    invalidDate: t('invalidDate'),
+    invalidValue: t('invalidValue'),
+  };
+
   if (!section) {
     logger.warn('No section provided');
     return <div className={cn("text-center", colors.text.muted)}>{t('noDataAvailable')}</div>;
@@ -303,7 +316,6 @@ export function GenericTabRenderer({
     );
   }
 
-  // Render based on mode
   switch (mode) {
     case 'compact':
       return (
@@ -312,6 +324,7 @@ export function GenericTabRenderer({
           data={data}
           customRenderers={customRenderers}
           valueFormatters={valueFormatters}
+          formatLabels={formatLabels}
         />
       );
     case 'display':
@@ -322,6 +335,7 @@ export function GenericTabRenderer({
           data={data}
           customRenderers={customRenderers}
           valueFormatters={valueFormatters}
+          formatLabels={formatLabels}
         />
       );
   }

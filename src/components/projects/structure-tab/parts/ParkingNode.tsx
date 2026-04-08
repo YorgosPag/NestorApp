@@ -27,7 +27,7 @@ interface ParkingNodeProps {
 }
 
 export const ParkingNode = ({ parking }: ParkingNodeProps) => {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation('parking');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const _spacing = useSpacingTokens();
@@ -43,19 +43,19 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
   };
 
   const statusLabels: Record<string, string> = {
-    available: t('status.available', 'Διαθέσιμη'),
-    sold: t('status.sold', 'Πωλημένη'),
-    reserved: t('status.reserved', 'Κρατημένη'),
-    owner: t('status.owner', 'Ιδιοκτήτη')
+    available: t('status.available'),
+    sold: t('status.sold'),
+    reserved: t('status.reserved'),
+    owner: t('status.owner')
   };
 
   // Type labels
   const typeLabels: Record<string, string> = {
-    standard: t('parking.types.standard', 'Κανονική'),
-    handicapped: t('parking.types.handicapped', 'ΑμεΑ'),
-    motorcycle: t('parking.types.motorcycle', 'Μοτοσυκλέτα'),
-    electric: t('parking.types.electric', 'Ηλεκτρικό'),
-    visitor: t('parking.types.visitor', 'Επισκεπτών'),
+    standard: t('types.standard'),
+    handicapped: t('types.handicapped'),
+    motorcycle: t('types.motorcycle'),
+    electric: t('types.electric'),
+    visitor: t('types.visitor'),
   };
 
   return (
@@ -73,11 +73,11 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
       />
       <div className="flex-1 min-w-0">
         <div className={cn(typography.label.sm, colors.text.foreground, "truncate")}>
-          {t('structure.parkingSpot', 'Θέση')} {parking.number}
+          {t('structure.parkingSpot')} {parking.number}
         </div>
         <div className={cn(typography.body.xs, colors.text.muted)}>
           {parking.type && <span>{typeLabels[parking.type] || parking.type}</span>}
-          {parking.floor && <span> • {t('structure.level', 'Επίπεδο')}: {parking.floor}</span>}
+          {parking.floor && <span> • {t('structure.level')}: {parking.floor}</span>}
           {parking.area && <span> • {parking.area} m²</span>}
         </div>
       </div>

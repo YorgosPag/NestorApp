@@ -12,6 +12,7 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('MultiplePhotosFull');
 import {
@@ -116,6 +117,7 @@ export function MultiplePhotosFull({
 }: MultiplePhotosFullProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { t } = useTranslation('common-photos');
 
   // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
   const companyIdResult = useCompanyId();
@@ -145,23 +147,23 @@ export function MultiplePhotosFull({
   // 🎯 Δυναμικά κείμενα ανάλογα με purpose και maxPhotos
   const getHeaderText = () => {
     if (purpose === 'logo' && maxPhotos === 1) {
-      return 'Λογότυπο';
+      return t('photos.management.logo');
     }
-    return `Φωτογραφίες (${usedSlots}/${maxPhotos})`;
+    return t('photos.management.photosCount', { used: usedSlots, max: maxPhotos });
   };
 
   const getDragDropText = () => {
     if (purpose === 'logo' && maxPhotos === 1) {
-      return 'Σύρετε το λογότυπο εδώ ή κάντε κλικ';
+      return t('upload.dragDropLogo');
     }
-    return 'Σύρετε πολλαπλές φωτογραφίες εδώ ή κάντε κλικ';
+    return t('upload.dragDropPhotos');
   };
 
   const getSubText = () => {
     if (purpose === 'logo' && maxPhotos === 1) {
-      return 'Μόνο ένα λογότυπο (JPG, PNG - μέχρι 5MB)';
+      return t('upload.logoOnly');
     }
-    return `Μπορείτε να προσθέσετε ${availableSlots} ακόμη φωτογραφίες (JPG, PNG - μέχρι 5MB η καθεμία)`;
+    return t('upload.addMorePhotosInfo', { count: availableSlots });
   };
 
   // 🎯 Multiple drop handler για bulk upload

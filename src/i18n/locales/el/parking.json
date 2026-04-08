@@ -130,6 +130,10 @@
       "sold": "Πωλημένες"
     }
   },
+  "structure": {
+    "parkingSpot": "Θέση",
+    "level": "Επίπεδο"
+  },
   "form": {
     "create": "Δημιουργία",
     "cancel": "Ακύρωση"
