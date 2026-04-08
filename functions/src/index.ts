@@ -487,3 +487,8 @@ export const getTrashStats = functions
       expiringInWeek,
     };
   });
+
+// ============================================================================
+// STORAGE: ORPHAN FILE CLEANUP (onFinalize)
+// ============================================================================
+export { onStorageFinalize } from './storage/orphan-cleanup';
