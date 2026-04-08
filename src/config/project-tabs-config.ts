@@ -21,6 +21,7 @@ import {
   PROJECT_TAB_DESCRIPTIONS,
   PROJECT_COMPONENT_LABELS
 } from '@/constants/property-statuses-enterprise';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -325,7 +326,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     enabled: true,
     component: 'ActivityTab',
     componentProps: {
-      entityType: 'project',
+      entityType: ENTITY_TYPES.PROJECT,
     },
   },
 

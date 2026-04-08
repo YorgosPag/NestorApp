@@ -22,6 +22,7 @@ import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // Extracted modules
 import {
@@ -166,7 +167,7 @@ export function DesktopMultiColumn({
   const handleConfirmedProjectUnlink = async () => {
     if (!pendingUnlinkProject) return;
     await executeEntityUnlink({
-      pending: pendingUnlinkProject, entityType: 'project',
+      pending: pendingUnlinkProject, entityType: ENTITY_TYPES.PROJECT,
       clearSelection: () => onProjectSelect(''),
       warning, t, dialogKey: 'dialogs.project', nameParam: 'projectName',
     });
@@ -185,7 +186,7 @@ export function DesktopMultiColumn({
   const handleConfirmedBuildingUnlink = async () => {
     if (!pendingUnlinkBuilding) return;
     await executeEntityUnlink({
-      pending: pendingUnlinkBuilding, entityType: 'building',
+      pending: pendingUnlinkBuilding, entityType: ENTITY_TYPES.BUILDING,
       clearSelection: () => onBuildingSelect(''),
       warning, t, dialogKey: 'dialogs.building', nameParam: 'buildingName',
     });
@@ -202,7 +203,7 @@ export function DesktopMultiColumn({
   const handleConfirmedPropertyUnlink = async () => {
     if (!pendingUnlinkProperty) return;
     await executeEntityUnlink({
-      pending: pendingUnlinkProperty, entityType: 'property',
+      pending: pendingUnlinkProperty, entityType: ENTITY_TYPES.PROPERTY,
       clearSelection: () => selectProperty(null),
       warning, t, dialogKey: 'dialogs.property', nameParam: 'propertyName',
     });

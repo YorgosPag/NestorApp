@@ -1,6 +1,7 @@
 // /home/user/studio/src/app/api/communications/webhooks/telegram/shared/types.ts
 
 import type { Timestamp } from 'firebase-admin/firestore';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 export type Direction = 'inbound' | 'outbound';
 
@@ -30,7 +31,7 @@ export interface CRMMessage {
   to: string;
   content: string;
   status: 'received' | 'sent';
-  entityType: 'lead';
+  entityType: typeof ENTITY_TYPES.LEAD;
   entityId: string | null;
   externalId: string | null;
   metadata: {

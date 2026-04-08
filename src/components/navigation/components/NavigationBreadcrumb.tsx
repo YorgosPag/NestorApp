@@ -30,6 +30,7 @@ import type { BreadcrumbItem } from '../core/types';
 import { ContextualNavigationService, type NavigableEntityType } from '@/services/navigation/ContextualNavigationService';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
 
@@ -77,7 +78,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         icon: NAVIGATION_ENTITIES.company.icon,
         color: NAVIGATION_ENTITIES.company.color,
         level: 'companies',
-        entityType: 'company',
+        entityType: ENTITY_TYPES.COMPANY,
         href: ContextualNavigationService.generateRoute('company', selectedCompany.id, { action: 'select' }),
         onClick: () => {} // Legacy - not used with Link
       });
@@ -90,7 +91,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         icon: NAVIGATION_ENTITIES.project.icon,
         color: NAVIGATION_ENTITIES.project.color,
         level: 'projects',
-        entityType: 'project',
+        entityType: ENTITY_TYPES.PROJECT,
         href: ContextualNavigationService.generateRoute('project', selectedProject.id, { action: 'select' }),
         onClick: () => {} // Legacy - not used with Link
       });
@@ -103,7 +104,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         icon: NAVIGATION_ENTITIES.building.icon,
         color: NAVIGATION_ENTITIES.building.color,
         level: 'buildings',
-        entityType: 'building',
+        entityType: ENTITY_TYPES.BUILDING,
         href: ContextualNavigationService.generateRoute('building', selectedBuilding.id, { action: 'select' }),
         onClick: () => {} // Legacy - not used with Link
       });

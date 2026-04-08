@@ -21,6 +21,7 @@ import type {
   PhotoWithMetadata,
 } from './photos-tab-types';
 import { getStatusColor } from '@/lib/design-system';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // =============================================================================
 // SHARED CONSTANTS
@@ -184,7 +185,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // PROJECT
   // ---------------------------------------------------------------------------
   project: {
-    entityType: 'project',
+    entityType: ENTITY_TYPES.PROJECT,
     title: 'photos.tabs.project',
     titleIcon: 'Briefcase',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,
@@ -203,7 +204,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // BUILDING
   // ---------------------------------------------------------------------------
   building: {
-    entityType: 'building',
+    entityType: ENTITY_TYPES.BUILDING,
     title: 'photos.tabs.building',
     titleIcon: 'Building2',
     maxPhotos: PHOTO_MAX_COUNTS.EXTENDED,
@@ -222,7 +223,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // CONTACT
   // ---------------------------------------------------------------------------
   contact: {
-    entityType: 'contact',
+    entityType: ENTITY_TYPES.CONTACT,
     title: 'photos.tabs.contact',
     titleIcon: 'User',
     maxPhotos: PHOTO_MAX_COUNTS.CONTACT,
@@ -264,7 +265,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // PROPERTY
   // ---------------------------------------------------------------------------
   property: {
-    entityType: 'property',
+    entityType: ENTITY_TYPES.PROPERTY,
     title: 'photos.tabs.unit',
     titleIcon: 'Home',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,

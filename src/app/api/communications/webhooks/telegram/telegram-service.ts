@@ -3,6 +3,7 @@
 import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { TelegramSendPayload, TelegramSendResult } from './telegram/types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -87,7 +88,7 @@ export async function storeMessageInCRM(message: CRMMessageInput, direction: 'in
       to: direction === 'inbound' ? 'bot' : chatId,
       content: message.text || '[Media Message]',
       status: direction === 'inbound' ? 'received' : 'sent',
-      entityType: 'lead',
+      entityType: ENTITY_TYPES.LEAD,
       entityId: null, // To be updated by lead matching logic
       externalId: message.message_id?.toString() || null,
       metadata: {

@@ -26,6 +26,7 @@ import { Migration, MigrationStep } from './types';
 import { collection, query, getDocs, doc, setDoc, writeBatch, where, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type {
@@ -59,8 +60,8 @@ class EnterpriseArchitectureConsolidationSteps {
 
         // Collections to consolidate
         const fragmentedCollections = [
-          { source: 'building_floorplans', target: COLLECTIONS.FLOORPLANS, entityType: 'building' },
-          { source: 'project_floorplans', target: COLLECTIONS.FLOORPLANS, entityType: 'project' },
+          { source: 'building_floorplans', target: COLLECTIONS.FLOORPLANS, entityType: ENTITY_TYPES.BUILDING },
+          { source: 'project_floorplans', target: COLLECTIONS.FLOORPLANS, entityType: ENTITY_TYPES.PROJECT },
           { source: 'unit_floorplans', target: COLLECTIONS.FLOORPLANS, entityType: 'unit' },
           { source: 'dxf_files', target: COLLECTIONS.CAD_FILES, entityType: 'mixed' },
           { source: 'dxf-overlay-levels', target: COLLECTIONS.CAD_LAYERS, entityType: 'overlay' },
@@ -129,8 +130,8 @@ class EnterpriseArchitectureConsolidationSteps {
         logger.info('🏗️ Migrating fragmented floorplans to unified enterprise collection...');
 
         const floorplanCollections = [
-          { source: 'building_floorplans', entityType: 'building' as const },
-          { source: 'project_floorplans', entityType: 'project' as const },
+          { source: 'building_floorplans', entityType: ENTITY_TYPES.BUILDING as const },
+          { source: 'project_floorplans', entityType: ENTITY_TYPES.PROJECT as const },
           { source: 'unit_floorplans', entityType: 'unit' as const }
         ];
 

@@ -1,18 +1,14 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-08T19:08:55Z",
-    "totalViolations": 57,
-    "totalFiles": 34,
+    "generated": "2026-04-08T19:15:38Z",
+    "totalViolations": 41,
+    "totalFiles": 28,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
     "src/lib/mock-data/dashboard.ts": 4,
-    "src/database/migrations/003_enterprise_database_architecture_consolidation.ts": 4,
-    "src/components/generic/photo-system/config/photos-tab-config.ts": 4,
-    "src/components/navigation/components/NavigationBreadcrumb.tsx": 3,
-    "src/components/navigation/components/DesktopMultiColumn.tsx": 3,
     "src/stores/notificationStore.ts": 2,
     "src/services/upload/utils/storage-path.ts": 2,
     "src/services/upload/utils/file-display-name.ts": 2,
@@ -34,8 +30,6 @@
     "src/design-system/primitives/Card/CardIcon.tsx": 1,
     "src/database/migrations/003_types.ts": 1,
     "src/constants/header.ts": 1,
-    "src/config/unified-tabs-factory.ts": 1,
-    "src/config/project-tabs-config.ts": 1,
     "src/components/shared/files/UploadEntryPointSelector.tsx": 1,
     "src/components/shared/files/EntityFilesManager.tsx": 1,
     "src/components/navigation/components/desktop-nav-handlers.ts": 1,

@@ -18,6 +18,7 @@
  */
 
 import type { ContactType } from '@/types/contacts';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 export type { ContactType };
 
@@ -564,7 +565,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             enabled: true,
             component: 'ActivityTab',
             componentProps: {
-              entityType: 'building',
+              entityType: ENTITY_TYPES.BUILDING,
             },
           },
         ],
