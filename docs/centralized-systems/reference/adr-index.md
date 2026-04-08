@@ -313,6 +313,7 @@
 | **ADR-292** | Floorplan Upload Consolidation Map | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-292-floorplan-upload-consolidation-map.md) |
 | **ADR-293** | File Naming & Storage Path SSoT Audit | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-293-file-naming-storage-path-ssot-audit.md) |
 | **ADR-294** | SSoT Ratchet Enforcement System | ✅ ✅ IMPLEMENTED | 2026-04-08 | Code Quality / SSoT Enforcement | [📄](./adrs/ADR-294-ssot-ratchet-enforcement.md) |
+| **ADR-295** | Multi-Channel Photo Sharing to CRM Contacts | ✅ ✅ IMPLEMENTED | 2026-04-09 | Omnichannel Communications | [📄](./adrs/ADR-295-multi-channel-photo-sharing.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

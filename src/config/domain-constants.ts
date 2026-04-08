@@ -609,6 +609,7 @@ export const API_ROUTES = {
     RESTORE: (id: string) => `/api/contacts/${id}/restore` as const,
     PERMANENT_DELETE: (id: string) => `/api/contacts/${id}/permanent-delete` as const,
     CHANNELS: (contactId: string) => `/api/contacts/${contactId}/channels` as const,
+    LINK_CHANNEL: (contactId: string) => `/api/contacts/${contactId}/link-channel` as const,
   },
 
   // ── Trash (SSOT Soft-Delete — ADR-281) ─────────────────────────────────

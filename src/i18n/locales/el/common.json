@@ -258,7 +258,23 @@
     "selectPhotos": "Επιλέξτε φωτογραφίες",
     "contactName": "Επαφή: {name}",
     "loadingChannels": "Φόρτωση καναλιών...",
-    "errorLoadingChannels": "Αποτυχία φόρτωσης καναλιών"
+    "errorLoadingChannels": "Αποτυχία φόρτωσης καναλιών",
+    "linkChannel": "Σύνδεση Καναλιού",
+    "linkChannelDesc": "Συνδέστε ένα κανάλι επικοινωνίας με αυτή την επαφή",
+    "selectProvider": "Επιλέξτε κανάλι",
+    "externalIdLabel": "ID Χρήστη",
+    "externalIdPlaceholder": {
+      "telegram": "Telegram Chat ID (π.χ. 123456789)",
+      "whatsapp": "Τηλέφωνο WhatsApp (π.χ. +30...)",
+      "messenger": "Messenger PSID",
+      "instagram": "Instagram IGSID"
+    },
+    "displayNameLabel": "Εμφανιζόμενο Όνομα (προαιρετικό)",
+    "linking": "Σύνδεση...",
+    "linkSuccess": "Το κανάλι συνδέθηκε επιτυχώς!",
+    "linkError": "Αποτυχία σύνδεσης: {error}",
+    "unlinkConfirm": "Αποσύνδεση",
+    "unlinkSuccess": "Το κανάλι αποσυνδέθηκε"
   },
   "loading": {
     "ariaLabel": "Φόρτωση σελίδας",

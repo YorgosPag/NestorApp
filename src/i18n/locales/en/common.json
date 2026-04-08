@@ -258,7 +258,23 @@
     "selectPhotos": "Select photos",
     "contactName": "Contact: {name}",
     "loadingChannels": "Loading channels...",
-    "errorLoadingChannels": "Failed to load channels"
+    "errorLoadingChannels": "Failed to load channels",
+    "linkChannel": "Link Channel",
+    "linkChannelDesc": "Link a communication channel to this contact",
+    "selectProvider": "Select channel",
+    "externalIdLabel": "User ID",
+    "externalIdPlaceholder": {
+      "telegram": "Telegram Chat ID (e.g. 123456789)",
+      "whatsapp": "WhatsApp Phone (e.g. +30...)",
+      "messenger": "Messenger PSID",
+      "instagram": "Instagram IGSID"
+    },
+    "displayNameLabel": "Display Name (optional)",
+    "linking": "Linking...",
+    "linkSuccess": "Channel linked successfully!",
+    "linkError": "Failed to link: {error}",
+    "unlinkConfirm": "Unlink",
+    "unlinkSuccess": "Channel unlinked"
   },
   "loading": {
     "ariaLabel": "Loading page",
