@@ -339,16 +339,6 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
         </aside>
       )}
 
-      {/* Debug Info για Development */}
-      {process.env.NODE_ENV === 'development' && (
-        <footer className={designSystem.cn(
-          designSystem.getTypographyClass('xs'),
-          designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
-          "text-center pt-2"
-        )} role="contentinfo" aria-label={t('sharing.devInfo')}>
-          🔍 Debug: {finalConfig.layout} layout, {Object.values(copiedStates).filter(Boolean).length} copied
-        </footer>
-      )}
     </section>
   );
 };

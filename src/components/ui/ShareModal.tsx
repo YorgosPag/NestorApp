@@ -254,7 +254,7 @@ export function ShareModal({
                 gridConfig={{
                   columns: 5,
                   buttonVariant: 'default',
-                  iconSize: 'md',
+                  iconSize: 'sm',
                   showLabels: true,
                   spacing: 'tight'
                 }}

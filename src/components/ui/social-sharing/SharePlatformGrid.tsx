@@ -279,17 +279,6 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
         {filteredPlatforms.map(renderPlatformButton)}
       </nav>
 
-      {/* Debug Info (only in development) */}
-      {process.env.NODE_ENV === 'development' && finalAnalyticsConfig.trackClicks && (
-        <aside className={designSystem.cn(
-          designSystem.getTypographyClass('xs'),
-          designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
-          "text-center"
-        )} role="note" aria-label={t('sharing.devInfo')}>
-          🔍 Debug: {filteredPlatforms.length} platforms, {finalGridConfig.columns} columns
-        </aside>
-      )}
-
       {/* Loading Overlay */}
       {loading && (
         <aside className={`absolute inset-0 ${colors.bg.overlay} flex items-center justify-center rounded-lg`} role="status" aria-live="polite" aria-label={t('sharing.loadingPlatforms')}>
