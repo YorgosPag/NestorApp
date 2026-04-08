@@ -302,19 +302,12 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
       role="region"
       aria-label={t('copy.quickActionsLabel')}
     >
-      {/* Section Header με Design System */}
-      <header className={designSystem.cn(
-        "pt-4 border-t",
-        designSystem.colorScheme.responsive.muted.split(' ')[0] // border-muted
-      )} role="banner">
-        <h3 className={designSystem.cn(
-          designSystem.getTypographyClass('sm', 'medium'),
-          designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
-          "mb-3"
-        )}>
-          {t('copy.quickActions')}
-        </h3>
-      </header>
+      <h3 className={designSystem.cn(
+        designSystem.getTypographyClass('sm', 'medium'),
+        designSystem.colorScheme.responsive.muted.split(' ')[1],
+      )}>
+        {t('copy.quickActions')}
+      </h3>
 
       {/* Copy Buttons Grid */}
       <main className={getLayoutClasses()} role="main">

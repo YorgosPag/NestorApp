@@ -1,18 +1,22 @@
 // src/services/email.service.ts
-// Enterprise Email Service with Resend integration
+// Enterprise Email Service with Resend + Mailgun fallback
 import { Resend } from 'resend';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EmailTemplatesService } from './email-templates.service';
+import { EmailAdapter } from '@/server/comms/email-adapter';
 import type { EmailTemplateType, EmailTemplateData } from '@/types/email-templates';
 
 // Environment variables
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@nestorconstruct.gr';
 const FROM_NAME = process.env.FROM_NAME || 'Nestor Construct';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Initialize Resend (only if API key exists)
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+// Mailgun fallback adapter
+const mailgunAdapter = MAILGUN_API_KEY ? new EmailAdapter() : null;
 
 // Legacy interface for backward compatibility
 interface EmailPayload {
@@ -93,22 +97,20 @@ export class EmailService {
       throw new Error('Property title and URL are required');
     }
 
-    // Check if Resend is properly configured
-    if (!resend) {
-      console.debug('🧪 ENTERPRISE EMAIL SERVICE: Development mode - No API key');
-      console.debug('📧 Recipients:', recipients);
-      console.debug('📝 Property:', { title: propertyTitle, url: propertyUrl, template: templateType });
+    // Determine provider: Resend → Mailgun → Simulation
+    const provider = resend ? 'resend' : mailgunAdapter ? 'mailgun' : null;
 
+    if (!provider) {
+      console.debug('🧪 EMAIL SERVICE: No provider configured (need RESEND_API_KEY or MAILGUN_API_KEY)');
       return {
         success: true,
         message: '🧪 DEVELOPMENT: Email simulated successfully',
         recipients: recipients.length,
         templateUsed: templateType,
-        note: 'This is a development simulation. No actual emails were sent.'
+        note: 'No email provider configured. Set RESEND_API_KEY or MAILGUN_API_KEY.'
       };
     }
 
-    // Production email sending
     try {
       const template = EmailTemplatesService.getTemplate(templateType);
       if (!template) {
@@ -135,32 +137,64 @@ export class EmailService {
       // Generate subject line
       const subject = this.generateSubject(templateType, propertyTitle);
 
-      // Send email via Resend
-      const result = await resend.emails.send({
-        from: `${senderName || FROM_NAME} <${FROM_EMAIL}>`,
-        to: recipients,
-        subject: subject,
-        html: htmlContent,
-        tags: [
-          { name: 'campaign', value: 'property_share' },
-          { name: 'template', value: templateType },
-          { name: 'environment', value: NODE_ENV }
-        ]
-      });
+      // Send via available provider
+      if (provider === 'resend' && resend) {
+        const result = await resend.emails.send({
+          from: `${senderName || FROM_NAME} <${FROM_EMAIL}>`,
+          to: recipients,
+          subject,
+          html: htmlContent,
+          tags: [
+            { name: 'campaign', value: 'property_share' },
+            { name: 'template', value: templateType },
+            { name: 'environment', value: NODE_ENV }
+          ]
+        });
 
-      console.debug('✅ ENTERPRISE EMAIL SENT:', {
-        id: result.data?.id,
-        recipients: recipients.length,
-        template: templateType
-      });
+        console.debug('✅ EMAIL SENT via Resend:', { id: result.data?.id, recipients: recipients.length });
+        return {
+          success: true,
+          message: `Email sent successfully to ${recipients.length} recipient${recipients.length > 1 ? 's' : ''}`,
+          recipients: recipients.length,
+          templateUsed: template.name,
+          emailId: result.data?.id
+        };
+      }
 
-      return {
-        success: true,
-        message: `Email sent successfully to ${recipients.length} recipient${recipients.length > 1 ? 's' : ''}`,
-        recipients: recipients.length,
-        templateUsed: template.name,
-        emailId: result.data?.id
-      };
+      // Mailgun path — send to each recipient
+      if (provider === 'mailgun' && mailgunAdapter) {
+        const fromHeader = `${senderName || FROM_NAME} <${FROM_EMAIL}>`;
+        const results = await Promise.all(
+          recipients.map(to =>
+            mailgunAdapter.sendEmail({
+              id: `share_${Date.now()}`,
+              to,
+              subject,
+              content: `${propertyTitle} — ${propertyUrl}`,
+              html: htmlContent,
+              from: fromHeader,
+              metadata: { templateId: templateType, category: 'property_share' },
+              attempts: 0,
+              maxAttempts: 1,
+            })
+          )
+        );
+
+        const successCount = results.filter(r => r.success).length;
+        const firstId = results.find(r => r.messageId)?.messageId;
+        console.debug('✅ EMAIL SENT via Mailgun:', { successCount, recipients: recipients.length });
+
+        if (successCount === 0) throw new Error('All Mailgun sends failed');
+        return {
+          success: true,
+          message: `Email sent to ${successCount}/${recipients.length} recipients via Mailgun`,
+          recipients: successCount,
+          templateUsed: template.name,
+          emailId: firstId,
+        };
+      }
+
+      throw new Error('No email provider available');
 
     } catch (error) {
       console.error('❌ ENTERPRISE EMAIL ERROR:', error);
@@ -188,9 +222,10 @@ export class EmailService {
    * Get service status
    */
   static getStatus() {
+    const activeProvider = resend ? 'Resend' : mailgunAdapter ? 'Mailgun' : 'None';
     return {
-      configured: !!resend && !!RESEND_API_KEY,
-      provider: 'Resend',
+      configured: !!(resend || mailgunAdapter),
+      provider: activeProvider,
       environment: NODE_ENV,
       fromEmail: FROM_EMAIL,
       fromName: FROM_NAME

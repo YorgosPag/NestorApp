@@ -10,7 +10,7 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { X, Download, ZoomIn, ZoomOut, RotateCw, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,8 +72,8 @@ export function PhotoPreviewModal({
     photoType, photoIndex, galleryPhotos, currentGalleryIndex, t
   });
 
-  // Early return — no photo to display
-  if (!state.currentPhoto) {
+  // Early return — no photo AND dialog closed
+  if (!state.currentPhoto && !open) {
     return null;
   }
 
@@ -85,15 +85,11 @@ export function PhotoPreviewModal({
           ? photoPreviewLayout.dialog.mobile
           : photoPreviewLayout.dialog.desktop
         } flex flex-col ${className} [&>button]:hidden`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="photo-preview-title"
-        aria-describedby="photo-preview-description"
       >
         <DialogHeader className="flex flex-col space-y-3 pb-2">
           {/* Row 1: Title + Badge */}
           <header className="flex items-center justify-between" role="banner">
-            <DialogTitle id="photo-preview-title" className="flex items-center gap-2 text-lg">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <state.IconComponent className={iconSizes.md} aria-hidden="true" />
               {state.title}
             </DialogTitle>
@@ -112,8 +108,8 @@ export function PhotoPreviewModal({
           <ToolbarRow state={state} iconSizes={iconSizes} t={t} onClose={() => onOpenChange(false)} />
         </DialogHeader>
 
-        {/* Screen-reader description */}
-        <div id="photo-preview-description" className="sr-only">
+        {/* Screen-reader description — Radix DialogDescription for proper aria binding */}
+        <DialogDescription className="sr-only">
           {state.isGalleryMode
             ? t('photoPreview.screenReader.gallery', {
                 current: state.currentIndex + 1,
@@ -124,7 +120,7 @@ export function PhotoPreviewModal({
                 contactInfo: contact ? t('photoPreview.screenReader.photoFrom', { name: getContactDisplayName(contact) }) : ''
               })
           }
-        </div>
+        </DialogDescription>
 
         {/* Photo Content */}
         <main

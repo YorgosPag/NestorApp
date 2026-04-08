@@ -11,20 +11,15 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { designSystem } from '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('SharePlatformGrid');
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 // 🏢 ENTERPRISE: Import centralized social platforms configuration
 import {
   SOCIAL_SHARING_PLATFORMS,
-  generatePlatformButtonStyles,
-  generatePlatformIconStyles,
-  generatePlatformLabelStyles
 } from '@/lib/social-sharing/SocialSharingPlatforms';
 import type { SharePlatform } from '@/lib/social-sharing/SocialSharingPlatforms';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -167,8 +162,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
     };
 
     return designSystem.cn(
-      'grid',
-      columnClasses[finalGridConfig.columns],
+      'flex flex-wrap justify-center',
       spacingClasses[finalGridConfig.spacing]
     );
   };
@@ -180,57 +174,31 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
     const IconComponent = platform.icon;
 
     return (
-      <Button
+      <button
         key={platform.id}
         type="button"
-        variant="ghost"
         disabled={loading}
         onClick={() => handlePlatformClick(platform)}
+        aria-label={t('sharing.shareOn', { platform: platform.name })}
         className={designSystem.cn(
-          // Use centralized platform button styles
-          generatePlatformButtonStyles(platform, finalGridConfig.buttonVariant),
-          // Additional responsive classes
-          'group relative',
-          INTERACTIVE_PATTERNS.BUTTON_ENHANCED,
-          // Loading state
-          loading && 'opacity-50 cursor-not-allowed',
-          // Focus states using design system
-          'focus:outline-none focus:ring-2',
+          'flex flex-col items-center justify-center gap-1.5',
+          'w-16 h-16 rounded-full',
+          `bg-gradient-to-br ${platform.colors.gradient}`,
+          'ring-1 ring-black/10',
+          'transition-transform duration-150 ease-out',
+          'hover:scale-110 active:scale-95',
+          'focus:outline-none focus:ring-2 focus:ring-offset-2',
           designSystem.getStatusColor('info', 'border'),
-          'focus:ring-offset-2'
+          loading && 'opacity-50 cursor-not-allowed',
         )}
       >
-        <article className="flex flex-col items-center space-y-2" role="button" aria-label={t('sharing.shareOn', { platform: platform.name })}>
-          {/* Platform Icon */}
-          <figure role="img" aria-label={t('sharing.iconAlt', { platform: platform.name })}>
-            <IconComponent
-              className={designSystem.cn(
-                generatePlatformIconStyles(finalGridConfig.iconSize),
-                // Add white text color για contrast
-                'text-white'
-              )}
-            />
-          </figure>
-
-          {/* Platform Label */}
-          {finalGridConfig.showLabels && (
-            <header className={designSystem.cn(
-              generatePlatformLabelStyles('xs'),
-              'text-white'
-            )}>
-              {platform.name}
-            </header>
-          )}
-        </article>
-
-        {/* Gradient Overlay για extra depth */}
-        <aside className={designSystem.cn(
-          "absolute inset-0",
-          GROUP_HOVER_PATTERNS.REVEAL_ON_GROUP,
-          TRANSITION_PRESETS.STANDARD_OPACITY,
-          "bg-gradient-to-br from-white via-transparent to-transparent"
-        )} role="presentation" aria-hidden="true" />
-      </Button>
+        <IconComponent className="w-6 h-6 text-white" />
+        {finalGridConfig.showLabels && (
+          <span className="text-[10px] font-medium text-white leading-none">
+            {platform.name}
+          </span>
+        )}
+      </button>
     );
   };
 
@@ -275,7 +243,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
       {...getAccessibilityProps()}
     >
       {/* Platform Grid */}
-      <nav className={getGridClasses()} role="group" aria-label={t('sharing.socialPlatforms')}>
+      <nav className={designSystem.cn(getGridClasses(), 'py-2')} role="group" aria-label={t('sharing.socialPlatforms')}>
         {filteredPlatforms.map(renderPlatformButton)}
       </nav>
 

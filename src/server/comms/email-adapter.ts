@@ -12,6 +12,7 @@ interface EmailJob {
   to: string;
   subject: string;
   content: string;
+  html?: string;
   from?: string;
   metadata?: {
     templateId?: string;
@@ -92,6 +93,9 @@ export class EmailAdapter {
       formData.append('to', job.to);
       formData.append('subject', job.subject);
       formData.append('text', job.content);
+      if (job.html) {
+        formData.append('html', job.html);
+      }
 
       const region = process.env.MAILGUN_REGION === 'eu' ? 'api.eu.mailgun.net' : 'api.mailgun.net';
       const url = `https://${region}/v3/${this.domain}/messages`;

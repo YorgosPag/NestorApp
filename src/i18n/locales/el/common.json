@@ -193,6 +193,27 @@
     "propertiesTeaser": "Δείτε αυτά τα ενδιαφέροντα ακίνητα από την {company}!",
     "propertiesTitle": "{company} - Ακίνητα"
   },
+  "emailShare": {
+    "title": "Αποστολή μέσω Email",
+    "recipientPlaceholder": "email@example.com",
+    "recipientLabel": "Παραλήπτες",
+    "addRecipient": "Προσθήκη",
+    "removeRecipient": "Αφαίρεση",
+    "messagePlaceholder": "Γράψτε ένα προσωπικό μήνυμα (προαιρετικό)...",
+    "messageLabel": "Προσωπικό Μήνυμα",
+    "charsRemaining": "{count} χαρακτήρες",
+    "templateLabel": "Πρότυπο Email",
+    "templateResidential": "Κατοικία",
+    "templateCommercial": "Επαγγελματικό",
+    "templatePremium": "Premium",
+    "send": "Αποστολή",
+    "sending": "Αποστολή...",
+    "back": "Πίσω",
+    "invalidEmail": "Μη έγκυρο email",
+    "maxRecipients": "Μέγιστο {max} παραλήπτες",
+    "noRecipients": "Προσθέστε τουλάχιστον έναν παραλήπτη",
+    "sendError": "Αποτυχία αποστολής. Δοκιμάστε ξανά."
+  },
   "loading": {
     "ariaLabel": "Φόρτωση σελίδας",
     "spinnerLabel": "Φόρτωση",

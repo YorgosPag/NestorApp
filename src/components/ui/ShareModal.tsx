@@ -252,7 +252,7 @@ export function ShareModal({
                 onPlatformSelect={handlePlatformShare}
                 loading={loading}
                 gridConfig={{
-                  columns: 3,
+                  columns: 5,
                   buttonVariant: 'default',
                   iconSize: 'md',
                   showLabels: true,

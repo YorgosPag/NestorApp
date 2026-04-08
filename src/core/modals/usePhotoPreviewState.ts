@@ -1,11 +1,5 @@
 /**
- * @fileoverview Custom hook encapsulating ALL state and handlers for PhotoPreviewModal.
- *
- * Extracted from PhotoPreviewModal.tsx to comply with Google SRP standards
- * (max 500 lines per file). Contains: zoom/rotation state, gallery navigation,
- * mobile detection, pinch-to-zoom, pan/drag, image dimensions, focus trap,
- * keyboard navigation, touch handlers, download handler, and share URL generation.
- *
+ * @fileoverview State & handlers for PhotoPreviewModal.
  * @module usePhotoPreviewState
  */
 
@@ -24,10 +18,6 @@ import { generatePhotoTitle, getPhotoTypeIcon } from '@/core/modals/photo-previe
 
 const logger = createModuleLogger('usePhotoPreviewState');
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 interface UsePhotoPreviewStateParams {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,21 +31,12 @@ interface UsePhotoPreviewStateParams {
   t: (key: string, params?: Record<string, unknown>) => string;
 }
 
-// ============================================================================
-// TOUCH HELPER
-// ============================================================================
-
 function getTouchDistance(touch1: React.Touch, touch2: React.Touch): number {
   const dx = touch1.clientX - touch2.clientX;
   const dy = touch1.clientY - touch2.clientY;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// ============================================================================
-// HOOK
-// ============================================================================
-
-/** Encapsulates all PhotoPreviewModal state, refs, effects, and handlers. */
 export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
   const {
     open, onOpenChange, photoUrl, photoTitle, contact,
@@ -180,12 +161,15 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
   }, [open, onOpenChange]);
 
   // --- Wheel zoom-to-cursor (desktop, Google Photos pattern) ---
+  // Document-level listener avoids Portal ref-timing issues
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !open) return;
+    if (!open) return;
 
     const onWheel = (e: WheelEvent) => {
+      const container = containerRef.current;
+      if (!container || !container.contains(e.target as Node)) return;
       e.preventDefault();
+
       const rect = container.getBoundingClientRect();
       const cx = e.clientX - rect.left - rect.width / 2;
       const cy = e.clientY - rect.top - rect.height / 2;
@@ -196,6 +180,10 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
       const next = Math.min(Math.max(cur * factor, 0.25), 8);
       const ratio = next / cur;
 
+      // Disable CSS transition during wheel for instant feedback
+      const img = imageRef.current;
+      if (img) img.style.transition = 'none';
+
       setZoom(next);
       setPanOffset({
         x: cx - (cx - pan.x) * ratio,
@@ -203,8 +191,8 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
       });
     };
 
-    container.addEventListener('wheel', onWheel, { passive: false });
-    return () => container.removeEventListener('wheel', onWheel);
+    document.addEventListener('wheel', onWheel, { passive: false });
+    return () => document.removeEventListener('wheel', onWheel);
   }, [open]);
 
   // --- Mouse drag pan (desktop) ---
@@ -330,6 +318,9 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isMobile || zoom <= 1 || e.button !== 0) return;
     e.preventDefault();
+    // Disable CSS transition during drag for instant response
+    const img = imageRef.current;
+    if (img) img.style.transition = 'none';
     setIsPanning(true);
     setPanStart({ x: e.clientX, y: e.clientY });
     setInitialPanOffset({ ...panOffsetRef.current });

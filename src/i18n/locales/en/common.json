@@ -193,6 +193,27 @@
     "propertiesTeaser": "Check out these interesting properties from {company}!",
     "propertiesTitle": "{company} - Properties"
   },
+  "emailShare": {
+    "title": "Send via Email",
+    "recipientPlaceholder": "email@example.com",
+    "recipientLabel": "Recipients",
+    "addRecipient": "Add",
+    "removeRecipient": "Remove",
+    "messagePlaceholder": "Write a personal message (optional)...",
+    "messageLabel": "Personal Message",
+    "charsRemaining": "{count} characters",
+    "templateLabel": "Email Template",
+    "templateResidential": "Residential",
+    "templateCommercial": "Commercial",
+    "templatePremium": "Premium",
+    "send": "Send",
+    "sending": "Sending...",
+    "back": "Back",
+    "invalidEmail": "Invalid email",
+    "maxRecipients": "Maximum {max} recipients",
+    "noRecipients": "Add at least one recipient",
+    "sendError": "Failed to send. Please try again."
+  },
   "loading": {
     "ariaLabel": "Loading page",
     "spinnerLabel": "Loading",
