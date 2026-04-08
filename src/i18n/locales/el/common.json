@@ -658,7 +658,29 @@
       "restoredFromTrash": "Επαναφορά από κάδο: {from} → {to}"
     },
     "loadMore": "Περισσότερα",
-    "byUser": "από {name}"
+    "byUser": "από {name}",
+    "values": {
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό",
+      "deleted": "Στον κάδο",
+      "available": "Διαθέσιμο",
+      "sold": "Πωλημένο",
+      "reserved": "Κρατημένο",
+      "draft": "Πρόχειρο",
+      "completed": "Ολοκληρωμένο",
+      "construction": "Υπό κατασκευή",
+      "planned": "Σχεδιασμένο",
+      "maintenance": "Συντήρηση",
+      "archived": "Αρχειοθετημένο",
+      "onHold": "Σε αναμονή",
+      "inProgress": "Σε εξέλιξη",
+      "approved": "Εγκεκριμένο",
+      "rejected": "Απορρίφθηκε",
+      "pending": "Εκκρεμεί",
+      "cancelled": "Ακυρωμένο",
+      "rented": "Ενοικιασμένο",
+      "occupied": "Κατειλημμένο"
+    }
   },
   "fullscreen": {
     "enter": "Πλήρης Οθόνη",

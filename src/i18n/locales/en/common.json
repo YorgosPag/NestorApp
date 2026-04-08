@@ -658,7 +658,29 @@
       "restoredFromTrash": "Restored from trash: {from} → {to}"
     },
     "loadMore": "Load more",
-    "byUser": "by {name}"
+    "byUser": "by {name}",
+    "values": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "deleted": "In trash",
+      "available": "Available",
+      "sold": "Sold",
+      "reserved": "Reserved",
+      "draft": "Draft",
+      "completed": "Completed",
+      "construction": "Under construction",
+      "planned": "Planned",
+      "maintenance": "Maintenance",
+      "archived": "Archived",
+      "onHold": "On hold",
+      "inProgress": "In progress",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "pending": "Pending",
+      "cancelled": "Cancelled",
+      "rented": "Rented",
+      "occupied": "Occupied"
+    }
   },
   "fullscreen": {
     "enter": "Fullscreen",

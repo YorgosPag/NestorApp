@@ -35,8 +35,14 @@ const NESTED_KEY_LABELS: Record<string, string> = {
   coolingType: "Ψύξη",
 };
 
+/**
+ * Format a raw audit value for display.
+ * @param value - Raw value from Firestore audit entry
+ * @param translateValue - Optional translator for known values (e.g. status labels)
+ */
 export function formatDisplayValue(
   value: string | number | boolean | null,
+  translateValue?: (v: string) => string | undefined,
 ): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Ναι" : "Όχι";
@@ -57,6 +63,12 @@ export function formatDisplayValue(
           .join(", ");
       }
     }
+  }
+
+  // Try translating known values (e.g. "active" → "Ενεργό")
+  if (typeof value === "string" && translateValue) {
+    const translated = translateValue(value);
+    if (translated) return translated;
   }
 
   return String(value);

@@ -345,6 +345,13 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
   const relativeTime = timestamp ? formatRelativeTime(timestamp) : "";
   const absoluteTime = timestamp ? formatDateTime(timestamp) : "";
 
+  /** Translate known status values via audit.values.* i18n keys */
+  const translateValue = (v: string): string | undefined => {
+    const key = `audit.values.${v}`;
+    const result = t(key);
+    return result !== key ? result : undefined;
+  };
+
   return (
     <li className="relative pb-5 pl-8 last:pb-0">
       {/* Timeline dot */}
@@ -394,11 +401,11 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
                     "line-through decoration-red-400/60",
                   )}
                 >
-                  {formatDisplayValue(change.oldValue)}
+                  {formatDisplayValue(change.oldValue, translateValue)}
                 </span>
                 {" → "}
                 <span className="font-medium text-foreground">
-                  {formatDisplayValue(change.newValue)}
+                  {formatDisplayValue(change.newValue, translateValue)}
                 </span>
               </li>
             ))}
