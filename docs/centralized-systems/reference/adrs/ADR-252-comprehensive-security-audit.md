@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ PHASE_3_IMPLEMENTED |
+| **Status** | ✅ PHASE_4_IMPLEMENTED |
 | **Date** | 2026-03-19 |
 | **Category** | Security / Infrastructure |
 | **Depends On** | ADR-249, ADR-250 |
@@ -455,3 +455,11 @@ Test: Malformed requests, expired webhooks, NaN parameters
 | | **Modified files (5):** `src/app/api/calendar/parse-event/route.ts`, `src/app/api/contracts/[id]/route.ts`, `src/app/api/units/[id]/payment-plan/route.ts`, `firestore.rules`, `src/app/api/navigation/company/route.ts`, `src/app/api/navigation/auto-fix-missing-companies/route.ts` |
 | | **New file (1):** `src/app/api/admin/migrate-nav-company-id/route.ts` — one-time migration for existing navigation_companies documents |
 | 2026-03-24 | **SV-C1 HARDENING** — `path-sanitizer.ts` allowlist corrected: removed phantom `cadFiles/` and `dxf/` prefixes, added real paths `companies/` (canonical root), `floor-plans/`, `dxf-scenes/`. Fixes mismatch between allowlist and actual storage paths. |
+| 2026-04-08 | **PHASE 4 IMPLEMENTED** — Production Security Hardening (5 ζητήματα from dedicated audit): |
+| | **1. Legacy Storage Paths REMOVED (HIGH):** 4 legacy paths (contacts/photos, floor-plans, companies/logos, dxf-scenes) removed from `storage.rules`. MCP audit confirmed 0 files at any legacy path + 0 runtime code references. `path-sanitizer.ts` allowlist cleaned (removed 3 dead prefixes). Rules deployed. |
+| | **2. Notifications Server-Only (MEDIUM):** `firestore.rules` — notifications create+delete changed to `allow: if false`. All production notification creation already used Admin SDK. Client `createNotification()` + `createSampleNotifications()` removed from `notificationService.ts`. `seed/route.ts` migrated to Admin SDK. `CrmNotificationsPageContent.tsx` test UI migrated to API call + dismiss pattern. Rules deployed. |
+| | **3. MFA ALREADY IMPLEMENTED:** Audit confirmed 3 permission sets with `requiresMfaEnrolled: true` in `permission-sets.ts` (lines 72, 81, 96). No changes needed. |
+| | **4. Legacy companyId:** NOT APPLICABLE — all current Firestore data is test/development and will be wiped before production. New documents already include companyId from code. |
+| | **5. Cloud Function onStorageFinalize (MEDIUM):** New Cloud Function in `functions/src/storage/orphan-cleanup.ts` — triggered on Storage upload, verifies FileRecord exists in Firestore, deletes orphan files + writes audit log. Scope: enterprise paths only (companies/...). Added `functions` config to `firebase.json`. |
+| | **CLAUDE.md updated:** Security section rewritten from outdated 2025-12-15 → current 2026-04-08 status. All 3 original blockers marked as resolved. |
+| | **Files changed (10):** `storage.rules`, `firestore.rules`, `firebase.json`, `CLAUDE.md`, `src/lib/security/path-sanitizer.ts`, `src/services/notificationService.ts`, `src/app/api/notifications/seed/route.ts`, `src/components/crm/pages/CrmNotificationsPageContent.tsx`, `src/services/upload-handlers/defaultUploadHandler.ts`, `functions/src/storage/orphan-cleanup.ts` (NEW) |

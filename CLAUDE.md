@@ -668,10 +668,8 @@ npm run test:visual:report
 - **Path Sanitizer**: `src/lib/security/path-sanitizer.ts` — path traversal + SSRF prevention
 
 ### **⚠️ ΕΚΚΡΕΜΟΤΗΤΕΣ HARDENING (χαμηλή προτεραιότητα):**
-- Notifications: migrate client create → server-only (Admin SDK)
-- Legacy documents χωρίς companyId: σταδιακό migration
-- MFA enforcement σε sensitive endpoints
-- Storage: Cloud Function onFinalize → verify FileRecord exists
+- Legacy documents χωρίς companyId: ΔΕΝ ΧΡΕΙΑΖΕΤΑΙ — test data, θα σβηστούν πριν production
+- Cloud Function onStorageFinalize: Υλοποιημένο, pending deploy (`firebase deploy --only functions`)
 
 ### **🔒 SECURITY AWARENESS:**
 
