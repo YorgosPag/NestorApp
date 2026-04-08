@@ -17,8 +17,10 @@ const logger = createModuleLogger('useTranslation');
  */
 function resolveAllNamespaces(namespaces: string[]): string[] {
   const compatSplits = namespaces.flatMap((ns) => [...getCompatNamespaces(ns)]);
-  const nonCommon = namespaces.filter((ns) => ns !== 'common');
-  return [...new Set([...nonCommon, ...compatSplits])];
+  // Include ALL original namespaces + their compat splits.
+  // Previously filtered out 'common', but that broke rawT lookups for
+  // unsplit keys like audit.* that still live in the common namespace.
+  return [...new Set([...namespaces, ...compatSplits])];
 }
 
 /**

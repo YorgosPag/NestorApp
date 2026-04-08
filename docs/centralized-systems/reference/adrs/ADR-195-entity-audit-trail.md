@@ -195,6 +195,7 @@
 
 #### Component 3: `ActivityTab` (UI — Tab)
 - **Location**: `src/components/shared/audit/ActivityTab.tsx`
+- **Config**: `src/components/shared/audit/activity-tab-config.ts`
 - **Props**: `entityType`, `entityId`
 - **Features**:
   - Timeline layout (vertical, newest first)
@@ -203,6 +204,8 @@
   - Relative timestamps ("2 hours ago")
   - Infinite scroll pagination (20 entries per page)
   - Empty state ("No activity recorded yet")
+  - **i18n**: All labels use `t()` with keys under `audit.actions.*`, `audit.filters.*` — zero hardcoded strings
+- **Config pattern**: `activity-tab-config.ts` stores `labelKey` (i18n key), not literal text. Resolved at render time via `t(config.labelKey)`
 - **Reusable**: Ίδιο component σε κάθε entity (Contact, Building, Unit, κτλ.)
 
 #### Component 4: `useEntityAudit` Hook
@@ -476,3 +479,4 @@ async function updateContact(contactId: string, updates: Partial<Contact>, actor
 | 2026-03-13 | **Phase 3 Project Integration DONE**: Added "Ιστορικό" tab (#14) to projects. Config-driven wire-up: `project-tabs-config.ts` (order 14), `projectMappings.ts` (ActivityTab mapping), `property-statuses-enterprise.ts` (HISTORY labels). `componentProps: { entityType: 'project' }` ensures correct entity filtering. i18n description added (el/en). | Claude Agent |
 | 2026-03-13 | **Phase 4 Building Integration DONE**: Added "Ιστορικό" tab (#16, order 16) to buildings via Unified Factory pattern. Wire-up: `unified-tabs-factory.ts` (history tab after videos), `buildingMappings.ts` (ActivityTab mapping). `componentProps: { entityType: 'building' }` ensures correct entity filtering. i18n descriptions fixed to generic text (removed "του έργου"/"Project"). Unit already had History tab (order 6) — no changes needed. | Claude Agent |
 | 2026-03-14 | **Phase 5 Parking + Storage Integration DONE**: Added "Ιστορικό" tab (order 6) to both Parking and Storage in `unified-tabs-factory.ts`. Added `ActivityTab` component mapping to `parkingMappings.ts` and `storageMappings.ts`. `componentProps: { entityType: 'parking' | 'storage' }` ensures correct entity filtering. Sales Sidebars already had inline History — no changes needed. | Claude Agent |
+| 2026-04-08 | **i18n SSoT cleanup**: Replaced all hardcoded Greek labels in `ActivityTab.tsx` and `activity-tab-config.ts` with i18n keys (`audit.actions.*`, `audit.filters.*`, `audit.loadMore`, `audit.byUser`). Config interface changed `label: string` → `labelKey: string`. Added 31 new keys to `el/common.json` + `en/common.json`. Fixed `useTranslation.ts` to stop filtering out `common` namespace (broke `rawT` lookups for unsplit keys). Removed `eslint-disable` comments. Also fixed `ContactDetailsHeader.tsx` guard: `!isEditing` → `!isEditing && onStartEdit` to prevent runtime error when callback is undefined. | Claude Agent |

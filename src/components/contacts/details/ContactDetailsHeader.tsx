@@ -207,8 +207,8 @@ export function ContactDetailsHeader({
               createEntityAction('new', t('header.newContact'), () => onNewContact(), { icon: UserPlus })
             ] : []),
             // 🎯 Edit/Delete — always visible (Edit starts edit mode on contact data tabs)
-            ...(!isEditing ? [
-              createEntityAction('edit', t('header.actions.edit'), () => onStartEdit?.())
+            ...(!isEditing && onStartEdit ? [
+              createEntityAction('edit', t('header.actions.edit'), () => onStartEdit())
             ] : []),
             // 🏢 ENTERPRISE: Save/Cancel — hidden on subcollection tabs (e.g. Relationships)
             // These tabs have their own save mechanism; showing contact Save causes confusion

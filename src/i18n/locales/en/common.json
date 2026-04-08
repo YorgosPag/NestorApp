@@ -627,7 +627,38 @@
     "noFilterResults": "No changes found for this filter",
     "noEntityId": "Entity ID not found",
     "totalLabel": "Total",
-    "historyFilters": "History Filters"
+    "historyFilters": "History Filters",
+    "actions": {
+      "created": "Created",
+      "updated": "Updated",
+      "deleted": "Deleted",
+      "soft_deleted": "Moved to trash",
+      "restored": "Restored from trash",
+      "status_changed": "Status changed",
+      "linked": "Linked",
+      "unlinked": "Unlinked",
+      "professional_assigned": "Professional assigned",
+      "professional_removed": "Professional removed",
+      "email_sent": "Email sent",
+      "invoice_created": "Invoice created"
+    },
+    "filters": {
+      "all": "All",
+      "updated": "Updates",
+      "created": "Creations",
+      "deleted": "Deletions",
+      "status_changed": "Status",
+      "professional_assigned": "Assignments",
+      "professional_removed": "Removals",
+      "email_sent": "Email",
+      "invoice_created": "Invoices"
+    },
+    "changes": {
+      "movedToTrash": "Moved to trash: {from} → {to}",
+      "restoredFromTrash": "Restored from trash: {from} → {to}"
+    },
+    "loadMore": "Load more",
+    "byUser": "by {name}"
   },
   "fullscreen": {
     "enter": "Fullscreen",

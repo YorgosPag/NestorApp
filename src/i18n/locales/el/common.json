@@ -627,7 +627,38 @@
     "noFilterResults": "Δεν βρέθηκαν αλλαγές για αυτό το φίλτρο",
     "noEntityId": "Δεν βρέθηκε αναγνωριστικό οντότητας",
     "totalLabel": "Συνολικά",
-    "historyFilters": "Φίλτρα ιστορικού"
+    "historyFilters": "Φίλτρα ιστορικού",
+    "actions": {
+      "created": "Δημιουργία",
+      "updated": "Ενημέρωση",
+      "deleted": "Διαγραφή",
+      "soft_deleted": "Μεταφορά στον κάδο",
+      "restored": "Επαναφορά από κάδο",
+      "status_changed": "Αλλαγή κατάστασης",
+      "linked": "Σύνδεση",
+      "unlinked": "Αποσύνδεση",
+      "professional_assigned": "Ανάθεση επαγγελματία",
+      "professional_removed": "Αφαίρεση επαγγελματία",
+      "email_sent": "Email εστάλη",
+      "invoice_created": "Δημιουργία παραστατικού"
+    },
+    "filters": {
+      "all": "Όλα",
+      "updated": "Ενημερώσεις",
+      "created": "Δημιουργίες",
+      "deleted": "Διαγραφές",
+      "status_changed": "Κατάσταση",
+      "professional_assigned": "Αναθέσεις",
+      "professional_removed": "Αφαιρέσεις",
+      "email_sent": "Email",
+      "invoice_created": "Παραστατικά"
+    },
+    "changes": {
+      "movedToTrash": "Μεταφορά στον κάδο: {from} → {to}",
+      "restoredFromTrash": "Επαναφορά από κάδο: {from} → {to}"
+    },
+    "loadMore": "Περισσότερα",
+    "byUser": "από {name}"
   },
   "fullscreen": {
     "enter": "Πλήρης Οθόνη",

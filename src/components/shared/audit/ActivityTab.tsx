@@ -1,4 +1,3 @@
-/* eslint-disable custom/no-hardcoded-strings */
 /**
  * 📜 ActivityTab — Enterprise Entity Audit Trail Component
  *
@@ -188,7 +187,7 @@ export function ActivityTab({
             ) : (
               <ChevronDown className="h-3 w-3" />
             )}
-            Περισσότερα
+            {t('audit.loadMore')}
           </button>
         </footer>
       )}
@@ -239,7 +238,7 @@ function StatsPanel({ stats }: { stats: Stats }) {
         return (
           <StatsCard
             key={action}
-            title={config.label}
+            title={t(config.labelKey)}
             value={count}
             icon={config.icon}
             color={actionColorMap[action] ?? "gray"}
@@ -267,7 +266,7 @@ function QuickFilters({
   const { t } = useTranslation("common");
   return (
     <nav className="flex flex-wrap gap-1.5" aria-label={t('audit.historyFilters')}>
-      {FILTER_OPTIONS.map(({ value, label }) => {
+      {FILTER_OPTIONS.map(({ value, labelKey }) => {
         const isActive = active === value;
         const count =
           value === "all" ? stats.total : (stats.byAction[value] ?? 0);
@@ -288,7 +287,7 @@ function QuickFilters({
                 : `bg-muted/60 ${colors.text.muted} hover:bg-muted`
             }`}
           >
-            {label}
+            {t(labelKey)}
             <span
               className={`text-[10px] ${isActive ? "opacity-80" : "opacity-50"}`}
             >
@@ -337,6 +336,7 @@ function DayGroup({
 // ============================================================================
 
 function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
+  const { t } = useTranslation("common");
   const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
   const Icon = config.icon;
@@ -358,11 +358,11 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
         {/* Header: action + who + time */}
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className={`text-sm font-medium ${config.color}`}>
-            {config.label}
+            {t(config.labelKey)}
           </span>
           {entry.performedByName && (
             <span className={cn("text-xs", colors.text.muted)}>
-              από {entry.performedByName}
+              {t('audit.byUser', { name: entry.performedByName })}
             </span>
           )}
           {timestamp && (

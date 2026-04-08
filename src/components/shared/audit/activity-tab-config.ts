@@ -1,8 +1,8 @@
-/* eslint-disable custom/no-hardcoded-strings, design-system/enforce-semantic-colors */
 /**
  * ActivityTab configuration — Action map and filter options
  *
  * Extracted from ActivityTab.tsx per Google SRP (500 line limit).
+ * Labels use i18n keys (audit.actions.* / audit.filters.*) resolved at render time.
  *
  * @module components/shared/audit/activity-tab-config
  * @enterprise ADR-195 — Entity Audit Trail, ADR-281 — Soft-Delete
@@ -25,7 +25,8 @@ import type { AuditAction } from "@/types/audit-trail";
 
 export interface ActionConfig {
   icon: React.ComponentType<{ className?: string }>;
-  label: string;
+  /** i18n key under audit.actions.* — resolved at render time */
+  labelKey: string;
   color: string;
   bgColor: string;
 }
@@ -33,86 +34,87 @@ export interface ActionConfig {
 export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   created: {
     icon: Plus,
-    label: "Δημιουργία",
+    labelKey: "audit.actions.created",
     color: "text-emerald-600",
     bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
   },
   updated: {
     icon: Edit3,
-    label: "Ενημέρωση",
+    labelKey: "audit.actions.updated",
     color: "text-blue-600",
     bgColor: "bg-blue-50 dark:bg-blue-950/30",
   },
   deleted: {
     icon: Trash2,
-    label: "Διαγραφή",
+    labelKey: "audit.actions.deleted",
     color: "text-red-600",
     bgColor: "bg-red-50 dark:bg-red-950/30",
   },
   soft_deleted: {
     icon: Trash2,
-    label: "Μεταφορά στον κάδο",
+    labelKey: "audit.actions.soft_deleted",
     color: "text-amber-600",
     bgColor: "bg-amber-50 dark:bg-amber-950/30",
   },
   restored: {
     icon: RefreshCw,
-    label: "Επαναφορά από κάδο",
+    labelKey: "audit.actions.restored",
     color: "text-emerald-600",
     bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
   },
   status_changed: {
     icon: RefreshCw,
-    label: "Αλλαγή κατάστασης",
+    labelKey: "audit.actions.status_changed",
     color: "text-amber-600",
     bgColor: "bg-amber-50 dark:bg-amber-950/30",
   },
   linked: {
     icon: Link2,
-    label: "Σύνδεση",
+    labelKey: "audit.actions.linked",
     color: "text-purple-600",
     bgColor: "bg-purple-50 dark:bg-purple-950/30",
   },
   unlinked: {
     icon: Unlink,
-    label: "Αποσύνδεση",
+    labelKey: "audit.actions.unlinked",
     color: "text-gray-600",
     bgColor: "bg-gray-50 dark:bg-gray-950/30",
   },
   professional_assigned: {
     icon: UserPlus,
-    label: "Ανάθεση επαγγελματία",
+    labelKey: "audit.actions.professional_assigned",
     color: "text-teal-600",
     bgColor: "bg-teal-50 dark:bg-teal-950/30",
   },
   professional_removed: {
     icon: UserMinus,
-    label: "Αφαίρεση επαγγελματία",
+    labelKey: "audit.actions.professional_removed",
     color: "text-orange-600",
     bgColor: "bg-orange-50 dark:bg-orange-950/30",
   },
   email_sent: {
     icon: Mail,
-    label: "Email εστάλη",
+    labelKey: "audit.actions.email_sent",
     color: "text-sky-600",
     bgColor: "bg-sky-50 dark:bg-sky-950/30",
   },
   invoice_created: {
     icon: Receipt,
-    label: "Δημιουργία παραστατικού",
+    labelKey: "audit.actions.invoice_created",
     color: "text-green-600",
     bgColor: "bg-green-50 dark:bg-green-950/30",
   },
 };
 
-export const FILTER_OPTIONS: { value: AuditAction | "all"; label: string }[] = [
-  { value: "all", label: "Όλα" },
-  { value: "updated", label: "Ενημερώσεις" },
-  { value: "created", label: "Δημιουργίες" },
-  { value: "deleted", label: "Διαγραφές" },
-  { value: "status_changed", label: "Κατάσταση" },
-  { value: "professional_assigned", label: "Αναθέσεις" },
-  { value: "professional_removed", label: "Αφαιρέσεις" },
-  { value: "email_sent", label: "Email" },
-  { value: "invoice_created", label: "Παραστατικά" },
+/** i18n key under audit.filters.* — resolved at render time */
+export const FILTER_OPTIONS: { value: AuditAction | "all"; labelKey: string }[] = [
+  { value: "all", labelKey: "audit.filters.all" },
+  { value: "updated", labelKey: "audit.filters.updated" },
+  { value: "created", labelKey: "audit.filters.created" },
+  { value: "deleted", labelKey: "audit.filters.deleted" },
+  { value: "status_changed", labelKey: "audit.filters.status_changed" },
+  { value: "professional_assigned", labelKey: "audit.filters.professional_assigned" },
+  { value: "professional_removed", labelKey: "audit.filters.professional_removed" },
+  { value: "email_sent", labelKey: "audit.filters.email_sent" },
+  { value: "invoice_created", labelKey: "audit.filters.invoice_created" },
 ];
