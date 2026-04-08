@@ -35,7 +35,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS, FIRESTORE_LIMITS, type CollectionKey } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
-import { requireAuthContext } from './auth-context';
+import { requireAuthContext, waitForAuthReady } from './auth-context';
 import { getTenantConfig, resolveTenantValue } from './tenant-config';
 import { chunkArray } from '@/lib/array-utils';
 import type {
@@ -233,13 +233,17 @@ class FirestoreQueryService implements IFirestoreQueryService {
     const colName = resolveCollectionName(key);
     const colRef = collection(db, colName);
 
-    // We need auth context synchronously for subscription setup, so we
-    // start the subscription after resolving auth.
+    // Wait for Firebase Auth to initialize before subscribing.
+    // This prevents silent failures during SSR hydration when
+    // auth.currentUser is still null. (ADR-294 auth-ready centralization)
     let unsubscribe: Unsubscribe = () => { /* noop */ };
     let cancelled = false;
 
-    void requireAuthContext().then(ctx => {
-      if (cancelled) return;
+    void waitForAuthReady().then(hasUser => {
+      if (cancelled || !hasUser) return;
+      return requireAuthContext();
+    }).then(ctx => {
+      if (!ctx || cancelled) return;
 
       const allConstraints: QueryConstraint[] = [
         ...buildTenantConstraints(key, ctx, options.tenantOverride),
@@ -295,7 +299,10 @@ class FirestoreQueryService implements IFirestoreQueryService {
     let unsubscribe: Unsubscribe = () => { /* noop */ };
     let cancelled = false;
 
-    void requireAuthContext().then(() => {
+    void waitForAuthReady().then(hasUser => {
+      if (cancelled || !hasUser) return;
+      return requireAuthContext();
+    }).then(() => {
       if (cancelled) return;
 
       unsubscribe = onSnapshot(docRef,
@@ -332,7 +339,10 @@ class FirestoreQueryService implements IFirestoreQueryService {
     let unsubscribe: Unsubscribe = () => { /* noop */ };
     let cancelled = false;
 
-    void requireAuthContext().then(() => {
+    void waitForAuthReady().then(hasUser => {
+      if (cancelled || !hasUser) return;
+      return requireAuthContext();
+    }).then(() => {
       if (cancelled) return;
 
       const allConstraints: QueryConstraint[] = [

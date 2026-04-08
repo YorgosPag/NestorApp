@@ -10,7 +10,30 @@
  */
 
 import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import type { TenantContext } from './firestore-query.types';
+
+/**
+ * Waits for Firebase Auth to finish initializing.
+ *
+ * During SSR hydration, `auth.currentUser` is null even for logged-in users
+ * because Firebase hasn't restored the session yet. This helper resolves once
+ * the first `onAuthStateChanged` callback fires — at that point the auth state
+ * is authoritative (user or null).
+ *
+ * @returns `true` if a user is authenticated, `false` otherwise
+ */
+export function waitForAuthReady(): Promise<boolean> {
+  // Already initialized — resolve immediately
+  if (auth.currentUser) return Promise.resolve(true);
+
+  return new Promise<boolean>((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(!!user);
+    });
+  });
+}
 
 /**
  * Extracts tenant-aware authentication context from the current Firebase user.

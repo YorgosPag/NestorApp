@@ -1,7 +1,7 @@
 # ADR-294: Dynamic Imports Optimization — Incremental Code Splitting
 
 ## Status
-✅ **ACTIVE** — Batch 6 implemented (2026-04-08)
+✅ **ACTIVE** — Batch 7 implemented (2026-04-08)
 
 ## Context
 
@@ -152,10 +152,10 @@ export function ReportsExecutivePageContent() { ... }
 | 4 | 9 (account, CRM remaining, obligations) | ✅ Done | 2026-04-08 |
 | 5 | 8 (admin pages) | ✅ Done | 2026-04-08 |
 | 6 | 2 (CRM dynamic routes: lead detail, task detail) | ✅ Done | 2026-04-08 |
-| 7 | ~12 (remaining light pages) | ⏳ Pending | — |
-| 8 | ~14 (final sweep + co-located component cleanup) | ⏳ Pending | — |
+| 7 | 7 (settings, navigation, storage, geo, public share pages) | ✅ Done | 2026-04-08 |
+| 8 | ~20 (final sweep + co-located component cleanup) | ⏳ Pending | — |
 
-**Total lazy-loaded pages:** 69/96 (21 existing + 10 B1 + 8 B2 + 11 B3 + 9 B4 + 8 B5 + 2 B6)
+**Total lazy-loaded pages:** 76/96 (21 existing + 10 B1 + 8 B2 + 11 B3 + 9 B4 + 8 B5 + 2 B6 + 7 B7)
 **Note:** ai-inbox + operator-inbox are Server Components (SSR auth) — not lazy-loaded by design
 
 ## Expected Impact
@@ -164,6 +164,25 @@ export function ReportsExecutivePageContent() { ... }
 - **Better code splitting**: Separate chunks for recharts, calendar, etc.
 
 ## Changelog
+
+### 2026-04-08 — Auth-ready guard centralization (infrastructure)
+- Centralized auth-ready logic inside `firestoreQueryService.subscribe()` via `waitForAuthReady()`
+- Added `waitForAuthReady()` to `auth-context.ts` — waits for Firebase Auth initialization before subscribing
+- Updated all 3 subscribe methods: `subscribe()`, `subscribeDoc()`, `subscribeSubcollection()`
+- Removed manual auth guards from `useRealtimeBuildings` and `useRealtimeTriageCommunications`
+- 4 other hooks (`useRealtimeMessages`, `useRealtimeProperties`, `useRealtimeOpportunities`, `useRealtimeTasks`) now protected automatically
+- Google pattern: Infrastructure handles auth, not consumers
+
+### 2026-04-08 — Batch 7 (7 pages: settings, navigation, storage, geo, public share)
+- Created 7 PageContent extraction files across 5 directories:
+  - `src/components/settings/pages/` (1): ShortcutsPageContent
+  - `src/components/navigation/pages/` (1): NavigationPageContent
+  - `src/components/storage/pages/` (1): StorageDetailPageContent
+  - `src/components/geo/pages/` (1): GeoCanvasPageContent (includes AdminGuard)
+  - `src/components/shared/pages/` (3): PublicPOPageContent, SharedFilePageContent, PhotoSharePageContent
+- Dynamic route pages (`storage/[id]`, `shared/[token]`, `shared/po/[token]`, `share/photo/[id]`) use `useParams()` internally
+- Geo-Canvas page already had internal `dynamic()` import — now outer page also lazy-loaded
+- Skipped: test/debug/demo pages, auth pages, static legal pages (data-deletion, privacy-policy, terms), redirect-only pages (account hub, settings hub, crm/customers)
 
 ### 2026-04-08 — Batch 6 (2 CRM dynamic routes)
 - Converted `/crm/leads/[id]` and `/crm/tasks/[taskId]` to lazy-loaded pages

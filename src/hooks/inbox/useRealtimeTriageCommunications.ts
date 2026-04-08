@@ -25,7 +25,6 @@ import { TRIAGE_STATUSES, type TriageStatus } from '@/constants/triage-statuses'
 import type { Communication, FirestoreishTimestamp } from '@/types/crm';
 import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -184,12 +183,6 @@ export function useRealtimeTriageCommunications(
   const { success } = useNotifications();
   const { t } = useTranslation('admin');
 
-  // 🔐 ENTERPRISE: Wait for Firebase Auth before subscribing — prevents
-  // silent subscription failure when requireAuthContext() throws on cold start.
-  // Pattern: Same as useRealtimeBuildings (proven fix for hydration race condition).
-  const { user } = useAuth();
-  const authReady = !!user;
-
   const [communications, setCommunications] = useState<Array<Communication & { id: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -210,8 +203,9 @@ export function useRealtimeTriageCommunications(
     previousIdsRef.current.clear();
     isInitialLoadRef.current = true;
 
-    // Guard: companyId + auth required for Firestore security rules
-    if (!enabled || !companyId || !authReady) {
+    // Guard: companyId required for Firestore security rules.
+    // Auth readiness handled centrally in firestoreQueryService.subscribe().
+    if (!enabled || !companyId) {
       setLoading(false);
       return;
     }
@@ -269,7 +263,7 @@ export function useRealtimeTriageCommunications(
     return () => {
       unsubscribe();
     };
-  }, [companyId, statusFilter, enabled, authReady]);
+  }, [companyId, statusFilter, enabled]);
 
   // =========================================================================
   // COMPUTED STATS (useMemo - replaces getTriageStats server call)
