@@ -1,9 +1,9 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-08T17:31:34Z",
-    "totalViolations": 137,
-    "totalFiles": 92,
+    "generated": "2026-04-08T18:09:47Z",
+    "totalViolations": 139,
+    "totalFiles": 93,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
@@ -33,6 +33,7 @@
     "src/components/file-manager/file-manager-handlers.ts": 2,
     "src/components/ContactFormSections/contactRenderersCore.tsx": 2,
     "src/components/building-management/tabs/BuildingContactsTab.tsx": 2,
+    "src/app/api/navigation/fix-contact-id/route.ts": 2,
     "src/app/api/contacts/[contactId]/bank-accounts/[accountId]/route.ts": 2,
     "src/services/upload/processors/PDFProcessor.ts": 1,
     "src/services/upload/processors/CADProcessor.ts": 1,

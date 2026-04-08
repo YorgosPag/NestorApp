@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "description": "SSoT Ratchet Registry — centralized module patterns (ADR-ssot-ratchet)",
-    "version": "1.0.0",
+    "description": "SSoT Ratchet Registry — centralized module patterns (ADR-294)",
+    "version": "2.0.0",
     "lastUpdated": "2026-04-08",
     "howToAdd": "Add module entry under 'modules', then run: npm run ssot:baseline"
   },
@@ -61,6 +61,160 @@
         "addDoc\\("
       ],
       "allowlist": []
+    },
+
+    "_comment_tier1": "=== TIER 1: DATA INTEGRITY (bypass = corruption) ===",
+
+    "tenant-company-id": {
+      "ssotFile": "src/config/tenant.ts",
+      "description": "Company ID must come from TENANT_COMPANY_ID/getCompanyId() — never hardcoded",
+      "forbiddenPatterns": [
+        "comp_9c7c1a50",
+        "pzNUy8ksddGCtcQMqumR"
+      ],
+      "allowlist": [
+        "src/config/tenant.ts",
+        "src/config/dev-environment.ts"
+      ]
+    },
+    "deletion-registry": {
+      "ssotFile": "src/config/deletion-registry.ts",
+      "description": "Deletion dependencies must be declared in DELETION_REGISTRY — no inline dependency arrays",
+      "forbiddenPatterns": [
+        "(?:DELETION_REGISTRY|deletionDependencies|DependencyDef\\[\\])\\s*(?:=|:)\\s*(?:\\{|\\[)"
+      ],
+      "allowlist": [
+        "src/config/deletion-registry.ts"
+      ]
+    },
+    "soft-delete-config": {
+      "ssotFile": "src/lib/firestore/soft-delete-config.ts",
+      "description": "Soft-delete entity config must use centralized SOFT_DELETE_CONFIG",
+      "forbiddenPatterns": [
+        "(?:SOFT_DELETE_CONFIG|SoftDeleteEntityConfig)\\s*(?:=|:)\\s*(?:\\{|Record)"
+      ],
+      "allowlist": [
+        "src/lib/firestore/soft-delete-config.ts"
+      ]
+    },
+    "entity-code-config": {
+      "ssotFile": "src/config/entity-code-config.ts",
+      "description": "Entity type codes (DI/GK/ST/ME/etc) must come from entity-code-config — no hardcoded 2-char codes",
+      "forbiddenPatterns": [
+        "(?:PROPERTY_TYPE_TO_CODE|PARKING_ZONE_TO_CODE|ENTITY_CODE_SEPARATOR)\\s*(?:=|:)\\s*(?:\\{|['\"])"
+      ],
+      "allowlist": [
+        "src/config/entity-code-config.ts",
+        "src/services/entity-code.service.ts"
+      ]
+    },
+
+    "_comment_tier2": "=== TIER 2: SECURITY (bypass = vulnerability) ===",
+
+    "ai-role-access-matrix": {
+      "ssotFile": "src/config/ai-role-access-matrix.ts",
+      "description": "AI role permissions must use AI_ROLE_ACCESS_MATRIX — no inline access configs",
+      "forbiddenPatterns": [
+        "(?:AI_ROLE_ACCESS_MATRIX|RoleAccessConfig|allowedCollections|blockedFields)\\s*(?:=|:)\\s*(?:\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/ai-role-access-matrix.ts",
+        "src/services/ai-pipeline/tools/agentic-tool-executor.ts",
+        "src/services/ai-pipeline/agentic-loop.ts"
+      ]
+    },
+    "environment-security": {
+      "ssotFile": "src/config/environment-security-config.ts",
+      "description": "Security policies must use ENVIRONMENT_SECURITY_CONFIG — no inline security rules",
+      "forbiddenPatterns": [
+        "(?:ENVIRONMENT_SECURITY_CONFIG|EnvironmentSecurityPolicy)\\s*(?:=|:)\\s*(?:\\{|Record)"
+      ],
+      "allowlist": [
+        "src/config/environment-security-config.ts"
+      ]
+    },
+    "file-upload-limits": {
+      "ssotFile": "src/config/file-upload-config.ts",
+      "description": "File size limits must come from FILE_TYPE_CONFIG — no hardcoded byte calculations",
+      "forbiddenPatterns": [
+        "(?:FILE_TYPE_CONFIG|FileTypeConfig)\\s*(?:=|:)\\s*(?:\\{|Record)"
+      ],
+      "allowlist": [
+        "src/config/file-upload-config.ts"
+      ]
+    },
+
+    "_comment_tier3": "=== TIER 3: BUSINESS LOGIC (bypass = inconsistency) ===",
+
+    "notification-events": {
+      "ssotFile": "src/config/notification-events.ts",
+      "description": "Notification events/channels/severities must use centralized registry",
+      "forbiddenPatterns": [
+        "(?:NOTIFICATION_EVENT_TYPES|NOTIFICATION_CHANNELS|NOTIFICATION_SEVERITIES)\\s*(?:=|:)\\s*(?:\\{)"
+      ],
+      "allowlist": [
+        "src/config/notification-events.ts"
+      ]
+    },
+    "project-mutation-impact": {
+      "ssotFile": "src/config/project-mutation-impact.ts",
+      "description": "Project mutation fields/guards must use PROJECT_MUTATION_* constants",
+      "forbiddenPatterns": [
+        "(?:PROJECT_MUTATION_CHANGE_FIELDS|PROJECT_MUTATION_FIELD_KIND_MAP|PROJECT_MUTATION_STATUS_GUARDED_VALUES|PROJECT_MUTATION_DEPENDENCY_IDS)\\s*(?:=|:)\\s*(?:\\{|\\[|new)"
+      ],
+      "allowlist": [
+        "src/config/project-mutation-impact.ts"
+      ]
+    },
+    "ai-pipeline-config": {
+      "ssotFile": "src/config/ai-pipeline-config.ts",
+      "description": "Pipeline queue/timeout/confidence configs must use PIPELINE_*_CONFIG constants",
+      "forbiddenPatterns": [
+        "(?:PIPELINE_QUEUE_CONFIG|PIPELINE_TIMEOUT_CONFIG|PIPELINE_CONFIDENCE_CONFIG)\\s*(?:=|:)\\s*(?:\\{)"
+      ],
+      "allowlist": [
+        "src/config/ai-pipeline-config.ts"
+      ]
+    },
+    "feature-flags": {
+      "ssotFile": "src/config/feature-flags.ts",
+      "description": "Feature flags must use APP_FEATURE_FLAGS/isAppFeatureEnabled — no inline flag objects",
+      "forbiddenPatterns": [
+        "(?:APP_FEATURE_FLAGS|AppFeatureFlags)\\s*(?:=|:)\\s*(?:\\{)"
+      ],
+      "allowlist": [
+        "src/config/feature-flags.ts"
+      ]
+    },
+    "business-hours": {
+      "ssotFile": "src/config/business-hours.ts",
+      "description": "Business hours/slots must use BUSINESS_HOURS config — no hardcoded scheduling values",
+      "forbiddenPatterns": [
+        "(?:BUSINESS_HOURS|BusinessHoursConfig)\\s*(?:=|:)\\s*(?:\\{)"
+      ],
+      "allowlist": [
+        "src/config/business-hours.ts"
+      ]
+    },
+    "audit-tracked-fields": {
+      "ssotFile": "src/config/audit-tracked-fields.ts",
+      "description": "Audit trail field definitions must use *_TRACKED_FIELDS from centralized config",
+      "forbiddenPatterns": [
+        "(?:PROPERTY_TRACKED_FIELDS|CONTACT_TRACKED_FIELDS|COMPANY_TRACKED_FIELDS)\\s*(?:=|:)\\s*(?:\\{|Record)"
+      ],
+      "allowlist": [
+        "src/config/audit-tracked-fields.ts"
+      ]
+    },
+    "firestore-schema-map": {
+      "ssotFile": "src/config/firestore-schema-map.ts",
+      "description": "AI schema definitions must use FIRESTORE_SCHEMA_MAP — no inline schema objects",
+      "forbiddenPatterns": [
+        "(?:FIRESTORE_SCHEMA_MAP|CollectionSchema)\\s*(?:=|:)\\s*(?:\\{|Record)"
+      ],
+      "allowlist": [
+        "src/config/firestore-schema-map.ts"
+      ]
     }
   }
 }

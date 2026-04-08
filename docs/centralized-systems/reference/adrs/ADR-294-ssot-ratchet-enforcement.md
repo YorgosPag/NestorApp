@@ -21,7 +21,9 @@
 | `scripts/generate-ssot-baseline.sh` | Baseline generator |
 | `scripts/ssot-audit.sh` | Progress report |
 
-### Modules (v1.0)
+### Modules (v2.0 — 20 modules, 3 tiers)
+
+**Original (v1.0):**
 | Module | SSoT File | Pattern |
 |--------|-----------|---------|
 | firestore-collections | `src/config/firestore-collections.ts` | `.collection('hardcoded')` / `.doc('hardcoded')` |
@@ -29,6 +31,32 @@
 | domain-constants | `src/config/domain-constants.ts` | Hardcoded `entityType`/`senderType` literals |
 | intent-badge-utils | `src/components/admin/shared/intent-badge-utils.ts` | Re-declared badge functions |
 | addDoc-prohibition | `src/services/enterprise-id.service.ts` | `addDoc()` usage |
+
+**Tier 1 — Data Integrity (bypass = corruption):**
+| Module | SSoT File | Pattern |
+|--------|-----------|---------|
+| tenant-company-id | `src/config/tenant.ts` | Hardcoded `comp_9c7c1a50` or legacy ID |
+| deletion-registry | `src/config/deletion-registry.ts` | Re-declared `DELETION_REGISTRY` / `DependencyDef[]` |
+| soft-delete-config | `src/lib/firestore/soft-delete-config.ts` | Re-declared `SOFT_DELETE_CONFIG` |
+| entity-code-config | `src/config/entity-code-config.ts` | Re-declared `PROPERTY_TYPE_TO_CODE` / `PARKING_ZONE_TO_CODE` |
+
+**Tier 2 — Security (bypass = vulnerability):**
+| Module | SSoT File | Pattern |
+|--------|-----------|---------|
+| ai-role-access-matrix | `src/config/ai-role-access-matrix.ts` | Re-declared `AI_ROLE_ACCESS_MATRIX` / `RoleAccessConfig` |
+| environment-security | `src/config/environment-security-config.ts` | Re-declared `ENVIRONMENT_SECURITY_CONFIG` |
+| file-upload-limits | `src/config/file-upload-config.ts` | Re-declared `FILE_TYPE_CONFIG` |
+
+**Tier 3 — Business Logic (bypass = inconsistency):**
+| Module | SSoT File | Pattern |
+|--------|-----------|---------|
+| notification-events | `src/config/notification-events.ts` | Re-declared `NOTIFICATION_EVENT_TYPES` / `CHANNELS` / `SEVERITIES` |
+| project-mutation-impact | `src/config/project-mutation-impact.ts` | Re-declared `PROJECT_MUTATION_*` |
+| ai-pipeline-config | `src/config/ai-pipeline-config.ts` | Re-declared `PIPELINE_*_CONFIG` |
+| feature-flags | `src/config/feature-flags.ts` | Re-declared `APP_FEATURE_FLAGS` |
+| business-hours | `src/config/business-hours.ts` | Re-declared `BUSINESS_HOURS` |
+| audit-tracked-fields | `src/config/audit-tracked-fields.ts` | Re-declared `*_TRACKED_FIELDS` |
+| firestore-schema-map | `src/config/firestore-schema-map.ts` | Re-declared `FIRESTORE_SCHEMA_MAP` |
 
 ### Ratchet Rules
 1. Per-file violation count can only **decrease** (ratchet down)
@@ -64,10 +92,15 @@ Batch-optimized codebase scanner — 4 phases:
 - **130 centralized files** with **1.072 exports**
 - Violation rate: **0.014%** (137 violations / 970K lines)
 
-## Baseline (2026-04-08)
-- **92 files** with violations
-- **137 total violations**
-- Top module: `domain-constants` (122 violations)
+## Baseline (2026-04-08, v2.0)
+- **93 files** with violations
+- **139 total violations** across **20 modules**
+- Module breakdown:
+  - `domain-constants`: 122 violations (87.8%)
+  - `firestore-collections`: 13 violations (9.4%)
+  - `tenant-company-id`: 2 violations (1.4%)
+  - `enterprise-id`: 2 violations (1.4%)
+  - All other 16 modules: 0 violations (preventive protection)
 
 ## Discovery Results (2026-04-08)
 - **77 duplicate exports** (re-declared outside SSoT) — ~30-40 true positives, rest are same-name different-domain
@@ -80,3 +113,4 @@ Batch-optimized codebase scanner — 4 phases:
 |------|--------|
 | 2026-04-08 | Initial implementation — 5 modules, 92 files baseline |
 | 2026-04-08 | Added Discovery Scanner — 4-phase batch analysis, 77 duplicates found |
+| 2026-04-08 | **v2.0** — Expanded from 5 → 20 modules (3 tiers: data integrity, security, business logic) |
