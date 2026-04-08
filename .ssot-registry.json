@@ -398,6 +398,16 @@
         "src/services/upload/utils/file-display-name.ts",
         "src/lib/security/path-sanitizer.ts"
       ]
+    },
+    "entity-creation-manual": {
+      "ssotFile": "src/lib/firestore/entity-creation.service.ts",
+      "description": "Entity creation must use createEntity() — no manual createdBy: user.uid/auth.uid assembly",
+      "forbiddenPatterns": [
+        "createdBy:\\s*(user\\.uid|auth\\.uid|userId|authContext\\.uid)"
+      ],
+      "allowlist": [
+        "src/lib/firestore/entity-creation.service.ts"
+      ]
     }
   }
 }
