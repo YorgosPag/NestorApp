@@ -63,7 +63,7 @@ export const DELETE = withStandardRateLimit(
       logger.info('Moving building to trash (soft-delete)', { buildingId, companyId: ctx.companyId });
 
       // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
-      await softDelete(adminDb, 'building', buildingId, ctx.uid, ctx.companyId);
+      await softDelete(adminDb, 'building', buildingId, ctx.uid, ctx.companyId, ctx.email ?? undefined);
 
       logger.info('Building moved to trash', { buildingId, email: ctx.email });
 

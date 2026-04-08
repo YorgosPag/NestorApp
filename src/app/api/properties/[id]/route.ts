@@ -253,7 +253,7 @@ export const DELETE = withStandardRateLimit(
         const existing = doc.data() as Record<string, unknown>;
 
         // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
-        await softDelete(adminDb, 'property', id, ctx.uid, ctx.companyId);
+        await softDelete(adminDb, 'property', id, ctx.uid, ctx.companyId, ctx.email ?? undefined);
 
         logger.info('Property moved to trash', { id, companyId: ctx.companyId });
 

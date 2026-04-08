@@ -129,7 +129,7 @@ export async function DELETE(
       const adminDb = getAdminFirestore();
 
       // 🗑️ ADR-281: Centralized soft-delete engine (tenant check + audit built-in)
-      await softDelete(adminDb, 'contact', contactId, ctx.uid, ctx.companyId);
+      await softDelete(adminDb, 'contact', contactId, ctx.uid, ctx.companyId, ctx.email ?? undefined);
 
       logger.info('Contact moved to trash', { contactId, email: ctx.email });
 

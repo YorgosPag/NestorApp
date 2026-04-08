@@ -42,7 +42,7 @@ export const POST = withStandardRateLimit(
       const adminDb = getAdminFirestore();
 
       const result = await restoreFromTrash(
-        adminDb, typedEntityType, entityId, ctx.uid, ctx.companyId
+        adminDb, typedEntityType, entityId, ctx.uid, ctx.companyId, ctx.email ?? undefined
       );
 
       await logAuditEvent(ctx, 'restored', entityType, 'api', {

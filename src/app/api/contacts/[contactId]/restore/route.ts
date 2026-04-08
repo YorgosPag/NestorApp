@@ -38,7 +38,7 @@ export const POST = withStandardRateLimit(
       const adminDb = getAdminFirestore();
 
       // 🔄 ADR-281: Centralized restore engine (tenant check + audit built-in)
-      const result = await restoreFromTrash(adminDb, 'contact', contactId, ctx.uid, ctx.companyId);
+      const result = await restoreFromTrash(adminDb, 'contact', contactId, ctx.uid, ctx.companyId, ctx.email ?? undefined);
 
       await logAuditEvent(ctx, 'restored', 'contact', 'api', {
         newValue: { type: 'status', value: { contactId, restoredStatus: result.restoredStatus } },

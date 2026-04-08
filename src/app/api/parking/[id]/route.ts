@@ -192,7 +192,7 @@ export const DELETE = withStandardRateLimit(
         const existing = (await docRef.get()).data() as Record<string, unknown>;
 
         // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
-        await softDelete(adminDb, 'parking', id, ctx.uid, ctx.companyId);
+        await softDelete(adminDb, 'parking', id, ctx.uid, ctx.companyId, ctx.email ?? undefined);
 
         logger.info('Parking spot moved to trash', { id, companyId: ctx.companyId });
 

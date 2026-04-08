@@ -198,7 +198,7 @@ export class EntityAuditService {
  * Serialize a value to a comparable primitive for diffing.
  */
 function serializeValue(value: unknown): string | number | boolean | null {
-  if (value === null || value === undefined) return null;
+  if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value;
   }

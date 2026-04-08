@@ -43,6 +43,7 @@ export async function softDelete(
   entityId: string,
   deletedBy: string,
   companyId: string,
+  performedByName?: string,
 ): Promise<{ success: true; entityId: string }> {
   const config = SOFT_DELETE_CONFIG[entityType];
   const docRef = db.collection(config.collection).doc(entityId);
@@ -95,11 +96,11 @@ export async function softDelete(
         field: "status",
         oldValue: previousStatus,
         newValue: "deleted",
-        label: "Moved to trash",
+        label: "Κατάσταση",
       },
     ],
     performedBy: deletedBy,
-    performedByName: null,
+    performedByName: performedByName ?? null,
     companyId,
   }).catch((err) => {
     logger.error("Audit trail failed (non-blocking)", {
@@ -130,6 +131,7 @@ export async function restoreFromTrash(
   entityId: string,
   restoredBy: string,
   companyId: string,
+  performedByName?: string,
 ): Promise<{ success: true; entityId: string; restoredStatus: string }> {
   const config = SOFT_DELETE_CONFIG[entityType];
   const docRef = db.collection(config.collection).doc(entityId);
@@ -181,11 +183,11 @@ export async function restoreFromTrash(
         field: "status",
         oldValue: "deleted",
         newValue: restoredStatus,
-        label: "Restored from trash",
+        label: "Κατάσταση",
       },
     ],
     performedBy: restoredBy,
-    performedByName: null,
+    performedByName: performedByName ?? null,
     companyId,
   }).catch((err) => {
     logger.error("Audit trail failed (non-blocking)", {
@@ -259,6 +261,7 @@ export async function batchSoftDelete(
   entityIds: string[],
   deletedBy: string,
   companyId: string,
+  performedByName?: string,
 ): Promise<{
   succeeded: string[];
   failed: Array<{ id: string; error: string }>;
@@ -269,7 +272,7 @@ export async function batchSoftDelete(
   await Promise.all(
     entityIds.map(async (id) => {
       try {
-        await softDelete(db, entityType, id, deletedBy, companyId);
+        await softDelete(db, entityType, id, deletedBy, companyId, performedByName);
         succeeded.push(id);
       } catch (err) {
         failed.push({ id, error: getErrorMessage(err) });
@@ -286,6 +289,7 @@ export async function batchRestore(
   entityIds: string[],
   restoredBy: string,
   companyId: string,
+  performedByName?: string,
 ): Promise<{
   succeeded: string[];
   failed: Array<{ id: string; error: string }>;
@@ -296,7 +300,7 @@ export async function batchRestore(
   await Promise.all(
     entityIds.map(async (id) => {
       try {
-        await restoreFromTrash(db, entityType, id, restoredBy, companyId);
+        await restoreFromTrash(db, entityType, id, restoredBy, companyId, performedByName);
         succeeded.push(id);
       } catch (err) {
         failed.push({ id, error: getErrorMessage(err) });

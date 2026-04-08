@@ -150,7 +150,7 @@ export async function handleDeleteProject(
   }
 
   // 3. ADR-281: Soft-delete — move to trash (status='deleted')
-  await softDelete(db, 'project', projectId, ctx.uid, ctx.companyId);
+  await softDelete(db, 'project', projectId, ctx.uid, ctx.companyId, ctx.email ?? undefined);
 
   const duration = Date.now() - startTime;
   logger.info('[Projects/Delete] Project moved to trash', { projectId, durationMs: duration });
