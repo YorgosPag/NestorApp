@@ -11,7 +11,8 @@ import { formatDateTime } from '@/lib/intl-utils';
 import { truncateText } from '@/lib/obligations-utils';
 import { CommonBadge } from '@/core/badges';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { MessageSquare, Mail, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { getChannelIconComponent } from '@/lib/channel-icon-map';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { MESSAGE_PREVIEW_LENGTH } from '@/config/domain-constants';
 import type { ConversationListItem } from '@/hooks/inbox/useInboxApi';
@@ -21,17 +22,8 @@ import type { ConversationListItem } from '@/hooks/inbox/useInboxApi';
 // ============================================================================
 
 export function getChannelIcon(channel: string, iconSizes: ReturnType<typeof useIconSizes>) {
-  switch (channel) {
-    case COMMUNICATION_CHANNELS.EMAIL:
-      return <Mail className={iconSizes.sm} />;
-    case COMMUNICATION_CHANNELS.TELEGRAM:
-    case COMMUNICATION_CHANNELS.WHATSAPP:
-    case COMMUNICATION_CHANNELS.MESSENGER:
-    case COMMUNICATION_CHANNELS.SMS:
-      return <MessageSquare className={iconSizes.sm} />;
-    default:
-      return <MessageSquare className={iconSizes.sm} />;
-  }
+  const Icon = getChannelIconComponent(channel);
+  return <Icon className={iconSizes.sm} />;
 }
 
 export function getChannelColorClasses(channel: string, colors: ReturnType<typeof useSemanticColors>) {

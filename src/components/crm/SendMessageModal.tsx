@@ -10,7 +10,8 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { CommonBadge } from '@/core/badges';
-import { Send, MessageSquare, Mail, Phone, X } from 'lucide-react';
+import { Send, X } from 'lucide-react';
+import { getChannelIconComponent } from '@/lib/channel-icon-map';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -39,19 +40,8 @@ interface SendMessageModalProps {
 }
 
 const getChannelIcon = (channel: CommunicationChannel, iconClass: string): React.ReactNode => {
-  switch (channel) {
-    case MESSAGE_TYPES.EMAIL:
-      return <Mail className={iconClass} />;
-    case MESSAGE_TYPES.TELEGRAM:
-    case MESSAGE_TYPES.WHATSAPP:
-    case MESSAGE_TYPES.MESSENGER:
-    case MESSAGE_TYPES.SMS:
-      return <MessageSquare className={iconClass} />;
-    case MESSAGE_TYPES.CALL:
-      return <Phone className={iconClass} />;
-    default:
-      return <MessageSquare className={iconClass} />;
-  }
+  const Icon = getChannelIconComponent(channel);
+  return <Icon className={iconClass} />;
 };
 
 const SendMessageModal: React.FC<SendMessageModalProps> = ({

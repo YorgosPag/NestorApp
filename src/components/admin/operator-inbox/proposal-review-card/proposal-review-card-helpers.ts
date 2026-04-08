@@ -1,9 +1,8 @@
-import { Globe, Mail, MessageSquare } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import type { PipelineAction, PipelineChannelValue } from '@/types/ai-pipeline';
+import type { PipelineAction } from '@/types/ai-pipeline';
 
 // SSoT re-exports from shared
 export { getIntentBadgeVariant, getConfidenceColor } from '@/components/admin/shared/intent-badge-utils';
+export { getChannelIconComponent as getChannelIcon } from '@/lib/channel-icon-map';
 
 const DRAFT_REPLY_PARAM = 'draftReply';
 
@@ -13,17 +12,6 @@ export const HIDDEN_ACTION_PARAMS = new Set([
   'senderEmail',
   'isKnownContact',
 ]);
-
-export const getChannelIcon = (channel: PipelineChannelValue): LucideIcon => {
-  switch (channel) {
-    case 'email':
-      return Mail;
-    case 'telegram':
-      return MessageSquare;
-    default:
-      return Globe;
-  }
-};
 
 export const buildModifiedActions = (
   actions: PipelineAction[],

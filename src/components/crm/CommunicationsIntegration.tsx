@@ -9,8 +9,6 @@ import { CommonBadge } from '@/core/badges';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import {
   MessageSquare,
-  Mail,
-  Phone,
   Send,
   Settings,
   Activity,
@@ -22,6 +20,7 @@ import {
   Users,
   Clock
 } from 'lucide-react';
+import { getChannelIconComponent } from '@/lib/channel-icon-map';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import UnifiedInbox from './UnifiedInbox';
 import SendMessageModal from './SendMessageModal';
@@ -31,7 +30,6 @@ import {
   testAllChannels,
   getCommunicationsStats 
 } from '../../lib/communications';
-import { MESSAGE_TYPES } from '../../lib/config/communications.config';
 import { useNotifications } from '@/providers/NotificationProvider';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -210,29 +208,17 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
   /**
    * Λήψη icon για κάθε channel
    */
+  const CHANNEL_COLOR: Record<string, string> = {
+    telegram: 'text-cyan-600',
+    whatsapp: 'text-green-600',
+    messenger: 'text-purple-600',
+    sms: 'text-orange-600',
+  };
+
   const getChannelIcon = (channel: string) => {
-    switch (channel) {
-      case MESSAGE_TYPES.EMAIL:
-      case 'email':
-        return <Mail className={iconSizes.sm} />;
-      case MESSAGE_TYPES.TELEGRAM:
-      case 'telegram':
-        return <MessageSquare className={`${iconSizes.sm} text-cyan-600`} />;
-      case MESSAGE_TYPES.WHATSAPP:
-      case 'whatsapp':
-        return <MessageSquare className={`${iconSizes.sm} text-green-600`} />;
-      case MESSAGE_TYPES.MESSENGER:
-      case 'messenger':
-        return <MessageSquare className={`${iconSizes.sm} text-purple-600`} />;
-      case MESSAGE_TYPES.SMS:
-      case 'sms':
-        return <MessageSquare className={`${iconSizes.sm} text-orange-600`} />;
-      case MESSAGE_TYPES.CALL:
-      case 'call':
-        return <Phone className={iconSizes.sm} />;
-      default:
-        return <MessageSquare className={iconSizes.sm} />;
-    }
+    const Icon = getChannelIconComponent(channel);
+    const color = CHANNEL_COLOR[channel] ?? '';
+    return <Icon className={`${iconSizes.sm} ${color}`} />;
   };
 
   if (loading) {
