@@ -1,16 +1,15 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-08T18:09:47Z",
-    "totalViolations": 139,
-    "totalFiles": 93,
+    "generated": "2026-04-08T18:22:56Z",
+    "totalViolations": 131,
+    "totalFiles": 89,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
     "src/core/headers/EnterpriseHeaderActions.tsx": 6,
     "src/services/entity-linking/EntityLinkingService.ts": 4,
-    "src/services/ai-pipeline/tools/handlers/banking-handler.ts": 4,
     "src/lib/mock-data/dashboard.ts": 4,
     "src/database/migrations/003_enterprise_database_architecture_consolidation.ts": 4,
     "src/components/generic/photo-system/config/photos-tab-config.ts": 4,
@@ -24,7 +23,6 @@
     "src/services/upload/utils/file-display-name.ts": 2,
     "src/services/entity-linking/entity-linking-queries.ts": 2,
     "src/services/entity-code.service.ts": 2,
-    "src/lib/firestore/cascade-contact-name.service.ts": 2,
     "src/hooks/useFloorplanFiles.ts": 2,
     "src/components/shared/EntityCodeField.tsx": 2,
     "src/components/projects/tabs/ProjectAssociationsTab.tsx": 2,
@@ -45,8 +43,6 @@
     "src/services/entity-linking/hooks/useEntityLinking.ts": 1,
     "src/services/contacts.service.ts": 1,
     "src/services/ai-pipeline/tools/handlers/attachment-handler.ts": 1,
-    "src/lib/firestore/communication-impact-preview.service.ts": 1,
-    "src/lib/firestore/address-impact-preview.service.ts": 1,
     "src/hooks/useEntityCodeSuggestion.ts": 1,
     "src/hooks/useEnterpriseMessages.ts": 1,
     "src/features/property-details/components/PropertyFieldsBlock.tsx": 1,
