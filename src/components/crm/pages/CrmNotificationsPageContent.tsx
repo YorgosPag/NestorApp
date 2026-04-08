@@ -19,10 +19,7 @@ import { useNotifications } from '@/components/crm/notifications/useNotification
 import { CrmNotificationCard } from '@/components/crm/notifications/NotificationCard';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { setDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { generateNotificationId } from '@/services/enterprise-id.service';
+import { dismissNotification } from '@/services/notificationService';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageLoadingState } from '@/core/states';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -57,36 +54,35 @@ export function CrmNotificationsPageContent() {
 
     setIsCreatingTest(true);
     try {
-      const notifId = generateNotificationId();
-      await setDoc(doc(db, COLLECTIONS.NOTIFICATIONS, notifId), {
-        userId: user.uid,
-        tenantId: 'default',
-        title: t('notifications.test.title'),
-        body: t('notifications.test.body'),
-        severity: 'info',
-        channel: 'inapp',
-        delivery: { state: 'delivered', attempts: 1 },
-        source: { service: 'test', feature: 'lead', env: 'dev' },
-        createdAt: Timestamp.now()
+      const res = await fetch('/api/notifications/seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid }),
       });
-      setTestNotificationId(notifId);
-      logger.info('Test notification created', { id: notifId });
+      const data = await res.json() as { success: boolean; message?: string };
+      if (data.success) {
+        setTestNotificationId('seeded');
+        logger.info('Test notifications created via API');
+      } else {
+        logger.error('Seed API failed', { response: data });
+      }
     } catch (err) {
       logger.error('Failed to create test notification', { error: err instanceof Error ? err.message : 'Unknown error' });
     } finally {
       setIsCreatingTest(false);
     }
-  }, [t, user?.uid]);
+  }, [user?.uid]);
 
   const deleteTestNotification = useCallback(async () => {
     if (!testNotificationId) return;
 
     try {
-      await deleteDoc(doc(db, COLLECTIONS.NOTIFICATIONS, testNotificationId));
+      // Dismiss = update delivery.state (allowed in rules), functionally hides from UI
+      await dismissNotification(testNotificationId);
       setTestNotificationId(null);
-      logger.info('Test notification deleted');
+      logger.info('Test notification dismissed');
     } catch (err) {
-      logger.error('Failed to delete test notification', { error: err instanceof Error ? err.message : 'Unknown error' });
+      logger.error('Failed to dismiss test notification', { error: err instanceof Error ? err.message : 'Unknown error' });
     }
   }, [testNotificationId]);
 

@@ -10,7 +10,6 @@ import {
   orderBy,
   limit as firestoreLimit,
   getDocs,
-  setDoc,
   updateDoc,
   doc,
   Timestamp,
@@ -21,7 +20,6 @@ import {
 } from 'firebase/firestore';
 import type { Notification, Severity } from '@/types/notification';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { generateNotificationId } from '@/services/enterprise-id.service';
 import { fieldToISO } from '@/lib/date-local';
 import { firestoreQueryService } from '@/services/firestore';
 
@@ -100,21 +98,6 @@ export async function fetchNotifications(params: NotificationQuery): Promise<Not
 
   const lastDoc = snapshot.docs[snapshot.docs.length - 1];
   return { items, cursor: lastDoc };
-}
-
-/**
- * Create a new notification in Firestore
- */
-export async function createNotification(notification: Omit<Notification, 'id'>): Promise<string> {
-  // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
-  const id = generateNotificationId();
-  await setDoc(doc(db, COLLECTION_NAME, id), {
-    ...notification,
-    id,
-    createdAt: Timestamp.now()
-  });
-
-  return id;
 }
 
 /**
@@ -200,59 +183,3 @@ export function subscribeToNotifications(
   );
 }
 
-/**
- * Helper: Create sample notifications for testing
- */
-export async function createSampleNotifications(userId: string): Promise<void> {
-  const sampleNotifications: Omit<Notification, 'id' | 'createdAt'>[] = [
-    {
-      tenantId: 'default',
-      userId,
-      severity: 'info',
-      title: 'Welcome to Enterprise Notifications',
-      body: 'This is a real notification from Firestore!',
-      channel: 'inapp',
-      delivery: { state: 'delivered', attempts: 1 },
-      source: { service: 'firestore', env: 'dev' },
-      actions: [
-        { id: 'view-details', label: 'View Details', url: 'https://example.com/details' },
-        { id: 'dismiss', label: 'Dismiss', destructive: false }
-      ],
-      meta: {
-        correlationId: 'corr-' + Date.now(),
-        traceId: 'trace-' + Date.now()
-      }
-    },
-    {
-      tenantId: 'default',
-      userId,
-      severity: 'success',
-      title: 'System Deployed Successfully',
-      body: 'Version 2.0 has been deployed to production',
-      channel: 'inapp',
-      delivery: { state: 'delivered', attempts: 1 },
-      source: { service: 'deployment', env: 'prod' },
-      actions: [
-        { id: 'open-dashboard', label: 'Open DXF Viewer', url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dxf/viewer` }
-      ]
-    },
-    {
-      tenantId: 'default',
-      userId,
-      severity: 'warning',
-      title: 'High Memory Usage',
-      body: 'Server memory usage is above 80%',
-      channel: 'inapp',
-      delivery: { state: 'delivered', attempts: 1 },
-      source: { service: 'monitoring', env: 'prod' },
-      actions: [
-        { id: 'view-metrics', label: 'View Metrics', url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dxf/viewer` },
-        { id: 'restart-service', label: 'Restart Service', destructive: true }
-      ]
-    }
-  ];
-
-  for (const notification of sampleNotifications) {
-    await createNotification(notification as Omit<Notification, 'id'>);
-  }
-}
