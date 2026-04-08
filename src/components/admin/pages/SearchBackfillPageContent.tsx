@@ -25,8 +25,8 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { getEntityIcon } from '@/app/admin/search-backfill/search-backfill-types';
-import { useSearchBackfillState } from '@/app/admin/search-backfill/useSearchBackfillState';
+import { getEntityIcon } from '../search-backfill/search-backfill-types';
+import { useSearchBackfillState } from '../search-backfill/useSearchBackfillState';
 
 export function SearchBackfillPageContent() {
   const iconSizes = useIconSizes();

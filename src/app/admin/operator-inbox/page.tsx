@@ -18,8 +18,8 @@
  */
 
 import { requireAdminForPage } from '@/server/admin/admin-guards';
-import OperatorInboxClient from './OperatorInboxClient';
-import AIInboxUnauthorized from '@/app/admin/ai-inbox/AIInboxUnauthorized';
+import OperatorInboxClient from '@/components/admin/operator-inbox/OperatorInboxClient';
+import AIInboxUnauthorized from '@/components/admin/ai-inbox/AIInboxUnauthorized';
 
 // ============================================================================
 // SERVER COMPONENT (PAGE)
