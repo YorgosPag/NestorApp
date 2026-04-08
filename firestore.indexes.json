@@ -461,6 +461,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "triageStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "companyId",
           "order": "ASCENDING"
         },
