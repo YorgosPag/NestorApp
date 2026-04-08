@@ -16,6 +16,18 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ContactIdentityImpactPreview');
 
+/** Max time to wait for dependency queries before treating as unavailable */
+const QUERY_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Query timeout after ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
 const DISPLAY_FIELDS: ReadonlySet<IndividualIdentityField> = new Set(['firstName', 'lastName']);
 const IDENTITY_FIELDS: ReadonlySet<IndividualIdentityField> = new Set([
   'fatherName',
@@ -87,22 +99,25 @@ export async function previewContactIdentityImpact(
   }
 
   try {
-    const [projectLinksSnapshot, attendanceEventsSnapshot, employmentRecordsSnapshot] = await Promise.all([
-      db.collection(COLLECTIONS.CONTACT_LINKS)
-        .where('sourceContactId', '==', contactId)
-        .where('targetEntityType', '==', ENTITY_TYPES.PROJECT)
-        .where('status', '==', 'active')
-        .select()
-        .get(),
-      db.collection(COLLECTIONS.ATTENDANCE_EVENTS)
-        .where('contactId', '==', contactId)
-        .select()
-        .get(),
-      db.collection(COLLECTIONS.EMPLOYMENT_RECORDS)
-        .where('contactId', '==', contactId)
-        .select()
-        .get(),
-    ]);
+    const [projectLinksSnapshot, attendanceEventsSnapshot, employmentRecordsSnapshot] = await withTimeout(
+      Promise.all([
+        db.collection(COLLECTIONS.CONTACT_LINKS)
+          .where('sourceContactId', '==', contactId)
+          .where('targetEntityType', '==', ENTITY_TYPES.PROJECT)
+          .where('status', '==', 'active')
+          .select()
+          .get(),
+        db.collection(COLLECTIONS.ATTENDANCE_EVENTS)
+          .where('contactId', '==', contactId)
+          .select()
+          .get(),
+        db.collection(COLLECTIONS.EMPLOYMENT_RECORDS)
+          .where('contactId', '==', contactId)
+          .select()
+          .get(),
+      ]),
+      QUERY_TIMEOUT_MS,
+    );
 
     const dependencies: ContactIdentityImpactDependency[] = [];
     const projectLinks = projectLinksSnapshot.size;
