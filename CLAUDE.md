@@ -116,6 +116,19 @@ SOS. SOS. N.10 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — AI PIPELINE: MANDATORY TESTING
 - **Test patterns**: Ακολούθησε τα υπάρχοντα test files στο `src/services/ai-pipeline/__tests__/` και `tools/__tests__/handlers/`
 - **ΓΙΑΤΙ**: Κάθε μήνα γίνονται δεκάδες αλλαγές στο pipeline — χωρίς tests = production bugs
 
+SOS. SOS. N.12 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — SSoT RATCHET ENFORCEMENT (ADR-294):
+- **Pre-commit hook CHECK 3.7** μπλοκάρει νέα SSoT violations αυτόματα
+- **Registry**: `.ssot-registry.json` — 5 modules (firestore-collections, enterprise-id, domain-constants, intent-badge-utils, addDoc-prohibition)
+- **Baseline**: `.ssot-violations-baseline.json` — 92 αρχεία, 137 violations (2026-04-08)
+- **Ratchet**: Violations μόνο μειώνονται. Νέο αρχείο + violation = ΜΠΛΟΚ. Υπάρχον αρχείο + αύξηση = ΜΠΛΟΚ.
+- **ΟΤΑΝ κεντρικοποιείς νέο module** → πρόσθεσέ το στο `.ssot-registry.json` + τρέξε `npm run ssot:baseline`
+- **ΟΤΑΝ κάνεις cleanup σε violations** → μετά το commit τρέξε `npm run ssot:baseline` για να "κλικάρει" κάτω το ratchet
+- **Commands**:
+  - `npm run ssot:audit` — πρόοδος vs baseline
+  - `npm run ssot:baseline` — ενημέρωση baseline
+  - `npm run ssot:discover` — εντοπισμός duplicates, anti-patterns, registry gaps
+- **ΓΙΑΤΙ**: Χωρίς automated enforcement, κάθε νέος agent μπορεί να γράψει scattered code
+
 SOS. SOS. N.9 CONTEXT HEALTH INDICATOR — ΥΠΟΧΡΕΩΤΙΚΟ ΣΤΟ ΤΕΛΟΣ ΚΑΘΕ ΕΡΓΑΣΙΑΣ:
 **Μετά από ΚΑΘΕ ολοκληρωμένη εργασία**, εμφάνισε context indicator:
 
