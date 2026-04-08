@@ -219,6 +219,14 @@ export function ReportsExecutivePageContent() { ... }
 - Converted 9 page.tsx to thin wrappers (~7 lines each)
 - Related: ADR-024 (Account Hub), ADR-025 (Notification Settings)
 
+### 2026-04-08 — SSoT Cleanup: 7 duplicates centralized (post co-location discovery)
+- **getIntentBadgeVariant()**: 3 copies (ai-inbox, operator-inbox, proposal-review-card) → 1 SSoT `admin/shared/intent-badge-utils.ts`
+- **getConfidenceBadgeVariant() + getConfidenceColor()**: co-located in same SSoT module
+- **format-relative-date.ts**: Custom 47-line English-only function → existing SSoT `intl-formatting.ts` (locale-aware `Intl.RelativeTimeFormat`)
+- **NotificationCard**: CRM-specific variant renamed → `CrmNotificationCard` to resolve naming collision with generic `compositions/NotificationCard`
+- **getChannelIcon()**: 4 copies (proposal-review-card, unified-inbox, SendMessageModal, CommunicationsIntegration) → 1 SSoT `lib/channel-icon-map.ts`
+- Net: -155 lines, 2 new SSoT files, 0 behavior changes
+
 ### 2026-04-08 — Bugfix: SalesSoldPageContent broken className interpolations
 - Fixed 10 instances of `className="... ${colors.text.X}"` (regular quotes)
 - Changed to `className={`... ${colors.text.X}`}` (template literals + JSX expression)
