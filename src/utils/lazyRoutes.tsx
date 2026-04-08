@@ -295,6 +295,62 @@ export const LazyRoutes = {
     () => import('@/subapps/accounting/components/apy-certificates/APYCertificatesPageContent').then(mod => ({ default: mod.APYCertificatesPageContent })),
     { loadingType: 'list', ssr: false }
   ),
+
+  // =========================================================================
+  // ⚡ ADR-294 BATCH 1: Dynamic Imports Optimization — 10 heaviest pages
+  // =========================================================================
+
+  // Reports (recharts heavy — each imports 4-6 chart sections)
+  ReportsExecutive: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsExecutivePageContent').then(mod => ({ default: mod.ReportsExecutivePageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsFinancial: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsFinancialPageContent').then(mod => ({ default: mod.ReportsFinancialPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsSales: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsSalesPageContent').then(mod => ({ default: mod.ReportsSalesPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsConstruction: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsConstructionPageContent').then(mod => ({ default: mod.ReportsConstructionPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  FinancialIntelligence: createLazyRoute(
+    () => import('@/components/sales/financial-intelligence/FinancialIntelligencePageContent').then(mod => ({ default: mod.FinancialIntelligencePageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  // CRM (complex client UIs — dashboards, filters, real-time)
+  CrmCalendar: createLazyRoute(
+    () => import('@/components/crm/calendar/CalendarPageContent').then(mod => ({ default: mod.CalendarPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  CrmTasks: createLazyRoute(
+    () => import('@/components/crm/tasks/TasksPageContent').then(mod => ({ default: mod.TasksPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  CrmLeads: createLazyRoute(
+    () => import('@/components/crm/leads/LeadsPageContent').then(mod => ({ default: mod.LeadsPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  CrmPipeline: createLazyRoute(
+    () => import('@/components/crm/pipeline/PipelinePageContent').then(mod => ({ default: mod.PipelinePageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  CrmCommunications: createLazyRoute(
+    () => import('@/components/crm/communications/CommunicationsPageContent').then(mod => ({ default: mod.CommunicationsPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support
