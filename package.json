@@ -37,6 +37,7 @@
     "ui-strings:baseline": "bash scripts/generate-ui-strings-baseline.sh",
     "ssot:audit": "bash scripts/ssot-audit.sh",
     "ssot:baseline": "bash scripts/generate-ssot-baseline.sh",
+    "ssot:discover": "bash scripts/ssot-discover.sh",
     "validate:all": "npm run lint:strict && bash scripts/validate-project-rules.sh",
     "strict-mode": "node scripts/simple-strict-check.js",
     "clear-cache": "node scripts/clear-cache.js",
