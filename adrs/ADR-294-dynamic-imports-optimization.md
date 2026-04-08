@@ -1,7 +1,7 @@
 # ADR-294: Dynamic Imports Optimization — Incremental Code Splitting
 
 ## Status
-✅ **ACTIVE** — Batch 2 implemented (2026-04-08)
+✅ **ACTIVE** — Batch 4 implemented (2026-04-08)
 
 ## Context
 
@@ -149,9 +149,10 @@ export function ReportsExecutivePageContent() { ... }
 | 1 | 10 (reports + CRM) | ✅ Done | 2026-04-08 |
 | 2 | 8 (remaining reports) | ✅ Done | 2026-04-08 |
 | 3 | 11 (sales, spaces, procurement) | ✅ Done | 2026-04-08 |
-| 4 | ~10 (account, admin, remaining) | ⏳ Pending | — |
+| 4 | 9 (account, CRM remaining, obligations) | ✅ Done | 2026-04-08 |
+| 5 | ~37 (admin, dynamic routes, light pages) | ⏳ Pending | — |
 
-**Total lazy-loaded pages:** 50/96 (21 existing + 10 Batch 1 + 8 Batch 2 + 11 Batch 3)
+**Total lazy-loaded pages:** 59/96 (21 existing + 10 Batch 1 + 8 Batch 2 + 11 Batch 3 + 9 Batch 4)
 
 ## Expected Impact
 - **-20% modules** per cold start (estimated)
@@ -159,6 +160,15 @@ export function ReportsExecutivePageContent() { ... }
 - **Better code splitting**: Separate chunks for recharts, calendar, etc.
 
 ## Changelog
+
+### 2026-04-08 — Batch 4 (9 pages: account, CRM remaining, obligations)
+- Created 9 PageContent extraction files across 3 directories:
+  - `src/components/account/pages/` (5): Profile, Preferences, Privacy, Security, Notifications
+  - `src/components/crm/pages/` (3): CrmHub, CrmTeams, CrmNotifications
+  - `src/components/obligations/pages/` (1): ObligationsHub
+- Updated lazyRoutes.tsx with 9 new entries
+- Converted 9 page.tsx to thin wrappers (~7 lines each)
+- Related: ADR-024 (Account Hub), ADR-025 (Notification Settings)
 
 ### 2026-04-08 — Bugfix: SalesSoldPageContent broken className interpolations
 - Fixed 10 instances of `className="... ${colors.text.X}"` (regular quotes)

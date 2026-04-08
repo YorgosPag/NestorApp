@@ -1,121 +1,28 @@
 'use client';
 
+/**
+ * =============================================================================
+ * LAZY ROUTES REGISTRY - CENTRALIZED DYNAMIC IMPORT CONFIGURATION
+ * =============================================================================
+ *
+ * SSoT for all lazy-loaded page routes in the application.
+ * Skeletons extracted to lazyRouteSkeletons.tsx (SRP).
+ *
+ * @module utils/lazyRoutes
+ * @enterprise ADR-294 - Dynamic Imports Optimization
+ */
+
 import dynamic from 'next/dynamic';
 import { ComponentType } from 'react';
-// 🏢 ENTERPRISE: Import from canonical location (not DXF Viewer)
-import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import {
+  PageLoadingSpinner,
+  DashboardLoadingSkeleton,
+  FormLoadingSkeleton,
+  ListLoadingSkeleton,
+} from './lazyRouteSkeletons';
 
-// ⚡ ENTERPRISE PERFORMANCE OPTIMIZATION (2026-01-27)
-// =========================================================================
-// REMOVED HOOKS FROM LOADING SKELETONS:
-// - useIconSizes, useBorderTokens, useSemanticColors, useTranslation
-//
-// REASON: Hooks were causing 200-400ms delay before skeleton could render
-// Pattern: Vercel, Google Cloud Console, Microsoft Azure Portal use static skeletons
-// RESULT: Instant skeleton render → better perceived performance
-// =========================================================================
-
-// ⚡ ENTERPRISE: Static loading components - ZERO hooks for instant render
-export const PageLoadingSpinner = () => (
-  <main className="min-h-screen bg-background flex items-center justify-center" role="status" aria-label="Loading">
-    <section className="text-center">
-      <AnimatedSpinner size="large" className="mx-auto mb-6" aria-hidden="true" />
-      <p className="text-muted-foreground">Loading...</p>
-    </section>
-  </main>
-);
-
-// ⚡ ENTERPRISE PERFORMANCE: Static skeleton - no hooks for instant render
-export const DashboardLoadingSkeleton = () => (
-  <main className="min-h-screen bg-background" role="status" aria-label="Loading dashboard">
-    <header className="border-b border-border bg-card">
-      <section className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="space-y-2">
-            <div className="h-8 bg-muted rounded-md w-48 animate-pulse" aria-hidden="true" />
-            <div className="h-4 bg-muted rounded-md w-64 animate-pulse" aria-hidden="true" />
-          </div>
-          <div className="flex space-x-3">
-            <div className="h-10 w-32 bg-muted rounded-md animate-pulse" aria-hidden="true" />
-            <div className="h-10 w-10 bg-muted rounded-md animate-pulse" aria-hidden="true" />
-          </div>
-        </div>
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Loading statistics">
-          {[0, 1, 2, 3].map((i) => (
-            <article key={i} className="bg-background border border-border rounded-lg p-4">
-              <div className="space-y-2">
-                <div className="h-4 bg-muted rounded-md w-16 animate-pulse" aria-hidden="true" />
-                <div className="h-8 bg-muted rounded-md w-20 animate-pulse" aria-hidden="true" />
-                <div className="h-3 bg-muted rounded-md w-24 animate-pulse" aria-hidden="true" />
-              </div>
-            </article>
-          ))}
-        </section>
-      </section>
-    </header>
-    <section className="p-6" aria-label="Loading content">
-      <div className="h-64 bg-muted rounded-md animate-pulse" aria-hidden="true" />
-    </section>
-  </main>
-);
-
-// ⚡ ENTERPRISE PERFORMANCE: Static form skeleton
-export const FormLoadingSkeleton = () => (
-  <main className="min-h-screen bg-background p-6" role="status" aria-label="Loading form">
-    <section className="max-w-4xl mx-auto">
-      <div className="bg-card border border-border rounded-lg p-6">
-        <div className="space-y-6">
-          <div className="h-8 bg-muted rounded-md w-48 animate-pulse" aria-hidden="true" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="space-y-2">
-                <div className="h-4 bg-muted rounded-md w-24 animate-pulse" aria-hidden="true" />
-                <div className="h-10 bg-muted rounded-md animate-pulse" aria-hidden="true" />
-              </div>
-            ))}
-          </div>
-          <div className="space-y-2">
-            <div className="h-4 bg-muted rounded-md w-32 animate-pulse" aria-hidden="true" />
-            <div className="h-24 bg-muted rounded-md animate-pulse" aria-hidden="true" />
-          </div>
-          <div className="flex justify-end space-x-3">
-            <div className="h-10 w-20 bg-muted rounded-md animate-pulse" aria-hidden="true" />
-            <div className="h-10 w-20 bg-muted rounded-md animate-pulse" aria-hidden="true" />
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-);
-
-// ⚡ ENTERPRISE PERFORMANCE: Static list skeleton
-export const ListLoadingSkeleton = () => (
-  <main className="min-h-screen bg-background" role="status" aria-label="Loading list">
-    <header className="border-b border-border bg-card p-6">
-      <div className="flex items-center justify-between">
-        <div className="h-8 bg-muted rounded-md w-32 animate-pulse" aria-hidden="true" />
-        <div className="h-10 w-32 bg-muted rounded-md animate-pulse" aria-hidden="true" />
-      </div>
-    </header>
-    <section className="p-6">
-      <ul role="list" className="space-y-4">
-        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-          <li key={i}>
-            <article className="bg-card border border-border rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <div className="h-5 bg-muted rounded-md w-32 animate-pulse" aria-hidden="true" />
-                  <div className="h-4 bg-muted rounded-md w-48 animate-pulse" aria-hidden="true" />
-                </div>
-                <div className="h-10 w-10 bg-muted rounded-full animate-pulse" aria-hidden="true" />
-              </div>
-            </article>
-          </li>
-        ))}
-      </ul>
-    </section>
-  </main>
-);
+// Re-export skeletons for backward compatibility
+export { PageLoadingSpinner, DashboardLoadingSkeleton, FormLoadingSkeleton, ListLoadingSkeleton };
 
 /** Type for lazy-loaded component modules — permissive to accept named/default exports */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -455,6 +362,58 @@ export const LazyRoutes = {
   ProcurementDetail: createLazyRoute(
     () => import('@/components/procurement/pages/ProcurementDetailPageContent').then(mod => ({ default: mod.ProcurementDetailPageContent })),
     { loadingType: 'form', ssr: false }
+  ),
+
+  // =========================================================================
+  // ⚡ ADR-294 BATCH 4: Dynamic Imports — Account, CRM remaining, Obligations
+  // =========================================================================
+
+  // Account
+  AccountProfile: createLazyRoute(
+    () => import('@/components/account/pages/ProfilePageContent').then(mod => ({ default: mod.ProfilePageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
+  AccountPreferences: createLazyRoute(
+    () => import('@/components/account/pages/PreferencesPageContent').then(mod => ({ default: mod.PreferencesPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
+  AccountPrivacy: createLazyRoute(
+    () => import('@/components/account/pages/PrivacyPageContent').then(mod => ({ default: mod.PrivacyPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  AccountSecurity: createLazyRoute(
+    () => import('@/components/account/pages/SecurityPageContent').then(mod => ({ default: mod.SecurityPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
+  AccountNotifications: createLazyRoute(
+    () => import('@/components/account/pages/NotificationsPageContent').then(mod => ({ default: mod.NotificationsPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  // CRM remaining
+  CrmHub: createLazyRoute(
+    () => import('@/components/crm/pages/CrmHubPageContent').then(mod => ({ default: mod.CrmHubPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  CrmTeams: createLazyRoute(
+    () => import('@/components/crm/pages/CrmTeamsPageContent').then(mod => ({ default: mod.CrmTeamsPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  CrmNotifications: createLazyRoute(
+    () => import('@/components/crm/pages/CrmNotificationsPageContent').then(mod => ({ default: mod.CrmNotificationsPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  // Obligations
+  ObligationsHub: createLazyRoute(
+    () => import('@/components/obligations/pages/ObligationsHubPageContent').then(mod => ({ default: mod.ObligationsHubPageContent })),
+    { loadingType: 'list', ssr: false }
   ),
 } as const;
 
