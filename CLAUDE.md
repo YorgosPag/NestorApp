@@ -118,8 +118,8 @@ SOS. SOS. N.10 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — AI PIPELINE: MANDATORY TESTING
 
 SOS. SOS. N.12 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — SSoT RATCHET ENFORCEMENT (ADR-294):
 - **Pre-commit hook CHECK 3.7** μπλοκάρει νέα SSoT violations αυτόματα
-- **Registry**: `.ssot-registry.json` — 20 modules σε 3 tiers (data integrity, security, business logic)
-- **Baseline**: `.ssot-violations-baseline.json` — 93 αρχεία, 139 violations (2026-04-08)
+- **Registry**: `.ssot-registry.json` — 35 modules σε 5 tiers (core, data integrity, security, business logic, enum constants + infrastructure)
+- **Baseline**: `.ssot-violations-baseline.json` — 33 αρχεία, 43 violations (2026-04-09)
 - **Ratchet**: Violations μόνο μειώνονται. Νέο αρχείο + violation = ΜΠΛΟΚ. Υπάρχον αρχείο + αύξηση = ΜΠΛΟΚ.
 - **ΟΤΑΝ κεντρικοποιείς νέο module** → πρόσθεσέ το στο `.ssot-registry.json` + τρέξε `npm run ssot:baseline`
 - **ΟΤΑΝ κάνεις cleanup σε violations** → μετά το commit τρέξε `npm run ssot:baseline` για να "κλικάρει" κάτω το ratchet

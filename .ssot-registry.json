@@ -36,8 +36,8 @@
       "ssotFile": "src/config/domain-constants.ts",
       "description": "Entity types, sender types, participant roles must use DOMAIN_CONSTANTS",
       "forbiddenPatterns": [
-        "senderType\\s*[:=]\\s*['\"](?:customer|agent|bot|system)['\"]",
-        "entityType\\s*[:=]\\s*['\"](?:lead|contact|company|project|property|building)['\"]"
+        "senderType\\s*[:=]\\s*['\"](customer|agent|bot|system)['\"]",
+        "entityType\\s*[:=]\\s*['\"](lead|contact|company|project|property|building)['\"]"
       ],
       "allowlist": [
         "src/config/domain-constants.ts",
@@ -48,7 +48,7 @@
       "ssotFile": "src/components/admin/shared/intent-badge-utils.ts",
       "description": "Intent/confidence badge variants must use centralized intent-badge-utils",
       "forbiddenPatterns": [
-        "(?:getIntentBadge|getConfidenceBadge|getConfidenceColor)\\s*(?:=|:)\\s*(?:function|\\()"
+        "(getIntentBadge|getConfidenceBadge|getConfidenceColor)\\s*(=|:)\\s*(function|\\()"
       ],
       "allowlist": [
         "src/components/admin/shared/intent-badge-utils.ts"
@@ -81,7 +81,7 @@
       "ssotFile": "src/config/deletion-registry.ts",
       "description": "Deletion dependencies must be declared in DELETION_REGISTRY — no inline dependency arrays",
       "forbiddenPatterns": [
-        "(?:DELETION_REGISTRY|deletionDependencies|DependencyDef\\[\\])\\s*(?:=|:)\\s*(?:\\{|\\[)"
+        "(DELETION_REGISTRY|deletionDependencies|DependencyDef\\[\\])\\s*(=|:)\\s*(\\{|\\[)"
       ],
       "allowlist": [
         "src/config/deletion-registry.ts"
@@ -91,7 +91,7 @@
       "ssotFile": "src/lib/firestore/soft-delete-config.ts",
       "description": "Soft-delete entity config must use centralized SOFT_DELETE_CONFIG",
       "forbiddenPatterns": [
-        "(?:SOFT_DELETE_CONFIG|SoftDeleteEntityConfig)\\s*(?:=|:)\\s*(?:\\{|Record)"
+        "(SOFT_DELETE_CONFIG|SoftDeleteEntityConfig)\\s*(=|:)\\s*(\\{|Record)"
       ],
       "allowlist": [
         "src/lib/firestore/soft-delete-config.ts"
@@ -101,7 +101,7 @@
       "ssotFile": "src/config/entity-code-config.ts",
       "description": "Entity type codes (DI/GK/ST/ME/etc) must come from entity-code-config — no hardcoded 2-char codes",
       "forbiddenPatterns": [
-        "(?:PROPERTY_TYPE_TO_CODE|PARKING_ZONE_TO_CODE|ENTITY_CODE_SEPARATOR)\\s*(?:=|:)\\s*(?:\\{|['\"])"
+        "(PROPERTY_TYPE_TO_CODE|PARKING_ZONE_TO_CODE|ENTITY_CODE_SEPARATOR)\\s*(=|:)\\s*(\\{|['\"])"
       ],
       "allowlist": [
         "src/config/entity-code-config.ts",
@@ -115,7 +115,7 @@
       "ssotFile": "src/config/ai-role-access-matrix.ts",
       "description": "AI role permissions must use AI_ROLE_ACCESS_MATRIX — no inline access configs",
       "forbiddenPatterns": [
-        "(?:AI_ROLE_ACCESS_MATRIX|RoleAccessConfig|allowedCollections|blockedFields)\\s*(?:=|:)\\s*(?:\\{|\\[|Record)"
+        "(AI_ROLE_ACCESS_MATRIX|RoleAccessConfig|allowedCollections|blockedFields)\\s*(=|:)\\s*(\\{|\\[|Record)"
       ],
       "allowlist": [
         "src/config/ai-role-access-matrix.ts",
@@ -127,7 +127,7 @@
       "ssotFile": "src/config/environment-security-config.ts",
       "description": "Security policies must use ENVIRONMENT_SECURITY_CONFIG — no inline security rules",
       "forbiddenPatterns": [
-        "(?:ENVIRONMENT_SECURITY_CONFIG|EnvironmentSecurityPolicy)\\s*(?:=|:)\\s*(?:\\{|Record)"
+        "(ENVIRONMENT_SECURITY_CONFIG|EnvironmentSecurityPolicy)\\s*(=|:)\\s*(\\{|Record)"
       ],
       "allowlist": [
         "src/config/environment-security-config.ts"
@@ -137,7 +137,7 @@
       "ssotFile": "src/config/file-upload-config.ts",
       "description": "File size limits must come from FILE_TYPE_CONFIG — no hardcoded byte calculations",
       "forbiddenPatterns": [
-        "(?:FILE_TYPE_CONFIG|FileTypeConfig)\\s*(?:=|:)\\s*(?:\\{|Record)"
+        "(FILE_TYPE_CONFIG|FileTypeConfig)\\s*(=|:)\\s*(\\{|Record)"
       ],
       "allowlist": [
         "src/config/file-upload-config.ts"
@@ -150,7 +150,7 @@
       "ssotFile": "src/config/notification-events.ts",
       "description": "Notification events/channels/severities must use centralized registry",
       "forbiddenPatterns": [
-        "(?:NOTIFICATION_EVENT_TYPES|NOTIFICATION_CHANNELS|NOTIFICATION_SEVERITIES)\\s*(?:=|:)\\s*(?:\\{)"
+        "(NOTIFICATION_EVENT_TYPES|NOTIFICATION_CHANNELS|NOTIFICATION_SEVERITIES)\\s*(=|:)\\s*(\\{)"
       ],
       "allowlist": [
         "src/config/notification-events.ts"
@@ -160,7 +160,7 @@
       "ssotFile": "src/config/project-mutation-impact.ts",
       "description": "Project mutation fields/guards must use PROJECT_MUTATION_* constants",
       "forbiddenPatterns": [
-        "(?:PROJECT_MUTATION_CHANGE_FIELDS|PROJECT_MUTATION_FIELD_KIND_MAP|PROJECT_MUTATION_STATUS_GUARDED_VALUES|PROJECT_MUTATION_DEPENDENCY_IDS)\\s*(?:=|:)\\s*(?:\\{|\\[|new)"
+        "(PROJECT_MUTATION_CHANGE_FIELDS|PROJECT_MUTATION_FIELD_KIND_MAP|PROJECT_MUTATION_STATUS_GUARDED_VALUES|PROJECT_MUTATION_DEPENDENCY_IDS)\\s*(=|:)\\s*(\\{|\\[|new)"
       ],
       "allowlist": [
         "src/config/project-mutation-impact.ts"
@@ -170,7 +170,7 @@
       "ssotFile": "src/config/ai-pipeline-config.ts",
       "description": "Pipeline queue/timeout/confidence configs must use PIPELINE_*_CONFIG constants",
       "forbiddenPatterns": [
-        "(?:PIPELINE_QUEUE_CONFIG|PIPELINE_TIMEOUT_CONFIG|PIPELINE_CONFIDENCE_CONFIG)\\s*(?:=|:)\\s*(?:\\{)"
+        "(PIPELINE_QUEUE_CONFIG|PIPELINE_TIMEOUT_CONFIG|PIPELINE_CONFIDENCE_CONFIG)\\s*(=|:)\\s*(\\{)"
       ],
       "allowlist": [
         "src/config/ai-pipeline-config.ts"
@@ -180,7 +180,7 @@
       "ssotFile": "src/config/feature-flags.ts",
       "description": "Feature flags must use APP_FEATURE_FLAGS/isAppFeatureEnabled — no inline flag objects",
       "forbiddenPatterns": [
-        "(?:APP_FEATURE_FLAGS|AppFeatureFlags)\\s*(?:=|:)\\s*(?:\\{)"
+        "(APP_FEATURE_FLAGS|AppFeatureFlags)\\s*(=|:)\\s*(\\{)"
       ],
       "allowlist": [
         "src/config/feature-flags.ts"
@@ -190,7 +190,7 @@
       "ssotFile": "src/config/business-hours.ts",
       "description": "Business hours/slots must use BUSINESS_HOURS config — no hardcoded scheduling values",
       "forbiddenPatterns": [
-        "(?:BUSINESS_HOURS|BusinessHoursConfig)\\s*(?:=|:)\\s*(?:\\{)"
+        "(BUSINESS_HOURS|BusinessHoursConfig)\\s*(=|:)\\s*(\\{)"
       ],
       "allowlist": [
         "src/config/business-hours.ts"
@@ -200,7 +200,7 @@
       "ssotFile": "src/config/audit-tracked-fields.ts",
       "description": "Audit trail field definitions must use *_TRACKED_FIELDS from centralized config",
       "forbiddenPatterns": [
-        "(?:PROPERTY_TRACKED_FIELDS|CONTACT_TRACKED_FIELDS|COMPANY_TRACKED_FIELDS)\\s*(?:=|:)\\s*(?:\\{|Record)"
+        "(PROPERTY_TRACKED_FIELDS|CONTACT_TRACKED_FIELDS|COMPANY_TRACKED_FIELDS)\\s*(=|:)\\s*(\\{|Record)"
       ],
       "allowlist": [
         "src/config/audit-tracked-fields.ts"
@@ -210,10 +210,193 @@
       "ssotFile": "src/config/firestore-schema-map.ts",
       "description": "AI schema definitions must use FIRESTORE_SCHEMA_MAP — no inline schema objects",
       "forbiddenPatterns": [
-        "(?:FIRESTORE_SCHEMA_MAP|CollectionSchema)\\s*(?:=|:)\\s*(?:\\{|Record)"
+        "(FIRESTORE_SCHEMA_MAP|CollectionSchema)\\s*(=|:)\\s*(\\{|Record)"
       ],
       "allowlist": [
         "src/config/firestore-schema-map.ts"
+      ]
+    },
+
+    "_comment_tier4": "=== TIER 4: ENUM/STATUS CONSTANTS — ADR-287 (bypass = inconsistency) ===",
+
+    "commercial-statuses": {
+      "ssotFile": "src/constants/commercial-statuses.ts",
+      "description": "Commercial statuses must import from @/constants/commercial-statuses — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(COMMERCIAL_STATUSES|LISTED_COMMERCIAL_STATUSES|FINALIZED_COMMERCIAL_STATUSES|COMMERCIAL_STATUS_ALIASES)\\s*(=|:)\\s*(\\[|\\{|Record)"
+      ],
+      "allowlist": [
+        "src/constants/commercial-statuses.ts",
+        "src/constants/property-statuses-enterprise.ts"
+      ]
+    },
+    "operational-statuses": {
+      "ssotFile": "src/constants/operational-statuses.ts",
+      "description": "Operational statuses must import from @/constants/operational-statuses — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(OPERATIONAL_STATUSES|IN_PROGRESS_OPERATIONAL_STATUSES)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/operational-statuses.ts",
+        "src/constants/property-statuses-enterprise.ts"
+      ]
+    },
+    "energy-classes": {
+      "ssotFile": "src/constants/energy-classes.ts",
+      "description": "Energy classes must import from @/constants/energy-classes — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(ENERGY_CLASSES|HIGH_EFFICIENCY_ENERGY_CLASSES)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/energy-classes.ts",
+        "src/constants/property-features-enterprise.ts"
+      ]
+    },
+    "building-types": {
+      "ssotFile": "src/constants/building-types.ts",
+      "description": "Building types must import from @/constants/building-types — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(BUILDING_TYPES|NON_RESIDENTIAL_BUILDING_TYPES)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/building-types.ts"
+      ]
+    },
+    "building-statuses": {
+      "ssotFile": "src/constants/building-statuses.ts",
+      "description": "Building statuses must import from @/constants/building-statuses — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(BUILDING_STATUSES|ACTIVE_BUILDING_STATUSES|IN_CONSTRUCTION_BUILDING_STATUSES)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/building-statuses.ts",
+        "src/constants/property-statuses-enterprise.ts"
+      ]
+    },
+    "project-statuses": {
+      "ssotFile": "src/constants/project-statuses.ts",
+      "description": "Project statuses must import from @/constants/project-statuses — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(PROJECT_STATUSES|ACTIVE_PROJECT_STATUSES|IN_PROGRESS_PROJECT_STATUSES)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/project-statuses.ts"
+      ]
+    },
+    "project-types": {
+      "ssotFile": "src/constants/project-types.ts",
+      "description": "Project types must import from @/constants/project-types — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(PROJECT_TYPES)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/project-types.ts"
+      ]
+    },
+    "priority-levels": {
+      "ssotFile": "src/constants/priority-levels.ts",
+      "description": "Priority levels must import from @/constants/priority-levels — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(PRIORITY_LEVELS)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/priority-levels.ts"
+      ]
+    },
+    "renovation-statuses": {
+      "ssotFile": "src/constants/renovation-statuses.ts",
+      "description": "Renovation statuses must import from @/constants/renovation-statuses — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(RENOVATION_STATUSES|COMPLETED_RENOVATION_STATUSES)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/renovation-statuses.ts",
+        "src/constants/property-statuses-enterprise.ts"
+      ]
+    },
+    "property-types": {
+      "ssotFile": "src/constants/property-types.ts",
+      "description": "Property types must import from @/constants/property-types — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(PROPERTY_TYPES|PROPERTY_TYPE_ALIASES|STANDALONE_UNIT_TYPES|COMMERCIAL_PROPERTY_TYPES|RESIDENTIAL_PROPERTY_TYPES)\\s*(=|:)\\s*(\\[|\\{|Record)"
+      ],
+      "allowlist": [
+        "src/constants/property-types.ts"
+      ]
+    },
+    "contact-types": {
+      "ssotFile": "src/constants/contact-types.ts",
+      "description": "Contact types must import from @/constants/contact-types — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(CONTACT_TYPES|CONTACT_TYPE_ALIASES)\\s*(=|:)\\s*(\\[|\\{|Record)"
+      ],
+      "allowlist": [
+        "src/constants/contact-types.ts"
+      ]
+    },
+    "entity-status-values": {
+      "ssotFile": "src/constants/entity-status-values.ts",
+      "description": "Entity/queue status objects must import from @/constants/entity-status-values — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(ENTITY_STATUS|QUEUE_STATUS)\\s*(=|:)\\s*(\\{)"
+      ],
+      "allowlist": [
+        "src/constants/entity-status-values.ts"
+      ]
+    },
+    "legal-phases": {
+      "ssotFile": "src/constants/legal-phases.ts",
+      "description": "Legal phases must import from @/constants/legal-phases — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(LEGAL_PHASES|PENDING_LEGAL_PHASES|SIGNED_LEGAL_PHASES)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/constants/legal-phases.ts"
+      ]
+    },
+    "greek-banks": {
+      "ssotFile": "src/constants/greek-banks.ts",
+      "description": "Greek bank data must import from @/constants/greek-banks — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(GREEK_BANKS|GREEK_BANK_CODES)\\s*(=|:)\\s*(\\[|\\{|Record)"
+      ],
+      "allowlist": [
+        "src/constants/greek-banks.ts"
+      ]
+    },
+    "triage-statuses": {
+      "ssotFile": "src/constants/triage-statuses.ts",
+      "description": "Triage statuses must import from @/constants/triage-statuses — no inline re-declaration",
+      "forbiddenPatterns": [
+        "(TRIAGE_STATUSES|TRIAGE_STATUS_VALUES)\\s*(=|:)\\s*(\\{|\\[)"
+      ],
+      "allowlist": [
+        "src/constants/triage-statuses.ts"
+      ]
+    },
+    "property-features-enterprise": {
+      "ssotFile": "src/constants/property-features-enterprise.ts",
+      "description": "Property feature enums (Orientation, ViewType, etc) must import from @/constants/property-features-enterprise",
+      "forbiddenPatterns": [
+        "(ORIENTATION_LABELS|VIEW_TYPE_LABELS|ENERGY_CLASS_LABELS|ENERGY_CLASS_COLORS)\\s*(=|:)\\s*(\\{|Record)"
+      ],
+      "allowlist": [
+        "src/constants/property-features-enterprise.ts"
+      ]
+    },
+
+    "_comment_tier5": "=== TIER 5: INFRASTRUCTURE (bypass = path inconsistency) ===",
+
+    "storage-path-construction": {
+      "ssotFile": "src/services/upload/utils/storage-path.ts",
+      "description": "Storage paths must use buildStoragePath() — no hardcoded companies/${id}/... paths",
+      "forbiddenPatterns": [
+        "companies/\\$\\{"
+      ],
+      "allowlist": [
+        "src/services/upload/utils/storage-path.ts",
+        "src/services/upload/utils/file-display-name.ts",
+        "src/lib/security/path-sanitizer.ts"
       ]
     }
   }
