@@ -54,49 +54,108 @@ export const PROPERTY_TRACKED_FIELDS: Record<string, string> = {
 
 /** Fields tracked for contact audit trail (field → Greek label) */
 export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
-  // Identity
+  // ── Identity (shared) ──
   firstName: 'Όνομα',
   lastName: 'Επώνυμο',
   fatherName: 'Πατρώνυμο',
   motherName: 'Μητρώνυμο',
+  middleName: 'Μεσαίο Όνομα',
+  nickname: 'Ψευδώνυμο',
   companyName: 'Επωνυμία',
   serviceName: 'Όνομα Υπηρεσίας',
   type: 'Τύπος',
   status: 'Κατάσταση',
 
-  // Tax / Legal
+  // ── Individual — Personal ──
+  birthDate: 'Ημ. Γέννησης',
+  birthCountry: 'Χώρα Γέννησης',
+  gender: 'Φύλο',
+  amka: 'ΑΜΚΑ',
+
+  // ── Individual — Identity Documents ──
+  documentType: 'Τύπος Εγγράφου',
+  documentIssuer: 'Εκδούσα Αρχή',
+  documentNumber: 'Αρ. Εγγράφου',
+  documentIssueDate: 'Ημ. Έκδοσης Εγγράφου',
+  documentExpiryDate: 'Ημ. Λήξης Εγγράφου',
+
+  // ── Tax / Legal ──
   vatNumber: 'ΑΦΜ',
   taxOffice: 'ΔΟΥ',
   idNumber: 'Αρ. Ταυτότητας',
   profession: 'Επάγγελμα',
 
-  // Contact info (arrays — serialized to JSON for diff)
+  // ── Individual — Professional ──
+  specialty: 'Ειδικότητα',
+  employer: 'Εργοδότης',
+  employerId: 'ID Εργοδότη',
+  position: 'Θέση',
+  department: 'Τμήμα',
+  workAddress: 'Διεύθυνση Εργασίας',
+  workWebsite: 'Ιστοσελίδα Εργασίας',
+  escoLabel: 'Επάγγελμα ESCO',
+  iscoCode: 'Κωδικός ISCO',
+  escoSkills: 'Δεξιότητες ESCO',
+
+  // ── Individual — Family ──
+  maritalStatus: 'Οικογ. Κατάσταση',
+  spouse: 'Σύζυγος',
+  children: 'Τέκνα',
+
+  // ── Contact info (arrays — serialized to JSON for diff) ──
   emails: 'Emails',
   phones: 'Τηλέφωνα',
+  websites: 'Ιστοσελίδες',
+  socialMediaArray: 'Μέσα Κοιν. Δικτύωσης',
 
-  // Address fields
+  // ── Address fields ──
   addresses: 'Διευθύνσεις',
 
-  // Categorization
+  // ── Categorization ──
   tags: 'Ετικέτες',
   isFavorite: 'Αγαπημένο',
   category: 'Κατηγορία',
 
-  // Notes
+  // ── Notes ──
   notes: 'Σημειώσεις',
 
-  // Company-specific
+  // ── Photos / Media ──
+  photoURL: 'Φωτογραφία Προφίλ',
+  multiplePhotoURLs: 'Φωτογραφίες',
+  logoURL: 'Λογότυπο',
+  representativePhotoURL: 'Φωτογραφία Εκπροσώπου',
+
+  // ── Company-specific ──
   legalForm: 'Νομική Μορφή',
   companyType: 'Τύπος Εταιρείας',
+  legalName: 'Νομική Επωνυμία',
+  tradeName: 'Εμπορική Επωνυμία',
+  registrationNumber: 'Αρ. ΓΕΜΗ',
   industry: 'Κλάδος',
+  sector: 'Τομέας',
+  numberOfEmployees: 'Αρ. Εργαζομένων',
+  annualRevenue: 'Ετήσιος Κύκλος Εργασιών',
+  contactPersons: 'Πρόσωπα Επικοινωνίας',
   'customFields.activities': 'Δραστηριότητες ΚΑΔ',
   'customFields.chamber': 'Επιμελητήριο / Τ.Υ. ΓΕΜΗ',
   'customFields.activityCodeKAD': 'Κύριος ΚΑΔ',
   'customFields.activityDescription': 'Περιγραφή ΚΑΔ',
   'customFields.activityType': 'Τύπος δραστηριότητας',
 
-  // Personas (ADR-121)
+  // ── Service-specific ──
+  serviceType: 'Τύπος Υπηρεσίας',
+  parentOrganization: 'Μητρικός Οργανισμός',
+  serviceCode: 'Κωδικός Υπηρεσίας',
+  registryNumber: 'Αρ. Μητρώου',
+  responsibleMinistry: 'Αρμόδιο Υπουργείο',
+  division: 'Διεύθυνση',
+  operatingHours: 'Ωράριο Λειτουργίας',
+  responsiblePersons: 'Υπεύθυνοι Επικοινωνίας',
+  servicesProvided: 'Παρεχόμενες Υπηρεσίες',
+
+  // ── Personas (ADR-121) ──
   personas: 'Ρόλοι (Personas)',
+  personaTypes: 'Τύποι Ρόλων',
 };
 
 // ============================================================================
