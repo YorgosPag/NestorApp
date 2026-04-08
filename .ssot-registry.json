@@ -408,6 +408,49 @@
       "allowlist": [
         "src/lib/firestore/entity-creation.service.ts"
       ]
+    },
+
+    "_comment_tier6": "=== TIER 6: CONFIG CONSOLIDATION (bypass = config drift) ===",
+
+    "search-index-config": {
+      "ssotFile": "src/config/search-index-config.ts",
+      "description": "Search index definitions must use SEARCH_INDEX_CONFIG — no inline search configs",
+      "forbiddenPatterns": [
+        "(SEARCH_INDEX_CONFIG)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/search-index-config.ts"
+      ]
+    },
+    "ai-analysis-config": {
+      "ssotFile": "src/config/ai-analysis-config.ts",
+      "description": "AI schemas/prompts/costs must use centralized ai-analysis-config — no inline AI configs",
+      "forbiddenPatterns": [
+        "(AI_ANALYSIS_DEFAULTS|AI_COST_CONFIG|AI_ANALYSIS_PROMPTS|AI_MESSAGE_INTENT_SCHEMA|AI_MULTI_INTENT_SCHEMA|AI_ADMIN_COMMAND_SCHEMA|AI_DOCUMENT_CLASSIFY_SCHEMA|AI_PROVIDER_IDS)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/ai-analysis-config.ts"
+      ]
+    },
+    "admin-tool-definitions": {
+      "ssotFile": "src/config/admin-tool-definitions.ts",
+      "description": "Admin AI tool definitions must use centralized admin-tool-definitions — no inline tool configs",
+      "forbiddenPatterns": [
+        "(ADMIN_TOOL_DEFINITIONS|ADMIN_TOOL_SYSTEM_PROMPT)\\s*(=|:)\\s*(\\{|\\[)"
+      ],
+      "allowlist": [
+        "src/config/admin-tool-definitions.ts"
+      ]
+    },
+    "persona-config": {
+      "ssotFile": "src/config/persona-config.ts",
+      "description": "Persona metadata/sections must use centralized persona-config — no inline persona definitions",
+      "forbiddenPatterns": [
+        "(PERSONA_METADATA|PROFESSIONAL_PERSONA_TYPES|ROLE_PERSONA_TYPES|PERSONA_SECTIONS)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/persona-config.ts"
+      ]
     }
   }
 }

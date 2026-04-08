@@ -1,9 +1,9 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-08T21:12:00Z",
-    "totalViolations": 60,
-    "totalFiles": 50,
+    "generated": "2026-04-08T21:19:51Z",
+    "totalViolations": 61,
+    "totalFiles": 51,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
@@ -57,6 +57,7 @@
     "src/components/building-management/tabs/BuildingContactsTab.tsx": 1,
     "src/app/api/properties/[id]/property-contact-links.ts": 1,
     "src/app/api/entity-code/suggest/route.ts": 1,
-    "src/app/api/cad-files/dual-write-to-files.ts": 1
+    "src/app/api/cad-files/dual-write-to-files.ts": 1,
+    "src/app/api/admin/search-backfill/search-index-config.ts": 1
   }
 }
