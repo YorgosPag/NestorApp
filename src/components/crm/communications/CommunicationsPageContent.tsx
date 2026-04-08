@@ -15,9 +15,9 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn, getResponsiveClass, getSpacingClass } from '@/lib/design-system';
-import { CommunicationsListPane } from '@/app/crm/communications/CommunicationsListPane';
-import { CommunicationsDetailPane } from '@/app/crm/communications/CommunicationsDetailPane';
-import { useCommunicationsPageController } from '@/app/crm/communications/useCommunicationsPageController';
+import { CommunicationsListPane } from './CommunicationsListPane';
+import { CommunicationsDetailPane } from './CommunicationsDetailPane';
+import { useCommunicationsPageController } from './useCommunicationsPageController';
 
 export function CommunicationsPageContent() {
   const iconSizes = useIconSizes();
