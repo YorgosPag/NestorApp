@@ -106,9 +106,9 @@ export function PhotosTab({
     return (
       <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
         <PropertyIcon className={`${iconSizes['2xl']} ${propertyColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('photos.selectProperty', 'Επιλέξτε Μονάδα')}</h3>
+        <h3 className="text-xl font-semibold mb-2">{t('photos.selectProperty')}</h3>
         <p className="text-sm max-w-sm">
-          {t('photos.selectUnitDescription', 'Επιλέξτε μια μονάδα από τη λίστα για να δείτε τις φωτογραφίες της.')}
+          {t('photos.selectUnitDescription')}
         </p>
       </div>
     );
@@ -118,7 +118,7 @@ export function PhotosTab({
   if (!companyId || !currentUserId) {
     return (
       <section className={cn("p-6 text-center", colors.text.muted)}>
-        <p>{t('photos.noAuth', 'Απαιτείται σύνδεση για να δείτε τις φωτογραφίες.')}</p>
+        <p>{t('photos.noAuth')}</p>
       </section>
     );
   }
@@ -129,7 +129,7 @@ export function PhotosTab({
       currentUserId={currentUserId}
       entityType={ENTITY_TYPES.PROPERTY}
       entityId={String(selectedProperty.id)}
-      entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
+      entityLabel={selectedProperty.name || t('unitFallbackLabel', { id: selectedProperty.id })}
       domain="sales"
       category="photos"
       purpose="photo"

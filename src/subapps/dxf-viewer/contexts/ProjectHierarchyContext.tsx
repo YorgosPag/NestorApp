@@ -13,6 +13,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import type { CompanyContact } from '../../../types/contacts';
 // 🔐 ENTERPRISE: Auth hook for authentication-ready gating
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload, type ContactCreatedPayload } from '@/services/realtime';
@@ -104,6 +105,7 @@ const ProjectHierarchyContext = createContext<ProjectHierarchyContextType | null
 export function ProjectHierarchyProvider({ children }: { children: React.ReactNode }) {
   // 🔐 ENTERPRISE: Auth-ready gating - wait for authentication before API calls
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation('dxf-viewer');
 
   const [hierarchy, setHierarchy] = useState<ProjectHierarchy>({
     companies: [],
@@ -192,7 +194,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
 
       setHierarchy(prev => ({
         ...prev,
-        error: `Σφάλμα φόρτωσης: ${errorMessage}`,
+        error: t('modal.loadError', { message: errorMessage }),
         loading: false
       }));
     } finally {
@@ -357,14 +359,14 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       // Project level destinations
       destinations.push({
         id: project.id,
-        label: `${project.name} - Γενική Κάτοψη`,
+        label: t('destination.generalFloorplan', { name: project.name }),
         type: 'project'
       });
 
       if (project.parkingSpots && project.parkingSpots.length > 0) {
         destinations.push({
           id: `${project.id}_parking`,
-          label: `${project.name} - Θέσεις Στάθμευσης`,
+          label: t('destination.parkingSpots', { name: project.name }),
           type: 'parking',
           parentId: project.id
         });
@@ -395,7 +397,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
         if (building.storageAreas && building.storageAreas.length > 0) {
           destinations.push({
             id: `${building.id}_storage`,
-            label: `${project.name} → ${bLabel} → Αποθήκες`,
+            label: t('destination.storages', { project: project.name, building: bLabel }),
             type: 'storage',
             parentId: building.id,
             metadata: { category: 'storage' }

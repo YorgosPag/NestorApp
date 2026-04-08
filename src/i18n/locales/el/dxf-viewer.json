@@ -93,5 +93,17 @@
   },
   "breadcrumb": {
     "ariaLabel": "Τοποθεσία σχεδίου"
+  },
+  "modal": {
+    "importFile": "Εισαγωγή Αρχείου",
+    "selectProject": "Επιλογή Project",
+    "success": "Επιτυχία",
+    "error": "Σφάλμα",
+    "loadError": "Σφάλμα φόρτωσης: {{message}}"
+  },
+  "destination": {
+    "generalFloorplan": "{{name}} - Γενική Κάτοψη",
+    "parkingSpots": "{{name}} - Θέσεις Στάθμευσης",
+    "storages": "{{project}} → {{building}} → Αποθήκες"
   }
 }

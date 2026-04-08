@@ -18,6 +18,7 @@ import { AlertCircle, CheckCircle2, Info, AlertTriangle, Upload } from 'lucide-r
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // ====================================================================
@@ -139,11 +140,12 @@ export const UploadModalContainer: React.FC<{
   children: React.ReactNode;
   title?: string;
   className?: string;
-}> = ({ children, title = 'Εισαγωγή Αρχείου', className }) => {
+}> = ({ children, title, className }) => {
+  const { t } = useTranslation('dxf-viewer');
   return (
     <ModalContainer
       variant="upload"
-      title={title}
+      title={title ?? t('modal.importFile')}
       icon={<Upload className={useIconSizes().md} />}
       className={className}
     >
@@ -159,11 +161,12 @@ export const ProjectModalContainer: React.FC<{
   children: React.ReactNode;
   title?: string;
   className?: string;
-}> = ({ children, title = 'Επιλογή Project', className }) => {
+}> = ({ children, title, className }) => {
+  const { t } = useTranslation('dxf-viewer');
   return (
     <ModalContainer
       variant="info"
-      title={title}
+      title={title ?? t('modal.selectProject')}
       className={className}
     >
       {children}
@@ -178,11 +181,12 @@ export const SuccessModalContainer: React.FC<{
   children: React.ReactNode;
   title?: string;
   className?: string;
-}> = ({ children, title = 'Επιτυχία', className }) => {
+}> = ({ children, title, className }) => {
+  const { t } = useTranslation('dxf-viewer');
   return (
     <ModalContainer
       variant="success"
-      title={title}
+      title={title ?? t('modal.success')}
       className={className}
     >
       {children}
@@ -197,11 +201,12 @@ export const ErrorModalContainer: React.FC<{
   children: React.ReactNode;
   title?: string;
   className?: string;
-}> = ({ children, title = 'Σφάλμα', className }) => {
+}> = ({ children, title, className }) => {
+  const { t } = useTranslation('dxf-viewer');
   return (
     <ModalContainer
       variant="error"
-      title={title}
+      title={title ?? t('modal.error')}
       className={className}
     >
       {children}

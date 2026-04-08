@@ -106,9 +106,9 @@ export function DocumentsTab({
     return (
       <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
         <PropertyIcon className={`${iconSizes['2xl']} ${propertyColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('documents.selectProperty', 'Επιλέξτε Μονάδα')}</h3>
+        <h3 className="text-xl font-semibold mb-2">{t('documents.selectProperty')}</h3>
         <p className="text-sm max-w-sm">
-          {t('documents.selectUnitDescription', 'Επιλέξτε μια μονάδα από τη λίστα για να δείτε τα έγγραφά της.')}
+          {t('documents.selectUnitDescription')}
         </p>
       </div>
     );
@@ -118,7 +118,7 @@ export function DocumentsTab({
   if (!companyId || !currentUserId) {
     return (
       <section className={cn("p-6 text-center", colors.text.muted)}>
-        <p>{t('documents.noAuth', 'Απαιτείται σύνδεση για να δείτε τα έγγραφα.')}</p>
+        <p>{t('documents.noAuth')}</p>
       </section>
     );
   }
@@ -129,7 +129,7 @@ export function DocumentsTab({
       currentUserId={currentUserId}
       entityType={ENTITY_TYPES.PROPERTY}
       entityId={String(selectedProperty.id)}
-      entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
+      entityLabel={selectedProperty.name || t('unitFallbackLabel', { id: selectedProperty.id })}
       domain="sales"
       category="documents"
       purpose="document"

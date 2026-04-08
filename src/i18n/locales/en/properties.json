@@ -709,5 +709,6 @@
   },
   "types": {
     "outdoor": "Outdoor"
-  }
+  },
+  "unitFallbackLabel": "Unit {{id}}"
 }

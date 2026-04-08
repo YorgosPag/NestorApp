@@ -709,5 +709,6 @@
   },
   "types": {
     "outdoor": "Υπαίθριο"
-  }
+  },
+  "unitFallbackLabel": "Μονάδα {{id}}"
 }

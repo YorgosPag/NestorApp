@@ -93,5 +93,17 @@
   },
   "breadcrumb": {
     "ariaLabel": "Drawing location"
+  },
+  "modal": {
+    "importFile": "Import File",
+    "selectProject": "Select Project",
+    "success": "Success",
+    "error": "Error",
+    "loadError": "Loading error: {{message}}"
+  },
+  "destination": {
+    "generalFloorplan": "{{name}} - General Floorplan",
+    "parkingSpots": "{{name}} - Parking Spots",
+    "storages": "{{project}} → {{building}} → Storages"
   }
 }

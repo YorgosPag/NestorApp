@@ -105,9 +105,9 @@ export function VideosTab({
     return (
       <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
         <PropertyIcon className={`${iconSizes['2xl']} ${propertyColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('videos.selectProperty', 'Επιλέξτε Μονάδα')}</h3>
+        <h3 className="text-xl font-semibold mb-2">{t('videos.selectProperty')}</h3>
         <p className="text-sm max-w-sm">
-          {t('videos.selectUnitDescription', 'Επιλέξτε μια μονάδα από τη λίστα για να δείτε τα βίντεο της.')}
+          {t('videos.selectUnitDescription')}
         </p>
       </div>
     );
@@ -117,7 +117,7 @@ export function VideosTab({
   if (!companyId || !currentUserId) {
     return (
       <section className={cn("p-6 text-center", colors.text.muted)}>
-        <p>{t('videos.noAuth', 'Απαιτείται σύνδεση για να δείτε τα βίντεο.')}</p>
+        <p>{t('videos.noAuth')}</p>
       </section>
     );
   }
@@ -128,7 +128,7 @@ export function VideosTab({
       currentUserId={currentUserId}
       entityType={ENTITY_TYPES.PROPERTY}
       entityId={String(selectedProperty.id)}
-      entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
+      entityLabel={selectedProperty.name || t('unitFallbackLabel', { id: selectedProperty.id })}
       domain="sales"
       category="videos"
       purpose="video"
