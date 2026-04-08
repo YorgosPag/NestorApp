@@ -210,9 +210,10 @@ export function ContactsPageContent() {
               ) : (
                 <ContactDetails
                   contact={selectedContact}
-                  onDeleteContact={() => handleDeleteContacts()}
-                  onContactUpdated={handleContactUpdatedInPlace}
-                  onNewContact={handleNewContact}
+                  onDeleteContact={showTrash ? undefined : () => handleDeleteContacts()}
+                  onContactUpdated={showTrash ? undefined : handleContactUpdatedInPlace}
+                  onNewContact={showTrash ? undefined : handleNewContact}
+                  readOnly={showTrash}
                 />
               )}
             </section>
@@ -241,7 +242,7 @@ export function ContactsPageContent() {
                   : selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')
               }
               actionButtons={
-                creationMode ? undefined : (
+                (creationMode || showTrash) ? undefined : (
                   <button
                     onClick={() => handleDeleteContacts()}
                     className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
@@ -264,9 +265,10 @@ export function ContactsPageContent() {
               ) : selectedContact ? (
                 <ContactDetails
                   contact={selectedContact}
-                  onDeleteContact={() => handleDeleteContacts()}
-                  onContactUpdated={handleContactUpdatedInPlace}
-                  onNewContact={handleNewContact}
+                  onDeleteContact={showTrash ? undefined : () => handleDeleteContacts()}
+                  onContactUpdated={showTrash ? undefined : handleContactUpdatedInPlace}
+                  onNewContact={showTrash ? undefined : handleNewContact}
+                  readOnly={showTrash}
                 />
               ) : null}
             </MobileDetailsSlideIn>
@@ -303,21 +305,24 @@ export function ContactsPageContent() {
               onClose={() => setSelectedContact(null)}
               title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
               actionButtons={
-                <button
-                  onClick={() => handleDeleteContacts()}
-                  className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                  aria-label={t('page.details.deleteContact')}
-                >
-                  <Trash2 className={iconSizes.sm} />
-                </button>
+                showTrash ? undefined : (
+                  <button
+                    onClick={() => handleDeleteContacts()}
+                    className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                    aria-label={t('page.details.deleteContact')}
+                  >
+                    <Trash2 className={iconSizes.sm} />
+                  </button>
+                )
               }
             >
               {selectedContact && (
                 <ContactDetails
                   contact={selectedContact}
-                  onDeleteContact={() => handleDeleteContacts()}
-                  onContactUpdated={handleContactUpdatedInPlace}
-                  onNewContact={handleNewContact}
+                  onDeleteContact={showTrash ? undefined : () => handleDeleteContacts()}
+                  onContactUpdated={showTrash ? undefined : handleContactUpdatedInPlace}
+                  onNewContact={showTrash ? undefined : handleNewContact}
+                  readOnly={showTrash}
                 />
               )}
             </MobileDetailsSlideIn>

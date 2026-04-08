@@ -19,6 +19,7 @@ export function ContactDetails({
   onDeleteContact,
   onContactUpdated,
   onNewContact,
+  readOnly = false,
 }: ContactDetailsProps) {
   const { t } = useTranslation('contacts');
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
@@ -60,32 +61,34 @@ export function ContactDetails({
         header={
           <ContactDetailsHeader
             contact={contact!}
-            onDeleteContact={onDeleteContact}
-            onNewContact={onNewContact}
+            onDeleteContact={readOnly ? undefined : onDeleteContact}
+            onNewContact={readOnly ? undefined : onNewContact}
             isEditing={isEditing}
-            onStartEdit={handleStartEdit}
+            onStartEdit={readOnly ? undefined : handleStartEdit}
             onSaveEdit={() => {
               void handleSaveEdit();
             }}
             onCancelEdit={handleCancelEdit}
-            hideEditControls={isSubcollectionTab}
+            hideEditControls={readOnly || isSubcollectionTab}
           />
         }
-        onCreateAction={onNewContact}
+        onCreateAction={readOnly ? undefined : onNewContact}
         emptyStateProps={{
           icon: Users,
           title: t('emptyState.title'),
           description: t('emptyState.description'),
         }}
       >
-        <ContactDetailsMobileActions
-          isEditing={isEditing}
-          onStartEdit={handleStartEdit}
-          onSaveEdit={() => {
-            void handleSaveEdit();
-          }}
-          onCancelEdit={handleCancelEdit}
-        />
+        {!readOnly && (
+          <ContactDetailsMobileActions
+            isEditing={isEditing}
+            onStartEdit={handleStartEdit}
+            onSaveEdit={() => {
+              void handleSaveEdit();
+            }}
+            onCancelEdit={handleCancelEdit}
+          />
+        )}
 
         <UnifiedContactTabbedSection
           contactType={contact?.type || 'individual'}

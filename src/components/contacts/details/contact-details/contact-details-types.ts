@@ -6,4 +6,6 @@ export interface ContactDetailsProps {
   onDeleteContact?: () => void;
   onContactUpdated?: () => void;
   onNewContact?: () => void;
+  /** When true, shows contact in read-only mode (e.g. trash view) */
+  readOnly?: boolean;
 }
