@@ -1,7 +1,7 @@
 # ADR-294: Dynamic Imports Optimization — Incremental Code Splitting
 
 ## Status
-✅ **ACTIVE** — Batch 4 implemented (2026-04-08)
+✅ **ACTIVE** — Batch 6 implemented (2026-04-08)
 
 ## Context
 
@@ -151,9 +151,11 @@ export function ReportsExecutivePageContent() { ... }
 | 3 | 11 (sales, spaces, procurement) | ✅ Done | 2026-04-08 |
 | 4 | 9 (account, CRM remaining, obligations) | ✅ Done | 2026-04-08 |
 | 5 | 8 (admin pages) | ✅ Done | 2026-04-08 |
-| 6 | ~29 (dynamic routes, light pages, cleanup) | ⏳ Pending | — |
+| 6 | 2 (CRM dynamic routes: lead detail, task detail) | ✅ Done | 2026-04-08 |
+| 7 | ~12 (remaining light pages) | ⏳ Pending | — |
+| 8 | ~14 (final sweep + co-located component cleanup) | ⏳ Pending | — |
 
-**Total lazy-loaded pages:** 67/96 (21 existing + 10 Batch 1 + 8 Batch 2 + 11 Batch 3 + 9 Batch 4 + 8 Batch 5)
+**Total lazy-loaded pages:** 69/96 (21 existing + 10 B1 + 8 B2 + 11 B3 + 9 B4 + 8 B5 + 2 B6)
 **Note:** ai-inbox + operator-inbox are Server Components (SSR auth) — not lazy-loaded by design
 
 ## Expected Impact
@@ -162,6 +164,16 @@ export function ReportsExecutivePageContent() { ... }
 - **Better code splitting**: Separate chunks for recharts, calendar, etc.
 
 ## Changelog
+
+### 2026-04-08 — Batch 6 (2 CRM dynamic routes)
+- Converted `/crm/leads/[id]` and `/crm/tasks/[taskId]` to lazy-loaded pages
+- **Lead Detail**: Moved 8 co-located files from `app/crm/leads/[id]/` to `src/components/crm/leads/lead-detail/`
+  - 4 components: ContactCard, QuickActions, TasksSummary, UpcomingTasks
+  - 2 hooks: useLead, useLeadTasks
+  - 2 utils: dates, status
+- Created `LeadDetailPageContent.tsx` (159 lines) + `TaskDetailPageContent.tsx` (414 lines)
+- Updated all relative imports to use new paths
+- Google pattern: app/ now contains only thin wrapper page.tsx + error.tsx
 
 ### 2026-04-08 — Batch 5 (8 admin pages)
 - Created 8 PageContent extraction files + 1 data file in `src/components/admin/pages/`

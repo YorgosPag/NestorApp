@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -16,8 +15,8 @@ export function useLeadTasks(leadId: string) {
     if (!leadId) {
         setLoading(false);
         return;
-    };
-    
+    }
+
     setLoading(true);
     setError(null);
     try {

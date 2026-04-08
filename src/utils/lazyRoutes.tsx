@@ -460,6 +460,20 @@ export const LazyRoutes = {
     () => import('@/components/admin/pages/LinkPropertiesPageContent').then(mod => ({ default: mod.LinkPropertiesPageContent })),
     { loadingType: 'list', ssr: false }
   ),
+
+  // =========================================================================
+  // ⚡ ADR-294 BATCH 6: Dynamic Imports — CRM Dynamic Routes (detail pages)
+  // =========================================================================
+
+  CrmLeadDetail: createLazyRoute(
+    () => import('@/components/crm/leads/LeadDetailPageContent').then(mod => ({ default: mod.LeadDetailPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  CrmTaskDetail: createLazyRoute(
+    () => import('@/components/crm/tasks/TaskDetailPageContent').then(mod => ({ default: mod.TaskDetailPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support

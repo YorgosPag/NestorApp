@@ -17,7 +17,7 @@ interface QuickActionsProps {
   lead: Opportunity;
   onEdit: () => void;
   onNewTask: () => void;
-  onSendEmail?: () => void; // New callback for email modal
+  onSendEmail?: () => void;
 }
 
 export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActionsProps) {
@@ -41,8 +41,6 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
       notifyError(t('leadDetails.errors.noEmail'));
       return;
     }
-
-    // Call the parent's email modal handler
     onSendEmail?.();
   };
 

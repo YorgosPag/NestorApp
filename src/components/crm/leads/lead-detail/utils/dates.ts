@@ -50,4 +50,3 @@ export const formatTaskDate = (dueDate?: FirestoreishTimestamp | null) => {
     return unknownDateLabel;
   }
 };
-

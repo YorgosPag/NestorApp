@@ -7,8 +7,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';
-import { formatDate } from '../utils/dates';
-import { useStatusColor } from '../utils/status';
+import { formatDate } from './utils/dates';
+import { useStatusColor } from './utils/status';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/design-system';
 
@@ -77,4 +77,3 @@ export function ContactCard({ lead }: ContactCardProps) {
     </div>
   );
 }
-

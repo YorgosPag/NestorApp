@@ -7,7 +7,7 @@ import type { CrmTask } from '@/types/crm';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { getTaskDateColor, formatTaskDate } from '../utils/dates';
+import { getTaskDateColor, formatTaskDate } from './utils/dates';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
