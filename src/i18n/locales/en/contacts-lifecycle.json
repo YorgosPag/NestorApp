@@ -2,10 +2,10 @@
   "trash": {
     "viewTrash": "Trash",
     "backToContacts": "Back to Contacts",
-    "trashCount": "{{count}} in trash",
+    "trashCount": "{count} in trash",
     "trashCount_one": "1 in trash",
     "deleteSuccess": "Contact moved to trash",
-    "deleteSuccessMultiple": "{{count}} contacts moved to trash",
+    "deleteSuccessMultiple": "{count} contacts moved to trash",
     "moveToTrash": "Move to Trash",
     "softDeleteDialog": {
       "title": "Move Contact to Trash",
@@ -24,7 +24,7 @@
     "undoFailed": "Failed to undo",
     "restore": "Restore",
     "restoreSelected": "Restore selected",
-    "restoreSuccess": "{{count}} contacts restored",
+    "restoreSuccess": "{count} contacts restored",
     "restoreSuccess_one": "Contact restored",
     "restoreFailed": "Failed to restore",
     "permanentDelete": "Permanently delete",

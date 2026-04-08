@@ -2,10 +2,10 @@
   "trash": {
     "viewTrash": "Κάδος",
     "backToContacts": "Πίσω στις Επαφές",
-    "trashCount": "{{count}} στον κάδο",
+    "trashCount": "{count} στον κάδο",
     "trashCount_one": "1 στον κάδο",
     "deleteSuccess": "Η επαφή μεταφέρθηκε στον κάδο",
-    "deleteSuccessMultiple": "{{count}} επαφές μεταφέρθηκαν στον κάδο",
+    "deleteSuccessMultiple": "{count} επαφές μεταφέρθηκαν στον κάδο",
     "moveToTrash": "Μεταφορά στον κάδο",
     "softDeleteDialog": {
       "title": "Μεταφορά επαφής στον κάδο",
@@ -24,7 +24,7 @@
     "undoFailed": "Αποτυχία αναίρεσης",
     "restore": "Επαναφορά",
     "restoreSelected": "Επαναφορά επιλεγμένων",
-    "restoreSuccess": "Επαναφέρθηκαν {{count}} επαφές",
+    "restoreSuccess": "Επαναφέρθηκαν {count} επαφές",
     "restoreSuccess_one": "Η επαφή επαναφέρθηκε",
     "restoreFailed": "Αποτυχία επαναφοράς",
     "permanentDelete": "Οριστική διαγραφή",
