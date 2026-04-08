@@ -602,6 +602,7 @@ export const API_ROUTES = {
     BY_ID: (id: string) => `/api/contacts/${id}` as const,
     PROPERTIES: (contactId: string) => `/api/contacts/${contactId}/properties` as const,
     SEARCH_INDIVIDUALS: '/api/contacts/search-individuals',
+    SEARCH_FOR_SHARE: '/api/contacts/search-for-share',
     IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/identity-impact-preview` as const,
     COMPANY_IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/company-identity-impact-preview` as const,
     SERVICE_IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/service-identity-impact-preview` as const,

@@ -191,7 +191,10 @@
     "viewMore": "See more at {company}!",
     "sqm": "sq.m",
     "propertiesTeaser": "Check out these interesting properties from {company}!",
-    "propertiesTitle": "{company} - Properties"
+    "propertiesTitle": "{company} - Properties",
+    "photoCaption": "{photoType} — {name}",
+    "photoCaptionNoContact": "{photoType}",
+    "photoCopiedToClipboard": "Photo copied! Press Ctrl+V in {platform}"
   },
   "emailShare": {
     "title": "Send via Email",
@@ -212,7 +215,17 @@
     "invalidEmail": "Invalid email",
     "maxRecipients": "Maximum {max} recipients",
     "noRecipients": "Add at least one recipient",
-    "sendError": "Failed to send. Please try again."
+    "sendError": "Failed to send. Please try again.",
+    "selectPhotos": "Select Photos to Share",
+    "recipientMode": {
+      "manual": "Manual",
+      "contact": "From Contacts"
+    },
+    "selectContact": "Search contact...",
+    "contactEmails": "Contact emails",
+    "noEmailsForContact": "This contact has no registered email",
+    "contactSelected": "Selected: {name}",
+    "searchingContacts": "Searching contacts..."
   },
   "loading": {
     "ariaLabel": "Loading page",

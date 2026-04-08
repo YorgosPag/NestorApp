@@ -6,14 +6,15 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { ArrowLeft, Plus, Send, X, Home, Briefcase, Crown } from 'lucide-react';
+import { ArrowLeft, Send, Home, Briefcase, Crown } from 'lucide-react';
+import { PhotoPickerGrid } from '@/components/ui/social-sharing/PhotoPickerGrid';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { isValidEmail } from '@/lib/validation/email-validation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import type { EmailTemplateType } from '@/types/email-templates';
+import { ContactEmailPicker } from './ContactEmailPicker';
+import type { SelectedContact } from './ContactEmailPicker';
 
 import type { EmailShareData, ShareData } from './types';
 
@@ -44,52 +45,22 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
   const { t } = useTranslation('common');
 
   const [recipients, setRecipients] = useState<string[]>([]);
-  const [emailInput, setEmailInput] = useState('');
   const [personalMessage, setPersonalMessage] = useState('');
   const [templateType, setTemplateType] = useState<EmailTemplateType>('residential');
-  const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-  const addRecipient = useCallback(() => {
-    const trimmed = emailInput.trim();
-    if (!trimmed) return;
-
-    if (!isValidEmail(trimmed)) {
-      setError(t('emailShare.invalidEmail'));
-      return;
-    }
-    if (recipients.length >= MAX_RECIPIENTS) {
-      setError(t('emailShare.maxRecipients', { max: MAX_RECIPIENTS }));
-      return;
-    }
-    if (recipients.includes(trimmed)) {
-      setError(t('emailShare.invalidEmail'));
-      return;
-    }
-
-    setRecipients(prev => [...prev, trimmed]);
-    setEmailInput('');
-    setError(null);
-  }, [emailInput, recipients, t]);
-
-  const removeRecipient = useCallback((index: number) => {
-    setRecipients(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addRecipient();
-    }
-  }, [addRecipient]);
+  const [selectedPhotos, setSelectedPhotos] = useState<string[]>(
+    shareData.photoUrl ? [shareData.photoUrl] : []
+  );
+  const [selectedContact, setSelectedContact] = useState<SelectedContact | null>(null);
 
   const handleSubmit = useCallback(async () => {
     if (recipients.length === 0) {
-      setError(t('emailShare.noRecipients'));
       return;
     }
     setSubmitError(null);
     try {
+      const photosToSend = selectedPhotos.length > 0 ? selectedPhotos
+        : shareData.photoUrl ? [shareData.photoUrl] : undefined;
       await onEmailShare({
         recipients,
         personalMessage: personalMessage || undefined,
@@ -97,68 +68,40 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
         propertyTitle: shareData.title,
         propertyDescription: shareData.text,
         propertyUrl: shareData.url,
+        photoUrl: shareData.photoUrl,
+        photoUrls: photosToSend,
+        isPhoto: shareData.isPhoto,
+        sourceContactId: selectedContact?.id,
+        sourceContactName: selectedContact?.name,
       });
     } catch {
       setSubmitError(t('emailShare.sendError'));
     }
-  }, [recipients, personalMessage, templateType, shareData, onEmailShare, t]);
+  }, [recipients, personalMessage, templateType, shareData, onEmailShare, selectedContact, t]);
 
   const charsRemaining = MAX_MESSAGE_LENGTH - personalMessage.length;
 
   return (
     <section className="space-y-4">
-      {/* Recipients */}
-      <fieldset>
-        <label className="text-sm font-medium mb-1.5 block">
-          {t('emailShare.recipientLabel')}
-        </label>
-        <div className="flex gap-2">
-          <Input
-            type="email"
-            value={emailInput}
-            onChange={e => { setEmailInput(e.target.value); setError(null); }}
-            onKeyDown={handleKeyDown}
-            placeholder={t('emailShare.recipientPlaceholder')}
-            disabled={loading}
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addRecipient}
-            disabled={loading || !emailInput.trim()}
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            {t('emailShare.addRecipient')}
-          </Button>
-        </div>
+      {/* Recipients — Manual or CRM Contact */}
+      <ContactEmailPicker
+        recipients={recipients}
+        onRecipientsChange={setRecipients}
+        maxRecipients={MAX_RECIPIENTS}
+        loading={loading}
+        onContactSelected={setSelectedContact}
+      />
 
-        {/* Recipient chips */}
-        {recipients.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5 mt-2">
-            {recipients.map((email, i) => (
-              <li
-                key={email}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-sm"
-              >
-                {email}
-                <button
-                  type="button"
-                  onClick={() => removeRecipient(i)}
-                  className="hover:text-destructive transition-colors"
-                  aria-label={t('emailShare.removeRecipient')}
-                  disabled={loading}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {error && <p className="text-sm text-destructive mt-1">{error}</p>}
-      </fieldset>
+      {/* Photo selection — centralized PhotoPickerGrid (multi-select for email) */}
+      {shareData.galleryPhotos && shareData.galleryPhotos.length > 1 && (
+        <PhotoPickerGrid
+          photos={shareData.galleryPhotos}
+          selected={selectedPhotos}
+          onSelectionChange={setSelectedPhotos}
+          mode="multi"
+          disabled={loading}
+        />
+      )}
 
       {/* Personal message */}
       <fieldset>

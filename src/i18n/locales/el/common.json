@@ -191,7 +191,10 @@
     "viewMore": "Δείτε περισσότερα στο {company}!",
     "sqm": "τ.μ.",
     "propertiesTeaser": "Δείτε αυτά τα ενδιαφέροντα ακίνητα από την {company}!",
-    "propertiesTitle": "{company} - Ακίνητα"
+    "propertiesTitle": "{company} - Ακίνητα",
+    "photoCaption": "{photoType} — {name}",
+    "photoCaptionNoContact": "{photoType}",
+    "photoCopiedToClipboard": "Η φωτογραφία αντιγράφηκε! Κάντε Ctrl+V στο {platform}"
   },
   "emailShare": {
     "title": "Αποστολή μέσω Email",
@@ -212,7 +215,17 @@
     "invalidEmail": "Μη έγκυρο email",
     "maxRecipients": "Μέγιστο {max} παραλήπτες",
     "noRecipients": "Προσθέστε τουλάχιστον έναν παραλήπτη",
-    "sendError": "Αποτυχία αποστολής. Δοκιμάστε ξανά."
+    "sendError": "Αποτυχία αποστολής. Δοκιμάστε ξανά.",
+    "selectPhotos": "Επιλέξτε Φωτογραφίες για Κοινοποίηση",
+    "recipientMode": {
+      "manual": "Χειροκίνητα",
+      "contact": "Από Επαφές"
+    },
+    "selectContact": "Αναζήτηση επαφής...",
+    "contactEmails": "Email επαφής",
+    "noEmailsForContact": "Η επαφή δεν έχει καταχωρημένο email",
+    "contactSelected": "Επιλέχθηκε: {name}",
+    "searchingContacts": "Αναζήτηση επαφών..."
   },
   "loading": {
     "ariaLabel": "Φόρτωση σελίδας",

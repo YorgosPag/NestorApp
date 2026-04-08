@@ -21,6 +21,9 @@ export interface ShareData {
   title: string;
   text?: string;
   url: string;
+  photoUrl?: string;
+  isPhoto?: boolean;
+  galleryPhotos?: string[];
 }
 
 /**
@@ -33,7 +36,14 @@ export interface EmailShareData {
   propertyTitle: string;
   propertyDescription?: string;
   propertyUrl: string;
+  photoUrl?: string;
+  photoUrls?: string[];
+  isPhoto?: boolean;
   senderName?: string;
+  /** CRM contact ID when recipient was selected from contacts */
+  sourceContactId?: string;
+  /** CRM contact display name for audit trail */
+  sourceContactName?: string;
 }
 
 /**
