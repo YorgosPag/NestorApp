@@ -160,6 +160,11 @@ export function ReportsExecutivePageContent() { ... }
 
 ## Changelog
 
+### 2026-04-08 — Bugfix: SalesSoldPageContent broken className interpolations
+- Fixed 10 instances of `className="... ${colors.text.X}"` (regular quotes)
+- Changed to `className={`... ${colors.text.X}`}` (template literals + JSX expression)
+- Pre-existing bug from original `sold/page.tsx` — colors were rendered as literal strings
+
 ### 2026-04-08 — Batch 3 (11 pages: sales, spaces, procurement)
 - Created 11 PageContent extraction files across 5 directories
 - Updated lazyRoutes.tsx with 11 new entries
@@ -179,3 +184,17 @@ export function ReportsExecutivePageContent() { ... }
 - Updated lazyRoutes.tsx with 10 new entries
 - Converted 10 page.tsx to thin wrappers
 - Related: ADR-265 (Reports), ADR-229 (Calendar), ADR-227 (Tasks)
+
+## TODO — Pending Refactoring (discovered during Batch 3)
+
+### 1. 🔴 Duplicated Sales Grid View (MEDIUM priority)
+- **Problem**: `SalesAvailablePropertiesPageContent`, `SalesAvailableParkingPageContent`, `SalesAvailableStoragePageContent` each contain ~40 lines of nearly identical grid card rendering
+- **Fix**: Extract shared `SalesGridCard` component to `src/components/sales/shared/SalesGridCard.tsx`
+- **Files**: `src/components/sales/pages/SalesAvailable*.tsx` (3 files)
+- **Effort**: ~1 hour, new session
+
+### 2. 🟡 Hardcoded CSS Colors in Sales Grid (LOW priority)
+- **Problem**: Grid cards use hardcoded Tailwind color classes (`bg-green-100 text-green-700 dark:bg-green-900/20`) instead of semantic design tokens
+- **Fix**: Replace with semantic color tokens from design system
+- **Files**: `src/components/sales/pages/SalesAvailable*.tsx` (3 files)
+- **Effort**: ~30 min, can combine with #1
