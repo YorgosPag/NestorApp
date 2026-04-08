@@ -34,12 +34,17 @@ const logger = createModuleLogger('middleware');
 
 /**
  * Authenticated API handler type.
- * Receives AuthContext and PermissionCache.
+ * Receives AuthContext, PermissionCache, and optional Next.js route segment data.
+ *
+ * The 4th parameter (`routeContext`) is the Next.js route context containing
+ * dynamic segment params (e.g., `{ params: Promise<{ contactId: string }> }`).
+ * It is forwarded transparently by withAuth from the Next.js runtime.
  */
 export type AuthenticatedHandler<T = unknown> = (
   request: NextRequest,
   context: AuthContext,
-  cache: PermissionCache
+  cache: PermissionCache,
+  routeContext?: unknown
 ) => Promise<NextResponse<T | ErrorResponse>>;
 
 /**
@@ -170,8 +175,8 @@ function createRoleRequiredResponse(requiredRoles: GlobalRole[]): NextResponse<E
 export function withAuth<T = unknown>(
   handler: AuthenticatedHandler<T>,
   options: WithAuthOptions = {}
-): (request: NextRequest) => Promise<NextResponse<T | ErrorResponse>> {
-  return async (request: NextRequest): Promise<NextResponse<T | ErrorResponse>> => {
+): (request: NextRequest, routeContext?: unknown) => Promise<NextResponse<T | ErrorResponse>> {
+  return async (request: NextRequest, routeContext?: unknown): Promise<NextResponse<T | ErrorResponse>> => {
     // Step 1: Build request context
     const ctx = await buildRequestContext(request);
 
@@ -180,7 +185,7 @@ export function withAuth<T = unknown>(
       if (options.allowUnauthenticated) {
         // Handler can receive unauthenticated context
         // This is a type-unsafe escape hatch for public endpoints
-        return handler(request, ctx as unknown as AuthContext, createPermissionCache());
+        return handler(request, ctx as unknown as AuthContext, createPermissionCache(), routeContext);
       }
 
       const errorResponse = options.unauthorizedResponse
@@ -241,7 +246,7 @@ export function withAuth<T = unknown>(
     // Step 6: Call handler with authenticated context + automatic error handling + performance tracking
     const requestStart = Date.now();
     try {
-      const response = await handler(request, ctx, cache);
+      const response = await handler(request, ctx, cache, routeContext);
 
       // 🏢 ENTERPRISE: Performance tracking — alert if route takes > 5s
       const duration = Date.now() - requestStart;

@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 type SetEditedData = React.Dispatch<React.SetStateAction<Partial<ContactFormData>>>;
 
@@ -39,14 +40,6 @@ export function useContactPhotoHandlers(setEditedData: SetEditedData) {
   }, [setEditedData]);
 
   const handleMultiplePhotosChange = useCallback((photos: PhotoSlot[]) => {
-    console.log('🔴 PHOTO DEBUG [useContactPhotoHandlers] handleMultiplePhotosChange', {
-      photosCount: photos.length,
-      filled: photos.filter(p => p.file || p.uploadUrl || p.preview).length,
-      slots: photos.map((p, i) => ({
-        i, f: !!p.file, u: !!p.uploadUrl, p: !!p.preview,
-        pUrl: p.preview?.substring(0, 40),
-      })),
-    });
     setEditedData(prev => ({
       ...prev,
       multiplePhotos: photos,
@@ -60,11 +53,44 @@ export function useContactPhotoHandlers(setEditedData: SetEditedData) {
     }
   }, [setEditedData]);
 
+  // 🏢 ENTERPRISE: Race-condition-safe per-slot upload completion handler.
+  // Uses functional updater so React guarantees `prev` is always the latest
+  // state — even if 2+ uploads complete in the same render cycle.
+  const handleMultiplePhotoUploadComplete = useCallback((index: number, result: FileUploadResult) => {
+    setEditedData(prev => {
+      const currentPhotos: PhotoSlot[] = [...(prev.multiplePhotos || [])];
+      while (currentPhotos.length <= index) {
+        currentPhotos.push({ file: null, isUploading: false, uploadProgress: 0 });
+      }
+
+      if (result.url) {
+        currentPhotos[index] = {
+          ...currentPhotos[index],
+          file: null,
+          uploadUrl: result.url,
+          preview: result.url,
+          fileName: result.fileName,
+          isUploading: false,
+          uploadProgress: 100,
+          error: undefined,
+        };
+      } else {
+        currentPhotos[index] = {
+          file: null, preview: undefined, uploadUrl: undefined,
+          fileName: undefined, isUploading: false, uploadProgress: 0, error: undefined,
+        };
+      }
+
+      return { ...prev, multiplePhotos: currentPhotos };
+    });
+  }, [setEditedData]);
+
   return {
     handleUploadedLogoURL,
     handleUploadedPhotoURL,
     handleFileChange,
     handleMultiplePhotosChange,
+    handleMultiplePhotoUploadComplete,
     handleLogoChange,
   } as const;
 }

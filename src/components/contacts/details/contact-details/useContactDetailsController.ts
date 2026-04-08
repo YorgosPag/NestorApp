@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Contact, IndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
@@ -44,6 +45,7 @@ interface UseContactDetailsControllerResult {
   handleFieldChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleLogoChange: (file: File | null) => void;
   handleMultiplePhotosChange: (photos: PhotoSlot[]) => void;
+  handleMultiplePhotoUploadComplete: (index: number, result: FileUploadResult) => void;
   handlePersonaToggle: (personaType: PersonaType) => Promise<void>;
   handlePhotoClick: (index: number) => void;
   handleSaveEdit: () => Promise<void>;
@@ -379,6 +381,7 @@ export function useContactDetailsController({
     handleUploadedPhotoURL,
     handleFileChange,
     handleMultiplePhotosChange,
+    handleMultiplePhotoUploadComplete,
     handleLogoChange,
   } = useContactPhotoHandlers(setEditedData);
 
@@ -477,6 +480,7 @@ export function useContactDetailsController({
     handleFileChange,
     handleLogoChange,
     handleMultiplePhotosChange,
+    handleMultiplePhotoUploadComplete,
     handlePersonaToggle,
     handlePhotoClick,
     handleSaveEdit,

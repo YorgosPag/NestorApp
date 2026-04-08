@@ -32,6 +32,7 @@ export function ContactDetails({
     handleFileChange,
     handleLogoChange,
     handleMultiplePhotosChange,
+    handleMultiplePhotoUploadComplete,
     handlePhotoClick,
     handleSaveEdit,
     handleSelectChange,
@@ -93,6 +94,7 @@ export function ContactDetails({
           handleSelectChange={handleSelectChange}
           setFormData={isEditing ? setEditedData : undefined}
           handleMultiplePhotosChange={isEditing ? handleMultiplePhotosChange : undefined}
+          handleMultiplePhotoUploadComplete={isEditing ? handleMultiplePhotoUploadComplete : undefined}
           disabled={!isEditing}
           relationshipsMode={isEditing ? 'full' : 'summary'}
           onPhotoClick={handlePhotoClick}

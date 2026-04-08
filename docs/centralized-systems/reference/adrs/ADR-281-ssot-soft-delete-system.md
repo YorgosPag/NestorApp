@@ -1374,3 +1374,4 @@ Index building pairnei 2-5 lepta — katholos blocking.
 | 2026-04-03 | Claude Code | Batch 3: Structural entity conversion — buildings/projects DELETE→softDelete + LIST filtering |
 | 2026-04-03 | Claude Code | Batch 4: Centralized routes (restore, permanent-delete, cron purge) + vercel.json + firestore indexes |
 | 2026-04-03 | Claude Code | Batch 5: Contact migration — DELETE/restore/permanent-delete now use centralized engine |
+| 2026-04-08 | Claude Code | BUGFIX: withAuth middleware was not forwarding Next.js route context (segmentData) — caused 500 errors on all 44 routes using segmentData pattern inside withAuth callbacks (restore, permanent-delete, impact-preview, accounting, procurement, trash, etc.) |
