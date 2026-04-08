@@ -25,6 +25,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 interface TrashActionsBarProps {
   selectedIds: string[];
   onBack: () => void;
+  /** Called after restore/error to refresh list AND clear stale selection */
   onRefresh: () => void;
   onPermanentDelete: (ids?: string[]) => void;
   trashCount: number;
@@ -68,6 +69,8 @@ export function TrashActionsBar({
     } catch (err) {
       logger.error('Restore failed', { effectiveIds, error: err });
       notify(t('trash.restoreFailed'), { type: 'error' });
+      // Refresh anyway — contact may already be restored (409 = not in trash anymore)
+      onRefresh();
     }
   };
 

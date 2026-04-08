@@ -54,6 +54,13 @@ export function useContactsTrashState({
     refreshContacts();
   }, [selectedContact, selectedContactIds, refreshContacts, setSelectedContact, setSelectedContactIds]);
 
+  /** After a trash action (restore/delete), clear selection AND refresh list */
+  const handleTrashActionComplete = useCallback(() => {
+    setSelectedContact(null);
+    setSelectedContactIds([]);
+    refreshContacts();
+  }, [setSelectedContact, setSelectedContactIds, refreshContacts]);
+
   const handleToggleTrash = useCallback(() => {
     setShowTrash(prev => !prev);
     setSelectedContact(null);
@@ -69,5 +76,6 @@ export function useContactsTrashState({
     handleRestoreContacts,
     handlePermanentDeleteContacts,
     handleContactsPermanentDeleted,
+    handleTrashActionComplete,
   } as const;
 }

@@ -473,6 +473,7 @@ export function useContactsPageState() {
     handleRestoreContacts: trash.handleRestoreContacts,
     handlePermanentDeleteContacts: trash.handlePermanentDeleteContacts,
     handleContactsPermanentDeleted: trash.handleContactsPermanentDeleted,
+    handleTrashActionComplete: trash.handleTrashActionComplete,
     // Filters
     filters,
     setFilters,

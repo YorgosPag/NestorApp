@@ -78,6 +78,7 @@ export function ContactsPageContent() {
     showTrash,
     trashCount,
     handleToggleTrash,
+    handleTrashActionComplete,
     showPermanentDeleteDialog,
     setShowPermanentDeleteDialog,
     handlePermanentDeleteContacts,
@@ -164,7 +165,7 @@ export function ContactsPageContent() {
         <TrashActionsBar
           selectedIds={selectedContactIds}
           onBack={handleToggleTrash}
-          onRefresh={handleContactsDeleted}
+          onRefresh={handleTrashActionComplete}
           onPermanentDelete={handlePermanentDeleteContacts}
           trashCount={trashCount}
           activeContactId={selectedContact?.id}
