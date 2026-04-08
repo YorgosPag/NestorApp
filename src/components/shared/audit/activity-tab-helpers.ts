@@ -9,12 +9,15 @@
  */
 
 import { safeJsonParse } from "@/lib/json-utils";
-import { formatDate } from "@/lib/intl-utils";
+import { formatDate, formatRelativeTime } from "@/lib/intl-utils";
 import type { AuditAction, EntityAuditEntry } from "@/types/audit-trail";
 
 export interface Stats {
   total: number;
   byAction: Partial<Record<AuditAction, number>>;
+  lastChangeRelative: string | null;
+  uniqueFieldsChanged: number;
+  uniqueUsers: number;
 }
 
 /** Nested object key labels for human-readable display */
@@ -126,8 +129,36 @@ export function groupEntriesByDate(
 /** Compute statistics from entries */
 export function computeStats(entries: EntityAuditEntry[]): Stats {
   const byAction: Partial<Record<AuditAction, number>> = {};
+  const fieldSet = new Set<string>();
+  const userSet = new Set<string>();
+
   for (const entry of entries) {
     byAction[entry.action] = (byAction[entry.action] ?? 0) + 1;
+    if (entry.performedByName) userSet.add(entry.performedByName);
+    else if (entry.performedBy) userSet.add(entry.performedBy);
+    for (const change of entry.changes ?? []) {
+      fieldSet.add(change.field);
+    }
   }
-  return { total: entries.length, byAction };
+
+  // Last change relative time
+  let lastChangeRelative: string | null = null;
+  if (entries.length > 0) {
+    const newest = entries[0];
+    const ts = newest.timestamp;
+    if (ts) {
+      const date = 'toDate' in ts && typeof ts.toDate === 'function'
+        ? (ts as { toDate(): Date }).toDate()
+        : new Date(ts as string | number);
+      lastChangeRelative = formatRelativeTime(date);
+    }
+  }
+
+  return {
+    total: entries.length,
+    byAction,
+    lastChangeRelative,
+    uniqueFieldsChanged: fieldSet.size,
+    uniqueUsers: userSet.size,
+  };
 }

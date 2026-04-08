@@ -17,7 +17,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Clock, History, ChevronDown, BarChart3, Filter } from "lucide-react";
+import { Clock, History, ChevronDown, BarChart3, Filter, FileEdit, Users } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useEntityAudit } from "@/hooks/useEntityAudit";
 import { formatRelativeTime, formatDateTime } from "@/lib/intl-utils";
@@ -201,50 +201,33 @@ export function ActivityTab({
 
 function StatsPanel({ stats }: { stats: Stats }) {
   const { t } = useTranslation("common");
-  const visibleActions: AuditAction[] = [
-    "updated",
-    "created",
-    "deleted",
-    "status_changed",
-    "professional_assigned",
-    "professional_removed",
-    "email_sent",
-    "invoice_created",
-  ];
-
-  const actionColorMap: Record<string, string> = {
-    created: "green",
-    updated: "blue",
-    deleted: "red",
-    status_changed: "orange",
-    professional_assigned: "teal",
-    professional_removed: "orange",
-    email_sent: "sky",
-    invoice_created: "green",
-  };
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <StatsCard
         title={t('audit.totalLabel')}
         value={stats.total}
         icon={BarChart3}
+        color="blue"
+      />
+      <StatsCard
+        title={t('audit.stats.lastChange')}
+        value={stats.lastChangeRelative ?? "—"}
+        icon={Clock}
         color="gray"
       />
-      {visibleActions.map((action) => {
-        const config = ACTION_MAP[action];
-        const count = stats.byAction[action] ?? 0;
-        if (count === 0) return null;
-        return (
-          <StatsCard
-            key={action}
-            title={t(config.labelKey)}
-            value={count}
-            icon={config.icon}
-            color={actionColorMap[action] ?? "gray"}
-          />
-        );
-      })}
+      <StatsCard
+        title={t('audit.stats.fieldsChanged')}
+        value={stats.uniqueFieldsChanged}
+        icon={FileEdit}
+        color="orange"
+      />
+      <StatsCard
+        title={t('audit.stats.users')}
+        value={stats.uniqueUsers}
+        icon={Users}
+        color="teal"
+      />
     </div>
   );
 }

@@ -627,6 +627,11 @@
     "noFilterResults": "No changes found for this filter",
     "noEntityId": "Entity ID not found",
     "totalLabel": "Total",
+    "stats": {
+      "lastChange": "Last Change",
+      "fieldsChanged": "Fields",
+      "users": "Users"
+    },
     "historyFilters": "History Filters",
     "actions": {
       "created": "Created",

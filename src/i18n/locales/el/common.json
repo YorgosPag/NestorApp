@@ -627,6 +627,11 @@
     "noFilterResults": "Δεν βρέθηκαν αλλαγές για αυτό το φίλτρο",
     "noEntityId": "Δεν βρέθηκε αναγνωριστικό οντότητας",
     "totalLabel": "Συνολικά",
+    "stats": {
+      "lastChange": "Τελευταία Αλλαγή",
+      "fieldsChanged": "Πεδία",
+      "users": "Χρήστες"
+    },
     "historyFilters": "Φίλτρα ιστορικού",
     "actions": {
       "created": "Δημιουργία",
