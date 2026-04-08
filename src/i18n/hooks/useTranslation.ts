@@ -28,7 +28,6 @@ function resolveAllNamespaces(namespaces: string[]): string[] {
  * @returns Translation function and i18n utilities
  */
 export const useTranslation = (namespace?: string | string[]) => {
-  const { t: rawT, i18n, ready } = useI18nextTranslation(namespace);
   const namespaceKey = Array.isArray(namespace)
     ? namespace.join('|')
     : namespace || '';
@@ -37,6 +36,14 @@ export const useTranslation = (namespace?: string | string[]) => {
 
   // 🏢 ADR-280: Resolve compat splits once
   const allNamespacesToLoad = useMemo(() => resolveAllNamespaces(namespaces), [namespaceKey]);
+
+  // 🏢 ADR-280 FIX: Pass ALL compat namespaces to rawT so it can find keys
+  // in split namespaces directly (with proper interpolation)
+  const effectiveNs = useMemo(
+    () => allNamespacesToLoad.length > 0 ? allNamespacesToLoad : namespace,
+    [allNamespacesToLoad, namespace],
+  );
+  const { t: rawT, i18n, ready } = useI18nextTranslation(effectiveNs);
 
   // Wrap t to apply compat remapping for split namespaces (ADR-280)
   const t = useMemo(() => {
