@@ -2,38 +2,14 @@
 
 /**
  * @module /reports/compliance
- * @enterprise ADR-265 Phase 12 — Compliance & Labor Report Dashboard
- *
- * KPIs, attendance methods, ΕΦΚΑ insurance class distribution.
+ * @enterprise ADR-265 Phase 12 — Compliance Report Dashboard
+ * @lazy ADR-294 Batch 2 — Thin wrapper, content loaded via dynamic import
  */
 
-import '@/lib/design-system';
-import { useTranslation } from 'react-i18next';
-import { Shield } from 'lucide-react';
-import { ReportPage } from '@/components/reports/core/ReportPage';
-import { useComplianceReport } from '@/hooks/reports/useComplianceReport';
-import {
-  ComplianceKPIs,
-  AttendanceMethodChart,
-  InsuranceClassChart,
-} from '@/components/reports/sections/compliance';
+import { LazyRoutes } from '@/utils/lazyRoutes';
+
+const ReportsCompliance = LazyRoutes.ReportsCompliance;
 
 export default function ComplianceReportsPage() {
-  const { t } = useTranslation('reports');
-  const report = useComplianceReport();
-
-  return (
-    <ReportPage
-      title={t('nav.compliance')}
-      description={t('compliance.description')}
-      icon={Shield}
-      onRefresh={report.refetch}
-    >
-      <ComplianceKPIs kpis={report.kpis} loading={report.loading} />
-
-      <AttendanceMethodChart data={report.methodPie} loading={report.loading} />
-
-      <InsuranceClassChart data={report.insuranceBars} loading={report.loading} />
-    </ReportPage>
-  );
+  return <ReportsCompliance />;
 }

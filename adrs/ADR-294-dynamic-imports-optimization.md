@@ -1,7 +1,7 @@
 # ADR-294: Dynamic Imports Optimization — Incremental Code Splitting
 
 ## Status
-✅ **ACTIVE** — Batch 1 implemented (2026-04-08)
+✅ **ACTIVE** — Batch 2 implemented (2026-04-08)
 
 ## Context
 
@@ -82,16 +82,43 @@ export function ReportsExecutivePageContent() { ... }
 - `src/utils/lazyRoutes.tsx` — +10 LazyRoute entries
 - 10 × `page.tsx` — Converted to thin wrappers
 
+### Batch 2 — 8 Remaining Report Pages (2026-04-08)
+
+| # | Page | Heavy Content | LoadingType |
+|---|------|--------------|-------------|
+| 1 | `/reports/spaces` | 5 chart sections (recharts) | dashboard |
+| 2 | `/reports/contacts` | 5 chart/table sections (recharts) | dashboard |
+| 3 | `/reports/crm` | 6 chart sections (recharts) | dashboard |
+| 4 | `/reports/compliance` | 3 chart sections (recharts) | dashboard |
+| 5 | `/reports/projects` | 8 chart sections (recharts) | dashboard |
+| 6 | `/reports/export` | Export grid + status panel | dashboard |
+| 7 | `/reports/builder` | ReportBuilder (dynamic) | dashboard |
+| 8 | `/reports/cash-flow` | 7 sections + tabs + collapsible | dashboard |
+
+### Files Created (Batch 2)
+- `src/components/reports/pages/ReportsSpacesPageContent.tsx`
+- `src/components/reports/pages/ReportsContactsPageContent.tsx`
+- `src/components/reports/pages/ReportsCrmPageContent.tsx`
+- `src/components/reports/pages/ReportsCompliancePageContent.tsx`
+- `src/components/reports/pages/ReportsProjectsPageContent.tsx`
+- `src/components/reports/pages/ReportsExportPageContent.tsx`
+- `src/components/reports/pages/ReportsBuilderPageContent.tsx`
+- `src/components/reports/pages/ReportsCashFlowPageContent.tsx`
+
+### Files Modified (Batch 2)
+- `src/utils/lazyRoutes.tsx` — +8 LazyRoute entries
+- 8 × `page.tsx` — Converted to thin wrappers
+
 ## Progress Tracker
 
 | Batch | Pages | Status | Date |
 |-------|-------|--------|------|
 | 1 | 10 (reports + CRM) | ✅ Done | 2026-04-08 |
-| 2 | ~8 (remaining reports) | ⏳ Pending | — |
+| 2 | 8 (remaining reports) | ✅ Done | 2026-04-08 |
 | 3 | ~8 (sales, spaces, procurement) | ⏳ Pending | — |
 | 4 | ~10 (account, admin, remaining) | ⏳ Pending | — |
 
-**Total lazy-loaded pages:** 31/96 (21 existing + 10 Batch 1)
+**Total lazy-loaded pages:** 39/96 (21 existing + 10 Batch 1 + 8 Batch 2)
 
 ## Expected Impact
 - **-20% modules** per cold start (estimated)
@@ -99,6 +126,13 @@ export function ReportsExecutivePageContent() { ... }
 - **Better code splitting**: Separate chunks for recharts, calendar, etc.
 
 ## Changelog
+
+### 2026-04-08 — Batch 2 (8 remaining report pages)
+- Created 8 PageContent extraction files in `src/components/reports/pages/`
+- Updated lazyRoutes.tsx with 8 new entries
+- Converted 8 page.tsx to thin wrappers
+- Pages: spaces, contacts, crm, compliance, projects, export, builder, cash-flow
+- Related: ADR-265 (Reports), ADR-268 (Report Builder/Cash Flow)
 
 ### 2026-04-08 — Batch 1 (10 pages)
 - Created 10 PageContent extraction files

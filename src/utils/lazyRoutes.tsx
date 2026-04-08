@@ -351,6 +351,49 @@ export const LazyRoutes = {
     () => import('@/components/crm/communications/CommunicationsPageContent').then(mod => ({ default: mod.CommunicationsPageContent })),
     { loadingType: 'list', ssr: false }
   ),
+  // =========================================================================
+  // ⚡ ADR-294 BATCH 2: Dynamic Imports — 8 remaining report pages
+  // =========================================================================
+
+  ReportsSpaces: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsSpacesPageContent').then(mod => ({ default: mod.ReportsSpacesPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsContacts: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsContactsPageContent').then(mod => ({ default: mod.ReportsContactsPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsCrm: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsCrmPageContent').then(mod => ({ default: mod.ReportsCrmPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsCompliance: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsCompliancePageContent').then(mod => ({ default: mod.ReportsCompliancePageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsProjects: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsProjectsPageContent').then(mod => ({ default: mod.ReportsProjectsPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsExport: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsExportPageContent').then(mod => ({ default: mod.ReportsExportPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsBuilder: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsBuilderPageContent').then(mod => ({ default: mod.ReportsBuilderPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  ReportsCashFlow: createLazyRoute(
+    () => import('@/components/reports/pages/ReportsCashFlowPageContent').then(mod => ({ default: mod.ReportsCashFlowPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support
