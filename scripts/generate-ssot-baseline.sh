@@ -59,7 +59,7 @@ process_module() {
 
     for pattern in "${PATTERNS[@]}"; do
         # Scan entire src/ for this pattern
-        grep -rnE "$pattern" src \
+        grep -rE "$pattern" src \
             --include="*.ts" --include="*.tsx" 2>/dev/null \
             | while IFS=: read -r filepath rest; do
                 # Normalize path
@@ -80,7 +80,7 @@ process_module() {
                 done
                 [[ $skip -eq 1 ]] && continue
 
-                # Skip comment lines
+                # Skip comment lines (no -n flag, so $rest is just line content)
                 if echo "$rest" | grep -qE "^\s*(//|\*|#)"; then
                     continue
                 fi

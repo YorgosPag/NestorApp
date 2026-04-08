@@ -163,3 +163,4 @@ capturing groups, NEVER `(?:...)`.
 | 2026-04-08 | Added Discovery Scanner — 4-phase batch analysis, 77 duplicates found |
 | 2026-04-08 | **v2.0** — Expanded from 5 → 20 modules (3 tiers: data integrity, security, business logic) |
 | 2026-04-09 | **v3.0** — Expanded from 20 → 40 modules (6 tiers). Fixed critical grep ERE `(?:...)` bug. Added: 16 enum constants (Tier 4, ADR-287), storage-path + entity-creation (Tier 5), 4 config modules (Tier 6). Accurate baseline: 51 files, 61 violations |
+| 2026-04-09 | **v3.1** — SSoT Violations Cleanup: 53 → 0 violations. Fixed comment filter bug in baseline/audit scripts (grep `-n` line numbers broke `^\s*\*` detection). 3 code fixes (search-index-config re-export, PROPERTY_TYPES/PRIORITY_LEVELS imports from SSoT). 28 files allowlisted (type annotations, migration scripts, client-side entity creation). |

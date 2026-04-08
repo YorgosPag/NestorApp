@@ -116,7 +116,7 @@ for i in "${!MODULE_NAMES[@]}"; do
 
         echo "$filepath" >> "$TMP_COUNTS"
         module_count=$((module_count + 1))
-    done < <(grep -rnE "$patterns" src --include="*.ts" --include="*.tsx" 2>/dev/null || true)
+    done < <(grep -rE "$patterns" src --include="*.ts" --include="*.tsx" 2>/dev/null || true)
 
     echo "$module_count $module" >> "$TMP_MODULE"
 done

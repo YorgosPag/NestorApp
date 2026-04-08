@@ -23,6 +23,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { PROPERTY_TYPES } from '@/constants/property-types';
 import type { DomainDefinition } from './report-builder-types';
 
 // ============================================================================
@@ -42,9 +43,7 @@ const OPPORTUNITY_SOURCES = [
   'website', 'referral', 'agent', 'social', 'phone', 'walkin',
 ] as const;
 
-const PROPERTY_TYPES = [
-  'apartment', 'maisonette', 'store', 'office', 'parking', 'storage',
-] as const;
+// PROPERTY_TYPES imported from @/constants/property-types (SSoT — ADR-294)
 
 const TASK_TYPES = [
   'call', 'email', 'meeting', 'viewing', 'document',

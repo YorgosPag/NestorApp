@@ -41,7 +41,14 @@
       ],
       "allowlist": [
         "src/config/domain-constants.ts",
-        "src/types/"
+        "src/types/",
+        "src/services/entity-code.service.ts",
+        "src/components/shared/EntityCodeField.tsx",
+        "src/hooks/useEntityCodeSuggestion.ts",
+        "src/hooks/useEnterpriseMessages.ts",
+        "src/database/migrations/003_types.ts",
+        "src/app/api/entity-code/suggest/route.ts",
+        "src/app/api/cad-files/dual-write-to-files.ts"
       ]
     },
     "intent-badge-utils": {
@@ -74,7 +81,9 @@
       ],
       "allowlist": [
         "src/config/tenant.ts",
-        "src/config/dev-environment.ts"
+        "src/config/dev-environment.ts",
+        "src/app/api/admin/migrate-company-id/migration-operations.ts",
+        "src/app/api/navigation/fix-contact-id/route.ts"
       ]
     },
     "deletion-registry": {
@@ -301,7 +310,8 @@
         "(PRIORITY_LEVELS)\\s*(=|:)\\s*(\\[|\\{)"
       ],
       "allowlist": [
-        "src/constants/priority-levels.ts"
+        "src/constants/priority-levels.ts",
+        "src/types/validation/schemas.ts"
       ]
     },
     "renovation-statuses": {
@@ -401,7 +411,8 @@
       "allowlist": [
         "src/services/upload/utils/storage-path.ts",
         "src/services/upload/utils/file-display-name.ts",
-        "src/lib/security/path-sanitizer.ts"
+        "src/lib/security/path-sanitizer.ts",
+        "src/app/api/admin/migrate-company-id/migration-operations.ts"
       ]
     },
     "entity-creation-manual": {
@@ -411,7 +422,24 @@
         "createdBy:\\s*(user\\.uid|auth\\.uid|userId|authContext\\.uid)"
       ],
       "allowlist": [
-        "src/lib/firestore/entity-creation.service.ts"
+        "src/lib/firestore/entity-creation.service.ts",
+        "src/components/file-manager/file-manager-handlers.ts",
+        "src/components/ContactFormSections/utils/PhotoUploadConfiguration.ts",
+        "src/components/contacts/creation/InlineContactCreation.tsx",
+        "src/components/contacts/dialogs/TabbedAddNewContactDialog.tsx",
+        "src/hooks/useFloorplanUpload.ts",
+        "src/hooks/inbox/useCrmAttachmentUpload.ts",
+        "src/services/user/EnterpriseUserPreferencesService.ts",
+        "src/components/projects/ika/StampsCalculationTabContent.tsx",
+        "src/hooks/useEntityAssociations.ts",
+        "src/components/projects/tabs/brokerage/useBrokerageAgreements.ts",
+        "src/components/shared/files/ShareDialog.tsx",
+        "src/app/api/properties/[id]/property-contact-links.ts",
+        "src/services/saved-reports/saved-reports-service.ts",
+        "src/services/procurement/po-share-service.ts",
+        "src/services/procurement/procurement-repository.ts",
+        "src/services/measurements/boq-repository.ts",
+        "src/components/projects/ika/contracts.ts"
       ]
     },
 

@@ -1,150 +1,22 @@
 /**
  * =============================================================================
- * SEARCH INDEX CONFIGURATION - Single Source of Truth (ADR-029)
+ * SEARCH BACKFILL HELPERS
  * =============================================================================
  *
- * Contains:
- * - Search index config for all entity types
- * - Greek-friendly text normalization
- * - Search document field extraction helpers
- * - Search prefix generation
+ * Re-exports SEARCH_INDEX_CONFIG from centralized SSoT and provides
+ * search-specific utility functions for the backfill engine.
  *
  * @module api/admin/search-backfill/search-index-config
  * @enterprise ADR-029 - Global Search v1
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
-import {
-  SEARCH_AUDIENCE,
-  type SearchAudience,
-  type SearchEntityType,
-  type SearchIndexConfig,
-} from '@/types/search';
+import type { SearchIndexConfig } from '@/types/search';
+
+// SSoT: Re-export from centralized config (ADR-294)
+export { SEARCH_INDEX_CONFIG, extractTitle, extractSubtitle, determineAudience } from '@/config/search-index-config';
 
 // =============================================================================
-// INDEX CONFIG - SSoT for all entity type search configurations
-// =============================================================================
-
-export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
-  project: {
-    collection: COLLECTIONS.PROJECTS,
-    titleField: 'name',
-    subtitleFields: ['address', 'city'],
-    searchableFields: ['name', 'address', 'city', 'projectCode'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'projects:projects:view',
-    routeTemplate: '/projects?projectId={id}&selected=true',
-  },
-  building: {
-    collection: COLLECTIONS.BUILDINGS,
-    titleField: 'name',
-    subtitleFields: ['address'],
-    searchableFields: ['name', 'address', 'buildingCode'],
-    statusField: 'status',
-    audience: (doc) => (doc.isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL),
-    requiredPermission: 'buildings:buildings:view',
-    routeTemplate: '/buildings?buildingId={id}&selected=true',
-  },
-  property: {
-    collection: COLLECTIONS.PROPERTIES,
-    titleField: 'name',
-    subtitleFields: ['floor', 'type'],
-    searchableFields: ['name', 'propertyCode', 'floor'],
-    statusField: 'status',
-    audience: (doc: Record<string, unknown>) => (doc.isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL),
-    requiredPermission: 'properties:properties:view',
-    routeTemplate: '/properties?propertyId={id}&selected=true',
-  },
-  contact: {
-    collection: COLLECTIONS.CONTACTS,
-    titleField: (doc) => {
-      const displayName = doc.displayName as string | undefined;
-      const firstName = doc.firstName as string | undefined;
-      const lastName = doc.lastName as string | undefined;
-      return displayName || `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown';
-    },
-    subtitleFields: ['email', 'phone'],
-    searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:contacts:view',
-    routeTemplate: '/contacts?contactId={id}&selected=true',
-  },
-  file: {
-    collection: COLLECTIONS.FILES,
-    titleField: 'displayName',
-    subtitleFields: ['category', 'domain'],
-    searchableFields: ['displayName', 'originalFilename'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'dxf:files:view',
-    routeTemplate: '/files?fileId={id}&selected=true',
-  },
-  parking: {
-    collection: COLLECTIONS.PARKING_SPACES,
-    titleField: 'number',
-    subtitleFields: ['floor', 'type'],
-    searchableFields: ['number', 'type', 'floor', 'location', 'notes'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'spaces:parking:view',
-    routeTemplate: '/spaces/parking?parkingId={id}&selected=true',
-  },
-  storage: {
-    collection: COLLECTIONS.STORAGE,
-    titleField: (doc) => {
-      const name = doc.name as string | undefined;
-      const code = doc.code as string | undefined;
-      const identifier = doc.identifier as string | undefined;
-      return name || code || identifier || 'Unknown';
-    },
-    subtitleFields: ['floor', 'type'],
-    searchableFields: ['name', 'code', 'identifier', 'floor', 'notes'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'spaces:storage:view',
-    routeTemplate: '/spaces/storages?storageId={id}&selected=true',
-  },
-  // ADR-029 Global Search v1 Phase 2 - CRM Entities
-  opportunity: {
-    collection: COLLECTIONS.OPPORTUNITIES,
-    titleField: 'title',
-    subtitleFields: ['stage', 'status'],
-    searchableFields: ['title', 'fullName', 'email', 'phone', 'notes'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:opportunities:view',
-    routeTemplate: '/crm/opportunities?opportunityId={id}&selected=true',
-  },
-  communication: {
-    collection: COLLECTIONS.COMMUNICATIONS,
-    titleField: (doc) => {
-      const subject = doc.subject as string | undefined;
-      const type = doc.type as string | undefined;
-      return subject || `${type || 'communication'}`;
-    },
-    subtitleFields: ['type', 'direction'],
-    searchableFields: ['subject', 'content', 'from', 'to'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:communications:view',
-    routeTemplate: '/crm/communications?communicationId={id}&selected=true',
-  },
-  task: {
-    collection: COLLECTIONS.TASKS,
-    titleField: 'title',
-    subtitleFields: ['type', 'priority'],
-    searchableFields: ['title', 'description'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:tasks:view',
-    routeTemplate: '/crm/tasks?taskId={id}&selected=true',
-  },
-};
-
-// =============================================================================
-// TEXT NORMALIZATION (Greek-friendly)
+// BACKFILL-SPECIFIC HELPERS (not in canonical config)
 // =============================================================================
 
 const GREEK_ACCENT_MAP: Record<string, string> = {
@@ -171,31 +43,6 @@ export function generateSearchPrefixes(text: string, maxPrefixLength = 5): strin
     }
   }
   return Array.from(prefixes);
-}
-
-// =============================================================================
-// FIELD EXTRACTION HELPERS
-// =============================================================================
-
-export function extractTitle(doc: Record<string, unknown>, config: SearchIndexConfig): string {
-  if (typeof config.titleField === 'function') {
-    return config.titleField(doc);
-  }
-  return (doc[config.titleField] as string) || '';
-}
-
-export function extractSubtitle(doc: Record<string, unknown>, config: SearchIndexConfig): string {
-  return config.subtitleFields
-    .map((field) => doc[field] as string | undefined)
-    .filter(Boolean)
-    .join(' - ');
-}
-
-export function determineAudience(doc: Record<string, unknown>, config: SearchIndexConfig): SearchAudience {
-  if (typeof config.audience === 'function') {
-    return config.audience(doc);
-  }
-  return config.audience;
 }
 
 export function extractSearchableText(doc: Record<string, unknown>, config: SearchIndexConfig): string {
