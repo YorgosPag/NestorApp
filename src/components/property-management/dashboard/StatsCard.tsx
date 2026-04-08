@@ -87,7 +87,7 @@ export function StatsCard({ title, value, icon: Icon, color, onClick, loading, d
                         ) : (
                             <>
                                 <p className={`text-xs font-medium ${colorClasses[colorKey]} truncate leading-tight`}>{title}</p>
-                                <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${valueColorClasses[colorKey]} truncate leading-tight`}>{value}</p>
+                                <p className={`${typeof value === 'string' ? 'text-sm sm:text-base' : 'text-lg sm:text-xl lg:text-2xl'} font-bold ${valueColorClasses[colorKey]} truncate leading-tight`}>{value}</p>
                                 {description && (
                                     <p className={`text-xs ${colors.text.muted} truncate leading-tight mt-0.5`}>{description}</p>
                                 )}
