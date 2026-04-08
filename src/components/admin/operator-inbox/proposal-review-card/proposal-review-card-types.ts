@@ -1,6 +1,10 @@
 import type { PipelineAction, PipelineContext, PipelineIntentTypeValue } from '@/types/ai-pipeline';
 import type { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { useTypography } from '@/hooks/useTypography';
+import type { IntentBadgeVariant } from '@/components/admin/shared/intent-badge-utils';
+
+// Re-export for consumers that import from here
+export type { IntentBadgeVariant };
 
 export interface ProposalReviewCardProps {
   queueId: string;
@@ -9,8 +13,6 @@ export interface ProposalReviewCardProps {
   onReject: (queueId: string, reason: string) => Promise<void>;
   isProcessing: boolean;
 }
-
-export type IntentBadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
 export interface MatchedUnitDisplay {
   name?: string;

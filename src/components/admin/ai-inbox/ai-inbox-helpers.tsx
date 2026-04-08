@@ -20,11 +20,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FirestoreishTimestamp } from '@/types/crm';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type IntentBadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+// SSoT re-exports — consumers can import from here or directly from shared
+export { getIntentBadgeVariant, getConfidenceBadgeVariant } from '@/components/admin/shared/intent-badge-utils';
+export type { IntentBadgeVariant } from '@/components/admin/shared/intent-badge-utils';
 
 interface FileTypeInfo {
   icon: typeof File;
@@ -34,40 +32,8 @@ interface FileTypeInfo {
 }
 
 // ============================================================================
-// BADGE VARIANT RESOLVERS
+// BADGE VARIANT RESOLVERS — SSoT: @/components/admin/shared/intent-badge-utils
 // ============================================================================
-
-/**
- * Maps AI intent type to a semantic badge variant.
- *
- * @param intentType - The classified intent (delivery, issue, payment, etc.)
- * @returns Badge variant for visual differentiation
- */
-export const getIntentBadgeVariant = (intentType?: string): IntentBadgeVariant => {
-  switch (intentType) {
-    case 'delivery':
-    case 'appointment':
-      return 'default';
-    case 'issue':
-      return 'destructive';
-    case 'payment':
-    case 'info_update':
-      return 'secondary';
-    default:
-      return 'outline';
-  }
-};
-
-/**
- * Maps AI confidence score to a semantic badge variant.
- *
- * @param confidence - Score from 0 to 1
- * @returns Badge variant: green >= 0.8, yellow >= 0.6, red < 0.6
- */
-export const getConfidenceBadgeVariant = (confidence?: number): IntentBadgeVariant => {
-  if (!confidence) return 'outline';
-  return confidence >= 0.8 ? 'default' : confidence >= 0.6 ? 'secondary' : 'destructive';
-};
 
 // ============================================================================
 // CONTENT EXTRACTION

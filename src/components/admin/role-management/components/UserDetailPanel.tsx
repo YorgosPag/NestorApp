@@ -28,7 +28,7 @@ import {
 
 import type { CompanyUser } from '../types';
 import { ROLE_BADGE_VARIANT, STATUS_BADGE_VARIANT } from '../types';
-import { formatRelativeDate } from '../utils/format-relative-date';
+import { formatRelativeTime } from '@/lib/intl-formatting';
 import { PREDEFINED_ROLES } from '@/lib/auth/roles';
 import type { RoleDefinition } from '@/lib/auth/roles';
 import { PERMISSION_SETS, computeEffectivePermissions } from '@/lib/auth/permission-sets';
@@ -150,7 +150,7 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
               <dd>{user.mfaEnrolled ? 'Enabled' : 'Not enrolled'}</dd>
 
               <dt className={colors.text.muted}>{t('roleManagement.lastSignIn', 'Last Sign-In')}</dt>
-              <dd>{formatRelativeDate(user.lastSignIn)}</dd>
+              <dd>{user.lastSignIn ? formatRelativeTime(user.lastSignIn) : t('users.activity.never')}</dd>
 
               <dt className={colors.text.muted}>{t('roleManagement.projects', 'Projects')}</dt>
               <dd>{user.projectCount}</dd>

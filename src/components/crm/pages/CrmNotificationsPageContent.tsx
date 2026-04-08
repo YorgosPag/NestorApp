@@ -16,7 +16,7 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Bell, BellRing, CheckCheck, Filter, AlertCircle, Inbox, FlaskConical, Trash2 } from 'lucide-react';
 import { useNotifications } from '@/components/crm/notifications/useNotifications';
-import { NotificationCard } from '@/components/crm/notifications/NotificationCard';
+import { CrmNotificationCard } from '@/components/crm/notifications/NotificationCard';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { db } from '@/lib/firebase';
@@ -205,7 +205,7 @@ export function CrmNotificationsPageContent() {
         {!loading && !error && notifications.length > 0 && (
           <div className="space-y-4">
             {notifications.map((n) => (
-              <NotificationCard key={n.id} notification={n} />
+              <CrmNotificationCard key={n.id} notification={n} />
             ))}
           </div>
         )}

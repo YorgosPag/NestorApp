@@ -6,7 +6,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { CrmNotificationData } from './useNotifications';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
-export const NotificationCard = ({ notification }: { notification: CrmNotificationData }) => {
+export const CrmNotificationCard = ({ notification }: { notification: CrmNotificationData }) => {
   const { quick, radiusClass } = useBorderTokens();
   const { getTypeStyles, getTypeLabel } = useNotificationUtils();
   const colors = useSemanticColors();

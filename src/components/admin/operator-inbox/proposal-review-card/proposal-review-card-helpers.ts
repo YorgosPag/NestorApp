@@ -1,7 +1,9 @@
 import { Globe, Mail, MessageSquare } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { PipelineAction, PipelineChannelValue, PipelineIntentTypeValue } from '@/types/ai-pipeline';
-import type { IntentBadgeVariant } from './proposal-review-card-types';
+import type { PipelineAction, PipelineChannelValue } from '@/types/ai-pipeline';
+
+// SSoT re-exports from shared
+export { getIntentBadgeVariant, getConfidenceColor } from '@/components/admin/shared/intent-badge-utils';
 
 const DRAFT_REPLY_PARAM = 'draftReply';
 
@@ -12,21 +14,6 @@ export const HIDDEN_ACTION_PARAMS = new Set([
   'isKnownContact',
 ]);
 
-export const getIntentBadgeVariant = (intent?: PipelineIntentTypeValue): IntentBadgeVariant => {
-  switch (intent) {
-    case 'invoice':
-    case 'payment_notification':
-      return 'default';
-    case 'defect_report':
-      return 'destructive';
-    case 'appointment_request':
-    case 'property_search':
-      return 'secondary';
-    default:
-      return 'outline';
-  }
-};
-
 export const getChannelIcon = (channel: PipelineChannelValue): LucideIcon => {
   switch (channel) {
     case 'email':
@@ -36,12 +23,6 @@ export const getChannelIcon = (channel: PipelineChannelValue): LucideIcon => {
     default:
       return Globe;
   }
-};
-
-export const getConfidenceColor = (confidence: number): string => {
-  if (confidence >= 90) return 'text-green-600 dark:text-green-400';
-  if (confidence >= 60) return 'text-yellow-600 dark:text-yellow-400';
-  return 'text-red-600 dark:text-red-400';
 };
 
 export const buildModifiedActions = (

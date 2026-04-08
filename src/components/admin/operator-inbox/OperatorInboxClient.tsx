@@ -20,7 +20,7 @@ import { PageLoadingState } from '@/core/states';
 import { Inbox, RefreshCw, Filter, CheckCircle, XCircle, Clock, AlertTriangle, Mail } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { AdminContext } from '@/server/admin/admin-guards';
-import type { PipelineIntentTypeValue } from '@/types/ai-pipeline';
+import { getIntentBadgeVariant } from '@/components/admin/shared/intent-badge-utils';
 import { PageContainer, ListContainer } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
@@ -38,25 +38,12 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useOperatorInboxState } from './useOperatorInboxState';
 
 // ============================================================================
-// TYPES + HELPERS
+// TYPES
 // ============================================================================
 
 interface OperatorInboxClientProps {
   adminContext: AdminContext;
 }
-
-type IntentBadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
-
-const getIntentBadgeVariant = (intent?: PipelineIntentTypeValue): IntentBadgeVariant => {
-  switch (intent) {
-    case 'invoice':
-    case 'payment_notification': return 'default';
-    case 'defect_report': return 'destructive';
-    case 'appointment_request':
-    case 'property_search': return 'secondary';
-    default: return 'outline';
-  }
-};
 
 // ============================================================================
 // COMPONENT

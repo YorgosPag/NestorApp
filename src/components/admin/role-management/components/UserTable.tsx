@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 
 import type { CompanyUser, UserListFilters } from '../types';
 import { ROLE_BADGE_VARIANT, STATUS_BADGE_VARIANT } from '../types';
-import { formatRelativeDate } from '../utils/format-relative-date';
+import { formatRelativeTime } from '@/lib/intl-formatting';
 import type { GlobalRole } from '@/lib/auth/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -260,7 +260,7 @@ export function UserTable({
 
                 {/* Last Sign-In */}
                 <TableCell className={cn("text-sm", colors.text.muted)}>
-                  {formatRelativeDate(companyUser.lastSignIn)}
+                  {companyUser.lastSignIn ? formatRelativeTime(companyUser.lastSignIn) : t('users.activity.never')}
                 </TableCell>
 
                 {/* Actions */}
