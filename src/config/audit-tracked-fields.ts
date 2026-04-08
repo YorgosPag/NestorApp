@@ -58,6 +58,7 @@ export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
   firstName: 'Όνομα',
   lastName: 'Επώνυμο',
   fatherName: 'Πατρώνυμο',
+  motherName: 'Μητρώνυμο',
   companyName: 'Επωνυμία',
   serviceName: 'Όνομα Υπηρεσίας',
   type: 'Τύπος',
