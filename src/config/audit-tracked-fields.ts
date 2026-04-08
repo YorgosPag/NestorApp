@@ -120,7 +120,7 @@ export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
   notes: 'Σημειώσεις',
 
   // ── Photos / Media ──
-  photoURL: 'Φωτογραφία Προφίλ',
+  // photoURL: excluded — derived from multiplePhotoURLs[0], not independent data
   multiplePhotoURLs: 'Φωτογραφίες',
   logoURL: 'Λογότυπο',
   representativePhotoURL: 'Φωτογραφία Εκπροσώπου',

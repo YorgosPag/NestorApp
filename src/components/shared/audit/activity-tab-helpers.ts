@@ -148,6 +148,10 @@ export function formatDisplayValue(
       if (Array.isArray(parsed)) {
         if (parsed.length === 0) return "—";
         const first = parsed[0];
+        // Array of URLs (photos/media) → "N φωτογραφίες"
+        if (typeof first === "string" && first.includes("firebasestorage.googleapis.com")) {
+          return parsed.length === 1 ? "1 φωτογραφία" : `${parsed.length} φωτογραφίες`;
+        }
         if (typeof first === "object" && first !== null) {
           const formatted = (parsed as Array<Record<string, unknown>>)
             .map((item) => formatKnownEntity(item))
@@ -162,6 +166,11 @@ export function formatDisplayValue(
           .join(", ");
       }
     }
+  }
+
+  // Firebase Storage URLs → human-readable label
+  if (typeof value === "string" && value.includes("firebasestorage.googleapis.com")) {
+    return "Φωτογραφία";
   }
 
   // Try translating known values (e.g. "active" → "Ενεργό")
