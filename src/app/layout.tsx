@@ -7,7 +7,7 @@ import { AuthProvider, UserRoleProvider } from "@/auth";
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
-import { ConditionalAppShell } from './components/ConditionalAppShell';
+import { ConditionalAppShell } from '@/components/layout/ConditionalAppShell';
 
 /**
  * =============================================================================

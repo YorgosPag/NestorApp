@@ -11,7 +11,7 @@
  */
 
 import type { Metadata } from 'next';
-import { CheckInClient } from './CheckInClient';
+import { CheckInClient } from '@/components/attendance/check-in/CheckInClient';
 
 export const metadata: Metadata = {
   title: 'Παρουσία Εργαζομένου | Nestor',

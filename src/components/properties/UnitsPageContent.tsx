@@ -31,7 +31,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
-import { createStatusLabelGetter, createTypeLabelGetter } from '@/app/properties/properties-page-helpers';
+import { createStatusLabelGetter, createTypeLabelGetter } from './properties-page-helpers';
 
 /** @deprecated Alias — use PropertiesManagementContent (ADR-269) */
 export const UnitsPageContent = PropertiesManagementContent;
