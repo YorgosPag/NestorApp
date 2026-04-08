@@ -457,7 +457,10 @@
   "leadDetails": {
     "errors": {
       "noPhone": "No phone number available",
-      "noEmail": "No email address available"
+      "noEmail": "No email address available",
+      "loadError": "Error loading lead",
+      "loadTasksError": "Error loading tasks",
+      "noId": "No ID provided"
     },
     "tasks": {
       "title": "Tasks",

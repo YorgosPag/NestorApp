@@ -4,17 +4,20 @@ import { useState, useEffect, useCallback } from 'react';
 import { getOpportunityById } from '@/services/opportunities.service';
 import type { Opportunity } from '@/types/crm';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 const logger = createModuleLogger('useLead');
 
 export function useLead(id: string) {
   const [lead, setLead] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation('crm');
 
   const fetchLead = useCallback(async (signal?: AbortSignal) => {
     if (!id) {
         setLoading(false);
-        setError('No ID provided');
+        setError(t('leadDetails.errors.noId'));
         return;
     }
 
@@ -26,18 +29,18 @@ export function useLead(id: string) {
       if (data) {
         setLead(data);
       } else {
-        setError('Το lead δεν βρέθηκε.');
+        setError(t('leadDetails.notFound'));
       }
     } catch (err) {
       if (signal?.aborted) return;
-      setError('Σφάλμα κατά τη φόρτωση του lead.');
+      setError(t('leadDetails.errors.loadError'));
       logger.error('Failed to fetch lead', { error: err });
     } finally {
       if (!signal?.aborted) {
         setLoading(false);
       }
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     const controller = new AbortController();

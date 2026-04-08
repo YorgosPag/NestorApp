@@ -11,6 +11,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
+import { normalizeToDate } from '@/lib/date-local';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn, getResponsiveClass, getSpacingClass } from '@/lib/design-system';
 import { doc, getDoc } from 'firebase/firestore';
@@ -31,15 +32,7 @@ import { useContactName } from '@/components/contacts/relationships/hooks/useCon
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
-const resolveDate = (value: FirestoreishTimestamp | null | undefined): Date | null => {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value === 'string') return new Date(value);
-  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
-    return value.toDate();
-  }
-  return null;
-};
+// SSoT: Use centralized normalizeToDate from @/lib/date-local instead of duplicate resolveDate
 
 const getStatusVariant = (status: CrmTask['status']): BadgeVariant => {
   switch (status) {
@@ -118,7 +111,7 @@ export function TaskDetailPageContent() {
   const [showFilters, setShowFilters] = useState(false);
 
   const formatTaskDate = useCallback((value: FirestoreishTimestamp | null | undefined) => {
-    const date = resolveDate(value);
+    const date = normalizeToDate(value);
     return date ? formatDate(date) : t('card.notDefined');
   }, [t]);
 

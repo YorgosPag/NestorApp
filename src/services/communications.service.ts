@@ -16,7 +16,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { generateMessageId } from '@/services/enterprise-id.service';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, normalizeToDate } from '@/lib/date-local';
 
 // ── Re-exports for backward compatibility ──────────
 // In 'use server' files, only async functions can be exported.
@@ -85,15 +85,9 @@ function buildActionErrorMetadata(params: {
   };
 }
 
-const resolveDateValue = (value: unknown): Date => {
-  if (value instanceof Date) return value;
-  if (typeof value === 'string' || typeof value === 'number') return new Date(value);
-  if (value && typeof value === 'object' && 'toDate' in value) {
-    const dateValue = (value as { toDate?: () => Date }).toDate?.();
-    if (dateValue instanceof Date) return dateValue;
-  }
-  return new Date();
-};
+// SSoT: Use centralized normalizeToDate from @/lib/date-local
+const resolveDateValue = (value: unknown): Date =>
+  normalizeToDate(value) ?? new Date();
 
 // ============================================================================
 // SHARED TRIAGE QUERY HELPER (Admin SDK)
