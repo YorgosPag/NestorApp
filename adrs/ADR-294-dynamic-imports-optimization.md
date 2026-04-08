@@ -109,16 +109,49 @@ export function ReportsExecutivePageContent() { ... }
 - `src/utils/lazyRoutes.tsx` — +8 LazyRoute entries
 - 8 × `page.tsx` — Converted to thin wrappers
 
+### Batch 3 — Sales, Spaces, Procurement (2026-04-08)
+
+| # | Page | Heavy Content | LoadingType |
+|---|------|--------------|-------------|
+| 1 | `/sales` | Hub dashboard + stats + nav cards | dashboard |
+| 2 | `/sales/available-properties` | Properties list + filters + sidebar | list |
+| 3 | `/sales/available-parking` | Parking list + filters + sidebar | list |
+| 4 | `/sales/available-storage` | Storage list + filters + sidebar | list |
+| 5 | `/sales/sold` | Sold dashboard + stats + breakdown | dashboard |
+| 6 | `/spaces` | Hub dashboard + stats + nav cards | dashboard |
+| 7 | `/spaces/common` | Common spaces dashboard + breakdown | dashboard |
+| 8 | `/spaces/parking` | Full parking management (400 lines) | list |
+| 9 | `/spaces/storage` | Full storage management (400 lines) | list |
+| 10 | `/procurement` | PO list + KPIs + filters | list |
+| 11 | `/procurement/[poId]` | PO detail + edit form | form |
+
+### Files Created (Batch 3)
+- `src/components/sales/pages/SalesHubPageContent.tsx`
+- `src/components/sales/pages/SalesAvailablePropertiesPageContent.tsx`
+- `src/components/sales/pages/SalesAvailableParkingPageContent.tsx`
+- `src/components/sales/pages/SalesAvailableStoragePageContent.tsx`
+- `src/components/sales/pages/SalesSoldPageContent.tsx`
+- `src/components/spaces/pages/SpacesHubPageContent.tsx`
+- `src/components/spaces/pages/SpacesCommonPageContent.tsx`
+- `src/components/space-management/ParkingPage/ParkingPageContent.tsx`
+- `src/components/space-management/StoragesPage/StoragePageContent.tsx`
+- `src/components/procurement/pages/ProcurementPageContent.tsx`
+- `src/components/procurement/pages/ProcurementDetailPageContent.tsx`
+
+### Files Modified (Batch 3)
+- `src/utils/lazyRoutes.tsx` — +11 LazyRoute entries
+- 11 × `page.tsx` — Converted to thin wrappers
+
 ## Progress Tracker
 
 | Batch | Pages | Status | Date |
 |-------|-------|--------|------|
 | 1 | 10 (reports + CRM) | ✅ Done | 2026-04-08 |
 | 2 | 8 (remaining reports) | ✅ Done | 2026-04-08 |
-| 3 | ~8 (sales, spaces, procurement) | ⏳ Pending | — |
+| 3 | 11 (sales, spaces, procurement) | ✅ Done | 2026-04-08 |
 | 4 | ~10 (account, admin, remaining) | ⏳ Pending | — |
 
-**Total lazy-loaded pages:** 39/96 (21 existing + 10 Batch 1 + 8 Batch 2)
+**Total lazy-loaded pages:** 50/96 (21 existing + 10 Batch 1 + 8 Batch 2 + 11 Batch 3)
 
 ## Expected Impact
 - **-20% modules** per cold start (estimated)
@@ -126,6 +159,13 @@ export function ReportsExecutivePageContent() { ... }
 - **Better code splitting**: Separate chunks for recharts, calendar, etc.
 
 ## Changelog
+
+### 2026-04-08 — Batch 3 (11 pages: sales, spaces, procurement)
+- Created 11 PageContent extraction files across 5 directories
+- Updated lazyRoutes.tsx with 11 new entries
+- Converted 11 page.tsx to thin wrappers
+- Extracted 400-line parking/storage components to dedicated files
+- Related: ADR-197 (Sales), ADR-199 (Parking/Storage Sales), ADR-267 (Procurement)
 
 ### 2026-04-08 — Batch 2 (8 remaining report pages)
 - Created 8 PageContent extraction files in `src/components/reports/pages/`

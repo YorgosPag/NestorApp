@@ -394,6 +394,68 @@ export const LazyRoutes = {
     () => import('@/components/reports/pages/ReportsCashFlowPageContent').then(mod => ({ default: mod.ReportsCashFlowPageContent })),
     { loadingType: 'dashboard', ssr: false }
   ),
+
+  // =========================================================================
+  // ⚡ ADR-294 BATCH 3: Dynamic Imports — Sales, Spaces, Procurement
+  // =========================================================================
+
+  // Sales
+  SalesHub: createLazyRoute(
+    () => import('@/components/sales/pages/SalesHubPageContent').then(mod => ({ default: mod.SalesHubPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  SalesAvailableProperties: createLazyRoute(
+    () => import('@/components/sales/pages/SalesAvailablePropertiesPageContent').then(mod => ({ default: mod.SalesAvailablePropertiesPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  SalesAvailableParking: createLazyRoute(
+    () => import('@/components/sales/pages/SalesAvailableParkingPageContent').then(mod => ({ default: mod.SalesAvailableParkingPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  SalesAvailableStorage: createLazyRoute(
+    () => import('@/components/sales/pages/SalesAvailableStoragePageContent').then(mod => ({ default: mod.SalesAvailableStoragePageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  SalesSold: createLazyRoute(
+    () => import('@/components/sales/pages/SalesSoldPageContent').then(mod => ({ default: mod.SalesSoldPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  // Spaces
+  SpacesHub: createLazyRoute(
+    () => import('@/components/spaces/pages/SpacesHubPageContent').then(mod => ({ default: mod.SpacesHubPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  SpacesCommon: createLazyRoute(
+    () => import('@/components/spaces/pages/SpacesCommonPageContent').then(mod => ({ default: mod.SpacesCommonPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  SpacesParking: createLazyRoute(
+    () => import('@/components/space-management/ParkingPage/ParkingPageContent').then(mod => ({ default: mod.ParkingPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  SpacesStorage: createLazyRoute(
+    () => import('@/components/space-management/StoragesPage/StoragePageContent').then(mod => ({ default: mod.StoragePageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  // Procurement
+  Procurement: createLazyRoute(
+    () => import('@/components/procurement/pages/ProcurementPageContent').then(mod => ({ default: mod.ProcurementPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  ProcurementDetail: createLazyRoute(
+    () => import('@/components/procurement/pages/ProcurementDetailPageContent').then(mod => ({ default: mod.ProcurementDetailPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support
