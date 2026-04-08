@@ -37,8 +37,11 @@
 4. Run `npm run ssot:baseline` after cleanup commits to persist lower counts
 
 ### Commands
-- `npm run ssot:audit` — progress report vs baseline
-- `npm run ssot:baseline` — regenerate baseline
+| Command | Purpose |
+|---------|---------|
+| `npm run ssot:audit` | Progress report vs baseline |
+| `npm run ssot:baseline` | Regenerate baseline after cleanup |
+| `npm run ssot:discover` | Discovery scanner — find duplicates, anti-patterns, registry gaps |
 
 ### How to Add New Module
 1. Add entry to `.ssot-registry.json` under `modules`
@@ -48,12 +51,32 @@
 ### Pre-commit Hook Integration
 CHECK 3.7 in `.git/hooks/pre-commit` — after i18n checks (3.5, 3.6), before file size check (4).
 
+### Discovery Scanner (`scripts/ssot-discover.sh`)
+Batch-optimized codebase scanner — 4 phases:
+1. **Extract** exports from all centralized files (config/, utils/, lib/, services/)
+2. **Cross-reference** for duplicate implementations (re-declared function names)
+3. **Scan** for scattered anti-patterns (hardcoded collections, entityTypes, etc.)
+4. **Gap analysis** — centralized files not yet in registry
+
+## Codebase Metrics (2026-04-08)
+- **5.195 αρχεία** `.ts` / `.tsx`
+- **970.442 γραμμές κώδικα** (~1M lines)
+- **130 centralized files** with **1.072 exports**
+- Violation rate: **0.014%** (137 violations / 970K lines)
+
 ## Baseline (2026-04-08)
 - **92 files** with violations
 - **137 total violations**
 - Top module: `domain-constants` (122 violations)
 
+## Discovery Results (2026-04-08)
+- **77 duplicate exports** (re-declared outside SSoT) — ~30-40 true positives, rest are same-name different-domain
+- **6 scattered anti-patterns** detected
+- **4/130** centralized files protected (registry coverage: 3%)
+- Top anti-patterns: hardcoded entityType (84 files), `.localeCompare()` (37 files), `Timestamp.fromDate` (20 files)
+
 ## Changelog
 | Date | Change |
 |------|--------|
 | 2026-04-08 | Initial implementation — 5 modules, 92 files baseline |
+| 2026-04-08 | Added Discovery Scanner — 4-phase batch analysis, 77 duplicates found |
