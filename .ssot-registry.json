@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "description": "SSoT Ratchet Registry — centralized module patterns (ADR-ssot-ratchet)",
+    "version": "1.0.0",
+    "lastUpdated": "2026-04-08",
+    "howToAdd": "Add module entry under 'modules', then run: npm run ssot:baseline"
+  },
+  "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/)",
+  "modules": {
+    "firestore-collections": {
+      "ssotFile": "src/config/firestore-collections.ts",
+      "description": "All Firestore collection/doc names must use COLLECTIONS constant",
+      "forbiddenPatterns": [
+        "\\.(collection|doc)\\(['\"][a-z_]+['\"]\\)"
+      ],
+      "allowlist": [
+        "src/config/firestore-collections.ts",
+        "src/config/firestore-field-constants.ts",
+        "src/config/firestore-schema-map.ts"
+      ]
+    },
+    "enterprise-id": {
+      "ssotFile": "src/services/enterprise-id.service.ts",
+      "description": "All document IDs must use EnterpriseIdService — no crypto.randomUUID()",
+      "forbiddenPatterns": [
+        "crypto\\.randomUUID\\(\\)"
+      ],
+      "allowlist": [
+        "src/services/enterprise-id.service.ts",
+        "src/services/enterprise-id-convenience.ts",
+        "src/services/enterprise-id-prefixes.ts",
+        "src/services/enterprise-id-migration.service.ts"
+      ]
+    },
+    "domain-constants": {
+      "ssotFile": "src/config/domain-constants.ts",
+      "description": "Entity types, sender types, participant roles must use DOMAIN_CONSTANTS",
+      "forbiddenPatterns": [
+        "senderType\\s*[:=]\\s*['\"](?:customer|agent|bot|system)['\"]",
+        "entityType\\s*[:=]\\s*['\"](?:lead|contact|company|project|property|building)['\"]"
+      ],
+      "allowlist": [
+        "src/config/domain-constants.ts",
+        "src/types/"
+      ]
+    },
+    "intent-badge-utils": {
+      "ssotFile": "src/components/admin/shared/intent-badge-utils.ts",
+      "description": "Intent/confidence badge variants must use centralized intent-badge-utils",
+      "forbiddenPatterns": [
+        "(?:getIntentBadge|getConfidenceBadge|getConfidenceColor)\\s*(?:=|:)\\s*(?:function|\\()"
+      ],
+      "allowlist": [
+        "src/components/admin/shared/intent-badge-utils.ts"
+      ]
+    },
+    "addDoc-prohibition": {
+      "ssotFile": "src/services/enterprise-id.service.ts",
+      "description": "NEVER use addDoc() — always setDoc() with enterprise ID",
+      "forbiddenPatterns": [
+        "addDoc\\("
+      ],
+      "allowlist": []
+    }
+  }
+}
