@@ -13,7 +13,7 @@ import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impa
 import type { Contact } from '@/types/contacts';
 
 const IndividualIdentityFieldSchema = z.enum(INDIVIDUAL_IDENTITY_FIELDS);
-const IndividualIdentityFieldCategorySchema = z.enum(['display', 'identity', 'regulated']);
+const IndividualIdentityFieldCategorySchema = z.enum(['display', 'identity', 'regulated', 'administrative']);
 
 const ContactIdentityImpactRequestSchema = z.object({
   changes: z.array(z.object({

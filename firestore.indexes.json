@@ -1060,6 +1060,25 @@
     }
     ,
     {
+      "collectionGroup": "contact_links",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sourceContactId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "targetEntityType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+    ,
+    {
       "collectionGroup": "attendance_qr_tokens",
       "queryScope": "COLLECTION",
       "fields": [

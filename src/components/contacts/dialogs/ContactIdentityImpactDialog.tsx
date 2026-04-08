@@ -28,6 +28,11 @@ const ENUM_FIELD_KEYS: Record<string, string> = {
   documentType: 'options.identity',
 };
 
+/** Convert snake_case to camelCase (e.g. "identity_card" → "identityCard") */
+function snakeToCamel(s: string): string {
+  return s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
 /** Format value for display — dates, country codes, and enums get locale formatting */
 function formatChangeValue(
   field: string,
@@ -43,8 +48,10 @@ function formatChangeValue(
   }
   const enumPrefix = ENUM_FIELD_KEYS[field];
   if (enumPrefix) {
-    const translated = tForm(`${enumPrefix}.${value}`);
-    if (translated !== `${enumPrefix}.${value}`) return translated;
+    // Try camelCase key first (locale files use camelCase), then raw value as fallback
+    const camelKey = `${enumPrefix}.${snakeToCamel(value)}`;
+    const translated = tForm(camelKey);
+    if (translated !== camelKey) return translated;
   }
   return value;
 }
