@@ -147,10 +147,12 @@ export function computeStats(entries: EntityAuditEntry[]): Stats {
     const newest = entries[0];
     const ts = newest.timestamp;
     if (ts) {
-      const date = 'toDate' in ts && typeof ts.toDate === 'function'
+      const date = (typeof ts === 'object' && ts !== null && 'toDate' in ts && typeof (ts as { toDate: unknown }).toDate === 'function')
         ? (ts as { toDate(): Date }).toDate()
         : new Date(ts as string | number);
-      lastChangeRelative = formatRelativeTime(date);
+      if (!isNaN(date.getTime())) {
+        lastChangeRelative = formatRelativeTime(date);
+      }
     }
   }
 
