@@ -12,9 +12,6 @@ rules_version = '2';
 // /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/
 //   domains/{domain}/categories/{category}/files/{fileId}.{ext}
 //
-// LEGACY PATHS (temporary backward compatibility):
-// /contacts/photos/{filename}
-// /floor-plans/{buildingId}/{floorId}/{filename}
 //
 // =============================================================================
 
@@ -229,91 +226,6 @@ service firebase.storage {
 
       // 🗑️ DELETE: Company-scoped access
       allow delete: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
-    }
-
-    // =========================================================================
-    // 📸 LEGACY: CONTACT PHOTOS (Backward Compatibility)
-    // =========================================================================
-    // Path: /contacts/photos/{filename}
-    //
-    // ⚠️ LEGACY: Will be migrated to canonical path
-    // Keep for reading existing files, restrict new writes
-    // =========================================================================
-
-    match /contacts/photos/{fileName} {
-
-      // 📖 READ: Any authenticated user (for profile display)
-      // TODO: Restrict to internal users after migration
-      allow read: if isAuthenticated();
-
-      // ✍️ WRITE: Authenticated users (temporary - new uploads should use canonical)
-      // Will be removed after migration
-      allow write: if isAuthenticated()
-                   && isValidFileSize()
-                   && isImageType();
-
-      // 🗑️ DELETE: Authenticated users
-      allow delete: if isAuthenticated();
-    }
-
-    // =========================================================================
-    // 🏗️ LEGACY: FLOOR PLANS (Backward Compatibility)
-    // =========================================================================
-    // Path: /floor-plans/{buildingId}/{floorId}/{filename}
-    //
-    // ⚠️ LEGACY: Will be migrated to canonical path
-    // =========================================================================
-
-    match /floor-plans/{buildingId}/{floorId}/{fileName} {
-
-      // 📖 READ: Any authenticated user
-      allow read: if isAuthenticated();
-
-      // ✍️ WRITE: Authenticated users (internal)
-      allow write: if isAuthenticated()
-                   && isValidFileSize()
-                   && (isPDFType() || request.resource.contentType == 'application/octet-stream');
-
-      // 🗑️ DELETE: Authenticated users
-      allow delete: if isAuthenticated();
-    }
-
-    // =========================================================================
-    // 🏢 LEGACY: COMPANY LOGOS
-    // =========================================================================
-    // Path: /companies/logos/{filename}
-    // =========================================================================
-
-    match /companies/logos/{fileName} {
-
-      allow read: if isAuthenticated();
-
-      allow write: if isAuthenticated()
-                   && isValidFileSize()
-                   && isImageType();
-
-      allow delete: if isAuthenticated();
-    }
-
-    // =========================================================================
-    // 🏢 DXF SCENES (Enterprise DXF Storage)
-    // =========================================================================
-    // Path: /dxf-scenes/{fileId}/{filename}
-    // Used by DxfFirestoreService for storing parsed DXF scene data
-    // Includes: project floorplans, building floorplans, floor floorplans, unit floorplans
-    // =========================================================================
-
-    match /dxf-scenes/{fileId}/{fileName} {
-
-      // 📖 READ: Any authenticated user (internal tool)
-      allow read: if isAuthenticated();
-
-      // ✍️ WRITE: Authenticated users (internal tool)
-      allow write: if isAuthenticated()
-                   && isValidFileSize();
-
-      // 🗑️ DELETE: Authenticated users
-      allow delete: if isAuthenticated();
     }
 
     // =========================================================================

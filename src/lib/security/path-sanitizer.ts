@@ -20,11 +20,8 @@ import 'server-only';
  * Any folderPath that doesn't start with one of these is rejected.
  */
 const ALLOWED_STORAGE_PREFIXES = [
-  'companies/',       // 🏢 Canonical enterprise root (buildStoragePath) + legacy companies/logos
-  'contacts/',        // Legacy: contacts/photos
-  'floor-plans/',     // Legacy: floor-plans/{buildingId}/{floorId}
-  'dxf-scenes/',      // Legacy: dxf-scenes/{fileId}
-  'attendance/',      // Legacy: attendance photos
+  'companies/',       // 🏢 Canonical enterprise root (buildStoragePath)
+  'attendance/',      // Attendance photos
   'projects/',        // Generic projects folder
   'files/',           // Generic files folder
   'photos/',          // Generic photos folder

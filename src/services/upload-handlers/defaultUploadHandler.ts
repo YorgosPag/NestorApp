@@ -112,7 +112,7 @@ const UPLOAD_PRESETS: Record<UploadPreset, Partial<UploadHandlerConfig>> = {
  * ```typescript
  * // Create a custom upload handler
  * const uploadHandler = createUploadHandler({
- *   folderPath: 'contacts/photos',
+ *   folderPath: 'companies/{companyId}/entities/contact/{contactId}/domains/identity/categories/photos/files',
  *   enableCompression: true,
  *   compressionUsage: 'profile-modal',
  *   purpose: 'representative',
