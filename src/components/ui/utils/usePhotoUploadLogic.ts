@@ -160,7 +160,7 @@ export function usePhotoUploadLogic({
     uploadHandler,
     onUploadComplete,
     purpose,
-    debug: true, // Enable logging for this use case
+    debug: false,
   });
 
   // ========================================================================

@@ -89,4 +89,5 @@ PascalCase, derived from filename:
 - **Import**: `import { createModuleLogger } from '@/lib/telemetry'`
 
 ## Changelog
+- **2026-04-08**: Log level audit — downgraded hot-path logs (individualMapper, MultiplePhotosFull) from info→debug, disabled debug mode in useAutoUploadEffect, removed console.log from individualMapper. Replaced verbose debug useEffect in EnterprisePhotoUpload with guarded log (only on actual File). ~90% console noise reduction.
 - **2026-03-13**: Phase 1 — 30 αρχεία, ~180 κλήσεις migrated

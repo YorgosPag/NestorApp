@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FormGrid } from '@/components/ui/form/FormComponents';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
@@ -224,25 +224,25 @@ export function IndividualFormTabRenderer({
 
   // 🚀 CENTRALIZATION: Removed duplicate upload handler - now using centralized defaultUploadHandler from MultiplePhotosUpload
 
-  // Create tabs from individual sections
-  const tabs = createIndividualFormTabsFromConfig(
+  // 🏢 ENTERPRISE: Memoize tabs to prevent cascade re-renders (Google-level perf)
+  const tabs = useMemo(() => createIndividualFormTabsFromConfig(
     sections,
     formData,
     onChange,
     onSelectChange,
     disabled,
-    t, // 🏢 ENTERPRISE: Pass translation function
+    t,
     onPhotoChange,
     onMultiplePhotosChange,
     onMultiplePhotoUploadComplete,
     onProfilePhotoSelection,
-    // handleEnterpriseMultiplePhotoUpload removed
     customRenderers,
     sectionFooterRenderers,
     onPhotoClick,
     fieldErrors,
     onFieldBlur
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [sections, formData, disabled, fieldErrors]);
 
   return (
     <div className="w-full">

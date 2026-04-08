@@ -26,7 +26,7 @@ const logger = createModuleLogger('IndividualMapper');
  */
 export function mapIndividualContactToFormData(contact: Contact): ContactFormData {
 
-  logger.info('INDIVIDUAL MAPPER: Starting mapping for contact', { contactId: contact.id });
+  logger.debug('INDIVIDUAL MAPPER: Starting mapping for contact', { contactId: contact.id });
 
   // 🏢 ENTERPRISE: Type-safe access to individual contact fields
   if (!isIndividualContact(contact)) {
@@ -43,7 +43,7 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
   // 📸 MULTIPLE PHOTOS - ENTERPRISE SOLUTION (2025 STANDARD)
   const rawUrls = getSafeArrayValue(individualContact, 'multiplePhotoURLs') || [];
 
-  logger.info('INDIVIDUAL MAPPER: rawUrls from database', { rawUrls });
+  logger.debug('INDIVIDUAL MAPPER: rawUrls from database', { rawUrls });
 
   // 🚨 CRITICAL FIX - ΜΗ ΑΛΛΑΞΕΙΣ ΑΥΤΗ ΤΗ ΛΟΓΙΚΗ! 🚨
   // BUG HISTORY: Πριν από αυτή τη διόρθωση, το filtering αφαίρεσε κενά arrays
@@ -56,8 +56,7 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
   if (rawUrls.length === 0) {
     // ✅ ΚΕΝΟ ARRAY: Κρατάμε κενό για proper deletion στη βάση
     multiplePhotos = [];
-    logger.info('INDIVIDUAL MAPPER: Empty photos array - will delete from database');
-    logger.info('INDIVIDUAL MAPPER: Also clearing photoURL field for complete deletion');
+    logger.debug('INDIVIDUAL MAPPER: Empty photos array - will delete from database');
   } else {
     // ✅ ΥΠΑΡΧΟΥΝ ΦΩΤΟΓΡΑΦΙΕΣ: Normal processing
     multiplePhotos = rawUrls
@@ -83,9 +82,8 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
 
   // 🎭 ENTERPRISE: Extract persona data from contact (ADR-121)
   const rawPersonas = getSafeArrayValue<PersonaData>(individualContact, 'personas');
-  console.log('🎭 MAPPER PERSONA DEBUG', {
+  logger.debug('MAPPER PERSONA', {
     rawPersonasCount: rawPersonas.length,
-    rawPersonas: rawPersonas.map(p => ({ type: p?.personaType, status: p?.status })),
     hasPersonasField: 'personas' in individualContact,
   });
   const activePersonas: PersonaType[] = rawPersonas

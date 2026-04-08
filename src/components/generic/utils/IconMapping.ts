@@ -11,6 +11,8 @@ import {
   HardHat, UserCog, Calculator, Scale, Key, Euro, Award, Tag,
   // 🏢 Procurement icons (PO statuses)
   FileEdit, Send, PackageOpen, PackageCheck, CircleCheck,
+  // 📁 Project participation icon (ADR-282)
+  FolderKanban,
   LucideIcon
 } from 'lucide-react';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
@@ -171,6 +173,9 @@ export const ICON_MAPPING = {
 
   // 🔧 Legacy emoji fallbacks για backward compatibility
   'handshake': UserCheck, // Alias
+
+  // 📁 Project participation (ADR-282)
+  'folder-kanban': FolderKanban,
 } as const;
 
 // ============================================================================

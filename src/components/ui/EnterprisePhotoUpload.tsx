@@ -154,15 +154,11 @@ export function EnterprisePhotoUpload({
     contactName,
   });
 
-  // 🔥 DEBUG: Log photoFile value to identify undefined issues
+  // 🏢 ENTERPRISE: Log only when an actual file is selected (not on empty renders)
   useEffect(() => {
-    logger.info('PhotoFile value changed', {
-      hasPhotoFile: !!photoFile,
-      isFileInstance: photoFile instanceof File,
-      fileName: photoFile?.name,
-      fileSize: photoFile?.size,
-      fileType: photoFile?.type
-    });
+    if (photoFile instanceof File) {
+      logger.info('PhotoFile selected', { fileName: photoFile.name, fileSize: photoFile.size });
+    }
   }, [photoFile]);
 
   // 🔥 EXTRACTED: Photo upload logic (70+ lines extracted)

@@ -212,7 +212,7 @@ export function MultiplePhotosFull({
   // RENDER
   // ========================================================================
 
-  logger.info('Rendering', { slotCount: normalizedPhotos.length });
+  logger.debug('Rendering', { slotCount: normalizedPhotos.length });
 
   return (
     <div className={`space-y-4 ${className}`}>
