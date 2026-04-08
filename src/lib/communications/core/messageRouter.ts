@@ -6,6 +6,7 @@ import { doc, setDoc, updateDoc, serverTimestamp, FieldValue } from 'firebase/fi
 import type { Channel, BaseMessageInput, SendResult } from '@/types/communications';
 import { ATTACHMENT_TYPES, type MessageAttachment } from '@/types/conversations';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { generateMessageId } from '@/services/enterprise-id.service';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -203,7 +204,7 @@ class MessageRouter {
       content: parsed.content,
       subject: parsed.subject,
       externalId: parsed.externalId,
-      entityType: 'lead',
+      entityType: ENTITY_TYPES.LEAD,
       entityId: null,
       metadata: parsed.metadata
     }, MESSAGE_DIRECTIONS.INBOUND as 'inbound');
@@ -264,7 +265,7 @@ class MessageRouter {
     try {
       let entityId: string | null = null; // TODO: Implement lead searching logic
       if (entityId) {
-        await this.updateMessageStatus(messageId, { entityType: 'lead', entityId });
+        await this.updateMessageStatus(messageId, { entityType: ENTITY_TYPES.LEAD, entityId });
       }
       return entityId;
     } catch (error) {

@@ -14,6 +14,7 @@ import {
 import { EntityLinkingCache } from './utils/cache';
 import { AuditLogger } from './utils/audit';
 import { withFirestoreRetry } from './utils/retry';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type {
   EntityType,
@@ -169,9 +170,9 @@ export async function getAvailableBuildingsForProject(
   projectId: string
 ): Promise<GetAvailableEntitiesResult> {
   return getAvailableEntities({
-    entityType: 'building',
+    entityType: ENTITY_TYPES.BUILDING,
     parentId: projectId,
-    parentType: 'project',
+    parentType: ENTITY_TYPES.PROJECT,
     includeLinkedToOthers: false,
   });
 }
@@ -181,9 +182,9 @@ export async function getAvailablePropertiesForBuilding(
   buildingId: string
 ): Promise<GetAvailableEntitiesResult> {
   return getAvailableEntities({
-    entityType: 'property',
+    entityType: ENTITY_TYPES.PROPERTY,
     parentId: buildingId,
-    parentType: 'building',
+    parentType: ENTITY_TYPES.BUILDING,
     includeLinkedToOthers: false,
   });
 }

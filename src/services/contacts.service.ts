@@ -30,7 +30,7 @@ import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
+import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import { computeEntityDiff, CONTACT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { cleanupOrphanedPhotos } from '@/utils/contactForm/photo-cleanup';
@@ -290,7 +290,7 @@ export class ContactsService {
     if (changes.length > 0) {
       const isStatusChange = changes.some((c) => c.field === 'status');
       apiClient.post(API_ROUTES.AUDIT_TRAIL.RECORD, {
-        entityType: 'contact', entityId: id,
+        entityType: ENTITY_TYPES.CONTACT, entityId: id,
         entityName: this.getDisplayName(existingContact),
         action: isStatusChange ? 'status_changed' : 'updated',
         changes,

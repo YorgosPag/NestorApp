@@ -19,6 +19,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { buildProfessionalAssignmentEmail, buildProfessionalRemovalEmail } from '@/services/email-templates/professional-assignment';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -161,7 +162,7 @@ async function handleAssignmentNotification(
 
     // Audit trail: email sent
     safeFireAndForget(EntityAuditService.recordChange({
-      entityType: 'property',
+      entityType: ENTITY_TYPES.PROPERTY,
       entityId: propertyId,
       entityName: hierarchy.propertyName,
       action: 'email_sent',

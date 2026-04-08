@@ -23,6 +23,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
@@ -180,7 +181,7 @@ async function handlePost(
         };
         const spaceTypeLabels = { parking: 'Παρκινγκ', storage: 'Αποθήκη' };
         safeFireAndForget(EntityAuditService.recordChange({
-          entityType: 'property',
+          entityType: ENTITY_TYPES.PROPERTY,
           entityId: propertyId,
           entityName: null,
           action: 'updated',

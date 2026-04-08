@@ -18,6 +18,7 @@ import {
   restoreMultipleDeletedContactsWithPolicy,
 } from '@/services/contact-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { useTranslation } from 'react-i18next';
 import type { Contact } from '@/types/contacts';
 
@@ -40,7 +41,7 @@ export function DeleteContactDialog(props: DeleteContactDialogProps) {
   const { t } = useTranslation('contacts');
 
   return createSmartDialog({
-    entityType: 'contact',
+    entityType: ENTITY_TYPES.CONTACT,
     operationType: 'delete',
     copyVariant: 'contactSoftDelete',
     props: {

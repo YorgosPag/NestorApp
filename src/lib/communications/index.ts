@@ -11,6 +11,7 @@ import {
   isChannelEnabled
 } from '../config/communications.config';
 import type { BaseMessageInput, SendResult, Channel, TemplateSendInput } from '@/types/communications';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('communications');
 
@@ -110,7 +111,7 @@ export const sendWelcomeMessage = (leadData: LeadData, channel: Channel = 'email
     channel,
     to,
     variables: { leadName: leadData.fullName || '', companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || '' },
-    entityType: 'lead',
+    entityType: ENTITY_TYPES.LEAD,
     entityId: leadData.id,
     metadata: { automatedMessage: true, trigger: 'new_lead' },
   });
@@ -123,14 +124,14 @@ export const sendFollowUpMessage = (
 ): Promise<SendResult> => {
   const to = (channel === 'email' ? leadData.email : leadData.phone) || '';
   if (customContent) {
-    return communicationsService.sendMessage({ channel, to, content: customContent, entityType: 'lead', entityId: leadData.id });
+    return communicationsService.sendMessage({ channel, to, content: customContent, entityType: ENTITY_TYPES.LEAD, entityId: leadData.id });
   }
   return communicationsService.sendTemplateMessage({
     templateType: 'follow_up',
     channel,
     to,
     variables: { leadName: leadData.fullName || '', companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || '' },
-    entityType: 'lead',
+    entityType: ENTITY_TYPES.LEAD,
     entityId: leadData.id,
     metadata: { automatedMessage: false, trigger: 'manual_follow_up' },
   });
@@ -151,7 +152,7 @@ export const sendAppointmentConfirmation = async (leadData: LeadData, appointmen
         location: appointmentData.location || 'communications.appointment.defaultLocation',
         companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || ''
       },
-      entityType: 'lead',
+      entityType: ENTITY_TYPES.LEAD,
       entityId: leadData.id,
       metadata: { automatedMessage: true, trigger: 'appointment_confirmation', appointmentId: appointmentData.id }
     };
@@ -183,7 +184,7 @@ export const sendCampaignToLeads = async (leads: LeadData[], campaignData: Campa
       messages.push({
         ...campaignBase,
         to,
-        entityType: 'lead',
+        entityType: ENTITY_TYPES.LEAD,
         entityId: lead.id,
         metadata: { ...campaignData.metadata, campaignType: 'bulk', automatedMessage: true }
       });

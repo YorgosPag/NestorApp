@@ -24,6 +24,7 @@ jest.mock('@/config/firestore-collections', () => ({
 
 jest.mock('@/config/domain-constants', () => ({
   FILE_STATUS: { READY: 'ready' },
+  ENTITY_TYPES: { CONTACT: 'contact' },
 }));
 
 jest.mock('firebase-admin/firestore', () => ({

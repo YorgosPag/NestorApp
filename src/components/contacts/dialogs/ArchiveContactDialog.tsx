@@ -17,6 +17,7 @@
 
 import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
 import type { Contact } from '@/types/contacts';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 interface ArchiveContactDialogProps {
   open: boolean;
@@ -34,7 +35,7 @@ interface ArchiveContactDialogProps {
  */
 export function ArchiveContactDialog(props: ArchiveContactDialogProps) {
   return createSmartDialog({
-    entityType: 'contact',
+    entityType: ENTITY_TYPES.CONTACT,
     operationType: 'archive',
     props: {
       ...props,

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { generateFileId } from '@/services/enterprise-id.service';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 const logger = createModuleLogger('TestUploadPage');
@@ -48,7 +49,7 @@ export default function TestUploadPage() {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const { path: storagePath } = buildStoragePath({
         companyId: 'test_company',
-        entityType: 'contact',
+        entityType: ENTITY_TYPES.CONTACT,
         entityId: 'test_contact',
         domain: 'admin',
         category: 'photos',

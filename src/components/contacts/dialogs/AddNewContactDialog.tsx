@@ -17,6 +17,7 @@
 
 import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
 import type { Contact } from '@/types/contacts';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 interface AddNewContactDialogProps {
   open: boolean;
@@ -33,7 +34,7 @@ interface AddNewContactDialogProps {
  */
 export function AddNewContactDialog(props: AddNewContactDialogProps) {
   return createSmartDialog({
-    entityType: 'contact',
+    entityType: ENTITY_TYPES.CONTACT,
     operationType: props.editContact ? 'update' : 'create',
     props: {
       ...props,

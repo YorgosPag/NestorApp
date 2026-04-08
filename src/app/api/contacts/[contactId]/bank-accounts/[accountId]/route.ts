@@ -17,6 +17,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { isCurrencyCode, isAccountType } from '@/types/contacts/banking';
 import type { BankAccountUpdate, AccountType, CurrencyCode } from '@/types/contacts/banking';
 import { createModuleLogger } from '@/lib/telemetry';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { mapBoolean, buildUpdateAuditChanges, getExistingAccount } from './bank-account-audit';
 
 const logger = createModuleLogger('BankAccountsPatchDeleteRoute');
@@ -171,7 +172,7 @@ async function handlePatch(
         const changes = buildUpdateAuditChanges(existingAccount, updates);
         if (changes.length > 0) {
           await EntityAuditService.recordChange({
-            entityType: 'contact',
+            entityType: ENTITY_TYPES.CONTACT,
             entityId: contactId,
             entityName: null,
             action: 'updated',
@@ -245,7 +246,7 @@ async function handleDelete(
         }
 
         await EntityAuditService.recordChange({
-          entityType: 'contact',
+          entityType: ENTITY_TYPES.CONTACT,
           entityId: contactId,
           entityName: null,
           action: 'updated',

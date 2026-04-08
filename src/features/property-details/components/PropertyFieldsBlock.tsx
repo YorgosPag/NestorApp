@@ -32,7 +32,7 @@ import { translatePolicyError, isKnownPolicyErrorCode } from '@/lib/policy';
 // ADR-284 Batch 7: SSoT hierarchy validation + inline new-unit UI
 import { NewUnitHierarchySection } from '@/components/properties/shared/NewUnitHierarchySection';
 import { validatePropertyCreationFields, isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
-import { isMultiLevelCapableType } from '@/config/domain-constants';
+import { isMultiLevelCapableType, ENTITY_TYPES } from '@/config/domain-constants';
 const logger = createModuleLogger('PropertyFieldsBlock');
 
 interface PropertyFieldsBlockProps {
@@ -179,7 +179,7 @@ export function PropertyFieldsBlock({
   const hasAllCodeInputs = !!codeBuildingId && !!localType && !!codeFloorId;
 
   const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
-    entityType: 'property',
+    entityType: ENTITY_TYPES.PROPERTY,
     buildingId: codeBuildingId,
     floorLevel: codeFloorLevel,
     propertyType: (localType as PropertyType) || undefined,

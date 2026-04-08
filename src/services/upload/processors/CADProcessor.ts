@@ -26,6 +26,7 @@ import type {
 } from '../types/upload.types';
 import { UPLOAD_DEFAULTS } from '../types/upload.types';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -134,7 +135,7 @@ export class CADProcessor implements FileProcessor {
 
     const { path } = buildStoragePath({
       companyId: companyId ?? 'unknown',
-      entityType: 'building' as EntityType,
+      entityType: ENTITY_TYPES.BUILDING,
       entityId: fileId,
       domain: 'construction' as FileDomain,
       category: 'drawings' as FileCategory,

@@ -21,7 +21,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
-import { API_ROUTES } from '@/config/domain-constants';
+import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -405,22 +405,22 @@ export function useFloorplanImportState(
 
     switch (selection.floorplanType) {
       case 'project':
-        entityType = 'project' as EntityType;
+        entityType = ENTITY_TYPES.PROJECT;
         entityId = selection.projectId!;
         entityLabel = selection.projectName ?? undefined;
         break;
       case 'building':
-        entityType = 'building' as EntityType;
+        entityType = ENTITY_TYPES.BUILDING;
         entityId = selection.buildingId!;
         entityLabel = selection.buildingName ?? undefined;
         break;
       case 'floor':
-        entityType = 'floor' as EntityType;
+        entityType = ENTITY_TYPES.FLOOR;
         entityId = selection.floorId!;
         entityLabel = selection.floorName ?? undefined;
         break;
       case 'property':
-        entityType = 'property' as EntityType;
+        entityType = ENTITY_TYPES.PROPERTY;
         entityId = selection.propertyId!;
         entityLabel = selection.levelName
           ? `${selection.propertyName} — ${selection.levelName}`

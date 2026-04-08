@@ -29,6 +29,7 @@ import {
   getCurrentEnvironment,
 } from '@/config/notification-events';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -165,7 +166,7 @@ async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<N
       },
       eventId: body.messageId, // Use messageId για idempotency
       entityId: body.conversationId,
-      entityType: 'contact' as const,
+      entityType: ENTITY_TYPES.CONTACT,
     });
 
     if (!result.success) {

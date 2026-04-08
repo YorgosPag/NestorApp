@@ -12,6 +12,7 @@
  */
 
 import { getErrorMessage } from '@/lib/error-utils';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { notifyAccountingOffice, notifyBuyerReservation, notifyBuyerCancellation, notifyBuyerSale } from './accounting-notification';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -306,7 +307,7 @@ export class SalesAccountingBridge {
       const invoiceTypeLabel = invoiceInput.type === 'credit_invoice' ? 'Πιστωτικό' : 'Τιμολόγιο';
       const companyId = await resolvePropertyCompanyId(propertyId);
       safeFireAndForget(EntityAuditService.recordChange({
-        entityType: 'property',
+        entityType: ENTITY_TYPES.PROPERTY,
         entityId: propertyId,
         entityName: null,
         action: 'invoice_created',

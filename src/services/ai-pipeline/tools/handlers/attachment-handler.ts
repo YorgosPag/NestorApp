@@ -8,7 +8,7 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FILE_STATUS } from '@/config/domain-constants';
+import { FILE_STATUS, ENTITY_TYPES } from '@/config/domain-constants';
 import { ATTACHMENT_PURPOSES } from '../agentic-tool-definitions';
 import type { AttachmentPurpose } from '../agentic-tool-definitions';
 import {
@@ -294,7 +294,7 @@ async function promoteFileRecord(
 
   // Multi-contact: only set entityId on FIRST promotion — subsequent contacts use file_links only
   if (!options?.alreadyPromoted) {
-    updateData.entityType = 'contact';
+    updateData.entityType = ENTITY_TYPES.CONTACT;
     updateData.entityId = contactId;
   }
 

@@ -61,6 +61,7 @@ import type {
 import { withFirestoreRetry } from './utils/retry';
 import { EntityLinkingCache } from './utils/cache';
 import { AuditLogger } from './utils/audit';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('EntityLinkingService');
 
@@ -370,27 +371,27 @@ export class EntityLinkingService {
   static async linkBuildingToProject(buildingId: string, projectId: string): Promise<LinkResult> {
     return this.linkEntity({
       entityId: buildingId,
-      entityType: 'building',
+      entityType: ENTITY_TYPES.BUILDING,
       parentId: projectId,
-      parentType: 'project',
+      parentType: ENTITY_TYPES.PROJECT,
     });
   }
 
   static async linkPropertyToBuilding(propertyId: string, buildingId: string): Promise<LinkResult> {
     return this.linkEntity({
       entityId: propertyId,
-      entityType: 'property',
+      entityType: ENTITY_TYPES.PROPERTY,
       parentId: buildingId,
-      parentType: 'building',
+      parentType: ENTITY_TYPES.BUILDING,
     });
   }
 
   static async linkProjectToCompany(projectId: string, companyId: string): Promise<LinkResult> {
     return this.linkEntity({
       entityId: projectId,
-      entityType: 'project',
+      entityType: ENTITY_TYPES.PROJECT,
       parentId: companyId,
-      parentType: 'company',
+      parentType: ENTITY_TYPES.COMPANY,
     });
   }
 

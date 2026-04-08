@@ -16,7 +16,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { usePropertyForm, isStandaloneUnitType } from '../hooks/usePropertyForm';
 import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
-import { isMultiLevelCapableType } from '@/config/domain-constants';
+import { isMultiLevelCapableType, ENTITY_TYPES } from '@/config/domain-constants';
 import { getProjectsList, type ProjectListItem } from '@/components/building-management/building-services';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyType, OperationalStatus, CommercialStatus } from '@/types/property';
@@ -190,7 +190,7 @@ export function useAddPropertyDialogState({
   const [codeOverridden, setCodeOverridden] = useState(false);
 
   const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
-    entityType: 'property',
+    entityType: ENTITY_TYPES.PROPERTY,
     buildingId: formData.buildingId,
     floorLevel: formData.floor,
     propertyType: formData.type || undefined,

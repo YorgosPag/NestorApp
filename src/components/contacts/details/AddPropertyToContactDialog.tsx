@@ -16,6 +16,7 @@
 'use client';
 
 import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 interface AddPropertyToContactDialogProps {
   open: boolean;
@@ -39,7 +40,7 @@ interface AddPropertyToContactDialogProps {
  */
 export function AddPropertyToContactDialog(props: AddPropertyToContactDialogProps) {
   return createSmartDialog({
-    entityType: 'property',
+    entityType: ENTITY_TYPES.PROPERTY,
     operationType: 'create',
     props: {
       ...props,

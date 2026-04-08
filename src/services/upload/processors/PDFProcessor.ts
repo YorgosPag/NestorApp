@@ -41,6 +41,7 @@ import {
 import {
   FILE_DOMAINS,
   FILE_CATEGORIES,
+  ENTITY_TYPES,
   type EntityType,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
@@ -168,7 +169,7 @@ export class PDFProcessor implements FileProcessor {
 
     const { path } = buildStoragePath({
       companyId: companyId ?? 'unknown',
-      entityType: 'building' as EntityType,
+      entityType: ENTITY_TYPES.BUILDING,
       entityId: buildingId,
       domain: FILE_DOMAINS.CONSTRUCTION,
       category: FILE_CATEGORIES.FLOORPLANS,

@@ -16,6 +16,7 @@ import { ContactsService } from '@/services/contacts.service';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
 import type { Contact } from '@/types/contacts';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 interface PermanentDeleteDialogProps {
   open: boolean;
@@ -62,7 +63,7 @@ export function PermanentDeleteDialog(props: PermanentDeleteDialogProps) {
         entitySubtype={props.contact?.type}
       />
       {createSmartDialog({
-        entityType: 'contact',
+        entityType: ENTITY_TYPES.CONTACT,
         operationType: 'delete',
         copyVariant: 'contactPermanentDelete',
         props: {

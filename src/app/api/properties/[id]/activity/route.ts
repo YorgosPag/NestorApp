@@ -16,6 +16,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { extractNestedIdFromUrl } from '@/lib/api/route-helpers';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -76,7 +77,7 @@ export const POST = withStandardRateLimit(
 
       // Record audit entry (fire-and-forget)
       await EntityAuditService.recordChange({
-        entityType: 'property',
+        entityType: ENTITY_TYPES.PROPERTY,
         entityId: id,
         entityName: (existing.name as string) ?? null,
         action: body.action,

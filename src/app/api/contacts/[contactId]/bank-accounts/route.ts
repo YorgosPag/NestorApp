@@ -22,6 +22,7 @@ import { isCurrencyCode, isAccountType } from '@/types/contacts/banking';
 import type { BankAccountInput, AccountType, CurrencyCode } from '@/types/contacts/banking';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import { createModuleLogger } from '@/lib/telemetry';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('BankAccountsPostRoute');
 
@@ -177,7 +178,7 @@ async function handlePost(
         }
 
         await EntityAuditService.recordChange({
-          entityType: 'contact',
+          entityType: ENTITY_TYPES.CONTACT,
           entityId: contactId,
           entityName: null,
           action: 'updated',

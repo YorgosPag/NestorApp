@@ -21,6 +21,7 @@ import {
   updateFileClassificationWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { uploadFileWithPolicy } from '@/services/filesystem/upload-orchestrator-gateway';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { getFileExtension } from '@/services/upload/utils/storage-path';
 import { isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
@@ -157,7 +158,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
         // ADR-292: Canonical 4-step upload via orchestrator (auth + create + upload + finalize)
         const result = await uploadFileWithPolicy(file, {
           companyId,
-          entityType: 'company' as EntityType,
+          entityType: ENTITY_TYPES.COMPANY,
           entityId: companyId,
           domain: 'admin' as FileDomain,
           category: 'documents' as FileCategory,
@@ -210,7 +211,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
     if (title === t('dashboard.totalFiles')) {
       setFilters(defaultFileFilters);
     } else if (title === t('dashboard.projects')) {
-      setFilters(prev => ({ ...prev, entityType: 'project' }));
+      setFilters(prev => ({ ...prev, entityType: ENTITY_TYPES.PROJECT }));
     }
   }, [t, setFilters]);
 
