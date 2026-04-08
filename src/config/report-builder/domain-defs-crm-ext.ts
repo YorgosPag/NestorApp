@@ -18,6 +18,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { TRIAGE_STATUS_VALUES } from '@/constants/triage-statuses';
 import type { DomainDefinition } from './report-builder-types';
 
 // ============================================================================
@@ -33,10 +34,6 @@ const COMMUNICATION_DIRECTIONS = ['inbound', 'outbound'] as const;
 const COMMUNICATION_STATUSES = [
   'completed', 'scheduled', 'cancelled', 'pending',
   'sent', 'delivered', 'failed',
-] as const;
-
-const TRIAGE_STATUSES = [
-  'pending', 'reviewed', 'approved', 'rejected',
 ] as const;
 
 const APPOINTMENT_STATUSES = [
@@ -135,7 +132,7 @@ export const COMMUNICATIONS_DEFINITION: DomainDefinition = {
     { key: 'requiresFollowUp', labelKey: 'domains.communications.fields.requiresFollowUp', type: 'boolean', filterable: true, sortable: true, defaultVisible: false },
     { key: 'followUpDate', labelKey: 'domains.communications.fields.followUpDate', type: 'date', filterable: true, sortable: true, defaultVisible: false, format: 'date' },
     // Triage & AI
-    { key: 'triageStatus', labelKey: 'domains.communications.fields.triageStatus', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: TRIAGE_STATUSES, enumLabelPrefix: 'domains.communications.enums.triageStatus' },
+    { key: 'triageStatus', labelKey: 'domains.communications.fields.triageStatus', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: TRIAGE_STATUS_VALUES, enumLabelPrefix: 'domains.communications.enums.triageStatus' },
     // Dates
     { key: 'createdAt', labelKey: 'domains.communications.fields.createdAt', type: 'date', filterable: true, sortable: true, defaultVisible: true, format: 'date' },
     // References

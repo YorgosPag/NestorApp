@@ -227,7 +227,8 @@
       ],
       "allowlist": [
         "src/constants/commercial-statuses.ts",
-        "src/constants/property-statuses-enterprise.ts"
+        "src/constants/property-statuses-enterprise.ts",
+        "src/config/report-builder/domain-defs-spaces.ts"
       ]
     },
     "operational-statuses": {
@@ -331,7 +332,9 @@
         "(CONTACT_TYPES|CONTACT_TYPE_ALIASES)\\s*(=|:)\\s*(\\[|\\{|Record)"
       ],
       "allowlist": [
-        "src/constants/contact-types.ts"
+        "src/constants/contact-types.ts",
+        "src/constants/contacts.ts",
+        "src/services/ai-pipeline/tools/agentic-tool-definitions.ts"
       ]
     },
     "entity-status-values": {
@@ -381,7 +384,9 @@
         "(ORIENTATION_LABELS|VIEW_TYPE_LABELS|ENERGY_CLASS_LABELS|ENERGY_CLASS_COLORS)\\s*(=|:)\\s*(\\{|Record)"
       ],
       "allowlist": [
-        "src/constants/property-features-enterprise.ts"
+        "src/constants/property-features-enterprise.ts",
+        "src/subapps/dxf-viewer/config/modal-select/core/labels/fields.ts",
+        "src/subapps/dxf-viewer/config/modal-select.ts"
       ]
     },
 

@@ -8,6 +8,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { CONTACT_TYPES } from '@/constants/contact-types';
 import type { DomainDefinition } from './report-builder-types';
 
 // ============================================================================
@@ -15,8 +16,6 @@ import type { DomainDefinition } from './report-builder-types';
 // ============================================================================
 
 const CONTACT_STATUSES = ['active', 'inactive', 'archived'] as const;
-
-const CONTACT_TYPES = ['individual', 'company', 'service'] as const;
 
 const GENDER_VALUES = ['male', 'female', 'other'] as const;
 
