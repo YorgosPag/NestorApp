@@ -345,11 +345,35 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
   const relativeTime = timestamp ? formatRelativeTime(timestamp) : "";
   const absoluteTime = timestamp ? formatDateTime(timestamp) : "";
 
-  /** Translate known status values via audit.values.* i18n keys */
+  /** Translate known values: enum labels, country codes, ISO dates */
   const translateValue = (v: string): string | undefined => {
-    const key = `audit.values.${v}`;
-    const result = t(key);
-    return result !== key ? result : undefined;
+    // 1. Enum values (gender, status, maritalStatus, documentType, legalForm, etc.)
+    const enumKey = `audit.values.${v}`;
+    const enumResult = t(enumKey);
+    if (enumResult !== enumKey) return enumResult;
+
+    // 2. Country codes (GR → Ελλάδα, CY → Κύπρος, etc.)
+    const countryMap: Record<string, string> = {
+      GR: 'countries.greece', CY: 'countries.cyprus', US: 'countries.usa',
+      DE: 'countries.germany', FR: 'countries.france', IT: 'countries.italy',
+      ES: 'countries.spain', UK: 'countries.uk', AU: 'countries.australia',
+      CA: 'countries.canada', OTHER: 'countries.other',
+    };
+    const countryKey = countryMap[v];
+    if (countryKey) {
+      const countryResult = t(countryKey);
+      if (countryResult !== countryKey) return countryResult;
+    }
+
+    // 3. ISO dates (2026-04-07 → 07/04/2026)
+    if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
+      const d = new Date(v);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+    }
+
+    return undefined;
   };
 
   return (
