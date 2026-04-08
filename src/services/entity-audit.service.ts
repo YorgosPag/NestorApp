@@ -60,6 +60,47 @@ function removeUndefinedValues(obj: Record<string, unknown>): Record<string, unk
   return result;
 }
 
+/**
+ * Resolve a user UID to "DisplayName (email)" for audit trail display.
+ *
+ * Strategy:
+ * - If currentName is a non-email string (e.g. "Σύστημα", "[GDPR ANONYMIZED]") → keep as-is
+ * - If currentName is null or an email → lookup /users/{uid} for displayName + email
+ * - Returns "DisplayName (email)" or falls back to currentName
+ *
+ * Non-blocking: errors return currentName unchanged.
+ */
+async function resolvePerformerDisplayName(
+  uid: string,
+  currentName: string | null,
+): Promise<string | null> {
+  // Keep special names as-is (not an email, not null)
+  if (currentName && !currentName.includes('@')) return currentName;
+
+  try {
+    const db = getAdminFirestore();
+    if (!db) return currentName;
+
+    const userDoc = await db.collection(COLLECTIONS.USERS).doc(uid).get();
+    if (!userDoc.exists) return currentName;
+
+    const data = userDoc.data();
+    const displayName = (data?.displayName as string | undefined)?.trim() || null;
+    const email = (data?.email as string | undefined)?.trim() || null;
+
+    if (displayName && email) return `${displayName} (${email})`;
+    if (displayName) return displayName;
+    if (email) return email;
+    return currentName;
+  } catch (err) {
+    logger.warn('Failed to resolve performer display name', {
+      uid,
+      error: getErrorMessage(err),
+    });
+    return currentName;
+  }
+}
+
 // ============================================================================
 // SERVICE
 // ============================================================================
@@ -79,6 +120,12 @@ export class EntityAuditService {
         return null;
       }
 
+      // Auto-resolve "DisplayName (email)" from /users/{uid}
+      const resolvedName = await resolvePerformerDisplayName(
+        params.performedBy,
+        params.performedByName,
+      );
+
       const entry = removeUndefinedValues({
         entityType: params.entityType,
         entityId: params.entityId,
@@ -86,7 +133,7 @@ export class EntityAuditService {
         action: params.action,
         changes: params.changes,
         performedBy: params.performedBy,
-        performedByName: params.performedByName ?? null,
+        performedByName: resolvedName ?? null,
         companyId: params.companyId,
         timestamp: FieldValue.serverTimestamp(),
       });
