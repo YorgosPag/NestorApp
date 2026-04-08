@@ -77,14 +77,14 @@ export const LazyRoutes = {
     { loadingType: 'list', ssr: false }
   ),
   
-  // Form routes
+  // Form routes (ADR-294 Batch 8 — replaced placeholder components with real implementations)
   ObligationsNew: createLazyRoute(
-    () => import('@/components/obligations/ObligationForm').then(mod => ({ default: mod.ObligationForm })),
+    () => import('@/components/obligations/pages/NewObligationPageContent').then(mod => ({ default: mod.NewObligationPageContent })),
     { loadingType: 'form', ssr: false }
   ),
 
   ObligationsEdit: createLazyRoute(
-    () => import('@/components/obligations/ObligationEditForm').then(mod => ({ default: mod.ObligationEditForm })),
+    () => import('@/components/obligations/pages/EditObligationPageContent').then(mod => ({ default: mod.EditObligationPageContent })),
     { loadingType: 'form', ssr: false }
   ),
 

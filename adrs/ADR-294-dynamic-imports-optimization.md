@@ -1,7 +1,7 @@
 # ADR-294: Dynamic Imports Optimization — Incremental Code Splitting
 
 ## Status
-✅ **ACTIVE** — Batch 7 implemented (2026-04-08)
+✅ **ACTIVE** — Batch 8 implemented (2026-04-08)
 
 ## Context
 
@@ -153,9 +153,9 @@ export function ReportsExecutivePageContent() { ... }
 | 5 | 8 (admin pages) | ✅ Done | 2026-04-08 |
 | 6 | 2 (CRM dynamic routes: lead detail, task detail) | ✅ Done | 2026-04-08 |
 | 7 | 7 (settings, navigation, storage, geo, public share pages) | ✅ Done | 2026-04-08 |
-| 8 | ~20 (final sweep + co-located component cleanup) | ⏳ Pending | — |
+| 8 | 2 (obligations new + edit, replaced placeholders with real implementations) | ✅ Done | 2026-04-08 |
 
-**Total lazy-loaded pages:** 76/96 (21 existing + 10 B1 + 8 B2 + 11 B3 + 9 B4 + 8 B5 + 2 B6 + 7 B7)
+**Total lazy-loaded pages:** 78/96 (21 existing + 10 B1 + 8 B2 + 11 B3 + 9 B4 + 8 B5 + 2 B6 + 7 B7 + 2 B8)
 **Note:** ai-inbox + operator-inbox are Server Components (SSR auth) — not lazy-loaded by design
 
 ## Expected Impact
@@ -164,6 +164,15 @@ export function ReportsExecutivePageContent() { ... }
 - **Better code splitting**: Separate chunks for recharts, calendar, etc.
 
 ## Changelog
+
+### 2026-04-08 — Batch 8 (2 obligations pages + co-located file migration)
+- Replaced 2 placeholder components (`ObligationForm.tsx`, `ObligationEditForm.tsx` — 21 lines each, dead code)
+  with real implementations extracted from `app/obligations/new/page.tsx` (243 lines) and `app/obligations/[id]/edit/page.tsx` (440 lines)
+- Created `EditObligationPageContent.tsx` (452 lines) + `NewObligationPageContent.tsx` (248 lines)
+- Migrated co-located hook `useNewObligationPage.ts` from `app/obligations/new/` → `components/obligations/hooks/`
+- Updated `preloadRoutes.ts` to point to new file locations
+- Deleted dead placeholder files + old co-located hook
+- Remaining co-located files in app/: role-management (13), ai-inbox (4), operator-inbox (2), attendance (2), etc.
 
 ### 2026-04-08 — Auth-ready guard centralization (infrastructure)
 - Centralized auth-ready logic inside `firestoreQueryService.subscribe()` via `waitForAuthReady()`

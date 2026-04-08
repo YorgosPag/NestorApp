@@ -27,8 +27,8 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<DynamicModuleImpor
   'contacts': () => import('@/components/contacts/ContactsPageContent'),
   'properties': () => import('@/components/properties/PropertiesPageContent'),
   'dxf-viewer': () => import('@/subapps/dxf-viewer/DxfViewerApp'),
-  'obligations-new': () => import('@/components/obligations/ObligationForm'),
-  'obligations-edit': () => import('@/components/obligations/ObligationEditForm'),
+  'obligations-new': () => import('@/components/obligations/pages/NewObligationPageContent'),
+  'obligations-edit': () => import('@/components/obligations/pages/EditObligationPageContent'),
 };
 
 // ============================================================================
