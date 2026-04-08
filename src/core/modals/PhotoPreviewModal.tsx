@@ -128,11 +128,16 @@ export function PhotoPreviewModal({
 
         {/* Photo Content */}
         <main
-          className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none`}
+          ref={state.containerRef}
+          className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none ${
+            state.isPanning ? 'cursor-grabbing' : state.zoom > 1 ? 'cursor-grab' : ''
+          }`}
           role="main"
           aria-label={t('photoPreview.aria.displayPhoto')}
+          onMouseDown={state.handleMouseDown}
+          onDoubleClick={state.handleDoubleClick}
         >
-          <figure className="relative w-full h-full flex items-center justify-center">
+          <figure className="relative w-full h-full flex items-center justify-center select-none">
             <img
               src={state.currentPhoto}
               alt={state.isGalleryMode
@@ -141,6 +146,7 @@ export function PhotoPreviewModal({
               }
               ref={state.imageRef}
               className={`${photoPreviewLayout.image.base} ${TRANSITION_PRESETS.STANDARD_TRANSFORM}`}
+              draggable={false}
               onTouchStart={state.handleTouchStart}
               onTouchMove={state.handleTouchMove}
               onTouchEnd={state.handleTouchEnd}

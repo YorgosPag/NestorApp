@@ -98,6 +98,11 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
     onEscape: () => onOpenChange(false)
   });
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const zoomRef = useRef(zoom);
+  const panOffsetRef = useRef(panOffset);
+  zoomRef.current = zoom;
+  panOffsetRef.current = panOffset;
 
   // --- Derived gallery values ---
   const isGalleryMode = galleryPhotos && galleryPhotos.length > 0;
@@ -173,6 +178,63 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onOpenChange]);
+
+  // --- Wheel zoom-to-cursor (desktop, Google Photos pattern) ---
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !open) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = container.getBoundingClientRect();
+      const cx = e.clientX - rect.left - rect.width / 2;
+      const cy = e.clientY - rect.top - rect.height / 2;
+
+      const cur = zoomRef.current;
+      const pan = panOffsetRef.current;
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      const next = Math.min(Math.max(cur * factor, 0.25), 8);
+      const ratio = next / cur;
+
+      setZoom(next);
+      setPanOffset({
+        x: cx - (cx - pan.x) * ratio,
+        y: cy - (cy - pan.y) * ratio,
+      });
+    };
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => container.removeEventListener('wheel', onWheel);
+  }, [open]);
+
+  // --- Mouse drag pan (desktop) ---
+  useEffect(() => {
+    if (!isPanning || isMobile) return;
+
+    const onMove = (e: MouseEvent) => {
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      const img = imageRef.current;
+      if (!img) return;
+
+      const curZoom = zoomRef.current;
+      const maxX = Math.max(0, (img.offsetWidth * (curZoom - 1)) / 2);
+      const maxY = Math.max(0, (img.offsetHeight * (curZoom - 1)) / 2);
+
+      setPanOffset({
+        x: Math.max(-maxX, Math.min(maxX, initialPanOffset.x + dx)),
+        y: Math.max(-maxY, Math.min(maxY, initialPanOffset.y + dy)),
+      });
+    };
+
+    const onUp = () => setIsPanning(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isPanning, isMobile, panStart, initialPanOffset]);
 
   // --- Derived display values ---
   const displayIndex = isGalleryMode ? currentIndex : photoIndex;
@@ -261,6 +323,21 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
   const handleFitToView = () => {
     setZoom(1);
     setRotation(0);
+    setPanOffset({ x: 0, y: 0 });
+  };
+
+  // --- Mouse down for desktop drag (only when zoomed) ---
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMobile || zoom <= 1 || e.button !== 0) return;
+    e.preventDefault();
+    setIsPanning(true);
+    setPanStart({ x: e.clientX, y: e.clientY });
+    setInitialPanOffset({ ...panOffsetRef.current });
+  };
+
+  // --- Double-click to reset zoom & pan ---
+  const handleDoubleClick = () => {
+    setZoom(1);
     setPanOffset({ x: 0, y: 0 });
   };
 
@@ -391,8 +468,10 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
     // Refs
     focusTrapRef,
     imageRef,
+    containerRef,
     // Derived
     isMobile,
+    isPanning,
     isGalleryMode,
     currentPhoto,
     totalPhotos,
@@ -414,5 +493,7 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
     handleTouchEnd,
     handleImageLoad,
     handleImageError,
+    handleMouseDown,
+    handleDoubleClick,
   };
 }
