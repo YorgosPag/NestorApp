@@ -317,5 +317,17 @@
     "exactMatch": "This contact already exists in the system!",
     "similarMatch": "A similar contact was found. Please check before continuing.",
     "possibleMatch": "Possible match with an existing contact."
+  },
+  "addressesSection": {
+    "removeAddress": "Remove Address"
+  },
+  "individual": {
+    "sections": {
+      "projectParticipation": {
+        "saveFirst": "Please save the contact first",
+        "empty": "Not participating in any project",
+        "info": "Linking is managed from Project Management"
+      }
+    }
   }
 }
