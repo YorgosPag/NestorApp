@@ -21,6 +21,7 @@ import type { KadActivity } from '@/types/ContactFormTypes';
 import { AddressesSectionWithFullscreen } from '@/components/contacts/dynamic/AddressesSectionWithFullscreen';
 import { getPhotoUploadHandlers, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 import { createModuleLogger } from '@/lib/telemetry';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('ContactRenderers');
 
@@ -150,7 +151,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       if (contactType === 'individual') entityLabel = `${(formData.firstName as string) || ''} ${(formData.lastName as string) || ''}`.trim();
       else if (contactType === 'company') entityLabel = (formData.companyName as string) || (formData.tradeName as string) || '';
       else if (contactType === 'service') entityLabel = (formData.serviceName as string) || (formData.name as string) || '';
-      return <EntityFilesManager entityType="contact" entityId={contactId} companyId={ctx.resolvedCompanyId} domain="admin" category="documents" currentUserId={ctx.userId} entityLabel={entityLabel} companyName={ctx.companyDisplayName} contactType={contactType} activePersonas={formData.activePersonas} />;
+      return <EntityFilesManager entityType={ENTITY_TYPES.CONTACT} entityId={contactId} companyId={ctx.resolvedCompanyId} domain="admin" category="documents" currentUserId={ctx.userId} entityLabel={entityLabel} companyName={ctx.companyDisplayName} contactType={contactType} activePersonas={formData.activePersonas} />;
     },
 
     // ── Project Participation (ADR-282: read-only derived section) ──
@@ -170,7 +171,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
     history: () => {
       const contactId = formData.id;
       if (!contactId) return <div className="p-8 text-center text-muted-foreground"><p>{t('individual.sections.history.description')}</p></div>;
-      return <ActivityTab entityType="contact" entityId={contactId} />;
+      return <ActivityTab entityType={ENTITY_TYPES.CONTACT} entityId={contactId} />;
     },
   };
 }

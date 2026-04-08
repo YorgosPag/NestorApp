@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { GRADIENT_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -240,25 +241,25 @@ export const EnterpriseHeaderActionsFactories = {
    * Projects header actions factory
    */
   forProjects: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="project" />,
+    <EnterpriseHeaderActions {...props} entityType={ENTITY_TYPES.PROJECT} />,
 
   /**
    * Buildings header actions factory
    */
   forBuildings: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="building" />,
+    <EnterpriseHeaderActions {...props} entityType={ENTITY_TYPES.BUILDING} />,
 
   /**
    * Contacts header actions factory
    */
   forContacts: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="contact" />,
+    <EnterpriseHeaderActions {...props} entityType={ENTITY_TYPES.CONTACT} />,
 
   /**
    * Properties header actions factory
    */
   forProperties: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="property" />
+    <EnterpriseHeaderActions {...props} entityType={ENTITY_TYPES.PROPERTY} />
 };
 
 // Factory methods available as separate exports

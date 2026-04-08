@@ -35,6 +35,7 @@ import type { Building } from '@/types/building/contracts';
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
 import '@/lib/design-system';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // =============================================================================
 // 🏢 TYPES
@@ -170,7 +171,7 @@ export const BuildingListCard = React.memo(function BuildingListCard({
 
   return (
     <ListCard
-      entityType="building"
+      entityType={ENTITY_TYPES.BUILDING}
       title={formatBuildingLabel(building.code, building.name, building.id)}
       subtitle={categoryLabel}
       badges={badges}

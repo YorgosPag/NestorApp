@@ -11,6 +11,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { BaseButton } from '../../components/shared/BaseButton';
 // 🏢 ENTERPRISE: Centralized ListCard for hierarchy items (same as contacts, projects, buildings lists)
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 export function HierarchyDebugPanel() {
   const iconSizes = useIconSizes();
@@ -90,7 +91,7 @@ export function HierarchyDebugPanel() {
             {companies.map(company => (
               <ListCard
                 key={company.id}
-                entityType="company"
+                entityType={ENTITY_TYPES.COMPANY}
                 title={company.companyName}
                 subtitle={company.industry}
                 isSelected={selectedCompany?.id === company.id}
@@ -128,7 +129,7 @@ export function HierarchyDebugPanel() {
                 {projects.map(project => (
                   <li key={project.id} className="list-none">
                     <ListCard
-                      entityType="project"
+                      entityType={ENTITY_TYPES.PROJECT}
                       title={project.name}
                       subtitle={`${project.buildings.length} ${t('panels.hierarchy.buildingsCount', { count: project.buildings.length })}`}
                       isSelected={selectedProject?.id === project.id}
@@ -163,7 +164,7 @@ export function HierarchyDebugPanel() {
                 {selectedProject.buildings.map(building => (
                   <li key={building.id} className="list-none">
                     <ListCard
-                      entityType="building"
+                      entityType={ENTITY_TYPES.BUILDING}
                       title={building.name}
                       subtitle={`${building.floors.length} ${t('panels.hierarchy.floorsCount', { count: building.floors.length })}`}
                       isSelected={selectedBuilding?.id === building.id}

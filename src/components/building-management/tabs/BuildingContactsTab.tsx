@@ -8,6 +8,7 @@
 'use client';
 
 import { EntityAssociationsManager } from '@/components/associations/EntityAssociationsManager';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 interface BuildingContactsTabProps {
   building?: { id: string; projectId?: string; [key: string]: unknown };
@@ -23,7 +24,7 @@ export function BuildingContactsTab({ building, data }: BuildingContactsTabProps
 
   return (
     <EntityAssociationsManager
-      entityType="building"
+      entityType={ENTITY_TYPES.BUILDING}
       entityId={buildingId}
       parentProjectId={parentProjectId}
     />

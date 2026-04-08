@@ -25,7 +25,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
+import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
 import type { Building } from '@/types/building/contracts';
 import type { FloorInfo } from '@/config/upload-entry-points';
 import { cn } from '@/lib/utils';
@@ -114,7 +114,7 @@ export function BuildingContractsTab({
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="building"
+      entityType={ENTITY_TYPES.BUILDING}
       entityId={String(resolvedBuilding.id)}
       entityLabel={resolvedBuilding.name || t('entityLabel', { id: resolvedBuilding.id })}
       projectId={resolvedBuilding.projectId}

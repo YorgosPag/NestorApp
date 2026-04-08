@@ -35,6 +35,7 @@ import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/L
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -170,7 +171,7 @@ export function ProjectListCard({
 
   return (
     <ListCard
-      entityType="project"
+      entityType={ENTITY_TYPES.PROJECT}
       title={project.name || project.title || project.id}
       subtitle={subtitle}
       badges={badges}

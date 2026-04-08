@@ -33,6 +33,7 @@ import type { Level } from '@/subapps/dxf-viewer/systems/levels/config';
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -189,7 +190,7 @@ export function LevelListCard({
 
   return (
     <ListCard
-      entityType="building"
+      entityType={ENTITY_TYPES.BUILDING}
       title={level.name}
       badges={badges}
       stats={stats}

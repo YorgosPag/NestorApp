@@ -26,7 +26,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
-import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import type { Project } from '@/types/project';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -137,7 +137,7 @@ export function ProjectFloorplanTab({
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="project"
+      entityType={ENTITY_TYPES.PROJECT}
       entityId={String(resolvedProject.id)}
       entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
       projectId={String(resolvedProject.id)}

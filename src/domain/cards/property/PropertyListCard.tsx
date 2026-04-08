@@ -34,6 +34,7 @@ import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/L
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -228,7 +229,7 @@ export function PropertyListCard({
 
   return (
     <ListCard
-      entityType="property"
+      entityType={ENTITY_TYPES.PROPERTY}
       title={property.name || property.id}
       subtitle={subtitle}
       badges={badges}

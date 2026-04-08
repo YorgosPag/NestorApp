@@ -28,6 +28,7 @@ import type { Building } from '@/types/building/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('BuildingPhotosTab');
@@ -121,7 +122,7 @@ export function BuildingPhotosTab({
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="building"
+      entityType={ENTITY_TYPES.BUILDING}
       entityId={String(resolvedBuilding.id)}
       entityLabel={resolvedBuilding.name || t('entityLabel', { id: resolvedBuilding.id })}
       projectId={resolvedBuilding.projectId}

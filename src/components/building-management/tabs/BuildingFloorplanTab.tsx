@@ -25,7 +25,7 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
-import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { FLOORPLAN_PURPOSES, ENTITY_TYPES } from '@/config/domain-constants';
 import type { Building } from '@/types/building/contracts';
 import { tryResolveCompanyId } from '@/services/company-id-resolver';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -136,7 +136,7 @@ export function BuildingFloorplanTab({
       <EntityFilesManager
         companyId={companyId}
         currentUserId={currentUserId}
-        entityType="building"
+        entityType={ENTITY_TYPES.BUILDING}
         entityId={String(resolvedBuilding.id)}
         entityLabel={resolvedBuilding.name || t('entityLabel', { id: resolvedBuilding.id })}
         projectId={resolvedBuilding.projectId}

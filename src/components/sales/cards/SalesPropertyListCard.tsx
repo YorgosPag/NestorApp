@@ -18,6 +18,7 @@ import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { Property, CommercialStatus } from '@/types/property';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
@@ -213,7 +214,7 @@ export function SalesPropertyListCard({
       isSelected={isSelected}
       onClick={() => onSelect?.(unit.id)}
       role="option"
-      entityType="property"
+      entityType={ENTITY_TYPES.PROPERTY}
       className={className}
     />
   );

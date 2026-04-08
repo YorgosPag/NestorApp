@@ -23,6 +23,7 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getCompanyById } from '@/services/companies.service';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -125,7 +126,7 @@ export function VideosTab({
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="property"
+      entityType={ENTITY_TYPES.PROPERTY}
       entityId={String(selectedProperty.id)}
       entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
       domain="sales"

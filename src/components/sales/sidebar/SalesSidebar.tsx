@@ -25,6 +25,7 @@ const SellDialog = dynamic(() => import('@/components/sales/dialogs/SellDialog')
 const RevertDialog = dynamic(() => import('@/components/sales/dialogs/RevertDialog').then(m => ({ default: m.RevertDialog })), { ssr: false });
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -236,7 +237,7 @@ export function SalesSidebar({
 
           {/* History — Centralized ActivityTab (ADR-195) */}
           <TabsContent value="history" className="flex-1">
-            <ActivityTab entityType="property" entityId={selectedProperty.id} />
+            <ActivityTab entityType={ENTITY_TYPES.PROPERTY} entityId={selectedProperty.id} />
           </TabsContent>
         </Tabs>
       }

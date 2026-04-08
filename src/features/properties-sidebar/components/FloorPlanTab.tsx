@@ -17,7 +17,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
-import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -117,7 +117,7 @@ export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
       <EntityFilesManager
         companyId={companyId}
         currentUserId={currentUserId}
-        entityType="property"
+        entityType={ENTITY_TYPES.PROPERTY}
         entityId={String(selectedProperty.id)}
         entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
         domain="construction"

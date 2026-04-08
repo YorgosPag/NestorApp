@@ -37,6 +37,7 @@ import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/G
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -232,7 +233,7 @@ export function PropertyGridCard({
 
   return (
     <GridCard
-      entityType="property"
+      entityType={ENTITY_TYPES.PROPERTY}
       title={property.name || property.code || property.id}
       subtitle={t(`types.${property.type}`, { defaultValue: property.type })}
       badges={badges}

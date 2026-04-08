@@ -16,6 +16,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { Pencil, XCircle, RefreshCw, X, Paperclip } from 'lucide-react';
 import type { BrokerageAgreement } from '@/types/brokerage';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getStatusBadge, formatCommission } from './brokerage-helpers';
 import '@/lib/design-system';
 
@@ -179,7 +180,7 @@ export function BrokerageAgreementCard({
           <EntityFilesManager
             companyId={companyId}
             currentUserId={currentUserId}
-            entityType="project"
+            entityType={ENTITY_TYPES.PROJECT}
             entityId={projectId}
             entityLabel={`${projectName} — ${agreement.agentName}`}
             domain="brokerage"

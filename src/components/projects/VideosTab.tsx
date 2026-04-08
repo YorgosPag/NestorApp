@@ -19,6 +19,7 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -73,7 +74,7 @@ export function VideosTab({ project, data }: VideosTabProps) {
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="project"
+      entityType={ENTITY_TYPES.PROJECT}
       entityId={String(resolvedProject.id)}
       entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
       domain="construction"

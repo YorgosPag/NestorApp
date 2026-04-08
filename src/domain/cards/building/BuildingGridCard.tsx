@@ -36,6 +36,7 @@ import type { Building } from '@/types/building/contracts';
 import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import '@/lib/design-system';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // =============================================================================
 // 🏢 TYPES
@@ -166,7 +167,7 @@ export function BuildingGridCard({
 
   return (
     <GridCard
-      entityType="building"
+      entityType={ENTITY_TYPES.BUILDING}
       title={formatBuildingLabel(building.code, building.name, building.id)}
       subtitle={categoryLabel}
       badges={badges}

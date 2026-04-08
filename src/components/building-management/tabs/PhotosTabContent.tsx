@@ -23,6 +23,7 @@ import type { Building } from '@/types/building/contracts';
 import { PhotosTabBase } from '@/components/generic/photo-system';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // =============================================================================
 // PROPS
@@ -59,7 +60,7 @@ const PhotosTabContent = ({ building, selectedProperty }: PhotosTabContentProps)
   return (
     <PhotosTabBase
       entity={entity}
-      entityType="building"
+      entityType={ENTITY_TYPES.BUILDING}
       entityName={entity.name}
     />
   );

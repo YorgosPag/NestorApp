@@ -20,6 +20,7 @@ import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { Project } from '@/types/project';
 
 // =============================================================================
@@ -69,7 +70,7 @@ export function MiscellaneousTabContent({ project, data }: MiscellaneousTabConte
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="project"
+      entityType={ENTITY_TYPES.PROJECT}
       entityId={String(resolvedProject.id)}
       entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
       domain="construction"

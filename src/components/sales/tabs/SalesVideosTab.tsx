@@ -13,6 +13,7 @@ import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { Video } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Property } from '@/types/property';
@@ -85,7 +86,7 @@ export function SalesVideosTab({ unit }: SalesVideosTabProps) {
     <EntityFilesManager
       companyId={companyId}
       currentUserId={currentUserId}
-      entityType="property"
+      entityType={ENTITY_TYPES.PROPERTY}
       entityId={unit.id}
       entityLabel={unit.name || `Μονάδα ${unit.id}`}
       domain="sales"

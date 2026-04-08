@@ -34,6 +34,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
   UNIT_TYPE_LABEL_KEYS, UNIT_TYPES_FOR_FILTER,
   CREATION_COMMERCIAL_OPTION_KEYS, OPERATIONAL_STATUS_OPTION_KEYS,
@@ -218,7 +219,7 @@ export function PropertyInlineCreateForm({
         <EntityCodeField
           value={code}
           onChange={setCode}
-          entityType="property"
+          entityType={ENTITY_TYPES.PROPERTY}
           buildingId={buildingId}
           floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
           propertyType={type || undefined}
