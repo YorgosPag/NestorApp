@@ -20,6 +20,7 @@ import { useCallback, useState } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useFileDownload } from './useFileDownload';
 import type { FileRecord } from '@/types/file-record';
 
 interface UseFileListActionsParams {
@@ -91,6 +92,8 @@ export function useFileListActions({
   onUnlink,
   currentUserId,
 }: UseFileListActionsParams): UseFileListActionsReturn {
+  // SSoT: enterprise download with proper filename + extension (fallback when caller doesn't provide onDownload)
+  const { handleDownload: enterpriseDownload } = useFileDownload();
   const { t } = useTranslation('files');
   const { success, error } = useNotifications();
 
@@ -236,11 +239,11 @@ export function useFileListActions({
     event.stopPropagation();
     if (onDownload) {
       onDownload(file);
-    } else if (file.downloadUrl) {
-      const newWindow = window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
-      if (newWindow) newWindow.opener = null;
+    } else {
+      // SSoT: always use enterprise download (blob + proper extension)
+      enterpriseDownload(file);
     }
-  }, [onDownload]);
+  }, [onDownload, enterpriseDownload]);
 
   return {
     editingFileId, editingName, setEditingName, renameLoading,

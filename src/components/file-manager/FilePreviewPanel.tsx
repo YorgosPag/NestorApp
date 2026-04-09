@@ -48,6 +48,7 @@ import { ShareDialog } from '@/components/shared/files/ShareDialog';
 import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
 import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
 import { DocxPreview } from './preview/DocxPreview';
+import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -242,17 +243,11 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
   );
 
   const PreviewIcon = getPreviewIcon(previewType);
+  const { handleDownload: downloadFile } = useFileDownload();
 
-  const handleDownload = () => {
-    if (file?.downloadUrl) {
-      window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
-    }
-  };
-
+  const handleDownload = () => { if (file) downloadFile(file); };
   const handleOpenNewTab = () => {
-    if (file?.downloadUrl) {
-      window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
-    }
+    if (file?.downloadUrl) window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
   };
 
   // Empty state

@@ -29,6 +29,9 @@ interface DownloadableFile {
   storagePath?: string;
   downloadUrl?: string;
   displayName: string;
+  originalFilename?: string;
+  /** File extension without dot (e.g. "pdf", "jpg") — most reliable source */
+  ext?: string;
 }
 
 interface UseFileDownloadReturn {
@@ -40,6 +43,59 @@ interface UseFileDownloadReturn {
 // ============================================================================
 
 const logger = createModuleLogger('FILE_DOWNLOAD');
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'image/svg+xml': '.svg',
+  'application/pdf': '.pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/msword': '.doc',
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+};
+
+/**
+ * Extract a real file extension from a filename.
+ * Returns '' if the suffix after the last dot doesn't look like a known extension.
+ * This avoids false positives like "Α.Ε." (Ανώνυμη Εταιρεία) being mistaken for an extension.
+ */
+function getExtension(filename: string): string {
+  const lastDot = filename.lastIndexOf('.');
+  if (lastDot <= 0) return '';
+
+  const suffix = filename.slice(lastDot).toLowerCase();
+  // Real extensions: 2-5 chars after dot, alphanumeric only (e.g. .pdf, .jpg, .docx, .xlsx)
+  return /^\.[a-z0-9]{2,5}$/.test(suffix) ? suffix : '';
+}
+
+function ensureFileExtension(
+  displayName: string,
+  ext?: string,
+  originalFilename?: string,
+  contentType?: string,
+): string {
+  if (getExtension(displayName)) return displayName;
+
+  // Priority 1: explicit ext field (same source batch ZIP uses — most reliable)
+  if (ext) return `${displayName}.${ext.replace(/^\./, '')}`;
+
+  // Priority 2: extract from original filename
+  const extFromOriginal = originalFilename ? getExtension(originalFilename) : '';
+  if (extFromOriginal) return `${displayName}${extFromOriginal}`;
+
+  // Priority 3: derive from MIME type
+  const extFromMime = contentType ? MIME_TO_EXT[contentType] ?? '' : '';
+  if (extFromMime) return `${displayName}${extFromMime}`;
+
+  return displayName;
+}
 
 // ============================================================================
 // HOOK
@@ -58,9 +114,11 @@ export function useFileDownload(): UseFileDownloadReturn {
       const blob = await downloadFileFromProxyWithPolicy(file.downloadUrl, file.displayName);
       const objectUrl = URL.createObjectURL(blob);
 
+      const downloadName = ensureFileExtension(file.displayName, file.ext, file.originalFilename, blob.type);
+
       const link = document.createElement('a');
       link.href = objectUrl;
-      link.download = file.displayName;
+      link.download = downloadName;
       document.body.appendChild(link);
       link.click();
 

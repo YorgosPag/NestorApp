@@ -400,6 +400,20 @@
       ]
     },
 
+    "file-download": {
+      "ssotFile": "src/components/shared/files/hooks/useFileDownload.ts",
+      "description": "File downloads must use useFileDownload hook — no window.open or inline <a download> for downloads",
+      "forbiddenPatterns": [
+        "link\\.download\\s*=",
+        "window\\.open\\(.*downloadUrl"
+      ],
+      "allowlist": [
+        "src/components/shared/files/hooks/useFileDownload.ts",
+        "src/components/shared/files/hooks/useBatchFileOperations.ts",
+        "src/components/file-manager/file-manager-handlers.ts"
+      ]
+    },
+
     "_comment_tier5": "=== TIER 5: INFRASTRUCTURE (bypass = path inconsistency) ===",
 
     "storage-path-construction": {

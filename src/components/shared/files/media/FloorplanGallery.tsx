@@ -25,6 +25,7 @@ import { ZOOM_CONFIG, filterFloorplanFiles, getFileIcon } from '@/components/sha
 import { renderDxfToCanvas } from '@/components/shared/files/media/floorplan-dxf-renderer';
 import { drawOverlayPolygons, computeOverlayAABBs, screenToWorld, hitTestOverlays } from '@/components/shared/files/media/floorplan-overlay-system';
 import { useFloorplanSceneLoader } from '@/components/shared/files/media/useFloorplanSceneLoader';
+import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 
 // Re-exports for backward compatibility
 export type { FloorplanGalleryProps, DxfDrawingMode };
@@ -228,14 +229,15 @@ export function FloorplanGallery({
 
   // ACTIONS
 
+  const { handleDownload: enterpriseDownload } = useFileDownload();
   const handleDownload = useCallback(() => {
     if (!currentFile) return;
     if (onDownload) {
       onDownload(currentFile);
-    } else if (currentFile.downloadUrl) {
-      window.open(currentFile.downloadUrl, '_blank');
+    } else {
+      enterpriseDownload(currentFile);
     }
-  }, [currentFile, onDownload]);
+  }, [currentFile, onDownload, enterpriseDownload]);
 
   const handleDelete = useCallback(async () => {
     if (!currentFile || !onDelete) return;
