@@ -232,7 +232,7 @@ export function ShareDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>
-                {t('common.cancel')}
+                {t('share.cancel')}
               </Button>
               <Button type="submit" disabled={creating}>
                 {creating ? (
@@ -296,7 +296,7 @@ export function ShareDialog({
 
             <DialogFooter>
               <Button onClick={handleClose}>
-                {t('common.close')}
+                {t('share.close')}
               </Button>
             </DialogFooter>
           </section>

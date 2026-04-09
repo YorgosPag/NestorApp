@@ -576,6 +576,8 @@
     "note": "Note",
     "notePlaceholder": "Message for recipient...",
     "create": "Create link",
+    "cancel": "Cancel",
+    "close": "Close",
     "created": "Link created!",
     "expiresIn": "Expires in {label}",
     "passwordProtected": "Password protected",
