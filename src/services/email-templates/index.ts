@@ -12,3 +12,5 @@ export { buildSaleConfirmationEmail } from './sale-confirmation';
 export type { SaleEmailData } from './sale-confirmation';
 export { buildProfessionalAssignmentEmail, buildProfessionalRemovalEmail } from './professional-assignment';
 export type { ProfessionalAssignmentEmailData } from './professional-assignment';
+export { buildPhotoShareEmail } from './photo-share';
+export type { PhotoShareEmailData } from './photo-share';

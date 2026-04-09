@@ -157,3 +157,29 @@ export function getPhotoTypeIcon(photoType: PhotoPreviewModalProps['photoType'] 
       return User;
   }
 }
+
+// ============================================================================
+// SHARE DATA HELPERS
+// ============================================================================
+
+/** Maps photo types to i18n keys for share text */
+const PHOTO_TYPE_I18N_MAP: Record<string, string> = {
+  avatar: 'photoPreview.titles.profile',
+  profile: 'photoPreview.titles.profile',
+  logo: 'photoPreview.titles.logo',
+  representative: 'photoPreview.titles.representative',
+  gallery: 'photoPreview.titles.photo',
+};
+
+/** Build the localized share text for a photo */
+export function buildPhotoShareText(
+  photoType: string,
+  contact: Contact | undefined,
+  t: (key: string, params?: Record<string, unknown>) => string,
+): string {
+  const photoTypeLabel = t(PHOTO_TYPE_I18N_MAP[photoType] ?? 'photoPreview.titles.photo');
+
+  return contact
+    ? t('share.photoCaption', { photoType: photoTypeLabel, name: getContactDisplayName(contact) })
+    : t('share.photoCaptionNoContact', { photoType: photoTypeLabel });
+}

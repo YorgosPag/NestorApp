@@ -3,6 +3,7 @@
 import { Resend } from 'resend';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EmailTemplatesService } from './email-templates.service';
+import { buildPhotoShareEmail } from './email-templates/photo-share';
 import { EmailAdapter } from '@/server/comms/email-adapter';
 import type { EmailTemplateType, EmailTemplateData } from '@/types/email-templates';
 
@@ -39,6 +40,8 @@ export interface EmailRequest {
   propertyLocation?: string;
   propertyUrl: string;
   photoUrl?: string;
+  photoUrls?: string[];
+  isPhoto?: boolean;
   senderName?: string;
   personalMessage?: string;
   templateType?: EmailTemplateType;
@@ -85,7 +88,8 @@ export class EmailService {
       photoUrl,
       senderName = FROM_NAME,
       personalMessage,
-      templateType = 'residential'
+      templateType = 'residential',
+      isPhoto,
     } = emailRequest;
 
     // Validate inputs
@@ -112,30 +116,36 @@ export class EmailService {
     }
 
     try {
-      const template = EmailTemplatesService.getTemplate(templateType);
-      if (!template) {
-        throw new Error(`Email template '${templateType}' not found`);
+      let htmlContent: string;
+      let subject: string;
+
+      const allPhotoUrls = emailRequest.photoUrls;
+      if (isPhoto && (photoUrl || allPhotoUrls?.length)) {
+        // Photo share → branded Pagonis Energo template with inline photo(s)
+        htmlContent = buildPhotoShareEmail({
+          photoUrl: photoUrl || allPhotoUrls![0],
+          photoUrls: allPhotoUrls,
+          title: propertyTitle,
+          personalMessage,
+          senderName: senderName || FROM_NAME,
+          recipientEmail: recipients[0],
+        });
+        subject = `${propertyTitle} — Nestor Construct`;
+      } else {
+        // Property share → existing templates (residential/commercial/premium)
+        const template = EmailTemplatesService.getTemplate(templateType);
+        if (!template) {
+          throw new Error(`Email template '${templateType}' not found`);
+        }
+        const emailData: EmailTemplateData = {
+          propertyTitle, propertyDescription, propertyPrice, propertyArea,
+          propertyLocation, propertyUrl, photoUrl,
+          recipientEmail: recipients[0],
+          personalMessage, senderName: senderName || FROM_NAME
+        };
+        htmlContent = EmailTemplatesService.generateEmailHtml(templateType, emailData);
+        subject = this.generateSubject(templateType, propertyTitle);
       }
-
-      // Prepare email data
-      const emailData: EmailTemplateData = {
-        propertyTitle,
-        propertyDescription,
-        propertyPrice,
-        propertyArea,
-        propertyLocation,
-        propertyUrl,
-        photoUrl,
-        recipientEmail: recipients[0], // Primary recipient
-        personalMessage,
-        senderName: senderName || FROM_NAME
-      };
-
-      // Generate HTML content using existing template service
-      const htmlContent = EmailTemplatesService.generateEmailHtml(templateType, emailData);
-
-      // Generate subject line
-      const subject = this.generateSubject(templateType, propertyTitle);
 
       // Send via available provider
       if (provider === 'resend' && resend) {
@@ -156,7 +166,7 @@ export class EmailService {
           success: true,
           message: `Email sent successfully to ${recipients.length} recipient${recipients.length > 1 ? 's' : ''}`,
           recipients: recipients.length,
-          templateUsed: template.name,
+          templateUsed: isPhoto ? 'photo-share' : templateType,
           emailId: result.data?.id
         };
       }
@@ -189,7 +199,7 @@ export class EmailService {
           success: true,
           message: `Email sent to ${successCount}/${recipients.length} recipients via Mailgun`,
           recipients: successCount,
-          templateUsed: template.name,
+          templateUsed: isPhoto ? 'photo-share' : templateType,
           emailId: firstId,
         };
       }

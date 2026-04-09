@@ -14,7 +14,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { generatePhotoId as enterpriseGeneratePhotoId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PhotoPreviewModalProps } from '@/core/modals/photo-preview-helpers';
-import { generatePhotoTitle, getPhotoTypeIcon } from '@/core/modals/photo-preview-helpers';
+import { generatePhotoTitle, getPhotoTypeIcon, buildPhotoShareText } from '@/core/modals/photo-preview-helpers';
 
 const logger = createModuleLogger('usePhotoPreviewState');
 
@@ -450,9 +450,11 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
 
   const shareData = {
     title,
-    text: `${title}${contact ? `\n${getContactDisplayName(contact)}` : ''}\n\nΔείτε τη φωτογραφία στο Nestor Construct!`,
+    text: buildPhotoShareText(photoType, contact, t),
     url: generatePhotoShareUrl(),
     isPhoto: true,
+    photoUrl: currentPhoto ?? undefined,
+    galleryPhotos: validPhotos.length > 1 ? (validPhotos as string[]) : undefined,
   };
 
   return {
