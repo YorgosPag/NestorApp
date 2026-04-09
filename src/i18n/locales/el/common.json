@@ -740,7 +740,8 @@
       "professional_assigned": "Αναθέσεις",
       "professional_removed": "Αφαιρέσεις",
       "email_sent": "Email",
-      "invoice_created": "Παραστατικά"
+      "invoice_created": "Παραστατικά",
+      "photo_share": "Φωτογραφίες"
     },
     "changes": {
       "movedToTrash": "Μεταφορά στον κάδο: {from} → {to}",

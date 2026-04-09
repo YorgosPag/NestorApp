@@ -12,8 +12,7 @@ import { RelationshipProvider } from '@/components/contacts/relationships/contex
 import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
 import { EntityFilesManager } from '@/components/shared/files';
 import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab';
-import { ActivityTab } from '@/components/shared/audit/ActivityTab';
-import { PhotoShareHistoryTab } from '@/components/contacts/tabs/PhotoShareHistoryTab';
+import { ContactHistoryTab } from '@/components/contacts/tabs/ContactHistoryTab';
 import { ProjectParticipationSection } from '@/components/contacts/details/ProjectParticipationSection';
 import { DoyPicker } from '@/components/ui/doy-picker';
 import { VatNumberField } from '@/components/contacts/fields/VatNumberField';
@@ -168,16 +167,11 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       />
     ),
 
-    // ── History (Audit Trail + Photo Share History) ──────────────
+    // ── History (Unified: Audit Trail + Photo Share in one timeline) ──
     history: () => {
       const contactId = formData.id;
       if (!contactId) return <div className="p-8 text-center text-muted-foreground"><p>{t('individual.sections.history.description')}</p></div>;
-      return (
-        <>
-          <PhotoShareHistoryTab contactId={contactId} />
-          <ActivityTab entityType={ENTITY_TYPES.CONTACT} entityId={contactId} />
-        </>
-      );
+      return <ContactHistoryTab contactId={contactId} />;
     },
   };
 }

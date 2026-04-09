@@ -740,7 +740,8 @@
       "professional_assigned": "Assignments",
       "professional_removed": "Removals",
       "email_sent": "Email",
-      "invoice_created": "Invoices"
+      "invoice_created": "Invoices",
+      "photo_share": "Photos"
     },
     "changes": {
       "movedToTrash": "Moved to trash: {from} → {to}",
