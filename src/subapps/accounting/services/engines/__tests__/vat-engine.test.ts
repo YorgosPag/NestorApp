@@ -413,13 +413,13 @@ describe('VATEngine', () => {
       const rule: VATDeductibilityRule = engine.getDeductibilityRule('office_supplies');
       expect(rule.category).toBe('office_supplies');
       expect(rule.deductiblePercent).toBe(100);
-      expect(rule.legalBasis).toContain('Ν.2859/2000');
+      expect(rule.legalBasis).toContain('vatConfig.legalBasis.');
     });
 
     it('returns 50% rule for telecom', () => {
       const rule = engine.getDeductibilityRule('telecom');
       expect(rule.deductiblePercent).toBe(50);
-      expect(rule.notes).toContain('Μικτή');
+      expect(rule.notes).toBe('vatConfig.notes.mixedUse');
     });
 
     it('returns 50% rule for vehicle_expenses', () => {

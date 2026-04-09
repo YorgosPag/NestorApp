@@ -15,7 +15,7 @@ import type {
   TrialBalanceData,
   TrialBalanceRow,
 } from '../../types/reports';
-import { getCategoryByCode } from '../../config/account-categories';
+import { getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 
 const REPORT_PAGE_SIZE = 10000;
@@ -93,10 +93,9 @@ function aggregateTrialBalance(entries: JournalEntry[]): TrialBalanceRow[] {
 
   const rows: TrialBalanceRow[] = [];
   for (const [category, { debit, credit }] of map) {
-    const catDef = getCategoryByCode(category as TrialBalanceRow['category']);
     rows.push({
       category: category as TrialBalanceRow['category'],
-      label: catDef?.label ?? category,
+      label: getCategoryDisplayLabel(category as TrialBalanceRow['category']),
       debit,
       credit,
       balance: credit - debit,

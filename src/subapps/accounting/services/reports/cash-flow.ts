@@ -17,7 +17,7 @@ import type {
   CashFlowSection,
   CashFlowItem,
 } from '../../types/reports';
-import { getCategoryByCode } from '../../config/account-categories';
+import { getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 
 const REPORT_PAGE_SIZE = 10000;
@@ -139,8 +139,7 @@ function buildSection(entries: JournalEntry[]): CashFlowSection {
   const itemMap = new Map<string, number>();
 
   for (const entry of entries) {
-    const catDef = getCategoryByCode(entry.category);
-    const label = catDef?.label ?? entry.category;
+    const label = getCategoryDisplayLabel(entry.category);
     const amount = entry.type === 'income' ? entry.netAmount : -entry.netAmount;
     itemMap.set(label, (itemMap.get(label) ?? 0) + amount);
   }

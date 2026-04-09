@@ -8,6 +8,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
+import i18next from 'i18next';
 import type { AccountCategory, IncomeCategory, ExpenseCategory } from '../types/common';
 import type { CategoryDefinition } from '../types/journal';
 
@@ -31,8 +32,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'service_income',
     type: 'income',
-    label: 'Αμοιβές Υπηρεσιών',
-    description: 'Μελέτες, ΠΕΑ, άδειες, ρυθμίσεις, επιβλέψεις',
+    label: 'categories.income.service_income',
+    description: 'categories.descriptions.service_income',
     mydataCode: 'category1_3',
     e3Code: '561_003',
     defaultVatRate: 24,
@@ -46,8 +47,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'construction_income',
     type: 'income',
-    label: 'Κατασκευαστικά Έσοδα',
-    description: 'Εργολαβίες κατασκευής (μη οικιστικά κτήρια)',
+    label: 'categories.income.construction_income',
+    description: 'categories.descriptions.construction_income',
     mydataCode: 'category1_1',
     e3Code: '561_001',
     defaultVatRate: 24,
@@ -61,8 +62,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'construction_res_income',
     type: 'income',
-    label: 'Πωλήσεις Ακινήτων',
-    description: 'Πωλήσεις νεόδμητων ακινήτων (κατασκευή & πώληση)',
+    label: 'categories.income.construction_res_income',
+    description: 'categories.descriptions.construction_res_income',
     mydataCode: 'category1_1',
     e3Code: '561_001',
     defaultVatRate: 24,
@@ -76,8 +77,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'rental_income',
     type: 'income',
-    label: 'Μισθώματα Ακινήτων',
-    description: 'Ενοίκια από ιδιόκτητα ακίνητα (κατοικίες, καταστήματα, γραφεία)',
+    label: 'categories.income.rental_income',
+    description: 'categories.descriptions.rental_income',
     mydataCode: 'category1_5',
     e3Code: '561_005',
     defaultVatRate: 24,
@@ -91,8 +92,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'asset_sale_income',
     type: 'income',
-    label: 'Πώληση Παγίου',
-    description: 'Πώληση εξοπλισμού, οχήματος, Η/Υ',
+    label: 'categories.income.asset_sale_income',
+    description: 'categories.descriptions.asset_sale_income',
     mydataCode: 'category1_4',
     e3Code: '570_003',
     defaultVatRate: 24,
@@ -106,8 +107,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'other_income',
     type: 'income',
-    label: 'Λοιπά Έσοδα',
-    description: 'Τόκοι, αποζημιώσεις, λοιπά',
+    label: 'categories.income.other_income',
+    description: 'categories.descriptions.other_income',
     mydataCode: 'category1_5',
     e3Code: '561_005',
     defaultVatRate: 0,
@@ -125,8 +126,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'third_party_fees',
     type: 'expense',
-    label: 'Αμοιβές Τρίτων',
-    description: 'Υπεργολαβίες, συνεργάτες, λογιστής',
+    label: 'categories.expense.third_party_fees',
+    description: 'categories.descriptions.third_party_fees',
     mydataCode: 'category2_3',
     e3Code: '585_001',
     defaultVatRate: 24,
@@ -140,8 +141,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'rent',
     type: 'expense',
-    label: 'Ενοίκιο Γραφείου',
-    description: 'Μηνιαίο ενοίκιο επαγγελματικού χώρου',
+    label: 'categories.expense.rent',
+    description: 'categories.descriptions.rent',
     mydataCode: 'category2_3',
     e3Code: '585_002',
     defaultVatRate: 0,
@@ -155,8 +156,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'utilities',
     type: 'expense',
-    label: 'ΔΕΗ / Νερό / Θέρμανση',
-    description: 'Ηλεκτρισμός, ύδρευση, θέρμανση γραφείου',
+    label: 'categories.expense.utilities',
+    description: 'categories.descriptions.utilities',
     mydataCode: 'category2_4',
     e3Code: '585_002',
     defaultVatRate: 6,
@@ -170,8 +171,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'telecom',
     type: 'expense',
-    label: 'Τηλεφωνία / Internet',
-    description: 'Κινητό, σταθερό, internet γραφείου',
+    label: 'categories.expense.telecom',
+    description: 'categories.descriptions.telecom',
     mydataCode: 'category2_4',
     e3Code: '585_002',
     defaultVatRate: 24,
@@ -185,8 +186,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'fuel',
     type: 'expense',
-    label: 'Καύσιμα',
-    description: 'Βενζίνη, πετρέλαιο επαγγελματικού οχήματος',
+    label: 'categories.expense.fuel',
+    description: 'categories.descriptions.fuel',
     mydataCode: 'category2_5',
     e3Code: '585_006',
     defaultVatRate: 24,
@@ -200,8 +201,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'vehicle_expenses',
     type: 'expense',
-    label: 'Έξοδα Οχήματος',
-    description: 'Service, ελαστικά, ΚΤΕΟ, διόδια',
+    label: 'categories.expense.vehicle_expenses',
+    description: 'categories.descriptions.vehicle_expenses',
     mydataCode: 'category2_5',
     e3Code: '585_006',
     defaultVatRate: 24,
@@ -215,8 +216,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'vehicle_insurance',
     type: 'expense',
-    label: 'Ασφάλεια Οχήματος',
-    description: 'Ετήσια ασφάλεια επαγγελματικού οχήματος',
+    label: 'categories.expense.vehicle_insurance',
+    description: 'categories.descriptions.vehicle_insurance',
     mydataCode: 'category2_5',
     e3Code: '585_006',
     defaultVatRate: 0,
@@ -230,8 +231,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'office_supplies',
     type: 'expense',
-    label: 'Αναλώσιμα Γραφείου',
-    description: 'Χαρτικά, μελάνια, αναλώσιμα εκτυπωτή',
+    label: 'categories.expense.office_supplies',
+    description: 'categories.descriptions.office_supplies',
     mydataCode: 'category2_5',
     e3Code: '585_006',
     defaultVatRate: 24,
@@ -245,8 +246,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'software',
     type: 'expense',
-    label: 'Λογισμικό / Subscriptions',
-    description: 'AutoCAD, Office 365, Cloud, SaaS subscriptions',
+    label: 'categories.expense.software',
+    description: 'categories.descriptions.software',
     mydataCode: 'category2_5',
     e3Code: '585_006',
     defaultVatRate: 24,
@@ -260,8 +261,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'equipment',
     type: 'expense',
-    label: 'Εξοπλισμός (<1.500€)',
-    description: 'Μικροεξοπλισμός κάτω από 1.500€ (δεν αποσβένεται)',
+    label: 'categories.expense.equipment',
+    description: 'categories.descriptions.equipment',
     mydataCode: 'category2_5',
     e3Code: '585_006',
     defaultVatRate: 24,
@@ -275,8 +276,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'travel',
     type: 'expense',
-    label: 'Ταξίδια / Μετακινήσεις',
-    description: 'Αεροπορικά, ξενοδοχεία, ημερήσιες αποζημιώσεις',
+    label: 'categories.expense.travel',
+    description: 'categories.descriptions.travel',
     mydataCode: 'category2_5',
     e3Code: '585_006',
     defaultVatRate: 24,
@@ -290,8 +291,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'training',
     type: 'expense',
-    label: 'Εκπαίδευση / Σεμινάρια',
-    description: 'Επαγγελματικά σεμινάρια, πιστοποιήσεις',
+    label: 'categories.expense.training',
+    description: 'categories.descriptions.training',
     mydataCode: 'category2_5',
     e3Code: '585_006',
     defaultVatRate: 6,
@@ -305,8 +306,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'advertising',
     type: 'expense',
-    label: 'Διαφήμιση / Marketing',
-    description: 'Google Ads, social media, εκτυπώσεις',
+    label: 'categories.expense.advertising',
+    description: 'categories.descriptions.advertising',
     mydataCode: 'category2_5',
     e3Code: '585_016',
     defaultVatRate: 24,
@@ -320,8 +321,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'efka',
     type: 'expense',
-    label: 'Εισφορές ΕΦΚΑ',
-    description: 'Μηνιαίες ασφαλιστικές εισφορές ΕΦΚΑ',
+    label: 'categories.expense.efka',
+    description: 'categories.descriptions.efka',
     mydataCode: 'category2_12',
     e3Code: '585_005',
     defaultVatRate: 0,
@@ -335,8 +336,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'professional_tax',
     type: 'expense',
-    label: 'Τέλος Επιτηδεύματος',
-    description: 'Ετήσιο τέλος επιτηδεύματος (650€/1.000€)',
+    label: 'categories.expense.professional_tax',
+    description: 'categories.descriptions.professional_tax',
     mydataCode: 'category2_12',
     e3Code: '585_009',
     defaultVatRate: 0,
@@ -350,8 +351,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'bank_fees',
     type: 'expense',
-    label: 'Τραπεζικά Έξοδα',
-    description: 'Προμήθειες, τόκοι, κόστη τραπεζικών συναλλαγών',
+    label: 'categories.expense.bank_fees',
+    description: 'categories.descriptions.bank_fees',
     mydataCode: 'category2_12',
     e3Code: '585_008',
     defaultVatRate: 0,
@@ -365,8 +366,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'tee_fees',
     type: 'expense',
-    label: 'Εισφορές ΤΕΕ',
-    description: 'Εισφορές Τεχνικού Επιμελητηρίου Ελλάδας',
+    label: 'categories.expense.tee_fees',
+    description: 'categories.descriptions.tee_fees',
     mydataCode: 'category2_12',
     e3Code: '585_009',
     defaultVatRate: 0,
@@ -380,8 +381,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'depreciation',
     type: 'expense',
-    label: 'Αποσβέσεις',
-    description: 'Ετήσιες αποσβέσεις παγίων (H/Y, αυτοκίνητο, εξοπλισμός)',
+    label: 'categories.expense.depreciation',
+    description: 'categories.descriptions.depreciation',
     mydataCode: 'category2_11',
     e3Code: '587_001',
     defaultVatRate: 0,
@@ -395,8 +396,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'other_expense',
     type: 'expense',
-    label: 'Λοιπά Έξοδα',
-    description: 'Μη κατηγοριοποιημένα λειτουργικά έξοδα',
+    label: 'categories.expense.other_expense',
+    description: 'categories.descriptions.other_expense',
     mydataCode: 'category2_14',
     e3Code: '585_016',
     defaultVatRate: 24,
@@ -422,7 +423,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
  * @example
  * ```typescript
  * const cat = getCategoryByCode('service_income');
- * console.log(cat?.label); // 'Αμοιβές Υπηρεσιών'
+ * // cat.label is an i18n key — resolve via getCategoryDisplayLabel() or t()
  * ```
  */
 export function getCategoryByCode(code: AccountCategory): CategoryDefinition | undefined {
@@ -483,4 +484,18 @@ export function getCategoriesByMyDataCode(mydataCode: string): CategoryDefinitio
  */
 export function getActiveCategories(): CategoryDefinition[] {
   return ACCOUNT_CATEGORIES.filter((cat) => cat.isActive);
+}
+
+/**
+ * Resolves a category's i18n label key to the user's current locale.
+ *
+ * Uses imperative i18next so it works in both React components AND plain TS services.
+ *
+ * @param code - AccountCategory code (e.g. 'service_income')
+ * @returns Translated label string, or the code as fallback
+ */
+export function getCategoryDisplayLabel(code: AccountCategory): string {
+  const cat = getCategoryByCode(code);
+  if (!cat) return code;
+  return i18next.t(cat.label, { ns: 'accounting' }) || code;
 }

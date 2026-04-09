@@ -15,7 +15,7 @@ import type {
   ProfitAndLossData,
   CategoryBreakdown,
 } from '../../types/reports';
-import { getCategoryByCode } from '../../config/account-categories';
+import { getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 
 const REPORT_PAGE_SIZE = 10000;
@@ -106,10 +106,9 @@ function aggregateByCategory(entries: JournalEntry[]): CategoryBreakdown[] {
 
   const rows: CategoryBreakdown[] = [];
   for (const [category, { total, count }] of map) {
-    const catDef = getCategoryByCode(category as CategoryBreakdown['category']);
     rows.push({
       category: category as CategoryBreakdown['category'],
-      label: catDef?.label ?? category,
+      label: getCategoryDisplayLabel(category as CategoryBreakdown['category']),
       netAmount: total,
       entryCount: count,
     });

@@ -15,7 +15,7 @@ import type {
   ExpenseByCategoryData,
   ExpenseCategoryRow,
 } from '../../types/reports';
-import { getCategoryByCode } from '../../config/account-categories';
+import { getCategoryByCode, getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 
 const REPORT_PAGE_SIZE = 10000;
@@ -80,10 +80,11 @@ function aggregateByCategory(entries: JournalEntry[]): ExpenseCategoryRow[] {
   const rows: ExpenseCategoryRow[] = [];
 
   for (const [category, { total, count }] of map) {
-    const catDef = getCategoryByCode(category as ExpenseCategoryRow['category']);
+    const catCode = category as ExpenseCategoryRow['category'];
+    const catDef = getCategoryByCode(catCode);
     rows.push({
-      category: category as ExpenseCategoryRow['category'],
-      label: catDef?.label ?? category,
+      category: catCode,
+      label: getCategoryDisplayLabel(catCode),
       totalNetAmount: total,
       entryCount: count,
       percentage: grandTotal > 0 ? (total / grandTotal) * 100 : 0,

@@ -31,7 +31,7 @@ export const GREEK_VAT_RATES: readonly VATRate[] = [
     code: 'standard_24',
     rate: 24,
     mydataCategory: 1,
-    label: 'Κανονικός 24%',
+    label: 'vatConfig.labels.standard_24',
     validFrom: '2016-06-01',
     validTo: null,
   },
@@ -39,7 +39,7 @@ export const GREEK_VAT_RATES: readonly VATRate[] = [
     code: 'reduced_13',
     rate: 13,
     mydataCategory: 2,
-    label: 'Μειωμένος 13%',
+    label: 'vatConfig.labels.reduced_13',
     validFrom: '2016-06-01',
     validTo: null,
   },
@@ -47,7 +47,7 @@ export const GREEK_VAT_RATES: readonly VATRate[] = [
     code: 'super_reduced_6',
     rate: 6,
     mydataCategory: 3,
-    label: 'Υπερμειωμένος 6%',
+    label: 'vatConfig.labels.super_reduced_6',
     validFrom: '2016-06-01',
     validTo: null,
   },
@@ -55,7 +55,7 @@ export const GREEK_VAT_RATES: readonly VATRate[] = [
     code: 'exempt_0',
     rate: 0,
     mydataCategory: 8,
-    label: 'Απαλλαγή 0%',
+    label: 'vatConfig.labels.exempt_0',
     validFrom: '2016-06-01',
     validTo: null,
   },
@@ -75,27 +75,27 @@ function buildDeductibilityRules(): ReadonlyMap<ExpenseCategory, VATDeductibilit
   const expenseCategories = ACCOUNT_CATEGORIES.filter((cat) => cat.type === 'expense');
   const rulesMap = new Map<ExpenseCategory, VATDeductibilityRule>();
 
-  /** Νομική βάση ανά κατηγορία */
+  /** i18n keys for legal basis per category (resolved at render time) */
   const legalBasisMap: Partial<Record<ExpenseCategory, string>> = {
-    third_party_fees: 'Ν.2859/2000 αρ.30 §1',
-    rent: 'Ν.2859/2000 αρ.22 — Απαλλαγή ΦΠΑ ενοικίων',
-    utilities: 'Ν.2859/2000 αρ.30 §1',
-    telecom: 'ΠΟΛ.1029/2006 — 50% μικτή χρήση',
-    fuel: 'Ν.2859/2000 αρ.30 §1 — Επαγγελματικό όχημα',
-    vehicle_expenses: 'ΠΟΛ.1029/2006 — 50% μικτή χρήση',
-    vehicle_insurance: 'Ν.2859/2000 αρ.22 — Ασφάλιστρα εκτός ΦΠΑ',
-    office_supplies: 'Ν.2859/2000 αρ.30 §1',
-    software: 'Ν.2859/2000 αρ.30 §1',
-    equipment: 'Ν.2859/2000 αρ.30 §1',
-    travel: 'Ν.2859/2000 αρ.30 §1',
-    training: 'Ν.2859/2000 αρ.30 §1',
-    advertising: 'Ν.2859/2000 αρ.30 §1',
-    efka: 'Εκτός πεδίου ΦΠΑ — Ασφαλιστικές εισφορές',
-    professional_tax: 'Εκτός πεδίου ΦΠΑ — Τέλος επιτηδεύματος',
-    bank_fees: 'Ν.2859/2000 αρ.22 — Χρηματοπιστωτικές υπηρεσίες',
-    tee_fees: 'Εκτός πεδίου ΦΠΑ — Εισφορές ΤΕΕ',
-    depreciation: 'Λογιστική εγγραφή — Δεν υπάρχει ΦΠΑ',
-    other_expense: 'Ν.2859/2000 αρ.30 §1',
+    third_party_fees: 'vatConfig.legalBasis.third_party_fees',
+    rent: 'vatConfig.legalBasis.rent',
+    utilities: 'vatConfig.legalBasis.utilities',
+    telecom: 'vatConfig.legalBasis.telecom',
+    fuel: 'vatConfig.legalBasis.fuel',
+    vehicle_expenses: 'vatConfig.legalBasis.vehicle_expenses',
+    vehicle_insurance: 'vatConfig.legalBasis.vehicle_insurance',
+    office_supplies: 'vatConfig.legalBasis.office_supplies',
+    software: 'vatConfig.legalBasis.software',
+    equipment: 'vatConfig.legalBasis.equipment',
+    travel: 'vatConfig.legalBasis.travel',
+    training: 'vatConfig.legalBasis.training',
+    advertising: 'vatConfig.legalBasis.advertising',
+    efka: 'vatConfig.legalBasis.efka',
+    professional_tax: 'vatConfig.legalBasis.professional_tax',
+    bank_fees: 'vatConfig.legalBasis.bank_fees',
+    tee_fees: 'vatConfig.legalBasis.tee_fees',
+    depreciation: 'vatConfig.legalBasis.depreciation',
+    other_expense: 'vatConfig.legalBasis.other_expense',
   };
 
   for (const cat of expenseCategories) {
@@ -103,8 +103,8 @@ function buildDeductibilityRules(): ReadonlyMap<ExpenseCategory, VATDeductibilit
     rulesMap.set(code, {
       category: code,
       deductiblePercent: cat.vatDeductiblePercent,
-      legalBasis: legalBasisMap[code] ?? 'Ν.2859/2000 αρ.30',
-      notes: cat.vatDeductiblePercent === 50 ? 'Μικτή χρήση (επαγγελματική + προσωπική)' : null,
+      legalBasis: legalBasisMap[code] ?? 'vatConfig.legalBasis.default',
+      notes: cat.vatDeductiblePercent === 50 ? 'vatConfig.notes.mixedUse' : null,
     });
   }
 

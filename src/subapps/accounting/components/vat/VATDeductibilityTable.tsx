@@ -23,7 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { getVatDeductibilityRules } from '../../services/config/vat-config';
-import { getCategoryByCode } from '../../config/account-categories';
+import { getCategoryDisplayLabel } from '../../config/account-categories';
 import type { VATDeductibilityRule } from '@/subapps/accounting/types';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -59,10 +59,9 @@ export function VATDeductibilityTable() {
     const rulesList: (VATDeductibilityRule & { categoryLabel: string })[] = [];
 
     for (const [code, rule] of rulesMap) {
-      const categoryDef = getCategoryByCode(code);
       rulesList.push({
         ...rule,
-        categoryLabel: categoryDef?.label ?? code,
+        categoryLabel: getCategoryDisplayLabel(code),
       });
     }
 
@@ -97,10 +96,10 @@ export function VATDeductibilityTable() {
                     </Badge>
                   </TableCell>
                   <TableCell className={cn("text-sm", colors.text.muted)}>
-                    {rule.legalBasis}
+                    {t(rule.legalBasis)}
                   </TableCell>
                   <TableCell className={cn("text-sm", colors.text.muted)}>
-                    {rule.notes ?? '\u2014'}
+                    {rule.notes ? t(rule.notes) : '\u2014'}
                   </TableCell>
                 </TableRow>
               ))}

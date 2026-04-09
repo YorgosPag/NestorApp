@@ -54,9 +54,9 @@ export interface CategoryDefinition {
   code: AccountCategory;
   /** Τύπος: έσοδο ή έξοδο */
   type: EntryType;
-  /** Ελληνικό label για UI */
+  /** i18n key for the display label (resolved via t() or getCategoryDisplayLabel()) */
   label: string;
-  /** Αναλυτική περιγραφή */
+  /** i18n key for the description (resolved via t()) */
   description: string;
   /** myDATA classification code (category1_x ή category2_x) */
   mydataCode: MyDataIncomeType | MyDataExpenseType;
