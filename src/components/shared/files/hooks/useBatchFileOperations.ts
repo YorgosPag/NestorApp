@@ -18,6 +18,7 @@ import {
   batchDownloadFilesWithPolicy,
   moveFileToTrashWithPolicy,
   updateFileClassificationWithPolicy,
+  type ArchiveFilesResponse,
 } from '@/services/filesystem/file-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useFileClassification, isAIClassifiable } from './useFileClassification';
@@ -26,6 +27,46 @@ import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
 
 const logger = createModuleLogger('useBatchFileOperations');
+
+// ============================================================================
+// SSoT: Archive result feedback (used by entity + central file manager)
+// ============================================================================
+
+interface ArchiveFeedbackCallbacks {
+  success: (msg: string) => void;
+  warning: (msg: string) => void;
+  error: (msg: string) => void;
+}
+
+/**
+ * Handles archive API result and shows appropriate toast notification.
+ * Returns true if the operation succeeded (caller should clear selection + refetch).
+ */
+export function showArchiveResultFeedback(
+  result: ArchiveFilesResponse,
+  totalCount: number,
+  notify: ArchiveFeedbackCallbacks,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): boolean {
+  if (!result.success) {
+    notify.error(result.errors[0] || t('batch.archiveError'));
+    return false;
+  }
+  if (result.processedCount === 0) {
+    notify.warning(t('batch.archiveNoChanges'));
+    return true;
+  }
+  if (result.errors.length > 0) {
+    notify.warning(t('batch.archivePartialSuccess', {
+      processed: result.processedCount,
+      failed: result.errors.length,
+      total: totalCount,
+    }));
+    return true;
+  }
+  notify.success(t('batch.archiveSuccess', { count: result.processedCount }));
+  return true;
+}
 
 // ============================================================================
 // TYPES
@@ -149,30 +190,11 @@ export function useBatchFileOperations({
 
     try {
       const result = await archiveFilesWithPolicy(ids);
-
-      if (!result.success) {
-        error(result.errors[0] || t('batch.archiveError'));
-        return;
+      const succeeded = showArchiveResultFeedback(result, ids.length, { success, warning, error }, t);
+      if (succeeded) {
+        setSelectedIds(new Set());
+        await refetch();
       }
-
-      setSelectedIds(new Set());
-      await refetch();
-
-      if (result.processedCount === 0) {
-        warning(t('batch.archiveNoChanges'));
-        return;
-      }
-
-      if (result.errors.length > 0) {
-        warning(t('batch.archivePartialSuccess', {
-          processed: result.processedCount,
-          failed: result.errors.length,
-          total: ids.length,
-        }));
-        return;
-      }
-
-      success(t('batch.archiveSuccess', { count: result.processedCount }));
     } catch (archiveError) {
       logger.error('Batch archive failed', { error: archiveError });
       error(t('batch.archiveError'));

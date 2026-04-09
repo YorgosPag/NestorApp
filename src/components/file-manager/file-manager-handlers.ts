@@ -25,6 +25,7 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { getFileExtension } from '@/services/upload/utils/storage-path';
 import { isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
+import { showArchiveResultFeedback } from '@/components/shared/files/hooks/useBatchFileOperations';
 import { defaultFileFilters } from '@/components/core/AdvancedFilters';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
@@ -133,30 +134,12 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
 
     try {
       const result = await archiveFilesWithPolicy(ids);
-
-      if (!result.success) {
-        showError(result.errors[0] || t('batch.archiveError'));
-        return;
+      const notify = { success: showSuccess, warning: showWarning, error: showError };
+      const succeeded = showArchiveResultFeedback(result, ids.length, notify, t);
+      if (succeeded) {
+        setSelectedIds(new Set());
+        await refetch();
       }
-
-      setSelectedIds(new Set());
-      await refetch();
-
-      if (result.processedCount === 0) {
-        showWarning(t('batch.archiveNoChanges'));
-        return;
-      }
-
-      if (result.errors.length > 0) {
-        showWarning(t('batch.archivePartialSuccess', {
-          processed: result.processedCount,
-          failed: result.errors.length,
-          total: ids.length,
-        }));
-        return;
-      }
-
-      showSuccess(t('batch.archiveSuccess', { count: result.processedCount }));
     } catch (error) {
       logger.error('Batch archive failed', { error });
       showError(t('batch.archiveError'));
