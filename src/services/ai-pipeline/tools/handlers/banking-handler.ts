@@ -6,7 +6,7 @@
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getBankByIBAN } from '@/constants/greek-banks';
 import { formatIBAN } from '@/types/contacts/banking';
@@ -155,7 +155,7 @@ export class BankingHandler implements ToolHandler {
 
     const snapshot = await db
       .collection(COLLECTIONS.CONTACTS).doc(contactId)
-      .collection('bankAccounts')
+      .collection(SUBCOLLECTIONS.BANK_ACCOUNTS)
       .where('isActive', '==', true)
       .get();
 
@@ -218,7 +218,7 @@ export class BankingHandler implements ToolHandler {
     const db = getAdminFirestore();
     const accountRef = db
       .collection(COLLECTIONS.CONTACTS).doc(contactId)
-      .collection('bankAccounts').doc(accountId);
+      .collection(SUBCOLLECTIONS.BANK_ACCOUNTS).doc(accountId);
 
     const accountSnap = await accountRef.get();
     if (!accountSnap.exists) {
@@ -228,7 +228,7 @@ export class BankingHandler implements ToolHandler {
     // Unset all other primary accounts
     const primarySnap = await db
       .collection(COLLECTIONS.CONTACTS).doc(contactId)
-      .collection('bankAccounts')
+      .collection(SUBCOLLECTIONS.BANK_ACCOUNTS)
       .where('isPrimary', '==', true).get();
 
     const batch = db.batch();

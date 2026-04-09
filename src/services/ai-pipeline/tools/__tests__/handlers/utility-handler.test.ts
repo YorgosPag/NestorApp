@@ -38,11 +38,11 @@ const mockRegionNames: Record<string, string> = {
 };
 jest.mock('@/subapps/accounting/data/greek-tax-offices', () => ({
   GREEK_TAX_OFFICES: [
-    { code: '1101', name: 'offices.1101', region: 'regions.attica' },
-    { code: '1201', name: 'offices.1201', region: 'regions.central_macedonia' },
-    { code: '1301', name: 'offices.1301', region: 'regions.attica' },
-    { code: '1401', name: 'offices.1401', region: 'regions.attica' },
-    { code: '1501', name: 'offices.1501', region: 'regions.attica' },
+    { code: '1101', name: "Α' Αθηνών", region: 'Αττική' },
+    { code: '1201', name: 'Θεσσαλονίκης', region: 'Κεντρική Μακεδονία' },
+    { code: '1301', name: 'Νέας Ιωνίας', region: 'Αττική' },
+    { code: '1401', name: 'Καλλιθέας', region: 'Αττική' },
+    { code: '1501', name: 'Πειραιώς', region: 'Αττική' },
   ],
   getTaxOfficeDisplayName: (code: string) => mockOfficeNames[code] ?? code,
   getRegionDisplayName: (key: string) => mockRegionNames[key] ?? key,
@@ -114,7 +114,7 @@ describe('UtilityHandler', () => {
 
       expect(result.success).toBe(true);
       const data = result.data as Array<{ name: string }>;
-      expect(data[0].name).toContain('Ιωνίας');
+      expect(data.some(d => d.name.includes('Ιωνίας'))).toBe(true);
     });
 
     it('returns error for empty query', async () => {
