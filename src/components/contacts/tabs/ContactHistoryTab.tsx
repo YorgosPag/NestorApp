@@ -44,6 +44,7 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const CONTACT_FILTER_OPTIONS: { value: ContactHistoryFilter; labelKey: string }[] = [
   ...FILTER_OPTIONS,
+  { value: 'document_added', labelKey: 'audit.filters.document_added' },
   { value: 'photo_share', labelKey: 'audit.filters.photo_share' },
 ];
 
@@ -215,10 +216,31 @@ function AuditEntryRenderer({ entry, t, colors }: { entry: EntityAuditEntry; t: 
   const relativeTime = timestamp ? formatRelativeTime(timestamp) : '';
   const absoluteTime = timestamp ? formatDateTime(timestamp) : '';
 
+  /** Resolve field label via i18n, falling back to stored label → raw field name */
+  const resolveFieldLabel = (field: string, storedLabel: string | undefined): string => {
+    const i18nKey = `audit.fields.${field}`;
+    const resolved = t(i18nKey);
+    if (resolved !== i18nKey) return resolved;
+    return storedLabel ?? field;
+  };
+
+  /** Translate a raw audit value — generic via audit.values.* */
   const translateValue = (v: string): string | undefined => {
+    // Direct match (e.g. "active", "colleague", "individual")
     const enumKey = `audit.values.${v}`;
     const result = t(enumKey);
     if (result !== enumKey) return result;
+
+    // Legacy composite format: "colleague — GEO PAGONIS" → translate first part
+    if (v.includes(' — ')) {
+      const [typeKey, ...rest] = v.split(' — ');
+      const typeTranslated = t(`audit.values.${typeKey}`);
+      if (typeTranslated !== `audit.values.${typeKey}`) {
+        return `${typeTranslated} — ${rest.join(' — ')}`;
+      }
+    }
+
+    // ISO date fallback
     if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
       const d = new Date(v);
       if (!isNaN(d.getTime())) return d.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -247,7 +269,7 @@ function AuditEntryRenderer({ entry, t, colors }: { entry: EntityAuditEntry; t: 
           <ul className="mt-1.5 space-y-1">
             {entry.changes.map((change, idx) => (
               <li key={`${change.field}-${idx}`} className="rounded bg-muted/50 px-2.5 py-1 text-xs">
-                <span className="font-medium">{change.label ?? change.field}</span>
+                <span className="font-medium">{resolveFieldLabel(change.field, change.label)}</span>
                 {': '}
                 <span className={cn(colors.text.muted, 'line-through decoration-red-400/60')}>
                   {formatDisplayValue(change.oldValue, translateValue)}

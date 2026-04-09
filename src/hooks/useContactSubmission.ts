@@ -181,17 +181,8 @@ export function useContactSubmission({
       setValidationErrors({});
       onContactAdded();
 
-      logger.info('SUBMISSION: Triggering enterprise cache invalidation');
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('contactsUpdated', {
-          detail: {
-            contactId: editContact?.id || 'new',
-            action: editContact ? 'updated' : 'created',
-            affectedFields: Object.keys(formData).filter(key => formData[key as keyof typeof formData]),
-          },
-        }));
-        logger.info('SUBMISSION: Global cache invalidation event dispatched');
-      }, 100);
+      // No manual contactsUpdated dispatch needed — the Firestore real-time
+      // subscription on the contacts page delivers changes automatically.
 
       onOpenChange(false);
       resetForm();

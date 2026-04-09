@@ -7,6 +7,8 @@ export interface NameCascadeDialogState {
   newName: string;
   properties: number;
   paymentPlans: number;
+  parking: number;
+  storage: number;
 }
 
 /** State for the address impact confirmation dialog (ADR-277) */
@@ -24,6 +26,8 @@ export interface CompanyIdentityDialogState {
   projects: number;
   properties: number;
   obligations: number;
+  parking: number;
+  storage: number;
   invoices: number;
   apyCertificates: number;
 }
@@ -33,6 +37,7 @@ export interface CommunicationImpactDialogState {
   changes: ReadonlyArray<CommunicationFieldChange>;
   properties: number;
   paymentPlans: number;
+  communications: number;
   projects: number;
   invoices: number;
   apyCertificates: number;

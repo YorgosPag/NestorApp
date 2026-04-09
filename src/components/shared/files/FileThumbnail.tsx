@@ -83,16 +83,24 @@ export function FileThumbnail({
     isPdf && !hasPreExistingThumb,
   );
 
-  // Image error state (for broken download URLs)
-  const [imageError, setImageError] = useState(false);
-  const handleImageError = useCallback(() => setImageError(true), []);
+  // Two-phase error state: thumbnail → downloadUrl → icon fallback
+  const [thumbError, setThumbError] = useState(false);
+  const [downloadError, setDownloadError] = useState(false);
 
-  // Determine what to show
-  const effectiveThumbUrl = hasPreExistingThumb
+  const handleImageError = useCallback(() => {
+    if (hasPreExistingThumb && !thumbError) {
+      setThumbError(true);
+    } else {
+      setDownloadError(true);
+    }
+  }, [hasPreExistingThumb, thumbError]);
+
+  // Determine what to show (cascade: thumbnailUrl → downloadUrl → icon)
+  const effectiveThumbUrl = hasPreExistingThumb && !thumbError
     ? thumbnailUrl
     : isPdf
       ? pdfThumbUrl
-      : isImage && !imageError
+      : isImage && !downloadError
         ? downloadUrl
         : null;
 

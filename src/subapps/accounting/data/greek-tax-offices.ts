@@ -3,14 +3,12 @@
  * @description Registry of ~100 active tax offices (ΔΟΥ) in Greece.
  *   Source: AADE (Independent Authority for Public Revenue), last updated 2024.
  *   Organized by region: Attica, Piraeus, Thessaloniki, Rest of Greece.
- *   All name/region values are i18n keys — resolve via getTaxOfficeDisplayName().
+ *   Names and regions are proper nouns — NOT translated via i18n.
  * @author Claude Code (Anthropic AI) + Georgios Pagonis
  * @created 2026-02-10
- * @version 2.0.0
+ * @version 3.0.0 — Inline names (proper nouns don't translate)
  * @see ADR-ACC-013 Searchable ΔΟΥ + ΚΑΔ Dropdowns
  */
-
-import i18next from 'i18next';
 
 // ============================================================================
 // TYPES
@@ -19,38 +17,150 @@ import i18next from 'i18next';
 export interface TaxOffice {
   /** AADE tax office code */
   code: string;
-  /** i18n key for the tax office name (resolve via t() or getTaxOfficeDisplayName()) */
+  /** Display name (proper noun — not translatable) */
   name: string;
-  /** i18n key for the region (resolve via t()) */
+  /** Region display name (proper noun — not translatable) */
   region: string;
 }
 
 // ============================================================================
-// REGION KEY CONSTANTS
+// OFFICE NAMES (code → display name)
+// ============================================================================
+
+const NAMES: Record<string, string> = {
+  '1101': 'Α\' Αθηνών',
+  '1104': 'Δ\' Αθηνών',
+  '1106': 'ΣΤ\' Αθηνών',
+  '1110': 'Ι\' Αθηνών',
+  '1113': 'ΙΓ\' Αθηνών',
+  '1114': 'ΙΔ\' Αθηνών',
+  '1116': 'ΙΣΤ\' Αθηνών',
+  '1119': 'Κατοίκων Εξωτερικού',
+  '1120': 'ΦΑΕ Αθηνών',
+  '1121': 'Α\' Αμαρουσίου',
+  '1124': 'Αγίων Αναργύρων',
+  '1125': 'Αγίου Δημητρίου',
+  '1127': 'Αιγάλεω',
+  '1129': 'Αχαρνών',
+  '1130': 'Βύρωνα',
+  '1131': 'Γλυφάδας',
+  '1133': 'Ελευσίνας',
+  '1135': 'Ηλιουπόλεως',
+  '1137': 'Καλλιθέας',
+  '1138': 'Κηφισιάς',
+  '1139': 'Κορωπίου',
+  '1140': 'Νέας Ιωνίας',
+  '1141': 'Νέας Σμύρνης',
+  '1143': 'Παλλήνης',
+  '1146': 'Περιστερίου',
+  '1149': 'Χαλανδρίου',
+  '1150': 'Χολαργού',
+  '1151': 'Ψυχικού',
+  '1201': 'Α\' Πειραιά',
+  '1205': 'Ε\' Πειραιά',
+  '1209': 'ΦΑΕ Πειραιά',
+  '1210': 'Αίγινας',
+  '1211': 'Νίκαιας',
+  '1212': 'Παλαιού Φαλήρου',
+  '1213': 'Σαλαμίνας',
+  '1301': 'Α\' Θεσσαλονίκης',
+  '1304': 'Δ\' Θεσσαλονίκης',
+  '1305': 'Ε\' Θεσσαλονίκης',
+  '1308': 'Η\' Θεσσαλονίκης',
+  '1310': 'ΦΑΕ Θεσσαλονίκης',
+  '1311': 'Αμπελοκήπων',
+  '1312': 'Καλαμαριάς',
+  '1313': 'Λαγκαδά',
+  '1314': 'Νεαπόλεως',
+  '1315': 'Τούμπας',
+  '1317': 'Ιωνίας Θεσσαλονίκης',
+  '1316': 'Ωραιοκάστρου',
+  '1401': 'Βέροιας',
+  '1402': 'Έδεσσας',
+  '1403': 'Κατερίνης',
+  '1404': 'Κιλκίς',
+  '1406': 'Πολυγύρου',
+  '1407': 'Σερρών',
+  '1501': 'Αλεξανδρούπολης',
+  '1502': 'Δράμας',
+  '1503': 'Καβάλας',
+  '1504': 'Κομοτηνής',
+  '1505': 'Ξάνθης',
+  '1506': 'Ορεστιάδας',
+  '1601': 'Γρεβενών',
+  '1602': 'Καστοριάς',
+  '1603': 'Κοζάνης',
+  '1604': 'Πτολεμαΐδας',
+  '1605': 'Φλώρινας',
+  '1701': 'Άρτας',
+  '1702': 'Ηγουμενίτσας',
+  '1703': 'Ιωαννίνων',
+  '1704': 'Πρεβέζης',
+  '1801': 'Βόλου',
+  '1802': 'Καρδίτσας',
+  '1803': 'Α\' Λάρισας',
+  '1805': 'Τρικάλων',
+  '1901': 'Λαμίας',
+  '1902': 'Λιβαδειάς',
+  '1903': 'Χαλκίδας',
+  '2001': 'Α\' Πατρών',
+  '2003': 'Αγρινίου',
+  '2004': 'Αμαλιάδας',
+  '2005': 'Μεσολογγίου',
+  '2006': 'Πύργου',
+  '2101': 'Κορίνθου',
+  '2102': 'Ναυπλίου',
+  '2103': 'Σπάρτης',
+  '2104': 'Τρίπολης',
+  '2105': 'Καλαμάτας',
+  '2201': 'Κέρκυρας',
+  '2202': 'Ζακύνθου',
+  '2203': 'Λευκάδας',
+  '2204': 'Αργοστολίου',
+  '2301': 'Μυτιλήνης',
+  '2302': 'Σάμου',
+  '2303': 'Χίου',
+  '2401': 'Ρόδου',
+  '2402': 'Κω',
+  '2403': 'Σύρου',
+  '2404': 'Νάξου',
+  '2405': 'Μυκόνου',
+  '2406': 'Θήρας',
+  '2501': 'Ηρακλείου',
+  '2502': 'Χανίων',
+  '2503': 'Ρεθύμνου',
+  '2504': 'Αγίου Νικολάου',
+  '9101': 'ΔΟΥ Μεγάλων Επιχειρήσεων',
+  '9102': 'ΔΟΥ Πλοίων',
+  '9103': 'ΚΕΦΟΔΕ (Κέντρο Φορολογίας)',
+};
+
+// ============================================================================
+// REGION CONSTANTS (proper nouns)
 // ============================================================================
 
 const R = {
-  ATTICA: 'regions.attica',
-  PIRAEUS: 'regions.piraeus',
-  THESSALONIKI: 'regions.thessaloniki',
-  CENTRAL_MACEDONIA: 'regions.central_macedonia',
-  EAST_MACEDONIA_THRACE: 'regions.east_macedonia_thrace',
-  WEST_MACEDONIA: 'regions.west_macedonia',
-  EPIRUS: 'regions.epirus',
-  THESSALY: 'regions.thessaly',
-  CENTRAL_GREECE: 'regions.central_greece',
-  WEST_GREECE: 'regions.west_greece',
-  PELOPONNESE: 'regions.peloponnese',
-  IONIAN_ISLANDS: 'regions.ionian_islands',
-  NORTH_AEGEAN: 'regions.north_aegean',
-  SOUTH_AEGEAN: 'regions.south_aegean',
-  CRETE: 'regions.crete',
-  SPECIAL: 'regions.special',
+  ATTICA: 'Αττική',
+  PIRAEUS: 'Πειραιάς',
+  THESSALONIKI: 'Θεσσαλονίκη',
+  CENTRAL_MACEDONIA: 'Κεντρική Μακεδονία',
+  EAST_MACEDONIA_THRACE: 'Ανατ. Μακεδονία & Θράκη',
+  WEST_MACEDONIA: 'Δυτική Μακεδονία',
+  EPIRUS: 'Ήπειρος',
+  THESSALY: 'Θεσσαλία',
+  CENTRAL_GREECE: 'Στερεά Ελλάδα',
+  WEST_GREECE: 'Δυτική Ελλάδα',
+  PELOPONNESE: 'Πελοπόννησος',
+  IONIAN_ISLANDS: 'Ιόνια Νησιά',
+  NORTH_AEGEAN: 'Βόρειο Αιγαίο',
+  SOUTH_AEGEAN: 'Νότιο Αιγαίο',
+  CRETE: 'Κρήτη',
+  SPECIAL: 'Ειδικές',
 } as const;
 
-/** Helper: builds a TaxOffice entry from code + region key */
+/** Helper: builds a TaxOffice entry from code + region */
 function doy(code: string, region: string): TaxOffice {
-  return { code, name: `offices.${code}`, region };
+  return { code, name: NAMES[code] || code, region };
 }
 
 // ============================================================================
@@ -200,19 +310,18 @@ export const GREEK_TAX_OFFICES: TaxOffice[] = [
 // HELPERS
 // ============================================================================
 
-const NS = 'accounting-tax-offices';
-
 /**
- * Resolves a tax office's i18n name key to the current locale.
- * Uses imperative i18next — works in both React components and plain TS services.
+ * Gets the display name for a tax office code.
+ * Direct lookup — no i18n needed (proper nouns).
  */
 export function getTaxOfficeDisplayName(code: string): string {
-  return i18next.t(`offices.${code}`, { ns: NS }) || code;
+  return NAMES[code] || code;
 }
 
 /**
- * Resolves a region i18n key to the current locale.
+ * Gets the region display name for a tax office code.
  */
-export function getRegionDisplayName(regionKey: string): string {
-  return i18next.t(regionKey, { ns: NS }) || regionKey;
+export function getRegionDisplayName(code: string): string {
+  const office = GREEK_TAX_OFFICES.find(o => o.code === code);
+  return office?.region || code;
 }

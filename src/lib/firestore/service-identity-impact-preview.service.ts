@@ -1,16 +1,26 @@
+/**
+ * 🔧 SERVICE IDENTITY IMPACT PREVIEW — Thin Wrapper
+ *
+ * Delegates to the unified ContactImpactEngine for dependency queries.
+ * Maps generic result to the ContactIdentityImpactPreview shape
+ * expected by the ContactIdentityImpactDialog.
+ *
+ * @module lib/firestore/service-identity-impact-preview
+ * @enterprise ADR-145 — Contact Dependency SSoT
+ */
+
 import 'server-only';
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { computeContactImpact } from './contact-impact-engine';
 import type {
   ContactIdentityImpactDependency,
   ContactIdentityImpactPreview,
 } from '@/types/contact-identity-impact';
 import type { ServiceIdentityFieldChange } from '@/utils/contactForm/service-identity-guard';
-import { createModuleLogger } from '@/lib/telemetry';
 
-const logger = createModuleLogger('ServiceIdentityImpactPreview');
+// ============================================================================
+// PREVIEW
+// ============================================================================
 
 export async function previewServiceIdentityImpact(
   contactId: string,
@@ -18,69 +28,36 @@ export async function previewServiceIdentityImpact(
 ): Promise<ContactIdentityImpactPreview> {
   if (changes.length === 0) {
     return {
-      mode: 'allow',
-      changes,
-      dependencies: [],
-      affectedDomains: [],
-      messageKey: 'identityImpact.messages.allow',
-      blockingCount: 0,
-      warningCount: 0,
+      mode: 'allow', changes, dependencies: [], affectedDomains: [],
+      messageKey: 'identityImpact.messages.allow', blockingCount: 0, warningCount: 0,
     };
   }
 
-  const db = getAdminFirestore();
-
   try {
-    const [projectLinksSnapshot, relationshipsSourceSnapshot, relationshipsTargetSnapshot] = await Promise.all([
-      db.collection(COLLECTIONS.CONTACT_LINKS)
-        .where('sourceContactId', '==', contactId)
-        .where('targetEntityType', '==', ENTITY_TYPES.PROJECT)
-        .where('status', '==', 'active')
-        .select()
-        .get(),
-      db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS)
-        .where('sourceContactId', '==', contactId)
-        .select()
-        .get(),
-      db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS)
-        .where('targetContactId', '==', contactId)
-        .select()
-        .get(),
-    ]);
+    const result = await computeContactImpact(contactId, 'identityChange', 'service');
 
-    const dependencies: ContactIdentityImpactDependency[] = [];
-    const projectLinks = projectLinksSnapshot.size;
-    const contactRelationships = relationshipsSourceSnapshot.size + relationshipsTargetSnapshot.size;
+    const dependencies: ContactIdentityImpactDependency[] = result.dependencies.map((dep) => ({
+      id: dep.id === 'contactRelationships' ? 'contactRelationships' as const : 'projectLinks' as const,
+      count: dep.count,
+      mode: 'warn' as const,
+    }));
 
-    if (projectLinks > 0) {
-      dependencies.push({ id: 'projectLinks', count: projectLinks, mode: 'warn' });
-    }
-
-    if (contactRelationships > 0) {
-      dependencies.push({ id: 'contactRelationships', count: contactRelationships, mode: 'warn' });
-    }
-
-    const warningCount = dependencies.reduce((sum, dependency) => sum + dependency.count, 0);
+    const warningCount = dependencies.reduce((sum, d) => sum + d.count, 0);
+    const affectedDomains = warningCount > 0
+      ? ['linkedProjects' as const, 'searchAndReporting' as const, 'relationshipViews' as const]
+      : ['searchAndReporting' as const];
 
     return {
       mode: warningCount > 0 ? 'warn' : 'allow',
-      changes,
-      dependencies,
-      affectedDomains: warningCount > 0 ? ['linkedProjects', 'searchAndReporting', 'relationshipViews'] : ['searchAndReporting'],
+      changes, dependencies, affectedDomains,
       messageKey: `identityImpact.messages.${warningCount > 0 ? 'warn' : 'allow'}`,
-      blockingCount: 0,
-      warningCount,
+      blockingCount: 0, warningCount,
     };
-  } catch (error) {
-    logger.warn('Service identity impact preview failed', error);
+  } catch {
     return {
-      mode: 'block',
-      changes,
-      dependencies: [],
+      mode: 'block', changes, dependencies: [],
       affectedDomains: ['searchAndReporting', 'relationshipViews'],
-      messageKey: 'identityImpact.messages.unavailable',
-      blockingCount: 0,
-      warningCount: 0,
+      messageKey: 'identityImpact.messages.unavailable', blockingCount: 0, warningCount: 0,
     };
   }
 }

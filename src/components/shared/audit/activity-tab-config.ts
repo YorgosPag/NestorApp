@@ -20,6 +20,8 @@ import {
   UserMinus,
   Mail,
   Receipt,
+  FilePlus2,
+  FileMinus2,
 } from "lucide-react";
 import type { AuditAction } from "@/types/audit-trail";
 
@@ -104,6 +106,18 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
     color: "text-green-600",
     bgColor: "bg-green-50 dark:bg-green-950/30",
   },
+  document_added: {
+    icon: FilePlus2,
+    labelKey: "audit.actions.document_added",
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50 dark:bg-indigo-950/30",
+  },
+  document_removed: {
+    icon: FileMinus2,
+    labelKey: "audit.actions.document_removed",
+    color: "text-rose-600",
+    bgColor: "bg-rose-50 dark:bg-rose-950/30",
+  },
 };
 
 /** i18n key under audit.filters.* — resolved at render time */
@@ -117,4 +131,6 @@ export const FILTER_OPTIONS: { value: AuditAction | "all"; labelKey: string }[] 
   { value: "professional_removed", labelKey: "audit.filters.professional_removed" },
   { value: "email_sent", labelKey: "audit.filters.email_sent" },
   { value: "invoice_created", labelKey: "audit.filters.invoice_created" },
+  { value: "document_added", labelKey: "audit.filters.document_added" },
+  { value: "document_removed", labelKey: "audit.filters.document_removed" },
 ];

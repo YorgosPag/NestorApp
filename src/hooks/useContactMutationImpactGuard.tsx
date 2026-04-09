@@ -161,6 +161,8 @@ export function useContactMutationImpactGuard(
             projects: 0,
             properties: 0,
             obligations: 0,
+            parking: 0,
+            storage: 0,
             invoices: 0,
             apyCertificates: 0,
           },
@@ -256,6 +258,8 @@ export function useContactMutationImpactGuard(
           projects={companyDialogState.preview.projects}
           properties={companyDialogState.preview.properties}
           obligations={companyDialogState.preview.obligations}
+          parking={companyDialogState.preview.parking}
+          storage={companyDialogState.preview.storage}
           invoices={companyDialogState.preview.invoices}
           apyCertificates={companyDialogState.preview.apyCertificates}
           onConfirm={handleCompanyConfirm}

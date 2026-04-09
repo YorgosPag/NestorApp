@@ -37,7 +37,9 @@ export type AuditAction =
   | 'professional_assigned'
   | 'professional_removed'
   | 'email_sent'
-  | 'invoice_created';
+  | 'invoice_created'
+  | 'document_added'
+  | 'document_removed';
 
 // ============================================================================
 // FIELD-LEVEL DIFF

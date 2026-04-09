@@ -56,14 +56,14 @@ export async function recordRelationshipAudit(params: RelationshipAuditParams): 
     const targetName = target ? ContactsService.getDisplayName(target) : params.targetContactId;
     const typeKey = params.relationshipType;
 
-    const buildOldValue = (otherName: string): string | null => {
-      if (params.action === 'linked') return null;
-      return `${typeKey} — ${otherName}`;
-    };
-    const buildNewValue = (otherName: string): string | null => {
-      if (params.action === 'unlinked') return null;
-      return `${typeKey} — ${otherName}`;
-    };
+    // Canonical values: type key stored raw → translated at render via audit.values.*
+    const oldType = params.action === 'linked' ? null : typeKey;
+    const newType = params.action === 'unlinked' ? null : typeKey;
+
+    const buildChanges = (otherName: string) => [
+      { field: 'relationshipType', oldValue: oldType, newValue: newType },
+      { field: 'relatedContact', oldValue: params.action === 'linked' ? null : otherName, newValue: params.action === 'unlinked' ? null : otherName },
+    ];
 
     // Audit for source contact (shows target name)
     apiClient.post(API_ROUTES.AUDIT_TRAIL.RECORD, {
@@ -71,12 +71,7 @@ export async function recordRelationshipAudit(params: RelationshipAuditParams): 
       entityId: params.sourceContactId,
       entityName: sourceName,
       action: params.action,
-      changes: [{
-        field: 'relationship',
-        oldValue: buildOldValue(targetName),
-        newValue: buildNewValue(targetName),
-        label: 'Σχέση',
-      }],
+      changes: buildChanges(targetName),
     }).catch(() => {});
 
     // Audit for target contact (shows source name)
@@ -85,12 +80,7 @@ export async function recordRelationshipAudit(params: RelationshipAuditParams): 
       entityId: params.targetContactId,
       entityName: targetName,
       action: params.action,
-      changes: [{
-        field: 'relationship',
-        oldValue: buildOldValue(sourceName),
-        newValue: buildNewValue(sourceName),
-        label: 'Σχέση',
-      }],
+      changes: buildChanges(sourceName),
     }).catch(() => {});
   } catch (err) {
     logger.warn('⚠️ Audit trail recording failed (non-blocking):', err);

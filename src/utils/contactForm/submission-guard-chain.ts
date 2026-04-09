@@ -95,7 +95,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
 
     if (oldName !== newName && newName.length > 0) {
       try {
-        const preview = await apiClient.get<{ totalAffected: number; properties: number; paymentPlans: number }>(
+        const preview = await apiClient.get<{ totalAffected: number; properties: number; paymentPlans: number; parking: number; storage: number }>(
           `/api/contacts/${editContactId}/name-cascade-preview`
         );
         if (preview.totalAffected > 0) {
@@ -105,7 +105,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
             deps.notifications.success('contacts-form.submission.updateSuccess');
             deps.nameCascadeConfirmedRef.current = false;
           };
-          deps.setNameCascadeDialog({ oldName, newName, properties: preview.properties, paymentPlans: preview.paymentPlans });
+          deps.setNameCascadeDialog({ oldName, newName, properties: preview.properties, paymentPlans: preview.paymentPlans, parking: preview.parking, storage: preview.storage });
           return { blocked: false, deferred: true, guardType: 'nameCascade' };
         }
       } catch (error) {
@@ -158,7 +158,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
     }
     if (detection.requiresImpactPreview) {
       try {
-        const ip = await apiClient.get<{ totalAffected: number; projects: number; properties: number; obligations: number; invoices: number; apyCertificates: number }>(
+        const ip = await apiClient.get<{ totalAffected: number; projects: number; properties: number; obligations: number; parking: number; storage: number; invoices: number; apyCertificates: number }>(
           `/api/contacts/${editContactId}/company-identity-impact-preview`
         );
         if (ip.totalAffected > 0) {
@@ -168,7 +168,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
             deps.notifications.success('contacts-form.submission.updateSuccess');
             deps.companyIdentityConfirmedRef.current = false;
           };
-          deps.setCompanyIdentityDialog({ changes: detection.changes, projects: ip.projects, properties: ip.properties, obligations: ip.obligations, invoices: ip.invoices, apyCertificates: ip.apyCertificates });
+          deps.setCompanyIdentityDialog({ changes: detection.changes, projects: ip.projects, properties: ip.properties, obligations: ip.obligations, parking: ip.parking, storage: ip.storage, invoices: ip.invoices, apyCertificates: ip.apyCertificates });
           return { blocked: false, deferred: true, guardType: 'companyIdentity' };
         }
       } catch (error) {
@@ -183,14 +183,15 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
   deps.companyIdentityConfirmedRef.current = false;
 
   // --- Guard 4: Communication Impact (ADR-280) ---
-  if (!deps.communicationImpactConfirmedRef.current && editContact.type === 'company') {
+  // SSoT: Runs for ALL contact types. Registry filters applicable dependencies per type.
+  if (!deps.communicationImpactConfirmedRef.current) {
     const commDetection = detectCommunicationChanges(editContact, formData);
     if (commDetection.hasUnsafeRemoval) {
       return { blocked: true, errorKey: 'common-shared.contacts.communicationImpact.unsafeRemoval' };
     }
     if (commDetection.requiresImpactPreview) {
       try {
-        const cp = await apiClient.get<{ totalAffected: number; properties: number; paymentPlans: number; projects: number; invoices: number; apyCertificates: number }>(
+        const cp = await apiClient.get<{ totalAffected: number; properties: number; paymentPlans: number; communications: number; projects: number; invoices: number; apyCertificates: number }>(
           `/api/contacts/${editContactId}/communication-impact-preview`
         );
         if (cp.totalAffected > 0) {
@@ -200,7 +201,7 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
             deps.notifications.success('contacts-form.submission.updateSuccess');
             deps.communicationImpactConfirmedRef.current = false;
           };
-          deps.setCommunicationImpactDialog({ changes: commDetection.changes, properties: cp.properties, paymentPlans: cp.paymentPlans, projects: cp.projects, invoices: cp.invoices, apyCertificates: cp.apyCertificates });
+          deps.setCommunicationImpactDialog({ changes: commDetection.changes, properties: cp.properties, paymentPlans: cp.paymentPlans, communications: cp.communications, projects: cp.projects, invoices: cp.invoices, apyCertificates: cp.apyCertificates });
           return { blocked: false, deferred: true, guardType: 'communicationImpact' };
         }
       } catch (error) {

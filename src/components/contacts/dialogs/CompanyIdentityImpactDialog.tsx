@@ -42,6 +42,8 @@ interface CompanyIdentityImpactDialogProps {
   projects: number;
   properties: number;
   obligations: number;
+  parking?: number;
+  storage?: number;
   invoices: number;
   apyCertificates: number;
   onConfirm: () => void;
@@ -76,6 +78,8 @@ export function CompanyIdentityImpactDialog({
   projects,
   properties,
   obligations,
+  parking = 0,
+  storage = 0,
   invoices,
   apyCertificates,
   onConfirm,
@@ -92,7 +96,7 @@ export function CompanyIdentityImpactDialog({
   const fieldLabel = (field: string) =>
     t(`contacts.companyIdentityImpact.fields.${field}`);
 
-  const totalLive = projects + properties + obligations;
+  const totalLive = projects + properties + obligations + parking + storage;
   const hasSnapshots = invoices > 0 || apyCertificates > 0;
   const isBlocked = mode == 'block';
   const Icon = isBlocked ? ShieldAlert : TriangleAlert;
@@ -161,6 +165,18 @@ export function CompanyIdentityImpactDialog({
                       <li className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
                         <span className="font-medium text-foreground">{ci('depObligations')}</span>
                         <span className={colors.text.muted}>{ci('count', { count: obligations })}</span>
+                      </li>
+                    )}
+                    {parking > 0 && (
+                      <li className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                        <span className="font-medium text-foreground">{ci('depParking')}</span>
+                        <span className={colors.text.muted}>{ci('count', { count: parking })}</span>
+                      </li>
+                    )}
+                    {storage > 0 && (
+                      <li className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                        <span className="font-medium text-foreground">{ci('depStorage')}</span>
+                        <span className={colors.text.muted}>{ci('count', { count: storage })}</span>
                       </li>
                     )}
                   </ul>

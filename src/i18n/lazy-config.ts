@@ -58,6 +58,7 @@ export const SUPPORTED_NAMESPACES = [
   'admin',     // 🏢 Admin tools (units, claims repair)
   'tool-hints', // 🏢 DXF Viewer: Step-by-step tool hints (ADR-082)
   'accounting', // 🏢 Accounting subapp (invoices, journal, VAT, tax, assets, documents)
+  'accounting-tax-offices', // 🏢 ΔΟΥ names + regions (DoyPicker component)
   'banking',    // 🏢 Banking module — bank accounts, IBAN, selectors (ADR-172)
   'addresses',  // 🏢 Shared address system — forms, cards, maps (ADR-172)
   'payments',   // 🏢 Payment plans, installments, loans, cheques, reports (ADR-234)
@@ -260,6 +261,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'files-media',
     'accounting',
     'accounting-setup',
+    'accounting-tax-offices',
     'payments',
     'payments-loans',
     'payments-cost-calc',

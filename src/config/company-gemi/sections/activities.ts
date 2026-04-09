@@ -27,7 +27,7 @@ export const activitiesSection: SectionConfig = {
   title: 'sections.activitiesKad', // i18n key
   icon: 'file-text',
   description: 'sectionDescriptions.activitiesKad', // i18n key
-  order: 3,
+  order: 4,
   fields: [
     {
       id: 'activities',

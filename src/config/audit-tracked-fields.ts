@@ -130,7 +130,8 @@ export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
   companyType: 'Τύπος Εταιρείας',
   legalName: 'Νομική Επωνυμία',
   tradeName: 'Εμπορική Επωνυμία',
-  registrationNumber: 'Αρ. ΓΕΜΗ',
+  gemiNumber: 'Αρ. ΓΕΜΗ',
+  registrationNumber: 'Αρ. ΓΕΜΗ (legacy)',
   industry: 'Κλάδος',
   sector: 'Τομέας',
   numberOfEmployees: 'Αρ. Εργαζομένων',
@@ -141,6 +142,15 @@ export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
   'customFields.activityCodeKAD': 'Κύριος ΚΑΔ',
   'customFields.activityDescription': 'Περιγραφή ΚΑΔ',
   'customFields.activityType': 'Τύπος δραστηριότητας',
+  'customFields.gemiStatus': 'Κατάσταση ΓΕΜΗ',
+  'customFields.gemiStatusDate': 'Ημερ. Κατάστασης ΓΕΜΗ',
+  'customFields.capitalAmount': 'Κεφάλαιο',
+  'customFields.currency': 'Νόμισμα',
+  'customFields.registrationDate': 'Ημερ. Εγγραφής',
+  'customFields.lastUpdateDate': 'Ημερ. Τελ. Ενημέρωσης',
+  'customFields.gemiDepartment': 'Τμήμα ΓΕΜΗ',
+  'customFields.prefecture': 'Νομός',
+  'customFields.municipality': 'Δήμος',
 
   // ── Service-specific ──
   serviceType: 'Τύπος Υπηρεσίας',
@@ -157,6 +167,57 @@ export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
   personas: 'Ρόλοι (Personas)',
   personaTypes: 'Τύποι Ρόλων',
 };
+
+// Fields exclusive to a specific contact type — excluded from audit diffs
+// for other types to prevent noise from form defaults (e.g. serviceType on individual).
+const SERVICE_EXCLUSIVE: ReadonlySet<string> = new Set([
+  'serviceType', 'serviceName', 'parentOrganization', 'serviceCode',
+  'registryNumber', 'responsibleMinistry', 'division', 'operatingHours',
+  'responsiblePersons', 'servicesProvided',
+]);
+const COMPANY_EXCLUSIVE: ReadonlySet<string> = new Set([
+  'companyName', 'legalForm', 'companyType', 'legalName', 'tradeName',
+  'gemiNumber', 'registrationNumber', 'industry', 'sector', 'numberOfEmployees',
+  'annualRevenue', 'contactPersons',
+  'customFields.activities', 'customFields.chamber',
+  'customFields.activityCodeKAD', 'customFields.activityDescription',
+  'customFields.activityType', 'customFields.gemiStatus', 'customFields.gemiStatusDate',
+  'customFields.capitalAmount', 'customFields.currency', 'customFields.registrationDate',
+  'customFields.lastUpdateDate', 'customFields.gemiDepartment',
+  'customFields.prefecture', 'customFields.municipality',
+]);
+const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
+  'firstName', 'lastName', 'fatherName', 'motherName', 'middleName',
+  'birthDate', 'birthCountry', 'gender', 'amka',
+  'documentType', 'documentIssuer', 'documentNumber',
+  'documentIssueDate', 'documentExpiryDate',
+  'specialty', 'employer', 'employerId', 'position', 'department',
+  'workAddress', 'workWebsite', 'escoLabel', 'iscoCode', 'escoSkills',
+  'maritalStatus', 'spouse', 'children',
+]);
+
+/** Return CONTACT_TRACKED_FIELDS filtered to only relevant fields for the given type */
+export function getContactTrackedFieldsForType(
+  contactType: 'individual' | 'company' | 'service' | string,
+): Record<string, string> {
+  let excludeSet: ReadonlySet<string>;
+  switch (contactType) {
+    case 'individual':
+      excludeSet = new Set([...SERVICE_EXCLUSIVE, ...COMPANY_EXCLUSIVE]);
+      break;
+    case 'company':
+      excludeSet = new Set([...SERVICE_EXCLUSIVE, ...INDIVIDUAL_EXCLUSIVE]);
+      break;
+    case 'service':
+      excludeSet = new Set([...COMPANY_EXCLUSIVE, ...INDIVIDUAL_EXCLUSIVE]);
+      break;
+    default:
+      return CONTACT_TRACKED_FIELDS;
+  }
+  return Object.fromEntries(
+    Object.entries(CONTACT_TRACKED_FIELDS).filter(([field]) => !excludeSet.has(field)),
+  );
+}
 
 // ============================================================================
 // FLATTEN HELPER — Converts nested objects to dot-notation for tracking
@@ -223,11 +284,23 @@ function sortKeys(value: unknown): unknown {
 /**
  * Serialize a value to a comparable primitive for diffing.
  * Uses sorted keys for stable comparison of objects/arrays.
+ *
+ * Empty structures ([], {all-empty-strings}) are normalized to null
+ * so that `null → []` or `null → { facebook: '' }` are NOT recorded
+ * as changes — they are form-initialization noise, not user edits.
  */
 function serializeValue(value: unknown): string | number | boolean | null {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value;
+  }
+  // Empty array → null (no meaningful data)
+  if (Array.isArray(value) && value.length === 0) return null;
+  // Object with ALL empty/null/undefined values → null (form default noise)
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    const vals = Object.values(value as Record<string, unknown>);
+    if (vals.length === 0) return null;
+    if (vals.every(v => v === null || v === undefined || v === '')) return null;
   }
   return JSON.stringify(sortKeys(value));
 }

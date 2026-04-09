@@ -81,7 +81,7 @@ const communicationSection: SectionConfig = {
   title: 'sections.communication',
   icon: 'smartphone',
   description: 'sectionDescriptions.communication',
-  order: 2.5, // Between addresses (2) and activities (3)
+  order: 3,
   fields: [
     {
       id: 'communication', // Triggers existing custom renderer in UnifiedContactTabbedSection
@@ -117,17 +117,15 @@ const shareholdersSection: SectionConfig = {
 };
 
 // Quick simplified sections για completeness - 🏢 i18n keys
-const filesSection: SectionConfig = { id: 'files', title: 'sections.files', icon: 'file-text', order: 7, fields: [], description: 'sectionDescriptions.files' };
-const decisionsSection: SectionConfig = { id: 'decisions', title: 'sections.organDecisions', icon: 'gavel', order: 8, fields: [], description: 'sectionDescriptions.organDecisions' };
-const historySection: SectionConfig = { id: 'companyVersions', title: 'sections.historyChanges', icon: 'history', order: 9, fields: [], description: 'sectionDescriptions.historyChanges' };
+const photosSection: SectionConfig = { id: 'companyPhotos', title: 'sections.logoPhotos', icon: 'image', order: 5, fields: [], description: 'sectionDescriptions.logoPhotos' };
+const bankingSection: SectionConfig = { id: 'banking', title: 'sections.banking', icon: 'credit-card', order: 6, fields: [], description: 'sectionDescriptions.banking' };
+const relationshipsSection: SectionConfig = { id: 'relationships', title: 'sections.peopleRoles', icon: 'users', order: 7, fields: [], description: 'sectionDescriptions.peopleRoles' };
+const filesSection: SectionConfig = { id: 'files', title: 'sections.files', icon: 'file-text', order: 8, fields: [], description: 'sectionDescriptions.files' };
+const historySection: SectionConfig = { id: 'history', title: 'sections.history', icon: 'history', order: 9, fields: [], description: 'sectionDescriptions.history' };
 // representativesSection REMOVED — merged into relationshipsSection (Πρόσωπα & Ρόλοι)
+const decisionsSection: SectionConfig = { id: 'decisions', title: 'sections.organDecisions', icon: 'gavel', order: 10, fields: [], description: 'sectionDescriptions.organDecisions' };
 const announcementsSection: SectionConfig = { id: 'announcements', title: 'sections.announcementsPublications', icon: 'megaphone', order: 11, fields: [], description: 'sectionDescriptions.announcementsPublications' };
 const statusesSection: SectionConfig = { id: 'statuses', title: 'sections.statusesLifecycle', icon: 'activity', order: 12, fields: [], description: 'sectionDescriptions.statusesLifecycle' };
-const photosSection: SectionConfig = { id: 'companyPhotos', title: 'sections.logoPhotos', icon: 'image', order: 13, fields: [], description: 'sectionDescriptions.logoPhotos' };
-const relationshipsSection: SectionConfig = { id: 'relationships', title: 'sections.peopleRoles', icon: 'users', order: 14, fields: [], description: 'sectionDescriptions.peopleRoles' };
-
-// 🏢 ENTERPRISE: Banking System (ADR-126)
-const bankingSection: SectionConfig = { id: 'banking', title: 'sections.banking', icon: 'credit-card', order: 15, fields: [], description: 'sectionDescriptions.banking' };
 
 // ============================================================================
 // SECTION REGISTRY
@@ -149,4 +147,5 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   photosSection,
   relationshipsSection,
   bankingSection, // 🏢 ENTERPRISE: Banking System (ADR-126)
+  historySection, // 📜 Unified History: Audit Trail + Photo Shares (reuses ContactHistoryTab)
 ].sort((a, b) => a.order - b.order); // Auto-sort by order

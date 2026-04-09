@@ -41,6 +41,7 @@ interface CommunicationImpactDialogProps {
   changes: ReadonlyArray<CommunicationFieldChange>;
   properties: number;
   paymentPlans: number;
+  communications?: number;
   projects: number;
   invoices: number;
   apyCertificates: number;
@@ -75,6 +76,7 @@ export function CommunicationImpactDialog({
   changes,
   properties,
   paymentPlans,
+  communications = 0,
   projects,
   invoices,
   apyCertificates,
@@ -90,7 +92,7 @@ export function CommunicationImpactDialog({
   const changeLabel = (changeType: CommunicationChangeType) =>
     t(`contacts.communicationImpact.changeTypes.${changeType}`);
 
-  const totalLive = properties + paymentPlans + projects;
+  const totalLive = properties + paymentPlans + projects + communications;
   const hasSnapshots = invoices > 0 || apyCertificates > 0;
 
   return (
@@ -145,6 +147,12 @@ export function CommunicationImpactDialog({
                       <li className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
                         <span className="font-medium text-foreground">{ci('depPaymentPlans')}</span>
                         <span className={colors.text.muted}>{ci('count', { count: paymentPlans })}</span>
+                      </li>
+                    )}
+                    {communications > 0 && (
+                      <li className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                        <span className="font-medium text-foreground">{ci('depCommunications')}</span>
+                        <span className={colors.text.muted}>{ci('count', { count: communications })}</span>
                       </li>
                     )}
                     {projects > 0 && (

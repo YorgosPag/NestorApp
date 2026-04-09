@@ -306,7 +306,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
     title: 'individual.sections.projectParticipation.title',
     icon: 'folder-kanban',
     description: 'individual.sections.projectParticipation.description',
-    order: 3.5,
+    order: 8,
     fields: [
       {
         // 🎯 DUMMY: Read-only project links
@@ -399,14 +399,14 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 7. ΣΧΕΣΕΙΣ - 🏢 ENTERPRISE RELATIONSHIP MANAGEMENT
+  // 9. ΣΧΕΣΕΙΣ - 🏢 ENTERPRISE RELATIONSHIP MANAGEMENT
   // -------------------------------------------------------------------------
   {
     id: 'relationships',
     title: 'individual.sections.relationships.title',
     icon: 'users',
     description: 'individual.sections.relationships.description',
-    order: 7,
+    order: 9,
     fields: [
       // Fields are handled by ContactRelationshipManager component
       // No individual fields needed as this is a complex UI component
@@ -414,14 +414,14 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 8. ΑΡΧΕΙΑ - 🏢 ENTERPRISE FILE MANAGEMENT (ADR-031)
+  // 10. ΑΡΧΕΙΑ - 🏢 ENTERPRISE FILE MANAGEMENT (ADR-031)
   // -------------------------------------------------------------------------
   {
     id: 'files',
     title: 'individual.sections.files.title',
     icon: 'file-text',
     description: 'individual.sections.files.description',
-    order: 8,
+    order: 10,
     fields: [
       // 🎯 DUMMY FIELD για custom renderer triggering
       // Fields are handled by EntityFilesManager component
@@ -435,14 +435,14 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 9. ΤΡΑΠΕΖΙΚΑ - 🏢 ENTERPRISE BANKING SYSTEM (ADR-126)
+  // 7. ΤΡΑΠΕΖΙΚΑ - 🏢 ENTERPRISE BANKING SYSTEM (ADR-126)
   // -------------------------------------------------------------------------
   {
     id: 'banking',
     title: 'individual.sections.banking.title',
     icon: 'credit-card',
     description: 'individual.sections.banking.description',
-    order: 9,
+    order: 7,
     fields: [
       // 🎯 DUMMY FIELD για custom renderer triggering
       // Fields are handled by ContactBankingTab component
@@ -456,14 +456,14 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 10. ΙΣΤΟΡΙΚΟ - 🏢 ENTERPRISE AUDIT TRAIL (ADR-195)
+  // 11. ΙΣΤΟΡΙΚΟ - 🏢 ENTERPRISE AUDIT TRAIL (ADR-195)
   // -------------------------------------------------------------------------
   {
     id: 'history',
     title: 'individual.sections.history.title',
     icon: 'clock',
     description: 'individual.sections.history.description',
-    order: 10,
+    order: 11,
     fields: [
       // 🎯 DUMMY FIELD για custom renderer triggering
       // Fields are handled by ActivityTab component (centralized audit trail)

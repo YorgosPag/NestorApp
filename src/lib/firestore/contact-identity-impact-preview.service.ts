@@ -1,55 +1,37 @@
+/**
+ * 👤 INDIVIDUAL IDENTITY IMPACT PREVIEW — Thin Wrapper
+ *
+ * Delegates to the unified ContactImpactEngine for dependency queries.
+ * Preserves the field-category-specific blocking logic (e.g., AMKA change
+ * blocks if attendance records exist, other identity changes only warn).
+ *
+ * @module lib/firestore/contact-identity-impact-preview
+ * @enterprise ADR-145 — Contact Dependency SSoT
+ */
+
 import 'server-only';
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import {
-  type ContactIdentityAffectedDomainId,
-  type ContactIdentityImpactDependency,
-  type ContactIdentityImpactPreview,
-} from '@/types/contact-identity-impact';
+import { computeContactImpact } from './contact-impact-engine';
 import type {
-  IndividualIdentityField,
-  IndividualIdentityFieldChange,
-} from '@/utils/contactForm/individual-identity-guard';
-import { createModuleLogger } from '@/lib/telemetry';
+  ContactIdentityAffectedDomainId,
+  ContactIdentityImpactDependency,
+  ContactIdentityImpactPreview,
+} from '@/types/contact-identity-impact';
+import type { IndividualIdentityFieldChange } from '@/utils/contactForm/individual-identity-guard';
 
-const logger = createModuleLogger('ContactIdentityImpactPreview');
+// ============================================================================
+// FIELD CATEGORY SETS
+// ============================================================================
 
-/** Max time to wait for dependency queries before treating as unavailable */
-const QUERY_TIMEOUT_MS = 10_000;
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Query timeout after ${ms}ms`)), ms),
-    ),
-  ]);
-}
-
-const DISPLAY_FIELDS: ReadonlySet<IndividualIdentityField> = new Set(['firstName', 'lastName']);
-const IDENTITY_FIELDS: ReadonlySet<IndividualIdentityField> = new Set([
-  'fatherName',
-  'motherName',
-  'birthDate',
-  'birthCountry',
-  'gender',
-]);
-const REGULATED_FIELDS: ReadonlySet<IndividualIdentityField> = new Set([
-  'amka',
-  'documentType',
-  'documentIssuer',
-  'documentNumber',
-  'documentIssueDate',
-  'documentExpiryDate',
-]);
+const DISPLAY_FIELDS = new Set(['firstName', 'lastName']);
+const IDENTITY_FIELDS = new Set(['fatherName', 'motherName', 'birthDate', 'birthCountry', 'gender']);
+const REGULATED_FIELDS = new Set(['amka', 'documentType', 'documentIssuer', 'documentNumber', 'documentIssueDate', 'documentExpiryDate']);
 
 function hasAnyField(
   changes: ReadonlyArray<IndividualIdentityFieldChange>,
-  fields: ReadonlySet<IndividualIdentityField>,
+  fields: ReadonlySet<string>,
 ): boolean {
-  return changes.some((change) => fields.has(change.field));
+  return changes.some((c) => fields.has(c.field));
 }
 
 function buildAffectedDomains(
@@ -61,16 +43,13 @@ function buildAffectedDomains(
     domains.add('linkedProjects');
     domains.add('searchAndReporting');
   }
-
   if (hasAnyField(changes, IDENTITY_FIELDS)) {
     domains.add('searchAndReporting');
   }
-
-  if (changes.some((change) => change.field === 'amka')) {
+  if (changes.some((c) => c.field === 'amka')) {
     domains.add('ikaAttendance');
     domains.add('employmentCompliance');
   }
-
   if (hasAnyField(changes, REGULATED_FIELDS)) {
     domains.add('documentsAndIdentifiers');
   }
@@ -78,111 +57,90 @@ function buildAffectedDomains(
   return [...domains];
 }
 
+function extractFieldCategories(
+  changes: ReadonlyArray<IndividualIdentityFieldChange>,
+): ReadonlyArray<string> {
+  const categories = new Set<string>();
+  for (const change of changes) {
+    categories.add(change.category);
+  }
+  return [...categories];
+}
+
+// ============================================================================
+// PREVIEW
+// ============================================================================
+
 export async function previewContactIdentityImpact(
   contactId: string,
   changes: ReadonlyArray<IndividualIdentityFieldChange>,
 ): Promise<ContactIdentityImpactPreview> {
-  const db = getAdminFirestore();
-  const hasAmkaChange = changes.some((change) => change.field === 'amka');
-  const hasOtherSensitiveChange = hasAnyField(changes, IDENTITY_FIELDS) || hasAnyField(changes, REGULATED_FIELDS);
-
   if (changes.length === 0) {
     return {
-      mode: 'allow',
-      changes,
-      dependencies: [],
-      affectedDomains: [],
-      messageKey: 'identityImpact.messages.allow',
-      blockingCount: 0,
-      warningCount: 0,
+      mode: 'allow', changes, dependencies: [], affectedDomains: [],
+      messageKey: 'identityImpact.messages.allow', blockingCount: 0, warningCount: 0,
     };
   }
 
+  const hasAmkaChange = changes.some((c) => c.field === 'amka');
+  const fieldCategories = extractFieldCategories(changes);
+
   try {
-    const [projectLinksSnapshot, attendanceEventsSnapshot, employmentRecordsSnapshot] = await withTimeout(
-      Promise.all([
-        db.collection(COLLECTIONS.CONTACT_LINKS)
-          .where('sourceContactId', '==', contactId)
-          .where('targetEntityType', '==', ENTITY_TYPES.PROJECT)
-          .where('status', '==', 'active')
-          .select()
-          .get(),
-        db.collection(COLLECTIONS.ATTENDANCE_EVENTS)
-          .where('contactId', '==', contactId)
-          .select()
-          .get(),
-        db.collection(COLLECTIONS.EMPLOYMENT_RECORDS)
-          .where('contactId', '==', contactId)
-          .select()
-          .get(),
-      ]),
-      QUERY_TIMEOUT_MS,
+    const result = await computeContactImpact(
+      contactId, 'identityChange', 'individual', undefined, fieldCategories,
     );
 
-    const dependencies: ContactIdentityImpactDependency[] = [];
-    const projectLinks = projectLinksSnapshot.size;
-    const attendanceEvents = attendanceEventsSnapshot.size;
-    const employmentRecords = employmentRecordsSnapshot.size;
-
-    if (projectLinks > 0) {
-      dependencies.push({
-        id: 'projectLinks',
-        count: projectLinks,
-        mode: 'warn',
-      });
-    }
-
-    if (attendanceEvents > 0 && (hasAmkaChange || hasOtherSensitiveChange)) {
-      dependencies.push({
-        id: 'attendanceEvents',
-        count: attendanceEvents,
-        mode: hasAmkaChange ? 'block' : 'warn',
-      });
-    }
-
-    if (employmentRecords > 0 && (hasAmkaChange || hasOtherSensitiveChange)) {
-      dependencies.push({
-        id: 'employmentRecords',
-        count: employmentRecords,
-        mode: hasAmkaChange ? 'block' : 'warn',
-      });
-    }
+    // Map engine results to identity-specific dependency format
+    const dependencies: ContactIdentityImpactDependency[] = result.dependencies
+      .filter((dep) => ['projectLinks', 'attendanceEvents', 'employmentRecords', 'opportunities', 'properties', 'parking', 'storage', 'communications', 'projectsAsLandowner', 'contactRelationships'].includes(dep.id))
+      .map((dep) => ({
+        id: mapToLegacyDependencyId(dep.id),
+        count: dep.count,
+        mode: resolveIdentityMode(dep.id, hasAmkaChange),
+      }));
 
     const blockingCount = dependencies
-      .filter((dependency) => dependency.mode === 'block')
-      .reduce((sum, dependency) => sum + dependency.count, 0);
+      .filter((d) => d.mode === 'block')
+      .reduce((sum, d) => sum + d.count, 0);
     const warningCount = dependencies
-      .filter((dependency) => dependency.mode === 'warn')
-      .reduce((sum, dependency) => sum + dependency.count, 0);
+      .filter((d) => d.mode === 'warn')
+      .reduce((sum, d) => sum + d.count, 0);
 
     const affectedDomains = buildAffectedDomains(changes);
 
     let mode: ContactIdentityImpactPreview['mode'] = 'allow';
-    if (blockingCount > 0) {
-      mode = 'block';
-    } else if (warningCount > 0 || affectedDomains.length > 0) {
-      mode = 'warn';
-    }
+    if (blockingCount > 0) mode = 'block';
+    else if (warningCount > 0 || affectedDomains.length > 0) mode = 'warn';
 
     return {
-      mode,
-      changes,
-      dependencies,
-      affectedDomains,
-      messageKey: `identityImpact.messages.${mode}`,
-      blockingCount,
-      warningCount,
+      mode, changes, dependencies, affectedDomains,
+      messageKey: `identityImpact.messages.${mode}`, blockingCount, warningCount,
     };
-  } catch (error) {
-    logger.warn('Contact identity impact preview failed', error);
+  } catch {
     return {
-      mode: 'block',
-      changes,
-      dependencies: [],
-      affectedDomains: buildAffectedDomains(changes),
-      messageKey: 'identityImpact.messages.unavailable',
-      blockingCount: 0,
-      warningCount: 0,
+      mode: 'block', changes, dependencies: [], affectedDomains: buildAffectedDomains(changes),
+      messageKey: 'identityImpact.messages.unavailable', blockingCount: 0, warningCount: 0,
     };
   }
+}
+
+// ============================================================================
+// MAPPING HELPERS
+// ============================================================================
+
+function mapToLegacyDependencyId(engineId: string): 'projectLinks' | 'attendanceEvents' | 'employmentRecords' | 'contactRelationships' {
+  switch (engineId) {
+    case 'projectLinks': return 'projectLinks';
+    case 'attendanceEvents': return 'attendanceEvents';
+    case 'employmentRecords': return 'employmentRecords';
+    case 'contactRelationships': return 'contactRelationships';
+    default: return 'projectLinks';
+  }
+}
+
+function resolveIdentityMode(depId: string, hasAmkaChange: boolean): 'warn' | 'block' {
+  if ((depId === 'attendanceEvents' || depId === 'employmentRecords') && hasAmkaChange) {
+    return 'block';
+  }
+  return 'warn';
 }

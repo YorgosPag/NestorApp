@@ -201,6 +201,8 @@ export function useContactUpdateGuards({
           projects={companyIdentityDialog.projects}
           properties={companyIdentityDialog.properties}
           obligations={companyIdentityDialog.obligations}
+          parking={companyIdentityDialog.parking}
+          storage={companyIdentityDialog.storage}
           invoices={companyIdentityDialog.invoices}
           apyCertificates={companyIdentityDialog.apyCertificates}
           onConfirm={confirmCompanyIdentity}
@@ -214,6 +216,7 @@ export function useContactUpdateGuards({
           changes={communicationImpactDialog.changes}
           properties={communicationImpactDialog.properties}
           paymentPlans={communicationImpactDialog.paymentPlans}
+          communications={communicationImpactDialog.communications}
           projects={communicationImpactDialog.projects}
           invoices={communicationImpactDialog.invoices}
           apyCertificates={communicationImpactDialog.apyCertificates}

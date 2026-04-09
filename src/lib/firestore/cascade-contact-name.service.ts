@@ -17,11 +17,13 @@
 import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { CascadeResult } from './cascade-propagation.service';
+import { computeContactImpact, findDependencyCount } from './contact-impact-engine';
+import type { ContactType } from '@/types/contacts';
 
 const logger = createModuleLogger('CascadeContactName');
 
@@ -84,7 +86,7 @@ export async function propagateContactNameChange(
         const plansSnapshot = await db
           .collection(COLLECTIONS.PROPERTIES)
           .doc(unitDoc.id)
-          .collection(COLLECTIONS.PROPERTY_PAYMENT_PLANS)
+          .collection(SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS)
           .where('ownerContactId', '==', contactId)
           .select()
           .get();
@@ -105,7 +107,7 @@ export async function propagateContactNameChange(
       }
 
       if (planCount > 0) {
-        collections[COLLECTIONS.PROPERTY_PAYMENT_PLANS] = planCount;
+        collections[SUBCOLLECTIONS.PROPERTY_PAYMENT_PLANS] = planCount;
         totalUpdated += planCount;
       }
     } else {
@@ -129,12 +131,15 @@ export async function propagateContactNameChange(
 
 // ============================================================================
 // PREVIEW (DRY-RUN) — Counts only, no writes
+// Delegates to the unified ContactImpactEngine (ADR-297 SSoT)
 // ============================================================================
 
 export interface NameCascadePreview {
   readonly totalAffected: number;
   readonly properties: number;
   readonly paymentPlans: number;
+  readonly parking: number;
+  readonly storage: number;
 }
 
 /**
@@ -142,40 +147,21 @@ export interface NameCascadePreview {
  * Read-only — no Firestore writes. Used for confirmation dialogs.
  */
 export async function previewContactNameCascade(
-  contactId: string
+  contactId: string,
+  contactType: ContactType = 'individual',
 ): Promise<NameCascadePreview> {
-  const db = getAdminFirestore();
-
   try {
-    const unitsSnapshot = await db
-      .collection(COLLECTIONS.PROPERTIES)
-      .where('commercial.ownerContactIds', 'array-contains', contactId)
-      .select()
-      .get();
-
-    const properties = unitsSnapshot.size;
-    let paymentPlans = 0;
-
-    // Count payment plans in affected properties
-    for (const unitDoc of unitsSnapshot.docs) {
-      const plansSnapshot = await db
-        .collection(COLLECTIONS.PROPERTIES)
-        .doc(unitDoc.id)
-        .collection(COLLECTIONS.PROPERTY_PAYMENT_PLANS)
-        .where('ownerContactId', '==', contactId)
-        .select()
-        .get();
-
-      paymentPlans += plansSnapshot.size;
-    }
+    const result = await computeContactImpact(contactId, 'nameChange', contactType);
 
     return {
-      totalAffected: properties + paymentPlans,
-      properties,
-      paymentPlans,
+      totalAffected: result.totalAffected,
+      properties: findDependencyCount(result, 'properties'),
+      paymentPlans: findDependencyCount(result, 'propertyPaymentPlans'),
+      parking: findDependencyCount(result, 'parking'),
+      storage: findDependencyCount(result, 'storage'),
     };
   } catch (error) {
     logger.warn('Name cascade preview failed:', error);
-    return { totalAffected: 0, properties: 0, paymentPlans: 0 };
+    return { totalAffected: 0, properties: 0, paymentPlans: 0, parking: 0, storage: 0 };
   }
 }

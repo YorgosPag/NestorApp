@@ -335,6 +335,15 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
     const enumResult = t(enumKey);
     if (enumResult !== enumKey) return enumResult;
 
+    // 1b. Legacy composite format: "colleague — GEO PAGONIS" → translate first part
+    if (v.includes(' — ')) {
+      const [typeKey, ...rest] = v.split(' — ');
+      const typeTranslated = t(`audit.values.${typeKey}`);
+      if (typeTranslated !== `audit.values.${typeKey}`) {
+        return `${typeTranslated} — ${rest.join(' — ')}`;
+      }
+    }
+
     // 2. Country codes (GR → Ελλάδα, CY → Κύπρος, etc.)
     const countryMap: Record<string, string> = {
       GR: 'countries.greece', CY: 'countries.cyprus', US: 'countries.usa',
@@ -399,7 +408,11 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
                 className="rounded bg-muted/50 px-2.5 py-1 text-xs"
               >
                 <span className="font-medium">
-                  {change.label ?? change.field}
+                  {(() => {
+                    const i18nKey = `audit.fields.${change.field}`;
+                    const resolved = t(i18nKey);
+                    return resolved !== i18nKey ? resolved : (change.label ?? change.field);
+                  })()}
                 </span>
                 {": "}
                 <span

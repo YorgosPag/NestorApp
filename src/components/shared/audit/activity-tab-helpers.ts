@@ -22,20 +22,36 @@ export interface Stats {
 
 /** Translate enum-like type values to Greek for audit display */
 const TYPE_LABELS: Record<string, string> = {
-  // Phone types
+  // Phone types (individual)
   mobile: "Κινητό",
   home: "Σπίτι",
   work: "Εργασία",
   fax: "Φαξ",
   other: "Άλλο",
+  // Phone types (company/service)
+  main: "Κεντρικό",
+  department: "Τμήμα",
+  secretariat: "Γραμματεία",
+  sales: "Πωλήσεις",
+  support: "Υποστήριξη",
+  helpdesk: "Γραμμή Βοήθειας",
   // Email types
   personal: "Προσωπικό",
+  general: "Γενικό",
+  info: "Πληροφορίες",
+  billing: "Λογιστήριο",
+  complaints: "Παράπονα",
+  // KAD activity types
+  primary: "Κύρια",
+  secondary: "Δευτερεύουσα",
   // Address types
   headquarters: "Έδρα",
   branch: "Υποκατάστημα",
   warehouse: "Αποθήκη",
   // Website types
   company: "Εταιρική",
+  corporate: "Εταιρική",
+  ecommerce: "E-shop",
   portfolio: "Portfolio",
   blog: "Blog",
   // Social media types
@@ -118,6 +134,14 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
     if (details) parts.push(`(${details})`);
     if (obj.url) parts.push(`— ${obj.url}`);
     return parts.length > 0 ? parts.join(" ") : null;
+  }
+  // KadActivity → "01.11 — Καλλιέργεια δημητριακών (Κύρια)"
+  if ("code" in obj && "description" in obj) {
+    const code = String(obj.code || "");
+    const desc = String(obj.description || "");
+    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const suffix = typeLabel ? ` (${typeLabel})` : "";
+    return code ? `${code} — ${desc}${suffix}` : desc || null;
   }
   // EscoSkillValue → "Java"
   if ("preferredLabel" in obj) return String(obj.preferredLabel);

@@ -14,6 +14,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { deriveDeletionDependencies } from '@/config/contact-dependency-registry';
 
 // ============================================================================
 // TYPES
@@ -168,79 +169,9 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         skipCompanyFilter: true,
       },
     ],
-    // Blocking dependencies — user must delete manually
-    dependencies: [
-      {
-        collection: COLLECTIONS.PROPERTIES,
-        foreignKey: 'commercial.ownerContactIds',
-        label: 'Πωλημένα διαμερίσματα',
-        queryType: 'array-contains',
-      },
-      {
-        collection: COLLECTIONS.PARKING_SPACES,
-        foreignKey: 'commercial.ownerContactIds',
-        label: 'Πωλημένες θέσεις στάθμευσης',
-        queryType: 'array-contains',
-      },
-      {
-        collection: COLLECTIONS.STORAGE,
-        foreignKey: 'commercial.ownerContactIds',
-        label: 'Πωλημένες αποθήκες',
-        queryType: 'array-contains',
-      },
-      {
-        collection: COLLECTIONS.OPPORTUNITIES,
-        foreignKey: 'contactId',
-        label: 'Ευκαιρίες πώλησης',
-        queryType: 'equals',
-      },
-      {
-        collection: COLLECTIONS.COMMUNICATIONS,
-        foreignKey: 'contactId',
-        label: 'Επικοινωνίες',
-        queryType: 'equals',
-      },
-      {
-        collection: COLLECTIONS.APPOINTMENTS,
-        foreignKey: 'requester.contactId',
-        label: 'Ραντεβού',
-        queryType: 'equals',
-      },
-      {
-        collection: COLLECTIONS.EXTERNAL_IDENTITIES,
-        foreignKey: 'internalContactId',
-        label: 'Εξωτερικές ταυτότητες',
-        queryType: 'equals',
-        skipCompanyFilter: true,
-      },
-      {
-        collection: COLLECTIONS.EMPLOYMENT_RECORDS,
-        foreignKey: 'contactId',
-        label: 'Εγγραφές απασχόλησης',
-        queryType: 'equals',
-        skipCompanyFilter: true,
-      },
-      {
-        collection: COLLECTIONS.ATTENDANCE_EVENTS,
-        foreignKey: 'contactId',
-        label: 'Συμβάντα παρουσίας',
-        queryType: 'equals',
-      },
-      // 🛡️ ADR-247 F-2: Block deletion of contact used as linkedCompanyId in projects
-      {
-        collection: COLLECTIONS.PROJECTS,
-        foreignKey: 'linkedCompanyId',
-        label: 'Συνδεδεμένα έργα (ως εταιρεία)',
-        queryType: 'equals',
-      },
-      // 🛡️ Block deletion of contact used as landowner in projects
-      {
-        collection: COLLECTIONS.PROJECTS,
-        foreignKey: 'landownerContactIds',
-        label: 'Έργα (ως οικοπεδούχος)',
-        queryType: 'array-contains',
-      },
-    ],
+    // Blocking dependencies — DERIVED from unified ContactDependencyRegistry (ADR-145 SSoT)
+    // Single source of truth: src/config/contact-dependency-registry.ts
+    dependencies: deriveDeletionDependencies(),
   },
 
   // ─── PROPERTY ──────────────────────────────────────────────────────

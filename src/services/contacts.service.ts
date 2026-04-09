@@ -32,7 +32,7 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
 import { PhotoUploadService } from '@/services/photo-upload.service';
-import { computeEntityDiff, CONTACT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
+import { computeEntityDiff, CONTACT_TRACKED_FIELDS, getContactTrackedFieldsForType } from '@/config/audit-tracked-fields';
 import { cleanupOrphanedPhotos } from '@/utils/contactForm/photo-cleanup';
 
 // Re-export read operations for backward compatibility
@@ -198,6 +198,19 @@ export class ContactsService {
 
     logger.info('CONTACT CREATED', { contactId: id, contactType: sanitizedData.type });
 
+    // Audit trail: record creation (fire-and-forget)
+    const displayName = this.getDisplayName(sanitizedData as unknown as Contact);
+    apiClient.post(API_ROUTES.AUDIT_TRAIL.RECORD, {
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: id,
+      entityName: displayName,
+      action: 'created',
+      changes: [
+        { field: 'type', oldValue: null, newValue: sanitizedData.type },
+        { field: 'status', oldValue: null, newValue: 'active' },
+      ],
+    }).catch(() => {});
+
     RealtimeService.dispatch('CONTACT_CREATED', {
       contactId: id,
       contact: {
@@ -281,11 +294,12 @@ export class ContactsService {
       apiClient.post(`/api/contacts/${id}/name-cascade`, { newDisplayName: newName }).catch(() => {});
     }
 
-    // Audit trail (fire-and-forget)
+    // Audit trail (fire-and-forget) — type-aware fields prevent cross-type noise
+    const trackedFields = getContactTrackedFieldsForType(existingContact.type);
     const changes = computeEntityDiff(
       existingContact as unknown as Record<string, unknown>,
       enterpriseData as unknown as Record<string, unknown>,
-      CONTACT_TRACKED_FIELDS,
+      trackedFields,
     );
     if (changes.length > 0) {
       const isStatusChange = changes.some((c) => c.field === 'status');

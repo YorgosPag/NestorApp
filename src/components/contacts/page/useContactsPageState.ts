@@ -70,6 +70,7 @@ export function useContactsPageState() {
   const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
   const [filters, setFilters] = useState<ContactFilterState>(INITIAL_FILTERS);
   const [subscriptionRetry, setSubscriptionRetry] = useState(0);
+  const initialLoadDone = useRef(false);
 
   // ---------------------------------------------------------------------------
   // Data: Firestore real-time subscription
@@ -77,12 +78,16 @@ export function useContactsPageState() {
   useEffect(() => {
     if (authLoading || !user) return;
 
-    setIsLoading(true);
+    // Only show full-page loading on initial mount — refreshes are silent
+    if (!initialLoadDone.current) {
+      setIsLoading(true);
+    }
     setError(null);
 
     const unsubContacts = ContactsService.subscribeToContacts(
       (freshContacts) => {
         setContacts(freshContacts);
+        initialLoadDone.current = true;
         setIsLoading(false);
       },
       {
@@ -270,8 +275,9 @@ export function useContactsPageState() {
 
   const handleContactAdded = useCallback(async () => {
     setCreationMode(null);
-    refreshContacts();
-  }, [refreshContacts]);
+    // No refreshContacts() needed — the active Firestore real-time subscription
+    // already delivers the new contact without tearing down the UI.
+  }, []);
 
   const handleCancelCreation = useCallback(() => setCreationMode(null), []);
   const handleSelectContactType = useCallback((type: ContactType) => setCreationMode(type), []);

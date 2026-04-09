@@ -160,6 +160,7 @@ export async function getTrashedFiles(options: {
 }): Promise<FileRecord[]> {
   const constraints = [
     where('isDeleted', '==', true),
+    where('companyId', '==', options.companyId),
   ];
 
   if (options.entityType) {

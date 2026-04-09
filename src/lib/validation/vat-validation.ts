@@ -41,12 +41,34 @@ export const VAT_EXTRACT_REGEX = /\b\d{9}\b/;
 // ============================================================================
 
 /**
- * Validate a Greek VAT number (9 digits).
+ * Verify the check digit of a Greek VAT number using the official
+ * mod-11 weighted algorithm.
+ *
+ * Algorithm: Multiply digits 1–8 by 2^8, 2^7, ... 2^1 respectively,
+ * sum the products, take mod 11. If result is 10, check digit is 0.
+ * The 9th digit must equal the computed check digit.
+ *
+ * @param vat - Normalized 9-digit string (caller must ensure format)
+ */
+export function isValidGreekVatCheckDigit(vat: string): boolean {
+  let sum = 0;
+  for (let i = 0; i < 8; i++) {
+    sum += Number(vat[i]) * (1 << (8 - i)); // 2^8, 2^7, ..., 2^1
+  }
+  const remainder = sum % 11;
+  const checkDigit = remainder === 10 ? 0 : remainder;
+  return Number(vat[8]) === checkDigit;
+}
+
+/**
+ * Validate a Greek VAT number: format (9 digits) + check digit algorithm.
  * Strips spaces before testing.
  */
 export function isValidGreekVat(vat: string): boolean {
   const normalized = normalizeVat(vat);
-  return GREEK_VAT_REGEX.test(normalized);
+  if (!GREEK_VAT_REGEX.test(normalized)) return false;
+  if (normalized === '000000000') return false;
+  return isValidGreekVatCheckDigit(normalized);
 }
 
 /**

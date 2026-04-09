@@ -237,7 +237,7 @@
     },
     "vatDuplicate": "VAT {{vatNumber}} is already used by: {{contactName}}",
     "vatChecking": "Checking VAT...",
-    "vatInvalid": "VAT number must be exactly 9 digits",
+    "vatInvalid": "Invalid VAT number — please verify the 9 digits are correct",
     "arrayValidation": {
       "invalidEmail": "One or more email addresses are invalid.",
       "invalidPhone": "One or more phone numbers are invalid.",

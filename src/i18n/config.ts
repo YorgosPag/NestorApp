@@ -128,6 +128,7 @@ if (typeof window !== 'undefined') {
       'geo-canvas-drawing', // 🏢 Split from geo-canvas (ADR-280)
       'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets
       'accounting-setup',   // 🏢 Split from accounting (ADR-280)
+      'accounting-tax-offices', // 🏢 ΔΟΥ names + regions (DoyPicker — used in contacts)
       'obligations',   // 🏢 Obligations workspace translations
       'payments',      // 🏢 Payments module
       'payments-loans',     // 🏢 Split from payments (ADR-280)
