@@ -2464,6 +2464,25 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📸 PHOTO_SHARES — CRM Contact Channel Share History
+    // =========================================================================
+    // 📅 Added: 2026-04-09 — Photo Share History Feature
+    match /photo_shares/{shareId} {
+      // 📖 READ: Authenticated tenant members only
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly()
+                      || belongsToCompany(resource.data.companyId));
+      // ✍️ CREATE: Authenticated with companyId + contactId enforcement
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAll(['companyId', 'createdBy', 'contactId'])
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
+      // 📝 UPDATE: Immutable records — no updates
+      allow update: if false;
+      // 🗑️ DELETE: Super admin only
+      allow delete: if isSuperAdminOnly();
+    }
+
+    // =========================================================================
     // 💬 FILE_COMMENTS - INLINE COMMENTS (ADR-191 Phase 4.3)
     // =========================================================================
     // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)

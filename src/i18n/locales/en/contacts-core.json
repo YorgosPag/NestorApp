@@ -327,6 +327,28 @@
         "saveFirst": "Please save the contact first",
         "empty": "Not participating in any project",
         "info": "Linking is managed from Project Management"
+      },
+      "photoShareHistory": {
+        "title": "Sharing History",
+        "description": "Save the contact first to view sharing history"
+      }
+    }
+  },
+  "photoShareHistory": {
+    "empty": "No photos have been shared with this contact yet",
+    "stats": {
+      "totalShares": "Total Shares",
+      "totalPhotos": "Total Photos",
+      "byChannel": "By Channel"
+    },
+    "entry": {
+      "photosShared": "{count} photo shared",
+      "photosShared_plural": "{count} photos shared",
+      "via": "via {channel}",
+      "status": {
+        "sent": "Sent",
+        "failed": "Failed",
+        "partial": "Partial"
       }
     }
   }

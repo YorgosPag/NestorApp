@@ -23,6 +23,7 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { FieldValue } from 'firebase-admin/firestore';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import type { PipelineChannelValue } from '@/types/ai-pipeline';
 import type { ChannelMediaReplyParams } from '@/services/ai-pipeline/shared/channel-reply-types';
@@ -135,6 +136,7 @@ export const POST = withSensitiveRateLimit(
 
       // Send each photo — caption only on the first
       let lastResult = { success: false, error: 'No photos sent' };
+      let sentCount = 0;
 
       for (let i = 0; i < data.photoUrls.length; i++) {
         const mediaParams: ChannelMediaReplyParams = {
@@ -149,7 +151,9 @@ export const POST = withSensitiveRateLimit(
         const result = await sendChannelMediaReply(mediaParams);
         lastResult = { success: result.success, error: result.error };
 
-        if (!result.success) {
+        if (result.success) {
+          sentCount++;
+        } else {
           logger.warn('Channel media send failed', {
             shareId,
             photoIndex: i,
@@ -158,6 +162,33 @@ export const POST = withSensitiveRateLimit(
           });
           break;
         }
+      }
+
+      // Persist photo share record for history
+      const shareStatus = sentCount === data.photoUrls.length
+        ? 'sent'
+        : sentCount > 0 ? 'partial' : 'failed';
+
+      try {
+        await db.collection(COLLECTIONS.PHOTO_SHARES).doc(shareId).set({
+          contactId: data.contactId,
+          contactName: data.contactName,
+          channel: data.channel,
+          externalUserId: data.externalUserId,
+          photoUrls: data.photoUrls,
+          photoCount: data.photoUrls.length,
+          caption: data.caption ?? null,
+          status: shareStatus,
+          sentCount,
+          companyId: ctx.companyId,
+          createdBy: ctx.uid,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      } catch (writeError) {
+        logger.warn('Photo share record write failed (non-blocking)', {
+          shareId,
+          error: getErrorMessage(writeError),
+        });
       }
 
       // Audit trail (non-blocking)

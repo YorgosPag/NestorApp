@@ -13,6 +13,7 @@ import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicConta
 import { EntityFilesManager } from '@/components/shared/files';
 import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
+import { PhotoShareHistoryTab } from '@/components/contacts/tabs/PhotoShareHistoryTab';
 import { ProjectParticipationSection } from '@/components/contacts/details/ProjectParticipationSection';
 import { DoyPicker } from '@/components/ui/doy-picker';
 import { VatNumberField } from '@/components/contacts/fields/VatNumberField';
@@ -166,6 +167,13 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
         additionalData={{ disabled: false }}
       />
     ),
+
+    // ── Photo Share History ─────────────────────────────────────
+    photoShareHistory: () => {
+      const contactId = formData.id;
+      if (!contactId) return <div className="p-8 text-center text-muted-foreground"><p>{t('individual.sections.photoShareHistory.description')}</p></div>;
+      return <PhotoShareHistoryTab contactId={contactId} />;
+    },
 
     // ── History ────────────────────────────────────────────────
     history: () => {
