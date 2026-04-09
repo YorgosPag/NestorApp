@@ -218,7 +218,8 @@
 | 109 | `AUDIT` | `audit` | — | Audit trail |
 | 110 | `ERRORS` | `errors` | — | Error logging |
 | 111 | `SYSTEM_AUDIT_LOGS` | `system_audit_logs` | — | Webhook/system audit |
-| 112 | `ENTITY_AUDIT_TRAIL` | `entity_audit_trail` | ADR-195 | Per-entity change history |
+| 112 | `CLOUD_FUNCTION_AUDIT_LOG` | `audit_log` | — | Cloud Function audit log (orphan cleanup, system events) |
+| 113 | `ENTITY_AUDIT_TRAIL` | `entity_audit_trail` | ADR-195 | Per-entity change history |
 
 ### 3.16 Forms, Surveys & Search (4)
 
@@ -238,13 +239,14 @@
 | 119 | `BOT_INTENTS` | `bot_intents` | — | Bot intent definitions |
 | 120 | `VOICE_COMMANDS` | `voice_commands` | ADR-164 | Voice AI pipeline |
 
-### 3.18 Calendar & Scheduling (3)
+### 3.18 Calendar & Scheduling (4)
 
 | # | COLLECTIONS Key | Firestore Name | ADR | Σημειώσεις |
 |---|----------------|----------------|-----|------------|
 | 121 | `CALENDAR` | `calendar` | — | Calendar events |
 | 122 | `APPOINTMENTS` | `appointments` | — | Ραντεβού |
 | 123 | `BOOKINGS` | `bookings` | — | Κρατήσεις |
+| 124 | `BOOKING_SESSIONS` | `booking_sessions` | — | Telegram booking sessions |
 
 ### 3.19 Inventory & Assets (2)
 
@@ -333,7 +335,13 @@
 | `UNIT_GRANTS` | `grants` | `companies/{id}/units/{id}/grants` |
 | `COMPANY_AUDIT_LOGS` | `audit_logs` | `companies/{id}/audit_logs` |
 
-### 4.7 File & Ownership Subcollections
+### 4.7 Contact Banking Subcollections
+
+| Subcollection Key | Name | Path Pattern |
+|-------------------|------|-------------|
+| `BANK_ACCOUNTS` | `bankAccounts` | `contacts/{id}/bankAccounts` |
+
+### 4.8 File & Ownership Subcollections
 
 | Subcollection Key | Name | Path Pattern |
 |-------------------|------|-------------|
@@ -515,7 +523,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 |---|-----------|--------|-----------|
 | 1 | **HIGH** | Ασυνέπεια ονόματος: `obligation-sections` (live) vs `obligationSections` (κώδικας) | `COLLECTIONS.OBLIGATION_SECTIONS`, live Firestore |
 | 2 | Low | Hardcoded `'dxf_files'` string αντί `COLLECTIONS.CAD_FILES` | `src/database/migrations/003_*.ts` (line 325) |
-| 3 | Low | Cloud Functions χρησιμοποιούν τοπικά COLLECTIONS | `functions/src/index.ts` |
+| ~~3~~ | ~~Low~~ ✅ | ~~Cloud Functions χρησιμοποιούν τοπικά COLLECTIONS~~ — **FIXED 2026-04-09**: `functions/src/config/firestore-collections.ts` + `functions/src/config/enterprise-id.ts` created. All Cloud Functions now import centralized COLLECTIONS. | `functions/src/config/` |
 | 4 | Medium | `CAD_FILES` deprecated αλλά dual-write ακόμα ενεργό | Πολλαπλά αρχεία |
 | 5 | Info | 4 legacy layer collections χωρίς σχέδιο αποκομμάτωσης | `LAYERS`, `LAYER_GROUPS`, `PROPERTY_LAYERS`, `LAYER_EVENTS` |
 | 6 | Info | 47 collections ορισμένες χωρίς write operations (read-only ή pending impl) | Βλ. §7.4 |
@@ -529,7 +537,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 2. ~~**ΑΜΕΣΟ — Enterprise ID violations fix**~~ ✅ **FIXED 2026-03-24**: Όλα τα enterprise ID violations διορθώθηκαν (11 call sites σε 9 αρχεία). Νέοι generators: `generateEmploymentRecordId()` (`emprec`), `generateAppointmentId()` (`appt`), `generateRouteConfigId()` (`rcfg`)
 3. **Deprecation Plan**: Ορισμός χρονοδιαγράμματος sunset για `CAD_FILES` → `FILES`
 4. **Legacy Cleanup**: Αξιολόγηση αν τα 4 layer collections χρησιμοποιούνται ακόμα
-5. **Cloud Functions Sync**: Import COLLECTIONS constant στα Cloud Functions
+5. ~~**Cloud Functions Sync**: Import COLLECTIONS constant στα Cloud Functions~~ ✅ **DONE 2026-04-09**: `functions/src/config/firestore-collections.ts` created
 6. **Dead Collection Cleanup**: Αξιολόγηση αν οι 47 read-only collections χρειάζονται πραγματικά
 7. **Index Review**: Ποιες composite indexes δεν χρησιμοποιούνται πλέον;
 
@@ -736,3 +744,4 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 | 2026-03-24 | Εμπλουτισμός: Live DB σύγκριση (9 ενεργές collections), Write Operations Analysis (205+ ops σε 118+ αρχεία), Ασυνέπεια `obligation-sections`, 47 read-only collections, Critical Transaction Points |
 | 2026-03-24 | Enterprise ID Compliance Audit (§11): 70+ generators, 58 COMPLIANT collections, 11 EXEMPT, 1 VIOLATION (`employment_records` — `collRef.doc()` auto-ID), 47 read-only (N/A) |
 | 2026-03-24 | Δεύτερη έρευνα Enterprise ID: +2 VIOLATIONS εντοπίστηκαν — `system_audit_logs` & `audit_logs` subcollection χρησιμοποιούν `.add()` (auto-ID) στο `src/lib/auth/audit.ts` (lines 199, 762). Σύνολο: 3 παραβιάσεις |
+| 2026-04-09 | SSoT κεντρικοποίηση collection names: +3 νέα entries (`BOOKING_SESSIONS`, `CLOUD_FUNCTION_AUDIT_LOG`, `BANK_ACCOUNTS` subcol). Cloud Functions mirror (`functions/src/config/firestore-collections.ts` + `enterprise-id.ts`). Fix `DXF_OVERLAY_LEVELS` name (`dxfOverlayLevels` → `dxf-overlay-levels`). 15+ αρχεία migrated από hardcoded strings → `COLLECTIONS.*` / `SUBCOLLECTIONS.*`. SSoT baseline updated (23 violations resolved). |

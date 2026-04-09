@@ -6,7 +6,7 @@
 
 **📊 Quick Stats**: 34 Enterprise Systems + Accounting Subapp (11 ADRs) | 24,000+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-281 SSOT Soft-Delete System — Google-level trash lifecycle for ALL entities. softDelete/restore/permanentDelete engine, 30-day auto-purge cron, centralized API routes (2026-04-03)
+> **🆕 Latest**: ADR-260 Collection Names SSoT Centralization — 15+ files migrated from hardcoded strings to `COLLECTIONS.*`, Cloud Functions mirror, archive view for files (Google Drive pattern) (2026-04-09)
 
 ---
 
@@ -201,6 +201,6 @@
 
 > **💡 Tip**: Bookmark this page για quick navigation στα centralized systems!
 >
-> **🔄 Last Updated**: 2026-03-18
+> **🔄 Last Updated**: 2026-04-09
 >
 > **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)
