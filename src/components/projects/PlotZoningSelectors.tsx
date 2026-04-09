@@ -45,7 +45,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                     <SelectContent>
                         {getBooleanOptions().map((option) => (
                             <SelectItem key={option.value} value={option.value}>
-                                {option.label}
+                                {t(option.label)}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -60,7 +60,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                     <SelectContent>
                         {getBooleanOptions().map((option) => (
                             <SelectItem key={option.value} value={option.value}>
-                                {option.label}
+                                {t(option.label)}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -75,7 +75,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                     <SelectContent>
                         {getBooleanOptions().map((option) => (
                             <SelectItem key={option.value} value={option.value}>
-                                {option.label}
+                                {t(option.label)}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -90,7 +90,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                     <SelectContent>
                         {getBooleanOptions().map((option) => (
                             <SelectItem key={option.value} value={option.value}>
-                                {option.label}
+                                {t(option.label)}
                             </SelectItem>
                         ))}
                     </SelectContent>

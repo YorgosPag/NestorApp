@@ -76,9 +76,13 @@ export async function getPhotoSharesByContact(
       } satisfies PhotoShareRecord;
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode = (error as { code?: string }).code ?? 'unknown';
     logger.error('Failed to fetch photo share history', {
       contactId,
-      error: error instanceof Error ? error.message : 'Unknown',
+      companyId,
+      errorCode,
+      errorMessage,
     });
     return [];
   }

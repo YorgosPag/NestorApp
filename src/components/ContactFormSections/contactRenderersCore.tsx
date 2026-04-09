@@ -168,18 +168,16 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       />
     ),
 
-    // ── Photo Share History ─────────────────────────────────────
-    photoShareHistory: () => {
-      const contactId = formData.id;
-      if (!contactId) return <div className="p-8 text-center text-muted-foreground"><p>{t('individual.sections.photoShareHistory.description')}</p></div>;
-      return <PhotoShareHistoryTab contactId={contactId} />;
-    },
-
-    // ── History ────────────────────────────────────────────────
+    // ── History (Audit Trail + Photo Share History) ──────────────
     history: () => {
       const contactId = formData.id;
       if (!contactId) return <div className="p-8 text-center text-muted-foreground"><p>{t('individual.sections.history.description')}</p></div>;
-      return <ActivityTab entityType={ENTITY_TYPES.CONTACT} entityId={contactId} />;
+      return (
+        <>
+          <PhotoShareHistoryTab contactId={contactId} />
+          <ActivityTab entityType={ENTITY_TYPES.CONTACT} entityId={contactId} />
+        </>
+      );
     },
   };
 }

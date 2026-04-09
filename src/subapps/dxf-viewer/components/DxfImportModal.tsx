@@ -221,7 +221,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                                     <SelectContent>
                                         {getEncodingOptions().map((option) => (
                                             <SelectItem key={option.value} value={option.value}>
-                                                <span>{option.label}</span>
+                                                <span>{t(option.label)}</span>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

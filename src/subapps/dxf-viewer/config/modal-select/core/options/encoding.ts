@@ -1,68 +1,57 @@
 /**
  * @fileoverview Encoding & Boolean Options Module
  * @description Extracted from modal-select.ts - ENCODING & BOOLEAN OPTIONS
+ * Values are i18n keys (dxf-viewer namespace) — consumers must use t() to render.
  * @author Claude (Anthropic AI)
  * @date 2025-12-28
- * @version 1.0.0 - ENTERPRISE MODULAR ARCHITECTURE
- * @compliance CLAUDE.md Enterprise Standards - MODULAR SPLITTING
+ * @version 1.1.0 - i18n keys (ADR-296 Phase 4H)
+ * @compliance CLAUDE.md Enterprise Standards - MODULAR SPLITTING, i18n SSoT
  */
 
 // ====================================================================
-// ENCODING OPTIONS - 🏢 ENTERPRISE CENTRALIZED
+// ENCODING OPTIONS - i18n keys (dxf-viewer namespace)
 // ====================================================================
 
-/**
- * Standardized encoding options για DXF imports
- */
 export const MODAL_SELECT_ENCODING_OPTIONS = [
   {
     value: 'windows-1253',
-    label: 'Windows-1253 (Greek)',
-    description: 'Για σωστή εμφάνιση Ελληνικών χαρακτήρων'
+    label: 'encoding.windows1253',
+    description: 'encoding.windows1253Desc'
   },
   {
     value: 'UTF-8',
-    label: 'UTF-8 (Προεπιλογή)',
-    description: 'Διεθνής κωδικοποίηση Unicode'
+    label: 'encoding.utf8',
+    description: 'encoding.utf8Desc'
   },
   {
     value: 'windows-1252',
-    label: 'Windows-1252 (Western)',
-    description: 'Λατινικοί χαρακτήρες'
+    label: 'encoding.windows1252',
+    description: 'encoding.windows1252Desc'
   },
   {
     value: 'ISO-8859-7',
-    label: 'ISO-8859-7 (Greek)',
-    description: 'Παλαιότερη Ελληνική κωδικοποίηση'
+    label: 'encoding.iso88597',
+    description: 'encoding.iso88597Desc'
   }
 ] as const;
 
 // ====================================================================
-// BOOLEAN OPTIONS - 🏢 ENTERPRISE CENTRALIZED
+// BOOLEAN OPTIONS - i18n keys (dxf-viewer namespace)
 // ====================================================================
 
-/**
- * Standardized boolean options (Ναι/Όχι)
- */
 export const MODAL_SELECT_BOOLEAN_OPTIONS = [
-  { value: 'yes', label: 'Ναι' },
-  { value: 'no', label: 'Όχι' }
+  { value: 'yes', label: 'common:boolean.yes' },
+  { value: 'no', label: 'common:boolean.no' }
 ] as const;
 
 // ====================================================================
-// ACCESSOR FUNCTIONS - 🏢 ENTERPRISE CENTRALIZED
+// ACCESSOR FUNCTIONS
 // ====================================================================
 
-/**
- * Get encoding options για DXF imports
- */
 export function getEncodingOptions() {
   return MODAL_SELECT_ENCODING_OPTIONS;
 }
 
-/**
- * Get boolean options (Ναι/Όχι)
- */
 export function getBooleanOptions() {
   return MODAL_SELECT_BOOLEAN_OPTIONS;
 }

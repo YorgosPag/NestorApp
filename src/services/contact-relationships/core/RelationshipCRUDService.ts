@@ -17,6 +17,7 @@ import {
 import { Contact } from '@/types/contacts';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
+import { recordRelationshipAudit } from './relationship-audit';
 import { RelationshipValidationService } from './RelationshipValidationService';
 import {
   getContactById,
@@ -213,6 +214,16 @@ export class RelationshipCRUDService {
       }
     }
 
+    // Audit trail for both contacts (fire-and-forget)
+    recordRelationshipAudit({
+      sourceContactId: relationship.sourceContactId,
+      targetContactId: relationship.targetContactId,
+      relationshipType: relationship.relationshipType,
+      action: 'linked',
+      sourceContact: sourceContact,
+      targetContact: targetContact,
+    });
+
     logger.info('✅ CRUD: Relationship created successfully', relationship.id);
     return relationship;
   }
@@ -319,6 +330,14 @@ export class RelationshipCRUDService {
       // Update in database
       await FirestoreRelationshipAdapter.updateRelationship(relationshipId, updated);
 
+      // Audit trail for both contacts (fire-and-forget)
+      recordRelationshipAudit({
+        sourceContactId: existing.sourceContactId,
+        targetContactId: existing.targetContactId,
+        relationshipType: existing.relationshipType,
+        action: 'updated',
+      });
+
       logger.info('✅ CRUD: Relationship updated successfully:', relationshipId);
       return updated;
 
@@ -374,6 +393,14 @@ export class RelationshipCRUDService {
       ...updates
     };
 
+    // Audit trail for both contacts (fire-and-forget)
+    recordRelationshipAudit({
+      sourceContactId: relationship.sourceContactId,
+      targetContactId: relationship.targetContactId,
+      relationshipType: relationship.relationshipType,
+      action: 'unlinked',
+    });
+
     logger.info('✅ CRUD: Relationship terminated successfully:', relationshipId);
     return terminatedRelationship;
   }
@@ -396,6 +423,15 @@ export class RelationshipCRUDService {
 
       // Hard delete the relationship from Firestore
       await FirestoreRelationshipAdapter.deleteRelationship(relationshipId);
+
+      // Audit trail for both contacts (fire-and-forget)
+      recordRelationshipAudit({
+        sourceContactId: relationship.sourceContactId,
+        targetContactId: relationship.targetContactId,
+        relationshipType: relationship.relationshipType,
+        action: 'unlinked',
+      });
+
       logger.info('✅ CRUD: Relationship hard-deleted:', relationshipId);
 
       // Cascade: delete reciprocal relationship (reverse direction, same type or mapped type)

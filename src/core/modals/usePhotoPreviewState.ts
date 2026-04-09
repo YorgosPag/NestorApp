@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import type React from 'react';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
-import { useFocusTrap, announceToScreenReader } from '@/utils/accessibility';
+import { announceToScreenReader } from '@/utils/accessibility';
 import { FileNamingService } from '@/services/FileNamingService';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -72,12 +72,10 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
   const [, setImageDimensions] = useState({ width: 0, height: 0, aspectRatio: 1 });
 
   // --- Focus trap ---
-  const focusTrapRef = useFocusTrap<HTMLDivElement>(open, {
-    autoFocus: true,
-    restoreFocus: true,
-    escapeDeactivates: true,
-    onEscape: () => onOpenChange(false)
-  });
+  // Radix Dialog provides built-in focus trap + escape handling.
+  // A custom useFocusTrap on top conflicts when a nested Dialog (ShareModal) opens,
+  // causing infinite focus recursion (Maximum call stack size exceeded).
+  const focusTrapRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomRef = useRef(zoom);

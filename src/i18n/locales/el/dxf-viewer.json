@@ -88,6 +88,16 @@
     "details": "Λεπτομέρειες:",
     "timestamp": "Χρονοσήμανση:"
   },
+  "encoding": {
+    "windows1253": "Windows-1253 (Greek)",
+    "windows1253Desc": "Για σωστή εμφάνιση Ελληνικών χαρακτήρων",
+    "utf8": "UTF-8 (Προεπιλογή)",
+    "utf8Desc": "Διεθνής κωδικοποίηση Unicode",
+    "windows1252": "Windows-1252 (Western)",
+    "windows1252Desc": "Λατινικοί χαρακτήρες",
+    "iso88597": "ISO-8859-7 (Greek)",
+    "iso88597Desc": "Παλαιότερη Ελληνική κωδικοποίηση"
+  },
   "contextMenu": {
     "flipArc": "Αντιστροφή"
   },

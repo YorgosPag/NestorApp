@@ -399,18 +399,6 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 6.5. ΙΣΤΟΡΙΚΟ ΚΟΙΝΟΠΟΙΗΣΗΣ ΦΩΤΟΓΡΑΦΙΩΝ
-  // -------------------------------------------------------------------------
-  {
-    id: 'photoShareHistory',
-    title: 'individual.sections.photoShareHistory.title',
-    icon: 'share-2',
-    description: 'individual.sections.photoShareHistory.description',
-    order: 6.5,
-    fields: [],
-  },
-
-  // -------------------------------------------------------------------------
   // 7. ΣΧΕΣΕΙΣ - 🏢 ENTERPRISE RELATIONSHIP MANAGEMENT
   // -------------------------------------------------------------------------
   {

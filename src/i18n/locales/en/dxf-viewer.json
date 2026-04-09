@@ -88,6 +88,16 @@
     "details": "Details:",
     "timestamp": "Timestamp:"
   },
+  "encoding": {
+    "windows1253": "Windows-1253 (Greek)",
+    "windows1253Desc": "For correct display of Greek characters",
+    "utf8": "UTF-8 (Default)",
+    "utf8Desc": "International Unicode encoding",
+    "windows1252": "Windows-1252 (Western)",
+    "windows1252Desc": "Latin characters",
+    "iso88597": "ISO-8859-7 (Greek)",
+    "iso88597Desc": "Older Greek encoding"
+  },
   "contextMenu": {
     "flipArc": "Reverse"
   },

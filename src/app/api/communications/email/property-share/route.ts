@@ -7,6 +7,10 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/server/admin/admin-guards';
 import { getErrorMessage } from '@/lib/error-utils';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { FieldValue } from 'firebase-admin/firestore';
+import { generateShareId } from '@/services/enterprise-id.service';
 import {
   type PropertyShareEmailRequest,
   RATE_LIMIT_MAX_REQUESTS,
@@ -129,6 +133,38 @@ export const POST = withAuth<PropertyShareResponse>(
         const result = await EmailService.sendPropertyShareEmail(emailRequest);
         const duration = Date.now() - startTime;
         logEmailAttempt(clientIP, true, data, undefined, duration);
+
+        // Persist photo share record for history (non-blocking)
+        if (requestData.isPhoto && requestData.sourceContactId) {
+          try {
+            const db = getAdminFirestore();
+            if (db) {
+              const shareId = generateShareId();
+              const photoUrls = Array.isArray(requestData.photoUrls)
+                ? (requestData.photoUrls as unknown[]).filter((u): u is string => typeof u === 'string')
+                : data.photoUrl ? [data.photoUrl] : [];
+
+              await db.collection(COLLECTIONS.PHOTO_SHARES).doc(shareId).set({
+                contactId: requestData.sourceContactId as string,
+                contactName: (requestData.sourceContactName as string) ?? '',
+                channel: 'email',
+                externalUserId: data.recipients![0],
+                photoUrls,
+                photoCount: photoUrls.length,
+                caption: data.personalMessage ?? null,
+                status: 'sent',
+                sentCount: photoUrls.length,
+                companyId: ctx.companyId,
+                createdBy: ctx.uid,
+                createdAt: FieldValue.serverTimestamp(),
+              });
+            }
+          } catch (shareWriteError) {
+            logger.warn('Photo share record write failed (non-blocking)', {
+              error: getErrorMessage(shareWriteError),
+            });
+          }
+        }
 
         // Audit trail
         await logAuditEvent(ctx, 'email_sent', 'communications.property-share.send', 'api', {

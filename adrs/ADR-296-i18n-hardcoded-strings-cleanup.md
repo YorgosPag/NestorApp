@@ -302,7 +302,7 @@ Data files with domain-specific Greek names use **structured locale entries**:
 | Phase 4E | DONE | 2026-04-09 | — | accounting data: 114 violations fixed, 6 files |
 | Phase 4F | DONE | 2026-04-09 | — | API routes + geo config: 20 violations fixed, 3 files |
 | Phase 4G | DONE | 2026-04-09 | — | dxf-viewer toolbar: 82 violations fixed, 3 files |
-| Phase 4H | PENDING | — | — | dxf-viewer encoding |
+| Phase 4H | DONE | 2026-04-09 | — | dxf-viewer encoding: 11 violations fixed, 4 files |
 | Phase 4I | PENDING | — | — | modal-select Part 1 |
 | Phase 4J | PENDING | — | — | modal-select Part 2 |
 
@@ -313,6 +313,7 @@ Data files with domain-specific Greek names use **structured locale entries**:
 | Date | Change |
 |------|--------|
 | 2026-04-09 | ADR-296 created. Full audit: 1,042 violations, 248 exempt, 794 to fix in 10 phases. |
+| 2026-04-09 | Phase 4H DONE: dxf-viewer encoding config — 11 violations fixed. encoding.ts: 4 encoding labels + 4 descriptions + 2 boolean labels → i18n keys (encoding.* namespace in dxf-viewer, common:boolean.yes/no). Consumers updated: DxfImportModal.tsx + PlotZoningSelectors.tsx wrap option.label with t(). 8 new locale keys in el/en dxf-viewer.json. |
 | 2026-04-09 | Phase 4G DONE: dxf-viewer toolbar config — 82 violations fixed. configurations.ts fully rewritten: 35 action button labels, 15 modal strings, 5 headers, 3 counters, 5 nav actions, 4 status messages, 4 confirm dialog → i18n keys (toolbar.* namespace). ~80 new locale keys in el/en dxf-viewer.json. |
 | 2026-04-09 | Phase 4F DONE: API routes + geographic config — 20 violations fixed. reconcile/route.ts (9 Greek error messages→English, error codes preserved), setup/route.ts (1 Greek law ref→English), geographic-config.ts (4 Greek city/region fallbacks→English, env vars override in production). |
 | 2026-04-09 | Phase 4E DONE: accounting data — 114 violations fixed. greek-tax-offices.ts fully refactored: 96 office names + 16 regions → i18n keys via doy() helper + region constants. New namespace `accounting-tax-offices` (el+en). DoyPicker + utility-handler consumers updated. getTaxOfficeDisplayName/getRegionDisplayName helpers added. |
