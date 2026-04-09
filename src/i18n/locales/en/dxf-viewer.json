@@ -112,5 +112,62 @@
     "copyFailed": "Copy failed",
     "perfMonitorOn": "FPS, Memory, Rendering metrics active",
     "perfMonitorOff": "Better performance - monitoring disabled"
+  },
+  "toolbar": {
+    "actions": {
+      "save": "Save",
+      "create": "Create",
+      "add": "Add",
+      "submit": "Submit",
+      "edit": "Edit",
+      "update": "Update",
+      "cancel": "Cancel",
+      "close": "Close",
+      "delete": "Delete",
+      "remove": "Remove",
+      "archive": "Archive",
+      "restore": "Restore",
+      "save_loading": "Saving...",
+      "delete_loading": "Deleting...",
+      "archive_loading": "Archiving...",
+      "restore_loading": "Restoring...",
+      "refresh": "Refresh",
+      "reset": "Reset",
+      "download": "Download",
+      "upload": "Upload",
+      "export": "Export",
+      "import": "Import",
+      "call": "Call",
+      "email": "Email",
+      "message": "Message",
+      "sms": "SMS",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "enable": "Enable",
+      "disable": "Disable",
+      "favorite": "Favorite",
+      "sort_asc": "Sort Ascending",
+      "sort_desc": "Sort Descending",
+      "sort": "Sort",
+      "favorites": "Favorites",
+      "archived": "Archived",
+      "help": "Help",
+      "info": "Info"
+    },
+    "desktop": {
+      "modals": {
+        "company": { "title": "Select Company", "placeholder": "Search companies...", "emptyMessage": "No companies found" },
+        "project": { "title": "Select Project", "placeholder": "Search projects...", "emptyMessage": "No projects found" },
+        "building": { "title": "Select Building", "placeholder": "Search buildings...", "emptyMessage": "No buildings found" },
+        "floor": { "title": "Select Floor", "placeholder": "Search floors...", "emptyMessage": "No floors found" },
+        "unit": { "title": "Select Unit", "placeholder": "Search units...", "emptyMessage": "No units found" }
+      },
+      "headers": { "companies": "Companies", "projects": "Projects", "buildings": "Buildings", "floors": "Floors", "units": "Units" },
+      "counters": { "total": "Total", "selected": "Selected", "filtered": "Filtered" },
+      "navActions": { "connect": "Connect", "disconnect": "Disconnect", "edit": "Edit", "delete": "Delete", "view_details": "View Details" },
+      "status": { "loading": "Loading...", "empty": "No data available", "error": "Loading error", "success": "Completed successfully" },
+      "confirm": { "title": "Confirm Action", "message": "Are you sure you want to proceed?", "confirmLabel": "Confirm", "cancelLabel": "Cancel" }
+    }
   }
 }

@@ -1,101 +1,94 @@
 /**
  * @fileoverview Toolbar Configurations Module
  * @description Extracted from modal-select.ts - TOOLBAR CONFIGURATIONS
+ *   All user-facing strings are i18n keys resolved via t() at render time.
  * @author Claude (Anthropic AI)
  * @date 2025-12-28
- * @version 1.0.0 - ENTERPRISE MODULAR ARCHITECTURE
- * @compliance CLAUDE.md Enterprise Standards - MODULAR SPLITTING
+ * @version 2.0.0 - i18n key pattern (ADR-296 Phase 4G)
+ * @compliance CLAUDE.md Enterprise Standards - MODULAR SPLITTING, i18n SSoT
  */
 
 // ====================================================================
-// TOOLBAR CONFIGURATIONS - 🏢 ENTERPRISE CENTRALIZED
+// TOOLBAR CONFIGURATIONS - i18n KEYS (namespace: dxf-viewer)
 // ====================================================================
 
 /**
- * Action Buttons Labels - Centralized για ActionButtons.tsx
- * ✅ ENTERPRISE: Single source of truth για όλα τα action button labels
+ * Action Buttons Labels — i18n keys for ActionButtons.tsx
+ * Resolve at render time: t(MODAL_SELECT_ACTION_BUTTONS_LABELS.save, { ns: 'dxf-viewer' })
  */
 export const MODAL_SELECT_ACTION_BUTTONS_LABELS = {
   // Primary Actions
-  save: 'Αποθήκευση',
-  create: 'Δημιουργία',
-  add: 'Προσθήκη',
-  submit: 'Υποβολή',
+  save: 'toolbar.actions.save',
+  create: 'toolbar.actions.create',
+  add: 'toolbar.actions.add',
+  submit: 'toolbar.actions.submit',
 
   // Secondary Actions
-  edit: 'Επεξεργασία',
-  update: 'Ενημέρωση',
-  cancel: 'Ακύρωση',
-  close: 'Κλείσιμο',
+  edit: 'toolbar.actions.edit',
+  update: 'toolbar.actions.update',
+  cancel: 'toolbar.actions.cancel',
+  close: 'toolbar.actions.close',
 
   // Destructive Actions
-  delete: 'Διαγραφή',
-  remove: 'Αφαίρεση',
-  archive: 'Αρχειοθέτηση',
-  restore: 'Επαναφορά',
+  delete: 'toolbar.actions.delete',
+  remove: 'toolbar.actions.remove',
+  archive: 'toolbar.actions.archive',
+  restore: 'toolbar.actions.restore',
 
-  // Loading States για Actions
-  save_loading: 'Αποθήκευση...',
-  delete_loading: 'Διαγραφή...',
-  archive_loading: 'Αρχειοθέτηση...',
-  restore_loading: 'Επαναφορά...',
+  // Loading States
+  save_loading: 'toolbar.actions.save_loading',
+  delete_loading: 'toolbar.actions.delete_loading',
+  archive_loading: 'toolbar.actions.archive_loading',
+  restore_loading: 'toolbar.actions.restore_loading',
 
   // Utility Actions
-  refresh: 'Ανανέωση',
-  reset: 'Επαναφορά',
-  download: 'Λήψη',
-  upload: 'Μεταφόρτωση',
-  export: 'Εξαγωγή',
-  import: 'Εισαγωγή',
+  refresh: 'toolbar.actions.refresh',
+  reset: 'toolbar.actions.reset',
+  download: 'toolbar.actions.download',
+  upload: 'toolbar.actions.upload',
+  export: 'toolbar.actions.export',
+  import: 'toolbar.actions.import',
 
   // Communication Actions
-  call: 'Κλήση',
-  email: 'Email',
-  message: 'Μήνυμα',
-  sms: 'SMS',
+  call: 'toolbar.actions.call',
+  email: 'toolbar.actions.email',
+  message: 'toolbar.actions.message',
+  sms: 'toolbar.actions.sms',
 
   // Navigation Actions
-  back: 'Πίσω',
-  next: 'Επόμενο',
-  previous: 'Προηγούμενο',
+  back: 'toolbar.actions.back',
+  next: 'toolbar.actions.next',
+  previous: 'toolbar.actions.previous',
 
   // State Actions
-  enable: 'Ενεργοποίηση',
-  disable: 'Απενεργοποίηση',
-  favorite: 'Αγαπημένο',
+  enable: 'toolbar.actions.enable',
+  disable: 'toolbar.actions.disable',
+  favorite: 'toolbar.actions.favorite',
 
   // Sorting Actions
-  sort_asc: 'Αύξουσα Ταξινόμηση',
-  sort_desc: 'Φθίνουσα Ταξινόμηση',
-  sort: 'Ταξινόμηση',
+  sort_asc: 'toolbar.actions.sort_asc',
+  sort_desc: 'toolbar.actions.sort_desc',
+  sort: 'toolbar.actions.sort',
 
   // Filter Actions
-  favorites: 'Αγαπημένα',
-  archived: 'Αρχειοθετημένα',
+  favorites: 'toolbar.actions.favorites',
+  archived: 'toolbar.actions.archived',
 
   // Help Actions
-  help: 'Βοήθεια',
-  info: 'Πληροφορίες'
+  help: 'toolbar.actions.help',
+  info: 'toolbar.actions.info',
 } as const;
 
 // ====================================================================
-// DESKTOP NAVIGATION CONFIGURATIONS - 🏢 ENTERPRISE CENTRALIZED
+// DESKTOP NAVIGATION CONFIGURATIONS - i18n KEYS
 // ====================================================================
 
-/**
- * Desktop Connection Modals Configuration Type
- * ✅ ENTERPRISE: Type-safe modal configuration structure
- */
 export interface DesktopConnectionModalConfig {
   readonly title: string;
   readonly placeholder: string;
   readonly emptyMessage: string;
 }
 
-/**
- * Desktop Connection Modals Collection Type
- * ✅ ENTERPRISE: Complete modal configuration map
- */
 export interface DesktopConnectionModalsConfig {
   readonly company: DesktopConnectionModalConfig;
   readonly project: DesktopConnectionModalConfig;
@@ -104,10 +97,6 @@ export interface DesktopConnectionModalsConfig {
   readonly unit: DesktopConnectionModalConfig;
 }
 
-/**
- * Desktop Navigation Headers Configuration Type
- * ✅ ENTERPRISE: Type-safe navigation headers
- */
 export interface DesktopNavigationHeadersConfig {
   readonly companies: string;
   readonly projects: string;
@@ -116,20 +105,12 @@ export interface DesktopNavigationHeadersConfig {
   readonly units: string;
 }
 
-/**
- * Desktop Counters Configuration Type
- * ✅ ENTERPRISE: Type-safe counter labels
- */
 export interface DesktopCountersConfig {
   readonly total: string;
   readonly selected: string;
   readonly filtered: string;
 }
 
-/**
- * Desktop Navigation Actions Configuration Type
- * ✅ ENTERPRISE: Type-safe navigation actions
- */
 export interface DesktopNavigationActionsConfig {
   readonly connect: string;
   readonly disconnect: string;
@@ -138,10 +119,6 @@ export interface DesktopNavigationActionsConfig {
   readonly view_details: string;
 }
 
-/**
- * Desktop Status Messages Configuration Type
- * ✅ ENTERPRISE: Type-safe status messages
- */
 export interface DesktopStatusMessagesConfig {
   readonly loading: string;
   readonly empty: string;
@@ -149,10 +126,6 @@ export interface DesktopStatusMessagesConfig {
   readonly success: string;
 }
 
-/**
- * Desktop Confirmation Dialog Configuration Type
- * ✅ ENTERPRISE: Type-safe confirmation dialog
- */
 export interface DesktopConfirmationDialogConfig {
   readonly title: string;
   readonly message: string;
@@ -161,117 +134,89 @@ export interface DesktopConfirmationDialogConfig {
 }
 
 // ====================================================================
-// DESKTOP CONFIGURATION FUNCTIONS - 🏢 ENTERPRISE CENTRALIZED
+// DESKTOP CONFIGURATION FUNCTIONS - i18n KEYS
 // ====================================================================
 
-/**
- * Desktop Connection Modals Configuration
- * ✅ CENTRALIZED: για DesktopMultiColumn connection modals
- */
 export function getDesktopConnectionModals(): DesktopConnectionModalsConfig {
   return {
     company: {
-      title: 'Επιλογή Εταιρείας',
-      placeholder: 'Αναζήτηση εταιρείας...',
-      emptyMessage: 'Δεν βρέθηκαν εταιρείες'
+      title: 'toolbar.desktop.modals.company.title',
+      placeholder: 'toolbar.desktop.modals.company.placeholder',
+      emptyMessage: 'toolbar.desktop.modals.company.emptyMessage',
     },
     project: {
-      title: 'Επιλογή Έργου',
-      placeholder: 'Αναζήτηση έργου...',
-      emptyMessage: 'Δεν βρέθηκαν έργα'
+      title: 'toolbar.desktop.modals.project.title',
+      placeholder: 'toolbar.desktop.modals.project.placeholder',
+      emptyMessage: 'toolbar.desktop.modals.project.emptyMessage',
     },
     building: {
-      title: 'Επιλογή Κτιρίου',
-      placeholder: 'Αναζήτηση κτιρίου...',
-      emptyMessage: 'Δεν βρέθηκαν κτίρια'
+      title: 'toolbar.desktop.modals.building.title',
+      placeholder: 'toolbar.desktop.modals.building.placeholder',
+      emptyMessage: 'toolbar.desktop.modals.building.emptyMessage',
     },
     floor: {
-      title: 'Επιλογή Ορόφου',
-      placeholder: 'Αναζήτηση ορόφου...',
-      emptyMessage: 'Δεν βρέθηκαν όροφοι'
+      title: 'toolbar.desktop.modals.floor.title',
+      placeholder: 'toolbar.desktop.modals.floor.placeholder',
+      emptyMessage: 'toolbar.desktop.modals.floor.emptyMessage',
     },
     unit: {
-      title: 'Επιλογή Μονάδας',
-      placeholder: 'Αναζήτηση μονάδας...',
-      emptyMessage: 'Δεν βρέθηκαν μονάδες'
-    }
+      title: 'toolbar.desktop.modals.unit.title',
+      placeholder: 'toolbar.desktop.modals.unit.placeholder',
+      emptyMessage: 'toolbar.desktop.modals.unit.emptyMessage',
+    },
   };
 }
 
-/**
- * Desktop Navigation Headers Configuration
- * ✅ CENTRALIZED: για DesktopMultiColumn headers
- */
 export function getDesktopNavigationHeaders(): DesktopNavigationHeadersConfig {
   return {
-    companies: 'Εταιρείες',
-    projects: 'Έργα',
-    buildings: 'Κτίρια',
-    floors: 'Όροφοι',
-    units: 'Μονάδες'
+    companies: 'toolbar.desktop.headers.companies',
+    projects: 'toolbar.desktop.headers.projects',
+    buildings: 'toolbar.desktop.headers.buildings',
+    floors: 'toolbar.desktop.headers.floors',
+    units: 'toolbar.desktop.headers.units',
   };
 }
 
-/**
- * Desktop Counters Configuration
- * ✅ CENTRALIZED: για DesktopMultiColumn counters
- */
 export function getDesktopCounters(): DesktopCountersConfig {
   return {
-    total: 'Σύνολο',
-    selected: 'Επιλεγμένα',
-    filtered: 'Φιλτραρισμένα'
+    total: 'toolbar.desktop.counters.total',
+    selected: 'toolbar.desktop.counters.selected',
+    filtered: 'toolbar.desktop.counters.filtered',
   };
 }
 
-/**
- * Desktop Navigation Actions Configuration
- * ✅ CENTRALIZED: για DesktopMultiColumn actions
- */
 export function getDesktopNavigationActions(): DesktopNavigationActionsConfig {
   return {
-    connect: 'Σύνδεση',
-    disconnect: 'Αποσύνδεση',
-    edit: 'Επεξεργασία',
-    delete: 'Διαγραφή',
-    view_details: 'Προβολή Λεπτομερειών'
+    connect: 'toolbar.desktop.navActions.connect',
+    disconnect: 'toolbar.desktop.navActions.disconnect',
+    edit: 'toolbar.desktop.navActions.edit',
+    delete: 'toolbar.desktop.navActions.delete',
+    view_details: 'toolbar.desktop.navActions.view_details',
   };
 }
 
-/**
- * Desktop Status Messages Configuration
- * ✅ CENTRALIZED: για DesktopMultiColumn status messages
- */
 export function getDesktopStatusMessages(): DesktopStatusMessagesConfig {
   return {
-    loading: 'Φόρτωση...',
-    empty: 'Δεν υπάρχουν δεδομένα',
-    error: 'Σφάλμα φόρτωσης',
-    success: 'Επιτυχής ολοκλήρωση'
+    loading: 'toolbar.desktop.status.loading',
+    empty: 'toolbar.desktop.status.empty',
+    error: 'toolbar.desktop.status.error',
+    success: 'toolbar.desktop.status.success',
   };
 }
 
-/**
- * Desktop Confirmation Dialog Configuration
- * ✅ CENTRALIZED: για DesktopMultiColumn confirmation dialogs
- */
 export function getDesktopConfirmationDialog(): DesktopConfirmationDialogConfig {
   return {
-    title: 'Επιβεβαίωση Ενέργειας',
-    message: 'Είστε βέβαιοι ότι θέλετε να προχωρήσετε;',
-    confirmLabel: 'Επιβεβαίωση',
-    cancelLabel: 'Ακύρωση'
+    title: 'toolbar.desktop.confirm.title',
+    message: 'toolbar.desktop.confirm.message',
+    confirmLabel: 'toolbar.desktop.confirm.confirmLabel',
+    cancelLabel: 'toolbar.desktop.confirm.cancelLabel',
   };
 }
 
 // ====================================================================
-// ACCESSOR FUNCTIONS - 🏢 ENTERPRISE CENTRALIZED
+// ACCESSOR FUNCTIONS
 // ====================================================================
 
-/**
- * Get action buttons labels
- * ✅ CENTRALIZED: Getter function για action button labels
- */
 export function getActionButtons() {
   return MODAL_SELECT_ACTION_BUTTONS_LABELS;
 }

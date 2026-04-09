@@ -112,5 +112,62 @@
     "copyFailed": "Αποτυχία αντιγραφής",
     "perfMonitorOn": "Μετρήσεις FPS, Memory, Rendering ενεργές",
     "perfMonitorOff": "Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη"
+  },
+  "toolbar": {
+    "actions": {
+      "save": "Αποθήκευση",
+      "create": "Δημιουργία",
+      "add": "Προσθήκη",
+      "submit": "Υποβολή",
+      "edit": "Επεξεργασία",
+      "update": "Ενημέρωση",
+      "cancel": "Ακύρωση",
+      "close": "Κλείσιμο",
+      "delete": "Διαγραφή",
+      "remove": "Αφαίρεση",
+      "archive": "Αρχειοθέτηση",
+      "restore": "Επαναφορά",
+      "save_loading": "Αποθήκευση...",
+      "delete_loading": "Διαγραφή...",
+      "archive_loading": "Αρχειοθέτηση...",
+      "restore_loading": "Επαναφορά...",
+      "refresh": "Ανανέωση",
+      "reset": "Επαναφορά",
+      "download": "Λήψη",
+      "upload": "Μεταφόρτωση",
+      "export": "Εξαγωγή",
+      "import": "Εισαγωγή",
+      "call": "Κλήση",
+      "email": "Email",
+      "message": "Μήνυμα",
+      "sms": "SMS",
+      "back": "Πίσω",
+      "next": "Επόμενο",
+      "previous": "Προηγούμενο",
+      "enable": "Ενεργοποίηση",
+      "disable": "Απενεργοποίηση",
+      "favorite": "Αγαπημένο",
+      "sort_asc": "Αύξουσα Ταξινόμηση",
+      "sort_desc": "Φθίνουσα Ταξινόμηση",
+      "sort": "Ταξινόμηση",
+      "favorites": "Αγαπημένα",
+      "archived": "Αρχειοθετημένα",
+      "help": "Βοήθεια",
+      "info": "Πληροφορίες"
+    },
+    "desktop": {
+      "modals": {
+        "company": { "title": "Επιλογή Εταιρείας", "placeholder": "Αναζήτηση εταιρείας...", "emptyMessage": "Δεν βρέθηκαν εταιρείες" },
+        "project": { "title": "Επιλογή Έργου", "placeholder": "Αναζήτηση έργου...", "emptyMessage": "Δεν βρέθηκαν έργα" },
+        "building": { "title": "Επιλογή Κτιρίου", "placeholder": "Αναζήτηση κτιρίου...", "emptyMessage": "Δεν βρέθηκαν κτίρια" },
+        "floor": { "title": "Επιλογή Ορόφου", "placeholder": "Αναζήτηση ορόφου...", "emptyMessage": "Δεν βρέθηκαν όροφοι" },
+        "unit": { "title": "Επιλογή Μονάδας", "placeholder": "Αναζήτηση μονάδας...", "emptyMessage": "Δεν βρέθηκαν μονάδες" }
+      },
+      "headers": { "companies": "Εταιρείες", "projects": "Έργα", "buildings": "Κτίρια", "floors": "Όροφοι", "units": "Μονάδες" },
+      "counters": { "total": "Σύνολο", "selected": "Επιλεγμένα", "filtered": "Φιλτραρισμένα" },
+      "navActions": { "connect": "Σύνδεση", "disconnect": "Αποσύνδεση", "edit": "Επεξεργασία", "delete": "Διαγραφή", "view_details": "Προβολή Λεπτομερειών" },
+      "status": { "loading": "Φόρτωση...", "empty": "Δεν υπάρχουν δεδομένα", "error": "Σφάλμα φόρτωσης", "success": "Επιτυχής ολοκλήρωση" },
+      "confirm": { "title": "Επιβεβαίωση Ενέργειας", "message": "Είστε βέβαιοι ότι θέλετε να προχωρήσετε;", "confirmLabel": "Επιβεβαίωση", "cancelLabel": "Ακύρωση" }
+    }
   }
 }
