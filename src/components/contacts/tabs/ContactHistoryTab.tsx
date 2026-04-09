@@ -42,11 +42,18 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 // EXTENDED FILTER OPTIONS (adds photo_share to audit filters)
 // ============================================================================
 
-const CONTACT_FILTER_OPTIONS: { value: ContactHistoryFilter; labelKey: string }[] = [
-  ...FILTER_OPTIONS,
-  { value: 'document_added', labelKey: 'audit.filters.document_added' },
-  { value: 'photo_share', labelKey: 'audit.filters.photo_share' },
-];
+const CONTACT_FILTER_OPTIONS = [
+  ...FILTER_OPTIONS.map((option) => ({
+    value: option.value as ContactHistoryFilter,
+    labelKey: option.labelKey,
+  })),
+  { value: 'photo_share' as const, labelKey: 'audit.filters.photo_share' },
+].reduce<Array<{ value: ContactHistoryFilter; labelKey: string }>>((options, option) => {
+  if (!options.some((candidate) => candidate.value === option.value)) {
+    options.push(option);
+  }
+  return options;
+}, []);
 
 // ============================================================================
 // PROPS
