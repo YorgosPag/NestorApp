@@ -400,6 +400,17 @@
       ]
     },
 
+    "archive-feedback": {
+      "ssotFile": "src/components/shared/files/hooks/useBatchFileOperations.ts",
+      "description": "Archive result feedback must use showArchiveResultFeedback() — no inline archive toast logic",
+      "forbiddenPatterns": [
+        "batch\\.archiveSuccess|batch\\.archivePartialSuccess|batch\\.archiveNoChanges"
+      ],
+      "allowlist": [
+        "src/components/shared/files/hooks/useBatchFileOperations.ts",
+        "src/i18n/locales/"
+      ]
+    },
     "file-download": {
       "ssotFile": "src/components/shared/files/hooks/useFileDownload.ts",
       "description": "File downloads must use useFileDownload hook — no window.open or inline <a download> for downloads",
