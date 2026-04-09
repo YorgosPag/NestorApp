@@ -146,7 +146,7 @@ export function EntityFilesManager({
   const [viewMode, setViewMode] = useState<'list' | 'tree' | 'gallery'>(
     displayStyle === 'standard' ? 'list' : 'gallery',
   );
-  const [activeTab, setActiveTab] = useState<'files' | 'trash'>('files');
+  const [activeTab, setActiveTab] = useState<'files' | 'archived' | 'trash'>('files');
   const [treeViewMode, setTreeViewMode] = useState<'business' | 'technical'>('business');
   const [selectedEntryPoint, setSelectedEntryPoint] = useState<UploadEntryPoint | null>(null);
   const [customTitle, setCustomTitle] = useState('');
@@ -456,6 +456,10 @@ export function EntityFilesManager({
           entityId={entityId}
           onRestore={(fileId: string) => {
             recordFileActivity('updated', 'file_restore', null, fileId, t('audit.fileRestore'));
+            refetch();
+          }}
+          onUnarchive={(fileId: string) => {
+            recordFileActivity('updated', 'file_unarchive', null, fileId, t('audit.fileUnarchive'));
             refetch();
           }}
         />

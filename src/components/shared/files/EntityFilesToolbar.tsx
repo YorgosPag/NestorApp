@@ -19,7 +19,7 @@ import React from 'react';
 import { getStatusColor } from '@/lib/design-system';
 import {
   FileText, RefreshCw, List, Network, Eye, Code,
-  Grid3X3, Image as ImageIcon, Maximize2, Minimize2, Trash2,
+  Grid3X3, Image as ImageIcon, Maximize2, Minimize2, Trash2, Archive,
 } from 'lucide-react';
 import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,8 +37,8 @@ import { AddCaptureMenu } from './AddCaptureMenu';
 // ============================================================================
 
 export interface EntityFilesToolbarProps {
-  activeTab: 'files' | 'trash';
-  onTabChange: (tab: 'files' | 'trash') => void;
+  activeTab: 'files' | 'archived' | 'trash';
+  onTabChange: (tab: 'files' | 'archived' | 'trash') => void;
   viewMode: 'list' | 'tree' | 'gallery';
   onViewModeChange: (mode: 'list' | 'tree' | 'gallery') => void;
   treeViewMode: 'business' | 'technical';
@@ -117,6 +117,18 @@ export function EntityFilesToolbar({
             >
               <FileText className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
               {t('manager.filesTitle')}
+            </Button>
+            <Button
+              variant={activeTab === 'archived' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => onTabChange('archived')}
+              role="tab"
+              aria-selected={activeTab === 'archived'}
+              aria-controls="archived-panel"
+              className={cn('px-2', activeTab === 'archived' && 'bg-orange-500 text-white hover:opacity-90')}
+            >
+              <Archive className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
+              {t('archived.title')}
             </Button>
             <Button
               variant={activeTab === 'trash' ? 'default' : 'ghost'}

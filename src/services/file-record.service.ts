@@ -64,6 +64,7 @@ import {
   moveToTrash,
   restoreFromTrash,
   getTrashedFiles,
+  getArchivedFiles,
   getFilesEligibleForPurge,
   placeHold,
   releaseHold,
@@ -417,6 +418,9 @@ export class FileRecordService {
 
   /** 📂 Get files in Trash — @see file-record-lifecycle.ts */
   static getTrashedFiles = getTrashedFiles;
+
+  /** 📦 Get archived files — @see file-record-lifecycle.ts */
+  static getArchivedFiles = getArchivedFiles;
 
   /** 📋 Get files eligible for purge — @see file-record-lifecycle.ts */
   static getFilesEligibleForPurge = getFilesEligibleForPurge;

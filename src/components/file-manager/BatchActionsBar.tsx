@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Sparkles,
   Archive,
+  RotateCcw,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
@@ -64,6 +65,8 @@ interface BatchActionsBarProps {
   aiClassifying?: boolean;
   /** Batch archive */
   onBatchArchive?: () => Promise<void>;
+  /** Batch unarchive (restore from archive) */
+  onBatchUnarchive?: () => Promise<void>;
 }
 
 // ============================================================================
@@ -91,12 +94,15 @@ export function BatchActionsBar({
   onAIClassify,
   aiClassifying = false,
   onBatchArchive,
+  onBatchUnarchive,
 }: BatchActionsBarProps) {
   const { t } = useTranslation('files');
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [unarchiving, setUnarchiving] = useState(false);
+  const [unarchiveDialogOpen, setUnarchiveDialogOpen] = useState(false);
 
   const allSelected = selectedCount === totalCount && totalCount > 0;
 
@@ -131,6 +137,18 @@ export function BatchActionsBar({
       setArchiveDialogOpen(false);
     } finally {
       setArchiving(false);
+    }
+  }
+
+  async function handleUnarchiveConfirm() {
+    if (!onBatchUnarchive) return;
+
+    setUnarchiving(true);
+    try {
+      await onBatchUnarchive();
+      setUnarchiveDialogOpen(false);
+    } finally {
+      setUnarchiving(false);
     }
   }
 
@@ -229,6 +247,29 @@ export function BatchActionsBar({
         </Tooltip>
       )}
 
+      {/* Batch unarchive (restore from archive) */}
+      {onBatchUnarchive && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setUnarchiveDialogOpen(true)}
+              disabled={unarchiving}
+              className="h-7 px-2 text-xs text-green-600 hover:text-green-700"
+            >
+              {unarchiving ? (
+                <Spinner size="small" color="inherit" className="mr-1" />
+              ) : (
+                <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              )}
+              {t('batch.unarchive')}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('batch.unarchiveTooltip')}</TooltipContent>
+        </Tooltip>
+      )}
+
       <span className="w-px h-5 bg-border" aria-hidden="true" />
 
       {/* Batch download */}
@@ -297,6 +338,17 @@ export function BatchActionsBar({
         variant="warning"
         loading={archiving}
         onConfirm={handleArchiveConfirm}
+      />
+
+      <ConfirmDialog
+        open={unarchiveDialogOpen}
+        onOpenChange={setUnarchiveDialogOpen}
+        title={t('archived.batchUnarchiveConfirmTitle')}
+        description={t('archived.batchUnarchiveConfirmDescription', { count: selectedCount })}
+        confirmText={t('archived.batchUnarchiveConfirmText')}
+        variant="default"
+        loading={unarchiving}
+        onConfirm={handleUnarchiveConfirm}
       />
     </nav>
   );

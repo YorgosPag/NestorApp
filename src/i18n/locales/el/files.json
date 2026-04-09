@@ -268,6 +268,25 @@
     "saveSuccess": "Οι συνδέσεις ενημερώθηκαν επιτυχώς",
     "saveError": "Σφάλμα κατά την αποθήκευση συνδέσεων"
   },
+  "archived": {
+    "title": "Αρχειοθήκη",
+    "description": "Αρχεία που μεταφέρθηκαν στην αρχειοθήκη",
+    "noArchivedFiles": "Η Αρχειοθήκη είναι άδεια",
+    "noArchivedFilesDescription": "Τα αρχεία που αρχειοθετείτε εμφανίζονται εδώ",
+    "archivedAt": "Αρχειοθετήθηκε στις",
+    "unarchive": "Επαναφορά",
+    "unarchiveFile": "Επαναφορά αρχείου",
+    "unarchiveConfirm": "Θέλετε να επαναφέρετε αυτό το αρχείο στα ενεργά;",
+    "unarchiveSuccess": "Το αρχείο επαναφέρθηκε επιτυχώς",
+    "unarchiveError": "Αποτυχία επαναφοράς αρχείου",
+    "batchUnarchiveConfirmTitle": "Μαζική επαναφορά",
+    "batchUnarchiveConfirmDescription": "{{count}} αρχεία θα επαναφερθούν στα ενεργά αρχεία.",
+    "batchUnarchiveConfirmText": "Επαναφορά",
+    "stats": {
+      "totalFiles": "Σύνολο αρχείων",
+      "totalSize": "Συνολικός χώρος"
+    }
+  },
   "trash": {
     "title": "Κάδος Ανακύκλωσης",
     "description": "Αρχεία που διαγράφηκαν τις τελευταίες 30 ημέρες",
@@ -463,7 +482,11 @@
     "archiveSuccess": "{count, plural, =1 {1 αρχείο αρχειοθετήθηκε επιτυχώς} other {{count} αρχεία αρχειοθετήθηκαν επιτυχώς}}",
     "archivePartialSuccess": "Αρχειοθετήθηκαν {{processed}} από {{total}} αρχεία. {{failed}} αρχεία δεν ολοκληρώθηκαν.",
     "archiveNoChanges": "Δεν υπήρξαν νέα αρχεία για αρχειοθέτηση.",
-    "archiveError": "Αποτυχία αρχειοθέτησης αρχείων"
+    "archiveError": "Αποτυχία αρχειοθέτησης αρχείων",
+    "unarchive": "Επαναφορά",
+    "unarchiveTooltip": "Επαναφορά στα ενεργά αρχεία",
+    "unarchiveSuccess": "{count, plural, =1 {1 αρχείο επαναφέρθηκε επιτυχώς} other {{count} αρχεία επαναφέρθηκαν επιτυχώς}}",
+    "unarchiveError": "Αποτυχία επαναφοράς αρχείων"
   },
   "comments": {
     "title": "Σχόλια",
@@ -583,6 +606,7 @@
     "fileUnlink": "Αποσύνδεση αρχείου",
     "fileBatchTrash": "Μαζική μετακίνηση αρχείου στον κάδο",
     "fileArchive": "Αρχειοθέτηση αρχείου",
+    "fileUnarchive": "Επαναφορά αρχείου από αρχειοθήκη",
     "fileRestore": "Επαναφορά αρχείου από κάδο"
   },
   "fileMutationPreview": {

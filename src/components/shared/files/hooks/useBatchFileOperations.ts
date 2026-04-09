@@ -15,6 +15,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   archiveFilesWithPolicy,
+  unarchiveFilesWithPolicy,
   batchDownloadFilesWithPolicy,
   moveFileToTrashWithPolicy,
   updateFileClassificationWithPolicy,
@@ -98,6 +99,8 @@ interface UseBatchFileOperationsReturn {
   handleBatchClassify: (classification: FileClassification) => Promise<void>;
   /** Batch archive */
   handleBatchArchive: () => Promise<void>;
+  /** Batch unarchive (restore from archive) */
+  handleBatchUnarchive: () => Promise<void>;
   /** AI auto-classify selected files */
   handleAIClassify: () => Promise<void>;
   /** Whether AI classification is in progress */
@@ -201,6 +204,27 @@ export function useBatchFileOperations({
     }
   }, [selectedIds, refetch, error, success, t, warning]);
 
+  // ---- Batch Unarchive ----
+
+  const handleBatchUnarchive = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    try {
+      const result = await unarchiveFilesWithPolicy(ids);
+      if (!result.success) {
+        error(result.errors[0] || t('batch.unarchiveError'));
+        return;
+      }
+      success(t('batch.unarchiveSuccess', { count: result.processedCount }));
+      setSelectedIds(new Set());
+      await refetch();
+    } catch (unarchiveError) {
+      logger.error('Batch unarchive failed', { error: unarchiveError });
+      error(t('batch.unarchiveError'));
+    }
+  }, [selectedIds, refetch, error, success, t]);
+
   // ---- AI Auto-Classify ----
 
   const handleAIClassify = useCallback(async () => {
@@ -223,6 +247,7 @@ export function useBatchFileOperations({
     handleBatchDownload,
     handleBatchClassify,
     handleBatchArchive,
+    handleBatchUnarchive,
     handleAIClassify,
     aiClassifying: classifyingIds.size > 0,
   };

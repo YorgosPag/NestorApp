@@ -268,6 +268,25 @@
     "saveSuccess": "Links updated successfully",
     "saveError": "Failed to save links"
   },
+  "archived": {
+    "title": "Archive",
+    "description": "Files moved to the archive",
+    "noArchivedFiles": "Archive is empty",
+    "noArchivedFilesDescription": "Files you archive appear here",
+    "archivedAt": "Archived on",
+    "unarchive": "Restore",
+    "unarchiveFile": "Restore file",
+    "unarchiveConfirm": "Do you want to restore this file to active files?",
+    "unarchiveSuccess": "File restored successfully",
+    "unarchiveError": "Failed to restore file",
+    "batchUnarchiveConfirmTitle": "Batch restore",
+    "batchUnarchiveConfirmDescription": "{{count}} files will be restored to active files.",
+    "batchUnarchiveConfirmText": "Restore",
+    "stats": {
+      "totalFiles": "Total files",
+      "totalSize": "Total size"
+    }
+  },
   "trash": {
     "title": "Trash",
     "description": "Files deleted in the last 30 days",
@@ -463,7 +482,11 @@
     "archiveSuccess": "{count, plural, =1 {1 file archived successfully} other {{count} files archived successfully}}",
     "archivePartialSuccess": "Archived {{processed}} of {{total}} files. {{failed}} files did not complete.",
     "archiveNoChanges": "There were no new files to archive.",
-    "archiveError": "Failed to archive files"
+    "archiveError": "Failed to archive files",
+    "unarchive": "Restore",
+    "unarchiveTooltip": "Restore to active files",
+    "unarchiveSuccess": "{count, plural, =1 {1 file restored successfully} other {{count} files restored successfully}}",
+    "unarchiveError": "Failed to restore files"
   },
   "comments": {
     "title": "Comments",
@@ -583,6 +606,7 @@
     "fileUnlink": "File unlink",
     "fileBatchTrash": "Batch move file to trash",
     "fileArchive": "File archive",
+    "fileUnarchive": "Restore file from archive",
     "fileRestore": "Restore file from trash"
   },
   "fileMutationPreview": {

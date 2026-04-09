@@ -50,6 +50,7 @@ import { FileUploadZone } from './FileUploadZone';
 import { UploadEntryPointSelector } from './UploadEntryPointSelector';
 import { HierarchicalEntryPointSelector } from './HierarchicalEntryPointSelector';
 import { TrashView } from './TrashView';
+import { ArchiveView } from './ArchiveView';
 import { MediaGallery } from './media';
 import { FloorplanGallery } from './media/FloorplanGallery';
 
@@ -69,7 +70,7 @@ interface BatchActions {
 }
 
 export interface EntityFilesContentProps {
-  activeTab: 'files' | 'trash';
+  activeTab: 'files' | 'archived' | 'trash';
   isFullscreen: boolean;
   // Upload zone
   showUploadZone: boolean;
@@ -131,6 +132,7 @@ export interface EntityFilesContentProps {
   companyId: string;
   entityId: string;
   onRestore: (fileId: string) => void;
+  onUnarchive: (fileId: string) => void;
 }
 
 // ============================================================================
@@ -155,10 +157,20 @@ export function EntityFilesContent(props: EntityFilesContentProps) {
         </div>
       )}
 
-      {/* Tab content - Files or Trash */}
-      {props.activeTab === 'files' ? (
+      {/* Tab content - Files, Archived, or Trash */}
+      {props.activeTab === 'files' && (
         <FilesTabContent {...props} />
-      ) : (
+      )}
+      {props.activeTab === 'archived' && (
+        <ArchiveView
+          companyId={props.companyId}
+          currentUserId={props.currentUserId}
+          entityType={props.entityType}
+          entityId={props.entityId}
+          onUnarchive={props.onUnarchive}
+        />
+      )}
+      {props.activeTab === 'trash' && (
         <TrashView
           companyId={props.companyId}
           currentUserId={props.currentUserId}

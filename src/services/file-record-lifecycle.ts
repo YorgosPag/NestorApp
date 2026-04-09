@@ -191,6 +191,48 @@ export async function getTrashedFiles(options: {
 }
 
 /**
+ * 📦 Get archived files for an entity
+ * Same pattern as getTrashedFiles but queries lifecycleState=archived
+ */
+export async function getArchivedFiles(options: {
+  companyId: string;
+  entityType?: EntityType;
+  entityId?: string;
+}): Promise<FileRecord[]> {
+  const constraints = [
+    where('isDeleted', '==', false),
+    where('companyId', '==', options.companyId),
+    where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ARCHIVED),
+  ];
+
+  if (options.entityType) {
+    constraints.push(where('entityType', '==', options.entityType));
+  }
+
+  if (options.entityId) {
+    constraints.push(where('entityId', '==', options.entityId));
+  }
+
+  const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
+
+  const archivedFiles: FileRecord[] = [];
+  for (const raw of result.documents) {
+    const normalized = {
+      ...raw,
+      id: raw.id as string,
+      createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
+      archivedAt: fieldToISO(raw as Record<string, unknown>, 'archivedAt') || raw.archivedAt,
+    };
+
+    if (isFileRecord(normalized)) {
+      archivedFiles.push(normalized);
+    }
+  }
+
+  return archivedFiles;
+}
+
+/**
  * 📋 Get files eligible for purge
  * 🏢 ADR-214 Phase 3: tenantOverride: 'skip' — server-side, sees ALL files
  */

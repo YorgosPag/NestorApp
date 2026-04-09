@@ -306,6 +306,16 @@ export async function archiveFilesWithPolicy(
   });
 }
 
+export async function unarchiveFilesWithPolicy(
+  fileIds: string[],
+): Promise<ArchiveFilesResponse> {
+  return mutateJson<ArchiveFilesResponse>(API_ROUTES.FILES.ARCHIVE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileIds, action: 'unarchive' }),
+  });
+}
+
 export async function updateFileClassificationWithPolicy(
   fileId: string,
   classification: FileClassification,
