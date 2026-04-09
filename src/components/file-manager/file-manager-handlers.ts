@@ -54,7 +54,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
     setSelectedFile, setSelectedIds, setFilters, setUploading,
     filteredFiles, selectedIds, fileInputRef,
     classifyBatch, refetch,
-    showSuccess, showError, t,
+    showSuccess, showError, showWarning, t,
   } = state;
 
   const handleFileClick = useCallback((file: FileRecord) => {
@@ -132,15 +132,36 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
     if (ids.length === 0) return;
 
     try {
-      await archiveFilesWithPolicy(ids);
+      const result = await archiveFilesWithPolicy(ids);
+
+      if (!result.success) {
+        showError(result.errors[0] || t('batch.archiveError'));
+        return;
+      }
+
+      setSelectedIds(new Set());
+      await refetch();
+
+      if (result.processedCount === 0) {
+        showWarning(t('batch.archiveNoChanges'));
+        return;
+      }
+
+      if (result.errors.length > 0) {
+        showWarning(t('batch.archivePartialSuccess', {
+          processed: result.processedCount,
+          failed: result.errors.length,
+          total: ids.length,
+        }));
+        return;
+      }
+
+      showSuccess(t('batch.archiveSuccess', { count: result.processedCount }));
     } catch (error) {
       logger.error('Batch archive failed', { error });
-      return;
+      showError(t('batch.archiveError'));
     }
-
-    setSelectedIds(new Set());
-    refetch();
-  }, [selectedIds, refetch, setSelectedIds]);
+  }, [selectedIds, refetch, setSelectedIds, showError, showSuccess, showWarning, t]);
 
   // Direct file upload (ADR-031 canonical pipeline)
   const handleFileUpload = useCallback(async (fileList: FileList | null) => {

@@ -133,7 +133,7 @@ export function useFileManagerState() {
   const { t } = useTranslation('files');
   const { user } = useAuth();
   const { activeWorkspace } = useWorkspace();
-  const { success: showSuccess, error: showError } = useNotifications();
+  const { success: showSuccess, error: showError, warning: showWarning } = useNotifications();
 
   // Debug state
   const [triggerError, setTriggerError] = useState(false);
@@ -229,7 +229,7 @@ export function useFileManagerState() {
     loading, error, refetch, stats,
     dashboardStats,
     // Notifications
-    showSuccess, showError,
+    showSuccess, showError, showWarning,
     // Debug
     triggerError, setTriggerError,
   };

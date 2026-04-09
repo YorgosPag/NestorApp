@@ -12,12 +12,14 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   archiveFilesWithPolicy,
   batchDownloadFilesWithPolicy,
   moveFileToTrashWithPolicy,
   updateFileClassificationWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { useFileClassification, isAIClassifiable } from './useFileClassification';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
@@ -70,6 +72,8 @@ export function useBatchFileOperations({
   currentUserId,
   refetch,
 }: UseBatchFileOperationsParams): UseBatchFileOperationsReturn {
+  const { t } = useTranslation('files');
+  const { success, error, warning } = useNotifications();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { classifyBatch, classifyingIds } = useFileClassification();
 
@@ -144,15 +148,36 @@ export function useBatchFileOperations({
     if (ids.length === 0) return;
 
     try {
-      await archiveFilesWithPolicy(ids);
-    } catch (error) {
-      logger.error('Batch archive failed', { error });
-      return;
-    }
+      const result = await archiveFilesWithPolicy(ids);
 
-    setSelectedIds(new Set());
-    refetch();
-  }, [selectedIds, refetch]);
+      if (!result.success) {
+        error(result.errors[0] || t('batch.archiveError'));
+        return;
+      }
+
+      setSelectedIds(new Set());
+      await refetch();
+
+      if (result.processedCount === 0) {
+        warning(t('batch.archiveNoChanges'));
+        return;
+      }
+
+      if (result.errors.length > 0) {
+        warning(t('batch.archivePartialSuccess', {
+          processed: result.processedCount,
+          failed: result.errors.length,
+          total: ids.length,
+        }));
+        return;
+      }
+
+      success(t('batch.archiveSuccess', { count: result.processedCount }));
+    } catch (archiveError) {
+      logger.error('Batch archive failed', { error: archiveError });
+      error(t('batch.archiveError'));
+    }
+  }, [selectedIds, refetch, error, success, t, warning]);
 
   // ---- AI Auto-Classify ----
 

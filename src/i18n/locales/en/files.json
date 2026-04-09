@@ -456,7 +456,14 @@
     "archive": "Archive",
     "archiveTooltip": "Move to archive",
     "deleteConfirmTitle": "Batch move to trash",
-    "deleteConfirmDescription": "{{count}} files will be moved to trash. You can restore them within 30 days."
+    "deleteConfirmDescription": "{{count}} files will be moved to trash. You can restore them within 30 days.",
+    "archiveConfirmTitle": "Batch archive",
+    "archiveConfirmDescription": "{{count}} files will be moved to the archive. They will not be deleted, but they will be removed from the active files view.",
+    "archiveConfirmText": "Archive",
+    "archiveSuccess": "{count, plural, =1 {1 file archived successfully} other {{count} files archived successfully}}",
+    "archivePartialSuccess": "Archived {{processed}} of {{total}} files. {{failed}} files did not complete.",
+    "archiveNoChanges": "There were no new files to archive.",
+    "archiveError": "Failed to archive files"
   },
   "comments": {
     "title": "Comments",

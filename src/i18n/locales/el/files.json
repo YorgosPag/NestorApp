@@ -456,7 +456,14 @@
     "archive": "Αρχειοθέτηση",
     "archiveTooltip": "Μεταφορά σε αρχειοθήκη",
     "deleteConfirmTitle": "Μαζική μετακίνηση στον κάδο",
-    "deleteConfirmDescription": "{{count}} αρχεία θα μετακινηθούν στον κάδο. Μπορείτε να τα επαναφέρετε μέσα σε 30 ημέρες."
+    "deleteConfirmDescription": "{{count}} αρχεία θα μετακινηθούν στον κάδο. Μπορείτε να τα επαναφέρετε μέσα σε 30 ημέρες.",
+    "archiveConfirmTitle": "Μαζική αρχειοθέτηση",
+    "archiveConfirmDescription": "{{count}} αρχεία θα μεταφερθούν στην αρχειοθήκη. Δεν θα διαγραφούν, αλλά θα φύγουν από την ενεργή προβολή αρχείων.",
+    "archiveConfirmText": "Αρχειοθέτηση",
+    "archiveSuccess": "{count, plural, =1 {1 αρχείο αρχειοθετήθηκε επιτυχώς} other {{count} αρχεία αρχειοθετήθηκαν επιτυχώς}}",
+    "archivePartialSuccess": "Αρχειοθετήθηκαν {{processed}} από {{total}} αρχεία. {{failed}} αρχεία δεν ολοκληρώθηκαν.",
+    "archiveNoChanges": "Δεν υπήρξαν νέα αρχεία για αρχειοθέτηση.",
+    "archiveError": "Αποτυχία αρχειοθέτησης αρχείων"
   },
   "comments": {
     "title": "Σχόλια",

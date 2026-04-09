@@ -33,6 +33,12 @@ interface FileUploadAuthContext {
   tokenLength: number;
 }
 
+export interface ArchiveFilesResponse {
+  success: boolean;
+  processedCount: number;
+  errors: string[];
+}
+
 // ============================================================================
 // 🏢 ADR-292: CANONICAL UPLOAD AUTH VALIDATION (SSoT)
 // ============================================================================
@@ -292,8 +298,8 @@ export async function downloadFileFromProxyWithPolicy(
 
 export async function archiveFilesWithPolicy(
   fileIds: string[],
-): Promise<{ success?: boolean; error?: string }> {
-  return mutateJson<{ success?: boolean; error?: string }>(API_ROUTES.FILES.ARCHIVE, {
+): Promise<ArchiveFilesResponse> {
+  return mutateJson<ArchiveFilesResponse>(API_ROUTES.FILES.ARCHIVE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fileIds, action: 'archive' }),

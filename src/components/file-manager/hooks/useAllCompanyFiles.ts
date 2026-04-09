@@ -40,7 +40,7 @@ import {
 import { isFileRecord } from '@/types/file-record';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
-import { FILE_STATUS } from '@/config/domain-constants';
+import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { normalizeToISO } from '@/lib/date-local';
 // 🏢 ENTERPRISE: Helpers extracted for SRP compliance (ADR-261)
@@ -165,7 +165,8 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
       collection(db, COLLECTIONS.FILES),
       where('companyId', '==', companyId),
       where('status', '==', FILE_STATUS.READY),
-      where('isDeleted', '==', false)
+      where('isDeleted', '==', false),
+      where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE)
     );
 
     // Subscribe to real-time updates

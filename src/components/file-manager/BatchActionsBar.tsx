@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { FileClassification } from '@/config/domain-constants';
 import '@/lib/design-system';
 
@@ -95,6 +96,7 @@ export function BatchActionsBar({
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
 
   const allSelected = selectedCount === totalCount && totalCount > 0;
 
@@ -118,6 +120,18 @@ export function BatchActionsBar({
 
   async function handleClassify(value: string) {
     await onBatchClassify(value as FileClassification);
+  }
+
+  async function handleArchiveConfirm() {
+    if (!onBatchArchive) return;
+
+    setArchiving(true);
+    try {
+      await onBatchArchive();
+      setArchiveDialogOpen(false);
+    } finally {
+      setArchiving(false);
+    }
   }
 
   return (
@@ -199,10 +213,7 @@ export function BatchActionsBar({
             <Button
               variant="ghost"
               size="sm"
-              onClick={async () => {
-                setArchiving(true);
-                try { await onBatchArchive(); } finally { setArchiving(false); }
-              }}
+              onClick={() => setArchiveDialogOpen(true)}
               disabled={archiving}
               className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700"
             >
@@ -276,6 +287,17 @@ export function BatchActionsBar({
         </TooltipTrigger>
         <TooltipContent>{t('batch.clearSelection')}</TooltipContent>
       </Tooltip>
+
+      <ConfirmDialog
+        open={archiveDialogOpen}
+        onOpenChange={setArchiveDialogOpen}
+        title={t('batch.archiveConfirmTitle')}
+        description={t('batch.archiveConfirmDescription', { count: selectedCount })}
+        confirmText={t('batch.archiveConfirmText')}
+        variant="warning"
+        loading={archiving}
+        onConfirm={handleArchiveConfirm}
+      />
     </nav>
   );
 }

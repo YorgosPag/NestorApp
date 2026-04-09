@@ -35,6 +35,7 @@ import {
   type EntityType,
   type FileDomain,
   type FileCategory,
+  FILE_LIFECYCLE_STATES,
   FILE_STATUS,
 } from '@/config/domain-constants';
 import type {
@@ -97,6 +98,11 @@ function toFileRecord(raw: DocumentData): FileRecord | null {
 // ============================================================================
 
 export class FileRecordService {
+  static isVisibleInActiveLists(file: Pick<FileRecord, 'lifecycleState' | 'isDeleted'>): boolean {
+    if (file.isDeleted) return false;
+    return (file.lifecycleState ?? FILE_LIFECYCLE_STATES.ACTIVE) === FILE_LIFECYCLE_STATES.ACTIVE;
+  }
+
   // ==========================================================================
   // CREATE OPERATIONS
   // ==========================================================================
@@ -328,6 +334,7 @@ export class FileRecordService {
 
     if (!options?.includeDeleted) {
       constraints.push(where('isDeleted', '==', false));
+      constraints.push(where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE));
     }
 
     const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
@@ -380,6 +387,7 @@ export class FileRecordService {
 
     if (!queryParams.includeDeleted) {
       constraints.push(where('isDeleted', '==', false));
+      constraints.push(where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE));
     }
 
     const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });

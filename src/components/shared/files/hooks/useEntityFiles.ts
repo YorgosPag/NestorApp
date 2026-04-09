@@ -16,7 +16,7 @@ import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
-import { FILE_STATUS } from '@/config/domain-constants';
+import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileLinkCreatedPayload } from '@/services/realtime';
@@ -180,12 +180,15 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
         return false;
       };
 
-      const filteredOwned = fetchedFiles.filter(filterByPurpose);
+      const filteredOwned = fetchedFiles
+        .filter(FileRecordService.isVisibleInActiveLists)
+        .filter(filterByPurpose);
 
       // 🔗 ENTERPRISE: Mark linked files and merge with owned files
       const ownedIds = new Set(filteredOwned.map(f => f.id));
       const uniqueLinked: FileRecordWithLinkStatus[] = linkedFiles
         .filter(f => !ownedIds.has(f.id)) // Deduplicate
+        .filter(FileRecordService.isVisibleInActiveLists)
         .filter(filterByPurpose)
         .map(f => ({ ...f, isLinkedFile: true }));
 
@@ -247,6 +250,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       where('entityId', '==', entityId),
       where('status', '==', FILE_STATUS.READY),
       where('isDeleted', '==', false),
+      where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE),
       ...(domain ? [where('domain', '==', domain)] : []),
       ...(category ? [where('category', '==', category)] : []),
       ...(levelFloorId ? [where('levelFloorId', '==', levelFloorId)] : []),
