@@ -310,18 +310,6 @@ export function FilesList({
 
           {/* Actions */}
           <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
-            {onView && file.downloadUrl && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={(e) => actions.handleView(file, e)} aria-label={t('list.viewFile')}>
-                    <Eye className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                    {t('list.view')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('list.viewFile')}</TooltipContent>
-              </Tooltip>
-            )}
-
             {file.downloadUrl && (
               <Tooltip>
                 <TooltipTrigger asChild>

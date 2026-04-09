@@ -6,6 +6,7 @@
     "accounting": "Λογιστικά",
     "legal": "Νομικά",
     "financial": "Οικονομικά",
+    "brokerage": "Μεσιτεία",
     "ingestion": "Εισερχόμενα"
   },
   "categories": {
@@ -16,7 +17,9 @@
     "documents": "Έγγραφα",
     "drawings": "Σχέδια",
     "reports": "Αναφορές",
-    "permits": "Άδειες"
+    "permits": "Άδειες",
+    "audio": "Ήχος",
+    "videos": "Βίντεο"
   },
   "entityTypes": {
     "contact": "Επαφές",
@@ -429,7 +432,9 @@
     "zoomIn": "Μεγέθυνση",
     "zoomOut": "Σμίκρυνση",
     "rotate": "Περιστροφή",
-    "fitToWidth": "Προσαρμογή στο πλάτος"
+    "fitToWidth": "Προσαρμογή στο πλάτος",
+    "docxLoading": "Φόρτωση εγγράφου...",
+    "docxError": "Δεν ήταν δυνατή η προεπισκόπηση του εγγράφου"
   },
   "batch": {
     "toolbar": "Μαζικές ενέργειες",
@@ -449,7 +454,9 @@
     "aiClassify": "AI Ταξινόμηση",
     "aiClassifyTooltip": "Αυτόματη αναγνώριση τύπου εγγράφου με AI",
     "archive": "Αρχειοθέτηση",
-    "archiveTooltip": "Μεταφορά σε αρχειοθήκη"
+    "archiveTooltip": "Μεταφορά σε αρχειοθήκη",
+    "deleteConfirmTitle": "Μαζική μετακίνηση στον κάδο",
+    "deleteConfirmDescription": "{{count}} αρχεία θα μετακινηθούν στον κάδο. Μπορείτε να τα επαναφέρετε μέσα σε 30 ημέρες."
   },
   "comments": {
     "title": "Σχόλια",

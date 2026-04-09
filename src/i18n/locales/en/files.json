@@ -6,6 +6,7 @@
     "accounting": "Accounting",
     "legal": "Legal",
     "financial": "Financial",
+    "brokerage": "Brokerage",
     "ingestion": "Inbox"
   },
   "categories": {
@@ -16,7 +17,9 @@
     "documents": "Document",
     "drawings": "Drawing",
     "reports": "Report",
-    "permits": "Permit"
+    "permits": "Permit",
+    "audio": "Audio",
+    "videos": "Video"
   },
   "entityTypes": {
     "contact": "Contact",
@@ -429,7 +432,9 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "rotate": "Rotate",
-    "fitToWidth": "Fit to width"
+    "fitToWidth": "Fit to width",
+    "docxLoading": "Loading document...",
+    "docxError": "Could not preview document"
   },
   "batch": {
     "toolbar": "Batch actions",
@@ -449,7 +454,9 @@
     "aiClassify": "AI Classify",
     "aiClassifyTooltip": "Auto-detect document type with AI",
     "archive": "Archive",
-    "archiveTooltip": "Move to archive"
+    "archiveTooltip": "Move to archive",
+    "deleteConfirmTitle": "Batch move to trash",
+    "deleteConfirmDescription": "{{count}} files will be moved to trash. You can restore them within 30 days."
   },
   "comments": {
     "title": "Comments",

@@ -19,6 +19,7 @@
 import {
   collection,
   doc,
+  getDoc,
   setDoc,
   query,
   where,
@@ -153,6 +154,18 @@ export class FileAuditService {
     }
 
     try {
+      // Resolve companyId from FileRecord when not provided (tenant isolation)
+      if (!companyId && fileId) {
+        try {
+          const fileSnap = await getDoc(doc(db, COLLECTIONS.FILES, fileId));
+          if (fileSnap.exists()) {
+            companyId = (fileSnap.data().companyId as string) || undefined;
+          }
+        } catch {
+          // Best-effort — continue without companyId if lookup fails
+        }
+      }
+
       const entry: FileAuditEntry = {
         fileId,
         action,

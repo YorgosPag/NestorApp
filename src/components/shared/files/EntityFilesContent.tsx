@@ -44,6 +44,7 @@ import type { UploadEntryPoint, FloorInfo } from '@/config/upload-entry-points';
 import { getAvailableGroups } from '@/config/upload-entry-points';
 import { FilesList } from './FilesList';
 import { GroupedFilesList } from './GroupedFilesList';
+import { GroupedFilesByDomainCategoryList } from './GroupedFilesByDomainCategoryList';
 import { FilePathTree } from './FilePathTree';
 import { FileUploadZone } from './FileUploadZone';
 import { UploadEntryPointSelector } from './UploadEntryPointSelector';
@@ -104,6 +105,7 @@ export interface EntityFilesContentProps {
   treeViewMode: 'business' | 'technical';
   displayStyle: 'standard' | 'media-gallery' | 'floorplan-gallery';
   fetchAllDomains?: boolean;
+  listGroupingMode?: 'studyGroup' | 'domainCategory';
   companyName?: string;
   // File operations
   onDelete: (fileId: string) => Promise<void>;
@@ -348,45 +350,32 @@ function FileViewDispatch(props: EntityFilesContentProps & { iconSizes: ReturnTy
   }
 
   if (props.viewMode === 'list') {
-    if (getAvailableGroups(props.entityType).length > 0) {
-      return (
-        <GroupedFilesList
-          files={props.filteredFiles}
-          loading={props.loading}
-          onDelete={props.onDelete}
-          onRename={props.onRename}
-          onDescriptionUpdate={props.onDescriptionUpdate}
-          onView={props.onView}
-          onDownload={props.onDownload}
-          currentUserId={props.currentUserId}
-          onLink={props.enableBuildingLink ? props.onLinkClick : undefined}
-          onUnlink={props.onUnlink}
-          showLinkAction={props.enableBuildingLink}
-          entityType={props.entityType}
-          selectedIds={props.selectedIds}
-          onToggleSelect={props.toggleSelect}
-        />
-      );
+    const sharedListProps = {
+      files: props.filteredFiles,
+      loading: props.loading,
+      onDelete: props.onDelete,
+      onRename: props.onRename,
+      onDescriptionUpdate: props.onDescriptionUpdate,
+      onView: props.onView,
+      onDownload: props.onDownload,
+      currentUserId: props.currentUserId,
+      onLink: props.enableBuildingLink ? props.onLinkClick : undefined,
+      onUnlink: props.onUnlink,
+      showLinkAction: props.enableBuildingLink,
+      entityType: props.entityType,
+      selectedIds: props.selectedIds,
+      onToggleSelect: props.toggleSelect,
+    };
+
+    if (props.listGroupingMode === 'domainCategory') {
+      return <GroupedFilesByDomainCategoryList {...sharedListProps} />;
     }
 
-    return (
-      <FilesList
-        files={props.filteredFiles}
-        loading={props.loading}
-        onDelete={props.onDelete}
-        onRename={props.onRename}
-        onDescriptionUpdate={props.onDescriptionUpdate}
-        onView={props.onView}
-        onDownload={props.onDownload}
-        currentUserId={props.currentUserId}
-        onLink={props.enableBuildingLink ? props.onLinkClick : undefined}
-        onUnlink={props.onUnlink}
-        showLinkAction={props.enableBuildingLink}
-        entityType={props.entityType}
-        selectedIds={props.selectedIds}
-        onToggleSelect={props.toggleSelect}
-      />
-    );
+    if (getAvailableGroups(props.entityType).length > 0) {
+      return <GroupedFilesList {...sharedListProps} />;
+    }
+
+    return <FilesList {...sharedListProps} />;
   }
 
   // Tree view

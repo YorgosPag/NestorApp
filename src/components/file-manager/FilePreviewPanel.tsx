@@ -47,6 +47,7 @@ import { AuditLogPanel } from '@/components/shared/files/AuditLogPanel';
 import { ShareDialog } from '@/components/shared/files/ShareDialog';
 import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
 import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
+import { DocxPreview } from './preview/DocxPreview';
 import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -72,17 +73,19 @@ interface FilePreviewPanelProps {
   className?: string;
 }
 
-type PreviewType = 'pdf' | 'image' | 'video' | 'unsupported';
+type PreviewType = 'pdf' | 'image' | 'video' | 'docx' | 'unsupported';
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-function getPreviewType(contentType: string | undefined): PreviewType {
+function getPreviewType(contentType: string | undefined, fileName?: string): PreviewType {
   if (!contentType) return 'unsupported';
   if (contentType === 'application/pdf') return 'pdf';
   if (contentType.startsWith('image/')) return 'image';
   if (contentType.startsWith('video/')) return 'video';
+  if (contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
+  if (fileName?.toLowerCase().endsWith('.docx')) return 'docx';
   return 'unsupported';
 }
 
@@ -91,6 +94,7 @@ function getPreviewIcon(previewType: PreviewType) {
     case 'pdf': return FileText;
     case 'image': return ImageIcon;
     case 'video': return Video;
+    case 'docx': return FileText;
     default: return File;
   }
 }
@@ -228,7 +232,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
   const translateDisplayName = useFileDisplayName();
 
   const previewType = useMemo(
-    () => (file ? getPreviewType(file.contentType) : 'unsupported'),
+    () => (file ? getPreviewType(file.contentType, file.displayName) : 'unsupported'),
     [file]
   );
 
@@ -473,6 +477,9 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       )}
       {previewType === 'video' && file.downloadUrl && (
         <VideoPreview url={file.downloadUrl} title={displayName} />
+      )}
+      {previewType === 'docx' && file.downloadUrl && (
+        <DocxPreview url={file.downloadUrl} title={displayName} />
       )}
       {(previewType === 'unsupported' || !file.downloadUrl) && (
         <UnsupportedPreview file={file} displayName={displayName} onDownload={handleDownload} />

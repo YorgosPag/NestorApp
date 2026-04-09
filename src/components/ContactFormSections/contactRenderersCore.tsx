@@ -151,7 +151,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       if (contactType === 'individual') entityLabel = `${(formData.firstName as string) || ''} ${(formData.lastName as string) || ''}`.trim();
       else if (contactType === 'company') entityLabel = (formData.companyName as string) || (formData.tradeName as string) || '';
       else if (contactType === 'service') entityLabel = (formData.serviceName as string) || (formData.name as string) || '';
-      return <EntityFilesManager entityType={ENTITY_TYPES.CONTACT} entityId={contactId} companyId={ctx.resolvedCompanyId} domain="admin" category="documents" currentUserId={ctx.userId} entityLabel={entityLabel} companyName={ctx.companyDisplayName} contactType={contactType} activePersonas={formData.activePersonas} />;
+      return <EntityFilesManager entityType={ENTITY_TYPES.CONTACT} entityId={contactId} companyId={ctx.resolvedCompanyId} domain="admin" category="documents" currentUserId={ctx.userId} entityLabel={entityLabel} companyName={ctx.companyDisplayName} contactType={contactType} activePersonas={formData.activePersonas} fetchAllDomains entryPointExcludeCategories={['photos', 'videos', 'floorplans']} listGroupingMode="domainCategory" />;
     },
 
     // ── Project Participation (ADR-282: read-only derived section) ──

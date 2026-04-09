@@ -98,6 +98,8 @@ export interface EntityFilesManagerProps {
   onNavigateToFloors?: () => void;
   navigateToFloorsLabel?: string;
   fetchAllDomains?: boolean;
+  /** Controls how files are grouped in list view */
+  listGroupingMode?: 'studyGroup' | 'domainCategory';
   /** ADR-236 Phase 3: Filter/tag files by multi-level floor ID */
   levelFloorId?: string;
 }
@@ -130,6 +132,7 @@ export function EntityFilesManager({
   onNavigateToFloors,
   navigateToFloorsLabel,
   fetchAllDomains,
+  listGroupingMode,
   levelFloorId,
 }: EntityFilesManagerProps) {
   const { t } = useTranslation('files');
@@ -315,6 +318,8 @@ export function EntityFilesManager({
     const names = Array.from(selectedIds).map(getFileName);
     const filesToDelete = files.filter((file) => deletedIds.has(file.id));
     const remainingFiles = files.filter((file) => !deletedIds.has(file.id));
+
+    // Property-specific confirmation (coverage impact)
     if (entityType === 'property') {
       const preview = buildPropertyFileBatchDeletePreview({
         category,
@@ -328,7 +333,17 @@ export function EntityFilesManager({
           return;
         }
       }
+    } else {
+      // Generic batch delete confirmation for all other entity types
+      const confirmed = await confirm({
+        title: t('batch.deleteConfirmTitle'),
+        description: t('batch.deleteConfirmDescription', { count: selectedIds.size }),
+      });
+      if (!confirmed) {
+        return;
+      }
     }
+
     await batchDeleteRaw();
     await syncPropertyCoverageForRemainingFiles({
       entityType,
@@ -411,6 +426,7 @@ export function EntityFilesManager({
           treeViewMode={treeViewMode}
           displayStyle={displayStyle}
           fetchAllDomains={fetchAllDomains}
+          listGroupingMode={listGroupingMode}
           companyName={companyName}
           onDelete={handleDelete}
           onRename={handleRename}
