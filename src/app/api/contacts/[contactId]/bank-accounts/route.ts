@@ -54,7 +54,7 @@ interface CreateBankAccountBody {
 function buildCreateAuditChanges(accountInput: BankAccountInput): AuditFieldChange[] {
   return [
     {
-      field: 'bankAccounts',
+      field: 'bank_accounts',
       oldValue: null,
       newValue: `${accountInput.bankName} (${accountInput.iban})`,
       label: 'Τραπεζικός λογαριασμός',

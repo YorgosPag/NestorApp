@@ -175,7 +175,7 @@ async function backfillEntityType(entityType) {
     };
 
     const searchDocId = `${entityType}_${doc.id}`;
-    const searchDocRef = db.collection('searchDocuments').doc(searchDocId);
+    const searchDocRef = db.collection('search_documents').doc(searchDocId);
 
     batch.set(searchDocRef, searchDoc);
     batchCount++;

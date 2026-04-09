@@ -44,7 +44,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 const COLLECTIONS = {
-  CAD_FILES: 'cadFiles'
+  CAD_FILES: 'cad_files'
 };
 
 class DxfMigrationTool {

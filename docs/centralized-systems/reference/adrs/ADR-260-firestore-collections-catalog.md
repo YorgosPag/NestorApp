@@ -57,7 +57,7 @@
 | 13 | `ACTIVITIES` | `activities` | — | CRM activities (calls, meetings) |
 | 14 | `TASKS` | `tasks` | — | Task management |
 | 15 | `OBLIGATIONS` | `obligations` | — | Υποχρεώσεις πληρωμών |
-| 16 | `OBLIGATION_TEMPLATES` | `obligationTemplates` | — | Templates υποχρεώσεων |
+| 16 | `OBLIGATION_TEMPLATES` | `obligation_templates` | — | Templates υποχρεώσεων |
 | 17 | `OBLIGATION_TRANSMITTALS` | `obligation_transmittals` | — | Transmittals PDFs |
 | ~~18~~ | ~~`OBLIGATION_SECTIONS`~~ | ~~`obligationSections`~~ | — | **ΑΦΑΙΡΕΘΗΚΕ** (2026-04-07): Orphan collection — sections αποθηκεύονται ως nested array σε obligations |
 | 18 | `ASSIGNMENT_POLICIES` | `assignment_policies` | — | Routing policies |
@@ -120,9 +120,9 @@
 
 | # | COLLECTIONS Key | Firestore Name | ADR | Σημειώσεις |
 |---|----------------|----------------|-----|------------|
-| 49 | `CAD_FILES` | `cadFiles` | — | **DEPRECATED** — dual-write ενεργό, χρήση FILES |
-| 50 | `CAD_LAYERS` | `cadLayers` | — | CAD layer metadata |
-| 51 | `CAD_SESSIONS` | `cadSessions` | — | CAD editing sessions |
+| 49 | `CAD_FILES` | `cad_files` | — | **DEPRECATED** — dual-write ενεργό, χρήση FILES |
+| 50 | `CAD_LAYERS` | `cad_layers` | — | CAD layer metadata |
+| 51 | `CAD_SESSIONS` | `cad_sessions` | — | CAD editing sessions |
 | 52 | `DXF_OVERLAY_LEVELS` | `dxfOverlayLevels` | — | DXF overlay levels |
 | 53 | `DXF_VIEWER_LEVELS` | `dxfViewerLevels` | — | DXF viewer configurations |
 
@@ -228,7 +228,7 @@
 | 113 | `FORMS` | `forms` | — | Form definitions |
 | 114 | `SUBMISSIONS` | `submissions` | — | Form submissions |
 | 115 | `SURVEYS` | `surveys` | — | Surveys |
-| 116 | `SEARCH_DOCUMENTS` | `searchDocuments` | — | Global search index |
+| 116 | `SEARCH_DOCUMENTS` | `search_documents` | — | Global search index |
 
 ### 3.17 Bots & Voice (4)
 
@@ -267,7 +267,7 @@
 | # | COLLECTIONS Key | Firestore Name | ADR | Σημειώσεις |
 |---|----------------|----------------|-----|------------|
 | 128 | `LAYERS` | `layers` | — | **Legacy** — backward compatibility |
-| 129 | `LAYER_GROUPS` | `layerGroups` | — | **Legacy** |
+| 129 | `LAYER_GROUPS` | `layer_groups` | — | **Legacy** |
 | 130 | `PROPERTY_LAYERS` | `property-layers` | — | **Legacy** |
 | 131 | `LAYER_EVENTS` | `layer-events` | — | **Legacy** |
 
@@ -339,7 +339,7 @@
 
 | Subcollection Key | Name | Path Pattern |
 |-------------------|------|-------------|
-| `BANK_ACCOUNTS` | `bankAccounts` | `contacts/{id}/bankAccounts` |
+| `BANK_ACCOUNTS` | `bank_accounts` | `contacts/{id}/bankAccounts` |
 
 ### 4.8 File & Ownership Subcollections
 
@@ -447,7 +447,7 @@
 
 Οι παρακάτω ορίζονται στον κώδικα αλλά **κανένα write operation δεν βρέθηκε**:
 
-`leads`, `activities`, `obligationTemplates`, `obligation_transmittals`, `analytics`, `metrics`, `teams`, `roles`, `permissions`, `relationships`, `forms`, `submissions`, `surveys`, `attachments`, `cadLayers`, `cadSessions`, `project_floorplans`, `calendar`, `bookings`, `logs`, `audit`, `inventory`, `assets`, `invoices`, `transactions`, `tokens`, `security_roles`, `email_domain_policies`, `country_security_policies`, `translations`, `locales`, `bot_configs`, `bot_catalogs`, `bot_intents`, `construction_tasks`, `digital_work_cards`, `boq_categories`, `boq_price_lists`, `boq_templates`, `cheques`, `legal_contracts`, `brokerage_agreements`, `commission_records`, `floor_floorplans`, `layer-events`, `layerGroups`
+`leads`, `activities`, `obligationTemplates`, `obligation_transmittals`, `analytics`, `metrics`, `teams`, `roles`, `permissions`, `relationships`, `forms`, `submissions`, `surveys`, `attachments`, `cad_layers`, `cad_sessions`, `project_floorplans`, `calendar`, `bookings`, `logs`, `audit`, `inventory`, `assets`, `invoices`, `transactions`, `tokens`, `security_roles`, `email_domain_policies`, `country_security_policies`, `translations`, `locales`, `bot_configs`, `bot_catalogs`, `bot_intents`, `construction_tasks`, `digital_work_cards`, `boq_categories`, `boq_price_lists`, `boq_templates`, `cheques`, `legal_contracts`, `brokerage_agreements`, `commission_records`, `floor_floorplans`, `layer-events`, `layer_groups`
 
 > Αυτές χρησιμοποιούνται μόνο για reads, ή είναι σε σχεδιαστική φάση (spec exists, implementation pending).
 
@@ -594,7 +594,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 | 25 | `workspaces` | `generateWorkspaceId()` | `ws` | `admin/bootstrap-company/route.ts` |
 | 26 | `dxfOverlayLevels` | `generateOverlayId()` | `ovrl` | `overlay-store.tsx` |
 | 27 | `dxfViewerLevels` | `generateLevelId()` | `lvl` | `LevelsSystem.tsx` |
-| 28 | `cadFiles` | `generateFileId()` | `file` | `dxf-firestore.service.ts` (dual-write) |
+| 28 | `cad_files` | `generateFileId()` | `file` | `dxf-firestore.service.ts` (dual-write) |
 | 29 | `floorplans` | enterprise ID | — | `FloorplanService.ts`, `migrations/003_*.ts` |
 | 30 | `parking_spots` | `generateParkingId()` | `park` | `admin/seed-parking/route.ts` |
 | 31 | `construction_phases` | `generateConstructionPhaseId()` | `cphase` | `construction-phases/route.ts` |
@@ -612,7 +612,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 | 43 | `assignment_policies` | enterprise ID | — | `AssignmentPolicyRepository.ts` |
 | 44 | `errors` | `generateErrorId()` | `err` | `error-report/route.ts` |
 | 45 | `email_ingestion_queue` | enterprise ID | — | `email-queue-service.ts` |
-| 46 | `searchDocuments` | enterprise ID | — | `search-backfill/route.ts` |
+| 46 | `search_documents` | enterprise ID | — | `search-backfill/route.ts` |
 | 47 | `counters` | deterministic key | — | `enterprise-id.service.ts`, `project-code.service.ts` |
 | 48 | `two_factor_enrollments` | enterprise ID | — | `EnterpriseTwoFactorService.ts` |
 
@@ -671,7 +671,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 
 Οι παρακάτω 47 collections δεν έχουν write operations στον κώδικα, άρα δεν αφορούνται από το Enterprise ID audit:
 
-`leads`, `activities`, `obligationTemplates`, `obligation_transmittals`, `analytics`, `metrics`, `teams`, `roles`, `permissions`, `relationships`, `forms`, `submissions`, `surveys`, `attachments`, `cadLayers`, `cadSessions`, `project_floorplans`, `calendar`, `bookings`, `logs`, `audit`, `inventory`, `assets`, `invoices`, `transactions`, `tokens`, `security_roles`, `email_domain_policies`, `country_security_policies`, `translations`, `locales`, `bot_configs`, `bot_catalogs`, `bot_intents`, `construction_tasks`, `digital_work_cards`, `boq_categories`, `boq_price_lists`, `boq_templates`, `cheques`, `legal_contracts`, `brokerage_agreements`, `commission_records`, `floor_floorplans`, `layer-events`, `layerGroups`, `obligationSections`
+`leads`, `activities`, `obligationTemplates`, `obligation_transmittals`, `analytics`, `metrics`, `teams`, `roles`, `permissions`, `relationships`, `forms`, `submissions`, `surveys`, `attachments`, `cad_layers`, `cad_sessions`, `project_floorplans`, `calendar`, `bookings`, `logs`, `audit`, `inventory`, `assets`, `invoices`, `transactions`, `tokens`, `security_roles`, `email_domain_policies`, `country_security_policies`, `translations`, `locales`, `bot_configs`, `bot_catalogs`, `bot_intents`, `construction_tasks`, `digital_work_cards`, `boq_categories`, `boq_price_lists`, `boq_templates`, `cheques`, `legal_contracts`, `brokerage_agreements`, `commission_records`, `floor_floorplans`, `layer-events`, `layer_groups`, `obligationSections`
 
 > **Σημείωση**: Όταν αυτές οι collections αποκτήσουν write operations στο μέλλον, ΠΡΕΠΕΙ να χρησιμοποιήσουν enterprise ID generators (ADR-017).
 
@@ -745,3 +745,4 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 | 2026-03-24 | Enterprise ID Compliance Audit (§11): 70+ generators, 58 COMPLIANT collections, 11 EXEMPT, 1 VIOLATION (`employment_records` — `collRef.doc()` auto-ID), 47 read-only (N/A) |
 | 2026-03-24 | Δεύτερη έρευνα Enterprise ID: +2 VIOLATIONS εντοπίστηκαν — `system_audit_logs` & `audit_logs` subcollection χρησιμοποιούν `.add()` (auto-ID) στο `src/lib/auth/audit.ts` (lines 199, 762). Σύνολο: 3 παραβιάσεις |
 | 2026-04-09 | SSoT κεντρικοποίηση collection names: +3 νέα entries (`BOOKING_SESSIONS`, `CLOUD_FUNCTION_AUDIT_LOG`, `BANK_ACCOUNTS` subcol). Cloud Functions mirror (`functions/src/config/firestore-collections.ts` + `enterprise-id.ts`). Fix `DXF_OVERLAY_LEVELS` name (`dxfOverlayLevels` → `dxf-overlay-levels`). 15+ αρχεία migrated από hardcoded strings → `COLLECTIONS.*` / `SUBCOLLECTIONS.*`. SSoT baseline updated (23 violations resolved). |
+| 2026-04-09 | **Naming Convention Standardization**: Rename 7 camelCase collection names → snake_case: `obligationTemplates`→`obligation_templates`, `cadFiles`→`cad_files`, `cadLayers`→`cad_layers`, `cadSessions`→`cad_sessions`, `layerGroups`→`layer_groups`, `searchDocuments`→`search_documents`, `bankAccounts`→`bank_accounts`. Updated: SSoT config, firestore.rules, firestore.indexes.json, Cloud Functions mirror, MCP server, 14 scripts/tests. 100% snake_case consistency. |

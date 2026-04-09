@@ -39,18 +39,18 @@ async function checkFloorFloorplans() {
     console.log('');
   });
 
-  // 2. Check cadFiles for floor floorplans
+  // 2. Check cad_files for floor floorplans
   console.log('='.repeat(50));
   console.log('📁 CADFILES FOR ΚΤΙΡΙΟ Β:');
   console.log('='.repeat(50));
 
-  const cadFilesSnapshot = await db.collection('cadFiles').get();
-  const buildingCadFiles = cadFilesSnapshot.docs.filter(doc =>
+  const cad_filesSnapshot = await db.collection('cad_files').get();
+  const buildingCadFiles = cad_filesSnapshot.docs.filter(doc =>
     doc.id.includes(buildingId) && doc.id.startsWith('floor_floorplan')
   );
 
   if (buildingCadFiles.length === 0) {
-    console.log('   (no floor floorplan cadFiles found for ΚΤΙΡΙΟ Β)');
+    console.log('   (no floor floorplan cad_files found for ΚΤΙΡΙΟ Β)');
   } else {
     buildingCadFiles.forEach(doc => {
       console.log('   CadFile ID: ' + doc.id);

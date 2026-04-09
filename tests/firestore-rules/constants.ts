@@ -28,7 +28,7 @@ export const TENANT_ISOLATED_COLLECTIONS = {
 
   // DXF/CAD
   DXF_OVERLAY_LEVELS: 'dxf-overlay-levels',
-  DXF_OVERLAY_LEVELS_ALT: 'dxfOverlayLevels',
+  DXF_OVERLAY_LEVELS_ALT: 'dxf-overlay-levels', // Previously dxfOverlayLevels
   LAYERS: 'layers',
   FLOORPLANS: 'floorplans',
   PROJECT_FLOORPLANS: 'project_floorplans',
@@ -116,7 +116,7 @@ export const OWNERSHIP_COLLECTIONS = {
   USER_NOTIFICATION_SETTINGS: 'user_notification_settings',
 
   // CAD Files (owner-based)
-  CAD_FILES: 'cadFiles',
+  CAD_FILES: 'cad_files',
 
   // Contact Relationships (source/target based)
   CONTACT_RELATIONSHIPS: 'contact_relationships',

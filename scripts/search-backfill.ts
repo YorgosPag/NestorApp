@@ -79,7 +79,7 @@ const COLLECTIONS = {
   UNITS: 'units',
   CONTACTS: 'contacts',
   FILES: 'files',
-  SEARCH_DOCUMENTS: 'searchDocuments',
+  SEARCH_DOCUMENTS: 'search_documents',
 } as const;
 
 // =============================================================================

@@ -30,5 +30,5 @@ export const COLLECTIONS = {
   BUILDINGS: 'buildings',
   UNITS: 'units',
   CONTACTS: 'contacts',
-  SEARCH_DOCUMENTS: 'searchDocuments',
+  SEARCH_DOCUMENTS: 'search_documents',
 } as const;

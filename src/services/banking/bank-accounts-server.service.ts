@@ -12,7 +12,7 @@ import 'server-only';
  * @compliance CLAUDE.md Enterprise Standards
  *
  * Firestore Structure:
- * contacts/{contactId}/bankAccounts/{accountId}
+ * contacts/{contactId}/bank_accounts/{accountId}
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';

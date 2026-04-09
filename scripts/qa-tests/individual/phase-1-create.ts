@@ -304,7 +304,7 @@ export const createTests: QATestCase[] = [
     assertions: async (ctx) => {
       const id = ctx.state.contactId as string;
       if (!id) return [{ label: 'Contact', passed: false, expected: 'exists', actual: 'null' }];
-      const snap = await db.collection('contacts').doc(id).collection('bankAccounts').get();
+      const snap = await db.collection('contacts').doc(id).collection('bank_accounts').get();
       return [
         { label: 'bankAccounts exists', passed: !snap.empty, expected: '>= 1', actual: `${snap.size}` },
         { label: 'IBAN GR16', passed: snap.docs.some((d) => String(d.data().iban ?? '').includes('GR16')), expected: 'GR16...', actual: snap.empty ? 'empty' : String(snap.docs[0].data().iban) },

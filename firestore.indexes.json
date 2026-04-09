@@ -1,7 +1,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "searchDocuments",
+      "collectionGroup": "search_documents",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -783,7 +783,7 @@
       ]
     },
     {
-      "collectionGroup": "bankAccounts",
+      "collectionGroup": "bank_accounts",
       "queryScope": "COLLECTION",
       "fields": [
         {

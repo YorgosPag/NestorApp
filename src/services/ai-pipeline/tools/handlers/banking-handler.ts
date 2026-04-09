@@ -118,7 +118,7 @@ export class BankingHandler implements ToolHandler {
       return { success: false, error: result.error };
     }
 
-    await auditWrite(ctx, 'bankAccounts', result.data.accountId, 'create', {
+    await auditWrite(ctx, 'bank_accounts', result.data.accountId, 'create', {
       contactId, iban, bankName,
     });
 
@@ -194,7 +194,7 @@ export class BankingHandler implements ToolHandler {
       return { success: false, error: result.error };
     }
 
-    await auditWrite(ctx, 'bankAccounts', accountId, 'delete', { contactId });
+    await auditWrite(ctx, 'bank_accounts', accountId, 'delete', { contactId });
 
     logger.info('Bank account deleted via AI agent', {
       contactId, accountId, requestId: ctx.requestId,
@@ -240,7 +240,7 @@ export class BankingHandler implements ToolHandler {
     batch.update(accountRef, { isPrimary: true, updatedAt: FieldValue.serverTimestamp() });
     await batch.commit();
 
-    await auditWrite(ctx, 'bankAccounts', accountId, 'set_primary', { contactId });
+    await auditWrite(ctx, 'bank_accounts', accountId, 'set_primary', { contactId });
 
     return { success: true, data: { accountId, isPrimary: true } };
   }

@@ -9,7 +9,7 @@
  * @compliance CLAUDE.md Enterprise Standards
  *
  * Firestore Structure:
- * contacts/{contactId}/bankAccounts/{accountId}
+ * contacts/{contactId}/bank_accounts/{accountId}
  *
  * @see BankAccount type in @/types/contacts/banking
  */
@@ -437,7 +437,7 @@ export class BankAccountsService {
     return firestoreQueryService.subscribeSubcollection<DocumentData>(
       'CONTACTS',
       contactId,
-      'bankAccounts',
+      'bank_accounts',
       (result) => {
         const accounts = result.documents.map(d => recordToBankAccount(d as Record<string, unknown>));
 

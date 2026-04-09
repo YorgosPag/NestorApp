@@ -46,14 +46,14 @@ function testCollectionsConfiguration() {
 
   // Simulate configuration validation (would import actual config in real test)
   const mockCollectionsConfig = {
-    CAD_FILES: 'cadFiles',
-    CAD_LAYERS: 'cadLayers',
-    CAD_SESSIONS: 'cadSessions',
+    CAD_FILES: 'cad_files',
+    CAD_LAYERS: 'cad_layers',
+    CAD_SESSIONS: 'cad_sessions',
     FLOORPLANS: 'floorplans',
-    PARKING_SPACES: 'parkingSpaces',
-    OBLIGATION_SECTIONS: 'obligationSections',
-    DXF_OVERLAY_LEVELS: 'dxfOverlayLevels',
-    DXF_VIEWER_LEVELS: 'dxfViewerLevels'
+    PARKING_SPACES: 'parking_spots',
+    OBLIGATION_SECTIONS: 'obligationSections', // removed collection
+    DXF_OVERLAY_LEVELS: 'dxf-overlay-levels',
+    DXF_VIEWER_LEVELS: 'dxf-viewer-levels'
   };
 
   let configurationScore = 0;
@@ -232,8 +232,8 @@ function testPerformanceScalability() {
   // Simulate collection access performance
   const collections = [
     'floorplans',
-    'cadFiles',
-    'cadLayers',
+    'cad_files',
+    'cad_layers',
     'parkingSpaces',
     'obligationSections'
   ];

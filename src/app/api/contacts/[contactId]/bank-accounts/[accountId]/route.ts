@@ -252,7 +252,7 @@ async function handleDelete(
           action: 'updated',
           changes: [
             {
-              field: 'bankAccounts',
+              field: 'bank_accounts',
               oldValue: `${existingAccount.bankName} (${existingAccount.iban})`,
               newValue: null,
               label: 'Τραπεζικός λογαριασμός',

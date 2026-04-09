@@ -139,7 +139,7 @@ export const guardTests: QATestCase[] = [
     assertions: async (ctx) => {
       const id = ctx.state.contactId as string;
       if (!id) return [{ label: 'Contact', passed: false, expected: 'exists', actual: 'null' }];
-      const snap = await db.collection('contacts').doc(id).collection('bankAccounts').get();
+      const snap = await db.collection('contacts').doc(id).collection('bank_accounts').get();
       const hasInvalid = snap.docs.some((doc) => {
         const iban = String(doc.data().iban ?? '');
         return iban.includes('GR0000000000000000000000000');

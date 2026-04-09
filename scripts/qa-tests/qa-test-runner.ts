@@ -313,7 +313,7 @@ async function assertNotProduction(): Promise<void> {
 const QA_COLLECTIONS = [
   'ai_agent_feedback', 'ai_chat_history', 'ai_pipeline_audit',
   'ai_pipeline_queue', 'ai_usage', 'contacts', 'conversations',
-  'external_identities', 'files', 'messages', 'file_links', 'searchDocuments',
+  'external_identities', 'files', 'messages', 'file_links', 'search_documents',
 ] as const;
 
 export async function resetCollections(): Promise<void> {

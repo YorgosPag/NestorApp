@@ -313,7 +313,7 @@ service cloud.firestore {
     // Used by: DxfFirestoreService, BuildingFloorplanService, FloorFloorplanService
     // 📅 Updated: 2026-03-20 (ADR-252 Security Fixes — tenant isolation)
     // =========================================================================
-    match /cadFiles/{fileId} {
+    match /cad_files/{fileId} {
 
       // 📖 READ: Tenant-scoped via companyId or creator fallback
       // 🔒 SECURITY (ADR-252 FR-C1): Was `auth != null` → now tenant-scoped
@@ -322,7 +322,7 @@ service cloud.firestore {
                        isSuperAdminOnly()
                        || (resource.data.keys().hasAny(['companyId'])
                            && belongsToCompany(resource.data.companyId))
-                       // LEGACY FALLBACK: cadFiles without companyId — creator only
+                       // LEGACY FALLBACK: cad_files without companyId — creator only
                        || (!resource.data.keys().hasAny(['companyId'])
                            && resource.data.keys().hasAny(['createdBy'])
                            && resource.data.createdBy == request.auth.uid)
@@ -1459,10 +1459,10 @@ service cloud.firestore {
       // 🏦 BANK ACCOUNTS SUBCOLLECTION - INHERITS PARENT TENANT ISOLATION
       // =====================================================================
       // 🏢 ENTERPRISE: Bank accounts for contacts (2026-02-01)
-      // 📁 Path: contacts/{contactId}/bankAccounts/{accountId}
+      // 📁 Path: contacts/{contactId}/bank_accounts/{accountId}
       // 🔒 SECURITY: Inherits access from parent contact document
       // =====================================================================
-      match /bankAccounts/{accountId} {
+      match /bank_accounts/{accountId} {
 
         // Helper: Check if user can access parent contact
         function canAccessParentContact() {
@@ -2050,7 +2050,7 @@ service cloud.firestore {
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
     // 🏢 ENTERPRISE: Templates are company-scoped
     // =========================================================================
-    match /obligationTemplates/{templateId} {
+    match /obligation_templates/{templateId} {
       // 📖 READ: Tenant-scoped
       allow read: if isAuthenticated()
                   && (
@@ -2284,7 +2284,7 @@ service cloud.firestore {
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     // 🏢 ENTERPRISE: DXF layer management with tenant isolation
-    match /layerGroups/{groupId} {
+    match /layer_groups/{groupId} {
       // 📖 READ: Tenant-scoped
       allow read: if isAuthenticated()
                   && (
@@ -2696,7 +2696,7 @@ service cloud.firestore {
     //   - Tenant-scoped reads via tenantId field
     //   - Write-only for server (Admin SDK)
     // =========================================================================
-    match /searchDocuments/{searchDocId} {
+    match /search_documents/{searchDocId} {
 
       // 📖 READ: Tenant-scoped - only users from the same company
       // 🔒 SECURITY: Search results filtered by tenantId

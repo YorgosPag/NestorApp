@@ -69,20 +69,20 @@ async function checkFloorDocument() {
     console.log('❌ Floor floorplan metadata NOT FOUND');
   }
   
-  // Check cadFiles collection (DxfFirestoreService metadata)
-  console.log('\n🔍 Checking cadFiles collection...');
+  // Check cad_files collection (DxfFirestoreService metadata)
+  console.log('\n🔍 Checking cad_files collection...');
   const fileId = `floor_floorplan_${buildingId}_${floorId}`;
-  const cadFileDoc = await db.collection('cadFiles').doc(fileId).get();
-  
+  const cadFileDoc = await db.collection('cad_files').doc(fileId).get();
+
   if (cadFileDoc.exists) {
     const data = cadFileDoc.data();
-    console.log('✅ cadFiles metadata EXISTS:');
+    console.log('✅ cad_files metadata EXISTS:');
     console.log('  - fileId:', fileId);
     console.log('  - fileName:', data.fileName);
     console.log('  - storagePath:', data.storagePath);
     console.log('  - version:', data.version);
   } else {
-    console.log('❌ cadFiles metadata NOT FOUND');
+    console.log('❌ cad_files metadata NOT FOUND');
   }
 }
 

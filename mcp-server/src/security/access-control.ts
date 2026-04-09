@@ -94,7 +94,7 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'ai_usage',
   'external_identities',
   'contact_relationships',
-  'searchDocuments',
+  'search_documents',
 ]);
 
 // ============================================================================

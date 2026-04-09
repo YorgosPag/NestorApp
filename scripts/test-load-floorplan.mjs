@@ -26,9 +26,9 @@ async function testLoadFloorplan() {
   console.log('🔍 Testing load for fileId: ' + fileId);
   console.log('');
 
-  // 1. Check cadFiles collection
-  console.log('1️⃣ Checking cadFiles collection...');
-  const cadFileDoc = await db.collection('cadFiles').doc(fileId).get();
+  // 1. Check cad_files collection
+  console.log('1️⃣ Checking cad_files collection...');
+  const cadFileDoc = await db.collection('cad_files').doc(fileId).get();
   if (cadFileDoc.exists) {
     const data = cadFileDoc.data();
     console.log('   ✅ CadFile exists');

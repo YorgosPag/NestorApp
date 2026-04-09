@@ -50,7 +50,7 @@ const QA_COLLECTIONS = [
   'files',
   'messages',
   'file_links',
-  'searchDocuments',
+  'search_documents',
   'units',
   'voice_commands',
 ] as const;

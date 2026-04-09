@@ -123,14 +123,14 @@ async function debugData() {
     });
   }
 
-  // 6. Check cadFiles for floor floorplans
+  // 6. Check cad_files for floor floorplans
   console.log('\n' + '='.repeat(60));
   console.log('📁 CADFILES WITH floor_floorplan PREFIX:');
   console.log('='.repeat(60));
-  const cadFilesSnapshot = await db.collection('cadFiles').get();
-  const floorCadFiles = cadFilesSnapshot.docs.filter(doc => doc.id.startsWith('floor_floorplan'));
+  const cad_filesSnapshot = await db.collection('cad_files').get();
+  const floorCadFiles = cad_filesSnapshot.docs.filter(doc => doc.id.startsWith('floor_floorplan'));
   if (floorCadFiles.length === 0) {
-    console.log('   (no floor floorplan cadFiles found)');
+    console.log('   (no floor floorplan cad_files found)');
   } else {
     floorCadFiles.forEach(doc => {
       console.log('\n   CadFile ID: ' + doc.id);

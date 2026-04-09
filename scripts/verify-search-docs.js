@@ -35,7 +35,7 @@ async function verify() {
   console.log('');
 
   // Get all search documents grouped by entityType
-  const snapshot = await db.collection('searchDocuments').get();
+  const snapshot = await db.collection('search_documents').get();
 
   const byType = {};
   snapshot.docs.forEach(doc => {
