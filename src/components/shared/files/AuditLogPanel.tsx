@@ -128,6 +128,8 @@ const ACTION_COLOR_MAP: Record<string, string> = {
 interface AuditLogPanelProps {
   /** File ID to show audit log for */
   fileId: string;
+  /** Tenant isolation — company ID for Firestore rules */
+  companyId: string;
   /** Additional className */
   className?: string;
 }
@@ -136,7 +138,7 @@ interface AuditLogPanelProps {
 // COMPONENT
 // ============================================================================
 
-export function AuditLogPanel({ fileId, className }: AuditLogPanelProps) {
+export function AuditLogPanel({ fileId, companyId, className }: AuditLogPanelProps) {
   const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
@@ -153,7 +155,7 @@ export function AuditLogPanel({ fileId, className }: AuditLogPanelProps) {
       setLoading(true);
       setError(null);
       try {
-        const history = await FileAuditService.getFileHistory(fileId, 30);
+        const history = await FileAuditService.getFileHistory(fileId, companyId, 30);
         if (!cancelled) {
           setEntries(history);
         }

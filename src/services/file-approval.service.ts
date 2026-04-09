@@ -13,6 +13,7 @@
 import {
   collection,
   doc,
+  getDoc,
   setDoc,
   query,
   where,
@@ -162,10 +163,12 @@ export const FileApprovalService = {
    */
   subscribeToApprovals(
     fileId: string,
+    companyId: string,
     callback: (approvals: FileApproval[]) => void
   ): Unsubscribe {
     const q = query(
       collection(db, COLLECTIONS.FILE_APPROVALS),
+      where('companyId', '==', companyId),
       where('fileId', '==', fileId),
       orderBy('createdAt', 'desc')
     );
@@ -179,14 +182,10 @@ export const FileApprovalService = {
    */
   async approve(approvalId: string, userId: string): Promise<void> {
     const approvalRef = doc(db, COLLECTIONS.FILE_APPROVALS, approvalId);
-    const q = query(
-      collection(db, COLLECTIONS.FILE_APPROVALS),
-      where('__name__', '==', approvalId)
-    );
-    const snap = await getDocs(q);
-    if (snap.empty) return;
+    const snap = await getDoc(approvalRef);
+    if (!snap.exists()) return;
 
-    const data = snap.docs[0].data() as Omit<FileApproval, 'id'>;
+    const data = snap.data() as Omit<FileApproval, 'id'>;
     const steps = [...data.steps];
 
     // Find current pending step for this user
@@ -226,14 +225,10 @@ export const FileApprovalService = {
     reason: string
   ): Promise<void> {
     const approvalRef = doc(db, COLLECTIONS.FILE_APPROVALS, approvalId);
-    const q = query(
-      collection(db, COLLECTIONS.FILE_APPROVALS),
-      where('__name__', '==', approvalId)
-    );
-    const snap = await getDocs(q);
-    if (snap.empty) return;
+    const snap = await getDoc(approvalRef);
+    if (!snap.exists()) return;
 
-    const data = snap.docs[0].data() as Omit<FileApproval, 'id'>;
+    const data = snap.data() as Omit<FileApproval, 'id'>;
     const steps = [...data.steps];
 
     const stepIdx = steps.findIndex(

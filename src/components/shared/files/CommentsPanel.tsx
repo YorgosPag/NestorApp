@@ -226,15 +226,15 @@ export function CommentsPanel({
   const [editingComment, setEditingComment] = useState<FileComment | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Real-time subscription
+  // Real-time subscription (companyId required for Firestore rules)
   useEffect(() => {
     setLoading(true);
-    const unsub = FileCommentService.subscribeToComments(fileId, (data) => {
+    const unsub = FileCommentService.subscribeToComments(fileId, companyId, (data) => {
       setComments(data);
       setLoading(false);
     });
     return unsub;
-  }, [fileId]);
+  }, [fileId, companyId]);
 
   // Build thread structure: top-level comments + their replies
   const threads = useMemo(() => {

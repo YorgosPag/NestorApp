@@ -37,6 +37,7 @@
     "ui-strings:baseline": "bash scripts/generate-ui-strings-baseline.sh",
     "icu:baseline": "node scripts/generate-icu-baseline.js",
     "i18n-keys:baseline": "node scripts/generate-i18n-keys-baseline.js",
+    "firestore:audit": "bash scripts/check-firestore-companyid.sh",
     "ssot:audit": "bash scripts/ssot-audit.sh",
     "ssot:baseline": "bash scripts/generate-ssot-baseline.sh",
     "ssot:discover": "bash scripts/ssot-discover.sh",

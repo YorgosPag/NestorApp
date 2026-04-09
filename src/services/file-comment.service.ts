@@ -104,9 +104,10 @@ export const FileCommentService = {
   /**
    * Get all comments for a file (ordered by creation time)
    */
-  async getComments(fileId: string): Promise<FileComment[]> {
+  async getComments(fileId: string, companyId: string): Promise<FileComment[]> {
     const q = query(
       collection(db, COLLECTIONS.FILE_COMMENTS),
+      where('companyId', '==', companyId),
       where('fileId', '==', fileId),
       orderBy('createdAt', 'asc')
     );
@@ -123,10 +124,12 @@ export const FileCommentService = {
    */
   subscribeToComments(
     fileId: string,
+    companyId: string,
     callback: (comments: FileComment[]) => void
   ): Unsubscribe {
     const q = query(
       collection(db, COLLECTIONS.FILE_COMMENTS),
+      where('companyId', '==', companyId),
       where('fileId', '==', fileId),
       orderBy('createdAt', 'asc')
     );

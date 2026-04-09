@@ -47,6 +47,7 @@ import '@/lib/design-system';
 
 export interface ApprovalPanelProps {
   fileId: string;
+  companyId: string;
   currentUserId: string;
   currentUserName: string;
   className?: string;
@@ -72,6 +73,7 @@ const STATUS_ICON_CONFIG: Record<
 
 export function ApprovalPanel({
   fileId,
+  companyId,
   currentUserId,
   currentUserName,
   className,
@@ -103,12 +105,12 @@ export function ApprovalPanel({
   // Real-time subscription
   useEffect(() => {
     setLoading(true);
-    const unsub = FileApprovalService.subscribeToApprovals(fileId, (data) => {
+    const unsub = FileApprovalService.subscribeToApprovals(fileId, companyId, (data) => {
       setApprovals(data);
       setLoading(false);
     });
     return unsub;
-  }, [fileId]);
+  }, [fileId, companyId]);
 
   const handleCreateApproval = useCallback(async () => {
     if (newApprovers.length === 0) return;

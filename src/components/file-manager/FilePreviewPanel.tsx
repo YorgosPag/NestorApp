@@ -298,7 +298,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t('pdf.openInNewTab')}</TooltipContent>
+                <TooltipContent>{t('list.openInNewTab')}</TooltipContent>
               </Tooltip>
             </>
           )}
@@ -434,9 +434,9 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       )}
 
       {/* Audit log panel (collapsible) */}
-      {showAudit && (
+      {showAudit && companyId && (
         <div className="border-b max-h-[250px] overflow-y-auto">
-          <AuditLogPanel fileId={file.id} className="p-2" />
+          <AuditLogPanel fileId={file.id} companyId={companyId} className="p-2" />
         </div>
       )}
 
@@ -453,10 +453,11 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       )}
 
       {/* Approvals panel (collapsible — ADR-191 Phase 3.3) */}
-      {showApprovals && currentUserId && (
+      {showApprovals && currentUserId && companyId && (
         <div className="border-b max-h-[300px] overflow-y-auto">
           <ApprovalPanel
             fileId={file.id}
+            companyId={companyId}
             currentUserId={currentUserId}
             currentUserName={currentUserName || 'User'}
           />

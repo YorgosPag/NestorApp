@@ -23,6 +23,11 @@
 ## Pre-commit Hook
 - [Disable slow pre-commit checks](feedback_disable_slow_precommit.md) — No tsc/prettier/madge/eslint in hook. Run on-demand only.
 
+## Firestore Security
+- **CHECK 3.10**: Κάθε `query()` + `where()` ΠΡΕΠΕΙ να περιλαμβάνει `where('companyId', '==', companyId)` — αλλιώς permission-denied
+- Baseline: `.firestore-companyid-baseline.json` (48 violations, 30 αρχεία, 2026-04-10)
+- `npm run firestore:audit` — έλεγχος πρόοδος vs baseline
+
 ## User Preferences
 
 ### Vercel Deploy Limit — Work on localhost

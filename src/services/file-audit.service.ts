@@ -226,11 +226,13 @@ export class FileAuditService {
    */
   static async getFileHistory(
     fileId: string,
+    companyId: string,
     maxEntries = 50,
   ): Promise<FileAuditRecord[]> {
     const colRef = collection(db, FILE_AUDIT_COLLECTION);
     const q = query(
       colRef,
+      where('companyId', '==', companyId),
       where('fileId', '==', fileId),
       orderBy('timestamp', 'desc'),
       firestoreLimit(maxEntries),
@@ -257,11 +259,13 @@ export class FileAuditService {
    */
   static async getUserHistory(
     performedBy: string,
+    companyId: string,
     maxEntries = 100,
   ): Promise<FileAuditRecord[]> {
     const colRef = collection(db, FILE_AUDIT_COLLECTION);
     const q = query(
       colRef,
+      where('companyId', '==', companyId),
       where('performedBy', '==', performedBy),
       orderBy('timestamp', 'desc'),
       firestoreLimit(maxEntries),

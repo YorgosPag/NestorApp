@@ -245,9 +245,9 @@ export class FileShareService {
   /**
    * Get all active shares for a file.
    */
-  static async getSharesForFile(fileId: string): Promise<FileShareRecord[]> {
+  static async getSharesForFile(fileId: string, companyId: string): Promise<FileShareRecord[]> {
     const colRef = collection(db, COLLECTIONS.FILE_SHARES);
-    const q = query(colRef, where('fileId', '==', fileId), where('isActive', '==', true));
+    const q = query(colRef, where('companyId', '==', companyId), where('fileId', '==', fileId), where('isActive', '==', true));
     const snap = await getDocs(q);
 
     return snap.docs.map((d) => {

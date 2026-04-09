@@ -254,7 +254,8 @@
     "descriptionPlaceholder": "Add a description or notes...",
     "filesCount": "files",
     "collapseGroup": "Collapse group",
-    "expandGroup": "Expand group"
+    "expandGroup": "Expand group",
+    "openInNewTab": "Open in new tab"
   },
   "linkModal": {
     "title": "Link file to Buildings",
