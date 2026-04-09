@@ -18,7 +18,7 @@
     "newExpense": "Νέο Έξοδο",
     "editInvoice": "Επεξεργασία Τιμολογίου",
     "updateInvoice": "Ενημέρωση",
-    "editNotAllowed": "Αυτό το τιμολόγιο δεν μπορεί να επεξεργαστεί (κατάσταση: {{status}}).",
+    "editNotAllowed": "Αυτό το τιμολόγιο δεν μπορεί να επεξεργαστεί (κατάσταση: {status}).",
     "loading": "Φόρτωση τιμολογίου...",
     "loadError": "Σφάλμα φόρτωσης",
     "invoiceDetails": "Λεπτομέρειες Τιμολογίου",
@@ -389,7 +389,7 @@
       "cancelButton": "Ακύρωση",
       "sending": "Αποστολή...",
       "successTitle": "Email Εστάλη!",
-      "successMessage": "Το τιμολόγιο εστάλη στο {{email}}.",
+      "successMessage": "Το τιμολόγιο εστάλη στο {email}.",
       "errorTitle": "Αποτυχία Αποστολής",
       "invalidEmail": "Μη έγκυρη διεύθυνση email",
       "pdfAttachmentNote": "Το PDF θα επισυναφθεί αυτόματα."
@@ -676,7 +676,7 @@
     "notFoundMessage": "Η βεβαίωση δεν βρέθηκε.",
     "fetchFailed": "Αποτυχία φόρτωσης βεβαίωσης",
     "backToList": "Πίσω στη λίστα",
-    "certificateTitle": "Βεβαίωση Παρακράτησης {{year}}",
+    "certificateTitle": "Βεβαίωση Παρακράτησης {year}",
     "createDialogTitle": "Νέα Βεβαίωση Παρακράτησης Φόρου",
     "createFailed": "Αποτυχία δημιουργίας βεβαίωσης.",
     "createButton": "Δημιουργία Βεβαίωσης",
@@ -688,7 +688,7 @@
       "received": "Ελήφθησαν",
       "pending": "Εκκρεμείς"
     },
-    "count": "{{count}} βεβαιώσεις",
+    "count": "{count} βεβαιώσεις",
     "empty": {
       "title": "Δεν βρέθηκαν βεβαιώσεις",
       "hint": "Δημιουργήστε μια νέα βεβαίωση για να ξεκινήσετε."
@@ -728,8 +728,8 @@
       "vatPlaceholder": "π.χ. 123456789"
     },
     "invoices": {
-      "heading": "Τιμολόγια ({{count}})",
-      "withholdingHeading": "Τιμολόγια με παρακράτηση ({{count}})",
+      "heading": "Τιμολόγια ({count})",
+      "withholdingHeading": "Τιμολόγια με παρακράτηση ({count})",
       "empty": "Δεν βρέθηκαν ΤΠΥ με παρακράτηση φόρου για αυτό το ΑΦΜ / έτος."
     },
     "invoiceTable": {
@@ -743,7 +743,7 @@
     },
     "notesHeading": "Σημειώσεις",
     "emailHistory": {
-      "heading": "Ιστορικό Αποστολών Υπενθυμίσεων ({{count}})",
+      "heading": "Ιστορικό Αποστολών Υπενθυμίσεων ({count})",
       "date": "Ημερομηνία",
       "recipient": "Παραλήπτης",
       "subject": "Θέμα",
@@ -751,14 +751,14 @@
       "sent": "Εστάλη",
       "failed": "Αποτυχία"
     },
-    "footer": "Δημιουργήθηκε: {{created}} · Τελ. ενημέρωση: {{updated}}",
+    "footer": "Δημιουργήθηκε: {created} · Τελ. ενημέρωση: {updated}",
     "duplicate": {
       "title": "Βεβαίωση ήδη υπάρχει",
-      "message": "Υπάρχει ήδη βεβαίωση για αυτόν τον πελάτη και το έτος {{year}}.",
+      "message": "Υπάρχει ήδη βεβαίωση για αυτόν τον πελάτη και το έτος {year}.",
       "viewExisting": "Προβολή υπάρχουσας βεβαίωσης →"
     },
     "reminderEmail": {
-      "title": "Αποστολή Υπενθύμισης — Βεβαίωση {{year}}",
+      "title": "Αποστολή Υπενθύμισης — Βεβαίωση {year}",
       "to": "Προς",
       "subject": "Θέμα",
       "language": "Γλώσσα",
@@ -766,10 +766,10 @@
       "langEn": "English",
       "pdfNote": "Θα επισυναφθεί αυτόματα το PDF της βεβαίωσης.",
       "preview": "Προεπισκόπηση",
-      "customer": "Πελάτης: {{name}} ({{vat}})",
+      "customer": "Πελάτης: {name} ({vat})",
       "invalidEmail": "Μη έγκυρη διεύθυνση email.",
       "sendError": "Αποτυχία αποστολής email.",
-      "sendSuccess": "Το email στάλθηκε στο {{email}}.",
+      "sendSuccess": "Το email στάλθηκε στο {email}.",
       "cancel": "Ακύρωση",
       "sending": "Αποστολή...",
       "send": "Αποστολή"
@@ -783,8 +783,8 @@
       "editTitle": "Επεξεργασία Κατηγορίας",
       "createTitle": "Νέα Κατηγορία",
       "listAriaLabel": "Λίστα custom κατηγοριών",
-      "editAriaLabel": "Επεξεργασία {{name}}",
-      "deleteAriaLabel": "Διαγραφή {{name}}",
+      "editAriaLabel": "Επεξεργασία {name}",
+      "deleteAriaLabel": "Διαγραφή {name}",
       "cancel": "Ακύρωση",
       "save": "Αποθήκευση",
       "create": "Δημιουργία",

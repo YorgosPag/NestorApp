@@ -18,7 +18,7 @@
     "newExpense": "New Expense",
     "editInvoice": "Edit Invoice",
     "updateInvoice": "Update",
-    "editNotAllowed": "This invoice cannot be edited (status: {{status}}).",
+    "editNotAllowed": "This invoice cannot be edited (status: {status}).",
     "loading": "Loading invoice...",
     "loadError": "Loading error",
     "invoiceDetails": "Invoice Details",
@@ -389,7 +389,7 @@
       "cancelButton": "Cancel",
       "sending": "Sending...",
       "successTitle": "Email Sent!",
-      "successMessage": "The invoice was sent to {{email}}.",
+      "successMessage": "The invoice was sent to {email}.",
       "errorTitle": "Send Failed",
       "invalidEmail": "Invalid email address",
       "pdfAttachmentNote": "The PDF will be attached automatically."
@@ -676,7 +676,7 @@
     "notFoundMessage": "Certificate not found.",
     "fetchFailed": "Failed to load certificate",
     "backToList": "Back to list",
-    "certificateTitle": "Tax Withholding Certificate {{year}}",
+    "certificateTitle": "Tax Withholding Certificate {year}",
     "createDialogTitle": "New Tax Withholding Certificate",
     "createFailed": "Failed to create certificate.",
     "createButton": "Create Certificate",
@@ -688,7 +688,7 @@
       "received": "Received",
       "pending": "Pending"
     },
-    "count": "{{count}} certificates",
+    "count": "{count} certificates",
     "empty": {
       "title": "No certificates found",
       "hint": "Create a new certificate to get started."
@@ -728,8 +728,8 @@
       "vatPlaceholder": "e.g. 123456789"
     },
     "invoices": {
-      "heading": "Invoices ({{count}})",
-      "withholdingHeading": "Invoices with withholding ({{count}})",
+      "heading": "Invoices ({count})",
+      "withholdingHeading": "Invoices with withholding ({count})",
       "empty": "No invoices with tax withholding found for this VAT # / year."
     },
     "invoiceTable": {
@@ -743,7 +743,7 @@
     },
     "notesHeading": "Notes",
     "emailHistory": {
-      "heading": "Reminder Send History ({{count}})",
+      "heading": "Reminder Send History ({count})",
       "date": "Date",
       "recipient": "Recipient",
       "subject": "Subject",
@@ -751,14 +751,14 @@
       "sent": "Sent",
       "failed": "Failed"
     },
-    "footer": "Created: {{created}} · Last updated: {{updated}}",
+    "footer": "Created: {created} · Last updated: {updated}",
     "duplicate": {
       "title": "Certificate already exists",
-      "message": "A certificate for this customer and year {{year}} already exists.",
+      "message": "A certificate for this customer and year {year} already exists.",
       "viewExisting": "View existing certificate →"
     },
     "reminderEmail": {
-      "title": "Send Reminder — Certificate {{year}}",
+      "title": "Send Reminder — Certificate {year}",
       "to": "To",
       "subject": "Subject",
       "language": "Language",
@@ -766,10 +766,10 @@
       "langEn": "English",
       "pdfNote": "The certificate PDF will be automatically attached.",
       "preview": "Preview",
-      "customer": "Customer: {{name}} ({{vat}})",
+      "customer": "Customer: {name} ({vat})",
       "invalidEmail": "Invalid email address.",
       "sendError": "Failed to send email.",
-      "sendSuccess": "Email sent to {{email}}.",
+      "sendSuccess": "Email sent to {email}.",
       "cancel": "Cancel",
       "sending": "Sending...",
       "send": "Send"
@@ -783,8 +783,8 @@
       "editTitle": "Edit Category",
       "createTitle": "New Category",
       "listAriaLabel": "Custom categories list",
-      "editAriaLabel": "Edit {{name}}",
-      "deleteAriaLabel": "Delete {{name}}",
+      "editAriaLabel": "Edit {name}",
+      "deleteAriaLabel": "Delete {name}",
       "cancel": "Cancel",
       "save": "Save",
       "create": "Create",

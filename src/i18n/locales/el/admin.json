@@ -90,7 +90,7 @@
       "description": "Δεν υπάρχουν μηνύματα που να ταιριάζουν με τα φίλτρα."
     },
     "newEmailSingle": "Νέο email ελήφθη!",
-    "newEmailMultiple": "{{count}} νέα emails ελήφθησαν!",
+    "newEmailMultiple": "{count} νέα emails ελήφθησαν!",
     "errors": {
       "authRequired": "Απαιτείται σύνδεση. Παρακαλώ συνδεθείτε ξανά.",
       "firestoreListener": "Αποτυχία σύνδεσης με τη βάση δεδομένων σε πραγματικό χρόνο.",
@@ -119,7 +119,7 @@
     "backToAdmin": "Πίσω στη Διαχείριση",
     "pageTitle": "Σύνδεση Πωλημένων Μονάδων με Πελάτες",
     "loadingProject": "Φόρτωση στοιχείων έργου...",
-    "fixDescription": "Διόρθωση του προβλήματος με τους πελάτες του {{project}}",
+    "fixDescription": "Διόρθωση του προβλήματος με τους πελάτες του {project}",
     "projectFallback": "έργου",
     "currentStatus": "📊 Τρέχουσα Κατάσταση Μονάδων",
     "toolTitle": "🔧 Εργαλείο Σύνδεσης",

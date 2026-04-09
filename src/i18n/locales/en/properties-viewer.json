@@ -16,7 +16,7 @@
     },
     "defaults": {
       "newPropertyName": "New property",
-      "duplicatePropertyName": "{{name}} copy"
+      "duplicatePropertyName": "{name} copy"
     },
     "tools": {
       "select": "Select",

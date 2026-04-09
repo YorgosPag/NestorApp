@@ -757,7 +757,7 @@
     "approximate": "Approximate",
     "area": "Area",
     "confidence": "confidence",
-    "lastLocation": "Last location: Accuracy ±{{accuracy}}m",
+    "lastLocation": "Last location: Accuracy ±{accuracy}m",
     "recentSearches": "Recent Searches",
     "municipalities": "Municipalities",
     "regions": "Regions",

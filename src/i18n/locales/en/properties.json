@@ -10,7 +10,7 @@
   },
   "multiLevel": {
     "floors": "Floors",
-    "autoCreated": "{{count}} levels created automatically. You can add or remove levels.",
+    "autoCreated": "{count} levels created automatically. You can add or remove levels.",
     "noNextFloor": {
       "title": "No next floor available",
       "description": "This unit type requires at least 2 levels, but there is no next floor in the building. Add an additional floor to the building or select a lower floor."
@@ -500,12 +500,12 @@
           "cta": "Create Building"
         },
         "noFloors": {
-          "title": "Building \"{{buildingName}}\" has no floors yet",
+          "title": "Building \"{buildingName}\" has no floors yet",
           "cta": "Add a Floor to this Building",
           "inlineCta": "No floors yet — Add Floor"
         },
         "orphanBuilding": {
-          "title": "Building \"{{buildingName}}\" is not linked to a Project",
+          "title": "Building \"{buildingName}\" is not linked to a Project",
           "description": "It must be linked to a Project first before you can continue.",
           "cta": {
             "fixNow": "Link it now",
@@ -569,8 +569,8 @@
       "tasks": { "label": "Tasks" }
     },
     "severity": {
-      "warn": "Warning ({{count}})",
-      "block": "Blocked ({{count}})"
+      "warn": "Warning ({count})",
+      "block": "Blocked ({count})"
     },
     "actions": {
       "cancel": "Cancel",
@@ -710,5 +710,5 @@
   "types": {
     "outdoor": "Outdoor"
   },
-  "unitFallbackLabel": "Unit {{id}}"
+  "unitFallbackLabel": "Unit {id}"
 }

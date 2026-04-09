@@ -185,7 +185,7 @@
     }
   },
   "mapLayers": {
-    "pinPreviewTitle": "Pin Preview - Radius: {{radius}}m",
-    "pinRadiusTitle": "Pin - Radius: {{radius}}m"
+    "pinPreviewTitle": "Pin Preview - Radius: {radius}m",
+    "pinRadiusTitle": "Pin - Radius: {radius}m"
   }
 }

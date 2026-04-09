@@ -6,7 +6,7 @@
     "forecastInflow": "[[~~~~~ Προβλεπόμενες Εισροές (12Μ) ~~~~~]]",
     "forecastOutflow": "[[~~~~~ Προβλεπόμενες Εκροές (12Μ) ~~~~~]]",
     "lowestBalance": "[[~~~~ Χαμηλότερο Υπόλοιπο ~~~~]]",
-    "lowestBalanceMonth": "[[~~~ σε {{month}} ~~~]]"
+    "lowestBalanceMonth": "[[~~~ σε {month} ~~~]]"
   },
   "scenario": {
     "label": "[[~~ Σενάριο ~~]]",

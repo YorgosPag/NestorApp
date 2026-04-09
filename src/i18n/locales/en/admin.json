@@ -90,7 +90,7 @@
       "description": "No messages match the current filters."
     },
     "newEmailSingle": "New email received!",
-    "newEmailMultiple": "{{count}} new emails received!",
+    "newEmailMultiple": "{count} new emails received!",
     "errors": {
       "authRequired": "Login required. Please sign in again.",
       "firestoreListener": "Failed to connect to real-time database.",
@@ -119,7 +119,7 @@
     "backToAdmin": "Back to Admin",
     "pageTitle": "Link Sold Units to Customers",
     "loadingProject": "Loading project details...",
-    "fixDescription": "Fixing the customer association problem for {{project}}",
+    "fixDescription": "Fixing the customer association problem for {project}",
     "projectFallback": "project",
     "currentStatus": "📊 Current Units Status",
     "toolTitle": "🔧 Linking Tool",

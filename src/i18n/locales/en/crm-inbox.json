@@ -65,7 +65,7 @@
     "search": {
       "placeholder": "Search events...",
       "noResults": "No events found",
-      "resultsCount": "{{count}} events found"
+      "resultsCount": "{count} events found"
     },
     "shortcuts": {
       "title": "Keyboard Shortcuts",
@@ -111,7 +111,7 @@
       "endType": "End",
       "never": "Never",
       "onDate": "On date",
-      "afterCount": "After {{count}} occurrences"
+      "afterCount": "After {count} occurrences"
     },
     "export": {
       "print": "Print",

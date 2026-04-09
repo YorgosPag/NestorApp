@@ -327,7 +327,7 @@
     "storage": {
       "deleteDialog": {
         "title": "Delete Storage",
-        "description": "Are you sure you want to delete storage {{name}}?"
+        "description": "Are you sure you want to delete storage {name}?"
       }
     }
   }

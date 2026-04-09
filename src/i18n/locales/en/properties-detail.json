@@ -164,7 +164,7 @@
     "noFloors": "Select at least 2 floors",
     "noFloorHint": "Link a building first",
     "selectHierarchyFirst": "Select unit type, building and floor first to unlock the fields.",
-    "autoCreated": "{{count}} levels created automatically. You can add or remove levels.",
+    "autoCreated": "{count} levels created automatically. You can add or remove levels.",
     "noNextFloor": {
       "title": "No next floor available",
       "description": "This unit type requires at least 2 levels, but there is no next floor in the building. Add an additional floor to the building or select a lower floor."

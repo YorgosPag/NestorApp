@@ -757,7 +757,7 @@
     "approximate": "Προσεγγιστική",
     "area": "Περιοχή",
     "confidence": "εμπιστοσύνη",
-    "lastLocation": "Τελευταία θέση: Ακρίβεια ±{{accuracy}}m",
+    "lastLocation": "Τελευταία θέση: Ακρίβεια ±{accuracy}m",
     "recentSearches": "Πρόσφατες Αναζητήσεις",
     "municipalities": "Δήμοι",
     "regions": "Περιφέρειες",

@@ -30,21 +30,21 @@
     "close": "Close",
     "coordinateSystem": "✅ Coordinate System:",
     "sceneStatus": "📊 Scene Status:",
-    "entities": "Entities: {{count}}",
-    "layers": "Layers: {{count}}",
+    "entities": "Entities: {count}",
+    "layers": "Layers: {count}",
     "noEntities": "⚠️ No entities",
     "hide": "📊 Hide",
     "show": "📊 Show",
     "coordinates": "📍 Coordinates:",
-    "worldCoord": "🌍 World: ({{x}}, {{y}})",
-    "roundTripError": "🔄 Round-trip error: {{error}}px",
+    "worldCoord": "🌍 World: ({x}, {y})",
+    "roundTripError": "🔄 Round-trip error: {error}px",
     "moveMouse": "Move the mouse over the canvas...",
     "clickTest": "🎯 Click Test:",
     "clear": "Clear",
     "testAreaLabel": "Coordinate accuracy test area",
     "clickHereForTest": "Click here for accuracy test",
     "noTests": "No tests yet",
-    "worldShort": "World: ({{x}}, {{y}})",
+    "worldShort": "World: ({x}, {y})",
     "perfect": "PERFECT ✅",
     "needsCorrection": "NEEDS CORRECTION ⚠️",
     "tips": "Tips:",
@@ -109,12 +109,12 @@
     "selectProject": "Select Project",
     "success": "Success",
     "error": "Error",
-    "loadError": "Loading error: {{message}}"
+    "loadError": "Loading error: {message}"
   },
   "destination": {
-    "generalFloorplan": "{{name}} - General Floorplan",
-    "parkingSpots": "{{name}} - Parking Spots",
-    "storages": "{{project}} → {{building}} → Storages"
+    "generalFloorplan": "{name} - General Floorplan",
+    "parkingSpots": "{name} - Parking Spots",
+    "storages": "{project} → {building} → Storages"
   },
   "callbacks": {
     "copy": "Copy",

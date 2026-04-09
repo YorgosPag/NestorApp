@@ -108,7 +108,7 @@
   },
 
   "crossFilter": {
-    "filtered": "Φίλτρο: {{field}} = {{value}}",
+    "filtered": "Φίλτρο: {field} = {value}",
     "clear": "Καθαρισμός φίλτρου"
   },
 
@@ -126,20 +126,20 @@
     "watermarkConfidential": "ΕΜΠΙΣΤΕΥΤΙΚΟ",
     "watermarkConfidentialUser": "ΕΜΠΙΣΤΕΥΤΙΚΟ + Χρήστης",
     "scope": "Εύρος Εξαγωγής",
-    "scopeAll": "Εξαγωγή όλων ({{count}} εγγραφές)",
-    "scopeFiltered": "Εξαγωγή τρέχουσας προβολής ({{count}} εγγραφές)",
+    "scopeAll": "Εξαγωγή όλων ({count} εγγραφές)",
+    "scopeFiltered": "Εξαγωγή τρέχουσας προβολής ({count} εγγραφές)",
     "exporting": "Εξαγωγή...",
     "successPdf": "Η αναφορά εξήχθη σε PDF",
     "successExcel": "Η αναφορά εξήχθη σε Excel",
     "error": "Αποτυχία εξαγωγής — δοκιμάστε ξανά",
-    "crossFilterActive": "Ενεργό φίλτρο: {{field}} = {{value}}",
+    "crossFilterActive": "Ενεργό φίλτρο: {field} = {value}",
     "cancel": "Ακύρωση",
     "confirm": "Εξαγωγή"
   },
 
   "accessibility": {
-    "expandGroup": "Ανάπτυξη ομάδας {{group}}",
-    "collapseGroup": "Σύμπτυξη ομάδας {{group}}",
-    "sortBySubtotal": "Ταξινόμηση κατά {{column}} υποσύνολο"
+    "expandGroup": "Ανάπτυξη ομάδας {group}",
+    "collapseGroup": "Σύμπτυξη ομάδας {group}",
+    "sortBySubtotal": "Ταξινόμηση κατά {column} υποσύνολο"
   }
 }

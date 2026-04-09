@@ -16,7 +16,7 @@
     },
     "defaults": {
       "newPropertyName": "Νέο ακίνητο",
-      "duplicatePropertyName": "{{name}} αντίγραφο"
+      "duplicatePropertyName": "{name} αντίγραφο"
     },
     "tools": {
       "select": "Επιλογή",

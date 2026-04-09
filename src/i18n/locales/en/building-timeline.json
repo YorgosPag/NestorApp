@@ -147,14 +147,14 @@
           "colVariance": "Variance",
           "colStatus": "Status",
           "colProgress": "Progress",
-          "expandPhase": "Expand {{name}}",
-          "collapsePhase": "Collapse {{name}}"
+          "expandPhase": "Expand {name}",
+          "collapsePhase": "Collapse {name}"
         },
         "lookahead": {
           "title": "Lookahead",
           "weeks2": "2 Weeks",
           "weeks4": "4 Weeks",
-          "empty": "No tasks scheduled in the next {{weeks}} weeks",
+          "empty": "No tasks scheduled in the next {weeks} weeks",
           "colTask": "Task",
           "colPhase": "Phase",
           "colStart": "Start",
@@ -220,17 +220,17 @@
           "list": {
             "empty": "No baselines saved",
             "emptyDesc": "Save a baseline to track schedule changes over time.",
-            "version": "v{{version}}",
+            "version": "v{version}",
             "compare": "Compare",
             "comparing": "Comparing",
             "stopComparing": "Stop comparing",
             "delete": "Delete",
-            "deleteConfirm": "Delete baseline \"{{name}}\"? This cannot be undone.",
-            "phases": "{{count}} phases",
-            "tasks": "{{count}} tasks"
+            "deleteConfirm": "Delete baseline \"{name}\"? This cannot be undone.",
+            "phases": "{count} phases",
+            "tasks": "{count} tasks"
           },
           "variance": {
-            "comparingTo": "Comparing to: {{name}}",
+            "comparingTo": "Comparing to: {name}",
             "clearComparison": "Clear",
             "colBaselineStart": "Baseline Start",
             "colBaselineEnd": "Baseline End",

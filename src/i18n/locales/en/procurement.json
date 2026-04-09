@@ -82,7 +82,7 @@
   },
   "email": {
     "sendButton": "Send via Email",
-    "subject": "Purchase Order {{poNumber}}",
+    "subject": "Purchase Order {poNumber}",
     "recipientLabel": "Recipient Email",
     "recipientPlaceholder": "supplier@example.com",
     "recipientName": "Recipient Name",
@@ -95,7 +95,7 @@
     "createLink": "Create Share Link",
     "copyLink": "Copy Link",
     "copied": "Link copied!",
-    "expires": "Expires in {{days}} days",
+    "expires": "Expires in {days} days",
     "readOnly": "Read-only access",
     "revoke": "Revoke Link",
     "revokeConfirm": "Are you sure you want to revoke this share link?",
@@ -108,7 +108,7 @@
     "companyDetails": "Company Details",
     "supplierDetails": "Supplier Details",
     "termsAndConditions": "Terms & Conditions",
-    "page": "Page {{current}} of {{total}}"
+    "page": "Page {current} of {total}"
   },
   "activity": {
     "tabLabel": "Activity",
@@ -130,9 +130,9 @@
     "receivedQty": "Received"
   },
   "notifications": {
-    "approvalNeeded": "PO {{poNumber}} requires approval",
-    "poApproved": "PO {{poNumber}} has been approved",
-    "poOverdue": "PO {{poNumber}} is overdue (needed by {{dateNeeded}})"
+    "approvalNeeded": "PO {poNumber} requires approval",
+    "poApproved": "PO {poNumber} has been approved",
+    "poOverdue": "PO {poNumber} is overdue (needed by {dateNeeded})"
   },
   "kpi": {
     "activePO": "Active POs",

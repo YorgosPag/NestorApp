@@ -233,8 +233,8 @@
     "fileActions": "File actions",
     "link": "Link",
     "unlink": "Unlink",
-    "linkFile": "Link file to {{entity}}",
-    "unlinkFile": "Unlink file from {{entity}}",
+    "linkFile": "Link file to {entity}",
+    "unlinkFile": "Unlink file from {entity}",
     "entityName": {
       "contact": "contact",
       "building": "building",
@@ -333,9 +333,9 @@
     "processing": "Processing files...",
     "errors": {
       "fileTooLarge": "File {fileName} is too large. Maximum size: {maxSize}",
-      "fileTooSmall": "File {{fileName}} is too small"
+      "fileTooSmall": "File {fileName} is too small"
     },
-    "compressed": "{{fileName}}: Compressed by {{savings}}% ({{originalSize}} → {{compressedSize}})",
+    "compressed": "{fileName}: Compressed by {savings}% ({originalSize} → {compressedSize})",
     "fileTypesHintPrefix": "Supported types",
     "fileTypes": {
       "images": "Images",
@@ -529,7 +529,7 @@
     "title": "Document templates",
     "create": "New template",
     "namePlaceholder": "Template name",
-    "contentPlaceholder": "HTML content with {{variables}}...",
+    "contentPlaceholder": "HTML content with {variables}...",
     "save": "Save",
     "variables": "Variables",
     "preview": "Preview",
@@ -577,7 +577,7 @@
     "notePlaceholder": "Message for recipient...",
     "create": "Create link",
     "created": "Link created!",
-    "expiresIn": "Expires in {{label}}",
+    "expiresIn": "Expires in {label}",
     "passwordProtected": "Password protected",
     "maxDownloadsLabel": "Max downloads: {count}",
     "expirationOptions": {
@@ -629,10 +629,10 @@
     },
     "sensitive": {
       "title": "Confirm sensitive file removal",
-      "description": "The file \"{{displayName}}\" is classified as sensitive or belongs to a regulated domain. Removing it may affect legal, accounting, or compliance workflows."
+      "description": "The file \"{displayName}\" is classified as sensitive or belongs to a regulated domain. Removing it may affect legal, accounting, or compliance workflows."
     },
     "batchLast": {
-      "description": "This batch action will remove all remaining \"{{category}}\" files linked to the property."
+      "description": "This batch action will remove all remaining \"{category}\" files linked to the property."
     },
     "batchSensitive": {
       "title": "Confirm sensitive batch removal",
@@ -640,7 +640,7 @@
     },
     "unlink": {
       "title": "Confirm file unlink",
-      "description": "Unlinking \"{{displayName}}\" removes it from this property without deleting the underlying file. Confirm that the property should lose access to it."
+      "description": "Unlinking \"{displayName}\" removes it from this property without deleting the underlying file. Confirm that the property should lose access to it."
     },
     "removeFloorplan": "Remove floorplan",
     "removeDocument": "Remove document",

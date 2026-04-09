@@ -317,7 +317,7 @@
     "changeEntityColor": "🎨 Change Entity Color"
   },
   "destinationSelector": {
-    "floorsCount": "{{count}} floors",
+    "floorsCount": "{count} floors",
     "stepTitle": {
       "company": "Select Company",
       "project": "Select Project",

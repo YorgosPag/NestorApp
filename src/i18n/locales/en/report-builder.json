@@ -95,7 +95,7 @@
     "label": "% of Total"
   },
   "crossFilter": {
-    "filtered": "Filtered: {{field}} = {{value}}",
+    "filtered": "Filtered: {field} = {value}",
     "clear": "Clear filter"
   },
   "grandTotal": {
@@ -111,19 +111,19 @@
     "watermarkConfidential": "CONFIDENTIAL",
     "watermarkConfidentialUser": "CONFIDENTIAL + User",
     "scope": "Export Scope",
-    "scopeAll": "Export all data ({{count}} records)",
-    "scopeFiltered": "Export current view ({{count}} records)",
+    "scopeAll": "Export all data ({count} records)",
+    "scopeFiltered": "Export current view ({count} records)",
     "exporting": "Exporting...",
     "successPdf": "Report exported to PDF",
     "successExcel": "Report exported to Excel",
     "error": "Export failed — try again",
-    "crossFilterActive": "Active filter: {{field}} = {{value}}",
+    "crossFilterActive": "Active filter: {field} = {value}",
     "cancel": "Cancel",
     "confirm": "Export"
   },
   "accessibility": {
-    "expandGroup": "Expand group {{group}}",
-    "collapseGroup": "Collapse group {{group}}",
-    "sortBySubtotal": "Sort by {{column}} subtotal"
+    "expandGroup": "Expand group {group}",
+    "collapseGroup": "Collapse group {group}",
+    "sortBySubtotal": "Sort by {column} subtotal"
   }
 }

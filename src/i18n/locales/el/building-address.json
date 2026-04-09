@@ -158,6 +158,6 @@
       "buildings": "Κτίρια",
       "units": "Μονάδες"
     },
-    "professionAutoFilled": "Το επάγγελμα ορίστηκε αυτόματα: {{profession}}"
+    "professionAutoFilled": "Το επάγγελμα ορίστηκε αυτόματα: {profession}"
   }
 }

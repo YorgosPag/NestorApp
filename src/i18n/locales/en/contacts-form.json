@@ -235,7 +235,7 @@
     "phone": {
       "invalidFormat": "Phone number may have invalid format"
     },
-    "vatDuplicate": "VAT {{vatNumber}} is already used by: {{contactName}}",
+    "vatDuplicate": "VAT {vatNumber} is already used by: {contactName}",
     "vatChecking": "Checking VAT...",
     "vatInvalid": "Invalid VAT number — please verify the 9 digits are correct",
     "arrayValidation": {

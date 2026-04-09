@@ -30,21 +30,21 @@
     "close": "Κλείσιμο",
     "coordinateSystem": "✅ Σύστημα Συντεταγμένων:",
     "sceneStatus": "📊 Κατάσταση Σκηνής:",
-    "entities": "Οντότητες: {{count}}",
-    "layers": "Επίπεδα: {{count}}",
+    "entities": "Οντότητες: {count}",
+    "layers": "Επίπεδα: {count}",
     "noEntities": "⚠️ Δεν υπάρχουν οντότητες",
     "hide": "📊 Απόκρυψη",
     "show": "📊 Εμφάνιση",
     "coordinates": "📍 Συντεταγμένες:",
-    "worldCoord": "🌍 Κόσμος: ({{x}}, {{y}})",
-    "roundTripError": "🔄 Σφάλμα round-trip: {{error}}px",
+    "worldCoord": "🌍 Κόσμος: ({x}, {y})",
+    "roundTripError": "🔄 Σφάλμα round-trip: {error}px",
     "moveMouse": "Μετακινήστε το ποντίκι πάνω από τον καμβά...",
     "clickTest": "🎯 Τεστ Κλικ:",
     "clear": "Καθαρισμός",
     "testAreaLabel": "Περιοχή τεστ ακρίβειας συντεταγμένων",
     "clickHereForTest": "Κλικ εδώ για τεστ ακρίβειας",
     "noTests": "Δεν υπάρχουν δοκιμές",
-    "worldShort": "Κόσμος: ({{x}}, {{y}})",
+    "worldShort": "Κόσμος: ({x}, {y})",
     "perfect": "ΤΕΛΕΙΟ ✅",
     "needsCorrection": "ΧΡΕΙΑΖΕΤΑΙ ΔΙΟΡΘΩΣΗ ⚠️",
     "tips": "Συμβουλές:",
@@ -109,12 +109,12 @@
     "selectProject": "Επιλογή Project",
     "success": "Επιτυχία",
     "error": "Σφάλμα",
-    "loadError": "Σφάλμα φόρτωσης: {{message}}"
+    "loadError": "Σφάλμα φόρτωσης: {message}"
   },
   "destination": {
-    "generalFloorplan": "{{name}} - Γενική Κάτοψη",
-    "parkingSpots": "{{name}} - Θέσεις Στάθμευσης",
-    "storages": "{{project}} → {{building}} → Αποθήκες"
+    "generalFloorplan": "{name} - Γενική Κάτοψη",
+    "parkingSpots": "{name} - Θέσεις Στάθμευσης",
+    "storages": "{project} → {building} → Αποθήκες"
   },
   "callbacks": {
     "copy": "Αντιγραφή",

@@ -147,14 +147,14 @@
           "colVariance": "Απόκλιση",
           "colStatus": "Κατάσταση",
           "colProgress": "Πρόοδος",
-          "expandPhase": "Ανάπτυξη {{name}}",
-          "collapsePhase": "Σύμπτυξη {{name}}"
+          "expandPhase": "Ανάπτυξη {name}",
+          "collapsePhase": "Σύμπτυξη {name}"
         },
         "lookahead": {
           "title": "Πρόβλεψη",
           "weeks2": "2 Εβδομάδες",
           "weeks4": "4 Εβδομάδες",
-          "empty": "Δεν υπάρχουν εργασίες τις επόμενες {{weeks}} εβδομάδες",
+          "empty": "Δεν υπάρχουν εργασίες τις επόμενες {weeks} εβδομάδες",
           "colTask": "Εργασία",
           "colPhase": "Φάση",
           "colStart": "Έναρξη",
@@ -220,17 +220,17 @@
           "list": {
             "empty": "Δεν υπάρχουν αποθηκευμένες βάσεις",
             "emptyDesc": "Αποθηκεύστε μια βάση για να παρακολουθείτε αλλαγές στο χρονοδιάγραμμα.",
-            "version": "v{{version}}",
+            "version": "v{version}",
             "compare": "Σύγκριση",
             "comparing": "Σύγκριση",
             "stopComparing": "Τέλος σύγκρισης",
             "delete": "Διαγραφή",
-            "deleteConfirm": "Διαγραφή βάσης \"{{name}}\"; Δεν μπορεί να αναιρεθεί.",
-            "phases": "{{count}} φάσεις",
-            "tasks": "{{count}} εργασίες"
+            "deleteConfirm": "Διαγραφή βάσης \"{name}\"; Δεν μπορεί να αναιρεθεί.",
+            "phases": "{count} φάσεις",
+            "tasks": "{count} εργασίες"
           },
           "variance": {
-            "comparingTo": "Σύγκριση με: {{name}}",
+            "comparingTo": "Σύγκριση με: {name}",
             "clearComparison": "Καθαρισμός",
             "colBaselineStart": "Αρχή Βάσης",
             "colBaselineEnd": "Λήξη Βάσης",

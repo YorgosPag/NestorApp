@@ -6,7 +6,7 @@
     "forecastInflow": "Forecast Inflow (12M)",
     "forecastOutflow": "Forecast Outflow (12M)",
     "lowestBalance": "Lowest Balance",
-    "lowestBalanceMonth": "in {{month}}"
+    "lowestBalanceMonth": "in {month}"
   },
   "scenario": {
     "label": "Scenario",

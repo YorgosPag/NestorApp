@@ -235,7 +235,7 @@
     "phone": {
       "invalidFormat": "Το τηλέφωνο μπορεί να έχει μη έγκυρο format"
     },
-    "vatDuplicate": "Το ΑΦΜ {{vatNumber}} χρησιμοποιείται ήδη από: {{contactName}}",
+    "vatDuplicate": "Το ΑΦΜ {vatNumber} χρησιμοποιείται ήδη από: {contactName}",
     "vatChecking": "Έλεγχος ΑΦΜ...",
     "vatInvalid": "Μη έγκυρο ΑΦΜ — ελέγξτε ότι τα 9 ψηφία είναι σωστά",
     "arrayValidation": {

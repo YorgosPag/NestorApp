@@ -317,7 +317,7 @@
     "changeEntityColor": "🎨 Αλλαγή Χρώματος Οντότητας"
   },
   "destinationSelector": {
-    "floorsCount": "{{count}} όροφοι",
+    "floorsCount": "{count} όροφοι",
     "stepTitle": {
       "company": "Επιλέξτε Εταιρεία",
       "project": "Επιλέξτε Έργο",

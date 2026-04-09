@@ -158,6 +158,6 @@
       "buildings": "Buildings",
       "units": "Units"
     },
-    "professionAutoFilled": "Profession auto-filled: {{profession}}"
+    "professionAutoFilled": "Profession auto-filled: {profession}"
   }
 }
