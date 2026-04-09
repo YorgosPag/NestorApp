@@ -85,7 +85,7 @@ export class UtilityHandler implements ToolHandler {
       return { success: false, error: 'query is required' };
     }
 
-    const { GREEK_TAX_OFFICES } = await import(
+    const { GREEK_TAX_OFFICES, getTaxOfficeDisplayName, getRegionDisplayName } = await import(
       '@/subapps/accounting/data/greek-tax-offices'
     );
 
@@ -100,8 +100,10 @@ export class UtilityHandler implements ToolHandler {
     const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length >= 2);
 
     const matches = GREEK_TAX_OFFICES.filter(office => {
-      const normalizedName = normalizeGreek(office.name);
-      const normalizedRegion = normalizeGreek(office.region);
+      const resolvedName = getTaxOfficeDisplayName(office.code);
+      const resolvedRegion = getRegionDisplayName(office.region);
+      const normalizedName = normalizeGreek(resolvedName);
+      const normalizedRegion = normalizeGreek(resolvedRegion);
       const fullText = `${normalizedName} ${normalizedRegion} ${office.code}`;
       return queryWords.every(w => fullText.includes(w));
     }).slice(0, 10);
@@ -117,8 +119,8 @@ export class UtilityHandler implements ToolHandler {
       success: true,
       data: matches.map(m => ({
         code: m.code,
-        name: m.name,
-        region: m.region,
+        name: getTaxOfficeDisplayName(m.code),
+        region: getRegionDisplayName(m.region),
       })),
       count: matches.length,
     };

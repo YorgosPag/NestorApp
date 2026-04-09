@@ -25,14 +25,27 @@ jest.mock('@/config/firestore-schema-map', () => ({
 }));
 
 // ── Mock greek-tax-offices (dynamic import) ──
+const mockOfficeNames: Record<string, string> = {
+  '1101': "Α' Αθηνών",
+  '1201': 'Θεσσαλονίκης',
+  '1301': 'Νέας Ιωνίας',
+  '1401': 'Καλλιθέας',
+  '1501': 'Πειραιώς',
+};
+const mockRegionNames: Record<string, string> = {
+  'regions.attica': 'Αττική',
+  'regions.central_macedonia': 'Κεντρική Μακεδονία',
+};
 jest.mock('@/subapps/accounting/data/greek-tax-offices', () => ({
   GREEK_TAX_OFFICES: [
-    { code: '1101', name: 'Α\' Αθηνών', region: 'Αττική' },
-    { code: '1201', name: 'Θεσσαλονίκης', region: 'Κεντρική Μακεδονία' },
-    { code: '1301', name: 'Νέας Ιωνίας', region: 'Αττική' },
-    { code: '1401', name: 'Καλλιθέας', region: 'Αττική' },
-    { code: '1501', name: 'Πειραιώς', region: 'Αττική' },
+    { code: '1101', name: 'offices.1101', region: 'regions.attica' },
+    { code: '1201', name: 'offices.1201', region: 'regions.central_macedonia' },
+    { code: '1301', name: 'offices.1301', region: 'regions.attica' },
+    { code: '1401', name: 'offices.1401', region: 'regions.attica' },
+    { code: '1501', name: 'offices.1501', region: 'regions.attica' },
   ],
+  getTaxOfficeDisplayName: (code: string) => mockOfficeNames[code] ?? code,
+  getRegionDisplayName: (key: string) => mockRegionNames[key] ?? key,
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports

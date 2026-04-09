@@ -61,6 +61,21 @@
       "targetNamespaces": []
     },
     {
+      "namespace": "accounting-tax-offices",
+      "owner": "accounting-subapp",
+      "primarySurface": "accounting-setup-doy-picker",
+      "stringClasses": [
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 200,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
       "namespace": "addresses",
       "owner": "shared-addressing",
       "primarySurface": "shared-addresses",

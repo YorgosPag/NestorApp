@@ -299,7 +299,7 @@ Data files with domain-specific Greek names use **structured locale entries**:
 | Phase 4B | DONE | 2026-04-09 | — | dxf-viewer code: 12 violations fixed, 2 files |
 | Phase 4C | DONE | 2026-04-09 | — | accounting components: 57 violations fixed, 2 files |
 | Phase 4D | DONE | 2026-04-09 | — | accounting config: 121 violations fixed, 10 files |
-| Phase 4E | PENDING | — | — | accounting data |
+| Phase 4E | DONE | 2026-04-09 | — | accounting data: 114 violations fixed, 6 files |
 | Phase 4F | PENDING | — | — | API routes + geo config |
 | Phase 4G | PENDING | — | — | dxf-viewer toolbar |
 | Phase 4H | PENDING | — | — | dxf-viewer encoding |
@@ -313,6 +313,7 @@ Data files with domain-specific Greek names use **structured locale entries**:
 | Date | Change |
 |------|--------|
 | 2026-04-09 | ADR-296 created. Full audit: 1,042 violations, 248 exempt, 794 to fix in 10 phases. |
+| 2026-04-09 | Phase 4E DONE: accounting data — 114 violations fixed. greek-tax-offices.ts fully refactored: 96 office names + 16 regions → i18n keys via doy() helper + region constants. New namespace `accounting-tax-offices` (el+en). DoyPicker + utility-handler consumers updated. getTaxOfficeDisplayName/getRegionDisplayName helpers added. |
 | 2026-04-09 | Phase 4D DONE: accounting config — 121 violations fixed. account-categories.ts (50: labels+descriptions→i18n keys, getCategoryDisplayLabel helper), vat-config.ts (24: VAT labels, 19 legalBasis, notes→i18n keys). 4 report services updated to use helper. VATDeductibilityTable consumer updated. ~70 new locale keys in el/en accounting.json. |
 | 2026-04-09 | Phase 4C DONE: accounting components — 57 violations fixed. CustomCategoriesSection (37: myDATA options→i18n keys, 15 defaultValue removals, error messages, buttons), useCustomCategories (4 error messages). ~50 new locale keys in el/en accounting-setup.json. |
 | 2026-04-09 | Phase 4B DONE: dxf-viewer user-facing code — 12 violations fixed. useDxfViewerCallbacks (4 toast/notification messages), DestinationWizard (8 button labels + step text). 14 new locale keys added to el/en dxf-viewer.json + dxf-viewer-wizard.json. |

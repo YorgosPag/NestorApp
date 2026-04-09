@@ -16,7 +16,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { SearchableCombobox, type ComboboxOption } from '@/components/ui/searchable-combobox';
-import { GREEK_TAX_OFFICES, type TaxOffice } from '@/subapps/accounting/data/greek-tax-offices';
+import { GREEK_TAX_OFFICES, getTaxOfficeDisplayName, getRegionDisplayName, type TaxOffice } from '@/subapps/accounting/data/greek-tax-offices';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -80,8 +80,8 @@ export function DoyPicker({
     const allOffices = [...GREEK_TAX_OFFICES, ...customOffices];
     return allOffices.map((office) => ({
       value: office.code,
-      label: office.name,
-      secondaryLabel: `${office.code} · ${office.region}`,
+      label: getTaxOfficeDisplayName(office.code),
+      secondaryLabel: `${office.code} · ${getRegionDisplayName(office.region)}`,
     }));
   }, [customOffices]);
 

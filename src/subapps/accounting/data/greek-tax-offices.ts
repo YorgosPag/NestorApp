@@ -1,166 +1,218 @@
 /**
  * @fileoverview Greek Tax Offices (ΔΟΥ) — Static Data
- * @description Πλήρης λίστα ~100 ενεργών Δημόσιων Οικονομικών Υπηρεσιών (ΔΟΥ) στην Ελλάδα.
- *   Πηγή: ΑΑΔΕ (Ανεξάρτητη Αρχή Δημοσίων Εσόδων), τελευταία ενημέρωση 2024.
- *   Οργανωμένα κατά περιφέρεια: Αττική, Πειραιάς, Θεσσαλονίκη, Λοιπή Ελλάδα.
- * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
+ * @description Registry of ~100 active tax offices (ΔΟΥ) in Greece.
+ *   Source: AADE (Independent Authority for Public Revenue), last updated 2024.
+ *   Organized by region: Attica, Piraeus, Thessaloniki, Rest of Greece.
+ *   All name/region values are i18n keys — resolve via getTaxOfficeDisplayName().
+ * @author Claude Code (Anthropic AI) + Georgios Pagonis
  * @created 2026-02-10
- * @version 1.0.0
+ * @version 2.0.0
  * @see ADR-ACC-013 Searchable ΔΟΥ + ΚΑΔ Dropdowns
  */
+
+import i18next from 'i18next';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export interface TaxOffice {
-  /** Κωδικός ΔΟΥ (ΑΑΔΕ) */
+  /** AADE tax office code */
   code: string;
-  /** Πλήρες όνομα ΔΟΥ */
+  /** i18n key for the tax office name (resolve via t() or getTaxOfficeDisplayName()) */
   name: string;
-  /** Περιφέρεια */
+  /** i18n key for the region (resolve via t()) */
   region: string;
 }
 
 // ============================================================================
-// DATA — Ενεργές ΔΟΥ (sorted alphabetically within each region)
+// REGION KEY CONSTANTS
+// ============================================================================
+
+const R = {
+  ATTICA: 'regions.attica',
+  PIRAEUS: 'regions.piraeus',
+  THESSALONIKI: 'regions.thessaloniki',
+  CENTRAL_MACEDONIA: 'regions.central_macedonia',
+  EAST_MACEDONIA_THRACE: 'regions.east_macedonia_thrace',
+  WEST_MACEDONIA: 'regions.west_macedonia',
+  EPIRUS: 'regions.epirus',
+  THESSALY: 'regions.thessaly',
+  CENTRAL_GREECE: 'regions.central_greece',
+  WEST_GREECE: 'regions.west_greece',
+  PELOPONNESE: 'regions.peloponnese',
+  IONIAN_ISLANDS: 'regions.ionian_islands',
+  NORTH_AEGEAN: 'regions.north_aegean',
+  SOUTH_AEGEAN: 'regions.south_aegean',
+  CRETE: 'regions.crete',
+  SPECIAL: 'regions.special',
+} as const;
+
+/** Helper: builds a TaxOffice entry from code + region key */
+function doy(code: string, region: string): TaxOffice {
+  return { code, name: `offices.${code}`, region };
+}
+
+// ============================================================================
+// DATA — Active tax offices (sorted alphabetically within each region)
 // ============================================================================
 
 export const GREEK_TAX_OFFICES: TaxOffice[] = [
-  // ─── ΑΤΤΙΚΗ (Αθήνα & Προάστια) ────────────────────────────────────────
-  { code: '1101', name: 'Α\' Αθηνών', region: 'Αττική' },
-  { code: '1104', name: 'Δ\' Αθηνών', region: 'Αττική' },
-  { code: '1106', name: 'ΣΤ\' Αθηνών', region: 'Αττική' },
-  { code: '1110', name: 'Ι\' Αθηνών', region: 'Αττική' },
-  { code: '1113', name: 'ΙΓ\' Αθηνών', region: 'Αττική' },
-  { code: '1114', name: 'ΙΔ\' Αθηνών', region: 'Αττική' },
-  { code: '1116', name: 'ΙΣΤ\' Αθηνών', region: 'Αττική' },
-  { code: '1119', name: 'Κατοίκων Εξωτερικού', region: 'Αττική' },
-  { code: '1120', name: 'ΦΑΕ Αθηνών', region: 'Αττική' },
-  { code: '1121', name: 'Α\' Αμαρουσίου', region: 'Αττική' },
-  { code: '1124', name: 'Αγίων Αναργύρων', region: 'Αττική' },
-  { code: '1125', name: 'Αγίου Δημητρίου', region: 'Αττική' },
-  { code: '1127', name: 'Αιγάλεω', region: 'Αττική' },
-  { code: '1129', name: 'Αχαρνών', region: 'Αττική' },
-  { code: '1130', name: 'Βύρωνα', region: 'Αττική' },
-  { code: '1131', name: 'Γλυφάδας', region: 'Αττική' },
-  { code: '1133', name: 'Ελευσίνας', region: 'Αττική' },
-  { code: '1135', name: 'Ηλιουπόλεως', region: 'Αττική' },
-  { code: '1137', name: 'Καλλιθέας', region: 'Αττική' },
-  { code: '1138', name: 'Κηφισιάς', region: 'Αττική' },
-  { code: '1139', name: 'Κορωπίου', region: 'Αττική' },
-  { code: '1140', name: 'Νέας Ιωνίας', region: 'Αττική' },
-  { code: '1141', name: 'Νέας Σμύρνης', region: 'Αττική' },
-  { code: '1143', name: 'Παλλήνης', region: 'Αττική' },
-  { code: '1146', name: 'Περιστερίου', region: 'Αττική' },
-  { code: '1149', name: 'Χαλανδρίου', region: 'Αττική' },
-  { code: '1150', name: 'Χολαργού', region: 'Αττική' },
-  { code: '1151', name: 'Ψυχικού', region: 'Αττική' },
+  // --- ATTICA ---
+  doy('1101', R.ATTICA),
+  doy('1104', R.ATTICA),
+  doy('1106', R.ATTICA),
+  doy('1110', R.ATTICA),
+  doy('1113', R.ATTICA),
+  doy('1114', R.ATTICA),
+  doy('1116', R.ATTICA),
+  doy('1119', R.ATTICA),
+  doy('1120', R.ATTICA),
+  doy('1121', R.ATTICA),
+  doy('1124', R.ATTICA),
+  doy('1125', R.ATTICA),
+  doy('1127', R.ATTICA),
+  doy('1129', R.ATTICA),
+  doy('1130', R.ATTICA),
+  doy('1131', R.ATTICA),
+  doy('1133', R.ATTICA),
+  doy('1135', R.ATTICA),
+  doy('1137', R.ATTICA),
+  doy('1138', R.ATTICA),
+  doy('1139', R.ATTICA),
+  doy('1140', R.ATTICA),
+  doy('1141', R.ATTICA),
+  doy('1143', R.ATTICA),
+  doy('1146', R.ATTICA),
+  doy('1149', R.ATTICA),
+  doy('1150', R.ATTICA),
+  doy('1151', R.ATTICA),
 
-  // ─── ΠΕΙΡΑΙΑΣ ──────────────────────────────────────────────────────────
-  { code: '1201', name: 'Α\' Πειραιά', region: 'Πειραιάς' },
-  { code: '1205', name: 'Ε\' Πειραιά', region: 'Πειραιάς' },
-  { code: '1209', name: 'ΦΑΕ Πειραιά', region: 'Πειραιάς' },
-  { code: '1210', name: 'Αίγινας', region: 'Πειραιάς' },
-  { code: '1211', name: 'Νίκαιας', region: 'Πειραιάς' },
-  { code: '1212', name: 'Παλαιού Φαλήρου', region: 'Πειραιάς' },
-  { code: '1213', name: 'Σαλαμίνας', region: 'Πειραιάς' },
+  // --- PIRAEUS ---
+  doy('1201', R.PIRAEUS),
+  doy('1205', R.PIRAEUS),
+  doy('1209', R.PIRAEUS),
+  doy('1210', R.PIRAEUS),
+  doy('1211', R.PIRAEUS),
+  doy('1212', R.PIRAEUS),
+  doy('1213', R.PIRAEUS),
 
-  // ─── ΘΕΣΣΑΛΟΝΙΚΗ ──────────────────────────────────────────────────────
-  { code: '1301', name: 'Α\' Θεσσαλονίκης', region: 'Θεσσαλονίκη' },
-  { code: '1304', name: 'Δ\' Θεσσαλονίκης', region: 'Θεσσαλονίκη' },
-  { code: '1305', name: 'Ε\' Θεσσαλονίκης', region: 'Θεσσαλονίκη' },
-  { code: '1308', name: 'Η\' Θεσσαλονίκης', region: 'Θεσσαλονίκη' },
-  { code: '1310', name: 'ΦΑΕ Θεσσαλονίκης', region: 'Θεσσαλονίκη' },
-  { code: '1311', name: 'Αμπελοκήπων', region: 'Θεσσαλονίκη' },
-  { code: '1312', name: 'Καλαμαριάς', region: 'Θεσσαλονίκη' },
-  { code: '1313', name: 'Λαγκαδά', region: 'Θεσσαλονίκη' },
-  { code: '1314', name: 'Νεαπόλεως', region: 'Θεσσαλονίκη' },
-  { code: '1315', name: 'Τούμπας', region: 'Θεσσαλονίκη' },
-  { code: '1317', name: 'Ιωνίας Θεσσαλονίκης', region: 'Θεσσαλονίκη' },
-  { code: '1316', name: 'Ωραιοκάστρου', region: 'Θεσσαλονίκη' },
+  // --- THESSALONIKI ---
+  doy('1301', R.THESSALONIKI),
+  doy('1304', R.THESSALONIKI),
+  doy('1305', R.THESSALONIKI),
+  doy('1308', R.THESSALONIKI),
+  doy('1310', R.THESSALONIKI),
+  doy('1311', R.THESSALONIKI),
+  doy('1312', R.THESSALONIKI),
+  doy('1313', R.THESSALONIKI),
+  doy('1314', R.THESSALONIKI),
+  doy('1315', R.THESSALONIKI),
+  doy('1317', R.THESSALONIKI),
+  doy('1316', R.THESSALONIKI),
 
-  // ─── ΚΕΝΤΡΙΚΗ ΜΑΚΕΔΟΝΙΑ ────────────────────────────────────────────────
-  { code: '1401', name: 'Βέροιας', region: 'Κεντρική Μακεδονία' },
-  { code: '1402', name: 'Έδεσσας', region: 'Κεντρική Μακεδονία' },
-  { code: '1403', name: 'Κατερίνης', region: 'Κεντρική Μακεδονία' },
-  { code: '1404', name: 'Κιλκίς', region: 'Κεντρική Μακεδονία' },
-  { code: '1406', name: 'Πολυγύρου', region: 'Κεντρική Μακεδονία' },
-  { code: '1407', name: 'Σερρών', region: 'Κεντρική Μακεδονία' },
+  // --- CENTRAL MACEDONIA ---
+  doy('1401', R.CENTRAL_MACEDONIA),
+  doy('1402', R.CENTRAL_MACEDONIA),
+  doy('1403', R.CENTRAL_MACEDONIA),
+  doy('1404', R.CENTRAL_MACEDONIA),
+  doy('1406', R.CENTRAL_MACEDONIA),
+  doy('1407', R.CENTRAL_MACEDONIA),
 
-  // ─── ΑΝΑΤΟΛΙΚΗ ΜΑΚΕΔΟΝΙΑ & ΘΡΑΚΗ ──────────────────────────────────────
-  { code: '1501', name: 'Αλεξανδρούπολης', region: 'Ανατ. Μακεδονία & Θράκη' },
-  { code: '1502', name: 'Δράμας', region: 'Ανατ. Μακεδονία & Θράκη' },
-  { code: '1503', name: 'Καβάλας', region: 'Ανατ. Μακεδονία & Θράκη' },
-  { code: '1504', name: 'Κομοτηνής', region: 'Ανατ. Μακεδονία & Θράκη' },
-  { code: '1505', name: 'Ξάνθης', region: 'Ανατ. Μακεδονία & Θράκη' },
-  { code: '1506', name: 'Ορεστιάδας', region: 'Ανατ. Μακεδονία & Θράκη' },
+  // --- EAST MACEDONIA & THRACE ---
+  doy('1501', R.EAST_MACEDONIA_THRACE),
+  doy('1502', R.EAST_MACEDONIA_THRACE),
+  doy('1503', R.EAST_MACEDONIA_THRACE),
+  doy('1504', R.EAST_MACEDONIA_THRACE),
+  doy('1505', R.EAST_MACEDONIA_THRACE),
+  doy('1506', R.EAST_MACEDONIA_THRACE),
 
-  // ─── ΔΥΤΙΚΗ ΜΑΚΕΔΟΝΙΑ ──────────────────────────────────────────────────
-  { code: '1601', name: 'Γρεβενών', region: 'Δυτική Μακεδονία' },
-  { code: '1602', name: 'Καστοριάς', region: 'Δυτική Μακεδονία' },
-  { code: '1603', name: 'Κοζάνης', region: 'Δυτική Μακεδονία' },
-  { code: '1604', name: 'Πτολεμαΐδας', region: 'Δυτική Μακεδονία' },
-  { code: '1605', name: 'Φλώρινας', region: 'Δυτική Μακεδονία' },
+  // --- WEST MACEDONIA ---
+  doy('1601', R.WEST_MACEDONIA),
+  doy('1602', R.WEST_MACEDONIA),
+  doy('1603', R.WEST_MACEDONIA),
+  doy('1604', R.WEST_MACEDONIA),
+  doy('1605', R.WEST_MACEDONIA),
 
-  // ─── ΗΠΕΙΡΟΣ ───────────────────────────────────────────────────────────
-  { code: '1701', name: 'Άρτας', region: 'Ήπειρος' },
-  { code: '1702', name: 'Ηγουμενίτσας', region: 'Ήπειρος' },
-  { code: '1703', name: 'Ιωαννίνων', region: 'Ήπειρος' },
-  { code: '1704', name: 'Πρεβέζης', region: 'Ήπειρος' },
+  // --- EPIRUS ---
+  doy('1701', R.EPIRUS),
+  doy('1702', R.EPIRUS),
+  doy('1703', R.EPIRUS),
+  doy('1704', R.EPIRUS),
 
-  // ─── ΘΕΣΣΑΛΙΑ ──────────────────────────────────────────────────────────
-  { code: '1801', name: 'Βόλου', region: 'Θεσσαλία' },
-  { code: '1802', name: 'Καρδίτσας', region: 'Θεσσαλία' },
-  { code: '1803', name: 'Α\' Λάρισας', region: 'Θεσσαλία' },
-  { code: '1805', name: 'Τρικάλων', region: 'Θεσσαλία' },
+  // --- THESSALY ---
+  doy('1801', R.THESSALY),
+  doy('1802', R.THESSALY),
+  doy('1803', R.THESSALY),
+  doy('1805', R.THESSALY),
 
-  // ─── ΣΤΕΡΕΑ ΕΛΛΑΔΑ ────────────────────────────────────────────────────
-  { code: '1901', name: 'Λαμίας', region: 'Στερεά Ελλάδα' },
-  { code: '1902', name: 'Λιβαδειάς', region: 'Στερεά Ελλάδα' },
-  { code: '1903', name: 'Χαλκίδας', region: 'Στερεά Ελλάδα' },
+  // --- CENTRAL GREECE ---
+  doy('1901', R.CENTRAL_GREECE),
+  doy('1902', R.CENTRAL_GREECE),
+  doy('1903', R.CENTRAL_GREECE),
 
-  // ─── ΔΥΤΙΚΗ ΕΛΛΑΔΑ ────────────────────────────────────────────────────
-  { code: '2001', name: 'Α\' Πατρών', region: 'Δυτική Ελλάδα' },
-  { code: '2003', name: 'Αγρινίου', region: 'Δυτική Ελλάδα' },
-  { code: '2004', name: 'Αμαλιάδας', region: 'Δυτική Ελλάδα' },
-  { code: '2005', name: 'Μεσολογγίου', region: 'Δυτική Ελλάδα' },
-  { code: '2006', name: 'Πύργου', region: 'Δυτική Ελλάδα' },
+  // --- WEST GREECE ---
+  doy('2001', R.WEST_GREECE),
+  doy('2003', R.WEST_GREECE),
+  doy('2004', R.WEST_GREECE),
+  doy('2005', R.WEST_GREECE),
+  doy('2006', R.WEST_GREECE),
 
-  // ─── ΠΕΛΟΠΟΝΝΗΣΟΣ ──────────────────────────────────────────────────────
-  { code: '2101', name: 'Κορίνθου', region: 'Πελοπόννησος' },
-  { code: '2102', name: 'Ναυπλίου', region: 'Πελοπόννησος' },
-  { code: '2103', name: 'Σπάρτης', region: 'Πελοπόννησος' },
-  { code: '2104', name: 'Τρίπολης', region: 'Πελοπόννησος' },
-  { code: '2105', name: 'Καλαμάτας', region: 'Πελοπόννησος' },
+  // --- PELOPONNESE ---
+  doy('2101', R.PELOPONNESE),
+  doy('2102', R.PELOPONNESE),
+  doy('2103', R.PELOPONNESE),
+  doy('2104', R.PELOPONNESE),
+  doy('2105', R.PELOPONNESE),
 
-  // ─── ΙΟΝΙΑ ΝΗΣΙΑ ───────────────────────────────────────────────────────
-  { code: '2201', name: 'Κέρκυρας', region: 'Ιόνια Νησιά' },
-  { code: '2202', name: 'Ζακύνθου', region: 'Ιόνια Νησιά' },
-  { code: '2203', name: 'Λευκάδας', region: 'Ιόνια Νησιά' },
-  { code: '2204', name: 'Αργοστολίου', region: 'Ιόνια Νησιά' },
+  // --- IONIAN ISLANDS ---
+  doy('2201', R.IONIAN_ISLANDS),
+  doy('2202', R.IONIAN_ISLANDS),
+  doy('2203', R.IONIAN_ISLANDS),
+  doy('2204', R.IONIAN_ISLANDS),
 
-  // ─── ΒΟΡΕΙΟ ΑΙΓΑΙΟ ────────────────────────────────────────────────────
-  { code: '2301', name: 'Μυτιλήνης', region: 'Βόρειο Αιγαίο' },
-  { code: '2302', name: 'Σάμου', region: 'Βόρειο Αιγαίο' },
-  { code: '2303', name: 'Χίου', region: 'Βόρειο Αιγαίο' },
+  // --- NORTH AEGEAN ---
+  doy('2301', R.NORTH_AEGEAN),
+  doy('2302', R.NORTH_AEGEAN),
+  doy('2303', R.NORTH_AEGEAN),
 
-  // ─── ΝΟΤΙΟ ΑΙΓΑΙΟ ─────────────────────────────────────────────────────
-  { code: '2401', name: 'Ρόδου', region: 'Νότιο Αιγαίο' },
-  { code: '2402', name: 'Κω', region: 'Νότιο Αιγαίο' },
-  { code: '2403', name: 'Σύρου', region: 'Νότιο Αιγαίο' },
-  { code: '2404', name: 'Νάξου', region: 'Νότιο Αιγαίο' },
-  { code: '2405', name: 'Μυκόνου', region: 'Νότιο Αιγαίο' },
-  { code: '2406', name: 'Θήρας', region: 'Νότιο Αιγαίο' },
+  // --- SOUTH AEGEAN ---
+  doy('2401', R.SOUTH_AEGEAN),
+  doy('2402', R.SOUTH_AEGEAN),
+  doy('2403', R.SOUTH_AEGEAN),
+  doy('2404', R.SOUTH_AEGEAN),
+  doy('2405', R.SOUTH_AEGEAN),
+  doy('2406', R.SOUTH_AEGEAN),
 
-  // ─── ΚΡΗΤΗ ─────────────────────────────────────────────────────────────
-  { code: '2501', name: 'Ηρακλείου', region: 'Κρήτη' },
-  { code: '2502', name: 'Χανίων', region: 'Κρήτη' },
-  { code: '2503', name: 'Ρεθύμνου', region: 'Κρήτη' },
-  { code: '2504', name: 'Αγίου Νικολάου', region: 'Κρήτη' },
+  // --- CRETE ---
+  doy('2501', R.CRETE),
+  doy('2502', R.CRETE),
+  doy('2503', R.CRETE),
+  doy('2504', R.CRETE),
 
-  // ─── ΕΙΔΙΚΕΣ ΔΟΥ ──────────────────────────────────────────────────────
-  { code: '9101', name: 'ΔΟΥ Μεγάλων Επιχειρήσεων', region: 'Ειδικές' },
-  { code: '9102', name: 'ΔΟΥ Πλοίων', region: 'Ειδικές' },
-  { code: '9103', name: 'ΚΕΦΟΔΕ (Κέντρο Φορολογίας)', region: 'Ειδικές' },
+  // --- SPECIAL ---
+  doy('9101', R.SPECIAL),
+  doy('9102', R.SPECIAL),
+  doy('9103', R.SPECIAL),
 ];
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+const NS = 'accounting-tax-offices';
+
+/**
+ * Resolves a tax office's i18n name key to the current locale.
+ * Uses imperative i18next — works in both React components and plain TS services.
+ */
+export function getTaxOfficeDisplayName(code: string): string {
+  return i18next.t(`offices.${code}`, { ns: NS }) || code;
+}
+
+/**
+ * Resolves a region i18n key to the current locale.
+ */
+export function getRegionDisplayName(regionKey: string): string {
+  return i18next.t(regionKey, { ns: NS }) || regionKey;
+}
