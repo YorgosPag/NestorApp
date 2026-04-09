@@ -59,7 +59,7 @@ export interface ArchiveViewProps {
   currentUserId: string;
   entityType?: string;
   entityId?: string;
-  onUnarchive?: (fileId: string) => void;
+  onUnarchive?: (fileId: string, displayName: string) => void;
 }
 
 // ============================================================================
@@ -142,6 +142,10 @@ export function ArchiveView({
   const handleUnarchiveConfirm = useCallback(async () => {
     if (!fileToUnarchive) return;
 
+    // Capture display name BEFORE removing from state
+    const file = archivedFiles.find((f) => f.id === fileToUnarchive);
+    const displayName = file?.displayName || file?.originalFilename || fileToUnarchive;
+
     setUnarchiveLoading(true);
     try {
       await unarchiveFilesWithPolicy([fileToUnarchive]);
@@ -150,7 +154,7 @@ export function ArchiveView({
       setFileToUnarchive(null);
 
       setArchivedFiles((prev) => prev.filter((f) => f.id !== fileToUnarchive));
-      onUnarchive?.(fileToUnarchive);
+      onUnarchive?.(fileToUnarchive, displayName);
     } catch (err) {
       const restoreError = err instanceof Error ? err : new Error('Failed to unarchive file');
       logger.error('Failed to unarchive file', { error: restoreError.message });

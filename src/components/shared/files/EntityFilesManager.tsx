@@ -458,8 +458,8 @@ export function EntityFilesManager({
             recordFileActivity('updated', 'file_restore', null, fileId, t('audit.fileRestore'));
             refetch();
           }}
-          onUnarchive={(fileId: string) => {
-            recordFileActivity('updated', 'file_unarchive', null, fileId, t('audit.fileUnarchive'));
+          onUnarchive={(fileId: string, displayName: string) => {
+            recordFileActivity('updated', 'file_unarchive', displayName, null, t('audit.fileUnarchive'));
             refetch();
           }}
         />

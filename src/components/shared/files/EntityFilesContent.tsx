@@ -132,7 +132,7 @@ export interface EntityFilesContentProps {
   companyId: string;
   entityId: string;
   onRestore: (fileId: string) => void;
-  onUnarchive: (fileId: string) => void;
+  onUnarchive: (fileId: string, displayName: string) => void;
 }
 
 // ============================================================================
