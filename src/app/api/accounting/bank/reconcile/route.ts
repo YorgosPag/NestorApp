@@ -63,7 +63,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       if (!txn) {
         return problemResponse(
           createBankMatchError('TRANSACTION_NOT_FOUND',
-            `Η συναλλαγή ${transactionId} δεν βρέθηκε`, 404)
+            `Transaction ${transactionId} not found`, 404)
         );
       }
 
@@ -71,7 +71,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       if (txn.matchStatus === 'unmatched' || txn.matchStatus === 'excluded') {
         return problemResponse(
           createBankMatchError('NOT_MATCHED',
-            'Η συναλλαγή δεν είναι αντιστοιχισμένη. Κάντε πρώτα match.',
+            'Transaction is not matched. Match it first.',
             400,
             { currentStatus: txn.matchStatus })
         );
@@ -80,7 +80,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       if (txn.matchStatus === 'reconciled') {
         return problemResponse(
           createBankMatchError('ALREADY_RECONCILED',
-            'Η συναλλαγή είναι ήδη συμφωνημένη (reconciled).',
+            'Transaction is already reconciled.',
             409,
             { reconciledBy: txn.reconciledByName ?? null, reconciledAt: txn.reconciledAt ?? null })
         );
@@ -91,7 +91,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         if (txn.version !== expectedVersion) {
           return problemResponse(
             createBankMatchError('VERSION_CONFLICT',
-              'Η συναλλαγή τροποποιήθηκε. Ανανεώστε τη σελίδα.',
+              'Transaction was modified. Please refresh the page.',
               409,
               {
                 currentVersion: txn.version,
@@ -110,7 +110,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         if (txn.matchedByName === ctx.email) {
           return problemResponse(
             createBankMatchError('SEGREGATION_VIOLATION',
-              'Δεν μπορείτε να κάνετε reconcile μια συναλλαγή που κάνατε match εσείς. Ζητήστε από άλλο χρήστη.',
+              'Cannot reconcile a transaction you matched yourself. Ask another user.',
               403,
               { matchedBy: txn.matchedByName })
           );
@@ -172,7 +172,7 @@ async function handlePatch(request: NextRequest): Promise<NextResponse> {
       // ── Admin-only ────────────────────────────────────────────────
       if (ctx.globalRole !== 'super_admin' && ctx.globalRole !== 'company_admin') {
         return NextResponse.json(
-          { success: false, error: 'Μόνο admin μπορεί να ξεκλειδώσει reconciled συναλλαγές' },
+          { success: false, error: 'Only admin can unlock reconciled transactions' },
           { status: 403 }
         );
       }
@@ -188,7 +188,7 @@ async function handlePatch(request: NextRequest): Promise<NextResponse> {
       if (!txn) {
         return problemResponse(
           createBankMatchError('TRANSACTION_NOT_FOUND',
-            `Η συναλλαγή ${transactionId} δεν βρέθηκε`, 404)
+            `Transaction ${transactionId} not found`, 404)
         );
       }
 
@@ -196,7 +196,7 @@ async function handlePatch(request: NextRequest): Promise<NextResponse> {
       if (txn.matchStatus !== 'reconciled') {
         return problemResponse(
           createBankMatchError('NOT_RECONCILED',
-            `Η συναλλαγή δεν είναι reconciled (τρέχουσα κατάσταση: ${txn.matchStatus})`,
+            `Transaction is not reconciled (current status: ${txn.matchStatus})`,
             400,
             { currentStatus: txn.matchStatus })
         );
@@ -222,7 +222,7 @@ async function handlePatch(request: NextRequest): Promise<NextResponse> {
         entityType: 'bank_transaction',
         entityId: transactionId,
         userId: ctx.uid,
-        details: `Admin unlock: ${transactionId}. Λόγος: ${reason}`,
+        details: `Admin unlock: ${transactionId}. Reason: ${reason}`,
         metadata: {
           beforeStatus: previousStatus,
           afterStatus: 'manual_matched',

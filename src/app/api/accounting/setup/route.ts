@@ -125,7 +125,7 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
           const shareCapital = ((body as Record<string, unknown>).shareCapital as number) ?? 0;
           if (shareCapital < 25000) {
             return NextResponse.json(
-              { success: false, error: 'AE minimum share capital is €25,000 (Ν.4548/2018)' },
+              { success: false, error: 'AE minimum share capital is €25,000 (Law 4548/2018)' },
               { status: 400 }
             );
           }
