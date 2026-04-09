@@ -93,6 +93,17 @@
       "confirm": "Αντικατάσταση"
     }
   },
+  "destination": {
+    "processingOptions": "Επιλογές επεξεργασίας",
+    "processing": "Επεξεργασία κάτοψης...",
+    "processingDescription": "Η κάτοψη υποβάλλεται σε επεξεργασία και αποθηκεύεται στον επιλεγμένο προορισμό.",
+    "complete": "Επιτυχής ολοκλήρωση!",
+    "completeDescription": "Η κάτοψη αποθηκεύτηκε επιτυχώς στον επιλεγμένο προορισμό.",
+    "previous": "← Προηγούμενο",
+    "finish": "Ολοκλήρωση",
+    "startProcessing": "Ξεκίνημα επεξεργασίας",
+    "next": "Επόμενο →"
+  },
   "wizardProgress": {
     "stepLabels": {
       "level": "Επίπεδο",

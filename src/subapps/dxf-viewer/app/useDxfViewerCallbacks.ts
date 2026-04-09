@@ -18,6 +18,7 @@ import type { CircleEntity, ArcEntity, PolylineEntity, SceneModel } from '../typ
 import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { NotificationContextValue } from '@/types/notifications';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /** Structural overlay entry shape used by callbacks */
 interface OverlayEntry {
@@ -82,6 +83,7 @@ export interface DxfViewerCallbacksReturn {
  * ADR-065 SRP split.
  */
 export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfViewerCallbacksReturn {
+  const { t } = useTranslation('dxf-viewer');
   const {
     notifications, copyToClipboard, handleAction,
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
@@ -99,18 +101,18 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     notifyMethod(message, {
       duration: 5000,
       actions: [{
-        label: 'Αντιγραφή',
+        label: t('callbacks.copy'),
         onClick: async () => {
           const success = await copyToClipboard(message);
           if (success) {
-            notifications.success('Αντιγράφηκε στο πρόχειρο!', { duration: 2000 });
+            notifications.success(t('callbacks.copiedToClipboard'), { duration: 2000 });
           } else {
-            notifications.error('Αποτυχία αντιγραφής');
+            notifications.error(t('callbacks.copyFailed'));
           }
         }
       }]
     });
-  }, [notifications, copyToClipboard]);
+  }, [notifications, copyToClipboard, t]);
 
   // 🧪 WRAP handleAction to intercept special actions
   const wrappedHandleAction = React.useCallback((action: string, data?: string | number | Record<string, unknown>) => {
@@ -124,7 +126,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       const newState = !perfMonitorEnabled;
       notifications.success(
         `Performance Monitor: ${newState ? 'ON ✅' : 'OFF ❌'}`,
-        { content: newState ? 'Μετρήσεις FPS, Memory, Rendering ενεργές' : 'Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη' }
+        { content: newState ? t('callbacks.perfMonitorOn') : t('callbacks.perfMonitorOff') }
       );
       return;
     }

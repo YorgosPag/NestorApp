@@ -21,6 +21,7 @@ import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelect
 import type { DxfDestination, DxfProcessingOptions, ProcessedDxfResult } from '../pipeline/types';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface DestinationWizardProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const { t } = useTranslation('dxf-viewer-wizard');
   const [currentStep, setCurrentStep] = useState<WizardStep>('destination');
   const [selectedDestination, setSelectedDestination] = useState<DxfDestination | null>(null);
   const [processingOptions, setProcessingOptions] = useState<DxfProcessingOptions>({ // ✅ ENTERPRISE: Simplified type after DxfProcessingOptions.destination made nullable
@@ -203,7 +205,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {currentStep === 'options' && selectedDestination && (
             <div>
               <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-                Επιλογές επεξεργασίας
+                {t('destination.processingOptions')}
               </h3>
               <div className={`${colors.bg.hover} ${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_XL}`}>
                 <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
@@ -270,10 +272,10 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             <div className={PANEL_LAYOUT.TEXT_ALIGN.CENTER}>
               <AnimatedSpinner size="large" className={`mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
               <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-                Επεξεργασία κάτοψης...
+                {t('destination.processing')}
               </h3>
               <p className={colors.text.muted}>
-                Η κάτοψη υποβάλλεται σε επεξεργασία και αποθηκεύεται στον επιλεγμένο προορισμό.
+                {t('destination.processingDescription')}
               </p>
             </div>
           )}
@@ -287,10 +289,10 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                 </svg>
               </div>
               <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-                Επιτυχής ολοκλήρωση!
+                {t('destination.complete')}
               </h3>
               <p className={`${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-                Η κάτοψη αποθηκεύτηκε επιτυχώς στον επιλεγμένο προορισμό.
+                {t('destination.completeDescription')}
               </p>
               {selectedDestination && (
                 <div className={`${colors.bg.hover} ${PANEL_LAYOUT.SPACING.MD} ${PANEL_LAYOUT.ROUNDED.LG} inline-block`}>
@@ -313,7 +315,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             disabled={currentStep === 'destination' || currentStep === 'processing'}
             className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`}
           >
-            ← Προηγούμενο
+            {t('destination.previous')}
           </button>
 
           <div className={`flex ${PANEL_LAYOUT.GAP.MD}`}>
@@ -322,7 +324,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                 onClick={handleClose}
                 className={`${PANEL_LAYOUT.BUTTON.PADDING_XL} ${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}
               >
-                Ολοκλήρωση
+                {t('destination.finish')}
               </button>
             ) : (
               <button
@@ -334,7 +336,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                 }
                 className={`${PANEL_LAYOUT.BUTTON.PADDING_XL} ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:${colors.bg.hover} disabled:cursor-not-allowed ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}
               >
-                {currentStep === 'options' ? 'Ξεκίνημα επεξεργασίας' : 'Επόμενο →'}
+                {currentStep === 'options' ? t('destination.startProcessing') : t('destination.next')}
               </button>
             )}
           </div>

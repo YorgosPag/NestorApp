@@ -105,5 +105,12 @@
     "generalFloorplan": "{{name}} - Γενική Κάτοψη",
     "parkingSpots": "{{name}} - Θέσεις Στάθμευσης",
     "storages": "{{project}} → {{building}} → Αποθήκες"
+  },
+  "callbacks": {
+    "copy": "Αντιγραφή",
+    "copiedToClipboard": "Αντιγράφηκε στο πρόχειρο!",
+    "copyFailed": "Αποτυχία αντιγραφής",
+    "perfMonitorOn": "Μετρήσεις FPS, Memory, Rendering ενεργές",
+    "perfMonitorOff": "Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη"
   }
 }

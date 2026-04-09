@@ -93,6 +93,17 @@
       "confirm": "Replace"
     }
   },
+  "destination": {
+    "processingOptions": "Processing Options",
+    "processing": "Processing floor plan...",
+    "processingDescription": "The floor plan is being processed and saved to the selected destination.",
+    "complete": "Successfully completed!",
+    "completeDescription": "The floor plan was successfully saved to the selected destination.",
+    "previous": "← Previous",
+    "finish": "Finish",
+    "startProcessing": "Start processing",
+    "next": "Next →"
+  },
   "wizardProgress": {
     "stepLabels": {
       "level": "Level",

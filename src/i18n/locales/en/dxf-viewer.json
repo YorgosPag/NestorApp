@@ -105,5 +105,12 @@
     "generalFloorplan": "{{name}} - General Floorplan",
     "parkingSpots": "{{name}} - Parking Spots",
     "storages": "{{project}} → {{building}} → Storages"
+  },
+  "callbacks": {
+    "copy": "Copy",
+    "copiedToClipboard": "Copied to clipboard!",
+    "copyFailed": "Copy failed",
+    "perfMonitorOn": "FPS, Memory, Rendering metrics active",
+    "perfMonitorOff": "Better performance - monitoring disabled"
   }
 }
