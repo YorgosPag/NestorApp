@@ -764,7 +764,12 @@
     "general": "General",
     "suggestions": "Suggestions:",
     "regionLabel": "Region",
-    "municipalityLabel": "Municipality"
+    "municipalityLabel": "Municipality",
+    "addressPlaceholder": "e.g. Kifisias Ave 123, Marousi 15124",
+    "boundaryPlaceholder": "e.g. Municipality of Athens, Attica Region, Thessaloniki",
+    "cacheAddresses": "addresses",
+    "cacheSearches": "searches",
+    "boundariesCount": "results"
   },
   "adminBoundary": {
     "searching": "Searching...",
@@ -777,7 +782,30 @@
     "region": "Region",
     "municipality": "Municipality",
     "selectToView": "Select a result to view the boundary",
-    "searchPlaceholder": "e.g. Municipality of Athens, Attica, Thessaloniki..."
+    "searchPlaceholder": "e.g. Municipality of Athens, Attica, Thessaloniki...",
+    "demoTitle": "Administrative Boundaries Demo",
+    "status": "Status:",
+    "statusReady": "Ready",
+    "statusLoading": "Loading...",
+    "statusError": "Error",
+    "detectedType": "Detected Type:",
+    "resultsCount": "Results:",
+    "error": "Error:",
+    "boundaryInfo": "Boundary Information",
+    "boundaryLoaded": "Boundary Loaded",
+    "type": "Type:",
+    "name": "Name:",
+    "adminLevel": "Admin Level:",
+    "features": "Features:",
+    "geometryPreview": "Geometry Preview",
+    "cacheStatistics": "Cache Statistics",
+    "debugInfo": "Debug Information",
+    "quickSearchAthensMunicipality": "Municipality of Athens",
+    "quickSearchThessalonikiMunicipality": "Municipality of Thessaloniki",
+    "quickSearchAtticaRegion": "Attica Region",
+    "quickSearchCentralMacedoniaRegion": "Central Macedonia Region",
+    "quickSearchPatrasMunicipality": "Municipality of Patras",
+    "quickSearchCrete": "Crete"
   },
   "coordinatePicker": {
     "instructions": {

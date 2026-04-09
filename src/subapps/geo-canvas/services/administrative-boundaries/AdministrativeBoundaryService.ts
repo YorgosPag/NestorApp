@@ -15,7 +15,7 @@ import { overpassApiService } from './OverpassApiService';
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
 import { geometrySimplificationEngine } from '../geometry/GeometrySimplificationEngine';
-import { GreekAdminLevel, MajorGreekMunicipalities, MajorGreekRegions } from '../../types/administrative-types';
+import { GreekAdminLevel, MajorGreekMunicipalities, MajorGreekRegions, GREECE_COUNTRY_NAME } from '../../types/administrative-types';
 import type { AdminSearchResult, AdminSearchQuery, AdvancedSearchFilters, BoundingBox } from '../../types/administrative-types';
 import type { ViewportContext } from '../geometry/GeometrySimplificationEngine';
 import { getString, getStringOrNumber } from '@/lib/firestore/field-extractors';
@@ -95,7 +95,7 @@ export class AdministrativeBoundaryService {
             name: getString(props, 'name') ?? municipalityName,
             nameEn: getString(props, 'nameEn'),
             adminLevel: GreekAdminLevel.MUNICIPALITY,
-            hierarchy: { country: 'Ελλάδα', region: getString(props, 'region') ?? 'Unknown', municipality: getString(props, 'name') ?? municipalityName },
+            hierarchy: { country: GREECE_COUNTRY_NAME, region: getString(props, 'region') ?? 'Unknown', municipality: getString(props, 'name') ?? municipalityName },
             geometry: boundary.geometry ?? undefined,
             confidence: 0.95,
           }];
@@ -113,7 +113,7 @@ export class AdministrativeBoundaryService {
             name: getString(props, 'name') ?? regionName,
             nameEn: getString(props, 'nameEn'),
             adminLevel: GreekAdminLevel.REGION,
-            hierarchy: { country: 'Ελλάδα', region: getString(props, 'name') ?? regionName },
+            hierarchy: { country: GREECE_COUNTRY_NAME, region: getString(props, 'name') ?? regionName },
             geometry: boundary.geometry ?? undefined,
             confidence: 0.95,
           }];

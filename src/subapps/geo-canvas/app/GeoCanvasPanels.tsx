@@ -160,26 +160,26 @@ export function FoundationView({ t, isLoading, colors, iconSizes, userType, onUs
           <div className={`${colors.bg.primary} p-6 rounded-lg`}>
             <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
               <CheckCircle className={iconSizes.md} />
-              Phase 1 Complete
+              {t('sidebar.phaseProgress.phase1Title')}
             </h3>
             <ul className="space-y-2 text-sm text-gray-300">
-              <li>{isLoading ? '• Δομή θεμελίων' : t('phaseDetails.phase1Features.foundationStructure')}</li>
-              <li>{isLoading ? '• Σύστημα τύπων Enterprise' : t('phaseDetails.phase1Features.enterpriseTypeSystem')}</li>
-              <li>{isLoading ? '• Ρύθμιση διαμόρφωσης' : t('phaseDetails.phase1Features.configurationSetup')}</li>
-              <li>{isLoading ? '• Ενσωμάτωση router έτοιμη' : t('phaseDetails.phase1Features.routerIntegrationReady')}</li>
+              <li>{t('phaseDetails.phase1Features.foundationStructure')}</li>
+              <li>{t('phaseDetails.phase1Features.enterpriseTypeSystem')}</li>
+              <li>{t('phaseDetails.phase1Features.configurationSetup')}</li>
+              <li>{t('phaseDetails.phase1Features.routerIntegrationReady')}</li>
             </ul>
           </div>
 
           <div className={`${colors.bg.primary} p-6 rounded-lg`}>
             <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
               <CheckCircle className={iconSizes.md} />
-              Phase 2 Complete
+              {t('sidebar.phaseProgress.phase2Title')}
             </h3>
             <ul className="space-y-2 text-sm text-gray-300">
-              <li>{isLoading ? '• Μηχανή μετασχηματισμού DXF' : t('phaseDetails.phase2Features.dxfTransformationEngine')}</li>
-              <li>{isLoading ? '• Υποστήριξη συστήματος συντεταγμένων' : t('phaseDetails.phase2Features.coordinateSystemSupport')}</li>
-              <li>{isLoading ? '• Εργαλεία γεωαναφοράς' : t('phaseDetails.phase2Features.georeferencingTools')}</li>
-              <li>{isLoading ? '• Διαχείριση σημείων ελέγχου' : t('phaseDetails.phase2Features.controlPointManagement')}</li>
+              <li>{t('phaseDetails.phase2Features.dxfTransformationEngine')}</li>
+              <li>{t('phaseDetails.phase2Features.coordinateSystemSupport')}</li>
+              <li>{t('phaseDetails.phase2Features.georeferencingTools')}</li>
+              <li>{t('phaseDetails.phase2Features.controlPointManagement')}</li>
             </ul>
           </div>
         </div>
@@ -187,13 +187,13 @@ export function FoundationView({ t, isLoading, colors, iconSizes, userType, onUs
         <div className={`mt-8 p-6 ${colors.bg.primary} rounded-lg`}>
           <h3 className="text-lg font-semibold mb-4 text-blue-400 flex items-center gap-2">
             <Construction className={iconSizes.md} />
-            {isLoading ? 'Επισκόπηση Αρχιτεκτονικής' : t('phaseDetails.architectureOverview.title')}
+            {t('phaseDetails.architectureOverview.title')}
           </h3>
           <div className="text-sm text-gray-300 space-y-2">
-            <p><strong>{isLoading ? 'Κεντρικοποιημένο Σύστημα: Ενσωματωμένο στο οικοσύστημα DXF Viewer' : t('phaseDetails.architectureOverview.centralizedSystem')}</strong></p>
-            <p><strong>{isLoading ? 'Στοίβα Τεχνολογίας: React + TypeScript + MapLibre GL JS' : t('phaseDetails.architectureOverview.technologyStack')}</strong></p>
-            <p><strong>{isLoading ? 'Ροή Δεδομένων: DXF → Μετασχηματισμός → GeoJSON → Χάρτης → Ειδοποιήσεις' : t('phaseDetails.architectureOverview.dataFlow')}</strong></p>
-            <p><strong>{isLoading ? 'Πρότυπα: ISO 19107, OGC, συμβάσεις AutoCAD' : t('phaseDetails.architectureOverview.standards')}</strong></p>
+            <p><strong>{t('phaseDetails.architectureOverview.centralizedSystem')}</strong></p>
+            <p><strong>{t('phaseDetails.architectureOverview.technologyStack')}</strong></p>
+            <p><strong>{t('phaseDetails.architectureOverview.dataFlow')}</strong></p>
+            <p><strong>{t('phaseDetails.architectureOverview.standards')}</strong></p>
           </div>
         </div>
       </div>

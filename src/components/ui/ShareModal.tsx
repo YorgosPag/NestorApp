@@ -215,6 +215,7 @@ const iconSizes = useIconSizes();
 
       await apiClient.post<PropertyShareEmailResponse>(API_ROUTES.COMMUNICATIONS.EMAIL_PROPERTY_SHARE, emailData);
 
+      notifications.success(t('emailShare.sendSuccess'));
       onShareSuccess?.(`email (${emailData.recipients.length} recipients, ${emailData.templateType} template)`);
       setShowEmailForm(false);
       onClose();

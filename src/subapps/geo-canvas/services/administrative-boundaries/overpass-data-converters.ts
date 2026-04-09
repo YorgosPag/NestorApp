@@ -9,7 +9,7 @@
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('OverpassDataConverters');
 
-import { GreekAdminLevel } from '../../types/administrative-types';
+import { GreekAdminLevel, GREECE_COUNTRY_NAME } from '../../types/administrative-types';
 import type {
   OverpassAdminResponse,
   BoundingBox,
@@ -124,7 +124,7 @@ export function convertToSearchResults(
       const confidence = calculateSearchConfidence(name, searchTerm);
 
       const hierarchy = {
-        country: 'Ελλάδα',
+        country: GREECE_COUNTRY_NAME,
         region: extractRegionFromTags(tags),
         municipality: adminLevel === GreekAdminLevel.MUNICIPALITY ? name : undefined,
       };
@@ -158,7 +158,7 @@ export function convertToPostalCodeSearchResults(
       const confidence = calculatePostalCodeConfidence(postalCode, searchTerm);
 
       const hierarchy = {
-        country: 'Ελλάδα',
+        country: GREECE_COUNTRY_NAME,
         region: extractRegionFromTags(tags),
         municipality: tags.municipality || tags['is_in:municipality'] || tags.city,
         community: tags.suburb || tags.neighbourhood,

@@ -764,7 +764,12 @@
     "general": "Γενικά",
     "suggestions": "Προτάσεις:",
     "regionLabel": "Περιφέρεια",
-    "municipalityLabel": "Δήμος"
+    "municipalityLabel": "Δήμος",
+    "addressPlaceholder": "π.χ. Λεωφόρος Κηφισίας 123, Μαρούσι 15124",
+    "boundaryPlaceholder": "π.χ. Δήμος Αθηναίων, Περιφέρεια Αττικής, Θεσσαλονίκη",
+    "cacheAddresses": "διευθύνσεις",
+    "cacheSearches": "αναζητήσεις",
+    "boundariesCount": "αποτελέσματα"
   },
   "adminBoundary": {
     "searching": "Αναζήτηση...",
@@ -777,7 +782,30 @@
     "region": "Περιφέρεια",
     "municipality": "Δήμος",
     "selectToView": "Επιλέξτε ένα αποτέλεσμα για να δείτε το boundary",
-    "searchPlaceholder": "π.χ. Δήμος Αθηναίων, Αττική, Θεσσαλονίκη..."
+    "searchPlaceholder": "π.χ. Δήμος Αθηναίων, Αττική, Θεσσαλονίκη...",
+    "demoTitle": "Demo Διοικητικών Ορίων",
+    "status": "Κατάσταση:",
+    "statusReady": "Έτοιμο",
+    "statusLoading": "Φόρτωση...",
+    "statusError": "Σφάλμα",
+    "detectedType": "Ανιχνευμένος Τύπος:",
+    "resultsCount": "Αποτελέσματα:",
+    "error": "Σφάλμα:",
+    "boundaryInfo": "Πληροφορίες Ορίου",
+    "boundaryLoaded": "Το Όριο Φορτώθηκε",
+    "type": "Τύπος:",
+    "name": "Όνομα:",
+    "adminLevel": "Διοικητικό Επίπεδο:",
+    "features": "Χαρακτηριστικά:",
+    "geometryPreview": "Προεπισκόπηση Γεωμετρίας",
+    "cacheStatistics": "Στατιστικά Cache",
+    "debugInfo": "Πληροφορίες Αποσφαλμάτωσης",
+    "quickSearchAthensMunicipality": "Δήμος Αθηναίων",
+    "quickSearchThessalonikiMunicipality": "Δήμος Θεσσαλονίκης",
+    "quickSearchAtticaRegion": "Περιφέρεια Αττικής",
+    "quickSearchCentralMacedoniaRegion": "Περιφέρεια Κεντρικής Μακεδονίας",
+    "quickSearchPatrasMunicipality": "Δήμος Πατρέων",
+    "quickSearchCrete": "Κρήτη"
   },
   "coordinatePicker": {
     "instructions": {

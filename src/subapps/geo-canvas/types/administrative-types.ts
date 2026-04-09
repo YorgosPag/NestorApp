@@ -351,6 +351,9 @@ export interface AdminCacheStats {
 /**
  * Major Greek Regions
  */
+/** Country name constant — SSoT for all hierarchy.country references */
+export const GREECE_COUNTRY_NAME = 'Ελλάδα' as const;
+
 export enum MajorGreekRegions {
   ATTICA = "Αττική",
   CENTRAL_MACEDONIA = "Κεντρική Μακεδονία",
@@ -522,5 +525,6 @@ export interface SearchAnalytics {
 export default {
   GreekAdminLevel,
   MajorGreekRegions,
-  MajorGreekMunicipalities
+  MajorGreekMunicipalities,
+  GREECE_COUNTRY_NAME
 };

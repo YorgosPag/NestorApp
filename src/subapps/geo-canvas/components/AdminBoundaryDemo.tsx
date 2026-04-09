@@ -72,7 +72,7 @@ export function AdminBoundaryDemo() {
     <div className={`p-6 max-w-4xl mx-auto ${colors.bg.primary} ${quick.card} shadow-lg`}>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         <Building2 className={`${iconSizes.lg} inline-block mr-3`} />
-        Administrative Boundaries Demo
+        {t('adminBoundary.demoTitle')}
       </h2>
 
       {/* Search Section */}
@@ -104,21 +104,21 @@ export function AdminBoundaryDemo() {
         {/* Quick Search Buttons */}
         <div className="flex gap-2 mb-4 flex-wrap">
           <h3 className="w-full text-sm font-medium text-gray-600 mb-2">{t('adminBoundary.quickSearch')}</h3>
-          {[
-            'Δήμος Αθηναίων',
-            'Δήμος Θεσσαλονίκης',
-            'Περιφέρεια Αττικής',
-            'Περιφέρεια Κεντρικής Μακεδονίας',
-            'Δήμος Πατρέων',
-            'Κρήτη'
-          ].map(query => (
+          {([
+            { labelKey: 'adminBoundary.quickSearchAthensMunicipality', query: 'Δήμος Αθηναίων' },
+            { labelKey: 'adminBoundary.quickSearchThessalonikiMunicipality', query: 'Δήμος Θεσσαλονίκης' },
+            { labelKey: 'adminBoundary.quickSearchAtticaRegion', query: 'Περιφέρεια Αττικής' },
+            { labelKey: 'adminBoundary.quickSearchCentralMacedoniaRegion', query: 'Περιφέρεια Κεντρικής Μακεδονίας' },
+            { labelKey: 'adminBoundary.quickSearchPatrasMunicipality', query: 'Δήμος Πατρέων' },
+            { labelKey: 'adminBoundary.quickSearchCrete', query: 'Κρήτη' },
+          ] as const).map(({ labelKey, query }) => (
             <button
               key={query}
               onClick={() => handleQuickSearch(query)}
               className={`px-3 py-1 text-sm ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${radius.full} transition-colors`}
               disabled={isLoading}
             >
-              {query}
+              {t(labelKey)}
             </button>
           ))}
         </div>
@@ -128,23 +128,23 @@ export function AdminBoundaryDemo() {
       <div className={`mb-6 p-4 ${colors.bg.secondary} ${quick.card}`}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <strong>Status:</strong>{' '}
+            <strong>{t('adminBoundary.status')}</strong>{' '}
             <span className={`ml-2 px-2 py-1 rounded ${
               isLoading ? `${colors.bg.warning} text-yellow-800` :
               error ? `${colors.bg.error} text-red-800` :
               `${colors.bg.success} text-green-800`
             }`}>
-              {isLoading ? 'Loading...' : error ? 'Error' : 'Ready'}
+              {isLoading ? t('adminBoundary.statusLoading') : error ? t('adminBoundary.statusError') : t('adminBoundary.statusReady')}
             </span>
           </div>
           <div>
-            <strong>Detected Type:</strong>{' '}
+            <strong>{t('adminBoundary.detectedType')}</strong>{' '}
             <span className="ml-2 font-mono text-blue-600">
               {detectedType || 'N/A'}
             </span>
           </div>
           <div>
-            <strong>Results:</strong>{' '}
+            <strong>{t('adminBoundary.resultsCount')}</strong>{' '}
             <span className="ml-2 font-bold text-green-600">
               {searchResults.length}
             </span>
@@ -153,7 +153,7 @@ export function AdminBoundaryDemo() {
 
         {error && (
           <div className="mt-2 text-red-600 text-sm">
-            <strong>Error:</strong> {error}
+            <strong>{t('adminBoundary.error')}</strong> {error}
           </div>
         )}
       </div>
@@ -230,32 +230,32 @@ export function AdminBoundaryDemo() {
 
         {/* Boundary Information */}
         <div>
-          <h3 className="text-lg font-semibold mb-3">Boundary Information</h3>
+          <h3 className="text-lg font-semibold mb-3">{t('adminBoundary.boundaryInfo')}</h3>
 
           {currentBoundary ? (
             <div className="space-y-4">
               {/* Boundary Type */}
               <div className={`p-4 ${colors.bg.success} ${quick.success}`}>
                 <div className="font-medium text-green-800 mb-2">
-                  ✅ Boundary Loaded
+                  {t('adminBoundary.boundaryLoaded')}
                 </div>
                 <div className="text-sm text-green-700">
-                  <div><strong>Type:</strong> {currentBoundary.type}</div>
+                  <div><strong>{t('adminBoundary.type')}</strong> {currentBoundary.type}</div>
                   {currentBoundary.type === 'Feature' && (
                     <>
-                      <div><strong>Name:</strong> {(currentBoundary as GeoJSON.Feature).properties?.name}</div>
-                      <div><strong>Admin Level:</strong> {(currentBoundary as GeoJSON.Feature).properties?.adminLevel}</div>
+                      <div><strong>{t('adminBoundary.name')}</strong> {(currentBoundary as GeoJSON.Feature).properties?.name}</div>
+                      <div><strong>{t('adminBoundary.adminLevel')}</strong> {(currentBoundary as GeoJSON.Feature).properties?.adminLevel}</div>
                     </>
                   )}
                   {currentBoundary.type === 'FeatureCollection' && (
-                    <div><strong>Features:</strong> {(currentBoundary as GeoJSON.FeatureCollection).features.length}</div>
+                    <div><strong>{t('adminBoundary.features')}</strong> {(currentBoundary as GeoJSON.FeatureCollection).features.length}</div>
                   )}
                 </div>
               </div>
 
               {/* Geometry Preview */}
               <div className={`p-4 ${colors.bg.secondary} ${radius.lg}`}>
-                <h4 className="font-medium text-gray-800 mb-2">Geometry Preview</h4>
+                <h4 className="font-medium text-gray-800 mb-2">{t('adminBoundary.geometryPreview')}</h4>
                 <div className="text-xs font-mono text-gray-600 max-h-32 overflow-y-auto">
                   <pre>{JSON.stringify(currentBoundary, null, 2).slice(0, 500)}...</pre>
                 </div>
@@ -269,7 +269,7 @@ export function AdminBoundaryDemo() {
 
           {/* Cache Stats */}
           <div className={`mt-6 p-4 ${colors.bg.info} ${quick.info}`}>
-            <h4 className="font-medium text-blue-800 mb-2">Cache Statistics</h4>
+            <h4 className="font-medium text-blue-800 mb-2">{t('adminBoundary.cacheStatistics')}</h4>
             <div className="text-sm text-blue-700 space-y-1">
               <div>Total Entries: {cacheStats.totalEntries}</div>
               <div>Hit Rate: {cacheStats.hitRate.toFixed(1)}%</div>
@@ -283,7 +283,7 @@ export function AdminBoundaryDemo() {
       {/* Debug Section */}
       {process.env.NODE_ENV === 'development' && (
         <div className={`mt-8 p-4 ${colors.bg.warning} ${quick.warning}`}>
-          <h3 className="font-medium text-yellow-800 mb-2">🐛 Debug Information</h3>
+          <h3 className="font-medium text-yellow-800 mb-2">{t('adminBoundary.debugInfo')}</h3>
           <div className="text-xs font-mono text-yellow-700">
             <div>Search Query: "{searchQuery}"</div>
             <div>Detected Type: {detectedType}</div>

@@ -92,13 +92,19 @@ function extractPhones(data: FirebaseFirestore.DocumentData): ShareablePhone[] {
     }));
 }
 
+/** Strip Greek tonos/diacritics for accent-insensitive search */
+function normalizeGreek(str: string): string {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function matchesSearch(data: FirebaseFirestore.DocumentData, term: string): boolean {
+  const normalizedTerm = normalizeGreek(term);
   const fields = [
     data.firstName, data.lastName, data.companyName,
     data.tradeName, data.serviceName, data.displayName,
   ];
   for (const field of fields) {
-    if (typeof field === 'string' && field.toLowerCase().includes(term)) {
+    if (typeof field === 'string' && normalizeGreek(field).includes(normalizedTerm)) {
       return true;
     }
   }
@@ -106,7 +112,7 @@ function matchesSearch(data: FirebaseFirestore.DocumentData, term: string): bool
   const emails = data.emails;
   if (Array.isArray(emails)) {
     for (const e of emails) {
-      if (typeof e?.email === 'string' && e.email.toLowerCase().includes(term)) {
+      if (typeof e?.email === 'string' && normalizeGreek(e.email).includes(normalizedTerm)) {
         return true;
       }
     }
@@ -122,7 +128,7 @@ export const GET = withStandardRateLimit(
   withAuth<ApiSuccessResponse<SearchForShareResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const { searchParams } = new URL(request.url);
-      const searchTerm = (searchParams.get('q') ?? '').trim().toLowerCase();
+      const searchTerm = normalizeGreek((searchParams.get('q') ?? '').trim());
 
       if (searchTerm.length < 2) {
         throw new ApiError(400, 'Search term must be at least 2 characters', 'VALIDATION_ERROR');

@@ -345,8 +345,8 @@ export function AddressSearchPanel({
               type="text"
               placeholder={
                 activeTab === 'address'
-                  ? "π.χ. Λεωφόρος Κηφισίας 123, Μαρούσι 15124"
-                  : "π.χ. Δήμος Αθηναίων, Περιφέρεια Αττικής, Θεσσαλονίκη"
+                  ? t('addressSearch.addressPlaceholder')
+                  : t('addressSearch.boundaryPlaceholder')
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -486,9 +486,9 @@ export function AddressSearchPanel({
         <div className={`mt-4 p-2 ${colors.bg.secondary} rounded-lg`}>
           <div className={`text-xs ${colors.text.muted}`}>
             {activeTab === 'address' ? (
-              <>Cache: {getCacheStats().size} διευθύνσεις | Recent: {recentSearches.length} αναζητήσεις</>
+              <>Cache: {getCacheStats().size} {t('addressSearch.cacheAddresses')} | Recent: {recentSearches.length} {t('addressSearch.cacheSearches')}</>
             ) : (
-              <>Boundaries: {boundaryResults.length} αποτελέσματα | Detected: {detectedType || 'N/A'} | Suggestions: {suggestions.length}</>
+              <>Boundaries: {boundaryResults.length} {t('addressSearch.boundariesCount')} | Detected: {detectedType || 'N/A'} | Suggestions: {suggestions.length}</>
             )}
           </div>
         </div>

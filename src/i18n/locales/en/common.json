@@ -216,6 +216,7 @@
     "maxRecipients": "Maximum {max} recipients",
     "noRecipients": "Add at least one recipient",
     "sendError": "Failed to send. Please try again.",
+    "sendSuccess": "Email sent successfully!",
     "selectPhotos": "Select Photos to Share",
     "recipientMode": {
       "manual": "Manual",
