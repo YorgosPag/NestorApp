@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { API_ROUTES } from '@/config/domain-constants';
 import type {
   CustomCategoryDocument,
@@ -77,6 +78,7 @@ export function useCustomCategories(
   const { includeInactive = false, autoFetch = true } = options;
 
   const { user } = useAuth();
+  const { t } = useTranslation('accounting-setup');
   const [categories, setCategories] = useState<CustomCategoryDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export function useCustomCategories(
       const data = (await res.json()) as { categories: CustomCategoryDocument[] };
       setCategories(data.categories);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Αποτυχία φόρτωσης κατηγοριών');
+      setError(err instanceof Error ? err.message : t('setup.customCategories.errors.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -118,7 +120,7 @@ export function useCustomCategories(
 
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? 'Αποτυχία δημιουργίας κατηγορίας');
+        throw new Error(body.error ?? t('setup.customCategories.errors.createFailed'));
       }
 
       const result = (await res.json()) as { id: string; code: string };
@@ -138,7 +140,7 @@ export function useCustomCategories(
 
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? 'Αποτυχία ενημέρωσης κατηγορίας');
+        throw new Error(body.error ?? t('setup.customCategories.errors.updateFailed'));
       }
 
       await fetchCategories();
@@ -154,7 +156,7 @@ export function useCustomCategories(
 
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? 'Αποτυχία διαγραφής κατηγορίας');
+        throw new Error(body.error ?? t('setup.customCategories.errors.deleteFailed'));
       }
 
       const result = (await res.json()) as DeleteResult;

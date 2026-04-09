@@ -46,23 +46,14 @@ import { cn } from '@/lib/utils';
 // MYDATA OPTIONS — Dropdown για υποχρεωτικό mapping
 // ============================================================================
 
-const MYDATA_INCOME_OPTIONS: Array<{ value: MyDataIncomeType; label: string }> = [
-  { value: 'category1_1', label: 'category1_1 — Πώληση αγαθών' },
-  { value: 'category1_3', label: 'category1_3 — Παροχή υπηρεσιών' },
-  { value: 'category1_4', label: 'category1_4 — Πώληση παγίων' },
-  { value: 'category1_5', label: 'category1_5 — Λοιπά έσοδα' },
+/** myDATA code values — labels resolved via i18n at render time */
+const MYDATA_INCOME_CODES: MyDataIncomeType[] = [
+  'category1_1', 'category1_3', 'category1_4', 'category1_5',
 ];
 
-const MYDATA_EXPENSE_OPTIONS: Array<{ value: MyDataExpenseType; label: string }> = [
-  { value: 'category2_2', label: 'category2_2 — Αγορές Α\' υλών' },
-  { value: 'category2_3', label: 'category2_3 — Λήψη υπηρεσιών' },
-  { value: 'category2_4', label: 'category2_4 — Γενικά έξοδα' },
-  { value: 'category2_5', label: 'category2_5 — Λοιπά έξοδα' },
-  { value: 'category2_6', label: 'category2_6 — Αμοιβές προσωπικού' },
-  { value: 'category2_7', label: 'category2_7 — Αγορές παγίων' },
-  { value: 'category2_11', label: 'category2_11 — Αποσβέσεις' },
-  { value: 'category2_12', label: 'category2_12 — Λοιπές εκπιπτόμενες δαπάνες' },
-  { value: 'category2_14', label: 'category2_14 — Πληροφοριακά' },
+const MYDATA_EXPENSE_CODES: MyDataExpenseType[] = [
+  'category2_2', 'category2_3', 'category2_4', 'category2_5',
+  'category2_6', 'category2_7', 'category2_11', 'category2_12', 'category2_14',
 ];
 
 // ============================================================================
@@ -110,8 +101,9 @@ export function CustomCategoriesSection() {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  const mydataOptions =
-    form.type === 'income' ? MYDATA_INCOME_OPTIONS : MYDATA_EXPENSE_OPTIONS;
+  const mydataCodes =
+    form.type === 'income' ? MYDATA_INCOME_CODES : MYDATA_EXPENSE_CODES;
+  const mydataLabelPrefix = form.type === 'income' ? 'setup.customCategories.mydata.income' : 'setup.customCategories.mydata.expense';
 
   function openCreate() {
     setEditingId(null);
@@ -139,11 +131,11 @@ export function CustomCategoriesSection() {
 
   const handleSave = useCallback(async () => {
     if (!form.label.trim()) {
-      setFormError('Το όνομα κατηγορίας είναι υποχρεωτικό');
+      setFormError(t('setup.customCategories.errors.labelRequired'));
       return;
     }
     if (!form.mydataCode) {
-      setFormError('Ο κωδικός myDATA είναι υποχρεωτικός');
+      setFormError(t('setup.customCategories.errors.mydataRequired'));
       return;
     }
 
@@ -176,7 +168,7 @@ export function CustomCategoriesSection() {
       }
       setDialogOpen(false);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Αποτυχία αποθήκευσης');
+      setFormError(err instanceof Error ? err.message : t('setup.customCategories.errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -191,7 +183,7 @@ export function CustomCategoriesSection() {
         setDeleteMessage(result.message);
         setTimeout(() => setDeleteMessage(null), 4000);
       } catch (err) {
-        setDeleteMessage(err instanceof Error ? err.message : 'Αποτυχία διαγραφής');
+        setDeleteMessage(err instanceof Error ? err.message : t('setup.customCategories.errors.deleteFailed'));
       }
     },
     [deleteCategory]
@@ -204,15 +196,12 @@ export function CustomCategoriesSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Tag className="size-5" />
-          {t('setup.customCategories.title', 'Προσαρμοσμένες Κατηγορίες')}
+          {t('setup.customCategories.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <p className={cn("text-sm mb-4", colors.text.muted)}>
-          {t(
-            'setup.customCategories.description',
-            'Δημιουργήστε εξειδικευμένες κατηγορίες εσόδων/εξόδων για αναλυτικότερη παρακολούθηση.'
-          )}
+          {t('setup.customCategories.description')}
         </p>
 
         {deleteMessage && (
@@ -233,7 +222,7 @@ export function CustomCategoriesSection() {
           <section aria-label={t('setup.customCategories.listAriaLabel')}>
             {categories.length === 0 ? (
               <p className={cn("text-sm py-2", colors.text.muted)}>
-                {t('setup.customCategories.empty', 'Δεν υπάρχουν custom κατηγορίες ακόμη.')}
+                {t('setup.customCategories.empty')}
               </p>
             ) : (
               <ul className="space-y-2 mb-4" role="list">
@@ -256,7 +245,7 @@ export function CustomCategoriesSection() {
                     <div className="flex items-center gap-2 shrink-0">
                       {!cat.isActive && (
                         <Badge variant="secondary" className="text-xs">
-                          {t('setup.customCategories.inactive', 'Ανενεργή')}
+                          {t('setup.customCategories.inactive')}
                         </Badge>
                       )}
                       <Button
@@ -287,7 +276,7 @@ export function CustomCategoriesSection() {
 
         <Button variant="outline" size="sm" onClick={openCreate} className="gap-1">
           <Plus className="size-4" />
-          {t('setup.customCategories.addNew', 'Νέα Κατηγορία')}
+          {t('setup.customCategories.addNew')}
         </Button>
       </CardContent>
 
@@ -297,8 +286,8 @@ export function CustomCategoriesSection() {
           <DialogHeader>
             <DialogTitle>
               {editingId
-                ? t('setup.customCategories.editTitle', 'Επεξεργασία Κατηγορίας')
-                : t('setup.customCategories.createTitle', 'Νέα Κατηγορία')}
+                ? t('setup.customCategories.editTitle')
+                : t('setup.customCategories.createTitle')}
             </DialogTitle>
           </DialogHeader>
 
@@ -310,7 +299,7 @@ export function CustomCategoriesSection() {
             {/* Τύπος */}
             {!editingId && (
               <div className="space-y-1.5">
-                <Label>{t('setup.customCategories.form.type', 'Τύπος')}</Label>
+                <Label>{t('setup.customCategories.form.type')}</Label>
                 <Select
                   value={form.type}
                   onValueChange={(v) =>
@@ -331,7 +320,7 @@ export function CustomCategoriesSection() {
             {/* Label */}
             <div className="space-y-1.5">
               <Label htmlFor="cat-label">
-                {t('setup.customCategories.form.label', 'Όνομα κατηγορίας')}
+                {t('setup.customCategories.form.label')}
                 <span className="text-destructive ml-1" aria-hidden>*</span>
               </Label>
               <Input
@@ -345,7 +334,7 @@ export function CustomCategoriesSection() {
             {/* Description */}
             <div className="space-y-1.5">
               <Label htmlFor="cat-desc">
-                {t('setup.customCategories.form.description', 'Περιγραφή')}
+                {t('setup.customCategories.form.description')}
               </Label>
               <Input
                 id="cat-desc"
@@ -358,7 +347,7 @@ export function CustomCategoriesSection() {
             {/* myDATA Code — ΥΠΟΧΡΕΩΤΙΚΟ */}
             <div className="space-y-1.5">
               <Label htmlFor="cat-mydata">
-                {t('setup.customCategories.form.mydataCode', 'Κωδικός myDATA (ΑΑΔΕ)')}
+                {t('setup.customCategories.form.mydataCode')}
                 <span className="text-destructive ml-1" aria-hidden>*</span>
               </Label>
               <Select
@@ -369,9 +358,9 @@ export function CustomCategoriesSection() {
                   <SelectValue placeholder={t('setup.customCategories.form.mydataCodePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {mydataOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {mydataCodes.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {t(`${mydataLabelPrefix}.${code}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -381,7 +370,7 @@ export function CustomCategoriesSection() {
             {/* E3 Code */}
             <div className="space-y-1.5">
               <Label htmlFor="cat-e3">
-                {t('setup.customCategories.form.e3Code', 'Κωδικός Ε3')}
+                {t('setup.customCategories.form.e3Code')}
               </Label>
               <Input
                 id="cat-e3"
@@ -394,7 +383,7 @@ export function CustomCategoriesSection() {
             {/* VAT Rate */}
             <div className="space-y-1.5">
               <Label htmlFor="cat-vat">
-                {t('setup.customCategories.form.vatRate', 'Συντελεστής ΦΠΑ')}
+                {t('setup.customCategories.form.vatRate')}
               </Label>
               <Select
                 value={String(form.defaultVatRate)}
@@ -417,7 +406,7 @@ export function CustomCategoriesSection() {
             {/* VAT Deductibility */}
             <div className="space-y-1.5">
               <Label htmlFor="cat-deduct">
-                {t('setup.customCategories.form.vatDeductible', 'Εκπτωσιμότητα ΦΠΑ')}
+                {t('setup.customCategories.form.vatDeductible')}
               </Label>
               <Select
                 value={String(form.vatDeductiblePercent)}
@@ -442,11 +431,11 @@ export function CustomCategoriesSection() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Ακύρωση
+              {t('setup.customCategories.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Spinner className="mr-2 size-4" /> : null}
-              {editingId ? 'Αποθήκευση' : 'Δημιουργία'}
+              {editingId ? t('setup.customCategories.save') : t('setup.customCategories.create')}
             </Button>
           </DialogFooter>
         </DialogContent>

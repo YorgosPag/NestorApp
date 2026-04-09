@@ -297,7 +297,7 @@ Data files with domain-specific Greek names use **structured locale entries**:
 | Batch 3 | DONE | 2026-04-06 | 75caafba | 5 components, ~19 violations |
 | Phase 4A | DONE | 2026-04-09 | — | geo-canvas: 31 violations fixed, 7 files |
 | Phase 4B | DONE | 2026-04-09 | — | dxf-viewer code: 12 violations fixed, 2 files |
-| Phase 4C | PENDING | — | — | accounting components |
+| Phase 4C | DONE | 2026-04-09 | — | accounting components: 57 violations fixed, 2 files |
 | Phase 4D | PENDING | — | — | accounting config |
 | Phase 4E | PENDING | — | — | accounting data |
 | Phase 4F | PENDING | — | — | API routes + geo config |
@@ -313,5 +313,6 @@ Data files with domain-specific Greek names use **structured locale entries**:
 | Date | Change |
 |------|--------|
 | 2026-04-09 | ADR-296 created. Full audit: 1,042 violations, 248 exempt, 794 to fix in 10 phases. |
+| 2026-04-09 | Phase 4C DONE: accounting components — 57 violations fixed. CustomCategoriesSection (37: myDATA options→i18n keys, 15 defaultValue removals, error messages, buttons), useCustomCategories (4 error messages). ~50 new locale keys in el/en accounting-setup.json. |
 | 2026-04-09 | Phase 4B DONE: dxf-viewer user-facing code — 12 violations fixed. useDxfViewerCallbacks (4 toast/notification messages), DestinationWizard (8 button labels + step text). 14 new locale keys added to el/en dxf-viewer.json + dxf-viewer-wizard.json. |
 | 2026-04-09 | Phase 4A DONE: geo-canvas — 31 violations fixed. GeoCanvasPanels (removed isLoading ternaries), AdminBoundaryDemo (18 keys → i18n), AddressSearchPanel (placeholders + cache stats), AdministrativeBoundaryService + overpass-data-converters + SpatialQueryService (GREECE_COUNTRY_NAME constant). 26 new locale keys added to el/en geo-canvas.json. |

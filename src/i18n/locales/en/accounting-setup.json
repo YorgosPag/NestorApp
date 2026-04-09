@@ -181,8 +181,72 @@
     "vatLabel": "VAT",
     "efkaLabel": "EFKA",
     "customCategories": {
+      "title": "Custom Categories",
+      "description": "Create specialized income/expense categories for more detailed tracking.",
+      "empty": "No custom categories yet.",
+      "inactive": "Inactive",
+      "addNew": "New Category",
+      "editTitle": "Edit Category",
+      "createTitle": "New Category",
+      "listAriaLabel": "Custom categories list",
       "editAriaLabel": "Edit {{name}}",
-      "deleteAriaLabel": "Delete {{name}}"
+      "deleteAriaLabel": "Delete {{name}}",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "form": {
+        "type": "Type",
+        "label": "Category name",
+        "labelPlaceholder": "e.g. Subcontracting",
+        "description": "Description",
+        "descriptionPlaceholder": "Brief category description",
+        "mydataCode": "myDATA Code (AADE)",
+        "mydataCodePlaceholder": "Select myDATA code",
+        "e3Code": "E3 Code",
+        "e3CodePlaceholder": "e.g. E3_102",
+        "vatRate": "VAT Rate",
+        "vatDeductible": "VAT Deductibility"
+      },
+      "types": {
+        "income": "Income",
+        "expense": "Expense"
+      },
+      "vatOptions": {
+        "exempt": "Exempt (0%)"
+      },
+      "deductibleOptions": {
+        "full": "100% Deductible",
+        "mixed": "50% Mixed",
+        "none": "0% Non-deductible"
+      },
+      "mydata": {
+        "income": {
+          "category1_1": "category1_1 — Sale of goods",
+          "category1_3": "category1_3 — Provision of services",
+          "category1_4": "category1_4 — Sale of fixed assets",
+          "category1_5": "category1_5 — Other income"
+        },
+        "expense": {
+          "category2_2": "category2_2 — Purchase of raw materials",
+          "category2_3": "category2_3 — Receipt of services",
+          "category2_4": "category2_4 — General expenses",
+          "category2_5": "category2_5 — Other expenses",
+          "category2_6": "category2_6 — Personnel fees",
+          "category2_7": "category2_7 — Purchase of fixed assets",
+          "category2_11": "category2_11 — Depreciation",
+          "category2_12": "category2_12 — Other deductible expenses",
+          "category2_14": "category2_14 — Informational"
+        }
+      },
+      "errors": {
+        "labelRequired": "Category name is required",
+        "mydataRequired": "myDATA code is required",
+        "saveFailed": "Failed to save",
+        "deleteFailed": "Failed to delete",
+        "fetchFailed": "Failed to load categories",
+        "createFailed": "Failed to create category",
+        "updateFailed": "Failed to update category"
+      }
     },
     "seriesPrefixPlaceholder": "INV-A"
   },

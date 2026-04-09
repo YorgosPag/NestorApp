@@ -181,8 +181,72 @@
     "vatLabel": "ΦΠΑ",
     "efkaLabel": "ΕΦΚΑ",
     "customCategories": {
+      "title": "Προσαρμοσμένες Κατηγορίες",
+      "description": "Δημιουργήστε εξειδικευμένες κατηγορίες εσόδων/εξόδων για αναλυτικότερη παρακολούθηση.",
+      "empty": "Δεν υπάρχουν custom κατηγορίες ακόμη.",
+      "inactive": "Ανενεργή",
+      "addNew": "Νέα Κατηγορία",
+      "editTitle": "Επεξεργασία Κατηγορίας",
+      "createTitle": "Νέα Κατηγορία",
+      "listAriaLabel": "Λίστα προσαρμοσμένων κατηγοριών",
       "editAriaLabel": "Επεξεργασία {{name}}",
-      "deleteAriaLabel": "Διαγραφή {{name}}"
+      "deleteAriaLabel": "Διαγραφή {{name}}",
+      "cancel": "Ακύρωση",
+      "save": "Αποθήκευση",
+      "create": "Δημιουργία",
+      "form": {
+        "type": "Τύπος",
+        "label": "Όνομα κατηγορίας",
+        "labelPlaceholder": "π.χ. Υπεργολαβίες",
+        "description": "Περιγραφή",
+        "descriptionPlaceholder": "Σύντομη περιγραφή κατηγορίας",
+        "mydataCode": "Κωδικός myDATA (ΑΑΔΕ)",
+        "mydataCodePlaceholder": "Επιλέξτε κωδικό myDATA",
+        "e3Code": "Κωδικός Ε3",
+        "e3CodePlaceholder": "π.χ. E3_102",
+        "vatRate": "Συντελεστής ΦΠΑ",
+        "vatDeductible": "Εκπτωσιμότητα ΦΠΑ"
+      },
+      "types": {
+        "income": "Έσοδο",
+        "expense": "Έξοδο"
+      },
+      "vatOptions": {
+        "exempt": "Απαλλαγή (0%)"
+      },
+      "deductibleOptions": {
+        "full": "100% Εκπίπτει",
+        "mixed": "50% Μικτό",
+        "none": "0% Δεν εκπίπτει"
+      },
+      "mydata": {
+        "income": {
+          "category1_1": "category1_1 — Πώληση αγαθών",
+          "category1_3": "category1_3 — Παροχή υπηρεσιών",
+          "category1_4": "category1_4 — Πώληση παγίων",
+          "category1_5": "category1_5 — Λοιπά έσοδα"
+        },
+        "expense": {
+          "category2_2": "category2_2 — Αγορές Α' υλών",
+          "category2_3": "category2_3 — Λήψη υπηρεσιών",
+          "category2_4": "category2_4 — Γενικά έξοδα",
+          "category2_5": "category2_5 — Λοιπά έξοδα",
+          "category2_6": "category2_6 — Αμοιβές προσωπικού",
+          "category2_7": "category2_7 — Αγορές παγίων",
+          "category2_11": "category2_11 — Αποσβέσεις",
+          "category2_12": "category2_12 — Λοιπές εκπιπτόμενες δαπάνες",
+          "category2_14": "category2_14 — Πληροφοριακά"
+        }
+      },
+      "errors": {
+        "labelRequired": "Το όνομα κατηγορίας είναι υποχρεωτικό",
+        "mydataRequired": "Ο κωδικός myDATA είναι υποχρεωτικός",
+        "saveFailed": "Αποτυχία αποθήκευσης",
+        "deleteFailed": "Αποτυχία διαγραφής",
+        "fetchFailed": "Αποτυχία φόρτωσης κατηγοριών",
+        "createFailed": "Αποτυχία δημιουργίας κατηγορίας",
+        "updateFailed": "Αποτυχία ενημέρωσης κατηγορίας"
+      }
     },
     "seriesPrefixPlaceholder": "ΤΠΥ-Α"
   },
