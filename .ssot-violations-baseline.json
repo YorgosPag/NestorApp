@@ -1,13 +1,25 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-08T23:10:21Z",
-    "totalViolations": 0,
-    "totalFiles": 0,
+    "generated": "2026-04-09T19:28:37Z",
+    "totalViolations": 15,
+    "totalFiles": 13,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
-
+    "src/services/gantt-export/gantt-export-utils.ts": 2,
+    "src/core/modals/usePhotoPreviewState.ts": 2,
+    "src/subapps/geo-canvas/floor-plan-system/components/FloorPlanControlPointPicker.tsx": 1,
+    "src/subapps/geo-canvas/components/TransformationPreview.tsx": 1,
+    "src/subapps/dxf-viewer/rendering/canvas/utils/CanvasUtils.ts": 1,
+    "src/services/pdf/utils/download.ts": 1,
+    "src/services/data-exchange/DataExportService.ts": 1,
+    "src/features/read-only-viewer/components/PropertyViewerWithLayers.tsx": 1,
+    "src/components/shared/pages/SharedFilePageContent.tsx": 1,
+    "src/components/shared/files/VersionHistory.tsx": 1,
+    "src/components/shared/files/InboxView.tsx": 1,
+    "src/components/file-manager/FilePreviewPanel.tsx": 1,
+    "src/components/admin/role-management/components/AuditExport.tsx": 1
   }
 }

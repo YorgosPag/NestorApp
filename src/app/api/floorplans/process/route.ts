@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Floorplan Processing API Route
+ * Floorplan Processing API Route
  * =============================================================================
  *
  * Server-side DXF/PDF processing that bypasses CORS restrictions.
@@ -8,267 +8,118 @@
  *
  * @module api/floorplans/process
  * @enterprise ADR-033 - Floorplan Processing Pipeline
- * @version 1.0.0
- *
- * Architecture:
- * - Downloads file from Firebase Storage (server-side, no CORS)
- * - Parses DXF using centralized DxfSceneBuilder (NO duplicates)
- * - Saves processedData to FileRecord in Firestore
- *
- * Pattern: Based on /api/upload/photo (enterprise-approved)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { gunzipSync, gzipSync } from 'zlib';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { getErrorMessage } from '@/lib/error-utils';
+import type {
+  ProcessFloorplanRequest,
+  ProcessFloorplanResponse,
+  FileRecordData,
+  FirebaseAdminError,
+} from './floorplan-process.types';
+import { getFileType, downloadFile, processDxf, processPdf } from './floorplan-process.service';
 
 const logger = createModuleLogger('FloorplanProcessRoute');
-import type {
-  FloorplanProcessedData,
-  DxfSceneData,
-  DxfSceneEntity,
-} from '@/types/file-record';
-import { getErrorMessage } from '@/lib/error-utils';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-/**
- * 🏢 ENTERPRISE: Request body interface
- */
-interface ProcessFloorplanRequest {
-  /** FileRecord ID to process */
-  fileId: string;
-  /** Force reprocessing even if already processed */
-  forceReprocess?: boolean;
-}
-
-/**
- * 🏢 ENTERPRISE: Success response
- */
-interface ProcessFloorplanSuccessResponse {
-  success: true;
-  fileId: string;
-  fileType: 'dxf' | 'pdf';
-  processedAt: string;
-  stats?: {
-    entityCount: number;
-    layerCount: number;
-    parseTimeMs: number;
-  };
-}
-
-/**
- * 🏢 ENTERPRISE: Error response
- */
-interface ProcessFloorplanErrorResponse {
-  success: false;
-  error: string;
-  errorCode?: string;
-  details?: string;
-}
-
-type ProcessFloorplanResponse =
-  | ProcessFloorplanSuccessResponse
-  | ProcessFloorplanErrorResponse;
-
-/**
- * 🏢 ENTERPRISE: FileRecord shape from Firestore
- */
-interface FileRecordData {
-  id: string;
-  storagePath: string;
-  contentType: string;
-  ext: string;
-  originalFilename: string;
-  displayName: string;
-  processedData?: FloorplanProcessedData;
-  companyId?: string;
-}
-
-/**
- * 🏢 ENTERPRISE: Type-safe error interface
- */
-interface FirebaseAdminError {
-  message?: string;
-  code?: string;
-  details?: string;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const FILES_COLLECTION = 'files';
-const SUPPORTED_DXF_EXTENSIONS = ['dxf'];
-const SUPPORTED_PDF_EXTENSIONS = ['pdf'];
-
-// 🏢 ENTERPRISE: In-memory mutex to prevent concurrent processing of same file
-// This prevents race conditions when multiple requests arrive for the same fileId
+// In-memory mutex to prevent concurrent processing of same file
 const processingInProgress = new Set<string>();
 
-// ============================================================================
-// FORCE DYNAMIC
-// ============================================================================
-
 export const dynamic = 'force-dynamic';
-// 🏢 ENTERPRISE: DXF parsing (download + parse + compress + upload) can exceed
-// the default 10s Vercel timeout for a ~400KB DXF file. Must be set explicitly.
 export const maxDuration = 60;
-
-// ============================================================================
-// MAIN HANDLER
-// ============================================================================
 
 /**
  * POST /api/floorplans/process
- *
- * 🔒 SECURITY: Protected with RBAC
- * - Permission: floorplans:floorplans:process
- * - Tenant isolation via companyId validation
- * @rateLimit HEAVY (10 req/min) - Resource-intensive operation
+ * @rateLimit HEAVY (10 req/min)
  */
 export const POST = withHeavyRateLimit(
   async (request: NextRequest) => {
-  const handler = withAuth<ProcessFloorplanResponse>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      return handleProcessFloorplan(req, ctx);
-    },
-    { permissions: 'floorplans:floorplans:process' }
-  );
-
-  return handler(request);
+    const handler = withAuth<ProcessFloorplanResponse>(
+      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+        return handleProcessFloorplan(req, ctx);
+      },
+      { permissions: 'floorplans:floorplans:process' }
+    );
+    return handler(request);
   }
 );
-
-// ============================================================================
-// CORE PROCESSING LOGIC
-// ============================================================================
 
 async function handleProcessFloorplan(
   request: NextRequest,
   ctx: AuthContext
 ): Promise<NextResponse<ProcessFloorplanResponse>> {
   const startTime = Date.now();
-  // 🏢 ENTERPRISE: Track fileId for mutex cleanup
   let currentFileId: string | null = null;
 
-  logger.info('[FloorplanProcess] Request', { email: ctx.email, companyId: ctx.companyId });
+  logger.info('Request', { email: ctx.email, companyId: ctx.companyId });
 
   try {
-    // =========================================================================
-    // 1. PARSE & VALIDATE REQUEST
-    // =========================================================================
-
+    // 1. PARSE & VALIDATE
     const body = (await request.json()) as ProcessFloorplanRequest;
     const { fileId, forceReprocess = false } = body;
 
     if (!fileId || typeof fileId !== 'string') {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'fileId is required',
-          errorCode: 'INVALID_REQUEST',
-        },
+        { success: false, error: 'fileId is required', errorCode: 'INVALID_REQUEST' },
         { status: 400 }
       );
     }
 
-    // Store for cleanup
     currentFileId = fileId;
 
-    // 🏢 ENTERPRISE: Check if this file is already being processed (mutex)
     if (processingInProgress.has(fileId)) {
-      logger.info('[FloorplanProcess] File already being processed', { fileId });
-      currentFileId = null; // Don't cleanup - we didn't add it
+      logger.info('File already being processed', { fileId });
+      currentFileId = null;
       return NextResponse.json(
-        {
-          success: false,
-          error: 'File is already being processed',
-          errorCode: 'ALREADY_PROCESSING',
-        },
+        { success: false, error: 'File is already being processed', errorCode: 'ALREADY_PROCESSING' },
         { status: 409 }
       );
     }
 
-    // Add to processing set
     processingInProgress.add(fileId);
-    logger.info('[FloorplanProcess] Processing file', { fileId });
 
-    // =========================================================================
-    // 2. FIREBASE ADMIN (ADR-077: Centralized via @/lib/firebaseAdmin)
-    // =========================================================================
-
+    // 2. FIREBASE ADMIN
     const adminDb = getAdminFirestore();
     const adminStorage = getAdminStorage();
-
-    // 🏢 ENTERPRISE: Get bucket with explicit name from env variables
-    const storageBucket =
-      process.env.FIREBASE_STORAGE_BUCKET ||
-      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
     if (!storageBucket) {
-      logger.error('[FloorplanProcess] FIREBASE_STORAGE_BUCKET not configured');
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Storage bucket not configured',
-          errorCode: 'CONFIG_ERROR',
-        },
+        { success: false, error: 'Storage bucket not configured', errorCode: 'CONFIG_ERROR' },
         { status: 500 }
       );
     }
 
     const bucket = adminStorage.bucket(storageBucket);
 
-    logger.info('[FloorplanProcess] Using bucket', { bucketName: bucket.name });
-
-    // =========================================================================
-    // 3. FETCH FILE RECORD FROM FIRESTORE
-    // =========================================================================
-
-    const fileDoc = await adminDb.collection(FILES_COLLECTION).doc(fileId).get();
+    // 3. FETCH FILE RECORD
+    const fileDoc = await adminDb.collection(COLLECTIONS.FILES).doc(fileId).get();
 
     if (!fileDoc.exists) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'File not found',
-          errorCode: 'FILE_NOT_FOUND',
-        },
+        { success: false, error: 'File not found', errorCode: 'FILE_NOT_FOUND' },
         { status: 404 }
       );
     }
 
     const fileData = { id: fileDoc.id, ...fileDoc.data() } as FileRecordData;
 
-    // =========================================================================
-    // 4. TENANT ISOLATION CHECK
-    // =========================================================================
-
+    // 4. TENANT ISOLATION
     if (fileData.companyId && fileData.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-      logger.warn('[FloorplanProcess] Tenant mismatch', { fileCompanyId: fileData.companyId, userCompanyId: ctx.companyId });
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Access denied',
-          errorCode: 'TENANT_MISMATCH',
-        },
+        { success: false, error: 'Access denied', errorCode: 'TENANT_MISMATCH' },
         { status: 403 }
       );
     }
 
-    // =========================================================================
-    // 5. CHECK IF ALREADY PROCESSED
-    // =========================================================================
-
+    // 5. CHECK ALREADY PROCESSED
     if (fileData.processedData && !forceReprocess) {
-      logger.info('[FloorplanProcess] Already processed, returning cached');
       return NextResponse.json({
         success: true,
         fileId,
@@ -284,205 +135,58 @@ async function handleProcessFloorplan(
       });
     }
 
-    // =========================================================================
     // 6. DETERMINE FILE TYPE
-    // =========================================================================
-
-    const ext = fileData.ext?.toLowerCase().replace('.', '') || '';
-    const isDxf = SUPPORTED_DXF_EXTENSIONS.includes(ext);
-    const isPdf = SUPPORTED_PDF_EXTENSIONS.includes(ext);
-
-    if (!isDxf && !isPdf) {
+    const fileType = getFileType(fileData.ext || '');
+    if (!fileType) {
       return NextResponse.json(
-        {
-          success: false,
-          error: `Unsupported file type: ${ext}`,
-          errorCode: 'UNSUPPORTED_TYPE',
-        },
+        { success: false, error: `Unsupported file type: ${fileData.ext}`, errorCode: 'UNSUPPORTED_TYPE' },
         { status: 400 }
       );
     }
 
-    // =========================================================================
-    // 7. DOWNLOAD FILE FROM STORAGE (SERVER-SIDE - NO CORS!)
-    // =========================================================================
+    // 7. DOWNLOAD + PROCESS
+    const rawBuffer = await downloadFile(bucket, fileData.storagePath);
 
-    logger.info('[FloorplanProcess] Downloading from storage', { storagePath: fileData.storagePath });
+    const result = fileType === 'dxf'
+      ? await processDxf(rawBuffer, fileData, bucket)
+      : processPdf(rawBuffer);
 
-    const fileRef = bucket.file(fileData.storagePath);
-    const [fileBuffer] = await fileRef.download();
-
-    // Decompress if gzip compressed (new uploads use compression)
-    const [fileMeta] = await fileRef.getMetadata();
-    const isCompressed = fileMeta.metadata?.compressed === 'gzip';
-    const rawBuffer = isCompressed ? gunzipSync(fileBuffer) : fileBuffer;
-
-    logger.info('[FloorplanProcess] Downloaded', {
-      bytes: fileBuffer.length,
-      ...(isCompressed && { decompressed: rawBuffer.length }),
-    });
-
-    // =========================================================================
-    // 8. PROCESS BASED ON FILE TYPE
-    // =========================================================================
-
-    let processedData: FloorplanProcessedData;
-    let stats: { entityCount: number; layerCount: number; parseTimeMs: number } | undefined;
-
-    if (isDxf) {
-      // DXF Processing using centralized DxfSceneBuilder
-      const parseStart = Date.now();
-
-      // 🏢 ENTERPRISE: Use centralized EncodingService for Greek character support
-      const { encodingService } = await import(
-        '@/subapps/dxf-viewer/io/encoding-service'
-      );
-      const { content, encoding } = encodingService.decodeBufferWithAutoDetect(rawBuffer);
-
-      logger.info('[FloorplanProcess] Decoded', { encoding });
-
-      // 🏢 ENTERPRISE: Use centralized DxfSceneBuilder (NO duplicates!)
-      const { DxfSceneBuilder } = await import(
-        '@/subapps/dxf-viewer/utils/dxf-scene-builder'
-      );
-
-      const scene = DxfSceneBuilder.buildScene(content);
-
-      const parseTimeMs = Date.now() - parseStart;
-
-      // Convert SceneModel to DxfSceneData
-      const dxfSceneData: DxfSceneData = {
-        entities: scene.entities.map((entity) => {
-          const { type, layer, ...rest } = entity;
-          return {
-            type,
-            layer: layer || '0',
-            ...rest,
-          } as DxfSceneEntity;
-        }),
-        layers: scene.layers,
-        bounds: scene.bounds,
-      };
-
-      stats = {
-        entityCount: dxfSceneData.entities.length,
-        layerCount: Object.keys(dxfSceneData.layers).length,
-        parseTimeMs,
-      };
-
-      // =====================================================================
-      // 🏢 ENTERPRISE: SAVE SCENE TO STORAGE (NOT Firestore!)
-      // =====================================================================
-      // Pattern: Autodesk, Bentley, Trimble - large data goes to object storage
-      // Firestore: metadata only (~1KB), Storage: scene data (~100KB-5MB)
-      // =====================================================================
-
-      const processedDataPath = `${fileData.storagePath}.processed.json`;
-      const processedJsonRaw = Buffer.from(JSON.stringify(dxfSceneData), 'utf-8');
-      const processedJsonBuffer = gzipSync(processedJsonRaw);
-
-      logger.info('[FloorplanProcess] Uploading compressed scene JSON to Storage', {
-        processedDataPath,
-        original: processedJsonRaw.length,
-        compressed: processedJsonBuffer.length,
-        reduction: `${((1 - processedJsonBuffer.length / processedJsonRaw.length) * 100).toFixed(0)}%`,
-      });
-
-      const processedFileRef = bucket.file(processedDataPath);
-      await processedFileRef.save(processedJsonBuffer, {
-        metadata: {
-          contentType: 'application/json',
-          // 🏢 ENTERPRISE V3: File is NOT public - served via authenticated API
-          cacheControl: 'private, max-age=31536000', // 1 year cache (immutable)
-          metadata: { compressed: 'gzip', originalSize: String(processedJsonRaw.length) },
-        },
-      });
-
-      // 🏢 ENTERPRISE V3: NO makePublic() - scene served via /api/floorplans/scene
-      // Client calls GET /api/floorplans/scene?fileId=... (authenticated API)
-
-      // 🏢 ENTERPRISE: Firestore gets METADATA ONLY (not the huge scene)
-      processedData = {
-        fileType: 'dxf',
-        processedDataPath,
-        sceneStats: stats,
-        bounds: dxfSceneData.bounds,
-        processedAt: Date.now(),
-        originalSize: rawBuffer.length,
-        processedSize: processedJsonBuffer.length,
-        encoding,
-      };
-
-      logger.info('[FloorplanProcess] DXF parsed', { stats });
-    } else {
-      // PDF Processing - For now, just mark as processed
-      // Full PDF rendering would require server-side PDF library
-      processedData = {
-        fileType: 'pdf',
-        processedAt: Date.now(),
-        originalSize: fileBuffer.length,
-      };
-
-      logger.info('[FloorplanProcess] PDF marked as processed');
-    }
-
-    // =========================================================================
-    // 9. SAVE METADATA TO FIRESTORE (small footprint only!)
-    // =========================================================================
-
-    await adminDb.collection(FILES_COLLECTION).doc(fileId).update({
-      processedData,
+    // 8. SAVE METADATA TO FIRESTORE
+    await adminDb.collection(COLLECTIONS.FILES).doc(fileId).update({
+      processedData: result.processedData,
       updatedAt: new Date().toISOString(),
     });
 
-    logger.info('[FloorplanProcess] Saved metadata to Firestore (scene in Storage)');
-
-    // =========================================================================
-    // 10. AUDIT LOG
-    // =========================================================================
-
+    // 9. AUDIT LOG
     const duration = Date.now() - startTime;
-
     await logAuditEvent(ctx, 'data_accessed', fileId, 'api', {
       metadata: {
         path: '/api/floorplans/process',
-        reason: `Floorplan processed: ${fileData.displayName} (${processedData.fileType}, ${duration}ms)`,
+        reason: `Floorplan processed: ${fileData.displayName} (${result.processedData.fileType}, ${duration}ms)`,
       },
     });
 
-    logger.info('[FloorplanProcess] Complete', { durationMs: duration, displayName: fileData.displayName });
-
-    // =========================================================================
-    // 11. RETURN SUCCESS RESPONSE
-    // =========================================================================
-
-    // 🏢 ENTERPRISE: Release mutex
     processingInProgress.delete(fileId);
 
     return NextResponse.json({
       success: true,
       fileId,
-      fileType: processedData.fileType,
-      processedAt: new Date(processedData.processedAt).toISOString(),
-      stats,
+      fileType: result.processedData.fileType,
+      processedAt: new Date(result.processedData.processedAt).toISOString(),
+      stats: result.stats,
     });
   } catch (error) {
-    // 🏢 ENTERPRISE: Release mutex on error
     if (currentFileId) {
       processingInProgress.delete(currentFileId);
     }
 
-    // 🔍 ENTERPRISE: Detailed error logging for debugging
     const firebaseError = error as FirebaseAdminError | null;
-    const errorMessage =
-      getErrorMessage(error);
-    const errorStack =
-      error instanceof Error ? error.stack : undefined;
+    const errorMessage = getErrorMessage(error);
 
-    logger.error('[FloorplanProcess] Error', {
+    logger.error('Error', {
       message: errorMessage,
       code: firebaseError?.code,
-      stack: errorStack?.substring(0, 500),
+      stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
     });
 
     return NextResponse.json(

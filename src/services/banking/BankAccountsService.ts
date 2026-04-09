@@ -45,15 +45,10 @@ const logger = createModuleLogger('BankAccountsService');
 // CONSTANTS
 // ============================================================================
 
-/**
- * Firestore subcollection name for bank accounts
- */
-const BANK_ACCOUNTS_SUBCOLLECTION = 'bankAccounts';
-
-/**
- * Main contacts collection name
- */
-const CONTACTS_COLLECTION = 'contacts';
+// SSoT: Collection names from centralized config
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+const BANK_ACCOUNTS_SUBCOLLECTION = SUBCOLLECTIONS.BANK_ACCOUNTS;
+const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
 // ============================================================================
 // FIRESTORE CONVERTERS

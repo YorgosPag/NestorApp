@@ -5,7 +5,7 @@
     "lastUpdated": "2026-04-08",
     "howToAdd": "Add module entry under 'modules', then run: npm run ssot:baseline"
   },
-  "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/)",
+  "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/|^functions/)",
   "modules": {
     "firestore-collections": {
       "ssotFile": "src/config/firestore-collections.ts",

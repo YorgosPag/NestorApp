@@ -17,10 +17,9 @@ import * as admin from 'firebase-admin';
 const db = admin.firestore();
 const storage = admin.storage();
 
-const COLLECTIONS = {
-  FILES: 'files',
-  AUDIT_LOG: 'audit_log',
-} as const;
+// SSoT: Collection names from centralized config
+import { COLLECTIONS } from '../config/firestore-collections';
+import { generateCloudAuditId } from '../config/enterprise-id';
 
 export const onStorageFinalize = functions
   .runWith({
@@ -63,7 +62,8 @@ export const onStorageFinalize = functions
       const bucket = storage.bucket();
       await bucket.file(filePath).delete();
 
-      await db.collection(COLLECTIONS.AUDIT_LOG).add({
+      const auditId = generateCloudAuditId();
+      await db.collection(COLLECTIONS.CLOUD_FUNCTION_AUDIT_LOG).doc(auditId).set({
         action: 'ORPHAN_FILE_DELETED',
         entityType: 'file',
         entityId: fileId,

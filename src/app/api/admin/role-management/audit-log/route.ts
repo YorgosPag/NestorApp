@@ -26,7 +26,9 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('RoleManagement:AuditLog');
 
-const AUDIT_COLLECTION = 'audit_logs';
+// SSoT: Subcollection name from centralized config
+import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+const AUDIT_COLLECTION = SUBCOLLECTIONS.COMPANY_AUDIT_LOGS;
 const PAGE_SIZE = 50;
 
 // =============================================================================

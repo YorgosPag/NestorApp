@@ -48,7 +48,9 @@ interface OverlayStoreActions {
 }
 
 const OverlayStoreContext = createContext<(OverlayStoreState & OverlayStoreActions) | null>(null);
-const COLLECTION_PREFIX = 'dxf-overlay-levels';
+// SSoT: Collection name from centralized config
+import { COLLECTIONS } from '@/config/firestore-collections';
+const COLLECTION_PREFIX = COLLECTIONS.DXF_OVERLAY_LEVELS;
 
 export function OverlayStoreProvider({ children }: { children: React.ReactNode }) {
   // 🔧 FIX (2026-02-13): Get authenticated user for companyId/createdBy — Firestore rules require these

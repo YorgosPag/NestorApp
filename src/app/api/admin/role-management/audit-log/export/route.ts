@@ -26,7 +26,9 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('RoleManagement:AuditExport');
 
-const AUDIT_COLLECTION = 'audit_logs';
+// SSoT: Subcollection name from centralized config
+import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+const AUDIT_COLLECTION = SUBCOLLECTIONS.COMPANY_AUDIT_LOGS;
 const MAX_EXPORT_ROWS = 1000;
 
 // =============================================================================

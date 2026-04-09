@@ -87,7 +87,7 @@ export const COLLECTIONS = {
   CAD_FILES: process.env.NEXT_PUBLIC_CAD_FILES_COLLECTION || 'cadFiles',
   CAD_LAYERS: process.env.NEXT_PUBLIC_CAD_LAYERS_COLLECTION || 'cadLayers',
   CAD_SESSIONS: process.env.NEXT_PUBLIC_CAD_SESSIONS_COLLECTION || 'cadSessions',
-  DXF_OVERLAY_LEVELS: process.env.NEXT_PUBLIC_DXF_OVERLAY_LEVELS_COLLECTION || 'dxfOverlayLevels',
+  DXF_OVERLAY_LEVELS: process.env.NEXT_PUBLIC_DXF_OVERLAY_LEVELS_COLLECTION || 'dxf-overlay-levels',
   DXF_VIEWER_LEVELS: process.env.NEXT_PUBLIC_DXF_VIEWER_LEVELS_COLLECTION || 'dxf-viewer-levels',
 
   // 📐 FLOORPLANS (Enterprise Unified)
@@ -108,6 +108,7 @@ export const COLLECTIONS = {
   CALENDAR: process.env.NEXT_PUBLIC_CALENDAR_COLLECTION || 'calendar',
   APPOINTMENTS: process.env.NEXT_PUBLIC_APPOINTMENTS_COLLECTION || 'appointments',
   BOOKINGS: process.env.NEXT_PUBLIC_BOOKINGS_COLLECTION || 'bookings',
+  BOOKING_SESSIONS: process.env.NEXT_PUBLIC_BOOKING_SESSIONS_COLLECTION || 'booking_sessions',
 
   // 🔧 MAINTENANCE & LOGS
   LOGS: process.env.NEXT_PUBLIC_LOGS_COLLECTION || 'logs',
@@ -176,8 +177,10 @@ export const COLLECTIONS = {
   // 💰 AI USAGE TRACKING (ADR-259A: Cost Protection — per-user monthly token/cost tracking)
   AI_USAGE: process.env.NEXT_PUBLIC_AI_USAGE_COLLECTION || 'ai_usage',
 
-  // 📋 SYSTEM AUDIT LOGS (Webhook/system-level audit events)
+  // 📋 AUDIT LOGS
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
+  /** Cloud Function audit log (orphan cleanup, system events) */
+  CLOUD_FUNCTION_AUDIT_LOG: process.env.NEXT_PUBLIC_CLOUD_FUNCTION_AUDIT_LOG_COLLECTION || 'audit_log',
 
   // 🏗️ CONSTRUCTION PHASES, TASKS & BASELINES (ADR-034, ADR-266)
   CONSTRUCTION_PHASES: process.env.NEXT_PUBLIC_CONSTRUCTION_PHASES_COLLECTION || 'construction_phases',
@@ -339,6 +342,9 @@ export const SUBCOLLECTIONS = {
 
   // Company audit logs (ADR-210: subcollection under companies/{id})
   COMPANY_AUDIT_LOGS: process.env.NEXT_PUBLIC_COMPANY_AUDIT_LOGS_SUBCOL || 'audit_logs',
+
+  // Contact bank accounts (subcollection under contacts/{id})
+  BANK_ACCOUNTS: process.env.NEXT_PUBLIC_BANK_ACCOUNTS_SUBCOL || 'bankAccounts',
 } as const;
 
 // ============================================================================

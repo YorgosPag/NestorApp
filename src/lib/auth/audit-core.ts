@@ -36,7 +36,10 @@ const logger = createModuleLogger('audit');
 // CONSTANTS
 // =============================================================================
 
-const AUDIT_COLLECTION = 'audit_logs';
+// SSoT: Subcollection name from centralized config
+// This writes to /companies/{companyId}/audit_logs/ (subcollection)
+import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+const AUDIT_COLLECTION = SUBCOLLECTIONS.COMPANY_AUDIT_LOGS;
 
 // =============================================================================
 // FIRESTORE DATA SANITIZATION

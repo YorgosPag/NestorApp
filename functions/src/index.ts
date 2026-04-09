@@ -45,10 +45,9 @@ const HOLD_TYPES = {
   ADMIN: 'admin',
 } as const;
 
-const COLLECTIONS = {
-  FILES: 'files',
-  AUDIT_LOG: 'audit_log',
-} as const;
+// SSoT: Collection names from centralized config
+import { COLLECTIONS } from './config/firestore-collections';
+import { generateCloudAuditId } from './config/enterprise-id';
 
 // ============================================================================
 // TYPES
@@ -95,7 +94,8 @@ interface AuditLogEntry {
  */
 async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
   try {
-    await db.collection(COLLECTIONS.AUDIT_LOG).add(entry);
+    const auditId = generateCloudAuditId();
+    await db.collection(COLLECTIONS.CLOUD_FUNCTION_AUDIT_LOG).doc(auditId).set(entry);
   } catch (error) {
     functions.logger.error('Failed to write audit log', { entry, error });
   }

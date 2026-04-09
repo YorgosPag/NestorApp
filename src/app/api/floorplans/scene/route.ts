@@ -60,7 +60,7 @@ interface SceneErrorResponse {
 // CONSTANTS
 // ============================================================================
 
-const FILES_COLLECTION = 'files';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /** Cache TTL for scene data - immutable once processed */
 const SCENE_CACHE_TTL_SECONDS = 86400; // 24 hours (scene data is immutable)
@@ -155,7 +155,7 @@ async function handleGetScene(
     // 3. FETCH FILE RECORD FROM FIRESTORE
     // =========================================================================
 
-    const fileDoc = await adminDb.collection(FILES_COLLECTION).doc(fileId).get();
+    const fileDoc = await adminDb.collection(COLLECTIONS.FILES).doc(fileId).get();
 
     if (!fileDoc.exists) {
       return NextResponse.json(

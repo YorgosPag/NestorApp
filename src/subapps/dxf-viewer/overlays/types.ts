@@ -158,9 +158,10 @@ export const DEFAULT_KIND: OverlayKind = 'property';
 export const UNDO_STACK_SIZE = 50;
 
 /**
- * Firestore collection names
+ * Firestore collection names — SSoT from centralized config
  */
-export const OVERLAY_COLLECTION_PREFIX = 'dxf-overlay-levels';
+import { COLLECTIONS } from '@/config/firestore-collections';
+export const OVERLAY_COLLECTION_PREFIX = COLLECTIONS.DXF_OVERLAY_LEVELS;
 
 /**
  * Shared overlay handler functions to eliminate duplicates

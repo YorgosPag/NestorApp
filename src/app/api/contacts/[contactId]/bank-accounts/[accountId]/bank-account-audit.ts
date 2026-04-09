@@ -1,11 +1,11 @@
 import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { BankAccountUpdate, BankAccount } from '@/types/contacts/banking';
 import type { AuditFieldChange } from '@/types/audit-trail';
 
-const BANK_ACCOUNTS_SUBCOLLECTION = 'bankAccounts';
+const BANK_ACCOUNTS_SUBCOLLECTION = SUBCOLLECTIONS.BANK_ACCOUNTS;
 
 export function mapBoolean(value: boolean): string {
   return value ? 'Ναι' : 'Όχι';

@@ -60,8 +60,10 @@ interface ContactDocData {
 // CONSTANTS
 // ============================================================================
 
-const CONTACTS_COLLECTION = 'contacts';
-const BANK_ACCOUNTS_SUBCOLLECTION = 'bankAccounts';
+// SSoT: Collection names from centralized config
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
+const BANK_ACCOUNTS_SUBCOLLECTION = SUBCOLLECTIONS.BANK_ACCOUNTS;
 
 // ============================================================================
 // TENANT VERIFICATION

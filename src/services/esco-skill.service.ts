@@ -35,7 +35,9 @@ import type {
 // CONSTANTS
 // ============================================================================
 
-const ESCO_SKILLS_COLLECTION = 'system/esco_cache/skills';
+// SSoT: Collection name from centralized config
+import { COLLECTIONS } from '@/config/firestore-collections';
+const ESCO_SKILLS_COLLECTION = COLLECTIONS.ESCO_SKILLS_CACHE;
 const DEFAULT_SEARCH_LIMIT = 20;
 const MIN_QUERY_LENGTH = 2;
 const CACHE_TTL_MS = 5 * 60 * 1000;

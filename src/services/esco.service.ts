@@ -58,8 +58,9 @@ import { EscoSkillService } from './esco-skill.service';
 // CONSTANTS
 // ============================================================================
 
-/** Firestore collection path for cached ESCO occupations */
-const ESCO_COLLECTION = 'system/esco_cache/occupations';
+// SSoT: Collection name from centralized config
+import { COLLECTIONS } from '@/config/firestore-collections';
+const ESCO_COLLECTION = COLLECTIONS.ESCO_CACHE;
 
 /** Maximum results per search query */
 const DEFAULT_SEARCH_LIMIT = 20;

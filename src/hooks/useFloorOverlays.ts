@@ -70,11 +70,10 @@ interface UseFloorOverlaysReturn {
 // CONSTANTS
 // ============================================================================
 
-/** Firestore collection for DXF viewer levels (SSoT: LevelsSystem.tsx line 80) */
-const LEVELS_COLLECTION = 'dxf-viewer-levels';
-
-/** Firestore collection for overlay items (SSoT: overlay-store.tsx line 46) */
-const OVERLAYS_COLLECTION = 'dxf-overlay-levels';
+// SSoT: Collection names from centralized config
+import { COLLECTIONS } from '@/config/firestore-collections';
+const LEVELS_COLLECTION = COLLECTIONS.DXF_VIEWER_LEVELS;
+const OVERLAYS_COLLECTION = COLLECTIONS.DXF_OVERLAY_LEVELS;
 
 // ============================================================================
 // HELPERS

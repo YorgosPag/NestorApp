@@ -28,7 +28,9 @@ export interface BookingSession {
   createdAt: string;
 }
 
-const BOOKING_SESSIONS_COLLECTION = 'booking_sessions';
+// SSoT: Collection name from centralized config
+import { COLLECTIONS } from '@/config/firestore-collections';
+const BOOKING_SESSIONS_COLLECTION = COLLECTIONS.BOOKING_SESSIONS;
 const SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // =============================================================================

@@ -104,7 +104,9 @@ export interface VatUniquenessResult {
   } | null;
 }
 
-const CONTACTS_COLLECTION = 'contacts';
+// SSoT: Collection name from centralized config
+import { COLLECTIONS } from '@/config/firestore-collections';
+const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
 /**
  * Check if a VAT number is already used by another contact.

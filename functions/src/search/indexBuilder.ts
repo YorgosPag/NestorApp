@@ -94,17 +94,11 @@ export interface SearchDocumentInput {
 }
 
 // =============================================================================
-// COLLECTIONS (Mirrored from firestore-collections.ts)
+// COLLECTIONS — SSoT from centralized config
 // =============================================================================
 
-export const COLLECTIONS = {
-  PROJECTS: 'projects',
-  BUILDINGS: 'buildings',
-  UNITS: 'units',
-  CONTACTS: 'contacts',
-  FILES: 'files',
-  SEARCH_DOCUMENTS: 'searchDocuments',
-} as const;
+// Re-export for indexTriggers.ts which imports COLLECTIONS from this module
+export { COLLECTIONS } from '../config/firestore-collections';
 
 // =============================================================================
 // INDEX CONFIGURATION
