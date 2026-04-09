@@ -338,6 +338,7 @@ export function EntityFilesManager({
       const confirmed = await confirm({
         title: t('batch.deleteConfirmTitle'),
         description: t('batch.deleteConfirmDescription', { count: selectedIds.size }),
+        confirmText: t('batch.deleteConfirmText'),
       });
       if (!confirmed) {
         return;

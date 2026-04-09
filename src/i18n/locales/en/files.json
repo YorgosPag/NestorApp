@@ -280,7 +280,7 @@
     "unarchiveSuccess": "File restored successfully",
     "unarchiveError": "Failed to restore file",
     "batchUnarchiveConfirmTitle": "Batch restore",
-    "batchUnarchiveConfirmDescription": "{{count}} files will be restored to active files.",
+    "batchUnarchiveConfirmDescription": "{count, plural, =1 {1 file will be restored to active files} other {{count} files will be restored to active files}}.",
     "batchUnarchiveConfirmText": "Restore",
     "stats": {
       "totalFiles": "Total files",
@@ -475,12 +475,13 @@
     "archive": "Archive",
     "archiveTooltip": "Move to archive",
     "deleteConfirmTitle": "Batch move to trash",
-    "deleteConfirmDescription": "{{count}} files will be moved to trash. You can restore them within 30 days.",
+    "deleteConfirmDescription": "{count, plural, =1 {1 file will be moved to trash} other {{count} files will be moved to trash}}. You can restore them within 30 days.",
+    "deleteConfirmText": "Move to trash",
     "archiveConfirmTitle": "Batch archive",
-    "archiveConfirmDescription": "{{count}} files will be moved to the archive. They will not be deleted, but they will be removed from the active files view.",
+    "archiveConfirmDescription": "{count, plural, =1 {1 file will be moved to the archive} other {{count} files will be moved to the archive}}. They will not be deleted, but they will be removed from the active files view.",
     "archiveConfirmText": "Archive",
     "archiveSuccess": "{count, plural, =1 {1 file archived successfully} other {{count} files archived successfully}}",
-    "archivePartialSuccess": "Archived {{processed}} of {{total}} files. {{failed}} files did not complete.",
+    "archivePartialSuccess": "Archived {processed} of {total} files. {failed} files did not complete.",
     "archiveNoChanges": "There were no new files to archive.",
     "archiveError": "Failed to archive files",
     "unarchive": "Restore",
@@ -578,7 +579,7 @@
     "created": "Link created!",
     "expiresIn": "Expires in {{label}}",
     "passwordProtected": "Password protected",
-    "maxDownloadsLabel": "Max downloads: {{count}}",
+    "maxDownloadsLabel": "Max downloads: {count}",
     "expirationOptions": {
       "1hour": "1 hour",
       "24hours": "24 hours",
@@ -592,7 +593,7 @@
     "noHistory": "No version history",
     "currentOnly": "This is the first version of the file",
     "current": "Current version",
-    "previousCount": "{{count}} previous",
+    "previousCount": "{count} previous",
     "download": "Download this version",
     "rollback": "Restore to this version"
   },
@@ -635,7 +636,7 @@
     },
     "batchSensitive": {
       "title": "Confirm sensitive batch removal",
-      "description": "This batch action includes {{count}} sensitive or regulated files. Confirm that this removal is intentional."
+      "description": "This batch action includes {count} sensitive or regulated files. Confirm that this removal is intentional."
     },
     "unlink": {
       "title": "Confirm file unlink",

@@ -63,11 +63,17 @@
     },
     "addDoc-prohibition": {
       "ssotFile": "src/services/enterprise-id.service.ts",
-      "description": "NEVER use addDoc() — always setDoc() with enterprise ID",
+      "description": "NEVER use addDoc()/.add()/.doc() — always setDoc() with enterprise ID",
       "forbiddenPatterns": [
-        "addDoc\\("
+        "addDoc\\(",
+        "\\.add\\(\\{",
+        "\\.collection\\([^)]+\\)\\.doc\\(\\)"
       ],
-      "allowlist": []
+      "allowlist": [
+        "src/services/ai-pipeline/tools/__tests__",
+        "src/subapps/dxf-viewer/hooks/canvas/usePolygonCompletion.ts",
+        "src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts"
+      ]
     },
 
     "_comment_tier1": "=== TIER 1: DATA INTEGRITY (bypass = corruption) ===",
