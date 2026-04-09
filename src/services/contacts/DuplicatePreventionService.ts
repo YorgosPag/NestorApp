@@ -282,10 +282,11 @@ export class DuplicatePreventionService {
         // to catch duplicates across individual/company/service contacts.
         // All other fields use type-scoped queries as before.
         const isVatField = field === 'vatNumber' || field === 'companyVatNumber';
+        const companyId = candidateContact.companyId;
 
         const constraints = isVatField
-          ? [where(field, '==', value), limit(5)]
-          : [where(field, '==', value), where('type', '==', candidateContact.type), limit(5)];
+          ? [...(companyId ? [where('companyId', '==', companyId)] : []), where(field, '==', value), limit(5)]
+          : [...(companyId ? [where('companyId', '==', companyId)] : []), where(field, '==', value), where('type', '==', candidateContact.type), limit(5)];
 
         const q = query(colRef, ...constraints);
 
@@ -327,10 +328,12 @@ export class DuplicatePreventionService {
   ): Promise<Contact[]> {
     const colRef = collection(db, this.COLLECTION).withConverter(contactConverter);
     const cutoffTime = Timestamp.fromMillis(Date.now() - config.timeWindow);
+    const companyId = candidateContact.companyId;
 
     try {
       const q = query(
         colRef,
+        ...(companyId ? [where('companyId', '==', companyId)] : []),
         where('type', '==', candidateContact.type),
         where('createdAt', '>=', cutoffTime),
         limit(10)

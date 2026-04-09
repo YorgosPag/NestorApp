@@ -23,6 +23,7 @@ import {
   orderBy,
   onSnapshot,
 } from 'firebase/firestore';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
@@ -88,6 +89,7 @@ export function useAttendanceLiveEvents(
   projectId: string | undefined,
   selectedDate: Date
 ): UseAttendanceLiveEventsReturn {
+  const companyId = useCompanyId()?.companyId;
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
   const [latestEvent, setLatestEvent] = useState<AttendanceEvent | null>(null);
   const [isLive, setIsLive] = useState(false);
@@ -99,7 +101,7 @@ export function useAttendanceLiveEvents(
   const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
-    if (!projectId) {
+    if (!projectId || !companyId) {
       setEvents([]);
       setLatestEvent(null);
       setIsLive(false);
@@ -116,6 +118,7 @@ export function useAttendanceLiveEvents(
 
     const eventsQuery = query(
       collection(db, COLLECTIONS.ATTENDANCE_EVENTS),
+      where('companyId', '==', companyId),
       where('projectId', '==', projectId),
       where('timestamp', '>=', startOfDayStr),
       where('timestamp', '<=', endOfDayStr),
@@ -156,7 +159,7 @@ export function useAttendanceLiveEvents(
       unsubscribe();
       setIsLive(false);
     };
-  }, [projectId, selectedDate]);
+  }, [projectId, companyId, selectedDate]);
 
   return { events, latestEvent, isLive, isLoading, error };
 }

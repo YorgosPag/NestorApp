@@ -34,6 +34,7 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { useCompanyId } from '@/hooks/useCompanyId';
 
 // ============================================================================
 // TYPES
@@ -70,6 +71,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 // ============================================================================
 
 export function useLegalContracts(propertyId: string | null, projectId?: string): UseLegalContractsReturn {
+  const companyId = useCompanyId()?.companyId;
   const [contracts, setContracts] = useState<LegalContract[]>([]);
   const [agreements, setAgreements] = useState<BrokerageAgreement[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -118,10 +120,11 @@ export function useLegalContracts(propertyId: string | null, projectId?: string)
 
   // 🔴 REAL-TIME: onSnapshot subscription for brokerage agreements
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !companyId) return;
 
     const q = query(
       collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
+      where('companyId', '==', companyId),
       where('projectId', '==', projectId)
     );
 
@@ -142,7 +145,7 @@ export function useLegalContracts(propertyId: string | null, projectId?: string)
     );
 
     return unsubscribe;
-  }, [projectId]);
+  }, [projectId, companyId]);
 
   // Actions
   const createContract = useCallback(async (input: CreateContractInput) => {

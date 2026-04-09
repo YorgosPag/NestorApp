@@ -32,19 +32,28 @@ export interface CompanyIdentityImpactPreview {
 // PREVIEW
 // ============================================================================
 
+const ZEROED: CompanyIdentityImpactPreview = {
+  totalAffected: 0, projects: 0, properties: 0, obligations: 0,
+  parking: 0, storage: 0, invoices: 0, apyCertificates: 0,
+};
+
 export async function previewCompanyIdentityImpact(
   contactId: string,
 ): Promise<CompanyIdentityImpactPreview> {
-  const result = await computeContactImpact(contactId, 'companyIdentityChange', 'company');
+  try {
+    const result = await computeContactImpact(contactId, 'companyIdentityChange', 'company');
 
-  return {
-    totalAffected: result.totalAffected,
-    projects: findDependencyCount(result, 'projectsAsCompany'),
-    properties: findDependencyCount(result, 'properties'),
-    obligations: findDependencyCount(result, 'obligations'),
-    parking: findDependencyCount(result, 'parking'),
-    storage: findDependencyCount(result, 'storage'),
-    invoices: findDependencyCount(result, 'invoices'),
-    apyCertificates: findDependencyCount(result, 'apyCertificates'),
-  };
+    return {
+      totalAffected: result.totalAffected,
+      projects: findDependencyCount(result, 'projectsAsCompany'),
+      properties: findDependencyCount(result, 'properties'),
+      obligations: findDependencyCount(result, 'obligations'),
+      parking: findDependencyCount(result, 'parking'),
+      storage: findDependencyCount(result, 'storage'),
+      invoices: findDependencyCount(result, 'invoices'),
+      apyCertificates: findDependencyCount(result, 'apyCertificates'),
+    };
+  } catch {
+    return ZEROED;
+  }
 }

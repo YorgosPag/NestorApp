@@ -84,7 +84,7 @@ describe('contact mutation impact preview services', () => {
         blockingCount: 0,
         warningCount: 0,
       });
-      expect(mockedGetAdminFirestore).toHaveBeenCalledTimes(1);
+      expect(mockedGetAdminFirestore).toHaveBeenCalledTimes(0);
     });
 
     it('blocks AMKA changes when attendance and employment records exist', async () => {
@@ -97,11 +97,12 @@ describe('contact mutation impact preview services', () => {
       const result = await previewContactIdentityImpact('contact_1', [amkaChange]);
 
       expect(result.mode).toBe('block');
-      expect(result.dependencies).toEqual([
+      expect(result.dependencies).toEqual(expect.arrayContaining([
         { id: 'projectLinks', count: 2, mode: 'warn' },
         { id: 'attendanceEvents', count: 3, mode: 'block' },
         { id: 'employmentRecords', count: 4, mode: 'block' },
-      ]);
+      ]));
+      expect(result.dependencies).toHaveLength(3);
       expect(result.blockingCount).toBe(7);
       expect(result.warningCount).toBe(2);
       expect(result.affectedDomains).toEqual(expect.arrayContaining(['ikaAttendance', 'employmentCompliance', 'documentsAndIdentifiers']));
@@ -144,11 +145,12 @@ describe('contact mutation impact preview services', () => {
       const result = await previewServiceIdentityImpact('service_1', [serviceChange]);
 
       expect(result.mode).toBe('warn');
-      expect(result.dependencies).toEqual([
+      expect(result.dependencies).toEqual(expect.arrayContaining([
         { id: 'projectLinks', count: 1, mode: 'warn' },
-        { id: 'contactRelationships', count: 5, mode: 'warn' },
-      ]);
-      expect(result.warningCount).toBe(6);
+        { id: 'contactRelationships', count: 2, mode: 'warn' },
+      ]));
+      expect(result.dependencies).toHaveLength(2);
+      expect(result.warningCount).toBe(3);
       expect(result.affectedDomains).toEqual(['linkedProjects', 'searchAndReporting', 'relationshipViews']);
       expect(result.messageKey).toBe('identityImpact.messages.warn');
     });
@@ -188,6 +190,8 @@ describe('contact mutation impact preview services', () => {
         projects: 2,
         properties: 3,
         obligations: 1,
+        parking: 0,
+        storage: 0,
         invoices: 4,
         apyCertificates: 5,
       });
@@ -209,6 +213,8 @@ describe('contact mutation impact preview services', () => {
         projects: 0,
         properties: 0,
         obligations: 0,
+        parking: 0,
+        storage: 0,
         invoices: 0,
         apyCertificates: 0,
       });

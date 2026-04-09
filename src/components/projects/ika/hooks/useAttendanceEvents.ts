@@ -22,6 +22,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createAttendanceEventWithPolicy } from '@/services/ika/ika-mutation-gateway';
@@ -82,6 +83,7 @@ export function useAttendanceEvents(
   projectId: string | undefined,
   selectedDate: Date
 ): UseAttendanceEventsReturn {
+  const companyId = useCompanyId()?.companyId;
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export function useAttendanceEvents(
     let mounted = true;
 
     async function fetchEvents() {
-      if (!projectId) {
+      if (!projectId || !companyId) {
         setEvents([]);
         setIsLoading(false);
         return;
@@ -111,6 +113,7 @@ export function useAttendanceEvents(
 
         const eventsQuery = query(
           collection(db, COLLECTIONS.ATTENDANCE_EVENTS),
+          where('companyId', '==', companyId),
           where('projectId', '==', projectId),
           where('timestamp', '>=', startOfDayStr),
           where('timestamp', '<=', endOfDayStr),
@@ -155,7 +158,7 @@ export function useAttendanceEvents(
 
     fetchEvents();
     return () => { mounted = false; };
-  }, [projectId, selectedDate, refreshKey]);
+  }, [projectId, companyId, selectedDate, refreshKey]);
 
   // Create a new immutable attendance event (server-side — SPEC-255C)
   const addEvent = useCallback(async (params: CreateAttendanceEventParams): Promise<boolean> => {

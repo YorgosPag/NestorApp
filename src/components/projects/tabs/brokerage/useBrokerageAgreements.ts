@@ -21,6 +21,7 @@ import {
   updateBrokerageAgreementWithPolicy,
 } from '@/services/brokerage-mutation-gateway';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import type {
   BrokerageAgreement,
   ExclusivityValidationResult,
@@ -39,6 +40,7 @@ export function useBrokerageAgreements(
   t: (key: string, params?: Record<string, string>) => string
 ) {
   const { user } = useAuth();
+  const companyId = useCompanyId()?.companyId;
 
   // File upload — expand/collapse per agreement
   const [expandedAgreementId, setExpandedAgreementId] = useState<string | null>(null);
@@ -74,11 +76,12 @@ export function useBrokerageAgreements(
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !companyId) return;
     setIsLoading(true);
 
     const q = query(
       collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
+      where('companyId', '==', companyId),
       where('projectId', '==', projectId)
     );
 
@@ -96,13 +99,14 @@ export function useBrokerageAgreements(
     );
 
     return unsubscribe;
-  }, [projectId]);
+  }, [projectId, companyId]);
 
   const fetchProperties = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId || !companyId) return;
     try {
       const q = query(
         collection(db, COLLECTIONS.PROPERTIES),
+        where('companyId', '==', companyId),
         where('projectId', '==', projectId)
       );
       const snap = await getDocs(q);
@@ -114,7 +118,7 @@ export function useBrokerageAgreements(
     } catch {
       setUnits([]);
     }
-  }, [projectId]);
+  }, [projectId, companyId]);
 
   useEffect(() => {
     fetchProperties();

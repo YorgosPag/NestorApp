@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import type { EmploymentRecord, ApdStatus, WorkerStampsSummary } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -64,6 +65,7 @@ export function useEmploymentRecords(
   month: number,
   year: number
 ): UseEmploymentRecordsReturn {
+  const companyId = useCompanyId()?.companyId;
   const [records, setRecords] = useState<EmploymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export function useEmploymentRecords(
     let mounted = true;
 
     async function fetchRecords() {
-      if (!projectId) {
+      if (!projectId || !companyId) {
         setRecords([]);
         setIsLoading(false);
         return;
@@ -90,6 +92,7 @@ export function useEmploymentRecords(
 
         const recordsQuery = query(
           collection(db, COLLECTIONS.EMPLOYMENT_RECORDS),
+          where('companyId', '==', companyId),
           where('projectId', '==', projectId),
           where('year', '==', year),
           where('month', '==', month)
@@ -140,7 +143,7 @@ export function useEmploymentRecords(
 
     fetchRecords();
     return () => { mounted = false; };
-  }, [projectId, month, year, refreshKey]);
+  }, [projectId, companyId, month, year, refreshKey]);
 
   // Batch save employment records for a month (server-side — SPEC-255C)
   const saveRecords = useCallback(async (params: SaveEmploymentRecordsParams): Promise<boolean> => {
