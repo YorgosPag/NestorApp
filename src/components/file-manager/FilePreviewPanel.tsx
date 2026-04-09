@@ -488,6 +488,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           fileId={file.id}
           fileName={displayName}
           userId={currentUserId}
+          companyId={companyId}
         />
       )}
     </section>
