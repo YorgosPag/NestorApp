@@ -110,10 +110,20 @@ export async function getRevisions(
 
 /**
  * Get building IDs linked to a project.
+ *
+ * @param projectId - The project ID
+ * @param companyId - The tenant company ID (required for tenant isolation)
  */
-export async function getBuildingIdsByProject(projectId: string): Promise<string[]> {
+export async function getBuildingIdsByProject(
+  projectId: string,
+  companyId: string,
+): Promise<string[]> {
   const snap = await getDocs(
-    query(collection(db, COLLECTIONS.BUILDINGS), where('projectId', '==', projectId)),
+    query(
+      collection(db, COLLECTIONS.BUILDINGS),
+      where('companyId', '==', companyId),
+      where('projectId', '==', projectId),
+    ),
   );
   return snap.docs.map(d => d.id);
 }
@@ -140,12 +150,23 @@ export async function validateBuildingData(
 
   for (const bId of buildingIds) {
     const floorsSnap = await getDocs(
-      query(collection(db, COLLECTIONS.FLOORS), where('buildingId', '==', bId)),
+      query(
+        // 🔒 companyId: N/A — `floors` has no companyId field; tenant isolation via
+        // buildingId → `belongsToBuildingCompany(buildingId)` in Firestore rules (line ~582).
+        collection(db, COLLECTIONS.FLOORS),
+        where('buildingId', '==', bId),
+      ),
     );
     totalFloors += floorsSnap.size;
 
     const unitsSnap = await getDocs(
-      query(collection(db, COLLECTIONS.PROPERTIES), where('buildingId', '==', bId)),
+      query(
+        // 🔒 companyId: N/A — `properties` has no companyId field; tenant isolation via
+        // project → `belongsToProjectCompany(project)` in Firestore rules (line ~613).
+        // Filtering by buildingId is safe: buildings are already tenant-scoped upstream.
+        collection(db, COLLECTIONS.PROPERTIES),
+        where('buildingId', '==', bId),
+      ),
     );
     totalProperties += unitsSnap.size;
 

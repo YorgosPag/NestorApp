@@ -14,6 +14,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useAuth } from '@/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { InfoLabel } from '@/components/sales/payments/financial-intelligence/InfoLabel';
@@ -64,6 +65,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   const { t } = useTranslation();
   const { success: showSuccess, error: showError } = useNotifications();
   const { user } = useAuth();
+  const companyId = useCompanyId()?.companyId;
   const router = useRouter();
   const fullscreen = useFullscreen();
   const spacingTokens = useSpacingTokens();
@@ -72,12 +74,11 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   const borders = useBorderTokens();
   const colors = useSemanticColors();
   const { confirm, dialogProps } = useConfirmDialog();
-
   const [buildingIds, setBuildingIds] = useState<string[]>([]);
   useEffect(() => {
-    getBuildingIdsByProject(resolvedProjectId).then(setBuildingIds).catch(() => {});
-  }, [resolvedProjectId]);
-
+    if (!companyId) return;
+    getBuildingIdsByProject(resolvedProjectId, companyId).then(setBuildingIds).catch(() => {});
+  }, [resolvedProjectId, companyId]);
   const [showUnlockInput, setShowUnlockInput] = useState(false);
   const [unlockReason, setUnlockReason] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -88,7 +89,6 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
       return next;
     });
   }, []);
-
   const ownership = useOwnershipTable(resolvedProjectId, buildingIds);
   const {
     table, loading, saving, isDirty, error, validation,
