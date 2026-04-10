@@ -160,11 +160,19 @@ export class BankAccountsService {
     try {
       const accountsRef = this.getAccountsCollection(contactId);
 
+      // 🔒 companyId: N/A — subcollection contacts/{contactId}/bank_accounts,
+      // tenant-isolated via path + Firestore rule `canAccessParentContact()`
+      // (rules line ~1465). BankAccount schema has no companyId field.
       let q;
       if (includeInactive) {
-        q = query(accountsRef, orderBy('createdAt', 'desc'));
+        q = query(
+          // 🔒 companyId: N/A — path-scoped subcollection, see block comment above.
+          accountsRef,
+          orderBy('createdAt', 'desc')
+        );
       } else {
         q = query(
+          // 🔒 companyId: N/A — path-scoped subcollection, see block comment above.
           accountsRef,
           where('isActive', '==', true),
           orderBy('createdAt', 'desc')
@@ -222,6 +230,9 @@ export class BankAccountsService {
     try {
       const accountsRef = this.getAccountsCollection(contactId);
       const q = query(
+        // 🔒 companyId: N/A — subcollection contacts/{contactId}/bank_accounts,
+        // tenant-isolated via path + Firestore rule `canAccessParentContact()`
+        // (rules line ~1465). BankAccount schema has no companyId field.
         accountsRef,
         where('isPrimary', '==', true),
         where('isActive', '==', true)
