@@ -110,7 +110,13 @@ export async function getBuildingSpaces(
 
     // --- UNITS: always have buildingId ---
     const unitsRef = collection(db, COLLECTIONS.PROPERTIES);
-    const unitsQuery = query(unitsRef, where('buildingId', '==', buildingId));
+    const unitsQuery = query(
+      // 🔒 companyId: N/A — `properties` has no companyId field; tenant isolation
+      // via project → `belongsToProjectCompany(project)` in Firestore rules (line ~613).
+      // Filtering by buildingId is safe: buildings are already tenant-scoped upstream.
+      unitsRef,
+      where('buildingId', '==', buildingId),
+    );
     const unitsSnap = await getDocs(unitsQuery);
 
     for (const unitDoc of unitsSnap.docs) {
@@ -129,7 +135,12 @@ export async function getBuildingSpaces(
 
     // --- PARKING by buildingId ---
     const parkingRef = collection(db, COLLECTIONS.PARKING_SPACES);
-    const parkingQuery = query(parkingRef, where('buildingId', '==', buildingId));
+    const parkingQuery = query(
+      // 🔒 companyId: N/A — `parking_spots` has no companyId field; tenant isolation
+      // via buildingId → `belongsToBuildingCompany(buildingId)` in Firestore rules (line ~691).
+      parkingRef,
+      where('buildingId', '==', buildingId),
+    );
     const parkingSnap = await getDocs(parkingQuery);
 
     for (const parkDoc of parkingSnap.docs) {
@@ -145,7 +156,12 @@ export async function getBuildingSpaces(
 
     // --- STORAGE by buildingId ---
     const storageRef = collection(db, COLLECTIONS.STORAGE);
-    const storageQuery = query(storageRef, where('buildingId', '==', buildingId));
+    const storageQuery = query(
+      // 🔒 companyId: N/A — `storage_units` has no companyId field; tenant isolation
+      // via buildingId → `belongsToBuildingCompany(buildingId)` in Firestore rules (line ~660).
+      storageRef,
+      where('buildingId', '==', buildingId),
+    );
     const storageSnap = await getDocs(storageQuery);
 
     for (const storDoc of storageSnap.docs) {
