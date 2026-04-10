@@ -154,7 +154,8 @@ export async function getAssignmentPolicies(
 ): Promise<AssignmentPolicy[]> {
   const policiesRef = getPoliciesCollection();
 
-  // Build query
+  // Build query — base query filters by companyId (tenant isolation).
+  // Subsequent query(q, ...) extensions inherit this constraint.
   let q = query(
     policiesRef,
     where('companyId', '==', queryParams.companyId)
@@ -162,15 +163,27 @@ export async function getAssignmentPolicies(
 
   // Project filter
   if (queryParams.projectId !== undefined) {
-    q = query(q, where('projectId', '==', queryParams.projectId));
+    q = query(
+      // 🔒 companyId: inherited from base query above (query extension pattern).
+      q,
+      where('projectId', '==', queryParams.projectId),
+    );
   }
 
   // Status filter
   if (queryParams.status) {
-    q = query(q, where('status', '==', queryParams.status));
+    q = query(
+      // 🔒 companyId: inherited from base query above (query extension pattern).
+      q,
+      where('status', '==', queryParams.status),
+    );
   } else if (!queryParams.includeInactive) {
     // Default: only active policies
-    q = query(q, where('status', '==', ENTITY_STATUS.ACTIVE));
+    q = query(
+      // 🔒 companyId: inherited from base query above (query extension pattern).
+      q,
+      where('status', '==', ENTITY_STATUS.ACTIVE),
+    );
   }
 
   const snapshot = await getDocs(q);

@@ -1,5 +1,4 @@
 {
-  "src/services/assignment/AssignmentPolicyRepository.ts": 3,
   "src/services/brokerage.service.ts": 6,
   "src/services/client.service.ts": 3,
   "src/services/contact-link.service.ts": 7,
@@ -9,7 +8,7 @@
   "_meta": {
     "description": "Firestore queries without companyId filter — ratchet baseline",
     "generated": "2026-04-10",
-    "totalViolations": 36,
-    "totalFiles": 7
+    "totalViolations": 33,
+    "totalFiles": 6
   }
 }
