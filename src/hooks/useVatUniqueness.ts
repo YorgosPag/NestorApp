@@ -19,6 +19,7 @@ import {
   isValidGreekVat,
   type VatUniquenessResult,
 } from '@/lib/validation/vat-validation';
+import { useCompanyId } from '@/hooks/useCompanyId';
 
 const DEBOUNCE_MS = 500;
 
@@ -31,6 +32,7 @@ export function useVatUniqueness(
   vatNumber: string | undefined | null,
   excludeContactId?: string
 ): UseVatUniquenessReturn {
+  const companyId = useCompanyId()?.companyId;
   const [isChecking, setIsChecking] = useState(false);
   const [result, setResult] = useState<VatUniquenessResult | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,8 +46,8 @@ export function useVatUniqueness(
 
     const vat = vatNumber?.trim() ?? '';
 
-    // If not a valid 9-digit VAT, clear result
-    if (!isValidGreekVat(vat)) {
+    // If not a valid 9-digit VAT or no tenant context, clear result
+    if (!isValidGreekVat(vat) || !companyId) {
       setResult(null);
       setIsChecking(false);
       return;
@@ -56,7 +58,7 @@ export function useVatUniqueness(
 
     timerRef.current = setTimeout(async () => {
       try {
-        const uniquenessResult = await checkVatUniqueness(vat, excludeContactId);
+        const uniquenessResult = await checkVatUniqueness(vat, companyId, excludeContactId);
         setResult(uniquenessResult);
       } catch {
         // Fail silently — don't block user
@@ -71,7 +73,7 @@ export function useVatUniqueness(
         clearTimeout(timerRef.current);
       }
     };
-  }, [vatNumber, excludeContactId]);
+  }, [vatNumber, excludeContactId, companyId]);
 
   return { isChecking, result };
 }

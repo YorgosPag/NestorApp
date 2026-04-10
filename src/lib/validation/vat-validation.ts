@@ -109,16 +109,18 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
 /**
- * Check if a VAT number is already used by another contact.
+ * Check if a VAT number is already used by another contact within the same company.
  * Performs a CROSS-TYPE query (no type filter) to catch duplicates
  * across individual, company, and service contacts.
  *
  * @param vatNumber - The VAT number to check (must be 9 digits)
+ * @param companyId - Tenant company identifier (required for tenant isolation)
  * @param excludeContactId - Optional ID to exclude (self-exclusion during edit)
  * @returns VatUniquenessResult indicating if the VAT is unique
  */
 export async function checkVatUniqueness(
   vatNumber: string,
+  companyId: string,
   excludeContactId?: string
 ): Promise<VatUniquenessResult> {
   const normalized = normalizeVat(vatNumber);
@@ -131,9 +133,10 @@ export async function checkVatUniqueness(
   try {
     const colRef = collection(db, CONTACTS_COLLECTION).withConverter(contactConverter);
 
-    // Cross-type query: NO type filter — catches ALL contact types
+    // Cross-type query: NO type filter — catches ALL contact types within tenant
     const q = query(
       colRef,
+      where('companyId', '==', companyId),
       where('vatNumber', '==', normalized),
       limit(2) // Get up to 2 to handle self-exclusion
     );

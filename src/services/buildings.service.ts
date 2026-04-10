@@ -10,10 +10,14 @@ const logger = createModuleLogger('BuildingsService');
 
 const UNITS_COLLECTION = COLLECTIONS.PROPERTIES;
 
-export async function getBuildingStats(buildingId: string): Promise<BuildingStats> {
+export async function getBuildingStats(
+  buildingId: string,
+  companyId: string
+): Promise<BuildingStats> {
   try {
     const unitsQuery = query(
       collection(db, UNITS_COLLECTION),
+      where('companyId', '==', companyId),
       where('buildingId', '==', buildingId)
     );
 

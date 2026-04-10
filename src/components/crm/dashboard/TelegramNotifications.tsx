@@ -10,6 +10,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { useCompanyId } from '@/hooks/useCompanyId';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { truncateText } from '@/lib/text-utils';
@@ -36,15 +37,18 @@ export function TelegramNotifications() {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('communications');
+  const companyId = useCompanyId()?.companyId;
   const [newMessages, setNewMessages] = useState<TelegramMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
+    if (!companyId) return;
     // Real-time listener για νέα Telegram μηνύματα
     // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
     const q = query(
       collection(db, COLLECTIONS.MESSAGES),
+      where('companyId', '==', companyId),
       where('type', '==', 'telegram'),
       where('direction', '==', 'inbound'),
       orderBy('createdAt', 'desc'),
@@ -76,7 +80,7 @@ export function TelegramNotifications() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [companyId]);
 
   const showBrowserNotification = (message: TelegramMessage) => {
     if ('Notification' in window && Notification.permission === 'granted') {

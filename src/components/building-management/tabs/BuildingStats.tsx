@@ -8,6 +8,7 @@ import { formatNumber } from '@/lib/intl-utils';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { useCompanyId } from '@/hooks/useCompanyId';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -24,15 +25,16 @@ interface BuildingStatsProps {
 
 export function BuildingStats({ buildingId }: BuildingStatsProps) {
   const { t } = useTranslation('building');
+  const companyId = useCompanyId()?.companyId;
   const [stats, setStats] = useState<StatsType | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!buildingId) return;
+      if (!buildingId || !companyId) return;
       setLoading(true);
       try {
-        const buildingStats = await getBuildingStats(buildingId);
+        const buildingStats = await getBuildingStats(buildingId, companyId);
         setStats(buildingStats);
       } catch (error) {
         logger.error('Failed to fetch building stats', { error });
@@ -42,7 +44,7 @@ export function BuildingStats({ buildingId }: BuildingStatsProps) {
       }
     };
     fetchStats();
-  }, [buildingId]);
+  }, [buildingId, companyId]);
 
   const dashboardStats: DashboardStat[] = [
     {

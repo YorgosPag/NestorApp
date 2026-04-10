@@ -1,11 +1,8 @@
 {
-  "src/components/crm/dashboard/TelegramNotifications.tsx": 1,
-  "src/lib/validation/vat-validation.ts": 1,
   "src/services/assignment/AssignmentPolicyRepository.ts": 3,
   "src/services/banking/BankAccountsService.ts": 3,
   "src/services/brokerage.service.ts": 6,
   "src/services/building-spaces.service.ts": 3,
-  "src/services/buildings.service.ts": 1,
   "src/services/client.service.ts": 3,
   "src/services/contact-link.service.ts": 7,
   "src/services/contact-relationships/adapters/FirestoreRelationshipAdapter.ts": 4,
@@ -16,7 +13,7 @@
   "_meta": {
     "description": "Firestore queries without companyId filter — ratchet baseline",
     "generated": "2026-04-10",
-    "totalViolations": 50,
-    "totalFiles": 14
+    "totalViolations": 47,
+    "totalFiles": 11
   }
 }
