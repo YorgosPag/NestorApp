@@ -20,14 +20,20 @@ export interface PersonaRemovalGuardResult {
 }
 
 /** Async guard function signature */
-type PersonaRemovalGuardFn = (contactId: string) => Promise<PersonaRemovalGuardResult>;
+type PersonaRemovalGuardFn = (
+  contactId: string,
+  companyId: string
+) => Promise<PersonaRemovalGuardResult>;
 
 // ─── Guard Adapters ──────────────────────────────────────────────────
 
 const PASS: PersonaRemovalGuardResult = { blocked: false, reasonKey: null };
 
 /** Wraps BrokerageService.hasActiveRecords → normalized result */
-async function brokerageGuard(contactId: string): Promise<PersonaRemovalGuardResult> {
+async function brokerageGuard(
+  contactId: string,
+  _companyId: string
+): Promise<PersonaRemovalGuardResult> {
   const { hasAgreements, hasCommissions } = await BrokerageService.hasActiveRecords(contactId);
   if (hasAgreements || hasCommissions) {
     return { blocked: true, reasonKey: 'persona.guards.realEstateAgent.blocked' };
@@ -36,8 +42,14 @@ async function brokerageGuard(contactId: string): Promise<PersonaRemovalGuardRes
 }
 
 /** Wraps ClientService.hasActiveUnits → normalized result */
-async function clientGuard(contactId: string): Promise<PersonaRemovalGuardResult> {
-  const { hasProperties, hasParking, hasStorage } = await ClientService.hasActiveUnits(contactId);
+async function clientGuard(
+  contactId: string,
+  companyId: string
+): Promise<PersonaRemovalGuardResult> {
+  const { hasProperties, hasParking, hasStorage } = await ClientService.hasActiveUnits(
+    contactId,
+    companyId
+  );
   if (hasProperties || hasParking || hasStorage) {
     return { blocked: true, reasonKey: 'persona.guards.client.blocked' };
   }
@@ -69,13 +81,14 @@ const PERSONA_REMOVAL_GUARDS: ReadonlyMap<PersonaType, PersonaRemovalGuardFn> = 
  */
 export async function checkPersonaRemovalGuard(
   personaType: PersonaType,
-  contactId: string
+  contactId: string,
+  companyId: string
 ): Promise<PersonaRemovalGuardResult> {
   const guard = PERSONA_REMOVAL_GUARDS.get(personaType);
   if (!guard) return PASS;
 
   try {
-    return await guard(contactId);
+    return await guard(contactId, companyId);
   } catch (error) {
     // Fail-open: if guard check fails (permissions, network), allow removal
     console.warn(`[PersonaRemovalGuard] ${personaType} check failed — allowing removal:`, error);

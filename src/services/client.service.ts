@@ -45,14 +45,19 @@ export class ClientService {
    * - storage_units (ownerContactIds array-contains)
    *
    * @param contactId - The contact's Firestore document ID
+   * @param companyId - Tenant isolation — required by Firestore rules
    * @returns Object indicating which collection types have active records
    */
-  static async hasActiveUnits(contactId: string): Promise<ActiveUnitsResult> {
+  static async hasActiveUnits(
+    contactId: string,
+    companyId: string
+  ): Promise<ActiveUnitsResult> {
     try {
       const [unitsSnap, parkingSnap, storageSnap] = await Promise.all([
         getDocs(
           query(
             collection(db, COLLECTIONS.PROPERTIES),
+            where('companyId', '==', companyId),
             where('commercial.ownerContactIds', 'array-contains', contactId),
             limit(1)
           )
@@ -60,6 +65,7 @@ export class ClientService {
         getDocs(
           query(
             collection(db, COLLECTIONS.PARKING_SPACES),
+            where('companyId', '==', companyId),
             where('commercial.ownerContactIds', 'array-contains', contactId),
             limit(1)
           )
@@ -67,6 +73,7 @@ export class ClientService {
         getDocs(
           query(
             collection(db, COLLECTIONS.STORAGE),
+            where('companyId', '==', companyId),
             where('commercial.ownerContactIds', 'array-contains', contactId),
             limit(1)
           )
