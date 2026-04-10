@@ -215,7 +215,13 @@ export class RelationshipQueryBuilder {
 
     // Add filters
     this.filters.forEach(filter => {
-      firestoreQuery = query(firestoreQuery, where(filter.field, filter.operator, filter.value));
+      firestoreQuery = query(
+        firestoreQuery,
+        // 🔒 companyId: N/A — generic query builder. Tenant scoping (including
+        // companyId) must be added by the caller via `.where('companyId', ...)`
+        // on this builder. Enforcement is the caller's responsibility.
+        where(filter.field, filter.operator, filter.value),
+      );
     });
 
     // Add sorts

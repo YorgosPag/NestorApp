@@ -97,6 +97,11 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
             let relationship: ContactRelationship | null = null;
             try {
               const relQuery = query(
+                // 🔒 companyId: N/A (deferred) — CONTACT_RELATIONSHIPS is a
+                // legacy schema that has no companyId field. Tenant isolation
+                // is enforced via the upstream sourceContactId (contacts are
+                // tenant-scoped) + Firestore rules. Full fix requires data
+                // migration to add companyId to ContactRelationship docs.
                 collection(db, COLLECTIONS.CONTACT_RELATIONSHIPS),
                 where('sourceContactId', '==', link.sourceContactId),
                 where('status', '==', 'active')

@@ -209,7 +209,14 @@ export class AuthorizedQueryService {
       let queryRef: Query<DocumentData> = collectionRef;
 
       if (!config.allowPublicAccess && authContext.uid) {
-        queryRef = query(queryRef, where(config.ownerField, '==', authContext.uid));
+        queryRef = query(
+          queryRef,
+          // 🔒 companyId: N/A — this is a generic query middleware. The
+          // `ownerField` is configurable per collection, and tenant scoping
+          // (e.g. companyId filter) is expected to be passed via
+          // `config.additionalConstraints` by the calling repository.
+          where(config.ownerField, '==', authContext.uid),
+        );
       }
 
       if (config.additionalConstraints.length > 0) {

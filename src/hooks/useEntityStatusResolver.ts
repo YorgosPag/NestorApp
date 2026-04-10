@@ -165,7 +165,14 @@ export function useEntityStatusResolver(
 
       for (const chunk of chunks) {
         const colRef = collection(db, collectionName);
-        const q = query(colRef, where(documentId(), 'in', chunk));
+        const q = query(
+          colRef,
+          // 🔒 companyId: N/A — batch-get by documentId() for units /
+          // parking_spots / storage_units whose tenant scope is resolved via
+          // buildingId / projectId (not a companyId field). entityIds come
+          // from a tenant-scoped upstream query + Firestore rules enforce.
+          where(documentId(), 'in', chunk),
+        );
 
         const unsub = onSnapshot(
           q,

@@ -215,6 +215,9 @@ class EnterpriseArchitectureConsolidationSteps {
 
         // Query all documents created by this migration
         const migrationQuery = query(
+          // 🔒 companyId: N/A — one-time migration rollback script, runs with
+          // elevated privileges across ALL tenants to reverse the migration.
+          // Not a user-facing query; executed manually by an admin.
           collection(db, COLLECTIONS.FLOORPLANS),
           where('migrationInfo.migrationId', '==', '003_enterprise_database_architecture_consolidation')
         );

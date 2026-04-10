@@ -129,6 +129,10 @@ export class EmailWorker {
       // Query for pending email jobs, ordered by creation time
       // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
       const q = query(
+        // 🔒 companyId: N/A — server-side background worker processes pending
+        // email jobs across ALL tenants (global queue). Tenant isolation is
+        // enforced downstream when the job is processed against its own
+        // tenant context. Firestore rules deny client reads of MESSAGES.
         collection(COLLECTIONS.MESSAGES),
         where('channel', '==', 'email'),
         where('status', '==', 'pending'),
