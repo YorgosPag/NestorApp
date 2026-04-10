@@ -51,18 +51,21 @@ export type LayerSyncCallback = (state: LayerSyncState) => void;
 export class LayerSyncManager {
   private floorId: string;
   private buildingId: string;
+  private companyId: string;
   private options: Required<LayerSyncOptions>;
   private unsubscribers: (() => void)[] = [];
   private state: LayerSyncState;
   private callbacks: Set<LayerSyncCallback> = new Set();
 
   constructor(
-    floorId: string, 
-    buildingId: string, 
+    floorId: string,
+    buildingId: string,
+    companyId: string,
     options: LayerSyncOptions = {}
   ) {
     this.floorId = floorId;
     this.buildingId = buildingId;
+    this.companyId = companyId;
     this.options = {
       enableRealtime: true,
       enableLogging: false,
@@ -91,9 +94,10 @@ export class LayerSyncManager {
     this.log('Starting layer sync for floor:', this.floorId);
 
     try {
-      // Listen to layer changes in Units collection
+      // Listen to layer changes in Units collection (tenant-scoped)
       const layersQuery = query(
         collection(db, COLLECTIONS.LAYERS),
+        where('companyId', '==', this.companyId),
         where('floorId', '==', this.floorId),
         orderBy('zIndex', 'asc')
       );
@@ -339,12 +343,13 @@ export class LayerSyncManager {
  * Hook για εύκολη χρήση του LayerSyncManager
  */
 export function useLayerSync(
-  floorId: string, 
-  buildingId: string, 
+  floorId: string,
+  buildingId: string,
+  companyId: string,
   options?: LayerSyncOptions
 ) {
-  const [syncManager] = React.useState(() => 
-    new LayerSyncManager(floorId, buildingId, options)
+  const [syncManager] = React.useState(() =>
+    new LayerSyncManager(floorId, buildingId, companyId, options)
   );
   
   const [syncState, setSyncState] = React.useState<LayerSyncState>(
@@ -374,18 +379,18 @@ export function useLayerSync(
  */
 export function createGlobalLayerSync(options?: LayerSyncOptions) {
   const managers = new Map<string, LayerSyncManager>();
-  
+
   return {
-    getManager(floorId: string, buildingId: string): LayerSyncManager {
+    getManager(floorId: string, buildingId: string, companyId: string): LayerSyncManager {
       const key = `${buildingId}:${floorId}`;
-      
+
       if (!managers.has(key)) {
-        managers.set(key, new LayerSyncManager(floorId, buildingId, options));
+        managers.set(key, new LayerSyncManager(floorId, buildingId, companyId, options));
       }
-      
+
       return managers.get(key)!;
     },
-    
+
     destroyManager(floorId: string, buildingId: string): void {
       const key = `${buildingId}:${floorId}`;
       const manager = managers.get(key);
@@ -407,18 +412,20 @@ export function createGlobalLayerSync(options?: LayerSyncOptions) {
  * Utility για manual sync operations
  */
 export async function forceSyncLayers(
-  floorId: string, 
-  buildingId: string
+  floorId: string,
+  buildingId: string,
+  companyId: string
 ): Promise<void> {
-  const syncManager = new LayerSyncManager(floorId, buildingId, {
+  const syncManager = new LayerSyncManager(floorId, buildingId, companyId, {
     enableRealtime: false,
     enableLogging: true
   });
-  
+
   try {
-    // Get all layers for this floor
+    // Get all layers for this floor (tenant-scoped)
     const layersQuery = query(
       collection(db, COLLECTIONS.LAYERS),
+      where('companyId', '==', companyId),
       where('floorId', '==', floorId)
     );
     

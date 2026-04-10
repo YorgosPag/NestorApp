@@ -5,6 +5,7 @@ export interface SystemLayerContext {
   floorId: string;
   buildingId: string;
   userId: string;
+  companyId: string;
 }
 
 interface SystemLayerDefinition {

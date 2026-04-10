@@ -48,6 +48,7 @@ import type { LayerState } from './useLayerStates';
 import type { Layer, LayerCategory } from '@/types/layers';
 import { LAYER_CATEGORIES } from '@/types/layers';
 import { useLayerManagement } from '@/hooks/useLayerManagement';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useLayerSync } from '@/lib/layer-sync';
 import '@/lib/design-system';
 
@@ -111,12 +112,14 @@ export function AdminLayerManager({
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
   const [showSystemLayers, setShowSystemLayers] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  
+  const companyId = useCompanyId()?.companyId ?? '';
+
   // Real-time sync with Properties (θυγατρικό)
   const { syncState, syncManager } = useLayerSync(
-    floorId, 
-    buildingId, 
-    { 
+    floorId,
+    buildingId,
+    companyId,
+    {
       enableRealtime: enableRealTimeSync,
       enableLogging: true
     }
@@ -139,6 +142,7 @@ export function AdminLayerManager({
     floorId,
     buildingId,
     userId,
+    companyId,
     autoSave: true,
     enableRealtime: true
   });

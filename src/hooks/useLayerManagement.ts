@@ -34,6 +34,7 @@ export interface UseLayerManagementOptions {
   floorId: string;
   buildingId: string;
   userId: string;
+  companyId: string;
   autoSave?: boolean;
   maxHistorySize?: number;
   enableRealtime?: boolean;
@@ -88,6 +89,7 @@ export function useLayerManagement({
   floorId,
   buildingId,
   userId,
+  companyId,
   autoSave = true,
   maxHistorySize = 50,
   enableRealtime = true
@@ -97,7 +99,7 @@ export function useLayerManagement({
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilterState] = useState<LayerFilter>(INITIAL_LAYER_FILTER);
 
-  const persistenceContext = useMemo(() => ({ floorId, buildingId, userId }), [floorId, buildingId, userId]);
+  const persistenceContext = useMemo(() => ({ floorId, buildingId, userId, companyId }), [floorId, buildingId, userId, companyId]);
 
   const loadLayers = useCallback(async () => {
     try {

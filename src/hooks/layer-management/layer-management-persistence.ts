@@ -15,12 +15,14 @@ export interface LoadedLayerManagementData {
 export async function loadLayerManagementData(context: SystemLayerContext): Promise<LoadedLayerManagementData> {
   const layersQuery = query(
     collection(db, COLLECTIONS.LAYERS),
+    where('companyId', '==', context.companyId),
     where('floorId', '==', context.floorId),
     orderBy('zIndex', 'asc')
   );
 
   const groupsQuery = query(
     collection(db, COLLECTIONS.LAYER_GROUPS),
+    where('companyId', '==', context.companyId),
     where('floorId', '==', context.floorId),
     orderBy('order', 'asc')
   );
@@ -73,7 +75,10 @@ export function subscribeToLayerManagement(
       handlers.onError(error.message);
     },
     {
-      constraints: [where('floorId', '==', context.floorId)]
+      constraints: [
+        where('companyId', '==', context.companyId),
+        where('floorId', '==', context.floorId),
+      ]
     }
   );
 }

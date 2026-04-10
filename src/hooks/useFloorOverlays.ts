@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useEntityStatusResolver } from './useEntityStatusResolver';
 import type { OverlayKind } from '@/subapps/dxf-viewer/overlays/types';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
@@ -132,6 +133,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
   const [rawOverlays, setRawOverlays] = useState<ReadonlyArray<RawFloorOverlayItem>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const companyId = useCompanyId()?.companyId;
 
   // Track active overlay subscriptions for cleanup
   const overlayUnsubsRef = useRef<Unsubscribe[]>([]);
@@ -143,7 +145,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
       overlayUnsubsRef.current = [];
     };
 
-    if (!floorId) {
+    if (!floorId || !companyId) {
       setRawOverlays([]);
       setLoading(false);
       setError(null);
@@ -162,9 +164,13 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
       setRawOverlays(merged);
     };
 
-    // Step 1: Query levels where floorId matches
+    // Step 1: Query levels where floorId matches (tenant-scoped)
     const levelsRef = collection(db, LEVELS_COLLECTION);
-    const levelsQuery = query(levelsRef, where('floorId', '==', floorId));
+    const levelsQuery = query(
+      levelsRef,
+      where('companyId', '==', companyId),
+      where('floorId', '==', floorId),
+    );
 
     const unsubLevels = onSnapshot(
       levelsQuery,
@@ -249,7 +255,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
       unsubLevels();
       cleanupOverlaySubs();
     };
-  }, [floorId]);
+  }, [floorId, companyId]);
 
   // ── ADR-258 SPEC-258C: Resolve entity statuses in real-time ─────────
   const statusMap = useEntityStatusResolver(rawOverlays);

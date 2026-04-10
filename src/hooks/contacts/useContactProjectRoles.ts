@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import type { LandownerEntry } from '@/types/ownership-table';
 
 // ============================================================================
@@ -45,18 +46,20 @@ export function useContactProjectRoles(contactId: string | undefined): {
 } {
   const [roles, setRoles] = useState<ProjectRole[]>([]);
   const [loading, setLoading] = useState(false);
+  const companyId = useCompanyId()?.companyId;
 
   useEffect(() => {
-    if (!contactId) {
+    if (!contactId || !companyId) {
       setRoles([]);
       return;
     }
 
     setLoading(true);
 
-    // Query projects where this contact is a landowner
+    // Query projects where this contact is a landowner (tenant-scoped)
     const q = query(
       collection(db, COLLECTIONS.PROJECTS),
+      where('companyId', '==', companyId),
       where('landownerContactIds', 'array-contains', contactId),
     );
 
@@ -91,7 +94,7 @@ export function useContactProjectRoles(contactId: string | undefined): {
     );
 
     return () => unsubscribe();
-  }, [contactId]);
+  }, [contactId, companyId]);
 
   return { roles, loading };
 }
