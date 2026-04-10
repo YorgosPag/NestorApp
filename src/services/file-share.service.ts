@@ -173,7 +173,16 @@ export class FileShareService {
    */
   static async validateShare(token: string): Promise<ShareValidation> {
     const colRef = collection(db, COLLECTIONS.FILE_SHARES);
-    const q = query(colRef, where('token', '==', token), where('isActive', '==', true));
+    // companyId: N/A — share links must remain publicly readable for anonymous access
+    // (firestore.rules explicitly allows public read on file_shares by token).
+    // Token is a 32-char URL-safe random string, unguessable. Tenant binding is stored
+    // in `share.companyId` and used by downstream file-access checks.
+    const q = query(
+      // companyId: N/A — anonymous public token-based share validation
+      colRef,
+      where('token', '==', token),
+      where('isActive', '==', true)
+    );
     const snap = await getDocs(q);
 
     if (snap.empty) {

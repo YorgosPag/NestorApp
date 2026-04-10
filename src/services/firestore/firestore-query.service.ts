@@ -393,7 +393,15 @@ class FirestoreQueryService implements IFirestoreQueryService {
     const results = new Map<string, T>();
 
     const chunkPromises = chunks.map(async chunk => {
-      const q = query(colRef, where(documentId(), 'in', chunk));
+      // companyId: N/A — generic batchGet by documentId() (Firestore reserved field).
+      // Tenant isolation is enforced at the firestore.rules level via resource.data.companyId
+      // checks on each fetched document. Adding a where('companyId') here would require
+      // every collection to have a companyId field (some don't, e.g. system/* docs).
+      const q = query(
+        // companyId: N/A — generic batchGet by documentId(), tenant enforced by firestore.rules
+        colRef,
+        where(documentId(), 'in', chunk)
+      );
       const snapshot = await getDocs(q);
       for (const docSnap of snapshot.docs) {
         results.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as unknown as T);

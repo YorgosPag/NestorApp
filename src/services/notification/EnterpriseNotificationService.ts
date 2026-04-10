@@ -237,7 +237,13 @@ class EnterpriseNotificationService {
       : `notification_priorities/global/${environment}`;
 
     const firestore = this.db!;
-    const prioritiesQuery = query(collection(firestore, prioritiesPath), where('isActive', '==', true));
+    // companyId: N/A — multi-tenancy via path (`notification_priorities/tenants/${tenantId}/...`),
+    // not via field. The collection itself is environment+tenant scoped at the path level.
+    const prioritiesQuery = query(
+      // companyId: N/A — path-based tenancy (notification_priorities/tenants/${tenantId})
+      collection(firestore, prioritiesPath),
+      where('isActive', '==', true)
+    );
     const prioritiesSnapshot = await getDocs(prioritiesQuery);
 
     const priorities: EnterpriseNotificationPriority[] = [];
@@ -304,7 +310,13 @@ class EnterpriseNotificationService {
       : `notification_channels/global/${environment}`;
 
     const firestore = this.db!;
-    const channelsQuery = query(collection(firestore, channelsPath), where('isEnabled', '==', true));
+    // companyId: N/A — multi-tenancy via path (`notification_channels/tenants/${tenantId}/...`),
+    // not via field. The collection itself is environment+tenant scoped at the path level.
+    const channelsQuery = query(
+      // companyId: N/A — path-based tenancy (notification_channels/tenants/${tenantId})
+      collection(firestore, channelsPath),
+      where('isEnabled', '==', true)
+    );
     const channelsSnapshot = await getDocs(channelsQuery);
 
     const channels: EnterpriseChannelConfig[] = [];

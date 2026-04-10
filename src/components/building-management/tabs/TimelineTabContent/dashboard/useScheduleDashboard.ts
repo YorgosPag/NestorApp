@@ -212,6 +212,7 @@ function buildLookaheadRows(
 // ─── Hook ────────────────────────────────────────────────────────────────
 
 interface UseScheduleDashboardParams {
+  companyId: string;
   buildingId: string;
   milestones: BuildingMilestone[];
 }
@@ -225,6 +226,7 @@ interface UseScheduleDashboardReturn extends ScheduleDashboardData {
 }
 
 export function useScheduleDashboard({
+  companyId,
   buildingId,
   milestones,
 }: UseScheduleDashboardParams): UseScheduleDashboardReturn {
@@ -246,7 +248,7 @@ export function useScheduleDashboard({
     let cancelled = false;
     setBoqLoading(true);
     boqService
-      .getByBuilding(buildingId)
+      .getByBuilding(companyId, buildingId)
       .then(items => {
         if (!cancelled) {
           setBoqItems(items);
@@ -260,7 +262,7 @@ export function useScheduleDashboard({
         if (!cancelled) setBoqLoading(false);
       });
     return () => { cancelled = true; };
-  }, [buildingId]);
+  }, [companyId, buildingId]);
 
   // ── KPIs ───────────────────────────────────────────────────────────────
   const kpis = useMemo((): ScheduleKPIs => {
@@ -346,10 +348,10 @@ export function useScheduleDashboard({
   // ── Refresh ────────────────────────────────────────────────────────────
   const refresh = useCallback(async () => {
     await reloadGantt();
-    const items = await boqService.getByBuilding(buildingId);
+    const items = await boqService.getByBuilding(companyId, buildingId);
     setBoqItems(items);
     setLastUpdated(new Date());
-  }, [buildingId, reloadGantt]);
+  }, [companyId, buildingId, reloadGantt]);
 
   const loading = ganttLoading || boqLoading;
 

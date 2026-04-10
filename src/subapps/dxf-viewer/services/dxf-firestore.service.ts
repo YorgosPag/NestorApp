@@ -335,13 +335,15 @@ export class DxfFirestoreService {
    * @returns { id, storagePath } or null if not found
    */
   static async findExistingFileRecord(
+    companyId: string,
     fileName: string
   ): Promise<{ id: string; storagePath: string | null } | null> {
     try {
       const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
-      // 🏢 ENTERPRISE: Simple query on originalFilename only — avoids composite index requirement
+      // 🏢 ENTERPRISE: Tenant-scoped query on companyId + originalFilename
       const q = query(
         collection(db, COLLECTIONS.FILES),
+        where('companyId', '==', companyId),
         where('originalFilename', '==', fileName),
         limit(5)
       );

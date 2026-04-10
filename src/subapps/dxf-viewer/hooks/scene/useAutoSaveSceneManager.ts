@@ -123,8 +123,13 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
           let canonicalScenePath: string | undefined;
 
           if (!fileId) {
-            // Check if wizard already created a FileRecord for this filename
-            const existing = await DxfFirestoreService.findExistingFileRecord(currentFileName);
+            // Check if wizard already created a FileRecord for this filename (tenant-scoped)
+            const lookupCompanyId = injectedSaveContextRef.current?.companyId ?? user?.companyId;
+            if (!lookupCompanyId) {
+              setSaveStatus('error');
+              return;
+            }
+            const existing = await DxfFirestoreService.findExistingFileRecord(lookupCompanyId, currentFileName);
             if (existing) {
               fileId = existing.id;
               // Derive scene path next to the original DXF in canonical storage

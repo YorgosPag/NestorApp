@@ -111,6 +111,7 @@ export class EscoSkillService {
     try {
       const collectionRef = collection(db, ESCO_SKILLS_COLLECTION);
       const q = query(
+        // companyId: N/A — public ESCO skills taxonomy (system/esco_cache/skills), shared across all tenants
         collectionRef,
         where(tokenField, 'array-contains', primaryToken),
         firestoreLimit(resultLimit * 2)

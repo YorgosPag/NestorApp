@@ -43,11 +43,11 @@ export interface BOQStats {
 // ============================================================================
 
 export interface IBOQRepository {
-  /** Λήψη όλων των items ανά building */
-  getByBuilding(buildingId: string): Promise<BOQItem[]>;
+  /** Λήψη όλων των items ανά building (companyId required for tenant isolation) */
+  getByBuilding(companyId: string, buildingId: string): Promise<BOQItem[]>;
 
-  /** Λήψη όλων των items ανά project (aggregation across buildings) */
-  getByProject(projectId: string): Promise<BOQItem[]>;
+  /** Λήψη όλων των items ανά project (aggregation across buildings, companyId required) */
+  getByProject(companyId: string, projectId: string): Promise<BOQItem[]>;
 
   /** Λήψη ενός item βάσει ID */
   getById(id: string): Promise<BOQItem | null>;
@@ -70,11 +70,11 @@ export interface IBOQRepository {
   /** Αλλαγή status */
   updateStatus(id: string, status: BOQItemStatus, userId: string): Promise<boolean>;
 
-  /** Αναζήτηση με φίλτρα */
-  search(buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]>;
+  /** Αναζήτηση με φίλτρα (companyId required for tenant isolation) */
+  search(companyId: string, buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]>;
 
-  /** Στατιστικά ανά building */
-  getStatistics(buildingId: string): Promise<BOQStats>;
+  /** Στατιστικά ανά building (companyId required for tenant isolation) */
+  getStatistics(companyId: string, buildingId: string): Promise<BOQStats>;
 
   /** Λήψη κατηγοριών (ΑΤΟΕ) */
   getCategories(companyId: string): Promise<BOQCategory[]>;
@@ -85,11 +85,11 @@ export interface IBOQRepository {
 // ============================================================================
 
 export interface IBOQService {
-  /** Λήψη items ανά building */
-  getByBuilding(buildingId: string): Promise<BOQItem[]>;
+  /** Λήψη items ανά building (companyId required for tenant isolation) */
+  getByBuilding(companyId: string, buildingId: string): Promise<BOQItem[]>;
 
-  /** Λήψη items ανά project (aggregation across all buildings) */
-  getByProject(projectId: string): Promise<BOQItem[]>;
+  /** Λήψη items ανά project (aggregation across all buildings, companyId required) */
+  getByProject(companyId: string, projectId: string): Promise<BOQItem[]>;
 
   /** Λήψη ενός item */
   getById(id: string): Promise<BOQItem | null>;
@@ -112,15 +112,15 @@ export interface IBOQService {
   /** Governance transition (draft→submitted→approved→certified→locked) */
   transition(id: string, targetStatus: BOQItemStatus, userId: string): Promise<boolean>;
 
-  /** Αναζήτηση */
-  search(buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]>;
+  /** Αναζήτηση (companyId required for tenant isolation) */
+  search(companyId: string, buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]>;
 
-  /** Στατιστικά */
-  getStatistics(buildingId: string): Promise<BOQStats>;
+  /** Στατιστικά (companyId required for tenant isolation) */
+  getStatistics(companyId: string, buildingId: string): Promise<BOQStats>;
 
   /** Κατηγορίες ΑΤΟΕ */
   getCategories(companyId: string): Promise<BOQCategory[]>;
 
-  /** Σύνοψη κτιρίου (αθροιστικά) */
-  getBuildingSummary(buildingId: string): Promise<BOQSummary | null>;
+  /** Σύνοψη κτιρίου (αθροιστικά, companyId required) */
+  getBuildingSummary(companyId: string, buildingId: string): Promise<BOQSummary | null>;
 }

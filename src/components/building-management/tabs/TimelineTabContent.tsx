@@ -315,6 +315,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
           }
         >
           <LazyScheduleDashboard
+            companyId={building.companyId as string}
             buildingId={building.id as string}
             buildingName={(building.name as string) ?? ''}
             milestones={firestoreMilestones}

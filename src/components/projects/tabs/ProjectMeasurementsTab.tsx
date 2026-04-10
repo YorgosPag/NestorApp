@@ -125,7 +125,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
       setBuildings(buildingList);
 
       // 2. Fetch all BOQ items for this project (single query)
-      const items = await boqService.getByProject(project.id);
+      const items = await boqService.getByProject(project.companyId, project.id);
       setAllItems(items);
 
       logger.info('Project measurements loaded', {

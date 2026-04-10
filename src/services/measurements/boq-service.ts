@@ -69,12 +69,12 @@ class BOQService implements IBOQService {
 
   // --- READ ---
 
-  getByBuilding(buildingId: string): Promise<BOQItem[]> {
-    return this.repository.getByBuilding(buildingId);
+  getByBuilding(companyId: string, buildingId: string): Promise<BOQItem[]> {
+    return this.repository.getByBuilding(companyId, buildingId);
   }
 
-  getByProject(projectId: string): Promise<BOQItem[]> {
-    return this.repository.getByProject(projectId);
+  getByProject(companyId: string, projectId: string): Promise<BOQItem[]> {
+    return this.repository.getByProject(companyId, projectId);
   }
 
   getById(id: string): Promise<BOQItem | null> {
@@ -210,12 +210,12 @@ class BOQService implements IBOQService {
 
   // --- SEARCH & STATS ---
 
-  search(buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]> {
-    return this.repository.search(buildingId, filters);
+  search(companyId: string, buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]> {
+    return this.repository.search(companyId, buildingId, filters);
   }
 
-  getStatistics(buildingId: string): Promise<BOQStats> {
-    return this.repository.getStatistics(buildingId);
+  getStatistics(companyId: string, buildingId: string): Promise<BOQStats> {
+    return this.repository.getStatistics(companyId, buildingId);
   }
 
   // --- CATEGORIES ---
@@ -226,9 +226,9 @@ class BOQService implements IBOQService {
 
   // --- BUILDING SUMMARY ---
 
-  async getBuildingSummary(buildingId: string): Promise<BOQSummary | null> {
+  async getBuildingSummary(companyId: string, buildingId: string): Promise<BOQSummary | null> {
     try {
-      const items = await this.repository.getByBuilding(buildingId);
+      const items = await this.repository.getByBuilding(companyId, buildingId);
       if (items.length === 0) {
         return null;
       }

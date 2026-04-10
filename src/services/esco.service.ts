@@ -213,6 +213,7 @@ export class EscoService {
     try {
       const collectionRef = collection(db, ESCO_COLLECTION);
       const q = query(
+        // companyId: N/A — public ESCO taxonomy (system/esco_cache/occupations), shared across all tenants
         collectionRef,
         where(tokenField, 'array-contains', primaryToken),
         firestoreLimit(resultLimit * 2) // Fetch extra for client-side filtering
@@ -378,6 +379,7 @@ export class EscoService {
     try {
       const collectionRef = collection(db, ESCO_COLLECTION);
       const q = query(
+        // companyId: N/A — public ESCO taxonomy (system/esco_cache/occupations), shared across all tenants
         collectionRef,
         where('iscoGroup', '==', iscoGroup),
         orderBy(`preferredLabel.${language}`),

@@ -49,6 +49,7 @@ import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 // ─── Props ───────────────────────────────────────────────────────────────
 
 interface ScheduleDashboardViewProps {
+  companyId: string;
   buildingId: string;
   buildingName: string;
   milestones: BuildingMilestone[];
@@ -58,6 +59,7 @@ interface ScheduleDashboardViewProps {
 // ─── Component ───────────────────────────────────────────────────────────
 
 export function ScheduleDashboardView({
+  companyId,
   buildingId,
   buildingName,
   milestones,
@@ -85,7 +87,7 @@ export function ScheduleDashboardView({
     lookAheadDays,
     setLookAheadDays,
     refresh,
-  } = useScheduleDashboard({ buildingId, milestones });
+  } = useScheduleDashboard({ companyId, buildingId, milestones });
 
   const baselineComparison = useBaselineComparison(buildingId);
 

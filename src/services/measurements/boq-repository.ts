@@ -121,10 +121,11 @@ const normalizeBOQCategory = (id: string, data: Record<string, unknown>): BOQCat
 
 export class FirestoreBOQRepository implements IBOQRepository {
 
-  async getByBuilding(buildingId: string): Promise<BOQItem[]> {
+  async getByBuilding(companyId: string, buildingId: string): Promise<BOQItem[]> {
     try {
       const boqQuery = query(
         collection(db, COLLECTIONS.BOQ_ITEMS),
+        where('companyId', '==', companyId),
         where('buildingId', '==', buildingId),
         orderBy('categoryCode', 'asc')
       );
@@ -139,10 +140,11 @@ export class FirestoreBOQRepository implements IBOQRepository {
     }
   }
 
-  async getByProject(projectId: string): Promise<BOQItem[]> {
+  async getByProject(companyId: string, projectId: string): Promise<BOQItem[]> {
     try {
       const boqQuery = query(
         collection(db, COLLECTIONS.BOQ_ITEMS),
+        where('companyId', '==', companyId),
         where('projectId', '==', projectId),
         orderBy('categoryCode', 'asc')
       );
@@ -318,10 +320,13 @@ export class FirestoreBOQRepository implements IBOQRepository {
     }
   }
 
-  async search(buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]> {
+  async search(companyId: string, buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]> {
     try {
       const baseRef = collection(db, COLLECTIONS.BOQ_ITEMS);
-      const constraints: QueryConstraint[] = [where('buildingId', '==', buildingId)];
+      const constraints: QueryConstraint[] = [
+        where('companyId', '==', companyId),
+        where('buildingId', '==', buildingId),
+      ];
 
       if (filters?.categoryCode) {
         constraints.push(where('categoryCode', '==', filters.categoryCode));
@@ -370,9 +375,9 @@ export class FirestoreBOQRepository implements IBOQRepository {
     }
   }
 
-  async getStatistics(buildingId: string): Promise<BOQStats> {
+  async getStatistics(companyId: string, buildingId: string): Promise<BOQStats> {
     try {
-      const items = await this.getByBuilding(buildingId);
+      const items = await this.getByBuilding(companyId, buildingId);
 
       let totalEstimatedCost = 0;
       for (const item of items) {

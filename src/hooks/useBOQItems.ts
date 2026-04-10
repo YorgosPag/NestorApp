@@ -106,9 +106,9 @@ export function useBOQItems(
   // --- FETCH via useAsyncData ---
 
   const { data, loading, error: fetchError, refetch: refreshItems } = useAsyncData({
-    fetcher: () => boqService.getByBuilding(buildingId),
-    deps: [buildingId],
-    enabled: !!buildingId,
+    fetcher: () => boqService.getByBuilding(companyId, buildingId),
+    deps: [companyId, buildingId],
+    enabled: !!buildingId && !!companyId,
   });
 
   const items = data ?? [];
