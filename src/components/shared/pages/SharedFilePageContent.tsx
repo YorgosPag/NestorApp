@@ -6,9 +6,13 @@
  * Public page accessible without authentication.
  * Validates share token, handles password protection, and serves file.
  *
+ * Preview rendering is delegated to the SSoT FilePreviewRenderer, which is
+ * the same component the authenticated file manager uses — ensuring every
+ * supported file type (PDF, images, video, audio, DOCX) previews identically
+ * in both contexts.
+ *
  * @module components/shared/pages/SharedFilePageContent
- * @enterprise ADR-294 Batch 7 — extracted from app/shared/[token]/page.tsx
- * @see ADR-191 - Enterprise Document Management System (Phase 4.2)
+ * @enterprise ADR-191 — Enterprise Document Management System (Phase 4.3)
  */
 
 'use client';
@@ -31,6 +35,8 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { FileShareService, type FileShareRecord } from '@/services/file-share.service';
 import { formatFileSize } from '@/utils/file-validation';
+import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
+import { getFileCategory, getFileCategoryI18nKey } from '@/lib/file-types/preview-registry';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -66,37 +72,6 @@ export function SharedFilePageContent() {
   const [passwordError, setPasswordError] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  // Validate share token
-  useEffect(() => {
-    async function validate() {
-      try {
-        const validation = await FileShareService.validateShare(token);
-
-        if (!validation.valid || !validation.share) {
-          setState(validation.reason?.includes('expired') ? 'expired' : 'error');
-          setErrorMessage(validation.reason ?? 'Invalid share link');
-          return;
-        }
-
-        setShare(validation.share);
-
-        // If password required, show password form
-        if (validation.share.requiresPassword) {
-          setState('password');
-          return;
-        }
-
-        // Load file info
-        await loadFileInfo(validation.share.fileId);
-      } catch (err) {
-        setState('error');
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to load');
-      }
-    }
-
-    validate();
-  }, [token]);
-
   // Load file metadata from Firestore
   const loadFileInfo = useCallback(async (fileId: string) => {
     const { doc, getDoc } = await import('firebase/firestore');
@@ -122,6 +97,35 @@ export function SharedFilePageContent() {
     setState('ready');
   }, []);
 
+  // Validate share token
+  useEffect(() => {
+    async function validate() {
+      try {
+        const validation = await FileShareService.validateShare(token);
+
+        if (!validation.valid || !validation.share) {
+          setState(validation.reason?.includes('expired') ? 'expired' : 'error');
+          setErrorMessage(validation.reason ?? 'Invalid share link');
+          return;
+        }
+
+        setShare(validation.share);
+
+        if (validation.share.requiresPassword) {
+          setState('password');
+          return;
+        }
+
+        await loadFileInfo(validation.share.fileId);
+      } catch (err) {
+        setState('error');
+        setErrorMessage(err instanceof Error ? err.message : 'Failed to load');
+      }
+    }
+
+    validate();
+  }, [token, loadFileInfo]);
+
   // Handle password submit
   const handlePasswordSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,10 +147,7 @@ export function SharedFilePageContent() {
 
     setDownloading(true);
     try {
-      // Increment download count
       await FileShareService.incrementDownloadCount(share.id);
-
-      // Open download
       window.open(fileInfo.downloadUrl, '_blank', 'noopener,noreferrer');
     } finally {
       setDownloading(false);
@@ -164,15 +165,20 @@ export function SharedFilePageContent() {
       })
     : '';
 
+  // Friendly file type label via SSoT registry
+  const fileTypeLabel = fileInfo
+    ? t(getFileCategoryI18nKey(getFileCategory(fileInfo.contentType, fileInfo.originalFilename)))
+    : '';
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-muted/50 to-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-4xl">
         <CardContent className="pt-6">
           {/* Loading */}
           {state === 'loading' && (
             <section className="text-center py-8">
               <Spinner size="large" className="mx-auto mb-4" />
-              <p className={cn("text-sm", colors.text.muted)}>{t('share.loading')}</p>
+              <p className={cn('text-sm', colors.text.muted)}>{t('share.loading')}</p>
             </section>
           )}
 
@@ -181,7 +187,7 @@ export function SharedFilePageContent() {
             <section className="text-center py-8">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-destructive" />
               <h2 className="text-lg font-semibold mb-2">{t('share.invalidLink')}</h2>
-              <p className={cn("text-sm", colors.text.muted)}>{errorMessage}</p>
+              <p className={cn('text-sm', colors.text.muted)}>{errorMessage}</p>
             </section>
           )}
 
@@ -190,9 +196,7 @@ export function SharedFilePageContent() {
             <section className="text-center py-8">
               <Clock className="h-12 w-12 mx-auto mb-4 text-amber-500" />
               <h2 className="text-lg font-semibold mb-2">{t('share.expired')}</h2>
-              <p className={cn("text-sm", colors.text.muted)}>
-                {t('share.requestNew')}
-              </p>
+              <p className={cn('text-sm', colors.text.muted)}>{t('share.requestNew')}</p>
             </section>
           )}
 
@@ -205,10 +209,10 @@ export function SharedFilePageContent() {
               <h2 className="text-lg font-semibold text-center mb-2">
                 {t('share.protected')}
               </h2>
-              <p className={cn("text-sm text-center mb-6", colors.text.muted)}>
+              <p className={cn('text-sm text-center mb-6', colors.text.muted)}>
                 {t('share.passwordRequired')}
               </p>
-              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-sm mx-auto">
                 <label className="block">
                   <span className="text-sm font-medium">{t('share.password')}</span>
                   <input
@@ -234,26 +238,28 @@ export function SharedFilePageContent() {
             </section>
           )}
 
-          {/* Ready — show file info and download */}
+          {/* Ready — show file info, preview and download */}
           {state === 'ready' && fileInfo && (
             <section className="py-4">
-              <figure className="flex items-center justify-center mb-6">
-                <FileText className="h-12 w-12 text-primary" />
-              </figure>
-
-              <h2 className="text-lg font-semibold text-center mb-1 truncate">
-                {fileInfo.displayName}
-              </h2>
-
-              <div className={cn("flex items-center justify-center gap-3 text-xs mb-6", colors.text.muted)}>
-                <span>.{fileInfo.ext}</span>
-                <span>{formatFileSize(fileInfo.sizeBytes)}</span>
-                <span>{fileInfo.contentType}</span>
-              </div>
+              <header className="text-center mb-6">
+                <figure className="flex items-center justify-center mb-3">
+                  <FileText className="h-10 w-10 text-primary" />
+                </figure>
+                <h2 className="text-lg font-semibold mb-1 truncate">
+                  {fileInfo.displayName}
+                </h2>
+                <div className={cn('flex items-center justify-center gap-3 text-xs', colors.text.muted)}>
+                  {fileInfo.ext && <span>.{fileInfo.ext}</span>}
+                  <span>·</span>
+                  <span>{formatFileSize(fileInfo.sizeBytes)}</span>
+                  <span>·</span>
+                  <span>{fileTypeLabel}</span>
+                </div>
+              </header>
 
               {/* Share note */}
               {share?.note && (
-                <p className={cn("text-sm bg-muted/50 rounded-md p-3 mb-4 italic", colors.text.muted)}>
+                <p className={cn('text-sm bg-muted/50 rounded-md p-3 mb-4 italic text-center', colors.text.muted)}>
                   {share.note}
                 </p>
               )}
@@ -273,20 +279,20 @@ export function SharedFilePageContent() {
                 {t('share.download')}
               </Button>
 
-              {/* Preview for images */}
-              {fileInfo.contentType.startsWith('image/') && fileInfo.downloadUrl && (
-                <figure className="border rounded-md overflow-hidden mb-4">
-                  <img
-                    src={fileInfo.downloadUrl}
-                    alt={fileInfo.displayName}
-                    className="w-full max-h-[300px] object-contain bg-muted/20"
-                    loading="lazy"
-                  />
-                </figure>
-              )}
+              {/* SSoT preview — same renderer as authenticated file manager */}
+              <div className="border rounded-md overflow-hidden mb-4 flex flex-col min-h-[500px] max-h-[70vh]">
+                <FilePreviewRenderer
+                  url={fileInfo.downloadUrl}
+                  contentType={fileInfo.contentType}
+                  fileName={fileInfo.originalFilename}
+                  displayName={fileInfo.displayName}
+                  sizeBytes={fileInfo.sizeBytes}
+                  onDownload={handleDownload}
+                />
+              </div>
 
               {/* Expiration info */}
-              <footer className={cn("flex items-center justify-center gap-2 text-xs", colors.text.muted)}>
+              <footer className={cn('flex items-center justify-center gap-2 text-xs', colors.text.muted)}>
                 <Clock className="h-3 w-3" />
                 <span>{t('share.expires')} {expiresLabel}</span>
                 {share && share.maxDownloads > 0 && (

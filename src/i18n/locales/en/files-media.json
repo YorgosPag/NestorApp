@@ -141,6 +141,20 @@
     "access": "Access",
     "download": "Download file",
     "expires": "Expires:",
-    "downloads": "downloads"
+    "downloads": "downloads",
+    "preview": "Preview",
+    "previewUnavailable": "Preview is not available for this file type.",
+    "fileType": {
+      "word": "Word Document",
+      "excel": "Excel Spreadsheet",
+      "powerpoint": "PowerPoint Presentation",
+      "pdf": "PDF Document",
+      "image": "Image",
+      "video": "Video",
+      "audio": "Audio file",
+      "archive": "Archive",
+      "text": "Text file",
+      "unknown": "File"
+    }
   }
 }

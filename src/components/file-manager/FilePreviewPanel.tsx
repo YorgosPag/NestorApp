@@ -21,12 +21,10 @@ import {
   FileText,
   Image as ImageIcon,
   Video,
+  Music,
   Download,
   ExternalLink,
   X,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
   File,
   Eye,
   History,
@@ -41,13 +39,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
-import { PdfCanvasViewer } from './PdfCanvasViewer';
 import { VersionHistory } from '@/components/shared/files/VersionHistory';
 import { AuditLogPanel } from '@/components/shared/files/AuditLogPanel';
 import { ShareDialog } from '@/components/shared/files/ShareDialog';
 import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
 import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
-import { DocxPreview } from './preview/DocxPreview';
+import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
+import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
@@ -74,148 +72,15 @@ interface FilePreviewPanelProps {
   className?: string;
 }
 
-type PreviewType = 'pdf' | 'image' | 'video' | 'docx' | 'unsupported';
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function getPreviewType(contentType: string | undefined, fileName?: string): PreviewType {
-  if (!contentType) return 'unsupported';
-  if (contentType === 'application/pdf') return 'pdf';
-  if (contentType.startsWith('image/')) return 'image';
-  if (contentType.startsWith('video/')) return 'video';
-  if (contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
-  if (fileName?.toLowerCase().endsWith('.docx')) return 'docx';
-  return 'unsupported';
-}
-
 function getPreviewIcon(previewType: PreviewType) {
   switch (previewType) {
     case 'pdf': return FileText;
     case 'image': return ImageIcon;
     case 'video': return Video;
+    case 'audio': return Music;
     case 'docx': return FileText;
     default: return File;
   }
-}
-
-// ============================================================================
-// SUB-COMPONENTS
-// ============================================================================
-
-/** PDF preview via pdfjs-dist canvas (theme-aware) */
-function PdfPreview({ url, title }: { url: string; title: string }) {
-  return <PdfCanvasViewer url={url} title={title} className="flex-1" />;
-}
-
-/** Image preview with zoom/rotate */
-function ImagePreview({ url, title }: { url: string; title: string }) {
-  const colors = useSemanticColors();
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-
-  return (
-    <figure className="flex-1 flex flex-col overflow-hidden">
-      {/* Controls */}
-      <nav className="flex items-center justify-center gap-1 py-2 border-b bg-muted/30">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
-          disabled={zoom <= 0.25}
-          className="h-7 w-7 p-0"
-        >
-          <ZoomOut className="h-3.5 w-3.5" />
-        </Button>
-        <span className={cn("text-xs w-12 text-center", colors.text.muted)}>
-          {Math.round(zoom * 100)}%
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setZoom((z) => Math.min(4, z + 0.25))}
-          disabled={zoom >= 4}
-          className="h-7 w-7 p-0"
-        >
-          <ZoomIn className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setRotation((r) => (r + 90) % 360)}
-          className="h-7 w-7 p-0 ml-2"
-        >
-          <RotateCw className="h-3.5 w-3.5" />
-        </Button>
-      </nav>
-      {/* Image */}
-      <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-muted/20">
-        <img
-          src={url}
-          alt={title}
-          className="max-w-full max-h-full object-contain transition-transform duration-200"
-          style={{
-            transform: `scale(${zoom}) rotate(${rotation}deg)`,
-          }}
-          loading="lazy"
-        />
-      </div>
-    </figure>
-  );
-}
-
-/** Video preview with native player */
-function VideoPreview({ url, title }: { url: string; title: string }) {
-  return (
-    <div className="flex-1 flex items-center justify-center p-4 bg-black/5">
-      <video
-        src={url}
-        controls
-        className="max-w-full max-h-full rounded-lg"
-        preload="metadata"
-        aria-label={title}
-      >
-        <track kind="captions" />
-      </video>
-    </div>
-  );
-}
-
-/** Fallback for unsupported types */
-function UnsupportedPreview({
-  file,
-  displayName,
-  onDownload,
-}: {
-  file: FileRecord;
-  displayName: string;
-  onDownload: () => void;
-}) {
-  const { t } = useTranslation('files');
-  const colors = useSemanticColors();
-
-  return (
-    <section className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
-      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-        <File className={cn("h-8 w-8", colors.text.muted)} />
-      </div>
-      <div>
-        <p className="font-medium text-sm">{displayName}</p>
-        <p className={cn("text-xs mt-1", colors.text.muted)}>
-          {file.contentType || t('technical.unavailable')}
-          {file.sizeBytes ? ` · ${formatFileSize(file.sizeBytes)}` : ''}
-        </p>
-      </div>
-      <p className={cn("text-xs max-w-xs", colors.text.muted)}>
-        {t('preview.unsupported')}
-      </p>
-      <Button variant="outline" size="sm" onClick={onDownload}>
-        <Download className="h-4 w-4 mr-2" />
-        {t('list.download')}
-      </Button>
-    </section>
-  );
 }
 
 // ============================================================================
@@ -464,22 +329,15 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
         </div>
       )}
 
-      {/* Preview area */}
-      {previewType === 'pdf' && file.downloadUrl && (
-        <PdfPreview url={file.downloadUrl} title={displayName} />
-      )}
-      {previewType === 'image' && file.downloadUrl && (
-        <ImagePreview url={file.downloadUrl} title={displayName} />
-      )}
-      {previewType === 'video' && file.downloadUrl && (
-        <VideoPreview url={file.downloadUrl} title={displayName} />
-      )}
-      {previewType === 'docx' && file.downloadUrl && (
-        <DocxPreview url={file.downloadUrl} title={displayName} />
-      )}
-      {(previewType === 'unsupported' || !file.downloadUrl) && (
-        <UnsupportedPreview file={file} displayName={displayName} onDownload={handleDownload} />
-      )}
+      {/* Preview area — SSoT renderer, shared with public share page */}
+      <FilePreviewRenderer
+        url={file.downloadUrl}
+        contentType={file.contentType}
+        fileName={file.displayName}
+        displayName={displayName}
+        sizeBytes={file.sizeBytes}
+        onDownload={handleDownload}
+      />
 
       {/* Share dialog */}
       {currentUserId && (

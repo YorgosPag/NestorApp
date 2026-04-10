@@ -141,6 +141,20 @@
     "access": "Πρόσβαση",
     "download": "Λήψη αρχείου",
     "expires": "Λήγει:",
-    "downloads": "λήψεις"
+    "downloads": "λήψεις",
+    "preview": "Προεπισκόπηση",
+    "previewUnavailable": "Η προεπισκόπηση δεν είναι διαθέσιμη για αυτόν τον τύπο αρχείου.",
+    "fileType": {
+      "word": "Έγγραφο Word",
+      "excel": "Υπολογιστικό φύλλο Excel",
+      "powerpoint": "Παρουσίαση PowerPoint",
+      "pdf": "Έγγραφο PDF",
+      "image": "Εικόνα",
+      "video": "Βίντεο",
+      "audio": "Αρχείο ήχου",
+      "archive": "Συμπιεσμένο αρχείο",
+      "text": "Αρχείο κειμένου",
+      "unknown": "Αρχείο"
+    }
   }
 }
