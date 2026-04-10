@@ -336,6 +336,8 @@ export class EnterpriseSessionService {
 
     const sessionsRef = this.getSessionsCollection(userId);
     const q = query(
+      // 🔒 companyId: N/A — subcollection users/{userId}/sessions, tenant-isolated
+      // via path + rule `allow read, write: if isOwner(userId)`. No companyId field.
       sessionsRef,
       where('status', '==', 'active'),
       orderBy('timestamps.lastActiveAt', 'desc')
@@ -455,6 +457,8 @@ export class EnterpriseSessionService {
   ): Promise<void> {
     const sessionsRef = this.getSessionsCollection(userId);
     const q = query(
+      // 🔒 companyId: N/A — subcollection users/{userId}/sessions, tenant-isolated
+      // via path + rule `allow read, write: if isOwner(userId)`. No companyId field.
       sessionsRef,
       where('status', '==', 'active'),
       where('isCurrent', '==', true)
