@@ -16,14 +16,13 @@
   "src/services/contact-relationships/adapters/FirestoreRelationshipAdapter.ts": 4,
   "src/services/contact-relationships/search/RelationshipQueryBuilder.ts": 1,
   "src/services/file-link.service.ts": 7,
-  "src/services/navigation-companies.service.ts": 2,
   "src/services/ownership/ownership-table-service.ts": 3,
   "src/services/session/EnterpriseSessionService.ts": 2,
   "src/services/teams/EnterpriseTeamsService.ts": 6,
   "_meta": {
     "description": "Firestore queries without companyId filter — ratchet baseline",
     "generated": "2026-04-10",
-    "totalViolations": 58,
-    "totalFiles": 21
+    "totalViolations": 56,
+    "totalFiles": 20
   }
 }

@@ -1,23 +1,30 @@
-import { collection, query, where, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, deleteDoc, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+import { requireAuthContext } from '@/services/firestore/auth-context';
 
 const logger = createModuleLogger('NavigationCompaniesService');
 
 /**
  * Service για διαχείριση των εταιρειών που εμφανίζονται στην πλοήγηση
  * Κρατά track ποιες εταιρείες (από contacts) έχουν προστεθεί χειροκίνητα στην πλοήγηση
+ *
+ * 🔒 SPEC-259B: Κάθε public method καλεί requireAuthContext() (SSoT)
+ * και φιλτράρει με companyId. Super admin (null companyId) βλέπει όλα.
  */
 
 export interface NavigationCompanyEntry {
   id?: string;
   contactId: string; // ID της εταιρείας από τη contacts collection
+  companyId: string | null; // 🔒 Tenant isolation (null = super_admin global entry)
   addedAt: Date;
   addedBy?: string; // User ID που την πρόσθεσε
 }
+
+const SUPER_ADMIN_CACHE_KEY = '__super_admin__';
 
 // 🏢 ENTERPRISE: Centralized collection configuration
 const NAVIGATION_COMPANIES_COLLECTION = COLLECTIONS.NAVIGATION;
@@ -28,6 +35,8 @@ export class NavigationCompaniesService {
    */
   async addCompanyToNavigation(contactId: string, userId?: string): Promise<void> {
     try {
+      const { companyId } = await requireAuthContext();
+
       // Ελέγχουμε αν υπάρχει ήδη
       const exists = await this.isCompanyInNavigation(contactId);
       if (exists) {
@@ -37,6 +46,7 @@ export class NavigationCompaniesService {
 
       const entry: Omit<NavigationCompanyEntry, 'id'> = {
         contactId,
+        companyId,
         addedAt: new Date(),
         ...(userId && { addedBy: userId })
       };
@@ -47,7 +57,7 @@ export class NavigationCompaniesService {
       await setDoc(docRef, entry);
 
       // 🗑️ PERFORMANCE: Clear cache after modification
-      this.clearCache();
+      this.clearCache(companyId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatch('WORKSPACE_UPDATED', {
@@ -73,9 +83,15 @@ export class NavigationCompaniesService {
    */
   async removeCompanyFromNavigation(contactId: string): Promise<void> {
     try {
+      const { companyId } = await requireAuthContext();
+
+      const constraints: QueryConstraint[] = [where('contactId', '==', contactId)];
+      if (companyId) {
+        constraints.push(where('companyId', '==', companyId));
+      }
       const q = query(
         collection(db, NAVIGATION_COMPANIES_COLLECTION),
-        where('contactId', '==', contactId)
+        ...constraints,
       );
 
       const snapshot = await getDocs(q);
@@ -83,7 +99,7 @@ export class NavigationCompaniesService {
       await Promise.all(deletePromises);
 
       // 🗑️ PERFORMANCE: Clear cache after modification
-      this.clearCache();
+      this.clearCache(companyId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatch('WORKSPACE_UPDATED', {
@@ -109,9 +125,15 @@ export class NavigationCompaniesService {
    */
   async isCompanyInNavigation(contactId: string): Promise<boolean> {
     try {
+      const { companyId } = await requireAuthContext();
+
+      const constraints: QueryConstraint[] = [where('contactId', '==', contactId)];
+      if (companyId) {
+        constraints.push(where('companyId', '==', companyId));
+      }
       const q = query(
         collection(db, NAVIGATION_COMPANIES_COLLECTION),
-        where('contactId', '==', contactId)
+        ...constraints,
       );
 
       const snapshot = await getDocs(q);
@@ -126,46 +148,39 @@ export class NavigationCompaniesService {
    * 🏢 ENTERPRISE CACHING: Επιστρέφει όλα τα IDs εταιρειών που είναι στην πλοήγηση
    *
    * @performance Implements memory caching για αποφυγή duplicate queries
-   * @cache 5 λεπτών TTL για real-time consistency
+   * @cache 5 λεπτών TTL per-tenant για real-time consistency + tenant isolation
    */
-  private static navigationCache: {
-    data: string[] | null;
-    timestamp: number;
-    ttl: number;
-  } = {
-    data: null,
-    timestamp: 0,
-    ttl: 5 * 60 * 1000, // 5 λεπτά cache
-  };
+  private static readonly CACHE_TTL_MS = 5 * 60 * 1000;
+  private static navigationCache: Map<string, { data: string[]; timestamp: number }> = new Map();
 
   async getNavigationCompanyIds(): Promise<string[]> {
     try {
-      // 🚀 PERFORMANCE: Check cache first
-      const now = Date.now();
-      const cache = NavigationCompaniesService.navigationCache;
+      const { companyId } = await requireAuthContext();
+      const cacheKey = companyId ?? SUPER_ADMIN_CACHE_KEY;
 
-      if (cache.data && (now - cache.timestamp) < cache.ttl) {
-        // console.log(`🧭 CACHE HIT: Returning ${cache.data.length} cached navigation company IDs`);
-        return cache.data;
+      // 🚀 PERFORMANCE: Check per-tenant cache first
+      const now = Date.now();
+      const cached = NavigationCompaniesService.navigationCache.get(cacheKey);
+      if (cached && (now - cached.timestamp) < NavigationCompaniesService.CACHE_TTL_MS) {
+        return cached.data;
       }
 
-      // 🔄 Cache miss - fetch from Firestore
-      const q = query(collection(db, NAVIGATION_COMPANIES_COLLECTION));
+      // 🔄 Cache miss - fetch from Firestore (tenant-scoped)
+      const q = companyId
+        ? query(
+            collection(db, NAVIGATION_COMPANIES_COLLECTION),
+            where('companyId', '==', companyId),
+          )
+        : query(collection(db, NAVIGATION_COMPANIES_COLLECTION)); // super_admin: all tenants
       const snapshot = await getDocs(q);
 
-      // 🎯 PRODUCTION: Μείωση logging verbosity για obligations/new page
-      // console.log(`🧭 CACHE MISS: ${NAVIGATION_COMPANIES_COLLECTION} collection has ${snapshot.docs.length} documents`);
-
-      const contactIds = snapshot.docs.map(doc => {
-        const data = doc.data() as NavigationCompanyEntry;
-        // 🎯 PRODUCTION: Αφαίρεση debug logs για καθαρότερη κονσόλα
-        // console.log(`🧭 DEBUG: navigation entry - contactId: ${data.contactId}, addedBy: ${data.addedBy}`);
+      const contactIds = snapshot.docs.map(d => {
+        const data = d.data() as NavigationCompanyEntry;
         return data.contactId;
       });
 
-      // 💾 Update cache
-      cache.data = contactIds;
-      cache.timestamp = now;
+      // 💾 Update per-tenant cache
+      NavigationCompaniesService.navigationCache.set(cacheKey, { data: contactIds, timestamp: now });
 
       return contactIds;
     } catch (error) {
@@ -175,26 +190,31 @@ export class NavigationCompaniesService {
   }
 
   /**
-   * 🗑️ CACHE MANAGEMENT: Clear cache when navigation changes
-   * Καλείται όταν προστίθενται/αφαιρούνται εταιρείες
+   * 🗑️ CACHE MANAGEMENT: Clear per-tenant cache when navigation changes
    */
-  private clearCache(): void {
-    NavigationCompaniesService.navigationCache.data = null;
-    NavigationCompaniesService.navigationCache.timestamp = 0;
-    // console.log('🧭 Cache cleared');
+  private clearCache(companyId: string | null): void {
+    const cacheKey = companyId ?? SUPER_ADMIN_CACHE_KEY;
+    NavigationCompaniesService.navigationCache.delete(cacheKey);
   }
 
   /**
-   * Επιστρέφει όλες τις navigation company entries
+   * Επιστρέφει όλες τις navigation company entries (tenant-scoped)
    */
   async getAllNavigationCompanies(): Promise<NavigationCompanyEntry[]> {
     try {
-      const q = query(collection(db, NAVIGATION_COMPANIES_COLLECTION));
+      const { companyId } = await requireAuthContext();
+
+      const q = companyId
+        ? query(
+            collection(db, NAVIGATION_COMPANIES_COLLECTION),
+            where('companyId', '==', companyId),
+          )
+        : query(collection(db, NAVIGATION_COMPANIES_COLLECTION)); // super_admin: all tenants
       const snapshot = await getDocs(q);
 
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      return snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
       } as NavigationCompanyEntry));
     } catch (error) {
       // Error logging removed //('Error fetching navigation companies:', error);
