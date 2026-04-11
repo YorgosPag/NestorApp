@@ -262,11 +262,6 @@ export const lazyRoutesAdr294 = {
     { loadingType: 'form', ssr: false }
   ),
 
-  AdminLinkProperties: createLazyRoute(
-    () => import('@/components/admin/pages/LinkPropertiesPageContent').then(mod => ({ default: mod.LinkPropertiesPageContent })),
-    { loadingType: 'list', ssr: false }
-  ),
-
   // =========================================================================
   // ⚡ BATCH 6: CRM Dynamic Routes (detail pages)
   // =========================================================================

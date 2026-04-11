@@ -569,7 +569,6 @@ export const API_ROUTES = {
     CREATE: '/api/properties/create',
     BY_ID: (id: string) => `/api/properties/${id}` as const,
     IMPACT_PREVIEW: (propertyId: string) => `/api/properties/${propertyId}/impact-preview` as const,
-    ADMIN_LINK: '/api/properties/admin-link',
     HIERARCHY: (propertyId: string) => `/api/properties/${propertyId}/hierarchy` as const,
     ACTIVITY: (propertyId: string) => `/api/properties/${propertyId}/activity` as const,
     PAYMENT_PLAN: (propertyId: string) => `/api/properties/${propertyId}/payment-plan` as const,
