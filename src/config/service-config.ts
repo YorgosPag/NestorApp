@@ -230,13 +230,13 @@ const bankingSection: ServiceSectionConfig = {
 // -------------------------------------------------------------------------
 const historySection: ServiceSectionConfig = {
   id: 'history',
-  title: 'sections.history',
+  title: 'contacts.service.sections.history.title',
   icon: 'clock',
   fields: [
     {
       id: 'history',
       type: 'input',
-      label: 'sections.history'
+      label: 'contacts.service.sections.history.title'
     }
   ]
 };
