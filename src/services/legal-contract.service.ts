@@ -19,6 +19,11 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generateContractId } from '@/services/enterprise-id.service';
 import { AssociationService } from '@/services/association.service';
+import {
+  updatePropertyLegalPhase,
+  phaseLabel,
+  type PhaseSyncPerformer,
+} from '@/services/legal-contract-phase-sync';
 import type {
   LegalContract,
   ContractPhase,
@@ -79,7 +84,7 @@ export class LegalContractService {
       if (existing) {
         return {
           success: false,
-          error: `Υπάρχει ήδη ${this.phaseLabel(input.phase)} για αυτή τη μονάδα`,
+          error: `Υπάρχει ήδη ${phaseLabel(input.phase)} για αυτή τη μονάδα`,
         };
       }
 
@@ -118,8 +123,8 @@ export class LegalContractService {
       const db = getDb();
       await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(id).set(contract);
 
-      // Sync legalPhase to property
-      await this.syncLegalPhase(input.propertyId);
+      // Sync legalPhase to property — carries the creator as the audit performer.
+      await this.syncLegalPhase(input.propertyId, { uid: createdBy, name: createdBy });
 
       logger.info(
         `[LegalContractService] Created ${input.phase} contract ${id} for property ${input.propertyId}`
@@ -377,13 +382,20 @@ export class LegalContractService {
   /**
    * Υπολογίζει και ενημερώνει τη legalPhase στο unit.commercial.
    * Βρίσκει το "πιο προχωρημένο" contract και παράγει τη φάση.
+   *
+   * @param performer Optional audit performer. When omitted, the phase-sync
+   *                  module falls back to the `'system'` sentinel so CHECK
+   *                  3.17 file-level audit coverage still fires.
    */
-  static async syncLegalPhase(propertyId: string): Promise<LegalPhase> {
+  static async syncLegalPhase(
+    propertyId: string,
+    performer?: PhaseSyncPerformer,
+  ): Promise<LegalPhase> {
     try {
       const contracts = await this.getContractsForProperty(propertyId);
 
       if (contracts.length === 0) {
-        await this.updatePropertyLegalPhase(propertyId, 'none');
+        await updatePropertyLegalPhase(propertyId, 'none', performer);
         return 'none';
       }
 
@@ -405,7 +417,7 @@ export class LegalContractService {
         }
       }
 
-      await this.updatePropertyLegalPhase(propertyId, highestPhase);
+      await updatePropertyLegalPhase(propertyId, highestPhase, performer);
       return highestPhase;
     } catch (error) {
       logger.error('[LegalContractService] Failed to sync legal phase:', error);
@@ -452,35 +464,11 @@ export class LegalContractService {
     return null;
   }
 
-  /**
-   * Ενημερώνει unit.commercial.legalPhase στο Firestore.
-   */
-  private static async updatePropertyLegalPhase(
-    propertyId: string,
-    legalPhase: LegalPhase
-  ): Promise<void> {
-    try {
-      const db = getDb();
-      await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
-        'commercial.legalPhase': legalPhase,
-      });
-      logger.info(`[LegalContractService] Property ${propertyId} legalPhase → ${legalPhase}`);
-    } catch (error) {
-      logger.error('[LegalContractService] Failed to update property legalPhase:', error);
-    }
-  }
-
-  /**
-   * Human-readable label για φάση.
-   */
-  private static phaseLabel(phase: ContractPhase): string {
-    const labels: Record<ContractPhase, string> = {
-      preliminary: 'Προσύμφωνο',
-      final: 'Οριστικό Συμβόλαιο',
-      payoff: 'Εξοφλητήριο',
-    };
-    return labels[phase];
-  }
+  // Previously housed `updatePropertyLegalPhase` + `phaseLabel` private
+  // helpers; both were extracted to `legal-contract-phase-sync.ts` so the
+  // single PROPERTIES-tracked write path carries its own CHECK 3.17 audit
+  // coverage and this service file stays under the 500-line Google SRP
+  // limit (ADR-195, CLAUDE.md N.7.1).
 }
 
 export default LegalContractService;
