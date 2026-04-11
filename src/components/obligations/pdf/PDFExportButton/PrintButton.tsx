@@ -8,6 +8,7 @@ import { cn } from "@/lib/design-system";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ObligationDocument } from "@/types/obligations";
 import { exportObligationToPDF } from "@/services/pdf-export.service";
+import { openBlobInNewTab } from '@/lib/exports/trigger-export-download';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('PrintButton');
@@ -29,18 +30,7 @@ export function PrintButton({ document, className }: PrintButtonProps) {
       });
 
       const blob = new Blob([pdfData as BlobPart], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-
-      if (typeof window !== "undefined") {
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.addEventListener("load", () => {
-            printWindow.print();
-          });
-        }
-      }
-
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      openBlobInNewTab(blob, { onLoad: (w) => w.print() });
     } catch (error) {
       logger.error('Error printing PDF', { error });
       if (typeof window !== "undefined") {

@@ -4,6 +4,7 @@
 import type { ObligationDocument as _Doc } from '@/types/obligations';
 import { exportObligationToPDF as _exportToPDF, downloadPDF as _downloadPDF } from '@/services/pdf-export.service';
 import { generateFileName as _genName, getContentSummary as _getSummary, validateObligation as _validate } from '@/lib/obligations-utils';
+import { openBlobInNewTab as _openBlob } from '@/lib/exports/trigger-export-download';
 import { DefaultObligationConfig } from './config';
 
 /** Επιλογές εξαγωγής PDF */
@@ -46,13 +47,6 @@ export const mergePdfOptions = (options?: PDFExportOptions): PDFExportOptions =>
   };
 };
 
-/** Επιστρέφει ασφαλές Object URL για blob και το καθαρίζει μετά από λίγο */
-const openBlobInNewTab = (blob: Blob, revokeAfterMs = 1000) => {
-  const url = URL.createObjectURL(blob);
-  window.open(url);
-  setTimeout(() => URL.revokeObjectURL(url), revokeAfterMs);
-};
-
 export const PDFHelpers = {
   /** Γρήγορη εξαγωγή PDF με τα default options */
   quickExport: async (document: _Doc) => {
@@ -71,18 +65,15 @@ export const PDFHelpers = {
   /** Προεπισκόπηση PDF σε νέο tab */
   preview: async (document: _Doc, options?: PDFExportOptions) => {
     const pdfData = await _exportToPDF(document, mergePdfOptions(options));
-    openBlobInNewTab(new Blob([pdfData as BlobPart], { type: 'application/pdf' }));
+    const blob = new Blob([pdfData as BlobPart], { type: 'application/pdf' });
+    _openBlob(blob);
   },
 
   /** Άμεση εκτύπωση PDF */
   print: async (document: _Doc, options?: PDFExportOptions) => {
     const pdfData = await _exportToPDF(document, mergePdfOptions(options));
-    const url = URL.createObjectURL(new Blob([pdfData as BlobPart], { type: 'application/pdf' }));
-    const printWindow = window.open(url);
-    if (printWindow) {
-      printWindow.addEventListener('load', () => printWindow.print());
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const blob = new Blob([pdfData as BlobPart], { type: 'application/pdf' });
+    _openBlob(blob, { onLoad: (w) => w.print() });
   },
 };
 

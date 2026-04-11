@@ -11,6 +11,7 @@
 
 import type { APYCertificate } from '../../types';
 import { renderAPYCertificatePDF } from './apy-certificate-pdf-template';
+import { openBlobInNewTab } from '@/lib/exports/trigger-export-download';
 
 // ============================================================================
 // HELPERS
@@ -79,18 +80,10 @@ export async function getAPYCertificatePDFBlob(cert: APYCertificate): Promise<Bl
  */
 export async function printAPYCertificatePDF(cert: APYCertificate): Promise<void> {
   const blob = await getAPYCertificatePDFBlob(cert);
-  const url = URL.createObjectURL(blob);
+  const tab = openBlobInNewTab(blob, { onLoad: (w) => w.print() });
 
-  const printWindow = window.open(url, '_blank');
-  if (printWindow) {
-    printWindow.addEventListener('load', () => {
-      printWindow.print();
-    });
-    // Clean up URL after a delay
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  } else {
-    // Fallback: download if popup blocked
-    URL.revokeObjectURL(url);
+  // Fallback: download if popup blocked
+  if (!tab) {
     await exportAPYCertificatePDF(cert);
   }
 }

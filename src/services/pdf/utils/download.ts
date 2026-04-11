@@ -1,29 +1,15 @@
 "use client";
 
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
+
 /**
  * Triggers a browser download for the given PDF data.
+ * Thin wrapper around the canonical triggerExportDownload helper.
+ *
  * @param pdfData The PDF content as a Uint8Array.
  * @param filename The desired filename for the downloaded file.
  */
 export const downloadPDF = (pdfData: Uint8Array, filename: string) => {
-  if (typeof window === 'undefined') {
-    // Error logging removed //("Download function called on the server.");
-    return;
-  }
-
-  const blobData = Uint8Array.from(pdfData);
-  const blob = new Blob([blobData], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  
-  // Append to body, click, and remove for cross-browser compatibility
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  // Clean up the object URL
-  URL.revokeObjectURL(url);
+  const blob = new Blob([pdfData], { type: 'application/pdf' });
+  triggerExportDownload({ blob, filename });
 };

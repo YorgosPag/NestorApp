@@ -11,6 +11,7 @@ import { toPng, toSvg } from 'html-to-image';
 import type { TaskGroup } from 'react-modern-gantt';
 import { designTokens } from '@/styles/design-tokens';
 import { formatDateShort } from '@/lib/intl-utils';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import type { GanttTaskExportRow } from './types';
 
 // ─── DOM Capture ──────────────────────────────────────────────────────────
@@ -102,32 +103,23 @@ export function flattenTaskGroupsToRows(
   return rows;
 }
 
-// ─── Download Trigger ─────────────────────────────────────────────────────
+// ─── Download Trigger (thin wrappers over canonical SSoT) ────────────────
 
 /**
- * Triggers a browser download from a data URL or Blob.
- * Uses the standard anchor-click pattern (same as src/services/pdf/utils/download.ts).
+ * Triggers a browser download from a data URL (used for PNG/SVG captures).
+ * Thin wrapper over triggerExportDownload — fetches the data URL to a Blob first.
  */
-export function triggerDownload(dataUrl: string, filename: string): void {
-  const link = document.createElement('a');
-  link.href = dataUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+export async function triggerDownload(dataUrl: string, filename: string): Promise<void> {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  triggerExportDownload({ blob, filename });
 }
 
 /**
  * Triggers a browser download from a Blob (for binary formats like Excel).
+ * Thin wrapper over the canonical triggerExportDownload helper.
  */
 export function triggerBlobDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  triggerExportDownload({ blob, filename });
 }
 

@@ -10,6 +10,7 @@
 
 import type { Invoice, CompanyProfile } from '../../types';
 import { renderInvoicePDF } from './invoice-pdf-template';
+import { openBlobInNewTab } from '@/lib/exports/trigger-export-download';
 
 // ============================================================================
 // TYPES
@@ -142,18 +143,10 @@ export async function printInvoicePDF(
   settings?: InvoicePDFSettings
 ): Promise<void> {
   const blob = await getInvoicePDFBlob(invoice, settings);
-  const url = URL.createObjectURL(blob);
+  const tab = openBlobInNewTab(blob, { onLoad: (w) => w.print() });
 
-  const printWindow = window.open(url, '_blank');
-  if (printWindow) {
-    printWindow.addEventListener('load', () => {
-      printWindow.print();
-    });
-    // Clean up URL after a delay
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  } else {
-    // Fallback: download if popup blocked
-    URL.revokeObjectURL(url);
+  // Fallback: download if popup blocked
+  if (!tab) {
     await exportInvoicePDF(invoice, settings);
   }
 }

@@ -18,5 +18,5 @@ export async function exportGanttAsImage(
   filename: string,
 ): Promise<void> {
   const dataUrl = await captureGanttAsDataUrl(chartElement, format);
-  triggerDownload(dataUrl, filename);
+  await triggerDownload(dataUrl, filename);
 }

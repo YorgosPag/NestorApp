@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useRef } from "react";
 import { exportObligationToPDF, downloadPDF } from "@/services/pdf-export.service";
+import { openBlobInNewTab } from "@/lib/exports/trigger-export-download";
 import { generateFileName } from "@/lib/obligations-utils";
 import type { ObligationDocument } from "@/types/obligations";
 import type { ExportOptions, ExportBuildOptions } from "../types";
@@ -111,11 +112,7 @@ export function usePdfExport(document: ObligationDocument) {
         setExportProgress(100);
 
         if (openPreview) {
-          const url = URL.createObjectURL(blob);
-          if (typeof window !== "undefined") {
-            window.open(url, "_blank");
-          }
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          openBlobInNewTab(blob);
         } else {
           const arrayBuffer = await blob.arrayBuffer();
           downloadPDF(new Uint8Array(arrayBuffer), filename);
