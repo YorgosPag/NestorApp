@@ -753,6 +753,17 @@
     },
     "loadMore": "Περισσότερα",
     "byUser": "από {name}",
+    "entityTypes": {
+      "contact": "Επαφή",
+      "company": "Εταιρεία",
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "property": "Ακίνητο",
+      "parking": "Parking",
+      "storage": "Αποθήκη",
+      "floor": "Όροφος",
+      "purchase_order": "Παραγγελία"
+    },
     "values": {
       "active": "Ενεργό",
       "inactive": "Ανενεργό",

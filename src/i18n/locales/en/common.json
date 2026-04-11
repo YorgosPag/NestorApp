@@ -753,6 +753,17 @@
     },
     "loadMore": "Load more",
     "byUser": "by {name}",
+    "entityTypes": {
+      "contact": "Contact",
+      "company": "Company",
+      "project": "Project",
+      "building": "Building",
+      "property": "Property",
+      "parking": "Parking",
+      "storage": "Storage",
+      "floor": "Floor",
+      "purchase_order": "Purchase Order"
+    },
     "values": {
       "active": "Active",
       "inactive": "Inactive",
