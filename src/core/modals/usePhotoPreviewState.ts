@@ -10,9 +10,9 @@ import { getContactDisplayName } from '@/types/contacts';
 import { announceToScreenReader } from '@/utils/accessibility';
 import { FileNamingService } from '@/services/FileNamingService';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
-import { API_ROUTES } from '@/config/domain-constants';
 import { generatePhotoId as enterpriseGeneratePhotoId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import type { PhotoPreviewModalProps } from '@/core/modals/photo-preview-helpers';
 import { generatePhotoTitle, getPhotoTypeIcon, buildPhotoShareText } from '@/core/modals/photo-preview-helpers';
 
@@ -52,6 +52,9 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
 
   // --- Mobile detection ---
   const [isMobile, setIsMobile] = useState(false);
+
+  // --- Centralized file download (Domain A SSoT, ADR-294) ---
+  const { handleDownload: proxyDownloadFile } = useFileDownload();
 
   // --- Refs for keyboard nav (avoid stale closures) ---
   const currentIndexRef = useRef(currentIndex);
@@ -249,55 +252,44 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
 
   // --- Download handler ---
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!currentPhoto) return;
 
+    // Derive extension from URL path (Firebase Storage URLs embed original filename).
+    let extension = '.jpg';
     try {
       const url = new URL(currentPhoto);
       const pathParts = url.pathname.split('/');
       const fileName = pathParts[pathParts.length - 1];
-      const extension = fileName.includes('.') ? '.' + fileName.split('.').pop() : '.jpg';
-
-      let downloadFilename = `${title}${extension}`;
-
-      if (contact) {
-        try {
-          const { formData: contactFormData } = mapContactToFormData(contact);
-          let purpose: 'logo' | 'photo' | 'representative' = 'photo';
-          if (photoType === 'logo') purpose = 'logo';
-          else if (photoType === 'representative') purpose = 'representative';
-
-          downloadFilename = FileNamingService.generateFilenameFromBase64(
-            contactFormData, purpose, `image/${extension.replace('.', '')}`, photoIndex
-          );
-        } catch (error) {
-          logger.warn('FileNamingService generation failed, using fallback', { error });
-          downloadFilename = `${title}${extension}`;
-        }
+      if (fileName.includes('.')) {
+        extension = '.' + fileName.split('.').pop();
       }
-
-      const downloadApiUrl = `${API_ROUTES.DOWNLOAD}?` + new URLSearchParams({
-        url: currentPhoto,
-        filename: downloadFilename
-      });
-
-      logger.info('ENTERPRISE DOWNLOAD', { originalUrl: currentPhoto, filename: downloadFilename, apiUrl: downloadApiUrl });
-
-      const link = document.createElement('a');
-      link.href = downloadApiUrl;
-      link.download = downloadFilename;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     } catch (error) {
-      logger.error('Download failed', { error });
-      if (!currentPhoto) return;
-      const link = document.createElement('a');
-      link.href = currentPhoto;
-      link.download = `${title}.jpg`;
-      link.click();
+      logger.warn('Failed to parse photo URL for extension, defaulting to .jpg', { error });
     }
+
+    let downloadFilename = `${title}${extension}`;
+
+    if (contact) {
+      try {
+        const { formData: contactFormData } = mapContactToFormData(contact);
+        let purpose: 'logo' | 'photo' | 'representative' = 'photo';
+        if (photoType === 'logo') purpose = 'logo';
+        else if (photoType === 'representative') purpose = 'representative';
+
+        downloadFilename = FileNamingService.generateFilenameFromBase64(
+          contactFormData, purpose, `image/${extension.replace('.', '')}`, photoIndex
+        );
+      } catch (error) {
+        logger.warn('FileNamingService generation failed, using fallback', { error });
+        downloadFilename = `${title}${extension}`;
+      }
+    }
+
+    // SSoT Domain A (ADR-294): delegate to useFileDownload → backend proxy.
+    // displayName already carries the extension, so the hook preserves it as-is.
+    logger.info('ENTERPRISE DOWNLOAD', { originalUrl: currentPhoto, filename: downloadFilename });
+    await proxyDownloadFile({ downloadUrl: currentPhoto, displayName: downloadFilename });
   };
 
   // --- Zoom / rotate handlers ---
