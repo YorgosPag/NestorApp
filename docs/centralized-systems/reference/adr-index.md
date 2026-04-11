@@ -169,6 +169,7 @@
 | **ADR-145** | PropertyType SSoT Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-145-property-types-ssot.md) |
 | **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-145-super-admin-ai-assistant.md) |
 | **ADR-146** | Canvas Size Observer Hook Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-146-canvas-size-observer-hook-centralization.md) |
+| **ADR-147** | Unified Share Surface — ShareSurfaceShell + Pluggable PermissionPanel | 🟡 Phase A IMPLEMENTED | 2026-04-11 | UI Components / Centralization | [📄](./adrs/ADR-147-unified-share-surface.md) |
 | **ADR-150** | Arrow Head Size Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-150-arrow-head-size-centralization.md) |
 | **ADR-151** | Grip Tolerance Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-151-grip-tolerance-centralization.md) |
 | **ADR-152** | Simple Coordinate Transform Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-152-simple-coordinate-transform-centralization.md) |
