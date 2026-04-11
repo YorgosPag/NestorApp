@@ -24,6 +24,7 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { ProjectUpdateSchema, CACHE_KEY_PREFIX } from './project-mutations.types';
 import type {
   ProjectUpdateResponse,
@@ -31,24 +32,6 @@ import type {
 } from './project-mutations.types';
 
 const logger = createModuleLogger('ProjectRoute');
-
-/**
- * Coerce an arbitrary Firestore value into the AuditFieldChange primitive
- * union. Complex objects (timestamps, nested records, arrays) are serialized
- * to a compact JSON string so the audit timeline can still render them.
- */
-function toAuditPrimitive(value: unknown): string | number | boolean | null {
-  if (value === null || value === undefined) return null;
-  const t = typeof value;
-  if (t === 'string' || t === 'number' || t === 'boolean') {
-    return value as string | number | boolean;
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
 
 export async function handleUpdateProject(
   request: NextRequest,
@@ -127,24 +110,29 @@ export async function handleUpdateProject(
     });
   }
 
-  // 8. ADR-195 — Entity audit trail (powers per-project History tab)
+  // 8. ADR-195 — Entity audit trail (powers per-project History tab).
+  // Canonical no-op filter: `diffFields` compares against PROJECT_TRACKED_FIELDS
+  // whitelist and drops fields that haven't actually changed, so form autosaves
+  // that PATCH the full payload don't produce ghost "— → —" entries.
   const projectCompanyId = (projectData?.companyId as string | undefined) ?? ctx.companyId;
-  const auditChanges = Object.keys(cleanData).map((field) => ({
-    field,
-    oldValue: toAuditPrimitive(projectData?.[field]),
-    newValue: toAuditPrimitive(cleanData[field]),
-    label: field,
-  }));
-  await EntityAuditService.recordChange({
-    entityType: ENTITY_TYPES.PROJECT,
-    entityId: projectId,
-    entityName: (projectData?.name as string | undefined) ?? projectId,
-    action: 'updated',
-    changes: auditChanges,
-    performedBy: ctx.uid,
-    performedByName: ctx.email,
-    companyId: projectCompanyId,
-  });
+  const auditChanges = EntityAuditService.diffFields(
+    (projectData ?? {}) as Record<string, unknown>,
+    cleanData,
+    PROJECT_TRACKED_FIELDS,
+  );
+
+  if (auditChanges.length > 0) {
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.PROJECT,
+      entityId: projectId,
+      entityName: (projectData?.name as string | undefined) ?? projectId,
+      action: 'updated',
+      changes: auditChanges,
+      performedBy: ctx.uid,
+      performedByName: ctx.email,
+      companyId: projectCompanyId,
+    });
+  }
 
   // 9. Legacy audit log
   await logAuditEvent(ctx, 'data_updated', 'projects', 'api', {

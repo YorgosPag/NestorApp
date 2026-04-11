@@ -49,6 +49,77 @@ export const PROPERTY_TRACKED_FIELDS: Record<string, string> = {
 };
 
 // ============================================================================
+// PROJECT TRACKED FIELDS
+// ============================================================================
+
+/**
+ * Fields tracked for project audit trail (field → Greek label).
+ *
+ * Used by `/api/projects/[projectId]` PATCH handler via
+ * `EntityAuditService.diffFields()` / `diffFieldsWithResolution()`.
+ *
+ * Explicit whitelist: internal fields (`updatedAt`, `updatedBy`, `_v`, cache
+ * keys, …) are intentionally excluded so they don't produce ghost entries in
+ * the per-project History tab.
+ */
+export const PROJECT_TRACKED_FIELDS: Record<string, string> = {
+  // ── Identity ──
+  name: 'Όνομα',
+  title: 'Τίτλος',
+  description: 'Περιγραφή',
+  status: 'Κατάσταση',
+  type: 'Τύπος',
+
+  // ── Company links (ADR-232: linkedCompanyId is business entity, companyId is tenant) ──
+  company: 'Εταιρεία',
+  linkedCompanyId: 'Συνδεδεμένη εταιρεία',
+  linkedCompanyName: 'Επωνυμία συνδεδεμένης εταιρείας',
+
+  // ── Location ──
+  address: 'Διεύθυνση',
+  city: 'Πόλη',
+  addresses: 'Διευθύνσεις',
+  location: 'Τοποθεσία',
+
+  // ── Progress / financials ──
+  progress: 'Πρόοδος',
+  totalValue: 'Συνολική αξία',
+  totalArea: 'Συνολικό εμβαδόν',
+  budget: 'Προϋπολογισμός',
+
+  // ── Timeline ──
+  startDate: 'Ημερομηνία έναρξης',
+  completionDate: 'Ημερομηνία ολοκλήρωσης',
+  endDate: 'Ημερομηνία λήξης',
+  duration: 'Διάρκεια (μήνες)',
+  startYear: 'Έτος έναρξης',
+
+  // ── Classification ──
+  priority: 'Προτεραιότητα',
+  riskLevel: 'Επίπεδο ρίσκου',
+  complexity: 'Πολυπλοκότητα',
+
+  // ── Permits / legal ──
+  buildingBlock: 'Οικοδομικό τετράγωνο',
+  protocolNumber: 'Αρ. πρωτοκόλλου',
+  licenseNumber: 'Αρ. άδειας',
+  issuingAuthority: 'Αρχή έκδοσης άδειας',
+  issueDate: 'Ημερομηνία έκδοσης άδειας',
+
+  // ── Feature flags ──
+  hasPermits: 'Έχει άδειες',
+  hasFinancing: 'Έχει χρηματοδότηση',
+  isEcological: 'Οικολογικό',
+  hasSubcontractors: 'Με υπεργολάβους',
+  isActive: 'Ενεργό',
+  hasIssues: 'Έχει ζητήματα',
+
+  // ── ADR-244: Landowners / bartex ──
+  landowners: 'Οικοπεδούχοι',
+  bartexPercentage: 'Ποσοστό αντιπαροχής',
+};
+
+// ============================================================================
 // CONTACT TRACKED FIELDS
 // ============================================================================
 

@@ -154,6 +154,80 @@ export async function seedEntityAuditTrail(
   });
 }
 
+/**
+ * Extra options for attendance seeders — `skipCompanyId` forces the
+ * crossdoc read leg by omitting the companyId field entirely instead of
+ * setting it to undefined (which admin SDK rejects on write).
+ */
+export interface AttendanceSeedOptions extends SeedOptions {
+  readonly skipCompanyId?: boolean;
+}
+
+/**
+ * Seed an `attendance_events` document.
+ *
+ * The rule at firestore.rules:196 gates reads via a dual OR path: direct
+ * `companyId` match first, then `projectId` crossdoc fallback. Canonical
+ * seed carries BOTH fields — the direct leg wins. Pass `skipCompanyId:
+ * true` to omit companyId entirely (forces the crossdoc path via
+ * `belongsToProjectCompany(projectId)`).
+ */
+export async function seedAttendanceEvent(
+  env: RulesTestEnvironment,
+  eventId: string,
+  projectId: string,
+  opts?: AttendanceSeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    const doc: Record<string, unknown> = {
+      projectId,
+      contactId: `contact-${eventId}`,
+      eventType: 'check_in',
+      method: 'manual',
+      timestamp: new Date(),
+      recordedBy: 'seed-system',
+      createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
+      createdAt: new Date(),
+      ...opts?.overrides,
+    };
+    if (!opts?.skipCompanyId) {
+      doc.companyId = opts?.companyId ?? SAME_TENANT_COMPANY_ID;
+    }
+    await ctx.firestore().collection('attendance_events').doc(eventId).set(doc);
+  });
+}
+
+/**
+ * Seed an `attendance_qr_tokens` document.
+ *
+ * Mirror of `seedAttendanceEvent` for the QR token collection. Every client
+ * write denies (`allow create/update/delete: if false`) — this seeder only
+ * exists so read/list tests have a fixture to target. Tokens are managed
+ * exclusively by the server via Admin SDK in production (ADR-170).
+ */
+export async function seedAttendanceQrToken(
+  env: RulesTestEnvironment,
+  tokenId: string,
+  projectId: string,
+  opts?: AttendanceSeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    const doc: Record<string, unknown> = {
+      projectId,
+      tokenHash: `hmac-${tokenId}`,
+      status: 'active',
+      expiresAt: new Date(Date.now() + 86_400_000),
+      createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
+      createdAt: new Date(),
+      ...opts?.overrides,
+    };
+    if (!opts?.skipCompanyId) {
+      doc.companyId = opts?.companyId ?? SAME_TENANT_COMPANY_ID;
+    }
+    await ctx.firestore().collection('attendance_qr_tokens').doc(tokenId).set(doc);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Legacy-fallback seeders (no companyId — tests the `|| no companyId` leg)
 // ---------------------------------------------------------------------------
