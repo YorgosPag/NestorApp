@@ -207,15 +207,31 @@ service cloud.firestore {
                            && belongsToProjectCompany(resource.data.projectId))
                      );
 
-      // ✍️ CREATE ONLY: Authenticated user with required fields + valid enums
+      // ✍️ CREATE: Authenticated + tenant-bound + cross-doc project ownership
+      // 🔒 SECURITY (ADR-298 §8 Phase B.2, 2026-04-11): Was shape/enum validation
+      // only — no tenant check. Latent gap: cross_tenant_admin could plant events
+      // under any company. Fix = defense-in-depth: (a) require `companyId` in
+      // payload, (b) payload companyId must match user's claim (super_admin
+      // short-circuit via `isSuperAdminOnly()`), (c) cross-doc verify that the
+      // referenced project actually belongs to the caller's tenant via
+      // `belongsToProjectCompany()` — mirrors the read gate's second OR leg.
+      // Production path (src/services/attendance/attendance-server-service.ts:317)
+      // uses Admin SDK, which bypasses rules — this tightening affects only the
+      // client surface (never exercised in production today, tightened defensively).
       allow create: if isAuthenticated()
                     && resource == null
                     && request.resource.data.keys().hasAll([
-                         'projectId', 'contactId', 'eventType', 'method',
+                         'companyId', 'projectId', 'contactId', 'eventType', 'method',
                          'timestamp', 'recordedBy', 'createdAt'
                        ])
+                    && request.resource.data.companyId is string
                     && request.resource.data.projectId is string
                     && request.resource.data.contactId is string
+                    && (
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
+                       )
+                    && belongsToProjectCompany(request.resource.data.projectId)
                     && request.resource.data.eventType in [
                          'check_in', 'check_out', 'break_start', 'break_end',
                          'left_site', 'returned', 'exit_permission'

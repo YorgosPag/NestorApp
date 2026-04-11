@@ -99,6 +99,7 @@ Worker scans QR → Browser opens /attendance/check-in/[token]
 | Brute force | withHeavyRateLimit on public endpoints |
 | Time manipulation | Server-side timestamps (FieldValue.serverTimestamp) |
 | Data tampering | Immutable events (create-only, no update/delete) |
+| Cross-tenant event injection | `attendance_events` create rule requires payload `companyId` to match the caller's claim (super_admin short-circuit) AND cross-doc verifies `belongsToProjectCompany(projectId)` — defense-in-depth layered over the Admin-SDK-only production path (ADR-298 §8 Phase B.2, 2026-04-11) |
 
 ## GDPR Compliance
 
@@ -198,6 +199,7 @@ TimesheetTabContent
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-11 | `attendance_events` create rule tightened with tenant guard + cross-doc project ownership check (defense-in-depth over Admin-SDK path). See ADR-298 §8 Phase B.2. | Claude |
 | 2026-02-22 | Live Worker Map: real-time dashboard with worker pins, geofence overlay, status badges, toast alerts | Claude |
 | 2026-02-22 | useAttendanceLiveEvents: Firestore onSnapshot hook for real-time attendance updates | Claude |
 | 2026-02-22 | Geofence audit trail: immutable log of every config change (who, when, old→new values) | Claude |

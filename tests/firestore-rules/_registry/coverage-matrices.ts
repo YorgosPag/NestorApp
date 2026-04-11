@@ -229,18 +229,20 @@ export function tenantStateMachineMatrix(): readonly CoverageCell[] {
 /**
  * Bespoke matrix for `attendance_events` — an append-only collection with
  * **dual-path reads** (either `companyId` direct OR `projectId` crossdoc) and
- * a **client-append-with-validation** create rule. Update/delete deny for all.
+ * a **tenant-bound client-append** create rule. Update/delete deny for all.
  *
  * This is a one-off — the rule shape does not fit `tenant_direct`,
  * `immutable`, or `admin_write_only` cleanly:
  *
  *   1. **Reads** follow tenant_direct semantics but via a dual OR path
  *      (`belongsToCompany(companyId)` OR `belongsToProjectCompany(projectId)`).
- *   2. **Create** is authenticated-only + payload field validation — **no
- *      tenant check**. This is a documented security gap (see ADR-298 §8
- *      Phase B.1 changelog): `cross_tenant_admin` can create an attendance
- *      event in any company. The matrix reflects the **actual** rule
- *      behaviour; the gap is tracked separately.
+ *   2. **Create** requires (a) required payload fields + enum validation,
+ *      (b) payload companyId matches the caller's claim (super_admin
+ *      short-circuit), and (c) cross-doc project ownership via
+ *      `belongsToProjectCompany(request.resource.data.projectId)`. This was
+ *      tightened in ADR-298 §8 Phase B.2 (2026-04-11) — the prior rule shape
+ *      validated only fields/enums with no tenant gate (documented latent gap
+ *      in Phase B.1 changelog).
  *   3. **Update/delete** deny for every persona (`if false`).
  *
  * Expressed as a delta over `tenantDirectMatrix()` so the divergences are
@@ -248,12 +250,13 @@ export function tenantStateMachineMatrix(): readonly CoverageCell[] {
  */
 export function attendanceEventMatrix(): readonly CoverageCell[] {
   return overrideCells(tenantDirectMatrix(), [
-    // Create: rule has no role gate and no tenant check.
+    // Create: same_tenant_user allowed (no role gate — any authenticated user
+    // in the same tenant whose payload references a same-tenant project).
     cell('same_tenant_user', 'create', 'allow'),
-    // SECURITY GAP: cross_tenant_admin can create — rule validates only
-    // shape/enums, never compares request.resource.data.companyId. Tracked
-    // as a finding in ADR-298 §8 Phase B.1 changelog.
-    cell('cross_tenant_admin', 'create', 'allow'),
+    // Cross-tenant create is now denied — post-Phase-B.2 the rule requires
+    // both payload companyId match AND cross-doc project ownership. Prior to
+    // the fix this cell was `allow` (security gap, see ADR-298 §8 Phase B.1).
+    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
     // Update: all deny with `immutable` reason (rule is `allow update: if false`).
     cell('super_admin', 'update', 'deny', 'immutable'),
     cell('same_tenant_admin', 'update', 'deny', 'immutable'),

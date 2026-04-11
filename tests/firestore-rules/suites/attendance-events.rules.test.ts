@@ -6,14 +6,16 @@
  * validation, but NO tenant check — see security note); update/delete deny.
  *
  * Matrix delta over `tenant_direct`:
- *   - `same_tenant_user` can create (no role gate on create rule)
- *   - `cross_tenant_admin` can create (SECURITY GAP — documented in ADR-298
- *     §8 Phase B.1 changelog)
+ *   - `same_tenant_user` can create (no role gate on create rule; tenant
+ *     bound via payload companyId match + cross-doc project ownership)
+ *   - `cross_tenant_admin` denied create (post Phase B.2 tightening —
+ *     previously an allow cell flagged as a security gap in Phase B.1)
  *   - update/delete deny for every persona with `immutable` reason
  *
- * See ADR-298 §4 Phase B (2026-04-11 correction) and §8 Phase B.1.
+ * See ADR-298 §4 Phase B (2026-04-11 correction), §8 Phase B.1 (gap finding),
+ * and §8 Phase B.2 (rule fix + matrix tightening).
  *
- * @since 2026-04-11 (ADR-298 Phase B.1)
+ * @since 2026-04-11 (ADR-298 Phase B.1, tightened in Phase B.2)
  */
 
 import {
@@ -75,10 +77,17 @@ describe('attendance_events.rules — tenant_dual_path + append-only writes', ()
             touchedAt: new Date(),
           },
           // create payload MUST satisfy the full field + enum validation
-          // in firestore.rules:211-224, otherwise `allow` cells deny for
+          // in firestore.rules:211-246, otherwise `allow` cells deny for
           // the wrong reason (field_not_allowlisted instead of the intended
-          // outcome). NO companyId field — the create rule ignores it.
+          // outcome). `companyId` is now REQUIRED by the create rule
+          // (Phase B.2 fix) — the payload targets the SAME_TENANT bucket so
+          // same-tenant personas match via `companyId == getUserCompanyId()`
+          // and super_admin matches via `isSuperAdminOnly()` short-circuit.
+          // Cross-tenant personas fail both the claim match and the
+          // `belongsToProjectCompany()` cross-doc check — the project seeded
+          // above carries SAME_TENANT_COMPANY_ID.
           createData: {
+            companyId: SAME_TENANT_COMPANY_ID,
             projectId,
             contactId: 'contact-fixture-1',
             eventType: 'check_in',
