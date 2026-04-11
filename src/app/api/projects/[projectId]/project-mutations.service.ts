@@ -32,6 +32,24 @@ import type {
 
 const logger = createModuleLogger('ProjectRoute');
 
+/**
+ * Coerce an arbitrary Firestore value into the AuditFieldChange primitive
+ * union. Complex objects (timestamps, nested records, arrays) are serialized
+ * to a compact JSON string so the audit timeline can still render them.
+ */
+function toAuditPrimitive(value: unknown): string | number | boolean | null {
+  if (value === null || value === undefined) return null;
+  const t = typeof value;
+  if (t === 'string' || t === 'number' || t === 'boolean') {
+    return value as string | number | boolean;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 export async function handleUpdateProject(
   request: NextRequest,
   ctx: AuthContext,
@@ -113,8 +131,8 @@ export async function handleUpdateProject(
   const projectCompanyId = (projectData?.companyId as string | undefined) ?? ctx.companyId;
   const auditChanges = Object.keys(cleanData).map((field) => ({
     field,
-    oldValue: (projectData?.[field] as unknown) ?? null,
-    newValue: (cleanData[field] as unknown) ?? null,
+    oldValue: toAuditPrimitive(projectData?.[field]),
+    newValue: toAuditPrimitive(cleanData[field]),
     label: field,
   }));
   await EntityAuditService.recordChange({
@@ -191,7 +209,7 @@ export async function handleDeleteProject(
     changes: [
       {
         field: 'status',
-        oldValue: (projectData?.status as unknown) ?? null,
+        oldValue: toAuditPrimitive(projectData?.status),
         newValue: 'deleted',
         label: 'Κατάσταση',
       },
@@ -202,7 +220,7 @@ export async function handleDeleteProject(
   });
 
   // 6. Legacy audit log
-  await logAuditEvent(ctx, 'soft_deleted', 'projects', 'api', {
+  await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {
     newValue: {
       type: 'status',
       value: { projectId, projectName: projectData?.name, deleteType: 'soft', duration },
