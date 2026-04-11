@@ -9,6 +9,11 @@ import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { ServiceSectionConfig } from '@/config/service-config';
 // 🏢 ENTERPRISE: i18n support for tab labels
 import { useTranslation } from 'react-i18next';
+import {
+  SERVICE_FORM_NAMESPACES,
+  translateFieldValue,
+  type FieldTranslator,
+} from './i18n/translate-field-value';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
@@ -84,7 +89,7 @@ function createServiceFormTabsFromConfig(
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
-  t: (key: string) => string,
+  t: FieldTranslator,
   onPhotosChange?: (photos: PhotoSlot[]) => void,
   customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>,
   sectionFooterRenderers?: Record<string, CustomRendererFn>,
@@ -92,27 +97,8 @@ function createServiceFormTabsFromConfig(
   onFieldBlur?: (fieldName: string) => void
 ) {
   return sections.map(section => {
-    // ========================================================================
-    // SMART LABEL LOGIC για relationships tab + i18n translation
-    // ========================================================================
-
-    // 🔧 FIX: Translate section title if it's an i18n key
-    let displayLabel = section.title;
-
-    // Check if it looks like an i18n key (contains dots and starts with 'contacts.')
-    if (displayLabel.includes('.') && displayLabel.startsWith('contacts.')) {
-      // Remove 'contacts.' prefix since we're already in contacts namespace
-      const key = displayLabel.replace('contacts.', '');
-      const translated = t(key);
-
-      // Use translation if found, otherwise use the key without prefix
-      if (translated && translated !== key && !translated.startsWith('contacts.')) {
-        displayLabel = translated;
-      } else {
-        // Fallback: use key without 'contacts.' prefix
-        displayLabel = key;
-      }
-    }
+    // Shared multi-namespace resolver — same contract as ServiceFormRenderer.
+    let displayLabel = translateFieldValue(section.title, t) ?? section.title;
 
     // Αν είναι relationships section και υπάρχει custom renderer, προσθέτουμε indicator
     if (section.id === 'relationships' && customRenderers?.relationships) {
@@ -234,7 +220,7 @@ export function ServiceFormTabRenderer({
   initialTab
 }: ServiceFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook for translating tab labels
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(SERVICE_FORM_NAMESPACES as unknown as string[]);
 
   if (!sections || sections.length === 0) {
     logger.warn('No sections provided');

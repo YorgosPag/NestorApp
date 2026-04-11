@@ -1,0 +1,15 @@
+{
+  "generated": "2026-04-11T10:47:29.695Z",
+  "description": "Orphan i18n keys in option/label configuration files — ratchet baseline",
+  "source": "scripts/check-option-i18n-keys.js",
+  "totalViolations": 246,
+  "totalFiles": 6,
+  "files": {
+    "src/config/individual-config.ts": 3,
+    "src/config/search-index-config.ts": 8,
+    "src/config/service-config.ts": 3,
+    "src/constants/domains/dropdown-misc-labels.ts": 139,
+    "src/subapps/dxf-viewer/config/modal-select/core/labels/fields.ts": 12,
+    "src/subapps/dxf-viewer/config/modal-select/core/labels/status.ts": 81
+  }
+}

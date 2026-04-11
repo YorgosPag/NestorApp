@@ -8,6 +8,11 @@ import { UniversalClickableField } from '@/components/ui/form/UniversalClickable
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support for service forms
 import { useTranslation } from 'react-i18next';
+import {
+  SERVICE_FORM_NAMESPACES,
+  translateFieldValue,
+  type FieldTranslator,
+} from './i18n/translate-field-value';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
 import { getIconComponent } from './utils/IconMapping';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -91,41 +96,11 @@ export interface ServiceFormRendererProps {
 }
 
 // ============================================================================
-// 🏢 ENTERPRISE: i18n HELPER FUNCTIONS
+// 🏢 ENTERPRISE: i18n resolver — shared with ServiceFormTabRenderer.
+// See ./i18n/translate-field-value.ts for the full contract and rationale.
 // ============================================================================
 
-/**
- * Translates a field value if it's an i18n key, otherwise returns as-is
- * 🌐 Supports nested keys like "contacts.service.fields.name.placeholder"
- * 🔧 FIX: Now properly handles i18n translation (2026-01-19)
- */
-function translateFieldValue(value: string | undefined, t: (key: string) => string): string | undefined {
-  if (!value) return value;
-
-  // Check if it looks like an i18n key (contains dots and starts with 'contacts.')
-  if (value.includes('.') && value.startsWith('contacts.')) {
-    // Remove 'contacts.' prefix since we're already in contacts namespace
-    const key = value.replace('contacts.', '');
-    const translated = t(key);
-
-    // 🔧 FIX: Check if translation was actually found
-    // react-i18next returns the key unchanged when translation is missing
-    // Also check if the translated value still contains the full original key
-    if (translated && translated !== key && !translated.startsWith('contacts.')) {
-      return translated;
-    }
-
-    // Translation not found - log warning in dev mode
-    if (process.env.NODE_ENV === 'development') {
-      logger.warn('Translation missing for key', { key, original: value });
-    }
-
-    // Return the key without the 'contacts.' prefix as fallback
-    return key;
-  }
-
-  return value;
-}
+type TFunction = FieldTranslator;
 
 // ============================================================================
 // FIELD RENDERER FUNCTIONS
@@ -204,7 +179,7 @@ function renderSelectField(
   formData: ServiceFormData,
   onSelectChange: SelectChangeHandler,
   disabled: boolean,
-  t: (key: string) => string
+  t: TFunction
 ): React.ReactNode {
   const currentValue = formData[field.id];
   const valueStr = currentValue !== null && currentValue !== undefined ? String(currentValue) : (field.defaultValue ?? '');
@@ -248,7 +223,7 @@ function renderField(
   onChange: InputChangeHandler,
   onSelectChange: SelectChangeHandler,
   disabled: boolean,
-  t: (key: string) => string,
+  t: TFunction,
   customRenderers?: Record<string, CustomFieldRenderer>,
   fieldErrors?: Record<string, string>,
   onFieldBlur?: FieldBlurHandler
@@ -301,8 +276,10 @@ export function ServiceFormRenderer({
   onFieldBlur
 }: ServiceFormRendererProps) {
   const iconSizes = useIconSizes();
-  // 🏢 ENTERPRISE: i18n support for service form translations
-  const { t } = useTranslation('contacts');
+  // 🏢 ENTERPRISE: Multi-namespace resolution — service forms pull labels from
+  // `contacts` (field names), `contacts-form` (option catalogs) and `forms`
+  // (shared section titles). i18next cascades through them in order.
+  const { t } = useTranslation(SERVICE_FORM_NAMESPACES as unknown as string[]);
 
   if (!sections || sections.length === 0) {
     return null;
@@ -329,16 +306,6 @@ export function ServiceFormRenderer({
                 const translatedLabel = translateFieldValue(field.label, t) || field.label;
                 const translatedPlaceholder = translateFieldValue(field.placeholder, t) || field.placeholder;
                 const translatedHelpText = translateFieldValue(field.helpText, t) || field.helpText;
-
-                // 🔍 DEBUG: Log translation for legalStatus field
-                if (field.id === 'legalStatus') {
-                  logger.info('legalStatus field debug', {
-                    fieldId: field.id,
-                    originalLabel: field.label,
-                    translatedLabel,
-                    isKey: field.label?.includes('contacts.')
-                  });
-                }
 
                 // Create translated field config for rendering
                 const translatedField: ServiceFieldConfig = {
