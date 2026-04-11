@@ -28,6 +28,8 @@ import {
   assertLinkedCompanyExists,
   ProjectMutationPolicyError,
 } from '@/services/projects/project-mutation-policy';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('ProjectsCreateRoute');
 
@@ -127,6 +129,27 @@ export const POST = withHighRateLimit(
         });
 
         logger.info('[Projects] Project created', { projectId, projectCode });
+
+        // 📜 ADR-195: Entity audit trail (powers the project History tab)
+        await EntityAuditService.recordChange({
+          entityType: ENTITY_TYPES.PROJECT,
+          entityId: projectId,
+          entityName: body.name,
+          action: 'created',
+          changes: [
+            { field: 'name', oldValue: null, newValue: body.name, label: 'Όνομα' },
+            { field: 'projectCode', oldValue: null, newValue: projectCode, label: 'Κωδικός Έργου' },
+            {
+              field: 'linkedCompanyId',
+              oldValue: null,
+              newValue: body.linkedCompanyId ?? null,
+              label: 'Συνδεδεμένη Εταιρεία',
+            },
+          ],
+          performedBy: ctx.uid,
+          performedByName: ctx.email,
+          companyId: resolvedCompanyId,
+        });
 
         // 📊 Audit log
         await logAuditEvent(ctx, 'data_created', 'projects', 'api', {
