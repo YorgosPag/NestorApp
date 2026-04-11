@@ -1,0 +1,854 @@
+#!/bin/bash
+# =============================================================================
+# ENTERPRISE PRE-COMMIT HOOK - Windows Reserved Filename Protection
+# =============================================================================
+# This hook prevents commits that include files with Windows reserved names
+# Reference: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+# =============================================================================
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}🔍 Running pre-commit checks...${NC}"
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Windows reserved filenames (case-insensitive)
+RESERVED_PATTERN="^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\.|$)"
+
+BLOCKED_FILES=""
+while IFS= read -r file; do
+    if [[ -n "$file" ]]; then
+        # Get just the filename without path
+        filename=$(basename "$file")
+        # Check if filename matches reserved pattern (case-insensitive)
+        if echo "$filename" | grep -iE "$RESERVED_PATTERN" > /dev/null 2>&1; then
+            BLOCKED_FILES="${BLOCKED_FILES}  ❌ ${file}\n"
+        fi
+    fi
+done <<< "$STAGED_FILES"
+
+if [[ -n "$BLOCKED_FILES" ]]; then
+    echo ""
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}  🚫 COMMIT BLOCKED - Windows Reserved Filenames Detected${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${YELLOW}The following files use Windows reserved names:${NC}"
+    echo -e "$BLOCKED_FILES"
+    echo ""
+    echo -e "${YELLOW}Reserved names: CON, PRN, AUX, NUL, COM0-COM9, LPT0-LPT9${NC}"
+    echo -e "${YELLOW}These names cause issues with Windows tools and ZIP utilities.${NC}"
+    echo ""
+    echo -e "To fix: ${GREEN}git reset HEAD <file>${NC} then ${GREEN}rm <file>${NC}"
+    echo ""
+    exit 1
+fi
+
+# =============================================================================
+# CHECK 2: ESLint — DISABLED (on-demand only)
+# =============================================================================
+# Disabled per Γιώργος request (2026-04-04): slows commits.
+# Run manually when needed: npx eslint src/
+# =============================================================================
+
+# Still need TS_FILES variable for other checks (file sizes, etc.)
+TS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' | grep -v 'node_modules' | grep -v '.d.ts')
+
+# =============================================================================
+# CHECK 3: Custom project rules (storage patterns, enterprise standards)
+# =============================================================================
+
+CUSTOM_SCRIPT="scripts/validate-project-rules.sh"
+if [[ -f "$CUSTOM_SCRIPT" && -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Running project-specific checks...${NC}"
+
+    CUSTOM_OUTPUT=$(bash "$CUSTOM_SCRIPT" $TS_FILES 2>&1)
+    CUSTOM_EXIT=$?
+
+    if [[ $CUSTOM_EXIT -ne 0 ]]; then
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED - Project Rule Violations${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "$CUSTOM_OUTPUT"
+        echo ""
+        exit 1
+    fi
+
+    echo -e "${GREEN}  ✅ Project rules passed${NC}"
+fi
+
+# =============================================================================
+# CHECK 3.5: Hardcoded i18n defaultValue strings (CLAUDE.md SOS. N.11)
+# =============================================================================
+# Blocks commits where .ts/.tsx files contain
+#   t('key', { defaultValue: 'literal text' })
+# Forces SSoT: every i18n key MUST live in src/i18n/locales/{el,en}/*.json.
+# =============================================================================
+
+HARDCODED_SCRIPT="scripts/check-hardcoded-strings.sh"
+if [[ -f "$HARDCODED_SCRIPT" && -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking hardcoded i18n strings (CLAUDE.md N.11)...${NC}"
+
+    HARDCODED_OUTPUT=$(bash "$HARDCODED_SCRIPT" $TS_FILES 2>&1)
+    HARDCODED_EXIT=$?
+
+    if [[ $HARDCODED_EXIT -ne 0 ]]; then
+        echo "$HARDCODED_OUTPUT"
+        exit 1
+    fi
+
+    echo -e "${GREEN}  ✅ i18n strings: no hardcoded defaultValue${NC}"
+fi
+
+# =============================================================================
+# CHECK 3.6: Hardcoded UI strings — JSX/attrs/errors/toasts (CLAUDE.md SOS. N.11)
+# =============================================================================
+# Blocks commits where .ts/.tsx files contain hardcoded Greek in:
+#   - JSX text content: <span>Αποθήκευση</span>
+#   - Attributes: placeholder/title/aria-label/alt="Ελληνικά"
+#   - Errors/alerts: throw new Error('Λάθος'), alert(...), confirm(...)
+#   - Toast calls: toast.success('Επιτυχία')
+# Ratchet: counts can only decrease, new files = zero tolerance.
+# =============================================================================
+
+UI_HARDCODED_SCRIPT="scripts/check-ui-hardcoded-strings.sh"
+if [[ -f "$UI_HARDCODED_SCRIPT" && -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking hardcoded UI strings (JSX/attrs/errors/toasts)...${NC}"
+
+    UI_HARDCODED_OUTPUT=$(bash "$UI_HARDCODED_SCRIPT" $TS_FILES 2>&1)
+    UI_HARDCODED_EXIT=$?
+
+    if [[ $UI_HARDCODED_EXIT -ne 0 ]]; then
+        echo "$UI_HARDCODED_OUTPUT"
+        exit 1
+    fi
+
+    # Show ratchet-down progress if any
+    if [[ -n "$UI_HARDCODED_OUTPUT" ]]; then
+        echo "$UI_HARDCODED_OUTPUT"
+    fi
+
+    echo -e "${GREEN}  ✅ UI strings: no new hardcoded Greek${NC}"
+fi
+
+# =============================================================================
+# CHECK 3.7: SSoT Import Violations (Centralized Module Ratchet)
+# =============================================================================
+# Blocks commits where .ts/.tsx files bypass centralized modules
+# (e.g., hardcoded collection names instead of COLLECTIONS constant,
+#  crypto.randomUUID() instead of EnterpriseIdService, addDoc() usage).
+# Ratchet: counts can only decrease, new files = zero tolerance.
+# Registry: .ssot-registry.json | Baseline: .ssot-violations-baseline.json
+# =============================================================================
+
+SSOT_SCRIPT="scripts/check-ssot-imports.sh"
+if [[ -f "$SSOT_SCRIPT" && -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking SSoT imports (centralized module ratchet)...${NC}"
+
+    SSOT_OUTPUT=$(bash "$SSOT_SCRIPT" $TS_FILES 2>&1)
+    SSOT_EXIT=$?
+
+    if [[ $SSOT_EXIT -ne 0 ]]; then
+        echo "$SSOT_OUTPUT"
+        exit 1
+    fi
+
+    if [[ -n "$SSOT_OUTPUT" ]]; then
+        echo "$SSOT_OUTPUT"
+    fi
+
+    echo -e "${GREEN}  ✅ SSoT imports: no new centralized module bypasses${NC}"
+fi
+
+# =============================================================================
+# CHECK 3.8: Missing i18n Keys — t('key') without locale entry
+# =============================================================================
+# Blocks commits where t('key') calls reference keys that don't exist
+# in the corresponding locale JSON file. Detects namespace mismatch bugs.
+# Ratchet: counts can only decrease, new files = zero tolerance.
+# Baseline: .i18n-missing-keys-baseline.json
+# =============================================================================
+
+I18N_KEYS_SCRIPT="scripts/check-i18n-missing-keys.js"
+if [[ -f "$I18N_KEYS_SCRIPT" && -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking i18n keys exist in locale files...${NC}"
+
+    I18N_KEYS_OUTPUT=$(node "$I18N_KEYS_SCRIPT" $TS_FILES 2>&1)
+    I18N_KEYS_EXIT=$?
+
+    if [[ $I18N_KEYS_EXIT -ne 0 ]]; then
+        echo "$I18N_KEYS_OUTPUT"
+        exit 1
+    fi
+
+    if [[ -n "$I18N_KEYS_OUTPUT" ]]; then
+        echo "$I18N_KEYS_OUTPUT"
+    fi
+fi
+
+# =============================================================================
+# CHECK 3.9: ICU Interpolation — {{var}} must be {var} (i18next-icu)
+# =============================================================================
+# Blocks commits where locale JSON files use {{variable}} (i18next default)
+# instead of {variable} (ICU format). Project uses i18next-icu plugin.
+# Ratchet: counts can only decrease, new files = zero tolerance.
+# Baseline: .icu-violations-baseline.json
+# =============================================================================
+
+LOCALE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E 'src/i18n/locales/(el|en)/.*\.json$')
+ICU_SCRIPT="scripts/check-icu-interpolation.sh"
+if [[ -f "$ICU_SCRIPT" && -n "$LOCALE_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking ICU interpolation ({{var}} → {var})...${NC}"
+
+    ICU_OUTPUT=$(bash "$ICU_SCRIPT" $LOCALE_FILES 2>&1)
+    ICU_EXIT=$?
+
+    if [[ $ICU_EXIT -ne 0 ]]; then
+        echo "$ICU_OUTPUT"
+        exit 1
+    fi
+
+    if [[ -n "$ICU_OUTPUT" ]]; then
+        echo "$ICU_OUTPUT"
+    fi
+
+    echo -e "${GREEN}  ✅ ICU interpolation: no new {{var}} violations${NC}"
+fi
+
+# =============================================================================
+# CHECK 3.10: Firestore queries must include companyId (tenant isolation)
+# =============================================================================
+# Blocks commits where Firestore query() uses where() without companyId filter.
+# Without companyId, Firestore rules deny access → permission-denied errors.
+# Ratchet: counts can only decrease, new files = zero tolerance.
+# Baseline: .firestore-companyid-baseline.json
+# =============================================================================
+
+TS_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' | grep -v '__tests__' | grep -v '\.test\.' | grep -v '\.spec\.' | grep -v '\.d\.ts' | grep -v 'i18n/locales')
+COMPANYID_SCRIPT="scripts/check-firestore-companyid.sh"
+if [[ -f "$COMPANYID_SCRIPT" && -n "$TS_STAGED" ]]; then
+    # Only check staged files that have Firestore queries
+    QUERY_FILES=""
+    for f in $TS_STAGED; do
+        if [[ -f "$f" ]] && grep -q "query(" "$f" 2>/dev/null && grep -q "where(" "$f" 2>/dev/null; then
+            QUERY_FILES="$QUERY_FILES $f"
+        fi
+    done
+
+    if [[ -n "$QUERY_FILES" ]]; then
+        echo -e "${YELLOW}🔍 Checking Firestore companyId in queries...${NC}"
+
+        COMPANYID_OUTPUT=$(bash "$COMPANYID_SCRIPT" $QUERY_FILES 2>&1)
+        COMPANYID_EXIT=$?
+
+        if [[ $COMPANYID_EXIT -ne 0 ]]; then
+            echo "$COMPANYID_OUTPUT"
+            exit 1
+        fi
+
+        echo -e "${GREEN}  ✅ Firestore companyId: no new violations${NC}"
+    fi
+fi
+
+# =============================================================================
+# CHECK 3.11: Navigation Label Completeness — every href has full i18n chain
+# =============================================================================
+# Blocks commits where smart-navigation-factory.ts has a sidebar item whose
+# href cannot be resolved to a translation in BOTH el/en navigation.json.
+# Catches the silent fallback that displays the raw URL in the sidebar.
+# Triggered only when the factory or navigation locale files are staged.
+# =============================================================================
+
+NAV_LABELS_SCRIPT="scripts/check-navigation-labels.js"
+NAV_TRIGGER_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '(src/config/smart-navigation-factory\.ts|src/i18n/locales/(el|en)/navigation\.json)$')
+if [[ -f "$NAV_LABELS_SCRIPT" && -n "$NAV_TRIGGER_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking navigation label completeness...${NC}"
+
+    NAV_LABELS_OUTPUT=$(node "$NAV_LABELS_SCRIPT" 2>&1)
+    NAV_LABELS_EXIT=$?
+
+    if [[ $NAV_LABELS_EXIT -ne 0 ]]; then
+        echo "$NAV_LABELS_OUTPUT"
+        exit 1
+    fi
+
+    if [[ -n "$NAV_LABELS_OUTPUT" ]]; then
+        echo "$NAV_LABELS_OUTPUT"
+    fi
+fi
+
+# =============================================================================
+# CHECK 3.12: Option-label i18n key integrity — orphan keys in config files
+# =============================================================================
+# Blocks commits where static option catalogs / label tables reference i18n
+# keys that do not exist in ANY src/i18n/locales/el/*.json. Complements
+# CHECK 3.8 which only scans explicit t('key') calls.
+# Ratchet: counts can only decrease, new files = zero tolerance.
+# Baseline: .option-i18n-keys-baseline.json
+# =============================================================================
+
+OPT_I18N_SCRIPT="scripts/check-option-i18n-keys.js"
+if [[ -f "$OPT_I18N_SCRIPT" && -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking option-label i18n key integrity...${NC}"
+
+    OPT_I18N_OUTPUT=$(node "$OPT_I18N_SCRIPT" $TS_FILES 2>&1)
+    OPT_I18N_EXIT=$?
+
+    if [[ $OPT_I18N_EXIT -ne 0 ]]; then
+        echo "$OPT_I18N_OUTPUT"
+        exit 1
+    fi
+
+    if [[ -n "$OPT_I18N_OUTPUT" ]]; then
+        echo "$OPT_I18N_OUTPUT"
+    fi
+fi
+
+# =============================================================================
+# CHECK 3.13: i18n runtime resolver reachability (ADR-279 / ADR-280)
+# =============================================================================
+# Complements CHECK 3.8 and CHECK 3.12 by verifying that dotted i18n keys
+# embedded in config files (service-config, individual-config, modal-select
+# label tables, etc.) are reachable through the SERVICE_FORM_NAMESPACES list
+# in src/components/generic/i18n/translate-field-value.ts.
+#
+# Motivation: 2026-04-11 regression — `contacts.service.*` keys lived in
+# `contacts-relationships.json` after ADR-280 namespace splitting, but the
+# runtime resolver only scanned [contacts, contacts-form, forms], bypassing
+# the namespace-compat legacy map. CHECK 3.8 and 3.12 both passed because the
+# keys DID exist in a locale file — they just weren't in a scanned namespace.
+#
+# Ratchet: counts can only decrease, new files = zero tolerance.
+# Baseline: .i18n-resolver-reachability-baseline.json
+# =============================================================================
+
+RESOLVER_REACH_SCRIPT="scripts/check-i18n-resolver-reachability.js"
+if [[ -f "$RESOLVER_REACH_SCRIPT" && -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking i18n runtime resolver reachability...${NC}"
+
+    RESOLVER_REACH_OUTPUT=$(node "$RESOLVER_REACH_SCRIPT" $TS_FILES 2>&1)
+    RESOLVER_REACH_EXIT=$?
+
+    if [[ $RESOLVER_REACH_EXIT -ne 0 ]]; then
+        echo "$RESOLVER_REACH_OUTPUT"
+        exit 1
+    fi
+
+    if [[ -n "$RESOLVER_REACH_OUTPUT" ]]; then
+        echo "$RESOLVER_REACH_OUTPUT"
+    fi
+fi
+
+# =============================================================================
+# CHECK 3.14: Audit Value Catalogs parity (ADR-195 / ADR-279)
+# =============================================================================
+# Validates every entry in src/config/audit-value-catalogs.ts against the
+# el/en locale JSONs: path must exist, be a non-empty { string: string } map,
+# and maintain key-level parity between locales.
+#
+# Motivation: 2026-04-11 bug — audit trail rendered raw enum keys ("region")
+# because audit.values.* in common.json drifted from options.serviceCategories.
+# This check enforces the SSoT: catalogs are the source, audit rendering reads
+# them directly. Zero tolerance — no baseline.
+# =============================================================================
+
+AUDIT_CATALOGS_SCRIPT="scripts/check-audit-value-catalogs.js"
+if [[ -f "$AUDIT_CATALOGS_SCRIPT" ]]; then
+    # Only run when the config or any el/en locale JSON is staged — cheap skip
+    # for commits that cannot possibly affect catalog parity.
+    if echo "$STAGED_FILES" | grep -qE '(src/config/audit-value-catalogs\.ts|src/i18n/locales/(el|en)/.*\.json)'; then
+        echo -e "${YELLOW}🔍 Checking audit value catalogs parity...${NC}"
+
+        AUDIT_CATALOGS_OUTPUT=$(node "$AUDIT_CATALOGS_SCRIPT" 2>&1)
+        AUDIT_CATALOGS_EXIT=$?
+
+        if [[ $AUDIT_CATALOGS_EXIT -ne 0 ]]; then
+            echo "$AUDIT_CATALOGS_OUTPUT"
+            exit 1
+        fi
+
+        if [[ -n "$AUDIT_CATALOGS_OUTPUT" ]]; then
+            echo "$AUDIT_CATALOGS_OUTPUT"
+        fi
+    fi
+fi
+
+# =============================================================================
+# CHECK 4: Google-Style File Size Limits (per file type)
+# =============================================================================
+# Limits based on Single Responsibility Principle:
+#   Component (.tsx in components/)  → 500 lines (CLAUDE.md N.7.1)
+#   Hook (use*.ts)                   → 500 lines (CLAUDE.md N.7.1)
+#   Service (.service.ts)            → 500 lines (CLAUDE.md N.7.1)
+#   API Route (route.ts in api/)     → 300 lines (1 endpoint handler)
+#   General .ts/.tsx                 → 500 lines (CLAUDE.md N.7.1)
+#
+# EXEMPT (no limit):
+#   config/, types/, data/, *.config.*, *.d.ts, *.test.*, *.spec.*,
+#   *-definitions.ts, *-schema*.ts, *.stories.*, i18n/locales/,
+#   __tests__/, docs/, adrs/, scripts/
+# =============================================================================
+
+if [[ -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking file sizes (Google-style per-type limits)...${NC}"
+
+    OVERSIZED_FILES=""
+
+    # Determine max lines based on file type
+    get_max_lines() {
+        local file="$1"
+
+        # EXEMPT patterns — no limit
+        if echo "$file" | grep -qE '(\.config\.|\.d\.ts$|\.test\.|\.spec\.|\.stories\.|\.qa\.|/config/|/types/|/data/|/__tests__/|/docs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|-definitions\.|-schema|-constants|enterprise-id\.service\.ts)'; then
+            echo 0
+            return
+        fi
+
+        # Component: .tsx files inside components/ or ui/
+        if echo "$file" | grep -qE '\.(tsx)$' && echo "$file" | grep -qE '(/components/|/ui/)'; then
+            echo 500
+            return
+        fi
+
+        # Hook: files starting with use*.ts
+        if echo "$file" | grep -qE '/use[A-Z][^/]*\.ts$'; then
+            echo 500
+            return
+        fi
+
+        # Service: *.service.ts files
+        if echo "$file" | grep -qE '\.service\.ts$'; then
+            echo 500
+            return
+        fi
+
+        # API Route: route.ts inside api/
+        if echo "$file" | grep -qE '/api/.*route\.ts$'; then
+            echo 300
+            return
+        fi
+
+        # General .ts/.tsx (catch-all)
+        echo 500
+    }
+
+    # Human-readable type name for error messages
+    get_file_type() {
+        local file="$1"
+        if echo "$file" | grep -qE '\.(tsx)$' && echo "$file" | grep -qE '(/components/|/ui/)'; then
+            echo "Component"
+            return
+        fi
+        if echo "$file" | grep -qE '/use[A-Z][^/]*\.ts$'; then
+            echo "Hook"
+            return
+        fi
+        if echo "$file" | grep -qE '\.service\.ts$'; then
+            echo "Service"
+            return
+        fi
+        if echo "$file" | grep -qE '/api/.*route\.ts$'; then
+            echo "API Route"
+            return
+        fi
+        echo "General"
+    }
+
+    while IFS= read -r file; do
+        if [[ -z "$file" ]]; then
+            continue
+        fi
+
+        MAX_LINES=$(get_max_lines "$file")
+
+        # 0 = exempt
+        if [[ "$MAX_LINES" -eq 0 ]]; then
+            continue
+        fi
+
+        if [[ -f "$file" ]]; then
+            LINE_COUNT=$(wc -l < "$file" | tr -d ' ')
+            if [[ "$LINE_COUNT" -gt "$MAX_LINES" ]]; then
+                FILE_TYPE=$(get_file_type "$file")
+                OVERSIZED_FILES="${OVERSIZED_FILES}  ❌ ${file} (${LINE_COUNT}/${MAX_LINES} lines — ${FILE_TYPE})\n"
+            fi
+        fi
+    done <<< "$TS_FILES"
+
+    if [[ -n "$OVERSIZED_FILES" ]]; then
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED - File Size Exceeds Type-Specific Limit${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo -e "${YELLOW}Limits: Component 500 | Hook 500 | Service 500 | API 300 | General 500${NC}"
+        echo -e "$OVERSIZED_FILES"
+        echo ""
+        echo -e "${YELLOW}Fix: Split into smaller, focused modules (Single Responsibility).${NC}"
+        echo -e "${YELLOW}Exempt: config/, types/, data/, tests, definitions, schemas, i18n${NC}"
+        echo ""
+        exit 1
+    fi
+
+    echo -e "${GREEN}  ✅ File sizes OK${NC}"
+fi
+
+# =============================================================================
+# CHECK 5: AI Pipeline Tests — Auto-run when pipeline files change
+# =============================================================================
+# Google Presubmit Pattern: If you touch pipeline code, tests MUST pass.
+# Runs ~11s — acceptable for pipeline quality gate.
+# =============================================================================
+
+PIPELINE_FILES=$(echo "$STAGED_FILES" | grep -E '^src/services/ai-pipeline/' | grep -v '__tests__' | grep -v '.test.' || true)
+
+if [[ -n "$PIPELINE_FILES" ]]; then
+    echo -e "${YELLOW}🧪 AI Pipeline files changed — running test suite...${NC}"
+
+    TEST_OUTPUT=$(npx jest --testPathPatterns="src/services/ai-pipeline" --silent 2>&1)
+    TEST_EXIT=$?
+
+    if [[ $TEST_EXIT -ne 0 ]]; then
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED - AI Pipeline Tests Failed${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        # Show only the summary (last 15 lines)
+        echo "$TEST_OUTPUT" | tail -15
+        echo ""
+        echo -e "${YELLOW}Fix failing tests before committing pipeline changes.${NC}"
+        echo -e "${YELLOW}Run: npm run test:ai-pipeline:all${NC}"
+        echo ""
+        exit 1
+    fi
+
+    # Extract pass count from output
+    PASS_INFO=$(echo "$TEST_OUTPUT" | grep -E "^Test Suites:" || echo "")
+    echo -e "${GREEN}  ✅ AI Pipeline tests passed${NC} ${PASS_INFO:+— $PASS_INFO}"
+fi
+
+# =============================================================================
+# CHECK 5B: Targeted Area Tests — Auto-run when area files change (ADR-292)
+# =============================================================================
+# Google Presubmit Pattern: Same pattern as AI Pipeline, for other areas.
+# Each area runs ONLY if staged files match its path pattern.
+# =============================================================================
+
+run_area_tests() {
+    local AREA_NAME="$1"
+    local AREA_PATTERN="$2"
+    local TEST_PATTERN="$3"
+    local FIX_CMD="$4"
+
+    local AREA_FILES
+    AREA_FILES=$(echo "$STAGED_FILES" | grep -E "$AREA_PATTERN" | grep -v '__tests__' | grep -v '.test.' || true)
+
+    if [[ -n "$AREA_FILES" ]]; then
+        echo -e "${YELLOW}🧪 ${AREA_NAME} files changed — running tests...${NC}"
+
+        local AREA_TEST_OUTPUT
+        AREA_TEST_OUTPUT=$(npx jest --testPathPatterns="$TEST_PATTERN" --silent 2>&1)
+        local AREA_TEST_EXIT=$?
+
+        if [[ $AREA_TEST_EXIT -ne 0 ]]; then
+            echo ""
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${RED}  🚫 COMMIT BLOCKED - ${AREA_NAME} Tests Failed${NC}"
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo ""
+            echo "$AREA_TEST_OUTPUT" | tail -15
+            echo ""
+            echo -e "${YELLOW}Fix failing tests before committing.${NC}"
+            echo -e "${YELLOW}Run: ${FIX_CMD}${NC}"
+            echo ""
+            exit 1
+        fi
+
+        local AREA_PASS_INFO
+        AREA_PASS_INFO=$(echo "$AREA_TEST_OUTPUT" | grep -E "^Test Suites:" || echo "")
+        echo -e "${GREEN}  ✅ ${AREA_NAME} tests passed${NC} ${AREA_PASS_INFO:+— $AREA_PASS_INFO}"
+    fi
+}
+
+# Accounting (VAT, tax, depreciation) — ~5s
+run_area_tests "Accounting" \
+    "^src/subapps/accounting/" \
+    "accounting" \
+    "npx jest --testPathPatterns=accounting --verbose"
+
+# Report Engine (aggregator, export) — ~4s
+run_area_tests "Report Engine" \
+    "^src/services/report-engine/" \
+    "report-engine" \
+    "npx jest --testPathPatterns=report-engine --verbose"
+
+# Entity Linking (cache, retry, audit) — ~3s
+run_area_tests "Entity Linking" \
+    "^src/services/entity-linking/" \
+    "entity-linking" \
+    "npx jest --testPathPatterns=entity-linking --verbose"
+
+# DXF Geometry (core math utils) — ~3s
+run_area_tests "DXF Geometry" \
+    "^src/subapps/dxf-viewer/rendering/entities/shared/" \
+    "geometry.*utils" \
+    "npx jest --testPathPatterns='geometry.*utils' --verbose"
+
+# Type Safety (communications, address, etc.) — ~2s
+run_area_tests "Type Safety" \
+    "^src/types/" \
+    "src/types/__tests__" \
+    "npx jest --testPathPatterns='src/types/__tests__' --verbose"
+
+# Contact Mutations (detectors, impact guard) — ~3s
+run_area_tests "Contact Mutations" \
+    "^src/(utils/contactForm|hooks/.*[Cc]ontact|services/contacts)" \
+    "contact-mutation" \
+    "npx jest --testPathPatterns=contact-mutation --verbose"
+
+# =============================================================================
+# CHECK 6: ADR Documentation Reminder (Google Presubmit Pattern)
+# =============================================================================
+# If src/ code files are staged but NO docs/adrs .md file is staged,
+# show a WARNING reminding the developer to update ADR documentation.
+# WARNING only — does NOT block the commit.
+# =============================================================================
+
+SRC_CODE_FILES=$(echo "$STAGED_FILES" | grep -E '^src/' | grep -E '\.(ts|tsx)$' | grep -v '\.test\.' | grep -v '\.spec\.' | grep -v '__tests__' | grep -v '/i18n/locales/' || true)
+DOC_FILES=$(echo "$STAGED_FILES" | grep -E '\.(md)$' | grep -E '(^docs/|^adrs/|ADR-)' || true)
+
+if [[ -n "$SRC_CODE_FILES" && -z "$DOC_FILES" ]]; then
+    SRC_COUNT=$(echo "$SRC_CODE_FILES" | wc -l | tr -d ' ')
+    if [[ "$SRC_COUNT" -ge 3 ]]; then
+        echo ""
+        echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}  ⚠️  ADR REMINDER — ${SRC_COUNT} src/ files changed, 0 ADR docs staged${NC}"
+        echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}  Google Pattern: Code + Documentation = same commit.${NC}"
+        echo -e "${YELLOW}  Check: docs/centralized-systems/reference/adrs/${NC}"
+        echo -e "${YELLOW}  Ignore if no ADR applies to this change.${NC}"
+        echo ""
+    fi
+fi
+
+# =============================================================================
+# CHECK 7: TypeScript Type Check — DISABLED (on-demand only)
+# =============================================================================
+# Disabled per Γιώργος request (2026-04-04): tsc takes 60-90s, slows commits.
+# Run manually when needed: npx tsc --noEmit
+# =============================================================================
+
+# =============================================================================
+# CHECK 8: Prettier Format Check — DISABLED (on-demand only)
+# =============================================================================
+# Disabled per Γιώργος request (2026-04-04): slows commits.
+# Run manually when needed: npx prettier --check src/
+# =============================================================================
+
+# =============================================================================
+# CHECK 9: Circular Import Detection — DISABLED (on-demand only)
+# =============================================================================
+# Disabled per Γιώργος request (2026-04-04): madge takes 30s, slows commits.
+# Run manually when needed: npx madge --circular src/
+# =============================================================================
+
+# =============================================================================
+# CHECK 10: Secret Scan (Google — no credentials in code)
+# =============================================================================
+# Scans staged files for hardcoded secrets, API keys, passwords, tokens.
+# BLOCKS commit — secrets in git history are a critical security risk.
+# =============================================================================
+
+SECRET_VIOLATIONS=""
+
+while IFS= read -r file; do
+    if [[ -z "$file" || ! -f "$file" ]]; then
+        continue
+    fi
+
+    # Skip binary, config, lock, and env example files
+    if echo "$file" | grep -qE '(\.png$|\.jpg$|\.ico$|\.woff|\.lock$|\.env\.example|\.env\.sample|node_modules)'; then
+        continue
+    fi
+
+    # Skip the hooks directory itself — it contains literal regex strings
+    # (e.g. "BEGIN.*PRIVATE KEY" as a grep pattern) that would self-trigger
+    # the detectors below. The hook scripts are reviewed at commit time
+    # anyway; they are not a realistic vector for leaked secrets.
+    if echo "$file" | grep -qE '^scripts/git-hooks/'; then
+        continue
+    fi
+
+    # Pattern 1: API keys (common formats — OpenAI, Google, GitHub, Slack, Firebase, Stripe)
+    MATCHES=$(grep -nE "(sk-[a-zA-Z0-9_-]{20,}|sk_live_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|ghp_[a-zA-Z0-9]{36}|xoxb-[a-zA-Z0-9-]+|AAAA[a-zA-Z0-9_-]{100,})" "$file" 2>/dev/null | grep -vE "^\s*(//|\*|#)" | head -3)
+    if [[ -n "$MATCHES" ]]; then
+        SECRET_VIOLATIONS="${SECRET_VIOLATIONS}  ❌ API key pattern in ${file}\n"
+        SECRET_VIOLATIONS="${SECRET_VIOLATIONS}$(echo "$MATCHES" | sed 's/^/     /')\n"
+    fi
+
+    # Pattern 2: Hardcoded passwords/secrets in assignments
+    MATCHES=$(grep -nEi "(password|secret|private_key|api_key)\s*[:=]\s*['\"][^'\"]{8,}['\"]" "$file" 2>/dev/null | grep -vE "^\s*(//|\*|#)|\.env|process\.env|example|placeholder|schema|type|interface|dummy|test|mock" | head -3)
+    if [[ -n "$MATCHES" ]]; then
+        SECRET_VIOLATIONS="${SECRET_VIOLATIONS}  ❌ Hardcoded secret in ${file}\n"
+        SECRET_VIOLATIONS="${SECRET_VIOLATIONS}$(echo "$MATCHES" | sed 's/^/     /')\n"
+    fi
+
+    # Pattern 3: Private keys
+    MATCHES=$(grep -n "BEGIN.*PRIVATE KEY" "$file" 2>/dev/null | head -1)
+    if [[ -n "$MATCHES" ]]; then
+        SECRET_VIOLATIONS="${SECRET_VIOLATIONS}  ❌ Private key in ${file}\n"
+    fi
+
+done <<< "$STAGED_FILES"
+
+if [[ -n "$SECRET_VIOLATIONS" ]]; then
+    echo ""
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}  🚫 COMMIT BLOCKED — Potential secrets detected${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "$SECRET_VIOLATIONS"
+    echo -e "${YELLOW}  Move secrets to .env files or environment variables.${NC}"
+    echo -e "${YELLOW}  If false positive, add to .gitignore or refactor.${NC}"
+    echo ""
+    exit 1
+fi
+
+echo -e "${GREEN}  ✅ Secret scan: clean${NC}"
+
+# =============================================================================
+# CHECK 11: Commit Message Format (Conventional Commits)
+# =============================================================================
+# Validates commit message follows: type(scope): description
+# Types: fix, feat, refactor, docs, chore, test, perf, ci, style, build
+# BLOCKS commit if format is wrong.
+# NOTE: This runs via commit-msg hook, not pre-commit.
+#       We install commit-msg hook here if it doesn't exist.
+# =============================================================================
+
+COMMIT_MSG_HOOK=".git/hooks/commit-msg"
+if [[ ! -f "$COMMIT_MSG_HOOK" ]]; then
+    cat > "$COMMIT_MSG_HOOK" << 'HOOK_EOF'
+#!/bin/bash
+# Conventional Commits validation (Google/Angular pattern)
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+FIRST_LINE=$(head -1 "$COMMIT_MSG_FILE")
+
+# Allow merge commits and reverts
+if echo "$FIRST_LINE" | grep -qE "^(Merge|Revert) "; then
+    exit 0
+fi
+
+# Conventional commit pattern: type(optional-scope): description
+if ! echo "$FIRST_LINE" | grep -qE "^(fix|feat|refactor|docs|chore|test|perf|ci|style|build)(\([a-zA-Z0-9_-]+\))?: .{3,}"; then
+    echo ""
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}  🚫 COMMIT BLOCKED — Invalid commit message format${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${YELLOW}  Required: type(scope): description${NC}"
+    echo -e "${YELLOW}  Types: fix, feat, refactor, docs, chore, test, perf, ci, style, build${NC}"
+    echo -e "${YELLOW}  Example: fix(auth): resolve token expiration race condition${NC}"
+    echo ""
+    echo -e "  Your message: ${RED}${FIRST_LINE}${NC}"
+    echo ""
+    exit 1
+fi
+
+# Max length check (70 chars for first line)
+if [[ ${#FIRST_LINE} -gt 100 ]]; then
+    echo ""
+    echo -e "${YELLOW}  ⚠️  Commit title is ${#FIRST_LINE} chars (recommended: <70, max: 100)${NC}"
+    echo ""
+fi
+
+exit 0
+HOOK_EOF
+    chmod +x "$COMMIT_MSG_HOOK"
+    echo -e "${GREEN}  ✅ Installed commit-msg hook (Conventional Commits)${NC}"
+fi
+
+# =============================================================================
+# CHECK 12: License Compliance (CLAUDE.md N.5 — no GPL/AGPL)
+# =============================================================================
+# If package.json changed, scan for GPL/LGPL/AGPL dependencies.
+# BLOCKS commit — GPL dependencies force open-source (Γιώργος wants proprietary).
+# =============================================================================
+
+PACKAGE_JSON_CHANGED=$(echo "$STAGED_FILES" | grep -E "^package\.json$" || true)
+
+if [[ -n "$PACKAGE_JSON_CHANGED" ]]; then
+    echo -e "${YELLOW}🔍 Checking dependency licenses (CLAUDE.md N.5)...${NC}"
+
+    LICENSE_TMPFILE=$(mktemp)
+    # Check licenses of all direct dependencies
+    npx license-checker --direct --json --production 2>/dev/null > "$LICENSE_TMPFILE"
+    LICENSE_EXIT=$?
+
+    if [[ $LICENSE_EXIT -eq 0 && -s "$LICENSE_TMPFILE" ]]; then
+        # Search for prohibited licenses
+        GPL_DEPS=$(grep -B1 -iE '"(GPL|LGPL|AGPL)' "$LICENSE_TMPFILE" | grep -v "^\-\-$" | head -20)
+
+        if [[ -n "$GPL_DEPS" ]]; then
+            echo ""
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${RED}  🚫 COMMIT BLOCKED — GPL/LGPL/AGPL dependency detected${NC}"
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo ""
+            echo "$GPL_DEPS"
+            echo ""
+            echo -e "${YELLOW}  Only MIT, Apache-2.0, BSD licenses allowed (CLAUDE.md N.5)${NC}"
+            echo -e "${YELLOW}  Remove the dependency or find a permissive alternative.${NC}"
+            echo ""
+            rm -f "$LICENSE_TMPFILE"
+            exit 1
+        fi
+
+        echo -e "${GREEN}  ✅ License compliance: all permissive${NC}"
+    else
+        echo -e "${YELLOW}  ⏭️  license-checker not available — skipped${NC}"
+    fi
+    rm -f "$LICENSE_TMPFILE"
+fi
+
+# =============================================================================
+# CHECK 13: Bundle Size Guard (Google — prevent bundle bloat)
+# =============================================================================
+# If new imports added to staged files, warn about potential bundle impact.
+# WARNING only — flags new large dependencies for awareness.
+# Known heavy packages: moment, lodash (full), three.js, d3, pdf-lib
+# =============================================================================
+
+if [[ -n "$TS_FILES" ]]; then
+    # Check for new imports of known heavy packages in staged diffs
+    HEAVY_IMPORTS=$(git diff --cached -U0 -- $TS_FILES 2>/dev/null | grep "^+" | grep -v "^+++" | grep -E "from ['\"](moment|lodash['\"]|three|d3['\"]|chart\.js|pdf-lib|xlsx|exceljs|puppeteer|canvas|sharp)" | head -5)
+
+    if [[ -n "$HEAVY_IMPORTS" ]]; then
+        echo ""
+        echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}  ⚠️  Heavy dependency import detected — check bundle impact${NC}"
+        echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
+        echo "$HEAVY_IMPORTS" | sed 's/^+/  /'
+        echo ""
+        echo -e "${YELLOW}  Consider: tree-shakeable alternative, dynamic import(), or lazy loading.${NC}"
+        echo -e "${YELLOW}  e.g.: import('lodash/get') instead of import _ from 'lodash'${NC}"
+        echo ""
+    fi
+fi
+
+echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
+exit 0

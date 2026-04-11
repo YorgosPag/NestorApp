@@ -1,0 +1,89 @@
+name: 🌐 i18n Governance (ADR-279)
+
+# =============================================================================
+# Layer 2 of Defense in Depth — CI mirror of the pre-commit i18n pipeline.
+#
+# Why this exists
+# ---------------
+# The pre-commit hook can be bypassed with `git commit --no-verify`, skipped on
+# agents that forget to activate core.hooksPath, or drift out of sync with the
+# tracked script. This workflow re-runs the same i18n governance checks against
+# every push / PR so that enforcement is guaranteed regardless of how the
+# commit was authored.
+#
+# It is intentionally narrow: ONLY the i18n governance ratchets run here so
+# that it stays fast (~30s) and does not get disabled under time pressure the
+# way the broader quality-gates.yml / unit.yml workflows have been in the past.
+#
+# Regression that motivated this workflow
+# ---------------------------------------
+# On 2026-04-11 the /contacts → Δημόσια Υπηρεσία form rendered raw dotted i18n
+# keys because `contacts-relationships` was missing from SERVICE_FORM_NAMESPACES
+# after ADR-280 namespace splitting. CHECK 3.8 and CHECK 3.12 both passed
+# because the keys *existed* in locale files — but the runtime resolver could
+# not reach them. CHECK 3.13 closes that gap, and this workflow ensures the
+# gap stays closed in CI even when pre-commit is bypassed.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/i18n/**'
+      - 'src/components/generic/i18n/**'
+      - 'src/config/**'
+      - 'src/app/**/service-config.ts'
+      - 'src/app/**/individual-config.ts'
+      - 'scripts/check-i18n-*.js'
+      - 'scripts/check-audit-value-catalogs.js'
+      - '.i18n-*.json'
+      - '.github/workflows/i18n-governance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/i18n/**'
+      - 'src/components/generic/i18n/**'
+      - 'src/config/**'
+      - 'scripts/check-i18n-*.js'
+      - 'scripts/check-audit-value-catalogs.js'
+      - '.i18n-*.json'
+
+concurrency:
+  group: i18n-governance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governance:
+    name: 🔒 i18n Governance Ratchets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # We do not need a full dependency install — every governance script is
+      # pure Node.js (no runtime deps) that walks the repo filesystem. This
+      # keeps the workflow under 30s and independent of pnpm-lock churn.
+
+      - name: 🔍 CHECK 3.13 — i18n runtime resolver reachability
+        run: node scripts/check-i18n-resolver-reachability.js --all
+
+      - name: 🔍 CHECK 3.14 — Audit value catalogs SSoT parity
+        run: node scripts/check-audit-value-catalogs.js
+
+      - name: 🔍 CHECK 3.8 — Missing i18n keys (ratchet)
+        run: node scripts/check-i18n-missing-keys.js --all || true
+        # CHECK 3.8 still has a legacy baseline of 4762 — we run it for
+        # visibility but do not fail the build until the baseline reaches 0.
+        # The pre-commit hook handles per-commit ratchet enforcement.
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=i18n Governance::All ratchet checks passed"
+          echo "CHECK 3.13 (resolver reachability): PASS"
+          echo "CHECK 3.14 (audit catalogs parity): PASS"
