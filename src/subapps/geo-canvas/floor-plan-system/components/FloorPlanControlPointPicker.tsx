@@ -19,6 +19,7 @@
  */
 
 import { safeJsonParse } from '@/lib/json-utils';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -241,12 +242,10 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
     }, null, 2);
 
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `control-points-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    triggerExportDownload({
+      blob: dataBlob,
+      filename: `control-points-${new Date().toISOString().split('T')[0]}.json`,
+    });
     success(t('toastMessages.pointsSaved'));
   };
 

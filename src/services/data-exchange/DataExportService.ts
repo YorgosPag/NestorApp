@@ -1,5 +1,7 @@
 'use client';
 
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
+
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
@@ -291,16 +293,9 @@ class DataExportService {
     return String(result);
   }
 
-  // Download helper
+  // Download helper — thin wrapper over canonical triggerExportDownload
   downloadBlob(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    triggerExportDownload({ blob, filename });
   }
 
   // Get appropriate file extension

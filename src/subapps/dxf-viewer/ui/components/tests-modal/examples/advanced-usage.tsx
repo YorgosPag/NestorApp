@@ -15,6 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { TestsModal } from '../../TestsModal'; // Corrected path to TestsModal
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
@@ -118,11 +119,7 @@ export function AdvancedUsageExample() {
   const exportHistory = useCallback(() => {
     const json = JSON.stringify(testHistory, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `test-history-${Date.now()}.json`;
-    a.click();
+    triggerExportDownload({ blob, filename: `test-history-${Date.now()}.json` });
     success('Test history exported!');
   }, [testHistory, success]);
 

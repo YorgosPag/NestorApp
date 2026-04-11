@@ -11,6 +11,7 @@
 'use client';
 
 import * as React from 'react';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import type { UnifiedTestReport } from './unified-test-runner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -122,14 +123,10 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   // Handle download as JSON
   const handleDownload = () => {
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `unified-test-report-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    triggerExportDownload({
+      blob,
+      filename: `unified-test-report-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
+    });
   };
 
   // Calculate pass rate

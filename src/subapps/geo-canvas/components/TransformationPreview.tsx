@@ -11,6 +11,8 @@ import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransfor
 // 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
 import { createSmartActionGroup } from '@/core/actions/SmartActionFactory';
 import type { SmartActionConfig } from '@/core/actions/SmartActionFactory';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
+import { buildPreviewGrid, buildAccuracyIndicators } from './TransformationPreview.geometry';
 
 // Import DXF scene types
 import type { SceneModel } from '../../dxf-viewer/types/scene';
@@ -132,82 +134,7 @@ export function TransformationPreview({
     if (!previewSettings.showTransformationGrid || !transformState.isCalibrated) {
       return null;
     }
-
-    const features: GeoJSON.Feature[] = [];
-    const { gridSpacing } = previewSettings;
-
-    // Calculate grid bounds από control points
-    const controlPoints = transformState.controlPoints;
-    if (controlPoints.length === 0) return null;
-
-    const dxfPoints = controlPoints.map(cp => cp.dxfPoint);
-    const minX = Math.min(...dxfPoints.map(p => p.x));
-    const maxX = Math.max(...dxfPoints.map(p => p.x));
-    const minY = Math.min(...dxfPoints.map(p => p.y));
-    const maxY = Math.max(...dxfPoints.map(p => p.y));
-
-    // Extend bounds slightly
-    const padding = gridSpacing;
-    const gridMinX = Math.floor((minX - padding) / gridSpacing) * gridSpacing;
-    const gridMaxX = Math.ceil((maxX + padding) / gridSpacing) * gridSpacing;
-    const gridMinY = Math.floor((minY - padding) / gridSpacing) * gridSpacing;
-    const gridMaxY = Math.ceil((maxY + padding) / gridSpacing) * gridSpacing;
-
-    // Generate grid lines
-    for (let x = gridMinX; x <= gridMaxX; x += gridSpacing) {
-      try {
-        const startGeo = dxfGeoTransformService.transformDxfToGeo({ x, y: gridMinY });
-        const endGeo = dxfGeoTransformService.transformDxfToGeo({ x, y: gridMaxY });
-
-        features.push({
-          type: 'Feature',
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [startGeo.lng, startGeo.lat],
-              [endGeo.lng, endGeo.lat]
-            ]
-          },
-          properties: {
-            type: 'grid_line',
-            direction: 'vertical',
-            dxfX: x
-          }
-        });
-      } catch (error) {
-        // Skip invalid transformations
-      }
-    }
-
-    for (let y = gridMinY; y <= gridMaxY; y += gridSpacing) {
-      try {
-        const startGeo = dxfGeoTransformService.transformDxfToGeo({ x: gridMinX, y });
-        const endGeo = dxfGeoTransformService.transformDxfToGeo({ x: gridMaxX, y });
-
-        features.push({
-          type: 'Feature',
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [startGeo.lng, startGeo.lat],
-              [endGeo.lng, endGeo.lat]
-            ]
-          },
-          properties: {
-            type: 'grid_line',
-            direction: 'horizontal',
-            dxfY: y
-          }
-        });
-      } catch (error) {
-        // Skip invalid transformations
-      }
-    }
-
-    return {
-      type: 'FeatureCollection',
-      features
-    };
+    return buildPreviewGrid(transformState.controlPoints, previewSettings.gridSpacing);
   }, [previewSettings.showTransformationGrid, previewSettings.gridSpacing, transformState.isCalibrated, transformState.controlPoints]);
 
   // ========================================================================
@@ -218,42 +145,7 @@ export function TransformationPreview({
     if (!previewSettings.showAccuracyCircles || !transformState.validation) {
       return null;
     }
-
-    const features: GeoJSON.Feature[] = [];
-
-    // Add accuracy circles around control points
-    transformState.controlPoints.forEach(cp => {
-      // Create circle approximation
-      const numVertices = 32;
-      const radiusInDegrees = cp.accuracy / 111320; // Convert meters to degrees (approximate)
-      const coordinates: number[][] = [];
-
-      for (let i = 0; i <= numVertices; i++) {
-        const angle = (i / numVertices) * 2 * Math.PI;
-        const lng = cp.geoPoint.lng + radiusInDegrees * Math.cos(angle);
-        const lat = cp.geoPoint.lat + radiusInDegrees * Math.sin(angle);
-        coordinates.push([lng, lat]);
-      }
-
-      features.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: [coordinates]
-        },
-        properties: {
-          type: 'accuracy_circle',
-          controlPointId: cp.id,
-          accuracy: cp.accuracy,
-          description: cp.description
-        }
-      });
-    });
-
-    return {
-      type: 'FeatureCollection',
-      features
-    };
+    return buildAccuracyIndicators(transformState.controlPoints);
   }, [previewSettings.showAccuracyCircles, transformState.controlPoints, transformState.validation]);
 
   // ========================================================================
@@ -451,12 +343,7 @@ export function TransformationPreview({
           // Export GeoJSON
           const dataStr = JSON.stringify(transformedGeoJSON, null, 2);
           const dataBlob = new Blob([dataStr], { type: 'application/json' });
-          const url = URL.createObjectURL(dataBlob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'transformed_dxf.geojson';
-          link.click();
-          URL.revokeObjectURL(url);
+          triggerExportDownload({ blob: dataBlob, filename: 'transformed_dxf.geojson' });
         }
       });
     }
