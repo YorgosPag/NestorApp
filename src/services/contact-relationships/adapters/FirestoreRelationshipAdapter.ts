@@ -184,6 +184,10 @@ export class FirestoreRelationshipAdapter {
 
       // Query 1: Where this contact is the source
       const sourceQuery = query(
+        // 🔒 companyId: N/A — CONTACT_RELATIONSHIPS legacy schema has no companyId
+        // field on documents. Firestore rules (rules:103-115) enforce tenant
+        // isolation via createdBy ownership fallback for docs without companyId.
+        // Real fix requires data migration — tracked as deferred in Phase 9 notes.
         colRef,
         where('sourceContactId', '==', contactId),
         where('status', '==', 'active')
@@ -191,6 +195,7 @@ export class FirestoreRelationshipAdapter {
 
       // Query 2: Where this contact is the target
       const targetQuery = query(
+        // 🔒 companyId: N/A — see sourceQuery note above (legacy schema debt).
         colRef,
         where('targetContactId', '==', contactId),
         where('status', '==', 'active')
@@ -258,6 +263,9 @@ export class FirestoreRelationshipAdapter {
 
       // Single-field query to avoid composite index requirement
       const q = query(
+        // 🔒 companyId: N/A — CONTACT_RELATIONSHIPS legacy schema has no companyId
+        // field. Firestore rules (rules:103-115) enforce tenant isolation via
+        // createdBy fallback. Real fix requires data migration.
         colRef,
         where('targetContactId', '==', organizationId)
       );
@@ -318,6 +326,9 @@ export class FirestoreRelationshipAdapter {
       // 🔧 FIX: Use equality filter (== 'active') instead of inequality (!= 'deleted')
       // Inequality filters require composite indexes and can cause silent failures
       const q = query(
+        // 🔒 companyId: N/A — CONTACT_RELATIONSHIPS legacy schema has no companyId
+        // field. Firestore rules (rules:103-115) enforce tenant isolation via
+        // createdBy fallback. Real fix requires data migration.
         colRef,
         where('sourceContactId', '==', sourceId),
         where('targetContactId', '==', targetId),
