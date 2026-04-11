@@ -691,5 +691,19 @@
     "error": "Voice dictation failed. Please try again.",
     "empty": "Please enter or dictate some text first.",
     "authRequired": "You must be signed in to save a note."
+  },
+  "shareSurface": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "submitting": "Sending...",
+    "errorPrefix": "Error",
+    "retry": "Try again",
+    "genericError": "Something went wrong. Please try again.",
+    "statusIdle": "Ready",
+    "statusSuccess": "Success",
+    "a11y": {
+      "dialogLabel": "Share",
+      "statusRegion": "Share status"
+    }
   }
 }
