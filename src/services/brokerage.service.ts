@@ -186,24 +186,41 @@ export class BrokerageService {
 
   /**
    * Λίστα μεσιτικών συμβάσεων για project/property.
+   *
+   * @param projectId - Project scope
+   * @param companyId - Tenant isolation — required by Firestore rules
+   * @param propertyId - Optional property filter
+   * @param status - Optional status filter
    */
   static async getAgreements(
     projectId: string,
+    companyId: string,
     propertyId?: string | null,
     status?: BrokerageStatus
   ): Promise<BrokerageAgreement[]> {
     try {
+      // Base query — tenant-scoped by companyId (tenant isolation).
+      // Subsequent query(q, ...) extensions inherit this constraint.
       let q = query(
         collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
+        where('companyId', '==', companyId),
         where('projectId', '==', projectId)
       );
 
       if (propertyId) {
-        q = query(q, where('propertyId', '==', propertyId));
+        q = query(
+          // 🔒 companyId: inherited from base query above (query extension pattern).
+          q,
+          where('propertyId', '==', propertyId)
+        );
       }
 
       if (status) {
-        q = query(q, where('status', '==', status));
+        q = query(
+          // 🔒 companyId: inherited from base query above (query extension pattern).
+          q,
+          where('status', '==', status)
+        );
       }
 
       const snapshot = await getDocs(q);
@@ -244,9 +261,10 @@ export class BrokerageService {
    * Rule 5: Validation runs on CREATE and UPDATE
    */
   static async validateExclusivity(
-    input: ExclusivityValidationInput
+    input: ExclusivityValidationInput,
+    companyId: string
   ): Promise<ExclusivityValidationResult> {
-    const allAgreements = await this.getAgreements(input.projectId);
+    const allAgreements = await this.getAgreements(input.projectId, companyId);
     return evaluateExclusivityRules(input, allAgreements);
   }
 
@@ -296,11 +314,18 @@ export class BrokerageService {
 
   /**
    * Ανάκτηση commission records για property.
+   *
+   * @param propertyId - Property scope
+   * @param companyId - Tenant isolation — required by Firestore rules
    */
-  static async getCommissions(propertyId: string): Promise<CommissionRecord[]> {
+  static async getCommissions(
+    propertyId: string,
+    companyId: string
+  ): Promise<CommissionRecord[]> {
     try {
       const q = query(
         collection(db, COLLECTIONS.COMMISSION_RECORDS),
+        where('companyId', '==', companyId),
         where('propertyId', '==', propertyId)
       );
       const snapshot = await getDocs(q);
@@ -347,11 +372,13 @@ export class BrokerageService {
    * Read-only — stays client-side.
    */
   static async hasActiveRecords(
-    agentContactId: string
+    agentContactId: string,
+    companyId: string
   ): Promise<{ hasAgreements: boolean; hasCommissions: boolean }> {
     try {
       const agreementsQ = query(
         collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
+        where('companyId', '==', companyId),
         where('agentContactId', '==', agentContactId),
         where('status', '==', 'active')
       );
@@ -359,6 +386,7 @@ export class BrokerageService {
 
       const commissionsQ = query(
         collection(db, COLLECTIONS.COMMISSION_RECORDS),
+        where('companyId', '==', companyId),
         where('agentContactId', '==', agentContactId),
         where('paymentStatus', '==', 'pending')
       );

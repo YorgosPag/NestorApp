@@ -32,9 +32,12 @@ const PASS: PersonaRemovalGuardResult = { blocked: false, reasonKey: null };
 /** Wraps BrokerageService.hasActiveRecords → normalized result */
 async function brokerageGuard(
   contactId: string,
-  _companyId: string
+  companyId: string
 ): Promise<PersonaRemovalGuardResult> {
-  const { hasAgreements, hasCommissions } = await BrokerageService.hasActiveRecords(contactId);
+  const { hasAgreements, hasCommissions } = await BrokerageService.hasActiveRecords(
+    contactId,
+    companyId
+  );
   if (hasAgreements || hasCommissions) {
     return { blocked: true, reasonKey: 'persona.guards.realEstateAgent.blocked' };
   }

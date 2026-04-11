@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { BrokerageService } from '@/services/brokerage.service';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { calculateCommission } from '@/types/brokerage';
 import type { BrokerageAgreement } from '@/types/brokerage';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -84,6 +85,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   const sellHasArea = sellNetArea > 0 || sellGrossArea > 0;
 
   const linkedSpaces = useLinkedSpacesForSale(unit);
+  const companyId = useCompanyId()?.companyId;
   const [brokerAgreements, setBrokerAgreements] = useState<BrokerageAgreement[]>([]);
   const [selectedBrokerId, setSelectedBrokerId] = useState<string>('none');
 
@@ -99,11 +101,15 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         setOwners([]);
       }
 
-      BrokerageService.getAgreements(resolveProjectId(unit) ?? '', unit.id, 'active')
-        .then(setBrokerAgreements)
-        .catch(() => setBrokerAgreements([]));
+      if (companyId) {
+        BrokerageService.getAgreements(resolveProjectId(unit) ?? '', companyId, unit.id, 'active')
+          .then(setBrokerAgreements)
+          .catch(() => setBrokerAgreements([]));
+      } else {
+        setBrokerAgreements([]);
+      }
     }
-  }, [open, unit.commercial?.askingPrice, unit.commercial?.owners, unit.project, unit.id]);
+  }, [open, companyId, unit.commercial?.askingPrice, unit.commercial?.owners, unit.project, unit.id]);
 
   const handleSave = useCallback(async () => {
     const price = Number(finalPrice);

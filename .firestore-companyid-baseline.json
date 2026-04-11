@@ -1,13 +1,12 @@
 {
-  "src/services/brokerage.service.ts": 6,
   "src/services/contact-link.service.ts": 7,
   "src/services/contact-relationships/adapters/FirestoreRelationshipAdapter.ts": 4,
   "src/services/file-link.service.ts": 7,
   "src/services/teams/EnterpriseTeamsService.ts": 6,
   "_meta": {
     "description": "Firestore queries without companyId filter — ratchet baseline",
-    "generated": "2026-04-10",
-    "totalViolations": 30,
-    "totalFiles": 5
+    "generated": "2026-04-11",
+    "totalViolations": 24,
+    "totalFiles": 4
   }
 }

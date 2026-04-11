@@ -129,7 +129,7 @@ export function useBrokerageAgreements(
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    if (!isFormVisible || !projectId) {
+    if (!isFormVisible || !projectId || !companyId) {
       setValidationResult(null);
       return;
     }
@@ -142,13 +142,16 @@ export function useBrokerageAgreements(
     const timer = setTimeout(async () => {
       setIsValidating(true);
       try {
-        const result = await BrokerageService.validateExclusivity({
-          projectId,
-          propertyId: form.scope === 'property' ? form.propertyId : null,
-          scope: form.scope,
-          exclusivity: form.exclusivity,
-          excludeAgreementId: editingAgreement?.id,
-        });
+        const result = await BrokerageService.validateExclusivity(
+          {
+            projectId,
+            propertyId: form.scope === 'property' ? form.propertyId : null,
+            scope: form.scope,
+            exclusivity: form.exclusivity,
+            excludeAgreementId: editingAgreement?.id,
+          },
+          companyId
+        );
         setValidationResult(result);
       } catch {
         setValidationResult(null);
@@ -158,7 +161,7 @@ export function useBrokerageAgreements(
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [isFormVisible, projectId, form.scope, form.propertyId, form.exclusivity, editingAgreement?.id]);
+  }, [isFormVisible, projectId, companyId, form.scope, form.propertyId, form.exclusivity, editingAgreement?.id]);
 
   // ---------------------------------------------------------------------------
   // FORM HANDLERS
