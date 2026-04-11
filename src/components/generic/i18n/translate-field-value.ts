@@ -38,10 +38,18 @@ const logger = createModuleLogger('service-form-i18n');
  * Order matters — i18next returns the first namespace that contains the key.
  * Do not add namespaces lightly: each entry expands the surface every
  * `translateFieldValue` call must walk.
+ *
+ * `contacts-relationships` is required because ADR-280 namespace splitting
+ * moved the `service.sections.*` / `service.fields.*` catalogs (consumed by
+ * service-config.ts) out of the monolithic `contacts` namespace. The legacy
+ * compat layer (`namespace-compat.ts` → LEGACY_NESTED_MAP) reroutes
+ * `contacts.service.*` there for classic `t()` calls, but this resolver bypasses
+ * compat and hits i18next directly — so the namespace must be listed here.
  */
 export const SERVICE_FORM_NAMESPACES = [
   'contacts',
   'contacts-form',
+  'contacts-relationships',
   'forms',
 ] as const;
 

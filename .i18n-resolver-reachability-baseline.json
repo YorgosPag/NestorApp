@@ -1,0 +1,24 @@
+{
+  "files": {
+    "src/config/company-config.ts": 27,
+    "src/config/crm-dashboard-tabs-config.ts": 10,
+    "src/config/period-selector-config.ts": 8,
+    "src/config/project-tabs-config.ts": 3,
+    "src/config/search-index-config.ts": 8,
+    "src/config/service-config.ts": 8,
+    "src/config/unified-tabs-factory.ts": 6,
+    "src/subapps/dxf-viewer/config/modal-select/core/labels/navigation.ts": 29,
+    "src/subapps/dxf-viewer/config/modal-select/core/labels/status.ts": 86,
+    "src/subapps/dxf-viewer/config/modal-select/core/labels/tabs.ts": 3,
+    "src/subapps/dxf-viewer/config/modal-select/core/options/encoding.ts": 8,
+    "src/subapps/dxf-viewer/config/modal-select/toolbar/configurations.ts": 52,
+    "src/constants/domains/dropdown-misc-labels.ts": 130
+  },
+  "namespaces": [
+    "contacts",
+    "contacts-form",
+    "contacts-relationships",
+    "forms"
+  ],
+  "updatedAt": "2026-04-11T11:17:58.210Z"
+}
