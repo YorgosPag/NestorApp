@@ -30,7 +30,7 @@
 
 - [ ] **ADR-298 Phase B.6** — compliance (3 collections: `obligations`, `obligation_transmittals`, `obligation_templates`). Canonical `tenant_direct`. **Ώρες:** 1-2 (expected 1,5).
 
-- [ ] **CHECK 3.17 Entity Audit Coverage** — 19 αρχεία με Firestore writes σε audit-tracked collections που δεν καλούν `EntityAuditService.recordChange()`. Boy Scout cleanup, 15-30 min/file. **Ώρες:** 4-10 (expected 6). Canonical service: `src/services/entity-audit.service.ts`.
+- [ ] **CHECK 3.17 Entity Audit Coverage** — 19 αρχεία με Firestore writes σε audit-tracked collections που δεν καλούν `EntityAuditService.recordChange()`. Boy Scout cleanup, 15-30 min/file. **Ώρες:** 4-10 (expected 6). Canonical service: `src/services/entity-audit.service.ts`. _(Baseline ratcheted 20→19 στο commit `56d95be4` — admin-link destructive chain deletion.)_
 
 - [ ] **CHECK 3.13 i18n Resolver Reachability** — 13 αρχεία, 378 violations. Keys σε static configs (service-config, individual-config, modal-select, dropdown-*-labels) unreachable από το runtime resolver. Fix: ενημέρωση `SERVICE_FORM_NAMESPACES` στο `src/components/generic/i18n/translate-field-value.ts`. **Ώρες:** 2-6 (expected 4).
 
@@ -57,3 +57,4 @@
 | Ημερομηνία | Αλλαγή |
 |------------|--------|
 | 2026-04-11 | Initial checklist dump από ADR-299 §4/§5. Scenario A = 21h expected, Scenario B = 64h expected. Καμία εργασία ολοκληρωμένη ακόμα — B.1 attendance ήδη completed πριν το ADR-299. |
+| 2026-04-11 | CHECK 3.17 baseline ratcheted 20→19 στο commit `56d95be4` (production safety hardening: deletion του `properties/admin-link` destructive chain). Δεν ήταν CHECK 3.17 cleanup target — ήταν security deletion που μείωσε baseline ως παρενέργεια. Line ενημερώθηκε. Hours estimate αναλλοίωτο. |
