@@ -176,7 +176,7 @@ active → trashed → archived → purged
 | Feature | Status | Files |
 |---------|--------|-------|
 | **4.1 Document templates** | ✅ Done | `src/services/document-template.service.ts`, `src/components/shared/files/DocumentTemplatePanel.tsx` |
-| **4.2 External sharing** | ✅ Done | `src/services/file-share.service.ts`, `src/components/shared/files/ShareDialog.tsx`, `src/app/shared/[token]/page.tsx` |
+| **4.2 External sharing** | ✅ Done (UI refactored under ADR-147 Phase B) | `src/services/file-share.service.ts`, `src/components/shared/files/ShareDialog.tsx` (thin wrapper → `LinkTokenPermissionPanel`), `src/app/shared/[token]/page.tsx` |
 | **4.3 Inline comments** | ✅ Done | `src/services/file-comment.service.ts`, `src/components/shared/files/CommentsPanel.tsx` |
 | **4.4 Virtual folders** | ✅ Done | `src/services/file-folder.service.ts`, `src/components/shared/files/FolderManager.tsx` |
 | **4.5 Advanced filters** | ✅ Done | `src/components/core/AdvancedFilters/configs.ts` (audit log filters) |

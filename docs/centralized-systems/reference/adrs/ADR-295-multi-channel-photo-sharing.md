@@ -65,7 +65,7 @@ Creates/updates external_identities document with contactId
 ### Modified Files
 | File | Change |
 |------|--------|
-| `src/components/ui/ShareModal.tsx` | Added "Send to Contact" flow + handlers |
+| `src/components/ui/ShareModal.tsx` | Added "Send to Contact" flow + handlers (2026-04-11: logic relocated to `UserAuthPermissionPanel` under ADR-147 Phase B — channel handlers, `handleChannelShare`, etc. now live in `src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx`) |
 | `src/config/domain-constants.ts` | Added CHANNELS, LINK_CHANNEL, SHARE_TO_CHANNEL routes |
 | `src/lib/share-utils.ts` | Extracted copyImageToClipboard utility |
 | `src/i18n/locales/{el,en}/common.json` | Added channelShare.* keys |
