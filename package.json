@@ -43,6 +43,7 @@
     "resolver-reach:baseline": "node scripts/check-i18n-resolver-reachability.js --baseline",
     "audit-values:audit": "node scripts/check-audit-value-catalogs.js",
     "firestore:audit": "bash scripts/check-firestore-companyid.sh",
+    "firestore:indexes:audit": "node scripts/check-firestore-index-coverage.js --all --verbose",
     "nav:audit": "node scripts/check-navigation-labels.js",
     "ssot:audit": "bash scripts/ssot-audit.sh",
     "ssot:baseline": "bash scripts/generate-ssot-baseline.sh",

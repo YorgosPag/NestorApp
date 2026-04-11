@@ -8,7 +8,7 @@ import {
   Building2, Warehouse, LayoutGrid, FileSignature, ClipboardCheck, PlayCircle,
   BarChart3,
   // 🎭 ENTERPRISE: Persona System icons (ADR-121)
-  HardHat, UserCog, Calculator, Scale, Key, Euro, Award, Tag,
+  HardHat, UserCog, Calculator, Scale, Key, Euro, Award, Tag, Percent,
   // 🏢 Procurement icons (PO statuses)
   FileEdit, Send, PackageOpen, PackageCheck, CircleCheck,
   // 📁 Project participation icon (ADR-282)
@@ -158,6 +158,7 @@ export const ICON_MAPPING = {
   'euro': Euro,
   'award': Award,
   'tag': Tag,
+  'percent': Percent,
 
   // 🏢 Procurement PO status icons (PascalCase aliases)
   'FileEdit': FileEdit,

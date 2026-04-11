@@ -381,6 +381,57 @@ if [[ -f "$AUDIT_CATALOGS_SCRIPT" ]]; then
 fi
 
 # =============================================================================
+# CHECK 3.15: Firestore Index Coverage (ADR-195 / 2026-04-11 regression)
+# =============================================================================
+# Static analyzer that ensures every query routed through firestoreQueryService
+# has a matching composite index in firestore.indexes.json — including the
+# super_admin variant where the companyId tenant filter is bypassed.
+#
+# Motivation: 2026-04-11 bug — the entity_audit_trail rule fix shipped with
+# a super_admin path that required an index [entityType, entityId, timestamp
+# DESC] which did not exist. Company admins worked, super admins hit
+# FAILED_PRECONDITION. Zero tolerance on touch — no baseline.
+#
+# Scope:
+#   - Staged src/**/*.{ts,tsx} files only. Pre-existing violations in
+#     untouched files are grandfathered in practice (Boy Scout rule applies
+#     on next touch). Full scan is available via `npm run firestore:indexes:audit`
+#     for CI jobs and manual audits.
+#   - Rationale: a per-file gate matches "zero tolerance on touch" while
+#     allowing incremental cleanup of the backlog without blocking unrelated
+#     commits. Accidental deletion of an index still in use by untouched
+#     files is expected to be caught by CI, not pre-commit.
+# =============================================================================
+
+INDEX_COVERAGE_SCRIPT="scripts/check-firestore-index-coverage.js"
+if [[ -f "$INDEX_COVERAGE_SCRIPT" ]]; then
+    INDEX_COVERAGE_TARGETS=""
+    STAGED_TS=$(echo "$STAGED_FILES" | grep -E '^src/.*\.(ts|tsx)$' || true)
+    if [[ -n "$STAGED_TS" ]]; then
+        INDEX_COVERAGE_TARGETS="$STAGED_TS"
+    fi
+
+    if [[ -n "$INDEX_COVERAGE_TARGETS" ]]; then
+        echo -e "${YELLOW}🔍 Checking Firestore index coverage...${NC}"
+
+        INDEX_COVERAGE_OUTPUT=$(node "$INDEX_COVERAGE_SCRIPT" $INDEX_COVERAGE_TARGETS 2>&1)
+        INDEX_COVERAGE_EXIT=$?
+
+        if [[ $INDEX_COVERAGE_EXIT -ne 0 ]]; then
+            echo "$INDEX_COVERAGE_OUTPUT"
+            echo ""
+            echo -e "${RED}✖ CHECK 3.15 failed — fix the missing composite indexes above.${NC}"
+            echo -e "${YELLOW}  Tip: run 'npm run firestore:indexes:audit' for a full scan report.${NC}"
+            exit 1
+        fi
+
+        if [[ -n "$INDEX_COVERAGE_OUTPUT" ]]; then
+            echo "$INDEX_COVERAGE_OUTPUT"
+        fi
+    fi
+fi
+
+# =============================================================================
 # CHECK 4: Google-Style File Size Limits (per file type)
 # =============================================================================
 # Limits based on Single Responsibility Principle:
