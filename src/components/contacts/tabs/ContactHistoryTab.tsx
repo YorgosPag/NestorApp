@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ACTION_MAP, FILTER_OPTIONS } from '@/components/shared/audit/activity-tab-config';
 import { formatDisplayValue } from '@/components/shared/audit/activity-tab-helpers';
+import { resolveAuditValue } from '@/components/shared/audit/audit-value-resolver';
 import { ShareEntry } from './ShareEntryRenderer';
 import {
   mergeAndSort,
@@ -234,29 +235,13 @@ function AuditEntryRenderer({ entry, t, colors }: { entry: EntityAuditEntry; t: 
     return storedLabel ?? field;
   };
 
-  /** Translate a raw audit value — generic via audit.values.* */
-  const translateValue = (v: string): string | undefined => {
-    // Direct match (e.g. "active", "colleague", "individual")
-    const enumKey = `audit.values.${v}`;
-    const result = t(enumKey);
-    if (result !== enumKey) return result;
-
-    // Legacy composite format: "colleague — GEO PAGONIS" → translate first part
-    if (v.includes(' — ')) {
-      const [typeKey, ...rest] = v.split(' — ');
-      const typeTranslated = t(`audit.values.${typeKey}`);
-      if (typeTranslated !== `audit.values.${typeKey}`) {
-        return `${typeTranslated} — ${rest.join(' — ')}`;
-      }
-    }
-
-    // ISO date fallback
-    if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
-      const d = new Date(v);
-      if (!isNaN(d.getTime())) return d.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-    return undefined;
-  };
+  /**
+   * Create a per-change translator that knows the field, so it can delegate to
+   * the SSoT catalog resolver. See ADR-279 — audit value resolution is driven
+   * by {@link AUDIT_VALUE_CATALOGS}, not ad-hoc `audit.values.*` duplicates.
+   */
+  const makeFieldTranslator = (field: string) =>
+    (v: string): string | undefined => resolveAuditValue(field, v, t);
 
   return (
     <li className="relative pb-5 pl-8 last:pb-0">
@@ -277,19 +262,22 @@ function AuditEntryRenderer({ entry, t, colors }: { entry: EntityAuditEntry; t: 
         </div>
         {entry.changes.length > 0 && (
           <ul className="mt-1.5 space-y-1">
-            {entry.changes.map((change, idx) => (
-              <li key={`${change.field}-${idx}`} className="rounded bg-muted/50 px-2.5 py-1 text-xs">
-                <span className="font-medium">{resolveFieldLabel(change.field, change.label)}</span>
-                {': '}
-                <span className={cn(colors.text.muted, 'line-through decoration-red-400/60')}>
-                  {formatDisplayValue(change.oldValue, translateValue)}
-                </span>
-                {' → '}
-                <span className="font-medium text-foreground">
-                  {formatDisplayValue(change.newValue, translateValue)}
-                </span>
-              </li>
-            ))}
+            {entry.changes.map((change, idx) => {
+              const translateFieldValue = makeFieldTranslator(change.field);
+              return (
+                <li key={`${change.field}-${idx}`} className="rounded bg-muted/50 px-2.5 py-1 text-xs">
+                  <span className="font-medium">{resolveFieldLabel(change.field, change.label)}</span>
+                  {': '}
+                  <span className={cn(colors.text.muted, 'line-through decoration-red-400/60')}>
+                    {formatDisplayValue(change.oldValue, translateFieldValue)}
+                  </span>
+                  {' → '}
+                  <span className="font-medium text-foreground">
+                    {formatDisplayValue(change.newValue, translateFieldValue)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </article>

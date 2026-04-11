@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { ACTION_MAP } from "./activity-tab-config";
 import { formatDisplayValue } from "./activity-tab-helpers";
+import { resolveAuditValue } from "./audit-value-resolver";
 
 // ============================================================================
 // ENTITY LINK MAPPING (for global view)
@@ -87,52 +88,38 @@ export function AuditTimelineEntry({
     ? buildEntityHref(entry.entityType, entry.entityId)
     : null;
 
-  /** Translate known values: enum labels, country codes, ISO dates */
-  const translateValue = (v: string): string | undefined => {
-    const enumKey = `audit.values.${v}`;
-    const enumResult = t(enumKey);
-    if (enumResult !== enumKey) return enumResult;
-
-    if (v.includes(" — ")) {
-      const [typeKey, ...rest] = v.split(" — ");
-      const typeTranslated = t(`audit.values.${typeKey}`);
-      if (typeTranslated !== `audit.values.${typeKey}`) {
-        return `${typeTranslated} — ${rest.join(" — ")}`;
-      }
-    }
-
-    const countryMap: Record<string, string> = {
-      GR: "countries.greece",
-      CY: "countries.cyprus",
-      US: "countries.usa",
-      DE: "countries.germany",
-      FR: "countries.france",
-      IT: "countries.italy",
-      ES: "countries.spain",
-      UK: "countries.uk",
-      AU: "countries.australia",
-      CA: "countries.canada",
-      OTHER: "countries.other",
-    };
-    const countryKey = countryMap[v];
-    if (countryKey) {
-      const countryResult = t(countryKey);
-      if (countryResult !== countryKey) return countryResult;
-    }
-
-    if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
-      const d = new Date(v);
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString("el-GR", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        });
-      }
-    }
-
-    return undefined;
+  /** Country-code labels (kept local — not a tracked enum field). */
+  const COUNTRY_KEYS: Readonly<Record<string, string>> = {
+    GR: "countries.greece",
+    CY: "countries.cyprus",
+    US: "countries.usa",
+    DE: "countries.germany",
+    FR: "countries.france",
+    IT: "countries.italy",
+    ES: "countries.spain",
+    UK: "countries.uk",
+    AU: "countries.australia",
+    CA: "countries.canada",
+    OTHER: "countries.other",
   };
+
+  /**
+   * Build a field-aware translator: resolver handles catalog + audit.values +
+   * ISO-date fallbacks; the country-code map is layered on top for non-enum
+   * fields (e.g. `birthCountry`).
+   */
+  const makeFieldTranslator = (field: string) =>
+    (v: string): string | undefined => {
+      const resolved = resolveAuditValue(field, v, t);
+      if (resolved) return resolved;
+
+      const countryKey = COUNTRY_KEYS[v];
+      if (countryKey) {
+        const countryResult = t(countryKey);
+        if (countryResult !== countryKey) return countryResult;
+      }
+      return undefined;
+    };
 
   return (
     <li className="relative pb-5 pl-8 last:pb-0">
@@ -191,35 +178,35 @@ export function AuditTimelineEntry({
 
         {entry.changes.length > 0 && (
           <ul className="mt-1.5 space-y-1">
-            {entry.changes.map((change, idx) => (
-              <li
-                key={`${change.field}-${idx}`}
-                className="rounded bg-muted/50 px-2.5 py-1 text-xs"
-              >
-                <span className="font-medium">
-                  {(() => {
-                    const i18nKey = `audit.fields.${change.field}`;
-                    const resolved = t(i18nKey);
-                    return resolved !== i18nKey
-                      ? resolved
-                      : (change.label ?? change.field);
-                  })()}
-                </span>
-                {": "}
-                <span
-                  className={cn(
-                    colors.text.muted,
-                    "line-through decoration-red-400/60",
-                  )}
+            {entry.changes.map((change, idx) => {
+              const translateFieldValue = makeFieldTranslator(change.field);
+              const fieldKey = `audit.fields.${change.field}`;
+              const resolvedFieldLabel = t(fieldKey);
+              const fieldLabel = resolvedFieldLabel !== fieldKey
+                ? resolvedFieldLabel
+                : (change.label ?? change.field);
+              return (
+                <li
+                  key={`${change.field}-${idx}`}
+                  className="rounded bg-muted/50 px-2.5 py-1 text-xs"
                 >
-                  {formatDisplayValue(change.oldValue, translateValue)}
-                </span>
-                {" → "}
-                <span className="font-medium text-foreground">
-                  {formatDisplayValue(change.newValue, translateValue)}
-                </span>
-              </li>
-            ))}
+                  <span className="font-medium">{fieldLabel}</span>
+                  {": "}
+                  <span
+                    className={cn(
+                      colors.text.muted,
+                      "line-through decoration-red-400/60",
+                    )}
+                  >
+                    {formatDisplayValue(change.oldValue, translateFieldValue)}
+                  </span>
+                  {" → "}
+                  <span className="font-medium text-foreground">
+                    {formatDisplayValue(change.newValue, translateFieldValue)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </article>

@@ -164,7 +164,10 @@ function formatStorageUrl(url: string): string {
 /**
  * Format a raw audit value for display.
  * @param value - Raw value from Firestore audit entry
- * @param translateValue - Optional translator for known values (e.g. status labels)
+ * @param translateValue - Optional translator for known values. For field-aware
+ *   (catalog-based) resolution the caller should create a per-change closure
+ *   that captures `change.field` and delegates to `resolveAuditValue(field, v, t)`
+ *   from `audit-value-resolver`. See ADR-195 / ADR-279.
  */
 export function formatDisplayValue(
   value: string | number | boolean | null,
