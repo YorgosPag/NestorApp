@@ -22,6 +22,8 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { ProjectUpdateSchema, CACHE_KEY_PREFIX } from './project-mutations.types';
 import type {
   ProjectUpdateResponse,
@@ -107,7 +109,26 @@ export async function handleUpdateProject(
     });
   }
 
-  // 8. Audit log
+  // 8. ADR-195 — Entity audit trail (powers per-project History tab)
+  const projectCompanyId = (projectData?.companyId as string | undefined) ?? ctx.companyId;
+  const auditChanges = Object.keys(cleanData).map((field) => ({
+    field,
+    oldValue: (projectData?.[field] as unknown) ?? null,
+    newValue: (cleanData[field] as unknown) ?? null,
+    label: field,
+  }));
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.PROJECT,
+    entityId: projectId,
+    entityName: (projectData?.name as string | undefined) ?? projectId,
+    action: 'updated',
+    changes: auditChanges,
+    performedBy: ctx.uid,
+    performedByName: ctx.email,
+    companyId: projectCompanyId,
+  });
+
+  // 9. Legacy audit log
   await logAuditEvent(ctx, 'data_updated', 'projects', 'api', {
     newValue: {
       type: 'status',
@@ -160,7 +181,27 @@ export async function handleDeleteProject(
   cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
 
-  // 5. Audit log
+  // 5. ADR-195 — Entity audit trail (soft-delete is recorded as `deleted` action)
+  const deleteCompanyId = (projectData?.companyId as string | undefined) ?? ctx.companyId;
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.PROJECT,
+    entityId: projectId,
+    entityName: (projectData?.name as string | undefined) ?? projectId,
+    action: 'deleted',
+    changes: [
+      {
+        field: 'status',
+        oldValue: (projectData?.status as unknown) ?? null,
+        newValue: 'deleted',
+        label: 'Κατάσταση',
+      },
+    ],
+    performedBy: ctx.uid,
+    performedByName: ctx.email,
+    companyId: deleteCompanyId,
+  });
+
+  // 6. Legacy audit log
   await logAuditEvent(ctx, 'soft_deleted', 'projects', 'api', {
     newValue: {
       type: 'status',

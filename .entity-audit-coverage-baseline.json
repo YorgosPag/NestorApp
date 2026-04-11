@@ -1,7 +1,7 @@
 {
   "description": "CHECK 3.17 — files with Firestore writes to audit-tracked collections that do not call EntityAuditService.recordChange(). Ratchet down only.",
-  "generatedAt": "2026-04-11T16:36:11.121Z",
-  "count": 70,
+  "generatedAt": "2026-04-11T16:55:17.632Z",
+  "count": 69,
   "files": [
     "src/app/api/admin/backfill-building-code/route.ts",
     "src/app/api/admin/cleanup-duplicates/route.ts",
@@ -28,7 +28,6 @@
     "src/app/api/fix-projects/route.ts",
     "src/app/api/notifications/preferences/route.ts",
     "src/app/api/projects/[projectId]/efka-declaration/route.ts",
-    "src/app/api/projects/[projectId]/project-mutations.service.ts",
     "src/app/api/projects/add-buildings/route.ts",
     "src/app/api/projects/bootstrap/bootstrap-queries.ts",
     "src/app/api/projects/by-company/[companyId]/route.ts",
