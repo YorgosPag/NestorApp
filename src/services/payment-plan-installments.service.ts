@@ -9,6 +9,8 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type {
   PaymentPlan,
   PaymentPlanStatus,
@@ -113,6 +115,29 @@ export async function resyncTotalAmount(
 
       logger.info(`[PaymentPlanService] Resynced plan ${plan.id}: ${oldTotal} → ${newTotal} (delta: ${delta})`);
     });
+
+    // ADR-195 — Entity audit trail (user-initiated sale price resync)
+    const propSnap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
+    const propCompanyId = (propSnap.data()?.companyId as string | undefined) ?? null;
+    if (propCompanyId) {
+      await EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.PROPERTY,
+        entityId: propertyId,
+        entityName: null,
+        action: 'updated',
+        changes: [
+          {
+            field: 'commercial.paymentSummary',
+            oldValue: activePlan.totalAmount,
+            newValue: newSalePrice,
+            label: 'Αναπροσαρμογή Τιμής Πώλησης',
+          },
+        ],
+        performedBy: updatedBy,
+        performedByName: null,
+        companyId: propCompanyId,
+      });
+    }
 
     return { success: true };
   } catch (error) {

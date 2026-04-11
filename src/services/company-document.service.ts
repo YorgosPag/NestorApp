@@ -19,6 +19,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateCompanyId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import type { AuditFieldChange } from '@/types/audit-trail';
 
 import type { CompanyDocument, CompanySettings, CompanyStatus, CompanyPlan } from '@/types/company';
 
@@ -161,6 +164,18 @@ export async function ensureCompanyDocument(
     // Invalidate cache
     companyExistsCache.delete(companyId);
 
+    // ADR-195 — Entity audit trail (company materialization)
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.COMPANY,
+      entityId: companyId,
+      entityName: docData.name,
+      action: 'created',
+      changes: buildCreationChanges(docData),
+      performedBy: createdBy,
+      performedByName: null,
+      companyId,
+    });
+
     logger.info('[CompanyDocument] Materialized phantom → real document', {
       companyId,
       name: docData.name,
@@ -215,6 +230,18 @@ export async function createCompanyDocument(
     const db = getAdminFirestore();
     await db.collection(COLLECTIONS.COMPANIES).doc(companyId).set(docData);
 
+    // ADR-195 — Entity audit trail (company creation)
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.COMPANY,
+      entityId: companyId,
+      entityName: data.name,
+      action: 'created',
+      changes: buildCreationChanges(docData),
+      performedBy: data.createdBy,
+      performedByName: null,
+      companyId,
+    });
+
     logger.info('[CompanyDocument] Created new company', {
       companyId,
       name: data.name,
@@ -243,4 +270,37 @@ function getDefaultSettings(): CompanySettings {
     timezone: 'Europe/Athens',
     features: {},
   };
+}
+
+/**
+ * Build an `AuditFieldChange[]` for a newly-created company document.
+ *
+ * Creation audit entries carry `oldValue: null` for every tracked field
+ * and `newValue` as the created field. Firestore `FieldValue.serverTimestamp()`
+ * sentinels are serialised via `String()` because they are not primitive at
+ * write time — they only become a real Timestamp on the server.
+ */
+function buildCreationChanges(docData: Record<string, unknown>): AuditFieldChange[] {
+  const tracked: Array<keyof typeof docData> = [
+    'name',
+    'contactId',
+    'status',
+    'plan',
+    'createdBy',
+  ];
+  return tracked.map((field) => {
+    const raw = docData[field];
+    const value =
+      raw === undefined || raw === null
+        ? null
+        : typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean'
+          ? raw
+          : String(raw);
+    return {
+      field: String(field),
+      oldValue: null,
+      newValue: value,
+      label: String(field),
+    };
+  });
 }

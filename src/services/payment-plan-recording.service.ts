@@ -11,6 +11,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generatePaymentRecordId } from '@/services/enterprise-id.service';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type {
   PaymentPlan,
   PaymentRecord,
@@ -151,6 +153,29 @@ export async function recordPayment(
 
       return record;
     });
+
+    // ADR-195 — Entity audit trail (user-initiated payment recorded)
+    const propSnap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
+    const propCompanyId = (propSnap.data()?.companyId as string | undefined) ?? null;
+    if (propCompanyId) {
+      await EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.PROPERTY,
+        entityId: propertyId,
+        entityName: null,
+        action: 'updated',
+        changes: [
+          {
+            field: 'commercial.paymentSummary',
+            oldValue: null,
+            newValue: `Πληρωμή €${input.amount} — δόση #${input.installmentIndex + 1}`,
+            label: 'Καταγραφή Πληρωμής',
+          },
+        ],
+        performedBy: createdBy,
+        performedByName: null,
+        companyId: propCompanyId,
+      });
+    }
 
     logger.info(
       `[PaymentPlanService] Recorded payment ${paymentId}: €${input.amount} for installment #${input.installmentIndex}` +

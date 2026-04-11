@@ -13,6 +13,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getCategoryByCode } from '@/subapps/accounting/config/account-categories';
 import { generateTransactionId } from '@/services/enterprise-id.service';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { CreateInvoiceInput } from '@/subapps/accounting/types/invoice';
 import type { InvoiceIssuer, InvoiceCustomer } from '@/subapps/accounting/types/invoice';
 import type { MyDataIncomeType } from '@/subapps/accounting/types/common';
@@ -163,9 +165,37 @@ export async function updatePropertyTransactionChain(
   transactionChainId: string
 ): Promise<void> {
   await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
+    const propRef = db.collection(COLLECTIONS.PROPERTIES).doc(propertyId);
+    const snap = await propRef.get();
+    const oldChainId =
+      ((snap.data()?.commercial as Record<string, unknown> | undefined)
+        ?.transactionChainId as string | undefined) ?? null;
+    const companyId = (snap.data()?.companyId as string | undefined) ?? null;
+
+    await propRef.update({
       'commercial.transactionChainId': transactionChainId,
     });
+
+    // ADR-195 — Entity audit trail (sales-accounting bridge system write)
+    if (oldChainId !== transactionChainId && companyId) {
+      await EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.PROPERTY,
+        entityId: propertyId,
+        entityName: null,
+        action: 'updated',
+        changes: [
+          {
+            field: 'commercial.transactionChainId',
+            oldValue: oldChainId,
+            newValue: transactionChainId,
+            label: 'Αλυσίδα Συναλλαγής',
+          },
+        ],
+        performedBy: 'system',
+        performedByName: 'Σύστημα',
+        companyId,
+      });
+    }
   }, undefined);
 }
 
