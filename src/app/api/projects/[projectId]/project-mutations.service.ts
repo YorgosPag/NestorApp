@@ -197,7 +197,7 @@ export async function handleDeleteProject(
     changes: [
       {
         field: 'status',
-        oldValue: toAuditPrimitive(projectData?.status),
+        oldValue: (projectData?.status as string | undefined) ?? null,
         newValue: 'deleted',
         label: 'Κατάσταση',
       },
