@@ -17,7 +17,10 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import type { AuditFieldChange } from '@/types/audit-trail';
 import type {
   InvoiceEntityResult,
   InvoiceEntity,
@@ -180,6 +183,30 @@ export async function autoEnrichFromInvoice(
 
   await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updatePayload);
   await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'auto_enrich_invoice', updatePayload);
+
+  // ADR-195: canonical entity audit trail (SSoT)
+  const enrichmentChanges: AuditFieldChange[] = Object.entries(updatePayload)
+    .filter(([k]) => k !== 'updatedAt' && k !== 'lastModifiedBy')
+    .map(([field, value]) => ({
+      field,
+      oldValue: null,
+      newValue: typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+        ? value
+        : JSON.stringify(value),
+      label: field,
+    }));
+  if (enrichmentChanges.length > 0) {
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: contactId,
+      entityName: displayName,
+      action: 'updated',
+      changes: enrichmentChanges,
+      performedBy: ctx.channelSenderId || 'system',
+      performedByName: buildAttribution(ctx),
+      companyId: ctx.companyId,
+    });
+  }
 
   logger.info('Contact auto-enriched from invoice', {
     contactId,

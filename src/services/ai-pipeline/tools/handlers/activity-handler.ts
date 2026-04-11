@@ -10,6 +10,9 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import {
   type AgenticContext,
   type ToolHandler,
@@ -18,6 +21,26 @@ import {
   buildAttribution,
   logger,
 } from '../executor-shared';
+
+/** ADR-195: local wrapper that records a CONTACT entity audit entry (SSoT). */
+async function recordContactAudit(
+  ctx: AgenticContext,
+  contactId: string,
+  entityName: string | null,
+  action: AuditAction,
+  changes: AuditFieldChange[],
+): Promise<void> {
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.CONTACT,
+    entityId: contactId,
+    entityName,
+    action,
+    changes,
+    performedBy: ctx.channelSenderId || 'system',
+    performedByName: buildAttribution(ctx),
+    companyId: ctx.companyId,
+  });
+}
 
 // KAD code validation — lazy-loaded to avoid importing 10K entries at module level
 let kadCodeSet: Set<string> | null = null;
@@ -145,6 +168,9 @@ export class ActivityHandler implements ToolHandler {
     await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', {
       action: 'add_activity', kadCode, activityType,
     });
+    await recordContactAudit(ctx, contactId, String(data.displayName ?? null) || null, 'updated', [
+      { field: 'activities', oldValue: null, newValue: `+${kadCode} (${activityType})`, label: 'Δραστηριότητα ΚΑΔ' },
+    ]);
 
     logger.info('KAD activity added via AI agent', {
       contactId, kadCode, activityType, requestId: ctx.requestId,
@@ -209,6 +235,9 @@ export class ActivityHandler implements ToolHandler {
     await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', {
       action: 'remove_activity', kadCode,
     });
+    await recordContactAudit(ctx, contactId, String(data.displayName ?? null) || null, 'updated', [
+      { field: 'activities', oldValue: kadCode, newValue: null, label: 'Δραστηριότητα ΚΑΔ' },
+    ]);
 
     return { success: true, data: { contactId, removedCode: kadCode, remaining: filtered.length } };
   }
@@ -255,6 +284,9 @@ export class ActivityHandler implements ToolHandler {
     await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', {
       action: 'set_primary_activity', kadCode,
     });
+    await recordContactAudit(ctx, contactId, String(data.displayName ?? null) || null, 'updated', [
+      { field: 'activities', oldValue: null, newValue: `primary=${kadCode}`, label: 'Κύρια δραστηριότητα' },
+    ]);
 
     return { success: true, data: { contactId, primaryCode: kadCode, totalActivities: activities.length } };
   }

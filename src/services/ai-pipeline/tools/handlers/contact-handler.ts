@@ -1,8 +1,11 @@
 /** CONTACT HANDLER — Create, append & update contact info + ESCO data */
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 import { toGreekTitleCase } from '@/utils/greek-text';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import type { AuditFieldChange } from '@/types/audit-trail';
 import { CONTACT_FIELD_TYPES, CONTACT_TYPES } from '../agentic-tool-definitions';
 import type { ContactFieldType, ContactTypeEnum } from '../agentic-tool-definitions';
 import type { SocialMediaInfo, AddressInfo } from '@/types/contacts/contracts';
@@ -47,7 +50,6 @@ const PHONE_SERVICE_MAP: Record<string, string> = {
   'helpdesk': 'helpdesk', 'κέντρο': 'helpdesk',
   'fax': 'fax', 'φαξ': 'fax',
 };
-
 // ── EMAIL TYPE MAPS ──
 const EMAIL_INDIVIDUAL_MAP: Record<string, string> = {
   'προσωπικό': 'personal', 'personal': 'personal', 'προσωπικά': 'personal',
@@ -66,7 +68,6 @@ const EMAIL_SERVICE_MAP: Record<string, string> = {
   'γραμματεία': 'secretariat', 'secretariat': 'secretariat',
   'πληροφορίες': 'info', 'info': 'info',
 };
-
 // ── WEBSITE TYPE MAPS ──
 const WEBSITE_INDIVIDUAL_MAP: Record<string, string> = {
   'personal': 'personal', 'προσωπικό': 'personal', 'προσωπική': 'personal',
@@ -84,7 +85,6 @@ const WEBSITE_SERVICE_MAP: Record<string, string> = {
   'eservices': 'eServices', 'ηλεκτρονικές': 'eServices',
   'portal': 'portal', 'πύλη': 'portal',
 };
-
 // ── SOCIAL MEDIA PLATFORM MAP (same for all entity types) ──
 const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
   'facebook': 'facebook', 'fb': 'facebook',
@@ -97,7 +97,6 @@ const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
   'whatsapp': 'other',
   'telegram': 'other',
 };
-
 // ── ENTITY-AWARE DEFAULTS ──
 const PHONE_DEFAULTS: Record<ContactEntity, string> = {
   individual: 'mobile', company: 'main', service: 'main',
@@ -108,9 +107,7 @@ const EMAIL_DEFAULTS: Record<ContactEntity, string> = {
 const WEBSITE_DEFAULTS: Record<ContactEntity, string> = {
   individual: 'personal', company: 'corporate', service: 'official',
 };
-
 // ── RESOLVER FUNCTIONS ──
-
 function resolvePhoneType(label: string, entity: ContactEntity, phoneNumber: string): string {
   const map = entity === 'company' ? PHONE_COMPANY_MAP
     : entity === 'service' ? PHONE_SERVICE_MAP
@@ -122,21 +119,18 @@ function resolvePhoneType(label: string, entity: ContactEntity, phoneNumber: str
   }
   return PHONE_DEFAULTS[entity];
 }
-
 function resolveEmailType(label: string, entity: ContactEntity): string {
   const map = entity === 'company' ? EMAIL_COMPANY_MAP
     : entity === 'service' ? EMAIL_SERVICE_MAP
     : EMAIL_INDIVIDUAL_MAP;
   return map[label] ?? EMAIL_DEFAULTS[entity];
 }
-
 function resolveWebsiteType(label: string, entity: ContactEntity): string {
   const map = entity === 'company' ? WEBSITE_COMPANY_MAP
     : entity === 'service' ? WEBSITE_SERVICE_MAP
     : WEBSITE_INDIVIDUAL_MAP;
   return map[label] ?? WEBSITE_DEFAULTS[entity];
 }
-
 /** Determine entity type from Firestore contact data */
 function getContactEntity(contactData: Record<string, unknown>): ContactEntity {
   const t = String(contactData.type ?? 'individual');
@@ -144,7 +138,6 @@ function getContactEntity(contactData: Record<string, unknown>): ContactEntity {
   if (t === 'service') return 'service';
   return 'individual';
 }
-
 /** Check if a label was resolved via an entity-aware map (to decide if label should be stored) */
 function resolvedInMap(label: string, entity: ContactEntity, commType: 'phone' | 'email' | 'website'): boolean {
   const maps: Record<string, Record<ContactEntity, Record<string, string>>> = {
@@ -243,6 +236,26 @@ export class ContactHandler implements ToolHandler {
       });
 
       await auditWrite(ctx, COLLECTIONS.CONTACTS, result.contactId, 'create', { displayName: result.displayName, type: contactType });
+
+      // ADR-195: canonical entity audit trail (SSoT)
+      const creationChanges: AuditFieldChange[] = [
+        { field: 'displayName', oldValue: null, newValue: result.displayName, label: 'Όνομα' },
+        { field: 'type', oldValue: null, newValue: contactType, label: 'Τύπος' },
+      ];
+      if (phone) creationChanges.push({ field: 'phones', oldValue: null, newValue: phone, label: 'Τηλέφωνο' });
+      if (email) creationChanges.push({ field: 'emails', oldValue: null, newValue: email, label: 'Email' });
+      if (companyName) creationChanges.push({ field: 'companyName', oldValue: null, newValue: companyName, label: 'Επωνυμία' });
+      await EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.CONTACT,
+        entityId: result.contactId,
+        entityName: result.displayName,
+        action: 'created',
+        changes: creationChanges,
+        performedBy: ctx.channelSenderId || 'system',
+        performedByName: buildAttribution(ctx),
+        companyId: ctx.companyId,
+      });
+
       // FIND-K: Index for Global Search (non-fatal)
       try {
         const { indexContactForSearch } = await import('@/lib/search/search-indexer');
@@ -437,6 +450,18 @@ export class ContactHandler implements ToolHandler {
     await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updatePayload);
 
     await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'append', updatePayload);
+
+    // ADR-195: canonical entity audit trail (SSoT)
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: contactId,
+      entityName: String(contactData.displayName ?? null) || null,
+      action: 'updated',
+      changes: [{ field: fieldType, oldValue: null, newValue: value, label: fieldType }],
+      performedBy: ctx.channelSenderId || 'system',
+      performedByName: buildAttribution(ctx),
+      companyId: ctx.companyId,
+    });
 
     const { emitEntitySyncSignal } = await import(
       '@/services/ai-pipeline/shared/contact-lookup'

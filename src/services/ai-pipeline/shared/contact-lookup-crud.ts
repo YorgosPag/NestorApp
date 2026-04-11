@@ -16,9 +16,12 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generateContactId, generateCompanyId } from '@/services/enterprise-id.service';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import type { AuditFieldChange } from '@/types/audit-trail';
 import type { EntitySyncAction, SyncEntityType } from '@/services/realtime/types';
 import { SYNC_SOURCE_AI_AGENT } from '@/services/realtime/types';
 
@@ -76,7 +79,30 @@ export async function updateContactField(
     updateData[field] = value;
   }
 
+  // ADR-195: canonical entity audit trail (SSoT) — fetch existing for companyId + displayName + oldValue
+  const existingSnap = await docRef.get();
+  const existingData = existingSnap.exists ? (existingSnap.data() ?? {}) : {};
+  const oldValue = typeof existingData[field] === 'string'
+    || typeof existingData[field] === 'number'
+    || typeof existingData[field] === 'boolean'
+    ? existingData[field] as string | number | boolean
+    : null;
+  const companyId = String(existingData.companyId ?? '');
+
   await docRef.update(updateData);
+
+  if (companyId) {
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: contactId,
+      entityName: String(existingData.displayName ?? null) || null,
+      action: 'updated',
+      changes: [{ field, oldValue, newValue: value, label: field }],
+      performedBy: updatedBy,
+      performedByName: updatedBy,
+      companyId,
+    });
+  }
 
   logger.info('Contact field updated', {
     contactId,
@@ -121,7 +147,25 @@ export async function removeContactField(
     updateData[field] = null;
   }
 
+  // ADR-195: canonical entity audit trail (SSoT) — fetch existing for companyId
+  const existingSnap = await docRef.get();
+  const existingData = existingSnap.exists ? (existingSnap.data() ?? {}) : {};
+  const companyId = String(existingData.companyId ?? '');
+
   await docRef.update(updateData);
+
+  if (companyId) {
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: contactId,
+      entityName: String(existingData.displayName ?? null) || null,
+      action: 'updated',
+      changes: [{ field, oldValue: null, newValue: null, label: `Διαγραφή ${field}` }],
+      performedBy: updatedBy,
+      performedByName: updatedBy,
+      companyId,
+    });
+  }
 
   logger.info('Contact field removed', {
     contactId,
@@ -273,6 +317,25 @@ export async function createContactServerSide(
     .collection(COLLECTIONS.CONTACTS)
     .doc(contactId)
     .set(contactDoc);
+
+  // ADR-195: canonical entity audit trail (SSoT)
+  const creationChanges: AuditFieldChange[] = [
+    { field: 'displayName', oldValue: null, newValue: displayName, label: 'Όνομα' },
+    { field: 'type', oldValue: null, newValue: params.type, label: 'Τύπος' },
+  ];
+  if (params.phone) creationChanges.push({ field: 'phones', oldValue: null, newValue: params.phone, label: 'Τηλέφωνο' });
+  if (params.email) creationChanges.push({ field: 'emails', oldValue: null, newValue: params.email, label: 'Email' });
+  if (params.companyName) creationChanges.push({ field: 'companyName', oldValue: null, newValue: params.companyName, label: 'Επωνυμία' });
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.CONTACT,
+    entityId: contactId,
+    entityName: displayName,
+    action: 'created',
+    changes: creationChanges,
+    performedBy: params.createdBy,
+    performedByName: params.createdBy,
+    companyId: params.companyId,
+  });
 
   logger.info('Contact created via Admin SDK', {
     contactId,

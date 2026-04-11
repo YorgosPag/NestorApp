@@ -12,6 +12,9 @@ import { getBankByIBAN } from '@/constants/greek-banks';
 import { formatIBAN } from '@/types/contacts/banking';
 import type { BankAccountInput, AccountType, CurrencyCode } from '@/types/contacts/banking';
 import { BankAccountsServerService } from '@/services/banking/bank-accounts-server.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import type { AuditFieldChange } from '@/types/audit-trail';
 import { BANK_ACCOUNT_OPERATIONS } from '../agentic-tool-definitions';
 import type { BankAccountOperation } from '../agentic-tool-definitions';
 import {
@@ -22,6 +25,24 @@ import {
   buildAttribution,
   logger,
 } from '../executor-shared';
+
+/** ADR-195: local wrapper for CONTACT entity audit (banking subcollection mutations). */
+async function recordBankingAudit(
+  ctx: AgenticContext,
+  contactId: string,
+  changes: AuditFieldChange[],
+): Promise<void> {
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.CONTACT,
+    entityId: contactId,
+    entityName: null,
+    action: 'updated',
+    changes,
+    performedBy: ctx.channelSenderId || 'system',
+    performedByName: buildAttribution(ctx),
+    companyId: ctx.companyId,
+  });
+}
 
 // ============================================================================
 // CONSTANTS
@@ -121,6 +142,9 @@ export class BankingHandler implements ToolHandler {
     await auditWrite(ctx, 'bank_accounts', result.data.accountId, 'create', {
       contactId, iban, bankName,
     });
+    await recordBankingAudit(ctx, contactId, [
+      { field: 'bankAccounts', oldValue: null, newValue: `${bankName} ${formatIBAN(iban)}`, label: 'Τραπεζικός λογαριασμός' },
+    ]);
 
     logger.info('Bank account added via AI agent', {
       contactId, accountId: result.data.accountId, requestId: ctx.requestId,
@@ -195,6 +219,9 @@ export class BankingHandler implements ToolHandler {
     }
 
     await auditWrite(ctx, 'bank_accounts', accountId, 'delete', { contactId });
+    await recordBankingAudit(ctx, contactId, [
+      { field: 'bankAccounts', oldValue: accountId, newValue: null, label: 'Τραπεζικός λογαριασμός' },
+    ]);
 
     logger.info('Bank account deleted via AI agent', {
       contactId, accountId, requestId: ctx.requestId,
@@ -241,6 +268,9 @@ export class BankingHandler implements ToolHandler {
     await batch.commit();
 
     await auditWrite(ctx, 'bank_accounts', accountId, 'set_primary', { contactId });
+    await recordBankingAudit(ctx, contactId, [
+      { field: 'primaryBankAccount', oldValue: null, newValue: accountId, label: 'Κύριος λογαριασμός' },
+    ]);
 
     return { success: true, data: { accountId, isPrimary: true } };
   }

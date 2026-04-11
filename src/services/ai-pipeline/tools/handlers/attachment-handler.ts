@@ -9,6 +9,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_STATUS, ENTITY_TYPES } from '@/config/domain-constants';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import { ATTACHMENT_PURPOSES } from '../agentic-tool-definitions';
 import type { AttachmentPurpose } from '../agentic-tool-definitions';
 import {
@@ -101,6 +102,17 @@ export class AttachmentHandler implements ToolHandler {
     await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'attach_profile_photo', {
       fileRecordId, photoURL: fileRecord.downloadUrl,
     });
+    // ADR-195: canonical entity audit trail (SSoT)
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: contactId,
+      entityName: contactDisplayName,
+      action: 'updated',
+      changes: [{ field: 'photoURL', oldValue: null, newValue: fileRecord.downloadUrl, label: 'Φωτογραφία προφίλ' }],
+      performedBy: ctx.channelSenderId || 'system',
+      performedByName: attribution,
+      companyId: ctx.companyId,
+    });
     emitSyncSignalIfMapped(COLLECTIONS.CONTACTS, 'UPDATED', contactId, ctx.companyId);
 
     logger.info('Profile photo attached to contact', {
@@ -136,6 +148,17 @@ export class AttachmentHandler implements ToolHandler {
 
     await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'attach_gallery_photo', {
       fileRecordId,
+    });
+    // ADR-195: canonical entity audit trail (SSoT)
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: contactId,
+      entityName: contactDisplayName,
+      action: 'updated',
+      changes: [{ field: 'multiplePhotoURLs', oldValue: null, newValue: fileRecord.downloadUrl, label: 'Φωτογραφία συλλογής' }],
+      performedBy: ctx.channelSenderId || 'system',
+      performedByName: attribution,
+      companyId: ctx.companyId,
     });
     emitSyncSignalIfMapped(COLLECTIONS.CONTACTS, 'UPDATED', contactId, ctx.companyId);
 

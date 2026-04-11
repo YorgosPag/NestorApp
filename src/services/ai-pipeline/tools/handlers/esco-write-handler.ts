@@ -8,6 +8,9 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import type { AuditFieldChange } from '@/types/audit-trail';
 import {
   type AgenticContext,
   type ToolResult,
@@ -160,6 +163,33 @@ export async function executeSetContactEsco(
 
   await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updateData);
   await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', updateData);
+
+  // ADR-195: canonical entity audit trail (SSoT)
+  const existingData = docSnap.data() as Record<string, unknown>;
+  const escoChanges: AuditFieldChange[] = [];
+  if (profession) {
+    escoChanges.push({
+      field: 'profession',
+      oldValue: typeof existingData.profession === 'string' ? existingData.profession : null,
+      newValue: profession,
+      label: 'Επάγγελμα',
+    });
+  }
+  if (updateData.escoSkills) {
+    escoChanges.push({ field: 'escoSkills', oldValue: null, newValue: changes.join(' | '), label: 'Δεξιότητες ESCO' });
+  }
+  if (escoChanges.length > 0) {
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: contactId,
+      entityName: String(existingData.displayName ?? null) || null,
+      action: 'updated',
+      changes: escoChanges,
+      performedBy: ctx.channelSenderId || 'system',
+      performedByName: buildAttribution(ctx),
+      companyId: ctx.companyId,
+    });
+  }
 
   const { emitEntitySyncSignal } = await import(
     '@/services/ai-pipeline/shared/contact-lookup'
