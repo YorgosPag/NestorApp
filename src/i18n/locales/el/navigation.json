@@ -286,7 +286,8 @@
     "aiInbox": "AI Εισερχόμενα",
     "operatorInbox": "Εισερχόμενα Χειριστών",
     "setup": "Ρύθμιση Admin",
-    "roleManagement": "Διαχείριση Ρόλων"
+    "roleManagement": "Διαχείριση Ρόλων",
+    "auditLog": "Ιστορικό Δραστηριότητας"
   },
   "legal": {
     "privacyPolicy": "Πολιτική Απορρήτου",

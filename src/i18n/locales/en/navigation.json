@@ -286,7 +286,8 @@
     "aiInbox": "AI Inbox",
     "operatorInbox": "Operator Inbox",
     "setup": "Admin Setup",
-    "roleManagement": "Role Management"
+    "roleManagement": "Role Management",
+    "auditLog": "Audit Log"
   },
   "legal": {
     "privacyPolicy": "Privacy Policy",

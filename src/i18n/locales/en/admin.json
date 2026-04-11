@@ -592,5 +592,22 @@
       "removeSuccess": "Member removed successfully",
       "updateHint": "To update, remove and re-add the member with new settings."
     }
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "description": "All changes made to the application by users in your company.",
+    "refresh": "Refresh",
+    "filters": {
+      "label": "Audit log filters",
+      "entityType": "Entity Type",
+      "allEntityTypes": "All types",
+      "action": "Action",
+      "allActions": "All actions",
+      "fromDate": "From date",
+      "toDate": "To date",
+      "performedBy": "User",
+      "performedByPlaceholder": "Search by name or UID...",
+      "reset": "Reset filters"
+    }
   }
 }

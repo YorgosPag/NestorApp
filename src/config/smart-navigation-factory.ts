@@ -68,6 +68,7 @@ import {
   PieChart,
   ShoppingCart,
   Banknote,
+  History,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -652,6 +653,15 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 smartConfig: {
                   priority: 'medium',
                   analyticsKey: 'nav_role_management',
+                  permissions: ['admin_access']
+                }
+              },
+              {
+                icon: History,
+                href: '/admin/audit-log',
+                smartConfig: {
+                  priority: 'medium',
+                  analyticsKey: 'nav_audit_log',
                   permissions: ['admin_access']
                 }
               },

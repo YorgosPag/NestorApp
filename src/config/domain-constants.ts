@@ -784,6 +784,7 @@ export const API_ROUTES = {
   AUDIT_TRAIL: {
     RECORD: '/api/audit-trail/record',
     BY_ENTITY: (entityType: string, entityId: string) => `/api/audit-trail/${entityType}/${entityId}` as const,
+    GLOBAL: '/api/audit-trail/global',
   },
 
   // ── Misc ──────────────────────────────────────────────────────────────

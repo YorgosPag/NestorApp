@@ -1688,6 +1688,20 @@
       ]
     },
     {
+      "collectionGroup": "entity_audit_trail",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "accounting_invoices",
       "queryScope": "COLLECTION",
       "fields": [
