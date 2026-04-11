@@ -1,73 +1,37 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Share Dialog
+ * 🏢 ENTERPRISE: Share Dialog (thin wrapper)
  * =============================================================================
  *
- * Modal dialog for creating shareable file links.
- * Supports expiration, password protection, max downloads, and notes.
+ * Thin wrapper over `ShareSurfaceShell` + `LinkTokenPermissionPanel` that
+ * injects the file-share service as the submit function and maps the
+ * `files.share.*` i18n namespace into the shared surface labels.
  *
  * @module components/shared/files/ShareDialog
- * @enterprise ADR-191 - Enterprise Document Management System (Phase 4.2)
+ * @enterprise ADR-147 Unified Share Surface (Phase B) — supersedes ADR-191 Phase 4.2 dialog
  */
 
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  Share2,
-  Copy,
-  Check,
-  Clock,
-  Lock,
-  Download,
-  MessageSquare,
-} from 'lucide-react';
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { cn } from '@/lib/utils';
-import { Spinner } from '@/components/ui/spinner';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ShareSurfaceShell, useShareFlow } from '@/components/ui/sharing';
+import { LinkTokenPermissionPanel } from '@/components/ui/sharing/panels/LinkTokenPermissionPanel';
+import {
+  INITIAL_LINK_TOKEN_DRAFT,
+  type LinkTokenDraft,
+  type LinkTokenResultData,
+} from '@/components/ui/sharing/panels/link-token/types';
 import { createFileShareWithPolicy } from '@/services/filesystem/file-mutation-gateway';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import '@/lib/design-system';
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface ShareDialogProps {
-  /** Whether the dialog is open */
   open: boolean;
-  /** Close handler */
   onOpenChange: (open: boolean) => void;
-  /** File ID to share */
   fileId: string;
-  /** File display name (for UI) */
   fileName: string;
-  /** Current user ID */
   userId: string;
-  /** Company ID */
   companyId?: string;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function ShareDialog({
   open,
@@ -76,232 +40,92 @@ export function ShareDialog({
   fileName,
   userId,
   companyId,
-}: ShareDialogProps) {
+}: ShareDialogProps): React.ReactElement {
   const { t } = useTranslation('files');
-  const colors = useSemanticColors();
+  const { t: tShell } = useTranslation('common-shared');
 
-  const EXPIRATION_OPTIONS = useMemo(() => [
-    { value: '1', label: t('share.expirationOptions.1hour') },
-    { value: '24', label: t('share.expirationOptions.24hours') },
-    { value: '72', label: t('share.expirationOptions.3days') },
-    { value: '168', label: t('share.expirationOptions.1week') },
-    { value: '720', label: t('share.expirationOptions.30days') },
-  ], [t]);
+  const expirationLabelFor = useCallback(
+    (hours: string): string => {
+      const map: Record<string, string> = {
+        '1': t('share.expirationOptions.1hour'),
+        '24': t('share.expirationOptions.24hours'),
+        '72': t('share.expirationOptions.3days'),
+        '168': t('share.expirationOptions.1week'),
+        '720': t('share.expirationOptions.30days'),
+      };
+      return map[hours] ?? hours;
+    },
+    [t],
+  );
 
-  const [expiresInHours, setExpiresInHours] = useState('72');
-  const [password, setPassword] = useState('');
-  const [maxDownloads, setMaxDownloads] = useState('0');
-  const [note, setNote] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const { copy, copied } = useCopyToClipboard();
-
-  const handleCreate = useCallback(async () => {
-    setCreating(true);
-    try {
+  const submit = useCallback(
+    async (draft: LinkTokenDraft): Promise<LinkTokenResultData> => {
+      const maxDownloadsCount = parseInt(draft.maxDownloads, 10);
       const token = await createFileShareWithPolicy({
         fileId,
         createdBy: userId,
-        expiresInHours: parseInt(expiresInHours, 10),
-        password: password.trim() || undefined,
-        maxDownloads: parseInt(maxDownloads, 10),
-        note: note.trim() || undefined,
+        expiresInHours: parseInt(draft.expiresInHours, 10),
+        password: draft.password.trim() || undefined,
+        maxDownloads: maxDownloadsCount,
+        note: draft.note.trim() || undefined,
         companyId,
       });
+      return {
+        url: `${window.location.origin}/shared/${token}`,
+        expiresInHoursLabel: expirationLabelFor(draft.expiresInHours),
+        maxDownloadsCount,
+        passwordProtected: draft.password.trim().length > 0,
+      };
+    },
+    [fileId, userId, companyId, expirationLabelFor],
+  );
 
-      const url = `${window.location.origin}/shared/${token}`;
-      setShareUrl(url);
-    } catch (err) {
-      console.error('Failed to create share link', err); // eslint-disable-line no-console
-    } finally {
-      setCreating(false);
-    }
-  }, [fileId, userId, expiresInHours, password, maxDownloads, note, companyId]);
-
-  const handleCopy = useCallback(async () => {
-    if (!shareUrl) return;
-    await copy(shareUrl);
-  }, [shareUrl, copy]);
+  const flow = useShareFlow<LinkTokenDraft, LinkTokenResultData>({
+    initialDraft: INITIAL_LINK_TOKEN_DRAFT,
+    submit,
+  });
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
-    // Reset state after close animation
+    // Reset state after close animation (preserves ADR-191 Phase 4.2 UX)
     setTimeout(() => {
-      setShareUrl(null);
-      setPassword('');
-      setNote('');
-      setMaxDownloads('0');
+      flow.reset();
     }, 200);
-  }, [onOpenChange]);
+  }, [onOpenChange, flow]);
+
+  const entity = useMemo(
+    () => ({
+      kind: 'file' as const,
+      id: fileId,
+      title: t('share.title'),
+      subtitle: fileName,
+      companyId,
+    }),
+    [fileId, fileName, companyId, t],
+  );
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
-            {t('share.title')}
-          </DialogTitle>
-          <DialogDescription className="truncate">
-            {fileName}
-          </DialogDescription>
-        </DialogHeader>
-
-        {!shareUrl ? (
-          /* Create share form */
-          <form
-            onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
-            className="space-y-4 py-2"
-          >
-            {/* Expiration */}
-            <fieldset className="space-y-1.5">
-              <label className="text-sm font-medium flex items-center gap-1.5">
-                <Clock className={cn("h-3.5 w-3.5", colors.text.muted)} />
-                {t('share.expiration')}
-              </label>
-              <Select value={expiresInHours} onValueChange={setExpiresInHours}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXPIRATION_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </fieldset>
-
-            {/* Password (optional) */}
-            <fieldset className="space-y-1.5">
-              <label className="text-sm font-medium flex items-center gap-1.5">
-                <Lock className={cn("h-3.5 w-3.5", colors.text.muted)} />
-                {t('share.password')}
-                <span className={cn("text-xs font-normal", colors.text.muted)}>
-                  ({t('share.optional')})
-                </span>
-              </label>
-              <input
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('share.passwordPlaceholder')}
-                className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </fieldset>
-
-            {/* Max downloads */}
-            <fieldset className="space-y-1.5">
-              <label className="text-sm font-medium flex items-center gap-1.5">
-                <Download className={cn("h-3.5 w-3.5", colors.text.muted)} />
-                {t('share.maxDownloads')}
-              </label>
-              <Select value={maxDownloads} onValueChange={setMaxDownloads}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">{t('share.unlimited')}</SelectItem>
-                  <SelectItem value="1">1</SelectItem>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-            </fieldset>
-
-            {/* Note */}
-            <fieldset className="space-y-1.5">
-              <label className="text-sm font-medium flex items-center gap-1.5">
-                <MessageSquare className={cn("h-3.5 w-3.5", colors.text.muted)} />
-                {t('share.note')}
-                <span className={cn("text-xs font-normal", colors.text.muted)}>
-                  ({t('share.optional')})
-                </span>
-              </label>
-              <input
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder={t('share.notePlaceholder')}
-                className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </fieldset>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>
-                {t('share.cancel')}
-              </Button>
-              <Button type="submit" disabled={creating}>
-                {creating ? (
-                  <Spinner size="small" color="inherit" className="mr-2" />
-                ) : (
-                  <Share2 className="h-4 w-4 mr-2" />
-                )}
-                {t('share.create')}
-              </Button>
-            </DialogFooter>
-          </form>
-        ) : (
-          /* Share URL created */
-          <section className="space-y-4 py-2">
-            <p className="text-sm text-green-600 font-medium text-center"> {/* eslint-disable-line design-system/enforce-semantic-colors */}
-              {t('share.created')}
-            </p>
-
-            {/* URL display + copy */}
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={shareUrl}
-                readOnly
-                className="flex-1 px-3 py-2 text-xs border rounded-md bg-muted truncate"
-                onClick={(e) => (e.target as HTMLInputElement).select()}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopy}
-                className={cn('flex-shrink-0', copied && 'text-green-600')} // eslint-disable-line design-system/enforce-semantic-colors
-              >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-
-            {/* Info */}
-            <footer className={cn("text-xs space-y-1", colors.text.muted)}>
-              <p className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {t('share.expiresIn', { label: EXPIRATION_OPTIONS.find(o => o.value === expiresInHours)?.label })}
-              </p>
-              {password && (
-                <p className="flex items-center gap-1">
-                  <Lock className="h-3 w-3" />
-                  {t('share.passwordProtected')}
-                </p>
-              )}
-              {parseInt(maxDownloads, 10) > 0 && (
-                <p className="flex items-center gap-1">
-                  <Download className="h-3 w-3" />
-                  {t('share.maxDownloadsLabel', { count: parseInt(maxDownloads, 10) })}
-                </p>
-              )}
-            </footer>
-
-            <DialogFooter>
-              <Button onClick={handleClose}>
-                {t('share.close')}
-              </Button>
-            </DialogFooter>
-          </section>
-        )}
-      </DialogContent>
-    </Dialog>
+    <ShareSurfaceShell
+      open={open}
+      onOpenChange={(next) => (next ? onOpenChange(true) : handleClose())}
+      entity={entity}
+      labels={{
+        title: t('share.title'),
+        subtitle: fileName,
+        closeLabel: t('share.close'),
+        errorPrefix: tShell('shareSurface.errorPrefix'),
+      }}
+      status={flow.state.status}
+      error={flow.state.error}
+    >
+      <LinkTokenPermissionPanel
+        entity={entity}
+        draft={flow.draft}
+        onDraftChange={flow.setDraft}
+        onSubmit={flow.submit}
+        onCancel={handleClose}
+        state={flow.state}
+      />
+    </ShareSurfaceShell>
   );
 }
