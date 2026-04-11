@@ -270,8 +270,7 @@
       "@radix-ui/react-compose-refs": "1.1.2",
       "import-in-the-middle": "3.0.1",
       "require-in-the-middle": "8.0.1",
-      "lru-memoizer": "3.0.0",
-      "unzipper": "0.12.3"
+      "lru-memoizer": "3.0.0"
     },
     "patchedDependencies": {
       "@radix-ui/react-presence@1.1.5": "patches/@radix-ui__react-presence@1.1.5.patch",
