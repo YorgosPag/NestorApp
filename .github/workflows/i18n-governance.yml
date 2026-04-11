@@ -69,17 +69,18 @@ jobs:
       # pure Node.js (no runtime deps) that walks the repo filesystem. This
       # keeps the workflow under 30s and independent of pnpm-lock churn.
 
-      - name: 🔍 CHECK 3.13 — i18n runtime resolver reachability
+      - name: 🔍 CHECK 3.13 — i18n runtime resolver reachability (full scan)
         run: node scripts/check-i18n-resolver-reachability.js --all
 
       - name: 🔍 CHECK 3.14 — Audit value catalogs SSoT parity
         run: node scripts/check-audit-value-catalogs.js
 
-      - name: 🔍 CHECK 3.8 — Missing i18n keys (ratchet)
-        run: node scripts/check-i18n-missing-keys.js --all || true
-        # CHECK 3.8 still has a legacy baseline of 4762 — we run it for
-        # visibility but do not fail the build until the baseline reaches 0.
-        # The pre-commit hook handles per-commit ratchet enforcement.
+      # Note: CHECK 3.8 (missing i18n keys) and CHECK 3.12 (option-label
+      # integrity) are per-file scanners driven by staged filenames; they do
+      # not support a repo-wide --all mode and have legacy baselines that the
+      # pre-commit hook enforces ratchet-style. Running them in CI without a
+      # file list would be a no-op, so they are intentionally omitted here
+      # and enforced solely by Layer 1 (tracked pre-commit hook).
 
       - name: ✅ Summary
         if: success()
