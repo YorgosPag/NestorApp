@@ -74,7 +74,7 @@ export function useGlobalAuditTrail({
   const filtersKey = JSON.stringify(filters ?? {});
 
   const fetchEntries = useCallback(
-    async (cursor?: string) => {
+    async (offset?: string) => {
       if (!user) return;
 
       setIsLoading(true);
@@ -82,7 +82,7 @@ export function useGlobalAuditTrail({
 
       try {
         const params = new URLSearchParams({ limit: String(pageSize) });
-        if (cursor) params.set('startAfter', cursor);
+        if (offset) params.set('offset', offset);
         if (filters?.entityType) params.set('entityType', filters.entityType);
         if (filters?.performedBy) params.set('performedBy', filters.performedBy);
         if (filters?.action) params.set('action', filters.action);
@@ -95,7 +95,7 @@ export function useGlobalAuditTrail({
 
         if (!isMounted.current) return;
 
-        if (cursor) {
+        if (offset) {
           setEntries((prev) => [...prev, ...data.entries]);
         } else {
           setEntries(data.entries);

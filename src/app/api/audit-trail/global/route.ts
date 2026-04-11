@@ -6,23 +6,28 @@
  *
  * Supports optional filters:
  *   - `entityType` — filter to a single entity type (in-memory)
- *   - `performedBy` — filter to a specific user UID (in-memory)
+ *   - `performedBy` — free-text match on user UID or display name (in-memory)
  *   - `action`     — filter to a specific audit action (in-memory)
- *   - `fromDate`   — ISO date, inclusive (server-side via `timestamp >=`)
- *   - `toDate`     — ISO date, inclusive (server-side via `timestamp <=`)
+ *   - `fromDate`   — ISO date, inclusive (in-memory)
+ *   - `toDate`     — ISO date, inclusive (in-memory)
  *   - `limit`      — 1..100, default 20
- *   - `startAfter` — cursor (audit doc ID)
+ *   - `offset`     — 0..N, default 0 (offset-based pagination)
  *
  * Tenant isolation is automatic via `ctx.companyId` — no admin can read
  * another company's audit trail.
  *
- * **Indexing strategy (MVP)**:
- *   - Single composite index: `(companyId, timestamp desc)` — base query
- *   - Date-range filters use the timestamp field (no extra index)
- *   - Entity/action/user filters are applied in-memory AFTER fetching.
- *     To keep pagination stable under filters, we overfetch by 5x when
- *     at least one in-memory filter is active. Acceptable for admin
- *     workloads; can be upgraded to dedicated composite indexes later.
+ * **Indexing strategy (MVP, works without composite index deploy)**:
+ *   The server query is intentionally simple — a single-field equality
+ *   filter on `companyId` with a hard cap of `SCAN_CAP` documents. All
+ *   other filters (entityType, action, user, date range) and sorting are
+ *   applied in-memory. This avoids the composite-index requirement and
+ *   lets the feature work immediately in development without a Firebase
+ *   index deploy.
+ *
+ *   For production scale (> SCAN_CAP audit entries per company), upgrade
+ *   to the composite index `(companyId asc, timestamp desc)` already
+ *   registered in `firestore.indexes.json`, then switch the query to use
+ *   `.orderBy('timestamp', 'desc').limit(X)` with cursor pagination.
  *
  * @module api/audit-trail/global
  * @permission super_admin | company_admin (enforced via withAuth)
@@ -83,11 +88,12 @@ const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
 ]);
 
 /**
- * Overfetch multiplier when in-memory filters are active.
- * Ensures we fetch enough candidates to satisfy `limit` after filtering,
- * without requiring a dedicated composite index per filter combination.
+ * Hard cap on documents fetched from Firestore per request.
+ * Keeps the unindexed scan bounded. If a company exceeds this count,
+ * the proper fix is to deploy the composite index and switch to
+ * server-side pagination.
  */
-const OVERFETCH_MULTIPLIER = 5;
+const SCAN_CAP = 500;
 
 // ============================================================================
 // GET — Paginated Global Audit Trail
@@ -126,7 +132,10 @@ export const GET = withStandardRateLimit(
       const fromDateStr = url.searchParams.get('fromDate');
       const toDateStr = url.searchParams.get('toDate');
       const fromDate = parseIsoDate(fromDateStr, 'fromDate');
-      const toDate = parseIsoDate(toDateStr, 'toDate');
+      const toDateRaw = parseIsoDate(toDateStr, 'toDate');
+      const toDate = toDateRaw
+        ? new Date(new Date(toDateRaw).setHours(23, 59, 59, 999))
+        : null;
 
       if (fromDate && toDate && fromDate > toDate) {
         throw new ApiError(400, 'fromDate must be <= toDate');
@@ -134,67 +143,20 @@ export const GET = withStandardRateLimit(
 
       const limitParam = parseInt(url.searchParams.get('limit') ?? '20', 10);
       const limit = Math.min(Math.max(limitParam, 1), 100);
-      const startAfter = url.searchParams.get('startAfter') ?? undefined;
 
-      // Detect in-memory filter activity → decide fetch size
-      const hasInMemoryFilters =
-        !!entityTypeFilter || !!performedByFilter || !!actionFilter;
-      const fetchSize = hasInMemoryFilters
-        ? limit * OVERFETCH_MULTIPLIER + 1
-        : limit + 1;
+      const offsetParam = parseInt(url.searchParams.get('offset') ?? '0', 10);
+      const offset = Math.max(offsetParam, 0);
 
-      // Build Firestore query — always company-scoped
-      let q: FirebaseFirestore.Query = db
+      // Single-field query — does NOT require a composite index.
+      // Firestore's auto-generated index on `companyId` handles this.
+      const snapshot = await db
         .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
-        .where(FIELDS.COMPANY_ID, '==', ctx.companyId);
+        .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
+        .limit(SCAN_CAP)
+        .get();
 
-      if (fromDate) {
-        q = q.where('timestamp', '>=', fromDate);
-      }
-      if (toDate) {
-        const endOfDay = new Date(toDate);
-        endOfDay.setHours(23, 59, 59, 999);
-        q = q.where('timestamp', '<=', endOfDay);
-      }
-
-      q = q.orderBy('timestamp', 'desc').limit(fetchSize);
-
-      // Cursor-based pagination
-      if (startAfter) {
-        const cursorDoc = await db
-          .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
-          .doc(startAfter)
-          .get();
-
-        if (cursorDoc.exists) {
-          q = q.startAfter(cursorDoc);
-        }
-      }
-
-      const snapshot = await q.get();
-      const rawDocs = snapshot.docs;
-
-      // In-memory filter for entityType / performedBy / action
-      const filteredDocs = rawDocs.filter((doc) => {
-        const data = doc.data();
-        if (entityTypeFilter && data.entityType !== entityTypeFilter) return false;
-        if (actionFilter && data.action !== actionFilter) return false;
-        if (performedByFilter) {
-          const haystack = `${data.performedBy ?? ''} ${data.performedByName ?? ''}`.toLowerCase();
-          if (!haystack.includes(performedByFilter.toLowerCase())) return false;
-        }
-        return true;
-      });
-
-      // Determine hasMore: if we overfetched AND still have > limit results
-      // after filtering, there are likely more pages available.
-      const hasMore = hasInMemoryFilters
-        ? rawDocs.length >= fetchSize && filteredDocs.length > limit
-        : rawDocs.length > limit;
-
-      const resultDocs = filteredDocs.slice(0, limit);
-
-      const entries: EntityAuditEntry[] = resultDocs.map((doc) => {
+      // Materialize all docs → entries
+      const allEntries: EntityAuditEntry[] = snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -210,14 +172,41 @@ export const GET = withStandardRateLimit(
         };
       });
 
+      // In-memory filter pipeline
+      const performedByLower = performedByFilter?.toLowerCase() ?? null;
+      const filtered = allEntries.filter((entry) => {
+        if (entityTypeFilter && entry.entityType !== entityTypeFilter) {
+          return false;
+        }
+        if (actionFilter && entry.action !== actionFilter) return false;
+        if (performedByLower) {
+          const haystack =
+            `${entry.performedBy ?? ''} ${entry.performedByName ?? ''}`.toLowerCase();
+          if (!haystack.includes(performedByLower)) return false;
+        }
+        if (fromDate || toDate) {
+          const ts = entry.timestamp ? new Date(entry.timestamp) : null;
+          if (!ts || isNaN(ts.getTime())) return false;
+          if (fromDate && ts < fromDate) return false;
+          if (toDate && ts > toDate) return false;
+        }
+        return true;
+      });
+
+      // Sort newest-first
+      filtered.sort((a, b) => {
+        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return bTime - aTime;
+      });
+
+      const pageEntries = filtered.slice(offset, offset + limit);
+      const hasMore = filtered.length > offset + limit;
+
       const response: EntityAuditResponse = {
-        entries,
+        entries: pageEntries,
         hasMore,
-        // Use the LAST raw doc for the cursor (not filtered), so the next
-        // page starts where this fetch left off regardless of filters.
-        ...(hasMore && rawDocs.length > 0
-          ? { nextCursor: rawDocs[rawDocs.length - 1].id }
-          : {}),
+        ...(hasMore ? { nextCursor: String(offset + limit) } : {}),
       };
 
       return apiSuccess(response, 'Global audit trail retrieved');
