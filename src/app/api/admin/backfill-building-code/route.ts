@@ -33,12 +33,20 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { normalizeToMillis } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
   planProjectCodes,
   type BuildingRow,
   type ProjectBackfillResult,
   type BackfillReport,
 } from './backfill-planner';
+
+interface BuildingMeta {
+  companyId: string | null;
+  name: string;
+  existingCode: string | null;
+}
 
 const logger = createModuleLogger('BackfillBuildingCode');
 
@@ -74,19 +82,28 @@ async function handleMigration(
     // Load ALL buildings (single collection scan — buildings are bounded).
     const snapshot = await db.collection(COLLECTIONS.BUILDINGS).get();
     const byProject = new Map<string, BuildingRow[]>();
+    const buildingMeta = new Map<string, BuildingMeta>();
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
       if (data.status === 'deleted') continue;
 
       const projectId = (data.projectId as string) || '(no-project)';
+      const name = (data.name as string) || '';
+      const existingCode = (data.code as string) || null;
       const row: BuildingRow = {
         id: doc.id,
         projectId,
-        name: (data.name as string) || '',
-        existingCode: (data.code as string) || null,
+        name,
+        existingCode,
         createdAtMs: normalizeToMillis(data.createdAt as string | Date | undefined),
       };
+
+      buildingMeta.set(doc.id, {
+        companyId: (data.companyId as string) ?? null,
+        name,
+        existingCode,
+      });
 
       if (!byProject.has(projectId)) byProject.set(projectId, []);
       byProject.get(projectId)!.push(row);
@@ -100,32 +117,70 @@ async function handleMigration(
 
     // Execute (unless dry-run)
     const errors: string[] = [];
+    const committedIds = new Set<string>();
     if (!dryRun) {
       let batch = db.batch();
       let ops = 0;
+      let pendingIds: string[] = [];
       for (const project of projects) {
         for (const assignment of project.assignments) {
           batch.update(
             db.collection(COLLECTIONS.BUILDINGS).doc(assignment.id),
             { code: assignment.newCode, _codeBackfilledAt: FieldValue.serverTimestamp() }
           );
+          pendingIds.push(assignment.id);
           ops++;
           if (ops >= BATCH_LIMIT) {
             try {
               await batch.commit();
+              for (const id of pendingIds) committedIds.add(id);
             } catch (err) {
               errors.push(`Batch commit failed: ${getErrorMessage(err)}`);
             }
             batch = db.batch();
             ops = 0;
+            pendingIds = [];
           }
         }
       }
       if (ops > 0) {
         try {
           await batch.commit();
+          for (const id of pendingIds) committedIds.add(id);
         } catch (err) {
           errors.push(`Final batch commit failed: ${getErrorMessage(err)}`);
+        }
+      }
+
+      // Audit trail — ADR-195 / CHECK 3.17. Fire per-building recordChange
+      // AFTER all Firestore writes complete, scoped to committed ids only.
+      // Tenant-gated: skip entries with missing companyId (legacy fixtures).
+      for (const project of projects) {
+        for (const assignment of project.assignments) {
+          if (!committedIds.has(assignment.id)) continue;
+          const meta = buildingMeta.get(assignment.id);
+          if (!meta?.companyId) continue;
+          try {
+            await EntityAuditService.recordChange({
+              entityType: ENTITY_TYPES.BUILDING,
+              entityId: assignment.id,
+              entityName: meta.name || null,
+              action: 'updated',
+              changes: [
+                {
+                  field: 'code',
+                  oldValue: meta.existingCode,
+                  newValue: assignment.newCode,
+                  label: 'Κωδικός Κτηρίου',
+                },
+              ],
+              performedBy: ctx.uid,
+              performedByName: ctx.email ?? null,
+              companyId: meta.companyId,
+            });
+          } catch (err) {
+            errors.push(`Audit recordChange failed for ${assignment.id}: ${getErrorMessage(err)}`);
+          }
         }
       }
     }
