@@ -133,12 +133,19 @@ export function UserAuthPermissionPanel({
         setShowEmailForm(false);
         onClose();
       } catch (error) {
+        // Surface the real backend error to the user instead of swallowing it
+        // behind a generic toast. Follows Google Gmail error UX: show the actual
+        // reason (validation message, rate limit, auth) so the user can react.
+        const message = error instanceof Error ? error.message : t('emailShare.sendError');
+        logger.error('Email share failed', { error: message });
+        notifications.error(message);
+        onShareError?.('email', message);
         throw error;
       } finally {
         setLoading(false);
       }
     },
-    [setLoading, notifications, t, onShareSuccess, onClose],
+    [setLoading, notifications, t, onShareSuccess, onShareError, onClose],
   );
 
   const handleCopySuccess = useCallback((): void => {

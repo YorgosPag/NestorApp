@@ -20,7 +20,7 @@ export interface PropertyShareEmailRequest {
   propertyPrice?: number;
   propertyArea?: number;
   propertyLocation?: string;
-  propertyUrl: string;
+  propertyUrl?: string;
   photoUrl?: string;
   senderName?: string;
   senderEmail?: string;
@@ -131,10 +131,14 @@ export function validateEmailRequest(data: EmailValidationInput): ValidationResu
     errors.push(`Property title must be ${VALIDATION_RULES.MAX_TITLE_LENGTH} characters or less`);
   }
 
-  if (!data.propertyUrl || typeof data.propertyUrl !== 'string') {
-    errors.push('Property URL is required and must be a string');
-  } else if (!isValidUrl(data.propertyUrl)) {
-    errors.push('Property URL must be a valid HTTP/HTTPS URL');
+  // Optional: endpoint serves generic shares (contacts, projects, photos) where no URL exists.
+  // If provided, it must be a valid HTTP/HTTPS URL. Empty/omitted is allowed.
+  if (data.propertyUrl !== undefined && data.propertyUrl !== '') {
+    if (typeof data.propertyUrl !== 'string') {
+      errors.push('Property URL must be a string');
+    } else if (!isValidUrl(data.propertyUrl)) {
+      errors.push('Property URL must be a valid HTTP/HTTPS URL');
+    }
   }
 
   // Recipients
@@ -200,7 +204,7 @@ export function validateEmailRequest(data: EmailValidationInput): ValidationResu
   const sanitizedData: PropertyShareEmailRequest = {
     recipients: recipients.map(email => email.trim().toLowerCase()),
     propertyTitle: sanitizeString(data.propertyTitle as string),
-    propertyUrl: data.propertyUrl as string,
+    propertyUrl: data.propertyUrl ? (data.propertyUrl as string) : undefined,
     photoUrl: data.photoUrl || undefined,
     propertyDescription: data.propertyDescription ? sanitizeString(data.propertyDescription) : undefined,
     personalMessage: data.personalMessage ? sanitizeString(data.personalMessage) : undefined,

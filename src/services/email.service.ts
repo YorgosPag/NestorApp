@@ -38,7 +38,7 @@ export interface EmailRequest {
   propertyPrice?: number;
   propertyArea?: number;
   propertyLocation?: string;
-  propertyUrl: string;
+  propertyUrl?: string;
   photoUrl?: string;
   photoUrls?: string[];
   isPhoto?: boolean;
@@ -97,8 +97,8 @@ export class EmailService {
       throw new Error('At least one recipient is required');
     }
 
-    if (!propertyTitle || !propertyUrl) {
-      throw new Error('Property title and URL are required');
+    if (!propertyTitle) {
+      throw new Error('Property title is required');
     }
 
     // Determine provider: Resend → Mailgun → Simulation
@@ -137,13 +137,24 @@ export class EmailService {
         if (!template) {
           throw new Error(`Email template '${templateType}' not found`);
         }
+        // Normalize undefined → '' so template interpolation doesn't emit
+        // the literal string "undefined" in href attributes.
         const emailData: EmailTemplateData = {
           propertyTitle, propertyDescription, propertyPrice, propertyArea,
-          propertyLocation, propertyUrl, photoUrl,
+          propertyLocation, propertyUrl: propertyUrl ?? '', photoUrl,
           recipientEmail: recipients[0],
           personalMessage, senderName: senderName || FROM_NAME
         };
         htmlContent = EmailTemplatesService.generateEmailHtml(templateType, emailData);
+        // Generic shares (contacts, projects) pass no propertyUrl. The legacy
+        // property templates always emit a CTA <a>. Strip those CTA wrappers
+        // post-render so recipients don't see a broken "href=""" button.
+        if (!propertyUrl) {
+          htmlContent = htmlContent.replace(
+            /<div style="text-align: center[^"]*">\s*<a href=""[^>]*class="cta-[^"]+"[\s\S]*?<\/a>\s*<\/div>/g,
+            '',
+          );
+        }
         subject = this.generateSubject(templateType, propertyTitle);
       }
 
@@ -180,7 +191,7 @@ export class EmailService {
               id: `share_${Date.now()}`,
               to,
               subject,
-              content: `${propertyTitle} — ${propertyUrl}`,
+              content: propertyUrl ? `${propertyTitle} — ${propertyUrl}` : propertyTitle,
               html: htmlContent,
               from: fromHeader,
               metadata: { templateId: templateType, category: 'property_share' },
