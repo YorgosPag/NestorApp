@@ -3309,11 +3309,16 @@ service cloud.firestore {
     }
 
     // System Fields Protection
+    // 📅 Fixed 2026-04-11 (ADR-298 Phase D.2) — CEL semantics:
+    // `List.hasAny(X)` requires X to also be a List, but `MapDiff.affectedKeys()`
+    // returns a Set, so the previous shape `systemFields.hasAny(affectedKeys())`
+    // threw `Unsupported operation error. Received: list.hasAny(set).` at runtime
+    // and denied every tenant_direct update that walked this helper (latent
+    // production bug surfaced by the Phase A emulator suite). The canonical
+    // form is `Set.hasAny(List)` — swap receiver and argument.
     function isAttemptingToModifySystemFields(newData, existingData) {
       let systemFields = ['createdAt', 'createdBy', 'ownerId', 'id'];
-      return systemFields.hasAny(
-        newData.diff(existingData).affectedKeys()
-      );
+      return newData.diff(existingData).affectedKeys().hasAny(systemFields);
     }
 
     // Relationship checking helper

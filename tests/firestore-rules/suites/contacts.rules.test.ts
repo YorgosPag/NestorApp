@@ -17,10 +17,7 @@ import { getContext } from '../_harness/auth-contexts';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { seedContact } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
-import {
-  SAME_TENANT_COMPANY_ID,
-  CROSS_TENANT_COMPANY_ID,
-} from '../_registry/personas';
+import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
@@ -58,13 +55,20 @@ describe('contacts.rules — tenant_direct pattern', () => {
             phone: '+30 210 9999999',
             companyId: SAME_TENANT_COMPANY_ID,
           },
+          // Fresh-doc payload for create — isValidContactData requires
+          // companyId (firestore.rules:3210).
+          createData: {
+            name: 'Created Contact',
+            email: 'created@example.com',
+            phone: '+30 210 1111111',
+            companyId: SAME_TENANT_COMPANY_ID,
+          },
+          // Always target the seeded bucket — cross-tenant personas are
+          // denied by the per-doc read rule, not by an empty query result.
           listFilter: {
             field: 'companyId',
             op: '==',
-            value:
-              cell.persona.startsWith('cross_tenant')
-                ? CROSS_TENANT_COMPANY_ID
-                : SAME_TENANT_COMPANY_ID,
+            value: SAME_TENANT_COMPANY_ID,
           },
         };
 

@@ -25,10 +25,16 @@ import type { CoverageCell } from '../_registry/coverage-manifest';
 export interface AssertTarget {
   /** Physical collection name (matches manifest + firestore.rules). */
   readonly collection: string;
-  /** Document id to read/write — for `list`, ignored. */
+  /** Document id to read/update/delete — also used as the base for create ids. */
   readonly docId: string;
-  /** Payload for create/update. Ignored for read/list/delete. */
+  /** Payload for update. Also used as create fallback when `createData` is omitted. */
   readonly data?: Record<string, unknown>;
+  /**
+   * Payload for create operations. Keep separate from `data` because create
+   * rules often require a distinct shape (e.g. `status: 'pending'` on files,
+   * or `resource == null` gates that mandate full valid-document payloads).
+   */
+  readonly createData?: Record<string, unknown>;
   /** For list operations: optional where filter applied to the query. */
   readonly listFilter?: {
     readonly field: string;
@@ -75,8 +81,15 @@ function executeOperation(
       }
       return query.get();
     }
-    case 'create':
-      return docRef.set(target.data ?? { placeholder: true });
+    case 'create': {
+      // Fresh doc id — tests seed a same-tenant fixture at `target.docId`,
+      // so calling `.set()` there would hit the UPDATE rule path (resource
+      // already exists). CREATE must target a non-existent id to exercise
+      // the real `resource == null` gate.
+      const createId = `${target.docId}-create-${Date.now().toString(36)}`;
+      const createRef = db.collection(target.collection).doc(createId);
+      return createRef.set(target.createData ?? target.data ?? { placeholder: true });
+    }
     case 'update':
       return docRef.update(target.data ?? { touchedAt: new Date() });
     case 'delete':

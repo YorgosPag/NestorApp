@@ -23,13 +23,14 @@ export type Outcome = 'allow' | 'deny';
  * assert on intent, not just outcome.
  */
 export type Reason =
-  | 'missing_claim'        // unauthenticated or no companyId claim
-  | 'cross_tenant'         // authed but wrong companyId
-  | 'immutable'            // append-only rule blocks update/delete
+  | 'missing_claim'         // unauthenticated or no companyId claim
+  | 'cross_tenant'          // authed but wrong companyId
+  | 'immutable'             // append-only rule blocks update/delete
   | 'field_not_allowlisted' // update with disallowed field
-  | 'legacy_fallback'      // legacy doc with no companyId — fallback-leg test
-  | 'enum_invalid'         // enum validation (channel/direction/status)
-  | 'server_only';         // client write forbidden (server SDK only)
+  | 'legacy_fallback'       // legacy doc with no companyId — fallback-leg test
+  | 'enum_invalid'          // enum validation (channel/direction/status)
+  | 'insufficient_role'     // authed + tenant OK but role below the rule's floor
+  | 'server_only';          // client write forbidden (server SDK only)
 
 /** All known operations — iteration helper for matrix loops. */
 export const ALL_OPERATIONS: readonly Operation[] = [

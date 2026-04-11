@@ -17,10 +17,7 @@ import { getContext } from '../_harness/auth-contexts';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { seedProject } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
-import {
-  SAME_TENANT_COMPANY_ID,
-  CROSS_TENANT_COMPANY_ID,
-} from '../_registry/personas';
+import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 /** SSoT export — CHECK 3.16 matches this against coverage-manifest.ts. */
@@ -53,19 +50,30 @@ describe('projects.rules — tenant_direct pattern', () => {
         const target: AssertTarget = {
           collection: 'projects',
           docId,
+          // Update payload — status must be one of the enum values in
+          // isValidProjectData (firestore.rules:3169).
           data: {
             name: 'Mutated Project',
-            status: 'active',
+            status: 'in_progress',
             company: 'Test Company',
             companyId: SAME_TENANT_COMPANY_ID,
           },
+          // Create payload — fresh-doc must satisfy isValidProjectData and
+          // carry a matching companyId for same-tenant personas. Super admin
+          // bypasses the companyId check via isSuperAdminOnly().
+          createData: {
+            name: 'Created Project',
+            status: 'planning',
+            company: 'Test Company',
+            companyId: SAME_TENANT_COMPANY_ID,
+          },
+          // List query always targets the seeded bucket. Cross-tenant personas
+          // get denied by the per-document read rule, which causes the list
+          // itself to fail — that is the correct deny signal for list ops.
           listFilter: {
             field: 'companyId',
             op: '==',
-            value:
-              cell.persona.startsWith('cross_tenant')
-                ? CROSS_TENANT_COMPANY_ID
-                : SAME_TENANT_COMPANY_ID,
+            value: SAME_TENANT_COMPANY_ID,
           },
         };
 

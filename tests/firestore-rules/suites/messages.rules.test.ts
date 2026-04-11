@@ -23,10 +23,7 @@ import { getContext } from '../_harness/auth-contexts';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { seedMessage } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
-import {
-  SAME_TENANT_COMPANY_ID,
-  CROSS_TENANT_COMPANY_ID,
-} from '../_registry/personas';
+import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
@@ -58,21 +55,34 @@ describe('messages.rules — tenant_direct pattern (critical messaging path)', (
         const target: AssertTarget = {
           collection: 'messages',
           docId,
+          // Update payload — isValidMessageData (firestore.rules:3268)
+          // requires conversationId, direction, channel, content.text. The
+          // seed already sets these; include them here so the merged doc
+          // remains valid against the rule.
           data: {
+            conversationId: `conv-${docId}`,
             channel: 'email',
             direction: 'inbound',
+            content: { text: 'Mutated body' },
             status: 'read',
             subject: 'Mutated subject',
-            body: 'Mutated body',
+            companyId: SAME_TENANT_COMPANY_ID,
+          },
+          // Fresh-doc create payload — must independently satisfy
+          // isValidMessageData plus companyId matching user claims.
+          createData: {
+            conversationId: 'conv-new',
+            channel: 'email',
+            direction: 'inbound',
+            content: { text: 'Created body' },
+            status: 'received',
+            subject: 'Created subject',
             companyId: SAME_TENANT_COMPANY_ID,
           },
           listFilter: {
             field: 'companyId',
             op: '==',
-            value:
-              cell.persona.startsWith('cross_tenant')
-                ? CROSS_TENANT_COMPANY_ID
-                : SAME_TENANT_COMPANY_ID,
+            value: SAME_TENANT_COMPANY_ID,
           },
         };
 

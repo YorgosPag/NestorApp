@@ -97,11 +97,18 @@ export async function seedFile(
   opts?: SeedOptions,
 ): Promise<void> {
   await withSeedContext(env, async (ctx) => {
+    // The files rule update/delete bodies compare several immutable fields
+    // against `resource.data.*` (id, storagePath, createdBy, companyId,
+    // status, isDeleted). CEL errors when accessing missing keys, so seed
+    // every field the rule will touch on the `ready → trashed` path.
     await ctx.firestore().collection('files').doc(fileId).set({
+      id: fileId,
       fileName: `seed-${fileId}.pdf`,
       mimeType: 'application/pdf',
       size: 1024,
       status: 'ready',
+      isDeleted: false,
+      storagePath: `companies/${opts?.companyId ?? SAME_TENANT_COMPANY_ID}/files/${fileId}`,
       ...baseDoc(opts),
       ...opts?.overrides,
     });
@@ -114,12 +121,16 @@ export async function seedMessage(
   opts?: SeedOptions,
 ): Promise<void> {
   await withSeedContext(env, async (ctx) => {
+    // Shape MUST satisfy `isValidMessageData` (firestore.rules:3268) so that
+    // subsequent update tests produce a merged doc which is still valid:
+    //   required: conversationId, direction, channel, content.text
     await ctx.firestore().collection('messages').doc(messageId).set({
+      conversationId: `conv-${messageId}`,
       channel: 'email',
       direction: 'inbound',
+      content: { text: 'Seeded by tests' },
       status: 'received',
       subject: 'Seed message',
-      body: 'Seeded by tests',
       ...baseDoc(opts),
       ...opts?.overrides,
     });

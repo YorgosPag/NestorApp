@@ -20,17 +20,14 @@ import { getContext } from '../_harness/auth-contexts';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { seedBuilding, seedProject } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
-import {
-  SAME_TENANT_COMPANY_ID,
-  CROSS_TENANT_COMPANY_ID,
-} from '../_registry/personas';
+import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'buildings',
 )!;
 
-describe('buildings.rules — tenant_direct pattern (with project seedDependency)', () => {
+describe('buildings.rules — admin_write_only pattern (with project seedDependency)', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => {
@@ -60,18 +57,23 @@ describe('buildings.rules — tenant_direct pattern (with project seedDependency
         const target: AssertTarget = {
           collection: 'buildings',
           docId: buildingId,
+          // Write payloads are expected to deny at the rule level for every
+          // persona (admin_write_only pattern) — the harness still needs a
+          // payload to drive the set/update calls.
           data: {
             name: 'Mutated Building',
+            projectId,
+            companyId: SAME_TENANT_COMPANY_ID,
+          },
+          createData: {
+            name: 'Created Building',
             projectId,
             companyId: SAME_TENANT_COMPANY_ID,
           },
           listFilter: {
             field: 'companyId',
             op: '==',
-            value:
-              cell.persona.startsWith('cross_tenant')
-                ? CROSS_TENANT_COMPANY_ID
-                : SAME_TENANT_COMPANY_ID,
+            value: SAME_TENANT_COMPANY_ID,
           },
         };
 

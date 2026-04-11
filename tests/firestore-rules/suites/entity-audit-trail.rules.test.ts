@@ -34,6 +34,8 @@ import {
   SAME_TENANT_COMPANY_ID,
   CROSS_TENANT_COMPANY_ID,
 } from '../_registry/personas';
+// CROSS_TENANT_COMPANY_ID stays imported — used by the Bug #1 targeted
+// regression block below (cross-tenant seed doc for super-admin read).
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
@@ -79,10 +81,7 @@ describe('entity_audit_trail.rules — immutable pattern (Bug #1 regression)', (
           listFilter: {
             field: 'companyId',
             op: '==',
-            value:
-              cell.persona.startsWith('cross_tenant')
-                ? CROSS_TENANT_COMPANY_ID
-                : SAME_TENANT_COMPANY_ID,
+            value: SAME_TENANT_COMPANY_ID,
           },
         };
 
