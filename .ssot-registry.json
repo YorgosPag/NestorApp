@@ -237,12 +237,13 @@
       ]
     },
     "firestore-realtime": {
-      "ssotFile": "src/services/realtime/RealtimeService.ts",
-      "description": "Firestore realtime subscriptions must go through the centralized RealtimeService singleton (ADR-145). Direct onSnapshot() calls are forbidden outside the canonical realtime service layer — use RealtimeService.subscribeToCollection / subscribeToDocument / dispatch+subscribe(eventName) instead. Legacy scattered callers are in the baseline and will ratchet down as they get migrated.",
+      "ssotFile": "src/services/firestore/firestore-query.service.ts",
+      "description": "Firestore realtime subscriptions must go through one of the two canonical layers: (1) firestoreQueryService.subscribe/subscribeDoc/subscribeSubcollection (ADR-214) for tenant-aware tenant-filtered reads — PRIMARY path, (2) RealtimeService.subscribeToCollection/subscribeToDocument (ADR-195 Phase 8) for raw wrapping + event bus dispatch. Direct onSnapshot() calls from firebase/firestore are forbidden outside these layers. Legacy scattered callers are in the baseline and will ratchet down as they get migrated — preferred migration target is firestoreQueryService because it auto-injects companyId/tenantId filters.",
       "forbiddenPatterns": [
         "\\bonSnapshot\\s*\\("
       ],
       "allowlist": [
+        "src/services/firestore/firestore-query.service.ts",
         "src/services/realtime/RealtimeService.ts",
         "src/services/realtime/hooks/"
       ]

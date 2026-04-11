@@ -1,14 +1,13 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-11T08:57:43Z",
-    "totalViolations": 26,
-    "totalFiles": 23,
+    "generated": "2026-04-11T09:27:23Z",
+    "totalViolations": 22,
+    "totalFiles": 21,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
-    "src/services/firestore/firestore-query.service.ts": 3,
     "src/hooks/useFloorOverlays.ts": 2,
     "src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts": 1,
     "src/subapps/dxf-viewer/overlays/overlay-store.tsx": 1,
@@ -17,7 +16,6 @@
     "src/services/file-comment.service.ts": 1,
     "src/services/file-approval.service.ts": 1,
     "src/lib/layer-sync.ts": 1,
-    "src/hooks/useLegalContracts.ts": 1,
     "src/hooks/useEntityStatusResolver.ts": 1,
     "src/hooks/inbox/useMessageReactions.ts": 1,
     "src/hooks/contacts/useContactProjectRoles.ts": 1,

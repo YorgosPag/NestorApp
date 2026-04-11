@@ -31,9 +31,8 @@ import {
   transitionLegalContractStatusWithPolicy,
   updateLegalContractWithPolicy,
 } from '@/services/legal-contracts/legal-contract-mutation-gateway';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where, type DocumentData } from 'firebase/firestore';
+import { firestoreQueryService, type QueryResult } from '@/services/firestore';
 import { useCompanyId } from '@/hooks/useCompanyId';
 
 // ============================================================================
@@ -118,30 +117,29 @@ export function useLegalContracts(propertyId: string | null, projectId?: string)
     fetchContracts();
   }, [fetchContracts]);
 
-  // 🔴 REAL-TIME: onSnapshot subscription for brokerage agreements
+  // 🔴 REAL-TIME: firestoreQueryService subscription for brokerage agreements
+  // (ADR-214 canonical path — auto-injects companyId tenant filter)
   useEffect(() => {
     if (!projectId || !companyId) return;
 
-    const q = query(
-      collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
-      where('companyId', '==', companyId),
-      where('projectId', '==', projectId)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as BrokerageAgreement);
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'BROKERAGE_AGREEMENTS',
+      (result: QueryResult<DocumentData>) => {
+        const data = result.documents.map(
+          (d) => ({ ...d } as unknown as BrokerageAgreement),
+        );
         setAgreements(data);
       },
-      (err) => {
+      (err: Error) => {
         // Non-blocking — agreements are supplementary data
-        // Log once to help diagnose permission issues without flooding console
         if (process.env.NODE_ENV === 'development') {
           console.warn('[useLegalContracts] Subscription error (non-blocking):', err.message);
         }
         setAgreements([]);
-      }
+      },
+      {
+        constraints: [where('projectId', '==', projectId)],
+      },
     );
 
     return unsubscribe;
