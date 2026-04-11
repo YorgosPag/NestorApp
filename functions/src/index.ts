@@ -18,12 +18,18 @@
 // =============================================================================
 export { onProjectWrite, onContactWrite } from './search/indexTriggers';
 
+// =============================================================================
+// 📜 ENTITY AUDIT CDC TRIGGERS (ADR-195 — Phase 1 PoC)
+// =============================================================================
+// Dual-write: runs alongside service-layer audit, marks entries with
+// `source: 'cdc'` for coverage comparison during the rollout window.
+export { auditContactWrite } from './audit/contact-audit-trigger';
+
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
-
 const db = admin.firestore();
 const storage = admin.storage();
 

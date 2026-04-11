@@ -38,6 +38,7 @@
     "icu:baseline": "node scripts/generate-icu-baseline.js",
     "i18n-keys:baseline": "node scripts/generate-i18n-keys-baseline.js",
     "firestore:audit": "bash scripts/check-firestore-companyid.sh",
+    "nav:audit": "node scripts/check-navigation-labels.js",
     "ssot:audit": "bash scripts/ssot-audit.sh",
     "ssot:baseline": "bash scripts/generate-ssot-baseline.sh",
     "ssot:discover": "bash scripts/ssot-discover.sh",

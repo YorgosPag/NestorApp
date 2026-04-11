@@ -25,6 +25,9 @@ export const COLLECTIONS = {
   // 📋 AUDIT (Cloud Function system events)
   CLOUD_FUNCTION_AUDIT_LOG: 'audit_log',
 
+  // 📜 ENTITY AUDIT TRAIL (ADR-195 — CDC-sourced entries written by triggers)
+  ENTITY_AUDIT_TRAIL: 'entity_audit_trail',
+
   // 🔍 SEARCH
   PROJECTS: 'projects',
   BUILDINGS: 'buildings',

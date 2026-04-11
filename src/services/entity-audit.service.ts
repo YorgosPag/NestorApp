@@ -138,6 +138,10 @@ export class EntityAuditService {
         performedBy: params.performedBy,
         performedByName: resolvedName ?? null,
         companyId: params.companyId,
+        // ADR-195 Phase 1: distinguishes service-layer entries from CDC
+        // (Cloud Function) entries during dual-write rollout. Will be removed
+        // once CDC coverage is verified and the service path is retired.
+        source: 'service',
         timestamp: FieldValue.serverTimestamp(),
       });
 

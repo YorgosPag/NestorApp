@@ -318,6 +318,18 @@ export class ContactsService {
     const docRef = doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id);
     const updateData = { ...updates, updatedAt: serverTimestamp() } as ContactUpdatePayload;
 
+    // ADR-195 Phase 1 (CDC PoC): stamp the performer on the document itself
+    // so the Cloud Function audit trigger has user context without needing
+    // a separate channel. Read by `auditContactWrite` from after.data().
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const udStamp = updateData as Record<string, unknown>;
+      udStamp._lastModifiedBy = currentUser.uid;
+      udStamp._lastModifiedByName =
+        currentUser.displayName?.trim() || currentUser.email || null;
+      udStamp._lastModifiedAt = serverTimestamp();
+    }
+
     // Remove protected system fields
     for (const field of SYSTEM_FIELDS) { delete (updateData as Record<string, unknown>)[field]; }
 

@@ -1,562 +1,246 @@
-# ΑΝΑΦΟΡΑ ΕΡΓΑΣΙΩΝ 2
+# ΑΝΑΦΟΡΑ ΓΙΑ ΝΕΑ SESSION — 2026-04-11 (v2)
 
-## Scope
-Ανάλυση για `Διαχείριση Επαφών -> Νομικά Πρόσωπα -> tabs «Δραστηριότητες & ΚΑΔ» και «Τραπεζικά»`.
-Στόχος:
-- να διαπιστωθεί αν σήμερα υπάρχουν dependencies,
-- αν ο χρήστης ενημερώνεται όταν προσθέτει/αλλάζει/διαγράφει στοιχεία,
-- τι notifications / confirmations / impact messages πρέπει να υπάρχουν,
-- και τι pattern ακολουθούν μεγάλοι vendors.
+**Από:** Claude Opus 4.6 (1M context) — session μετά το `/clear` που ολοκλήρωσε το Phase Β της SSoT export centralization
+**Προς:** Τον εαυτό μου σε νέα session (fresh /clear)
+**Σκοπός:** Self-contained brief για να εκτελέσεις το **Phase Γ** (Domain A migration → `useFileDownload` hook) και να κλείσεις το SSoT export work.
 
 ---
 
-## Executive Summary
+## 1. ΤΙ ΟΛΟΚΛΗΡΩΘΗΚΕ ΣΕ ΑΥΤΗ ΤΗ SESSION ✅
 
-### 1. Δραστηριότητες & ΚΑΔ
-Ναι, υπάρχουν πραγματικές εξαρτήσεις και μάλιστα πιο σοβαρές απ’ όσο φαίνεται στο UI.
-Το tab σήμερα λειτουργεί κυρίως ως form-state editor και όχι ως fully governed subsystem. Ο χρήστης μπορεί να αλλάξει primary/secondary KADs και chamber, αλλά δεν βλέπει ειδικά messages για add/update/remove/set-primary. Οι αλλαγές τελικά ενσωματώνονται στο γενικό save της επαφής.
+### Phase Β — Export Centralization (ADR-294) **FULLY COMPLETE**
 
-Το σημαντικό είναι ότι ο primary KAD δεν είναι απλό display field. Συνδέεται ήδη με accounting/profile/PDF flows και μελλοντικά μπορεί να επηρεάζει classification και myDATA/invoicing semantics. Άρα χρειάζεται impact-aware UX, ειδικά όταν αλλάζει ή αφαιρείται ο primary KAD.
+Όλα τα Domain B (generated exports) έχουν μεταναστεύσει στον canonical helper `src/lib/exports/trigger-export-download.ts`. Συνολικά **14 call sites** migrated.
 
-### 2. Τραπεζικά
-Ναι, υπάρχουν dependencies και εδώ το σύστημα είναι πιο ώριμο.
-Το banking tab έχει ξεχωριστό subsystem, CRUD υπηρεσίες, IBAN validation, duplicate prevention, soft-delete, set-primary και dedicated success/error toasts. Υπάρχει ήδη confirmation dialog για delete.
+**Commits (τοπικά, ΔΕΝ έχει γίνει push):**
 
-Παρόλα αυτά λείπει το πιο σημαντικό layer: dependency-aware ενημέρωση. Δηλαδή σήμερα ο χρήστης ενημερώνεται ότι «ο λογαριασμός διαγράφηκε/ορίστηκε κύριος», αλλά όχι για το operational impact: τι θα αλλάξει σε μελλοντικά invoices, payment instructions, accounting exports ή PDF fallback flows.
+| Commit | Description |
+|--------|-------------|
+| `2852dabb` | Β.1 — `trigger-export-download.ts` + 6 PDF sites (προηγ. session) |
+| `c28be7ff` | Β.3 — CSV/JSON migration (5 files) + `TransformationPreview.tsx` split (527→418 γρ.) |
+| `c64b1b99` | Β.4 — IFC/PNG/TXT migration (4 files) |
+| `86ed64fd` | Β.5 — SSoT registry + baseline + ADR-294 changelog |
 
-### 3. Συμπέρασμα προϊόντος
-- Το `Τραπεζικά` είναι ήδη λειτουργικά ώριμο, αλλά όχι impact-aware.
-- Το `Δραστηριότητες & ΚΑΔ` δεν είναι ακόμα productized στο ίδιο επίπεδο: έχει data model και rendering, αλλά όχι row-level governance/messages.
-- Και τα δύο tabs πρέπει να αντιμετωπίζονται ως `master data with downstream effects`, όχι ως απλά form sections.
+**Σημείωση για Β.2**: Τα gantt-export-utils.ts, gantt-image-exporter.ts, cash-flow-excel-exporter.ts είχαν ήδη συμπεριληφθεί στο Β.1 commit (2852dabb), οπότε δεν χρειάστηκε ξεχωριστό Β.2.
 
----
+**SSoT baseline evolution:**
+- Πριν Phase Β: 21 violations σε 19 files
+- Μετά Phase Β: **16 violations σε 7 files** — όλα Domain A (Firebase Storage user downloads)
 
-## Τι υπάρχει σήμερα στον κώδικα
+### TransformationPreview Split — Google SRP Compliance
 
-## A. Δραστηριότητες & ΚΑΔ
+Το `src/subapps/geo-canvas/components/TransformationPreview.tsx` ήταν 527 γραμμές. Έκανα extract των 2 pure geometry builders (`generatePreviewGrid`, `generateAccuracyIndicators`) σε νέο αρχείο `src/subapps/geo-canvas/components/TransformationPreview.geometry.ts` (147 γραμμές). **ΔΕΝ έσβησα κανένα σχόλιο** (MEMORY κανόνας `feedback_file_size_extract_not_trim`). Αποτέλεσμα: 418 γραμμές στο component, άνετα κάτω από το 500-line ratchet.
 
-### UI / Rendering
-Το section αποδίδεται από custom renderer:
-- `src/config/company-gemi/sections/activities.ts`
-- `src/components/ContactFormSections/contactRenderersCore.tsx:223`
-- `src/components/contacts/dynamic/ContactKadSection.tsx:59`
+### Registry changes (.ssot-registry.json)
 
-Το `ContactKadSection` επιτρέπει:
-- 1 primary activity,
-- N secondary activities,
-- chamber field,
-- add secondary,
-- remove secondary,
-- edit primary/secondary μέσω `KadCodePicker`.
+**Νέο module `export-file`:**
+```json
+"export-file": {
+  "ssotFile": "src/lib/exports/trigger-export-download.ts",
+  "description": "Generated file exports (PDF/CSV/Excel/ZIP/PNG/IFC/TXT/GeoJSON) must use triggerExportDownload() or openBlobInNewTab() from src/lib/exports/trigger-export-download. Do NOT re-implement local downloadBlob/triggerDownload helpers.",
+  "forbiddenPatterns": [
+    "function\\s+(downloadBlob|triggerBlobDownload|triggerDownload)\\s*\\(",
+    "const\\s+(downloadBlob|triggerBlobDownload|triggerDownload)\\s*="
+  ],
+  "allowlist": [
+    "src/lib/exports/trigger-export-download.ts",
+    "src/services/gantt-export/gantt-export-utils.ts",
+    "src/services/data-exchange/DataExportService.ts"
+  ]
+}
+```
 
-Σημαντικό: όλες αυτές οι ενέργειες είναι local form mutations. Δεν υπάρχουν standalone toasts, confirm dialogs ή impact warnings μέσα στο component.
-
-### Mapping / persistence
-Οι δραστηριότητες γράφονται και διαβάζονται με compatibility layers:
-- `src/utils/contactForm/mappers/company.ts:124-125`
-- `src/utils/contacts/EnterpriseContactSaver.ts:162-164`
-- `src/utils/contactForm/fieldMappers/companyMapper.ts:31-57`
-- `src/components/ContactFormSections/contactRenderersCore.tsx:231-235`
-
-Σήμερα συνυπάρχουν:
-- `customFields.activities[]`
-- πιθανό legacy root `activities`
-- legacy singular fields `activityCodeKAD`, `activityDescription`, `activityType`
-
-Αυτό σημαίνει ότι τα KADs έχουν ήδη βαρύτητα master-data και κουβαλάνε backward-compatibility footprint.
-
-### Validation / governance
-Το UI KAD picker είναι permissive:
-- `src/components/shared/KadCodePicker.tsx`
-
-Επιτρέπει:
-- επιλογή από την official λίστα,
-- αλλά και free-text fallback σε κάποιες περιπτώσεις.
-
-Στο κανονικό UI flow δεν βρήκα:
-- duplicate KAD prevention,
-- confirmation πριν αφαιρεθεί secondary,
-- confirmation πριν αλλάξει primary,
-- ειδικό success/error toast για KAD add/update/remove.
-
-### Σημερινά visible labels
-Υπάρχουν μόνο labels του form, όχι operation messages:
-- `src/i18n/locales/el/forms.json:293-301`
-
-Π.χ. υπάρχουν:
-- `Κύρια Δραστηριότητα`
-- `Δευτερεύουσες Δραστηριότητες`
-- `Προσθήκη ΚΑΔ`
-- `Αφαίρεση ΚΑΔ`
-- `Επιμελητήριο / Τ.Υ. ΓΕΜΗ`
-
-Δεν βρέθηκαν ειδικά:
-- `created/updated/deleted` toasts για KAD,
-- `confirm delete primary KAD`,
-- `impact preview` strings.
+**Extended `file-download` allowlist:** Προστέθηκε `src/lib/exports/trigger-export-download.ts` (ο helper καλεί `link.download = filename` εσωτερικά).
 
 ---
 
-## B. Τραπεζικά
+## 2. ΤΙ ΕΚΚΡΕΜΕΙ — **PHASE Γ** (scope νέας session)
 
-### UI / CRUD behavior
-Το tab είναι σαφώς πιο ώριμο:
-- `src/components/contacts/tabs/ContactBankingTab.tsx`
-- `src/components/banking/BankAccountForm.tsx`
-- `src/components/banking/BankAccountCard.tsx`
-- `src/services/banking/BankAccountsService.ts`
-- `src/services/banking/bank-accounts-server.service.ts`
+### 2.1. Οι 7 Domain A files που πρέπει να μεταναστεύσουν στο `useFileDownload` hook
 
-Υποστηρίζει:
-- list accounts,
-- add account,
-- edit account,
-- delete account,
-- set primary account,
-- realtime subscription,
-- IBAN validation,
-- duplicate IBAN prevention,
-- soft-delete με `isActive: false`.
+Αυτά τα αρχεία κατεβάζουν **Firebase Storage files** (όχι generated exports). Πρέπει να περάσουν από το existing centralized hook `src/components/shared/files/hooks/useFileDownload.ts`.
 
-### Σημερινά messages που ήδη υπάρχουν
-Υπάρχει dedicated delete dialog και toasts:
-- `src/components/contacts/tabs/ContactBankingTab.tsx:164-170`
-- `src/components/contacts/tabs/ContactBankingTab.tsx:181-187`
-- `src/components/contacts/tabs/ContactBankingTab.tsx:203-210`
-- `src/components/contacts/tabs/ContactBankingTab.tsx:371-399`
-- `src/i18n/locales/el/contacts.json:1318-1335`
+**Baseline (2026-04-11T07:34:22Z) — 16 violations, 7 files:**
 
-Σήμερα ο χρήστης βλέπει ήδη:
-- delete confirm,
-- success toast για create,
-- success toast για update,
-- success toast για delete,
-- success toast για set primary,
-- error toast για load/delete/set primary.
+| # | File | Count | Pattern Type |
+|---|------|-------|--------------|
+| 1 | `src/core/modals/usePhotoPreviewState.ts` | 4 | `link.download = downloadFilename` + `${title}.jpg` |
+| 2 | `src/components/shared/pages/SharedFilePageContent.tsx` | 2 | `window.open(fileInfo.downloadUrl, ...)` |
+| 3 | `src/components/shared/files/VersionHistory.tsx` | 2 | `window.open(version.downloadUrl, ...)` |
+| 4 | `src/components/shared/files/InboxView.tsx` | 2 | `window.open(file.downloadUrl, ...)` |
+| 5 | `src/components/procurement/PurchaseOrderActions.tsx` | 2 | `a.download = filename` |
+| 6 | `src/components/file-manager/FilePreviewPanel.tsx` | 2 | `window.open(file.downloadUrl, ...)` |
+| 7 | `src/components/admin/role-management/components/AuditExport.tsx` | 2 | `link.download = filenameMatch?.[1] ?? ...` |
 
-### Validation / security
-Στο server flow υπάρχουν:
-- tenant isolation,
-- IBAN validation,
-- currency validation,
-- duplicate IBAN check,
-- single-primary enforcement,
-- soft delete.
+**Σημείωση:** Οι counts στο baseline είναι 2x οι πραγματικές matches γιατί το script μετράει το ίδιο file σε πολλά patterns (π.χ. `a\.download` + `link\.download` και τα δύο πιάνονται). Δεν είναι bug — απλά διπλασιασμένο counting που είναι consistent.
 
-Τεκμήρια:
-- `src/services/banking/bank-accounts-server.service.ts:74-90`
-- `src/services/banking/bank-accounts-server.service.ts:101-147`
-- `src/services/banking/bank-accounts-server.service.ts:158-181`
-- `src/services/banking/bank-accounts-server.service.ts:190-218`
-- `src/services/banking/bank-accounts-server.service.ts:240-300`
-- `src/services/banking/bank-accounts-server.service.ts:317-440`
+### 2.2. Κανόνες για την migration
 
-### Τι λείπει σήμερα
-Δεν βρήκα στο normal product flow:
-- warning όταν αλλάζει ο primary account,
-- warning όταν διαγράφεται primary account,
-- warning όταν διαγράφεται ο τελευταίος active account,
-- impact preview για future invoices / payment instructions / PDF output,
-- field-level audit trail στο UI path.
+**ΚΡΙΣΙΜΟ — React hook usage:**
+- Το `useFileDownload` είναι **React hook** → πρέπει να καλείται στο **top-level** του component, όχι μέσα σε event handlers.
+- Pattern: `const { download } = useFileDownload();` στο top → call `download(fileRecord)` μέσα στον handler.
+
+**Πρώτο βήμα (ΠΡΙΝ γράψεις κώδικα):**
+1. Διάβασε `src/components/shared/files/hooks/useFileDownload.ts` — κατανόησε το API (είναι `FileRecord`-based; παίρνει `downloadUrl` directly; καλεί Firebase Storage getDownloadURL;)
+2. Διάβασε και τα 7 target files για να δεις τι context έχουν (props, state, event handler signatures)
+3. Αν η signature του hook απαιτεί `FileRecord` αλλά τα call sites έχουν μόνο `downloadUrl` string, ίσως χρειαστεί overload ή adapter
+
+### 2.3. Η στρατηγική σε φάσεις
+
+**Γ.1 — Read & Plan (obligatory ΠΡΙΝ οποιοδήποτε edit):**
+- Read useFileDownload hook
+- Read και τα 7 target files (γρήγορο, ~1K tokens το κάθε ένα)
+- Δημιούργησε migration plan: για κάθε αρχείο, ποια είναι η υπάρχουσα λογική και ποιο είναι το target pattern
+
+**Γ.2 — Simple sites πρώτα (low risk):**
+- `window.open(...downloadUrl)` sites (4 files): FilePreviewPanel, InboxView, VersionHistory, SharedFilePageContent → straightforward replacement με hook
+- Ένα commit ανά 1-2 files ή ένα bundled commit "Phase Γ.2 — shared files domain"
+
+**Γ.3 — Complex sites (medium risk):**
+- `usePhotoPreviewState.ts` — core modal, 2 call sites με `title` filename construction. Ίσως χρειάζεται να μετατραπεί σε component level.
+- `PurchaseOrderActions.tsx` — procurement domain, έχει direct `a.download` pattern
+- `AuditExport.tsx` — admin tool με `filenameMatch?.[1]` regex-based naming
+- Κάθε ένα από αυτά ίσως απαιτεί custom treatment
+
+**Γ.4 — Baseline refresh + ADR update:**
+- `npm run ssot:baseline` (ΠΡΟΣΟΧΗ: δες §4 για γνωστό flakiness στο script)
+- Ενημέρωση ADR-294 changelog με Phase Γ closure
+- Αναμενόμενο τελικό baseline: **0 violations, 0 files** → 🎯 **SSoT export centralization 100% complete**
+
+### 2.4. Εκτιμώμενο budget νέας session
+
+- Read phase: ~15-20k tokens (hook + 7 files)
+- Edit + commits: ~30-40k tokens (7 files σε 2-3 commits)
+- Πρόβλεψη: **55-70k tokens συνολικά** σε clean /clear session
 
 ---
 
-## Downstream Dependencies που υπάρχουν ήδη σήμερα
+## 3. GIT STATE ΟΤΑΝ ΣΤΑΜΑΤΗΣΑ
 
-## A. ΚΑΔ / Δραστηριότητες
+```
+HEAD = 86ed64fd chore(ssot): register export-file module + baseline refresh + ADR-294 update (Β.5)
+       c64b1b99 refactor(exports): migrate IFC/PNG/TXT exports to triggerExportDownload (Β.4)
+       c28be7ff refactor(exports): migrate CSV/JSON exporters to triggerExportDownload (Β.3)
+       ...
+       2852dabb feat(exports): add trigger-export-download canonical helper + migrate PDF sites
+```
 
-### Βέβαιες εξαρτήσεις
-1. Contact/company persistence model
-- `src/utils/contactForm/mappers/company.ts:124-125`
-- `src/utils/contacts/EnterpriseContactSaver.ts:162-164`
-- `src/utils/contactForm/fieldMappers/companyMapper.ts:31-57`
+**Branch ahead of origin/main by ~155 commits.** **ΚΑΝΕΝΑ PUSH** έχει γίνει. Working tree **ΚΑΘΑΡΟ** (verified).
 
-2. Primary activity mirroring σε legacy fields
-- `src/components/ContactFormSections/contactRenderersCore.tsx:233-235`
-
-3. Accounting / PDF usage
-- `src/subapps/accounting/services/pdf/invoice-pdf-exporter.ts:76-79`
-- `src/subapps/accounting/components/invoices/details/InvoiceActionsMenu.tsx:34-43`
-- `src/subapps/accounting/services/pdf/invoice-pdf-template.ts` με `kadCode` rendering
-
-4. Accounting architecture / ADR docs
-- `src/subapps/accounting/docs/adrs/ADR-ACC-002-invoicing-system.md`
-- `src/subapps/accounting/docs/adrs/ADR-ACC-003-mydata-aade-integration.md`
-- `src/subapps/accounting/docs/adrs/ADR-ACC-018-invoice-pdf-generation.md`
-- `src/subapps/accounting/config/account-categories.ts`
-
-### Τι σημαίνει πρακτικά
-- Ο primary KAD δεν είναι cosmetic.
-- Μπορεί να εμφανίζεται ή να τροφοδοτεί accounting/myDATA/PDF behaviors.
-- Η αλλαγή primary KAD πρέπει να θεωρείται `important business-data edit`.
-
-### Σημαντική παρατήρηση
-Το live contact model κρατά array `activities`, αλλά ο accounting PDF exporter σήμερα τραβά `mainKad` από company profile, όχι κατευθείαν από contact form state. Αυτό σημαίνει ότι υπάρχει architectural split και πιθανό consistency risk μεταξύ contact profile και accounting profile. Άρα η ανάγκη για ξεκάθαρα impact messages είναι ακόμα μεγαλύτερη.
-
-## B. Τραπεζικά
-
-### Βέβαιες εξαρτήσεις
-1. Subcollection / reportability
-- `contacts/{contactId}/bankAccounts/{accountId}`
-- τεκμηριώνεται σε service και ADR/spec docs
-
-2. Invoice PDF / issuer snapshot / fallback logic
-- `src/subapps/accounting/services/pdf/invoice-pdf-exporter.ts:58-70`
-- `src/subapps/accounting/components/invoices/details/InvoiceActionsMenu.tsx:40-43`
-- `src/subapps/accounting/components/invoices/forms/InvoiceForm.tsx` με issuer snapshot placeholder για bank accounts
-- `src/subapps/accounting/docs/adrs/ADR-ACC-018-invoice-pdf-generation.md`
-
-3. AI tooling / admin operations
-- `src/services/ai-pipeline/tools/handlers/banking-handler.ts`
-
-4. Dynamic reporting / entity mapping docs
-- `docs/centralized-systems/reference/adrs/ADR-268-dynamic-report-builder/SPEC-009-entity-mapping-companies.md`
-- `docs/centralized-systems/reference/adrs/ADR-268-dynamic-report-builder/SPEC-022-entity-mapping-accounting.md`
-
-### Τι σημαίνει πρακτικά
-- Οι bank accounts επηρεάζουν τουλάχιστον future payment-facing outputs.
-- Για νέα invoices, το σωστό pattern είναι snapshot.
-- Για παλιότερα ή fallback flows, το live profile μπορεί ακόμα να χρησιμοποιείται.
-
-### Πολύ κρίσιμο συμπέρασμα
-Η σωστή product messaging πρέπει να ξεχωρίζει 2 πράγματα:
-- `μελλοντικά παραστατικά / εξαγωγές / ροές πληρωμών θα χρησιμοποιούν τα νέα στοιχεία`
-- `ήδη εκδομένα παραστατικά με snapshot δεν αλλάζουν`
+**Κανόνας N.(-1) — ΠΟΤΕ push χωρίς ρητή εντολή Γιώργου.** Ο Γιώργος δεν έδωσε εντολή push σε αυτή τη session.
 
 ---
 
-## Audit / Tracking: τι υπάρχει και τι δεν υπάρχει
+## 4. ΓΝΩΣΤΟ FLAKY BEHAVIOR — `generate-ssot-baseline.sh`
 
-### Banking
-Υπάρχει audit write στο AI path:
-- `src/services/ai-pipeline/tools/handlers/banking-handler.ts:120-122`
-- `src/services/ai-pipeline/tools/handlers/banking-handler.ts:196`
-- `src/services/ai-pipeline/tools/handlers/banking-handler.ts:242`
+Το script έχει flaky behavior στο Git Bash / Windows:
+- **Συμπτώματα**: Runs χωρίς obvious error αλλά παράγει **0 violations** ενώ υπάρχουν πραγματικά violations
+- **Αιτία (υποψία)**: Subshell variable scoping issue — η `while read | grep` pipeline χάνει το scope των arrays `PATTERNS`/`ALLOWLIST`/`CURRENT_MODULE` σε subshells
+- **Workaround που χρησιμοποίησα**: Έγραψα το baseline χειρωνακτικά με counts από ένα successful run (16 violations σε 7 files)
+- **Verified counts manually**:
+  ```bash
+  grep -rE "link\.download\s*=" src --include="*.ts" --include="*.tsx" \
+    | grep -vE "useFileDownload|useBatchFileOperations|file-manager-handlers|trigger-export-download"
+  # → 3 matches σε 2 files (AuditExport, usePhotoPreviewState×2)
 
-### Activities
-Υπάρχει audit write στο AI path:
-- `src/services/ai-pipeline/tools/handlers/activity-handler.ts:145-147`
-- `src/services/ai-pipeline/tools/handlers/activity-handler.ts:209-211`
-- `src/services/ai-pipeline/tools/handlers/activity-handler.ts:255-257`
+  grep -rE "\ba\.download\s*=" src --include="*.ts" --include="*.tsx" \
+    | grep -vE "useFileDownload|useBatchFileOperations|file-manager-handlers|trigger-export-download"
+  # → 1 match σε 1 file (PurchaseOrderActions)
 
-### Αλλά στο normal UI flow
-Δεν βρήκα ισοδύναμο field-level audit trail για:
-- add/remove secondary KAD,
-- set primary KAD,
-- update/delete/set-primary bank account.
+  grep -rE "window\.open\([^)]*downloadUrl" src --include="*.ts" --include="*.tsx" \
+    | grep -vE "useFileDownload|useBatchFileOperations|file-manager-handlers|trigger-export-download"
+  # → 4 matches σε 4 files (FilePreviewPanel, InboxView, VersionHistory, SharedFilePageContent)
+  ```
+- **Συμβουλή νέας session**: Αν ο generator ξαναβγάλει 0 violations μετά από Phase Γ edits, μπη γράψε το baseline χειρωνακτικά. Το σωστό τελικό state = `totalViolations: 0, totalFiles: 0`.
 
-Συμπέρασμα:
-Το repo ήδη αναγνωρίζει θεωρητικά την ανάγκη audit, αλλά σήμερα την υλοποιεί άνισα: υπάρχει στον AI path, όχι καθαρά στον user-facing main UI path.
-
----
-
-## Ενημερώνεται σήμερα ο χρήστης;
-
-## A. Δραστηριότητες & ΚΑΔ
-Σήμερα: `Όχι επαρκώς`.
-
-Τι υπάρχει:
-- labels/controls στο form,
-- generic contact save feedback στο τέλος του submit.
-
-Τι δεν υπάρχει:
-- add KAD success toast,
-- remove KAD confirm,
-- primary KAD change warning,
-- chamber change info,
-- dependency preview.
-
-Άρα ο χρήστης ουσιαστικά δεν ενημερώνεται σωστά για το operational impact.
-
-## B. Τραπεζικά
-Σήμερα: `Μερικώς ναι`.
-
-Τι υπάρχει:
-- CRUD toasts,
-- delete confirmation,
-- validation messages για IBAN/bank name,
-- server-side duplicate prevention.
-
-Τι δεν υπάρχει:
-- dependency-aware messaging,
-- future-vs-history clarification,
-- stronger primary-account change warning,
-- last-account safety message,
-- explicit compliance-sensitive monitoring notice.
-
-Άρα ο χρήστης ενημερώνεται για την πράξη, όχι για τη συνέπεια.
+**Για το proper fix**: Υπάρχει γνωστό pending στο MEMORY για "i18n baseline corruption" — το ίδιο pattern. Χρειάζεται bugfix στο generator script (rewrite σε Node.js ίσως, ή να γίνει inline ο grep scanner αντί pipeline με subshells). Όχι urgent.
 
 ---
 
-## Τι notifications / messages πρέπει να υπάρχουν
+## 5. ΑΛΛΕΣ ΕΚΚΡΕΜΟΤΗΤΕΣ ΕΚΤΟΣ SCOPE PHASE Γ
 
-## A. Δραστηριότητες & ΚΑΔ
+Αυτά είναι γνωστά pending από MEMORY και προηγούμενες sessions — **μην τα αγγίξεις** εκτός αν ο Γιώργος το ζητήσει ρητά:
 
-### 1. Add secondary KAD
-Πρέπει να εμφανίζεται success toast:
-- `Ο ΚΑΔ {code} προστέθηκε.`
+1. **ADR-233 Building Code** (από 2026-04-05):
+   - 🔴 HIGH: uniqueness validation
+   - 🟡 MEDIUM: `BuildingsList.tsx`
+   - 🟢 LOW: unit tests
 
-Αν ο ΚΑΔ υπάρχει ήδη:
-- `Ο ΚΑΔ {code} υπάρχει ήδη στις δραστηριότητες της επαφής.`
+2. **i18n missing keys legacy** — 4762 violations σε 549 files, Boy Scout rule
 
-### 2. Remove secondary KAD
-Πριν τη διαγραφή χρειάζεται lightweight confirm:
-- `Θέλετε να αφαιρέσετε τον ΚΑΔ {code};`
-- `Η αλλαγή θα επηρεάσει μόνο τη μελλοντική χρήση της επαφής σε αναζητήσεις, προφίλ και λογιστικές ροές που διαβάζουν live στοιχεία.`
+3. **i18n baseline corruption** — `.i18n-violations-baseline.json` έχει κενό `totalViolations:` field (ίδιο bug pattern με το ssot generator)
 
-Μετά τη διαγραφή:
-- `Ο ΚΑΔ {code} αφαιρέθηκε.`
-
-### 3. Change primary KAD
-Αυτό είναι critical action και χρειάζεται stronger warning.
-Προτεινόμενο confirm:
-- `Η κύρια δραστηριότητα θα αλλάξει από {oldCode} σε {newCode}.`
-- `Η αλλαγή μπορεί να επηρεάσει λογιστικές ρυθμίσεις, PDF παραστατικών, myDATA/classification flows και μελλοντικά έγγραφα που χρησιμοποιούν τον κύριο ΚΑΔ της εταιρείας.`
-- `Τα ήδη εκδομένα παραστατικά που έχουν snapshot δεν αλλάζουν.`
-
-Μετά το save:
-- `Ο κύριος ΚΑΔ ενημερώθηκε.`
-
-### 4. Remove primary KAD
-Κανονικά δεν πρέπει να επιτρέπεται “κενό” primary KAD αν υπάρχουν άλλες δραστηριότητες.
-Προτεινόμενο rule:
-- αν υπάρχει secondary, ζητάμε πρώτα `ορίστε νέο primary`.
-- αν είναι ο μόνος KAD, επιτρέπεται clear μόνο με explicit strong confirm ή δεν επιτρέπεται καθόλου αν ο business κανόνας απαιτεί κύρια δραστηριότητα.
-
-Προτεινόμενο message:
-- `Η εταιρεία πρέπει να έχει μία κύρια δραστηριότητα. Ορίστε άλλον ΚΑΔ ως κύριο πριν αφαιρέσετε τον τρέχοντα.`
-
-### 5. Chamber edit
-Δεν χρειάζεται βαρύ confirm, αλλά χρειάζεται info-level notice αν υπάρχουν accounting/compliance dependencies:
-- `Η αλλαγή επιμελητηρίου θα χρησιμοποιηθεί σε μελλοντικές προβολές/έγγραφα που διαβάζουν live στοιχεία εταιρείας.`
-
-### 6. Save summary για όλο το tab
-Αν έχουν αλλάξει πολλά fields, ιδανικά πριν το save:
-- `Θα ενημερωθούν η κύρια δραστηριότητα, {n} δευτερεύουσες δραστηριότητες και το επιμελητήριο.`
-- `Οι αλλαγές θα ισχύσουν για μελλοντική χρήση της επαφής. Τα υπάρχοντα snapshots παραμένουν ως έχουν.`
+4. **Push των 155+ commits** στο origin/main — ΜΟΝΟ με ρητή εντολή Γιώργου
 
 ---
 
-## B. Τραπεζικά
+## 6. STEP-BY-STEP ΠΡΟΤΕΙΝΟΜΕΝΗ ΡΟΗ ΝΕΑΣ SESSION
 
-### 1. Add bank account
-Υπάρχει ήδη success toast. Θέλει μικρή ενίσχυση αν είναι primary:
-- `Ο λογαριασμός {bankName} προστέθηκε και ορίστηκε ως κύριος.`
-
-Αν δεν είναι primary:
-- `Ο λογαριασμός {bankName} προστέθηκε.`
-
-### 2. Update bank account
-Υπάρχει ήδη success toast, αλλά για sensitive field changes πρέπει να υπάρχει impact notice.
-Αν αλλάζει ένα από:
-- `iban`
-- `bankName`
-- `bankCode`
-- `holderName`
-- `isPrimary`
-
-τότε χρειάζεται message:
-- `Οι αλλαγές θα χρησιμοποιηθούν σε μελλοντικές πληρωμές, εξαγωγές και έγγραφα που διαβάζουν live τραπεζικά στοιχεία.`
-- `Τα ήδη εκδομένα παραστατικά που περιέχουν snapshot τραπεζικών στοιχείων δεν αλλάζουν.`
-
-### 3. Delete bank account
-Υπάρχει ήδη confirm, αλλά πρέπει να γίνει πιο χρήσιμο.
-Προτεινόμενο νέο confirm:
-- `Θέλετε να απενεργοποιήσετε τον λογαριασμό {bankName} με IBAN {iban};`
-- `Ο λογαριασμός δεν θα είναι πλέον διαθέσιμος σε μελλοντικές πληρωμές, PDF παραστατικών και ροές που χρησιμοποιούν live τραπεζικά στοιχεία.`
-- `Τα ήδη εκδομένα παραστατικά που έχουν snapshot δεν αλλάζουν.`
-
-Αν είναι primary account:
-- `Ο λογαριασμός αυτός είναι ο κύριος. Μετά τη διαγραφή, πρέπει να ορίσετε νέο κύριο λογαριασμό.`
-
-### 4. Set primary account
-Υπάρχει ήδη toast, αλλά χρειάζεται warning πριν την αλλαγή όταν υπάρχει ήδη άλλος primary:
-- `Ο λογαριασμός {bankName} θα οριστεί ως κύριος.`
-- `Μελλοντικές πληρωμές και έγγραφα που χρησιμοποιούν primary bank account θα εμφανίζουν αυτόν τον λογαριασμό.`
-
-Μετά:
-- `Ο λογαριασμός {bankName} ορίστηκε ως κύριος.`
-
-### 5. Delete last active account
-Πρέπει να υπάρχει special warning:
-- `Πρόκειται για τον τελευταίο ενεργό τραπεζικό λογαριασμό της επαφής.`
-- `Μετά τη διαγραφή δεν θα υπάρχει διαθέσιμος λογαριασμός για μελλοντικές πληρωμές ή προβολή σε σχετικά έγγραφα.`
-
-### 6. Duplicate / fraud-sensitive edit
-Για αλλαγή IBAN ειδικά, προτείνεται monitoring-style info:
-- `Η αλλαγή IBAN είναι ευαίσθητη οικονομική μεταβολή και καταγράφεται στο ιστορικό αλλαγών.`
+```
+1. Read αυτό το αρχείο (local_ΑΝΑΦΟΡΑ_ΕΡΓΑΣΙΩΝ_2.md)
+2. git status -s + git log --oneline -5 → verify καθαρό state + οι 4 Phase Β commits
+3. Read src/components/shared/files/hooks/useFileDownload.ts → κατανόηση API
+4. Read και τα 7 target files (parallel με Agent Explore ή sequential)
+5. Plan Mode: Γράψε migration strategy — ποια αρχεία ποιο pattern
+6. Γ.2 — Simple 4 files (window.open → hook) → 1 commit
+7. Γ.3 — Complex 3 files (custom treatment) → 1 commit ανά file ή bundled
+8. npm run ssot:baseline (αν flaky → manual write με 0/0)
+9. Update ADR-294 changelog με Phase Γ closure
+10. Γ.4 — Final commit: baseline + ADR
+11. ΣΤΑΜΑΤΑ. Ανακοίνωσε "Phase Γ complete → SSoT export centralization 100%"
+12. ΠΕΡΙΜΕΝΕ εντολή push από Γιώργο. **ΜΗΝ push αυτόνομα.**
+```
 
 ---
 
-## Τι dependencies ΠΡΕΠΕΙ να θεωρούνται επίσημα product dependencies
+## 7. ΚΙΝΔΥΝΟΙ / WARNINGS ΓΙΑ ΤΗ ΝΕΑ SESSION ⚠️
 
-## Για ΚΑΔ
-Πρέπει να θεωρούνται official dependencies:
-- company master profile,
-- primary activity / classification logic,
-- accounting profile resolution,
-- invoice PDF / myDATA-related display or data selection,
-- report filters / search / future analytics,
-- audit trail.
+1. **React hooks rule**: `useFileDownload` πρέπει να καλείται στο top-level, ΟΧΙ μέσα σε handlers/conditions. Αν ένα call site είναι σε closure (π.χ. map over versions), μπορεί να χρειαστεί refactor σε child component ή extraction σε parent scope.
 
-## Για Τραπεζικά
-Πρέπει να θεωρούνται official dependencies:
-- payment instructions,
-- invoice/export/PDF fallback data,
-- issuer snapshot creation for new accounting docs,
-- future remittance/payment integrations,
-- sensitive-field monitoring,
-- audit trail.
+2. **FileRecord shape mismatch**: Τα call sites έχουν διαφορετικά shapes (`fileInfo.downloadUrl`, `version.downloadUrl`, inline `downloadFilename`). Το hook πιθανώς περιμένει `FileRecord` type. Αν mismatch → χρειάζεται adapter ή hook overload. **Πρώτα διάβασε το API πριν αποφασίσεις.**
+
+3. **Core modal files**: Το `usePhotoPreviewState.ts` είναι core modal state — το refactor μπορεί να επηρεάσει πολλά callers. Εφάρμοσε `grep -r "usePhotoPreviewState"` πριν τις αλλαγές.
+
+4. **Pre-commit hook** είναι ενεργός — θα πιάσει file size >500, i18n, SSoT ratchet, κτλ. Αν μπλοκάρει → **fix root cause**, ΠΟΤΕ `--no-verify`.
+
+5. **Generator flakiness (§4)**: Αν το baseline regen βγάλει περίεργα αποτελέσματα, γράψε το baseline manually. Μη χάσεις ώρες για το generator bug.
+
+6. **Parallel agents**: Σε αυτή τη session εμφανίστηκαν συγκρούσεις με άλλο agent που έτρεχε παράλληλα (έκανε edits σε `src/config/audit-tracked-fields.ts` και `src/config/service-config.ts` και committed δύο δικούς του commits 2e6b762d + c18821a7 + εκκρεμεί ένα ADR entry για `entity-audit-trail` module). **Πριν ξεκινήσεις Phase Γ, τρέξε `git status -s` και `git log --oneline -10` για να δεις το πραγματικό state.** Αν δεις αλλαγές που δεν έκανες, **μην τις αγγίξεις** — MEMORY κανόνας `feedback_never_checkout_other_agent_files`.
 
 ---
 
-## Τι κάνουν οι μεγάλοι vendors
+## 8. QUICK REFERENCE — useful commands
 
-## 1. Microsoft Dynamics 365 / Business Central
-Επίσημες πηγές δείχνουν ότι:
-- επιτρέπονται πολλαπλοί bank accounts,
-- ορίζεται preferred/default bank account,
-- sensitive bank fields μπορούν να παρακολουθούνται και να παράγουν notifications,
-- σε Finance υπάρχει vendor bank approval workflow,
-- η Microsoft αναγνώρισε ρητά την ανάγκη ιστορικότητας για παλιά payment entries όταν αλλάζει IBAN.
+```bash
+# Verify Phase Β commits
+git log --oneline | head -10
 
-Τεκμήρια:
-- Business Central vendor bank accounts: preferred bank account + monitor sensitive fields
-  https://learn.microsoft.com/en-gb/dynamics365/business-central/purchasing-how-set-up-vendors-bank-accounts
-- Finance vendor bank approval workflow
-  https://learn.microsoft.com/en-us/dynamics365/finance/accounts-payable/vendor-bank-account-workflow
-- Finance IBAN validation
-  https://learn.microsoft.com/en-us/dynamics365/finance/cash-bank-management/iban-validation
-- Business Central historical IBAN tracking for past credit transfer entries
-  https://learn.microsoft.com/th-th/dynamics365-release-plan/2021wave2/smb/dynamics365-business-central/keep-track-historical-iban-number-when-vendor-bank-account-number-changes
+# Check baseline
+cat .ssot-violations-baseline.json
 
-Συμπέρασμα για εμάς:
-Το σωστό market pattern είναι:
-- multiple accounts,
-- preferred/primary selection,
-- strong validation,
-- approval/monitoring για sensitive changes,
-- historical safety για past documents/entries.
+# SSoT audit (progress vs baseline)
+npm run ssot:audit
 
-## 2. SAP
-Η SAP αντιμετωπίζει τον business partner ως κεντρικό master record με:
-- πολλαπλά bank details,
-- IBAN και bank detail IDs,
-- substitute/change semantics και validity periods,
-- multiple industries με standard/default industry,
-- industry ως classification της κύριας επιχειρηματικής δραστηριότητας.
+# Regen baseline (ΠΡΟΣΟΧΗ στο flakiness)
+npm run ssot:baseline
 
-Τεκμήρια:
-- SAP Business Partner Industry
-  https://help.sap.com/docs/SAP_S4HANA_CLOUD/f86dc2eb1f8b48c880a7607213104b27/273a98394e684e688845757ac68deb2d.html
-- SAP Bank Details / Business Partner Bank Account Data
-  https://help.sap.com/docs/SAP_S4HANA_ON-PREMISE/6d31005aa10649649041a0b205f5f4f7/b9ae8d5377a0ec23e10000000a174cb4.html
-  https://help.sap.com/docs/SAP_S4HANA_CLOUD/f86dc2eb1f8b48c880a7607213104b27/ab936af2a75844d4b7948c8a23fd9ffc.html
-- SAP Business Partner API properties for BANKDETAILS and INDUSTRIES
-  https://help.sap.com/docs/SAP_S4HANA_ON-PREMISE/74b0b157c81944ffaac6ebc07245b9dc/87a9cd7d1c7e4fcb8bf81a080c516349.html
+# Manual scan για verify των Phase Γ targets
+grep -rE "link\.download|a\.download|window\.open\([^)]*downloadUrl" src \
+  --include="*.ts" --include="*.tsx" \
+  | grep -vE "useFileDownload|useBatchFileOperations|file-manager-handlers|trigger-export-download"
 
-Συμπέρασμα για εμάς:
-Το σωστό pattern είναι να μοντελοποιούμε και τα KAD και τα bank accounts ως first-class master subrecords, με standard/default semantics και όχι σαν απλά πεδία φόρμας.
-
-## 3. Oracle Fusion
-Η Oracle δείχνει ότι οι business classifications:
-- είναι ξεχωριστός managed resource,
-- έχουν status, certifying agency, notes, dates, attachments,
-- κρατούν provider/contact attribution,
-- έχουν create/update/delete REST endpoints,
-- και στέλνονται notifications όταν classification records λήγουν.
-
-Τεκμήρια:
-- Oracle Business Classifications overview
-  https://docs.oracle.com/en/cloud/saas/procurement/25c/oaprc/business-classifications.html
-- Oracle Business Classifications REST endpoints
-  https://docs.oracle.com/en/cloud/saas/procurement/25d/fapra/api-suppliers-business-classifications.html
-- Oracle update classification API with `CreatedBy`, `LastUpdatedBy`, `LastUpdateDate`
-  https://docs.oracle.com/en/cloud/saas/procurement/26a/fapra/op-suppliers-supplierid-child-businessclassifications-classificationid-patch.html
-
-Συμπέρασμα για εμάς:
-Τα activity/classification δεδομένα σε enterprise προϊόντα έχουν status, attribution, ημερομηνίες, notes και notifications. Άρα το δικό μας `ΚΑΔ` tab σήμερα είναι product-immature σε σχέση με την αγορά.
+# TypeScript check (μόνο αν Phase Γ αλλάξει exports/interfaces)
+npx tsc --noEmit 2>&1 | grep -E "FilePreviewPanel|InboxView|VersionHistory|SharedFilePage|usePhotoPreview|PurchaseOrderActions|AuditExport"
+```
 
 ---
 
-## Προτεινόμενο policy ανά tab
+## ΤΕΛΟΣ ΑΝΑΦΟΡΑΣ
 
-## A. Δραστηριότητες & ΚΑΔ
-- Επιτρέπεται add/update/remove secondary KAD.
-- Επιτρέπεται change primary KAD μόνο με explicit confirm.
-- Δεν πρέπει να επιτρέπεται orphan state χωρίς primary KAD, εκτός αν υπάρχει σαφός business rule waiver.
-- Το chamber edit επιτρέπεται χωρίς hard block αλλά με info notice.
-- Κάθε save που αλλάζει primary KAD πρέπει να γράφει audit event.
-- Ιδανικά να υπάρχει diff summary πριν το save.
+**Context τρέχουσας session όταν σταμάτησα:** ~80% φορτωμένο, 15+ εντολές, συμπλοκότητα από generator flakiness + parallel agent collision.
+**Σύσταση Γιώργο:** `/clear` + νέα session με αυτή την αναφορά ως πρώτο input.
+**Εκτιμώμενο budget για ολοκλήρωση Phase Γ:** 55-70k tokens στη νέα session.
+**Deliverable:** `totalViolations: 0` στο `.ssot-violations-baseline.json` → SSoT export centralization 100% complete.
 
-## B. Τραπεζικά
-- Επιτρέπεται add/update/delete/set-primary.
-- Delete πρέπει να παραμείνει soft-delete.
-- IBAN changes να θεωρούνται sensitive changes.
-- Set-primary και delete-primary να έχουν extra warning.
-- Delete-last-active να έχει stronger warning ή guard ανά business rule.
-- Κάθε create/update/delete/set-primary να γράφει audit event και στο normal UI path, όχι μόνο στο AI path.
-
----
-
-## Συγκεκριμένα gaps που αξίζει να υλοποιηθούν στο repo
-
-### Priority 1
-1. `KAD operation messaging`
-- dedicated i18n keys για add/remove/set-primary/impact-warning
-- lightweight confirm για remove secondary
-- strong confirm για change primary
-
-2. `Banking impact messaging`
-- επέκταση του υπάρχοντος delete dialog
-- warning όταν διαγράφεται primary ή last active
-- info banner όταν αλλάζει sensitive field όπως IBAN
-
-3. `UI-path audit trail`
-- reuse του υπάρχοντος audit concept που υπάρχει στα AI handlers
-- ίδια λογική για normal product flow
-
-### Priority 2
-4. `Future vs snapshot clarification`
-- reusable copy pattern για accounting-related fields
-- να εμφανίζεται σε banking και primary KAD changes
-
-5. `KAD validation hardening`
-- duplicate prevention
-- ξεκάθαρο rule για free-text vs official-only KAD
-- προστασία ώστε πάντα να υπάρχει primary
-
-### Priority 3
-6. `Impact preview`
-- πριν από critical save να υπολογίζεται summary όπως:
-  - `θα αλλάξει ο κύριος ΚΑΔ`
-  - `θα απενεργοποιηθεί primary bank account`
-  - `μελλοντικά έγγραφα/πληρωμές θα χρησιμοποιούν τα νέα στοιχεία`
-
----
-
-## Τελικό συμπέρασμα
-Στα tabs `Δραστηριότητες & ΚΑΔ` και `Τραπεζικά` υπάρχουν ήδη πραγματικές εξαρτήσεις.
-
-Το `Τραπεζικά` έχει σήμερα αρκετά καλή CRUD ωριμότητα, αλλά λείπει η ενημέρωση για downstream impact.
-Το `Δραστηριότητες & ΚΑΔ` έχει data model και rendering, αλλά όχι αντίστοιχη product governance: δεν έχει operation-level toasts, confirmations, impact warnings ή ξεκάθαρο audit story.
-
-Αν το προϊόν θέλει enterprise συμπεριφορά, η σωστή κατεύθυνση είναι:
-- `KAD = governed business classification master data`
-- `Bank accounts = governed sensitive financial master data`
-- και για τα δύο tabs: `impact-aware UX + audit trail + future-vs-history clarity`.
-
----
-
-## Έλεγχος / Μεθοδολογία
-Έγινε έρευνα στον τοπικό κώδικα και στα docs του repo, με έμφαση σε:
-- contacts form rendering,
-- mapping/persistence,
-- banking services,
-- accounting PDF/snapshot flows,
-- i18n messages,
-- AI handlers / audit patterns.
-
-Έγινε επίσης benchmark από επίσημες πηγές Microsoft, SAP και Oracle.
-
-Δεν έγινε αλλαγή production code. Άρα δεν έτρεξα `npx tsc --noEmit`, επειδή το turn αφορούσε μόνο συγγραφή τοπικής αναφοράς.
+Καλή συνέχεια.
+— Claude Opus 4.6, 2026-04-11

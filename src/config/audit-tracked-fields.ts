@@ -179,12 +179,11 @@ const SERVICE_EXCLUSIVE: ReadonlySet<string> = new Set([
   'registryNumber', 'responsibleMinistry', 'division', 'operatingHours',
   'responsiblePersons', 'servicesProvided',
 ]);
-// Note: 'name', 'shortName', 'supervisionMinistry' are service-only form fields;
-// excluded from individual/company diffs to avoid noise from form defaults.
-const SERVICE_ONLY_FORM_FIELDS: readonly string[] = ['name', 'shortName', 'supervisionMinistry'];
-
+// Note: 'name', 'shortName', 'supervisionMinistry' are already in SERVICE_EXCLUSIVE,
+// so they're excluded from individual/company diffs via that set. They must NOT
+// be added to COMPANY/INDIVIDUAL exclusives, otherwise they get excluded from
+// service diffs as well (excludeSet for 'service' = COMPANY ∪ INDIVIDUAL).
 const COMPANY_EXCLUSIVE: ReadonlySet<string> = new Set([
-  ...SERVICE_ONLY_FORM_FIELDS,
   'companyName', 'legalForm', 'companyType', 'legalName', 'tradeName',
   'gemiNumber', 'registrationNumber', 'industry', 'sector', 'numberOfEmployees',
   'annualRevenue', 'contactPersons',
@@ -196,7 +195,6 @@ const COMPANY_EXCLUSIVE: ReadonlySet<string> = new Set([
   'customFields.prefecture', 'customFields.municipality',
 ]);
 const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
-  ...SERVICE_ONLY_FORM_FIELDS,
   'firstName', 'lastName', 'fatherName', 'motherName', 'middleName',
   'birthDate', 'birthCountry', 'gender', 'amka',
   'documentType', 'documentIssuer', 'documentNumber',

@@ -116,6 +116,9 @@ const NAVIGATION_LABELS = {
   // 🏢 ENTERPRISE: Role Management (ADR-244)
   role_management: 'admin.roleManagement',
 
+  // 🏢 ENTERPRISE: Global Audit Log (ADR-195 Phase 7)
+  audit_log: 'admin.auditLog',
+
   // Badges
   badge_new: 'badges.new',
 
@@ -130,6 +133,7 @@ const NAVIGATION_LABELS = {
   available_storage: 'sidebar.availableStorage',
   available_parking: 'sidebar.availableParking',
   sold_properties: 'sidebar.soldProperties',
+  financial_intelligence: 'sidebar.financialIntelligence',
 
   // Accounting submenu
   accounting_setup: 'accounting.setup',
@@ -731,6 +735,7 @@ function getLabelKeyForPath(path: string): string {
     'sales/available-storage': 'available_storage',
     'sales/available-parking': 'available_parking',
     'sales/sold': 'sold_properties',
+    'sales/financial-intelligence': 'financial_intelligence',
 
     // Accounting
     'accounting': 'accounting',
@@ -787,6 +792,7 @@ function getLabelKeyForPath(path: string): string {
     'admin/operator-inbox': 'operator_inbox',
     'admin/setup': 'admin_setup',
     'admin/role-management': 'role_management',
+    'admin/audit-log': 'audit_log',
 
     // Tools paths
     'files': 'file_manager',

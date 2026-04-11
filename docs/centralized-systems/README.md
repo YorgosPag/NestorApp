@@ -72,6 +72,7 @@
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores
 - **[📧 Email/AI Ingestion](data-systems/email-ai-ingestion.md)** - Email webhooks & AI analysis
+- **[📜 Entity Audit Trail (ADR-195)](reference/adrs/ADR-195-entity-audit-trail.md)** - Centralized change history: service-layer `EntityAuditService` + `useEntityAudit` hook, global admin view at `/admin/audit-log`, Phase 1 CDC `auditContactWrite` Cloud Function trigger (dual-write with `source: 'service' | 'cdc'`)
 - **[🇪🇺 ESCO Professional Classification](reference/adrs/ADR-132-esco-professional-classification.md)** - EU ESCO occupations + skills taxonomy (ADR-132)
 - **[👷 Attendance QR + GPS Verification](reference/adrs/ADR-170-attendance-qr-gps-verification.md)** - QR Code + GPS Geofencing + Photo Verification (ADR-170)
 - **[📏 BOQ / Quantity Surveying](reference/adrs/ADR-175-quantity-surveying-measurements-system.md)** - Σύστημα Επιμετρήσεων: ΑΤΟΕ categories, cost engine, governance, UI (ADR-175)
