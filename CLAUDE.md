@@ -130,7 +130,26 @@ SOS. SOS. N.12 ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ — SSoT RATCHET ENFORCEMENT (ADR-
   - `npm run ssot:discover` — εντοπισμός duplicates, anti-patterns, registry gaps
 - **ΓΙΑΤΙ**: Χωρίς automated enforcement, κάθε νέος agent μπορεί να γράψει scattered code
 
-SOS. SOS. N.9 CONTEXT HEALTH INDICATOR — ΥΠΟΧΡΕΩΤΙΚΟ ΣΤΟ ΤΕΛΟΣ ΚΑΘΕ ΕΡΓΑΣΙΑΣ:
+## 🚨🚨🚨 SOS. SOS. N.13 — ΑΔΙΑΠΡΑΓΜΑΤΕΥΤΟ: RATCHET BACKLOG SESSION-START REMINDER (ADR-299)
+
+**ΣΤΗΝ ΠΡΩΤΗ ΣΟΥ ΑΠΑΝΤΗΣΗ ΚΑΘΕ ΝΕΟΥ SESSION**, ΥΠΟΧΡΕΩΤΙΚΑ:
+
+1. **ΔΙΑΒΑΣΕ** το `.claude-rules/pending-ratchet-work.md` (live checklist των εκκρεμοτήτων) — είναι το agent-facing view του ADR-299.
+2. **ΥΠΕΝΘΥΜΙΣΕ** στον Γιώργο **ΣΥΝΤΟΜΑ** τι εκκρεμεί — χρησιμοποίησε το copy-paste template στο τέλος του αρχείου (2-4 γραμμές max).
+3. **ΕΞΑΙΡΕΣΗ**: Αν ο Γιώργος δίνει σαφή εντολή για **ανεξάρτητη εργασία** (άσχετη με ratchet backlog), τότε μία μόνο γραμμή: «Εκκρεμούν N ratchet εργασίες στο ADR-299, δες `.claude-rules/pending-ratchet-work.md` όταν χρειαστεί» — ΜΗΝ φορτώνεις την απάντηση με άσχετα reminders.
+
+**ΓΙΑΤΙ ΑΥΤΟΣ Ο ΚΑΝΟΝΑΣ:**
+- Ο Γιώργος έχει **πολλές παράλληλες εργασίες** και θέλει να μην ξεχάσει τις ratchet εκκρεμότητες
+- Το ADR-299 είναι το SSoT με όλα τα pending ratchets (ADR-298 Phase B/C/E, CHECK 3.17 entity audit, i18n missing keys, resolver reachability) + hour estimates + scenarios A/B
+- Η ad-hoc εκτίμηση δημιουργεί σύγχυση (15h παλιά vs 55-75h νέα — documented σε ADR-299 §1.1)
+- **Triple redundancy**: CLAUDE.md (εδώ) → `.claude-rules/MEMORY.md` (pointer) → `.claude-rules/pending-ratchet-work.md` (live checklist). Καμία single point of failure.
+
+**ΚΑΝΟΝΑΣ ΕΝΗΜΕΡΩΣΗΣ:**
+- Όταν ολοκληρώνεται ένα ratchet item → **ΑΦΑΙΡΕΙΣ** τη γραμμή (όχι strikethrough) και γράφεις changelog entry στο `.claude-rules/pending-ratchet-work.md` + ενημερώνεις το §4 του ADR-299.
+- ΠΟΤΕ μην μαρκάρεις item ως completed χωρίς ρητή εντολή Γιώργου ή actual merge.
+- Αν οι μετρήσεις των baselines αλλάζουν >10%, ενημέρωσε το §2 του ADR-299.
+
+## SOS. SOS. N.9 CONTEXT HEALTH INDICATOR — ΥΠΟΧΡΕΩΤΙΚΟ ΣΤΟ ΤΕΛΟΣ ΚΑΘΕ ΕΡΓΑΣΙΑΣ:
 **Μετά από ΚΑΘΕ ολοκληρωμένη εργασία**, εμφάνισε context indicator:
 
 - Μέτρα πόσες εντολές/tasks έχουν εκτελεστεί στο τρέχον conversation

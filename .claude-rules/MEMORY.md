@@ -14,6 +14,7 @@
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — ΠΟΤΕ μη ρωτάς "θέλεις commit;" — ο Γιώργος λέει μόνος του
 
 ## Pending Work
+- [🔥 Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **SOS:** Scenario A = ~21h (Phase B.2-B.6 + CHECK 3.17 + resolver reach), Scenario B = ~64h. ΥΠΕΝΘΥΜΙΣΗ ΣΕ ΚΑΘΕ SESSION START (CLAUDE.md N.13).
 - [ADR-233 Building Code — 3 Pending Items](project_adr233_building_code_pending.md) — HIGH: uniqueness validation, MEDIUM: BuildingsList.tsx, LOW: unit tests (2026-04-05)
 
 ## Code Architecture
