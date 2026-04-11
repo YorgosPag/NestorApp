@@ -619,45 +619,6 @@ git push origin main
 
 ---
 
-## 🧭 SOS. SOS. N.13 — RATCHET BACKLOG MASTER ROADMAP (ADR-299)
-
-**ΥΠΟΧΡΕΩΤΙΚΑ ΣΤΗΝ ΑΡΧΗ ΚΑΘΕ SESSION**: Διάβασε το `adrs/ADR-299-ratchet-backlog-master-roadmap.md` και υπενθύμισε στον Γιώργο τι εκκρεμεί. Το ADR-299 είναι το **single source of truth** για όλες τις pending ratchet εργασίες — ο Γιώργος δεν θέλει να τις ξεχάσει.
-
-### 🎯 Active backlogs (snapshot 2026-04-11)
-
-| Ratchet | ADR | Baseline file | Count | Τύπος |
-|---------|-----|---------------|-------|-------|
-| **Firestore rules runtime coverage** (Phase B/C/E) | ADR-298 | manifest pending | **88 collections** | Test suites |
-| **Entity audit coverage — write side** (CHECK 3.17) | ADR-195 | `.entity-audit-coverage-baseline.json` | **18 αρχεία** | Boy Scout |
-| **i18n missing keys** (CHECK 3.8) | ADR-280 | `.i18n-missing-keys-baseline.json` | **4.762 legacy** | Ratchet down |
-| **i18n resolver reachability** (CHECK 3.13) | ADR-279/280 | `.i18n-resolver-reachability-baseline.json` | **378 violations / 13 αρχεία** | Ratchet down |
-
-**Snapshot αυθεντικότητα**: οι authoritative μετρήσεις είναι πάντα τα `.*-baseline.json` files — αυτός ο πίνακας μπορεί να γίνει stale. Τρέξε `npm run audit-coverage:audit` / `i18n:audit` / αντίστοιχα για real-time count.
-
-### 📊 Προτεινόμενο scope (καταγεγραμμένο στο ADR-299 §5)
-
-- **Scenario A — Critical path (προτεινόμενο)**: ADR-298 Phase B + CHECK 3.17 + resolver reachability ≈ **21 ώρες expected** (εύρος 13,5-32h), 4-6 sessions
-- **Scenario B — Zero backlog**: Όλα τα παραπάνω + Phase C/E + i18n missing keys ≈ **64 ώρες expected** (εύρος 39,5-99h), 13-20 sessions
-
-### 🔄 Session start protocol
-
-1. **Διάβασε ADR-299** § 2 (current state) και § 3 (scope breakdown)
-2. **Υπενθύμισε στον Γιώργο** ένα από:
-   - Τα τρέχοντα counts (αν ζητήσει status)
-   - Το επόμενο actionable slice βάσει Scenario A (αν θέλει να προχωρήσει)
-   - Την εκτίμηση ωρών (αν ρωτήσει «πόσο μένει»)
-3. **Ενημέρωσε ADR-299** μόνο όταν:
-   - Ένα master milestone ολοκληρώνεται (π.χ. Phase B.2 complete)
-   - Οι μετρήσεις αλλάζουν >10% από τις καταγεγραμμένες
-   - Νέο check εισάγεται (νέο baseline file)
-4. **ΜΗΝ** ενημερώσεις ADR-299 σε κάθε commit — είναι strategic document, όχι task list
-
-### ⚠️ Ειδική σημείωση
-
-Αυτή η υπενθύμιση **αντικαθιστά** τη συνήθεια «δείξε μου τις εκκρεμότητες» — ο Γιώργος έχει σοβαρές παράλληλες εργασίες και χρειάζεται passive reminder, όχι ενεργή ερώτηση. Όταν ολοκληρωθεί όλο το backlog του ADR-299, **αφαίρεσε αυτή την ενότητα** από το CLAUDE.md.
-
----
-
 ## 📌 PENDING TASKS REMINDER
 
 ### ⚠️ ServiceRegistry V2 Migration (Low Priority - No Rush!)
