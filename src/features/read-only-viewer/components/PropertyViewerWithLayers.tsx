@@ -21,6 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 
 // 🏢 ENTERPRISE: Centralized Property Icon & Color
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
@@ -128,15 +129,20 @@ export function PropertyViewerWithLayers({
   const handleDownload = () => {
     try {
       const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-      if (canvas) {
-        const link = document.createElement('a');
-        // 🏢 ENTERPRISE: i18n-enabled filename
-        link.download = `${t('viewer.download.filename')}-${currentFloor?.name || 'floor'}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } else {
+      if (!canvas) {
         window.print();
+        return;
       }
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          window.print();
+          return;
+        }
+        triggerExportDownload({
+          blob,
+          filename: `${t('viewer.download.filename')}-${currentFloor?.name || 'floor'}.png`,
+        });
+      }, 'image/png');
     } catch (error) {
       // 🏢 ENTERPRISE: i18n-enabled error message
       logger.error(t('viewer.errors.loadingError'), { error });

@@ -16,6 +16,7 @@ import { auth, db } from '@/lib/firebase';
 import { twoFactorService } from '@/services/two-factor';
 import type { UserTwoFactorState, TotpSecretInfo } from '@/services/two-factor';
 import { AUTH_EVENTS } from '@/config/domain-constants';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('TwoFactorEnrollment');
@@ -194,14 +195,7 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
     const content = `Nestor Pagonis - Backup Codes\n${'='.repeat(40)}\n\n${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}\n\n${t('twoFactor.backupFileNote')}\n\nGenerated: ${new Date().toISOString()}`;
 
     const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'nestor-backup-codes.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    triggerExportDownload({ blob, filename: 'nestor-backup-codes.txt' });
   };
 
   // Disable 2FA

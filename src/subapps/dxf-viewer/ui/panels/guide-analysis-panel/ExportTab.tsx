@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { Download, Calculator, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,12 +35,7 @@ export const ExportTab: React.FC = () => {
   const handleExportIFC = useCallback(() => {
     const ifcText = exportGuidesToIFC(guides);
     const blob = new Blob([ifcText], { type: 'application/x-step' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `guides-${Date.now()}.ifc`;
-    a.click();
-    URL.revokeObjectURL(url);
+    triggerExportDownload({ blob, filename: `guides-${Date.now()}.ifc` });
   }, [guides]);
 
   // Quantity Takeoff

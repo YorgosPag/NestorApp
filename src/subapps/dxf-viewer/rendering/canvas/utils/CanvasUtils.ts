@@ -9,6 +9,7 @@ const logger = createModuleLogger('CanvasUtils');
 
 import type { CanvasConfig, Point2D } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 // 🏢 ENTERPRISE: Centralized bounds service για performance optimization
 import { canvasBoundsService } from '../../../services/CanvasBoundsService';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
@@ -302,7 +303,8 @@ export class CanvasUtils {
   }
 
   /**
-   * Save canvas as image
+   * Save canvas as image.
+   * Uses canvas.toBlob + canonical triggerExportDownload helper.
    */
   static saveCanvasAsImage(
     canvas: HTMLCanvasElement,
@@ -311,14 +313,11 @@ export class CanvasUtils {
     quality: number = 1.0
   ): void {
     const mimeType = `image/${format}`;
-    const dataURL = canvas.toDataURL(mimeType, quality);
-
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = dataURL;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    canvas.toBlob((blob) => {
+      if (blob) {
+        triggerExportDownload({ blob, filename });
+      }
+    }, mimeType, quality);
   }
 
   /**
