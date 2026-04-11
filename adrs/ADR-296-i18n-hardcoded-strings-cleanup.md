@@ -4,7 +4,7 @@
 **Date**: 2026-04-09
 **Author**: Claude (ADR-driven workflow)
 **Approved by**: Georgios Pagonis
-**Related**: CLAUDE.md SOS N.11, ADR-294 (SSoT Ratchet)
+**Related**: CLAUDE.md SOS N.11, ADR-294 (SSoT Ratchet), **ADR-299 (Ratchet Backlog Master Roadmap — aggregated SSoT για όλα τα ratchets + hour estimates)**
 
 ---
 

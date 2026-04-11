@@ -5,6 +5,7 @@
 > **Author**: Claude Agent + Γιώργος Παγώνης
 > **Category**: Entity Systems
 > **Decision**: Option Γ — Header "Last Modified" + Dedicated Activity Tab
+> **Related**: ADR-299 (Ratchet Backlog Master Roadmap) — aggregated SSoT για όλα τα ratchets (CHECK 3.14 audit value catalogs, CHECK 3.15 index coverage, CHECK 3.17 entity audit write coverage τεκμηριώνονται εκεί μαζί με hour estimates)
 
 ---
 

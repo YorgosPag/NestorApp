@@ -3,6 +3,8 @@
 ## Status
 ✅ IMPLEMENTED — 2026-04-08
 
+**Related:** ADR-299 (Ratchet Backlog Master Roadmap) — aggregated SSoT για όλα τα ratchets, συμπεριλαμβανομένου του SSoT ratchet που περιγράφεται εδώ. Οι συνολικές μετρήσεις και τα hour estimates διατηρούνται εκεί.
+
 ## Context
 Η προστασία από scattered/duplicate κώδικα βασιζόταν μόνο σε CLAUDE.md κανόνες και μνήμη agent. Δεν υπήρχε automated enforcement — κάθε νέο session ή agent μπορούσε να γράψει duplicates χωρίς μπλοκάρισμα.
 
