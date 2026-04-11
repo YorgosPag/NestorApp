@@ -108,6 +108,29 @@ function isStringMap(value) {
   return keys.every(k => typeof value[k] === 'string');
 }
 
+/**
+ * camelCase guard — referenced catalogs MUST only contain camelCase keys.
+ *
+ * Why this matters
+ * ----------------
+ * Form option values persist as snake_case tokens (e.g. `fire_department`),
+ * while ADR-279 mandates camelCase i18n catalog keys (`fireDepartment`). The
+ * audit-value-resolver bridges the two via a one-way snake→camel fallback
+ * (see `audit-value-resolver.ts:toCamelCase`). That fallback is safe ONLY if
+ * the canonical catalog contains no snake_case/kebab-case drift, otherwise two
+ * keys could collapse to the same camelCase form and silently shadow each
+ * other.
+ *
+ * Allowed: `fireDepartment`, `NAME_A_TO_Z` (SCREAMING_SNAKE sentinel enums),
+ * `ΑΕ` (Greek abbreviations already stored as-is).
+ * Rejected: lowercase snake_case (`fire_department`) or kebab-case
+ * (`fire-department`), which would alias the camelCase entry.
+ */
+function findSnakeCaseKeys(catalog) {
+  const snake = /^[a-z][a-z0-9]*[_-][a-z0-9_-]+$/;
+  return Object.keys(catalog).filter(k => snake.test(k));
+}
+
 // ---------------------------------------------------------------------------
 // Main validation routine.
 // ---------------------------------------------------------------------------
@@ -171,6 +194,21 @@ function validate() {
         `[${field}] en:${ns}:${dotPath} → expected non-empty { string: string } object`,
       );
       continue;
+    }
+
+    // Guard-rail: reject snake_case/kebab-case keys so the resolver's
+    // one-way snake→camel fallback cannot alias two distinct entries.
+    const elSnake = findSnakeCaseKeys(elCatalog);
+    const enSnake = findSnakeCaseKeys(enCatalog);
+    if (elSnake.length > 0) {
+      errors.push(
+        `[${field}] el:${ns}:${dotPath} → keys must be camelCase (ADR-279); found snake/kebab: ${elSnake.join(', ')}`,
+      );
+    }
+    if (enSnake.length > 0) {
+      errors.push(
+        `[${field}] en:${ns}:${dotPath} → keys must be camelCase (ADR-279); found snake/kebab: ${enSnake.join(', ')}`,
+      );
     }
 
     const elKeys = new Set(Object.keys(elCatalog));
