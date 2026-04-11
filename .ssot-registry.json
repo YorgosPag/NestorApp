@@ -221,6 +221,21 @@
         "src/config/audit-tracked-fields.ts"
       ]
     },
+    "entity-audit-trail": {
+      "ssotFile": "src/services/entity-audit.service.ts",
+      "description": "Entity audit trail must go through EntityAuditService.recordChange() and useEntityAudit hook — no direct writes to entity_audit_trail, no duplicate hook re-implementations, no inline collection queries (ADR-195)",
+      "forbiddenPatterns": [
+        "(addDoc|setDoc|updateDoc)\\s*\\([^)]*(entity_audit_trail|ENTITY_AUDIT_TRAIL)",
+        "collection\\s*\\(\\s*(COLLECTIONS\\.ENTITY_AUDIT_TRAIL|['\"]entity_audit_trail['\"])",
+        "(function\\s+useEntityAudit\\s*\\(|const\\s+useEntityAudit\\s*=)"
+      ],
+      "allowlist": [
+        "src/services/entity-audit.service.ts",
+        "src/hooks/useEntityAudit.ts",
+        "src/app/api/audit-trail/",
+        "src/config/firestore-collections.ts"
+      ]
+    },
     "firestore-schema-map": {
       "ssotFile": "src/config/firestore-schema-map.ts",
       "description": "AI schema definitions must use FIRESTORE_SCHEMA_MAP — no inline schema objects",
@@ -419,7 +434,7 @@
     },
     "file-download": {
       "ssotFile": "src/components/shared/files/hooks/useFileDownload.ts",
-      "description": "User file downloads (FileRecord from Storage) must use useFileDownload hook — no window.open or inline anchor.download. Generated exports (PDF/CSV/Excel/ZIP) are a separate domain — pending export-file module.",
+      "description": "User file downloads (FileRecord from Storage) must use useFileDownload hook — no window.open or inline anchor.download. Generated exports (PDF/CSV/Excel/ZIP/PNG/IFC/TXT) belong to the export-file module (Domain B).",
       "forbiddenPatterns": [
         "link\\.download\\s*=",
         "window\\.open\\([^)]*downloadUrl",
@@ -430,7 +445,21 @@
       "allowlist": [
         "src/components/shared/files/hooks/useFileDownload.ts",
         "src/components/shared/files/hooks/useBatchFileOperations.ts",
-        "src/components/file-manager/file-manager-handlers.ts"
+        "src/components/file-manager/file-manager-handlers.ts",
+        "src/lib/exports/trigger-export-download.ts"
+      ]
+    },
+    "export-file": {
+      "ssotFile": "src/lib/exports/trigger-export-download.ts",
+      "description": "Generated file exports (PDF/CSV/Excel/ZIP/PNG/IFC/TXT/GeoJSON) must use triggerExportDownload() or openBlobInNewTab() from src/lib/exports/trigger-export-download. Do NOT re-implement local downloadBlob/triggerDownload helpers.",
+      "forbiddenPatterns": [
+        "function\\s+(downloadBlob|triggerBlobDownload|triggerDownload)\\s*\\(",
+        "const\\s+(downloadBlob|triggerBlobDownload|triggerDownload)\\s*="
+      ],
+      "allowlist": [
+        "src/lib/exports/trigger-export-download.ts",
+        "src/services/gantt-export/gantt-export-utils.ts",
+        "src/services/data-exchange/DataExportService.ts"
       ]
     },
 
