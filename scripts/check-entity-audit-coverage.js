@@ -107,12 +107,30 @@ const HARD_EXEMPT_PATTERNS = [
 ];
 
 /**
- * Write operations to detect. We match the method name anywhere after a
- * `.` on the same or following line as a `COLLECTIONS.<KEY>` reference.
- * This is a regex-level heuristic — a scope-aware AST walker is v2 work.
+ * Write operations to detect.
+ *
+ * v1.1 precision refinement (2026-04-11): the original scanner matched any
+ * `.set(` / `.add(` / `.update(` / `.delete(` within a 600-char window of
+ * `COLLECTIONS.<KEY>`, which produced false positives for plain-JS calls
+ * like `Map.set()`, `Set.add()`, `Array.push()` ... in files that only
+ * *read* from a tracked collection. Example: building-spaces.service.ts
+ * iterates parking docs and calls `spaceLookup.set(id, ...)` — not a
+ * Firestore write.
+ *
+ * The fix: chain writes must be preceded by a Firestore-ref shape
+ * (`.doc(...)` or `.collection(...)`) so we never match bare method calls
+ * on arbitrary identifiers. Module fns (setDoc/updateDoc/deleteDoc/addDoc)
+ * are already precise and stay as-is.
  */
-const WRITE_METHODS = ['set', 'update', 'delete', 'add'];
-const MODULE_WRITE_FNS = ['setDoc', 'updateDoc', 'deleteDoc', 'addDoc'];
+// Direct chain: `...doc(id).set|update|delete(` or `...collection(ref).add(`
+const CHAIN_DIRECT_RE =
+  /\.\s*doc\s*\([^)]*\)\s*\.\s*(?:set|update|delete)\s*\(|\.\s*collection\s*\([^)]*\)\s*\.\s*add\s*\(/g;
+// Variable chain: `projectRef.update(...)`, `docRef.set(...)`, `batch.update(...)`, etc.
+// Restricted to identifier shapes that look like Firestore refs so bare JS
+// `Map.set()` / `Set.add()` / `Array.push()` never match.
+const CHAIN_VAR_RE =
+  /\b(?:\w*Ref|\w*Doc|ref|doc|batch|transaction|tx|writeBatch)\s*\.\s*(?:set|update|delete|create)\s*\(/g;
+const MODULE_WRITE_RE = /\b(?:setDoc|updateDoc|deleteDoc|addDoc)\s*\(/g;
 
 // ---------------------------------------------------------------------------
 // ANSI colours (no-op on non-TTY)
@@ -204,39 +222,110 @@ function stripCommentsAndStrings(src) {
 /**
  * Look for writes to any tracked collection key in the sanitized source.
  *
+ * Scope-aware attribution strategy:
+ *   1. Index EVERY `COLLECTIONS.<KEY>` reference (tracked + untracked) with
+ *      its source offset. Untracked refs are needed so we can tell when a
+ *      variable-chain write targets an untracked collection.
+ *   2. For each write shape, attribute the write to a collection by:
+ *      - MODULE fns (`setDoc(doc(db, COLLECTIONS.KEY, id), ...)`) →
+ *        scan FORWARD ~300 chars (the ref lives inside the call args).
+ *      - DIRECT chain (`.doc(id).set(...)`) → scan BACKWARD ~300 chars
+ *        (the `.doc()` and the write are adjacent).
+ *      - VARIABLE chain (`projectRef.update(...)`, `batch.set(docRef, ...)`)
+ *        → scan BACKWARD up to ~1500 chars for the NEAREST COLLECTIONS ref
+ *        (tracked OR untracked). If the nearest is untracked, the write
+ *        targets an untracked collection and is ignored. If tracked, attribute.
+ *
+ * Why this matters: a single file can reference both a tracked and an
+ * untracked collection, with variable refs to each. Without scope-aware
+ * attribution we get false positives (e.g. `identitySnap.docs[0].ref.update()`
+ * on an EXTERNAL_IDENTITIES result being attributed to a CONTACTS query
+ * further down the file).
+ *
  * @param {string} src
  * @returns {{hasWrite: boolean, keys: Set<string>}}
  */
 function detectTrackedWrites(src) {
-  const found = new Set();
-
-  // Pattern A: `COLLECTIONS.<KEY>` anywhere in the file, then within the
-  // next ~600 chars we also see one of the write method names. This is
-  // coarse but catches the multi-line Admin SDK pattern
-  // `adminDb.collection(COLLECTIONS.PROJECTS).doc(id).set({...})`.
-  const keyRe = /\bCOLLECTIONS\s*\.\s*([A-Z_]+)\b/g;
+  /** @type {Array<{pos: number, key: string, tracked: boolean}>} */
+  const allRefs = [];
+  const refRe = /\bCOLLECTIONS\s*\.\s*([A-Z_]+)\b/g;
   /** @type {RegExpExecArray|null} */
   let m;
-  while ((m = keyRe.exec(src)) !== null) {
-    const key = m[1];
-    if (!TRACKED_COLLECTION_KEYS.has(key)) continue;
-
-    const window = src.slice(m.index, m.index + 600);
-    const hasChainedWrite = WRITE_METHODS.some((method) =>
-      new RegExp(`\\.\\s*${method}\\s*\\(`).test(window),
-    );
-    const hasModuleWrite = MODULE_WRITE_FNS.some((fn) =>
-      new RegExp(`\\b${fn}\\s*\\(`).test(window),
-    );
-
-    if (hasChainedWrite || hasModuleWrite) {
-      found.add(key);
-    }
+  while ((m = refRe.exec(src)) !== null) {
+    allRefs.push({
+      pos: m.index,
+      key: m[1],
+      tracked: TRACKED_COLLECTION_KEYS.has(m[1]),
+    });
   }
 
-  // Pattern B: top-level modular form — `addDoc(collection(db, COLLECTIONS.KEY), ...)`
-  // is already caught by Pattern A since the COLLECTIONS.<KEY> ref precedes
-  // the write call within the same window. No extra handling needed.
+  const found = new Set();
+  if (allRefs.length === 0) {
+    return { hasWrite: false, keys: found };
+  }
+
+  /**
+   * Scan forward from writePos for the nearest tracked COLLECTIONS ref.
+   * Used for module fns where the ref lives inside the call args.
+   * @param {number} writePos
+   * @param {number} maxDist
+   * @returns {string|null}
+   */
+  function forwardTrackedKey(writePos, maxDist) {
+    for (const ref of allRefs) {
+      const d = ref.pos - writePos;
+      if (d < 0) continue;
+      if (d > maxDist) break;
+      if (ref.tracked) return ref.key;
+      // Untracked ref encountered before any tracked ref — don't attribute.
+      return null;
+    }
+    return null;
+  }
+
+  /**
+   * Scan backward from writePos for the nearest COLLECTIONS ref. If that
+   * nearest ref is tracked, return its key; otherwise return null (the
+   * write targets a different collection).
+   * @param {number} writePos
+   * @param {number} maxDist
+   * @returns {string|null}
+   */
+  function backwardTrackedKey(writePos, maxDist) {
+    /** @type {typeof allRefs[number]|null} */
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const ref of allRefs) {
+      const d = writePos - ref.pos;
+      if (d < 0 || d > maxDist) continue;
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearest = ref;
+      }
+    }
+    return nearest && nearest.tracked ? nearest.key : null;
+  }
+
+  // Phase 1: module write fns — ref lives inside args, scan forward.
+  MODULE_WRITE_RE.lastIndex = 0;
+  while ((m = MODULE_WRITE_RE.exec(src)) !== null) {
+    const key = forwardTrackedKey(m.index, 300);
+    if (key) found.add(key);
+  }
+
+  // Phase 2a: direct chain writes — `.doc(id).set(` — scan backward tight window.
+  CHAIN_DIRECT_RE.lastIndex = 0;
+  while ((m = CHAIN_DIRECT_RE.exec(src)) !== null) {
+    const key = backwardTrackedKey(m.index, 400);
+    if (key) found.add(key);
+  }
+
+  // Phase 2b: variable-ref chain — ref defined earlier, scan backward wide.
+  CHAIN_VAR_RE.lastIndex = 0;
+  while ((m = CHAIN_VAR_RE.exec(src)) !== null) {
+    const key = backwardTrackedKey(m.index, 1500);
+    if (key) found.add(key);
+  }
 
   return { hasWrite: found.size > 0, keys: found };
 }
