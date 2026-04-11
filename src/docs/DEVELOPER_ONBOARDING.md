@@ -431,7 +431,6 @@ function isDevMode() {
 | `/api/admin/fix-projects-direct` | POST | Admin | None | Direct project fixes |
 | `/api/admin/fix-property-project` | POST | Admin | None | Fix property-project links |
 | `/api/admin/migrate-dxf` | POST | Admin | None | DXF migration |
-| `/api/admin/migrate-properties` | POST | Admin | None | Property migration |
 | `/api/admin/seed-parking` | POST | Admin | None | Seed parking data |
 | `/api/admin/migrations/execute` | POST | Admin | None | Run migrations |
 | `/api/admin/migrations/execute-admin` | POST | Admin | None | Admin migrations |
