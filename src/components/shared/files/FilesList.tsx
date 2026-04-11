@@ -14,7 +14,7 @@
 
 import React from 'react';
 import { getStatusColor } from '@/lib/design-system';
-import { FileText, Download, Eye, Trash2, Calendar, HardDrive, Link2, Unlink, Pencil, Check, X } from 'lucide-react';
+import { FileText, Eye, Trash2, Calendar, HardDrive, Link2, Unlink, Pencil, Check, X } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { FileThumbnail } from './FileThumbnail';
@@ -310,18 +310,6 @@ export function FilesList({
 
           {/* Actions */}
           <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
-            {file.downloadUrl && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={(e) => actions.handleDownload(file, e)} aria-label={t('list.downloadFile')}>
-                    <Download className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                    {t('list.download')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('list.downloadFile')}</TooltipContent>
-              </Tooltip>
-            )}
-
             {onRename && !file.isLinkedFile && (
               <Tooltip>
                 <TooltipTrigger asChild>
