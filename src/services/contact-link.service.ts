@@ -158,17 +158,23 @@ export async function getContactLinkById(linkId: string): Promise<ContactLink | 
 export async function listContactLinks(params: ListContactLinksParams = {}): Promise<ContactLink[]> {
   const { sourceContactId, sourceWorkspaceId, targetWorkspaceId, targetEntityType, targetEntityId, status, limit: limitParam } = params;
 
+  // 🔒 companyId: N/A — ContactLink legacy schema has no companyId field on
+  // documents. Firestore rules (firestore.rules:151-186) enforce tenant isolation
+  // via createdBy ownership fallback (rules:160-162) for docs without companyId.
+  // Adding where('companyId') would silently match zero documents. Real fix
+  // requires data migration across all existing contact_links — tracked as
+  // deferred debt (same pattern as Phase 10C.8 / FirestoreRelationshipAdapter).
   let q = query(
     collection(db, COLLECTIONS.CONTACT_LINKS).withConverter(contactLinkConverter),
     orderBy('createdAt', 'desc')
-  );
+  ); // 🔒 companyId: N/A — legacy schema
 
-  if (sourceContactId) q = query(q, where('sourceContactId', '==', sourceContactId));
-  if (sourceWorkspaceId) q = query(q, where('sourceWorkspaceId', '==', sourceWorkspaceId));
-  if (targetWorkspaceId) q = query(q, where('targetWorkspaceId', '==', targetWorkspaceId));
-  if (targetEntityType) q = query(q, where('targetEntityType', '==', targetEntityType));
-  if (targetEntityId) q = query(q, where('targetEntityId', '==', targetEntityId));
-  if (status) q = query(q, where('status', '==', status));
+  if (sourceContactId) q = query(q, where('sourceContactId', '==', sourceContactId)); // 🔒 companyId: N/A — legacy schema
+  if (sourceWorkspaceId) q = query(q, where('sourceWorkspaceId', '==', sourceWorkspaceId)); // 🔒 companyId: N/A — legacy schema
+  if (targetWorkspaceId) q = query(q, where('targetWorkspaceId', '==', targetWorkspaceId)); // 🔒 companyId: N/A — legacy schema
+  if (targetEntityType) q = query(q, where('targetEntityType', '==', targetEntityType)); // 🔒 companyId: N/A — legacy schema
+  if (targetEntityId) q = query(q, where('targetEntityId', '==', targetEntityId)); // 🔒 companyId: N/A — legacy schema
+  if (status) q = query(q, where('status', '==', status)); // 🔒 companyId: N/A — legacy schema
   if (limitParam) q = query(q, firestoreLimit(limitParam));
 
   const snapshot = await getDocs(q);

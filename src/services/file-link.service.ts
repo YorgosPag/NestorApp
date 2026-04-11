@@ -100,17 +100,23 @@ export async function getFileLinkById(linkId: string): Promise<FileLink | null> 
 export async function listFileLinks(params: ListFileLinksParams = {}): Promise<FileLink[]> {
   const { sourceFileId, sourceWorkspaceId, targetEntityType, targetEntityId, targetWorkspaceId, status, limit: limitParam } = params;
 
+  // 🔒 companyId: N/A — FileLink legacy schema has no companyId field on
+  // documents. No dedicated firestore.rules match for file_links (falls under
+  // default-deny → authenticated fallback). Adding where('companyId') would
+  // silently match zero documents. Real fix requires data migration across all
+  // existing file_links — tracked as deferred debt (same pattern as Phase 10C.8
+  // / FirestoreRelationshipAdapter). Symmetric with contact-link.service.ts.
   let q = query(
     collection(db, COLLECTIONS.FILE_LINKS).withConverter(fileLinkConverter),
     orderBy('createdAt', 'desc')
-  );
+  ); // 🔒 companyId: N/A — legacy schema
 
-  if (sourceFileId) q = query(q, where('sourceFileId', '==', sourceFileId));
-  if (sourceWorkspaceId) q = query(q, where('sourceWorkspaceId', '==', sourceWorkspaceId));
-  if (targetEntityType) q = query(q, where('targetEntityType', '==', targetEntityType));
-  if (targetEntityId) q = query(q, where('targetEntityId', '==', targetEntityId));
-  if (targetWorkspaceId) q = query(q, where('targetWorkspaceId', '==', targetWorkspaceId));
-  if (status) q = query(q, where('status', '==', status));
+  if (sourceFileId) q = query(q, where('sourceFileId', '==', sourceFileId)); // 🔒 companyId: N/A — legacy schema
+  if (sourceWorkspaceId) q = query(q, where('sourceWorkspaceId', '==', sourceWorkspaceId)); // 🔒 companyId: N/A — legacy schema
+  if (targetEntityType) q = query(q, where('targetEntityType', '==', targetEntityType)); // 🔒 companyId: N/A — legacy schema
+  if (targetEntityId) q = query(q, where('targetEntityId', '==', targetEntityId)); // 🔒 companyId: N/A — legacy schema
+  if (targetWorkspaceId) q = query(q, where('targetWorkspaceId', '==', targetWorkspaceId)); // 🔒 companyId: N/A — legacy schema
+  if (status) q = query(q, where('status', '==', status)); // 🔒 companyId: N/A — legacy schema
   if (limitParam) q = query(q, firestoreLimit(limitParam));
 
   const snapshot = await getDocs(q);
