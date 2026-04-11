@@ -10,6 +10,9 @@
  *
  * @module components/contacts/tabs/ContactHistoryTab
  * @enterprise ADR-195 — Entity Audit Trail
+ * @ssot ADR-294 — Canonical history tab for all contact types (individual,
+ *                 company, service). Do NOT create per-type duplicates — the
+ *                 renderer is type-agnostic via `contactId` prop.
  */
 
 import React, { useMemo, useState } from 'react';

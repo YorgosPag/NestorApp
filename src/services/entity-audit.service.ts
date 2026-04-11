@@ -9,6 +9,9 @@
  *
  * @module services/entity-audit.service
  * @enterprise ADR-195 — Entity Audit Trail
+ * @ssot ADR-294 — This is the ONLY file allowed to write to `entity_audit_trail`.
+ *                 The `entity-audit-trail` module in `.ssot-registry.json` blocks
+ *                 direct writes, inline queries, and duplicate hooks elsewhere.
  */
 
 import 'server-only';

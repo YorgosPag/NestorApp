@@ -7,6 +7,9 @@
  *
  * @module hooks/useEntityAudit
  * @enterprise ADR-195 — Entity Audit Trail
+ * @ssot ADR-294 — This is the ONLY canonical client hook for audit history.
+ *                 The `entity-audit-trail` module in `.ssot-registry.json` blocks
+ *                 re-implementations of `useEntityAudit` elsewhere.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
