@@ -1,19 +1,13 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-11T07:34:22Z",
-    "totalViolations": 16,
-    "totalFiles": 7,
+    "generated": "2026-04-11T08:08:29Z",
+    "totalViolations": 0,
+    "totalFiles": 0,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
-    "src/core/modals/usePhotoPreviewState.ts": 4,
-    "src/components/shared/pages/SharedFilePageContent.tsx": 2,
-    "src/components/shared/files/VersionHistory.tsx": 2,
-    "src/components/shared/files/InboxView.tsx": 2,
-    "src/components/procurement/PurchaseOrderActions.tsx": 2,
-    "src/components/file-manager/FilePreviewPanel.tsx": 2,
-    "src/components/admin/role-management/components/AuditExport.tsx": 2
+
   }
 }
