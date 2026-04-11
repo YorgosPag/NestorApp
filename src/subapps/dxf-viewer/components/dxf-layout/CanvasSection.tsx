@@ -42,7 +42,6 @@ import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../u
 import type { ToolType } from '../../ui/toolbar/types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
-
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.

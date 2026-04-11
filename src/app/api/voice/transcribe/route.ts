@@ -7,7 +7,7 @@
  * Receives audio blob from client MediaRecorder → sends to Whisper API → returns text.
  *
  * Following existing patterns:
- * - Auth: withAuth from @/lib/auth (same as error-report, fix-projects)
+ * - Auth: withAuth from @/lib/auth (same as error-report)
  * - Rate limit: withHeavyRateLimit (10 req/min — audio processing is expensive)
  * - Whisper config: AI_ANALYSIS_DEFAULTS.OPENAI (same as ADR-156)
  *
