@@ -224,6 +224,23 @@ const bankingSection: ServiceSectionConfig = {
   ]
 };
 
+// -------------------------------------------------------------------------
+// 9. ΙΣΤΟΡΙΚΟ - 🏢 ENTERPRISE AUDIT TRAIL (ADR-195)
+// SSoT: shares ContactHistoryTab + entity_audit_trail collection with individual/company
+// -------------------------------------------------------------------------
+const historySection: ServiceSectionConfig = {
+  id: 'history',
+  title: 'sections.history',
+  icon: 'clock',
+  fields: [
+    {
+      id: 'history',
+      type: 'input',
+      label: 'sections.history'
+    }
+  ]
+};
+
 export const SERVICE_SECTIONS: ServiceSectionConfig[] = [
   basicInfoSection,
   addressSection,
@@ -231,7 +248,8 @@ export const SERVICE_SECTIONS: ServiceSectionConfig[] = [
   logoSection,
   relationshipsSection,
   filesSection,
-  bankingSection
+  bankingSection,
+  historySection
 ];
 
 /**

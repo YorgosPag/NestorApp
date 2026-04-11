@@ -153,6 +153,9 @@ export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
   'customFields.municipality': 'Δήμος',
 
   // ── Service-specific ──
+  name: 'Ονομασία Υπηρεσίας',
+  shortName: 'Συντομογραφία',
+  supervisionMinistry: 'Εποπτεύον Υπουργείο',
   serviceType: 'Τύπος Υπηρεσίας',
   parentOrganization: 'Μητρικός Οργανισμός',
   serviceCode: 'Κωδικός Υπηρεσίας',
@@ -171,11 +174,17 @@ export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
 // Fields exclusive to a specific contact type — excluded from audit diffs
 // for other types to prevent noise from form defaults (e.g. serviceType on individual).
 const SERVICE_EXCLUSIVE: ReadonlySet<string> = new Set([
+  'name', 'shortName', 'supervisionMinistry',
   'serviceType', 'serviceName', 'parentOrganization', 'serviceCode',
   'registryNumber', 'responsibleMinistry', 'division', 'operatingHours',
   'responsiblePersons', 'servicesProvided',
 ]);
+// Note: 'name', 'shortName', 'supervisionMinistry' are service-only form fields;
+// excluded from individual/company diffs to avoid noise from form defaults.
+const SERVICE_ONLY_FORM_FIELDS: readonly string[] = ['name', 'shortName', 'supervisionMinistry'];
+
 const COMPANY_EXCLUSIVE: ReadonlySet<string> = new Set([
+  ...SERVICE_ONLY_FORM_FIELDS,
   'companyName', 'legalForm', 'companyType', 'legalName', 'tradeName',
   'gemiNumber', 'registrationNumber', 'industry', 'sector', 'numberOfEmployees',
   'annualRevenue', 'contactPersons',
@@ -187,6 +196,7 @@ const COMPANY_EXCLUSIVE: ReadonlySet<string> = new Set([
   'customFields.prefecture', 'customFields.municipality',
 ]);
 const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
+  ...SERVICE_ONLY_FORM_FIELDS,
   'firstName', 'lastName', 'fatherName', 'motherName', 'middleName',
   'birthDate', 'birthCountry', 'gender', 'amka',
   'documentType', 'documentIssuer', 'documentNumber',
