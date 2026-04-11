@@ -473,6 +473,49 @@ if [[ -f "$RULES_COVERAGE_SCRIPT" ]]; then
 fi
 
 # =============================================================================
+# CHECK 3.17: Entity Audit Coverage (ADR-195 / 2026-04-11)
+# =============================================================================
+# Ratchet-mode gate that ensures every Firestore write to an audit-tracked
+# collection (projects, contacts, buildings, properties, floors, parking,
+# storage, purchase_orders, companies) lives in a file that also calls
+# EntityAuditService.recordChange() from the ADR-195 SSoT module.
+#
+# Closes the symmetric gap to the existing entity-audit-trail SSoT entry in
+# .ssot-registry.json — that one forbids *direct writes* to the
+# entity_audit_trail collection (reader-side protection); this one requires
+# *writes elsewhere* to feed it (writer-side coverage).
+#
+# Baseline: .entity-audit-coverage-baseline.json — existing files are
+# grandfathered; new files with writes must include recordChange().
+#
+# Scope: triggered only when src/**/*.{ts,tsx} files are staged.
+# =============================================================================
+
+AUDIT_COVERAGE_SCRIPT="scripts/check-entity-audit-coverage.js"
+if [[ -f "$AUDIT_COVERAGE_SCRIPT" ]]; then
+    AUDIT_COVERAGE_TARGETS=$(echo "$STAGED_FILES" | grep -E '^src/.*\.(ts|tsx)$' || true)
+
+    if [[ -n "$AUDIT_COVERAGE_TARGETS" ]]; then
+        echo -e "${YELLOW}🔍 Checking entity audit coverage (CHECK 3.17)...${NC}"
+
+        AUDIT_COVERAGE_OUTPUT=$(node "$AUDIT_COVERAGE_SCRIPT" $AUDIT_COVERAGE_TARGETS 2>&1)
+        AUDIT_COVERAGE_EXIT=$?
+
+        if [[ $AUDIT_COVERAGE_EXIT -ne 0 ]]; then
+            echo "$AUDIT_COVERAGE_OUTPUT"
+            echo ""
+            echo -e "${RED}✖ CHECK 3.17 failed — add EntityAuditService.recordChange() to the files above.${NC}"
+            echo -e "${YELLOW}  Tip: run 'npm run audit-coverage:audit' for a full scan.${NC}"
+            exit 1
+        fi
+
+        if [[ -n "$AUDIT_COVERAGE_OUTPUT" ]]; then
+            echo "$AUDIT_COVERAGE_OUTPUT"
+        fi
+    fi
+fi
+
+# =============================================================================
 # CHECK 4: Google-Style File Size Limits (per file type)
 # =============================================================================
 # Limits based on Single Responsibility Principle:
