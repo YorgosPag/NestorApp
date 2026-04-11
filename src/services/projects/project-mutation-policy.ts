@@ -74,13 +74,15 @@ export function assertProjectCreatePolicy(projectData: Record<string, unknown>):
  *
  * Companies are stored in the CONTACTS collection with type === 'company'.
  *
+ * @returns Resolved company display name — callers reuse it to avoid a
+ *          second fetch (e.g. audit trail human-readable snapshots per ADR-195).
  * @throws {ProjectMutationPolicyError} if the contact does not exist or
  *         is not of type 'company'.
  */
 export async function assertLinkedCompanyExists(
   db: Firestore,
   linkedCompanyId: string
-): Promise<void> {
+): Promise<{ companyName: string }> {
   if (isBlank(linkedCompanyId)) {
     throw new ProjectMutationPolicyError(
       POLICY_ERROR_CODES.COMPANY_REQUIRED,
@@ -107,4 +109,7 @@ export async function assertLinkedCompanyExists(
       'Linked Company is not a valid company contact.',
     );
   }
+
+  const rawName = typeof data.companyName === 'string' ? data.companyName.trim() : '';
+  return { companyName: rawName || linkedCompanyId };
 }

@@ -57,6 +57,14 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
 
   // ── Contact: individual document type (identityCard/passport/...)
   documentType: { ns: 'contacts-form', path: 'options.identity' },
+
+  // ── Project: lifecycle status (planning/inProgress/completed/onHold/cancelled).
+  // Stored values are snake_case (`in_progress`, `on_hold`) per PROJECT_STATUSES
+  // SSoT; the resolver normalizes them to camelCase before lookup. The `status`
+  // key is shared across entities — when a non-project audit entry references
+  // `status` with an unknown value, the resolver gracefully falls back to
+  // `common:audit.values.*`, so there is no regression risk for contacts etc.
+  status: { ns: 'projects', path: 'status' },
 } as const;
 
 /** All field names that have a registered catalog — cheap membership test. */

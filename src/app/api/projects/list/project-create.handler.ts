@@ -97,9 +97,14 @@ export const POST = withHighRateLimit(
           ? (body.linkedCompanyId ?? ctx.companyId)
           : ctx.companyId;
 
-        // 🏢 ADR-284 §3.0: Verify linkedCompanyId points to an existing company contact
+        // 🏢 ADR-284 §3.0: Verify linkedCompanyId points to an existing company contact.
+        // Reuses the same fetch to resolve the display name for the audit trail
+        // (ADR-195 — audit entries store human-readable snapshots, not raw IDs).
         const adminDb = getAdminFirestore();
-        await assertLinkedCompanyExists(adminDb, body.linkedCompanyId as string);
+        const { companyName: linkedCompanyName } = await assertLinkedCompanyExists(
+          adminDb,
+          body.linkedCompanyId as string,
+        );
 
         const sanitizedData = {
           ...body,
@@ -142,7 +147,7 @@ export const POST = withHighRateLimit(
             {
               field: 'linkedCompanyId',
               oldValue: null,
-              newValue: body.linkedCompanyId ?? null,
+              newValue: linkedCompanyName,
               label: 'Συνδεδεμένη Εταιρεία',
             },
           ],
