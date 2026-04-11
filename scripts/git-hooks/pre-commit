@@ -432,6 +432,47 @@ if [[ -f "$INDEX_COVERAGE_SCRIPT" ]]; then
 fi
 
 # =============================================================================
+# CHECK 3.16: Firestore Rules Test Coverage (ADR-298 / 2026-04-11)
+# =============================================================================
+# Zero-tolerance gate that ensures every top-level match block in
+# firestore.rules is covered by either tests/firestore-rules/_registry/
+# coverage-manifest.ts or an explicit pending list entry, and that every
+# covered collection has a matching test suite with the SSoT COVERAGE
+# export and matrix loop.
+#
+# Also validates rule shape for `immutable` pattern collections — the
+# Bug #1 class from 2026-04-11 where super_admin short-circuit was not
+# the first OR leg of the tenant gate. Phase A scope; Phase B expands.
+#
+# Scope: triggered only when firestore.rules or files under
+#        tests/firestore-rules/ are staged.
+# =============================================================================
+
+RULES_COVERAGE_SCRIPT="scripts/check-firestore-rules-test-coverage.js"
+if [[ -f "$RULES_COVERAGE_SCRIPT" ]]; then
+    RULES_COVERAGE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^firestore\.rules$|^tests/firestore-rules/' || true)
+
+    if [[ -n "$RULES_COVERAGE_TRIGGERS" ]]; then
+        echo -e "${YELLOW}🔍 Checking Firestore rules test coverage (CHECK 3.16)...${NC}"
+
+        RULES_COVERAGE_OUTPUT=$(node "$RULES_COVERAGE_SCRIPT" $RULES_COVERAGE_TRIGGERS 2>&1)
+        RULES_COVERAGE_EXIT=$?
+
+        if [[ $RULES_COVERAGE_EXIT -ne 0 ]]; then
+            echo "$RULES_COVERAGE_OUTPUT"
+            echo ""
+            echo -e "${RED}✖ CHECK 3.16 failed — fix the rules coverage violations above.${NC}"
+            echo -e "${YELLOW}  Tip: run 'pnpm firestore-rules:coverage:audit' for a full scan.${NC}"
+            exit 1
+        fi
+
+        if [[ -n "$RULES_COVERAGE_OUTPUT" ]]; then
+            echo "$RULES_COVERAGE_OUTPUT"
+        fi
+    fi
+fi
+
+# =============================================================================
 # CHECK 4: Google-Style File Size Limits (per file type)
 # =============================================================================
 # Limits based on Single Responsibility Principle:

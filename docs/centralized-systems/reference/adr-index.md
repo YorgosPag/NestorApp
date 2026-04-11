@@ -317,6 +317,7 @@
 | **ADR-295** | Multi-Channel Photo Sharing to CRM Contacts | ✅ ✅ IMPLEMENTED | 2026-04-09 | Omnichannel Communications | [📄](./adrs/ADR-295-multi-channel-photo-sharing.md) |
 | **ADR-296** | i18n Hardcoded Greek Strings — Phased Cleanup | ✅ APPROVED | 2026-04-09 | Code Quality / i18n | [📄](../../../adrs/ADR-296-i18n-hardcoded-strings-cleanup.md) |
 | **ADR-297** | Contact Dependency Registry — SSoT | ✅ ✅ IMPLEMENTED | 2026-04-09 | Data Architecture / SSoT Enforcement | [📄](../../../adrs/ADR-297-contact-dependency-ssot.md) |
+| **ADR-298** | Firestore Rules Test Coverage SSoT + CHECK 3.16 | ✅ ✅ IMPLEMENTED (Phase A) | 2026-04-11 | Security / Testing Infrastructure / SSoT Enforcement | [📄](../../../adrs/ADR-298-firestore-rules-test-coverage-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
