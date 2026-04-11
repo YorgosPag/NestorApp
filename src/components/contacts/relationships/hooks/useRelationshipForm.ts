@@ -189,7 +189,8 @@ export const useRelationshipForm = (
       }
 
     } catch (error) {
-      logger.error('CENTRALIZED VALIDATION: Validation failed:', { error: error });
+      const errMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('CENTRALIZED VALIDATION: Business rule violation', { data: { message: errMessage } });
 
       if (error instanceof Error) {
         // Return the validation error message directly
