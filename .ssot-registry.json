@@ -419,10 +419,13 @@
     },
     "file-download": {
       "ssotFile": "src/components/shared/files/hooks/useFileDownload.ts",
-      "description": "File downloads must use useFileDownload hook — no window.open or inline <a download> for downloads",
+      "description": "User file downloads (FileRecord from Storage) must use useFileDownload hook — no window.open or inline anchor.download. Generated exports (PDF/CSV/Excel/ZIP) are a separate domain — pending export-file module.",
       "forbiddenPatterns": [
         "link\\.download\\s*=",
-        "window\\.open\\(.*downloadUrl"
+        "window\\.open\\([^)]*downloadUrl",
+        "\\ba\\.download\\s*=",
+        "anchor\\.download\\s*=",
+        "window\\.open\\([^)]*\\.downloadUrl\\)"
       ],
       "allowlist": [
         "src/components/shared/files/hooks/useFileDownload.ts",
