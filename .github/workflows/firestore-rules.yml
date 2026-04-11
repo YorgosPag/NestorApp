@@ -1,0 +1,156 @@
+name: 🔒 Firestore Rules (ADR-298)
+
+# =============================================================================
+# Layer 2 of Defense in Depth for Firestore Security Rules — CI mirror of the
+# pre-commit CHECK 3.16 gate + full jest emulator suite that cannot run in
+# pre-commit due to time budget.
+#
+# Why this workflow
+# -----------------
+# CHECK 3.16 (pre-commit) runs two fast static validators:
+#   1. Coverage manifest parity against firestore.rules
+#   2. Rule shape guard on `immutable` pattern collections
+#
+# It deliberately skips the jest emulator suite because spinning up the
+# Firebase emulator adds ~20–40s to every commit. Full runtime validation
+# lives here instead, so that every PR touching rules / tests / scanners is
+# gated on both the static checks AND the end-to-end behavior tests.
+#
+# Regression that motivated the gate
+# ----------------------------------
+# On 2026-04-11 `entity_audit_trail` read rule had `isSuperAdminOnly()` in the
+# wrong branch of an AND-chain. Legacy documents without `companyId` short-
+# circuited the guard before the super-admin check was reached, so super-admin
+# reads returned `permission-denied` in production even though company-admin
+# reads worked. No pre-existing gate caught this — ADR-298 adds CHECK 3.16
+# (static) for pre-commit and this workflow (runtime) for PRs / main.
+#
+# Time budget target
+# ------------------
+# ≤ 3 minutes per run with cache hits (pnpm + firebase-tools + emulator
+# binaries). Static job is ~15s, jest job is ~60–120s depending on runner.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'tests/firestore-rules/**'
+      - 'jest.config.firestore-rules.js'
+      - 'scripts/check-firestore-rules-test-coverage.js'
+      - 'scripts/_shared/firestore-index-matcher.js'
+      - '.github/workflows/firestore-rules.yml'
+      - 'firebase.json'
+  push:
+    branches: [main]
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'tests/firestore-rules/**'
+      - 'jest.config.firestore-rules.js'
+      - 'scripts/check-firestore-rules-test-coverage.js'
+      - '.github/workflows/firestore-rules.yml'
+
+concurrency:
+  group: firestore-rules-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Static validation — fast, no emulator, no dependency install beyond Node.
+  # Mirrors the pre-commit CHECK 3.16 pipeline but runs in repo-wide (`--all`)
+  # mode so pre-existing backlog is surfaced for PR review even when the
+  # touched files themselves are clean.
+  # ---------------------------------------------------------------------------
+  static:
+    name: 🔍 Coverage Manifest + Rule Shape (CHECK 3.16 — full scan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The coverage audit script is pure Node (walks the filesystem, parses
+      # firestore.rules + manifest). No runtime deps = no install needed.
+      - name: 🔍 CHECK 3.16 — Coverage + rule shape (full scan)
+        run: node scripts/check-firestore-rules-test-coverage.js --all --verbose
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Firestore Rules Static::Coverage manifest + rule shape PASS"
+
+  # ---------------------------------------------------------------------------
+  # Runtime validation — boots Firestore emulator, runs the full jest suite.
+  # This is the gate that catches Bug #1-class regressions (rule behavior
+  # drift) that static validation cannot detect by design.
+  # ---------------------------------------------------------------------------
+  runtime:
+    name: 🧪 Jest Suite (Firestore Emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      # pnpm store path for cache key stability
+      PNPM_STORE_PATH: ~/.local/share/pnpm/store
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # Only the packages needed for rules testing:
+      #   - @firebase/rules-unit-testing (emulator client)
+      #   - firebase-admin (peer)
+      #   - jest + @swc/jest (transform)
+      #   - firebase-tools (emulator binary + emulators:exec runner)
+      #
+      # `--frozen-lockfile` ensures the CI run matches the committed lockfile;
+      # `--ignore-scripts` skips the app's postinstall (patch-package +
+      # radix react19 patch) which are irrelevant for a rules-only run and
+      # would otherwise fail on missing files.
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 📥 Cache Firebase emulator binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-v1
+          restore-keys: |
+            firebase-emulators-${{ runner.os }}-
+
+      - name: ☕ Setup Java (required by Firestore emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # `firebase emulators:exec` boots the Firestore emulator, runs the
+      # command, and shuts it down on exit. Single-line, deterministic, no
+      # background process bookkeeping. Matches the local
+      # `pnpm test:firestore-rules:emulator` script for dev parity.
+      - name: 🧪 Run Firestore rules jest suite
+        run: pnpm test:firestore-rules:emulator
+        env:
+          CI: 'true'
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Firestore Rules Runtime::All jest suites passed against live emulator"
