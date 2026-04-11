@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | 🟡 APPROVED — Phase A Implemented |
+| **Status** | 🟢 ACCEPTED — Phase A + Phase B Implemented |
 | **Date** | 2026-04-11 |
 | **Category** | UI Components / Centralization |
 | **Canonical Location** | `src/components/ui/sharing/` |
@@ -14,7 +14,7 @@
 
 - **Canonical**: `ShareSurfaceShell` + `useShareFlow` + `PermissionPanel` slot interface from `src/components/ui/sharing/`
 - **Decision**: Extract a presentation-only primitive (modal chrome + state machine) and let each sharing feature plug in its own `PermissionPanel` with its own ACL semantics.
-- **Status**: 🟡 Phase A (types, shell, hook) IMPLEMENTED. Phase B (migration of `ShareModal` + `ShareDialog`) PENDING.
+- **Status**: 🟢 Phase A (types, shell, hook) + Phase B (ShareModal + ShareDialog migrated) IMPLEMENTED.
 - **Date**: 2026-04-11
 
 ---
@@ -159,11 +159,11 @@ export function useShareFlow<TDraft, TResult>(options: {
 
 Τα commits 1-3 ΔΕΝ αγγίζουν production flows. Ο νέος κώδικας είναι unused μέχρι το Phase B.
 
-### Phase B — Migration (production-critical) 🟡 PENDING
+### Phase B — Migration (production-critical) ✅ IMPLEMENTED
 
-4. **Commit 4**: Migrate `ShareDialog.tsx` → thin wrapper over `ShareSurfaceShell` + new `LinkTokenPermissionPanel` (+ `LinkTokenForm`, `LinkTokenResult`).
-5. **Commit 5**: Migrate `ShareModal.tsx` → thin wrapper + new `UserAuthPermissionPanel` (+ `PlatformShareController`, `PhotoPickerStep`).
-6. **Commit 6**: Barrel export cleanup, JSDoc pass, unused import removal.
+4. **Commit 4** (`c86e01f3`): Migrated `ShareDialog.tsx` → thin wrapper over `ShareSurfaceShell` + new `LinkTokenPermissionPanel` (+ `LinkTokenForm`, `LinkTokenResult`, `types.ts`). Legacy 307-line dialog reduced to ~130-line wrapper. `createFileShareWithPolicy` call site untouched.
+5. **Commit 5**: Migrated `ShareModal.tsx` → thin wrapper (~110 γρ.) + new `UserAuthPermissionPanel` (~285 γρ.) + `usePlatformShareController` hook (~220 γρ.) + `PhotoPickerStep` (~70 γρ.). Legacy 461-line modal split into 4 files, `handlePlatformShare` broken into <40-line helpers (`resolveFacebookUrl`, `shareToAppDirect`, `shareToSocialWindow`).
+6. **Commit 6**: ADR-147 changelog + status update (this commit).
 
 **Zero behavior change guarantee:** καμία αλλαγή σε `ShareModalProps`, `ShareDialogProps`, `useShareModal()`. Όλοι οι call sites (`ContactsList.tsx`, `FilesList.tsx`, κλπ) δουλεύουν χωρίς αλλαγές.
 
@@ -264,4 +264,10 @@ Manual testing on `localhost:3000` μετά από κάθε Phase B commit:
 
 ## Changelog
 
-- **2026-04-11**: Phase A implemented (commits 1-3). Phase B pending.
+- **2026-04-11**: Phase A implemented (commits 1-3) — ADR + i18n keys + primitive layer (`ShareSurfaceShell`, `ShareStatusBanner`, `useShareFlow`, `types/sharing.ts`).
+- **2026-04-11**: Phase B implemented (commits 4-6) — both production sharing flows migrated.
+  - `ShareDialog.tsx`: 307 → ~130 γρ. via `LinkTokenPermissionPanel`.
+  - `ShareModal.tsx`: 461 → ~110 γρ. via `UserAuthPermissionPanel`.
+  - `handlePlatformShare` split into <40-line helpers.
+  - Public APIs (`ShareDialogProps`, `ShareModalProps`, `useShareModal()`) unchanged — zero call-site impact at `FilePreviewPanel.tsx`, `ContactsList.tsx`, etc.
+  - Services (`FileShareService`, `createFileShareWithPolicy`, email / channel API routes) untouched.
