@@ -267,7 +267,10 @@
       "react-dom": "^19.2.1",
       "next": "15.5.12",
       "@radix-ui/react-presence": "1.1.5",
-      "@radix-ui/react-compose-refs": "1.1.2"
+      "@radix-ui/react-compose-refs": "1.1.2",
+      "import-in-the-middle": "3.0.1",
+      "require-in-the-middle": "8.0.1",
+      "lru-memoizer": "3.0.0"
     },
     "patchedDependencies": {
       "@radix-ui/react-presence@1.1.5": "patches/@radix-ui__react-presence@1.1.5.patch",
