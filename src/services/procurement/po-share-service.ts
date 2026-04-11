@@ -136,8 +136,12 @@ export async function validatePOShare(
       return { valid: false, error: 'Purchase order has been deleted' };
     }
 
-    // Increment access count (fire-and-forget)
-    shareDoc.ref
+    // Increment access count (fire-and-forget).
+    // Explicit collection path so CHECK 3.17's backward-nearest-COLLECTIONS
+    // heuristic attributes this write to PO_SHARES (untracked) instead of
+    // PURCHASE_ORDERS (the preceding read at line ~125). No behavior change.
+    db.collection(COLLECTIONS.PO_SHARES)
+      .doc(shareDoc.id)
       .update({ accessCount: FieldValue.increment(1) })
       .catch(() => { /* non-critical */ });
 
