@@ -86,6 +86,19 @@
       "help": "Βοήθεια και οδηγίες (F1)"
     }
   },
+  "share": {
+    "modalTitle": "Κοινοποίηση Έργου: {name}",
+    "modalTitleMultiple": "Κοινοποίηση {count} Έργων",
+    "status": "Κατάσταση",
+    "progress": "Πρόοδος",
+    "company": "Εταιρεία",
+    "address": "Διεύθυνση",
+    "startDate": "Έναρξη",
+    "completionDate": "Ολοκλήρωση",
+    "area": "Επιφάνεια",
+    "description": "Περιγραφή",
+    "noProjectSelected": "Δεν έχει επιλεγεί έργο"
+  },
   "card": {
     "status": {
       "planning": "Σχεδιασμένο",

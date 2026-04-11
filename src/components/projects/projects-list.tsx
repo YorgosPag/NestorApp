@@ -17,6 +17,9 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: ADR-147 unified share surface + project formatter SSoT
+import { ShareModal } from '@/components/ui/ShareModal';
+import { formatProjectsForShare, type ProjectShareData } from '@/lib/sharing/format-project-share';
 
 // 🏢 ENTERPRISE: Sort types from CompactToolbar
 import type { SortField } from '@/components/core/CompactToolbar/types';
@@ -48,6 +51,17 @@ export function ProjectsList({
   // 🏢 ENTERPRISE: Using string IDs for Firebase compatibility
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
+
+  // 🏢 ENTERPRISE: ADR-147 Phase C — Project sharing via unified share surface
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareData, setShareData] = useState<ProjectShareData>({ title: '', text: '', url: '' });
+
+  const handleShareProject = React.useCallback(() => {
+    if (!selectedProject) return;
+    const payload = formatProjectsForShare([selectedProject], t);
+    setShareData(payload);
+    setShareModalOpen(true);
+  }, [selectedProject, t]);
 
   // 🏢 ENTERPRISE: Sort state via centralized hook (ADR-205 Phase 4)
   const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
@@ -114,6 +128,7 @@ export function ProjectsList({
           onNewItem={onNewProject}
           onEditItem={onEditProject ? (_id: string) => onEditProject() : undefined}
           onDeleteItems={onDeleteProject ? (_ids: string[]) => onDeleteProject() : undefined}
+          onShare={handleShareProject}
         />
       </div>
 
@@ -149,6 +164,13 @@ export function ProjectsList({
           ))}
         </div>
       </ScrollArea>
+
+      {/* 🏢 ENTERPRISE: ADR-147 Phase C — unified share modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        shareData={shareData}
+      />
     </EntityListColumn>
   );
 }

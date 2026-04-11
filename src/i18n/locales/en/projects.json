@@ -86,6 +86,19 @@
       "help": "Help and instructions (F1)"
     }
   },
+  "share": {
+    "modalTitle": "Share Project: {name}",
+    "modalTitleMultiple": "Share {count} Projects",
+    "status": "Status",
+    "progress": "Progress",
+    "company": "Company",
+    "address": "Address",
+    "startDate": "Start",
+    "completionDate": "Completion",
+    "area": "Area",
+    "description": "Description",
+    "noProjectSelected": "No project selected"
+  },
   "card": {
     "status": {
       "planning": "Planning",

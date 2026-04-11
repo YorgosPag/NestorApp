@@ -222,7 +222,7 @@ Manual testing on `localhost:3000` μετά από κάθε Phase B commit:
 - Photo share history (`photo_shares` collection, `src/services/photo-share-history.service.ts`)
 - Backend services (`FileShareService`, `createFileShareWithPolicy`, API routes)
 - Firestore security rules
-- Future "share project" / "share building" features (θα landάρουν ως ξεχωριστά adapters)
+- ~~Future "share project" / "share building" features~~ → **Project sharing landed in Phase C (2026-04-11)** via formatter reuse — no new adapter needed.
 - Genericization του `ContactChannelPicker` → `RecipientPicker` (explicitly deferred σε μελλοντικό ADR)
 - Changes σε `ShareModalProps.shareData` / `ShareDialogProps`
 - Tests — manual testing posture per project convention
@@ -271,3 +271,10 @@ Manual testing on `localhost:3000` μετά από κάθε Phase B commit:
   - `handlePlatformShare` split into <40-line helpers.
   - Public APIs (`ShareDialogProps`, `ShareModalProps`, `useShareModal()`) unchanged — zero call-site impact at `FilePreviewPanel.tsx`, `ContactsList.tsx`, etc.
   - Services (`FileShareService`, `createFileShareWithPolicy`, email / channel API routes) untouched.
+- **2026-04-11**: **Phase C implemented** — project sharing enabled via formatter reuse, **zero new components**.
+  - New: `src/lib/sharing/format-project-share.ts` (~150 γρ.) — pure function, SSoT for what fields of a project are shared (name, status, progress, company, address, dates, area, description). Excludes financials, internal IDs, audit metadata (Google Contacts pattern).
+  - Modified: `src/components/projects/projects-list.tsx` — wired `onShare={handleShareProject}` on `CompactToolbar` + `<ShareModal>` instance (same pattern as `ContactsList.tsx`).
+  - i18n: `+projects:share.*` keys (el + en, 11 keys, ICU format).
+  - Reuses as-is: `ShareModal`, `ShareSurfaceShell`, `UserAuthPermissionPanel`, `CompactToolbar` (`onShare` prop already existed, config already had `share: true` for projects).
+  - **Pattern established**: Each new shareable entity (buildings, services, properties) = 1 formatter file + 2-line wiring. No new panels, services, dialogs, or Firestore collections.
+  - Multi-select support: if >1 project selected, formatter emits a compact list (1 line per project with name — address — progress — status).
