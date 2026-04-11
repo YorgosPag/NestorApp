@@ -8,6 +8,9 @@
  * hooks return the same shape so they can feed the shared
  * `AuditTimelineView` component.
  *
+ * Subscribes to RealtimeService events for instant updates whenever any
+ * tracked entity is created/updated/deleted anywhere in the app.
+ *
  * @module hooks/useGlobalAuditTrail
  * @enterprise ADR-195 — Entity Audit Trail (Phase 7: Global Admin View)
  * @permission super_admin | company_admin (server enforces)
@@ -18,12 +21,53 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/lib/error-utils';
+import { RealtimeService } from '@/services/realtime';
+import type { RealtimeEventMap } from '@/services/realtime/types';
 import type {
   AuditAction,
   AuditEntityType,
   EntityAuditEntry,
   EntityAuditResponse,
 } from '@/types/audit-trail';
+
+/**
+ * Events that correspond to entity audit trail writes across the app.
+ * When any of these fires, the global admin view refetches its current page.
+ * Must stay in sync with the entity types served by /api/audit-trail/global.
+ */
+const GLOBAL_AUDIT_WATCH_EVENTS = [
+  // Contacts (individual, company, service — all share the same collection)
+  'CONTACT_CREATED',
+  'CONTACT_UPDATED',
+  'CONTACT_DELETED',
+  // Buildings
+  'BUILDING_CREATED',
+  'BUILDING_UPDATED',
+  'BUILDING_DELETED',
+  // Projects
+  'PROJECT_CREATED',
+  'PROJECT_UPDATED',
+  'PROJECT_DELETED',
+  // Units (properties)
+  'UNIT_CREATED',
+  'UNIT_UPDATED',
+  'UNIT_DELETED',
+  // Parking spots
+  'PARKING_CREATED',
+  'PARKING_UPDATED',
+  'PARKING_DELETED',
+  // Storages
+  'STORAGE_CREATED',
+  'STORAGE_UPDATED',
+  'STORAGE_DELETED',
+  // Contact relationships (tracked via entity audit too)
+  'RELATIONSHIP_CREATED',
+  'RELATIONSHIP_UPDATED',
+  'RELATIONSHIP_DELETED',
+  // Entity linking (ADR-012) — surfaces through audit trail as linked/unlinked
+  'ENTITY_LINKED',
+  'ENTITY_UNLINKED',
+] as const satisfies ReadonlyArray<keyof RealtimeEventMap>;
 
 // ============================================================================
 // TYPES
@@ -128,6 +172,31 @@ export function useGlobalAuditTrail({
       isMounted.current = false;
     };
   }, [fetchEntries, refreshTrigger]);
+
+  // 🏢 ENTERPRISE: Real-time subscription via RealtimeService (ADR-195 Phase 8)
+  // Any entity create/update/delete across the app → refresh the global view.
+  // Debounced by 500ms to let the server finish writing the audit entry
+  // (entity save dispatches immediately; audit.recordChange is fire-and-forget).
+  useEffect(() => {
+    isMounted.current = true;
+
+    const handleEvent = () => {
+      setTimeout(() => {
+        if (isMounted.current) {
+          setRefreshTrigger((prev) => prev + 1);
+        }
+      }, 500);
+    };
+
+    const unsubscribers = GLOBAL_AUDIT_WATCH_EVENTS.map((eventName) =>
+      RealtimeService.subscribe(eventName, handleEvent),
+    );
+
+    return () => {
+      isMounted.current = false;
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, []);
 
   const loadMore = useCallback(() => {
     if (hasMore && nextCursor && !isLoading) {

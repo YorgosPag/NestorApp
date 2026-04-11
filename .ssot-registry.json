@@ -236,6 +236,17 @@
         "src/config/firestore-collections.ts"
       ]
     },
+    "firestore-realtime": {
+      "ssotFile": "src/services/realtime/RealtimeService.ts",
+      "description": "Firestore realtime subscriptions must go through the centralized RealtimeService singleton (ADR-145). Direct onSnapshot() calls are forbidden outside the canonical realtime service layer — use RealtimeService.subscribeToCollection / subscribeToDocument / dispatch+subscribe(eventName) instead. Legacy scattered callers are in the baseline and will ratchet down as they get migrated.",
+      "forbiddenPatterns": [
+        "\\bonSnapshot\\s*\\("
+      ],
+      "allowlist": [
+        "src/services/realtime/RealtimeService.ts",
+        "src/services/realtime/hooks/"
+      ]
+    },
     "firestore-schema-map": {
       "ssotFile": "src/config/firestore-schema-map.ts",
       "description": "AI schema definitions must use FIRESTORE_SCHEMA_MAP — no inline schema objects",

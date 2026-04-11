@@ -35,12 +35,22 @@ interface UseEntityAuditReturn {
   refetch: () => void;
 }
 
-/** Map entity types to RealtimeService event names */
+/**
+ * Map entity types to RealtimeService event names.
+ * Must cover every `AuditEntityType` so per-entity tabs receive live updates.
+ * Services/companies share the `contact` collection, so they map to CONTACT_* events.
+ * Keys are plain strings to tolerate legacy `'unit'` callers (alias of property).
+ */
 const ENTITY_EVENT_MAP: Record<string, string[]> = {
-  unit: ['UNIT_UPDATED', 'UNIT_CREATED', 'UNIT_DELETED'],
-  building: ['BUILDING_UPDATED', 'BUILDING_CREATED', 'BUILDING_DELETED'],
   contact: ['CONTACT_UPDATED', 'CONTACT_CREATED', 'CONTACT_DELETED', 'RELATIONSHIP_CREATED', 'RELATIONSHIP_UPDATED', 'RELATIONSHIP_DELETED'],
-  project: ['PROJECT_UPDATED', 'PROJECT_CREATED', 'PROJECT_DELETED'],
+  company: ['CONTACT_UPDATED', 'CONTACT_CREATED', 'CONTACT_DELETED'],
+  building: ['BUILDING_UPDATED', 'BUILDING_CREATED', 'BUILDING_DELETED', 'ENTITY_LINKED', 'ENTITY_UNLINKED'],
+  property: ['UNIT_UPDATED', 'UNIT_CREATED', 'UNIT_DELETED', 'ENTITY_LINKED', 'ENTITY_UNLINKED'],
+  unit: ['UNIT_UPDATED', 'UNIT_CREATED', 'UNIT_DELETED', 'ENTITY_LINKED', 'ENTITY_UNLINKED'],
+  floor: ['UNIT_UPDATED', 'UNIT_CREATED', 'UNIT_DELETED'],
+  project: ['PROJECT_UPDATED', 'PROJECT_CREATED', 'PROJECT_DELETED', 'ENTITY_LINKED', 'ENTITY_UNLINKED'],
+  parking: ['PARKING_UPDATED', 'PARKING_CREATED', 'PARKING_DELETED'],
+  storage: ['STORAGE_UPDATED', 'STORAGE_CREATED', 'STORAGE_DELETED'],
   purchase_order: ['PO_UPDATED', 'PO_CREATED', 'PO_DELETED', 'PO_STATUS_CHANGED'],
 };
 
