@@ -2368,6 +2368,31 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📜 ENTITY_AUDIT_TRAIL - CANONICAL ENTITY CHANGE LOG (ADR-195 Phase 10)
+    // =========================================================================
+    // 📅 Added: 2026-04-11 (ADR-195 Phase 10 — Client-side onSnapshot SSoT)
+    // 🏢 ENTERPRISE: Canonical source of truth for every entity mutation.
+    //    Client hooks subscribe DIRECTLY via Firestore onSnapshot (no HTTP
+    //    polling, no manual RealtimeService event lists). Firestore rules are
+    //    the sole authorization layer.
+    // 🔒 READ: Tenant-scoped + admin-only (super_admin | company_admin). No
+    //    downgrade to plain authenticated reads — audit data is sensitive.
+    // 🚫 WRITE: Server-only via Firebase Admin SDK (EntityAuditService).
+    //    Admin SDK bypasses rules, so `allow write: if false` is safe.
+    // 📎 SSoT: See `.ssot-registry.json` → `entity-audit-trail` module.
+    //    Canonical reader: `src/services/entity-audit-client.service.ts`.
+    match /entity_audit_trail/{auditId} {
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAny(['companyId'])
+                  && (
+                       isSuperAdminOnly()
+                       || (isCompanyAdminOfCompany(resource.data.companyId)
+                           && belongsToCompany(resource.data.companyId))
+                     );
+      allow write: if false; // Server-side only (Admin SDK)
+    }
+
+    // =========================================================================
     // 🏢 ADMIN_BUILDING_TEMPLATES - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)

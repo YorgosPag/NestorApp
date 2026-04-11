@@ -1,24 +1,35 @@
 /**
- * 📜 useEntityAudit — Client hook for entity audit trail
+ * 📜 useEntityAudit — Client hook for per-entity audit trail
  *
- * Fetches paginated audit history for any entity type.
- * Uses the centralized API client for authenticated requests.
- * Subscribes to RealtimeService events for instant updates.
+ * Google-level SSoT: subscribes DIRECTLY to the canonical `entity_audit_trail`
+ * Firestore collection via `EntityAuditClientService` (which composes the
+ * canonical `firestoreQueryService` layer). Eliminates the manually maintained
+ * `ENTITY_EVENT_MAP` and the 500 ms debounced refetch — the audit collection
+ * itself is the event bus.
+ *
+ * `loadMore` continues to use the paginated HTTP endpoint so History tabs can
+ * scroll beyond the live window without inflating the realtime listener.
  *
  * @module hooks/useEntityAudit
- * @enterprise ADR-195 — Entity Audit Trail
- * @ssot ADR-294 — This is the ONLY canonical client hook for audit history.
- *                 The `entity-audit-trail` module in `.ssot-registry.json` blocks
- *                 re-implementations of `useEntityAudit` elsewhere.
+ * @enterprise ADR-195 — Entity Audit Trail (Phase 10: Client Subscriptions)
+ * @ssot ADR-294 — Canonical hook. Re-implementations are blocked by the
+ *                 SSoT ratchet (`entity-audit-trail` module).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/lib/error-utils';
-import { RealtimeService } from '@/services/realtime';
-import type { AuditEntityType, EntityAuditEntry, EntityAuditResponse } from '@/types/audit-trail';
+import { EntityAuditClientService } from '@/services/entity-audit-client.service';
+import type {
+  AuditEntityType,
+  EntityAuditEntry,
+  EntityAuditResponse,
+} from '@/types/audit-trail';
 
 interface UseEntityAuditOptions {
   entityType: AuditEntityType;
@@ -35,24 +46,29 @@ interface UseEntityAuditReturn {
   refetch: () => void;
 }
 
-/**
- * Map entity types to RealtimeService event names.
- * Must cover every `AuditEntityType` so per-entity tabs receive live updates.
- * Services/companies share the `contact` collection, so they map to CONTACT_* events.
- * Keys are plain strings to tolerate legacy `'unit'` callers (alias of property).
- */
-const ENTITY_EVENT_MAP: Record<string, string[]> = {
-  contact: ['CONTACT_UPDATED', 'CONTACT_CREATED', 'CONTACT_DELETED', 'RELATIONSHIP_CREATED', 'RELATIONSHIP_UPDATED', 'RELATIONSHIP_DELETED'],
-  company: ['CONTACT_UPDATED', 'CONTACT_CREATED', 'CONTACT_DELETED'],
-  building: ['BUILDING_UPDATED', 'BUILDING_CREATED', 'BUILDING_DELETED', 'ENTITY_LINKED', 'ENTITY_UNLINKED'],
-  property: ['UNIT_UPDATED', 'UNIT_CREATED', 'UNIT_DELETED', 'ENTITY_LINKED', 'ENTITY_UNLINKED'],
-  unit: ['UNIT_UPDATED', 'UNIT_CREATED', 'UNIT_DELETED', 'ENTITY_LINKED', 'ENTITY_UNLINKED'],
-  floor: ['UNIT_UPDATED', 'UNIT_CREATED', 'UNIT_DELETED'],
-  project: ['PROJECT_UPDATED', 'PROJECT_CREATED', 'PROJECT_DELETED', 'ENTITY_LINKED', 'ENTITY_UNLINKED'],
-  parking: ['PARKING_UPDATED', 'PARKING_CREATED', 'PARKING_DELETED'],
-  storage: ['STORAGE_UPDATED', 'STORAGE_CREATED', 'STORAGE_DELETED'],
-  purchase_order: ['PO_UPDATED', 'PO_CREATED', 'PO_DELETED', 'PO_STATUS_CHANGED'],
-};
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function dedupeAndSort(entries: EntityAuditEntry[]): EntityAuditEntry[] {
+  const seen = new Set<string>();
+  const out: EntityAuditEntry[] = [];
+  for (const entry of entries) {
+    if (!entry.id || seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    out.push(entry);
+  }
+  out.sort((a, b) => {
+    const bMs = Date.parse(b.timestamp) || 0;
+    const aMs = Date.parse(a.timestamp) || 0;
+    return bMs - aMs;
+  });
+  return out;
+}
+
+// ============================================================================
+// HOOK
+// ============================================================================
 
 export function useEntityAudit({
   entityType,
@@ -60,98 +76,113 @@ export function useEntityAudit({
   pageSize = 20,
 }: UseEntityAuditOptions): UseEntityAuditReturn {
   const { user } = useAuth();
-  const [entries, setEntries] = useState<EntityAuditEntry[]>([]);
+  const [liveEntries, setLiveEntries] = useState<EntityAuditEntry[]>([]);
+  const [historyEntries, setHistoryEntries] = useState<EntityAuditEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const isMounted = useRef(true);
 
-  const fetchEntries = useCallback(
-    async (cursor?: string) => {
-      if (!entityId || !user) return;
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const params = new URLSearchParams({ limit: String(pageSize) });
-        if (cursor) params.set('startAfter', cursor);
-
-        const data = await apiClient.get<EntityAuditResponse>(
-          `${API_ROUTES.AUDIT_TRAIL.BY_ENTITY(entityType, entityId)}?${params.toString()}`,
-        );
-
-        if (!isMounted.current) return;
-
-        if (cursor) {
-          // Append for "load more"
-          setEntries((prev) => [...prev, ...data.entries]);
-        } else {
-          // Replace for initial fetch
-          setEntries(data.entries);
-        }
-
-        setHasMore(data.hasMore);
-        setNextCursor(data.nextCursor);
-      } catch (err) {
-        if (!isMounted.current) return;
-        setError(getErrorMessage(err, 'Failed to load audit trail'));
-      } finally {
-        if (isMounted.current) {
-          setIsLoading(false);
-        }
-      }
-    },
-    [entityType, entityId, pageSize, user],
-  );
-
-  // Initial fetch on mount / entity change / refresh trigger
-  useEffect(() => {
-    setEntries([]);
-    setNextCursor(undefined);
-    setHasMore(false);
-    fetchEntries();
-  }, [fetchEntries, refreshTrigger]);
-
-  // 🏢 ENTERPRISE: Real-time subscription via RealtimeService
+  // 🔴 LIVE SUBSCRIPTION — canonical per-entity audit subscribe
   useEffect(() => {
     isMounted.current = true;
-    const eventNames = ENTITY_EVENT_MAP[entityType];
-    if (!eventNames) return;
+    if (!user || !entityId) {
+      setLiveEntries([]);
+      setHistoryEntries([]);
+      return;
+    }
 
-    // Small delay to allow the server to write the audit entry
-    const handleEvent = () => {
-      setTimeout(() => {
-        if (isMounted.current) {
-          setRefreshTrigger((prev) => prev + 1);
+    setIsLoading(true);
+    setError(null);
+    setHistoryEntries([]);
+    setNextCursor(undefined);
+    setHasMore(false);
+
+    const unsubscribe = EntityAuditClientService.subscribeEntity(
+      {
+        entityType,
+        entityId,
+        limit: pageSize,
+      },
+      (entries, subscriptionError) => {
+        if (!isMounted.current) return;
+        if (subscriptionError) {
+          setError(
+            getErrorMessage(
+              subscriptionError,
+              'Failed to subscribe to entity audit trail',
+            ),
+          );
+          setIsLoading(false);
+          return;
         }
-      }, 500);
-    };
-
-    const unsubscribers = eventNames.map((eventName) =>
-      RealtimeService.subscribe(
-        eventName as Parameters<typeof RealtimeService.subscribe>[0],
-        handleEvent,
-      ),
+        setLiveEntries(entries);
+        setHasMore(entries.length >= pageSize);
+        setError(null);
+        setIsLoading(false);
+      },
     );
 
     return () => {
       isMounted.current = false;
-      unsubscribers.forEach((unsub) => unsub());
+      unsubscribe();
     };
-  }, [entityType]);
+  }, [user, entityType, entityId, pageSize]);
 
-  const loadMore = useCallback(() => {
-    if (hasMore && nextCursor && !isLoading) {
-      fetchEntries(nextCursor);
+  // 📜 HISTORICAL PAGINATION — HTTP endpoint (older than live window)
+  const loadMore = useCallback(async () => {
+    if (!entityId || !user || isLoading) return;
+
+    const tail = liveEntries.concat(historyEntries);
+    const oldest = tail[tail.length - 1];
+    const cursor = nextCursor ?? oldest?.id;
+    if (!cursor) {
+      setHasMore(false);
+      return;
     }
-  }, [hasMore, nextCursor, isLoading, fetchEntries]);
 
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams({ limit: String(pageSize) });
+      params.set('startAfter', cursor);
+
+      const data = await apiClient.get<EntityAuditResponse>(
+        `${API_ROUTES.AUDIT_TRAIL.BY_ENTITY(entityType, entityId)}?${params.toString()}`,
+      );
+
+      if (!isMounted.current) return;
+      setHistoryEntries((prev) => [...prev, ...data.entries]);
+      setHasMore(data.hasMore);
+      setNextCursor(data.nextCursor);
+    } catch (err) {
+      if (!isMounted.current) return;
+      setError(getErrorMessage(err, 'Failed to load more audit entries'));
+    } finally {
+      if (isMounted.current) setIsLoading(false);
+    }
+  }, [
+    user,
+    entityType,
+    entityId,
+    isLoading,
+    liveEntries,
+    historyEntries,
+    nextCursor,
+    pageSize,
+  ]);
+
+  // Kept for API compatibility — subscription is already live.
   const refetch = useCallback(() => {
-    setRefreshTrigger((prev) => prev + 1);
+    setError(null);
   }, []);
+
+  const entries = useMemo(
+    () => dedupeAndSort([...liveEntries, ...historyEntries]),
+    [liveEntries, historyEntries],
+  );
 
   return { entries, isLoading, error, hasMore, loadMore, refetch };
 }

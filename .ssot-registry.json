@@ -223,15 +223,19 @@
     },
     "entity-audit-trail": {
       "ssotFile": "src/services/entity-audit.service.ts",
-      "description": "Entity audit trail must go through EntityAuditService.recordChange() and useEntityAudit hook — no direct writes to entity_audit_trail, no duplicate hook re-implementations, no inline collection queries (ADR-195)",
+      "description": "Entity audit trail is a closed SSoT (ADR-195 Phase 10). Server writes go through EntityAuditService.recordChange(). Client reads go through EntityAuditClientService.subscribeGlobal()/subscribeEntity(), which compose firestoreQueryService. The canonical hooks are useEntityAudit + useGlobalAuditTrail. Forbidden: direct writes to entity_audit_trail, inline collection() queries on ENTITY_AUDIT_TRAIL, re-implementation of either hook, manual RealtimeService event lists like GLOBAL_AUDIT_WATCH_EVENTS/ENTITY_EVENT_MAP, or bypassing firestoreQueryService with raw onSnapshot on the collection.",
       "forbiddenPatterns": [
         "(addDoc|setDoc|updateDoc)\\s*\\([^)]*(entity_audit_trail|ENTITY_AUDIT_TRAIL)",
         "collection\\s*\\(\\s*(COLLECTIONS\\.ENTITY_AUDIT_TRAIL|['\"]entity_audit_trail['\"])",
-        "(function\\s+useEntityAudit\\s*\\(|const\\s+useEntityAudit\\s*=)"
+        "(function\\s+useEntityAudit\\s*\\(|const\\s+useEntityAudit\\s*=)",
+        "(function\\s+useGlobalAuditTrail\\s*\\(|const\\s+useGlobalAuditTrail\\s*=)",
+        "(GLOBAL_AUDIT_WATCH_EVENTS|ENTITY_EVENT_MAP)\\s*="
       ],
       "allowlist": [
         "src/services/entity-audit.service.ts",
+        "src/services/entity-audit-client.service.ts",
         "src/hooks/useEntityAudit.ts",
+        "src/hooks/useGlobalAuditTrail.ts",
         "src/app/api/audit-trail/",
         "src/config/firestore-collections.ts"
       ]
