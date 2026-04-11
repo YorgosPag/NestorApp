@@ -15,6 +15,10 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generatePurchaseOrderId, generatePOItemId } from '@/services/enterprise-id.service';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import type { AuditEntityType } from '@/types/audit-trail';
+
+const PURCHASE_ORDER_ENTITY: AuditEntityType = 'purchase_order';
 import type {
   PurchaseOrder,
   PurchaseOrderStatus,
@@ -126,6 +130,24 @@ export async function createPurchaseOrder(
       .doc(id)
       .set(sanitizeForFirestore(doc as unknown as Record<string, unknown>));
   }, undefined);
+
+  // ADR-195 — Entity audit trail (purchase order creation)
+  await EntityAuditService.recordChange({
+    entityType: PURCHASE_ORDER_ENTITY,
+    entityId: id,
+    entityName: poNumber,
+    action: 'created',
+    changes: [
+      { field: 'poNumber', oldValue: null, newValue: poNumber, label: 'Αρ. Παραγγελίας' },
+      { field: 'supplierId', oldValue: null, newValue: dto.supplierId, label: 'Προμηθευτής' },
+      { field: 'projectId', oldValue: null, newValue: dto.projectId, label: 'Έργο' },
+      { field: 'total', oldValue: null, newValue: total, label: 'Σύνολο' },
+      { field: 'status', oldValue: null, newValue: 'draft', label: 'Κατάσταση' },
+    ],
+    performedBy: userId,
+    performedByName: null,
+    companyId,
+  });
 
   return { id, poNumber };
 }

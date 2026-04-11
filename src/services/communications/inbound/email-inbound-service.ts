@@ -226,6 +226,26 @@ async function ensureContactForSender(companyId: string, sender: ParsedAddress):
   const { generateContactId } = await import('@/services/enterprise-id.service');
   const enterpriseId = generateContactId();
   await adminDb.collection(COLLECTIONS.CONTACTS).doc(enterpriseId).set(newContact);
+
+  // ADR-195 — Entity audit trail (auto-created contact from inbound email)
+  const { EntityAuditService } = await import('@/services/entity-audit.service');
+  const { ENTITY_TYPES } = await import('@/config/domain-constants');
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.CONTACT,
+    entityId: enterpriseId,
+    entityName: newContact.displayName,
+    action: 'created',
+    changes: [
+      { field: 'firstName', oldValue: null, newValue: firstName, label: 'Όνομα' },
+      { field: 'lastName', oldValue: null, newValue: lastName, label: 'Επώνυμο' },
+      { field: 'email', oldValue: null, newValue: sender.email, label: 'Email' },
+      { field: 'type', oldValue: null, newValue: 'individual', label: 'Τύπος' },
+    ],
+    performedBy: SYSTEM_IDENTITY.ID,
+    performedByName: 'Inbound Email Pipeline',
+    companyId,
+  });
+
   return enterpriseId;
 }
 
