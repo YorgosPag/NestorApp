@@ -17,9 +17,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users2, Plus, Settings, Shield, UserCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { enterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService';
-import type { EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsService';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
@@ -34,14 +35,19 @@ import { UnifiedDashboard, type DashboardStat } from '@/components/property-mana
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { PageContainer } from '@/core/containers';
 
+interface TeamMember {
+  id: string;
+  displayName: string;
+  role: string;
+  position?: { title?: string } | null;
+}
+
 interface DisplayTeam {
   id: string;
   name: string;
   description: string;
-  members: EnterpriseTeamMember[];
+  members: TeamMember[];
 }
-
-const teamsService = enterpriseTeamsService;
 
 export function CrmTeamsPageContent() {
   const logger = createModuleLogger('crm/teams');
@@ -61,25 +67,59 @@ export function CrmTeamsPageContent() {
         setLoading(true);
         setError(null);
 
-        const organizationId = resolvedCompanyId;
-        if (!organizationId) {
+        if (!resolvedCompanyId) {
           setError(t('teams.error.missingOrg'));
           setTeams([]);
           setLoading(false);
           return;
         }
-        const teamsFromDb = await teamsService.getTeams(organizationId);
 
-        const displayTeams: DisplayTeam[] = [];
-        for (const team of teamsFromDb) {
-          const members = await teamsService.getTeamMembers(team.id, organizationId);
-          displayTeams.push({
-            id: team.id,
-            name: team.name,
-            description: team.description,
-            members
-          });
-        }
+        const teamsQ = query(
+          collection(db, COLLECTIONS.TEAMS),
+          where('companyId', '==', resolvedCompanyId),
+          where('isActive', '==', true),
+          orderBy('name')
+        );
+        const teamsSnap = await getDocs(teamsQ);
+
+        const displayTeams: DisplayTeam[] = await Promise.all(
+          teamsSnap.docs.map(async (teamDoc) => {
+            const teamData = teamDoc.data() as {
+              name?: string;
+              description?: string;
+            };
+
+            const membersQ = query(
+              collection(db, COLLECTIONS.CONTACTS),
+              where('companyId', '==', resolvedCompanyId),
+              where('type', '==', 'employee'),
+              where('department', '==', teamDoc.id),
+              where('isActive', '==', true),
+              orderBy('displayName')
+            );
+            const membersSnap = await getDocs(membersQ);
+            const members: TeamMember[] = membersSnap.docs.map((m) => {
+              const data = m.data() as {
+                displayName?: string;
+                role?: string;
+                position?: { title?: string } | null;
+              };
+              return {
+                id: m.id,
+                displayName: data.displayName ?? '',
+                role: data.role ?? '',
+                position: data.position ?? null,
+              };
+            });
+
+            return {
+              id: teamDoc.id,
+              name: teamData.name ?? teamDoc.id,
+              description: teamData.description ?? '',
+              members,
+            };
+          })
+        );
 
         setTeams(displayTeams);
       } catch (err) {
@@ -92,7 +132,7 @@ export function CrmTeamsPageContent() {
     };
 
     loadTeamsData();
-  }, []);
+  }, [resolvedCompanyId, t, logger]);
 
   const totalMembers = teams.reduce((sum, team) => sum + team.members.length, 0);
 
