@@ -25,6 +25,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { requireProjectInTenant } from '@/lib/auth/tenant-isolation';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const EfkaDeclarationSchema = z.object({
   employerVatNumber: z.string().max(20).nullable().optional(),
@@ -94,6 +96,38 @@ async function handlePatch(
         await logAuditEvent(ctx, 'data_updated', projectId, 'project', {
           metadata: { reason: 'EFKA declaration updated (κρατική δήλωση)' },
         }).catch(() => {/* non-blocking */});
+
+        // Per-entity audit trail (feeds the project "Ιστορικό" tab via ADR-195).
+        // Only the changed top-level keys of the declaration are emitted to
+        // keep the timeline signal-to-noise high — full declaration snapshot
+        // is still recoverable from the project document itself.
+        const declarationChanges = Object.keys(body).map((field) => ({
+          field: `efkaDeclaration.${field}`,
+          oldValue:
+            typeof (currentDeclaration as Record<string, unknown>)[field] === 'string' ||
+            typeof (currentDeclaration as Record<string, unknown>)[field] === 'number' ||
+            typeof (currentDeclaration as Record<string, unknown>)[field] === 'boolean'
+              ? ((currentDeclaration as Record<string, unknown>)[field] as string | number | boolean)
+              : null,
+          newValue:
+            typeof (body as Record<string, unknown>)[field] === 'string' ||
+            typeof (body as Record<string, unknown>)[field] === 'number' ||
+            typeof (body as Record<string, unknown>)[field] === 'boolean'
+              ? ((body as Record<string, unknown>)[field] as string | number | boolean)
+              : null,
+          label: `Δήλωση ΕΦΚΑ / ${field}`,
+        }));
+
+        await EntityAuditService.recordChange({
+          entityType: ENTITY_TYPES.PROJECT,
+          entityId: projectId,
+          entityName: (projectData?.name as string | undefined) ?? null,
+          action: 'updated',
+          changes: declarationChanges,
+          performedBy: ctx.uid,
+          performedByName: ctx.email ?? null,
+          companyId: (projectData?.companyId as string | undefined) ?? ctx.companyId,
+        });
 
         return NextResponse.json({ success: true, data: mergedDeclaration });
       } catch (error) {

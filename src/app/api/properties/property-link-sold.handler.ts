@@ -17,6 +17,8 @@ import { COLLECTIONS } from "@/config/firestore-collections";
 import { withStandardRateLimit } from "@/lib/middleware/with-rate-limit";
 import { createModuleLogger } from "@/lib/telemetry";
 import { getErrorMessage } from "@/lib/error-utils";
+import { EntityAuditService } from "@/services/entity-audit.service";
+import { ENTITY_TYPES } from "@/config/domain-constants";
 
 const logger = createModuleLogger("PropertiesLinkSold");
 
@@ -115,6 +117,8 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
         const soldPropertiesToLink: Array<{
           id: string;
           buildingId?: unknown;
+          companyId?: string;
+          name?: string;
         }> = [];
         propertiesSnapshot.forEach((doc) => {
           const data = doc.data();
@@ -125,6 +129,9 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
             soldPropertiesToLink.push({
               id: doc.id,
               buildingId: data.buildingId,
+              companyId:
+                typeof data.companyId === "string" ? data.companyId : undefined,
+              name: typeof data.name === "string" ? data.name : undefined,
             });
           }
         });
@@ -171,7 +178,13 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           count: updates.length,
         });
 
-        // Perform updates using Admin SDK
+        // Perform updates using Admin SDK.
+        // Build a lookup of property metadata harvested in STEP 2 so we can
+        // emit a per-property audit row without an extra read round-trip.
+        const propertyMeta = new Map(
+          soldPropertiesToLink.map((p) => [p.id, { companyId: p.companyId, name: p.name }]),
+        );
+
         for (const update of updates) {
           await getAdminFirestore()
             .collection(COLLECTIONS.PROPERTIES)
@@ -179,6 +192,27 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
             .update({
               soldTo: update.contactId,
             });
+
+          // Per-entity audit trail (feeds the property "Ιστορικό" tab via ADR-195).
+          // Fire-and-forget — errors never break the batch.
+          const meta = propertyMeta.get(update.propertyId);
+          await EntityAuditService.recordChange({
+            entityType: ENTITY_TYPES.PROPERTY,
+            entityId: update.propertyId,
+            entityName: meta?.name ?? null,
+            action: 'updated',
+            changes: [
+              {
+                field: 'soldTo',
+                oldValue: null,
+                newValue: update.contactId,
+                label: `Αγοραστής: ${update.contactName}`,
+              },
+            ],
+            performedBy: ctx.uid,
+            performedByName: ctx.email ?? null,
+            companyId: meta?.companyId ?? ctx.companyId,
+          });
 
           logger.info("[Properties/LinkSold] Property linked to contact", {
             propertyId: update.propertyId,

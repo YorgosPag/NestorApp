@@ -16,6 +16,8 @@ import { generateContactLinkId } from '@/lib/contact-link-id';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
 import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
 import type { PropertyOwnerRole } from '@/types/ownership-table';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('PropertyContactLinks');
 
@@ -166,7 +168,13 @@ export async function activateClientPersona(
     return;
   }
 
-  const contactData = contactDoc.data() as { personas?: PersonaData[] };
+  const contactData = contactDoc.data() as {
+    personas?: PersonaData[];
+    companyId?: string;
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+  };
   const personas = contactData.personas ?? [];
 
   // Already has active client persona — skip
@@ -183,4 +191,34 @@ export async function activateClientPersona(
   });
 
   logger.info('Client persona auto-activated', { contactId });
+
+  // Per-entity audit trail (feeds the contact "Ιστορικό" tab via ADR-195).
+  // Tenant-gated: skipped silently when the contact lacks companyId, matching
+  // the legacy-fixture guard used in the Phase 4 services batches. Performer
+  // is the auto-activation system because this is a side-effect of a sale —
+  // the user-facing action is the reservation/sale itself and is audited
+  // separately at the property level.
+  const companyId = contactData.companyId;
+  if (companyId) {
+    await EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: contactId,
+      entityName:
+        contactData.displayName ??
+        [contactData.firstName, contactData.lastName].filter(Boolean).join(' ') ??
+        null,
+      action: 'updated',
+      changes: [
+        {
+          field: 'personas',
+          oldValue: null,
+          newValue: 'client',
+          label: 'Ενεργοποίηση Πελάτη',
+        },
+      ],
+      performedBy: 'system',
+      performedByName: 'Αυτόματη Ενεργοποίηση',
+      companyId,
+    });
+  }
 }

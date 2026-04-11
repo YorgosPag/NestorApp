@@ -36,6 +36,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { getErrorMessage } from '@/lib/error-utils';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('BuildingLinkProjectRoute');
 
@@ -158,6 +160,28 @@ export async function POST(
             getErrorMessage(error, 'Failed to link Building to Project'),
           );
         }
+
+        // Per-entity audit trail (feeds the building "Ιστορικό" tab via ADR-195).
+        // Fire-and-forget — recordChange never throws, logs internally on failure.
+        await EntityAuditService.recordChange({
+          entityType: ENTITY_TYPES.BUILDING,
+          entityId: buildingId,
+          entityName: (existingBuildingData.name as string | undefined) ?? null,
+          action: 'updated',
+          changes: [
+            {
+              field: 'projectId',
+              oldValue: null,
+              newValue: projectId,
+              label: 'Έργο',
+            },
+          ],
+          performedBy: ctx.uid,
+          performedByName: ctx.email ?? null,
+          companyId:
+            (existingBuildingData.companyId as string | undefined) ??
+            ctx.companyId,
+        });
 
         // Step 4: Cascade + audit via centralized linking pipeline (fire-and-forget)
         linkEntity('building:projectId', {

@@ -22,6 +22,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('NotificationsPreferencesRoute');
 
@@ -104,6 +106,28 @@ const basePUT = async (request: NextRequest) => {
         },
         { merge: true }
       );
+
+      // Per-entity audit trail (feeds the contact "Ιστορικό" tab via ADR-195).
+      // Single change entry — the full preferences payload is stored on the
+      // contact document itself, so the audit row just needs to mark WHEN
+      // the user touched their notification settings. Fire-and-forget.
+      await EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.CONTACT,
+        entityId: ctx.uid,
+        entityName: ctx.email ?? null,
+        action: 'updated',
+        changes: [
+          {
+            field: 'notificationPreferences',
+            oldValue: null,
+            newValue: 'updated',
+            label: 'Προτιμήσεις Ειδοποιήσεων',
+          },
+        ],
+        performedBy: ctx.uid,
+        performedByName: ctx.email ?? null,
+        companyId: ctx.companyId,
+      });
 
       logger.info('[Notifications/Preferences] Updated successfully');
 
