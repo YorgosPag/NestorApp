@@ -25,6 +25,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatFlexibleDate } from '@/lib/intl-utils';
 import { FileVersionService, type FileVersionSnapshot } from '@/services/file-version.service';
+import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -64,6 +65,7 @@ export function VersionHistory({
   const [loading, setLoading] = useState(true);
   const [rollingBack, setRollingBack] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { handleDownload: downloadVersion } = useFileDownload();
 
   // Load version history
   useEffect(() => {
@@ -205,7 +207,13 @@ export function VersionHistory({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={() => window.open(version.downloadUrl, '_blank')}
+                    onClick={() => downloadVersion({
+                      downloadUrl: version.downloadUrl,
+                      displayName: `v${version.versionNumber}_${version.originalFilename}`,
+                      originalFilename: version.originalFilename,
+                      ext: version.ext,
+                      storagePath: version.storagePath,
+                    })}
                   >
                     <Download className="h-3.5 w-3.5" />
                   </Button>

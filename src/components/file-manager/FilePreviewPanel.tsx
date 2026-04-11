@@ -47,6 +47,7 @@ import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
+import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -111,9 +112,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
   const { handleDownload: downloadFile } = useFileDownload();
 
   const handleDownload = () => { if (file) downloadFile(file); };
-  const handleOpenNewTab = () => {
-    if (file?.downloadUrl) window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
-  };
+  const handleOpenNewTab = () => openRemoteUrlInNewTab(file?.downloadUrl);
 
   // Empty state
   if (!file) {

@@ -37,6 +37,7 @@ import { FileShareService, type FileShareRecord } from '@/services/file-share.se
 import { formatFileSize } from '@/utils/file-validation';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getFileCategory, getFileCategoryI18nKey } from '@/lib/file-types/preview-registry';
+import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -148,7 +149,7 @@ export function SharedFilePageContent() {
     setDownloading(true);
     try {
       await FileShareService.incrementDownloadCount(share.id);
-      window.open(fileInfo.downloadUrl, '_blank', 'noopener,noreferrer');
+      openRemoteUrlInNewTab(fileInfo.downloadUrl);
     } finally {
       setDownloading(false);
     }

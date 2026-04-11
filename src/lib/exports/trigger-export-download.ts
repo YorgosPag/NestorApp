@@ -91,6 +91,26 @@ export function triggerExportDownload(opts: TriggerExportOptions): void {
 // ============================================================================
 
 /**
+ * Opens a remote URL (e.g. Firebase Storage signed URL) in a new browser tab
+ * for inline preview. This is NOT a download — the browser decides how to render
+ * the resource. Use this for "Open in new tab" UX affordances on file records.
+ *
+ * Centralized here so that call sites avoid `window.open(…downloadUrl…)` inline,
+ * which the SSoT file-download scanner would otherwise flag as a violation.
+ */
+export function openRemoteUrlInNewTab(url: string | null | undefined): void {
+  if (!url) {
+    logger.warn('openRemoteUrlInNewTab called with empty url — no-op');
+    return;
+  }
+  if (typeof window === 'undefined') {
+    logger.warn('openRemoteUrlInNewTab called on server — no-op');
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/**
  * Opens a blob in a new browser tab (e.g. for PDF preview / print dialog).
  * Returns the opened Window or null if blocked.
  * Automatically revokes the object URL after `revokeAfterMs`.

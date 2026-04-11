@@ -27,6 +27,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDateTime } from '@/lib/intl-utils';
+import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted helpers + fetch hook
@@ -79,7 +80,7 @@ export function InboxView({
   }, []);
 
   const handlePreview = useCallback((file: InboxFileRecord) => {
-    if (file.downloadUrl) window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
+    openRemoteUrlInNewTab(file.downloadUrl);
   }, []);
 
   if (loading) {

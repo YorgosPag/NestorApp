@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { getAuth } from 'firebase/auth';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import type { AuditLogFilters } from '../types';
 
 // =============================================================================
@@ -59,20 +60,11 @@ export function AuditExport({ filters, canExport }: AuditExportProps) {
         throw new Error(`Export failed: ${response.status}`);
       }
 
-      // Create downloadable file
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-
       const disposition = response.headers.get('content-disposition');
       const filenameMatch = disposition?.match(/filename="(.+)"/);
-      link.download = filenameMatch?.[1] ?? `audit-log.${format}`;
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const filename = filenameMatch?.[1] ?? `audit-log.${format}`;
+      triggerExportDownload({ blob, filename });
 
       success(t('roleManagement.auditTab.exportSuccess', 'Export completed'));
     } catch (err) {

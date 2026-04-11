@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { PurchaseOrder } from '@/types/procurement';
 import { API_ROUTES } from '@/config/domain-constants';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import {
   createPurchaseOrderShareWithPolicy,
   sendPurchaseOrderEmailWithPolicy,
@@ -56,13 +57,7 @@ function usePdfDownload(poId: string) {
       if (!res.ok) throw new Error(res.statusText);
 
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const filename = [poId, 'pdf'].join('.');
-    a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      triggerExportDownload({ blob, filename: [poId, 'pdf'].join('.') });
       setStatus('success');
       setTimeout(() => setStatus('idle'), 2000);
     } catch {
