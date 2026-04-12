@@ -148,7 +148,14 @@
       "pageLabel": "Projects Error",
       "ariaLabel": "Loading Error",
       "title": "Error loading projects:",
-      "retry": "Retry"
+      "retry": "Retry",
+      "authRequired": "Your session has expired or you are not signed in.",
+      "authRequiredAction": "Please sign in to view your projects.",
+      "authFailed": "Authentication failed. Please sign in again.",
+      "serverError": "Server error. Please try again later.",
+      "networkError": "Network error. Check your connection.",
+      "unknownError": "An unexpected error occurred.",
+      "loginButton": "Sign in"
     },
     "dashboard": {
       "label": "Project Statistics",

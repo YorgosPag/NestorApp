@@ -115,7 +115,7 @@ export function useFirestoreProjects() {
       if (!user) {
         // User not authenticated - cannot proceed
         setLoading(false);
-        setError('User not authenticated');
+        setError('AUTH_REQUIRED');
         return;
       }
 
@@ -167,19 +167,19 @@ export function useFirestoreProjects() {
 
         logger.error('Fetch projects error', { error: err });
 
-        // 🏢 Enterprise error handling με proper type guards
+        // 🏢 Enterprise error handling — error codes for i18n translation in consumer
         if (err instanceof Error) {
           if (err.message.includes('HTTP 401') || err.message.includes('HTTP 403')) {
-            setError('🔒 Authorization failed. Please log in again.');
+            setError('AUTH_FAILED');
           } else if (err.message.includes('HTTP 5')) {
-            setError('⚠️ Server error. Please try again later.');
+            setError('SERVER_ERROR');
           } else if (err.message.includes('network') || err.message.includes('fetch')) {
-            setError('Network error. Check your connection.');
+            setError('NETWORK_ERROR');
           } else {
-            setError(`Error loading projects: ${err.message}`);
+            setError('UNKNOWN_ERROR');
           }
         } else {
-          setError('Unknown error loading projects');
+          setError('UNKNOWN_ERROR');
         }
       } finally {
         // Only update loading if not aborted

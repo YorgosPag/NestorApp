@@ -17,6 +17,7 @@ import {
   TrendingUp,
   BarChart3,
   Calendar,
+  LogIn,
 } from 'lucide-react';
 // 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -25,6 +26,8 @@ import { ProjectViewSwitch } from './ProjectViewSwitch';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { deleteProject } from '@/services/projects-client.service';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
@@ -266,13 +269,44 @@ export function ProjectsPageContent() {
     );
   }
 
-  // Εμφάνιση error state
+  // Εμφάνιση error state — i18n translated error codes
   if (error) {
+    const isAuthError = error === 'AUTH_REQUIRED' || error === 'AUTH_FAILED';
+
+    if (isAuthError) {
+      return (
+        <PageContainer ariaLabel={t('page.error.pageLabel')}>
+          <section className="flex flex-1 items-center justify-center" role="alert">
+            <div className="text-center">
+              <LogIn className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <p className="text-lg font-medium mb-2">
+                {error === 'AUTH_REQUIRED'
+                  ? t('page.error.authRequired')
+                  : t('page.error.authFailed')}
+              </p>
+              <p className="text-muted-foreground mb-6">
+                {t('page.error.authRequiredAction')}
+              </p>
+              <Button asChild>
+                <Link href="/login">{t('page.error.loginButton')}</Link>
+              </Button>
+            </div>
+          </section>
+        </PageContainer>
+      );
+    }
+
+    const errorMessages: Record<string, string> = {
+      SERVER_ERROR: t('page.error.serverError'),
+      NETWORK_ERROR: t('page.error.networkError'),
+      UNKNOWN_ERROR: t('page.error.unknownError'),
+    };
+
     return (
       <PageContainer ariaLabel={t('page.error.pageLabel')}>
         <PageErrorState
           title={t('page.error.title')}
-          message={error}
+          message={errorMessages[error] ?? t('page.error.unknownError')}
           onRetry={() => window.location.reload()}
           retryLabel={t('page.error.retry')}
           layout="contained"
