@@ -17,8 +17,9 @@
 const DEBUG_SHARED_PROPERTIES_PROVIDER = false;
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { Property } from '@/types/property-viewer';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -54,6 +55,7 @@ const getFloorLabel = (floor?: number): string => {
 };
 
 export function SharedPropertiesProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const [properties, setPropertiesState] = useState<Property[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
   const [isLoading, setIsLoading] = useState(false); // 🏢 CHANGE: Start false (lazy)
@@ -85,21 +87,35 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     setPropertiesState(newProperties);
   }, []);
 
-  // 🏢 ENTERPRISE: Only set up listener when activated
+  // 🏢 ENTERPRISE: Only set up listener when activated + authenticated
   useEffect(() => {
     // Skip if not activated (lazy initialization)
     if (!activated) {
       return;
     }
 
+    // 🔐 AUTH-READY GATING: Wait for auth state before setting up Firestore listener
+    if (authLoading) {
+      return;
+    }
+
+    if (!user?.companyId) {
+      logger.warn('[SharedProperties] No authenticated user or missing companyId — skipping listener');
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
-    const unitsCollection = collection(db, COLLECTIONS.PROPERTIES);
+    const propertiesQuery = query(
+      collection(db, COLLECTIONS.PROPERTIES),
+      where('companyId', '==', user.companyId)
+    );
     logger.info('[SharedProperties] Setting up Firestore listener (activated)...');
 
     const unsubscribe = onSnapshot(
-      unitsCollection,
+      propertiesQuery,
       (snapshot) => {
         if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info('Firestore snapshot received', { docsCount: snapshot.size });
 
@@ -143,7 +159,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       },
       (listenerError) => {
         logger.error('Firestore listener error', { error: listenerError });
-        setError('Failed to load data from Firestore.');
+        setError('FIRESTORE_LISTENER_ERROR');
         setIsLoading(false);
       }
     );
@@ -155,7 +171,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       unsubscribe();
       unsubscribeRef.current = null;
     };
-  }, [activated, refreshKey]);
+  }, [activated, refreshKey, authLoading, user?.companyId]);
 
   return (
     <SharedPropertiesContext.Provider value={{
