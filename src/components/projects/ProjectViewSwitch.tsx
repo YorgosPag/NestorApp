@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import type { Project } from '@/types/project';
+import type { ProjectStatus } from '@/constants/project-statuses';
 import type { NavigationCompany } from '@/components/navigation/core/types';
 import { Trash2 } from 'lucide-react';
 import { ProjectsList } from './projects-list';
@@ -42,10 +43,12 @@ interface ProjectViewSwitchProps {
   onProjectCreated?: (projectId: string) => void;
   /** Callback to cancel create mode */
   onCancelCreate?: () => void;
+  /** ADR-300 §Addendum — draft-mode status pill persistence (Fill then Create) */
+  onDraftStatusChange?: (next: ProjectStatus) => void;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode, isCreateMode, onProjectCreated, onCancelCreate }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode, isCreateMode, onProjectCreated, onCancelCreate, onDraftStatusChange }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -134,6 +137,7 @@ export function ProjectViewSwitch({
             isCreateMode={isCreateMode}
             onProjectCreated={onProjectCreated}
             onCancelCreate={onCancelCreate}
+            onDraftStatusChange={onDraftStatusChange}
             />
           )}
         </MobileDetailsSlideIn>
@@ -165,6 +169,7 @@ export function ProjectViewSwitch({
           isCreateMode={isCreateMode}
           onProjectCreated={onProjectCreated}
           onCancelCreate={onCancelCreate}
+          onDraftStatusChange={onDraftStatusChange}
         />
       </div>
 
@@ -207,6 +212,7 @@ export function ProjectViewSwitch({
             isCreateMode={isCreateMode}
             onProjectCreated={onProjectCreated}
             onCancelCreate={onCancelCreate}
+            onDraftStatusChange={onDraftStatusChange}
           />
         )}
       </MobileDetailsSlideIn>

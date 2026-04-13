@@ -123,6 +123,69 @@ form/dirty/auto-save lifecycle. Linear/Gmail pattern: state change είναι
 
 ---
 
+## Addendum — 2026-04-13 — Dual-mode pill (Fill then Create support)
+
+### Κενό που εντοπίστηκε
+Η αρχική υλοποίηση έκρυβε σιωπηλά το pill σε **create mode**:
+- Το draft project έχει `id = '__new__'` και `status = ''`
+- Το guard `isProjectStatus(project.status)` επιστρέφε false → pill hidden
+- Παράλληλα, ο προηγούμενος commit `0105e587` έκανε το status **required**
+  για τη δημιουργία — αποτέλεσμα: **αδύνατη η δημιουργία νέου project**,
+  γιατί δεν υπήρχε UI για να επιλέξει κατάσταση.
+
+### Λύση — dual-mode `ProjectStatusPill`
+Το ίδιο component λειτουργεί σε δύο modes χωρίς ξεχωριστά widgets:
+
+| Prop | Create mode | Edit/Read mode |
+|------|-------------|----------------|
+| `status` | `ProjectStatus \| ''` (permitted empty) | `ProjectStatus` |
+| `draft` | `true` | `false` (default) |
+| On select | `onChange(next)` — σκέτο (no API) | `updateProjectClient` + optimistic + rollback |
+| Empty render | Dashed "Select status" chip με `CircleDashed` | N/A (never empty) |
+
+### Persistence flow σε create mode
+```
+Pill click
+  → onChange(next)
+  → ProjectDetailsHeader.onStatusChange
+  → project-details.onDraftStatusChange
+  → ProjectViewSwitch.onDraftStatusChange
+  → projects-page-content.handleDraftStatusChange
+  → setSelectedProject(prev => ({ ...prev, status: next }))
+  → re-render cascade
+  → GeneralProjectTab useEffect (create-mode branch)
+  → setProjectData(prev => ({ ...prev, status: next }))  // status only
+  → User clicks Save → handleSave pre-flight pass → createProject
+```
+
+### Critical fix: narrowed sync effect στο `GeneralProjectTab`
+Το `useEffect` που συγχρονίζει `projectData` από `project` θα έκανε
+**full reset** σε κάθε pill click (το `project` reference αλλάζει), με
+αποτέλεσμα να clobber-άρει κάθε πεδίο που είχε πληκτρολογήσει ο χρήστης.
+
+Η διόρθωση: νέο create-mode branch που συγχρονίζει **μόνο το status**:
+```ts
+if (isCreateMode) {
+  setProjectData(prev => ({ ...prev, status: project.status ?? '' }));
+  return;
+}
+```
+Όλα τα υπόλοιπα πεδία παραμένουν owned από το local state και δεν
+επηρεάζονται από τα pill updates.
+
+### Files Touched (Addendum)
+**Modified**:
+- `src/components/projects/ProjectStatusPill.tsx` — widened status type, `draft` prop, placeholder rendering
+- `src/components/projects/ProjectDetailsHeader.tsx` — `isCreateMode` prop, empty-status branch
+- `src/components/projects/project-details.tsx` — `onDraftStatusChange` prop, conditional wiring
+- `src/components/projects/ProjectViewSwitch.tsx` — thread `onDraftStatusChange` σε 3 call sites
+- `src/components/projects/projects-page-content.tsx` — `handleDraftStatusChange` updater
+- `src/components/projects/general-tab/GeneralProjectTab.tsx` — narrowed create-mode sync branch
+- `src/i18n/locales/{el,en}/projects.json` — νέο `statusPill.placeholder` key
+
+---
+
 ## Changelog
 
 - **2026-04-13** — Initial implementation. Pill σε production.
+- **2026-04-13** — Addendum: Dual-mode pill. Fixed create-mode gap (pill was hidden). Added `draft` prop, placeholder rendering, narrowed sync effect in `GeneralProjectTab` για preservation user input.

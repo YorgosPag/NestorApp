@@ -233,7 +233,20 @@ export function GeneralProjectTab({
     // the user's keystrokes and clobber them. The form state is authoritative
     // during an edit session; sync only happens on entry/exit of editing or
     // on entity swap.
-    if (isEditing && !isCreateMode) return;
+    //
+    // 🏢 ADR-300 §Addendum: in create mode the `ProjectStatusPill` (rendered
+    // in the header, outside this tab) streams status updates by mutating
+    // `selectedProject` at the page level. That produces a new `project`
+    // reference on every pill click — if we re-ran the full form sync we
+    // would clobber every keystroke the user has typed into the other
+    // fields. The create-mode branch therefore narrows the sync to `status`
+    // only; all other fields are owned by local state and are already
+    // seeded from the draft project at mount time (see `useState` above).
+    if (isCreateMode) {
+      setProjectData(prev => ({ ...prev, status: project.status ?? '' }));
+      return;
+    }
+    if (isEditing) return;
     setProjectData(prev => ({
       ...prev,
       name: project.name,

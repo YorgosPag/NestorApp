@@ -475,6 +475,7 @@
   },
   "statusPill": {
     "ariaLabel": "Project status",
+    "placeholder": "Select status",
     "updateFailed": "Failed to update status"
   },
   "permitsTab": {

@@ -19,6 +19,7 @@
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import type { Project } from '@/types/project';
+import type { ProjectStatus } from '@/constants/project-statuses';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
@@ -48,6 +49,14 @@ interface ProjectDetailsProps {
   onProjectCreated?: (projectId: string) => void;
   /** Callback to cancel create mode */
   onCancelCreate?: () => void;
+  /**
+   * 🏢 ADR-300 §Addendum — Fill-then-Create status pill. When the draft
+   * project (id = `__new__`) is still in the "fill" phase, the status pill
+   * delegates persistence to the page-level draft store via this callback
+   * so the selected status flows back down into `GeneralProjectTab`'s form
+   * state through the standard props sync effect.
+   */
+  onDraftStatusChange?: (next: ProjectStatus) => void;
 }
 
 // ============================================================================
@@ -64,6 +73,7 @@ export function ProjectDetails({
   isCreateMode,
   onProjectCreated,
   onCancelCreate,
+  onDraftStatusChange,
 }: ProjectDetailsProps) {
   const { t } = useTranslation('projects');
 
@@ -161,7 +171,8 @@ export function ProjectDetails({
             onCancelEdit={handleCancelEdit}
             onNewProject={onNewProject}
             onDeleteProject={onDeleteProject}
-            onStatusChange={refetchProject}
+            isCreateMode={isCreateMode}
+            onStatusChange={isCreateMode ? onDraftStatusChange : refetchProject}
           />
         ) : null
       }

@@ -133,6 +133,14 @@ export function ProjectsPageContent() {
     }
   }, [isCreateMode, setSelectedProject]);
 
+  // 🏢 ADR-300 §Addendum: Status pill in draft mode writes straight to the
+  // page-level draft store. The new status flows back down into
+  // `GeneralProjectTab`'s local form state via the standard props sync
+  // effect, so the subsequent Save picks up the selection.
+  const handleDraftStatusChange = useCallback((next: Project['status']) => {
+    setSelectedProject(prev => (prev ? { ...prev, status: next } : prev));
+  }, [setSelectedProject]);
+
   // 🛡️ ADR-226 Phase 3: Deletion Guard — replaces cascade preview
   const { checking: checkingDeletion, checkBeforeDelete, BlockedDialog } = useDeletionGuard('project');
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -375,6 +383,7 @@ export function ProjectsPageContent() {
             isCreateMode={isCreateMode}
             onProjectCreated={handleProjectCreated}
             onCancelCreate={handleCancelCreate}
+            onDraftStatusChange={handleDraftStatusChange}
           />
         </ListContainer>
 

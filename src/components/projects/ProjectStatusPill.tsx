@@ -1,18 +1,24 @@
 /**
  * 🏢 ProjectStatusPill — Inline interactive status pill for the project header.
  *
- * Linear/Gmail pattern: click the pill → popover with status options →
- * one-click change. Bypasses the form/auto-save path; calls the API directly
- * with optimistic update + rollback on error. Works regardless of edit mode,
- * because state ≠ form content.
+ * Linear/Notion pattern: click the pill → popover with status options →
+ * one-click change. Works in two modes:
+ *
+ *   - `draft=false` (default): persisted entity — calls `updateProjectClient`
+ *     with optimistic update + rollback on error. Runs regardless of edit
+ *     mode, because status is not a form field anymore.
+ *   - `draft=true`: pre-create entity — skips the API entirely and delegates
+ *     persistence to the parent via `onChange`. The same component drives
+ *     both read/edit and "Fill then Create" flows (ADR-300 §Addendum).
  *
  * @see ADR-145 lifecycle (project status semantics)
+ * @see ADR-300 status pill information architecture
  */
 
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Check } from 'lucide-react';
+import { Check, CircleDashed } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ProjectBadge } from '@/core/badges/UnifiedBadgeSystem';
 import { ACTIVE_PROJECT_STATUSES, type ProjectStatus } from '@/constants/project-statuses';
@@ -25,8 +31,14 @@ import '@/lib/design-system';
 
 interface ProjectStatusPillProps {
   projectId: string;
-  status: ProjectStatus;
+  status: ProjectStatus | '';
   disabled?: boolean;
+  /**
+   * When true, the pill skips the API call and delegates persistence to the
+   * parent via `onChange`. Used by the "Fill then Create" flow where the
+   * project has no Firestore id yet.
+   */
+  draft?: boolean;
   onChange?: (next: ProjectStatus) => void;
 }
 
@@ -44,17 +56,19 @@ export const ProjectStatusPill = React.memo(function ProjectStatusPill({
   projectId,
   status,
   disabled = false,
+  draft = false,
   onChange,
 }: ProjectStatusPillProps) {
   const { t } = useTranslation('projects');
   const { error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
 
-  const [optimisticStatus, setOptimisticStatus] = useState<ProjectStatus>(status);
+  const [optimisticStatus, setOptimisticStatus] = useState<ProjectStatus | ''>(status);
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Sync optimistic state when parent updates (e.g. realtime/refetch)
+  // Sync optimistic state when parent updates (e.g. realtime/refetch, or the
+  // draft project rehydrating from the page-level selectedProject store).
   React.useEffect(() => {
     setOptimisticStatus(status);
   }, [status]);
@@ -68,6 +82,14 @@ export const ProjectStatusPill = React.memo(function ProjectStatusPill({
     setOptimisticStatus(next);
     setOpen(false);
 
+    // Draft mode: the project has no Firestore id yet — persistence happens
+    // at form submit time. Delegate to the parent so it can update the draft
+    // store (projects-page-content → selectedProject).
+    if (draft) {
+      onChange?.(next);
+      return;
+    }
+
     startTransition(async () => {
       const result = await updateProjectClient(projectId, { status: next });
       if (!result.success) {
@@ -78,6 +100,8 @@ export const ProjectStatusPill = React.memo(function ProjectStatusPill({
       onChange?.(next);
     });
   };
+
+  const isEmpty = optimisticStatus === '';
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -91,7 +115,20 @@ export const ProjectStatusPill = React.memo(function ProjectStatusPill({
             !disabled && !isPending && 'cursor-pointer'
           )}
         >
-          <ProjectBadge status={optimisticStatus} size="sm" />
+          {isEmpty ? (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border border-dashed',
+                'border-muted-foreground/40 px-2.5 py-0.5 text-xs font-medium',
+                'text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground'
+              )}
+            >
+              <CircleDashed className={iconSizes.xs} aria-hidden="true" />
+              {t('statusPill.placeholder')}
+            </span>
+          ) : (
+            <ProjectBadge status={optimisticStatus} size="sm" />
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="p-1">

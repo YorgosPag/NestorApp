@@ -19,6 +19,11 @@ interface ProjectDetailsHeaderProps {
     onNewProject?: () => void;
     onDeleteProject?: () => void;
     hideEditControls?: boolean;
+    /**
+     * "Fill then Create" mode — the project has no Firestore id yet. The pill
+     * must skip the API call and delegate persistence to `onStatusChange`.
+     */
+    isCreateMode?: boolean;
     onStatusChange?: (next: ProjectStatus) => void;
 }
 
@@ -31,20 +36,29 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
     onNewProject,
     onDeleteProject,
     hideEditControls = false,
+    isCreateMode = false,
     onStatusChange
 }: ProjectDetailsHeaderProps) {
     const { t } = useTranslation('projects');
 
     const statusPill = useMemo(() => {
-        if (!project.id || !isProjectStatus(project.status)) return undefined;
+        if (!project.id) return undefined;
+        // In create mode we allow rendering with an empty status so the pill
+        // can act as the placeholder CTA ("Select status"). In edit/read mode
+        // we only render when the status is a valid enum value.
+        const pillStatus: ProjectStatus | '' = isProjectStatus(project.status)
+            ? project.status
+            : '';
+        if (!isCreateMode && pillStatus === '') return undefined;
         return (
             <ProjectStatusPill
                 projectId={project.id}
-                status={project.status}
+                status={pillStatus}
+                draft={isCreateMode}
                 onChange={onStatusChange}
             />
         );
-    }, [project.id, project.status, onStatusChange]);
+    }, [project.id, project.status, isCreateMode, onStatusChange]);
 
     const actions = useMemo(() => [
         // New Project button

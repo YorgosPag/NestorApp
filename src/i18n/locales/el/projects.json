@@ -475,6 +475,7 @@
   },
   "statusPill": {
     "ariaLabel": "Κατάσταση έργου",
+    "placeholder": "Επιλέξτε κατάσταση",
     "updateFailed": "Αποτυχία ενημέρωσης κατάστασης"
   },
   "permitsTab": {
