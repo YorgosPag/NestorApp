@@ -29,7 +29,9 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { CONFLICT_CODE } from '@/config/versioning-config';
-import { logger } from '@/lib/logger';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useVersionedSave');
 
 // ============================================
 // TYPES
