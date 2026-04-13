@@ -20,6 +20,62 @@
 import type { AuditFieldChange } from '@/types/audit-trail';
 
 // ============================================================================
+// TRACKED FIELD DEFINITION (ADR-195 Phase 11 — SSoT discriminated union)
+// ============================================================================
+
+/**
+ * Schema for one tracked field. The `kind` discriminator routes the diff
+ * engine between scalar comparison and collection-aware reconciliation.
+ *
+ * - `scalar` — single primitive (string/number/bool/null) or opaque object.
+ *   Produces `oldValue → newValue` entries (legacy behavior).
+ * - `collection` — array of items. The diff engine reconciles by `keyBy`
+ *   and produces granular added/removed/modified entries.
+ *
+ * As of this commit, ALL fields are declared `scalar`. Array fields will be
+ * flipped to `collection` together with the engine that understands them.
+ */
+export type TrackedFieldDef =
+  | { readonly kind: 'scalar'; readonly label: string }
+  | {
+      readonly kind: 'collection';
+      readonly label: string;
+      /**
+       * Stable identity for collection items.
+       * - `'value'` — the element itself is the key (primitive arrays).
+       * - `string` — read this property from each item (e.g. `'id'`).
+       * - `readonly string[]` — composite key, joined by `|`.
+       */
+      readonly keyBy: 'value' | string | readonly string[];
+      /** Item fields concatenated to form the human display label. */
+      readonly labelFields?: readonly string[];
+      /** Separator between `labelFields` (default `' — '`). */
+      readonly labelSeparator?: string;
+      /** Sub-fields tracked for `op === 'modified'` entries. */
+      readonly trackSubFields?: readonly string[];
+    };
+
+/** Read the human-readable label from any TrackedFieldDef variant. */
+export function getTrackedFieldLabel(def: TrackedFieldDef): string {
+  return def.label;
+}
+
+/**
+ * Convert a `TrackedFieldDef` map back to a plain `Record<string, string>`
+ * (field → label). Used internally so the legacy flatten/diff helpers keep
+ * a single signature.
+ */
+export function legacyLabelMap(
+  defs: Record<string, TrackedFieldDef>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [field, def] of Object.entries(defs)) {
+    out[field] = def.label;
+  }
+  return out;
+}
+
+// ============================================================================
 // FLATTENING — Dot-notation support for nested tracked fields
 // ============================================================================
 
@@ -151,4 +207,25 @@ export function diffTrackedFieldsLegacy(
   }
 
   return changes;
+}
+
+// ============================================================================
+// CANONICAL DIFF (TrackedFieldDef signature — preferred entry point)
+// ============================================================================
+
+/**
+ * Compute field-level diffs between two document states using the SSoT
+ * `TrackedFieldDef` registry. This is the canonical entry point for all
+ * audit diffing.
+ *
+ * Today this routes scalar fields through `diffTrackedFieldsLegacy`. The
+ * next commit will add a `collection`-aware branch that emits granular
+ * added/removed/modified entries for array fields.
+ */
+export function diffTrackedFields(
+  oldDoc: Record<string, unknown>,
+  newDoc: Record<string, unknown>,
+  defs: Record<string, TrackedFieldDef>,
+): AuditFieldChange[] {
+  return diffTrackedFieldsLegacy(oldDoc, newDoc, legacyLabelMap(defs));
 }

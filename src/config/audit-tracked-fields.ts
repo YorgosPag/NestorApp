@@ -11,15 +11,33 @@
 import type { AuditFieldChange } from '@/types/audit-trail';
 import {
   flattenForTracking as sharedFlattenForTracking,
-  diffTrackedFieldsLegacy,
+  diffTrackedFields as sharedDiffTrackedFields,
+  type TrackedFieldDef,
+  legacyLabelMap,
 } from '@/lib/audit/audit-diff';
+
+// Re-export the SSoT type so consumers that already import from this file
+// (the historical home of `*_TRACKED_FIELDS`) can keep their imports.
+export type { TrackedFieldDef } from '@/lib/audit/audit-diff';
+export { getTrackedFieldLabel } from '@/lib/audit/audit-diff';
+
+/** Wrap a plain `field → label` map into a `Record<string, TrackedFieldDef>` (all scalar). */
+function scalarsToDefs(
+  raw: Record<string, string>,
+): Record<string, TrackedFieldDef> {
+  const out: Record<string, TrackedFieldDef> = {};
+  for (const [field, label] of Object.entries(raw)) {
+    out[field] = { kind: 'scalar', label };
+  }
+  return out;
+}
 
 // ============================================================================
 // PROPERTY TRACKED FIELDS (Centralized — previously in properties/[id]/route.ts)
 // ============================================================================
 
-/** Fields tracked for property audit trail (field → Greek label) */
-export const PROPERTY_TRACKED_FIELDS: Record<string, string> = {
+/** Fields tracked for property audit trail (raw field → Greek label) */
+const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   // Core fields
   name: 'Όνομα',
   type: 'Τύπος',
@@ -66,7 +84,7 @@ export const PROPERTY_TRACKED_FIELDS: Record<string, string> = {
  * keys, …) are intentionally excluded so they don't produce ghost entries in
  * the per-project History tab.
  */
-export const PROJECT_TRACKED_FIELDS: Record<string, string> = {
+const PROJECT_TRACKED_FIELDS_RAW: Record<string, string> = {
   // ── Identity ──
   name: 'Όνομα',
   title: 'Τίτλος',
@@ -127,8 +145,8 @@ export const PROJECT_TRACKED_FIELDS: Record<string, string> = {
 // CONTACT TRACKED FIELDS
 // ============================================================================
 
-/** Fields tracked for contact audit trail (field → Greek label) */
-export const CONTACT_TRACKED_FIELDS: Record<string, string> = {
+/** Fields tracked for contact audit trail (raw field → Greek label) */
+const CONTACT_TRACKED_FIELDS_RAW: Record<string, string> = {
   // ── Identity (shared) ──
   firstName: 'Όνομα',
   lastName: 'Επώνυμο',
@@ -279,10 +297,26 @@ const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
   'maritalStatus', 'spouse', 'children',
 ]);
 
+// ============================================================================
+// EXPORTED REGISTRIES (TrackedFieldDef discriminated union)
+// ============================================================================
+
+/** Property audit registry — `field → TrackedFieldDef`. */
+export const PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  scalarsToDefs(PROPERTY_TRACKED_FIELDS_RAW);
+
+/** Project audit registry — `field → TrackedFieldDef`. */
+export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  scalarsToDefs(PROJECT_TRACKED_FIELDS_RAW);
+
+/** Contact audit registry — `field → TrackedFieldDef`. */
+export const CONTACT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  scalarsToDefs(CONTACT_TRACKED_FIELDS_RAW);
+
 /** Return CONTACT_TRACKED_FIELDS filtered to only relevant fields for the given type */
 export function getContactTrackedFieldsForType(
   contactType: 'individual' | 'company' | 'service' | string,
-): Record<string, string> {
+): Record<string, TrackedFieldDef> {
   let excludeSet: ReadonlySet<string>;
   switch (contactType) {
     case 'individual':
@@ -303,29 +337,28 @@ export function getContactTrackedFieldsForType(
 }
 
 // ============================================================================
-// SHARED DIFF HELPERS — Re-exported from `@/lib/audit/audit-diff`
+// SHARED DIFF HELPERS — Wrappers over `@/lib/audit/audit-diff`
 // ============================================================================
 
 /**
  * Flatten a document for dot-notation tracking.
- * Re-exported from the shared primitive so legacy consumers that import
- * from `@/config/audit-tracked-fields` keep working.
+ * Accepts the new `TrackedFieldDef` map (the SSoT format).
  */
 export function flattenForTracking(
   doc: Record<string, unknown>,
-  trackedFields: Record<string, string>,
+  trackedFields: Record<string, TrackedFieldDef>,
 ): Record<string, unknown> {
-  return sharedFlattenForTracking(doc, trackedFields);
+  return sharedFlattenForTracking(doc, legacyLabelMap(trackedFields));
 }
 
 /**
  * Compute field-level diffs between old and new document states.
- * Client-safe wrapper over the shared `diffTrackedFieldsLegacy` primitive.
+ * Client-safe wrapper over the shared diff engine.
  */
 export function computeEntityDiff(
   oldDoc: Record<string, unknown>,
   newDoc: Record<string, unknown>,
-  trackedFields: Record<string, string>,
+  trackedFields: Record<string, TrackedFieldDef>,
 ): AuditFieldChange[] {
-  return diffTrackedFieldsLegacy(oldDoc, newDoc, trackedFields);
+  return sharedDiffTrackedFields(oldDoc, newDoc, trackedFields);
 }

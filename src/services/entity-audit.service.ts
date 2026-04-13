@@ -26,7 +26,10 @@ import type {
   AuditAction,
   AuditFieldChange,
 } from '@/types/audit-trail';
-import { diffTrackedFieldsLegacy } from '@/lib/audit/audit-diff';
+import {
+  diffTrackedFields,
+  type TrackedFieldDef,
+} from '@/lib/audit/audit-diff';
 
 const logger = createModuleLogger('EntityAuditService');
 
@@ -164,19 +167,20 @@ export class EntityAuditService {
 
   /**
    * Compute field-level diffs between old and new document states.
-   * Supports dot-notation fields (e.g. 'commercial.askingPrice').
+   * Supports dot-notation fields (e.g. 'commercial.askingPrice') and
+   * (in upcoming commits) collection-aware diffing for array fields.
    *
    * @param oldDoc - Document state before update
    * @param newDoc - Fields being updated (partial)
-   * @param trackedFields - Map of field name → human-readable label
+   * @param trackedFields - SSoT registry of tracked fields (TrackedFieldDef)
    * @returns Array of field changes (only fields that actually changed)
    */
   static diffFields(
     oldDoc: Record<string, unknown>,
     newDoc: Record<string, unknown>,
-    trackedFields: Record<string, string>,
+    trackedFields: Record<string, TrackedFieldDef>,
   ): AuditFieldChange[] {
-    return diffTrackedFieldsLegacy(oldDoc, newDoc, trackedFields);
+    return diffTrackedFields(oldDoc, newDoc, trackedFields);
   }
 
   /**
@@ -193,7 +197,7 @@ export class EntityAuditService {
   static async diffFieldsWithResolution(
     oldDoc: Record<string, unknown>,
     newDoc: Record<string, unknown>,
-    trackedFields: Record<string, string>,
+    trackedFields: Record<string, TrackedFieldDef>,
     resolvers: Record<string, (id: unknown) => Promise<string | null>>,
   ): Promise<AuditFieldChange[]> {
     const changes = this.diffFields(oldDoc, newDoc, trackedFields);
