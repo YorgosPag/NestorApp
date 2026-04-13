@@ -52,7 +52,7 @@
 | Περιοχή | Canonical ADR | Baseline | Violations | Αρχεία | Τύπος |
 |---------|---------------|----------|------------|--------|-------|
 | **Firestore rules test coverage — runtime** (Phase B/C/E) | ADR-298 | manifest pending | **88 collections** | — | Test suites required |
-| **Entity audit coverage — write side** (CHECK 3.17) | ADR-195 | `.entity-audit-coverage-baseline.json` | **19 violations** (base 19, ratcheted 20→19 στο commit `56d95be4` — admin-link destructive chain deletion) | 19 αρχεία | Boy Scout |
+| **Entity audit coverage — write side** (CHECK 3.17) | ADR-195 | `.entity-audit-coverage-baseline.json` | **15 violations** (ratcheted 20→19→18→15: security deletions + Batch 1 wire-up 2026-04-13) | 15 αρχεία | Boy Scout |
 | **i18n missing keys** (CHECK 3.8) | ADR-280 | `.i18n-missing-keys-baseline.json` | **4.762** legacy | — | Ratchet down only |
 | **i18n resolver reachability** (CHECK 3.13) | ADR-279 / ADR-280 | `.i18n-resolver-reachability-baseline.json` | **378** violations | 13 αρχεία | Ratchet down only |
 
@@ -95,6 +95,8 @@ C.1 remaining accounting (15), C.2 DXF/CAD/floorplans (15), C.3 file variants (1
 ### 3.2 CHECK 3.17 Entity Audit Coverage (19 files)
 
 Κάθε αρχείο στο baseline κάνει Firestore write σε audit-tracked collection (`projects`, `contacts`, `buildings`, `properties`, `floors`, `parking`, `storage`, `purchase_orders`, `companies`) χωρίς να καλεί `EntityAuditService.recordChange()`. Fix ανά αρχείο = fetch `performedBy`/`performedByName`/`companyId` + recordChange call στο ίδιο transactional block. File-level granularity — ένα αρχείο περνάει όταν έχει έστω **ένα** covered write path.
+
+**Batch 1 (2026-04-13):** 3 αρχεία καλύφθηκαν — `execute-admin/route.ts` (projects), `normalize-floors/route.ts` (floors), `migrate-building-features/migration-operations.ts` (buildings). Baseline 18→15.
 
 ### 3.3 i18n Missing Keys (4.762 legacy)
 

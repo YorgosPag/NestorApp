@@ -9,6 +9,8 @@ import { logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
   FALLBACK_BUILDING_NAME,
   LEGACY_GREEK_TO_KEY,
@@ -233,6 +235,22 @@ export const executeBuildingFeaturesMigration = async (
         updatedAt: timestamp,
         [MIGRATION_TIMESTAMP_FIELD]: timestamp,
       });
+
+      EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.BUILDING as 'building',
+        entityId: preview.id,
+        entityName: preview.name,
+        action: 'updated',
+        changes: [{
+          field: 'features',
+          oldValue: preview.currentFeatures.join(', ') || null,
+          newValue: preview.migratedFeatures.join(', ') || null,
+          label: 'Building Features',
+        }],
+        performedBy: ctx.uid,
+        performedByName: ctx.email ?? null,
+        companyId: 'system',
+      }).catch(() => {});
 
       results.push({
         id: preview.id,

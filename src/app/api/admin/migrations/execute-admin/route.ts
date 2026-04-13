@@ -33,6 +33,8 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('ExecuteAdminMigrationRoute');
 
@@ -172,6 +174,18 @@ async function handleAdminSdkMigration(
     if (updateCount > 0) {
       await batch.commit();
       logger.info('Successfully updated projects', { count: updateCount });
+      for (const mapping of mappings) {
+        EntityAuditService.recordChange({
+          entityType: ENTITY_TYPES.PROJECT as 'project',
+          entityId: mapping.projectId,
+          entityName: mapping.projectName ?? null,
+          action: 'updated',
+          changes: [{ field: 'companyId', oldValue: mapping.oldCompanyId === '<empty>' ? null : mapping.oldCompanyId, newValue: mapping.newCompanyId, label: 'Company ID' }],
+          performedBy: ctx.uid,
+          performedByName: ctx.email ?? null,
+          companyId: mapping.newCompanyId,
+        }).catch(() => {});
+      }
     } else {
       logger.info('No projects required updates');
     }
