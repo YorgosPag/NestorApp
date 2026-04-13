@@ -161,23 +161,13 @@ export function useProjectDetail(
   }, [projectId, skip, pauseRefetch, doFetch]);
 
   // Realtime subscription — shallow-merge PROJECT_UPDATED deltas into the
-  // hydrated doc and the cache. Intentional overlap with `useProjectsState`:
-  // that hook keeps the list tile in sync; this one keeps the detail form in
-  // sync. Both are cheap shallow merges of the same payload.
-  //
-  // 🏢 ADR-256 v3: While the user is editing (`pauseRefetch === true`), we
-  // intentionally DROP these events. `updateProjectClient` echoes the patch
-  // back as a PROJECT_UPDATED event the instant each auto-save succeeds, and
-  // that echo races the user's next keystrokes — a shallow merge of the
-  // "A" that just saved clobbers the local "AB" that the user has since
-  // typed. The user's own edits are already in the form state, so the echo
-  // is redundant noise during an editing session. Concurrent edits from
-  // another tab will be picked up by `refetch()` when the user stops editing.
-  const pauseRefetchRef = useRef(pauseRefetch);
-  pauseRefetchRef.current = pauseRefetch;
+  // hydrated doc and the cache. Events are accepted even during an editing
+  // session: keeping `hydrated` in sync is what prevents a post-save flash
+  // of stale data when the form's sync effect runs again on `isEditing` exit.
+  // The consumer (`GeneralProjectTab`) is responsible for not re-syncing its
+  // form state from props mid-edit (see its `isEditing` early-return).
   useEffect(() => {
     const handleUpdate = (payload: ProjectUpdatedPayload) => {
-      if (pauseRefetchRef.current) return;
       if (!projectIdRef.current || payload.projectId !== projectIdRef.current) return;
 
       setProject((prev) => {
