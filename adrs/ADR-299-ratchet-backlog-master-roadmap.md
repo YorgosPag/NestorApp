@@ -80,7 +80,7 @@ Canonical breakdown στο `adrs/ADR-298-firestore-rules-test-coverage-ssot.md` 
 |-------|-------------|---------|--------|
 | B.1 | `attendance_events`, `attendance_qr_tokens` | `tenant_dual_path` + `admin_write_only` | ✅ done (Phase B.1) |
 | B.2 | `accounting_audit_log`, `accounting_invoices`, `accounting_journal_entries` | `role_dual` + immutable overrides (audit_log) | ✅ done (2026-04-13) |
-| B.3 | `contacts`, `opportunities`, `leads`, `activities` | `tenant_direct` | ⏳ pending |
+| B.3 | `contacts` (Phase A), `opportunities`, `leads`, `activities` | `tenant_direct` + `crmDirectMatrix` | ✅ done (2026-04-13) |
 | B.4 | `properties`, `storage_units`, `parking_spots`, `floors` | `admin_write_only` | ⏳ pending |
 | B.5 | `conversations`, `external_identities` | `tenant_direct` + enum | ⏳ pending |
 | B.6 | `obligations`, `obligation_transmittals`, `obligation_templates` | `tenant_direct` | ⏳ pending |

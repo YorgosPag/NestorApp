@@ -20,8 +20,6 @@
 
 ### 🔥 CRITICAL PATH (Scenario A — ~21h expected)
 
-- [ ] **ADR-298 Phase B.3** — CRM core (4 collections: `contacts`, `opportunities`, `leads`, `activities`). Canonical `tenant_direct` pattern, no new work. **Hours:** 1.5-3.5 (expected 2.5). Critical: high read volume.
-
 - [ ] **ADR-298 Phase B.4** — properties (4 collections: `properties`, `storage_units`, `parking_spots`, `floors`). Existing `admin_write_only` pattern. **Hours:** 1.5-3 (expected 2). Seed helpers reuse.
 
 - [ ] **ADR-298 Phase B.5** — messaging (2 collections: `conversations`, `external_identities`). `tenant_direct` + enum validation. **Hours:** 1-2.5 (expected 1.5).
@@ -58,3 +56,4 @@
 | 2026-04-11 | CHECK 3.17 baseline ratcheted 20→19 in commit `56d95be4` (production safety hardening: deletion of `properties/admin-link` destructive chain). Was not a CHECK 3.17 cleanup target — was security deletion that reduced baseline as side-effect. Line updated. Hours estimate unchanged. |
 | 2026-04-11 | CHECK 3.17 baseline 19→18 in commit `f160e750` (cluster B triage: deletion of `admin/migrate-properties` break-glass one-shot with hardcoded Greek apartment templates + tenant-specific building IDs). Expected hours updated 6→5.5 (removed 1 file from Boy Scout queue). Cluster (B) — 7 files still pending (migrate-building-features, migrate-company-id, migrate-enterprise-ids route+ops, migrations/execute-admin, migrations/normalize-floors, seed-floors, seed-parking) — deferred to focused per-file wire-up commits. |
 | 2026-04-13 | ADR-298 Phase B.2 COMPLETED. accounting_audit_log + accounting_invoices + accounting_journal_entries moved to COVERAGE. New `roleDualMatrix()` + 3 seeders + 3 suites. Pending list 86→83, coverage 8→11 collections. Removed from checklist. |
+| 2026-04-13 | ADR-298 Phase B.3 COMPLETED. leads + opportunities + activities moved to COVERAGE. New `crmDirectMatrix()` + 3 seeders + 3 suites. Pending list 83→80, coverage 11→14 collections. Removed from checklist. |

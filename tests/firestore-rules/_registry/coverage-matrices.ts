@@ -296,6 +296,40 @@ export function roleDualMatrix(): readonly CoverageCell[] {
 }
 
 /**
+ * Canonical matrix for CRM `tenant_direct` collections (`leads`, `opportunities`,
+ * `activities`) where the create rule lacks an `isSuperAdminOnly()` short-circuit.
+ *
+ * Key deltas from `tenantDirectMatrix()`:
+ *   - super_admin × create → deny: the create rule is
+ *     `companyId == getUserCompanyId()` only. Super admin's claim is
+ *     'company-root' ≠ SAME_TENANT_COMPANY_ID ('company-a') → denied.
+ *     Reason: `cross_tenant` (the companyId mismatch is the gate, not a
+ *     missing role — super admin legitimately targets other tenants via
+ *     Admin SDK; the client rule just can't express that without knowing
+ *     target tenant at rule-eval time).
+ *   - same_tenant_user × create → allow: companyId == getUserCompanyId()
+ *     satisfied for same-tenant personas.
+ *   - same_tenant_user × update/delete → allow: `resource.data.createdBy ==
+ *     request.auth.uid`. Test contract: seed doc **must** carry
+ *     `createdBy = PERSONA_CLAIMS.same_tenant_user.uid`.
+ *
+ * Collections: `leads`, `opportunities`, `activities`.
+ * See ADR-298 §4 Phase B.3 (2026-04-13).
+ */
+export function crmDirectMatrix(): readonly CoverageCell[] {
+  return overrideCells(tenantDirectMatrix(), [
+    // No isSuperAdminOnly() short-circuit on create — super_admin companyId
+    // claim ('company-root') does not match test tenant ('company-a').
+    cell('super_admin', 'create', 'deny', 'cross_tenant'),
+    // same_tenant_user: full CRUD via companyId match (create) and
+    // createdBy == uid path (update/delete). Seed doc must carry their uid.
+    cell('same_tenant_user', 'create', 'allow'),
+    cell('same_tenant_user', 'update', 'allow'),
+    cell('same_tenant_user', 'delete', 'allow'),
+  ]);
+}
+
+/**
  * Bespoke matrix for `attendance_events` — an append-only collection with
  * **dual-path reads** (either `companyId` direct OR `projectId` crossdoc) and
  * a **tenant-bound client-append** create rule. Update/delete deny for all.

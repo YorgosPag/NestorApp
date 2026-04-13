@@ -169,7 +169,8 @@
     "residential": "Κατοικίες",
     "commercial": "Εμπορικό",
     "mixed": "Μικτή Χρήση",
-    "industrial": "Βιομηχανικό"
+    "industrial": "Βιομηχανικό",
+    "unknown": "Μη ορισμένο"
   },
   "status": {
     "active": "Ενεργό",

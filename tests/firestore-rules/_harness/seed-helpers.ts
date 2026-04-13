@@ -309,6 +309,74 @@ export async function seedAccountingAuditLog(
 }
 
 // ---------------------------------------------------------------------------
+// CRM seeders (tenant_direct CRM pattern — ADR-298 Phase B.3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed options for CRM collections that carry a `createdBy` field.
+ * Default `createdByUid` = `PERSONA_CLAIMS.same_tenant_user.uid` so that
+ * `same_tenant_user × update/delete` cells exercise the `uid == createdBy` path.
+ */
+export interface CrmSeedOptions extends SeedOptions {
+  readonly createdByUid?: string;
+}
+
+export async function seedLead(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: CrmSeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('leads').doc(docId).set({
+      title: `Test Lead ${docId}`,
+      status: 'new',
+      ...baseDoc({
+        ...opts,
+        createdBy: opts?.createdByUid ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      }),
+      ...opts?.overrides,
+    });
+  });
+}
+
+export async function seedOpportunity(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: CrmSeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('opportunities').doc(docId).set({
+      title: `Test Opportunity ${docId}`,
+      stage: 'prospecting',
+      value: 0,
+      ...baseDoc({
+        ...opts,
+        createdBy: opts?.createdByUid ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      }),
+      ...opts?.overrides,
+    });
+  });
+}
+
+export async function seedActivity(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: CrmSeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('activities').doc(docId).set({
+      type: 'call',
+      description: `Test Activity ${docId}`,
+      ...baseDoc({
+        ...opts,
+        createdBy: opts?.createdByUid ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      }),
+      ...opts?.overrides,
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Legacy-fallback seeders (no companyId — tests the `|| no companyId` leg)
 // ---------------------------------------------------------------------------
 

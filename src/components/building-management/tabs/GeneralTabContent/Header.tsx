@@ -15,7 +15,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 interface HeaderProps {
-    building: { id: string; category?: 'mixed' | 'residential' | 'commercial' | 'industrial' };
+    building: { id: string; code?: string; category?: 'mixed' | 'residential' | 'commercial' | 'industrial' };
     isEditing: boolean;
     autoSaving: boolean;
     lastSaved: Date | null;
@@ -41,13 +41,15 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <CommonBadge
-          status="company"
-          customLabel={`ID: ${building.id}`}
-          variant="secondary"
-          size="sm"
-          className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-        />
+        {building.code && (
+          <CommonBadge
+            status="company"
+            customLabel={building.code}
+            variant="secondary"
+            size="sm"
+            className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+          />
+        )}
         <CommonBadge
           status="company"
           customLabel={getCategoryLabel(building.category)}

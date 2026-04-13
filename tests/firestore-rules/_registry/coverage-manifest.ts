@@ -29,6 +29,7 @@ import type { Persona } from './personas';
 import {
   adminWriteOnlyMatrix,
   attendanceEventMatrix,
+  crmDirectMatrix,
   immutableMatrix,
   overrideCells,
   roleDualMatrix,
@@ -168,6 +169,30 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
       cell('super_admin', 'create', 'deny', 'server_only'),
     ]),
   },
+  // ── ADR-298 Phase B.3 — CRM core tenant_direct (2026-04-13) ─────────────
+  {
+    collection: 'leads',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/leads.rules.test.ts',
+    rulesRange: [1584, 1625],
+    // Create rule has no isSuperAdminOnly() short-circuit — super_admin denied.
+    // Seed doc carries createdBy = same_tenant_user.uid for update/delete leg.
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'opportunities',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/opportunities.rules.test.ts',
+    rulesRange: [1626, 1665],
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'activities',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/activities.rules.test.ts',
+    rulesRange: [1666, 1705],
+    matrix: crmDirectMatrix(),
+  },
   // ── ADR-298 Phase B.2 — accounting ΚΦΔ (2026-04-13) ─────────────────────
   {
     collection: 'accounting_invoices',
@@ -268,9 +293,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'appointments',
   // — CRM —
   'communications',
-  'leads',
-  'opportunities',
-  'activities',
+  // leads, opportunities, activities → moved to COVERAGE (ADR-298 Phase B.3, 2026-04-13)
   'conversations',
   'external_identities',
   // — System / config —

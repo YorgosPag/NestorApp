@@ -169,7 +169,8 @@
     "residential": "Residential",
     "commercial": "Commercial",
     "mixed": "Mixed Use",
-    "industrial": "Industrial"
+    "industrial": "Industrial",
+    "unknown": "Unspecified"
   },
   "status": {
     "active": "Active",
