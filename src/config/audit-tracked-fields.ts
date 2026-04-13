@@ -474,6 +474,41 @@ const PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
 export const PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROPERTY_TRACKED_FIELDS_RAW, PROPERTY_COLLECTION_DEFS);
 
+// ============================================================================
+// BUILDING TRACKED FIELDS (ADR-195 — creation diff for service-layer writes)
+// ============================================================================
+
+/** Fields tracked for building audit trail (raw field → Greek label) */
+const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
+  // Identity
+  name: 'Όνομα',
+  code: 'Κωδικός',
+  description: 'Περιγραφή',
+  status: 'Κατάσταση',
+  projectId: 'Έργο',
+  // Location
+  address: 'Διεύθυνση',
+  city: 'Πόλη',
+  addresses: 'Διευθύνσεις',
+  // Metrics
+  totalArea: 'Συνολικό εμβαδόν',
+  builtArea: 'Δομημένο εμβαδόν',
+  floors: 'Όροφοι',
+  units: 'Μονάδες',
+  totalValue: 'Συνολική αξία',
+  progress: 'Πρόοδος',
+  // Timeline
+  startDate: 'Ημερομηνία έναρξης',
+  completionDate: 'Ημερομηνία ολοκλήρωσης',
+  // Company links
+  company: 'Εταιρεία',
+  linkedCompanyId: 'Συνδεδεμένη εταιρεία',
+};
+
+/** Building audit registry — `field → TrackedFieldDef`. */
+export const BUILDING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(BUILDING_TRACKED_FIELDS_RAW, {});
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -481,6 +516,33 @@ export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 /** Contact audit registry — `field → TrackedFieldDef`. */
 export const CONTACT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(CONTACT_TRACKED_FIELDS_RAW, CONTACT_COLLECTION_DEFS);
+
+/**
+ * Return the tracked-fields registry for a given `AuditEntityType`, or `null`
+ * if no registry exists (e.g. `floor`, `storage`, `parking` which are not yet
+ * defined here — those will emit `changes: []` on creation until their
+ * registries are added).
+ *
+ * Used by `createEntity()` (`entity-creation.service.ts`) to populate the
+ * `changes` array on `action: 'created'` audit entries, so the History tab
+ * shows the initial values of tracked fields.
+ */
+export function getTrackedFieldsForEntityAuditType(
+  type: string | null,
+): Record<string, TrackedFieldDef> | null {
+  switch (type) {
+    case 'building':
+      return BUILDING_TRACKED_FIELDS;
+    case 'property':
+      return PROPERTY_TRACKED_FIELDS;
+    case 'project':
+      return PROJECT_TRACKED_FIELDS;
+    case 'contact':
+      return CONTACT_TRACKED_FIELDS;
+    default:
+      return null;
+  }
+}
 
 /** Return CONTACT_TRACKED_FIELDS filtered to only relevant fields for the given type */
 export function getContactTrackedFieldsForType(

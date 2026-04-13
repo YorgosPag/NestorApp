@@ -20,6 +20,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import {
@@ -322,15 +323,24 @@ export async function createEntity(
   logger.info('Entity created', { entityType, entityId });
 
   // --- Step 9: Entity Audit Trail (ADR-195) ---
-  // Emit `action: 'created'` entry so History tabs surface the creation.
+  // Emit `action: 'created'` entry so History tabs surface the creation with
+  // initial field values. `diffFields({}, doc, tracked)` produces null→value
+  // entries for every tracked field present on the new document. If no
+  // registry exists for the entity type, we still emit the creation event
+  // (with empty changes) so the "created by" line appears in the timeline.
   // recordChange is fire-and-forget (internal try/catch); never breaks creation.
   if (entry.entityAuditType) {
+    const trackedFields = getTrackedFieldsForEntityAuditType(entry.entityAuditType);
+    const changes = trackedFields
+      ? EntityAuditService.diffFields({}, sanitizedDoc, trackedFields)
+      : [];
+
     await EntityAuditService.recordChange({
       entityType: entry.entityAuditType,
       entityId,
       entityName: (mergedDoc.name as string | undefined) ?? null,
       action: 'created',
-      changes: [],
+      changes,
       performedBy: auth.uid,
       performedByName: auth.email ?? null,
       companyId,
