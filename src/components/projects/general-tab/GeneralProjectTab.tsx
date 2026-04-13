@@ -232,7 +232,14 @@ export function GeneralProjectTab({
       status: project.status,
       companyName: project.companyName,
       companyId: project.companyId || fallbackCompanyId,
-      description: project.description || prev.description,
+      // 🏢 ADR-256 read-path: use nullish coalescing (NOT `|| prev`). With
+      // hydrate-on-select, cross-project leakage via `prev.description`
+      // would show the previous project's text in a freshly-opened one
+      // (especially visible in the "New project" dialog). Mid-edit typing
+      // is protected by `useProjectDetail({ pauseRefetch: isEditing })` —
+      // the project ref does not change while the user is editing, so this
+      // effect does not run and cannot clobber unsaved input.
+      description: project.description ?? '',
       buildingBlock: project.buildingBlock || '',
       protocolNumber: project.protocolNumber || '',
       licenseNumber: project.licenseNumber || '',
