@@ -2,8 +2,8 @@
   "_meta": {
     "description": "Missing i18n keys baseline — t() calls without matching locale entry",
     "generated": "2026-04-09T21:07:49Z",
-    "totalViolations": 4762,
-    "totalFiles": 549,
+    "totalViolations": 4747,
+    "totalFiles": 548,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
   "files": {
@@ -241,7 +241,6 @@
     "src/components/projects/parking/ParkingStatsSummary.tsx": 5,
     "src/components/projects/parking/ParkingTab.tsx": 1,
     "src/components/projects/parking/ParkingTableToolbar.tsx": 8,
-    "src/components/projects/PermitsAndStatusTab.tsx": 15,
     "src/components/projects/PlotZoningSelectors.tsx": 10,
     "src/components/projects/project-list-item/parts/CompletionRow.tsx": 1,
     "src/components/projects/project-list-item/parts/StatsGrid.tsx": 2,

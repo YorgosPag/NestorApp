@@ -46,6 +46,10 @@ export interface EntityHeaderProps {
   subtitle?: string;
   badges?: EntityHeaderBadge[];
   actions?: EntityHeaderAction[];
+  // Inline element rendered next to the title (e.g. interactive status pill).
+  // Why: badges[] renders below and is non-interactive; this slot keeps the
+  // pill on the title line — Linear/Gmail pattern for entity state.
+  titleAdornment?: React.ReactNode;
   avatarImageUrl?: string; // Optional avatar/photo URL to display instead of icon
   onAvatarClick?: () => void; // Optional click handler for avatar image
 
@@ -69,6 +73,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   subtitle,
   badges = [],
   actions = [],
+  titleAdornment,
   avatarImageUrl,
   onAvatarClick,
   iconColor,
@@ -157,13 +162,18 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            {/* Title */}
-            <h3 className={cn(
-              "font-semibold text-foreground line-clamp-1",
-              titleSizes[variant]
-            )}>
-              {title}
-            </h3>
+            {/* Title row (title + optional inline adornment) */}
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className={cn(
+                "font-semibold text-foreground line-clamp-1",
+                titleSizes[variant]
+              )}>
+                {title}
+              </h3>
+              {titleAdornment && (
+                <div className="flex-shrink-0">{titleAdornment}</div>
+              )}
+            </div>
 
             {/* Subtitle */}
             {subtitle && (

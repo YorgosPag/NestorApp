@@ -4,7 +4,6 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -14,13 +13,13 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
 import '@/lib/design-system';
 
-interface PermitsAndStatusTabProps {
+interface PermitsTabProps {
     data: ProjectFormData;
     setData: React.Dispatch<React.SetStateAction<ProjectFormData>>;
     isEditing: boolean;
 }
 
-export const PermitsAndStatusTab = React.memo(function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStatusTabProps) {
+export const PermitsTab = React.memo(function PermitsTab({ data, setData, isEditing }: PermitsTabProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
@@ -33,10 +32,6 @@ export const PermitsAndStatusTab = React.memo(function PermitsAndStatusTab({ dat
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
-    };
-
-    const handleSelectChange = (value: ProjectFormData['status']) => {
-        setData((prev: ProjectFormData) => ({...prev, status: value}));
     };
 
     return (
@@ -85,27 +80,6 @@ export const PermitsAndStatusTab = React.memo(function PermitsAndStatusTab({ dat
                             max={todayISO}
                             size="md"
                         />
-                    </div>
-                </div>
-
-                {/* Project status */}
-                <div className={cn("grid grid-cols-1 md:grid-cols-5", spacing.gap.md)}>
-                    <div className={spacing.spaceBetween.sm}>
-                        <Label className={typography.label.sm}>{t('permitsTab.projectStatus')}</Label>
-                        <Select
-                            value={data.status || undefined}
-                            onValueChange={(value) => handleSelectChange(value as ProjectFormData['status'])}
-                            disabled={!isEditing}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('permitsTab.statusPlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="completed" className="text-popover-foreground">{t('permitsTab.statusConstructed')}</SelectItem>
-                                <SelectItem value="planning" className="text-popover-foreground">{t('permitsTab.statusPlanning')}</SelectItem>
-                                <SelectItem value="in_progress" className="text-popover-foreground">{t('permitsTab.statusInProgress')}</SelectItem>
-                            </SelectContent>
-                        </Select>
                     </div>
                 </div>
             </CardContent>

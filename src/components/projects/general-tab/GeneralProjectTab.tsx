@@ -6,7 +6,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 import { GeneralProjectHeader } from '../GeneralProjectHeader';
 import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
-import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
+import { PermitsTab } from '../PermitsTab';
 
 import { useAutosave } from './hooks/useAutosave';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
@@ -419,7 +419,7 @@ export function GeneralProjectTab({
           projectId={project.id}
         />
 
-        <PermitsAndStatusTab
+        <PermitsTab
           data={projectData}
           setData={setProjectData}
           isEditing={isEditing}

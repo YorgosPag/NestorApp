@@ -161,6 +161,7 @@ export function ProjectDetails({
             onCancelEdit={handleCancelEdit}
             onNewProject={onNewProject}
             onDeleteProject={onDeleteProject}
+            onStatusChange={refetchProject}
           />
         ) : null
       }

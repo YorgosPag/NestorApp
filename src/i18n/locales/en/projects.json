@@ -473,8 +473,24 @@
       }
     }
   },
+  "statusPill": {
+    "ariaLabel": "Project status",
+    "updateFailed": "Failed to update status"
+  },
   "permitsTab": {
-    "statusPlaceholder": "Select status..."
+    "title": "Permits",
+    "description": "Building permit details for the project",
+    "buildingBlock": "Building block",
+    "protocolNumber": "Protocol number",
+    "licenseNumber": "License number",
+    "issuingAuthority": "Issuing authority",
+    "issueDate": "Issue date"
+  },
+  "permits": {
+    "buildingBlockPlaceholder": "e.g. Block 142",
+    "protocolPlaceholder": "e.g. 12345/2024",
+    "licensePlaceholder": "e.g. 567/2024",
+    "authorityPlaceholder": "e.g. Athens Planning Authority"
   },
   "createValidation": {
     "nameRequired": "Project title is required.",
