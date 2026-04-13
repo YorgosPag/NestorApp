@@ -202,8 +202,7 @@ export function AuditTimelineEntry({
                     className="rounded bg-muted/50 px-2.5 py-1 text-xs"
                   >
                     <span className="font-medium">{message}</span>
-                    {change.op === 'modified' &&
-                      change.subChanges &&
+                    {change.subChanges &&
                       change.subChanges.length > 0 && (
                         <ul className="mt-1 ml-3 space-y-0.5">
                           {change.subChanges.map((sub, si) => {

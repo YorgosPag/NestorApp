@@ -214,6 +214,74 @@ describe('diffTrackedFields — collection: addresses with stable id', () => {
       oldValue: null,
       newValue: null,
     });
+    expect(changes[0].subChanges).toEqual(
+      expect.arrayContaining([
+        { subField: 'type', oldValue: null, newValue: 'entrance' },
+        { subField: 'street', oldValue: null, newValue: 'Παραδόσεων' },
+      ]),
+    );
+  });
+
+  it('emits granular subChanges on `added` covering every tracked sub-field', () => {
+    const fullDefs: Record<string, TrackedFieldDef> = {
+      addresses: {
+        kind: 'collection',
+        label: 'Διευθύνσεις',
+        keyBy: 'id',
+        labelFields: ['type', 'street', 'number'],
+        trackSubFields: [
+          'type', 'isPrimary', 'label',
+          'street', 'number', 'city', 'postalCode',
+          'blockSide',
+        ],
+      },
+    };
+    const old = { addresses: [] };
+    const next = {
+      addresses: [
+        {
+          id: '9',
+          type: 'entrance',
+          street: 'Παραδόσεων',
+          number: '16',
+          city: 'Θεσσαλονίκη',
+          postalCode: '54622',
+          label: 'Είσοδος Α',
+          blockSide: 'north',
+          isPrimary: true,
+        },
+      ],
+    };
+    const changes = diffTrackedFields(old, next, fullDefs);
+    expect(changes).toHaveLength(1);
+    const subFields = (changes[0].subChanges ?? []).map((s) => s.subField);
+    expect(subFields).toEqual(
+      expect.arrayContaining([
+        'type', 'street', 'number', 'city',
+        'postalCode', 'label', 'blockSide', 'isPrimary',
+      ]),
+    );
+    expect(subFields).not.toContain('id');
+  });
+
+  it('emits granular subChanges on `removed` (value → null for every tracked sub-field)', () => {
+    const old = {
+      addresses: [
+        { id: '1', type: 'site', street: 'Σαμοθράκης', number: '16', city: 'Θεσσαλονίκη' },
+      ],
+    };
+    const next = { addresses: [] };
+    const changes = diffTrackedFields(old, next, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0].op).toBe('removed');
+    expect(changes[0].subChanges).toEqual(
+      expect.arrayContaining([
+        { subField: 'type', oldValue: 'site', newValue: null },
+        { subField: 'street', oldValue: 'Σαμοθράκης', newValue: null },
+        { subField: 'number', oldValue: '16', newValue: null },
+        { subField: 'city', oldValue: 'Θεσσαλονίκη', newValue: null },
+      ]),
+    );
   });
 
   it('emits a single `removed` entry when an address is deleted', () => {

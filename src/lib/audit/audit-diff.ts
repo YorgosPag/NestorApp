@@ -381,6 +381,7 @@ function diffCollection(
       op: 'added',
       itemKey: key,
       itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
+      subChanges: diffSubFields({}, item, def.keyBy, def.trackSubFields),
     });
   }
 
@@ -395,6 +396,7 @@ function diffCollection(
       op: 'removed',
       itemKey: key,
       itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
+      subChanges: diffSubFields(item, {}, def.keyBy, def.trackSubFields),
     });
   }
 
