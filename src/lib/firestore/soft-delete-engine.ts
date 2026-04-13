@@ -44,6 +44,7 @@ export async function softDelete(
   deletedBy: string,
   companyId: string,
   performedByName?: string,
+  isSuperAdmin: boolean = false,
 ): Promise<{ success: true; entityId: string }> {
   const config = SOFT_DELETE_CONFIG[entityType];
   const docRef = db.collection(config.collection).doc(entityId);
@@ -55,8 +56,8 @@ export async function softDelete(
 
   const data = docSnap.data();
 
-  // Tenant isolation
-  if (data?.companyId && data.companyId !== companyId) {
+  // Tenant isolation — bypassed for super admin (route-level guard already validated access)
+  if (!isSuperAdmin && data?.companyId && data.companyId !== companyId) {
     throw new ApiError(
       403,
       `Unauthorized: ${config.labelEn} belongs to different company`,
@@ -101,7 +102,7 @@ export async function softDelete(
     ],
     performedBy: deletedBy,
     performedByName: performedByName ?? null,
-    companyId,
+    companyId: (data?.companyId as string | undefined) ?? companyId,
   }).catch((err) => {
     logger.error("Audit trail failed (non-blocking)", {
       entityType,

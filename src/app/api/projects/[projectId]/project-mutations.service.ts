@@ -177,7 +177,8 @@ export async function handleDeleteProject(
   }
 
   // 3. ADR-281: Soft-delete — move to trash (status='deleted')
-  await softDelete(db, 'project', projectId, ctx.uid, ctx.companyId, ctx.email ?? undefined);
+  //    Super admin bypasses engine-level tenant check (route-level guard above already validated)
+  await softDelete(db, 'project', projectId, ctx.uid, ctx.companyId, ctx.email ?? undefined, isSuperAdmin);
 
   const duration = Date.now() - startTime;
   logger.info('[Projects/Delete] Project moved to trash', { projectId, durationMs: duration });
