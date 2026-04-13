@@ -76,6 +76,17 @@ export class ApiClientError extends Error {
   static isApiClientError(error: unknown): error is ApiClientError {
     return error instanceof ApiClientError;
   }
+
+  toJSON(): Record<string, unknown> {
+    return {
+      name: this.name,
+      message: this.message,
+      statusCode: this.statusCode,
+      errorCode: this.errorCode,
+      requestId: this.requestId,
+      stack: this.stack,
+    };
+  }
 }
 
 /**

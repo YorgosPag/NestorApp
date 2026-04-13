@@ -76,15 +76,22 @@ function normalizeMetadata(metadata: Record<string, unknown> | undefined): Recor
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(metadata)) {
     if (value instanceof Error) {
-      out[key] = {
-        message: value.message,
-        name: value.name,
-        stack: value.stack,
-        ...(value.cause !== undefined ? { cause: value.cause } : {}),
-        ...Object.fromEntries(
-          Object.entries(value).filter(([k]) => !['message', 'name', 'stack', 'cause'].includes(k))
-        ),
-      };
+      const hasToJSON = typeof (value as { toJSON?: unknown }).toJSON === 'function';
+      out[key] = hasToJSON
+        ? (value as unknown as { toJSON: () => Record<string, unknown> }).toJSON()
+        : {
+            message: value.message,
+            name: value.name,
+            stack: value.stack,
+            ...(value.cause !== undefined ? { cause: value.cause } : {}),
+            ...Object.fromEntries(
+              Object.entries(value).filter(
+                ([k, v]) =>
+                  !['message', 'name', 'stack', 'cause'].includes(k) &&
+                  !(typeof Response !== 'undefined' && v instanceof Response),
+              ),
+            ),
+          };
     } else {
       out[key] = value;
     }

@@ -241,7 +241,10 @@ export async function deleteProject(
     return { success: true };
 
   } catch (error) {
-    logger.error('Error deleting project', { projectId, error });
+    const details = ApiClientError.isApiClientError(error)
+      ? `HTTP ${error.statusCode}${error.errorCode ? ` [${error.errorCode}]` : ''} — ${error.message}${error.requestId ? ` (req=${error.requestId})` : ''}`
+      : getErrorMessage(error);
+    logger.error(`Error deleting project ${projectId}: ${details}`);
     return {
       success: false,
       error: getErrorMessage(error)
