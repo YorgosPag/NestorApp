@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useTransition } from 'react';
+import React, { useState, useCallback, useTransition, useRef, useEffect } from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { toggleSelect } from '@/lib/toggle-select';
@@ -114,13 +114,37 @@ export function BuildingsPageContent() {
     logger.info('New building form opened (Fill then Create)');
   }, [companies, setSelectedBuilding]);
 
-  // 🏢 ENTERPRISE: After successful creation, replace temp building with real one
+  // Tracks the real buildingId after creation while waiting for onSnapshot to
+  // deliver the full document. Avoids a race between the POST response and the
+  // Firestore real-time update (onSnapshot may arrive before or after the callback).
+  const pendingBuildingIdRef = useRef<string | null>(null);
+
+  // 🏢 ENTERPRISE: After successful creation, sync selectedBuilding with real data
   const handleBuildingCreated = useCallback((realBuildingId: string) => {
     if (selectedBuilding && selectedBuilding.id === TEMP_BUILDING_ID) {
-      setSelectedBuilding({ ...selectedBuilding, id: realBuildingId } as BuildingType);
+      // Fast path: onSnapshot already delivered the document
+      const realBuilding = buildingsData.find(b => b.id === realBuildingId);
+      if (realBuilding) {
+        setSelectedBuilding(realBuilding);
+      } else {
+        // Slow path: onSnapshot not yet delivered — set pending, sync on arrival
+        pendingBuildingIdRef.current = realBuildingId;
+        setSelectedBuilding({ ...selectedBuilding, id: realBuildingId } as BuildingType);
+      }
       setStartInEditMode(false);
     }
-  }, [selectedBuilding, setSelectedBuilding]);
+  }, [selectedBuilding, setSelectedBuilding, buildingsData]);
+
+  // When buildingsData updates (onSnapshot), resolve any pending post-creation sync
+  useEffect(() => {
+    const pendingId = pendingBuildingIdRef.current;
+    if (!pendingId) return;
+    const realBuilding = buildingsData.find(b => b.id === pendingId);
+    if (realBuilding) {
+      pendingBuildingIdRef.current = null;
+      setSelectedBuilding(realBuilding);
+    }
+  }, [buildingsData, setSelectedBuilding]);
 
   // 🏢 ENTERPRISE: Cancel create mode — deselect building
   const handleCancelCreate = useCallback(() => {
