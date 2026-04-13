@@ -94,14 +94,9 @@ export async function propagateBuildingProjectLink(
       updatedAt: FieldValue.serverTimestamp(),
     });
     EntityAuditService.recordChange({
-      entityType: ENTITY_TYPES.BUILDING as 'building',
-      entityId: buildingId,
-      entityName: null,
-      action: 'updated',
-      changes: [{ field: 'linkedCompanyId', oldValue: null, newValue: resolvedLinkedCompanyId }],
-      performedBy: 'cascade-propagation',
-      performedByName: null,
-      companyId: resolvedLinkedCompanyId ?? 'system',
+      entityType: ENTITY_TYPES.BUILDING as 'building', entityId: buildingId, entityName: null,
+      action: 'updated', changes: [{ field: 'linkedCompanyId', oldValue: null, newValue: resolvedLinkedCompanyId }],
+      performedBy: 'cascade-propagation', performedByName: null, companyId: resolvedLinkedCompanyId ?? 'system',
     }).catch(() => {});
     collections[COLLECTIONS.BUILDINGS] = 1;
     totalUpdated += 1;
