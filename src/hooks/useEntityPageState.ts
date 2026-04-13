@@ -181,8 +181,13 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
         setSelectedItemRaw(updated);
       }
     }
+    // selectedItem?.id is included so the sync fires when the selected ID
+    // changes (e.g. after building creation replaces '__new__' with the real ID
+    // via startTransition — by the time the transition commits, items already
+    // has the full document from onSnapshot, but [items] dep alone won't
+    // re-trigger since items didn't change in that render cycle).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
+  }, [items, selectedItem?.id]);
 
   // ── Filtered items ─────────────────────────────────────────────────
   const filteredItems = useMemo(
