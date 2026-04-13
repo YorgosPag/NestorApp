@@ -12,6 +12,7 @@
  */
 
 import type { AuthContext, AuditTargetType } from '@/lib/auth/types';
+import type { AuditEntityType } from '@/types/audit-trail';
 import type { PropertyType } from '@/types/property';
 import type { ParkingLocationZone } from '@/types/parking';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -73,8 +74,15 @@ export interface EntityRegistryEntry {
   readonly codeField: 'name' | 'number' | 'code' | null;
   /** Whether tenant isolation check is required */
   readonly tenantCheck: boolean;
-  /** Audit log target type */
+  /** Audit log target type (legacy auth audit — see logAuditEvent) */
   readonly auditTargetType: AuditTargetType;
+  /**
+   * Entity audit trail type (ADR-195). When non-null, createEntity() emits
+   * an `action: 'created'` entry via EntityAuditService.recordChange() after
+   * the Firestore write. Null means the entity is not tracked in
+   * `entity_audit_trail` (e.g. DXF/CAD subresources).
+   */
+  readonly entityAuditType: AuditEntityType | null;
 }
 
 /**
@@ -92,6 +100,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: null,
     tenantCheck: false,
     auditTargetType: 'building',
+    entityAuditType: 'building',
   },
   floor: {
     collection: COLLECTIONS.FLOORS,
@@ -102,6 +111,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: null,
     tenantCheck: false,
     auditTargetType: 'api',
+    entityAuditType: 'floor',
   },
   unit: {
     collection: COLLECTIONS.PROPERTIES,
@@ -112,6 +122,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: 'code',
     tenantCheck: true,
     auditTargetType: 'property',
+    entityAuditType: 'property',
   },
   property: {
     collection: COLLECTIONS.PROPERTIES,
@@ -122,6 +133,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: 'code',
     tenantCheck: true,
     auditTargetType: 'property',
+    entityAuditType: 'property',
   },
   storage: {
     collection: COLLECTIONS.STORAGE,
@@ -132,6 +144,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: 'code',
     tenantCheck: true,
     auditTargetType: 'api',
+    entityAuditType: 'storage',
   },
   parking: {
     collection: COLLECTIONS.PARKING_SPACES,
@@ -142,6 +155,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: 'code',
     tenantCheck: true,
     auditTargetType: 'api',
+    entityAuditType: 'parking',
   },
   dxfLevel: {
     collection: COLLECTIONS.DXF_VIEWER_LEVELS,
@@ -152,6 +166,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: null,
     tenantCheck: false,
     auditTargetType: 'api',
+    entityAuditType: null,
   },
   /**
    * 🏢 ADR-288: CAD File metadata (DXF scene metadata, stored in cadFiles collection).
@@ -169,6 +184,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: null,
     tenantCheck: false,
     auditTargetType: 'api',
+    entityAuditType: null,
   },
   /**
    * 🔷 ADR-289: DXF Overlay polygon item. Stored under the
@@ -188,6 +204,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     codeField: null,
     tenantCheck: false,
     auditTargetType: 'api',
+    entityAuditType: null,
   },
 } as const;
 

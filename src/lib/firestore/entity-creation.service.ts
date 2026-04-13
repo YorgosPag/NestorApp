@@ -19,6 +19,7 @@ import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { logAuditEvent } from '@/lib/auth/audit';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import {
@@ -320,7 +321,23 @@ export async function createEntity(
   await adminDb.collection(entry.collection).doc(entityId).set(sanitizedDoc);
   logger.info('Entity created', { entityType, entityId });
 
-  // --- Step 9: Audit log ---
+  // --- Step 9: Entity Audit Trail (ADR-195) ---
+  // Emit `action: 'created'` entry so History tabs surface the creation.
+  // recordChange is fire-and-forget (internal try/catch); never breaks creation.
+  if (entry.entityAuditType) {
+    await EntityAuditService.recordChange({
+      entityType: entry.entityAuditType,
+      entityId,
+      entityName: (mergedDoc.name as string | undefined) ?? null,
+      action: 'created',
+      changes: [],
+      performedBy: auth.uid,
+      performedByName: auth.email ?? null,
+      companyId,
+    });
+  }
+
+  // --- Step 10: Legacy auth audit log ---
   await logAuditEvent(auth, 'data_created', entityId, entry.auditTargetType, {
     newValue: {
       type: 'status',
