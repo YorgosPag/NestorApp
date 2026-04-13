@@ -204,10 +204,13 @@ export async function deleteBuilding(
     return { success: true };
 
   } catch (error) {
-    logger.error('deleteBuilding failed', { error });
+    const message = error instanceof Error ? error.message : String(error);
+    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
+    const errorCode = ApiClientError.isApiClientError(error) ? error.errorCode : undefined;
+    logger.error('deleteBuilding failed', { message, statusCode, errorCode });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: message,
     };
   }
 }
