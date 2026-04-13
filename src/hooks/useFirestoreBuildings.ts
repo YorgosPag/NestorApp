@@ -1,20 +1,25 @@
 'use client';
 
 /**
- * ENTERPRISE BUILDINGS HOOK
+ * ENTERPRISE BUILDINGS HOOK — Real-time onSnapshot (ADR-227)
  *
- * Uses centralized useAsyncData hook (ADR-223).
- * Real-time sync via RealtimeService triggers refetch on CRUD events.
+ * Replaces the previous REST + useAsyncData pattern that caused full-screen
+ * flicker on every CRUD event (setLoading(true) → spinner → data).
+ *
+ * Uses firestoreQueryService.subscribe('BUILDINGS', ...) which wraps Firestore
+ * onSnapshot with tenant isolation (auto-companyId injection) and auth-ready
+ * gating. Updates arrive incrementally — no loading state on mutations.
+ *
+ * @ssot ADR-227 — Real-Time Subscription Consolidation
+ * @ssot ADR-228 — Real-Time Event Bus Coverage
  */
 
-import { useEffect } from 'react';
-import { useAuth } from '@/auth/hooks/useAuth';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
+import { useState, useEffect, useCallback } from 'react';
+import { firestoreQueryService } from '@/services/firestore';
+import type { QueryResult } from '@/services/firestore';
+import type { DocumentData } from 'firebase/firestore';
 import type { Building } from '@/types/building/contracts';
-import { RealtimeService, type BuildingUpdatedPayload, type BuildingCreatedPayload, type BuildingDeletedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
-import { useAsyncData } from '@/hooks/useAsyncData';
 
 const logger = createModuleLogger('useFirestoreBuildings');
 
@@ -26,65 +31,55 @@ interface UseFirestoreBuildingsReturn {
 }
 
 /**
- * Response data type (apiClient returns unwrapped data)
+ * Normalize a createdAt value to milliseconds.
+ * Handles Firestore Timestamp objects, ISO strings, and numeric millis.
  */
-interface BuildingsData {
-  buildings: Building[];
-  count: number;
-  projectId?: string;
+function toMillis(value: unknown): number {
+  if (!value) return 0;
+  if (typeof value === 'object' && value !== null && 'toMillis' in value) {
+    return (value as { toMillis(): number }).toMillis();
+  }
+  if (typeof value === 'string') return new Date(value).getTime() || 0;
+  if (typeof value === 'number') return value;
+  return 0;
 }
 
 export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
-  const { user, loading: authLoading } = useAuth();
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data, loading, error, refetch } = useAsyncData({
-    fetcher: async () => {
-      logger.info('Fetching buildings');
-      const result = await apiClient.get<BuildingsData>(API_ROUTES.BUILDINGS.LIST);
-
-      if (!result || !result.buildings) {
-        throw new Error('Invalid response format from API');
-      }
-
-      logger.info(`Loaded ${result.count} buildings`);
-      return result.buildings;
-    },
-    deps: [user?.uid],
-    enabled: !authLoading && !!user,
-  });
-
-  // Real-time handlers — all trigger refetch for server-consistent state
   useEffect(() => {
-    const handleBuildingUpdate = (_payload: BuildingUpdatedPayload) => {
-      logger.info('Building updated, triggering refetch');
-      refetch();
-    };
+    setLoading(true);
 
-    const handleBuildingCreated = (_payload: BuildingCreatedPayload) => {
-      logger.info('Building created, triggering refetch');
-      refetch();
-    };
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'BUILDINGS',
+      (result: QueryResult<DocumentData>) => {
+        const mapped = result.documents
+          // Mirror server-side soft-delete exclusion (ADR-281)
+          .filter(doc => doc.status !== 'deleted')
+          // Mirror server-side sort: createdAt desc
+          .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+          .map(doc => doc as unknown as Building);
 
-    const handleBuildingDeleted = (_payload: BuildingDeletedPayload) => {
-      logger.info('Building deleted, triggering refetch');
-      refetch();
-    };
+        logger.info('Buildings updated via real-time subscription', { count: mapped.length });
+        setBuildings(mapped);
+        setLoading(false);
+        setError(null);
+      },
+      (err: Error) => {
+        logger.error('Firestore subscription error', { error: err.message });
+        setError(err.message);
+        setLoading(false);
+      }
+    );
 
-    const unsubUpdate = RealtimeService.subscribe('BUILDING_UPDATED', handleBuildingUpdate);
-    const unsubCreate = RealtimeService.subscribe('BUILDING_CREATED', handleBuildingCreated);
-    const unsubDelete = RealtimeService.subscribe('BUILDING_DELETED', handleBuildingDeleted);
+    return unsubscribe;
+  }, []);
 
-    return () => {
-      unsubUpdate();
-      unsubCreate();
-      unsubDelete();
-    };
-  }, [refetch]);
+  // No-op: onSnapshot handles all updates automatically.
+  // Kept for API compatibility with callers that invoke refetch() after mutations.
+  const refetch = useCallback((): Promise<void> => Promise.resolve(), []);
 
-  return {
-    buildings: data ?? [],
-    loading,
-    error,
-    refetch,
-  };
+  return { buildings, loading, error, refetch };
 }
