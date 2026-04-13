@@ -99,6 +99,7 @@ export const POST = withHighRateLimit(
         // linkedCompanyId = CRM client company reference (separate concern).
         // Bug fix: super_admin was erroneously using linkedCompanyId as companyId,
         // causing tenant isolation mismatch on subsequent reads/deletes.
+        const isSuperAdmin = isRoleBypass(ctx.globalRole);
         const resolvedCompanyId = ctx.companyId;
 
         // 🏢 ADR-284 §3.0: Verify linkedCompanyId points to an existing company contact.
