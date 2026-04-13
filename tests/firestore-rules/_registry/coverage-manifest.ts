@@ -193,6 +193,40 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [1666, 1705],
     matrix: crmDirectMatrix(),
   },
+  // ── ADR-298 Phase B.6 — compliance tenant_direct (2026-04-13) ───────────
+  {
+    collection: 'obligations',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/obligations.rules.test.ts',
+    rulesRange: [1981, 2024],
+    // Read: isSuperAdminOnly() || companyId direct || projectId crossdoc || legacy createdBy.
+    // Create has no isSuperAdminOnly() short-circuit — super_admin denied (cross_tenant).
+    // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly().
+    // Seed doc carries createdBy=same_tenant_user.uid for uid-match update/delete leg.
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'obligation_transmittals',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/obligation-transmittals.rules.test.ts',
+    rulesRange: [2033, 2062],
+    // Simpler read: isSuperAdminOnly() || companyId direct (no crossdoc, no legacy).
+    // Create: no isSuperAdminOnly() short-circuit — super_admin denied (cross_tenant).
+    // Update: strict companyId immutability (no optional hasAny guard).
+    // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly().
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'obligation_templates',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/obligation-templates.rules.test.ts',
+    rulesRange: [2069, 2107],
+    // Read: isSuperAdminOnly() || companyId direct || legacy createdBy (no crossdoc).
+    // Create: no isSuperAdminOnly() short-circuit — super_admin denied (cross_tenant).
+    // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly().
+    // Update: optional companyId immutability guard (!hasAny || unchanged).
+    matrix: crmDirectMatrix(),
+  },
   // ── ADR-298 Phase B.5 — messaging tenant_direct (2026-04-13) ─────────────
   {
     collection: 'conversations',
@@ -364,9 +398,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'analytics',
   'bot_configs',
   // — Obligations / compliance —
-  'obligations',
-  'obligation_transmittals',
-  'obligation_templates',
+  // obligations, obligation_transmittals, obligation_templates → moved to COVERAGE (ADR-298 Phase B.6, 2026-04-13)
   // — Audit / search / voice —
   'audit_logs',
   'system_audit_logs',
