@@ -223,17 +223,13 @@
     }
   },
   "permitsTab": {
-    "title": "Άδειες & Κατάσταση",
-    "description": "Στοιχεία αδειών και τρέχουσα κατάσταση του έργου",
+    "title": "Άδειες",
+    "description": "Στοιχεία οικοδομικής άδειας του έργου",
     "buildingBlock": "Οικοδομικό Τετράγωνο",
     "protocolNumber": "Αρ. Πρωτοκόλλου",
     "licenseNumber": "Αριθμός Άδειας",
     "issuingAuthority": "Αρχή Έκδοσης",
-    "issueDate": "Ημερομηνία Έκδοσης",
-    "projectStatus": "Κατάσταση Έργου",
-    "statusConstructed": "Κατασκευασμένα",
-    "statusPlanning": "Σχεδιασμός",
-    "statusInProgress": "Σε εξέλιξη"
+    "issueDate": "Ημερομηνία Έκδοσης"
   },
   "videosTab": {
     "title": "Videos Έργου",

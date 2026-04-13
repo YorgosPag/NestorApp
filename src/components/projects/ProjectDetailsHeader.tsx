@@ -43,13 +43,15 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
 
     const statusPill = useMemo(() => {
         if (!project.id) return undefined;
-        // In create mode we allow rendering with an empty status so the pill
-        // can act as the placeholder CTA ("Select status"). In edit/read mode
-        // we only render when the status is a valid enum value.
+        // 🏢 ADR-300 §Addendum v2: defensive rendering. Never hide the pill
+        // behind schema validation — legacy projects may carry non-canonical
+        // or missing status values (e.g. 'active', 'Planning', undefined).
+        // Silently hiding the control strands the user with no way to fix
+        // the row. Instead, fall back to the placeholder CTA so the pill
+        // acts as a repair path: click → pick valid status → persisted.
         const pillStatus: ProjectStatus | '' = isProjectStatus(project.status)
             ? project.status
             : '';
-        if (!isCreateMode && pillStatus === '') return undefined;
         return (
             <ProjectStatusPill
                 projectId={project.id}

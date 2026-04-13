@@ -223,17 +223,13 @@
     }
   },
   "permitsTab": {
-    "title": "Permits & Status",
-    "description": "Permit details and current project status",
+    "title": "Permits",
+    "description": "Building permit details for the project",
     "buildingBlock": "Building Block",
     "protocolNumber": "Protocol Number",
     "licenseNumber": "License Number",
     "issuingAuthority": "Issuing Authority",
-    "issueDate": "Issue Date",
-    "projectStatus": "Project Status",
-    "statusConstructed": "Constructed",
-    "statusPlanning": "Planning",
-    "statusInProgress": "In Progress"
+    "issueDate": "Issue Date"
   },
   "videosTab": {
     "title": "Project Videos",
