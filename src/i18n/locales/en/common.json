@@ -741,6 +741,12 @@
       "movedToTrash": "Moved to trash: {from} → {to}",
       "restoredFromTrash": "Restored from trash: {from} → {to}"
     },
+    "collection": {
+      "added": "Added {field}: {item}",
+      "removed": "Removed {field}: {item}",
+      "modified": "Updated {field}: {item}",
+      "emptyItem": "(unknown)"
+    },
     "loadMore": "Load more",
     "byUser": "by {name}",
     "entityTypes": {

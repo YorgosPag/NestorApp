@@ -185,6 +185,62 @@ export function AuditTimelineEntry({
               const fieldLabel = resolvedFieldLabel !== fieldKey
                 ? resolvedFieldLabel
                 : (change.label ?? change.field);
+
+              // ── Collection-aware rendering (ADR-195 Phase 11) ──
+              if (change.kind === 'collection' && change.op) {
+                const rawLabel = change.itemLabel ?? change.itemKey ?? '';
+                const itemLabel = rawLabel !== ''
+                  ? rawLabel
+                  : t('audit.collection.emptyItem');
+                const message = t(`audit.collection.${change.op}`, {
+                  field: fieldLabel,
+                  item: itemLabel,
+                });
+                return (
+                  <li
+                    key={`${change.field}-${change.op}-${change.itemKey ?? idx}`}
+                    className="rounded bg-muted/50 px-2.5 py-1 text-xs"
+                  >
+                    <span className="font-medium">{message}</span>
+                    {change.op === 'modified' &&
+                      change.subChanges &&
+                      change.subChanges.length > 0 && (
+                        <ul className="mt-1 ml-3 space-y-0.5">
+                          {change.subChanges.map((sub, si) => {
+                            const subKey = `audit.fields.${sub.subField}`;
+                            const resolvedSub = t(subKey);
+                            const subLabel = resolvedSub !== subKey
+                              ? resolvedSub
+                              : (sub.label ?? sub.subField);
+                            const translateSubValue = makeFieldTranslator(sub.subField);
+                            return (
+                              <li key={`${sub.subField}-${si}`}>
+                                <span className={colors.text.muted}>
+                                  {subLabel}
+                                  {": "}
+                                </span>
+                                <span
+                                  className={cn(
+                                    colors.text.muted,
+                                    "line-through decoration-red-400/60",
+                                  )}
+                                >
+                                  {formatDisplayValue(sub.oldValue, translateSubValue)}
+                                </span>
+                                {" → "}
+                                <span className="font-medium text-foreground">
+                                  {formatDisplayValue(sub.newValue, translateSubValue)}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                  </li>
+                );
+              }
+
+              // ── Scalar rendering (legacy) ──
               return (
                 <li
                   key={`${change.field}-${idx}`}

@@ -741,6 +741,12 @@
       "movedToTrash": "Μεταφορά στον κάδο: {from} → {to}",
       "restoredFromTrash": "Επαναφορά από κάδο: {from} → {to}"
     },
+    "collection": {
+      "added": "Προστέθηκε {field}: {item}",
+      "removed": "Αφαιρέθηκε {field}: {item}",
+      "modified": "Ενημερώθηκε {field}: {item}",
+      "emptyItem": "(άγνωστο)"
+    },
     "loadMore": "Περισσότερα",
     "byUser": "από {name}",
     "entityTypes": {
