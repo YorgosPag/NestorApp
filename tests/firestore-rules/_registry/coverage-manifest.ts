@@ -193,6 +193,28 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [1666, 1705],
     matrix: crmDirectMatrix(),
   },
+  // ── ADR-298 Phase B.5 — messaging tenant_direct (2026-04-13) ─────────────
+  {
+    collection: 'conversations',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/conversations.rules.test.ts',
+    rulesRange: [1706, 1753],
+    // Create rule requires isValidConversationData (channel + status enum) and
+    // has no isSuperAdminOnly short-circuit — super_admin denied (cross_tenant).
+    // same_tenant_user has full CRUD: create via companyId match, update/delete
+    // via createdBy==uid path. Identical delta shape to crmDirectMatrix().
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'external_identities',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/external-identities.rules.test.ts',
+    rulesRange: [1801, 1844],
+    // No isValidConversationData on create/update. Same CRUD pattern as CRM
+    // collections: super_admin denied on create (no isSuperAdminOnly short-circuit),
+    // same_tenant_user full CRUD via companyId/createdBy paths.
+    matrix: crmDirectMatrix(),
+  },
   // ── ADR-298 Phase B.4 — property hierarchy admin_write_only (2026-04-13) ─
   {
     collection: 'floors',
@@ -332,8 +354,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // — CRM —
   'communications',
   // leads, opportunities, activities → moved to COVERAGE (ADR-298 Phase B.3, 2026-04-13)
-  'conversations',
-  'external_identities',
+  // conversations, external_identities → moved to COVERAGE (ADR-298 Phase B.5, 2026-04-13)
   // — System / config —
   'system',
   'config',

@@ -20,8 +20,6 @@
 
 ### 🔥 CRITICAL PATH (Scenario A — ~21h expected)
 
-- [ ] **ADR-298 Phase B.5** — messaging (2 collections: `conversations`, `external_identities`). `tenant_direct` + enum validation. **Hours:** 1-2.5 (expected 1.5).
-
 - [ ] **ADR-298 Phase B.6** — compliance (3 collections: `obligations`, `obligation_transmittals`, `obligation_templates`). Canonical `tenant_direct`. **Hours:** 1-2 (expected 1.5).
 
 - [ ] **CHECK 3.17 Entity Audit Coverage** — 18 files with Firestore writes to audit-tracked collections not calling `EntityAuditService.recordChange()`. Boy Scout cleanup, 15-30 min/file. **Hours:** 4-9 (expected 5.5). Canonical service: `src/services/entity-audit.service.ts`. _(Baseline ratcheted 20→19 in `56d95be4` — admin-link destructive chain; 19→18 absorbed by `f160e750` — admin/migrate-properties break-glass deletion.)_
@@ -56,3 +54,4 @@
 | 2026-04-13 | ADR-298 Phase B.2 COMPLETED. accounting_audit_log + accounting_invoices + accounting_journal_entries moved to COVERAGE. New `roleDualMatrix()` + 3 seeders + 3 suites. Pending list 86→83, coverage 8→11 collections. Removed from checklist. |
 | 2026-04-13 | ADR-298 Phase B.3 COMPLETED. leads + opportunities + activities moved to COVERAGE. New `crmDirectMatrix()` + 3 seeders + 3 suites. Pending list 83→80, coverage 11→14 collections. Removed from checklist. |
 | 2026-04-13 | ADR-298 Phase B.4 COMPLETED. properties + storage_units + parking_spots + floors moved to COVERAGE. `adminWriteOnlyMatrix()` base + overrideCells for properties update delta. 4 seeders + 4 suites. 365 tests green. Pending list 80→76, coverage 14→18 collections. Removed from checklist. |
+| 2026-04-13 | ADR-298 Phase B.5 COMPLETED. conversations + external_identities moved to COVERAGE. `crmDirectMatrix()` for both; conversations enum-validated via `isValidConversationData`. New `seed-helpers-messaging.ts` module (SRP split). 405 tests green. Pending list 76→74, coverage 18→20 collections. Removed from checklist. |
