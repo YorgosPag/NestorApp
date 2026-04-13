@@ -64,9 +64,10 @@ export async function softDelete(
     );
   }
 
-  // Idempotency guard
+  // Idempotency: entity already in trash → desired state achieved, return success
   if (data?.status === "deleted") {
-    throw new ApiError(409, `${config.labelEn} is already in trash`);
+    logger.info(`Soft-delete idempotent — ${entityType} already in trash`, { entityId });
+    return { success: true, entityId };
   }
 
   const previousStatus =

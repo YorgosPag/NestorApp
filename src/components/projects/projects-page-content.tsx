@@ -160,10 +160,11 @@ export function ProjectsPageContent() {
     if (result.success) {
       logger.info('Project deleted', { projectId: projectToDelete.id });
       setSelectedProject(null);
-      setProjectToDelete(null);
     } else {
       logger.error('Failed to delete project', { error: result.error });
     }
+    // Always close dialog — on error user can retry; project may have dependency guard re-fire
+    setProjectToDelete(null);
     setIsDeleting(false);
   }, [projectToDelete, setSelectedProject]);
 
