@@ -20,7 +20,7 @@
 
 ### 🔥 CRITICAL PATH (Scenario A — ~21h expected)
 
-- [ ] **CHECK 3.17 Entity Audit Coverage** — 9 files remaining. Boy Scout cleanup, 15-30 min/file. **Hours:** ~3 (expected). Canonical service: `src/services/entity-audit.service.ts`. _(Baseline ratcheted 20→19→18→15→11→9: Batch 1+2+3 done.)_
+- [x] **CHECK 3.17 Entity Audit Coverage** — COMPLETATO. Baseline 9→0. _(Batch 4: 4 wire-up server-side + 5 HARD_EXEMPT nel scanner.)_
 
 - [ ] **CHECK 3.13 i18n Resolver Reachability** — 13 files, 378 violations. Keys in static configs (service-config, individual-config, modal-select, dropdown-*-labels) unreachable from runtime resolver. Fix: update `SERVICE_FORM_NAMESPACES` in `src/components/generic/i18n/translate-field-value.ts`. **Hours:** 2-6 (expected 4).
 
@@ -57,3 +57,4 @@
 | 2026-04-13 | CHECK 3.17 Batch 1 DONE. 3 admin migration files wired: execute-admin/route.ts (projects), normalize-floors/route.ts (floors), migrate-building-features/migration-operations.ts (buildings). Baseline 18→15. |
 | 2026-04-13 | CHECK 3.17 Batch 2 DONE. 4 admin files wired: seed-floors.handlers.ts (floor deleted), migrate-company-id/migration-operations.ts (company created), migrate-enterprise-ids/migration-operations.ts (building updated), migrate-enterprise-ids/route.ts (building created). Baseline 15→11. |
 | 2026-04-13 | CHECK 3.17 Batch 3 DONE. 2 files wired: geofence/route.ts (project updated), seed-parking/parking-seed-operations.ts (parking created). Baseline 11→9. ownership-table-service.ts deferred (client-side SDK, needs server wrapper approach). |
+| 2026-04-13 | CHECK 3.17 Batch 4 DONE — ZERO BASELINE. 4 server-side wire-up (005_assign_project_codes, 006_normalize_storage, cascade-propagation, property-coverage-recalculator) + 5 HARD_EXEMPT in scanner (audit-core circular, 4 client-SDK files). Baseline 9→0. CHECK 3.17 completamente chiusa. |
