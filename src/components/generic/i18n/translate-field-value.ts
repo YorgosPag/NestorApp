@@ -72,8 +72,11 @@ export const SERVICE_FORM_NAMESPACES = [
   'dxf-viewer',
   'filters',
   'navigation',
+  'projects',
   'projects-data',
+  'properties-enums',
   'reports-extended',
+  'storage',
 ] as const;
 
 export type ServiceFormNamespace = (typeof SERVICE_FORM_NAMESPACES)[number];
@@ -118,6 +121,22 @@ export function translateFieldValue(
     const stripped = value.slice('contacts.'.length);
     if (i18next.exists(stripped, NS_OPTION)) {
       return t(stripped, NS_OPTION);
+    }
+  }
+
+  // Phase B (CHECK 3.13 — 2026-04-13): namespace-prefix strip fallback.
+  // Config files in scope use keys like `common.priority.none`, `building.floors.ground`,
+  // `projects.status.planning`, `properties.status.available`, `storage.general.status.x`.
+  // These keys include the namespace name as a prefix in the dotted path — a convention
+  // carried over from the legacy single-namespace setup.  At runtime the i18next namespace
+  // containing the key stores only the suffix (e.g. `projects.json` has `status.planning`,
+  // not `projects.status.planning`).  Stripping the first component and looking up the
+  // remainder across all loaded SERVICE_FORM_NAMESPACES bridges that convention gap.
+  const prefixDot = value.indexOf('.');
+  if (prefixDot > 0) {
+    const rest = value.slice(prefixDot + 1);
+    if (i18next.exists(rest, NS_OPTION)) {
+      return t(rest, NS_OPTION);
     }
   }
 

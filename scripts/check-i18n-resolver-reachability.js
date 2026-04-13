@@ -152,6 +152,20 @@ function resolves(key, nsIndex) {
     }
   }
 
+  // Phase B (CHECK 3.13 — 2026-04-13): namespace-prefix strip fallback.
+  // Mirrors the same logic added to translateFieldValue.  Keys like
+  // `common.priority.none`, `projects.status.planning`, `properties.status.available`
+  // store the namespace name as the first path component; the actual namespace file
+  // holds only the suffix.  Strip the first component and scan all loaded namespace
+  // sets for the remainder.
+  const prefixDot = key.indexOf('.');
+  if (prefixDot > 0) {
+    const rest = key.slice(prefixDot + 1);
+    for (const set of nsIndex.values()) {
+      if (set.has(rest)) return true;
+    }
+  }
+
   return false;
 }
 
