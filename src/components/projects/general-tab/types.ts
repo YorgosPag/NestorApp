@@ -21,7 +21,12 @@ export interface ProjectFormData {
   licenseNumber: string;
   issuingAuthority: string;
   issueDate: string;
-  status: ProjectStatus;
+  /**
+   * Project status. Empty string represents the "no selection yet" state in
+   * create mode — the form's pre-flight validation blocks save until the user
+   * picks a concrete value, so this never reaches the API layer as `''`.
+   */
+  status: ProjectStatus | '';
   companyName: string;
   /** Company ID — used in create mode to link project to company */
   companyId?: string;

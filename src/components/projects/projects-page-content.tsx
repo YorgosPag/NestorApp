@@ -98,7 +98,10 @@ export function ProjectsPageContent() {
       name: '',
       title: '',
       description: '',
-      status: 'planning',
+      // 🏢 Google-level create mode: no silent default. Widened to allow '',
+      // which surfaces as the "Επιλέξτε κατάσταση..." placeholder in the
+      // form's <Select> and is blocked by handleSave's pre-flight validation.
+      status: '' as unknown as Project['status'],
       companyId: '',
       company: '',
       address: '',

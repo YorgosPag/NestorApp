@@ -472,5 +472,12 @@
         "remediation": "Measurements belong to the current project. Perform the required transfer or re-approval first."
       }
     }
+  },
+  "permitsTab": {
+    "statusPlaceholder": "Select status..."
+  },
+  "createValidation": {
+    "nameRequired": "Project title is required.",
+    "statusRequired": "Project status is required."
   }
 }

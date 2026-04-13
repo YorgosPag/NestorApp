@@ -92,7 +92,11 @@ export function GeneralProjectTab({
     licenseNumber: project.licenseNumber || '',
     issuingAuthority: project.issuingAuthority || '',
     issueDate: project.issueDate || '',
-    status: project.status,
+    // 🏢 Google-level create mode: no silent default. An empty status forces
+    // the user to make an explicit choice, enforced by pre-flight validation
+    // in `handleSave`. In edit mode, the existing `project.status` flows
+    // through unchanged via the sync effect below.
+    status: project.status ?? '',
     companyName: project.companyName,
     companyId: project.companyId || fallbackCompanyId,
     type: project.type || '',
@@ -155,7 +159,10 @@ export function GeneralProjectTab({
     return {
       name: data.name,
       title: data.licenseTitle,
-      status: data.status,
+      // Empty status only exists during the create-mode pre-flight — edit-path
+      // saves never see `''` because the form is seeded from a real document.
+      // Map to `undefined` so the API layer treats it as "unchanged".
+      status: data.status || undefined,
       description: data.description,
       buildingBlock: data.buildingBlock || undefined,
       protocolNumber: data.protocolNumber || undefined,
@@ -231,7 +238,7 @@ export function GeneralProjectTab({
       ...prev,
       name: project.name,
       licenseTitle: project.title,
-      status: project.status,
+      status: project.status ?? '',
       companyName: project.companyName,
       companyId: project.companyId || fallbackCompanyId,
       description: project.description ?? '',
@@ -265,6 +272,24 @@ export function GeneralProjectTab({
         const companyPayload = companyLink.getPayload();
         const effectiveLinkedCompanyId = companyPayload.linkedCompanyId ?? null;
 
+        // 🏢 Google-level create mode pre-flight validation. Every check
+        // returns early with a user-visible error — we never silently fall
+        // back to a placeholder value (previous `name || 'Νέο Έργο'` and
+        // `status || 'planning'` defaults have been removed).
+
+        const trimmedName = projectData.name.trim();
+        if (!trimmedName) {
+          setSaveError(t('createValidation.nameRequired'));
+          setSaveErrorCode('VALIDATION_NAME_REQUIRED');
+          return;
+        }
+
+        if (!projectData.status) {
+          setSaveError(t('createValidation.statusRequired'));
+          setSaveErrorCode('VALIDATION_STATUS_REQUIRED');
+          return;
+        }
+
         // 🏢 ADR-284 §3.0: Pre-flight company policy check — avoids API round-trip
         // and surfaces the same PolicyErrorBanner + recovery action immediately.
         if (!effectiveLinkedCompanyId) {
@@ -277,11 +302,11 @@ export function GeneralProjectTab({
 
         const result = await createProjectWithPolicy({
           payload: {
-          name: projectData.name || 'Νέο Έργο',
-          title: projectData.licenseTitle,
-          description: projectData.description,
-          status: projectData.status || 'planning',
-          companyId: fallbackCompanyId,
+            name: trimmedName,
+            title: projectData.licenseTitle,
+            description: projectData.description,
+            status: projectData.status,
+            companyId: fallbackCompanyId,
             linkedCompanyId: effectiveLinkedCompanyId,
           },
         });
@@ -334,6 +359,7 @@ export function GeneralProjectTab({
     refetchProject,
     runExistingProjectUpdate,
     setIsEditing,
+    t,
     versioned,
   ]);
 

@@ -26,6 +26,11 @@ export const PermitsAndStatusTab = React.memo(function PermitsAndStatusTab({ dat
     const typography = useTypography();
     const spacing = useSpacingTokens();
 
+    // 🏢 Google-level: `YYYY-MM-DD` for the native date input's `max` attribute.
+    // Recomputed per render — cheap, and the boundary only matters at interaction
+    // time, so a once-per-mount memo would drift across midnight.
+    const todayISO = new Date().toISOString().slice(0, 10);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
@@ -66,7 +71,20 @@ export const PermitsAndStatusTab = React.memo(function PermitsAndStatusTab({ dat
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="issueDate" className={typography.label.sm}>{t('permitsTab.issueDate')}</Label>
-                        <Input id="issueDate" name="issueDate" type="date" value={data.issueDate} onChange={handleChange} disabled={!isEditing} size="md" />
+                        {/* 🏢 Google-level: a permit cannot be issued in the future.
+                            `max={todayISO}` lets the native date picker block the
+                            selection at the UI level; server-side validation lives
+                            in the projects update handler. */}
+                        <Input
+                            id="issueDate"
+                            name="issueDate"
+                            type="date"
+                            value={data.issueDate}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            max={todayISO}
+                            size="md"
+                        />
                     </div>
                 </div>
 
@@ -74,9 +92,13 @@ export const PermitsAndStatusTab = React.memo(function PermitsAndStatusTab({ dat
                 <div className={cn("grid grid-cols-1 md:grid-cols-5", spacing.gap.md)}>
                     <div className={spacing.spaceBetween.sm}>
                         <Label className={typography.label.sm}>{t('permitsTab.projectStatus')}</Label>
-                        <Select value={data.status} onValueChange={(value) => handleSelectChange(value as ProjectFormData['status'])} disabled={!isEditing}>
+                        <Select
+                            value={data.status || undefined}
+                            onValueChange={(value) => handleSelectChange(value as ProjectFormData['status'])}
+                            disabled={!isEditing}
+                        >
                             <SelectTrigger>
-                                <SelectValue />
+                                <SelectValue placeholder={t('permitsTab.statusPlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="completed" className="text-popover-foreground">{t('permitsTab.statusConstructed')}</SelectItem>
