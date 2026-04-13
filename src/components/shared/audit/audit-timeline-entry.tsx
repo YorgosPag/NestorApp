@@ -180,11 +180,15 @@ export function AuditTimelineEntry({
           <ul className="mt-1.5 space-y-1">
             {entry.changes.map((change, idx) => {
               const translateFieldValue = makeFieldTranslator(change.field);
-              const fieldKey = `audit.fields.${change.field}`;
-              const resolvedFieldLabel = t(fieldKey);
-              const fieldLabel = resolvedFieldLabel !== fieldKey
-                ? resolvedFieldLabel
-                : (change.label ?? change.field);
+              const specificFieldKey = `audit.fields.${entry.entityType}.${change.field}`;
+              const genericFieldKey = `audit.fields.${change.field}`;
+              const resolvedSpecific = t(specificFieldKey);
+              const resolvedGeneric = t(genericFieldKey);
+              const fieldLabel = resolvedSpecific !== specificFieldKey
+                ? resolvedSpecific
+                : resolvedGeneric !== genericFieldKey
+                  ? resolvedGeneric
+                  : (change.label ?? change.field);
 
               // ── Collection-aware rendering (ADR-195 Phase 11) ──
               if (change.kind === 'collection' && change.op) {
@@ -208,9 +212,8 @@ export function AuditTimelineEntry({
                           {change.subChanges.map((sub, si) => {
                             const subKey = `audit.fields.${sub.subField}`;
                             const resolvedSub = t(subKey);
-                            const subLabel = resolvedSub !== subKey
-                              ? resolvedSub
-                              : (sub.label ?? sub.subField);
+                            const subLabel = sub.label
+                              ?? (resolvedSub !== subKey ? resolvedSub : sub.subField);
                             const translateSubValue = makeFieldTranslator(sub.subField);
                             return (
                               <li key={`${sub.subField}-${si}`}>

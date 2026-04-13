@@ -858,7 +858,16 @@
       "family": "Family",
       "property_buyer": "Property Buyer",
       "property_co_buyer": "Property Co-Buyer",
-      "property_landowner": "Landowner"
+      "property_landowner": "Landowner",
+      "site": "Site",
+      "entrance": "Entrance",
+      "delivery": "Delivery",
+      "legal": "Legal",
+      "postal": "Postal",
+      "billing": "Billing",
+      "correspondence": "Correspondence",
+      "headquarters": "Headquarters",
+      "branch": "Branch"
     },
     "fields": {
       "firstName": "First Name",
@@ -977,7 +986,15 @@
       "landOwnershipPct": "Land Ownership (%)",
       "allocatedShares": "Allocated Shares",
       "responsibilities": "Responsibilities",
-      "availableHours": "Available Hours"
+      "availableHours": "Available Hours",
+      "building": {
+        "name": "Building Title",
+        "code": "Building Code",
+        "description": "Building Description",
+        "category": "Building Category",
+        "status": "Building Status",
+        "progress": "Building Progress (%)"
+      }
     }
   },
   "fullscreen": {

@@ -53,6 +53,8 @@ export type TrackedFieldDef =
       readonly labelSeparator?: string;
       /** Sub-fields tracked for `op === 'modified'` entries. */
       readonly trackSubFields?: readonly string[];
+      /** Optional human-readable label overrides per sub-field (used instead of i18n fallback). */
+      readonly subFieldLabels?: Readonly<Record<string, string>>;
     };
 
 /** Read the human-readable label from any TrackedFieldDef variant. */
@@ -328,6 +330,7 @@ function diffSubFields(
   after: unknown,
   keyBy: 'value' | string | readonly string[],
   trackSubFields: readonly string[] | undefined,
+  subFieldLabels?: Readonly<Record<string, string>>,
 ): AuditSubChange[] {
   if (
     typeof before !== 'object' || before === null || Array.isArray(before) ||
@@ -348,7 +351,8 @@ function diffSubFields(
     const oldValue = serializeScalar(b[field]);
     const newValue = serializeScalar(a[field]);
     if (oldValue !== newValue) {
-      subs.push({ subField: field, oldValue, newValue });
+      const label = subFieldLabels?.[field];
+      subs.push({ subField: field, oldValue, newValue, ...(label ? { label } : {}) });
     }
   }
   return subs;
@@ -381,7 +385,7 @@ function diffCollection(
       op: 'added',
       itemKey: key,
       itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
-      subChanges: diffSubFields({}, item, def.keyBy, def.trackSubFields),
+      subChanges: diffSubFields({}, item, def.keyBy, def.trackSubFields, def.subFieldLabels),
     });
   }
 
@@ -396,14 +400,14 @@ function diffCollection(
       op: 'removed',
       itemKey: key,
       itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
-      subChanges: diffSubFields(item, {}, def.keyBy, def.trackSubFields),
+      subChanges: diffSubFields(item, {}, def.keyBy, def.trackSubFields, def.subFieldLabels),
     });
   }
 
   for (const [key, afterItem] of afterMap) {
     const beforeItem = beforeMap.get(key);
     if (beforeItem === undefined) continue;
-    const subChanges = diffSubFields(beforeItem, afterItem, def.keyBy, def.trackSubFields);
+    const subChanges = diffSubFields(beforeItem, afterItem, def.keyBy, def.trackSubFields, def.subFieldLabels);
     if (subChanges.length === 0) continue;
     out.push({
       field,

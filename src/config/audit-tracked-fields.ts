@@ -318,20 +318,39 @@ const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
 // engine reconciles by `keyBy` and emits per-item entries. Everything else
 // falls through as scalar via `mergeDefs`.
 
+const ADDRESS_SUB_FIELD_LABELS: Readonly<Record<string, string>> = {
+  type: 'Τύπος Διεύθυνσης',
+  isPrimary: 'Κύρια Διεύθυνση',
+  label: 'Ετικέτα',
+  street: 'Οδός',
+  number: 'Αριθμός',
+  city: 'Πόλη',
+  postalCode: 'Τ.Κ.',
+  region: 'Περιφέρεια',
+  regionalUnit: 'Περιφερειακή Ενότητα',
+  country: 'Χώρα',
+  municipality: 'Δήμος',
+  neighborhood: 'Περιοχή / Συνοικία',
+  blockSide: 'Πλευρά Οικοδομικού Τετραγώνου',
+  floor: 'Όροφος',
+};
+
+const ADDRESS_TRACK_SUB_FIELDS: readonly string[] = [
+  'type', 'isPrimary', 'label',
+  'street', 'number', 'city', 'postalCode',
+  'region', 'regionalUnit', 'country',
+  'municipality', 'neighborhood',
+  'blockSide', 'floor',
+];
+
 const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
   addresses: {
     kind: 'collection',
     label: 'Διευθύνσεις',
     keyBy: 'id',
     labelFields: ['type', 'street', 'number'],
-    trackSubFields: [
-      'type', 'isPrimary', 'label',
-      'street', 'number', 'city', 'postalCode',
-      'region', 'regionalUnit', 'country',
-      'blockSide', 'blockSideDescription',
-      'cadastralCode', 'municipality', 'neighborhood',
-      'sortOrder',
-    ],
+    trackSubFields: ADDRESS_TRACK_SUB_FIELDS,
+    subFieldLabels: ADDRESS_SUB_FIELD_LABELS,
   },
   landowners: {
     kind: 'collection',
@@ -481,10 +500,11 @@ export const PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 /** Fields tracked for building audit trail (raw field → Greek label) */
 const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
   // Identity
-  name: 'Όνομα',
+  name: 'Τίτλος',
   code: 'Κωδικός',
   description: 'Περιγραφή',
   status: 'Κατάσταση',
+  category: 'Κατηγορία Κτιρίου',
   projectId: 'Έργο',
   // Location
   address: 'Διεύθυνση',
@@ -505,9 +525,20 @@ const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
   linkedCompanyId: 'Συνδεδεμένη εταιρεία',
 };
 
+const BUILDING_COLLECTION_DEFS: Record<string, CollectionDef> = {
+  addresses: {
+    kind: 'collection',
+    label: 'Διευθύνσεις',
+    keyBy: 'id',
+    labelFields: ['type', 'street', 'number'],
+    trackSubFields: ADDRESS_TRACK_SUB_FIELDS,
+    subFieldLabels: ADDRESS_SUB_FIELD_LABELS,
+  },
+};
+
 /** Building audit registry — `field → TrackedFieldDef`. */
 export const BUILDING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  mergeDefs(BUILDING_TRACKED_FIELDS_RAW, {});
+  mergeDefs(BUILDING_TRACKED_FIELDS_RAW, BUILDING_COLLECTION_DEFS);
 
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =

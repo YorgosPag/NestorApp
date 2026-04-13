@@ -858,7 +858,21 @@
       "family": "Συγγενής",
       "property_buyer": "Αγοραστής Ακινήτου",
       "property_co_buyer": "Συν-αγοραστής",
-      "property_landowner": "Οικοπεδούχος"
+      "property_landowner": "Οικοπεδούχος",
+      "site": "Εργοτάξιο",
+      "entrance": "Είσοδος",
+      "delivery": "Παράδοση",
+      "legal": "Νομική",
+      "postal": "Ταχυδρομική",
+      "billing": "Τιμολόγηση",
+      "correspondence": "Αλληλογραφία",
+      "headquarters": "Έδρα",
+      "branch": "Υποκατάστημα",
+      "Greece": "Ελλάδα",
+      "Cyprus": "Κύπρος",
+      "Germany": "Γερμανία",
+      "United Kingdom": "Ηνωμένο Βασίλειο",
+      "United States": "Ηνωμένες Πολιτείες"
     },
     "fields": {
       "firstName": "Όνομα",
@@ -977,7 +991,15 @@
       "landOwnershipPct": "Ποσοστό Ιδιοκτησίας (%)",
       "allocatedShares": "Κατανεμημένα Μερίδια",
       "responsibilities": "Αρμοδιότητες",
-      "availableHours": "Διαθέσιμες Ώρες"
+      "availableHours": "Διαθέσιμες Ώρες",
+      "building": {
+        "name": "Τίτλος Κτιρίου",
+        "code": "Κωδικός Κτιρίου",
+        "description": "Περιγραφή Κτιρίου",
+        "category": "Κατηγορία Κτιρίου",
+        "status": "Κατάσταση Κτιρίου",
+        "progress": "Πρόοδος Κτιρίου (%)"
+      }
     }
   },
   "fullscreen": {
