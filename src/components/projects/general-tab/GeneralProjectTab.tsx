@@ -35,6 +35,13 @@ interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
   registerSaveCallback?: (saveFn: () => void) => void;
   isCreateMode?: boolean;
   onProjectCreated?: (projectId: string) => void;
+  /**
+   * 🏢 ADR-256 read-path: injected by `project-details.tsx` via `useProjectDetail`.
+   * Called after a successful save so the hydrated Firestore document becomes
+   * the post-save source of truth (covers server-computed fields like
+   * normalized timestamps and any field the API layer mutates on write).
+   */
+  refetchProject?: () => Promise<void>;
 }
 
 function normalizeGuardValue(value: string | number | null | undefined): string {
@@ -68,6 +75,7 @@ export function GeneralProjectTab({
   registerSaveCallback,
   isCreateMode,
   onProjectCreated,
+  refetchProject,
 }: ExtendedGeneralProjectTabProps) {
   const { t } = useTranslation('projects');
   const spacing = useSpacingTokens();
@@ -297,6 +305,11 @@ export function GeneralProjectTab({
           await versioned.save(projectData);
           logger.info('Project updated successfully');
           setIsEditing(false);
+          // 🏢 ADR-256 read-path: pull the canonical post-save Firestore doc
+          // so server-computed fields (timestamps, normalized values) become
+          // the source of truth. Non-blocking — the optimistic local state
+          // keeps the form stable during the round-trip.
+          void refetchProject?.();
         } finally {
           setIsSaving(false);
         }
@@ -316,6 +329,7 @@ export function GeneralProjectTab({
     onProjectCreated,
     project.id,
     projectData,
+    refetchProject,
     runExistingProjectUpdate,
     setIsEditing,
     versioned,

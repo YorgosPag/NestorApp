@@ -26,6 +26,7 @@ import { PROJECT_COMPONENT_MAPPING } from '@/components/generic/mappings/project
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
 import { DetailsContainer } from '@/core/containers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useProjectDetail } from '@/hooks/useProjectDetail';
 
 // ============================================================================
 // TYPES
@@ -74,6 +75,31 @@ export function ProjectDetails({
   // Ref for save callback registered by GeneralProjectTab
   const saveCallbackRef = useRef<(() => void) | null>(null);
 
+  // 🏢 ADR-256 read-path: hydrate the full Firestore document on select. The
+  // list API only projects ~19 lean fields for tile perf — the detail view
+  // needs the remaining 22+ (permits, description, budget, client, etc.).
+  // Until this resolves, `project` still renders (tile-level fields paint
+  // immediately), then the hydrated doc takes over as SSoT.
+  const {
+    project: hydratedProject,
+    error: hydrationError,
+    refetch: refetchProject,
+  } = useProjectDetail(project?.id ?? null, {
+    skip: isCreateMode === true,
+    pauseRefetch: isEditing,
+  });
+
+  // Merge order matters: hydrated wins over summary, then `companyName` is
+  // re-spread last because it's added by the `getProjectWithCompanyName`
+  // wrapper in `ProjectViewSwitch` and does NOT exist on the raw Firestore
+  // doc — we must not drop it during hydration.
+  const effectiveProject = useMemo<(Project & { companyName: string }) | null>(() => {
+    if (!project) return null;
+    if (isCreateMode) return project;
+    if (!hydratedProject) return project;
+    return { ...project, ...hydratedProject, companyName: project.companyName };
+  }, [project, hydratedProject, isCreateMode]);
+
   const handleStartEdit = useCallback(() => {
     setIsEditing(true);
   }, [setIsEditing]);
@@ -101,23 +127,34 @@ export function ProjectDetails({
   // Get project tabs from centralized config
   const projectTabs = getSortedProjectTabs();
 
-  // Memoize globalProps to prevent re-render cascade on ALL tabs
+  // Memoize globalProps to prevent re-render cascade on ALL tabs.
+  // `refetchProject` is additive and optional — only `GeneralProjectTab` uses
+  // it today (post-save canonicalization), the other 16 tabs ignore it.
   const globalProps = useMemo(() => ({
-    projectId: project?.id ?? '',
+    projectId: effectiveProject?.id ?? project?.id ?? '',
     isEditing,
     onSetEditing: setIsEditing,
     registerSaveCallback,
     isCreateMode,
     onProjectCreated,
-  }), [project?.id, isEditing, setIsEditing, registerSaveCallback, isCreateMode, onProjectCreated]);
+    refetchProject,
+  }), [effectiveProject?.id, project?.id, isEditing, setIsEditing, registerSaveCallback, isCreateMode, onProjectCreated, refetchProject]);
+
+  // 404 handling: if the hydrated GET returned "project not found" (deleted
+  // mid-navigation), fall back to the empty state instead of rendering the
+  // tabs against a stale summary.
+  const is404 = hydrationError !== null
+    && !isCreateMode
+    && /not found|404/i.test(hydrationError.message);
+  const displayProject = is404 ? null : effectiveProject;
 
   return (
     <DetailsContainer
-      selectedItem={project}
+      selectedItem={displayProject}
       header={
-        project ? (
+        displayProject ? (
           <ProjectDetailsHeader
-            project={project}
+            project={displayProject}
             isEditing={isEditing}
             onStartEdit={handleStartEdit}
             onSaveEdit={handleSaveEdit}
@@ -128,10 +165,10 @@ export function ProjectDetails({
         ) : null
       }
       tabsRenderer={
-        project ? (
+        displayProject ? (
           <UniversalTabsRenderer
             tabs={projectTabs.map(convertToUniversalConfig)}
-            data={project}
+            data={displayProject}
             componentMapping={PROJECT_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
             defaultTab={initialTab || "general"}
             theme="default"
