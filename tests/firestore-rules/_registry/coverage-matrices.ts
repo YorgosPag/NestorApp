@@ -381,3 +381,12 @@ export {
   fiscalPeriodMatrix,
 } from './coverage-matrices-accounting';
 
+// Phase C.5 system-global matrix functions live in coverage-matrices-system.ts
+// (extracted per Google SRP 500-line rule — ADR-298 Phase C.5, 2026-04-13).
+export {
+  countersMatrix,
+  systemAdminGlobalMatrix,
+  systemGlobalMatrix,
+  tasksMatrix,
+} from './coverage-matrices-system';
+

@@ -43,6 +43,12 @@ import {
   denyAllMatrix,
   fiscalPeriodMatrix,
 } from './coverage-matrices-accounting';
+import {
+  countersMatrix,
+  systemAdminGlobalMatrix,
+  systemGlobalMatrix,
+  tasksMatrix,
+} from './coverage-matrices-system';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -456,6 +462,90 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
       cell('anonymous', 'delete', 'deny', 'immutable'),
     ]),
   },
+  // ── ADR-298 Phase C.5 — System-global (2026-04-13) ───────────────────────
+  {
+    collection: 'config',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/config.rules.test.ts',
+    rulesRange: [1579, 1583],
+    matrix: systemGlobalMatrix(),
+  },
+  {
+    collection: 'email_domain_policies',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/email-domain-policies.rules.test.ts',
+    rulesRange: [1903, 1909],
+    matrix: systemGlobalMatrix(),
+  },
+  {
+    collection: 'country_security_policies',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/country-security-policies.rules.test.ts',
+    rulesRange: [1910, 1916],
+    matrix: systemGlobalMatrix(),
+  },
+  {
+    collection: 'bot_configs',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/bot-configs.rules.test.ts',
+    rulesRange: [2292, 2297],
+    matrix: systemGlobalMatrix(),
+  },
+  {
+    collection: 'system',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/system.rules.test.ts',
+    rulesRange: [1563, 1572],
+    // isCompanyAdmin() read (role-only, not tenant-bound), write=false
+    matrix: systemAdminGlobalMatrix(),
+  },
+  {
+    collection: 'navigation_companies',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/navigation-companies.rules.test.ts',
+    rulesRange: [733, 739],
+    matrix: adminWriteOnlyMatrix(),
+  },
+  {
+    collection: 'appointments',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/appointments.rules.test.ts',
+    rulesRange: [851, 868],
+    matrix: adminWriteOnlyMatrix(),
+  },
+  {
+    collection: 'counters',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/counters.rules.test.ts',
+    rulesRange: [1922, 1928],
+    // isAuthenticated() read+write — global increment counters
+    matrix: countersMatrix(),
+  },
+  {
+    collection: 'analytics',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/analytics.rules.test.ts',
+    rulesRange: [1934, 1967],
+    // Create: companyId==getUserCompanyId() only, no isSuperAdminOnly() — super_admin denied
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'communications',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/communications.rules.test.ts',
+    rulesRange: [1521, 1554],
+    // Create: companyId==getUserCompanyId() only, no isSuperAdminOnly() — super_admin denied
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'tasks',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/tasks.rules.test.ts',
+    rulesRange: [784, 837],
+    // Create: isSuperAdminOnly() OR-leg present → super_admin allowed (delta from crmDirectMatrix)
+    // Seed doc: createdBy=assignedTo=same_tenant_user.uid for update/delete paths
+    matrix: tasksMatrix(),
+  },
 ] as const;
 
 /**
@@ -511,22 +601,22 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'layers',
   'layer_groups',
   // — Navigation / notifications / tasks —
-  'navigation_companies',
+  // navigation_companies → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   'notifications',
-  'tasks',
-  'appointments',
+  // tasks        → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
+  // appointments → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   // — CRM —
-  'communications',
+  // communications → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   // leads, opportunities, activities → moved to COVERAGE (ADR-298 Phase B.3, 2026-04-13)
   // conversations, external_identities → moved to COVERAGE (ADR-298 Phase B.5, 2026-04-13)
   // — System / config —
-  'system',
-  'config',
-  'email_domain_policies',
-  'country_security_policies',
-  'counters',
-  'analytics',
-  'bot_configs',
+  // system              → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
+  // config              → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
+  // email_domain_policies     → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
+  // country_security_policies → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
+  // counters → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
+  // analytics → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
+  // bot_configs → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   // — Obligations / compliance —
   // obligations, obligation_transmittals, obligation_templates → moved to COVERAGE (ADR-298 Phase B.6, 2026-04-13)
   // — Audit / search / voice —

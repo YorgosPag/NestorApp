@@ -25,7 +25,7 @@
 
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
-- [ ] **ADR-298 Phase C** — 55 remaining Firestore rules collections in 6 subcategories: C.2 DXF/CAD/floorplans (15), C.3 file variants (10), C.4 BoQ/ownership/commissions (8), C.5 system-global (11, trivial ~15 min/coll), C.6 ownership-based users (5), C.7 specialized (10). C.1 accounting (16) DONE 2026-04-13. **Hours:** ~11-25 (expected ~17, down from 22).
+- [ ] **ADR-298 Phase C** — 44 remaining Firestore rules collections in 5 subcategories: C.2 DXF/CAD/floorplans (15), C.3 file variants (10), C.4 BoQ/ownership/commissions (8), C.6 ownership-based users (5), C.7 specialized (10 + notifications). C.1 accounting (16) DONE 2026-04-13. C.5 system-global (11) DONE 2026-04-13. **Hours:** ~9-22 (expected ~14, down from 17).
 
 - [ ] **ADR-298 Phase E** — Storage rules coverage. `storage.rules` 12KB, new harness shape, separate future ADR. **Hours:** 4-10 (expected 7).
 
@@ -61,3 +61,4 @@
 | 2026-04-13 | CHECK 3.13 Phase B DONE. 3 namespace aggiuntivi (`projects`, `properties-enums`, `storage`) + prefix-strip fallback in `translateFieldValue` e scanner `resolves()`. Baseline 214→79 (5 file rimasti). ADR-279 aggiornato. |
 | 2026-04-13 | ADR-298 Phase C.1 DONE. 16 accounting collections → COVERAGE. 4 new matrix builders + coverage-matrices-accounting.ts (SRP split) + seed-helpers-accounting.ts + 16 suites. Pending 71→55, coverage 23→39. |
 | 2026-04-13 | CHECK 3.13 Phase C DONE — ZERO BASELINE. 79 chiavi locale mancanti aggiunte in 9 namespace (el+en): contacts-core (company.sections/fields), storage (card.stats.level/value/stage/priority/dueDate + types.parking), building-tabs (floorplan.description + protocols.description), building (propertyTypes.*), properties-enums (status.underConstruction/blocked + saleStatus.*), dxf-viewer (steps.*), contacts-relationships (status enum + 22 types), crm (stages.*), filters (allPrices). Baseline 79→0. CHECK 3.13 completamente chiusa. ADR-279 Phase C entry aggiunto. |
+| 2026-04-13 | ADR-298 Phase C.5 DONE. 11 system-global collections → COVERAGE. 4 new matrix builders (systemGlobalMatrix, systemAdminGlobalMatrix, countersMatrix, tasksMatrix) + coverage-matrices-system.ts (SRP split) + seed-helpers-system.ts + 11 suites. Pending 55→44, coverage 39→50. |
