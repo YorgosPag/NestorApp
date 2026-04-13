@@ -44,6 +44,7 @@ export interface BuildingUpdatePayload {
   linkedCompanyName?: string | null; // 🏢 ENTERPRISE: Company display name
   company?: string | null;         // 🏢 ENTERPRISE: Legacy company display name
   addresses?: ProjectAddress[];    // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
 }
 
 /**
@@ -124,6 +125,7 @@ export interface BuildingCreatePayload {
   companyId: string;
   company?: string;
   addresses?: ProjectAddress[];  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
 }
 
 /**

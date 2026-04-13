@@ -50,6 +50,7 @@ interface BuildingUpdatePayload {
   linkedCompanyName?: string | null;
   company?: string | null;
   addresses?: Record<string, unknown>[];
+  category?: string;
 }
 
 interface BuildingUpdateResponse {

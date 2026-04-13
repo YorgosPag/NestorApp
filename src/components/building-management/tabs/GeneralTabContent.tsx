@@ -42,7 +42,8 @@ function buildFormData(building: Building) {
     startDate: building.startDate || '',
     completionDate: building.completionDate || '',
     address: building.address || '',
-    city: building.city || ''
+    city: building.city || '',
+    category: (building.category as 'mixed' | 'residential' | 'commercial' | 'industrial' | '') || '',
   };
 }
 
@@ -245,6 +246,7 @@ export function GeneralTabContent({
         address: data.address,
         city: data.city,
         _v: data._v,
+        ...(data.category ? { category: data.category as 'mixed' | 'residential' | 'commercial' | 'industrial' } : {}),
       },
     });
     return result;
@@ -312,6 +314,7 @@ export function GeneralTabContent({
         completionDate: formData.completionDate,
         address: formData.address,
         city: formData.city,
+        ...(formData.category ? { category: formData.category as 'mixed' | 'residential' | 'commercial' | 'industrial' } : {}),
       };
 
       if (isCreateMode) {

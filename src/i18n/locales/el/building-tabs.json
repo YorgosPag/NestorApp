@@ -256,7 +256,9 @@
         "buildingTitle": "Τίτλος Κτιρίου *",
         "description": "Περιγραφή Κτιρίου",
         "descriptionPlaceholder": "Περιγράψτε το κτίριο...",
-        "charactersCount": "{count}/500 χαρακτήρες"
+        "charactersCount": "{count}/500 χαρακτήρες",
+        "category": "Κατηγορία Κτιρίου",
+        "categoryPlaceholder": "Επιλέξτε κατηγορία..."
       },
       "technicalSpecs": {
         "title": "Τεχνικά Χαρακτηριστικά",

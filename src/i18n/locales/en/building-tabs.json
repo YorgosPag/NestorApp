@@ -256,7 +256,9 @@
         "buildingTitle": "Building Title *",
         "description": "Building Description",
         "descriptionPlaceholder": "Describe the building...",
-        "charactersCount": "{count}/500 characters"
+        "charactersCount": "{count}/500 characters",
+        "category": "Building Category",
+        "categoryPlaceholder": "Select category..."
       },
       "technicalSpecs": {
         "title": "Technical Specifications",

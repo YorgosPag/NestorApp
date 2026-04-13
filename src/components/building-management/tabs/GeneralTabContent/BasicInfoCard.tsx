@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
@@ -16,9 +23,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
+const BUILDING_CATEGORIES = ['residential', 'commercial', 'mixed', 'industrial'] as const;
+
 interface BasicInfoCardProps {
     /** ADR-233 §3.4: `code` is the locked building identifier ("Κτήριο Α"). Read-only. */
-    formData: { code?: string; name: string; description: string };
+    formData: { code?: string; name: string; description: string; category?: string };
     updateField: (field: string, value: string | number) => void;
     isEditing: boolean;
     errors: { [key: string]: string };
@@ -60,6 +69,26 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
             className={cn(!isEditing && "bg-muted", errors.name && getStatusBorder('error'))}
           />
           {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label>{t('tabs.general.basicInfo.category')}</Label>
+          <Select
+            value={formData.category || ''}
+            onValueChange={(value) => updateField('category', value)}
+            disabled={!isEditing}
+          >
+            <SelectTrigger className={cn(!isEditing && 'bg-muted')}>
+              <SelectValue placeholder={t('tabs.general.basicInfo.categoryPlaceholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              {BUILDING_CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {t(`categories.${cat}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

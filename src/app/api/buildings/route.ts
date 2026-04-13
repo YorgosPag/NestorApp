@@ -39,6 +39,7 @@ const CreateBuildingSchema = z.object({
   companyId: z.string().max(128).optional(),
   company: z.string().max(200).optional(),
   addresses: z.array(z.record(z.unknown())).optional(),
+  category: z.enum(['mixed', 'residential', 'commercial', 'industrial']).optional(),
 }).passthrough();
 
 const logger = createModuleLogger('BuildingsRoute');
@@ -165,6 +166,7 @@ interface BuildingCreatePayload {
   companyId?: string;
   company?: string;
   addresses?: Record<string, unknown>[];  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  category?: string;
 }
 
 interface BuildingCreateResponse {
