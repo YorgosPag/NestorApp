@@ -89,7 +89,14 @@ export function ConflictDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-      <AlertDialogContent>
+      {/* SPEC-256A v2: dialog grew from 2 to 3 consequence cards, which can
+          overflow the default `max-w-lg` on narrow viewports. Cap at 90vw on
+          small screens, bound the height so tall content scrolls inside the
+          dialog instead of pushing cards off-canvas, and force word-break so
+          long user-names in the "last changed by" line cannot blow out the
+          column. `break-words` is the Tailwind equivalent of CSS
+          `overflow-wrap: break-word`. */}
+      <AlertDialogContent className="w-[min(32rem,90vw)] max-h-[85vh] overflow-y-auto break-words">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
             <AlertTriangle className={iconSizes.md} />

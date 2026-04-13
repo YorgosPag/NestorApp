@@ -31,7 +31,7 @@
 
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConflictResponseBody } from '@/types/versioning';
 import { CONFLICT_CODE } from '@/config/versioning-config';
 
@@ -152,27 +152,47 @@ export function useVersionedSave<T>(
   const [isConflicted, setIsConflicted] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictResponseBody | null>(null);
 
-  // Sync versionRef with the prop under two carefully-scoped rules. The old
-  // implementation unconditionally mirrored `initialVersion` into `versionRef`
-  // on every render, which caused a race on solo-user auto-save: a successful
-  // save bumped the ref from 5→6, but the parent prop still held _v=5 for one
-  // extra render, so the mirror rolled the ref back to 5 and the next
-  // auto-save fired with a stale _v, producing a self-409.
-  if (entityId !== undefined && entityId !== entityIdRef.current) {
-    // Entity swap (e.g. user navigated to a different project). Adopt the new
-    // prop version outright — previous entity's tracked version is irrelevant.
-    entityIdRef.current = entityId;
+  // Forward-only version sync. The old implementation unconditionally
+  // mirrored `initialVersion` into `versionRef` on every render, which caused
+  // a race on solo-user auto-save: a successful save bumped the ref from 5→6,
+  // but the parent prop still held _v=5 for one extra render, so the mirror
+  // rolled the ref back to 5 and the next auto-save fired with a stale _v,
+  // producing a self-409. Two scoped rules replace it:
+  //
+  //  1. Entity swap (new `entityId`) — reset the ref outright. Previous
+  //     entity's tracked version is irrelevant.
+  //  2. Same entity — only accept prop versions that move FORWARD. Prevents
+  //     the lagging-prop rollback while still adopting external updates
+  //     (another tab wrote a newer version and the parent re-fetched).
+  //
+  // Entity swaps ALSO need to clear `isConflicted` / `conflictData`, which
+  // are React state and cannot be reset from render — the effect below does
+  // that atomically. The entity-swap branch here only touches the ref so
+  // `versioned.save()` called mid-commit (via a ref-captured handler) won't
+  // fire against the wrong entity's version.
+  const entityChanged = entityId !== undefined && entityId !== entityIdRef.current;
+  if (entityChanged) {
     versionRef.current = initialVersion;
   } else if (
-    initialVersion !== undefined &&
-    !isConflicted &&
-    (versionRef.current === undefined || initialVersion > versionRef.current)
+    initialVersion !== undefined
+    && !isConflicted
+    && (versionRef.current === undefined || initialVersion > versionRef.current)
   ) {
-    // Same entity: only accept prop versions that move forward. Prevents the
-    // lagging-prop rollback while still picking up genuine external updates
-    // (e.g. another tab wrote a newer version and the parent re-fetched).
     versionRef.current = initialVersion;
   }
+
+  // State-side handler for entity swaps: clear conflict state so a dismissed
+  // conflict on project A does not follow the user to project B. Without this,
+  // `isConflicted` remained true across navigation and the ConflictDialog
+  // reopened the instant the new project rendered. The ref update happens
+  // here (not in render) so we don't race with the `entityChanged` branch.
+  useEffect(() => {
+    if (entityId === undefined) return;
+    if (entityId === entityIdRef.current) return;
+    entityIdRef.current = entityId;
+    setIsConflicted(false);
+    setConflictData(null);
+  }, [entityId]);
 
   // Save function ref to avoid stale closures
   const saveFnRef = useRef(saveFn);
