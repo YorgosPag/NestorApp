@@ -157,10 +157,11 @@ export function BuildingsPageContent() {
     if (result.success) {
       logger.info('Building deleted', { buildingId: buildingToDelete.id });
       setSelectedBuilding(null);
-      setBuildingToDelete(null);
     } else {
-      logger.error('Failed to delete building', { error: result.error });
+      logger.error('Failed to delete building', { buildingId: buildingToDelete.id, error: result.error });
     }
+    // Always close dialog — on error user can retry
+    setBuildingToDelete(null);
     setIsDeleting(false);
   }, [buildingToDelete, setSelectedBuilding]);
 

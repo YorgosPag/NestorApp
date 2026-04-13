@@ -204,13 +204,24 @@ export async function deleteBuilding(
     return { success: true };
 
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
-    const errorCode = ApiClientError.isApiClientError(error) ? error.errorCode : undefined;
-    logger.error('deleteBuilding failed', { message, statusCode, errorCode });
+    const isApiError = ApiClientError.isApiClientError(error);
+    const message = isApiError
+      ? error.message
+      : error instanceof Error
+        ? error.message
+        : String(error);
+    const statusCode = isApiError ? error.statusCode : undefined;
+    const errorCode = isApiError ? error.errorCode : undefined;
+    logger.error('deleteBuilding failed', {
+      buildingId,
+      message: message || '(empty)',
+      statusCode,
+      errorCode,
+      errorType: error?.constructor?.name ?? typeof error,
+    });
     return {
       success: false,
-      error: message,
+      error: message || 'Unknown error during building deletion',
     };
   }
 }
