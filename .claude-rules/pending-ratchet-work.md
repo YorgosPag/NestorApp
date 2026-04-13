@@ -25,7 +25,7 @@
 
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
-- [ ] **ADR-298 Phase C** — 74 remaining Firestore rules collections in 7 subcategories: C.1 accounting (15), C.2 DXF/CAD/floorplans (15), C.3 file variants (10), C.4 BoQ/ownership/commissions (8), C.5 system-global (11, trivial ~15 min/coll), C.6 ownership-based users (5), C.7 specialized (10). **Hours:** 14-35 (expected 22).
+- [ ] **ADR-298 Phase C** — 55 remaining Firestore rules collections in 6 subcategories: C.2 DXF/CAD/floorplans (15), C.3 file variants (10), C.4 BoQ/ownership/commissions (8), C.5 system-global (11, trivial ~15 min/coll), C.6 ownership-based users (5), C.7 specialized (10). C.1 accounting (16) DONE 2026-04-13. **Hours:** ~11-25 (expected ~17, down from 22).
 
 - [ ] **ADR-298 Phase E** — Storage rules coverage. `storage.rules` 12KB, new harness shape, separate future ADR. **Hours:** 4-10 (expected 7).
 
@@ -59,4 +59,5 @@
 | 2026-04-13 | CHECK 3.17 Batch 4 DONE — ZERO BASELINE. 4 server-side wire-up (005_assign_project_codes, 006_normalize_storage, cascade-propagation, property-coverage-recalculator) + 5 HARD_EXEMPT in scanner (audit-core circular, 4 client-SDK files). Baseline 9→0. CHECK 3.17 completamente chiusa. |
 | 2026-04-13 | CHECK 3.13 Phase A DONE. 14 namespace aggiunti a `SERVICE_FORM_NAMESPACES` in translate-field-value.ts. Baseline 378→214 (5 file rimasti). ADR-279 aggiornato. |
 | 2026-04-13 | CHECK 3.13 Phase B DONE. 3 namespace aggiuntivi (`projects`, `properties-enums`, `storage`) + prefix-strip fallback in `translateFieldValue` e scanner `resolves()`. Baseline 214→79 (5 file rimasti). ADR-279 aggiornato. |
+| 2026-04-13 | ADR-298 Phase C.1 DONE. 16 accounting collections → COVERAGE. 4 new matrix builders + coverage-matrices-accounting.ts (SRP split) + seed-helpers-accounting.ts + 16 suites. Pending 71→55, coverage 23→39. |
 | 2026-04-13 | CHECK 3.13 Phase C DONE — ZERO BASELINE. 79 chiavi locale mancanti aggiunte in 9 namespace (el+en): contacts-core (company.sections/fields), storage (card.stats.level/value/stage/priority/dueDate + types.parking), building-tabs (floorplan.description + protocols.description), building (propertyTypes.*), properties-enums (status.underConstruction/blocked + saleStatus.*), dxf-viewer (steps.*), contacts-relationships (status enum + 22 types), crm (stages.*), filters (allPrices). Baseline 79→0. CHECK 3.13 completamente chiusa. ADR-279 Phase C entry aggiunto. |

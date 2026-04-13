@@ -541,7 +541,9 @@ if [[ -n "$TS_FILES" ]]; then
         local file="$1"
 
         # EXEMPT patterns — no limit
-        if echo "$file" | grep -qE '(\.config\.|\.d\.ts$|\.test\.|\.spec\.|\.stories\.|\.qa\.|/config/|/types/|/data/|/__tests__/|/docs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|-definitions\.|-schema|-constants|enterprise-id\.service\.ts)'; then
+        # /_registry/ added 2026-04-13: firestore-rules _registry is a pure typed data registry
+        # (coverage-manifest.ts, coverage-matrices*.ts) — no business logic, data-file semantics.
+        if echo "$file" | grep -qE '(\.config\.|\.d\.ts$|\.test\.|\.spec\.|\.stories\.|\.qa\.|/config/|/types/|/data/|/_registry/|/__tests__/|/docs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|-definitions\.|-schema|-constants|enterprise-id\.service\.ts)'; then
             echo 0
             return
         fi

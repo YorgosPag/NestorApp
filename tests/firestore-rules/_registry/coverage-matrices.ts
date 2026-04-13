@@ -369,3 +369,15 @@ export function attendanceEventMatrix(): readonly CoverageCell[] {
     cell('same_tenant_admin', 'delete', 'deny', 'immutable'),
   ]);
 }
+
+// Phase C.1 accounting matrix functions live in coverage-matrices-accounting.ts
+// (extracted per Google SRP 500-line rule — ADR-298 Phase C.1, 2026-04-13).
+// Re-exported here so callers that import from coverage-matrices don't need
+// to know about the split.
+export {
+  accountingSingletonMatrix,
+  accountingSystemCalcMatrix,
+  denyAllMatrix,
+  fiscalPeriodMatrix,
+} from './coverage-matrices-accounting';
+

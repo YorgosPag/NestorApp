@@ -29,14 +29,20 @@ import type { Persona } from './personas';
 import {
   adminWriteOnlyMatrix,
   attendanceEventMatrix,
+  cell,
   crmDirectMatrix,
   immutableMatrix,
   overrideCells,
   roleDualMatrix,
   tenantDirectMatrix,
   tenantStateMachineMatrix,
-  cell,
 } from './coverage-matrices';
+import {
+  accountingSingletonMatrix,
+  accountingSystemCalcMatrix,
+  denyAllMatrix,
+  fiscalPeriodMatrix,
+} from './coverage-matrices-accounting';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,7 +59,8 @@ export type RulesPattern =
   | 'ownership'            // ownerId == request.auth.uid
   | 'system_global'        // read-only for every authenticated user
   | 'role_dual'            // user-created vs system-generated split
-  | 'field_allowlist';     // update restricted to a set of allowed fields
+  | 'field_allowlist'      // update restricted to a set of allowed fields
+  | 'deny_all';            // allow read,write: if false — no client access (Admin SDK only)
 
 /** One (persona × operation) cell of a collection's coverage matrix. */
 export interface CoverageCell {
@@ -290,6 +297,129 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     matrix: adminWriteOnlyMatrix(),
     seedDependencies: ['projects', 'buildings'],
   },
+  // ── ADR-298 Phase C.1 — remaining accounting (2026-04-13) ───────────────
+  // Pattern A: standard role_dual (canCreateAccounting with createdBy==uid)
+  {
+    collection: 'accounting_bank_transactions',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-bank-transactions.rules.test.ts',
+    rulesRange: [3020, 3027],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_bank_accounts',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-bank-accounts.rules.test.ts',
+    rulesRange: [3027, 3034],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_fixed_assets',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-fixed-assets.rules.test.ts',
+    rulesRange: [3034, 3041],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_depreciation_records',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-depreciation-records.rules.test.ts',
+    rulesRange: [3041, 3048],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_expense_documents',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-expense-documents.rules.test.ts',
+    rulesRange: [3048, 3055],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_import_batches',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-import-batches.rules.test.ts',
+    rulesRange: [3055, 3062],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_tax_installments',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-tax-installments.rules.test.ts',
+    rulesRange: [3062, 3069],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_apy_certificates',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-apy-certificates.rules.test.ts',
+    rulesRange: [3069, 3076],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_custom_categories',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-custom-categories.rules.test.ts',
+    rulesRange: [3076, 3083],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_matching_rules',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-matching-rules.rules.test.ts',
+    rulesRange: [3083, 3090],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_efka_payments',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-efka-payments.rules.test.ts',
+    rulesRange: [3090, 3097],
+    matrix: roleDualMatrix(),
+  },
+  // Pattern C: fiscal periods — Q8 SAP state-machine
+  {
+    collection: 'accounting_fiscal_periods',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-fiscal-periods.rules.test.ts',
+    rulesRange: [3111, 3132],
+    // Fiscal period matrix: admin-only create, internal-user update with
+    // state-machine guard, delete forbidden (business invariant).
+    // See `fiscalPeriodMatrix()` in coverage-matrices.ts for full rationale.
+    matrix: fiscalPeriodMatrix(),
+  },
+  // Pattern D: settings singletons — admin-only write, internal-user read
+  {
+    collection: 'accounting_settings',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-settings.rules.test.ts',
+    rulesRange: [3132, 3146],
+    matrix: accountingSingletonMatrix(),
+  },
+  {
+    collection: 'accounting_efka_config',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-efka-config.rules.test.ts',
+    rulesRange: [3146, 3162],
+    matrix: accountingSingletonMatrix(),
+  },
+  // Pattern E: server-only — deny all client access
+  {
+    collection: 'accounting_invoice_counters',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/accounting-invoice-counters.rules.test.ts',
+    rulesRange: [3162, 3169],
+    // `allow read, write: if false` — no client reads or writes at all.
+    // Stronger than `immutable` (which allows tenant-scoped reads).
+    matrix: denyAllMatrix(),
+  },
+  // Pattern F: system-calculated — no createdBy, admin-delete
+  {
+    collection: 'accounting_customer_balances',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-customer-balances.rules.test.ts',
+    rulesRange: [3169, 3178],
+    matrix: accountingSystemCalcMatrix(),
+  },
   // ── ADR-298 Phase B.2 — accounting ΚΦΔ (2026-04-13) ─────────────────────
   {
     collection: 'accounting_invoices',
@@ -412,25 +542,25 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'commission_records',
   'ownership_tables',
   // — Accounting (sole proprietor subapp) —
-  // accounting_journal_entries → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
-  // accounting_invoices        → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
-  // accounting_audit_log       → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
-  'accounting_bank_transactions',
-  'accounting_bank_accounts',
-  'accounting_fixed_assets',
-  'accounting_depreciation_records',
-  'accounting_expense_documents',
-  'accounting_import_batches',
-  'accounting_tax_installments',
-  'accounting_apy_certificates',
-  'accounting_custom_categories',
-  'accounting_matching_rules',
-  'accounting_efka_payments',
-  'accounting_fiscal_periods',
-  'accounting_settings',
-  'accounting_efka_config',
-  'accounting_invoice_counters',
-  'accounting_customer_balances',
+  // accounting_journal_entries      → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
+  // accounting_invoices             → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
+  // accounting_audit_log            → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
+  // accounting_bank_transactions    → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_bank_accounts        → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_fixed_assets         → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_depreciation_records → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_expense_documents    → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_import_batches       → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_tax_installments     → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_apy_certificates     → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_custom_categories    → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_matching_rules       → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_efka_payments        → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_fiscal_periods       → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_settings             → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_efka_config          → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_invoice_counters     → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // accounting_customer_balances    → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
 ] as const;
 
 // ---------------------------------------------------------------------------
