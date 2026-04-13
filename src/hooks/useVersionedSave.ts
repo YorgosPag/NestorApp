@@ -49,6 +49,14 @@ interface VersionedSaveResult {
 interface UseVersionedSaveConfig<T> {
   /** Initial version from the loaded document. `undefined` = not yet loaded. */
   initialVersion: number | undefined;
+  /**
+   * Identity of the entity being saved (e.g. `project.id`). When this changes,
+   * the hook resets its tracked version to `initialVersion`. When it stays the
+   * same, a lagging prop cannot roll the version backwards — the local tracked
+   * version only ever moves forward. Omit ONLY for legacy call-sites that
+   * never swap entities within the same mount.
+   */
+  entityId?: string;
   /** The actual save function that sends data to the API */
   saveFn: (data: T & { _v?: number }) => Promise<VersionedSaveResult>;
   /** Called when a 409 conflict is detected */
@@ -137,15 +145,32 @@ function extractConflictBody(error: unknown): ConflictResponseBody | null {
 export function useVersionedSave<T>(
   config: UseVersionedSaveConfig<T>
 ): UseVersionedSaveReturn<T> {
-  const { initialVersion, saveFn, onConflict } = config;
+  const { initialVersion, entityId, saveFn, onConflict } = config;
 
   const versionRef = useRef<number | undefined>(initialVersion);
+  const entityIdRef = useRef<string | undefined>(entityId);
   const [isConflicted, setIsConflicted] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictResponseBody | null>(null);
 
-  // Keep version ref in sync with initial prop changes
-  // (e.g. when document is reloaded from Firestore)
-  if (initialVersion !== undefined && versionRef.current !== initialVersion && !isConflicted) {
+  // Sync versionRef with the prop under two carefully-scoped rules. The old
+  // implementation unconditionally mirrored `initialVersion` into `versionRef`
+  // on every render, which caused a race on solo-user auto-save: a successful
+  // save bumped the ref from 5→6, but the parent prop still held _v=5 for one
+  // extra render, so the mirror rolled the ref back to 5 and the next
+  // auto-save fired with a stale _v, producing a self-409.
+  if (entityId !== undefined && entityId !== entityIdRef.current) {
+    // Entity swap (e.g. user navigated to a different project). Adopt the new
+    // prop version outright — previous entity's tracked version is irrelevant.
+    entityIdRef.current = entityId;
+    versionRef.current = initialVersion;
+  } else if (
+    initialVersion !== undefined &&
+    !isConflicted &&
+    (versionRef.current === undefined || initialVersion > versionRef.current)
+  ) {
+    // Same entity: only accept prop versions that move forward. Prevents the
+    // lagging-prop rollback while still picking up genuine external updates
+    // (e.g. another tab wrote a newer version and the parent re-fetched).
     versionRef.current = initialVersion;
   }
 

@@ -255,6 +255,7 @@ export function GeneralTabContent({
 
   const versioned = useVersionedSave<ReturnType<typeof buildFormData>>({
     initialVersion: (building._v as number | undefined),
+    entityId: building.id,
     saveFn: versionedSaveFn,
     onConflict: (body) => {
       logger.warn('Version conflict detected', { buildingId: building.id, conflict: body });

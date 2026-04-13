@@ -107,6 +107,26 @@ export function ConflictDialog({
             </section>
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {/* SPEC-256A v2: explicit per-action consequences — users cannot tell
+            "Reload" from "Overwrite" without being told exactly what each one
+            discards. The dialog now surfaces that upfront, above the buttons,
+            rather than relying on the button labels alone. */}
+        <section className="space-y-2 text-sm">
+          <article className={cn("rounded-md border p-3", colors.border.muted)}>
+            <p className="font-medium">{t('versioning.forceSave')}</p>
+            <p className={colors.text.muted}>{t('versioning.forceSaveDescription')}</p>
+          </article>
+          <article className={cn("rounded-md border p-3", colors.border.muted)}>
+            <p className="font-medium">{t('versioning.reload')}</p>
+            <p className={colors.text.muted}>{t('versioning.reloadDescription')}</p>
+          </article>
+          <article className={cn("rounded-md border p-3", colors.border.muted)}>
+            <p className="font-medium">{t('buttons.cancel')}</p>
+            <p className={colors.text.muted}>{t('versioning.cancelDescription')}</p>
+          </article>
+        </section>
+
         <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
           <AlertDialogCancel onClick={onClose}>
             {t('buttons.cancel')}

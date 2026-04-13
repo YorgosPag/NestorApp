@@ -185,6 +185,7 @@ export function GeneralProjectTab({
 
   const versioned = useVersionedSave<ProjectFormData>({
     initialVersion: (project as unknown as { _v?: number })._v,
+    entityId: project.id,
     saveFn: versionedSaveFn,
     onConflict: (body) => {
       logger.warn('Version conflict detected', { projectId: project.id, conflict: body });
