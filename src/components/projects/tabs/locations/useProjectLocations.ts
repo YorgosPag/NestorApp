@@ -185,16 +185,21 @@ export function useProjectLocations(project: Project) {
 
     setIsSaving(true);
     try {
+      const isNewPrimary = localAddresses.length === 0 || addIsPrimary;
       const newAddress = createProjectAddress({
         ...addressFields,
         city: addressFields.city,
         type: addType,
-        isPrimary: localAddresses.length === 0 || addIsPrimary,
+        isPrimary: isNewPrimary,
         ...(addBlockSide !== SELECT_CLEAR_VALUE ? { blockSide: addBlockSide as BlockSideDirection } : {}),
         ...(addLabel ? { label: addLabel } : {}),
       });
 
-      const newAddresses = [...localAddresses, newAddress];
+      // Demote existing primaries if new address is primary (prevents "Exactly one primary" violation)
+      const baseAddresses = isNewPrimary
+        ? localAddresses.map(a => ({ ...a, isPrimary: false }))
+        : localAddresses;
+      const newAddresses = [...baseAddresses, newAddress];
       const ok = await persistAddresses(newAddresses, 'Η διεύθυνση προστέθηκε επιτυχώς!', 'Σφάλμα αποθήκευσης διεύθυνσης');
       if (ok) handleCancelAdd();
     } finally {
@@ -235,8 +240,11 @@ export function useProjectLocations(project: Project) {
 
     setIsSaving(true);
     try {
-      const newAddresses = localAddresses.map((addr, i) => {
-        if (i !== editingIndex) return addr;
+      let newAddresses = localAddresses.map((addr, i) => {
+        if (i !== editingIndex) {
+          // Demote other primaries if edited address becomes primary
+          return editIsPrimary ? { ...addr, isPrimary: false } : addr;
+        }
         const { blockSide: _bs, label: _lb, ...rest } = addr;
         return {
           ...rest,
@@ -248,6 +256,13 @@ export function useProjectLocations(project: Project) {
           ...(editLabel ? { label: editLabel } : {}),
         };
       });
+
+      // Safety: if user un-marked the only primary, auto-promote first other address
+      if (!newAddresses.some(a => a.isPrimary) && newAddresses.length > 0) {
+        const promoteIdx = newAddresses.findIndex((_, i) => i !== editingIndex);
+        const target = promoteIdx >= 0 ? promoteIdx : 0;
+        newAddresses = newAddresses.map((a, i) => i === target ? { ...a, isPrimary: true } : a);
+      }
 
       const ok = await persistAddresses(newAddresses, 'Η διεύθυνση ενημερώθηκε επιτυχώς!', 'Σφάλμα ενημέρωσης διεύθυνσης');
       if (ok) handleCancelEdit();

@@ -232,7 +232,10 @@ export async function updateProjectClient(
     if (ApiClientError.isApiClientError(error) && error.statusCode === 409) {
       throw error;
     }
-    logger.error('Error updating project', { projectId, error });
+    const errMsg = getErrorMessage(error);
+    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
+    const errorCode = ApiClientError.isApiClientError(error) ? error.errorCode : undefined;
+    logger.error(`Error updating project: ${errMsg} (status=${statusCode ?? 'n/a'}, code=${errorCode ?? 'n/a'})`, { projectId });
     return {
       success: false,
       error: getErrorMessage(error)
