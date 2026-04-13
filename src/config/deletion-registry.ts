@@ -15,6 +15,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { deriveDeletionDependencies } from '@/config/contact-dependency-registry';
+import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 
 // ============================================================================
 // TYPES
@@ -37,6 +38,13 @@ export interface DependencyDef {
   queryType: QueryType;
   /** Skip companyId filter — for collections without tenant isolation (e.g. accounting_invoices) */
   skipCompanyFilter?: boolean;
+  /**
+   * Optional normalizer for the entityId before querying.
+   * Required when the foreign key may be stored as a different type in Firestore
+   * (e.g., legacy numeric projectId stored as number, not string).
+   * Firestore uses strict type matching — string '123' ≠ number 123.
+   */
+  valueNormalizer?: (value: string) => string | number;
 }
 
 /** A dependency that gets auto-deleted (cascade) before blocking check */
@@ -132,6 +140,7 @@ export const DEPENDENCY_REMEDIATIONS = {
   landowners: 'Αφαιρέστε πρώτα τον οικοπεδούχο από τα έργα ή τις ιδιοκτησίες όπου χρησιμοποιείται.',
   generic: 'Αφαιρέστε ή επανασυνδέστε πρώτα τις εξαρτώμενες εγγραφές που εμφανίζονται παρακάτω.',
   guardUnavailable: 'Ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά και, αν επιμείνει, επικοινωνήστε με διαχειριστή.',
+  buildings: 'Διαγράψτε πρώτα όλα τα κτίρια που ανήκουν σε αυτό το έργο. Πηγαίνετε στη σελίδα "Κτίρια", επιλέξτε κάθε κτίριο και διαγράψτε το.',
 } as const;
 
 export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
@@ -263,6 +272,10 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         foreignKey: 'projectId',
         label: 'Κτίρια',
         queryType: 'equals',
+        remediation: DEPENDENCY_REMEDIATIONS.buildings,
+        // Legacy projects may store projectId as a number in Firestore.
+        // Firestore strict type matching: string '123' ≠ number 123.
+        valueNormalizer: normalizeProjectIdForQuery,
       },
       {
         collection: COLLECTIONS.OPPORTUNITIES,

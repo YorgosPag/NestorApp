@@ -17,6 +17,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { createModuleLogger } from '@/lib/telemetry';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
+import { checkDeletionDependencies } from '@/lib/firestore/deletion-guard';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
@@ -176,19 +177,36 @@ export async function handleDeleteProject(
     throw new ApiError(403, 'Access denied - Project not found');
   }
 
-  // 3. ADR-281: Soft-delete — move to trash (status='deleted')
+  // 3. Server-side dependency check (defense-in-depth: client guard may be bypassed via direct API calls)
+  //    Super admin may skip this check (administrative override).
+  if (!isSuperAdmin) {
+    const depCheck = await checkDeletionDependencies(db, 'project', projectId, ctx.companyId);
+    if (!depCheck.allowed) {
+      const depList = depCheck.dependencies
+        .map((d) => d.count > 0 ? `${d.label} (${d.count})` : d.label)
+        .join(', ');
+      logger.warn('[Projects/Delete] Blocked — active dependencies exist', { projectId, dependencies: depList });
+      throw new ApiError(
+        409,
+        `Η διαγραφή αποκλείεται. Εξαρτήσεις: ${depList}. Διαγράψτε τες πρώτα.`,
+        'HAS_DEPENDENCIES'
+      );
+    }
+  }
+
+  // 4. ADR-281: Soft-delete — move to trash (status='deleted')
   //    Super admin bypasses engine-level tenant check (route-level guard above already validated)
   await softDelete(db, 'project', projectId, ctx.uid, ctx.companyId, ctx.email ?? undefined, isSuperAdmin);
 
   const duration = Date.now() - startTime;
   logger.info('[Projects/Delete] Project moved to trash', { projectId, durationMs: duration });
 
-  // 4. Invalidate caches
+  // 5. Invalidate caches
   const cache = EnterpriseAPICache.getInstance();
   cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
 
-  // 5. ADR-195 — Entity audit trail (soft-delete is recorded as `deleted` action)
+  // 6. ADR-195 — Entity audit trail (soft-delete is recorded as `deleted` action)
   const deleteCompanyId = (projectData?.companyId as string | undefined) ?? ctx.companyId;
   await EntityAuditService.recordChange({
     entityType: ENTITY_TYPES.PROJECT,
@@ -208,7 +226,7 @@ export async function handleDeleteProject(
     companyId: deleteCompanyId,
   });
 
-  // 6. Legacy audit log
+  // 7. Legacy audit log
   await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {
     newValue: {
       type: 'status',

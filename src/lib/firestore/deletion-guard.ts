@@ -91,8 +91,11 @@ export async function checkDeletionDependencies(
   );
 
   // ── Aggregate results ──
-  const blocking = results.filter((r) => r.count > 0);
-  const totalDependents = blocking.reduce((sum, r) => sum + r.count, 0);
+  // count > 0: real blocking dependencies
+  // count < 0 (=== -1): query error — treat as blocking (safe default, better than allowing deletion)
+  const blocking = results.filter((r) => r.count !== 0);
+  // Exclude error cases (-1) from the count total to avoid showing misleading numbers
+  const totalDependents = blocking.reduce((sum, r) => sum + Math.max(0, r.count), 0);
 
   if (blocking.length === 0) {
     return {
@@ -103,13 +106,17 @@ export async function checkDeletionDependencies(
     };
   }
 
-  const depLabels = blocking.map((d) => `${d.label} (${d.count})`).join(', ');
+  const depLabels = blocking
+    .map((d) => d.count > 0 ? `${d.label} (${d.count})` : `${d.label} (έλεγχος μη διαθέσιμος)`)
+    .join(', ');
 
   return {
     allowed: false,
     dependencies: blocking,
     totalDependents,
-    message: `Η διαγραφή αποκλείεται. Υπάρχουν ${totalDependents} εξαρτώμενες εγγραφές: ${depLabels}. Διαγράψτε τες πρώτα.`,
+    message: totalDependents > 0
+      ? `Η διαγραφή αποκλείεται. Υπάρχουν ${totalDependents} εξαρτώμενες εγγραφές: ${depLabels}. Διαγράψτε τες πρώτα.`
+      : `Η διαγραφή αποκλείεται λόγω σφάλματος ελέγχου εξαρτήσεων: ${depLabels}. Δοκιμάστε ξανά.`,
   };
 }
 
@@ -338,20 +345,24 @@ export async function checkLinkRemovalDependencies(
     deps.map((dep) => checkCompoundDependency(db, dep, contactId, targetEntityId, companyId))
   );
 
-  const blocking = results.filter((r) => r.count > 0);
-  const totalDependents = blocking.reduce((sum, r) => sum + r.count, 0);
+  const blocking = results.filter((r) => r.count !== 0);
+  const totalDependents = blocking.reduce((sum, r) => sum + Math.max(0, r.count), 0);
 
   if (blocking.length === 0) {
     return { allowed: true, dependencies: [], totalDependents: 0, message: 'Δεν υπάρχουν εξαρτήσεις. Η αφαίρεση επιτρέπεται.' };
   }
 
-  const depLabels = blocking.map((d) => `${d.label} (${d.count})`).join(', ');
+  const depLabels = blocking
+    .map((d) => d.count > 0 ? `${d.label} (${d.count})` : `${d.label} (έλεγχος μη διαθέσιμος)`)
+    .join(', ');
 
   return {
     allowed: false,
     dependencies: blocking,
     totalDependents,
-    message: `Ο συνεργάτης δεν μπορεί να αφαιρεθεί. Εμπλέκεται σε ${totalDependents} εγγραφές: ${depLabels}.`,
+    message: totalDependents > 0
+      ? `Ο συνεργάτης δεν μπορεί να αφαιρεθεί. Εμπλέκεται σε ${totalDependents} εγγραφές: ${depLabels}.`
+      : `Ο συνεργάτης δεν μπορεί να αφαιρεθεί λόγω σφάλματος ελέγχου εξαρτήσεων: ${depLabels}. Δοκιμάστε ξανά.`,
   };
 }
 
@@ -458,10 +469,15 @@ async function checkSingleDependency(
       query = query.where(FIELDS.COMPANY_ID, '==', companyId);
     }
 
+    // Apply optional normalizer: some foreign keys may be stored as a different
+    // type in Firestore (e.g., legacy numeric projectId as number vs string).
+    // Firestore uses strict type matching — string '123' ≠ number 123.
+    const queryValue: string | number = dep.valueNormalizer ? dep.valueNormalizer(entityId) : entityId;
+
     if (dep.queryType === 'array-contains') {
-      query = query.where(dep.foreignKey, 'array-contains', entityId);
+      query = query.where(dep.foreignKey, 'array-contains', queryValue);
     } else {
-      query = query.where(dep.foreignKey, '==', entityId);
+      query = query.where(dep.foreignKey, '==', queryValue);
     }
 
     // Limit to MAX_PREVIEW_IDS + 1 to know if there are more
