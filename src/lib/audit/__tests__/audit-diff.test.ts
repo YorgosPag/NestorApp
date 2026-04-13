@@ -17,6 +17,8 @@ import {
   sortKeys,
   flattenForTracking,
   diffTrackedFieldsLegacy,
+  diffTrackedFields,
+  type TrackedFieldDef,
 } from '../audit-diff';
 
 describe('serializeScalar', () => {
@@ -174,6 +176,208 @@ describe('diffTrackedFieldsLegacy — array fields (LEGACY behavior, current bug
     // legacy: monolithic JSON before/after
     expect(typeof changes[0].oldValue).toBe('string');
     expect(typeof changes[0].newValue).toBe('string');
+  });
+});
+
+// ============================================================================
+// COLLECTION-AWARE DIFF (ADR-195 Phase 11)
+// ============================================================================
+
+describe('diffTrackedFields — collection: addresses with stable id', () => {
+  const defs: Record<string, TrackedFieldDef> = {
+    addresses: {
+      kind: 'collection',
+      label: 'Διευθύνσεις',
+      keyBy: 'id',
+      labelFields: ['type', 'street'],
+      trackSubFields: ['type', 'street', 'number', 'city'],
+    },
+  };
+
+  it('emits a single `added` entry when a new address is appended', () => {
+    const old = { addresses: [{ id: '1', type: 'site', street: 'Σαμοθράκης' }] };
+    const next = {
+      addresses: [
+        { id: '1', type: 'site', street: 'Σαμοθράκης' },
+        { id: '2', type: 'entrance', street: 'Παραδόσεων' },
+      ],
+    };
+    const changes = diffTrackedFields(old, next, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({
+      field: 'addresses',
+      kind: 'collection',
+      op: 'added',
+      itemKey: 'k:2',
+      itemLabel: 'entrance — Παραδόσεων',
+      label: 'Διευθύνσεις',
+      oldValue: null,
+      newValue: null,
+    });
+  });
+
+  it('emits a single `removed` entry when an address is deleted', () => {
+    const old = {
+      addresses: [
+        { id: '1', type: 'site', street: 'Σαμοθράκης' },
+        { id: '2', type: 'entrance', street: 'Παραδόσεων' },
+      ],
+    };
+    const next = { addresses: [{ id: '1', type: 'site', street: 'Σαμοθράκης' }] };
+    const changes = diffTrackedFields(old, next, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({
+      op: 'removed',
+      itemKey: 'k:2',
+      itemLabel: 'entrance — Παραδόσεων',
+    });
+  });
+
+  it('emits a `modified` entry with granular subChanges', () => {
+    const old = {
+      addresses: [{ id: '1', type: 'site', street: 'Σαμοθράκης', number: '16', city: 'Θεσσαλονίκη' }],
+    };
+    const next = {
+      addresses: [{ id: '1', type: 'site', street: 'Παραδόσεων', number: '16', city: 'Θεσσαλονίκη' }],
+    };
+    const changes = diffTrackedFields(old, next, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0].op).toBe('modified');
+    expect(changes[0].itemKey).toBe('k:1');
+    expect(changes[0].subChanges).toEqual([
+      { subField: 'street', oldValue: 'Σαμοθράκης', newValue: 'Παραδόσεων' },
+    ]);
+  });
+
+  it('handles mixed ops (add + remove + modify) in a single diff', () => {
+    const old = {
+      addresses: [
+        { id: '1', type: 'site', street: 'Α' },
+        { id: '2', type: 'entrance', street: 'Β' },
+        { id: '3', type: 'delivery', street: 'Γ' },
+      ],
+    };
+    const next = {
+      addresses: [
+        { id: '1', type: 'site', street: 'Α-NEW' }, // modified
+        { id: '3', type: 'delivery', street: 'Γ' }, // unchanged
+        { id: '4', type: 'legal', street: 'Δ' },    // added
+      ],
+    };
+    const changes = diffTrackedFields(old, next, defs);
+    expect(changes).toHaveLength(3);
+    const ops = changes.map((c) => c.op).sort();
+    expect(ops).toEqual(['added', 'modified', 'removed']);
+  });
+
+  it('returns no changes when the array is untouched', () => {
+    const items = [{ id: '1', type: 'site', street: 'Α' }];
+    expect(diffTrackedFields({ addresses: items }, { addresses: items }, defs)).toEqual([]);
+  });
+
+  it('skips collection fields absent from newDoc (partial update)', () => {
+    const old = { addresses: [{ id: '1', type: 'site', street: 'Α' }] };
+    const next = { name: 'Changed' };
+    expect(diffTrackedFields(old, next, defs)).toEqual([]);
+  });
+
+  it('treats null → [] as no change', () => {
+    expect(diffTrackedFields({ addresses: null }, { addresses: [] }, defs)).toEqual([]);
+  });
+});
+
+describe('diffTrackedFields — collection: composite keyBy fallback', () => {
+  const defs: Record<string, TrackedFieldDef> = {
+    phones: {
+      kind: 'collection',
+      label: 'Τηλέφωνα',
+      keyBy: ['number'],
+      labelFields: ['number'],
+      trackSubFields: ['number', 'type', 'isPrimary'],
+    },
+  };
+
+  it('treats two items with same type but different number as distinct', () => {
+    const old = { phones: [{ number: '2101111111', type: 'home', isPrimary: true }] };
+    const next = {
+      phones: [
+        { number: '2101111111', type: 'home', isPrimary: true },
+        { number: '2109999999', type: 'home', isPrimary: false },
+      ],
+    };
+    const changes = diffTrackedFields(old, next, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0].op).toBe('added');
+    expect(changes[0].itemKey).toBe('c:2109999999');
+  });
+});
+
+describe('diffTrackedFields — collection: primitive arrays (keyBy value)', () => {
+  const defs: Record<string, TrackedFieldDef> = {
+    tags: { kind: 'collection', label: 'Ετικέτες', keyBy: 'value' },
+  };
+
+  it('reports added primitives', () => {
+    const changes = diffTrackedFields({ tags: ['a'] }, { tags: ['a', 'b'] }, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ op: 'added', itemKey: 's:b', itemLabel: 'b' });
+  });
+
+  it('reports removed primitives', () => {
+    const changes = diffTrackedFields({ tags: ['a', 'b'] }, { tags: ['a'] }, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ op: 'removed', itemKey: 's:b' });
+  });
+
+  it('does not emit modified entries for primitives', () => {
+    expect(diffTrackedFields({ tags: ['a'] }, { tags: ['a'] }, defs)).toEqual([]);
+  });
+});
+
+describe('diffTrackedFields — collection: dot-notation (commercial.owners)', () => {
+  const defs: Record<string, TrackedFieldDef> = {
+    'commercial.owners': {
+      kind: 'collection',
+      label: 'Ιδιοκτήτες',
+      keyBy: 'contactId',
+      labelFields: ['name'],
+      trackSubFields: ['name', 'ownershipPct'],
+    },
+  };
+
+  it('flattens nested `commercial.owners` and emits per-item entries', () => {
+    const old = { commercial: { owners: [{ contactId: 'c1', name: 'Άλφα', ownershipPct: 100 }] } };
+    const next = {
+      commercial: {
+        owners: [
+          { contactId: 'c1', name: 'Άλφα', ownershipPct: 50 },
+          { contactId: 'c2', name: 'Βήτα', ownershipPct: 50 },
+        ],
+      },
+    };
+    const changes = diffTrackedFields(old, next, defs);
+    expect(changes).toHaveLength(2);
+    const byOp = Object.fromEntries(changes.map((c) => [c.op, c]));
+    expect(byOp.modified).toMatchObject({
+      itemKey: 'k:c1',
+      subChanges: [{ subField: 'ownershipPct', oldValue: 100, newValue: 50 }],
+    });
+    expect(byOp.added).toMatchObject({ itemKey: 'k:c2', itemLabel: 'Βήτα' });
+  });
+});
+
+describe('diffTrackedFields — scalar passthrough', () => {
+  const defs: Record<string, TrackedFieldDef> = {
+    name: { kind: 'scalar', label: 'Όνομα' },
+  };
+
+  it('still emits legacy scalar entries alongside collections', () => {
+    const old = { name: 'X' };
+    const next = { name: 'Y' };
+    const changes = diffTrackedFields(old, next, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ field: 'name', oldValue: 'X', newValue: 'Y', label: 'Όνομα' });
+    expect(changes[0].kind).toBeUndefined();
   });
 });
 

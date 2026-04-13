@@ -17,7 +17,7 @@
  * @enterprise ADR-195 — Entity Audit Trail
  */
 
-import type { AuditFieldChange } from '@/types/audit-trail';
+import type { AuditFieldChange, AuditSubChange } from '@/types/audit-trail';
 
 // ============================================================================
 // TRACKED FIELD DEFINITION (ADR-195 Phase 11 — SSoT discriminated union)
@@ -210,22 +210,262 @@ export function diffTrackedFieldsLegacy(
 }
 
 // ============================================================================
+// COLLECTION DIFF (ADR-195 Phase 11 — key-based reconciliation)
+// ============================================================================
+
+/** Narrow shape for the collection variant of `TrackedFieldDef`. */
+type CollectionDef = Extract<TrackedFieldDef, { kind: 'collection' }>;
+
+/** Coerce any value to an array (null/undefined/non-array → []). */
+function normalizeArray(value: unknown): readonly unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+/**
+ * Derive a stable identity key for one collection item.
+ *
+ * Priority:
+ *   1. `keyBy: 'value'` — primitive element is its own key.
+ *   2. `keyBy: string` — read that property.
+ *   3. `keyBy: string[]` — composite from all listed properties.
+ * When the primary strategy yields no usable value (missing id / all-empty
+ * composite), we fall back to a deterministic JSON of the whole item. This
+ * keeps "added / removed" semantics correct even for legacy rows without
+ * stable ids (at the cost of modifications presenting as remove+add).
+ */
+function computeKey(
+  item: unknown,
+  keyBy: 'value' | string | readonly string[],
+): string {
+  if (keyBy === 'value') {
+    if (item === null || item === undefined) return '__null__';
+    if (typeof item === 'string') return `s:${item}`;
+    if (typeof item === 'number' || typeof item === 'boolean') return `p:${String(item)}`;
+    return `j:${JSON.stringify(sortKeys(item))}`;
+  }
+  if (typeof item !== 'object' || item === null) {
+    return `j:${JSON.stringify(item)}`;
+  }
+  const rec = item as Record<string, unknown>;
+  if (typeof keyBy === 'string') {
+    const v = rec[keyBy];
+    if (v !== undefined && v !== null && v !== '') return `k:${String(v)}`;
+    return `j:${JSON.stringify(sortKeys(rec))}`;
+  }
+  const parts: string[] = [];
+  for (const field of keyBy) {
+    const v = rec[field];
+    parts.push(v === undefined || v === null ? '' : String(v));
+  }
+  if (parts.every((p) => p === '')) {
+    return `j:${JSON.stringify(sortKeys(rec))}`;
+  }
+  return `c:${parts.join('|')}`;
+}
+
+/** Build a `key → item` index preserving the LAST occurrence on duplicates. */
+function indexByKey(
+  items: readonly unknown[],
+  keyBy: 'value' | string | readonly string[],
+): Map<string, unknown> {
+  const map = new Map<string, unknown>();
+  for (const item of items) {
+    map.set(computeKey(item, keyBy), item);
+  }
+  return map;
+}
+
+/**
+ * Produce a human display label for a collection item by concatenating
+ * `labelFields`. Primitive items return themselves as a string. Falls back
+ * to the first non-empty string/number property when `labelFields` is
+ * unhelpful.
+ */
+function formatItemLabel(
+  item: unknown,
+  labelFields: readonly string[] | undefined,
+  separator: string | undefined,
+): string {
+  if (item === null || item === undefined) return '';
+  if (typeof item === 'string') return item;
+  if (typeof item === 'number' || typeof item === 'boolean') return String(item);
+  if (typeof item !== 'object') return '';
+  const rec = item as Record<string, unknown>;
+  const sep = separator ?? ' — ';
+  if (labelFields && labelFields.length > 0) {
+    const parts: string[] = [];
+    for (const field of labelFields) {
+      const v = rec[field];
+      if (v !== undefined && v !== null && v !== '') parts.push(String(v));
+    }
+    if (parts.length > 0) return parts.join(sep);
+  }
+  for (const v of Object.values(rec)) {
+    if (typeof v === 'string' && v !== '') return v;
+    if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  }
+  return '';
+}
+
+/**
+ * Build the set of field names that form the item's identity so we can
+ * exclude them from sub-field diffs (no point reporting `id → id`).
+ */
+function keyFieldSet(keyBy: 'value' | string | readonly string[]): ReadonlySet<string> {
+  if (keyBy === 'value') return new Set();
+  if (typeof keyBy === 'string') return new Set([keyBy]);
+  return new Set(keyBy);
+}
+
+/**
+ * Compute sub-field changes between two collection items matched by key.
+ * Respects `trackSubFields` when provided; otherwise inspects the union of
+ * keys from both items. Primitives (e.g. `string[]` items) yield no
+ * sub-changes.
+ */
+function diffSubFields(
+  before: unknown,
+  after: unknown,
+  keyBy: 'value' | string | readonly string[],
+  trackSubFields: readonly string[] | undefined,
+): AuditSubChange[] {
+  if (
+    typeof before !== 'object' || before === null || Array.isArray(before) ||
+    typeof after !== 'object' || after === null || Array.isArray(after)
+  ) {
+    return [];
+  }
+  const b = before as Record<string, unknown>;
+  const a = after as Record<string, unknown>;
+  const skip = keyFieldSet(keyBy);
+  const fields: readonly string[] = trackSubFields
+    ? trackSubFields
+    : Array.from(new Set([...Object.keys(b), ...Object.keys(a)]));
+
+  const subs: AuditSubChange[] = [];
+  for (const field of fields) {
+    if (skip.has(field)) continue;
+    const oldValue = serializeScalar(b[field]);
+    const newValue = serializeScalar(a[field]);
+    if (oldValue !== newValue) {
+      subs.push({ subField: field, oldValue, newValue });
+    }
+  }
+  return subs;
+}
+
+/**
+ * Reconcile two arrays by stable key and emit granular audit entries.
+ * Produces one `AuditFieldChange` per added / removed / modified item,
+ * with `kind: 'collection'`, the resolved `itemKey`, a human `itemLabel`
+ * and (for modifications) a `subChanges` array.
+ */
+function diffCollection(
+  field: string,
+  def: CollectionDef,
+  before: readonly unknown[],
+  after: readonly unknown[],
+): AuditFieldChange[] {
+  const beforeMap = indexByKey(before, def.keyBy);
+  const afterMap = indexByKey(after, def.keyBy);
+  const out: AuditFieldChange[] = [];
+
+  for (const [key, item] of afterMap) {
+    if (beforeMap.has(key)) continue;
+    out.push({
+      field,
+      oldValue: null,
+      newValue: null,
+      label: def.label,
+      kind: 'collection',
+      op: 'added',
+      itemKey: key,
+      itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
+    });
+  }
+
+  for (const [key, item] of beforeMap) {
+    if (afterMap.has(key)) continue;
+    out.push({
+      field,
+      oldValue: null,
+      newValue: null,
+      label: def.label,
+      kind: 'collection',
+      op: 'removed',
+      itemKey: key,
+      itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
+    });
+  }
+
+  for (const [key, afterItem] of afterMap) {
+    const beforeItem = beforeMap.get(key);
+    if (beforeItem === undefined) continue;
+    const subChanges = diffSubFields(beforeItem, afterItem, def.keyBy, def.trackSubFields);
+    if (subChanges.length === 0) continue;
+    out.push({
+      field,
+      oldValue: null,
+      newValue: null,
+      label: def.label,
+      kind: 'collection',
+      op: 'modified',
+      itemKey: key,
+      itemLabel: formatItemLabel(afterItem, def.labelFields, def.labelSeparator),
+      subChanges,
+    });
+  }
+
+  return out;
+}
+
+// ============================================================================
 // CANONICAL DIFF (TrackedFieldDef signature — preferred entry point)
 // ============================================================================
 
 /**
  * Compute field-level diffs between two document states using the SSoT
- * `TrackedFieldDef` registry. This is the canonical entry point for all
- * audit diffing.
+ * `TrackedFieldDef` registry. Canonical entry point for all audit diffing.
  *
- * Today this routes scalar fields through `diffTrackedFieldsLegacy`. The
- * next commit will add a `collection`-aware branch that emits granular
- * added/removed/modified entries for array fields.
+ * Routing:
+ *   - `kind: 'scalar'` → primitive before/after comparison (legacy behavior).
+ *   - `kind: 'collection'` → key-based reconciliation via `diffCollection`
+ *     emitting granular added / removed / modified entries.
+ *
+ * Partial-update semantics: only fields present in `newDoc` are evaluated,
+ * so PATCH payloads that touch a subset of fields don't produce false
+ * negatives for untouched ones. Dot-notation flattening (e.g.
+ * `commercial.owners`) works for both scalar and collection variants.
  */
 export function diffTrackedFields(
   oldDoc: Record<string, unknown>,
   newDoc: Record<string, unknown>,
   defs: Record<string, TrackedFieldDef>,
 ): AuditFieldChange[] {
-  return diffTrackedFieldsLegacy(oldDoc, newDoc, legacyLabelMap(defs));
+  const labels = legacyLabelMap(defs);
+  const flatOld = flattenForTracking(oldDoc, labels);
+  const flatNew = flattenForTracking(newDoc, labels);
+
+  const changes: AuditFieldChange[] = [];
+
+  for (const [field, def] of Object.entries(defs)) {
+    if (!(field in flatNew)) continue;
+
+    if (def.kind === 'collection') {
+      const before = normalizeArray(flatOld[field]);
+      const after = normalizeArray(flatNew[field]);
+      changes.push(...diffCollection(field, def, before, after));
+      continue;
+    }
+
+    const oldValue = flatOld[field] ?? null;
+    const newValue = flatNew[field] ?? null;
+    const oldStr = serializeScalar(oldValue);
+    const newStr = serializeScalar(newValue);
+    if (oldStr !== newStr) {
+      changes.push({ field, oldValue: oldStr, newValue: newStr, label: def.label });
+    }
+  }
+
+  return changes;
 }

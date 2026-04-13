@@ -21,13 +21,26 @@ import {
 export type { TrackedFieldDef } from '@/lib/audit/audit-diff';
 export { getTrackedFieldLabel } from '@/lib/audit/audit-diff';
 
-/** Wrap a plain `field → label` map into a `Record<string, TrackedFieldDef>` (all scalar). */
-function scalarsToDefs(
+/** Narrow alias for the collection variant — one-liner so the per-entity maps stay readable. */
+type CollectionDef = Extract<TrackedFieldDef, { kind: 'collection' }>;
+
+/**
+ * Merge a plain `field → label` registry with collection overrides.
+ * Fields listed in `collections` are promoted to `{ kind: 'collection', ... }`;
+ * the remainder default to `{ kind: 'scalar', label }`. This keeps the raw
+ * label maps compact while the collection registries stay colocated with the
+ * entity they describe (ADR-195 Phase 11).
+ */
+function mergeDefs(
   raw: Record<string, string>,
+  collections: Record<string, CollectionDef>,
 ): Record<string, TrackedFieldDef> {
   const out: Record<string, TrackedFieldDef> = {};
   for (const [field, label] of Object.entries(raw)) {
-    out[field] = { kind: 'scalar', label };
+    out[field] = field in collections ? collections[field] : { kind: 'scalar', label };
+  }
+  for (const [field, def] of Object.entries(collections)) {
+    if (!(field in out)) out[field] = def;
   }
   return out;
 }
@@ -298,20 +311,176 @@ const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
 ]);
 
 // ============================================================================
+// COLLECTION REGISTRIES (ADR-195 Phase 11 — key-based reconciliation)
+// ============================================================================
+//
+// Any tracked field whose value is an array lives here. The audit diff
+// engine reconciles by `keyBy` and emits per-item entries. Everything else
+// falls through as scalar via `mergeDefs`.
+
+const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
+  addresses: {
+    kind: 'collection',
+    label: 'Διευθύνσεις',
+    keyBy: 'id',
+    labelFields: ['type', 'street', 'number'],
+    trackSubFields: [
+      'type', 'isPrimary', 'label',
+      'street', 'number', 'city', 'postalCode',
+      'region', 'regionalUnit', 'country',
+      'blockSide', 'blockSideDescription',
+      'cadastralCode', 'municipality', 'neighborhood',
+      'sortOrder',
+    ],
+  },
+  landowners: {
+    kind: 'collection',
+    label: 'Οικοπεδούχοι',
+    keyBy: 'contactId',
+    labelFields: ['name'],
+    trackSubFields: ['name', 'landOwnershipPct', 'allocatedShares'],
+  },
+};
+
+const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
+  emails: {
+    kind: 'collection',
+    label: 'Emails',
+    keyBy: 'email',
+    labelFields: ['email'],
+    trackSubFields: ['email', 'type', 'isPrimary', 'label'],
+  },
+  phones: {
+    kind: 'collection',
+    label: 'Τηλέφωνα',
+    keyBy: 'number',
+    labelFields: ['number'],
+    trackSubFields: ['number', 'type', 'isPrimary', 'label', 'countryCode'],
+  },
+  websites: {
+    kind: 'collection',
+    label: 'Ιστοσελίδες',
+    keyBy: 'url',
+    labelFields: ['url'],
+    trackSubFields: ['url', 'type', 'label'],
+  },
+  socialMedia: {
+    kind: 'collection',
+    label: 'Μέσα Κοιν. Δικτύωσης',
+    keyBy: ['platform', 'username'],
+    labelFields: ['platform', 'username'],
+    trackSubFields: ['platform', 'username', 'url', 'type', 'label'],
+  },
+  addresses: {
+    kind: 'collection',
+    label: 'Διευθύνσεις',
+    keyBy: ['type', 'street', 'city', 'postalCode'],
+    labelFields: ['type', 'street', 'city'],
+    trackSubFields: [
+      'type', 'isPrimary', 'label',
+      'street', 'number', 'city', 'postalCode',
+      'region', 'country',
+      'municipality', 'municipalityId', 'regionalUnit',
+      'decentAdmin', 'majorGeo', 'settlement', 'settlementId',
+      'community', 'municipalUnit',
+    ],
+  },
+  children: {
+    kind: 'collection',
+    label: 'Τέκνα',
+    keyBy: 'value',
+  },
+  contactPersons: {
+    kind: 'collection',
+    label: 'Πρόσωπα Επικοινωνίας',
+    keyBy: ['name', 'position'],
+    labelFields: ['name', 'position'],
+    trackSubFields: ['name', 'position', 'department', 'email', 'phone', 'isPrimary'],
+  },
+  tags: {
+    kind: 'collection',
+    label: 'Ετικέτες',
+    keyBy: 'value',
+  },
+  multiplePhotoURLs: {
+    kind: 'collection',
+    label: 'Φωτογραφίες',
+    keyBy: 'value',
+  },
+  responsiblePersons: {
+    kind: 'collection',
+    label: 'Υπεύθυνοι Επικοινωνίας',
+    keyBy: ['name', 'position'],
+    labelFields: ['name', 'position'],
+    trackSubFields: [
+      'name', 'position', 'department', 'email', 'phone',
+      'isPrimary', 'responsibilities', 'availableHours',
+    ],
+  },
+  servicesProvided: {
+    kind: 'collection',
+    label: 'Παρεχόμενες Υπηρεσίες',
+    keyBy: 'value',
+  },
+  personas: {
+    kind: 'collection',
+    label: 'Ρόλοι (Personas)',
+    keyBy: ['type'],
+    labelFields: ['type'],
+  },
+  personaTypes: {
+    kind: 'collection',
+    label: 'Τύποι Ρόλων',
+    keyBy: 'value',
+  },
+  escoSkills: {
+    kind: 'collection',
+    label: 'Δεξιότητες ESCO',
+    keyBy: ['code'],
+    labelFields: ['label', 'code'],
+  },
+};
+
+const PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
+  orientations: {
+    kind: 'collection',
+    label: 'Προσανατολισμοί',
+    keyBy: 'value',
+  },
+  interiorFeatures: {
+    kind: 'collection',
+    label: 'Εσωτερικά χαρακτηριστικά',
+    keyBy: 'value',
+  },
+  securityFeatures: {
+    kind: 'collection',
+    label: 'Χαρακτηριστικά ασφαλείας',
+    keyBy: 'value',
+  },
+  'commercial.owners': {
+    kind: 'collection',
+    label: 'Ιδιοκτήτες/Αγοραστές',
+    keyBy: 'contactId',
+    labelFields: ['name'],
+    trackSubFields: ['name', 'ownershipPct', 'role', 'paymentPlanId'],
+  },
+};
+
+// ============================================================================
 // EXPORTED REGISTRIES (TrackedFieldDef discriminated union)
 // ============================================================================
 
 /** Property audit registry — `field → TrackedFieldDef`. */
 export const PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  scalarsToDefs(PROPERTY_TRACKED_FIELDS_RAW);
+  mergeDefs(PROPERTY_TRACKED_FIELDS_RAW, PROPERTY_COLLECTION_DEFS);
 
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  scalarsToDefs(PROJECT_TRACKED_FIELDS_RAW);
+  mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
 
 /** Contact audit registry — `field → TrackedFieldDef`. */
 export const CONTACT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  scalarsToDefs(CONTACT_TRACKED_FIELDS_RAW);
+  mergeDefs(CONTACT_TRACKED_FIELDS_RAW, CONTACT_COLLECTION_DEFS);
 
 /** Return CONTACT_TRACKED_FIELDS filtered to only relevant fields for the given type */
 export function getContactTrackedFieldsForType(
