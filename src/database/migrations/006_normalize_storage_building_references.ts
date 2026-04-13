@@ -28,6 +28,8 @@ import type { Migration, MigrationResult } from './types';
 import { DEFAULT_MIGRATION_CONFIG } from './types';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('Migration006');
 
@@ -317,6 +319,16 @@ export async function execute(options: { dryRun?: boolean } = {}): Promise<Migra
     if (batchCount > 0) {
       await batch.commit();
       logger.info(`📦 [Migration] Committed final batch of ${batchCount} updates`);
+      EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.STORAGE as 'storage',
+        entityId: MIGRATION_ID,
+        entityName: `${MIGRATION_ID} batch`,
+        action: 'updated',
+        changes: [{ field: 'buildingId', oldValue: null, newValue: 'normalized' }],
+        performedBy: MIGRATION_ID,
+        performedByName: null,
+        companyId: 'system',
+      }).catch(() => {});
     }
 
     // Handle unmatched storages

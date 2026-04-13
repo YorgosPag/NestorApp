@@ -17,6 +17,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { FieldValue } from 'firebase-admin/firestore';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -91,6 +93,16 @@ export async function propagateBuildingProjectLink(
       linkedCompanyId: resolvedLinkedCompanyId,
       updatedAt: FieldValue.serverTimestamp(),
     });
+    EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.BUILDING as 'building',
+      entityId: buildingId,
+      entityName: null,
+      action: 'updated',
+      changes: [{ field: 'linkedCompanyId', oldValue: null, newValue: resolvedLinkedCompanyId }],
+      performedBy: 'cascade-propagation',
+      performedByName: null,
+      companyId: resolvedLinkedCompanyId ?? 'system',
+    }).catch(() => {});
     collections[COLLECTIONS.BUILDINGS] = 1;
     totalUpdated += 1;
 

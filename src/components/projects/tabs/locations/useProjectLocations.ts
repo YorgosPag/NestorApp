@@ -21,6 +21,7 @@ import {
 } from '@/types/project/address-helpers';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { toHierarchyValue, fromHierarchyValue, EMPTY_HIERARCHY } from './location-converters';
 
 // =============================================================================
@@ -29,6 +30,7 @@ import { toHierarchyValue, fromHierarchyValue, EMPTY_HIERARCHY } from './locatio
 
 export function useProjectLocations(project: Project) {
   const { success, error } = useNotifications();
+  const { t } = useTranslation('projects-data');
 
   // Derive addresses from project prop
   const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(() =>
@@ -235,6 +237,13 @@ export function useProjectLocations(project: Project) {
     const addressFields = fromHierarchyValue({ ...EMPTY_HIERARCHY, ...editHierarchy } as AddressWithHierarchyValue);
     if (!addressFields.city) {
       error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
+      return;
+    }
+
+    // Guard: cannot un-mark primary when no other address exists to promote
+    const otherAddressExists = localAddresses.some((_, i) => i !== editingIndex);
+    if (!editIsPrimary && !otherAddressExists) {
+      error(t('locations.errors.soleAddressMustBePrimary'));
       return;
     }
 

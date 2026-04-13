@@ -19,6 +19,8 @@ import type { Migration, MigrationResult } from './types';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PROJECT_CODE_CONFIG, formatProjectCode } from '@/services/project-code.service';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('Migration005');
 
@@ -240,6 +242,16 @@ export async function executeMigration(
         timestamp: new Date()
       });
 
+      EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.PROJECT as 'project',
+        entityId: project.id,
+        entityName: project.name ?? null,
+        action: 'updated',
+        changes: [{ field: 'projectCode', oldValue: null, newValue: newCode }],
+        performedBy: MIGRATION_ID,
+        performedByName: null,
+        companyId: 'system',
+      }).catch(() => {});
       logger.info(`  ✓ ${project.name} - assigned: ${newCode}`);
       affectedRecords++;
       nextSequence++;

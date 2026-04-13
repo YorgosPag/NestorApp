@@ -16,6 +16,8 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FieldValue } from 'firebase-admin/firestore';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -84,6 +86,16 @@ export async function recalculatePropertyCoverageFlag(
       [flag]: hasFiles,
       updatedAt: FieldValue.serverTimestamp(),
     });
+    EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.PROPERTY as 'property',
+      entityId: propertyId,
+      entityName: null,
+      action: 'updated',
+      changes: [{ field: flag, oldValue: null, newValue: hasFiles }],
+      performedBy: 'property-coverage-recalculator',
+      performedByName: null,
+      companyId: 'system',
+    }).catch(() => {});
 
     logger.info('Property coverage flag recalculated', {
       propertyId,

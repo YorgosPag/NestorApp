@@ -104,6 +104,15 @@ const HARD_EXEMPT_PATTERNS = [
   /\.test\.(ts|tsx)$/,
   /\.spec\.(ts|tsx)$/,
   /[\\/]__tests__[\\/]/,
+  // Audit infrastructure — writes go TO audit subcollections (audit_logs, system_audit_logs).
+  // Calling recordChange() here would create infinite recursion (audit writing to audit).
+  /[\\/]lib[\\/]auth[\\/]audit-core\.ts$/,
+  // Client-SDK files — EntityAuditService has `import 'server-only'` and cannot be
+  // imported from browser context. These files use firebase/firestore (client SDK).
+  /[\\/]components[\\/]admin[\\/]pages[\\/]DatabaseUpdatePageContent\.tsx$/, // dev-only, production-blocked
+  /[\\/]components[\\/]debug[\\/]FirestoreTestData\.tsx$/,                   // debug test-data seeder
+  /[\\/]database[\\/]migrations[\\/]002_normalize_floors_collection\.ts$/,   // client-SDK migration
+  /[\\/]services[\\/]ownership[\\/]ownership-table-service\.ts$/,            // client-SDK; millesimalShares writes in finalizeTable
 ];
 
 /**
