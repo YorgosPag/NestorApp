@@ -22,7 +22,7 @@
 
 - [x] **CHECK 3.17 Entity Audit Coverage** — COMPLETATO. Baseline 9→0. _(Batch 4: 4 wire-up server-side + 5 HARD_EXEMPT nel scanner.)_
 
-- [ ] **CHECK 3.13 i18n Resolver Reachability** — 13 files, 378 violations. Keys in static configs (service-config, individual-config, modal-select, dropdown-*-labels) unreachable from runtime resolver. Fix: update `SERVICE_FORM_NAMESPACES` in `src/components/generic/i18n/translate-field-value.ts`. **Hours:** 2-6 (expected 4).
+- [ ] **CHECK 3.13 i18n Resolver Reachability** — 5 files, 214 violations (down from 378). Phase A done 2026-04-13: 14 namespace aggiunti a `SERVICE_FORM_NAMESPACES`, baseline 378→214. **Remaining:** Phase B (prefix-strip per `projects./units./properties./storage.`, ~78 fix in status.ts) + Phase C (missing locale keys, ~135, overlap CHECK 3.8). **Hours remaining:** ~2-4 (Phase B ~1-2h, Phase C overlap).
 
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
@@ -58,3 +58,4 @@
 | 2026-04-13 | CHECK 3.17 Batch 2 DONE. 4 admin files wired: seed-floors.handlers.ts (floor deleted), migrate-company-id/migration-operations.ts (company created), migrate-enterprise-ids/migration-operations.ts (building updated), migrate-enterprise-ids/route.ts (building created). Baseline 15→11. |
 | 2026-04-13 | CHECK 3.17 Batch 3 DONE. 2 files wired: geofence/route.ts (project updated), seed-parking/parking-seed-operations.ts (parking created). Baseline 11→9. ownership-table-service.ts deferred (client-side SDK, needs server wrapper approach). |
 | 2026-04-13 | CHECK 3.17 Batch 4 DONE — ZERO BASELINE. 4 server-side wire-up (005_assign_project_codes, 006_normalize_storage, cascade-propagation, property-coverage-recalculator) + 5 HARD_EXEMPT in scanner (audit-core circular, 4 client-SDK files). Baseline 9→0. CHECK 3.17 completamente chiusa. |
+| 2026-04-13 | CHECK 3.13 Phase A DONE. 14 namespace aggiunti a `SERVICE_FORM_NAMESPACES` in translate-field-value.ts. Baseline 378→214 (5 file rimasti). ADR-279 aggiornato. |

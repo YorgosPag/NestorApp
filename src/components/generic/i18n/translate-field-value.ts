@@ -45,12 +45,35 @@ const logger = createModuleLogger('service-form-i18n');
  * compat layer (`namespace-compat.ts` → LEGACY_NESTED_MAP) reroutes
  * `contacts.service.*` there for classic `t()` calls, but this resolver bypasses
  * compat and hits i18next directly — so the namespace must be listed here.
+ *
+ * Extended namespaces (CHECK 3.13 — 2026-04-13):
+ * Config files scanned by CHECK 3.13 (company-config, service-config,
+ * modal-select labels, dropdown-*-labels) reference keys from domains beyond
+ * contacts. These namespaces must be listed here so that `translateFieldValue`
+ * (and the pre-commit scanner that simulates it) can resolve them at runtime.
+ * See ADR-279 §5 and `.i18n-resolver-reachability-baseline.json` for details.
  */
 export const SERVICE_FORM_NAMESPACES = [
+  // Core contact / form namespaces (original set)
   'contacts',
   'contacts-form',
   'contacts-relationships',
+  'contacts-core',
+  'contacts-lifecycle',
   'forms',
+  // Domain namespaces consumed by config files in CHECK 3.13 scope
+  'building',
+  'building-filters',
+  'building-tabs',
+  'common',
+  'common-shared',
+  'common-status',
+  'crm',
+  'dxf-viewer',
+  'filters',
+  'navigation',
+  'projects-data',
+  'reports-extended',
 ] as const;
 
 export type ServiceFormNamespace = (typeof SERVICE_FORM_NAMESPACES)[number];

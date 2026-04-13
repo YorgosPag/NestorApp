@@ -1,24 +1,30 @@
 {
   "files": {
-    "src/config/company-config.ts": 27,
-    "src/config/crm-dashboard-tabs-config.ts": 10,
-    "src/config/period-selector-config.ts": 8,
-    "src/config/project-tabs-config.ts": 3,
+    "src/config/company-config.ts": 21,
     "src/config/search-index-config.ts": 8,
-    "src/config/service-config.ts": 8,
-    "src/config/unified-tabs-factory.ts": 6,
-    "src/subapps/dxf-viewer/config/modal-select/core/labels/navigation.ts": 29,
-    "src/subapps/dxf-viewer/config/modal-select/core/labels/status.ts": 86,
-    "src/subapps/dxf-viewer/config/modal-select/core/labels/tabs.ts": 3,
-    "src/subapps/dxf-viewer/config/modal-select/core/options/encoding.ts": 8,
-    "src/subapps/dxf-viewer/config/modal-select/toolbar/configurations.ts": 52,
-    "src/constants/domains/dropdown-misc-labels.ts": 130
+    "src/config/unified-tabs-factory.ts": 2,
+    "src/subapps/dxf-viewer/config/modal-select/core/labels/status.ts": 78,
+    "src/constants/domains/dropdown-misc-labels.ts": 105
   },
   "namespaces": [
     "contacts",
     "contacts-form",
     "contacts-relationships",
-    "forms"
+    "contacts-core",
+    "contacts-lifecycle",
+    "forms",
+    "building",
+    "building-filters",
+    "building-tabs",
+    "common",
+    "common-shared",
+    "common-status",
+    "crm",
+    "dxf-viewer",
+    "filters",
+    "navigation",
+    "projects-data",
+    "reports-extended"
   ],
-  "updatedAt": "2026-04-11T11:17:58.210Z"
+  "updatedAt": "2026-04-13T18:22:46.841Z"
 }
