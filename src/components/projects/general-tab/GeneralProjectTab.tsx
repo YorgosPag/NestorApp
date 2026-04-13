@@ -219,6 +219,14 @@ export function GeneralProjectTab({
   }, [companyLink.linkedId, saveErrorCode]);
 
   useEffect(() => {
+    // 🏢 ADR-256 v3: never reset form state from props while the user is
+    // editing. Even with `useProjectDetail({ pauseRefetch: isEditing })`,
+    // the summary coming from `useProjectsState` can still mutate mid-edit
+    // (list-side PROJECT_UPDATED merges), and any such mutation would race
+    // the user's keystrokes and clobber them. The form state is authoritative
+    // during an edit session; sync only happens on entry/exit of editing or
+    // on entity swap.
+    if (isEditing && !isCreateMode) return;
     setProjectData(prev => ({
       ...prev,
       name: project.name,
@@ -226,13 +234,6 @@ export function GeneralProjectTab({
       status: project.status,
       companyName: project.companyName,
       companyId: project.companyId || fallbackCompanyId,
-      // 🏢 ADR-256 read-path: use nullish coalescing (NOT `|| prev`). With
-      // hydrate-on-select, cross-project leakage via `prev.description`
-      // would show the previous project's text in a freshly-opened one
-      // (especially visible in the "New project" dialog). Mid-edit typing
-      // is protected by `useProjectDetail({ pauseRefetch: isEditing })` —
-      // the project ref does not change while the user is editing, so this
-      // effect does not run and cannot clobber unsaved input.
       description: project.description ?? '',
       buildingBlock: project.buildingBlock || '',
       protocolNumber: project.protocolNumber || '',
@@ -252,7 +253,7 @@ export function GeneralProjectTab({
       client: project.client || '',
       location: project.location || '',
     }));
-  }, [fallbackCompanyId, project]);
+  }, [fallbackCompanyId, project, isEditing, isCreateMode]);
 
   const handleSave = useCallback(async () => {
     try {
