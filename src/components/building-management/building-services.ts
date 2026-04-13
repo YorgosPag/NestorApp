@@ -212,6 +212,9 @@ export async function deleteBuilding(
         : String(error);
     const statusCode = isApiError ? error.statusCode : undefined;
     const errorCode = isApiError ? error.errorCode : undefined;
+    // Direct console.error bypasses logger normalization for full diagnostic
+    // eslint-disable-next-line no-console
+    console.error('[deleteBuilding] RAW error:', error, 'buildingId:', buildingId, 'msg:', message, 'code:', statusCode, errorCode);
     logger.error('deleteBuilding failed', {
       buildingId,
       message: message || '(empty)',
