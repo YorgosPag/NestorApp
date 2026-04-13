@@ -95,12 +95,11 @@ export const POST = withHighRateLimit(
         // Enforce name + linkedCompanyId BEFORE any Firestore writes.
         assertProjectCreatePolicy(body as unknown as Record<string, unknown>);
 
-        // 🏢 ENTERPRISE: ALL users (including super_admin) get companyId
-        // Super admin inherits from linkedCompanyId (the company entity this project belongs to)
-        const isSuperAdmin = isRoleBypass(ctx.globalRole);
-        const resolvedCompanyId = isSuperAdmin
-          ? (body.linkedCompanyId ?? ctx.companyId)
-          : ctx.companyId;
+        // 🏢 ENTERPRISE: companyId = tenant company (ctx.companyId), always.
+        // linkedCompanyId = CRM client company reference (separate concern).
+        // Bug fix: super_admin was erroneously using linkedCompanyId as companyId,
+        // causing tenant isolation mismatch on subsequent reads/deletes.
+        const resolvedCompanyId = ctx.companyId;
 
         // 🏢 ADR-284 §3.0: Verify linkedCompanyId points to an existing company contact.
         // Reuses the same fetch to resolve the display name for the audit trail

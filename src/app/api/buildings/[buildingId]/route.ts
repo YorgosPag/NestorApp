@@ -56,7 +56,14 @@ export const DELETE = withStandardRateLimit(
 
       // 🔒 TENANT ISOLATION: Check ownership (unless super_admin)
       if (!isSuperAdmin && buildingData?.companyId !== ctx.companyId) {
-        logger.warn('Unauthorized delete attempt', { email: ctx.email, buildingId });
+        logger.warn('Unauthorized delete attempt — companyId mismatch', {
+          email: ctx.email,
+          buildingId,
+          ctxCompanyId: ctx.companyId,
+          ctxGlobalRole: ctx.globalRole,
+          buildingCompanyId: buildingData?.companyId ?? '(missing)',
+          isSuperAdmin,
+        });
         throw new ApiError(403, 'Unauthorized: Building belongs to different company');
       }
 
