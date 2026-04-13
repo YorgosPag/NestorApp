@@ -156,6 +156,18 @@ export function useEntityLink(
   const [linkedId, setLinkedId] = useState<string | null>(initialParentId);
   const prevEntityIdRef = useRef(entityId);
 
+  // Pre-load options once and cache them in this hook.
+  // When EntityLinkCard remounts (entity switch → key change), it receives
+  // initialOptions immediately → no loading spinner on subsequent buildings.
+  const [cachedOptions, setCachedOptions] = useState<EntityLinkOption[] | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    loadOptions().then((opts) => {
+      if (!cancelled) setCachedOptions(opts);
+    }).catch(() => { /* non-fatal */ });
+    return () => { cancelled = true; };
+  }, [loadOptions]);
+
   // Realtime refresh — increments when parent entity type changes (create/update/delete)
   const [refreshSignal, setRefreshSignal] = useState(0);
 
@@ -232,6 +244,8 @@ export function useEntityLink(
     searchable,
     hideCurrentLabel,
     refreshSignal,
+    // Pre-loaded options — eliminates spinner on entity switch (remount)
+    ...(cachedOptions !== undefined ? { initialOptions: cachedOptions } : {}),
     // immediate mode → onSave for auto-save
     ...(autoSave && onSave ? { onSave } : {}),
     // form/local mode → onValueChange for parent state sync

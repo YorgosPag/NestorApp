@@ -100,6 +100,12 @@ export interface EntityLinkCardProps {
    * the user must fix (ADR-291 Scenario 6b: banner + inline combo).
    */
   hasError?: boolean;
+  /**
+   * Pre-loaded options from the parent hook (useEntityLink).
+   * When provided, the component skips the internal fetch + loading spinner on mount.
+   * Used to eliminate the spinner when EntityLinkCard remounts on entity switch.
+   */
+  initialOptions?: EntityLinkOption[];
 }
 
 // =============================================================================
@@ -126,6 +132,7 @@ export function EntityLinkCard({
   onValueChange,
   refreshSignal,
   hasError = false,
+  initialOptions,
 }: EntityLinkCardProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -135,9 +142,11 @@ export function EntityLinkCard({
 
   const resolvedSearchPlaceholder = searchPlaceholder ?? t('entityLink.searchPlaceholder');
 
-  const [options, setOptions] = useState<EntityLinkOption[]>([]);
+  const [options, setOptions] = useState<EntityLinkOption[]>(initialOptions ?? []);
   const [selectedId, setSelectedId] = useState<string>(currentValue || NONE_VALUE);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialOptions === undefined);
+  // Track whether pre-loaded options were provided — suppresses loading spinner on mount
+  const hasInitialOptionsRef = useRef(initialOptions !== undefined);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [searchQuery, setSearchQuery] = useState('');
@@ -165,8 +174,10 @@ export function EntityLinkCard({
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      // On refresh (not initial mount), don't show full loading spinner — silent refetch
-      if (refreshSignal && refreshSignal > 0) {
+      // Silent refetch when: (a) refreshSignal fired, or (b) initialOptions were pre-loaded
+      // by useEntityLink — no spinner needed, options already visible.
+      const silent = (refreshSignal !== undefined && refreshSignal > 0) || hasInitialOptionsRef.current;
+      if (silent) {
         try {
           const data = await loadOptions();
           if (!cancelled) setOptions(data);
