@@ -96,6 +96,7 @@ export async function POST(
           .doc(projectId);
 
         let existingBuildingData: Record<string, unknown> = {};
+        let projectName: string | null = null;
 
         try {
           await adminDb.runTransaction(async (tx) => {
@@ -104,6 +105,7 @@ export async function POST(
             if (!projectSnap.exists) {
               throw new ApiError(400, 'Referenced Project not found.');
             }
+            projectName = (projectSnap.data()?.name as string | undefined) ?? null;
             const linkedCompanyId = projectSnap.data()?.linkedCompanyId;
             if (isBlank(linkedCompanyId)) {
               throw new ApiError(
@@ -172,7 +174,7 @@ export async function POST(
             {
               field: 'projectId',
               oldValue: null,
-              newValue: projectId,
+              newValue: projectName ?? projectId,
               label: 'Έργο',
             },
           ],

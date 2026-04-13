@@ -233,6 +233,14 @@ export interface EntityCreationParams {
   };
   /** API path for audit log metadata */
   apiPath?: string;
+  /**
+   * Optional resolvers for ID → display-name translation in audit change values.
+   * Key: tracked field name (e.g. `projectId`).
+   * Value: async function that receives the raw ID and returns the display name or null.
+   * When provided, `createEntity` uses `EntityAuditService.diffFieldsWithResolution`
+   * instead of `diffFields` so the History tab shows names, not IDs.
+   */
+  auditFieldResolvers?: Record<string, (id: unknown) => Promise<string | null>>;
 }
 
 /** Result returned by createEntity() */

@@ -225,11 +225,30 @@ export const POST = withStandardRateLimit(
       logger.info('[Buildings] Creating new building for tenant', { companyId: ctx.companyId });
 
       // 🏢 ADR-238: Centralized entity creation (auto companyId, audit, timestamps)
+      // Resolve projectId → project name at write time so the History tab
+      // shows the project name instead of the raw ID (ADR-195 fix).
+      const auditFieldResolvers = body.projectId
+        ? {
+            projectId: async (id: unknown) => {
+              try {
+                const snap = await adminDb
+                  .collection(COLLECTIONS.PROJECTS)
+                  .doc(String(id))
+                  .get();
+                return (snap.data()?.name as string | undefined) ?? null;
+              } catch {
+                return null;
+              }
+            },
+          }
+        : undefined;
+
       const result = await createEntity('building', {
         auth: ctx,
         parentId: body.projectId ? String(body.projectId) : null,
         entitySpecificFields,
         apiPath: '/api/buildings (POST)',
+        auditFieldResolvers,
       });
 
       return apiSuccess<BuildingCreateResponse>(

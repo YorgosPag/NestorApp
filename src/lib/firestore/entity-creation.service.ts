@@ -252,7 +252,7 @@ export async function createEntity(
   entityType: ServerEntityType,
   params: EntityCreationParams
 ): Promise<EntityCreationResult> {
-  const { auth, parentId, entitySpecificFields, codeOptions, apiPath } = params;
+  const { auth, parentId, entitySpecificFields, codeOptions, apiPath, auditFieldResolvers } = params;
 
   const adminDb = getAdminFirestore();
   if (!adminDb) {
@@ -332,7 +332,9 @@ export async function createEntity(
   if (entry.entityAuditType) {
     const trackedFields = getTrackedFieldsForEntityAuditType(entry.entityAuditType);
     const changes = trackedFields
-      ? EntityAuditService.diffFields({}, sanitizedDoc, trackedFields)
+      ? (auditFieldResolvers
+          ? await EntityAuditService.diffFieldsWithResolution({}, sanitizedDoc, trackedFields, auditFieldResolvers)
+          : EntityAuditService.diffFields({}, sanitizedDoc, trackedFields))
       : [];
 
     await EntityAuditService.recordChange({
