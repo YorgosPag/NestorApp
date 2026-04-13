@@ -30,23 +30,28 @@ import {
 } from '@/services/projects/project-mutation-policy';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
+import type { AuditFieldChange } from '@/types/audit-trail';
 
 const logger = createModuleLogger('ProjectsCreateRoute');
 
 const CACHE_KEY_PREFIX = 'api:projects:list';
 
-interface ProjectCreatePayload {
+/**
+ * Structural subset we care about on the server — every other extended
+ * field flows through as `Record<string, unknown>` via the spread, so we
+ * only list the keys the handler itself inspects (name / policy / cache
+ * invalidation). All tracked fields (permits, classification, timeline,
+ * financials, …) are diffed against `PROJECT_TRACKED_FIELDS` below.
+ */
+type ProjectCreatePayload = {
   name: string;
-  title?: string;
-  description?: string;
   status?: string;
   companyId: string;
   company?: string;
-  address?: string;
-  city?: string;
   /** 🏢 ADR-232: Business entity link */
   linkedCompanyId?: string | null;
-}
+} & Record<string, unknown>;
 
 interface ProjectCreateResponse {
   projectId: string;
@@ -135,22 +140,51 @@ export const POST = withHighRateLimit(
 
         logger.info('[Projects] Project created', { projectId, projectCode });
 
-        // 📜 ADR-195: Entity audit trail (powers the project History tab)
+        // 📜 ADR-195: Entity audit trail (powers the project History tab).
+        //
+        // Google-level pattern: "create = diff from empty state". We compute
+        // the changeset by running the standard `diffFields({}, body, …)`
+        // over the SSoT `PROJECT_TRACKED_FIELDS` registry, so every tracked
+        // field the user actually filled in (permits card, classification,
+        // timeline, financials, description, title, status, linked company,
+        // …) lands in the history tab automatically. Fields the user left
+        // blank normalize to `null` and produce no noise.
+        //
+        // The dynamic diff replaces the previous hardcoded three-entry
+        // snapshot (`name`, `projectCode`, `linkedCompanyId`) that silently
+        // dropped every other field the user entered on the General tab.
+        const auditBody: Record<string, unknown> = {
+          ...body,
+          // Substitute the resolved display name for `linkedCompanyId` so
+          // the audit entry stores a human-readable value instead of the
+          // raw company document id (ADR-195 denormalization policy).
+          linkedCompanyId: linkedCompanyName ?? body.linkedCompanyId ?? null,
+        };
+        const diffedChanges = EntityAuditService.diffFields(
+          {},
+          auditBody,
+          PROJECT_TRACKED_FIELDS,
+        );
+
+        // `projectCode` is server-assigned (ADR-210 sequential counter) and
+        // therefore not part of the tracked-field registry — append it
+        // explicitly so users see the auto-generated code in the history.
+        const auditChanges: AuditFieldChange[] = [
+          ...diffedChanges,
+          {
+            field: 'projectCode',
+            oldValue: null,
+            newValue: projectCode,
+            label: 'Κωδικός Έργου',
+          },
+        ];
+
         await EntityAuditService.recordChange({
           entityType: ENTITY_TYPES.PROJECT,
           entityId: projectId,
           entityName: body.name,
           action: 'created',
-          changes: [
-            { field: 'name', oldValue: null, newValue: body.name, label: 'Όνομα' },
-            { field: 'projectCode', oldValue: null, newValue: projectCode, label: 'Κωδικός Έργου' },
-            {
-              field: 'linkedCompanyId',
-              oldValue: null,
-              newValue: linkedCompanyName,
-              label: 'Συνδεδεμένη Εταιρεία',
-            },
-          ],
+          changes: auditChanges,
           performedBy: ctx.uid,
           performedByName: ctx.email,
           companyId: resolvedCompanyId,

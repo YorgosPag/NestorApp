@@ -51,6 +51,34 @@ export interface ProjectCreatePayload {
   city?: string;
   // 🏢 ENTERPRISE: Multi-address support (ADR-167)
   addresses?: ProjectAddress[];
+  // 🏢 Extended project fields — must mirror ProjectUpdatePayload so the
+  // create path can persist the full GeneralProjectTab form (permits card,
+  // classification, timeline, financials). Previously omitted → user input
+  // silently dropped on first save, surfacing as missing fields in the UI
+  // container "Άδειες" and missing entries in the audit trail.
+  buildingBlock?: string;
+  protocolNumber?: string;
+  licenseNumber?: string;
+  issuingAuthority?: string;
+  issueDate?: string;
+  client?: string;
+  location?: string;
+  type?: string;
+  priority?: string;
+  riskLevel?: string;
+  complexity?: string;
+  budget?: number;
+  totalValue?: number;
+  totalArea?: number;
+  duration?: number;
+  startDate?: string | null;
+  completionDate?: string | null;
+  /** ADR-244: Οικοπεδούχοι — SSoT */
+  landowners?: LandownerEntry[] | null;
+  /** ADR-244: Ποσοστό αντιπαροχής (%) */
+  bartexPercentage?: number | null;
+  /** ADR-244: Denormalized contact IDs for queries */
+  landownerContactIds?: string[] | null;
 }
 
 /**

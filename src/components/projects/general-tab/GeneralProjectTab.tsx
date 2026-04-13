@@ -313,11 +313,17 @@ export function GeneralProjectTab({
 
         logger.info('Creating new project...', { data: projectData, linkedCompanyId: effectiveLinkedCompanyId });
 
+        // 🏢 Google-level: the create payload is the same superset as the
+        // edit payload so every field the user filled in on `GeneralProjectTab`
+        // (permits card, classification, timeline, financials, description,
+        // license title, …) reaches the server on the first save. Previously
+        // this branch only forwarded 6 fields and silently dropped the rest,
+        // leaving both the "Άδειες" container and the audit trail incomplete.
+        const updatePayload = buildUpdatePayload(projectData);
         const result = await createProjectWithPolicy({
           payload: {
+            ...updatePayload,
             name: trimmedName,
-            title: projectData.licenseTitle,
-            description: projectData.description,
             status: projectData.status,
             companyId: fallbackCompanyId,
             linkedCompanyId: effectiveLinkedCompanyId,
