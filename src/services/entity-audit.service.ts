@@ -26,7 +26,7 @@ import type {
   AuditAction,
   AuditFieldChange,
 } from '@/types/audit-trail';
-import { flattenForTracking } from '@/config/audit-tracked-fields';
+import { diffTrackedFieldsLegacy } from '@/lib/audit/audit-diff';
 
 const logger = createModuleLogger('EntityAuditService');
 
@@ -176,34 +176,7 @@ export class EntityAuditService {
     newDoc: Record<string, unknown>,
     trackedFields: Record<string, string>,
   ): AuditFieldChange[] {
-    // Flatten both docs for dot-notation support
-    const flatOld = flattenForTracking(oldDoc, trackedFields);
-    const flatNew = flattenForTracking(newDoc, trackedFields);
-
-    const changes: AuditFieldChange[] = [];
-
-    for (const [field, label] of Object.entries(trackedFields)) {
-      // Only process fields present in the update payload
-      if (!(field in flatNew)) continue;
-
-      const oldValue = flatOld[field] ?? null;
-      const newValue = flatNew[field] ?? null;
-
-      // Normalize to comparable primitives
-      const oldStr = serializeValue(oldValue);
-      const newStr = serializeValue(newValue);
-
-      if (oldStr !== newStr) {
-        changes.push({
-          field,
-          oldValue: oldStr,
-          newValue: newStr,
-          label,
-        });
-      }
-    }
-
-    return changes;
+    return diffTrackedFieldsLegacy(oldDoc, newDoc, trackedFields);
   }
 
   /**
@@ -248,29 +221,3 @@ export class EntityAuditService {
   }
 }
 
-/**
- * Sort object keys recursively for stable JSON comparison.
- */
-function sortKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeys);
-  if (value !== null && typeof value === 'object') {
-    const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
-      sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
-    }
-    return sorted;
-  }
-  return value;
-}
-
-/**
- * Serialize a value to a comparable primitive for diffing.
- * Uses sorted keys for stable comparison of objects/arrays.
- */
-function serializeValue(value: unknown): string | number | boolean | null {
-  if (value === null || value === undefined || value === '') return null;
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value;
-  }
-  return JSON.stringify(sortKeys(value));
-}

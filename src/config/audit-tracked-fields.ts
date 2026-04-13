@@ -9,6 +9,10 @@
  */
 
 import type { AuditFieldChange } from '@/types/audit-trail';
+import {
+  flattenForTracking as sharedFlattenForTracking,
+  diffTrackedFieldsLegacy,
+} from '@/lib/audit/audit-diff';
 
 // ============================================================================
 // PROPERTY TRACKED FIELDS (Centralized — previously in properties/[id]/route.ts)
@@ -299,134 +303,29 @@ export function getContactTrackedFieldsForType(
 }
 
 // ============================================================================
-// FLATTEN HELPER — Converts nested objects to dot-notation for tracking
+// SHARED DIFF HELPERS — Re-exported from `@/lib/audit/audit-diff`
 // ============================================================================
 
 /**
  * Flatten a document for dot-notation tracking.
- * Converts `{ commercial: { askingPrice: 100 } }` → `{ 'commercial.askingPrice': 100 }`
- *
- * Only flattens keys that have a corresponding dot-notation entry in trackedFields.
+ * Re-exported from the shared primitive so legacy consumers that import
+ * from `@/config/audit-tracked-fields` keep working.
  */
 export function flattenForTracking(
   doc: Record<string, unknown>,
   trackedFields: Record<string, string>,
 ): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-
-  // Collect top-level keys that need flattening (e.g. 'commercial' from 'commercial.askingPrice')
-  const nestedPrefixes = new Set<string>();
-  for (const field of Object.keys(trackedFields)) {
-    const dotIdx = field.indexOf('.');
-    if (dotIdx > 0) {
-      nestedPrefixes.add(field.slice(0, dotIdx));
-    }
-  }
-
-  for (const [key, value] of Object.entries(doc)) {
-    if (nestedPrefixes.has(key) && typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      // Flatten nested object into dot-notation
-      for (const [subKey, subValue] of Object.entries(value as Record<string, unknown>)) {
-        const dotKey = `${key}.${subKey}`;
-        if (dotKey in trackedFields) {
-          result[dotKey] = subValue;
-        }
-      }
-    } else {
-      result[key] = value;
-    }
-  }
-
-  return result;
-}
-
-// ============================================================================
-// CLIENT-SIDE DIFF UTILITY
-// ============================================================================
-
-/**
- * Sort object keys recursively for stable JSON comparison.
- * Without this, { a: 1, b: 2 } and { b: 2, a: 1 } would produce different strings.
- */
-function sortKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeys);
-  if (value !== null && typeof value === 'object') {
-    const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
-      sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
-    }
-    return sorted;
-  }
-  return value;
-}
-
-/**
- * Serialize a value to a comparable primitive for diffing.
- * Uses sorted keys for stable comparison of objects/arrays.
- *
- * Empty structures ([], {all-empty-strings}) are normalized to null
- * so that `null → []` or `null → { facebook: '' }` are NOT recorded
- * as changes — they are form-initialization noise, not user edits.
- */
-function serializeValue(value: unknown): string | number | boolean | null {
-  if (value === null || value === undefined || value === '') return null;
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value;
-  }
-  // Empty array → null (no meaningful data)
-  if (Array.isArray(value) && value.length === 0) return null;
-  // Object with ALL empty/null/undefined values → null (form default noise)
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    const vals = Object.values(value as Record<string, unknown>);
-    if (vals.length === 0) return null;
-    if (vals.every(v => v === null || v === undefined || v === '')) return null;
-  }
-  return JSON.stringify(sortKeys(value));
+  return sharedFlattenForTracking(doc, trackedFields);
 }
 
 /**
  * Compute field-level diffs between old and new document states.
- * Supports dot-notation fields (e.g. 'commercial.askingPrice').
- *
- * Client-side equivalent of EntityAuditService.diffFields() — same logic,
- * without the `server-only` import so it can run in the browser.
- *
- * @param oldDoc - Document state before update
- * @param newDoc - Fields being updated (partial)
- * @param trackedFields - Map of field name → human-readable label
- * @returns Array of field changes (only fields that actually changed)
+ * Client-safe wrapper over the shared `diffTrackedFieldsLegacy` primitive.
  */
 export function computeEntityDiff(
   oldDoc: Record<string, unknown>,
   newDoc: Record<string, unknown>,
   trackedFields: Record<string, string>,
 ): AuditFieldChange[] {
-  // Flatten both docs for dot-notation support
-  const flatOld = flattenForTracking(oldDoc, trackedFields);
-  const flatNew = flattenForTracking(newDoc, trackedFields);
-
-  const changes: AuditFieldChange[] = [];
-
-  for (const [field, label] of Object.entries(trackedFields)) {
-    // Only process fields present in the update payload
-    if (!(field in flatNew)) continue;
-
-    const oldValue = flatOld[field] ?? null;
-    const newValue = flatNew[field] ?? null;
-
-    // Normalize to comparable primitives
-    const oldStr = serializeValue(oldValue);
-    const newStr = serializeValue(newValue);
-
-    if (oldStr !== newStr) {
-      changes.push({
-        field,
-        oldValue: oldStr,
-        newValue: newStr,
-        label,
-      });
-    }
-  }
-
-  return changes;
+  return diffTrackedFieldsLegacy(oldDoc, newDoc, trackedFields);
 }
