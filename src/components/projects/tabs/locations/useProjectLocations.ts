@@ -280,6 +280,15 @@ export function useProjectLocations(project: Project) {
     }
   };
 
+  // Intercepts primary-change for edit form: blocks unchecking when this is the sole address
+  const handleEditIsPrimaryChange = (val: boolean) => {
+    if (!val && localAddresses.length <= 1) {
+      error(t('locations.errors.soleAddressMustBePrimary'));
+      return;
+    }
+    setEditIsPrimary(val);
+  };
+
   return {
     localAddresses,
     isSaving,
@@ -313,6 +322,7 @@ export function useProjectLocations(project: Project) {
     setEditLabel,
     editIsPrimary,
     setEditIsPrimary,
+    handleEditIsPrimaryChange,
     handleStartEdit,
     handleSaveEdit,
     handleCancelEdit,

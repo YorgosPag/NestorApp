@@ -111,7 +111,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           onTypeChange={loc.setEditType}
           onBlockSideChange={loc.setEditBlockSide}
           onLabelChange={loc.setEditLabel}
-          onIsPrimaryChange={loc.setEditIsPrimary}
+          onIsPrimaryChange={loc.handleEditIsPrimaryChange}
           isSaving={loc.isSaving}
           onSave={loc.handleSaveEdit}
           onCancel={loc.handleCancelEdit}
