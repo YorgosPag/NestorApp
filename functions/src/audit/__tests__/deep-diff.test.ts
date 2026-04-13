@@ -109,13 +109,19 @@ describe('deepDiff', () => {
   });
 
   describe('arrays and complex values', () => {
-    it('treats arrays as opaque leaf values (serialized JSON)', () => {
+    it('emits a single collection "added" entry for appended primitives', () => {
       const changes = deepDiff(
         { personaTypes: ['owner'] },
         { personaTypes: ['owner', 'tenant'] },
       );
       expect(changes).toHaveLength(1);
-      expect(changes[0].field).toBe('personaTypes');
+      expect(changes[0]).toMatchObject({
+        field: 'personaTypes',
+        kind: 'collection',
+        op: 'added',
+        itemKey: 's:tenant',
+        itemLabel: 'tenant',
+      });
     });
 
     it('treats arrays with same elements in same order as equal', () => {
@@ -124,6 +130,98 @@ describe('deepDiff', () => {
         { tags: ['a', 'b', 'c'] },
       );
       expect(changes).toEqual([]);
+    });
+  });
+
+  describe('collection-aware diff (ADR-195 Phase 11)', () => {
+    it('emits `added` for a new address with stable id', () => {
+      const before = { addresses: [{ id: '1', type: 'site', street: 'Σαμοθράκης' }] };
+      const after = {
+        addresses: [
+          { id: '1', type: 'site', street: 'Σαμοθράκης' },
+          { id: '2', type: 'entrance', street: 'Παραδόσεων' },
+        ],
+      };
+      const changes = deepDiff(before, after);
+      expect(changes).toHaveLength(1);
+      expect(changes[0]).toMatchObject({
+        field: 'addresses',
+        kind: 'collection',
+        op: 'added',
+        itemKey: 'k:2',
+        itemLabel: 'Παραδόσεων — entrance',
+        oldValue: null,
+        newValue: null,
+      });
+    });
+
+    it('emits `removed` for a deleted address', () => {
+      const before = {
+        addresses: [
+          { id: '1', type: 'site', street: 'Σαμοθράκης' },
+          { id: '2', type: 'entrance', street: 'Παραδόσεων' },
+        ],
+      };
+      const after = { addresses: [{ id: '1', type: 'site', street: 'Σαμοθράκης' }] };
+      const changes = deepDiff(before, after);
+      expect(changes).toHaveLength(1);
+      expect(changes[0]).toMatchObject({
+        op: 'removed',
+        itemKey: 'k:2',
+      });
+    });
+
+    it('emits `modified` with granular subChanges', () => {
+      const before = {
+        addresses: [{ id: '1', type: 'site', street: 'Σαμοθράκης', number: '16' }],
+      };
+      const after = {
+        addresses: [{ id: '1', type: 'site', street: 'Παραδόσεων', number: '16' }],
+      };
+      const changes = deepDiff(before, after);
+      expect(changes).toHaveLength(1);
+      expect(changes[0].op).toBe('modified');
+      expect(changes[0].itemKey).toBe('k:1');
+      expect(changes[0].subChanges).toContainEqual({
+        subField: 'street',
+        oldValue: 'Σαμοθράκης',
+        newValue: 'Παραδόσεων',
+      });
+    });
+
+    it('distinguishes phones by number (no stable id)', () => {
+      const before = { phones: [{ number: '2101111111', type: 'home' }] };
+      const after = {
+        phones: [
+          { number: '2101111111', type: 'home' },
+          { number: '2109999999', type: 'home' },
+        ],
+      };
+      const changes = deepDiff(before, after);
+      expect(changes).toHaveLength(1);
+      expect(changes[0].op).toBe('added');
+      expect(changes[0].itemLabel).toContain('2109999999');
+    });
+
+    it('handles mixed add/remove/modify in one diff', () => {
+      const before = {
+        addresses: [
+          { id: '1', type: 'site', street: 'Α' },
+          { id: '2', type: 'entrance', street: 'Β' },
+          { id: '3', type: 'delivery', street: 'Γ' },
+        ],
+      };
+      const after = {
+        addresses: [
+          { id: '1', type: 'site', street: 'Α-NEW' },
+          { id: '3', type: 'delivery', street: 'Γ' },
+          { id: '4', type: 'legal', street: 'Δ' },
+        ],
+      };
+      const changes = deepDiff(before, after);
+      expect(changes).toHaveLength(3);
+      const ops = changes.map((c) => c.op).sort();
+      expect(ops).toEqual(['added', 'modified', 'removed']);
     });
   });
 
