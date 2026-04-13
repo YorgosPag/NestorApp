@@ -24,6 +24,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { logAuditEvent } from '@/lib/auth/audit';
 import type { GeofenceConfig } from '@/components/projects/ika/contracts';
 import { getErrorMessage } from '@/lib/error-utils';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 const logger = createModuleLogger('api/attendance/geofence');
 
@@ -165,6 +167,17 @@ const basePOST = async (request: NextRequest) => {
         };
 
         await projectRef.update({ geofenceConfig });
+
+        EntityAuditService.recordChange({
+          entityType: ENTITY_TYPES.PROJECT as 'project',
+          entityId: body.projectId,
+          entityName: null,
+          action: 'updated',
+          changes: [{ field: 'geofenceConfig', oldValue: previousGeofence ? 'configured' : null, newValue: `${body.latitude},${body.longitude} r=${radiusMeters}m`, label: 'Geofence Config' }],
+          performedBy: ctx.uid,
+          performedByName: ctx.email ?? null,
+          companyId: (projectDoc.data()?.companyId as string | undefined) ?? ctx.companyId ?? 'system',
+        }).catch(() => {});
 
         // Immutable audit log — who changed geofence, old → new values
         logAuditEvent(ctx, 'data_updated', body.projectId, 'project', {

@@ -4,6 +4,7 @@ import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { generateParkingId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import type {
   CreatedParkingSpotRecord,
   ExistingParkingSpotRecord,
@@ -87,6 +88,16 @@ export async function createSeedParkingSpots(): Promise<CreatedParkingSpotRecord
     };
 
     await parkingRef.doc(parkingId).set(parkingDoc);
+    EntityAuditService.recordChange({
+      entityType: 'parking',
+      entityId: parkingId,
+      entityName: String(template.number),
+      action: 'created',
+      changes: [{ field: 'buildingId', oldValue: null, newValue: TARGET_BUILDING.id, label: 'Building' }],
+      performedBy: 'seed-parking-api',
+      performedByName: null,
+      companyId: 'system',
+    }).catch(() => {});
     createdSpots.push({ id: parkingId, number: template.number });
     logger.info('Created parking spot', { parkingId, number: template.number });
   }
