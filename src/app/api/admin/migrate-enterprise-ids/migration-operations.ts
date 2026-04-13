@@ -10,6 +10,8 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { LegacyDocument, MigrationReport } from './migration-config';
 import {
   SIMPLE_COLLECTIONS,
@@ -164,6 +166,7 @@ export async function updateContactReferences(
   db: FirebaseFirestore.Firestore,
   oldId: string,
   newId: string,
+  performedBy: string,
 ): Promise<number> {
   let updated = 0;
 
@@ -195,6 +198,18 @@ export async function updateContactReferences(
       updated++;
     }
     await batch.commit();
+    for (const doc of buildingsSnap.docs) {
+      EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.BUILDING as 'building',
+        entityId: doc.id,
+        entityName: (doc.data().name as string | undefined) ?? null,
+        action: 'updated',
+        changes: [{ field: 'linkedCompanyId', oldValue: oldId, newValue: newId, label: 'Linked Company ID' }],
+        performedBy,
+        performedByName: null,
+        companyId: (doc.data().companyId as string | undefined) ?? 'system',
+      }).catch(() => {});
+    }
   }
 
   // units with soldTo

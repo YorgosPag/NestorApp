@@ -21,6 +21,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { LegacyDocument, MigrationResult, SimpleCollectionConfig } from './migration-config';
 import { SIMPLE_COLLECTIONS, BUILDING_SUBCOLLECTIONS } from './migration-config';
 import {
@@ -151,6 +153,16 @@ export const POST = withSensitiveRateLimit(
           if (!oldDoc.exists) continue;
 
           await db.collection(COLLECTIONS.BUILDINGS).doc(bldg.newId).set(oldDoc.data()!);
+          EntityAuditService.recordChange({
+            entityType: ENTITY_TYPES.BUILDING as 'building',
+            entityId: bldg.newId,
+            entityName: (oldDoc.data()!.name as string | undefined) ?? null,
+            action: 'created',
+            changes: [{ field: 'id', oldValue: bldg.id, newValue: bldg.newId, label: 'Enterprise ID Migration' }],
+            performedBy: ctx.uid,
+            performedByName: null,
+            companyId: (oldDoc.data()!.companyId as string | undefined) ?? 'system',
+          }).catch(() => {});
 
           let subcollectionsMigrated = 0;
           for (const sub of BUILDING_SUBCOLLECTIONS) {
@@ -177,7 +189,7 @@ export const POST = withSensitiveRateLimit(
           if (!oldDoc.exists) continue;
 
           await db.collection(COLLECTIONS.CONTACTS).doc(contact.newId).set(oldDoc.data()!);
-          const referencesUpdated = await updateContactReferences(db, contact.id, contact.newId);
+          const referencesUpdated = await updateContactReferences(db, contact.id, contact.newId, ctx.uid);
           await oldDocRef.delete();
 
           results.push({ oldId: contact.id, newId: contact.newId, collection: COLLECTIONS.CONTACTS, subcollectionsMigrated: 0, referencesUpdated });

@@ -13,6 +13,8 @@ import { generateCompanyId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { AuthContext } from '@/lib/auth';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import type {
   CollectionMigrationResult,
   SubcollectionMigrationResult,
@@ -247,6 +249,16 @@ export async function executeMigration(
       };
 
       await db.collection(COLLECTIONS.COMPANIES).doc(newId).set(newCompanyDoc);
+      EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.COMPANY as 'company',
+        entityId: newId,
+        entityName: typeof newCompanyDoc.name === 'string' ? newCompanyDoc.name : null,
+        action: 'created',
+        changes: [{ field: 'migratedFrom', oldValue: oldId, newValue: newId, label: 'Company ID Migration' }],
+        performedBy: ctx.uid,
+        performedByName: ctx.email ?? null,
+        companyId: newId,
+      }).catch(() => {});
     }
 
     report.steps.companyDocument = {

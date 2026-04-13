@@ -19,6 +19,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FLOOR_TEMPLATES, TARGET_BUILDING, TARGET_COMPANY_ID } from './seed-floors.config';
+import { EntityAuditService } from '@/services/entity-audit.service';
 
 const logger = createModuleLogger('SeedFloorsHandlers');
 
@@ -238,8 +239,19 @@ export async function handleSeedFloorsDelete(
     const deletedIds: string[] = [];
     await processAdminBatch(floorsRef, BATCH_SIZE_READ, async (docs) => {
       for (const docSnapshot of docs) {
+        const floorData = docSnapshot.data();
         await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
         deletedIds.push(docSnapshot.id);
+        EntityAuditService.recordChange({
+          entityType: 'floor',
+          entityId: docSnapshot.id,
+          entityName: (floorData.name as string | undefined) ?? null,
+          action: 'deleted',
+          changes: [],
+          performedBy: ctx.uid,
+          performedByName: ctx.email ?? null,
+          companyId: (floorData.companyId as string | undefined) ?? ctx.companyId ?? 'system',
+        }).catch(() => {});
       }
     });
 

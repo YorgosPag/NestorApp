@@ -52,7 +52,7 @@
 | Περιοχή | Canonical ADR | Baseline | Violations | Αρχεία | Τύπος |
 |---------|---------------|----------|------------|--------|-------|
 | **Firestore rules test coverage — runtime** (Phase B/C/E) | ADR-298 | manifest pending | **88 collections** | — | Test suites required |
-| **Entity audit coverage — write side** (CHECK 3.17) | ADR-195 | `.entity-audit-coverage-baseline.json` | **15 violations** (ratcheted 20→19→18→15: security deletions + Batch 1 wire-up 2026-04-13) | 15 αρχεία | Boy Scout |
+| **Entity audit coverage — write side** (CHECK 3.17) | ADR-195 | `.entity-audit-coverage-baseline.json` | **11 violations** (ratcheted 20→19→18→15→11: security deletions + Batch 1+2 wire-up 2026-04-13) | 11 αρχεία | Boy Scout |
 | **i18n missing keys** (CHECK 3.8) | ADR-280 | `.i18n-missing-keys-baseline.json` | **4.762** legacy | — | Ratchet down only |
 | **i18n resolver reachability** (CHECK 3.13) | ADR-279 / ADR-280 | `.i18n-resolver-reachability-baseline.json` | **378** violations | 13 αρχεία | Ratchet down only |
 
