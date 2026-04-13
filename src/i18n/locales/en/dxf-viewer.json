@@ -179,5 +179,14 @@
       "status": { "loading": "Loading...", "empty": "No data available", "error": "Loading error", "success": "Completed successfully" },
       "confirm": { "title": "Confirm Action", "message": "Are you sure you want to proceed?", "confirmLabel": "Confirm", "cancelLabel": "Cancel" }
     }
+  },
+  "steps": {
+    "selectCompany": "Select Company",
+    "selectProject": "Select Project",
+    "selectBuilding": "Select Building",
+    "selectUnit": "Select Unit",
+    "fileSelection": "File Selection",
+    "encodingSelection": "Encoding Selection",
+    "destinationSelection": "Destination Selection"
   }
 }

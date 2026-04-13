@@ -351,5 +351,54 @@
         "partial": "Μερική"
       }
     }
+  },
+  "company": {
+    "sections": {
+      "basicInfo": { "title": "Βασικά Στοιχεία Εταιρείας" },
+      "gemi": { "title": "Στοιχεία ΓΕΜΗ" },
+      "contact": { "title": "Στοιχεία Επικοινωνίας" },
+      "logo": { "title": "Λογότυπο" },
+      "relationships": { "title": "Σχέσεις" }
+    },
+    "fields": {
+      "companyName": {
+        "placeholder": "π.χ. Nestor Κατασκευαστική Α.Ε.",
+        "helpText": "Η νόμιμη επωνυμία της εταιρείας"
+      },
+      "tradeName": {
+        "placeholder": "π.χ. Nestor",
+        "helpText": "Ο εμπορικός τίτλος ή το brand name"
+      },
+      "vatNumber": {
+        "helpText": "ΑΦΜ — 9 ψηφία χωρίς κενά"
+      },
+      "gemiNumber": {
+        "helpText": "Αριθμός εγγραφής στο Γενικό Εμπορικό Μητρώο"
+      },
+      "chamber": {
+        "placeholder": "π.χ. Εμπορικό Επιμελητήριο Αθηνών",
+        "helpText": "Το επιμελητήριο στο οποίο ανήκει η εταιρεία"
+      },
+      "activityCodeKAD": {
+        "placeholder": "π.χ. 41.20",
+        "helpText": "Κωδικός Αριθμός Δραστηριότητας (ΚΑΔ)"
+      },
+      "activityDescription": {
+        "placeholder": "Περιγράψτε την επιχειρηματική δραστηριότητα...",
+        "helpText": "Σύντομη περιγραφή κύριας δραστηριότητας"
+      },
+      "city": {
+        "helpText": "Πόλη έδρας της εταιρείας"
+      },
+      "phone": {
+        "helpText": "Κεντρικό τηλέφωνο εταιρείας"
+      },
+      "email": {
+        "helpText": "Κεντρικό email επικοινωνίας"
+      },
+      "website": {
+        "helpText": "Ιστοσελίδα της εταιρείας (π.χ. https://www.company.gr)"
+      }
+    }
   }
 }

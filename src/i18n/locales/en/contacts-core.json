@@ -351,5 +351,54 @@
         "partial": "Partial"
       }
     }
+  },
+  "company": {
+    "sections": {
+      "basicInfo": { "title": "Company Basic Information" },
+      "gemi": { "title": "GEMI Details" },
+      "contact": { "title": "Contact Information" },
+      "logo": { "title": "Logo" },
+      "relationships": { "title": "Relationships" }
+    },
+    "fields": {
+      "companyName": {
+        "placeholder": "e.g. Nestor Construction S.A.",
+        "helpText": "The legal company name"
+      },
+      "tradeName": {
+        "placeholder": "e.g. Nestor",
+        "helpText": "The commercial title or brand name"
+      },
+      "vatNumber": {
+        "helpText": "VAT number — 9 digits without spaces"
+      },
+      "gemiNumber": {
+        "helpText": "Registration number in the General Commercial Registry"
+      },
+      "chamber": {
+        "placeholder": "e.g. Athens Chamber of Commerce",
+        "helpText": "The chamber to which the company belongs"
+      },
+      "activityCodeKAD": {
+        "placeholder": "e.g. 41.20",
+        "helpText": "Activity Classification Code (KAD)"
+      },
+      "activityDescription": {
+        "placeholder": "Describe the business activity...",
+        "helpText": "Brief description of the main business activity"
+      },
+      "city": {
+        "helpText": "City of the company's registered office"
+      },
+      "phone": {
+        "helpText": "Main company phone number"
+      },
+      "email": {
+        "helpText": "Main contact email address"
+      },
+      "website": {
+        "helpText": "Company website (e.g. https://www.company.com)"
+      }
+    }
   }
 }

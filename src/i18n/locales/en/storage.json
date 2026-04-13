@@ -48,7 +48,8 @@
     "basement": "Basement",
     "ground": "Ground Floor",
     "special": "Special",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "parking": "Parking Spot"
   },
   "status": {
     "available": "Available",
@@ -116,7 +117,12 @@
     "stats": {
       "floor": "Floor",
       "area": "Area",
-      "price": "Price"
+      "price": "Price",
+      "level": "Level",
+      "value": "Value",
+      "stage": "Stage",
+      "priority": "Priority",
+      "dueDate": "Due Date"
     },
     "ariaLabel": "Storage card {name}",
     "status": {

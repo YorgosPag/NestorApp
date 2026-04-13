@@ -179,5 +179,14 @@
       "status": { "loading": "Φόρτωση...", "empty": "Δεν υπάρχουν δεδομένα", "error": "Σφάλμα φόρτωσης", "success": "Επιτυχής ολοκλήρωση" },
       "confirm": { "title": "Επιβεβαίωση Ενέργειας", "message": "Είστε βέβαιοι ότι θέλετε να προχωρήσετε;", "confirmLabel": "Επιβεβαίωση", "cancelLabel": "Ακύρωση" }
     }
+  },
+  "steps": {
+    "selectCompany": "Επιλογή Εταιρείας",
+    "selectProject": "Επιλογή Έργου",
+    "selectBuilding": "Επιλογή Κτιρίου",
+    "selectUnit": "Επιλογή Μονάδας",
+    "fileSelection": "Επιλογή Αρχείου",
+    "encodingSelection": "Επιλογή Κωδικοποίησης",
+    "destinationSelection": "Επιλογή Προορισμού"
   }
 }

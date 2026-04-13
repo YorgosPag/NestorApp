@@ -1,11 +1,5 @@
 {
-  "files": {
-    "src/config/company-config.ts": 21,
-    "src/config/search-index-config.ts": 6,
-    "src/config/unified-tabs-factory.ts": 2,
-    "src/subapps/dxf-viewer/config/modal-select/core/labels/status.ts": 6,
-    "src/constants/domains/dropdown-misc-labels.ts": 44
-  },
+  "files": {},
   "namespaces": [
     "contacts",
     "contacts-form",
@@ -29,5 +23,5 @@
     "reports-extended",
     "storage"
   ],
-  "updatedAt": "2026-04-13T18:34:10.930Z"
+  "updatedAt": "2026-04-13T18:55:58.208Z"
 }

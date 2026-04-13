@@ -48,7 +48,8 @@
     "basement": "Υπόγεια",
     "ground": "Ισόγεια",
     "special": "Ειδική",
-    "unknown": "Άγνωστο"
+    "unknown": "Άγνωστο",
+    "parking": "Θέση Στάθμευσης"
   },
   "status": {
     "available": "Διαθέσιμη",
@@ -116,7 +117,12 @@
     "stats": {
       "floor": "Όροφος",
       "area": "Εμβαδόν",
-      "price": "Τιμή"
+      "price": "Τιμή",
+      "level": "Επίπεδο",
+      "value": "Αξία",
+      "stage": "Στάδιο",
+      "priority": "Προτεραιότητα",
+      "dueDate": "Ολοκλήρωση"
     },
     "ariaLabel": "Κάρτα αποθήκης {name}",
     "status": {

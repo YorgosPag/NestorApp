@@ -12,7 +12,29 @@
       "friend": "Friend",
       "family": "Family",
       "businessContact": "Business Contact",
-      "other": "Other"
+      "other": "Other",
+      "director": "Director",
+      "executive": "Executive",
+      "intern": "Intern",
+      "contractor": "Contractor",
+      "chairman": "Chairman",
+      "ceo": "CEO",
+      "representative": "Representative",
+      "partner": "Partner",
+      "vendor": "Vendor",
+      "client": "Client",
+      "electedOfficial": "Elected Official",
+      "appointedOfficial": "Appointed Official",
+      "ministryOfficial": "Ministry Official",
+      "mayor": "Mayor",
+      "deputyMayor": "Deputy Mayor",
+      "regionalGovernor": "Regional Governor",
+      "advisor": "Advisor",
+      "mentor": "Mentor",
+      "protege": "Protégé",
+      "supplier": "Supplier",
+      "customer": "Customer",
+      "competitor": "Competitor"
     },
     "presets": {
       "positions": {
@@ -141,6 +163,11 @@
       }
     },
     "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "terminated": "Terminated",
+      "suspended": "Suspended",
       "createSuccess": "Relationship created successfully!",
       "updateSuccess": "Relationship updated successfully!",
       "deleteSuccess": "Relationship deleted successfully!",

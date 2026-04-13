@@ -22,7 +22,6 @@
 
 - [x] **CHECK 3.17 Entity Audit Coverage** — COMPLETATO. Baseline 9→0. _(Batch 4: 4 wire-up server-side + 5 HARD_EXEMPT nel scanner.)_
 
-- [ ] **CHECK 3.13 i18n Resolver Reachability** — 5 files, 79 violations (down from 378). Phase A+B done 2026-04-13: 21 namespace in `SERVICE_FORM_NAMESPACES`, prefix-strip fallback aggiunto, baseline 378→214→79. **Remaining:** Phase C only (missing locale keys, 79 violations, overlap CHECK 3.8). **Hours remaining:** ~1-2 (Phase C = add locale entries per genuinely absent keys). Files: company-config 21, dropdown-misc-labels 44, search-index-config 6, unified-tabs-factory 2, dxf-viewer/status 6.
 
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
@@ -60,3 +59,4 @@
 | 2026-04-13 | CHECK 3.17 Batch 4 DONE — ZERO BASELINE. 4 server-side wire-up (005_assign_project_codes, 006_normalize_storage, cascade-propagation, property-coverage-recalculator) + 5 HARD_EXEMPT in scanner (audit-core circular, 4 client-SDK files). Baseline 9→0. CHECK 3.17 completamente chiusa. |
 | 2026-04-13 | CHECK 3.13 Phase A DONE. 14 namespace aggiunti a `SERVICE_FORM_NAMESPACES` in translate-field-value.ts. Baseline 378→214 (5 file rimasti). ADR-279 aggiornato. |
 | 2026-04-13 | CHECK 3.13 Phase B DONE. 3 namespace aggiuntivi (`projects`, `properties-enums`, `storage`) + prefix-strip fallback in `translateFieldValue` e scanner `resolves()`. Baseline 214→79 (5 file rimasti). ADR-279 aggiornato. |
+| 2026-04-13 | CHECK 3.13 Phase C DONE — ZERO BASELINE. 79 chiavi locale mancanti aggiunte in 9 namespace (el+en): contacts-core (company.sections/fields), storage (card.stats.level/value/stage/priority/dueDate + types.parking), building-tabs (floorplan.description + protocols.description), building (propertyTypes.*), properties-enums (status.underConstruction/blocked + saleStatus.*), dxf-viewer (steps.*), contacts-relationships (status enum + 22 types), crm (stages.*), filters (allPrices). Baseline 79→0. CHECK 3.13 completamente chiusa. ADR-279 Phase C entry aggiunto. |

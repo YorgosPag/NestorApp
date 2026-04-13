@@ -15,7 +15,15 @@
     "pending": "Εκκρεμεί",
     "withdrawn": "Αποσυρμένο",
     "expired": "Ληγμένο",
-    "notSold": "Δεν Πωλήθηκε"
+    "notSold": "Δεν Πωλήθηκε",
+    "underConstruction": "Υπό Κατασκευή",
+    "blocked": "Μπλοκαρισμένο"
+  },
+  "saleStatus": {
+    "notSold": "Δεν Πωλήθηκε",
+    "sold": "Πωλήθηκε",
+    "reserved": "Κρατημένο",
+    "pending": "Εκκρεμεί"
   },
   "rental": {
     "rentOnly": "Μόνο Ενοικίαση",

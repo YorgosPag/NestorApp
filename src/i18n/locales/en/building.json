@@ -597,5 +597,11 @@
     "back": "Back",
     "home": "Home",
     "supportMessage": "If the problem persists, please contact support."
+  },
+  "propertyTypes": {
+    "studio": "Studio",
+    "garsoniera": "Studio Apartment",
+    "apartment": "Apartment",
+    "maisonette": "Maisonette"
   }
 }

@@ -15,7 +15,15 @@
     "pending": "Pending",
     "withdrawn": "Withdrawn",
     "expired": "Expired",
-    "notSold": "Not Sold"
+    "notSold": "Not Sold",
+    "underConstruction": "Under Construction",
+    "blocked": "Blocked"
+  },
+  "saleStatus": {
+    "notSold": "Not Sold",
+    "sold": "Sold",
+    "reserved": "Reserved",
+    "pending": "Pending"
   },
   "rental": {
     "rentOnly": "Rent Only",

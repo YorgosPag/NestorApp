@@ -12,7 +12,29 @@
       "friend": "Φίλος",
       "family": "Οικογένεια",
       "businessContact": "Επαγγελματική Επαφή",
-      "other": "Άλλο"
+      "other": "Άλλο",
+      "director": "Διευθυντής",
+      "executive": "Στέλεχος",
+      "intern": "Ασκούμενος",
+      "contractor": "Εργολάβος",
+      "chairman": "Πρόεδρος",
+      "ceo": "Διευθύνων Σύμβουλος",
+      "representative": "Εκπρόσωπος",
+      "partner": "Συνεργάτης",
+      "vendor": "Προμηθευτής",
+      "client": "Πελάτης",
+      "electedOfficial": "Αιρετός Αξιωματούχος",
+      "appointedOfficial": "Διορισμένος Αξιωματούχος",
+      "ministryOfficial": "Υπουργικός Αξιωματούχος",
+      "mayor": "Δήμαρχος",
+      "deputyMayor": "Αντιδήμαρχος",
+      "regionalGovernor": "Περιφερειάρχης",
+      "advisor": "Σύμβουλος",
+      "mentor": "Μέντορας",
+      "protege": "Προστατευόμενος",
+      "supplier": "Προμηθευτής",
+      "customer": "Πελάτης",
+      "competitor": "Ανταγωνιστής"
     },
     "presets": {
       "positions": {
@@ -141,6 +163,11 @@
       }
     },
     "status": {
+      "active": "Ενεργή",
+      "inactive": "Ανενεργή",
+      "pending": "Εκκρεμεί",
+      "terminated": "Τερματισμένη",
+      "suspended": "Ανασταλμένη",
       "createSuccess": "Η σχέση δημιουργήθηκε επιτυχώς!",
       "updateSuccess": "Η σχέση ενημερώθηκε επιτυχώς!",
       "deleteSuccess": "Η σχέση διαγράφηκε επιτυχώς!",

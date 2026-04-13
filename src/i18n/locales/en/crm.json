@@ -567,5 +567,11 @@
     "feature4": "Statistics per property",
     "activationNote": "Analytics will be activated once the Mailgun webhook is configured.",
     "templatesNote": "Now available: 3 email templates in the Share Modal!"
+  },
+  "stages": {
+    "lead": "Lead",
+    "closing": "Closing",
+    "won": "Won",
+    "lost": "Lost"
   }
 }
