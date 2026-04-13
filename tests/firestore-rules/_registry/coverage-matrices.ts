@@ -227,6 +227,75 @@ export function tenantStateMachineMatrix(): readonly CoverageCell[] {
 }
 
 /**
+ * Canonical matrix for the `role_dual` pattern — accounting collections where
+ * reads follow standard tenant isolation (`canReadAccounting`) and writes use
+ * the user-created pattern (`canCreateAccounting` requires both `companyId ==
+ * getUserCompanyId()` and `createdBy == request.auth.uid`).
+ *
+ * Key deltas from `tenantDirectMatrix()`:
+ *   - read:   `same_tenant_user` allowed (`canReadAccounting` = `isSuperAdminOnly ||
+ *             isInternalUserOfCompany` — internal_user included)
+ *   - create: `super_admin` denied (no `isSuperAdminOnly()` short-circuit in
+ *             `canCreateAccounting` — super_admin's companyId 'company-root'
+ *             does not match `SAME_TENANT_COMPANY_ID` 'company-a')
+ *   - update/delete: `super_admin` allowed (via `isCompanyAdminOfCompany` →
+ *             `isSuperAdminOnly()` short-circuit)
+ *   - update/delete: `same_tenant_user` allowed when seeded doc carries their
+ *             uid as `createdBy` (tests the `uid == createdBy` leg)
+ *
+ * Test contract: each test suite builds persona-aware createData inside the
+ * cell loop, setting `companyId: SAME_TENANT_COMPANY_ID` and
+ * `createdBy: persona.uid`. This ensures:
+ *   - same-tenant personas satisfy `companyId == getUserCompanyId()` + uid match → allow
+ *   - super_admin (company-root) and cross_tenant_admin (company-b) fail the
+ *     companyId check against company-a → deny (cross_tenant)
+ * Seed doc uses `createdBy = PERSONA_CLAIMS.same_tenant_user.uid` so the
+ * `uid == createdBy` update/delete leg is exercised for same_tenant_user.
+ *
+ * Collections: `accounting_invoices`, `accounting_journal_entries`.
+ * `accounting_audit_log` uses `overrideCells(roleDualMatrix(), [...])` to
+ * swap update/delete to `immutable` deny (Q7 ΚΦΔ compliance).
+ *
+ * See ADR-298 §4 Phase B.2 (2026-04-13).
+ */
+export function roleDualMatrix(): readonly CoverageCell[] {
+  return [
+    // Read: isSuperAdminOnly() || isInternalUserOfCompany(companyId)
+    cell('super_admin', 'read', 'allow'),
+    cell('super_admin', 'list', 'allow'),
+    cell('same_tenant_admin', 'read', 'allow'),
+    cell('same_tenant_admin', 'list', 'allow'),
+    cell('same_tenant_user', 'read', 'allow'),
+    cell('same_tenant_user', 'list', 'allow'),
+    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    cell('anonymous', 'list', 'deny', 'missing_claim'),
+    // Create: isInternalUser() && companyId==getUserCompanyId() && createdBy==uid
+    // No isSuperAdminOnly() short-circuit — super_admin (company-root)
+    // fails the companyId check when targeting SAME_TENANT_COMPANY_ID (company-a)
+    cell('super_admin', 'create', 'deny', 'cross_tenant'),
+    cell('same_tenant_admin', 'create', 'allow'),
+    cell('same_tenant_user', 'create', 'allow'),
+    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    // Update: (uid==createdBy || isCompanyAdminOfCompany(companyId)) && companyId immutable
+    // Seed doc carries createdBy=same_tenant_user.uid → user-level allow exercised
+    cell('super_admin', 'update', 'allow'),       // isCompanyAdminOfCompany → isSuperAdminOnly
+    cell('same_tenant_admin', 'update', 'allow'), // isCompanyAdminOfCompany → company_admin match
+    cell('same_tenant_user', 'update', 'allow'),  // uid == createdBy (seed doc)
+    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+    // Delete: uid==createdBy || isCompanyAdminOfCompany(companyId)
+    cell('super_admin', 'delete', 'allow'),
+    cell('same_tenant_admin', 'delete', 'allow'),
+    cell('same_tenant_user', 'delete', 'allow'),
+    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
+  ];
+}
+
+/**
  * Bespoke matrix for `attendance_events` — an append-only collection with
  * **dual-path reads** (either `companyId` direct OR `projectId` crossdoc) and
  * a **tenant-bound client-append** create rule. Update/delete deny for all.

@@ -18,7 +18,7 @@
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 import { withSeedContext } from './auth-contexts';
-import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
+import { PERSONA_CLAIMS, SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 
 export interface SeedOptions {
   /** Override the companyId for cross-tenant test fixtures. */
@@ -225,6 +225,86 @@ export async function seedAttendanceQrToken(
       doc.companyId = opts?.companyId ?? SAME_TENANT_COMPANY_ID;
     }
     await ctx.firestore().collection('attendance_qr_tokens').doc(tokenId).set(doc);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Accounting seeders (role_dual pattern — ADR-298 Phase B.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed options for accounting collections that carry a `createdBy` field.
+ * The default `createdByUid` is `same_tenant_user.uid` so that
+ * `same_tenant_user × update/delete` cells can exercise the `uid == createdBy`
+ * path without requiring a per-cell custom seed.
+ */
+export interface AccountingSeedOptions extends SeedOptions {
+  /** uid stored in `createdBy`. Defaults to `PERSONA_CLAIMS.same_tenant_user.uid`. */
+  readonly createdByUid?: string;
+}
+
+export async function seedAccountingInvoice(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: AccountingSeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('accounting_invoices').doc(docId).set({
+      invoiceNumber: `INV-${docId}`,
+      amount: 1000,
+      currency: 'EUR',
+      status: 'draft',
+      ...baseDoc({
+        ...opts,
+        createdBy: opts?.createdByUid ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      }),
+      ...opts?.overrides,
+    });
+  });
+}
+
+export async function seedAccountingJournalEntry(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: AccountingSeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('accounting_journal_entries').doc(docId).set({
+      description: `Journal entry ${docId}`,
+      debit: 100,
+      credit: 100,
+      ...baseDoc({
+        ...opts,
+        createdBy: opts?.createdByUid ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      }),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
+ * Seed an `accounting_audit_log` document.
+ *
+ * The rule at firestore.rules:3099 requires `userId == request.auth.uid` on
+ * create. This seeder stores `userId` separately from the `createdBy` base
+ * field — the two can differ (admin creates the audit entry recording another
+ * user's action). The read rule uses only `companyId` for tenant isolation.
+ */
+export async function seedAccountingAuditLog(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions & { readonly userId?: string },
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('accounting_audit_log').doc(docId).set({
+      action: 'created',
+      entityType: 'invoice',
+      entityId: `inv-${docId}`,
+      userId: opts?.userId ?? PERSONA_CLAIMS.same_tenant_admin.uid,
+      timestamp: new Date(),
+      ...baseDoc(opts),
+      ...opts?.overrides,
+    });
   });
 }
 

@@ -31,6 +31,7 @@ import {
   attendanceEventMatrix,
   immutableMatrix,
   overrideCells,
+  roleDualMatrix,
   tenantDirectMatrix,
   tenantStateMachineMatrix,
   cell,
@@ -167,6 +168,42 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
       cell('super_admin', 'create', 'deny', 'server_only'),
     ]),
   },
+  // ── ADR-298 Phase B.2 — accounting ΚΦΔ (2026-04-13) ─────────────────────
+  {
+    collection: 'accounting_invoices',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-invoices.rules.test.ts',
+    rulesRange: [3013, 3019],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_journal_entries',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-journal-entries.rules.test.ts',
+    rulesRange: [3006, 3012],
+    matrix: roleDualMatrix(),
+  },
+  {
+    collection: 'accounting_audit_log',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/accounting-audit-log.rules.test.ts',
+    rulesRange: [3099, 3108],
+    // Q7 ΚΦΔ compliance: update/delete are `if false` — immutable for all personas.
+    // Read + create follow the standard role_dual shape (canReadAccounting /
+    // canCreateAccountingSystem + userId==uid; no isSuperAdminOnly short-circuit).
+    matrix: overrideCells(roleDualMatrix(), [
+      cell('super_admin', 'update', 'deny', 'immutable'),
+      cell('same_tenant_admin', 'update', 'deny', 'immutable'),
+      cell('same_tenant_user', 'update', 'deny', 'immutable'),
+      cell('cross_tenant_admin', 'update', 'deny', 'immutable'),
+      cell('anonymous', 'update', 'deny', 'immutable'),
+      cell('super_admin', 'delete', 'deny', 'immutable'),
+      cell('same_tenant_admin', 'delete', 'deny', 'immutable'),
+      cell('same_tenant_user', 'delete', 'deny', 'immutable'),
+      cell('cross_tenant_admin', 'delete', 'deny', 'immutable'),
+      cell('anonymous', 'delete', 'deny', 'immutable'),
+    ]),
+  },
 ] as const;
 
 /**
@@ -261,8 +298,9 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'commission_records',
   'ownership_tables',
   // — Accounting (sole proprietor subapp) —
-  'accounting_journal_entries',
-  'accounting_invoices',
+  // accounting_journal_entries → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
+  // accounting_invoices        → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
+  // accounting_audit_log       → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
   'accounting_bank_transactions',
   'accounting_bank_accounts',
   'accounting_fixed_assets',
@@ -274,7 +312,6 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'accounting_custom_categories',
   'accounting_matching_rules',
   'accounting_efka_payments',
-  'accounting_audit_log',
   'accounting_fiscal_periods',
   'accounting_settings',
   'accounting_efka_config',
