@@ -15,7 +15,8 @@
     "clearAllCount": "Clear ({count})",
     "toggleSidebar": "Toggle Sidebar",
     "nextSlide": "Next slide",
-    "previousSlide": "Previous slide"
+    "previousSlide": "Previous slide",
+    "moveToTrash": "Move to Trash"
   },
   "periods": {
     "day": "Day",

@@ -193,6 +193,47 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [1666, 1705],
     matrix: crmDirectMatrix(),
   },
+  // ── ADR-298 Phase B.4 — property hierarchy admin_write_only (2026-04-13) ─
+  {
+    collection: 'floors',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/floors.rules.test.ts',
+    rulesRange: [590, 618],
+    matrix: adminWriteOnlyMatrix(),
+    seedDependencies: ['projects', 'buildings'],
+  },
+  {
+    collection: 'properties',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/properties.rules.test.ts',
+    rulesRange: [619, 664],
+    // Delta from canonical admin_write_only: update is allowed for super_admin
+    // (isSuperAdminOnly bypass) and for company admins of the project's company
+    // (isCompanyAdminOfProject + isAllowedPropertyFieldUpdate + propertyStructuralFieldsUnchanged).
+    // Client create/delete remain server-only.
+    matrix: overrideCells(adminWriteOnlyMatrix(), [
+      cell('super_admin', 'update', 'allow'),
+      cell('same_tenant_admin', 'update', 'allow'),
+      cell('same_tenant_user', 'update', 'deny', 'insufficient_role'),
+    ]),
+    seedDependencies: ['projects'],
+  },
+  {
+    collection: 'storage_units',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/storage-units.rules.test.ts',
+    rulesRange: [665, 694],
+    matrix: adminWriteOnlyMatrix(),
+    seedDependencies: ['projects', 'buildings'],
+  },
+  {
+    collection: 'parking_spots',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/parking-spots.rules.test.ts',
+    rulesRange: [695, 725],
+    matrix: adminWriteOnlyMatrix(),
+    seedDependencies: ['projects', 'buildings'],
+  },
   // ── ADR-298 Phase B.2 — accounting ΚΦΔ (2026-04-13) ─────────────────────
   {
     collection: 'accounting_invoices',
@@ -272,10 +313,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'teams',
   'positions',
   // — Building / property hierarchy —
-  'floors',
-  'properties',
-  'storage_units',
-  'parking_spots',
+  // floors, properties, storage_units, parking_spots → moved to COVERAGE (ADR-298 Phase B.4, 2026-04-13)
   'project_floorplans',
   'building_floorplans',
   'floor_floorplans',

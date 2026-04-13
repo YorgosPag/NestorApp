@@ -377,6 +377,108 @@ export async function seedActivity(
 }
 
 // ---------------------------------------------------------------------------
+// Property hierarchy seeders (admin_write_only pattern — ADR-298 Phase B.4)
+// ---------------------------------------------------------------------------
+/**
+ * Seed a `floors` document.
+ *
+ * Floors read via `buildingId` crossdoc (`belongsToBuildingCompany`). No
+ * direct `companyId` on the floor document — tenant isolation is derived
+ * from the parent building's companyId. Every client write denies; server
+ * creates via Admin SDK (ADR-170 hierarchy).
+ */
+export async function seedFloor(
+  env: RulesTestEnvironment,
+  floorId: string,
+  buildingId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('floors').doc(floorId).set({
+      name: `Test Floor ${floorId}`,
+      level: 0,
+      buildingId,
+      createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
+      createdAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
+ * Seed a `properties` document.
+ *
+ * Properties read via `project` crossdoc (`belongsToProjectCompany`). The
+ * `id` field must be set equal to `propId` because `propertyStructuralFieldsUnchanged`
+ * checks `request.resource.data.id == resource.data.id` on update. Client
+ * create/delete deny; company admin update is allowed via field allowlist.
+ */
+export async function seedProperty(
+  env: RulesTestEnvironment,
+  propId: string,
+  projectId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('properties').doc(propId).set({
+      id: propId,
+      project: projectId,
+      name: `Test Property ${propId}`,
+      description: 'Seed property',
+      createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
+      createdAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
+ * Seed a `storage_units` document.
+ *
+ * Identical crossdoc pattern to floors — reads via `buildingId`. All client
+ * writes deny; Admin SDK only (PR-1D).
+ */
+export async function seedStorageUnit(
+  env: RulesTestEnvironment,
+  unitId: string,
+  buildingId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('storage_units').doc(unitId).set({
+      name: `Test Storage Unit ${unitId}`,
+      buildingId,
+      createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
+      createdAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
+ * Seed a `parking_spots` document.
+ *
+ * Identical crossdoc pattern to floors — reads via `buildingId`. All client
+ * writes deny; Admin SDK only (PR-1D).
+ */
+export async function seedParkingSpot(
+  env: RulesTestEnvironment,
+  spotId: string,
+  buildingId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('parking_spots').doc(spotId).set({
+      name: `Test Parking Spot ${spotId}`,
+      buildingId,
+      createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
+      createdAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Legacy-fallback seeders (no companyId — tests the `|| no companyId` leg)
 // ---------------------------------------------------------------------------
 

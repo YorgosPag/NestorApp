@@ -48,6 +48,7 @@ export type { Building } from '@/types/building/contracts';
 export function BuildingsPageContent() {
   // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation('building');
+  const { t: tCommon } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -431,6 +432,7 @@ export function BuildingsPageContent() {
           onOpenChange={(open) => { if (!open) setBuildingToDelete(null); }}
           title={t('details.deleteBuilding')}
           description={t('details.confirmDelete', { name: buildingToDelete?.name ?? '' })}
+          confirmText={tCommon('buttons.moveToTrash')}
           onConfirm={handleConfirmDelete}
           loading={isDeleting}
           disabled={checkingDeletion}

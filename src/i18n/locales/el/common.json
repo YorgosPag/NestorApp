@@ -15,7 +15,8 @@
     "clearAllCount": "Καθαρισμός ({count})",
     "toggleSidebar": "Εναλλαγή Πλαϊνού Μενού",
     "nextSlide": "Επόμενη διαφάνεια",
-    "previousSlide": "Προηγούμενη διαφάνεια"
+    "previousSlide": "Προηγούμενη διαφάνεια",
+    "moveToTrash": "Μεταφορά στον Κάδο"
   },
   "periods": {
     "day": "Ημέρα",
