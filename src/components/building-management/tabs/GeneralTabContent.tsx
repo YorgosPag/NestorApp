@@ -24,10 +24,8 @@ import { useCompanyId } from '@/hooks/useCompanyId';
 // 🏢 ADR-248: Centralized auto-save system
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
-// 🏢 SPEC-256A: Optimistic versioning — conflict detection
+// 🏢 SPEC-256A: Optimistic versioning — silent last-write-wins
 import { useVersionedSave } from '@/hooks/useVersionedSave';
-import { ConflictDialog } from '@/components/shared/ConflictDialog';
-import { useRouter } from 'next/navigation';
 import { createBuildingWithPolicy, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
 import '@/lib/design-system';
@@ -71,7 +69,6 @@ export function GeneralTabContent({
   onBuildingCreated,
 }: GeneralTabContentProps) {
   const { t } = useTranslation('building');
-  const router = useRouter();
   // 🏢 ADR-201: Centralized companyId resolution (building → user fallback)
   const resolvedCompanyId = useCompanyId({ building })?.companyId ?? '';
 
@@ -257,9 +254,6 @@ export function GeneralTabContent({
     initialVersion: (building._v as number | undefined),
     entityId: building.id,
     saveFn: versionedSaveFn,
-    onConflict: (body) => {
-      logger.warn('Version conflict detected', { buildingId: building.id, conflict: body });
-    },
   });
 
   // 🏢 ADR-248: Centralized auto-save with actual Firestore persistence
@@ -275,7 +269,7 @@ export function GeneralTabContent({
     retry: autoSaveRetry,
   } = useAutoSave(formData, {
     saveFn: autoSaveFn,
-    enabled: effectiveIsEditing && !isCreateMode && !versioned.isConflicted,
+    enabled: effectiveIsEditing && !isCreateMode,
   });
 
   /**
@@ -419,29 +413,8 @@ export function GeneralTabContent({
   const { projectsCount, fetchFailed, showSheet, setShowSheet, handleProjectCreated } =
     useProjectQuickCreate(handleNewProjectSelected);
 
-  // 🏢 SPEC-256A: ConflictDialog handlers
-  const handleConflictReload = useCallback(() => {
-    router.refresh();
-  }, [router]);
-
-  const handleConflictForceSave = useCallback(async () => {
-    await versioned.forceSave(formData);
-  }, [versioned, formData]);
-
-  const handleConflictClose = useCallback(() => {
-    versioned.resetConflict();
-  }, [versioned]);
-
   return (
     <section className="space-y-2">
-      {/* 🏢 SPEC-256A: Version conflict dialog */}
-      <ConflictDialog
-        open={versioned.isConflicted}
-        conflict={versioned.conflictData}
-        onReload={handleConflictReload}
-        onForceSave={handleConflictForceSave}
-        onClose={handleConflictClose}
-      />
       <Header
         building={building}
         isEditing={effectiveIsEditing}

@@ -1,45 +1,40 @@
 /**
- * @file useVersionedSave — Client-side Optimistic Versioning Hook
+ * @file useVersionedSave — Silent Last-Write-Wins Versioning Hook
  * @module hooks/useVersionedSave
  *
- * 🏢 ENTERPRISE: SPEC-256A — Tracks document `_v` and intercepts 409 conflicts.
+ * 🏢 ENTERPRISE: SPEC-256A Phase 2 — Google pattern for solo-user apps.
  *
  * Wraps any save function to:
- * 1. Inject `_v` into the payload automatically
+ * 1. Inject `_v` into the payload automatically (server still enforces it for audit)
  * 2. Bump local version on success
- * 3. Catch 409 conflicts and expose `isConflicted` (blocks useAutoSave retries)
- * 4. Provide `resetConflict()` + `forceSave()` for ConflictDialog actions
+ * 3. On 409 VERSION_CONFLICT → **silently retry without `_v`** (last-write-wins)
  *
- * @example
- * ```tsx
- * const versioned = useVersionedSave({
- *   initialVersion: building._v,
- *   saveFn: (data) => updateBuilding(buildingId, data),
- *   onConflict: (body) => setConflictData(body),
- * });
+ * No dialog. No user interruption. The audit trail remains the source of truth
+ * for who-changed-what. This matches Gmail / Google Contacts / Calendar behavior
+ * for single-tenant records: the user's latest intent always wins, and the
+ * version history is preserved server-side for post-hoc inspection.
  *
- * // Pass to useAutoSave:
- * useAutoSave(formData, {
- *   saveFn: versioned.save,
- *   enabled: isEditing && !versioned.isConflicted,
- * });
- * ```
+ * Phase 1 (ConflictDialog-based) was removed because:
+ * - Nestor is a solo-user operator app — true concurrent edits are exceptional.
+ * - The dialog fired on self-conflicts (stale prop, phantom server bumps, etc.)
+ *   and became noise, not signal.
+ * - A "pick keep-mine vs discard" modal breaks flow for something the user
+ *   cannot meaningfully resolve without side-by-side diff UX.
  *
- * @see src/types/versioning.ts
- * @see src/components/shared/ConflictDialog.tsx
+ * @see docs/centralized-systems/reference/adrs/ADR-256-concurrency-conflict-analysis.md
+ * @see docs/centralized-systems/reference/adrs/specs/SPEC-256A-optimistic-versioning.md
  */
 
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ConflictResponseBody } from '@/types/versioning';
+import { useCallback, useEffect, useRef } from 'react';
 import { CONFLICT_CODE } from '@/config/versioning-config';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // TYPES
 // ============================================
 
-/** Result from a versioned save function (must include `_v` on success) */
 interface VersionedSaveResult {
   success: boolean;
   error?: string;
@@ -53,30 +48,19 @@ interface UseVersionedSaveConfig<T> {
    * Identity of the entity being saved (e.g. `project.id`). When this changes,
    * the hook resets its tracked version to `initialVersion`. When it stays the
    * same, a lagging prop cannot roll the version backwards — the local tracked
-   * version only ever moves forward. Omit ONLY for legacy call-sites that
-   * never swap entities within the same mount.
+   * version only ever moves forward.
    */
   entityId?: string;
   /** The actual save function that sends data to the API */
   saveFn: (data: T & { _v?: number }) => Promise<VersionedSaveResult>;
-  /** Called when a 409 conflict is detected */
-  onConflict?: (body: ConflictResponseBody) => void;
 }
 
 interface UseVersionedSaveReturn<T> {
   /** Current tracked version */
   version: number | undefined;
-  /** Whether a conflict is active (blocks auto-save) */
-  isConflicted: boolean;
-  /** Conflict details (for ConflictDialog) */
-  conflictData: ConflictResponseBody | null;
-  /** Wrapped save function — injects `_v`, handles 409 */
+  /** Wrapped save function — silent last-write-wins on 409 */
   save: (data: T) => Promise<void>;
-  /** Force save ignoring version (for "Overwrite" action in ConflictDialog) */
-  forceSave: (data: T) => Promise<void>;
-  /** Clear conflict state (for "Reload" action) */
-  resetConflict: () => void;
-  /** Manually set version (e.g. after reload) */
+  /** Manually set version (e.g. after external reload) */
   setVersion: (v: number) => void;
 }
 
@@ -84,58 +68,18 @@ interface UseVersionedSaveReturn<T> {
 // HELPERS
 // ============================================
 
-/**
- * Detect a version conflict from an error.
- * Works with:
- * 1. ApiClientError (statusCode: 409, errorCode: 'VERSION_CONFLICT')
- * 2. Plain objects with code/errorCode fields
- * 3. Error messages containing VERSION_CONFLICT
- */
-function extractConflictBody(error: unknown): ConflictResponseBody | null {
-  if (!error || typeof error !== 'object') return null;
-
+function is409Conflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
   const errObj = error as Record<string, unknown>;
+  if (errObj.statusCode === 409) return true;
+  if (errObj.errorCode === CONFLICT_CODE || errObj.code === CONFLICT_CODE) return true;
+  const message = typeof errObj.message === 'string' ? errObj.message : '';
+  return message.includes(CONFLICT_CODE);
+}
 
-  // Pattern 1: ApiClientError with statusCode 409
-  // The errorCode and message are set from the response body by enterprise-api-client
-  if (errObj.statusCode === 409 || errObj.errorCode === CONFLICT_CODE || errObj.code === CONFLICT_CODE) {
-    // Try to extract structured body
-    if (errObj.body && typeof errObj.body === 'object') {
-      return errObj.body as ConflictResponseBody;
-    }
-
-    // ApiClientError: message contains the conflict info
-    // The 409 response body has: code, error, errorCode, currentVersion, expectedVersion, updatedAt, updatedBy
-    // enterprise-api-client sets error.message = response.error field
-    const message = (errObj.message as string) ?? '';
-    if (message.includes('conflict') || message.includes(CONFLICT_CODE)) {
-      // Build a minimal ConflictResponseBody from available data
-      return {
-        code: CONFLICT_CODE,
-        error: message,
-        errorCode: CONFLICT_CODE,
-        currentVersion: -1, // Unknown — dialog will still show
-        expectedVersion: -1,
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'unknown',
-      };
-    }
-  }
-
-  // Pattern 2: Check error message for conflict indicator
-  const message = (errObj.message as string) ?? '';
-  if (message.includes(CONFLICT_CODE)) {
-    try {
-      const jsonStart = message.indexOf('{');
-      if (jsonStart >= 0) {
-        return JSON.parse(message.slice(jsonStart)) as ConflictResponseBody;
-      }
-    } catch {
-      // Not parseable — fall through
-    }
-  }
-
-  return null;
+function resultIs409(result: VersionedSaveResult): boolean {
+  if (result.success) return false;
+  return typeof result.error === 'string' && result.error.includes(CONFLICT_CODE);
 }
 
 // ============================================
@@ -145,138 +89,83 @@ function extractConflictBody(error: unknown): ConflictResponseBody | null {
 export function useVersionedSave<T>(
   config: UseVersionedSaveConfig<T>
 ): UseVersionedSaveReturn<T> {
-  const { initialVersion, entityId, saveFn, onConflict } = config;
+  const { initialVersion, entityId, saveFn } = config;
 
   const versionRef = useRef<number | undefined>(initialVersion);
   const entityIdRef = useRef<string | undefined>(entityId);
-  const [isConflicted, setIsConflicted] = useState(false);
-  const [conflictData, setConflictData] = useState<ConflictResponseBody | null>(null);
 
-  // Forward-only version sync. The old implementation unconditionally
-  // mirrored `initialVersion` into `versionRef` on every render, which caused
-  // a race on solo-user auto-save: a successful save bumped the ref from 5→6,
-  // but the parent prop still held _v=5 for one extra render, so the mirror
-  // rolled the ref back to 5 and the next auto-save fired with a stale _v,
-  // producing a self-409. Two scoped rules replace it:
-  //
-  //  1. Entity swap (new `entityId`) — reset the ref outright. Previous
-  //     entity's tracked version is irrelevant.
-  //  2. Same entity — only accept prop versions that move FORWARD. Prevents
-  //     the lagging-prop rollback while still adopting external updates
-  //     (another tab wrote a newer version and the parent re-fetched).
-  //
-  // Entity swaps ALSO need to clear `isConflicted` / `conflictData`, which
-  // are React state and cannot be reset from render — the effect below does
-  // that atomically. The entity-swap branch here only touches the ref so
-  // `versioned.save()` called mid-commit (via a ref-captured handler) won't
-  // fire against the wrong entity's version.
+  // Forward-only version sync. Entity swap → reset. Same entity → adopt only
+  // prop versions that move forward (prevents lagging-prop rollback causing
+  // self-409 races on auto-save).
   const entityChanged = entityId !== undefined && entityId !== entityIdRef.current;
   if (entityChanged) {
     versionRef.current = initialVersion;
   } else if (
     initialVersion !== undefined
-    && !isConflicted
     && (versionRef.current === undefined || initialVersion > versionRef.current)
   ) {
     versionRef.current = initialVersion;
   }
 
-  // State-side handler for entity swaps: clear conflict state so a dismissed
-  // conflict on project A does not follow the user to project B. Without this,
-  // `isConflicted` remained true across navigation and the ConflictDialog
-  // reopened the instant the new project rendered. The ref update happens
-  // here (not in render) so we don't race with the `entityChanged` branch.
   useEffect(() => {
     if (entityId === undefined) return;
     if (entityId === entityIdRef.current) return;
     entityIdRef.current = entityId;
-    setIsConflicted(false);
-    setConflictData(null);
   }, [entityId]);
 
-  // Save function ref to avoid stale closures
   const saveFnRef = useRef(saveFn);
   saveFnRef.current = saveFn;
-  const onConflictRef = useRef(onConflict);
-  onConflictRef.current = onConflict;
 
-  /**
-   * Internal save logic — shared by `save` (with _v) and `forceSave` (without _v).
-   */
-  const doSave = useCallback(async (data: T, includeVersion: boolean) => {
-    const payload = includeVersion
-      ? { ...data, _v: versionRef.current }
-      : { ...data }; // No _v → server does force-write
+  const save = useCallback(async (data: T) => {
+    // First attempt: with `_v` so the server can audit the version.
+    const firstPayload = { ...data, _v: versionRef.current } as T & { _v?: number };
 
     let result: VersionedSaveResult;
     try {
-      result = await saveFnRef.current(payload as T & { _v?: number });
+      result = await saveFnRef.current(firstPayload);
     } catch (thrown: unknown) {
-      // SPEC-256A: ApiClientError with 409 is re-thrown by service layer
-      const conflictBody = extractConflictBody(thrown);
-      if (conflictBody) {
-        setIsConflicted(true);
-        setConflictData(conflictBody);
-        onConflictRef.current?.(conflictBody);
-        // DO NOT re-throw — prevents useAutoSave from retrying
+      if (is409Conflict(thrown)) {
+        // Silent retry without _v (last-write-wins).
+        logger.warn('Version conflict — silent retry without _v', { entityId });
+        const retryPayload = { ...data } as T & { _v?: number };
+        const retryResult = await saveFnRef.current(retryPayload);
+        if (retryResult.success && typeof retryResult._v === 'number') {
+          versionRef.current = retryResult._v;
+        } else if (!retryResult.success) {
+          throw new Error(retryResult.error || 'Save failed after version-conflict retry');
+        }
         return;
       }
-      // Non-conflict errors: re-throw for useAutoSave to handle
       throw thrown;
     }
 
     if (!result.success) {
-      // Check if the error message contains conflict info
-      const conflictBody = extractConflictBody({ message: result.error, code: CONFLICT_CODE });
-      if (conflictBody || result.error?.includes(CONFLICT_CODE)) {
-        setIsConflicted(true);
-        if (conflictBody) {
-          setConflictData(conflictBody);
-          onConflictRef.current?.(conflictBody);
+      if (resultIs409(result)) {
+        logger.warn('Version conflict (result) — silent retry without _v', { entityId });
+        const retryPayload = { ...data } as T & { _v?: number };
+        const retryResult = await saveFnRef.current(retryPayload);
+        if (retryResult.success && typeof retryResult._v === 'number') {
+          versionRef.current = retryResult._v;
+        } else if (!retryResult.success) {
+          throw new Error(retryResult.error || 'Save failed after version-conflict retry');
         }
-        // DO NOT throw — prevents useAutoSave from retrying
         return;
       }
       throw new Error(result.error || 'Save failed');
     }
 
-    // Success — update local version
     if (typeof result._v === 'number') {
       versionRef.current = result._v;
     }
-  }, []);
+  }, [entityId]);
 
-  /** Normal save — includes `_v` for conflict detection */
-  const save = useCallback(async (data: T) => {
-    await doSave(data, true);
-  }, [doSave]);
-
-  /** Force save — omits `_v` to bypass version check */
-  const forceSave = useCallback(async (data: T) => {
-    await doSave(data, false);
-    // Clear conflict state on successful force save
-    setIsConflicted(false);
-    setConflictData(null);
-  }, [doSave]);
-
-  /** Reset conflict state (e.g. after user reloads data) */
-  const resetConflict = useCallback(() => {
-    setIsConflicted(false);
-    setConflictData(null);
-  }, []);
-
-  /** Manually set version (e.g. after reloading document) */
   const setVersion = useCallback((v: number) => {
     versionRef.current = v;
   }, []);
 
   return {
     version: versionRef.current,
-    isConflicted,
-    conflictData,
     save,
-    forceSave,
-    resetConflict,
     setVersion,
   };
 }

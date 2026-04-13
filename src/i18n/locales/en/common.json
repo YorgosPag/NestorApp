@@ -681,19 +681,6 @@
       "service": "This public service is referenced in the following:"
     }
   },
-  "versioning": {
-    "conflictTitle": "Version conflict",
-    "conflictMessage": "This record has been modified since you loaded it. Choose what should happen to your current edits.",
-    "reload": "Discard & reload",
-    "reloadDescription": "Loads the latest version from the server. Your current edits will be lost.",
-    "forceSave": "Keep my changes",
-    "forceSaveDescription": "Saves your current edits over the latest version. The other version's changes will be lost.",
-    "cancelDescription": "Closes this dialog without saving. Your edits stay intact until you decide.",
-    "lastChangedBy": "Last changed by: {user}, {time}",
-    "secondsAgo": "{count, plural, one {# second} other {# seconds}} ago",
-    "minutesAgo": "{count, plural, one {# minute} other {# minutes}} ago",
-    "hoursAgo": "{count, plural, one {# hour} other {# hours}} ago"
-  },
   "doyPicker": {
     "search": "Search Tax Office...",
     "notFound": "No tax office found — add new",

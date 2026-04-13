@@ -14,8 +14,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectUpdatePayload } from '@/services/projects-client.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useVersionedSave } from '@/hooks/useVersionedSave';
-import { ConflictDialog } from '@/components/shared/ConflictDialog';
-import { useRouter } from 'next/navigation';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
@@ -111,7 +109,6 @@ export function GeneralProjectTab({
     location: project.location || '',
   });
 
-  const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   // 🏢 ADR-284 §3.0: track policy error code for the shared <PolicyErrorBanner>
@@ -195,9 +192,6 @@ export function GeneralProjectTab({
     initialVersion: (project as unknown as { _v?: number })._v,
     entityId: project.id,
     saveFn: versionedSaveFn,
-    onConflict: (body) => {
-      logger.warn('Version conflict detected', { projectId: project.id, conflict: body });
-    },
   });
 
   const hasPendingImpactReview = useMemo(() => (
@@ -211,7 +205,7 @@ export function GeneralProjectTab({
 
   const { autoSaving, lastSaved, status: autoSaveStatus, error: autoSaveError, retry: autoSaveRetry } = useAutosave(
     projectData,
-    isEditing && !isCreateMode && !versioned.isConflicted && !hasPendingImpactReview,
+    isEditing && !isCreateMode && !hasPendingImpactReview,
     { saveFn: autoSaveFn }
   );
 
@@ -348,28 +342,8 @@ export function GeneralProjectTab({
     }
   }, [registerSaveCallback, handleSave]);
 
-  const handleConflictReload = useCallback(() => {
-    router.refresh();
-  }, [router]);
-
-  const handleConflictForceSave = useCallback(async () => {
-    await versioned.forceSave(projectData);
-  }, [projectData, versioned]);
-
-  const handleConflictClose = useCallback(() => {
-    versioned.resetConflict();
-  }, [versioned]);
-
   return (
     <>
-      <ConflictDialog
-        open={versioned.isConflicted}
-        conflict={versioned.conflictData}
-        onReload={handleConflictReload}
-        onForceSave={handleConflictForceSave}
-        onClose={handleConflictClose}
-      />
-
       {ImpactDialog}
 
       <GeneralProjectHeader

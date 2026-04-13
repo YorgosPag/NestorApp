@@ -18,13 +18,9 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
+import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
-// 🏢 SPEC-256A: Optimistic versioning — conflict detection
-import { ConflictDialog } from '@/components/shared/ConflictDialog';
-import type { ConflictResponseBody } from '@/types/versioning';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,12 +60,10 @@ export function StorageGeneralTab({
   const colors = useSemanticColors();
   const typography = useTypography();
   const { t } = useTranslation('storage');
-  const router = useRouter();
 
-  // 🏢 SPEC-256A: Optimistic versioning — track _v in ref
+  // 🏢 SPEC-256A Phase 2: track _v for optimistic concurrency, but any 409 is
+  // resolved via silent last-write-wins retry below — never a dialog.
   const versionRef = useRef<number | undefined>((storage as unknown as { _v?: number })._v);
-  const [isConflicted, setIsConflicted] = useState(false);
-  const [conflictData, setConflictData] = useState<ConflictResponseBody | null>(null);
 
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
@@ -78,8 +72,6 @@ export function StorageGeneralTab({
   useEffect(() => {
     setForm(buildFormState(storage));
     versionRef.current = (storage as unknown as { _v?: number })._v;
-    setIsConflicted(false);
-    setConflictData(null);
   }, [storage.id]);
 
   // Building link callbacks
@@ -178,17 +170,31 @@ export function StorageGeneralTab({
         return true;
       }
 
-      // SPEC-256A: Include _v for optimistic versioning
+      // SPEC-256A Phase 2: Include _v so the server can still audit the
+      // version; on 409 we silently retry without _v (last-write-wins).
       if (versionRef.current !== undefined) {
         payload._v = versionRef.current;
       }
 
-      const result = await updateStorageWithPolicy<StoragePatchResult & { _v?: number }>({
-        storageId: storage.id,
-        payload,
-      });
+      let result: (StoragePatchResult & { _v?: number }) | undefined;
+      try {
+        result = await updateStorageWithPolicy<StoragePatchResult & { _v?: number }>({
+          storageId: storage.id,
+          payload,
+        });
+      } catch (err) {
+        if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
+          logger.warn('Storage version conflict — silent retry without _v', { id: storage.id });
+          delete payload._v;
+          result = await updateStorageWithPolicy<StoragePatchResult & { _v?: number }>({
+            storageId: storage.id,
+            payload,
+          });
+        } else {
+          throw err;
+        }
+      }
 
-      // SPEC-256A: Update local version from response
       if (typeof result?._v === 'number') {
         versionRef.current = result._v;
       }
@@ -211,20 +217,6 @@ export function StorageGeneralTab({
       onEditingChange?.(false);
       return true;
     } catch (err) {
-      // SPEC-256A: Catch 409 version conflict
-      if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-        setIsConflicted(true);
-        setConflictData({
-          code: 'VERSION_CONFLICT',
-          error: err.message || 'Version conflict',
-          errorCode: 'VERSION_CONFLICT',
-          currentVersion: -1,
-          expectedVersion: versionRef.current ?? -1,
-          updatedAt: new Date().toISOString(),
-          updatedBy: 'unknown',
-        });
-        return false;
-      }
       logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
@@ -242,26 +234,8 @@ export function StorageGeneralTab({
     };
   }, [handleSave, onSaveRef]);
 
-  // SPEC-256A: Force save handler for ConflictDialog (retries without _v)
-  const handleForceSave = useCallback(async () => {
-    versionRef.current = undefined; // Remove version → force-write
-    setIsConflicted(false);
-    setConflictData(null);
-    if (onSaveRef?.current) {
-      await onSaveRef.current();
-    }
-  }, [onSaveRef]);
-
   return (
     <div className="p-2 space-y-2">
-      {/* 🏢 SPEC-256A: Version conflict dialog */}
-      <ConflictDialog
-        open={isConflicted}
-        conflict={conflictData}
-        onReload={() => router.refresh()}
-        onForceSave={handleForceSave}
-        onClose={() => { setIsConflicted(false); setConflictData(null); }}
-      />
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
