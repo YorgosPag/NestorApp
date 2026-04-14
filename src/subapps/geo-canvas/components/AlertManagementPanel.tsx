@@ -133,7 +133,7 @@ export function AlertManagementPanel({
       <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-          <span className="ml-3 text-gray-600">Initializing Alert Engine...</span>
+          <span className="ml-3 text-gray-600">{t('alertManagement.initializing')}</span>
         </div>
       </div>
     );
@@ -147,7 +147,7 @@ export function AlertManagementPanel({
           <div className="flex items-center">
             <AlertTriangle className="h-6 w-6 text-orange-500 mr-3" />
             <h2 className="text-xl font-semibold text-gray-900">
-              {t('alert-management', 'Alert Management')}
+              {t('alertManagement.title')}
             </h2>
           </div>
           {onClose && (
@@ -155,7 +155,7 @@ export function AlertManagementPanel({
               onClick={onClose}
               className={`text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
             >
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{t('alertManagement.close')}</span>
               ×
             </button>
           )}
@@ -175,9 +175,9 @@ export function AlertManagementPanel({
                   : `border-transparent text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
               }`}
             >
-              {tab === 'create' && t('create-alerts', 'Create Alerts')}
-              {tab === 'manage' && t('manage-subscriptions', 'Manage Subscriptions')}
-              {tab === 'preferences' && t('notification-preferences', 'Notification Preferences')}
+              {tab === 'create' && t('alertManagement.tabs.create')}
+              {tab === 'manage' && t('alertManagement.tabs.manage')}
+              {tab === 'preferences' && t('alertManagement.tabs.preferences')}
             </button>
           ))}
         </nav>
@@ -188,7 +188,7 @@ export function AlertManagementPanel({
         {activeTab === 'create' && (
           <div className="space-y-4">
             <p className="text-gray-600 mb-6">
-              {t('create-alert-description', 'Create spatial alerts based on polygon intersections and geographic events.')}
+              {t('alertManagement.create.description')}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -199,10 +199,10 @@ export function AlertManagementPanel({
                 <Plus className="h-8 w-8 text-blue-600 mr-4" />
                 <div className="text-left">
                   <h3 className="font-medium text-gray-900">
-                    {t('new-polygon-alert', 'New Polygon Alert')}
+                    {t('alertManagement.create.newPolygonAlert')}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {t('polygon-alert-description', 'Create alerts based on polygon intersections')}
+                    {t('alertManagement.create.newPolygonAlertDesc')}
                   </p>
                 </div>
               </button>
@@ -214,10 +214,10 @@ export function AlertManagementPanel({
                 <Bell className="h-8 w-8 text-green-600 mr-4" />
                 <div className="text-left">
                   <h3 className="font-medium text-gray-900">
-                    {t('test-alert', 'Test Alert')}
+                    {t('alertManagement.create.testAlert')}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {t('test-alert-description', 'Send a test notification')}
+                    {t('alertManagement.create.testAlertDesc')}
                   </p>
                 </div>
               </button>
@@ -228,7 +228,7 @@ export function AlertManagementPanel({
         {activeTab === 'manage' && (
           <div className="space-y-4">
             <p className="text-gray-600 mb-6">
-              {t('manage-subscriptions-description', 'Manage your active alert subscriptions and rules.')}
+              {t('alertManagement.manage.description')}
             </p>
 
             <button
@@ -238,10 +238,10 @@ export function AlertManagementPanel({
               <Settings className="h-8 w-8 text-blue-600 mr-4" />
               <div className="text-left">
                 <h3 className="font-medium text-gray-900">
-                  {t('subscription-management', 'Subscription Management')}
+                  {t('alertManagement.manage.subscriptionManagement')}
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {t('subscription-management-description', 'View and edit your alert subscriptions')}
+                  {t('alertManagement.manage.subscriptionManagementDesc')}
                 </p>
               </div>
             </button>
@@ -251,7 +251,7 @@ export function AlertManagementPanel({
         {activeTab === 'preferences' && (
           <div className="space-y-4">
             <p className="text-gray-600 mb-6">
-              {t('notification-preferences-description', 'Configure how and when you receive notifications.')}
+              {t('alertManagement.preferences.description')}
             </p>
 
             <button
@@ -261,10 +261,10 @@ export function AlertManagementPanel({
               <Bell className="h-8 w-8 text-purple-600 mr-4" />
               <div className="text-left">
                 <h3 className="font-medium text-gray-900">
-                  {t('notification-settings', 'Notification Settings')}
+                  {t('alertManagement.preferences.notificationSettings')}
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {t('notification-settings-description', 'Customize your notification preferences')}
+                  {t('alertManagement.preferences.notificationSettingsDesc')}
                 </p>
               </div>
             </button>
@@ -276,7 +276,7 @@ export function AlertManagementPanel({
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
         <div className="flex items-center text-sm text-gray-600">
           <div className={`w-2 h-2 rounded-full mr-2 ${isInitialized ? 'bg-green-500' : 'bg-red-500'}`} />
-          Alert Engine: {isInitialized ? 'Connected' : 'Disconnected'}
+          {t('alertManagement.status.engine')}: {isInitialized ? t('alertManagement.status.connected') : t('alertManagement.status.disconnected')}
         </div>
       </div>
     </div>

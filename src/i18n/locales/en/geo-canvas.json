@@ -692,6 +692,38 @@
   "alertDashboard": {
     "title": "Alert Dashboard"
   },
+  "alertManagement": {
+    "title": "Alert Management",
+    "close": "Close",
+    "initializing": "Initializing Alert Engine...",
+    "tabs": {
+      "create": "Create Alerts",
+      "manage": "Manage Subscriptions",
+      "preferences": "Notification Preferences"
+    },
+    "create": {
+      "description": "Create spatial alerts based on polygon intersections and geographic events.",
+      "newPolygonAlert": "New Polygon Alert",
+      "newPolygonAlertDesc": "Create alerts based on polygon intersections",
+      "testAlert": "Test Alert",
+      "testAlertDesc": "Send a test notification"
+    },
+    "manage": {
+      "description": "Manage your active alert subscriptions and rules.",
+      "subscriptionManagement": "Subscription Management",
+      "subscriptionManagementDesc": "View and edit your alert subscriptions"
+    },
+    "preferences": {
+      "description": "Configure how and when you receive notifications.",
+      "notificationSettings": "Notification Settings",
+      "notificationSettingsDesc": "Customize your notification preferences"
+    },
+    "status": {
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "engine": "Alert Engine"
+    }
+  },
   "userActions": {
     "changeUserType": "🔄 Change User Type"
   },
