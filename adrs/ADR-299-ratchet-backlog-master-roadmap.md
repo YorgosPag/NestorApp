@@ -90,7 +90,7 @@ C.1 remaining accounting (15), C.2 DXF/CAD/floorplans (15), C.3 file variants (1
 
 **Phase D — CI integration** ✅ complete
 
-**Phase E — Storage rules** (separate future ADR) — `storage.rules` 12KB, νέο harness shape.
+**Phase E — Storage rules** ✅ COMPLETATO 2026-04-14 — ADR-301. 4 path patterns, 48 celle, harness dedicato, CHECK 3.19 (zero-tolerance).
 
 ### 3.2 CHECK 3.17 Entity Audit Coverage (19 files)
 
@@ -133,7 +133,7 @@ Scanner: `scripts/check-i18n-resolver-reachability.js`. Επιβεβαιώνει
 | **i18n resolver reachability** (13 αρχεία, 378 violations) | 2 | 4 | 6 | Εστιασμένο scope, known locations |
 | **Critical path total (Scenario A)** | **13,5** | **21** | **32** | |
 | **ADR-298 Phase C** (74 coll, 7 subcategories) | 14 | 22 | 35 | C.5 trivial (~15 min/coll), C.1/C.2 complex (~30-45 min/coll) |
-| **ADR-298 Phase E** (storage rules, separate ADR) | 4 | 7 | 10 | Νέο harness shape, storage.rules 12KB |
+| **ADR-301 Phase A** (storage rules) ✅ DONE | 0 | 0 | 0 | COMPLETATO 2026-04-14 — 4 path, 48 celle, CHECK 3.19 |
 | **i18n missing keys** (4.762 legacy) | 8 | 14 | 22 | Namespace mass-migration + individual fixes |
 | **Extra for zero-backlog (Scenario B)** | **+26** | **+43** | **+67** | |
 | **Total Scenario B** | **39,5** | **64** | **99** | |

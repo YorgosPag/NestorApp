@@ -516,6 +516,43 @@ if [[ -f "$AUDIT_COVERAGE_SCRIPT" ]]; then
 fi
 
 # =============================================================================
+# CHECK 3.19: Storage Rules Test Coverage (ADR-301 / 2026-04-14)
+# =============================================================================
+# Zero-tolerance gate that ensures every top-level match block in
+# storage.rules is covered by either a test suite registered in
+# tests/storage-rules/_registry/coverage-manifest.ts or an explicit
+# pending list entry, and that every covered path has a matching test
+# suite with the SSoT COVERAGE export and matrix loop.
+#
+# Scope: triggered only when storage.rules or files under
+#        tests/storage-rules/ are staged.
+# =============================================================================
+
+STORAGE_COVERAGE_SCRIPT="scripts/check-storage-rules-test-coverage.js"
+if [[ -f "$STORAGE_COVERAGE_SCRIPT" ]]; then
+    STORAGE_COVERAGE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^storage\.rules$|^tests/storage-rules/' || true)
+
+    if [[ -n "$STORAGE_COVERAGE_TRIGGERS" ]]; then
+        echo -e "${YELLOW}🔍 Checking Storage rules test coverage (CHECK 3.19)...${NC}"
+
+        STORAGE_COVERAGE_OUTPUT=$(node "$STORAGE_COVERAGE_SCRIPT" $STORAGE_COVERAGE_TRIGGERS 2>&1)
+        STORAGE_COVERAGE_EXIT=$?
+
+        if [[ $STORAGE_COVERAGE_EXIT -ne 0 ]]; then
+            echo "$STORAGE_COVERAGE_OUTPUT"
+            echo ""
+            echo -e "${RED}✖ CHECK 3.19 failed — fix the storage rules coverage violations above.${NC}"
+            echo -e "${YELLOW}  Tip: run 'pnpm storage-rules:coverage:audit' for a full scan.${NC}"
+            exit 1
+        fi
+
+        if [[ -n "$STORAGE_COVERAGE_OUTPUT" ]]; then
+            echo "$STORAGE_COVERAGE_OUTPUT"
+        fi
+    fi
+fi
+
+# =============================================================================
 # CHECK 4: Google-Style File Size Limits (per file type)
 # =============================================================================
 # Limits based on Single Responsibility Principle:
