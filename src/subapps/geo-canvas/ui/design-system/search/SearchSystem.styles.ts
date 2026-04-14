@@ -100,7 +100,7 @@ const searchInputStyles: SearchInputStylesType = {
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: colors.background.primary,
+    backgroundColor: 'hsl(var(--background))',
     border: `1px solid ${colors.border.primary}`,
     borderRadius: borderRadius.md,
     boxShadow: shadows.md,
@@ -226,7 +226,7 @@ const searchFiltersStyles: SearchFilterStylesType = {
     padding: `${spacing.xs} ${spacing.sm}`,
     border: `1px solid ${colors.border.primary}`,
     borderRadius: borderRadius.sm,
-    backgroundColor: colors.background.primary,
+    backgroundColor: 'hsl(var(--background))',
     color: colors.text.secondary,
     fontSize: typography.fontSize.xs,
     cursor: 'pointer' as const,
@@ -332,7 +332,7 @@ const searchLayoutStyles = {
   main: {
     width: '100%',
     padding: spacing.lg,
-    backgroundColor: colors.background.primary
+    backgroundColor: 'hsl(var(--background))'
   } as const,
 
   filtersSection: {

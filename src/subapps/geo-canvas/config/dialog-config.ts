@@ -49,7 +49,7 @@ export const GEO_DIALOG_STYLES = {
     position?: 'center' | 'top' | 'bottom' | 'custom';
     customPosition?: { x: number; y: number };
   }): CSSProperties => ({
-    backgroundColor: colors.background.primary,
+    backgroundColor: 'hsl(var(--background))',
     borderRadius: borderRadius.md,
     boxShadow: shadows.lg,
     maxHeight: GEO_DIALOG_DIMENSIONS.maxHeightVh + 'vh',
