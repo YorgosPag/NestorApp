@@ -10,6 +10,7 @@
  * | save    | Green   | GREEN            |
  * | cancel  | Gray    | GRAY             |
  * | delete  | Red     | RED              |
+ * | trash   | Gray    | GRAY             | soft-delete (move to trash)
  * | new     | Green   | GREEN            |
  * | view    | Primary | PRIMARY_BUTTON   |
  * | print   | Gray    | GRAY             |
@@ -22,7 +23,7 @@ import type { EntityHeaderAction } from './UnifiedEntityHeaderSystem';
 
 // ===== TYPES =====
 
-type ActionType = 'edit' | 'save' | 'cancel' | 'delete' | 'new' | 'view' | 'print';
+type ActionType = 'edit' | 'save' | 'cancel' | 'delete' | 'trash' | 'new' | 'view' | 'print';
 
 interface EntityActionPreset {
   icon: LucideIcon;
@@ -36,6 +37,7 @@ const ENTITY_ACTION_PRESETS: Record<ActionType, EntityActionPreset> = {
   save:   { icon: Save,    className: `${GRADIENT_HOVER_EFFECTS.GREEN} text-white` },
   cancel: { icon: X,       className: `${GRADIENT_HOVER_EFFECTS.GRAY} text-white` },
   delete: { icon: Trash2,  className: `${GRADIENT_HOVER_EFFECTS.RED} text-white` },
+  trash:  { icon: Trash2,  className: `${GRADIENT_HOVER_EFFECTS.GRAY} text-white` },
   new:    { icon: Plus,    className: `${GRADIENT_HOVER_EFFECTS.GREEN} text-white` },
   view:   { icon: Eye,     className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON },
   print:  { icon: Printer, className: `${GRADIENT_HOVER_EFFECTS.GRAY} text-white` },

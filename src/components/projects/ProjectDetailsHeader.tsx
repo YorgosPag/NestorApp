@@ -39,7 +39,7 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
     isCreateMode = false,
     onStatusChange
 }: ProjectDetailsHeaderProps) {
-    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
 
     const statusPill = useMemo(() => {
         if (!project.id) return undefined;
@@ -76,9 +76,9 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
                 createEntityAction('cancel', t('detailsHeader.actions.cancel'), () => onCancelEdit?.())
             ]
         ) : []),
-        // Delete Action
+        // Soft-delete Action (ADR-308 — moves to trash, not permanent delete)
         ...(!hideEditControls && onDeleteProject ? [
-            createEntityAction('delete', t('detailsHeader.actions.delete'), () => onDeleteProject())
+            createEntityAction('trash', t('moveToTrash', { ns: 'trash' }), () => onDeleteProject())
         ] : [])
     ], [isEditing, onStartEdit, onSaveEdit, onCancelEdit, onNewProject, onDeleteProject, hideEditControls, t]);
 
