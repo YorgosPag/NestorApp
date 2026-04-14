@@ -191,13 +191,6 @@ export const POST = withStandardRateLimit(
               const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(id).get();
               return snap.exists ? ((snap.data()?.name as string) ?? null) : null;
             },
-            companyId: async (id) => {
-              if (!id || typeof id !== 'string') return null;
-              const snap = await adminDb.collection(COLLECTIONS.COMPANIES).doc(id).get();
-              if (!snap.exists) return null;
-              const d = snap.data() as Record<string, unknown>;
-              return (d.companyName ?? d.tradeName ?? d.legalName ?? null) as string | null;
-            },
           },
         });
 

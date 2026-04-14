@@ -61,7 +61,9 @@ const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   description: 'Περιγραφή',
   buildingId: 'Κτίριο',
   projectId: 'Έργο',
-  companyId: 'Εταιρεία',
+  // companyId intentionally omitted — it is the tenant isolation key and
+  // never changes after creation. Tracking it produces noise (raw ID) with
+  // no informational value for the property audit timeline.
   // Extended fields (from PropertyFieldsBlock)
   layout: 'Διαρρύθμιση',
   areas: 'Εμβαδά',
