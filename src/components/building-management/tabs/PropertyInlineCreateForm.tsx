@@ -169,7 +169,6 @@ export function PropertyInlineCreateForm({
       if (areaNet) areas.net = parseFloat(areaNet);
       if (areaGross) areas.gross = parseFloat(areaGross);
       if (Object.keys(areas).length > 0) propertyData.areas = areas;
-      if (areaNet) propertyData.area = parseFloat(areaNet);
 
       const layout: Record<string, number> = {};
       if (bedrooms) layout.bedrooms = parseInt(bedrooms, 10);
