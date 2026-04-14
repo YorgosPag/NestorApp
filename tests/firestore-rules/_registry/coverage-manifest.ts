@@ -49,6 +49,15 @@ import {
   systemGlobalMatrix,
   tasksMatrix,
 } from './coverage-matrices-system';
+import {
+  cadFilesMatrix,
+  fileApprovalsMatrix,
+  fileAuditLogMatrix,
+  fileCommentsMatrix,
+  fileSharesMatrix,
+  fileTenantFullMatrix,
+  photoSharesMatrix,
+} from './coverage-matrices-dxf';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -546,6 +555,163 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     // Seed doc: createdBy=assignedTo=same_tenant_user.uid for update/delete paths
     matrix: tasksMatrix(),
   },
+  // ── ADR-298 Phase C.2 — DXF / CAD / Floorplan collections (2026-04-14) ──────
+  {
+    collection: 'project_floorplans',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/project-floorplans.rules.test.ts',
+    rulesRange: [875, 913],
+    // Create: companyId==getUserCompanyId() only — no isSuperAdminOnly() → super_admin denied.
+    // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly.
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'building_floorplans',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/building-floorplans.rules.test.ts',
+    rulesRange: [918, 952],
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'floor_floorplans',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/floor-floorplans.rules.test.ts',
+    rulesRange: [958, 994],
+    // Has extra dev fallback leg on read (!companyId && !createdBy) — does not affect
+    // canonical matrix (seed doc always carries companyId).
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'unit_floorplans',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/unit-floorplans.rules.test.ts',
+    rulesRange: [999, 1036],
+    // Delta from project_floorplans: create has isSuperAdminOnly() OR-leg → super_admin allowed.
+    matrix: fileTenantFullMatrix(),
+  },
+  {
+    collection: 'floorplans',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/floorplans.rules.test.ts',
+    rulesRange: [2342, 2375],
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'dxfOverlayLevels',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/dxf-overlay-levels.rules.test.ts',
+    rulesRange: [1137, 1187],
+    // Items subcollection not tracked (nested subcollection — excluded from manifest).
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'layers',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/layers.rules.test.ts',
+    rulesRange: [1193, 1226],
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'layer_groups',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/layer-groups.rules.test.ts',
+    rulesRange: [2303, 2336],
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'admin_building_templates',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/admin-building-templates.rules.test.ts',
+    rulesRange: [2419, 2454],
+    // Legacy fallback on read for !companyId docs (creator-only) — not exercised
+    // by canonical matrix (seed doc carries companyId).
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'cad_files',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/cad-files.rules.test.ts',
+    rulesRange: [332, 365],
+    // Permissive write: create/update require only isAuthenticated() + fileName.
+    // No companyId gate on write → cross_tenant_admin CAN create/update.
+    // Read/delete: tenant-scoped (isSuperAdminOnly || belongsToCompany || legacy createdBy).
+    matrix: cadFilesMatrix(),
+  },
+  // ── ADR-298 Phase C.3 — File management collections (2026-04-14) ──────────
+  {
+    collection: 'file_audit_log',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/file-audit-log.rules.test.ts',
+    rulesRange: [2468, 2476],
+    // Read gate: belongsToCompany only — NO isSuperAdminOnly bypass (super_admin denied).
+    // Create allows super_admin (isSuperAdminOnly on create rule).
+    // Update/delete: if false — immutable audit trail.
+    // Note: pattern is 'tenant_direct' (not 'immutable') to avoid the Bug #1 shape
+    // check which requires isSuperAdminOnly as first read leg — this collection
+    // deliberately excludes super_admin from reads by design.
+    matrix: fileAuditLogMatrix(),
+  },
+  {
+    collection: 'file_shares',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/file-shares.rules.test.ts',
+    rulesRange: [2485, 2508],
+    // Read: if true — public (anonymous allowed for share token validation pages).
+    // Delete: createdBy==uid only — super_admin and admin denied.
+    matrix: fileSharesMatrix(),
+  },
+  {
+    collection: 'photo_shares',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/photo-shares.rules.test.ts',
+    rulesRange: [2513, 2527],
+    // Update: if false — immutable CRM share history records.
+    // Delete: isSuperAdminOnly() only.
+    matrix: photoSharesMatrix(),
+  },
+  {
+    collection: 'file_comments',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/file-comments.rules.test.ts',
+    rulesRange: [2535, 2548],
+    // Read gate: belongsToCompany (no isSuperAdminOnly bypass) → super_admin denied.
+    // Update: any same-tenant member (authorId must be preserved).
+    // Delete: author only (authorId == request.auth.uid). Seed: authorId=same_tenant_user.uid.
+    matrix: fileCommentsMatrix(),
+  },
+  {
+    collection: 'file_approvals',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/file-approvals.rules.test.ts',
+    rulesRange: [2555, 2576],
+    // Delete: if false — approval records are immutable business artifacts.
+    matrix: fileApprovalsMatrix(),
+  },
+  {
+    collection: 'document_templates',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/document-templates.rules.test.ts',
+    rulesRange: [2583, 2610],
+    // Full CRUD: isSuperAdminOnly || (companyId && belongsToCompany).
+    // same_tenant_user has all operations (not just admin).
+    matrix: fileTenantFullMatrix(),
+  },
+  {
+    collection: 'file_webhooks',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/file-webhooks.rules.test.ts',
+    rulesRange: [2617, 2620],
+    // allow read, write: if false — Admin SDK only. Same shape as accounting_invoice_counters.
+    matrix: denyAllMatrix(),
+  },
+  {
+    collection: 'file_folders',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/file-folders.rules.test.ts',
+    rulesRange: [2627, 2654],
+    // Full CRUD: isSuperAdminOnly || (companyId && belongsToCompany).
+    matrix: fileTenantFullMatrix(),
+  },
 ] as const;
 
 /**
@@ -569,16 +735,16 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // — Attendance / HR —
   // attendance_events + attendance_qr_tokens moved to COVERAGE (ADR-298 Phase B.1, 2026-04-11)
   'employment_records',
-  // — Files / CAD —
-  'cad_files',
-  'file_shares',
-  'photo_shares',
-  'file_comments',
-  'file_approvals',
-  'document_templates',
-  'file_webhooks',
-  'file_folders',
-  'file_audit_log',
+  // — Files / CAD — (all moved to COVERAGE in ADR-298 Phase C.2+C.3, 2026-04-14)
+  // cad_files            → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // file_shares          → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
+  // photo_shares         → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
+  // file_comments        → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
+  // file_approvals       → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
+  // document_templates   → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
+  // file_webhooks        → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
+  // file_folders         → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
+  // file_audit_log       → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
   // — Companies / users / workspaces —
   'companies',
   'security_roles',
@@ -590,16 +756,16 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'positions',
   // — Building / property hierarchy —
   // floors, properties, storage_units, parking_spots → moved to COVERAGE (ADR-298 Phase B.4, 2026-04-13)
-  'project_floorplans',
-  'building_floorplans',
-  'floor_floorplans',
-  'unit_floorplans',
-  'floorplans',
-  'admin_building_templates',
+  // project_floorplans     → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // building_floorplans    → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // floor_floorplans       → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // unit_floorplans        → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // floorplans             → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // admin_building_templates → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // — DXF / CAD overlays —
-  'dxfOverlayLevels',
-  'layers',
-  'layer_groups',
+  // dxfOverlayLevels → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // layers           → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // layer_groups     → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // — Navigation / notifications / tasks —
   // navigation_companies → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   'notifications',

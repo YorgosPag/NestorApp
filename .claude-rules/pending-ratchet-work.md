@@ -1,6 +1,6 @@
 # Pending Ratchet Work — Live Checklist
 
-**Last updated:** 2026-04-11
+**Last updated:** 2026-04-14
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Every agent starting a session in this repo MUST (per CLAUDE.md SOS N.13) read this file and report to Giorgio in its first reply what is PENDING, so Giorgio doesn't forget.
 
@@ -25,7 +25,7 @@
 
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
-- [ ] **ADR-298 Phase C** — 44 remaining Firestore rules collections in 5 subcategories: C.2 DXF/CAD/floorplans (15), C.3 file variants (10), C.4 BoQ/ownership/commissions (8), C.6 ownership-based users (5), C.7 specialized (10 + notifications). C.1 accounting (16) DONE 2026-04-13. C.5 system-global (11) DONE 2026-04-13. **Hours:** ~9-22 (expected ~14, down from 17).
+- [ ] **ADR-298 Phase C** — 26 remaining Firestore rules collections in 3 subcategories: C.4 BoQ/ownership/commissions (8), C.6 ownership-based users (5), C.7 specialized (~13 + notifications). C.1 accounting (16) DONE 2026-04-13. C.2 DXF/floorplans (10) DONE 2026-04-14. C.3 file variants (8) DONE 2026-04-14. C.5 system-global (11) DONE 2026-04-13. **Hours:** ~5-12 (expected ~8, down from 14).
 
 - [ ] **ADR-298 Phase E** — Storage rules coverage. `storage.rules` 12KB, new harness shape, separate future ADR. **Hours:** 4-10 (expected 7).
 
@@ -62,3 +62,4 @@
 | 2026-04-13 | ADR-298 Phase C.1 DONE. 16 accounting collections → COVERAGE. 4 new matrix builders + coverage-matrices-accounting.ts (SRP split) + seed-helpers-accounting.ts + 16 suites. Pending 71→55, coverage 23→39. |
 | 2026-04-13 | CHECK 3.13 Phase C DONE — ZERO BASELINE. 79 chiavi locale mancanti aggiunte in 9 namespace (el+en): contacts-core (company.sections/fields), storage (card.stats.level/value/stage/priority/dueDate + types.parking), building-tabs (floorplan.description + protocols.description), building (propertyTypes.*), properties-enums (status.underConstruction/blocked + saleStatus.*), dxf-viewer (steps.*), contacts-relationships (status enum + 22 types), crm (stages.*), filters (allPrices). Baseline 79→0. CHECK 3.13 completamente chiusa. ADR-279 Phase C entry aggiunto. |
 | 2026-04-13 | ADR-298 Phase C.5 DONE. 11 system-global collections → COVERAGE. 4 new matrix builders (systemGlobalMatrix, systemAdminGlobalMatrix, countersMatrix, tasksMatrix) + coverage-matrices-system.ts (SRP split) + seed-helpers-system.ts + 11 suites. Pending 55→44, coverage 39→50. |
+| 2026-04-14 | ADR-298 Phase C.2+C.3 DONE. 18 DXF/CAD/floorplan + file management collections → COVERAGE. 7 new matrix builders (fileTenantFullMatrix, cadFilesMatrix, fileAuditLogMatrix, fileSharesMatrix, photoSharesMatrix, fileCommentsMatrix, fileApprovalsMatrix) + coverage-matrices-dxf.ts (SRP split) + seed-helpers-dxf.ts + 18 suites. 1477 tests green (68 suites). Pending 44→26, coverage 50→68 collections. |

@@ -390,3 +390,15 @@ export {
   tasksMatrix,
 } from './coverage-matrices-system';
 
+// Phase C.2+C.3 DXF/CAD/floorplan/file matrix functions live in coverage-matrices-dxf.ts
+// (extracted per Google SRP 500-line rule — ADR-298 Phase C.2+C.3, 2026-04-14).
+export {
+  cadFilesMatrix,
+  fileApprovalsMatrix,
+  fileAuditLogMatrix,
+  fileCommentsMatrix,
+  fileSharesMatrix,
+  fileTenantFullMatrix,
+  photoSharesMatrix,
+} from './coverage-matrices-dxf';
+
