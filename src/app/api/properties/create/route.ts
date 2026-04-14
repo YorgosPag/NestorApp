@@ -6,6 +6,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PropertyType } from '@/types/property';
 import { getErrorMessage } from '@/lib/error-utils';
 import {
@@ -179,6 +180,18 @@ export const POST = withStandardRateLimit(
             unitType: (body.type || 'apartment') as PropertyType,
           },
           apiPath: '/api/properties/create (POST)',
+          auditFieldResolvers: {
+            buildingId: async (id) => {
+              if (!id || typeof id !== 'string') return null;
+              const snap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(id).get();
+              return snap.exists ? ((snap.data()?.name as string) ?? null) : null;
+            },
+            projectId: async (id) => {
+              if (!id || typeof id !== 'string') return null;
+              const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(id).get();
+              return snap.exists ? ((snap.data()?.name as string) ?? null) : null;
+            },
+          },
         });
 
         return apiSuccess<PropertyCreateResponse>(

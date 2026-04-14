@@ -161,6 +161,78 @@ function formatStorageUrl(url: string): string {
   return extMatch ? `Φωτογραφία (${extMatch[1]})` : "Φωτογραφία";
 }
 
+// ============================================================================
+// FIELD-SPECIFIC FORMATTING (floor numbers, area units)
+// ============================================================================
+
+/**
+ * Floor number → human-readable label (Greek ordinal convention).
+ *   0  → "Ισόγειο"
+ *   1  → "1ος"
+ *  -1  → "1ο υπόγειο"
+ */
+function formatFloorNumber(value: string | number | boolean | null): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const num = typeof value === 'number' ? value : Number(value);
+  if (Number.isNaN(num)) return undefined;
+  if (num === 0) return 'Ισόγειο';
+  if (num > 0) return `${num}ος`;
+  return `${Math.abs(num)}ο υπόγειο`;
+}
+
+/**
+ * Wrap a scalar area number with the m² unit label.
+ */
+function formatAreaScalar(value: string | number | boolean | null): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'boolean') return undefined;
+  const num = typeof value === 'number' ? value : Number(value);
+  if (Number.isNaN(num)) return undefined;
+  return `${num} τ.μ.`;
+}
+
+/**
+ * Format the `areas` nested-object JSON with τ.μ. units on each value.
+ * Input: '{"gross":120,"net":100,"balcony":15}'
+ * Output: "Μικτό: 120 τ.μ., Καθαρό: 100 τ.μ., Μπαλκόνι: 15 τ.μ."
+ */
+function formatAreasObject(raw: string): string | undefined {
+  const parsed = safeJsonParse<Record<string, unknown>>(raw, undefined);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+  const parts = Object.entries(parsed)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => `${NESTED_KEY_LABELS[k] ?? k}: ${v} τ.μ.`);
+  return parts.length > 0 ? parts.join(', ') : undefined;
+}
+
+/**
+ * Field-aware wrapper around {@link formatDisplayValue}.
+ *
+ * Applies special formatting for fields whose stored values carry implicit
+ * semantics not covered by the generic renderer:
+ *   - `floor`  — numeric ordinal → Greek label ("Ισόγειο", "1ος", "1ο υπόγειο")
+ *   - `area`   — numeric scalar  → value + " τ.μ."
+ *   - `areas`  — JSON object     → key labels with " τ.μ." on each value
+ *
+ * Falls through to `formatDisplayValue` for all other fields.
+ */
+export function formatFieldAwareValue(
+  field: string,
+  value: string | number | boolean | null,
+  translateValue?: (v: string) => string | undefined,
+): string {
+  if (field === 'floor') {
+    return formatFloorNumber(value) ?? formatDisplayValue(value, translateValue);
+  }
+  if (field === 'area') {
+    return formatAreaScalar(value) ?? formatDisplayValue(value, translateValue);
+  }
+  if (field === 'areas' && typeof value === 'string' && value.startsWith('{')) {
+    return formatAreasObject(value) ?? formatDisplayValue(value, translateValue);
+  }
+  return formatDisplayValue(value, translateValue);
+}
+
 /**
  * Format a raw audit value for display.
  * @param value - Raw value from Firestore audit entry

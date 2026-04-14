@@ -23,7 +23,7 @@ import { useTranslation } from "@/i18n/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { ACTION_MAP } from "./activity-tab-config";
-import { formatDisplayValue } from "./activity-tab-helpers";
+import { formatFieldAwareValue } from "./activity-tab-helpers";
 import { resolveAuditValue } from "./audit-value-resolver";
 
 // ============================================================================
@@ -227,11 +227,11 @@ export function AuditTimelineEntry({
                                     "line-through decoration-red-400/60",
                                   )}
                                 >
-                                  {formatDisplayValue(sub.oldValue, translateSubValue)}
+                                  {formatFieldAwareValue(sub.subField, sub.oldValue, translateSubValue)}
                                 </span>
                                 {" → "}
                                 <span className="font-medium text-foreground">
-                                  {formatDisplayValue(sub.newValue, translateSubValue)}
+                                  {formatFieldAwareValue(sub.subField, sub.newValue, translateSubValue)}
                                 </span>
                               </li>
                             );
@@ -256,11 +256,11 @@ export function AuditTimelineEntry({
                       "line-through decoration-red-400/60",
                     )}
                   >
-                    {formatDisplayValue(change.oldValue, translateFieldValue)}
+                    {formatFieldAwareValue(change.field, change.oldValue, translateFieldValue)}
                   </span>
                   {" → "}
                   <span className="font-medium text-foreground">
-                    {formatDisplayValue(change.newValue, translateFieldValue)}
+                    {formatFieldAwareValue(change.field, change.newValue, translateFieldValue)}
                   </span>
                 </li>
               );

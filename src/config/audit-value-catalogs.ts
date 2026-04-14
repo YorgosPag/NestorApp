@@ -65,6 +65,21 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // `status` with an unknown value, the resolver gracefully falls back to
   // `common:audit.values.*`, so there is no regression risk for contacts etc.
   status: { ns: 'projects', path: 'status' },
+
+  // ── Property: unit type (studio/apartment/maisonette/shop/office/...).
+  // Points to the camelCase-only `auditTypes` sub-catalog (ADR-279 §3).
+  // The runtime resolver normalises stored snake_case values (apartment_1br →
+  // apartment1br, detached_house → detachedHouse) before lookup, so legacy
+  // Firestore documents continue to translate correctly.
+  // For non-property entities that also track a `type` field, unknown values
+  // fall through to `common:audit.values.*` — no regression risk.
+  type: { ns: 'properties-enums', path: 'auditTypes' },
+
+  // ── Property: commercial status (unavailable/forSale/reserved/sold/...).
+  // Points to the camelCase-only `auditCommercialStatus` sub-catalog.
+  // kebab-case stored values (for-sale → forSale, for-rent → forRent) are
+  // normalised by the resolver before lookup.
+  commercialStatus: { ns: 'properties-enums', path: 'auditCommercialStatus' },
 } as const;
 
 /** All field names that have a registered catalog — cheap membership test. */

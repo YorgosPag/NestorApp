@@ -100,6 +100,34 @@
     "rented": "Rented",
     "under-negotiation": "Under Negotiation"
   },
+  "auditTypes": {
+    "apartment": "Apartment",
+    "studio": "Studio",
+    "maisonette": "Maisonette",
+    "shop": "Shop",
+    "office": "Office",
+    "storage": "Storage",
+    "bedsit": "Bedsit",
+    "loft": "Loft",
+    "penthouse": "Penthouse",
+    "hall": "Hall",
+    "villa": "Villa",
+    "apartment2br": "2-Bedroom Apartment",
+    "apartment3br": "3-Bedroom Apartment",
+    "apartment4br": "4-Bedroom Apartment",
+    "apartment1br": "1-Bedroom Apartment",
+    "detachedHouse": "Detached House"
+  },
+  "auditCommercialStatus": {
+    "unavailable": "Unavailable",
+    "forSale": "For Sale",
+    "forRent": "For Rent",
+    "forSaleAndRent": "For Sale and Rent",
+    "sold": "Sold",
+    "reserved": "Reserved",
+    "rented": "Rented",
+    "underNegotiation": "Under Negotiation"
+  },
   "intent": {
     "sale": "For Sale",
     "rental": "For Rental",

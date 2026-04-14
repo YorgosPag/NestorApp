@@ -100,6 +100,34 @@
     "rented": "Ενοικιάστηκε",
     "under-negotiation": "Υπό Διαπραγμάτευση"
   },
+  "auditTypes": {
+    "apartment": "Διαμέρισμα",
+    "studio": "Στούντιο",
+    "maisonette": "Μεζονέτα",
+    "shop": "Κατάστημα",
+    "office": "Γραφείο",
+    "storage": "Αποθήκη",
+    "bedsit": "Γκαρσονιέρα",
+    "loft": "Σοφίτα",
+    "penthouse": "Ρετιρέ",
+    "hall": "Αίθουσα",
+    "villa": "Βίλα",
+    "apartment2br": "Διαμέρισμα 2 Υ/Δ",
+    "apartment3br": "Διαμέρισμα 3 Υ/Δ",
+    "apartment4br": "Διαμέρισμα 4 Υ/Δ",
+    "apartment1br": "Γκαρσονιέρα",
+    "detachedHouse": "Μονοκατοικία"
+  },
+  "auditCommercialStatus": {
+    "unavailable": "Μη διαθέσιμο",
+    "forSale": "Προς πώληση",
+    "forRent": "Προς ενοικίαση",
+    "forSaleAndRent": "Προς πώληση και ενοικίαση",
+    "sold": "Πωλήθηκε",
+    "reserved": "Κρατημένο",
+    "rented": "Ενοικιάστηκε",
+    "underNegotiation": "Υπό Διαπραγμάτευση"
+  },
   "intent": {
     "sale": "Για Πώληση",
     "rental": "Για Ενοικίαση",
