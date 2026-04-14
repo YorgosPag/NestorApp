@@ -70,6 +70,7 @@ function SummaryField({
 export function PropertySummaryContent({ data: unit }: PropertySummaryContentProps) {
   const _colors = useSemanticColors();
   const { t } = useTranslation('common');
+  const { t: tProps } = useTranslation('properties');
   const iconSizes = useIconSizes();
 
   if (!unit) return null;
@@ -128,7 +129,7 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
               icon={Compass}
               iconColor="text-amber-600"
               label={t('sales.unitSummary.orientation')}
-              value={orientation ? t(`orientations.${orientation}`) : undefined}
+              value={orientation ? tProps(`orientation.short.${orientation}`, { defaultValue: orientation }) : undefined}
             />
             <SummaryField
               icon={Zap}

@@ -160,6 +160,16 @@
       "maisonette": "Maisonette",
       "shop": "Shop",
       "storage": "Storage"
+    },
+    "orientation": {
+      "north": "North",
+      "northeast": "Northeast",
+      "east": "East",
+      "southeast": "Southeast",
+      "south": "South",
+      "southwest": "Southwest",
+      "west": "West",
+      "northwest": "Northwest"
     }
   },
   "orientation": {

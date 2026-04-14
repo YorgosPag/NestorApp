@@ -160,6 +160,16 @@
       "maisonette": "Μεζονέτα",
       "shop": "Κατάστημα",
       "storage": "Αποθήκη"
+    },
+    "orientation": {
+      "north": "Βόρειο",
+      "northeast": "Βορειοανατολικό",
+      "east": "Ανατολικό",
+      "southeast": "Νοτιοανατολικό",
+      "south": "Νότιο",
+      "southwest": "Νοτιοδυτικό",
+      "west": "Δυτικό",
+      "northwest": "Βορειοδυτικό"
     }
   },
   "orientation": {
