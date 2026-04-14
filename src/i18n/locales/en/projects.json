@@ -451,6 +451,9 @@
     "brokerTerminate": {
       "withPendingCommissions": "This brokerage agreement has pending commissions that have not been paid. Terminating the agreement does not automatically cancel pending commissions — review and complete or cancel them manually."
     },
+    "ikaSettingsSave": {
+      "withActiveRecords": "There are APD/stamp records for this company. Changing insurance classes or contribution rates will affect stamp calculations for ALL active projects — confirm that the new ΕΦΚΑ circular is in effect before saving."
+    },
     "dependencies": {
       "buildings": {
         "label": "Project buildings",
@@ -515,6 +518,10 @@
       "calendarEvents": {
         "label": "Calendar events",
         "remediation": "Calendar events reference the old project name. Update them manually after saving."
+      },
+      "employmentRecordsGlobal": {
+        "label": "APD/stamp records — all projects",
+        "remediation": "The new configuration applies to future calculations. Records already submitted to ΕΦΚΑ are not automatically recalled."
       }
     }
   },

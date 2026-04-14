@@ -337,7 +337,13 @@
         "classLabel": "Class {number} — €{wage}/day"
       },
       "noInsuranceClass": "No class",
-      "totalsRow": "TOTALS"
+      "totalsRow": "TOTALS",
+      "confirm": {
+        "overwriteSubmitted": {
+          "title": "Overwrite submitted records",
+          "description": "Records for this period have already been submitted or accepted by ΕΦΚΑ. Saving will overwrite the existing entries — confirm you intend to proceed."
+        }
+      }
     },
     "apdTab": {
       "title": "APD & Payments",
@@ -367,7 +373,13 @@
         "viewDetails": "Details"
       },
       "deadlineWarning": "Deadline approaching!",
-      "deadlinePassed": "Deadline has passed!"
+      "deadlinePassed": "Deadline has passed!",
+      "confirm": {
+        "markSubmitted": {
+          "title": "Confirm APD Submission",
+          "description": "You are marking this APD as «Submitted». This action reflects an actual submission to ΕΦΚΑ — confirm you have already submitted the declaration before proceeding."
+        }
+      }
     }
   }
 }

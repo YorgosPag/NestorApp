@@ -33,6 +33,8 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useEmploymentRecords } from './hooks/useEmploymentRecords';
 import type { EmploymentRecord, ApdStatus } from './contracts';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
 import '@/lib/design-system';
 
@@ -140,13 +142,23 @@ export function ApdPaymentsTabContent({ projectId }: ApdPaymentsTabContentProps)
 
   const monthGroups = useMemo(() => groupRecordsByMonth(records), [records]);
 
+  const { confirm, dialogProps } = useConfirmDialog();
+
   const handleMarkSubmitted = useCallback(async (group: ApdMonthGroup) => {
+    // ADR-307: confirm before marking APD as submitted — irreversible compliance action
+    const confirmed = await confirm({
+      title: t('ika.apdTab.confirm.markSubmitted.title'),
+      description: t('ika.apdTab.confirm.markSubmitted.description'),
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+
     for (const record of group.records) {
       if (record.apdStatus === 'pending') {
         await updateApdStatus(record.id, 'submitted');
       }
     }
-  }, [updateApdStatus]);
+  }, [updateApdStatus, confirm, t]);
 
   // No project ID
   if (!projectId) {
@@ -265,6 +277,9 @@ export function ApdPaymentsTabContent({ projectId }: ApdPaymentsTabContentProps)
           </CardContent>
         </Card>
       )}
+
+      {/* ADR-307: confirm before legal compliance status change */}
+      <ConfirmDialog {...dialogProps} />
     </section>
   );
 }

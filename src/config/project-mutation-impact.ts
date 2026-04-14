@@ -170,8 +170,9 @@ export const PROJECT_MUTATION_DEPENDENCY_IDS = [
   'accountingInvoices',
   'files',
   'boqItems',
-  'soldProperties',   // dep #15 — ADR-302 §5.2: properties with commercialStatus=='sold'
-  'calendarEvents',   // dep #16 — ADR-302 §6.1: calendar_events with projectId
+  'soldProperties',          // dep #15 — ADR-302 §5.2: properties with commercialStatus=='sold'
+  'calendarEvents',          // dep #16 — ADR-302 §6.1: calendar_events with projectId
+  'employmentRecordsGlobal', // dep #17 — ADR-307: company-wide count for global ΕΦΚΑ config save
 ] as const;
 
 export type ProjectMutationDependencyId = typeof PROJECT_MUTATION_DEPENDENCY_IDS[number];

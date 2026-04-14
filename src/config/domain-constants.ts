@@ -752,6 +752,8 @@ export const API_ROUTES = {
     EMPLOYMENT_RECORDS: '/api/ika/employment-records',
     EMPLOYMENT_RECORD_APD_STATUS: (recordId: string) => `/api/ika/employment-records/${recordId}/apd-status` as const,
     EFKA_DECLARATION: (projectId: string) => `/api/projects/${projectId}/efka-declaration` as const,
+    /** ADR-307: impact preview before saving global ΕΦΚΑ labor compliance config */
+    LABOR_COMPLIANCE_SAVE_PREVIEW: '/api/ika/labor-compliance-save-preview',
   },
 
   // ── Communications ────────────────────────────────────────────────────

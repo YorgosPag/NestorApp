@@ -38,6 +38,8 @@ import { StampsSummaryDashboard } from './components/StampsSummaryDashboard';
 import { WorkerStampsTable } from './components/WorkerStampsTable';
 import { EmploymentRecordDialog } from './components/EmploymentRecordDialog';
 import type { WorkerStampsSummary } from './contracts';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import '@/lib/design-system';
 
 interface StampsCalculationTabContentProps {
@@ -81,7 +83,8 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
   // Hooks
   const { workers, isLoading: workersLoading } = useProjectWorkers(projectId);
   const { config, isLoading: configLoading } = useLaborComplianceConfig();
-  const { saveRecords } = useEmploymentRecords(projectId, selectedMonth, selectedYear);
+  const { records, saveRecords } = useEmploymentRecords(projectId, selectedMonth, selectedYear);
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
 
   // Build a Date range for the selected month to query attendance events
   const monthStartDate = useMemo(
@@ -156,6 +159,20 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
 
   async function handleSaveRecords() {
     if (!projectId || !user) return;
+
+    // ADR-307: guard if any existing records for this period are already submitted/accepted
+    const hasSubmittedRecords = records.some(
+      (r) => r.apdStatus === 'submitted' || r.apdStatus === 'accepted',
+    );
+
+    if (hasSubmittedRecords) {
+      const confirmed = await confirm({
+        title: t('ika.stampsTab.confirm.overwriteSubmitted.title'),
+        description: t('ika.stampsTab.confirm.overwriteSubmitted.description'),
+        variant: 'destructive',
+      });
+      if (!confirmed) return;
+    }
 
     setIsSaving(true);
     const success = await saveRecords({
@@ -282,6 +299,9 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
         config={config}
         onSave={handleSaveInsuranceClass}
       />
+
+      {/* ADR-307: confirm before overwriting submitted records */}
+      <ConfirmDialog {...confirmDialogProps} />
     </section>
   );
 }

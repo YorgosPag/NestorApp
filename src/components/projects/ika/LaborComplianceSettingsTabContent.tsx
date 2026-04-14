@@ -35,6 +35,7 @@ import {
   saveLaborComplianceConfigWithPolicy,
   seedLaborComplianceDefaultsWithPolicy,
 } from '@/services/labor-compliance/labor-compliance-mutation-gateway';
+import { useGuardedLaborComplianceSave } from '@/hooks/useGuardedLaborComplianceSave';
 import type { LaborComplianceDocument } from '@/services/labor-compliance';
 import type { InsuranceClass, ContributionRates } from './contracts';
 import {
@@ -58,6 +59,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
   const _borders = useBorderTokens();
   const { user } = useAuth();
   const notifications = useNotifications();
+  const { checking, runSaveOperation, ImpactDialog } = useGuardedLaborComplianceSave();
 
   // --- State ---
   const [isLoading, setIsLoading] = useState(true);
@@ -124,7 +126,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
   const handleSave = useCallback(async () => {
     if (!user?.uid) return;
 
-    // Validate first
+    // Validate first — fail fast before impact preview
     const classValidation = LaborComplianceService.validateInsuranceClasses(classes);
     if (!classValidation.valid) {
       notifications.error(`${t('ika.efkaSettingsTab.validationError')}: ${classValidation.errors[0]}`);
@@ -136,28 +138,31 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
       return;
     }
 
-    try {
+    // ADR-307: impact guard — confirms global footprint before writing
+    await runSaveOperation(async () => {
       setIsSaving(true);
-      await saveLaborComplianceConfigWithPolicy({
-        classes,
-        rates,
-        metadata: {
-          year: activeYear,
-          userId: user.uid,
-          sourceCircular: sourceCircular || null,
-          effectiveDate: effectiveDate || new Date().toISOString().split('T')[0],
-        },
-      });
-      notifications.success(t('ika.efkaSettingsTab.saveSuccess'));
-      setIsEditing(false);
-      await loadData();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Save failed';
-      notifications.error(msg);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [user, classes, rates, activeYear, sourceCircular, effectiveDate, notifications, t, loadData]);
+      try {
+        await saveLaborComplianceConfigWithPolicy({
+          classes,
+          rates,
+          metadata: {
+            year: activeYear,
+            userId: user.uid,
+            sourceCircular: sourceCircular || null,
+            effectiveDate: effectiveDate || new Date().toISOString().split('T')[0],
+          },
+        });
+        notifications.success(t('ika.efkaSettingsTab.saveSuccess'));
+        setIsEditing(false);
+        await loadData();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Save failed';
+        notifications.error(msg);
+      } finally {
+        setIsSaving(false);
+      }
+    });
+  }, [user, classes, rates, activeYear, sourceCircular, effectiveDate, notifications, t, loadData, runSaveOperation]);
 
   const handleSeed = useCallback(async () => {
     if (!user?.uid) return;
@@ -224,10 +229,10 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
                 <X className={iconSizes.sm} />
                 <span className="ml-1">{t('projectHeader.cancel')}</span>
               </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
+              <Button onClick={handleSave} disabled={isSaving || checking}>
                 <Save className={iconSizes.sm} />
                 <span className="ml-1">
-                  {isSaving ? t('ika.efkaSettingsTab.saving') : t('ika.efkaSettingsTab.save')}
+                  {isSaving || checking ? t('ika.efkaSettingsTab.saving') : t('ika.efkaSettingsTab.save')}
                 </span>
               </Button>
             </>
@@ -370,6 +375,9 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
           />
         </CardContent>
       </Card>
+
+      {/* ADR-307: global impact guard dialog */}
+      {ImpactDialog}
     </section>
   );
 }
