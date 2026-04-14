@@ -411,3 +411,11 @@ export {
   ownershipTablesMatrix,
 } from './coverage-matrices-boq';
 
+// Phase C.6 users/companies/ownership matrix functions live in coverage-matrices-users.ts
+// (extracted per Google SRP 500-line rule — ADR-298 Phase C.6, 2026-04-14).
+export {
+  companiesMatrix,
+  ownerOnlyMatrix,
+  usersMatrix,
+} from './coverage-matrices-users';
+

@@ -25,7 +25,7 @@
 
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
-- [ ] **ADR-298 Phase C** — 21 remaining Firestore rules collections in 2 subcategories: C.6 ownership-based users (~8: companies, security_roles, users, user_notification_settings, user_2fa_settings, workspaces, teams, positions), C.7 specialized (~13 + notifications). C.1 accounting (16) DONE 2026-04-13. C.2 DXF/floorplans (10) DONE 2026-04-14. C.3 file variants (8) DONE 2026-04-14. C.4 BoQ/commissions/ownership (5) DONE 2026-04-14. C.5 system-global (11) DONE 2026-04-13. **Hours:** ~4-10 (expected ~6).
+- [ ] **ADR-298 Phase C** — 13 remaining Firestore rules collections in 1 subcategory: C.7 specialized (~13: contact_relationships, contact_links, relationships, relationship_audit, employment_records, notifications, audit_logs, system_audit_logs, audit_log, search_documents, voice_commands). C.1 accounting (16) DONE. C.2+C.3 DXF/files (18) DONE. C.4 BoQ/commissions (5) DONE. C.5 system-global (11) DONE. C.6 users/companies/workspaces (8) DONE 2026-04-14. **Hours:** ~2-5 (estimated ~3).
 
 - [ ] **ADR-298 Phase E** — Storage rules coverage. `storage.rules` 12KB, new harness shape, separate future ADR. **Hours:** 4-10 (expected 7).
 
@@ -64,3 +64,4 @@
 | 2026-04-13 | ADR-298 Phase C.5 DONE. 11 system-global collections → COVERAGE. 4 new matrix builders (systemGlobalMatrix, systemAdminGlobalMatrix, countersMatrix, tasksMatrix) + coverage-matrices-system.ts (SRP split) + seed-helpers-system.ts + 11 suites. Pending 55→44, coverage 39→50. |
 | 2026-04-14 | ADR-298 Phase C.2+C.3 DONE. 18 DXF/CAD/floorplan + file management collections → COVERAGE. 7 new matrix builders (fileTenantFullMatrix, cadFilesMatrix, fileAuditLogMatrix, fileSharesMatrix, photoSharesMatrix, fileCommentsMatrix, fileApprovalsMatrix) + coverage-matrices-dxf.ts (SRP split) + seed-helpers-dxf.ts + 18 suites. 1477 tests green (68 suites). Pending 44→26, coverage 50→68 collections. |
 | 2026-04-14 | ADR-298 Phase C.4 DONE. 5 BoQ/commissions/ownership collections → COVERAGE. 4 new matrix builders (boqCategoriesMatrix, brokerageMatrix, commissionRecordsMatrix, ownershipTablesMatrix) + coverage-matrices-boq.ts (SRP split) + seed-helpers-boq.ts + 5 suites. 119 tests green (5 suites). Pending 26→21, coverage 68→73 collections. |
+| 2026-04-14 | ADR-298 Phase C.6 DONE. 8 ownership-based collections → COVERAGE: companies, security_roles, users, user_notification_settings, user_2fa_settings, workspaces, teams, positions. 3 new matrix builders (companiesMatrix, usersMatrix, ownerOnlyMatrix) + coverage-matrices-users.ts (SRP) + seed-helpers-users.ts + 8 suites. 198 tests green. Pending 21→13, coverage 73→81 collections. |

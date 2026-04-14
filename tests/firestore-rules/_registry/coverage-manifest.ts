@@ -64,6 +64,11 @@ import {
   commissionRecordsMatrix,
   ownershipTablesMatrix,
 } from './coverage-matrices-boq';
+import {
+  companiesMatrix,
+  ownerOnlyMatrix,
+  usersMatrix,
+} from './coverage-matrices-users';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -767,6 +772,86 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     // Nested revisions subcollection excluded from top-level CHECK 3.16 scope.
     matrix: ownershipTablesMatrix(),
   },
+  // ── ADR-298 Phase C.6 — ownership-based users / companies / workspaces (2026-04-14) ──
+  {
+    collection: 'companies',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/companies.rules.test.ts',
+    rulesRange: [518, 550],
+    // Read: isSuperAdminOnly() || getUserCompanyId() == companyId (path variable, not field).
+    // Write: if false — Admin SDK only (ADR-252 FR-C3).
+    // List: same-tenant personas denied (path-var rule, unrestricted queries blocked).
+    // Nested audit_logs subcollection is covered by this parent block.
+    matrix: companiesMatrix(),
+  },
+  {
+    collection: 'security_roles',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/security-roles.rules.test.ts',
+    rulesRange: [1309, 1312],
+    // Read: isAuthenticated() — global, no tenant isolation (critical for login).
+    // Write: if false — Admin SDK only.
+    matrix: systemGlobalMatrix(),
+  },
+  {
+    collection: 'users',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/users.rules.test.ts',
+    rulesRange: [1319, 1361],
+    // Read: uid==userId || (companyId && belongsToCompany) || isSuperAdminOnly (SPEC-259B).
+    // Create/update: uid==userId || (companyId && isCompanyAdminOfCompany).
+    // Delete: if false — user docs never client-deleted.
+    // Nested sessions subcollection is covered by this parent block.
+    matrix: usersMatrix(),
+  },
+  {
+    collection: 'user_2fa_settings',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/user-2fa-settings.rules.test.ts',
+    rulesRange: [1368, 1371],
+    // Pure ownership: allow read, write: if isOwner(userId) = request.auth.uid == userId.
+    // List + create: deny for all (path-var rule; harness fresh-docId constraint).
+    // Own-uid create exercised in suite's dedicated regression block.
+    matrix: ownerOnlyMatrix(),
+  },
+  {
+    collection: 'user_notification_settings',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/user-notification-settings.rules.test.ts',
+    rulesRange: [1378, 1381],
+    // Pure ownership: allow read, write: if isOwner(userId) = request.auth.uid == userId.
+    // List + create: deny for all (path-var rule; harness fresh-docId constraint).
+    // Own-uid create exercised in suite's dedicated regression block.
+    matrix: ownerOnlyMatrix(),
+  },
+  {
+    collection: 'workspaces',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/workspaces.rules.test.ts',
+    rulesRange: [1388, 1402],
+    // Read: isSuperAdminOnly() || (companyId && belongsToCompany) (PR-1B, SPEC-259B).
+    // Write: if false — Admin SDK only.
+    matrix: adminWriteOnlyMatrix(),
+  },
+  {
+    collection: 'teams',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/teams.rules.test.ts',
+    rulesRange: [2678, 2712],
+    // Create: companyId==getUserCompanyId() — no isSuperAdminOnly() short-circuit.
+    // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly.
+    // Seed doc carries createdBy=same_tenant_user.uid.
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'positions',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/positions.rules.test.ts',
+    rulesRange: [2719, 2722],
+    // Read: isAuthenticated() — global, no tenant isolation.
+    // Write: if false — Admin SDK only.
+    matrix: systemGlobalMatrix(),
+  },
 ] as const;
 
 /**
@@ -800,15 +885,15 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // file_webhooks        → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
   // file_folders         → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
   // file_audit_log       → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
-  // — Companies / users / workspaces —
-  'companies',
-  'security_roles',
-  'users',
-  'user_notification_settings',
-  'user_2fa_settings',
-  'workspaces',
-  'teams',
-  'positions',
+  // — Companies / users / workspaces — (all moved to COVERAGE in ADR-298 Phase C.6, 2026-04-14)
+  // companies                  → moved to COVERAGE (ADR-298 Phase C.6, 2026-04-14)
+  // security_roles             → moved to COVERAGE (ADR-298 Phase C.6, 2026-04-14)
+  // users                      → moved to COVERAGE (ADR-298 Phase C.6, 2026-04-14)
+  // user_notification_settings → moved to COVERAGE (ADR-298 Phase C.6, 2026-04-14)
+  // user_2fa_settings          → moved to COVERAGE (ADR-298 Phase C.6, 2026-04-14)
+  // workspaces                 → moved to COVERAGE (ADR-298 Phase C.6, 2026-04-14)
+  // teams                      → moved to COVERAGE (ADR-298 Phase C.6, 2026-04-14)
+  // positions                  → moved to COVERAGE (ADR-298 Phase C.6, 2026-04-14)
   // — Building / property hierarchy —
   // floors, properties, storage_units, parking_spots → moved to COVERAGE (ADR-298 Phase B.4, 2026-04-13)
   // project_floorplans     → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
