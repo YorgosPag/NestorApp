@@ -80,7 +80,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
 
   return (
     <div className={`${colors.bg.primary} rounded-lg shadow-sm ${quick.card} p-6`}>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-4`}>
         {t('userTypeSelector.title')}
       </h3>
 
@@ -112,12 +112,12 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
             </div>
 
             {/* Label */}
-            <h4 className="font-semibold text-gray-900 mb-1">
+            <h4 className={`font-semibold ${colors.text.foreground} mb-1`}>
               {userType.label}
             </h4>
 
             {/* Description */}
-            <p className="text-sm text-gray-600">
+            <p className={`text-sm ${colors.text.muted}`}>
               {userType.description}
             </p>
 
@@ -135,7 +135,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
       {/* Info message */}
       {currentType && (
         <div className={`mt-4 p-3 ${colors.bg.info} ${quick.card}`}>
-          <p className="text-sm text-blue-700">
+          <p className={`text-sm ${colors.text.info}`}>
             <span className="font-medium">{t('userTypeSelector.currentType')}</span>{' '}
             {userTypes.find(ut => ut.type === currentType)?.label}
           </p>

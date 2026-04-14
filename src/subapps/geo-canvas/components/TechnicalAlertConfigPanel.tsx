@@ -59,13 +59,13 @@ export function TechnicalAlertConfigPanel({
   return (
     <section className={`mt-4 ${colors.bg.primary} ${quick.card} shadow-lg ${getStatusBorder('error')} p-4`}>
       <header className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <AlertTriangle className={`${iconSizes.md} text-red-600`} />
+        <h3 className={`text-lg font-semibold ${colors.text.foreground} flex items-center gap-2`}>
+          <AlertTriangle className={`${iconSizes.md} ${colors.text.error}`} />
           {t('drawingInterfaces.technical.automatedAlerts.title')}
         </h3>
         <button
           onClick={onClose}
-          className={`text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+          className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
         >
           <X className={iconSizes.md} />
         </button>
@@ -75,10 +75,10 @@ export function TechnicalAlertConfigPanel({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Sensitivity Settings */}
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-gray-900">{t('hardcodedTexts.labels.technicalSensitivity')}</legend>
+          <legend className={`text-sm font-semibold ${colors.text.foreground}`}>{t('hardcodedTexts.labels.technicalSensitivity')}</legend>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className={`block text-xs font-medium ${colors.text.secondary} mb-1`}>
               {t('drawingInterfaces.technical.automatedAlerts.detectionSensitivity')}
             </label>
             <Select
@@ -100,7 +100,7 @@ export function TechnicalAlertConfigPanel({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className={`block text-xs font-medium ${colors.text.secondary} mb-1`}>
               {t('drawingInterfaces.technical.automatedAlerts.monitoringInterval')}
             </label>
             <Select
@@ -125,7 +125,7 @@ export function TechnicalAlertConfigPanel({
 
         {/* Platform Settings */}
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-gray-900">{t('hardcodedTexts.labels.monitoringPlatforms')}</legend>
+          <legend className={`text-sm font-semibold ${colors.text.foreground}`}>{t('hardcodedTexts.labels.monitoringPlatforms')}</legend>
 
           <div className="space-y-2">
             {[
@@ -149,10 +149,10 @@ export function TechnicalAlertConfigPanel({
                   }}
                   className="rounded border-border text-red-600 focus:ring-red-500"
                 />
-                <span className="text-sm text-gray-700 flex items-center gap-1">
+                <span className={`text-sm ${colors.text.secondary} flex items-center gap-1`}>
                   <platform.icon className={iconSizes.sm} />
                   {platform.name}
-                  {platform.disabled && <span className="text-xs text-gray-400">{t('hardcodedTexts.values.comingSoon')}</span>}
+                  {platform.disabled && <span className={`text-xs ${colors.text.disabled}`}>{t('hardcodedTexts.values.comingSoon')}</span>}
                 </span>
               </label>
             ))}
@@ -190,8 +190,8 @@ export function TechnicalAlertConfigPanel({
 
       {/* Technical Specifications */}
       <footer className={`${colors.bg.error} ${quick.error} p-3`}>
-        <h4 className="text-sm font-semibold text-red-900 mb-2">{t('drawingInterfaces.technical.automatedAlerts.technicalSpecifications')}</h4>
-        <div className="grid grid-cols-2 gap-2 text-xs text-red-700">
+        <h4 className={`text-sm font-semibold ${colors.text.onError} mb-2`}>{t('drawingInterfaces.technical.automatedAlerts.technicalSpecifications')}</h4>
+        <div className={`grid grid-cols-2 gap-2 text-xs ${colors.text.error}`}>
           <div>
             <span className="font-medium">{t('hardcodedTexts.ui.precision')}:</span> {t('hardcodedTexts.values.millimeterLevel')}
           </div>

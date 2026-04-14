@@ -7,19 +7,7 @@ import { Tag, Palette, Eye, EyeOff, Info } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-// ✅ ENTERPRISE: Mock effects για compilation - θα συνδεθεί με πραγματικό effects system
-const INTERACTIVE_PATTERNS = {
-  PRIMARY_HOVER: 'hover:bg-blue-700',
-  SUBTLE_HOVER: 'hover:bg-gray-100'
-};
-
-const HOVER_TEXT_EFFECTS = {
-  DARKER: 'hover:text-opacity-80'
-};
-
-const HOVER_BACKGROUND_EFFECTS = {
-  LIGHT: 'hover:bg-opacity-10'
-};
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
   EnhancedPropertyStatus as PropertyStatus,
   ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS,

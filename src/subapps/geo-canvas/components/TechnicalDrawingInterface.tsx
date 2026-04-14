@@ -170,7 +170,7 @@ export function TechnicalDrawingInterface({
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
-          <ExternalLink className={`${iconSizes.xl} mb-2 text-purple-600`} />
+          <ExternalLink className={`${iconSizes.xl} mb-2 ${colors.text.purple}`} />
           <span className="text-sm font-medium">{t('hardcodedTexts.ui.dxfViewer')}</span>
           <span className={`text-xs ${colors.text.muted}`}>{t('hardcodedTexts.ui.fullCad')}</span>
         </button>
@@ -188,7 +188,7 @@ export function TechnicalDrawingInterface({
             ${actualIsDrawing && selectedTool !== 'precision' ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
-          <Ruler className={`${iconSizes.xl} mb-2 text-blue-600`} />
+          <Ruler className={`${iconSizes.xl} mb-2 ${colors.text.info}`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.technical.tools.precision')}</span>
           <span className={`text-xs ${colors.text.muted}`}>mm-level</span>
         </button>
@@ -206,7 +206,7 @@ export function TechnicalDrawingInterface({
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
-          <Settings className={`${iconSizes.xl} mb-2 text-gray-600`} />
+          <Settings className={`${iconSizes.xl} mb-2 ${colors.text.muted}`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.technical.tools.settings')}</span>
           <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.technical.tools.settingsAdvanced')}</span>
         </button>
@@ -224,7 +224,7 @@ export function TechnicalDrawingInterface({
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
-          <AlertTriangle className={`${iconSizes.xl} mb-2 text-red-600`} />
+          <AlertTriangle className={`${iconSizes.xl} mb-2 ${colors.text.error}`} />
           <span className="text-sm font-medium">{t('hardcodedTexts.ui.alerts')}</span>
           <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.technical.tools.alertsAuto')}</span>
         </button>
@@ -252,20 +252,20 @@ export function TechnicalDrawingInterface({
 
       {/* Technical Specs Panel */}
       <section className={`mb-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('muted')}`}>
-        <h4 className="text-sm font-medium text-purple-800 mb-2">
+        <h4 className={`text-sm font-medium ${colors.text.purple} mb-2`}>
           🔬 {t('drawingInterfaces.technical.specifications.title')}
         </h4>
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="text-purple-700">
+          <div className={colors.text.purple}>
             <span className="font-medium">{t('drawingInterfaces.technical.specifications.accuracy')}:</span> ±1mm
           </div>
-          <div className="text-purple-700">
+          <div className={colors.text.purple}>
             <span className="font-medium">{t('drawingInterfaces.technical.specifications.coordinates')}:</span> WGS84
           </div>
-          <div className="text-purple-700">
+          <div className={colors.text.purple}>
             <span className="font-medium">{t('hardcodedTexts.labels.formats')}</span> {t('hardcodedTexts.values.dxfDwg')}
           </div>
-          <div className="text-purple-700">
+          <div className={colors.text.purple}>
             <span className="font-medium">{t('hardcodedTexts.labels.cadTools')}</span> {t('hardcodedTexts.values.full')}
           </div>
         </div>
@@ -274,7 +274,7 @@ export function TechnicalDrawingInterface({
       {/* Instructions */}
       {selectedTool && (
         <div className={`mt-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
-          <p className="text-sm text-blue-700">
+          <p className={`text-sm ${colors.text.info}`}>
             {selectedTool === 'dxf-viewer' && t('drawingInterfaces.technical.fullDxfViewer')}
             {selectedTool === 'precision' && t('drawingInterfaces.technical.instructions.precision')}
             {selectedTool === 'settings' && t('drawingInterfaces.technical.instructions.settings')}
@@ -287,19 +287,19 @@ export function TechnicalDrawingInterface({
       <div className={`mt-4 p-3 ${colors.bg.secondary} rounded-md`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Database className={`${iconSizes.sm} text-gray-600`} />
-            <span className="text-sm text-gray-700">{t('hardcodedTexts.labels.dxfViewerLabel')}</span>
+            <Database className={`${iconSizes.sm} ${colors.text.muted}`} />
+            <span className={`text-sm ${colors.text.secondary}`}>{t('hardcodedTexts.labels.dxfViewerLabel')}</span>
           </div>
           <a
             href="/dxf/viewer"
             target="_blank"
             rel="noopener noreferrer"
-            className={`text-xs text-blue-600 flex items-center gap-1 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
+            className={`text-xs ${colors.text.info} flex items-center gap-1 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
           >
             {t('drawingInterfaces.technical.openViewer')} <ExternalLink className={iconSizes.xs} />
           </a>
         </div>
-        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+        <p className={`text-xs ${colors.text.muted} mt-1 flex items-center gap-1`}>
           <CraneIcon className={iconSizes.xs} />
           {t('drawingInterfaces.technical.cadEnvironment')}
         </p>
@@ -309,12 +309,12 @@ export function TechnicalDrawingInterface({
       {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
         <div className={`mt-4 p-3 ${colors.bg.secondary} rounded-md space-y-1`}>
           {stats.totalPolygons > 0 && (
-            <p className="text-xs text-gray-600">
+            <p className={`text-xs ${colors.text.muted}`}>
               <span className="font-medium">{t('drawingInterfaces.technical.stats.technicalDrawings')}:</span> {stats.totalPolygons}
             </p>
           )}
           {realEstateStats.totalAlerts > 0 && (
-            <div className="text-xs text-red-700">
+            <div className={`text-xs ${colors.text.error}`}>
               <p>
                 <span className="font-medium">{t('hardcodedTexts.labels.automatedAlerts')}</span> {realEstateStats.totalAlerts}
               </p>

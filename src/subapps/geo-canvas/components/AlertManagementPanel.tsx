@@ -279,7 +279,7 @@ export function AlertManagementPanel({
       {/* Status Footer */}
       <div className={`px-6 py-3 ${colors.bg.backgroundTertiary} border-t ${getStatusBorder('muted')} rounded-b-lg`}>
         <div className={`flex items-center text-sm ${colors.text.muted}`}>
-          <div className={`w-2 h-2 rounded-full mr-2 ${isInitialized ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`w-2 h-2 rounded-full mr-2 ${isInitialized ? colors.bg.success : colors.bg.error}`} />
           {t('alertManagement.status.engine')}: {isInitialized ? t('alertManagement.status.connected') : t('alertManagement.status.disconnected')}
         </div>
       </div>

@@ -70,7 +70,7 @@ export function AdminBoundaryDemo() {
 
   return (
     <div className={`p-6 max-w-4xl mx-auto ${colors.bg.primary} ${quick.card} shadow-lg`}>
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+      <h2 className={`text-2xl font-bold mb-6 ${colors.text.DARKER}`}>
         <Building2 className={`${iconSizes.lg} inline-block mr-3`} />
         {t('adminBoundary.demoTitle')}
       </h2>
@@ -103,7 +103,7 @@ export function AdminBoundaryDemo() {
 
         {/* Quick Search Buttons */}
         <div className="flex gap-2 mb-4 flex-wrap">
-          <h3 className="w-full text-sm font-medium text-gray-600 mb-2">{t('adminBoundary.quickSearch')}</h3>
+          <h3 className={`w-full text-sm font-medium ${colors.text.muted} mb-2`}>{t('adminBoundary.quickSearch')}</h3>
           {([
             { labelKey: 'adminBoundary.quickSearchAthensMunicipality', query: 'Δήμος Αθηναίων' },
             { labelKey: 'adminBoundary.quickSearchThessalonikiMunicipality', query: 'Δήμος Θεσσαλονίκης' },
@@ -130,29 +130,29 @@ export function AdminBoundaryDemo() {
           <div>
             <strong>{t('adminBoundary.status')}</strong>{' '}
             <span className={`ml-2 px-2 py-1 rounded ${
-              isLoading ? `${colors.bg.warning} text-yellow-800` :
-              error ? `${colors.bg.error} text-red-800` :
-              `${colors.bg.success} text-green-800`
+              isLoading ? `${colors.bg.warning} ${colors.text.onWarning}` :
+              error ? `${colors.bg.error} ${colors.text.onError}` :
+              `${colors.bg.success} ${colors.text.onSuccess}`
             }`}>
               {isLoading ? t('adminBoundary.statusLoading') : error ? t('adminBoundary.statusError') : t('adminBoundary.statusReady')}
             </span>
           </div>
           <div>
             <strong>{t('adminBoundary.detectedType')}</strong>{' '}
-            <span className="ml-2 font-mono text-blue-600">
+            <span className={`ml-2 font-mono ${colors.text.info}`}>
               {detectedType || 'N/A'}
             </span>
           </div>
           <div>
             <strong>{t('adminBoundary.resultsCount')}</strong>{' '}
-            <span className="ml-2 font-bold text-green-600">
+            <span className={`ml-2 font-bold ${colors.text.success}`}>
               {searchResults.length}
             </span>
           </div>
         </div>
 
         {error && (
-          <div className="mt-2 text-red-600 text-sm">
+          <div className={`mt-2 ${colors.text.error} text-sm`}>
             <strong>{t('adminBoundary.error')}</strong> {error}
           </div>
         )}
@@ -165,13 +165,13 @@ export function AdminBoundaryDemo() {
 
           {suggestions.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-600 mb-2">{t('adminBoundary.suggestions')}</h4>
+              <h4 className={`text-sm font-medium ${colors.text.muted} mb-2`}>{t('adminBoundary.suggestions')}</h4>
               <div className="flex gap-2 flex-wrap">
                 {suggestions.map((suggestion, index) => (
                   <button
                     key={index}
                     onClick={() => handleQuickSearch(suggestion)}
-                    className={`px-2 py-1 text-xs ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} rounded text-blue-700 transition-colors`}
+                    className={`px-2 py-1 text-xs ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} rounded ${colors.text.info} transition-colors`}
                   >
                     {suggestion}
                   </button>
@@ -182,7 +182,7 @@ export function AdminBoundaryDemo() {
 
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {searchResults.length === 0 && !isLoading ? (
-              <div className="text-gray-500 text-center py-8">
+              <div className={`${colors.text.muted} text-center py-8`}>
                 {t('adminBoundary.noResults')}
               </div>
             ) : (
@@ -198,24 +198,24 @@ export function AdminBoundaryDemo() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className={`font-medium ${colors.text.foreground}`}>
                         {result.name}
                       </div>
                       {result.nameEn && (
-                        <div className="text-sm text-gray-500">
+                        <div className={`text-sm ${colors.text.muted}`}>
                           {result.nameEn}
                         </div>
                       )}
-                      <div className="text-xs text-gray-400">
+                      <div className={`text-xs ${colors.text.disabled}`}>
                         Level: {result.adminLevel} •
                         Confidence: {(result.confidence * 100).toFixed(0)}% •
                         {result.hierarchy.region && ` ${result.hierarchy.region}`}
                       </div>
                     </div>
                     <div className={`px-2 py-1 text-xs rounded ${
-                      result.adminLevel === 4 ? `${colors.bg.accent} text-purple-800` :
-                      result.adminLevel === 8 ? `${colors.bg.info} text-blue-800` :
-                      `${colors.bg.muted} text-gray-800`
+                      result.adminLevel === 4 ? `${colors.bg.accent} ${colors.text.purple}` :
+                      result.adminLevel === 8 ? `${colors.bg.info} ${colors.text.onInfo}` :
+                      `${colors.bg.muted} ${colors.text.DARKER}`
                     }`}>
                       {result.adminLevel === 4 ? t('adminBoundary.region') :
                        result.adminLevel === 8 ? t('adminBoundary.municipality') :
@@ -236,10 +236,10 @@ export function AdminBoundaryDemo() {
             <div className="space-y-4">
               {/* Boundary Type */}
               <div className={`p-4 ${colors.bg.success} ${quick.success}`}>
-                <div className="font-medium text-green-800 mb-2">
+                <div className={`font-medium ${colors.text.onSuccess} mb-2`}>
                   {t('adminBoundary.boundaryLoaded')}
                 </div>
-                <div className="text-sm text-green-700">
+                <div className={`text-sm ${colors.text.success}`}>
                   <div><strong>{t('adminBoundary.type')}</strong> {currentBoundary.type}</div>
                   {currentBoundary.type === 'Feature' && (
                     <>
@@ -255,22 +255,22 @@ export function AdminBoundaryDemo() {
 
               {/* Geometry Preview */}
               <div className={`p-4 ${colors.bg.secondary} ${radius.lg}`}>
-                <h4 className="font-medium text-gray-800 mb-2">{t('adminBoundary.geometryPreview')}</h4>
-                <div className="text-xs font-mono text-gray-600 max-h-32 overflow-y-auto">
+                <h4 className={`font-medium ${colors.text.DARKER} mb-2`}>{t('adminBoundary.geometryPreview')}</h4>
+                <div className={`text-xs font-mono ${colors.text.muted} max-h-32 overflow-y-auto`}>
                   <pre>{JSON.stringify(currentBoundary, null, 2).slice(0, 500)}...</pre>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="text-gray-500 text-center py-8">
+            <div className={`${colors.text.muted} text-center py-8`}>
               {t('adminBoundary.selectToView')}
             </div>
           )}
 
           {/* Cache Stats */}
           <div className={`mt-6 p-4 ${colors.bg.info} ${quick.info}`}>
-            <h4 className="font-medium text-blue-800 mb-2">{t('adminBoundary.cacheStatistics')}</h4>
-            <div className="text-sm text-blue-700 space-y-1">
+            <h4 className={`font-medium ${colors.text.onInfo} mb-2`}>{t('adminBoundary.cacheStatistics')}</h4>
+            <div className={`text-sm ${colors.text.info} space-y-1`}>
               <div>Total Entries: {cacheStats.totalEntries}</div>
               <div>Hit Rate: {cacheStats.hitRate.toFixed(1)}%</div>
               <div>Evictions: {cacheStats.evictionCount}</div>
@@ -283,8 +283,8 @@ export function AdminBoundaryDemo() {
       {/* Debug Section */}
       {process.env.NODE_ENV === 'development' && (
         <div className={`mt-8 p-4 ${colors.bg.warning} ${quick.warning}`}>
-          <h3 className="font-medium text-yellow-800 mb-2">{t('adminBoundary.debugInfo')}</h3>
-          <div className="text-xs font-mono text-yellow-700">
+          <h3 className={`font-medium ${colors.text.onWarning} mb-2`}>{t('adminBoundary.debugInfo')}</h3>
+          <div className={`text-xs font-mono ${colors.text.warning}`}>
             <div>Search Query: "{searchQuery}"</div>
             <div>Detected Type: {detectedType}</div>
             <div>Results Count: {searchResults.length}</div>
