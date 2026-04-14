@@ -459,7 +459,12 @@
       "controlPoints": "Σημεία Ελέγχου",
       "avgAccuracy": "Μέση Ακρίβεια:",
       "best": "Καλύτερη:",
-      "accuracy": "±{value}m"
+      "accuracy": "±{value}m",
+      "polygons": "Πολύγωνα",
+      "indicators": "Δείκτες Κατάστασης",
+      "transformationActive": "Μετασχηματισμός Ενεργός",
+      "drawingActive": "Σχεδίαση Ενεργή",
+      "statusBar": "Γραμμή Κατάστασης"
     },
     "coordinates": {
       "lng": "Γεωγρ. Μήκος",

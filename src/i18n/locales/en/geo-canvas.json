@@ -459,7 +459,12 @@
       "controlPoints": "Control Points",
       "avgAccuracy": "Avg Accuracy:",
       "best": "Best:",
-      "accuracy": "±{value}m"
+      "accuracy": "±{value}m",
+      "polygons": "Polygons",
+      "indicators": "Status Indicators",
+      "transformationActive": "Transformation Active",
+      "drawingActive": "Drawing Active",
+      "statusBar": "Status Bar"
     },
     "coordinates": {
       "lng": "Longitude",
