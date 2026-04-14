@@ -28,7 +28,7 @@ interface UsePropertyDeletionGuardReturn {
 }
 
 export function usePropertyDeletionGuard(): UsePropertyDeletionGuardReturn {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const {
     checking,
     checkBeforeDelete,

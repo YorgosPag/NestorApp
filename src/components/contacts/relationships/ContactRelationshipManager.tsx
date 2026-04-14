@@ -83,7 +83,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const { confirm, dialogProps } = useConfirmDialog();
 
   // 📋 Relationship list management hook

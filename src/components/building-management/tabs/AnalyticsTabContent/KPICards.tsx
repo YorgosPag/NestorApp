@@ -12,7 +12,7 @@ import '@/lib/design-system';
 
 export default function KPICards() {
     // 🏢 ENTERPRISE: i18n hook for translations
-    const { t } = useTranslation('building');
+    const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
     const colors = useSemanticColors();
 
     // 🏢 ENTERPRISE: Helper function to get efficiency label

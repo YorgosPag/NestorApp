@@ -87,7 +87,7 @@ function emptyForm(): CategoryFormState {
 // ============================================================================
 
 export function CustomCategoriesSection() {
-  const { t } = useTranslation(['accounting', 'accounting-setup']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices', 'accounting-setup']);
   const colors = useSemanticColors();
   const { categories, loading, error, createCategory, updateCategory, deleteCategory } =
     useCustomCategories({ includeInactive: true });

@@ -46,7 +46,7 @@ export function useRelationshipStatistics(
   contactId: string,
   contactType?: ContactType
 ) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   // ============================================================================
   // MEMOIZED CALCULATIONS
   // ============================================================================

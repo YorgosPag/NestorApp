@@ -26,7 +26,7 @@ interface FloorSelectorProps {
 
 export function FloorSelector({ currentFloor, floors, onSelectFloor }: FloorSelectorProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   if (!currentFloor) {
     return (

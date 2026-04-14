@@ -56,7 +56,7 @@ const GuideBatchContextMenuInner = forwardRef<GuideBatchContextMenuHandle, Guide
     { onDeleteSelected, onLockSelected, onUnlockSelected, onChangeColor, onGroupSelected, onCancel },
     ref,
   ) {
-    const { t } = useTranslation('dxf-viewer');
+    const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
     const [isOpen, setIsOpen] = useState(false);
     const [selectedCount, setSelectedCount] = useState(0);
     const [showColors, setShowColors] = useState(false);

@@ -30,7 +30,7 @@ interface UseReplyComposerAttachmentsParams {
 export function useReplyComposerAttachments({
   onUploadAttachment,
 }: UseReplyComposerAttachmentsParams) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);

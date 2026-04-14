@@ -17,7 +17,7 @@ interface InvoicesTableProps {
 }
 
 export function InvoicesTable({ invoices, onRefresh }: InvoicesTableProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   return (
     <div className="rounded-md border border-border">

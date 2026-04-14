@@ -98,7 +98,7 @@ export function AutoSaveStatusIndicator({
   onRetry,
   className,
 }: AutoSaveStatusIndicatorProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;

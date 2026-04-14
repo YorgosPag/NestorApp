@@ -33,7 +33,7 @@ interface CorporateTaxBreakdownProps {
 // ============================================================================
 
 export function CorporateTaxBreakdown({ result, entityType }: CorporateTaxBreakdownProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices', 'accounting-setup']);
   const colors = useSemanticColors();
   const { corporateTax, profitAfterTax, distributedDividends, retainedEarnings, totalDividendTax } = result;
 

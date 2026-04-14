@@ -52,7 +52,7 @@ const EMPTY_FORM_DATA: Partial<Opportunity> = {};
 export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdated }: EditOpportunityModalProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const [formData, setFormData] = useState<Partial<Opportunity>>(EMPTY_FORM_DATA);
   const [loading, setLoading] = useState(false);
   const notifications = useNotifications();

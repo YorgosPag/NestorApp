@@ -94,7 +94,7 @@ export function useFileListActions({
 }: UseFileListActionsParams): UseFileListActionsReturn {
   // SSoT: enterprise download with proper filename + extension (fallback when caller doesn't provide onDownload)
   const { handleDownload: enterpriseDownload } = useFileDownload();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const { success, error } = useNotifications();
 
   const [editingFileId, setEditingFileId] = useState<string | null>(null);

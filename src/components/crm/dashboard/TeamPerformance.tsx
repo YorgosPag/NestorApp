@@ -23,7 +23,7 @@ export function TeamPerformance() {
     const colors = useSemanticColors();
     const { quick } = useBorderTokens();
     // 🏢 ENTERPRISE: i18n support
-    const { t } = useTranslation('crm');
+    const { t } = useTranslation(['crm', 'crm-inbox']);
     // 🏢 ENTERPRISE: Configurable team performance data
     const getTeamData = () => {
         const envTeamData = process.env.NEXT_PUBLIC_TEAM_PERFORMANCE_JSON;

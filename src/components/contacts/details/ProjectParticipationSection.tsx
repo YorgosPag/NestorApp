@@ -20,8 +20,8 @@ interface ProjectParticipationSectionProps {
 }
 
 export function ProjectParticipationSection({ contactId }: ProjectParticipationSectionProps) {
-  const { t } = useTranslation('building');
-  const { t: tContacts } = useTranslation('contacts');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t: tContacts } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
 
   if (!contactId) {

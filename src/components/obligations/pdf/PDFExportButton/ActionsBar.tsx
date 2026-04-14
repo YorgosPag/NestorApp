@@ -15,7 +15,7 @@ interface ActionsBarProps {
 }
 
 export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-3 pt-4 border-t">

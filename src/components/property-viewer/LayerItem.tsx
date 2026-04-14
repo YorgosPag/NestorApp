@@ -83,7 +83,7 @@ export function LayerItem({
   const iconSizes = useIconSizes();
   const { radius } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameName, setRenameName] = useState(layer.name);
 

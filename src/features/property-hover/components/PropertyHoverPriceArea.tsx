@@ -14,7 +14,7 @@ export function PropertyHoverPriceArea({
   hasPrice: boolean; price?: number; priceLabel: string; isRentLike: boolean;
   hasArea: boolean; area?: number; pricePerSqm?: string;
 }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

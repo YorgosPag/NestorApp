@@ -47,7 +47,7 @@ function DomainCategoryGroupHeader({
   onToggle,
 }: DomainCategoryGroupHeaderProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
 
   const iconInfo = getCategoryIconInfo(category);

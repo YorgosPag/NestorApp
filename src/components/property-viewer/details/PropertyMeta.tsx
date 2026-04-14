@@ -43,8 +43,8 @@ export function PropertyMeta({
   const colors = useSemanticColors();
   const _statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
   // 🏢 ENTERPRISE: i18n support - properties + units namespaces
-  const { t } = useTranslation('properties');
-  const { t: tUnits } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   // 🏢 ENTERPRISE: Use new areas schema with legacy fallback
   const displayArea = property.areas?.gross ?? property.area;

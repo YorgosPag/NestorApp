@@ -132,7 +132,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   // 🌐 i18n - Load both namespaces for status labels
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();

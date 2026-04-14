@@ -86,7 +86,7 @@ export function ArchiveView({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const translateDisplayName = useFileDisplayName();
   const { success, error: showError } = useNotifications();
 

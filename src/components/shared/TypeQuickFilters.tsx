@@ -125,7 +125,7 @@ export function TypeQuickFilters({
   ariaLabel
 }: TypeQuickFiltersProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
 
   // Use translations as defaults if props not provided
@@ -237,7 +237,7 @@ export function TypeQuickFilters({
  */
 export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <TypeQuickFilters
       {...props}
@@ -252,7 +252,7 @@ export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options
  */
 export function ContactTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <TypeQuickFilters
       {...props}
@@ -267,7 +267,7 @@ export function ContactTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'opti
  */
 export function ChannelQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <TypeQuickFilters
       {...props}

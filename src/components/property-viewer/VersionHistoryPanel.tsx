@@ -97,7 +97,7 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     const colors = useSemanticColors();
     const notifications = useNotifications();
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
     const { confirm, dialogProps } = useConfirmDialog();
     const { prompt, dialogProps: promptDialogProps } = usePromptDialog();
     // 🏢 ENTERPRISE: Proper types - using VersionHistoryItem for display compatibility

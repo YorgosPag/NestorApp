@@ -34,7 +34,7 @@ const LOAN_STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive
 
 export function LoanInfoCard({ loan }: LoanInfoCardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
 
   if (loan.status === 'not_applicable') return null;
 

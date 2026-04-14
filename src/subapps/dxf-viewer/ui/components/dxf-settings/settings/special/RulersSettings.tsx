@@ -98,7 +98,7 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
   const { activeTab, setActiveTab } = useTabNavigation<RulerSubTab>(defaultTab);
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   // ============================================================================
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface

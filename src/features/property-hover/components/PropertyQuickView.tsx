@@ -41,8 +41,8 @@ function QuickViewRow({ label, value }: { label: string; value: React.ReactNode 
 }
 
 export function PropertyQuickView({ property }: PropertyQuickViewProps) {
-  const { t } = useTranslation('properties');
-  const { t: tUnits } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
   const statusConfig = getPropertyStatusConfig();
   // 🏢 ADR-258: commercialStatus is SSoT, legacy status is fallback

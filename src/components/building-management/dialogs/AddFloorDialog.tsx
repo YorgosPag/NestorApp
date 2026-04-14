@@ -73,7 +73,7 @@ const LEVEL_MAX = 100;
 // =============================================================================
 
 export function AddFloorDialog({ buildingId, open, onClose, onSuccess }: AddFloorDialogProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
 

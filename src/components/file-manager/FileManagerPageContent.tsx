@@ -96,7 +96,7 @@ interface FileCardProps {
 }
 
 function FileCard({ file, onClick, onDoubleClick }: FileCardProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
 
   return (

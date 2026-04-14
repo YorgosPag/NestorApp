@@ -16,7 +16,8 @@
     "list": {
       "ariaLabel": "Parking Spaces List",
       "noResults": "No parking spaces found",
-      "noResultsForTerm": "for the term \"{term}\""
+      "noResultsForTerm": "for the term \"{term}\"",
+      "noResultsHint": "No results hint"
     },
     "accessibility": {
       "toggleFilters": "Toggle filters"

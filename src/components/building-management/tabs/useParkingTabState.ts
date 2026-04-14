@@ -41,7 +41,7 @@ interface UseParkingTabStateParams {
 
 export function useParkingTabState({ buildingId, projectId }: UseParkingTabStateParams) {
   const { t } = useTranslation('parking');
-  const { t: tBuilding } = useTranslation('building');
+  const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   // ---------------------------------------------------------------------------
   // Data state

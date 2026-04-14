@@ -93,5 +93,7 @@
     "url": "URL",
     "digest": "Digest",
     "adminEmail": "Administrator Email"
-  }
+  },
+  "confirm": "Confirm",
+  "cancel": "Cancel"
 }

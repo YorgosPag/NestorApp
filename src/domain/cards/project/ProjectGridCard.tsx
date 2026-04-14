@@ -103,7 +103,7 @@ export function ProjectGridCard({
   className,
 }: ProjectGridCardProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)

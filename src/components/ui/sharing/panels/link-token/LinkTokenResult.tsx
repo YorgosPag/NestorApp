@@ -30,7 +30,7 @@ export function LinkTokenResult({
   result,
   onClose,
 }: LinkTokenResultProps): React.ReactElement {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const { copy, copied } = useCopyToClipboard();
 

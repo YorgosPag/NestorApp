@@ -65,7 +65,7 @@ export function SalesQuickFilters({
   onPropertyTypeChange,
   className,
 }: SalesQuickFiltersProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // Convert single selection to array format expected by TypeQuickFilters
   const handleStatusChange = (types: string[]) => {

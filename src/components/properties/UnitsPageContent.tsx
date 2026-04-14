@@ -40,7 +40,7 @@ export const UnitsPageContent = PropertiesManagementContent;
 
 export function PropertiesManagementContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const _colors = useSemanticColors();
   const searchParams = useSearchParams();
   const urlPropertyId = searchParams.get('propertyId') ?? searchParams.get('unitId');

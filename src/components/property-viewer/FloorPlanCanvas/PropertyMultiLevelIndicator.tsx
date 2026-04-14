@@ -37,7 +37,7 @@ interface PropertyMultiLevelIndicatorProps {
 
 export function PropertyMultiLevelIndicator({ property, centroid, onNavigateLevels }: PropertyMultiLevelIndicatorProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   const groundFloor = t('multiLevelIndicator.groundFloor');
   const firstFloor = t('multiLevelIndicator.firstFloor');

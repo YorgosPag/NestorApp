@@ -37,7 +37,7 @@ type DialogStep = 'company' | 'project' | 'building' | 'property';
 
 // ── Component ──────────────────────────────────────────────────
 export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimpleProjectDialogProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const { user } = useAuth();
   const colors = useSemanticColors();
   const typography = useTypography();

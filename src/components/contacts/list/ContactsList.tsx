@@ -59,7 +59,7 @@ export function ContactsList({
   onContactUpdated
 }: ContactsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const { success, error } = useNotifications();
   // 🏢 ENTERPRISE: Sort state via centralized hook (ADR-205 Phase 4)

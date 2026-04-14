@@ -42,7 +42,7 @@ export function SelectCompanyContactModal({
   onCompanySelected,
   existingCompanyIds = [],
 }: SelectCompanyContactModalProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Icon from centralized config - ZERO hardcoded values
   const CompanyIcon = NAVIGATION_ENTITIES.company.icon;

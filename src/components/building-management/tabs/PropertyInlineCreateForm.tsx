@@ -67,7 +67,7 @@ export function PropertyInlineCreateForm({
   onCreated,
   onCancel,
 }: PropertyInlineCreateFormProps) {
-  const { t: tUnits } = useTranslation('properties');
+  const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
   const { success, error: notifyError } = useNotifications();
 

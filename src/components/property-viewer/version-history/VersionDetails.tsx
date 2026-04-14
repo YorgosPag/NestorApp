@@ -22,7 +22,7 @@ export function VersionDetails({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   if (!version) {
     return (

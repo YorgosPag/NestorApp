@@ -10,7 +10,7 @@ import '@/lib/design-system';
 export function EmptyState() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   return (
     <div className={`flex items-center justify-center h-full ${colors.bg.secondary}`}>
       <div className="text-center space-y-4 max-w-md">

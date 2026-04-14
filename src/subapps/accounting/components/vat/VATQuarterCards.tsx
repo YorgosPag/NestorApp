@@ -55,7 +55,7 @@ interface QuarterCardProps {
 }
 
 function QuarterCard({ quarter }: QuarterCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (
@@ -110,7 +110,7 @@ interface EmptyQuarterCardProps {
 }
 
 function EmptyQuarterCard({ quarterNumber }: EmptyQuarterCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (

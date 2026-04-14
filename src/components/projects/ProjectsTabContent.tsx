@@ -52,7 +52,7 @@ export function ActionsTabContent({
   onDeleteProject
 }: TabContentProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();
@@ -99,7 +99,7 @@ export function ActionsTabContent({
 // 📂 Εισαγωγή/Εξαγωγή (Import/Export)
 export function ImportExportTabContent({ onExport }: TabContentProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   return (
     <>
@@ -126,7 +126,7 @@ export function ManagementTabContent({
   onRefresh
 }: TabContentProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   return (
     <>
@@ -171,7 +171,7 @@ export function ManagementTabContent({
 // 🛠️ Εργαλεία (Tools)
 export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   return (
     <>
@@ -207,7 +207,7 @@ export function SearchFiltersTabContent({
   typeTabs = []
 }: TabContentProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 

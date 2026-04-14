@@ -27,7 +27,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh: _onRefresh }: Conta
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
-    const { t } = useTranslation('contacts');
+    const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
     const email = getPrimaryEmail(contact);
     const phone = getPrimaryPhone(contact);
 

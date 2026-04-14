@@ -82,7 +82,7 @@ export function CommunicationImpactDialog({
   apyCertificates,
   onConfirm,
 }: CommunicationImpactDialogProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

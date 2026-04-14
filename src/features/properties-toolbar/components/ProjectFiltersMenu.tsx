@@ -24,7 +24,7 @@ interface Props {
 }
 
 export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Props) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const handleFilterChange = (filter: string, checked: boolean) => {
     onActiveFiltersChange(

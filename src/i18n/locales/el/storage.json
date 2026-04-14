@@ -30,7 +30,9 @@
       "description": "Περιγραφή",
       "descriptionPlaceholder": "Προαιρετική περιγραφή...",
       "notes": "Σημειώσεις",
-      "notesPlaceholder": "Προαιρετικές σημειώσεις..."
+      "notesPlaceholder": "Προαιρετικές σημειώσεις...",
+      "createError": "Create error",
+      "createDescription": "Create description"
     }
   },
   "sizes": {
@@ -220,7 +222,11 @@
     "edit": "Επεξεργασία",
     "print": "Εκτύπωση",
     "ownerLabel": "Ιδιοκτήτης:",
-    "newStorage": "Νέα Αποθήκη"
+    "newStorage": "Νέα Αποθήκη",
+    "saving": "Saving...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
   },
   "page": {
     "backToProjects": "Επιστροφή στα Έργα",
@@ -336,5 +342,9 @@
         "description": "Είστε σίγουροι ότι θέλετε να διαγράψετε την αποθήκη {name};"
       }
     }
+  },
+  "common": {
+    "storage": "Storage",
+    "parking": "Parking"
   }
 }

@@ -23,7 +23,7 @@ export function PropertyAttachments({ storage, parking }: PropertyAttachmentsPro
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   return (
     <div className={spacing.spaceBetween.sm}>

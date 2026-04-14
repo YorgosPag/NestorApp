@@ -88,7 +88,7 @@ export function FileUploadZone({
 }: FileUploadZoneProps) {
   const iconSizes = useIconSizes();
   const { createBorder, quick, getStatusBorder } = useBorderTokens();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const { success, error: showError, warning } = useNotifications();
 

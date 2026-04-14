@@ -101,7 +101,7 @@ function useKadOptions() {
 // ============================================================================
 
 export function KadSection({ data, onChange, errors }: KadSectionProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const { options: kadOptions, isLoading: kadLoading } = useKadOptions();
 

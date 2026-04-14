@@ -6,7 +6,8 @@
     }
   },
   "list": {
-    "title": "Ακίνητα"
+    "title": "Ακίνητα",
+    "ariaLabel": ""
   },
   "multiLevel": {
     "floors": "Όροφοι",
@@ -247,7 +248,8 @@
       "shop": "Κατάστημα",
       "office": "Γραφείο",
       "storage": "Αποθήκη"
-    }
+    },
+    "pageLabel": "Page label"
   },
   "placeholders": {
     "searchUnits": "Αναζήτηση μονάδων...",
@@ -445,7 +447,8 @@
     "serverReject": "Το ακίνητο περιέχει κλειδωμένα πεδία που δεν μπορούν να αλλάξουν στην τρέχουσα εμπορική του κατάσταση."
   },
   "inlineEdit": {
-    "updated": "Το ακίνητο ενημερώθηκε επιτυχώς"
+    "updated": "Το ακίνητο ενημερώθηκε επιτυχώς",
+    "updateError": "Update error"
   },
   "dialog": {
     "addUnit": {
@@ -454,14 +457,28 @@
         "project": "Έργο",
         "type": "Τύπος Μονάδας",
         "building": "Κτίριο",
-        "floor": "Όροφος"
+        "floor": "Όροφος",
+        "name": "Name",
+        "code": "Code",
+        "commercialStatus": "Commercial status",
+        "area": "Area",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "description": "Description"
       },
       "placeholders": {
         "status": "Επιλέξτε...",
         "project": "Επιλέξτε Έργο...",
         "type": "Επιλέξτε τύπο...",
         "building": "Επιλέξτε Κτίριο...",
-        "floor": "Επιλέξτε Όροφο..."
+        "floor": "Επιλέξτε Όροφο...",
+        "name": "Name",
+        "code": "Code",
+        "commercialStatus": "Commercial status",
+        "area": "Area",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "description": "Description"
       },
       "statusOptions": {
         "draft": "Ημιτελές",
@@ -516,7 +533,15 @@
       "nameSuggestion": {
         "conflictWarning": "Το όνομα μοιάζει να αντιστοιχεί σε «{inferredType}» — επιλεγμένος τύπος: «{selectedType}»",
         "suggested": "Προτεινόμενο: {name}"
-      }
+      },
+      "title": "Title",
+      "description": "Description",
+      "tabs": {
+        "basic": "Basic",
+        "details": "Details"
+      },
+      "loadingFloors": "Loading floors",
+      "noFloors": "No floors"
     },
     "linkBuildingToProject": {
       "title": "Σύνδεση Κτιρίου με Έργο",
@@ -531,7 +556,16 @@
         "success": "Το Κτίριο συνδέθηκε με το Έργο επιτυχώς",
         "error": "Αποτυχία σύνδεσης Κτιρίου με Έργο"
       }
-    }
+    },
+    "deleteConfirmation": {
+      "title": "Title",
+      "message": "Message",
+      "warning": "Warning"
+    },
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "view": "View",
+    "edit": "Edit"
   },
   "impactGuard": {
     "titles": {
@@ -566,11 +600,21 @@
       "data": "Δεδομένα"
     },
     "dependencies": {
-      "files": { "label": "Αρχεία" },
-      "contacts": { "label": "Επαφές" },
-      "contracts": { "label": "Συμβόλαια" },
-      "invoices": { "label": "Τιμολόγια" },
-      "tasks": { "label": "Εργασίες" }
+      "files": {
+        "label": "Αρχεία"
+      },
+      "contacts": {
+        "label": "Επαφές"
+      },
+      "contracts": {
+        "label": "Συμβόλαια"
+      },
+      "invoices": {
+        "label": "Τιμολόγια"
+      },
+      "tasks": {
+        "label": "Εργασίες"
+      }
     },
     "severity": {
       "warn": "Προειδοποίηση ({count})",
@@ -618,7 +662,17 @@
     "floorPlaceholder": "Επιλέξτε όροφο",
     "loadingFloors": "Φόρτωση ορόφων...",
     "noFloors": "Δεν βρέθηκαν όροφοι για αυτό το κτίριο",
-    "noFloor": "-- Χωρίς όροφο --"
+    "noFloor": "-- Χωρίς όροφο --",
+    "noName": "No name",
+    "title": "Title",
+    "selectLabel": "Select label",
+    "loading": "Loading...",
+    "placeholder": "",
+    "noBuilding": "No building",
+    "currentBuilding": "Current building",
+    "saving": "Saving...",
+    "success": "Success",
+    "error": "An error occurred"
   },
   "floorplan": {
     "selectProperty": "Επιλέξτε ακίνητο",
@@ -714,5 +768,91 @@
   "types": {
     "outdoor": "Υπαίθριο"
   },
-  "unitFallbackLabel": "Μονάδα {id}"
+  "unitFallbackLabel": "Μονάδα {id}",
+  "units": {
+    "cbm": "Cbm"
+  },
+  "customerTab": {
+    "customerInfo": "Customer info",
+    "loading": "Loading...",
+    "loadingError": "Loading error",
+    "loadingErrorMessage": "Loading error message",
+    "retryLoading": "Retry loading",
+    "reloadPage": "Reload page",
+    "loaded": "Loaded",
+    "viewInContacts": "View in contacts",
+    "unknownCustomer": "Unknown customer",
+    "fetchedAt": "Fetched at",
+    "tip": "Tip",
+    "tipMessage": "Tip message",
+    "customerId": "Customer id",
+    "transactionValue": "Transaction value",
+    "contactsList": "Contacts list",
+    "call": "Call",
+    "noUnitSelected": "No unit selected",
+    "availableUnit": "Available unit",
+    "unitAvailable": "Unit available",
+    "statusLabel": "Status label",
+    "scheduleViewing": "Schedule viewing",
+    "soldWithoutCustomer": "Sold without customer",
+    "soldWithoutCustomerWarning": "Sold without customer warning",
+    "propertyStatus": "Property status",
+    "transactionDate": "Transaction date",
+    "unknownDate": "Unknown date",
+    "customerIdMissing": "Customer id missing",
+    "manageTransaction": "Manage transaction",
+    "transactionDetails": "Transaction details",
+    "unitStatusLabel": "Unit status label",
+    "statusSold": "Status sold",
+    "statusReserved": "Status reserved",
+    "statusRented": "Status rented",
+    "transactionDateLabel": "Transaction date label",
+    "transactionValueLabel": "Transaction value label",
+    "notAvailable": "Not available",
+    "propertyRelations": "Property relations",
+    "transactionDocuments": "Transaction documents",
+    "transactionDocumentsDesc": "Transaction documents desc",
+    "transactionHistory": "Transaction history",
+    "transactionHistoryDesc": "Transaction history desc",
+    "communication": "Communication",
+    "communicationDesc": "Communication desc",
+    "otherProperties": "Other properties",
+    "otherPropertiesDesc": "Other properties desc",
+    "quickActions": "Quick actions",
+    "directCall": "Direct call",
+    "fullProfile": "Full profile",
+    "schedule": "Schedule",
+    "report": "Report"
+  },
+  "common": {
+    "labels": {
+      "email": "Email"
+    }
+  },
+  "navigation": {
+    "units": "Units"
+  },
+  "card": {
+    "stats": {
+      "condition": "Condition",
+      "building": "Building",
+      "floor": "Floor",
+      "area": "Area",
+      "price": "Price"
+    },
+    "ariaLabel": ""
+  },
+  "buttons": {
+    "cancel": "Cancel"
+  },
+  "dropdowns": {
+    "selectClient": "Select client"
+  },
+  "alerts": {
+    "warning": "Warning",
+    "buyerMismatch": "Buyer mismatch"
+  },
+  "details": {
+    "goToCustomer": "Go to customer"
+  }
 }

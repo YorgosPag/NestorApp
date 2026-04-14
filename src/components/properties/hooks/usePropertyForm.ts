@@ -106,7 +106,7 @@ export function usePropertyForm({
   onPropertyAdded,
   onOpenChange,
 }: UsePropertyFormProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { success, error } = useNotifications();
 
   const [formData, setFormData] = useState<PropertyFormData>(INITIAL_FORM_DATA);

@@ -7,7 +7,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 export function BuyerMismatchAlert() {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
 
   return (

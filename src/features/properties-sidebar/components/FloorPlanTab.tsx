@@ -37,7 +37,7 @@ interface FloorPlanTabProps {
 
 export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const fallbackCompanyId = useCompanyId()?.companyId;

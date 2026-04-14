@@ -41,7 +41,7 @@ export function ShareDialog({
   userId,
   companyId,
 }: ShareDialogProps): React.ReactElement {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const { t: tShell } = useTranslation('common-shared');
 
   const expirationLabelFor = useCallback(

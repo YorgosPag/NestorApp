@@ -104,7 +104,7 @@ function ChangeCell({ value }: { value: CellValue }) {
 // ============================================================================
 
 export function ReportTable({ reportType, data }: ReportTableProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const tableData = useMemo(

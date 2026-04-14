@@ -70,7 +70,7 @@ export function TransactionsPanel({
   onCheckAll,
   onStatusFilterChange,
 }: TransactionsPanelProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   const filtered = statusFilter === 'all'
     ? transactions

@@ -12,7 +12,7 @@ export function useLead(id: string) {
   const [lead, setLead] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
 
   const fetchLead = useCallback(async (signal?: AbortSignal) => {
     if (!id) {

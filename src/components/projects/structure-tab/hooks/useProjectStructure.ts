@@ -44,7 +44,7 @@ export function useProjectStructure(
   options: UseProjectStructureOptions = {}
 ): UseProjectStructureReturn {
   const { enabled = true } = options;
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   const [structure, setStructure] = useState<ProjectStructure | null>(null);
   const [loading, setLoading] = useState(false);

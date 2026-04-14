@@ -52,7 +52,7 @@ function useDxfSettingsSafe() {
 }
 
 export function CentralizedAutoSaveStatus() {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const iconSizes = useIconSizes();
   const { radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -254,7 +254,7 @@ export function CentralizedAutoSaveStatus() {
  * Compact version
  */
 export function CentralizedAutoSaveStatusCompact() {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { radius } = useBorderTokens();

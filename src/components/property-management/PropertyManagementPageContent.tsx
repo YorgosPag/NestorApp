@@ -39,7 +39,7 @@ import '@/lib/design-system';
 export function PropertyManagementPageContent() {
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('selected');
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
 
   // Hook with all property data and state

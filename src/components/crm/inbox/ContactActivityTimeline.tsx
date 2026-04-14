@@ -252,7 +252,7 @@ export function ContactActivityTimeline({
   messages,
   loading = false
 }: ContactActivityTimelineProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
   const { quick } = useBorderTokens();

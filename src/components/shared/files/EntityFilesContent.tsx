@@ -140,7 +140,7 @@ export interface EntityFilesContentProps {
 // ============================================================================
 
 export function EntityFilesContent(props: EntityFilesContentProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const _colors = useSemanticColors();
 
   return (
@@ -195,7 +195,7 @@ function UploadZoneSection({
   onUpload, acceptedTypes, maxFileSize, uploading,
 }: EntityFilesContentProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   return (
     <div className="relative space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
@@ -277,7 +277,7 @@ function UploadZoneSection({
 
 function FilesTabContent(props: EntityFilesContentProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
 
   return (
@@ -408,7 +408,7 @@ function FileViewDispatch(props: EntityFilesContentProps & { iconSizes: ReturnTy
 // ============================================================================
 
 function GalleryView(props: EntityFilesContentProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   if (props.displayStyle === 'floorplan-gallery') {
     return (

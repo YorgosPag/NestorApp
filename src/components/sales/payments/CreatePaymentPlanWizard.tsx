@@ -90,7 +90,7 @@ export function CreatePaymentPlanWizard({
   onCreateSplit,
 }: CreatePaymentPlanWizardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const { success, error: notifyError } = useNotifications();
 
   // ADR-244: Multi-owner step — only shown when >1 owner

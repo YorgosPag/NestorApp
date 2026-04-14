@@ -128,7 +128,7 @@ export function UnifiedInbox({
   showFilters = true,
   enablePolling = true,
 }: UnifiedInboxProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

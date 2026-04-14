@@ -89,7 +89,7 @@ export function ReadOnlyLayerItem({
 }: ReadOnlyLayerItemProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const categoryInfo = layer.metadata?.category ? getCategoryInfo(layer.metadata.category) : null;
 
   return (

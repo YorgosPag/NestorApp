@@ -51,7 +51,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
     allowPdf = true
 }) => {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('dxf-viewer');
+    const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileType, setFileType] = useState<ImportFileType>(null);
     const [encoding, setEncoding] = useState('windows-1253');

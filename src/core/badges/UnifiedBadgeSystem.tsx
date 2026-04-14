@@ -147,7 +147,7 @@ interface CommonBadgeProps extends Omit<UnifiedBadgeProps, 'domain'> {
 export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) => {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const badgeConfig = BadgeFactory.createCommonBadge(status, colors, props);
 
   // 🏢 ENTERPRISE: Translate label if it's an i18n key

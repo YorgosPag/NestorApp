@@ -5,7 +5,7 @@ import { cn, getStatusColor } from '@/lib/design-system';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 export const useNotificationUtils = () => {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
 
   const getTypeStyles = (type: string) => {
     switch(type) {

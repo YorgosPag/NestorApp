@@ -124,7 +124,7 @@ export const ModalErrorState: React.FC<ErrorStateProps> = ({
   className = ''
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const typography = useTypography();
   const displayRetryText = retryText || t('loadingStates.retry');
   return (
@@ -241,7 +241,7 @@ export const ModalLoadingOverlay: React.FC<LoadingOverlayProps> = ({
   className = ''
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const colors = useSemanticColors();
   const typography = useTypography();
   const displayMessage = message || t('loadingStates.loading');
@@ -281,7 +281,7 @@ export const CompaniesLoadingState: React.FC<CompaniesLoadingProps> = ({
   isEmpty = false
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   if (isLoading) {
     return <InlineLoading message={t('loadingStates.companies.loading')} type="card" />;
@@ -319,7 +319,7 @@ export const ProjectsLoadingState: React.FC<CompaniesLoadingProps> = ({
   isEmpty = false
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   if (isLoading) {
     return <InlineLoading message={t('loadingStates.projects.loading')} type="card" />;

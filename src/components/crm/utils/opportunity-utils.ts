@@ -15,7 +15,7 @@ export const STAGE_IDS: Opportunity['stage'][] = [
 ];
 
 /**
- * @deprecated Use STAGE_IDS with useTranslation('crm') t(`opportunities.stages.${stageId}`)
+ * @deprecated Use STAGE_IDS with useTranslation(['crm', 'crm-inbox']) t(`opportunities.stages.${stageId}`)
  */
 export const stageDefinitions: { id: Opportunity['stage']; label: string }[] = STAGE_IDS.map(id => ({
     id,

@@ -60,7 +60,7 @@ export default function CoordinateCalibrationOverlay({
   const { getElementBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   // 🌐 i18n
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const [clickTests, setClickTests] = useState<ClickTest[]>([]);
   const [showDetails, setShowDetails] = useState(true);
   const clickIdRef = useRef(0);

@@ -144,7 +144,7 @@ export function CrmCalendar({
   navigateToDate,
   onDateChange,
 }: CrmCalendarProps) {
-  const { t, i18n } = useTranslation('crm');
+  const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
   const { success: notifySuccess, error: notifyError } = useNotifications();
 
   // Dialog state

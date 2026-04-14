@@ -54,7 +54,7 @@ export function PropertiesHeader({
   trashCount,
 }: PropertiesHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { t: tViewer } = useTranslation('properties-viewer');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();

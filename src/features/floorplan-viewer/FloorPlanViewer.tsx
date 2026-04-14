@@ -44,7 +44,7 @@ const logger = createModuleLogger('FloorPlanViewer');
 export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
   const { quick: _quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   const {
     currentFloor,

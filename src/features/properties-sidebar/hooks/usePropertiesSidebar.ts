@@ -16,7 +16,7 @@ export function usePropertiesSidebar(
   viewerProps: ViewerPassthroughProps,
   selectedProperty: Property | null | undefined,
 ) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { success, error: notifyError } = useNotifications();
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeViewerProps = viewerProps;

@@ -34,7 +34,7 @@ import '@/lib/design-system';
 const logger = createModuleLogger('crm/notifications');
 
 export function CrmNotificationsPageContent() {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { user } = useAuth();

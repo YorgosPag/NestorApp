@@ -57,7 +57,7 @@ export function WorkerAssignmentDialog({
   excludeContactIds,
   onAssigned,
 }: WorkerAssignmentDialogProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const spacing = useSpacingTokens();

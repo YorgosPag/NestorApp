@@ -56,7 +56,8 @@
       "buildingGeneral": "Γενική Κάτοψη Κτιρίου",
       "storage": "Κάτοψη Αποθηκών",
       "property": "Κάτοψη Ακινήτου",
-      "floor": "Κάτοψη Ορόφου"
+      "floor": "Κάτοψη Ορόφου",
+      "unit": "Unit"
     },
     "floorplanSections": {
       "selectForProject": "Γενική Κάτοψη / Τοπογραφικό Έργου",
@@ -300,6 +301,12 @@
         "distanceLabel": "Γνωστή Απόσταση:",
         "placeholder": "π.χ. 100",
         "hint": "Στο επόμενο βήμα μπορείτε να επιλέξετε δύο σημεία στο σχέδιο που αντιστοιχούν σε αυτή την απόσταση."
+      },
+      "settings": {
+        "title": "Title",
+        "distanceLabel": "Distance label",
+        "placeholder": "",
+        "hint": "Hint"
       }
     }
   },

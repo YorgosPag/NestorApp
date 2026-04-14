@@ -43,7 +43,7 @@ const SKIP_SECONDS = 10;
 export function VideoPlayer({ file, autoPlay = false, showControls = true, onEnded, onError, className }: VideoPlayerProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
 
   const {
     videoRef, containerRef, progressRef,

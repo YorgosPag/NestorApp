@@ -241,6 +241,10 @@
         "hierarchy": "This action affects the organization tree and related personnel metrics.",
         "reciprocal": "This action also affects the reciprocal relationship on the linked contact."
       }
+    },
+    "errors": {
+      "alreadyExists": "Already exists",
+      "contactsNotFound": "Contacts not found"
     }
   },
   "communication": {

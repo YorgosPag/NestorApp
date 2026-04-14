@@ -117,7 +117,7 @@ export function LayerItem({
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   // 🌐 i18n
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const layer = scene.layers[layerName];
   const isEditing = editingLayer === layerName;
   const showColorPicker = colorPickerLayer === layerName;

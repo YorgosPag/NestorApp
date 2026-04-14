@@ -69,7 +69,7 @@ export function ParkingQuickFilters({
   onTypeChange,
   className,
 }: ParkingQuickFiltersProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   const handleStatusChange = (types: string[]) => {
     onStatusChange(types.length === 0 ? 'all' : types[0]);

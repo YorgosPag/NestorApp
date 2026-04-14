@@ -20,7 +20,7 @@ interface ProjectHeaderProps {
 
 export function ProjectHeader({ name, buildingsCount, totalProperties }: ProjectHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   const typography = useTypography();

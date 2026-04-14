@@ -26,7 +26,7 @@ export function PropertyPageHeader({
   setViewMode
 }: PropertyPageHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   return (
     <PageHeader

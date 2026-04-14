@@ -39,7 +39,7 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
     isCreateMode = false,
     onStatusChange
 }: ProjectDetailsHeaderProps) {
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
     const statusPill = useMemo(() => {
         if (!project.id) return undefined;

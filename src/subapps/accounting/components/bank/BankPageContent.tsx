@@ -104,7 +104,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 // ============================================================================
 
 export function BankPageContent() {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const [filters, setFilters] = useState<BankFilterState>({ ...DEFAULT_FILTERS });

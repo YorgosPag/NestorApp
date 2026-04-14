@@ -69,7 +69,7 @@ export function PropertyViewerWithLayers({
   onPropertySelect,
   onLayerVisibilityChange
 }: PropertyViewerWithLayersProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();

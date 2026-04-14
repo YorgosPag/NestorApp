@@ -17,7 +17,7 @@ export function HierarchyDebugPanel() {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const {
     companies,
     selectedCompany,

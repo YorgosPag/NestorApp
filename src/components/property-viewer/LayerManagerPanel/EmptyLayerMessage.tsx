@@ -20,7 +20,7 @@ export function EmptyLayerMessage({ searchQuery }: EmptyLayerMessageProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   return (
     <div className={cn("text-center py-8", colors.text.muted)}>

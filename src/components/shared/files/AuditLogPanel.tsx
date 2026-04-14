@@ -139,7 +139,7 @@ interface AuditLogPanelProps {
 // ============================================================================
 
 export function AuditLogPanel({ fileId, companyId, className }: AuditLogPanelProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   const iconSizes = useIconSizes();

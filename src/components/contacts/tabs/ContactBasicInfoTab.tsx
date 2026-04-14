@@ -28,7 +28,7 @@ export function ContactBasicInfoTab({
   data,
   additionalData,
 }: ContactBasicInfoTabProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const config = getContactFormConfig(data.type);
   const sections = config.getSections();

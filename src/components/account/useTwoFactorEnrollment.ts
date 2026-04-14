@@ -29,7 +29,7 @@ interface UseTwoFactorEnrollmentParams {
 }
 
 export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorEnrollmentParams) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // State
   const [step, setStep] = useState<EnrollmentStep>('initial');

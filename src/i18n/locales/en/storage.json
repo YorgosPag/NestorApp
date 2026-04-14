@@ -30,7 +30,9 @@
       "description": "Description",
       "descriptionPlaceholder": "Optional description...",
       "notes": "Notes",
-      "notesPlaceholder": "Optional notes..."
+      "notesPlaceholder": "Optional notes...",
+      "createError": "Create error",
+      "createDescription": "Create description"
     }
   },
   "sizes": {
@@ -220,7 +222,11 @@
     "edit": "Edit",
     "print": "Print",
     "ownerLabel": "Owner:",
-    "newStorage": "New Storage"
+    "newStorage": "New Storage",
+    "saving": "Saving...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
   },
   "page": {
     "backToProjects": "Back to Projects",
@@ -336,5 +342,9 @@
         "description": "Are you sure you want to delete storage {name}?"
       }
     }
+  },
+  "common": {
+    "storage": "Storage",
+    "parking": "Parking"
   }
 }

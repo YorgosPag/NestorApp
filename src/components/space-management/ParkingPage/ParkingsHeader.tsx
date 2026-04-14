@@ -50,7 +50,7 @@ export function ParkingsHeader({
   setShowFilters,
 }: ParkingsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

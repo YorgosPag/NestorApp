@@ -90,7 +90,7 @@ export function FileInspector({
   companyName,
 }: FileInspectorProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const { success, error } = useNotifications();
 

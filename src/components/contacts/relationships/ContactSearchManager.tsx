@@ -89,7 +89,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
   onCreateNew,
 }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   // 🔐 ENTERPRISE: Defense-in-depth — gate data fetching on auth state
   const { user, loading: authLoading } = useAuth();

@@ -31,7 +31,7 @@ interface PanelTabsProps {
  * @see types/panel-types.ts - Centralized panel type definitions
  */
 export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed }: PanelTabsProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   // 🏢 ENTERPRISE: Create tabs in TabDefinition format (same as GenericFormTabRenderer)
   const tabs: TabDefinition[] = [

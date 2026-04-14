@@ -138,7 +138,7 @@ export function ConversationListCard({
   compact = true,
   className,
 }: ConversationListCardProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)

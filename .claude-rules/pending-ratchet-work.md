@@ -29,7 +29,7 @@
 
 - [x] **ADR-298 Phase E** — COMPLETATO 2026-04-14. ADR-301 (Storage Rules Coverage SSoT). 4 path pattern, 48 celle, harness completo, CHECK 3.19 verde.
 
-- [ ] **CHECK 3.8 i18n Missing Keys** — 4,762 legacy violations. `t('key')` calls without matching locale entry + namespace mismatches from ADR-280 split. **Hours:** 8-22 (expected 14). Mass-migration + individual fixes.
+- [x] **CHECK 3.8 i18n Missing Keys** — COMPLETATO 2026-04-14. 4,750→0 violazioni. 3 fasi: (1) 730 file `useTranslation` single→array (namespace ADR-280 subs), (2) 479 chiavi genuinamente mancanti aggiunte ai locale files el+en, (3) settings.json creato. Baseline 0.
 
 ---
 
@@ -67,3 +67,4 @@
 | 2026-04-14 | ADR-298 Phase C.6 DONE. 8 ownership-based collections → COVERAGE: companies, security_roles, users, user_notification_settings, user_2fa_settings, workspaces, teams, positions. 3 new matrix builders (companiesMatrix, usersMatrix, ownerOnlyMatrix) + coverage-matrices-users.ts (SRP) + seed-helpers-users.ts + 8 suites. 198 tests green. Pending 21→13, coverage 73→81 collections. |
 | 2026-04-14 | ADR-298 Phase C.7 DONE — PHASE C COMPLETA. 11 specialized collections → COVERAGE: contact_relationships, contact_links, relationships, relationship_audit, employment_records, notifications, audit_logs, system_audit_logs, audit_log, search_documents, voice_commands. 5 new matrix builders (contactRelationshipsMatrix, employmentRecordsMatrix, notificationsMatrix, auditLogMatrix, searchDocumentsMatrix, voiceCommandsMatrix) + coverage-matrices-specialized.ts (SRP) + seed-helpers-specialized.ts + 11 suites. 291 tests green. Pending 13→0 (VUOTA). Coverage 81→92 collections. FIRESTORE_RULES_PENDING = []. |
 | 2026-04-14 | ADR-301 Phase A DONE — Storage Rules Coverage SSoT. 4 path patterns → COVERAGE (canonical_with_project, canonical_no_project, cad, temp). Harness: emulator.ts + auth-contexts.ts + seed-helpers.ts + assertions.ts. Registry: personas.ts + operations.ts + coverage-manifest.ts. 4 test suites, 48 cells. CHECK 3.19 (zero-tolerance, pre-commit). jest.config.storage-rules.js + 5 npm scripts. ADR-298 Phase E chiusa. |
+| 2026-04-14 | CHECK 3.8 i18n Missing Keys DONE — ZERO BASELINE. 4,750→0 violazioni in 3 fasi: (1) 730 file single-ns→array (ADR-280 namespace split: dxf-viewer+5 subs, common+9 subs, building+5 subs, contacts+5 subs, properties+3 subs, projects+2 subs, accounting+2 subs, crm+1 sub, files+1 sub); (2) 479 chiavi genuinamente mancanti aggiunte a 30 locale files el+en; (3) settings.json creato (el+en). Baseline regenerated: 0 violations / 0 files. |

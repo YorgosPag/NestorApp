@@ -167,17 +167,63 @@
     },
     "desktop": {
       "modals": {
-        "company": { "title": "Επιλογή Εταιρείας", "placeholder": "Αναζήτηση εταιρείας...", "emptyMessage": "Δεν βρέθηκαν εταιρείες" },
-        "project": { "title": "Επιλογή Έργου", "placeholder": "Αναζήτηση έργου...", "emptyMessage": "Δεν βρέθηκαν έργα" },
-        "building": { "title": "Επιλογή Κτιρίου", "placeholder": "Αναζήτηση κτιρίου...", "emptyMessage": "Δεν βρέθηκαν κτίρια" },
-        "floor": { "title": "Επιλογή Ορόφου", "placeholder": "Αναζήτηση ορόφου...", "emptyMessage": "Δεν βρέθηκαν όροφοι" },
-        "unit": { "title": "Επιλογή Μονάδας", "placeholder": "Αναζήτηση μονάδας...", "emptyMessage": "Δεν βρέθηκαν μονάδες" }
+        "company": {
+          "title": "Επιλογή Εταιρείας",
+          "placeholder": "Αναζήτηση εταιρείας...",
+          "emptyMessage": "Δεν βρέθηκαν εταιρείες"
+        },
+        "project": {
+          "title": "Επιλογή Έργου",
+          "placeholder": "Αναζήτηση έργου...",
+          "emptyMessage": "Δεν βρέθηκαν έργα"
+        },
+        "building": {
+          "title": "Επιλογή Κτιρίου",
+          "placeholder": "Αναζήτηση κτιρίου...",
+          "emptyMessage": "Δεν βρέθηκαν κτίρια"
+        },
+        "floor": {
+          "title": "Επιλογή Ορόφου",
+          "placeholder": "Αναζήτηση ορόφου...",
+          "emptyMessage": "Δεν βρέθηκαν όροφοι"
+        },
+        "unit": {
+          "title": "Επιλογή Μονάδας",
+          "placeholder": "Αναζήτηση μονάδας...",
+          "emptyMessage": "Δεν βρέθηκαν μονάδες"
+        }
       },
-      "headers": { "companies": "Εταιρείες", "projects": "Έργα", "buildings": "Κτίρια", "floors": "Όροφοι", "units": "Μονάδες" },
-      "counters": { "total": "Σύνολο", "selected": "Επιλεγμένα", "filtered": "Φιλτραρισμένα" },
-      "navActions": { "connect": "Σύνδεση", "disconnect": "Αποσύνδεση", "edit": "Επεξεργασία", "delete": "Διαγραφή", "view_details": "Προβολή Λεπτομερειών" },
-      "status": { "loading": "Φόρτωση...", "empty": "Δεν υπάρχουν δεδομένα", "error": "Σφάλμα φόρτωσης", "success": "Επιτυχής ολοκλήρωση" },
-      "confirm": { "title": "Επιβεβαίωση Ενέργειας", "message": "Είστε βέβαιοι ότι θέλετε να προχωρήσετε;", "confirmLabel": "Επιβεβαίωση", "cancelLabel": "Ακύρωση" }
+      "headers": {
+        "companies": "Εταιρείες",
+        "projects": "Έργα",
+        "buildings": "Κτίρια",
+        "floors": "Όροφοι",
+        "units": "Μονάδες"
+      },
+      "counters": {
+        "total": "Σύνολο",
+        "selected": "Επιλεγμένα",
+        "filtered": "Φιλτραρισμένα"
+      },
+      "navActions": {
+        "connect": "Σύνδεση",
+        "disconnect": "Αποσύνδεση",
+        "edit": "Επεξεργασία",
+        "delete": "Διαγραφή",
+        "view_details": "Προβολή Λεπτομερειών"
+      },
+      "status": {
+        "loading": "Φόρτωση...",
+        "empty": "Δεν υπάρχουν δεδομένα",
+        "error": "Σφάλμα φόρτωσης",
+        "success": "Επιτυχής ολοκλήρωση"
+      },
+      "confirm": {
+        "title": "Επιβεβαίωση Ενέργειας",
+        "message": "Είστε βέβαιοι ότι θέλετε να προχωρήσετε;",
+        "confirmLabel": "Επιβεβαίωση",
+        "cancelLabel": "Ακύρωση"
+      }
     }
   },
   "steps": {
@@ -188,5 +234,8 @@
     "fileSelection": "Επιλογή Αρχείου",
     "encodingSelection": "Επιλογή Κωδικοποίησης",
     "destinationSelection": "Επιλογή Προορισμού"
+  },
+  "common": {
+    "settings": "Settings"
   }
 }

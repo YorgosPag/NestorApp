@@ -34,7 +34,7 @@ export function PublicPropertyViewerHeader({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const router = useRouter();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   
   return (
     <div className="shrink-0">

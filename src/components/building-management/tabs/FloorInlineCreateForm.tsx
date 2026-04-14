@@ -106,7 +106,7 @@ export function FloorInlineCreateForm({
   onCancel,
   existingFloorNumbers = EMPTY_SET,
 }: FloorInlineCreateFormProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { success, error: notifyError } = useNotifications();
   const colors = useSemanticColors();
 

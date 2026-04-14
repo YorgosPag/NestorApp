@@ -46,7 +46,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   const { uploadFloorplan, isUploading, progress, error, clearError } = useFloorplanUpload(config);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
 
   const [uploadSuccess, setUploadSuccess] = useState(false);
 

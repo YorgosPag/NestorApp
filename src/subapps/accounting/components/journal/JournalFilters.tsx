@@ -54,7 +54,7 @@ const QUARTER_LABELS: Record<FiscalQuarter, string> = {
 // ============================================================================
 
 export function JournalFilters({ filters, onFilterChange }: JournalFiltersProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   return (
     <nav className="flex flex-wrap gap-3" aria-label={t('common.filter')}>

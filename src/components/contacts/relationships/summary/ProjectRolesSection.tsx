@@ -49,7 +49,7 @@ const ROLE_I18N_KEYS: Record<string, string> = {
 
 export function ProjectRolesSection({ contactId, className = 'mb-6' }: ProjectRolesSectionProps) {
   const { roles, loading } = useContactProjectRoles(contactId);
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const iconSizes = useIconSizes();
 
   // Don't render section if no roles and not loading

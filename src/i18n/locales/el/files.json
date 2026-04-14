@@ -77,7 +77,9 @@
     "onlyPdfAllowed": "Μόνο αρχεία PDF επιτρέπονται",
     "fileTooLarge": "Το αρχείο είναι πολύ μεγάλο (μέγιστο 50MB)",
     "fileLargeWarning": "Το αρχείο είναι μεγάλο και μπορεί να χρειαστεί περισσότερος χρόνος για μεταφόρτωση",
-    "filenameSpecialChars": "Το όνομα του αρχείου περιέχει ειδικούς χαρακτήρες που μπορεί να προκαλέσουν προβλήματα"
+    "filenameSpecialChars": "Το όνομα του αρχείου περιέχει ειδικούς χαρακτήρες που μπορεί να προκαλέσουν προβλήματα",
+    "invalidFile": "Invalid file",
+    "fileTooSmall": "File too small"
   },
   "upload": {
     "typeQuestion": "Τι τύπο εγγράφου θα ανεβάσετε;",
@@ -255,7 +257,9 @@
     "filesCount": "αρχεία",
     "collapseGroup": "Σύμπτυξη ομάδας",
     "expandGroup": "Ανάπτυξη ομάδας",
-    "openInNewTab": "Άνοιγμα σε νέα καρτέλα"
+    "openInNewTab": "Άνοιγμα σε νέα καρτέλα",
+    "classifying": "Classifying",
+    "classificationFailed": "Classification failed"
   },
   "linkModal": {
     "title": "Σύνδεση αρχείου σε Κτίρια",
@@ -427,7 +431,8 @@
     "pending": "Σε αναμονή"
   },
   "common": {
-    "cancel": "Ακύρωση"
+    "cancel": "Ακύρωση",
+    "close": "Close"
   },
   "studies": {
     "selectGroup": "Επιλέξτε κατηγορία μελέτης",
@@ -652,5 +657,20 @@
     "removeFile": "Κατάργηση αρχείου",
     "removeFiles": "Κατάργηση αρχείων",
     "unlinkFile": "Αποσύνδεση αρχείου"
+  },
+  "copy": {
+    "copyError": "Copy error"
+  },
+  "uploadButton": {
+    "selectFile": "Select file",
+    "loading": "Loading..."
+  },
+  "floorplan": {
+    "processingInProgress": "Processing in progress"
+  },
+  "floorplanImport": {
+    "select": {
+      "unit": "Unit"
+    }
   }
 }

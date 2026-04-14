@@ -20,7 +20,7 @@ interface ProjectCardMetricsProps {
 
 export function ProjectCardMetrics({ project }: ProjectCardMetricsProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   // 🟢 ENTERPRISE: Centralized systems
   const typography = useTypography();
   const colors = useSemanticColors();

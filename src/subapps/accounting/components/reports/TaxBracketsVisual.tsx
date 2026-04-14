@@ -121,7 +121,7 @@ function findAmountForRate(breakdown: TaxBracketResult[], rate: number): number 
 // ============================================================================
 
 export function TaxBracketsVisual({ bracketBreakdown, taxableIncome }: TaxBracketsVisualProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (

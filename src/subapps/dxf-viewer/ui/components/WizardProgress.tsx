@@ -84,7 +84,7 @@ export function WizardProgress({
 
 // 🏢 ENTERPRISE: Hook for i18n-aware step labels
 export function useDefaultStepLabels(): string[] {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   return [
     t('wizardProgress.stepLabels.level'),
     t('wizardProgress.stepLabels.calibration'),

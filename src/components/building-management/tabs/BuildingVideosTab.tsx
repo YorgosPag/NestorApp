@@ -72,7 +72,7 @@ export function BuildingVideosTab({
   title: _title,
 }: BuildingVideosTabProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
 
   // Resolve building from props

@@ -59,7 +59,7 @@ const STORAGE_TYPES: StorageType[] = ['small', 'large', 'basement', 'ground', 's
 
 export function StorageTab({ building }: StorageTabProps) {
   const { t } = useTranslation('storage');
-  const { t: tBuilding } = useTranslation('building');
+  const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const { confirm, dialogProps } = useConfirmDialog();
 

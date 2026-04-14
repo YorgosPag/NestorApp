@@ -49,7 +49,7 @@ const CalculationFormula = ({ text, className }: { text: string; className?: str
 };
 
 export function AllowedBuildingDataTab({ allowedDataInput, calculatedData, onInputChange, isEditing }: AllowedBuildingDataTabProps) {
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
     const typography = useTypography();
     // 🏢 ENTERPRISE: Centralized spacing tokens
     const spacing = useSpacingTokens();

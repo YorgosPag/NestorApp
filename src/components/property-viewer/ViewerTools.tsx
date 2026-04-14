@@ -95,7 +95,7 @@ export function ViewerTools({
   isReadOnly = false,
   className
 }: ViewerToolsProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { confirm, dialogProps } = useConfirmDialog();
   const { warning } = useNotifications();
   const iconSizes = useIconSizes();

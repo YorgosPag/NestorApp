@@ -39,7 +39,7 @@ import { FinancialReportsDashboard } from './FinancialReportsDashboard';
 // ============================================================================
 
 export function ReportsPageContent() {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showDashboard, setShowDashboard] = useState(true);

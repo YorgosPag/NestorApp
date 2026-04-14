@@ -12,7 +12,7 @@ import '@/lib/design-system';
 
 export function LoadingCard() {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   // 🏢 ENTERPRISE: Centralized typography tokens
   const typography = useTypography();
   return (

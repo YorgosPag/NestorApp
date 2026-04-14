@@ -38,7 +38,7 @@ const crmSectionKeys = [
 export function CrmHubPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const pagePadding = getSpacingClass('p', 'lg');
   const sectionMargin = getSpacingClass('m', 'lg', 'b');
 

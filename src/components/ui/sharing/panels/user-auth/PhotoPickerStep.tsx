@@ -33,7 +33,7 @@ export function PhotoPickerStep({
   onCancel,
   onConfirm,
 }: PhotoPickerStepProps): React.ReactElement {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   return (
     <section className="space-y-4">

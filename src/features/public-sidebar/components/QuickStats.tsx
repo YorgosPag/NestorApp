@@ -17,7 +17,7 @@ export function QuickStats({
   pricesFromLabel: string;
   pricesFromValue: string;
 }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
   return (
     <div className="px-6">

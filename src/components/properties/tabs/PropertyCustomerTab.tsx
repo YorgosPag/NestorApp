@@ -64,7 +64,7 @@ export function PropertyCustomerTab({
   const iconSizes = useIconSizes();
   useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   const hasSoldStatus = selectedProperty?.status === 'sold' ||
                        selectedProperty?.status === 'reserved' ||

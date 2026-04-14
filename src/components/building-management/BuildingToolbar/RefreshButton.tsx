@@ -9,7 +9,7 @@ import '@/lib/design-system';
 
 export function RefreshButton({ onRefresh }: { onRefresh: () => void }) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const iconSizes = useIconSizes();
   return (
     <ToolbarButton tooltip={t('toolbar.tooltips.refresh')} onClick={onRefresh}>

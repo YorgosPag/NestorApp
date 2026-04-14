@@ -63,7 +63,7 @@ export function BuildingToolbar({
   disabled = false,
 }: BuildingToolbarProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   
   // Primary actions (always visible)
   const primaryActions: ToolbarAction[] = [];

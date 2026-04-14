@@ -6,7 +6,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 export function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void; }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   return (
     <div className="flex-1">
       <SearchInput

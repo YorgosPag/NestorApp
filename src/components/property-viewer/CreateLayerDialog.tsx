@@ -39,7 +39,7 @@ const DEFAULT_COLOR = '#3b82f6'; // eslint-disable-line design-system/no-hardcod
 export function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDialogProps) {
   const iconSizes = useIconSizes();
   const { radius } = useBorderTokens();
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<LayerCategory>('annotations');

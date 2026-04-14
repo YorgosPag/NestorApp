@@ -73,7 +73,7 @@ export function GenericListHeader({
 }: GenericListHeaderProps) {
     const iconSizes = useIconSizes();
     // 🏢 ENTERPRISE: i18n support
-    const { t } = useTranslation('common');
+    const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
     // Use translation as default if placeholder not provided
     const displayPlaceholder = searchPlaceholder ?? t('placeholders.search');

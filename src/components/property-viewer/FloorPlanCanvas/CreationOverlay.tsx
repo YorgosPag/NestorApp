@@ -34,7 +34,7 @@ export function CreationOverlay({
   className = ''
 }: CreationOverlayProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   // Use currentPolyline if available, fallback to vertices
   const points = currentPolyline.length > 0 ? currentPolyline : vertices;

@@ -12,7 +12,7 @@ import '@/lib/design-system';
 export function CalendarTab() {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const [date, setDate] = React.useState<Date | undefined>(new Date());
 
   return (

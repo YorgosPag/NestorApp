@@ -151,7 +151,7 @@ function ErrorBubble({ message }: { message: string }) {
 
 /** Renders a single command + response pair */
 function ConversationEntry({ commandId }: { commandId: string }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const entry = useVoiceCommandStore((s) =>
     s.commandHistory.find((c) => c.commandId === commandId)
   );
@@ -187,7 +187,7 @@ function ConversationEntry({ commandId }: { commandId: string }) {
 // =============================================================================
 
 export function VoiceAIPanel() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const scrollRef = React.useRef<HTMLDivElement>(null);

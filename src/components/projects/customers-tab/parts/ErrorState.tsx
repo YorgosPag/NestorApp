@@ -20,7 +20,7 @@ interface ErrorStateProps {
 
 export function ErrorState({ error, errorType, canRetry = true, onRetry }: ErrorStateProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   // 🏢 ENTERPRISE: Centralized typography tokens
   const typography = useTypography();
   const iconSizes = useIconSizes();

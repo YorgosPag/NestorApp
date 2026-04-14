@@ -35,7 +35,7 @@ export default function CursorTooltipOverlay({
   className = ''
 }: CursorTooltipOverlayProps) {
   // 🌐 i18n
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   if (!isActive || !cursorPosition || activeTool === 'select') return null;
 

@@ -29,7 +29,7 @@ export function PropertyMutationImpactDialog({
   onOpenChange,
   onConfirm,
 }: PropertyMutationImpactDialogProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
 
   const mode = preview?.mode ?? 'allow';

@@ -33,7 +33,7 @@ interface PartnerEFKATabsProps {
 // ============================================================================
 
 export function PartnerEFKATabs({ summary }: PartnerEFKATabsProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   if (summary.partnerSummaries.length === 0) {

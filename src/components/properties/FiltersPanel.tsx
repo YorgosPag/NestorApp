@@ -22,7 +22,7 @@ export function FiltersPanel({ filters, onFiltersChange }: FiltersPanelProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   return (
     <div className="px-4 pt-4 shrink-0">

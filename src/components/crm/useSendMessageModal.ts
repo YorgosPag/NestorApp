@@ -56,7 +56,7 @@ export function useSendMessageModal({
   onMessageSent,
   onOpenChange
 }: UseSendMessageModalParams) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { success, error: notifyError } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [sending, setSending] = useState(false);

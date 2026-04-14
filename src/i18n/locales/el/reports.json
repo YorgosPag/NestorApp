@@ -225,7 +225,8 @@
       "buyer": "Αγοραστής",
       "amount": "Ποσό",
       "daysOverdue": "Ημέρες Καθυστέρησης",
-      "noOverdue": "Δεν υπάρχουν πωληθέντα ακίνητα"
+      "noOverdue": "Δεν υπάρχουν πωληθέντα ακίνητα",
+      "unit": "Unit"
     },
     "pipeline": {
       "title": "Ροή Πωλήσεων",
@@ -307,6 +308,10 @@
     "energyClass": {
       "title": "Κατανομή Ενεργειακής Κλάσης",
       "description": "Ακίνητα ομαδοποιημένα ανά πιστοποιητικό ενεργειακής απόδοσης"
+    },
+    "propertyStatus": {
+      "title": "Title",
+      "description": "Description"
     }
   },
   "contacts": {
@@ -464,5 +469,126 @@
   },
   "schedule": {
     "description": "Ανάλυση χρονοδιαγράμματος κατασκευής και διαχείριση δεδουλευμένης αξίας"
+  },
+  "crm": {
+    "description": "Description",
+    "comms": {
+      "count": "Count",
+      "title": "Title",
+      "description": "Description"
+    },
+    "kpis": {
+      "title": "Title",
+      "opportunities": "Opportunities",
+      "wonDeals": "Won deals",
+      "winRate": "Win rate",
+      "avgDeal": "Avg deal",
+      "totalTasks": "Total tasks",
+      "overdueTasks": "Overdue tasks",
+      "communications": "Communications",
+      "lostDeals": "Lost deals"
+    },
+    "leads": {
+      "title": "Title",
+      "description": "Description"
+    },
+    "pipeline": {
+      "count": "Count",
+      "value": "Value",
+      "title": "Title",
+      "description": "Description"
+    },
+    "taskStatuses": {
+      "pending": "Pending",
+      "in_progress": "In_progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "priorities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "tasks": {
+      "title": "Title",
+      "description": "Description"
+    },
+    "team": {
+      "tasks": "Tasks",
+      "title": "Title",
+      "description": "Description"
+    }
+  },
+  "spaces": {
+    "description": "Description",
+    "parking": {
+      "statuses": {
+        "available": "Available",
+        "occupied": "Occupied",
+        "reserved": "Reserved",
+        "sold": "Sold",
+        "maintenance": "Maintenance"
+      },
+      "types": {
+        "standard": "Standard",
+        "handicapped": "Handicapped",
+        "motorcycle": "Motorcycle",
+        "electric": "Electric",
+        "visitor": "Visitor"
+      },
+      "title": "Title",
+      "description": "Description",
+      "zones": {
+        "pilotis": "Pilotis",
+        "underground": "Underground",
+        "open_space": "Open_space",
+        "rooftop": "Rooftop",
+        "covered_outdoor": "Covered_outdoor"
+      },
+      "zoneTitle": "Zone title",
+      "zoneDescription": "Zone description"
+    },
+    "kpis": {
+      "title": "Title",
+      "totalParking": "Total parking",
+      "totalStorage": "Total storage",
+      "parkingUtilization": "Parking utilization",
+      "storageUtilization": "Storage utilization",
+      "totalValue": "Total value",
+      "totalArea": "Total area",
+      "avgPricePerSqm": "Avg price per sqm",
+      "totalSold": "Total sold",
+      "linked": "Linked",
+      "unlinked": "Unlinked"
+    },
+    "byBuilding": {
+      "parkingValue": "Parking value",
+      "storageValue": "Storage value",
+      "title": "Title",
+      "description": "Description"
+    },
+    "storage": {
+      "statuses": {
+        "available": "Available",
+        "occupied": "Occupied",
+        "maintenance": "Maintenance",
+        "reserved": "Reserved",
+        "sold": "Sold",
+        "unavailable": "Unavailable"
+      },
+      "types": {
+        "large": "Large",
+        "small": "Small",
+        "basement": "Basement",
+        "ground": "Ground",
+        "special": "Special",
+        "storage": "Storage",
+        "garage": "Garage",
+        "warehouse": "Warehouse"
+      },
+      "title": "Title",
+      "description": "Description"
+    }
   }
 }

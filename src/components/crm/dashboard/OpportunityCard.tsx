@@ -41,7 +41,7 @@ const getCreatedAtLabel = (timestamp: Opportunity['createdAt'], unknownLabel: st
 
 export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity: Opportunity, onEdit: (opportunity: Opportunity) => void, onDelete: (opportunityId: string, opportunityName: string) => void }) {
     // 🏢 ENTERPRISE: i18n hook for translations
-    const { t } = useTranslation('crm');
+    const { t } = useTranslation(['crm', 'crm-inbox']);
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const router = useRouter();

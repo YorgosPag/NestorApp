@@ -86,7 +86,7 @@ export function ReactionBubbles({
   className,
   maxVisible = 6,
 }: ReactionBubblesProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const colors = useSemanticColors();
 
   // Sort reactions by count (most popular first)

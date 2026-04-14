@@ -155,7 +155,8 @@
     "time": {
       "now": "Τώρα",
       "hoursAgo": "{hours}ω",
-      "yesterday": "Χθες"
+      "yesterday": "Χθες",
+      "label": "Label"
     },
     "message": {
       "from": "Από",
@@ -289,6 +290,9 @@
       "statusInProgress": "Σε εξέλιξη",
       "statusPending": "Εκκρεμεί",
       "statusFailed": "Απέτυχε"
+    },
+    "card": {
+      "ariaLabel": ""
     }
   }
 }

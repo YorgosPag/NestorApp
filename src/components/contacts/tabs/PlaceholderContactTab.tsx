@@ -24,7 +24,7 @@ export function PlaceholderContactTab({
   tabName,
   description,
 }: PlaceholderContactTabProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">

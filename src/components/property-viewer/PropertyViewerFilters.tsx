@@ -40,7 +40,7 @@ export function PropertyViewerFilters({ filters, onFiltersChange }: PropertyView
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const [showAdvanced, setShowAdvanced] = useState(false);
   // 🏢 ADR-051: Use centralized useGenericFilters with 'features' key (not 'advancedFeatures')
   // FilterState extends GenericFilterState, so no type casting needed

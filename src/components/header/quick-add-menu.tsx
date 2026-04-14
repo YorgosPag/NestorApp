@@ -80,7 +80,7 @@ export function QuickAddMenu() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
-  const { t, currentLanguage } = useTranslation('common');
+  const { t, currentLanguage } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { user } = useAuth();
   const [dictationOpen, setDictationOpen] = useState(false);
   const [dictationText, setDictationText] = useState('');

@@ -42,7 +42,7 @@ export function StorageTableView({
   getTypeLabel
 }: StorageTableViewProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const allSelected = selectedProperties.length === units.length && units.length > 0;
   const isIndeterminate = selectedProperties.length > 0 && !allSelected;
 

@@ -26,7 +26,7 @@ interface EnhancedImportWizardProps {
 
 export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedImportWizardProps) {
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
-  // const { t } = useTranslation('dxf-viewer');
+  // const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   // const [importMode, setImportMode] = useState<ImportMode>('enhanced');
   // const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // const [showModeSelector, setShowModeSelector] = useState(true);

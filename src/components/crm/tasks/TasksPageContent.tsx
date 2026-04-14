@@ -32,7 +32,7 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import type { TaskFilterState } from '@/components/core/AdvancedFilters/configs';
 
 export function TasksPageContent() {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const layout = useLayoutClasses();
   const sectionSpacing = getSpacingClass('m', 'md', 'b');
   const { isAuthenticated, loading: authLoading } = useAuth();

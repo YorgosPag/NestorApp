@@ -28,7 +28,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🌐 i18n
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   // Determine which icon to show - if activeTool matches a dropdown option, use that icon
   let IconComponent = tool.icon;
   if (tool.dropdownOptions && activeTool) {
@@ -179,7 +179,7 @@ interface ActionButtonProps {
 export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
   const iconSizes = useIconSizes();
   // 🌐 i18n
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const IconComponent = action.icon;
 
   // 🏢 ENTERPRISE: Translate label - supports both i18n keys and plain strings

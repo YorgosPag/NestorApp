@@ -70,7 +70,7 @@ export function RecordPaymentDialog({
   paymentPlanId,
   onRecord,
 }: RecordPaymentDialogProps) {
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const { success, error: notifyError } = useNotifications();
 
   const remaining = installment.amount - installment.paidAmount;

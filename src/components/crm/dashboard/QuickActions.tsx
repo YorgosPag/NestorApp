@@ -16,7 +16,7 @@ export function QuickActions() {
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const actions = [
     { label: t('quickActions.newEmail'), icon: Mail },
     { label: t('quickActions.logCall'), icon: PhoneCall },

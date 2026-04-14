@@ -65,7 +65,7 @@ export function PhotosTab({
   selectedProperty,
 }: PhotosTabProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

@@ -128,7 +128,7 @@ export function SearchResultItem({
   className,
 }: SearchResultItemProps) {
   const router = useRouter();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // === Computed Values ===
   const navigationEntityType = SEARCH_TO_NAVIGATION_ENTITY[result.entityType];
@@ -254,7 +254,7 @@ export function SearchResultGroup({
   count,
   children,
 }: SearchResultGroupProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const spacing = useSpacingTokens();
   const typography = useTypography();
   const colors = useSemanticColors();

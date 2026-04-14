@@ -81,7 +81,7 @@ export function DocumentReviewCard({
   onReject,
   confirming,
 }: DocumentReviewCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   // Editable confirmed fields — pre-populated from AI extraction

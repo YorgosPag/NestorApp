@@ -10,7 +10,7 @@ export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onCh
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   return (
     <div className={`flex ${colors.bg.secondary} rounded-lg p-1`}>

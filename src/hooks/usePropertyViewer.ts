@@ -119,7 +119,7 @@ export const DEFAULT_STATS: PropertyStats = {
  * @enterprise-ready true
  */
 export function usePropertyViewer() {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { success, error: notifyError } = useNotifications();
 
   // 1. Core State Management (properties, selection, history)

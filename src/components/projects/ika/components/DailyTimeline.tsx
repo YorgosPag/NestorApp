@@ -76,7 +76,7 @@ function formatMinutes(minutes: number): string {
 }
 
 export function DailyTimeline({ workerSummaries, onRecordEvent }: DailyTimelineProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();

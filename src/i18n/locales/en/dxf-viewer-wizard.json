@@ -56,7 +56,8 @@
       "buildingGeneral": "Building General Floorplan",
       "storage": "Storage Floorplan",
       "property": "Property Floorplan",
-      "floor": "Floor Plan"
+      "floor": "Floor Plan",
+      "unit": "Unit"
     },
     "floorplanSections": {
       "selectForProject": "Site Plan / Topographic Survey",
@@ -300,6 +301,12 @@
         "distanceLabel": "Γνωστή Απόσταση:",
         "placeholder": "π.χ. 100",
         "hint": "Στο επόμενο βήμα μπορείτε να επιλέξετε δύο σημεία στο σχέδιο που αντιστοιχούν σε αυτή την απόσταση."
+      },
+      "settings": {
+        "title": "Title",
+        "distanceLabel": "Distance label",
+        "placeholder": "",
+        "hint": "Hint"
       }
     }
   },

@@ -35,7 +35,7 @@ export function ListLayout({
   onHoverProperty?: (propertyId: string | null) => void;
   viewerProps: ReadOnlyViewerContextProps;
 }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   // 🏢 ENTERPRISE: Centralized spacing tokens - NO hardcoded values
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();

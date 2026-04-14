@@ -59,7 +59,7 @@ interface EntityCodeFieldProps {
   disabled?: boolean;
   /** Whether to show as compact (dialogs) vs full (detail forms) */
   variant?: 'form' | 'dialog';
-  /** @deprecated No longer needed — component uses its own useTranslation('common') */
+  /** @deprecated No longer needed — component uses its own useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']) */
   t?: TranslationFn;
 }
 
@@ -89,7 +89,7 @@ export function EntityCodeField({
   variant = 'form',
   t: _t,
 }: EntityCodeFieldProps): React.JSX.Element {
-  const { t: tc } = useTranslation('common');
+  const { t: tc } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
   const [codeOverridden, setCodeOverridden] = useState(!!value);
 
@@ -174,7 +174,7 @@ function CodeInfoPopover({
 }: {
   infoExample: string;
 }) {
-  const { t: tc } = useTranslation('common');
+  const { t: tc } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
 
   return (

@@ -58,8 +58,8 @@ export function PropertiesHeader({
   showFilters,
   setShowFilters,
 }: PropertiesHeaderProps) {
-  const { t } = useTranslation('properties');
-  const { t: tCommon } = useTranslation('common');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

@@ -16,7 +16,8 @@
     "toggleSidebar": "Εναλλαγή Πλαϊνού Μενού",
     "nextSlide": "Επόμενη διαφάνεια",
     "previousSlide": "Προηγούμενη διαφάνεια",
-    "moveToTrash": "Μεταφορά στον Κάδο"
+    "moveToTrash": "Μεταφορά στον Κάδο",
+    "confirm": "Confirm"
   },
   "periods": {
     "day": "Ημέρα",
@@ -680,7 +681,8 @@
       "individual": "Αυτό το φυσικό πρόσωπο έχει τις παρακάτω εξαρτήσεις:",
       "company": "Αυτό το νομικό πρόσωπο συνδέεται με τα παρακάτω:",
       "service": "Αυτή η δημόσια υπηρεσία αναφέρεται στα παρακάτω:"
-    }
+    },
+    "unavailableCount": "Unavailable count"
   },
   "doyPicker": {
     "search": "Αναζήτηση Δ.Ο.Υ...",
@@ -946,11 +948,9 @@
       "servicesProvided": "Παρεχόμενες Υπηρεσίες",
       "personas": "Ρόλοι (Personas)",
       "personaTypes": "Τύποι Ρόλων",
-      "name": "Όνομα",
       "floor": "Όροφος",
       "area": "Εμβαδόν",
       "price": "Τιμή",
-      "description": "Περιγραφή",
       "buildingId": "Κτίριο",
       "projectId": "Έργο",
       "commercialStatus": "Εμπορική Κατάσταση",
@@ -1080,5 +1080,27 @@
       "notary": "Συμβολαιογράφος",
       "unassigned": "Μη ανατεθειμένος"
     }
+  },
+  "common": {
+    "loading": "Loading...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save"
+  },
+  "viewer": {
+    "messages": {
+      "updateSuccess": "Update success"
+    }
+  },
+  "delete": {
+    "title": "Title",
+    "description": "Description"
+  },
+  "toolbar": {
+    "refresh": "Refresh"
+  },
+  "entityLinks": {
+    "error": "An error occurred"
   }
 }

@@ -21,7 +21,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
   const { structure, loading, error } = useProjectStructure(projectId);
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   if (loading) {
     return <LoadingSkeleton />;

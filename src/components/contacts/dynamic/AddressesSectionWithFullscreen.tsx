@@ -50,8 +50,8 @@ export function AddressesSectionWithFullscreen({
   setFormData,
   disabled,
 }: AddressesSectionWithFullscreenProps) {
-  const { t: tContacts } = useTranslation('contacts');
-  const { t: tCommon } = useTranslation('common');
+  const { t: tContacts } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const fullscreen = useFullscreen();
 
   // 📍 ADR-277: Pending drag resolve state (map drag may clear hierarchy)

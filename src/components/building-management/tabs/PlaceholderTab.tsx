@@ -23,7 +23,7 @@ interface PlaceholderTabProps {
 
 const PlaceholderTab = ({ title = 'Content', icon: Icon, building: _building, ..._additionalProps }: PlaceholderTabProps) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { createBorder, quick } = useBorderTokens();

@@ -117,7 +117,7 @@ export function TaskEditDialog({
   onOpenChange,
   onUpdated,
 }: TaskEditDialogProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();

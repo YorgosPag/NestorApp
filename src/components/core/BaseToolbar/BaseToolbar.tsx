@@ -261,7 +261,7 @@ export function BaseToolbar({
 // Search component
 function ToolbarSearchComponent({ search, compact }: { search: ToolbarSearch; compact?: boolean }) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   return (
     <div className="relative">
@@ -302,7 +302,7 @@ function ToolbarFiltersComponent({
 }) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for clear all button
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <div className="flex items-center gap-2">
       {filters.map((filter) => (

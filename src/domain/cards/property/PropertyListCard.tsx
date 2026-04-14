@@ -128,7 +128,7 @@ export function PropertyListCard({
   compact = false,
   className,
 }: PropertyListCardProps) {
-  const { t } = useTranslation(['properties']);
+  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail']);
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)

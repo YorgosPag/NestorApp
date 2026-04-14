@@ -103,7 +103,7 @@ function mapContactToCustomer(contact: Contact): InvoiceCustomer {
 // ============================================================================
 
 export function CustomerSelector({ customer, onCustomerChange }: CustomerSelectorProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const [selectedContactId, setSelectedContactId] = useState(customer.contactId ?? '');
   const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);

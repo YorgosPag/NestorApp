@@ -67,7 +67,7 @@ export function PartnerManagementSection({
   onPartnersChange,
   onGemiNumberChange,
 }: PartnerManagementSectionProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   const activeShareSum = partners
     .filter((p) => p.isActive)

@@ -49,7 +49,7 @@ export function PropertyGridView() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { radius } = useBorderTokens();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   // Local state
   const [showDashboard, setShowDashboard] = useState(false);

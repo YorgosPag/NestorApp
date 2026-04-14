@@ -24,7 +24,7 @@ interface ParkingFilterPanelProps {
 
 export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPanelProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
     // 🏢 ENTERPRISE: Centralized spacing tokens

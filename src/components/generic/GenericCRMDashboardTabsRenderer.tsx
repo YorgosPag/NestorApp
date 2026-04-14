@@ -123,7 +123,7 @@ export function GenericCRMDashboardTabsRenderer({
   customComponents = {},
   globalProps = {},
 }: GenericCRMDashboardTabsRendererProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const colors = useSemanticColors();
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled !== false);

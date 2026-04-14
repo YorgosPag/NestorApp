@@ -60,7 +60,7 @@ interface DocumentsProjectTabProps {
  */
 export function DocumentsProjectTab({ project, data, onNavigateToTab }: DocumentsProjectTabProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
 

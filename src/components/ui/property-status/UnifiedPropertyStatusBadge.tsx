@@ -193,7 +193,7 @@ export function AnalyticsStatusBadge({
   percentage,
   ...props
 }: UnifiedPropertyStatusBadgeProps & { count?: number; percentage?: number }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   return (
     <div className="flex items-center gap-3">
@@ -225,7 +225,7 @@ export function InteractiveStatusBadge({
   allowedTransitions?: EnhancedPropertyStatus[];
   onStatusChange?: (newStatus: EnhancedPropertyStatus) => void;
 }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const [showTransitions, setShowTransitions] = React.useState(false);

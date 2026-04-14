@@ -32,7 +32,7 @@ export interface CustomerProfileSectionProps {
 // ============================================================================
 
 export function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectionProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder, getElementBorder } = useBorderTokens();
   const colors = useSemanticColors();

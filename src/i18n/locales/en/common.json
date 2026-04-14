@@ -16,7 +16,8 @@
     "toggleSidebar": "Toggle Sidebar",
     "nextSlide": "Next slide",
     "previousSlide": "Previous slide",
-    "moveToTrash": "Move to Trash"
+    "moveToTrash": "Move to Trash",
+    "confirm": "Confirm"
   },
   "periods": {
     "day": "Day",
@@ -680,7 +681,8 @@
       "individual": "This individual has the following dependencies:",
       "company": "This company is linked to the following:",
       "service": "This public service is referenced in the following:"
-    }
+    },
+    "unavailableCount": "Unavailable count"
   },
   "doyPicker": {
     "search": "Search Tax Office...",
@@ -941,11 +943,9 @@
       "servicesProvided": "Services Provided",
       "personas": "Roles (Personas)",
       "personaTypes": "Role Types",
-      "name": "Name",
       "floor": "Floor",
       "area": "Area",
       "price": "Price",
-      "description": "Description",
       "buildingId": "Building",
       "projectId": "Project",
       "commercialStatus": "Commercial Status",
@@ -1075,5 +1075,27 @@
       "notary": "Notary",
       "unassigned": "Unassigned"
     }
+  },
+  "common": {
+    "loading": "Loading...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save"
+  },
+  "viewer": {
+    "messages": {
+      "updateSuccess": "Update success"
+    }
+  },
+  "delete": {
+    "title": "Title",
+    "description": "Description"
+  },
+  "toolbar": {
+    "refresh": "Refresh"
+  },
+  "entityLinks": {
+    "error": "An error occurred"
   }
 }

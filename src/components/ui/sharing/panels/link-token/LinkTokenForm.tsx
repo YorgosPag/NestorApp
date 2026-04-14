@@ -44,7 +44,7 @@ export function LinkTokenForm({
   onCancel,
   submitting,
 }: LinkTokenFormProps): React.ReactElement {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
 
   const expirationOptions = useMemo(

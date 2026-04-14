@@ -47,7 +47,7 @@ export function GeneralProjectHeader({
     autoSaveError,
     onAutoSaveRetry,
 }: GeneralProjectHeaderProps) {
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const spacing = useSpacingTokens();

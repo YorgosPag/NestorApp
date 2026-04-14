@@ -43,7 +43,7 @@ const SKELETON_COUNT = 8;
 
 export function FinancialReportsDashboard() {
   const router = useRouter();
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const [dateFilter, setDateFilter] = useState<ReportDateFilter>({ preset: 'this_month' });
   const { summaries, loading, errors } = useReportsDashboard(dateFilter);
 

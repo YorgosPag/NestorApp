@@ -72,7 +72,7 @@ export function MemberManagementSection({
   onGemiNumberChange,
   onShareCapitalChange,
 }: MemberManagementSectionProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const activeShareSum = members

@@ -235,7 +235,7 @@ export function IndividualFormRenderer({
   onFieldBlur
 }: IndividualFormRendererProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   if (!sections || sections.length === 0) {
     logger.warn('No sections provided');

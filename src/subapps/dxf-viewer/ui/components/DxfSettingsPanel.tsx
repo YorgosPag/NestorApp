@@ -90,7 +90,7 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
    * Active main tab state
    * - Default: 'specific' (most used tab)
    */
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('specific');
 
   // ============================================================================

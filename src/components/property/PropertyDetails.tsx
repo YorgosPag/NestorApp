@@ -33,7 +33,7 @@ interface PropertyDetailsProps {
 }
 
 export function PropertyDetails({ property }: PropertyDetailsProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { success, error } = useNotifications();
 
   // 🏢 ENTERPRISE: Centralized systems

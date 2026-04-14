@@ -72,7 +72,7 @@ export function AuditTimelineView({
   onFilterChange,
   showEntityLink = false,
 }: AuditTimelineViewProps) {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
 
   const filteredEntries = React.useMemo(() => {
@@ -187,7 +187,7 @@ export function AuditTimelineView({
 // ============================================================================
 
 function StatsPanel({ stats }: { stats: Stats }) {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -233,7 +233,7 @@ function QuickFilters({
   stats: Stats;
 }) {
   const colors = useSemanticColors();
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <nav
       className="flex flex-wrap gap-1.5"

@@ -52,7 +52,7 @@ export function TableHeaderSearch({
   compact = true
 }: TableHeaderSearchProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
 
   // Use translation with fallback to prop
@@ -104,7 +104,7 @@ export function UnitsHeaderSearch({
   searchTerm: string;
   onSearchChange: (term: string) => void;
 }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <TableHeaderSearch
       searchTerm={searchTerm}
@@ -123,7 +123,7 @@ export function BuildingsHeaderSearch({
   searchTerm: string;
   onSearchChange: (term: string) => void;
 }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <TableHeaderSearch
       searchTerm={searchTerm}
@@ -142,7 +142,7 @@ export function ProjectsHeaderSearch({
   searchTerm: string;
   onSearchChange: (term: string) => void;
 }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <TableHeaderSearch
       searchTerm={searchTerm}
@@ -161,7 +161,7 @@ export function ContactsHeaderSearch({
   searchTerm: string;
   onSearchChange: (term: string) => void;
 }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <TableHeaderSearch
       searchTerm={searchTerm}

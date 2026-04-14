@@ -101,7 +101,7 @@ export function CompanyAddressesSection({
   disabled = false,
   onChange,
 }: CompanyAddressesSectionProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const [branchDeleteIndex, setBranchDeleteIndex] = useState<number | null>(null);
   // Headquarters = first entry with type 'headquarters', or first entry

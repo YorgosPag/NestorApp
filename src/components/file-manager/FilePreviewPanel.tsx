@@ -90,7 +90,7 @@ function getPreviewIcon(previewType: PreviewType) {
 
 export function FilePreviewPanel({ file, onClose, companyId, currentUserId, currentUserName, onRefresh, className }: FilePreviewPanelProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const [showVersions, setShowVersions] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
   const [showShare, setShowShare] = useState(false);

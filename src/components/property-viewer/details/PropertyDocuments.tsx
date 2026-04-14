@@ -19,7 +19,7 @@ export function PropertyDocuments({ documents }: PropertyDocumentsProps) {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   return (
     <div className={spacing.spaceBetween.sm}>

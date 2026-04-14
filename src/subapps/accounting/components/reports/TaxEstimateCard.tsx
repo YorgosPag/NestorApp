@@ -49,7 +49,7 @@ const formatPercent = (rate: number): string => formatPercentage(rate, { minimum
 // ============================================================================
 
 export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const { user } = useAuth();
   const colors = useSemanticColors();
 

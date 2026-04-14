@@ -50,7 +50,7 @@ export function ProjectsHeader({
   setShowFilters,
 }: ProjectsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

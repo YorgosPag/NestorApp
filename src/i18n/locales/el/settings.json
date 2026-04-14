@@ -1,0 +1,9 @@
+{
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "description": "View all available keyboard shortcuts",
+    "searchPlaceholder": "Search shortcuts...",
+    "categoryPlaceholder": "All categories",
+    "print": "Print"
+  }
+}

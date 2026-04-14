@@ -20,7 +20,7 @@ export function ContactCard({ lead }: ContactCardProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radiusClass } = useBorderTokens();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { getStatusColor } = useStatusColor();
   const spacing = useSpacingTokens();
 

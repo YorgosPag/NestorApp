@@ -59,7 +59,7 @@ export function ExpenseCategoryPicker({
   customCategories = [],
   disabled,
 }: ExpenseCategoryPickerProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   const builtInCodes = type === 'income' ? INCOME_CATEGORY_CODES : EXPENSE_CATEGORY_CODES;
   const i18nSection = type === 'income' ? 'categories.income' : 'categories.expense';

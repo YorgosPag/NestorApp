@@ -13,7 +13,7 @@ import { PageContainer } from '@/core/containers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function PipelinePageContent() {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
 
   return (
     <PageContainer ariaLabel={t('pipeline.title')}>

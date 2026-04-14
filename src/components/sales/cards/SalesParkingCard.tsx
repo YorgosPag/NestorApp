@@ -51,7 +51,7 @@ export function SalesParkingCard({
   compact = true,
   className,
 }: SalesParkingCardProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   const status = spot.status ?? 'available';
   const badgeConfig = STATUS_BADGE[status] ?? STATUS_BADGE.available;

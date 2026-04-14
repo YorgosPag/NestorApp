@@ -72,7 +72,7 @@ interface ContactHistoryTabProps {
 // ============================================================================
 
 export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { t: tContacts } = useTranslation('contacts-core');
   const colors = useSemanticColors();
   const [activeFilter, setActiveFilter] = useState<ContactHistoryFilter>('all');

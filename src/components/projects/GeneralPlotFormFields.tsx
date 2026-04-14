@@ -17,7 +17,7 @@ interface GeneralPlotFormFieldsProps {
 
 export function GeneralPlotFormFields({ plotData, onPlotDataChange, isEditing, onEnterPress }: GeneralPlotFormFieldsProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const colors = useSemanticColors();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

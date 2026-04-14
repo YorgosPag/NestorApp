@@ -69,7 +69,7 @@ export function NavigationCardToolbar({
 }: NavigationCardToolbarProps) {
   // 🏢 ENTERPRISE: i18n hooks - navigation for entity-specific labels, common for shared buttons
   const { t } = useTranslation('navigation');
-  const { t: tCommon } = useTranslation('common');
+  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // Get config with i18n translations
   const config = getToolbarConfig(level, t, tCommon);

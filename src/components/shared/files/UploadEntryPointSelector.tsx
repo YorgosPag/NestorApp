@@ -92,7 +92,7 @@ export function UploadEntryPointSelector({
   activePersonas,
 }: UploadEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
-  const { t, i18n } = useTranslation('files');
+  const { t, i18n } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const [searchQuery, setSearchQuery] = useState('');
 

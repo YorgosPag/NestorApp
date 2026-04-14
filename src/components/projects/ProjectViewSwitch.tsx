@@ -54,7 +54,7 @@ export function ProjectViewSwitch({
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Lifted edit state — shared between CompactToolbar and ProjectDetails
   const [isEditingProject, setIsEditingProject] = useState(false);

@@ -21,7 +21,7 @@ export function PropertyDates({ dates }: PropertyDatesProps) {
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   if (!dates) return null;
 

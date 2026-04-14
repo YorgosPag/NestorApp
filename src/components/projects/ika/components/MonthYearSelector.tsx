@@ -38,7 +38,7 @@ interface MonthYearSelectorProps {
 }
 
 export function MonthYearSelector({ month, year, onChange }: MonthYearSelectorProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
 

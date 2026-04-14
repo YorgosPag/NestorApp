@@ -34,7 +34,7 @@ export function ConnectionControls({
 }: ConnectionControlsProps) {
     const iconSizes = useIconSizes();
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
     return (
         <div className="space-y-2">

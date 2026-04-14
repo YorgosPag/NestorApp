@@ -77,7 +77,9 @@
     "onlyPdfAllowed": "Only PDF files are allowed",
     "fileTooLarge": "File is too large (maximum 50MB)",
     "fileLargeWarning": "File is large and may take longer to upload",
-    "filenameSpecialChars": "Filename contains special characters that may cause problems"
+    "filenameSpecialChars": "Filename contains special characters that may cause problems",
+    "invalidFile": "Invalid file",
+    "fileTooSmall": "File too small"
   },
   "upload": {
     "typeQuestion": "What type of document will you upload?",
@@ -255,7 +257,9 @@
     "filesCount": "files",
     "collapseGroup": "Collapse group",
     "expandGroup": "Expand group",
-    "openInNewTab": "Open in new tab"
+    "openInNewTab": "Open in new tab",
+    "classifying": "Classifying",
+    "classificationFailed": "Classification failed"
   },
   "linkModal": {
     "title": "Link file to Buildings",
@@ -427,7 +431,8 @@
     "pending": "Pending"
   },
   "common": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "close": "Close"
   },
   "studies": {
     "selectGroup": "Select study category",
@@ -652,5 +657,20 @@
     "removeFile": "Remove file",
     "removeFiles": "Remove files",
     "unlinkFile": "Unlink file"
+  },
+  "copy": {
+    "copyError": "Copy error"
+  },
+  "uploadButton": {
+    "selectFile": "Select file",
+    "loading": "Loading..."
+  },
+  "floorplan": {
+    "processingInProgress": "Processing in progress"
+  },
+  "floorplanImport": {
+    "select": {
+      "unit": "Unit"
+    }
   }
 }

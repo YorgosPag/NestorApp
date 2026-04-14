@@ -99,7 +99,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 // ============================================================================
 
 export function VATPageContent() {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   const [fiscalYear, setFiscalYear] = useState<number>(new Date().getFullYear());
   const [showDashboard, setShowDashboard] = useState(true);

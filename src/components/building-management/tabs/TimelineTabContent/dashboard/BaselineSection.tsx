@@ -56,7 +56,7 @@ const MAX_BASELINES = 10;
 // ─── Component ──────────────────────────────────────────────────────────
 
 export function BaselineSection({ baseline, loading }: BaselineSectionProps) {
-  const { t } = useTranslation("building");
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 

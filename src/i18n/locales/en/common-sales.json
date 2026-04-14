@@ -167,7 +167,13 @@
       "info": {
         "title": "Available Units",
         "description": "Here you see all units that are actively for sale. Includes prices, buyer interest and sales statistics."
-      }
+      },
+      "filters": {
+        "toggle": "Toggle"
+      },
+      "loading": "Loading...",
+      "gridLabel": "Grid label",
+      "unitDetails": "Unit details"
     },
     "tabs": {
       "saleInfo": "Sale",
@@ -182,7 +188,8 @@
       "documentsHint": "Documents are managed in Spaces → Properties",
       "photosHint": "Photos are managed in Spaces → Properties",
       "videosHint": "Videos are managed in Spaces → Properties",
-      "videosNoAuth": "Sign in required to view videos."
+      "videosNoAuth": "Sign in required to view videos.",
+      "unitSummary": "Unit summary"
     },
     "actions": {
       "changePrice": "Change Price",
@@ -221,7 +228,8 @@
       "project": "Project",
       "permit": "Permit Title",
       "building": "Building",
-      "property": "Property"
+      "property": "Property",
+      "unit": "Unit"
     },
     "propertySummary": {
       "physicalData": "Physical Data",
@@ -332,7 +340,8 @@
       "createError": "Error",
       "noContracts": "No contracts yet. Create the first one.",
       "noBuyer": "No buyer assigned",
-      "noBuyerDesc": "You must assign a buyer first (Reserve/Sell)"
+      "noBuyerDesc": "You must assign a buyer first (Reserve/Sell)",
+      "scopeUnit": "Scope unit"
     },
     "errors": {
       "noBuilding": "The property is not linked to a building. Go to Property Management → Info and link a building.",
@@ -440,6 +449,18 @@
       "dualListingTooltip": "Listed for both sale and rent",
       "statusAriaLabel": "Commercial status filter",
       "typeAriaLabel": "Unit type filter"
+    },
+    "unitSummary": {
+      "physicalData": "Physical data",
+      "type": "Type",
+      "area": "Area",
+      "floor": "Floor",
+      "building": "Building",
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "orientation": "Orientation",
+      "energy": "Energy",
+      "openInSpaces": "Open in spaces"
     }
   },
   "salesStorage": {

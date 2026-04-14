@@ -75,7 +75,7 @@ export function PaymentReportDialog({
   projectId,
 }: PaymentReportDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const { report, isLoading, error, fetchReport, exportToExcel } =
     usePaymentReport(projectId);
 

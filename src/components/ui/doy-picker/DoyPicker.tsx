@@ -68,7 +68,7 @@ export function DoyPicker({
   className,
   showAddNew = true,
 }: DoyPickerProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // State for add-new dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);

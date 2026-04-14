@@ -40,7 +40,7 @@ function formatHoursMinutes(hours: number): string {
 }
 
 export function AttendanceDashboard({ summary }: AttendanceDashboardProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();

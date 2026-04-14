@@ -43,7 +43,7 @@ export function TypeSelect({
   const { quick, radius } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   // 🏢 ENTERPRISE: Dynamic options with i18n translation
   const typeOptions = [

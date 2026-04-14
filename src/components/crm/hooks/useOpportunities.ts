@@ -15,7 +15,7 @@ const logger = createModuleLogger('useOpportunities');
 
 export function useOpportunities() {
     const notifications = useNotifications();
-    const { t } = useTranslation('crm');
+    const { t } = useTranslation(['crm', 'crm-inbox']);
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

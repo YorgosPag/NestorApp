@@ -49,7 +49,7 @@ export function AddChequeDialog({
   paymentPlanId,
   contactId,
 }: AddChequeDialogProps) {
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const { success, error: notifyError } = useNotifications();
   const [isSubmitting, setIsSubmitting] = useState(false);
 

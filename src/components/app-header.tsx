@@ -32,7 +32,7 @@ const GlobalSearchDialog = dynamic(
 export function AppHeader() {
   // 🔐 Get authenticated user
   const { user } = useAuth();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // 🔍 Global Search Dialog state
   const [searchOpen, setSearchOpen] = React.useState(false);

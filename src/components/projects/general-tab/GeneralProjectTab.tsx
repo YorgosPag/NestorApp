@@ -75,7 +75,7 @@ export function GeneralProjectTab({
   onProjectCreated,
   refetchProject,
 }: ExtendedGeneralProjectTabProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const spacing = useSpacingTokens();
   const fallbackCompanyId = useCompanyId()?.companyId ?? '';
 

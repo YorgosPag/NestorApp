@@ -147,7 +147,7 @@ export function MediaGallery({
 }: MediaGalleryProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
 
   // Photo preview modal (existing centralized system)
   const photoModal = usePhotoPreviewModal();

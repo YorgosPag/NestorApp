@@ -21,7 +21,7 @@ export function ProjectCardMetrics({ project }: ProjectCardMetricsProps) {
   // 🟢 ENTERPRISE: Centralized systems
   const typography = useTypography();
   const colors = useSemanticColors();
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   return (
     <div className="grid grid-cols-2 gap-2 pt-2">

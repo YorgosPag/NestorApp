@@ -135,7 +135,7 @@ export function EntityFilesManager({
   listGroupingMode,
   levelFloorId,
 }: EntityFilesManagerProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const { activeWorkspace } = useWorkspace();
   const fullscreen = useFullscreen();
 

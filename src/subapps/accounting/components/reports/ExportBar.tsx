@@ -36,7 +36,7 @@ type ExportFormat = 'pdf' | 'excel' | 'csv';
 // ============================================================================
 
 export function ExportBar({ reportType, data, period, reportTitle }: ExportBarProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const [loadingFormat, setLoadingFormat] = useState<ExportFormat | null>(null);
 
   const handleExport = useCallback(async (format: ExportFormat) => {

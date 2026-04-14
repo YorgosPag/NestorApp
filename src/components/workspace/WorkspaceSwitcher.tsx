@@ -52,7 +52,7 @@ export interface WorkspaceSwitcherProps {
 export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSwitcherProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('common'); // 🏢 ENTERPRISE: i18n translation
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']); // 🏢 ENTERPRISE: i18n translation
   const { activeWorkspace, availableWorkspaces, loading, switchWorkspace, refreshWorkspaces } =
     useWorkspace();
 

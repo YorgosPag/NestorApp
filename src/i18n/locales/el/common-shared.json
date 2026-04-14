@@ -402,7 +402,8 @@
     "aria": {
       "customerActions": "Ενέργειες πελάτη",
       "customerDetails": "Στοιχεία πελάτη: {name}"
-    }
+    },
+    "changeUnit": "Change unit"
   },
   "sharing": {
     "shareOn": "Κοινοποίηση σε {platform}",

@@ -39,7 +39,7 @@ export function PropertyEntityLinks({
   onBuildingLinkChange,
   onLinkChanged,
 }: PropertyEntityLinksProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 

@@ -241,6 +241,10 @@
         "hierarchy": "Η ενέργεια επηρεάζει το οργανόγραμμα και τις σχετικές μετρήσεις προσωπικού.",
         "reciprocal": "Η ενέργεια επηρεάζει και την αντίστροφη σχέση στη συνδεδεμένη επαφή."
       }
+    },
+    "errors": {
+      "alreadyExists": "Already exists",
+      "contactsNotFound": "Contacts not found"
     }
   },
   "communication": {

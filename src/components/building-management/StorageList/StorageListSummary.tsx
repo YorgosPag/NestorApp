@@ -15,7 +15,7 @@ interface StorageListSummaryProps {
 
 export function StorageListSummary({ units }: StorageListSummaryProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const totalValue = units.reduce((sum, u) => sum + u.price, 0);
   const totalArea = units.reduce((sum, u) => sum + u.area, 0);

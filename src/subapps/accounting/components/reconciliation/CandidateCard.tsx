@@ -26,7 +26,7 @@ interface CandidateCardProps {
 }
 
 export function CandidateCard({ candidate, onMatch, matching }: CandidateCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   return (
     <Card className="transition-shadow hover:shadow-md">

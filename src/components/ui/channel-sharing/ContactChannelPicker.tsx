@@ -90,7 +90,7 @@ const CHANNEL_COLORS: Record<ChannelProvider, string> = {
 // ============================================================================
 
 export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannelPickerProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
 
   // Contact search state

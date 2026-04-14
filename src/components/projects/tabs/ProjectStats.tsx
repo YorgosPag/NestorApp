@@ -21,7 +21,7 @@ interface ProjectStatsProps {
 }
 
 export function ProjectStats({ projectId }: ProjectStatsProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const [stats, setStats] = useState<StatsType | null>(null);
   const [loading, setLoading] = useState(true);
 

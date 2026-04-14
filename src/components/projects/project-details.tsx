@@ -75,7 +75,7 @@ export function ProjectDetails({
   onCancelCreate,
   onDraftStatusChange,
 }: ProjectDetailsProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   // Use lifted state if available, otherwise fallback to local state
   const [localIsEditing, setLocalIsEditing] = useState(false);

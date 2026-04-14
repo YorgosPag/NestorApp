@@ -134,7 +134,7 @@ export function MessageContextMenu({
   children,
   className,
 }: MessageContextMenuProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { copy } = useCopyToClipboard();

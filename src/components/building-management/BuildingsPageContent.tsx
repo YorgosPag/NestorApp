@@ -47,8 +47,8 @@ export type { Building } from '@/types/building/contracts';
 
 export function BuildingsPageContent() {
   // [ENTERPRISE] i18n hook for translations
-  const { t } = useTranslation('building');
-  const { t: tCommon } = useTranslation('common');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

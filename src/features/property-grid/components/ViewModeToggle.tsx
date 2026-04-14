@@ -12,7 +12,7 @@ export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onCh
   const colors = useSemanticColors();
   const { radius } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   return (
     <div className={`flex ${colors.bg.secondary} ${radius.lg} p-1`}>

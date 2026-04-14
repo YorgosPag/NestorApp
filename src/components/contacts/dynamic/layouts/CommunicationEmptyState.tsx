@@ -56,7 +56,7 @@ export function CommunicationEmptyState({
   config,
 }: CommunicationEmptyStateProps): JSX.Element {
   const iconSizes = useIconSizes();
-  const { t, isNamespaceReady } = useTranslation('contacts');
+  const { t, isNamespaceReady } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const IconComponent = config.icon;
 
   return (

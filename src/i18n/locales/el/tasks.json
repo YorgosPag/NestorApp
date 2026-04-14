@@ -84,7 +84,8 @@
       "completedAt": "Ολοκληρώθηκε",
       "contactId": "Επαφή",
       "projectId": "Έργο",
-      "unitId": "Μονάδα"
+      "unitId": "Μονάδα",
+      "propertyId": "Property id"
     },
     "loadingPlaceholder": "Φόρτωση..."
   },

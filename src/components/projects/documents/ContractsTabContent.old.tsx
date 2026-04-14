@@ -48,7 +48,7 @@ interface ContractsTabContentProps {
  */
 export function ContractsTabContent({ project, data }: ContractsTabContentProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   // Resolve project from props
   const resolvedProject = project || data;

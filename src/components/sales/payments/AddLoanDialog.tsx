@@ -55,7 +55,7 @@ interface AddLoanDialogProps {
 // ============================================================================
 
 export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddLoanDialogProps) {
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const { success, error: notifyError } = useNotifications();
   const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');

@@ -65,7 +65,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   zIndex = 9998
 }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -215,7 +215,7 @@ export const ConfirmModal: React.FC<{
   variant = 'info'
 }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
   const confirmVariant = variant === 'danger' ? 'primary' : 'secondary';
 
@@ -255,7 +255,7 @@ export const LoadingModal: React.FC<{
   message
 }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

@@ -31,7 +31,7 @@ export function PropertiesToolbar({
   onAssignmentSuccess: () => void;
   totalProperties: number;
 }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

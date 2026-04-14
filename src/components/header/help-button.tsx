@@ -45,7 +45,7 @@ import '@/lib/design-system';
 export function HelpButton() {
   const iconSizes = useIconSizes();
   const router = useRouter();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // 🏢 ENTERPRISE: SSR-safe platform detection
   const [isMac, setIsMac] = React.useState(false);

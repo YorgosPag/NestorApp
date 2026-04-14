@@ -45,7 +45,7 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
     buildings, floors, onFileImport, onClose,
   } = params;
 
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const { user } = useAuth();
   const { setProjectFloorplan, setParkingFloorplan } = useFloorplan();
   const { loadPdf: loadPdfToBackground, setEnabled: setPdfEnabled, unloadPdf } = usePdfBackgroundStore();

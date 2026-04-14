@@ -39,7 +39,7 @@ interface EFKAMonthlyBreakdownProps {
 // ============================================================================
 
 export function EFKAMonthlyBreakdown({ breakdown }: EFKAMonthlyBreakdownProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   const sortedBreakdown = [...breakdown].sort((a, b) => a.month - b.month);
 

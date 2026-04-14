@@ -82,7 +82,7 @@ export function ShareholderManagementSection({
   onGemiNumberChange,
   onShareCapitalChange,
 }: ShareholderManagementSectionProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const activeShareSum = shareholders

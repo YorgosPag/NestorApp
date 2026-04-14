@@ -163,7 +163,7 @@ function UnsupportedPreview({
   sizeBytes: number | undefined;
   onDownload?: () => void;
 }) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
 
   const subtitle = [

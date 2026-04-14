@@ -73,7 +73,7 @@ function PhotosTabStats({ totalCount: _totalCount, categoryStats, categories }: 
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   // 🏢 ENTERPRISE: Translate category label if it's an i18n key
   const translateLabel = (label: string): string => {
@@ -132,7 +132,7 @@ function PhotosTabCategories({
 }: CategoriesProps) {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   // 🏢 ENTERPRISE: Translate category label if it's an i18n key
   const translateLabel = (label: string): string => {
@@ -229,7 +229,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
   const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   // ---------------------------------------------------------------------------
   // 🏢 ADR-292: Resolve canonical fields (prop > hook fallback)

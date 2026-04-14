@@ -46,7 +46,7 @@ export function PropertyPageFilters({
   setFilterBuilding
 }: PropertyPageFiltersProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
 
   // 🏢 ENTERPRISE: Options with i18n support

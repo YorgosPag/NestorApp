@@ -22,7 +22,7 @@ interface BasicProjectInfoTabProps {
 }
 
 export const BasicProjectInfoTab = React.memo(function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectInfoTabProps) {
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const iconSizes = useIconSizes();
     const typography = useTypography();
     const spacing = useSpacingTokens();

@@ -45,7 +45,7 @@ import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-toke
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange, allowedContactTypes, defaultPersonas, presentation = 'dialog' }: AddNewContactDialogProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ICON SIZES - ENTERPRISE PATTERN
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Auth context for canonical upload pipeline (ADR-031)

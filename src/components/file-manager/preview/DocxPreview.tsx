@@ -63,7 +63,7 @@ async function renderDocxToContainer(
 // ============================================================================
 
 export function DocxPreview({ url, title }: DocxPreviewProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<DocxState>('loading');

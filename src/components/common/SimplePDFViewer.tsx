@@ -25,7 +25,7 @@ export function SimplePDFViewer({
   const { createBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
 
   return (
     <div className={`${colors.bg.secondary} ${quick.card} ${createBorder('medium', tokenColors.gray['300'], 'dashed')} p-6 ${className}`}>

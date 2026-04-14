@@ -50,7 +50,7 @@ const MATCH_STATUS_VARIANTS: Record<MatchStatus, 'default' | 'secondary' | 'dest
 // ============================================================================
 
 export function TransactionsList({ transactions }: TransactionsListProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   if (transactions.length === 0) {

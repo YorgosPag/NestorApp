@@ -11,7 +11,7 @@ import '@/lib/design-system';
 
 export function NotificationBell() {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const open = useNotificationDrawer(s => s.open);
   const isOpen = useNotificationDrawer(s => s.isOpen);
   const unread = useNotificationCenter(s => s.unread);

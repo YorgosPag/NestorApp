@@ -18,7 +18,7 @@ import { buildCommunicationsDashboardStats } from './communicationsDashboardStat
 const logger = createModuleLogger('crm/communications');
 
 export function useCommunicationsPageController() {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { isLoading: authLoading, isAuthenticated, isAdmin } = useUserRole();
   const authReady = !authLoading;
   const hasStaffAccess = isAuthenticated && isAdmin;

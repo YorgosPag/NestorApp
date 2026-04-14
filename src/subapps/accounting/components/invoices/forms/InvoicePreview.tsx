@@ -18,7 +18,7 @@ interface InvoicePreviewProps {
 }
 
 export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   // Group VAT by rate

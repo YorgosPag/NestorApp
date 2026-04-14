@@ -94,7 +94,7 @@ export function CalendarCreateDialog({
   initialDate,
   onCreated,
 }: CalendarCreateDialogProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { success, error: notifyError } = useNotifications();
   const { user } = useAuth();
   const iconSizes = useIconSizes();

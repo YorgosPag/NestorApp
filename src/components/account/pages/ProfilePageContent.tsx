@@ -31,7 +31,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function ProfilePageContent() {
   const { user, updateUserProfile } = useAuth();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
   const borders = useBorderTokens();
   const layout = useLayoutClasses();

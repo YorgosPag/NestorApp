@@ -105,7 +105,7 @@ const ProjectHierarchyContext = createContext<ProjectHierarchyContextType | null
 export function ProjectHierarchyProvider({ children }: { children: React.ReactNode }) {
   // 🔐 ENTERPRISE: Auth-ready gating - wait for authentication before API calls
   const { user, loading: authLoading } = useAuth();
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   const [hierarchy, setHierarchy] = useState<ProjectHierarchy>({
     companies: [],

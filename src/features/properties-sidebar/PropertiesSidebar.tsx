@@ -43,7 +43,7 @@ export function PropertiesSidebar({
   onCancelCreate,
   defaultTab,
 }: PropertiesSidebarProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const emptyStateMessages = useEmptyStateMessages();

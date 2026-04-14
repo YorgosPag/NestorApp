@@ -103,7 +103,7 @@ export function EmployerPicker({
   disabled = false,
   placeholder,
 }: EmployerPickerProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
 
   // State

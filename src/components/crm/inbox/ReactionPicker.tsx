@@ -90,7 +90,7 @@ export function ReactionPicker({
   className,
   isLoading = false,
 }: ReactionPickerProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const _colors = useSemanticColors();
 
   // Handle reaction click

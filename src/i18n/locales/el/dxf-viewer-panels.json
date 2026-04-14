@@ -6,7 +6,8 @@
     },
     "overlay": {
       "title": "Επικάλυψη",
-      "description": "{{regionCount, plural, =0 {} other {{regionCount} περιοχές επικάλυψης}}"
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} περιοχές επικάλυψης}}",
+      "loading": "Loading..."
     },
     "levels": {
       "title": "Επίπεδα",
@@ -49,7 +50,11 @@
     "layers": {
       "title": "Επίπεδα",
       "description": "Σχεδίαση Επιπέδων & Διαχείριση Κατάστασης"
-    }
+    },
+    "colors": {
+      "loading": "Loading..."
+    },
+    "selectPanel": "Select panel"
   },
   "layerActions": {
     "changeColor": "Αλλαγή χρώματος",
@@ -268,7 +273,8 @@
       "noLayersFound": "Δεν βρέθηκαν επίπεδα",
       "createNewOrChangeFilters": "Δημιουργήστε ένα νέο επίπεδο ή αλλάξτε τα φίλτρα",
       "searchLayers": "Αναζήτηση επιπέδων...",
-      "other": "Άλλα"
+      "other": "Άλλα",
+      "moreOptions": "More options"
     },
     "stats": {
       "total": "Σύνολο:",

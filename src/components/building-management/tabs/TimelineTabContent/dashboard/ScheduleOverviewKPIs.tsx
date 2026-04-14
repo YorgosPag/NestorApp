@@ -72,7 +72,7 @@ export function ScheduleOverviewKPIs({
   kpis,
   loading,
 }: ScheduleOverviewKPIsProps) {
-  const { t } = useTranslation("building");
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   const cards = useMemo((): ReportKPI[] => {
     const progressDelta = kpis.overallProgress - kpis.expectedProgress;

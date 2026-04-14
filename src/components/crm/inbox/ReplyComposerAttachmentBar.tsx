@@ -35,7 +35,7 @@ export function ReplyComposerAttachmentBar({
   onRemoveAttachment,
   onClearAll,
 }: ReplyComposerAttachmentBarProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

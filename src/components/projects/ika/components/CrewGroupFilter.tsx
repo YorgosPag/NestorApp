@@ -43,7 +43,7 @@ interface CrewGroupFilterProps {
 }
 
 export function CrewGroupFilter({ crews, selectedCrewId, onChange }: CrewGroupFilterProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();

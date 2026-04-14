@@ -17,7 +17,7 @@ export function PropertyCountOverlay({ count }: PropertyCountOverlayProps) {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   return (
     <div className={`${colors.bg.primary}/80 backdrop-blur-sm ${quick.card} px-3 py-1 shadow-sm`}>

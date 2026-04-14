@@ -42,7 +42,7 @@ const EFKA_CATEGORIES = [1, 2, 3, 4, 5, 6] as const;
 // ============================================================================
 
 export function FiscalInfoSection({ data, onChange }: FiscalInfoSectionProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   return (
     <Card>

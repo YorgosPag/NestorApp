@@ -78,7 +78,7 @@ export function ApprovalPanel({
   currentUserName,
   className,
 }: ApprovalPanelProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
 
   const statusConfig = useMemo(() => ({

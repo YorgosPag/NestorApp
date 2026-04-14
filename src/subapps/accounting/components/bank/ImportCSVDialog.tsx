@@ -73,7 +73,7 @@ export function ImportCSVDialog({
   onImport,
   onSuccess,
 }: ImportCSVDialogProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const [selectedBank, setSelectedBank] = useState<BankCode | ''>('');

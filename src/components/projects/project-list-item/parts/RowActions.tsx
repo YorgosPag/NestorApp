@@ -24,7 +24,7 @@ interface RowActionsProps {
 
 export function RowActions({ isFavorite, onToggleFavorite }: RowActionsProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const iconSizes = useIconSizes();
 
     return (

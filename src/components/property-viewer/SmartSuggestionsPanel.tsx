@@ -26,7 +26,7 @@ export function SmartSuggestionsPanel({ properties, onShowSuggestion, onAcceptSu
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   const analyzePlacement = () => {
     const newSuggestions = suggestionSystem.analyzeFloorPlan(properties);

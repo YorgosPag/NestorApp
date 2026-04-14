@@ -62,7 +62,7 @@ export function ReplyComposer({
   isSavingEdit = false,
   onUploadAttachment,
 }: ReplyComposerProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const textareaRef = useRef<HTMLTextAreaElement>(null);

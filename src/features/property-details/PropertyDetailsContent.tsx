@@ -79,7 +79,7 @@ export function PropertyDetailsContent({
   isCreatingNewUnit?: boolean;
   onPropertyCreated?: (propertyId: string) => void;
 }) {
-  const { t } = useTranslation(['common', 'properties']);
+  const { t } = useTranslation(['common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account', 'properties', 'properties-viewer', 'properties-enums', 'properties-detail']);
   const { quick } = useBorderTokens();
   const spacing = useSpacingTokens();
   const iconSizes = useIconSizes();

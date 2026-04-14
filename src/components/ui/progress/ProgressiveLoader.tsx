@@ -37,7 +37,7 @@ export function ProgressiveLoader({
   onStepChange
 }: ProgressiveLoaderProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const [internalProgress, setInternalProgress] = useState(0);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
   const [startTime] = useState(Date.now());

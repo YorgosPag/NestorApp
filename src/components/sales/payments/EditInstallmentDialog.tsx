@@ -101,7 +101,7 @@ export function EditInstallmentDialog({
   onDelete,
 }: EditInstallmentDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const { success, error: notifyError } = useNotifications();
 
   const isNotesOnly = planStatus === 'active';

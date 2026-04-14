@@ -40,7 +40,7 @@ export function ChequeRegistrySection({
   contactId,
 }: ChequeRegistrySectionProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const {
     cheques,
     isLoading,

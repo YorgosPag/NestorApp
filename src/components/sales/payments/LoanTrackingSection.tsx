@@ -32,7 +32,7 @@ const MAX_LOANS = 3;
 
 export function LoanTrackingSection({ propertyId }: LoanTrackingSectionProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const {
     loans,
     isLoading,

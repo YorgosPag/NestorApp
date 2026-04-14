@@ -46,7 +46,7 @@ interface PropertyGridProps {
 
 export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanced }: PropertyGridProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

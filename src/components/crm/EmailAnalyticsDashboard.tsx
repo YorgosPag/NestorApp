@@ -19,7 +19,7 @@ export function EmailAnalyticsDashboard() {
   const router = useRouter();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   // 🏢 ENTERPRISE: Use centralized unit icon for residential
   const ResidentialIcon = NAVIGATION_ENTITIES.property.icon;
 

@@ -43,7 +43,7 @@ export function FloorplanGallery({
   onHoverOverlay,
   onClickOverlay,
 }: FloorplanGalleryProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

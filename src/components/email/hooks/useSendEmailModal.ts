@@ -14,7 +14,7 @@ const logger = createModuleLogger('useSendEmailModal');
 type Lead = { id?: string; fullName?: string; email?: string };
 
 export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEmailSent?: () => void) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { success, error: notifyError } = useNotifications();
   const [formData, setFormData] = useState({
     templateType: "custom",

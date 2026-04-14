@@ -29,7 +29,7 @@ export function ProjectMutationImpactDialog({
   onOpenChange,
   onConfirm,
 }: ProjectMutationImpactDialogProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
 
   const mode = preview?.mode ?? 'allow';

@@ -5,7 +5,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 export function PropertyHoverDescription({ text }:{ text: string }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
   return (
     <div className="space-y-1">

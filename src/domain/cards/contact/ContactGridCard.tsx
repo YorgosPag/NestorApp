@@ -104,7 +104,7 @@ export function ContactGridCard({
   className,
 }: ContactGridCardProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)

@@ -62,7 +62,7 @@ export function SidebarPanel({
   const { radius } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   const safeFloorData = floorData || { id: '', name: '', level: 0, buildingId: '', properties: [] };
   const safeSelectedPolygonIds = Array.isArray(selectedPolygonIds) ? selectedPolygonIds : [];

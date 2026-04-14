@@ -20,7 +20,7 @@ export function TasksSummary({ tasks, loading }: TasksSummaryProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const spacing = useSpacingTokens();
 
   const { pendingTasks, completedTasks } = useMemo(() => {

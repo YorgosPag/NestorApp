@@ -89,7 +89,7 @@ const INITIAL_FORM_STATE: FormState = {
 // ============================================================================
 
 export function AddAssetForm({ open, onOpenChange, onSubmit }: AddAssetFormProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM_STATE);
   const [submitting, setSubmitting] = useState(false);

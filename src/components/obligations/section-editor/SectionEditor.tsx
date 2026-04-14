@@ -23,7 +23,7 @@ export default function SectionEditor({
   onCancel,
   isEditing = true
 }: SectionEditorProps) {
-  const { t } = useTranslation(['common', 'obligations']); // 🏢 ENTERPRISE: i18n translation
+  const { t } = useTranslation(['common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account', 'obligations']); // 🏢 ENTERPRISE: i18n translation
 
   const {
     editedSection,

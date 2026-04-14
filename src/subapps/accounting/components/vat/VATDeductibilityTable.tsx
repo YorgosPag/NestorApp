@@ -51,7 +51,7 @@ function getDeductibilityLabel(percent: number): string {
 // ============================================================================
 
 export function VATDeductibilityTable() {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const rules = useMemo(() => {

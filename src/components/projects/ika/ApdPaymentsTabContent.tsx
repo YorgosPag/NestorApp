@@ -120,7 +120,7 @@ function groupRecordsByMonth(records: EmploymentRecord[]): ApdMonthGroup[] {
 }
 
 export function ApdPaymentsTabContent({ projectId }: ApdPaymentsTabContentProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();

@@ -79,7 +79,7 @@ export function CreateAPYCertificateDialog({
   onCreated,
   defaultFiscalYear,
 }: CreateAPYCertificateDialogProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const { user } = useAuth();
   const { profile: companyProfile } = useCompanySetup();
   const { createCertificate } = useAPYCertificates({ autoFetch: false });

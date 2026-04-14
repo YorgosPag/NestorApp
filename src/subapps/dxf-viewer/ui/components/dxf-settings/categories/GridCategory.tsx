@@ -90,7 +90,7 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
 
   // Tab navigation state (ADR-005)
   const { activeTab, setActiveTab } = useTabNavigation<GridMainTab>(defaultTab);
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   // ============================================================================
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface

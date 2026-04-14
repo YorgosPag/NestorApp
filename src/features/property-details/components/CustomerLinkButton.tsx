@@ -8,7 +8,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 export function CustomerLinkButton({ contactId }: { contactId: string }) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   return (
     <Button asChild variant="outline" className="w-full">

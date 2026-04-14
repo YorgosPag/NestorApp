@@ -20,7 +20,7 @@ interface BuildingEditToolbarProps {
 
 export function BuildingEditToolbar({ isEditing, onEdit, onSave, onCancel }: BuildingEditToolbarProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();

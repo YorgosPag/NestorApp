@@ -191,7 +191,10 @@
     "required": "Required",
     "addArticle": "Add article",
     "duplicateSection": "Duplicate section",
-    "contentLabel": "Section Content"
+    "contentLabel": "Section Content",
+    "articleNumber": "Article number",
+    "articleNumberPlaceholder": "Article number placeholder",
+    "order": "Order"
   },
   "exportOptions": {
     "title": "Export Options",
@@ -354,5 +357,12 @@
       "gray": "Gray",
       "removeColor": "Remove color"
     }
+  },
+  "toc": {
+    "title": "Title",
+    "sectionCount": "Section count",
+    "collapseAll": "Collapse all",
+    "expandAll": "Expand all",
+    "clickToNavigate": "Click to navigate"
   }
 }

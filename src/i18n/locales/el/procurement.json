@@ -78,7 +78,8 @@
     "duplicate": "Αντιγραφή PO",
     "pdf": "PDF",
     "copyText": "Αντιγραφή Κειμένου",
-    "cancelPO": "Ακύρωση PO"
+    "cancelPO": "Ακύρωση PO",
+    "notFound": "Not found"
   },
   "email": {
     "sendButton": "Αποστολή μέσω Email",

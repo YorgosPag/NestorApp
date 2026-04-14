@@ -44,7 +44,7 @@ export function CandidatesPanel({
   onGroupMatch,
   onExclude,
 }: CandidatesPanelProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   // Empty state: no transaction selected
   if (!transaction) {
@@ -146,7 +146,7 @@ export function CandidatesPanel({
 // ============================================================================
 
 function TransactionHeader({ transaction }: { transaction: BankTransaction }) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   return (
     <header className="p-3 border-b">
       <h3 className="text-sm font-semibold mb-1">

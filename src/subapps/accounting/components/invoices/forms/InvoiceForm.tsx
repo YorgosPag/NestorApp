@@ -144,7 +144,7 @@ function buildFormStateFromInvoice(invoice: Invoice): InvoiceFormState {
 }
 
 export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: InvoiceFormProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const { user } = useAuth();
   const { presets } = useServicePresets();
   const { profile: companyProfile } = useCompanySetup();

@@ -20,7 +20,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
 export function CalendarEventTooltip({ event, title }: EventProps<CalendarEvent>) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const colors = useSemanticColors();
 
   const descriptionPreview = event.description

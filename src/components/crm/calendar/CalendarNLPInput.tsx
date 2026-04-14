@@ -31,7 +31,7 @@ interface CalendarNLPInputProps {
 }
 
 export function CalendarNLPInput({ onParsed, locale }: CalendarNLPInputProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { error: notifyError } = useNotifications();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);

@@ -62,7 +62,7 @@ export function ImageAttachment({
 }: SingleAttachmentProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
@@ -117,7 +117,7 @@ export function ImageAttachment({
 export function DocumentAttachment({ attachment, isOutbound }: SingleAttachmentProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const extension = getFileExtension(attachment.filename, attachment.mimeType);
   const sizeText = attachment.size ? formatFileSize(attachment.size) : '';
 
@@ -159,7 +159,7 @@ export function DocumentAttachment({ attachment, isOutbound }: SingleAttachmentP
 
 export function AudioAttachment({ attachment, isOutbound }: SingleAttachmentProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   if (!attachment.url) return null;
 
   return (
@@ -181,7 +181,7 @@ export function AudioAttachment({ attachment, isOutbound }: SingleAttachmentProp
 
 export function VideoAttachment({ attachment, isOutbound }: SingleAttachmentProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   if (!attachment.url) return null;
 
   return (
@@ -261,7 +261,7 @@ export interface LightboxProps {
 
 export function Lightbox({ imageUrl, onClose }: LightboxProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   useEscapeKey(onClose);
 
   return (

@@ -45,16 +45,21 @@
 | **ICU interpolation `{{var}}`** (CHECK 3.9) | ADR-296 | `.icu-violations-baseline.json` | **0** | Cleanup ολοκληρώθηκε 2026-04-09. |
 | **Audit value catalogs** (CHECK 3.14) | ADR-195 | — | **0** | Zero-tolerance check, όχι ratchet. |
 | **Firestore index coverage** (CHECK 3.15) | ADR-195 | — | **0 on touch** | Zero-tolerance on touch, Boy Scout για backlog. |
-| **Firestore rules test coverage — static** (CHECK 3.16) | ADR-298 | manifest-driven | **0 drift** | 8 / 96 collections covered, 84 pending στο `FIRESTORE_RULES_PENDING` (tracked list). |
+| **Firestore rules test coverage — static** (CHECK 3.16) | ADR-298 | manifest-driven | **0 drift** | 92 / 92 collections covered, `FIRESTORE_RULES_PENDING` = [] (COMPLETATO 2026-04-14). |
+| **i18n missing keys** (CHECK 3.8) | ADR-280 | `.i18n-missing-keys-baseline.json` | **0** | 4.750→0 (COMPLETATO 2026-04-14). 730 file useTranslation + 479 chiavi aggiunte. |
+| **i18n resolver reachability** (CHECK 3.13) | ADR-279/ADR-280 | `.i18n-resolver-reachability-baseline.json` | **0** | 378→0 (COMPLETATO 2026-04-13). |
+| **Entity audit coverage** (CHECK 3.17) | ADR-195 | `.entity-audit-coverage-baseline.json` | **0** | 9→0 (COMPLETATO 2026-04-13). |
+| **Storage rules test coverage** (CHECK 3.19) | ADR-301 | manifest-driven | **0 drift** | 4 path patterns, 48 celle (COMPLETATO 2026-04-14). |
 
 ### 2.2 🟡 Backlog με ratchet (σταδιακό cleanup)
 
 | Περιοχή | Canonical ADR | Baseline | Violations | Αρχεία | Τύπος |
 |---------|---------------|----------|------------|--------|-------|
 | **Firestore rules test coverage — runtime** (Phase B/C/E) | ADR-298 | manifest pending | **88 collections** | — | Test suites required |
-| **Entity audit coverage — write side** (CHECK 3.17) | ADR-195 | `.entity-audit-coverage-baseline.json` | **9 violations** (ratcheted 20→19→18→15→11→9: Batch 1+2+3 wire-up 2026-04-13) | 9 αρχεία | Boy Scout |
-| **i18n missing keys** (CHECK 3.8) | ADR-280 | `.i18n-missing-keys-baseline.json` | **4.762** legacy | — | Ratchet down only |
-| **i18n resolver reachability** (CHECK 3.13) | ADR-279 / ADR-280 | `.i18n-resolver-reachability-baseline.json` | **378** violations | 13 αρχεία | Ratchet down only |
+| **Firestore rules test coverage — runtime** (Phase B/C/E) ✅ | ADR-298 / ADR-301 | manifest | **0 pending** | — | COMPLETATO 2026-04-14 |
+| **Entity audit coverage — write side** (CHECK 3.17) ✅ | ADR-195 | `.entity-audit-coverage-baseline.json` | **0** (Batch 4 DONE 2026-04-13) | — | COMPLETATO |
+| **i18n missing keys** (CHECK 3.8) ✅ | ADR-280 | `.i18n-missing-keys-baseline.json` | **0** (4.750→0 DONE 2026-04-14) | — | COMPLETATO |
+| **i18n resolver reachability** (CHECK 3.13) ✅ | ADR-279 / ADR-280 | `.i18n-resolver-reachability-baseline.json` | **0** (Phase C DONE 2026-04-13) | — | COMPLETATO |
 
 ### 2.3 Πώς υπολογίζονται οι μετρήσεις
 

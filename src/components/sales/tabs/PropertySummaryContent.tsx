@@ -69,8 +69,8 @@ function SummaryField({
 
 export function PropertySummaryContent({ data: unit }: PropertySummaryContentProps) {
   const _colors = useSemanticColors();
-  const { t } = useTranslation('common');
-  const { t: tProps } = useTranslation('properties');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tProps } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
 
   if (!unit) return null;

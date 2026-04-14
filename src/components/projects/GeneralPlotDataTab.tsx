@@ -34,7 +34,7 @@ interface GeneralPlotDataTabProps {
 
 export function GeneralPlotDataTab({ plotData, onPlotDataChange, isEditing }: GeneralPlotDataTabProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const typography = useTypography();
     const formRef = useRef<HTMLDivElement>(null);
 

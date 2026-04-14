@@ -24,7 +24,7 @@ const logger = createModuleLogger('useLeadsList');
 
 export function useLeadsList(refreshTrigger?: number | string | boolean | null) {
   const router = useRouter();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();
 

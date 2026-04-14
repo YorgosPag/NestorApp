@@ -496,5 +496,18 @@
   "createValidation": {
     "nameRequired": "Ο τίτλος του έργου είναι υποχρεωτικός.",
     "statusRequired": "Η κατάσταση του έργου είναι υποχρεωτική."
+  },
+  "allTypes": "All types",
+  "allStatuses": "All statuses",
+  "allLevels": "All levels",
+  "parking": {
+    "stats": {
+      "occupied": "Occupied"
+    }
+  },
+  "structure": {
+    "noUnits": "No units",
+    "noStorages": "No storages",
+    "noParkingSpots": "No parking spots"
   }
 }

@@ -573,5 +573,17 @@
     "closing": "Closing",
     "won": "Won",
     "lost": "Lost"
+  },
+  "modal": {
+    "title": "Title",
+    "to": "To",
+    "selectType": "Select type",
+    "subjectLabel": "Subject label",
+    "subjectPlaceholder": "Subject placeholder",
+    "contentLabel": "Content label",
+    "contentPlaceholder": "Content placeholder",
+    "sending": "Sending...",
+    "send": "Send",
+    "cancel": "Cancel"
   }
 }

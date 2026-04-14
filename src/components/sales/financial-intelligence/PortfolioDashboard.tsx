@@ -98,7 +98,7 @@ const fmtEuro = (val: number) => formatCurrencyWhole(val) ?? '';
 
 export function PortfolioDashboard() {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
 
   // State
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);

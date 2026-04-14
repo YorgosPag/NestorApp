@@ -65,7 +65,7 @@ interface GeofenceConfigMapProps {
 // =============================================================================
 
 export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const typography = useTypography();
 

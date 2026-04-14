@@ -46,7 +46,7 @@ interface ProjectLocationsTabProps {
 
 export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps) {
   const { t } = useTranslation('addresses');
-  const { t: tProjects } = useTranslation('projects');
+  const { t: tProjects } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const spacing = useSpacingTokens();

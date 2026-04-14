@@ -27,7 +27,7 @@ export function StatusLegend({
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   
   // ✅ CENTRALIZED: Labels from PROPERTY_STATUS_LABELS, colors from design-tokens
   const statusItems = [

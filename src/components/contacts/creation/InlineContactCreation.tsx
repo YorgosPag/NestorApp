@@ -26,7 +26,7 @@ interface InlineContactCreationProps {
 }
 
 export function InlineContactCreation({ contactType, onContactAdded, onCancel, onBack }: InlineContactCreationProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { user } = useAuth();

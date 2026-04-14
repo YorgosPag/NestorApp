@@ -20,7 +20,7 @@ interface BuildingCardMetricsProps {
 
 export function BuildingCardMetrics({ building }: BuildingCardMetricsProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   // 🏢 ENTERPRISE: Centralized systems
   const typography = useTypography();
   const colors = useSemanticColors();

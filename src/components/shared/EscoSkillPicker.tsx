@@ -78,7 +78,7 @@ export function EscoSkillPicker({
   language,
   maxSkills = DEFAULT_MAX_SKILLS,
 }: EscoSkillPickerProps) {
-  const { t, i18n } = useTranslation('contacts');
+  const { t, i18n } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const resolvedLanguage: EscoLanguage = language ?? (i18n.language === 'el' ? 'el' : 'en');
 

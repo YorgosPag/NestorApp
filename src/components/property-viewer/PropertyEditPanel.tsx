@@ -13,7 +13,7 @@ interface PropertyEditPanelProps {
 
 export function PropertyEditPanel({ selectedPolygonId }: PropertyEditPanelProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
     const colors = useSemanticColors();
 
     return (

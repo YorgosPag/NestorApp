@@ -140,7 +140,7 @@ export function PropertyStatusSelector({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   // ========================================================================
   // STATE

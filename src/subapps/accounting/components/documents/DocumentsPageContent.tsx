@@ -104,7 +104,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 // ============================================================================
 
 export function DocumentsPageContent() {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());

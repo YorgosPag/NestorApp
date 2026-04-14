@@ -44,7 +44,7 @@ const DialogClose = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
   const { radius } = useBorderTokens();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   return (
     <DialogPrimitive.Close

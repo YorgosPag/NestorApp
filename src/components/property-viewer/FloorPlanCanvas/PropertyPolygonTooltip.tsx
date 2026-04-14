@@ -32,7 +32,7 @@ interface PropertyPolygonTooltipProps {
 }
 
 export function PropertyPolygonTooltip({ property, centroid }: PropertyPolygonTooltipProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const boxX = centroid.x + TOOLTIP_LAYOUT.offsetX;
   const boxY = centroid.y + TOOLTIP_LAYOUT.offsetY;
   const textX = boxX + TOOLTIP_LAYOUT.textPaddingX;

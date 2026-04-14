@@ -77,7 +77,7 @@ export function PhotoPreviewCard({
 }: PhotoPreviewCardProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // ========================================================================
   // COMPUTED VALUES
@@ -178,7 +178,7 @@ export function PhotoPreviewCard({
  * 🏢 ENTERPRISE: i18n-enabled variant
  */
 export function CompanyLogoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 'altText' | 'emptyText'>) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <PhotoPreviewCard
       {...props}
@@ -194,7 +194,7 @@ export function CompanyLogoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 
  * 🏢 ENTERPRISE: i18n-enabled variant
  */
 export function RepresentativePhotoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 'altText' | 'emptyText'>) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <PhotoPreviewCard
       {...props}
@@ -210,7 +210,7 @@ export function RepresentativePhotoCard(props: Omit<PhotoPreviewCardProps, 'icon
  * 🏢 ENTERPRISE: i18n-enabled variant with interpolation
  */
 export function IndividualPhotoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 'altText' | 'emptyText'> & { photoIndex?: number }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { photoIndex = 1, ...rest } = props;
   return (
     <PhotoPreviewCard
@@ -227,7 +227,7 @@ export function IndividualPhotoCard(props: Omit<PhotoPreviewCardProps, 'iconType
  * 🏢 ENTERPRISE: i18n-enabled variant
  */
 export function ServiceLogoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 'altText' | 'emptyText'>) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <PhotoPreviewCard
       {...props}

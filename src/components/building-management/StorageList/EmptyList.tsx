@@ -6,7 +6,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EmptyState } from '@/components/shared/EmptyState';
 
 export function EmptyList() {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   return (
     <EmptyState
       icon={Archive}

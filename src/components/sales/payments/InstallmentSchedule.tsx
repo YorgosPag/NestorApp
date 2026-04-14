@@ -63,7 +63,7 @@ export function InstallmentSchedule({
   const colors = useSemanticColors();
   const canEdit = planStatus === 'negotiation' || planStatus === 'draft' || planStatus === 'active';
   const canAdd = planStatus === 'negotiation' || planStatus === 'draft';
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
 
   const now = new Date().toISOString();
 

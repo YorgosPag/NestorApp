@@ -26,7 +26,7 @@ type PanelId = keyof typeof PANEL_TITLE_KEYS;
 
 // 🔺 FIXED SNAPPING PANEL με ProSnapToolbar
 const SnappingView = memo(() => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const {
     enabledModes,
     toggleMode,
@@ -56,7 +56,7 @@ SnappingView.displayName = 'SnappingView';
 
 // 📋 LAYERS PANEL
 const LayersView = memo(() => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -87,7 +87,7 @@ LayersView.displayName = 'LayersView';
 
 // 🔧 PROPERTIES PANEL
 const PropertiesView = memo(() => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -121,7 +121,7 @@ PropertiesView.displayName = 'PropertiesView';
 
 // 📜 HISTORY PANEL
 const HistoryView = memo(() => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const colors = useSemanticColors();
 
   return (
@@ -147,7 +147,7 @@ interface DockviewApi {
 
 // 🏗️ MAIN CAD DOCK
 const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
-  const { t, i18n } = useTranslation('dxf-viewer');
+  const { t, i18n } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   // ✅ ENTERPRISE FIX: Use compatible type for API ref
   const apiRef = useRef<DockviewApi | null>(null);

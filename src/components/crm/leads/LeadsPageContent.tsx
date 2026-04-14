@@ -24,7 +24,7 @@ import { PipelineTab } from '@/components/crm/dashboard/PipelineTab';
 import { useOpportunities } from '@/components/crm/hooks/useOpportunities';
 
 export function LeadsPageContent() {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
 
   const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<CrmDashboardFilterState>(defaultCrmDashboardFilters);

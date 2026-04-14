@@ -53,7 +53,7 @@ interface LoanCardProps {
 
 export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
 
   const ltv = calculateLTV(loan.approvedAmount, loan.appraisalValue);
   const ltvLevel = getLtvComplianceLevel(ltv);

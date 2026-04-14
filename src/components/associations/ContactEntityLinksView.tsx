@@ -36,7 +36,7 @@ export interface ContactEntityLinksViewProps {
 // ============================================================================
 
 export function ContactEntityLinksView({ contactId }: ContactEntityLinksViewProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const { grouped, isLoading } = useContactEntityLinks(contactId);
 

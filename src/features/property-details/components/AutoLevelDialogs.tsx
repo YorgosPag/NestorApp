@@ -16,7 +16,7 @@ interface AutoLevelDialogsProps {
 }
 
 export function AutoLevelDialogs({ dialogState, onConfirm, onDismiss }: AutoLevelDialogsProps) {
-  const { t } = useTranslation(['properties-detail', 'common']);
+  const { t } = useTranslation(['properties-detail', 'common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account']);
 
   if (!dialogState.type) return null;
 

@@ -25,7 +25,7 @@ import '@/lib/design-system';
 
 export function CRMDashboardPageContent() {
   const layout = useLayoutClasses();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [filters, setFilters] = useState<CrmDashboardFilterState>(defaultCrmDashboardFilters);
   // 🏢 ENTERPRISE: Real-time opportunities (ADR-227 Phase 1)

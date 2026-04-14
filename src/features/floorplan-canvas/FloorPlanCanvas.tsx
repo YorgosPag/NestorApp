@@ -44,7 +44,7 @@ export function FloorPlanCanvas({
 }: FloorPlanCanvasProps) {
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   // PDF state
   const [numPages, setNumPages] = useState<number>(0);

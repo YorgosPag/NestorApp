@@ -21,7 +21,7 @@ interface CalendarSearchInputProps {
 }
 
 export function CalendarSearchInput({ events, onFilteredEvents }: CalendarSearchInputProps) {
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
 

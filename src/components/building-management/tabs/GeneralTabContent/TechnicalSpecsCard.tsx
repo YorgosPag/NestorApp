@@ -31,7 +31,7 @@ interface TechnicalSpecsCardProps {
 
 export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }: TechnicalSpecsCardProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

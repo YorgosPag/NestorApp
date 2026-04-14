@@ -44,7 +44,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
   show = true
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -117,7 +117,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   variant = 'minimal'
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -162,7 +162,7 @@ export const FieldValidationError: React.FC<{
   fieldId
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -198,7 +198,7 @@ export const SuccessMessage: React.FC<{
   autoHide = false
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { quick, getStatusBorder } = useBorderTokens();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();

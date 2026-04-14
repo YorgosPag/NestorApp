@@ -20,7 +20,7 @@ interface PropertyDashboardProps {
 
 export function PropertyDashboard({ stats }: PropertyDashboardProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
     const getStatusLabel = (status: string) => {
         switch (status) {

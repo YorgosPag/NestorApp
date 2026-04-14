@@ -84,7 +84,8 @@
       "completedAt": "Completed",
       "contactId": "Contact",
       "projectId": "Project",
-      "unitId": "Unit"
+      "unitId": "Unit",
+      "propertyId": "Property id"
     },
     "loadingPlaceholder": "Loading..."
   },

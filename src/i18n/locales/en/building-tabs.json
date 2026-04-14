@@ -426,6 +426,12 @@
       "searchPlaceholder": "Search code or description...",
       "exportReport": "Export Report",
       "loading": "Loading storage units..."
+    },
+    "parkingFloorplan": {
+      "title": "Title"
+    },
+    "projectFloorplan": {
+      "title": "Title"
     }
   }
 }

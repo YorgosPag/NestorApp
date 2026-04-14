@@ -119,7 +119,7 @@ export function ConfirmDialog({
   icon,
   children,
 }: ConfirmDialogProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // Default button texts from i18n
   const resolvedConfirmText = confirmText || t('buttons.confirm', 'Confirm');
@@ -192,7 +192,7 @@ export function ConfirmDialog({
 export function DeleteConfirmDialog(
   props: Omit<ConfirmDialogProps, 'variant'> & { variant?: ConfirmDialogVariant }
 ) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   return (
     <ConfirmDialog

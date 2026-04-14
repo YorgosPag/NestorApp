@@ -6,7 +6,7 @@
  *
  * ⚠️ LEGACY SYSTEM: The useEnterpriseMessages hook now uses i18n JSON files!
  * This file is kept for type definitions and backward compatibility.
- * New code should use useTranslation('common') directly.
+ * New code should use useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']) directly.
  *
  * FORTUNE 500-CLASS INTERNATIONALIZATION ARCHITECTURE
  *

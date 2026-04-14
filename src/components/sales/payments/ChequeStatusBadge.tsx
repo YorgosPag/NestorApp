@@ -27,7 +27,7 @@ interface ChequeStatusBadgeProps {
 }
 
 export function ChequeStatusBadge({ status }: ChequeStatusBadgeProps) {
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
 
   return (
     <Badge variant={STATUS_VARIANT[status]}>

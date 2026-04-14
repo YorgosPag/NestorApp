@@ -155,7 +155,8 @@
     "time": {
       "now": "Now",
       "hoursAgo": "{hours}h",
-      "yesterday": "Yesterday"
+      "yesterday": "Yesterday",
+      "label": "Label"
     },
     "message": {
       "from": "From",
@@ -289,6 +290,9 @@
       "statusInProgress": "In Progress",
       "statusPending": "Pending",
       "statusFailed": "Failed"
+    },
+    "card": {
+      "ariaLabel": ""
     }
   }
 }

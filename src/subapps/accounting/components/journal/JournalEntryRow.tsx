@@ -38,7 +38,7 @@ const TYPE_BADGE_VARIANTS = {
 // ============================================================================
 
 export function JournalEntryRow({ entry }: JournalEntryRowProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   return (
     <TableRow>

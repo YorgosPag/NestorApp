@@ -48,7 +48,7 @@ interface MiscellaneousTabContentProps {
  */
 export function MiscellaneousTabContent({ project, data }: MiscellaneousTabContentProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   // Resolve project from props
   const resolvedProject = project || data;

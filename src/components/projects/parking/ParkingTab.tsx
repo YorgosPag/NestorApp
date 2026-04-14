@@ -15,7 +15,7 @@ import '@/lib/design-system';
 
 export function ParkingTab() {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const typography = useTypography();
   const spacing = useSpacingTokens();
   const {

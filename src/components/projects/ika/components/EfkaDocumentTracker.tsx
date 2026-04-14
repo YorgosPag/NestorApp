@@ -31,7 +31,7 @@ const STATUS_VARIANT_MAP: Record<EfkaDocumentStatus, 'default' | 'secondary' | '
 };
 
 export function EfkaDocumentTracker({ documents }: EfkaDocumentTrackerProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();

@@ -41,7 +41,7 @@ const EDITABLE_STATUSES = new Set(['draft', 'rejected']);
 // ============================================================================
 
 export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const router = useRouter();
   const { user } = useAuth();

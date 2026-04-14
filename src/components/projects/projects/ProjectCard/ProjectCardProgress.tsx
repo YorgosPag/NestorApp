@@ -11,7 +11,7 @@ interface ProjectCardProgressProps {
 
 export function ProjectCardProgress({ progress }: ProjectCardProgressProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   return (
     <ThemeProgressBar

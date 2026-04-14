@@ -61,7 +61,7 @@ const STORAGE_STATUSES = Object.keys(statusLabels) as StorageStatus[];
 
 export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) {
   const { t } = useTranslation('storage');
-  const { t: tBuilding } = useTranslation('building');
+  const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { buildings, loading: buildingsLoading } = useFirestoreBuildings();
 
   // Form state

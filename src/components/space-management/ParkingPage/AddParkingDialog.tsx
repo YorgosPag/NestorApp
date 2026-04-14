@@ -65,7 +65,7 @@ interface ParkingCreateResult {
 // ============================================================================
 
 export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { t: tParking } = useTranslation('parking');
   const { buildings, loading: buildingsLoading } = useFirestoreBuildings();
 

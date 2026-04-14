@@ -44,7 +44,7 @@ interface DepreciationScheduleProps {
 // ============================================================================
 
 export function DepreciationSchedule({ assetDescription, records }: DepreciationScheduleProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const sortedRecords = [...records].sort((a, b) => a.fiscalYear - b.fiscalYear);

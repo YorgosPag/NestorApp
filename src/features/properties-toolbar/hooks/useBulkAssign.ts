@@ -18,7 +18,7 @@ interface UseBulkAssignProps {
 }
 
 export function useBulkAssign({ notifications, onSuccess }: UseBulkAssignProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);

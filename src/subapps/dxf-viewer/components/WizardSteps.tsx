@@ -50,7 +50,7 @@ interface CompanyStepProps {
 export function CompanyStep({
   companies, selectedCompanyId, loading, error, onCompanyChange, onRetry,
 }: CompanyStepProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const typography = useTypography();
   const getBorder = useModalBorder();
 
@@ -114,7 +114,7 @@ interface ProjectStepProps {
 export function ProjectStep({
   selectedCompany, projects, selectedProjectId, loading, error, onProjectChange,
 }: ProjectStepProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const typography = useTypography();
   const getBorder = useModalBorder();
 
@@ -184,7 +184,7 @@ export function BuildingStep({
   selectedCompany, selectedProject, buildings, selectedBuildingId,
   floors, selectedFloorId, onBuildingChange, onFloorChange, onLoadFloorplan,
 }: BuildingStepProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const typography = useTypography();
   const getBorder = useModalBorder();
 
@@ -291,7 +291,7 @@ interface FloorSectionProps {
 }
 
 function FloorSection({ floors, selectedFloorId, onFloorChange, onLoadFloorplan }: FloorSectionProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const typography = useTypography();
   const getBorder = useModalBorder();
 

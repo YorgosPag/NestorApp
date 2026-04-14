@@ -79,7 +79,7 @@ export function BuildingSpaceConfirmDialog({
   loading = false,
   variant = 'destructive',
 }: BuildingSpaceConfirmDialogProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   const resolvedConfirmLabel = confirmLabel || t('spaceActions.delete');
   const resolvedCancelLabel = cancelLabel || t('spaceConfirm.cancel');

@@ -47,7 +47,7 @@ const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relati
   logger.info('ContactBadge hook result', { contactName, loading });
 
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   if (loading) {
     return (
@@ -111,7 +111,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   // ============================================================================
   // RENDER HELPERS

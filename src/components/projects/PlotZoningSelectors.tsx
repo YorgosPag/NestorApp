@@ -22,7 +22,7 @@ interface PlotZoningSelectorsProps {
 
 export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onEnterPress }: PlotZoningSelectorsProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const typography = useTypography();
     const colors = useSemanticColors();
 

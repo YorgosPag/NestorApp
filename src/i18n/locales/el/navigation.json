@@ -27,7 +27,8 @@
       "projects": "Επιλέξτε Έργο",
       "buildings": "Επιλέξτε Κτίριο",
       "properties": "Επιλέξτε Προορισμό",
-      "default": "Πλοήγηση"
+      "default": "Πλοήγηση",
+      "units": "Units"
     },
     "descriptions": {
       "companies": "Επιλέξτε την εταιρεία για να δείτε τα έργα της",
@@ -461,6 +462,13 @@
       "spotTitle": "Θέση {number}",
       "defaultSubtitle": "Θέση Στάθμευσης",
       "openTooltip": "Άνοιγμα στις Θέσεις Στάθμευσης"
+    },
+    "units": {
+      "title": "Title",
+      "listLabel": "List label",
+      "empty": "No items found",
+      "defaultSubtitle": "Default subtitle",
+      "openTooltip": "Open tooltip"
     }
   }
 }

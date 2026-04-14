@@ -101,7 +101,7 @@ export function useFileUpload({
   onUploadComplete,
 }: UseFileUploadParams): UseFileUploadReturn {
   const [uploading, setUploading] = useState(false);
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const { success, error: showError, warning } = useNotifications();
 
   const handleUpload = useCallback(async (selectedFiles: File[]) => {

@@ -75,7 +75,7 @@ export function AuditTimelineEntry({
   entry,
   showEntityLink,
 }: AuditTimelineEntryProps) {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
   const Icon = config.icon;

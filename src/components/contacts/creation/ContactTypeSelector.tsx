@@ -23,7 +23,7 @@ const TYPE_DESCRIPTION_KEYS: Record<ContactType, string> = {
 };
 
 export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 

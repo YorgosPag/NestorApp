@@ -82,7 +82,7 @@ function formatCurrency(amount: number | null): string {
 
 export function ContractCard({ contract, onTransition }: ContractCardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { success, error: notifyError } = useNotifications();
   const [expanded, setExpanded] = useState(false);
   const [transitioning, setTransitioning] = useState(false);

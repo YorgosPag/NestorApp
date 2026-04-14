@@ -95,7 +95,7 @@ interface EmailHistoryRowProps {
 }
 
 function EmailHistoryRow({ record, index }: EmailHistoryRowProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   return (
     <TableRow>
       <TableCell className="text-gray-600 text-sm">{index + 1}</TableCell>
@@ -127,7 +127,7 @@ export function APYCertificateDetails({
   certificateId,
   onBack,
 }: APYCertificateDetailsProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const { user } = useAuth();
   const { updateCertificate } = useAPYCertificates({ autoFetch: false });
 

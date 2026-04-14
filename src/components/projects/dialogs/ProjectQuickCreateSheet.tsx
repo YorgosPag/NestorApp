@@ -70,7 +70,7 @@ export function ProjectQuickCreateSheet({
   onOpenChange,
   onProjectCreated,
 }: ProjectQuickCreateSheetProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   // 🏢 Reset the template each time the sheet opens — guarantees a clean form
   const tempProject = useMemo(() => (open ? buildTempProject() : null), [open]);

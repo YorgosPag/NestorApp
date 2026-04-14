@@ -24,7 +24,7 @@ export function BuildingAddressesManualList({
   onDelete,
 }: BuildingAddressesManualListProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
 
   return (

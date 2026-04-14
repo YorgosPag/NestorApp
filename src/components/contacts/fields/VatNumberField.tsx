@@ -44,7 +44,7 @@ export function VatNumberField({
   disabled,
   excludeContactId,
 }: VatNumberFieldProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const { isChecking, result } = useVatUniqueness(value, excludeContactId);
 

@@ -166,7 +166,7 @@ export function GenericPropertiesTabsRenderer({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n translation for tab labels
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled !== false);

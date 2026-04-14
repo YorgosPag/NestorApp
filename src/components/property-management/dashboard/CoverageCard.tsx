@@ -73,7 +73,7 @@ export function CoverageCard({
   onMissingDocumentsClick,
   className,
 }: CoverageCardProps) {
-  const { t } = useTranslation(['properties', 'common']);
+  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail', 'common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();

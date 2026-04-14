@@ -32,7 +32,7 @@ import { translatePropertyMutationError } from '@/services/property/property-mut
 
 export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const { success, error: notifyError } = useNotifications();
   const [askingPrice, setAskingPrice] = useState<string>(

@@ -23,7 +23,7 @@ export function useConnectionPanelState({
     setIsConnecting,
 }: UseConnectionPanelStateProps) {
     const notifications = useNotifications();
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
     const { prompt, dialogProps } = usePromptDialog();
     const [connectionType, setConnectionType] = useState<ConnectionType>('related');
 

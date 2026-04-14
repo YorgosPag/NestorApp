@@ -70,7 +70,7 @@ export function ProjectFloorplanTab({
 }: ProjectFloorplanTabProps) {
   const { user } = useAuth();
   const colors = useSemanticColors();
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   // Resolve project from props
   const resolvedProject = project || data;

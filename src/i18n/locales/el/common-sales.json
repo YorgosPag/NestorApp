@@ -167,7 +167,13 @@
       "info": {
         "title": "Διαθέσιμα Ακίνητα",
         "description": "Εδώ βλέπετε όλα τα ακίνητα που είναι ενεργά προς πώληση. Περιλαμβάνονται τιμές, ενδιαφέρον αγοραστών και στατιστικά πωλήσεων."
-      }
+      },
+      "filters": {
+        "toggle": "Toggle"
+      },
+      "loading": "Loading...",
+      "gridLabel": "Grid label",
+      "unitDetails": "Unit details"
     },
     "tabs": {
       "saleInfo": "Πώληση",
@@ -182,7 +188,8 @@
       "documentsHint": "Τα έγγραφα διαχειρίζονται στη σελίδα Χώροι → Ακίνητα",
       "photosHint": "Οι φωτογραφίες διαχειρίζονται στη σελίδα Χώροι → Ακίνητα",
       "videosHint": "Τα βίντεο διαχειρίζονται στη σελίδα Χώροι → Ακίνητα",
-      "videosNoAuth": "Απαιτείται σύνδεση για να δείτε τα βίντεο."
+      "videosNoAuth": "Απαιτείται σύνδεση για να δείτε τα βίντεο.",
+      "unitSummary": "Unit summary"
     },
     "actions": {
       "changePrice": "Αλλαγή Τιμής",
@@ -221,7 +228,8 @@
       "project": "Έργο",
       "permit": "Τίτλος Αδείας",
       "building": "Κτίριο",
-      "property": "Ακίνητο"
+      "property": "Ακίνητο",
+      "unit": "Unit"
     },
     "propertySummary": {
       "physicalData": "Φυσικά Στοιχεία",
@@ -332,7 +340,8 @@
       "createError": "Σφάλμα",
       "noContracts": "Δεν υπάρχουν συμβόλαια. Δημιουργήστε το πρώτο.",
       "noBuyer": "Δεν υπάρχει αγοραστής",
-      "noBuyerDesc": "Πρέπει πρώτα να ορίσετε αγοραστή (Κράτηση/Πώληση)"
+      "noBuyerDesc": "Πρέπει πρώτα να ορίσετε αγοραστή (Κράτηση/Πώληση)",
+      "scopeUnit": "Scope unit"
     },
     "errors": {
       "noBuilding": "Το ακίνητο δεν είναι συνδεδεμένο με κτίριο. Μεταβείτε στη Διαχείριση Ακινήτων → Πληροφορίες και συνδέστε κτίριο.",
@@ -440,6 +449,18 @@
       "dualListingTooltip": "Καταχωρημένα για πώληση και ενοικίαση",
       "statusAriaLabel": "Φίλτρο εμπορικής κατάστασης",
       "typeAriaLabel": "Φίλτρο τύπου μονάδας"
+    },
+    "unitSummary": {
+      "physicalData": "Physical data",
+      "type": "Type",
+      "area": "Area",
+      "floor": "Floor",
+      "building": "Building",
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "orientation": "Orientation",
+      "energy": "Energy",
+      "openInSpaces": "Open in spaces"
     }
   },
   "salesStorage": {

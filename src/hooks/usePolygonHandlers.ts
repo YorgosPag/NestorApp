@@ -51,7 +51,7 @@ export function usePolygonHandlers({
   forceDataRefresh,
 }: UsePolygonHandlersProps) {
   const { success: notifySuccess, error: notifyError, warning, notify } = useNotifications();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { requestDelete, Dialogs: PropertyDeletionDialogs } = usePropertyDeletionGuard();
 
   const selectedFloor = floors.find((floor) => floor.id === selectedFloorId) ?? null;

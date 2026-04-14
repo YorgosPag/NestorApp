@@ -117,7 +117,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   // 🏢 ENTERPRISE: Auth context for race condition prevention
   const { isAuthenticated, loading: authLoading } = useAuth();
   const typography = useTypography();

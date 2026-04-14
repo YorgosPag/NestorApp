@@ -144,7 +144,7 @@ export function AdministrativeAddressPicker({
   visibleLevels,
   showPostalCode = true,
 }: AdministrativeAddressPickerProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const { isLoading, resolvePath, levelOptions } =
     useAdministrativeHierarchy();

@@ -17,7 +17,7 @@ interface AIInboxUnauthorizedProps {
 }
 
 export function AIInboxUnauthorized({ error }: AIInboxUnauthorizedProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
   const colors = useSemanticColors();

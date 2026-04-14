@@ -51,7 +51,7 @@ export function UnitStep({
   buildings, selectedBuildingId, units, selectedUnitId,
   onUnitChange, onLoadFloorplan,
 }: UnitStepProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const typography = useTypography();
   const getBorder = useModalBorder();
 
@@ -153,7 +153,7 @@ interface StatusCountsProps {
 export function StatusCounts({
   currentStep, companies, projects, buildings, units, loading,
 }: StatusCountsProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const typography = useTypography();
 
   return (
@@ -188,7 +188,7 @@ interface SitePlanSectionProps {
 }
 
 export function SitePlanSection({ onLoadFloorplan }: SitePlanSectionProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const typography = useTypography();
   const getBorder = useModalBorder();
 

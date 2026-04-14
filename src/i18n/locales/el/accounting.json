@@ -148,7 +148,21 @@
     "selectBank": "Επιλογή Τράπεζας",
     "selectBankPlaceholder": "Επιλέξτε τράπεζα...",
     "selectFile": "Αρχείο CSV",
-    "chooseFile": "Επιλογή Αρχείου"
+    "chooseFile": "Επιλογή Αρχείου",
+    "noTransactionsDescription": "No transactions description",
+    "importError": "Import error",
+    "uploading": "Uploading",
+    "upload": "Upload",
+    "unmatchedTransactions": "Unmatched transactions",
+    "allTransactionsMatched": "All transactions matched",
+    "bankDescription": "Bank description",
+    "matchCandidates": "Match candidates",
+    "selectTransactionToMatch": "Select transaction to match",
+    "noCandidatesFound": "No candidates found",
+    "candidateLabel": "Candidate label",
+    "confidence": "Confidence",
+    "actions": "Actions",
+    "matchAction": "Match action"
   },
   "efka": {
     "title": "Εισφορές ΕΦΚΑ",
@@ -222,7 +236,23 @@
       "furniture": "Έπιπλα",
       "tools": "Εργαλεία",
       "other": "Λοιπά"
-    }
+    },
+    "requiredFields": "Required fields",
+    "invalidCost": "Invalid cost",
+    "createError": "Create error",
+    "addAssetTitle": "Add asset title",
+    "name": "Name",
+    "namePlaceholder": "Name placeholder",
+    "categoryPlaceholder": "Category placeholder",
+    "residualValue": "Residual value",
+    "notes": "Notes",
+    "notesPlaceholder": "Notes placeholder",
+    "creating": "Creating...",
+    "noDepreciationRecords": "No depreciation records",
+    "year": "Year",
+    "openingValue": "Opening value",
+    "depreciation": "Depreciation",
+    "closingValue": "Closing value"
   },
   "documents": {
     "title": "Παραστατικά AI",
@@ -327,7 +357,24 @@
       "backToReports": "Πίσω στις Αναφορές",
       "from": "Από",
       "to": "Έως"
-    }
+    },
+    "dueDate": "Due date",
+    "amount": "Amount",
+    "status": "Status",
+    "bracket": "Bracket",
+    "taxableInBracket": "Taxable in bracket",
+    "grossIncome": "Gross income",
+    "deductibleExpenses": "Deductible expenses",
+    "finalAmount": "Final amount",
+    "projectedIncome": "Projected income",
+    "projectedExpenses": "Projected expenses",
+    "projectedFinal": "Projected final",
+    "outputVAT": "Output v a t",
+    "inputVAT": "Input v a t",
+    "vatPayable": "Vat payable",
+    "vatCredit": "Vat credit",
+    "vatPaid": "Vat paid",
+    "vatSettlement": "Vat settlement"
   },
   "tax": {
     "partnerBreakdown": {
@@ -344,7 +391,10 @@
       "bracket": "Κλίμακα",
       "taxableAmount": "Φορολογητέο",
       "taxAmount": "Φόρος"
-    }
+    },
+    "totalIncome": "Total income",
+    "totalExpenses": "Total expenses",
+    "taxableIncome": "Taxable income"
   },
   "forms": {
     "save": "Αποθήκευση",
@@ -393,7 +443,8 @@
       "errorTitle": "Αποτυχία Αποστολής",
       "invalidEmail": "Μη έγκυρη διεύθυνση email",
       "pdfAttachmentNote": "Το PDF θα επισυναφθεί αυτόματα."
-    }
+    },
+    "back": "Back"
   },
   "common": {
     "fiscalYear": "Φορολογικό Έτος",
@@ -438,7 +489,8 @@
       "10": "Οκτώβριος",
       "11": "Νοέμβριος",
       "12": "Δεκέμβριος"
-    }
+    },
+    "cancel": "Cancel"
   },
   "categories": {
     "income": {
@@ -496,6 +548,10 @@
       "tee_fees": "Εισφορές Τεχνικού Επιμελητηρίου Ελλάδας",
       "depreciation": "Ετήσιες αποσβέσεις παγίων (H/Y, αυτοκίνητο, εξοπλισμός)",
       "other_expense": "Μη κατηγοριοποιημένα λειτουργικά έξοδα"
+    },
+    "groups": {
+      "standard": "Standard",
+      "custom": "Custom"
     }
   },
   "vatConfig": {
@@ -814,5 +870,26 @@
         "none": "0% — Δεν εκπίπτει"
       }
     }
-  }
+  },
+  "apyCertificates": {
+    "reminderEmail": {
+      "invalidEmail": "Invalid email",
+      "sendError": "Send error",
+      "title": "Title",
+      "to": "To",
+      "customer": "Customer",
+      "subject": "Subject",
+      "language": "Language",
+      "langEl": "Lang el",
+      "langEn": "Lang en",
+      "pdfNote": "Pdf note",
+      "preview": "Preview",
+      "sendSuccess": "Send success",
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "send": "Send"
+    }
+  },
+  "installmentsPaid": "Installments paid",
+  "installmentNumber": "Installment number"
 }

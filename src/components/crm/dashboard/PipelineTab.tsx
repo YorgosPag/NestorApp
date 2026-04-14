@@ -25,7 +25,7 @@ export function PipelineTab() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const {
     opportunities,
     loading,

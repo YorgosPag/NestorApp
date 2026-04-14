@@ -49,7 +49,7 @@ interface ProjectParkingTabProps {
 
 export function ProjectParkingTab({ project, data, title }: ProjectParkingTabProps) {
   const { t } = useTranslation('parking');
-  const { t: _tBuilding } = useTranslation('building');
+  const { t: _tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
   const typography = useTypography();

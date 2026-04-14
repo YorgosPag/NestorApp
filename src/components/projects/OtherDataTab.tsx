@@ -13,7 +13,7 @@ import '@/lib/design-system';
 
 export function OtherDataTab() {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     const typography = useTypography();
     const formRef = useRef<HTMLDivElement>(null);
     const [financialData, setFinancialData] = useState({

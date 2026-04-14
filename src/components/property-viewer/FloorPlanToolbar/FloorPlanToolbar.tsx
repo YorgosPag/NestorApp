@@ -82,7 +82,7 @@ export function FloorPlanToolbar({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const [isUploading, setIsUploading] = useState(false);
 
   // 🏢 ADR-054: Centralized file upload handler

@@ -130,7 +130,7 @@ function applyFilters(files: FileRecord[], searchTerm: string, filters: FileFilt
 // ============================================================================
 
 export function useFileManagerState() {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const { user } = useAuth();
   const { activeWorkspace } = useWorkspace();
   const { success: showSuccess, error: showError, warning: showWarning } = useNotifications();

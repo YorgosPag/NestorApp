@@ -220,7 +220,7 @@ export function GanttColorPickerDialog({
   onSave,
   title,
 }: GanttColorPickerDialogProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const spacingTokens = useSpacingTokens();
 
   return (
@@ -256,7 +256,7 @@ interface GanttLegendBadgesProps {
 }
 
 export function GanttLegendBadges({ className }: GanttLegendBadgesProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const spacingTokens = useSpacingTokens();
 
   return (
@@ -289,7 +289,7 @@ interface GanttFullscreenLegendProps {
 }
 
 export function GanttFullscreenLegend({ className }: GanttFullscreenLegendProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const spacingTokens = useSpacingTokens();
 
   return (

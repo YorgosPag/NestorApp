@@ -37,7 +37,7 @@ export function PropertyDetailsHeader({
   onNewProperty,
   onDeleteProperty,
 }: PropertyDetailsHeaderProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   const handleHeaderSave = useCallback(() => {
     const form = document.getElementById('property-fields-form') as HTMLFormElement | null;

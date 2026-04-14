@@ -90,7 +90,7 @@ export function LinkToBuildingModal({
   projectId,
   onSaved,
 }: LinkToBuildingModalProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const { success, error: showError } = useNotifications();
 

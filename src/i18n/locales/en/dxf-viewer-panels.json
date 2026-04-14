@@ -6,7 +6,8 @@
     },
     "overlay": {
       "title": "Overlay",
-      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}"
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}",
+      "loading": "Loading..."
     },
     "levels": {
       "title": "Levels",
@@ -49,7 +50,11 @@
     "layers": {
       "title": "Layers",
       "description": "Layer Drawing & Status Management"
-    }
+    },
+    "colors": {
+      "loading": "Loading..."
+    },
+    "selectPanel": "Select panel"
   },
   "layerActions": {
     "changeColor": "Change color",
@@ -268,7 +273,8 @@
       "noLayersFound": "No layers found",
       "createNewOrChangeFilters": "Create a new layer or change the filters",
       "searchLayers": "Search layers...",
-      "other": "Other"
+      "other": "Other",
+      "moreOptions": "More options"
     },
     "stats": {
       "total": "Total:",

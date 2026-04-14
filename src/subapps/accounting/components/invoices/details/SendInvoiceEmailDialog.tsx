@@ -79,7 +79,7 @@ export function SendInvoiceEmailDialog({
   onOpenChange,
   onSuccess,
 }: SendInvoiceEmailDialogProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const { user } = useAuth();
 

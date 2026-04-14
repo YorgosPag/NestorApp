@@ -49,7 +49,7 @@ import {
 // ============================================================================
 
 export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

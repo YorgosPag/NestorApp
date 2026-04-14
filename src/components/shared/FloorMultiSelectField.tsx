@@ -62,7 +62,7 @@ export function FloorMultiSelectField({
   disabled = false,
   initiallyOpen = false,
 }: FloorMultiSelectFieldProps) {
-  const { t } = useTranslation(['properties']);
+  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail']);
   const { user } = useAuth();
   const colors = useSemanticColors();
 

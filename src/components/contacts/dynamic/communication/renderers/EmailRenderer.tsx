@@ -56,7 +56,7 @@ export const EmailRenderer: React.FC<EmailRendererProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή για emails
   if (isDesktop) {

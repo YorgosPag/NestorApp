@@ -19,7 +19,7 @@ interface StorageRowActionsProps {
 }
 
 export function StorageRowActions({ unit, onEdit, onDelete, deletingId, unlinkingId, onUnlink }: StorageRowActionsProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   return (
     <nav className="flex justify-end gap-1">

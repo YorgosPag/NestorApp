@@ -56,7 +56,7 @@ export function UnifiedCustomerCard({
   // HOOKS & STATE
   // ========================================================================
 
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

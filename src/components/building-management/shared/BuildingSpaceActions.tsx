@@ -50,7 +50,7 @@ export function BuildingSpaceActions({
   isDeleting = false,
 }: BuildingSpaceActionsProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   return (
     <nav className="flex justify-end gap-1">

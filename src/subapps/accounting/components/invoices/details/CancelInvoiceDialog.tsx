@@ -95,7 +95,7 @@ export function CancelInvoiceDialog({
   onOpenChange,
   onSuccess,
 }: CancelInvoiceDialogProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const { user } = useAuth();
 

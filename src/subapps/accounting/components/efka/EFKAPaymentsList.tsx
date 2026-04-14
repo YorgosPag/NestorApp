@@ -53,7 +53,7 @@ const PAYMENT_STATUS_VARIANTS: Record<
 // ============================================================================
 
 export function EFKAPaymentsList({ payments }: EFKAPaymentsListProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const sortedPayments = [...payments].sort((a, b) => a.month - b.month);

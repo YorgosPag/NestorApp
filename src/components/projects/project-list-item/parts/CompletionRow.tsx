@@ -17,7 +17,7 @@ interface CompletionRowProps {
 export function CompletionRow({ completionDate }: CompletionRowProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     if (!completionDate) return null;
 
     return (

@@ -211,7 +211,7 @@ export function getBuildingFeatureKey(feature: string): string | null {
  *
  * @example
  * // In a component:
- * const { t, isNamespaceReady } = useTranslation('building');
+ * const { t, isNamespaceReady } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
  * const label = translateBuildingFeature('Σύστημα καθοδήγησης parking', t, isNamespaceReady);
  * // Returns: "Parking Guidance System" (if locale is en)
  */

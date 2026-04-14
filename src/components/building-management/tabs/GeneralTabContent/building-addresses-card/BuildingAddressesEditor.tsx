@@ -40,7 +40,7 @@ export function BuildingAddressesEditor({
   isSaving,
 }: BuildingAddressesEditorProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const presentation = EDITOR_PRESENTATION[mode];
 
   return (

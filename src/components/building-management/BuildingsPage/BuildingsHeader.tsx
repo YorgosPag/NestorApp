@@ -48,7 +48,7 @@ export function BuildingsHeader({
   setShowFilters,
 }: BuildingsHeaderProps) {
   // [ENTERPRISE] i18n hook
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();

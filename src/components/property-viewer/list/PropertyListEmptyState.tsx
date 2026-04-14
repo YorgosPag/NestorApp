@@ -9,7 +9,7 @@ const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 export function PropertyListEmptyState() {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   return (
     <EmptyState
       icon={PropertyIcon}

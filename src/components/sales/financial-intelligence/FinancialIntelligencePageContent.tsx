@@ -18,7 +18,7 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { PortfolioDashboard } from '@/components/sales/financial-intelligence/PortfolioDashboard';
 
 export function FinancialIntelligencePageContent() {
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
 

@@ -55,7 +55,7 @@ const INSTALLMENT_STATUS_VARIANTS: Record<
 // ============================================================================
 
 export function InstallmentsCard({ installments }: InstallmentsCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const sortedInstallments = [...installments].sort(

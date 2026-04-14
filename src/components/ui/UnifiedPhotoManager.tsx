@@ -87,7 +87,7 @@ function IndividualPhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   // 🏢 ENTERPRISE: Global PhotoPreviewModal για gallery functionality
   const photoPreviewModal = useGlobalPhotoPreview();
 
@@ -175,7 +175,7 @@ function CompanyPhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const handleLogoChange = handlers.handleLogoChange ?? (() => {});
 
   // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
@@ -312,7 +312,7 @@ function ServicePhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
   const companyIdResult = useCompanyId();

@@ -22,7 +22,7 @@ export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radiusClass } = useBorderTokens();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const spacing = useSpacingTokens();
 
   const pendingTasks = useMemo(() => {

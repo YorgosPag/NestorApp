@@ -43,7 +43,7 @@ export function useProjectCustomers(
   options: UseProjectCustomersOptions = {}
 ): UseProjectCustomersReturn {
   const { enabled = true } = options;
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
   const [loading, setLoading] = useState(false);

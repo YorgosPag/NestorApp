@@ -43,7 +43,7 @@ export default function DynamicInputOverlay({
   mouseWorldPosition = null,
   tempPoints = null
 }: DynamicInputOverlayProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const { settings } = useCursor();
   const colors = useSemanticColors();
   

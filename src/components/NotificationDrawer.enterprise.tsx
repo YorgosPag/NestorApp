@@ -97,7 +97,7 @@ export function NotificationDrawer() {
     }
   }, [dismissLocal]);
 
-  const { t, i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { getStatusBorder } = useBorderTokens();

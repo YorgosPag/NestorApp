@@ -25,7 +25,7 @@ function getAvailableYears(): number[] {
 }
 
 export function FiscalYearPicker({ value, onValueChange, disabled }: FiscalYearPickerProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const years = getAvailableYears();
 
   return (

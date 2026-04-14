@@ -47,7 +47,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   const projectName = (projectData?.name as string) ?? '';
 
   const { user } = useAuth();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const typography = useTypography();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();

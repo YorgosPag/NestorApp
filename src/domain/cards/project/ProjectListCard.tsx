@@ -102,7 +102,7 @@ export function ProjectListCard({
   className,
 }: ProjectListCardProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)

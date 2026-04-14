@@ -31,7 +31,7 @@ function DxfViewerLoadingFallback() {
 
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isAdmin, isLoading } = useUserRole();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const spacing = useSpacingTokens();
   const typography = useTypography();
   const colors = useSemanticColors();
@@ -72,7 +72,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function DxfViewerPage() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const _spacing = useSpacingTokens();
   const _typography = useTypography();
   const _colors = useSemanticColors();

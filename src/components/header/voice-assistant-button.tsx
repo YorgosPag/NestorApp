@@ -48,7 +48,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 export function VoiceAssistantButton() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { user } = useAuth();
 
   const [dialogOpen, setDialogOpen] = React.useState(false);

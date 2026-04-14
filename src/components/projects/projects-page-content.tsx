@@ -38,7 +38,7 @@ const logger = createModuleLogger('ProjectsPageContent');
 
 export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   // Note: Deep-link tab is read from useProjectsPageState (same useSearchParams instance)
 

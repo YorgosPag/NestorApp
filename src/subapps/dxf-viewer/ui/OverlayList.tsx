@@ -35,7 +35,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   onDelete,
   onToggleLayers,
 }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Centralized spacing (same pattern as UnitsList)

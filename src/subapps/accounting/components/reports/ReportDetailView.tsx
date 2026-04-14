@@ -60,7 +60,7 @@ function isValidPreset(value: string): value is ReportDatePreset {
 // ============================================================================
 
 export function ReportDetailView() {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();

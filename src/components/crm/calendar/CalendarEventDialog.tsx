@@ -56,7 +56,7 @@ interface CalendarEventDialogProps {
 // ============================================================================
 
 export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: CalendarEventDialogProps) {
-  const { t, i18n } = useTranslation('crm');
+  const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();

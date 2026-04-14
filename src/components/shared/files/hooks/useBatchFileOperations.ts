@@ -116,7 +116,7 @@ export function useBatchFileOperations({
   currentUserId,
   refetch,
 }: UseBatchFileOperationsParams): UseBatchFileOperationsReturn {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const { success, error, warning } = useNotifications();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { classifyBatch, classifyingIds } = useFileClassification();

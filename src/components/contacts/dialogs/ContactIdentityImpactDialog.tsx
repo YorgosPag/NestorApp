@@ -82,7 +82,7 @@ export function ContactIdentityImpactDialog({
   onOpenChange,
   onConfirm,
 }: ContactIdentityImpactDialogProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const { t: tForm } = useTranslation('contacts-form');
   const iconSizes = useIconSizes();
 

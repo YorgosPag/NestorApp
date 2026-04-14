@@ -13,7 +13,7 @@ export function SortToggleButton({ sortDirection, onToggleSort }: {
 }) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   const tooltipText = sortDirection === 'asc'
     ? t('toolbar.sort.ascending')

@@ -16,7 +16,7 @@ interface ParkingStatsSummaryProps {
 }
 
 export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
     const dashboardStats: DashboardStat[] = [
         {

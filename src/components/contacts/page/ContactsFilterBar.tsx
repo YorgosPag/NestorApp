@@ -12,7 +12,7 @@ interface ContactsFilterBarProps {
 }
 
 export function ContactsFilterBar({ showOnlyOwners, onShowOnlyOwnersChange }: ContactsFilterBarProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   return (
     <div className="px-4 py-2 border-b">

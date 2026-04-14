@@ -103,7 +103,7 @@ export function FinancialReportCard({
   loading,
   onClick,
 }: FinancialReportCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const config = REPORT_CARD_CONFIG[type];
   const Icon = config.icon;
 

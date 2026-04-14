@@ -48,7 +48,7 @@ const EFKA_MAIN_CODES = ['main_1', 'main_2', 'main_3', 'main_4', 'main_5', 'main
 // ============================================================================
 
 export function PartnerRow({ partner, index, onChange, onRemove }: PartnerRowProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const { result: vatResult } = useVatUniqueness(partner.vatNumber);
 
   return (

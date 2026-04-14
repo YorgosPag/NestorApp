@@ -141,7 +141,7 @@ export const UploadModalContainer: React.FC<{
   title?: string;
   className?: string;
 }> = ({ children, title, className }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   return (
     <ModalContainer
       variant="upload"
@@ -162,7 +162,7 @@ export const ProjectModalContainer: React.FC<{
   title?: string;
   className?: string;
 }> = ({ children, title, className }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   return (
     <ModalContainer
       variant="info"
@@ -182,7 +182,7 @@ export const SuccessModalContainer: React.FC<{
   title?: string;
   className?: string;
 }> = ({ children, title, className }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   return (
     <ModalContainer
       variant="success"
@@ -202,7 +202,7 @@ export const ErrorModalContainer: React.FC<{
   title?: string;
   className?: string;
 }> = ({ children, title, className }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   return (
     <ModalContainer
       variant="error"

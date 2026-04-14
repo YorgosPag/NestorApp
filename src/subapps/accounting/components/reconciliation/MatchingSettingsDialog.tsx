@@ -35,7 +35,7 @@ export function MatchingSettingsDialog({
   onSave,
   saving,
 }: MatchingSettingsDialogProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const [open, setOpen] = useState(false);
   const [thresholds, setThresholds] = useState<MatchingThresholds>(config.thresholds);
   const [weights, setWeights] = useState<MatchingScoringWeights>(config.weights);

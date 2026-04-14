@@ -64,8 +64,8 @@ interface PropertiesTabContentProps {
 }
 
 export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
-  const { t } = useTranslation('building');
-  const { t: tUnits } = useTranslation('properties');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 

@@ -22,7 +22,7 @@ export function Legend() {
     const { radius } = useBorderTokens();
     const colors = useSemanticColors();
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
     return (
         <div className="border-t pt-3">

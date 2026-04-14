@@ -24,7 +24,7 @@ export function PropertyHoverHeader({
   statusColor,
   status = 'for-sale'
 }: PropertyHoverHeaderProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: Translate unit type (apartment → Διαμέρισμα) — SSoT: filters.types

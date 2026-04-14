@@ -14,5 +14,42 @@
         "description": "Save the contact first to view sharing history"
       }
     }
+  },
+  "service": {
+    "registryEmpty": "Registry empty"
+  },
+  "toolbar": {
+    "tabs": {
+      "actions": {
+        "newContact": "New contact",
+        "newContactTooltip": "New contact tooltip",
+        "edit": "Edit",
+        "editTooltip": "Edit tooltip",
+        "delete": "Delete",
+        "deleteCount": "Delete count",
+        "deleteSelected": "Delete selected",
+        "deleteSelectFirst": "Delete select first",
+        "refresh": "Refresh",
+        "refreshTooltip": "Refresh tooltip"
+      }
+    },
+    "actions": {
+      "new": "New",
+      "edit": "Edit",
+      "delete": "Delete"
+    }
+  },
+  "customer": {
+    "propertiesCount": "Properties count",
+    "loadError": "Load error"
+  },
+  "employer": {
+    "linkedBadge": "Linked badge"
+  },
+  "common": {
+    "clear": "Clear"
+  },
+  "esco": {
+    "badge": "Badge"
   }
 }

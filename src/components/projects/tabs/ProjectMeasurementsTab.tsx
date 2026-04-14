@@ -79,7 +79,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const colors = useSemanticColors();
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   const [buildings, setBuildings] = useState<BuildingInfo[]>([]);
   const [allItems, setAllItems] = useState<BOQItem[]>([]);

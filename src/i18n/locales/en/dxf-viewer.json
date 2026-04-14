@@ -167,17 +167,63 @@
     },
     "desktop": {
       "modals": {
-        "company": { "title": "Select Company", "placeholder": "Search companies...", "emptyMessage": "No companies found" },
-        "project": { "title": "Select Project", "placeholder": "Search projects...", "emptyMessage": "No projects found" },
-        "building": { "title": "Select Building", "placeholder": "Search buildings...", "emptyMessage": "No buildings found" },
-        "floor": { "title": "Select Floor", "placeholder": "Search floors...", "emptyMessage": "No floors found" },
-        "unit": { "title": "Select Unit", "placeholder": "Search units...", "emptyMessage": "No units found" }
+        "company": {
+          "title": "Select Company",
+          "placeholder": "Search companies...",
+          "emptyMessage": "No companies found"
+        },
+        "project": {
+          "title": "Select Project",
+          "placeholder": "Search projects...",
+          "emptyMessage": "No projects found"
+        },
+        "building": {
+          "title": "Select Building",
+          "placeholder": "Search buildings...",
+          "emptyMessage": "No buildings found"
+        },
+        "floor": {
+          "title": "Select Floor",
+          "placeholder": "Search floors...",
+          "emptyMessage": "No floors found"
+        },
+        "unit": {
+          "title": "Select Unit",
+          "placeholder": "Search units...",
+          "emptyMessage": "No units found"
+        }
       },
-      "headers": { "companies": "Companies", "projects": "Projects", "buildings": "Buildings", "floors": "Floors", "units": "Units" },
-      "counters": { "total": "Total", "selected": "Selected", "filtered": "Filtered" },
-      "navActions": { "connect": "Connect", "disconnect": "Disconnect", "edit": "Edit", "delete": "Delete", "view_details": "View Details" },
-      "status": { "loading": "Loading...", "empty": "No data available", "error": "Loading error", "success": "Completed successfully" },
-      "confirm": { "title": "Confirm Action", "message": "Are you sure you want to proceed?", "confirmLabel": "Confirm", "cancelLabel": "Cancel" }
+      "headers": {
+        "companies": "Companies",
+        "projects": "Projects",
+        "buildings": "Buildings",
+        "floors": "Floors",
+        "units": "Units"
+      },
+      "counters": {
+        "total": "Total",
+        "selected": "Selected",
+        "filtered": "Filtered"
+      },
+      "navActions": {
+        "connect": "Connect",
+        "disconnect": "Disconnect",
+        "edit": "Edit",
+        "delete": "Delete",
+        "view_details": "View Details"
+      },
+      "status": {
+        "loading": "Loading...",
+        "empty": "No data available",
+        "error": "Loading error",
+        "success": "Completed successfully"
+      },
+      "confirm": {
+        "title": "Confirm Action",
+        "message": "Are you sure you want to proceed?",
+        "confirmLabel": "Confirm",
+        "cancelLabel": "Cancel"
+      }
     }
   },
   "steps": {
@@ -188,5 +234,8 @@
     "fileSelection": "File Selection",
     "encodingSelection": "Encoding Selection",
     "destinationSelection": "Destination Selection"
+  },
+  "common": {
+    "settings": "Settings"
   }
 }

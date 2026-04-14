@@ -64,7 +64,7 @@ export function Toolbar({
 }: ToolbarProps) {
   const iconSizes = useIconSizes();
   const ariaLabels = getAriaLabels();
-  const { t } = useTranslation(['common', 'obligations']);
+  const { t } = useTranslation(['common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account', 'obligations']);
   const [colorOpen, setColorOpen] = useState(false);
 
   return (

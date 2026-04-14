@@ -114,8 +114,8 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   const projectData = project ?? data;
   const projectId = projectData?.id;
 
-  const { t } = useTranslation('common');
-  const { t: tProjects } = useTranslation('projects');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tProjects } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const { success: showSuccess, error: showError } = useNotifications();
   const typography = useTypography();
   const iconSizes = useIconSizes();

@@ -22,7 +22,7 @@ interface LineItemsEditorProps {
 }
 
 export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineItemsEditorProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const DEFAULT_LINE_ITEM: InvoiceLineItem = {

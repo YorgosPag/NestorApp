@@ -8,7 +8,7 @@
  *
  * Centralized Systems Used:
  * - useSemanticColors() for theme-aware status colors
- * - useTranslation('building') for i18n
+ * - useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']) for i18n
  * - useSpacingTokens() for consistent spacing
  * - useIconSizes() for icon dimensions
  * - Card, Badge, Button from @/components/ui
@@ -88,7 +88,7 @@ export { STATUS_TO_CSS_COLOR, AVAILABLE_VIEW_MODES } from './gantt-view-config';
 // ─── Component ────────────────────────────────────────────────────────────
 
 export function GanttView({ building }: GanttViewProps) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const spacingTokens = useSpacingTokens();
   const iconSizes = useIconSizes();
   const typography = useTypography();

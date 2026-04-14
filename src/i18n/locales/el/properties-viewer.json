@@ -299,5 +299,8 @@
     "permanentDelete": "Οριστική Διαγραφή",
     "emptyTitle": "Ο κάδος είναι άδειος",
     "emptyDescription": "Δεν βρέθηκαν διαγραμμένα ακίνητα."
+  },
+  "header": {
+    "searchPlaceholder": "Search placeholder"
   }
 }

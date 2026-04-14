@@ -41,7 +41,7 @@ interface IkaTabProps {
 }
 
 export function IkaTab({ project, data }: IkaTabProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const spacing = useSpacingTokens();
 
   // Extract projectId from either prop

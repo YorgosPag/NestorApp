@@ -145,7 +145,7 @@ export function AddCaptureMenu({
   buttonLabel,
 }: AddCaptureMenuProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const isMobile = useIsMobile();
 

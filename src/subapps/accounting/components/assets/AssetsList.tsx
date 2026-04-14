@@ -55,7 +55,7 @@ const ASSET_STATUS_VARIANTS: Record<
 // ============================================================================
 
 export function AssetsList({ assets }: AssetsListProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   if (assets.length === 0) {

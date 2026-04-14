@@ -402,7 +402,8 @@
     "aria": {
       "customerActions": "Customer actions",
       "customerDetails": "Customer details: {name}"
-    }
+    },
+    "changeUnit": "Change unit"
   },
   "sharing": {
     "shareOn": "Share on {platform}",

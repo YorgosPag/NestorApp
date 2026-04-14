@@ -48,7 +48,7 @@ export function HeaderSearch({
   shortcutKey = "k"
 }: HeaderSearchProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const defaultPlaceholder = `${t('placeholders.searchContacts')} (⌘K)`;
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();

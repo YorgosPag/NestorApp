@@ -27,7 +27,8 @@
       "projects": "Select Project",
       "buildings": "Select Building",
       "properties": "Select Destination",
-      "default": "Navigation"
+      "default": "Navigation",
+      "units": "Units"
     },
     "descriptions": {
       "companies": "Select a company to view its projects",
@@ -461,6 +462,13 @@
       "spotTitle": "Spot {number}",
       "defaultSubtitle": "Parking",
       "openTooltip": "Open in Parking"
+    },
+    "units": {
+      "title": "Title",
+      "listLabel": "List label",
+      "empty": "No items found",
+      "defaultSubtitle": "Default subtitle",
+      "openTooltip": "Open tooltip"
     }
   }
 }

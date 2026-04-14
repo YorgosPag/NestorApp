@@ -38,7 +38,7 @@ interface PaymentPlanOverviewProps {
 
 export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
 
   const paidPercentage = plan.totalAmount > 0
     ? Math.round((plan.paidAmount / plan.totalAmount) * 100)

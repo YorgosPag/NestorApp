@@ -41,7 +41,7 @@ export function ParkingSpotTableRow({
   onViewFloorPlan,
 }: ParkingSpotTableRowProps) {
   const { t } = useTranslation('parking');
-  const { t: tProjects } = useTranslation('projects');
+  const { t: tProjects } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const typography = useTypography();
 

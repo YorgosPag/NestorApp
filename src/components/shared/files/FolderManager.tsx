@@ -66,7 +66,7 @@ export function FolderManager({
   onFilesDropped,
   className,
 }: FolderManagerProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const [folders, setFolders] = useState<FileFolder[]>([]);
   const [loading, setLoading] = useState(true);

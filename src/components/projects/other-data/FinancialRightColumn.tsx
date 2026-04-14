@@ -24,7 +24,7 @@ interface FinancialRightColumnProps {
 
 export function FinancialRightColumn({ financialData, calculatedData, onChange, onEnterPress }: FinancialRightColumnProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('projects');
+    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
     // 🏢 ENTERPRISE: Centralized spacing tokens
     const spacing = useSpacingTokens();
 

@@ -1,6 +1,8 @@
 {
   "ika": {
-    "workers": "Εργατοτεχνίτες",
+    "workers": {
+      "searchPlaceholder": "Search placeholder"
+    },
     "timesheet": "Παρουσιολόγιο",
     "stampsCalculation": "Υπολογισμός Ενσήμων",
     "apdPayments": "ΑΠΔ & Πληρωμές",

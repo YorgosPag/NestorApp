@@ -26,7 +26,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 ];
 
 export function PaymentMethodSelector({ value, onValueChange, disabled }: PaymentMethodSelectorProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   return (
     <Select

@@ -15,7 +15,7 @@ interface Props {
 }
 
 export function StorageCardActions({ onEdit, onDelete }: Props) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   return (
     <nav className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

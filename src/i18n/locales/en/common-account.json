@@ -134,7 +134,8 @@
       "revokeAllTitle": "Sign Out All Other Devices",
       "revokeAllDescription": "This will sign out all devices except this one. Other users will need to sign in again.",
       "revokeAll": "Sign out all",
-      "comingSoon": "Coming Soon"
+      "comingSoon": "Coming Soon",
+      "twoFactorTitle": "Two factor title"
     },
     "privacy": {
       "title": "Privacy",

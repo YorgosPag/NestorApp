@@ -493,7 +493,10 @@
       "managePermissions": "Διαχείριση Δικαιωμάτων",
       "suspend": "Αναστολή",
       "reactivate": "Επανενεργοποίηση",
-      "viewDetails": "Προβολή Στοιχείων"
+      "viewDetails": "Προβολή Στοιχείων",
+      "permissions": "Permissions",
+      "activate": "Activate",
+      "details": "Details"
     },
     "table": {
       "user": "Χρήστης",
@@ -555,7 +558,76 @@
       "removing": "Αφαίρεση...",
       "removeSuccess": "Το μέλος αφαιρέθηκε επιτυχώς",
       "updateHint": "Για ενημέρωση, αφαιρέστε και προσθέστε ξανά το μέλος."
-    }
+    },
+    "loading": "Loading...",
+    "subtitle": "Subtitle",
+    "mfaRequired": "Mfa required",
+    "includedPermissions": "Included permissions",
+    "permissionSetsUpdated": "Permission sets updated",
+    "managePermissionSets": "Manage permission sets",
+    "permissionSetsDescription": "Permission sets description",
+    "permissions": "Permissions",
+    "reason": "Reason",
+    "minChars": "Min chars",
+    "reasonPlaceholder": "Reason placeholder",
+    "savePermissionSets": "Save permission sets",
+    "roleChanged": "Role changed",
+    "changeRole": "Change role",
+    "changeRoleDescription": "Change role description",
+    "currentRole": "Current role",
+    "newRole": "New role",
+    "cannotChangeOwnRole": "Cannot change own role",
+    "reLoginWarning": "Re login warning",
+    "confirmRoleChange": "Confirm role change",
+    "hierarchyNote": "Hierarchy note",
+    "domain": "Domain",
+    "userDetails": "User details",
+    "userInfo": "User info",
+    "name": "Name",
+    "email": "Email",
+    "uid": "Uid",
+    "globalRole": "Global role",
+    "mfa": "Mfa",
+    "lastSignIn": "Last sign in",
+    "projects": "Projects",
+    "orgPermissionSets": "Org permission sets",
+    "noPermissionSets": "No permission sets",
+    "projectMemberships": "Project memberships",
+    "noProjectMemberships": "No project memberships",
+    "project": "Project",
+    "projectRole": "Project role",
+    "extraSets": "Extra sets",
+    "effectivePermissions": "Effective permissions",
+    "bypassRole": "Bypass role",
+    "noPermissions": "No permissions",
+    "userSuspended": "User suspended",
+    "userActivated": "User activated",
+    "searchPlaceholder": "Search placeholder",
+    "allRoles": "All roles",
+    "allStatuses": "All statuses",
+    "active": "Active",
+    "suspended": "Suspended",
+    "suspendUser": "Suspend user",
+    "activateUser": "Activate user",
+    "suspendDescription": "Suspend description",
+    "activateDescription": "Activate description",
+    "suspend": "Suspend",
+    "activate": "Activate",
+    "loadingUsers": "Loading users",
+    "noUsersFound": "No users found",
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "mfa": "Mfa",
+      "projects": "Projects",
+      "lastSignIn": "Last sign in",
+      "actions": "Actions"
+    },
+    "unnamed": "Unnamed",
+    "you": "You",
+    "cannotSuspendSelf": "Cannot suspend self"
   },
   "auditLog": {
     "title": "Ιστορικό Δραστηριότητας",
@@ -572,6 +644,15 @@
       "performedBy": "Χρήστης",
       "performedByPlaceholder": "Αναζήτηση με όνομα ή UID...",
       "reset": "Επαναφορά φίλτρων"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "saving": "Saving..."
+  },
+  "users": {
+    "activity": {
+      "never": "Never"
     }
   }
 }

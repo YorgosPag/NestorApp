@@ -119,7 +119,7 @@ export function PropertyGridCard({
   compact = false,
   className,
 }: PropertyGridCardProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)

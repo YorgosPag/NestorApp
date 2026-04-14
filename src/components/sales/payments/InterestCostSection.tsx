@@ -57,7 +57,7 @@ export function InterestCostSection({
   salePrice,
 }: InterestCostSectionProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const {
     rates,
     spreads,

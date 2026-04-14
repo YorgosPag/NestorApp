@@ -71,7 +71,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder, getElementBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added getElementBorder, radius
   const colors = useSemanticColors();
-  const { t } = useTranslation('dxf-viewer');  // 🏢 ENTERPRISE: i18n
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);  // 🏢 ENTERPRISE: i18n
   // 🔥 FIX: Use Global Text Settings από provider, ΟΧΙ Preview-specific settings!
   // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
   // Θέλουμε να ενημερώσουμε το 'dxf-text-general-settings' (CORRECT!)

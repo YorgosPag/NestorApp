@@ -40,7 +40,7 @@ interface EntityTypeSelectorProps {
 // ============================================================================
 
 export function EntityTypeSelector({ value, onChange }: EntityTypeSelectorProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (

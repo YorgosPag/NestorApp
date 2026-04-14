@@ -160,7 +160,7 @@ export interface UseEnterpriseMessagesReturn {
  * με optimized performance και consistent API
  */
 export function useEnterpriseMessages(): UseEnterpriseMessagesReturn {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // ============================================================================
   // 🚀 MEMOIZED MESSAGE ACCESS - i18n ENABLED

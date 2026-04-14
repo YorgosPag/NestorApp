@@ -14,7 +14,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useTranslation } from '@/i18n';
 
 export function CalibrationStep() {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

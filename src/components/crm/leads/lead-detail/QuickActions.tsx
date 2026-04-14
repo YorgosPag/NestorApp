@@ -25,7 +25,7 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
   const { error: notifyError } = useNotifications();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const spacing = useSpacingTokens();
 
   const handleCall = () => {

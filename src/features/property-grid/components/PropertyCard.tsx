@@ -48,7 +48,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
 
   return (

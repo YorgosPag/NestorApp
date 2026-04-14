@@ -27,7 +27,7 @@ interface ToolbarMainActionsProps {
 }
 
 export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   
   const handleNewBuilding = () => {

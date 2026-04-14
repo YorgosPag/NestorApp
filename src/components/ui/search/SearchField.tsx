@@ -48,7 +48,7 @@ export function SearchField({
   id = 'search',
 }: SearchFieldProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // Use translations with fallback to props
   const resolvedPlaceholder = placeholder || t('placeholders.searchProperty');
@@ -112,7 +112,7 @@ export function PropertySearchField(props: Omit<SearchFieldProps, 'placeholder'>
 
 // Company Search variant - για το navigation modal
 export function CompanySearchField(props: Omit<SearchFieldProps, 'placeholder' | 'label'>) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   return (
     <SearchField
       {...props}

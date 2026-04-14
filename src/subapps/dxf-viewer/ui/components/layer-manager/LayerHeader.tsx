@@ -11,7 +11,7 @@ import { useTranslation } from '@/i18n';
 import type { LayerHeaderProps } from './types';
 
 export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeaderProps) {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

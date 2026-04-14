@@ -47,7 +47,7 @@ function isAnnualSummary(data: unknown): data is VATAnnualSummary {
 // ============================================================================
 
 export function VATReportCard({ fiscalYear }: VATReportCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const { summary, loading, error } = useVATSummary({ fiscalYear });

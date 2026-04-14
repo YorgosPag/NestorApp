@@ -49,7 +49,7 @@ interface ReportDateFilterBarProps {
 // ============================================================================
 
 export function ReportDateFilterBar({ value, onValueChange, disabled }: ReportDateFilterBarProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   return (
     <nav className="flex items-center gap-3 flex-wrap" aria-label={t('reports.datePresets.this_month')}>

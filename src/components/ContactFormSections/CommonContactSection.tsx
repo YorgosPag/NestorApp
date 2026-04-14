@@ -21,7 +21,7 @@ export function CommonContactSection({
   disabled = false
 }: CommonContactSectionProps) {
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   return (
     <>

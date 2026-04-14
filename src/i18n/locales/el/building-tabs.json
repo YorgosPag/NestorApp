@@ -426,6 +426,12 @@
       "searchPlaceholder": "Αναζήτηση κωδικού ή περιγραφής...",
       "exportReport": "Εξαγωγή Αναφοράς",
       "loading": "Φόρτωση αποθηκευτικών χώρων..."
+    },
+    "parkingFloorplan": {
+      "title": "Title"
+    },
+    "projectFloorplan": {
+      "title": "Title"
     }
   }
 }

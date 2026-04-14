@@ -47,7 +47,7 @@ interface WorkerStampsTableProps {
  */
 
 export function WorkerStampsTable({ summary, onEditWorker }: WorkerStampsTableProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();

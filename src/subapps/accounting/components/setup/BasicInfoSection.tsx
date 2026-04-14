@@ -119,7 +119,7 @@ function mapContactToSetupFields(contact: Contact): Partial<CompanySetupInput> {
 // ============================================================================
 
 export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const [selectedContactId, setSelectedContactId] = useState('');
   const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);

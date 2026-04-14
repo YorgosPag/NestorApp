@@ -54,7 +54,7 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
   onOpenChange
 }) => {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
 
   const {
     isOpen,

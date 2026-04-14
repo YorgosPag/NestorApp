@@ -38,7 +38,7 @@ interface InsuranceClassesTableProps {
 }
 
 export const InsuranceClassesTable = React.memo(function InsuranceClassesTable({ classes, isEditing, onClassChange }: InsuranceClassesTableProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const typography = useTypography();
   const handleChange = (index: number, field: keyof Pick<InsuranceClass, 'minDailyWage' | 'maxDailyWage' | 'imputedDailyWage'>, rawValue: string) => {
     const parsed = parseFloat(rawValue);

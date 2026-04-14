@@ -76,7 +76,7 @@ export function ReadOnlyMediaViewer({
   highlightedOverlayUnitId,
   className,
 }: ReadOnlyMediaViewerProps) {
-  const { t } = useTranslation(['properties', 'common', 'files']);
+  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail', 'common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account', 'files', 'files-media']);
   const spacing = useSpacingTokens();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();

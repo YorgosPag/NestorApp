@@ -19,7 +19,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export default function TokenInfoPage() {
   const { user, loading } = useAuth();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const spacing = useSpacingTokens();
   const borders = useBorderTokens();
   const colors = useSemanticColors();

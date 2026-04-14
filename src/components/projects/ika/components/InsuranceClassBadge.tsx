@@ -23,7 +23,7 @@ interface InsuranceClassBadgeProps {
 }
 
 export function InsuranceClassBadge({ classNumber, imputedWage }: InsuranceClassBadgeProps) {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   if (classNumber === null) {
     return (

@@ -48,7 +48,7 @@ type SpaceTab = 'properties' | 'storage' | 'parking';
 
 export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<SpaceTab>('properties');
   const { quick } = useBorderTokens();

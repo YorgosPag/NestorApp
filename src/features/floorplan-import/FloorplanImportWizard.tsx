@@ -98,7 +98,7 @@ export function FloorplanImportWizard({
   onClose,
   onComplete,
 }: FloorplanImportWizardProps) {
-  const { t, isNamespaceReady } = useTranslation('files');
+  const { t, isNamespaceReady } = useTranslation(['files', 'files-media']);
 
   const state = useFloorplanImportState({ isOpen });
 

@@ -51,7 +51,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
   const { radius } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const {
     state: { rulers: rulerSettings },
     updateRulerSettings

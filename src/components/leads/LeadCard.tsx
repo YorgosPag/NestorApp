@@ -33,7 +33,7 @@ export function LeadCard({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
 
   return (
     <article className={`${colors.bg.primary} border rounded-lg p-4 ${INTERACTIVE_PATTERNS.CARD_STANDARD}`} itemScope itemType="https://schema.org/Person">

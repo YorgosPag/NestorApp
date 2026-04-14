@@ -33,7 +33,7 @@ export function BuildingCard({
   onClick,
 }: BuildingCardProps) {
   // 🏢 ENTERPRISE: i18n hook for translations with namespace readiness check
-  const { t, isNamespaceReady } = useTranslation('building');
+  const { t, isNamespaceReady } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();

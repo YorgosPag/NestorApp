@@ -191,7 +191,10 @@
     "required": "Απαραίτητο",
     "addArticle": "Προσθήκη άρθρου",
     "duplicateSection": "Αντιγραφή ενότητας",
-    "contentLabel": "Περιεχόμενο Ενότητας"
+    "contentLabel": "Περιεχόμενο Ενότητας",
+    "articleNumber": "Article number",
+    "articleNumberPlaceholder": "Article number placeholder",
+    "order": "Order"
   },
   "exportOptions": {
     "title": "Επιλογές Εξαγωγής",
@@ -354,5 +357,12 @@
       "gray": "Γκρι",
       "removeColor": "Αφαίρεση χρώματος"
     }
+  },
+  "toc": {
+    "title": "Title",
+    "sectionCount": "Section count",
+    "collapseAll": "Collapse all",
+    "expandAll": "Expand all",
+    "clickToNavigate": "Click to navigate"
   }
 }

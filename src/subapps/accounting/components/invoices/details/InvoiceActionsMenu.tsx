@@ -44,7 +44,7 @@ function buildPDFSettings(profile: CompanyProfile | null): InvoicePDFSettings {
 }
 
 export function InvoiceActionsMenu({ invoice, onRefresh, companyProfile, onSendEmail, onEdit, onCancel }: InvoiceActionsMenuProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
 

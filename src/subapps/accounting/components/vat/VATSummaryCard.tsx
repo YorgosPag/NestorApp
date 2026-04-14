@@ -30,7 +30,7 @@ interface VATSummaryCardProps {
 // ============================================================================
 
 export function VATSummaryCard({ summary }: VATSummaryCardProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (

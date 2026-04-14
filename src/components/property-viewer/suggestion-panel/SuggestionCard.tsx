@@ -25,7 +25,7 @@ export function SuggestionCard({
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const topRecommendation = suggestion.recommendations[0];
 
   return (

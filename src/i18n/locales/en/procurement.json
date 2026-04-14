@@ -78,7 +78,8 @@
     "duplicate": "Duplicate PO",
     "pdf": "PDF",
     "copyText": "Copy Text",
-    "cancelPO": "Cancel PO"
+    "cancelPO": "Cancel PO",
+    "notFound": "Not found"
   },
   "email": {
     "sendButton": "Send via Email",

@@ -24,7 +24,7 @@ const propertyColor = NAVIGATION_ENTITIES.property.color;
 
 export const PropertyNode = ({ property }: { property: PropertyModel }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();

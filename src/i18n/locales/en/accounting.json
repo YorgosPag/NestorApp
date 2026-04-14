@@ -148,7 +148,21 @@
     "selectBank": "Select Bank",
     "selectBankPlaceholder": "Choose your bank...",
     "selectFile": "CSV File",
-    "chooseFile": "Choose File"
+    "chooseFile": "Choose File",
+    "noTransactionsDescription": "No transactions description",
+    "importError": "Import error",
+    "uploading": "Uploading",
+    "upload": "Upload",
+    "unmatchedTransactions": "Unmatched transactions",
+    "allTransactionsMatched": "All transactions matched",
+    "bankDescription": "Bank description",
+    "matchCandidates": "Match candidates",
+    "selectTransactionToMatch": "Select transaction to match",
+    "noCandidatesFound": "No candidates found",
+    "candidateLabel": "Candidate label",
+    "confidence": "Confidence",
+    "actions": "Actions",
+    "matchAction": "Match action"
   },
   "efka": {
     "title": "EFKA Contributions",
@@ -222,7 +236,23 @@
       "furniture": "Furniture",
       "tools": "Tools",
       "other": "Other"
-    }
+    },
+    "requiredFields": "Required fields",
+    "invalidCost": "Invalid cost",
+    "createError": "Create error",
+    "addAssetTitle": "Add asset title",
+    "name": "Name",
+    "namePlaceholder": "Name placeholder",
+    "categoryPlaceholder": "Category placeholder",
+    "residualValue": "Residual value",
+    "notes": "Notes",
+    "notesPlaceholder": "Notes placeholder",
+    "creating": "Creating...",
+    "noDepreciationRecords": "No depreciation records",
+    "year": "Year",
+    "openingValue": "Opening value",
+    "depreciation": "Depreciation",
+    "closingValue": "Closing value"
   },
   "documents": {
     "title": "AI Documents",
@@ -327,7 +357,24 @@
       "backToReports": "Back to Reports",
       "from": "From",
       "to": "To"
-    }
+    },
+    "dueDate": "Due date",
+    "amount": "Amount",
+    "status": "Status",
+    "bracket": "Bracket",
+    "taxableInBracket": "Taxable in bracket",
+    "grossIncome": "Gross income",
+    "deductibleExpenses": "Deductible expenses",
+    "finalAmount": "Final amount",
+    "projectedIncome": "Projected income",
+    "projectedExpenses": "Projected expenses",
+    "projectedFinal": "Projected final",
+    "outputVAT": "Output v a t",
+    "inputVAT": "Input v a t",
+    "vatPayable": "Vat payable",
+    "vatCredit": "Vat credit",
+    "vatPaid": "Vat paid",
+    "vatSettlement": "Vat settlement"
   },
   "tax": {
     "partnerBreakdown": {
@@ -344,7 +391,10 @@
       "bracket": "Bracket",
       "taxableAmount": "Taxable Amount",
       "taxAmount": "Tax Amount"
-    }
+    },
+    "totalIncome": "Total income",
+    "totalExpenses": "Total expenses",
+    "taxableIncome": "Taxable income"
   },
   "forms": {
     "save": "Save",
@@ -393,7 +443,8 @@
       "errorTitle": "Send Failed",
       "invalidEmail": "Invalid email address",
       "pdfAttachmentNote": "The PDF will be attached automatically."
-    }
+    },
+    "back": "Back"
   },
   "common": {
     "fiscalYear": "Fiscal Year",
@@ -438,7 +489,8 @@
       "10": "October",
       "11": "November",
       "12": "December"
-    }
+    },
+    "cancel": "Cancel"
   },
   "categories": {
     "income": {
@@ -496,6 +548,10 @@
       "tee_fees": "Technical Chamber of Greece contributions",
       "depreciation": "Annual depreciation of fixed assets (PC, car, equipment)",
       "other_expense": "Uncategorized operating expenses"
+    },
+    "groups": {
+      "standard": "Standard",
+      "custom": "Custom"
     }
   },
   "vatConfig": {
@@ -814,5 +870,26 @@
         "none": "0% — Not deductible"
       }
     }
-  }
+  },
+  "apyCertificates": {
+    "reminderEmail": {
+      "invalidEmail": "Invalid email",
+      "sendError": "Send error",
+      "title": "Title",
+      "to": "To",
+      "customer": "Customer",
+      "subject": "Subject",
+      "language": "Language",
+      "langEl": "Lang el",
+      "langEn": "Lang en",
+      "pdfNote": "Pdf note",
+      "preview": "Preview",
+      "sendSuccess": "Send success",
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "send": "Send"
+    }
+  },
+  "installmentsPaid": "Installments paid",
+  "installmentNumber": "Installment number"
 }

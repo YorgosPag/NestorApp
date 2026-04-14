@@ -53,7 +53,7 @@ export function CompactToolbarActions({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   const handleFilterChange = (filter: string, checked: boolean) => {
     if (checked) {

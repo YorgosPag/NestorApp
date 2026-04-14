@@ -74,7 +74,7 @@ export function SendReminderEmailDialog({
   onSent,
 }: SendReminderEmailDialogProps) {
   const { user } = useAuth();
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   const [recipientEmail, setRecipientEmail] = useState('');
   const [language, setLanguage] = useState<APYEmailLanguage>('el');

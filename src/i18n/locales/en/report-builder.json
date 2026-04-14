@@ -125,5 +125,14 @@
     "expandGroup": "Expand group {group}",
     "collapseGroup": "Collapse group {group}",
     "sortBySubtotal": "Sort by {column} subtotal"
+  },
+  "messages": {
+    "loaded": "Loaded",
+    "unsavedChanges": "Unsaved changes"
+  },
+  "actions": {
+    "save": "Save",
+    "saveAs": "Save as",
+    "load": "Load"
   }
 }

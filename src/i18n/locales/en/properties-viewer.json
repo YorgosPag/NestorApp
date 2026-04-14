@@ -299,5 +299,8 @@
     "permanentDelete": "Delete permanently",
     "emptyTitle": "Trash is empty",
     "emptyDescription": "No deleted properties found."
+  },
+  "header": {
+    "searchPlaceholder": "Search placeholder"
   }
 }

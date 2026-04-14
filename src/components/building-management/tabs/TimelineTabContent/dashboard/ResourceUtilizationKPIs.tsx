@@ -29,7 +29,7 @@ export function ResourceUtilizationKPIs({
   utilization,
   loading,
 }: ResourceUtilizationKPIsProps) {
-  const { t } = useTranslation("building");
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const tBase = "tabs.timeline.dashboard.resourceUtilization";
 
   const overRAG: RAGStatus =

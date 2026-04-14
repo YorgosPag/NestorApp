@@ -42,7 +42,7 @@ function getConfidenceBadge(confidence: number): { variant: 'default' | 'seconda
 // ============================================================================
 
 export function ExtractedDataDisplay({ data }: ExtractedDataDisplayProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const confidenceBadge = getConfidenceBadge(data.overallConfidence);

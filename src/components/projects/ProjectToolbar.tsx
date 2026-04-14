@@ -45,7 +45,7 @@ export function ProjectToolbar({
   onRefresh
 }: ProjectToolbarProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
   const handleStatusChange = (value: string) => {
     // Remove all existing status filters

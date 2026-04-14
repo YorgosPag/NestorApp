@@ -31,7 +31,7 @@ const INVOICE_TYPES: InvoiceType[] = [
 ];
 
 export function InvoiceFilters({ filters, onFilterChange }: InvoiceFiltersProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
   return (
     <nav className="flex flex-wrap gap-3">

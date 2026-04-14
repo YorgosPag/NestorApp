@@ -94,7 +94,7 @@ export function FileUploadButton({
   icon,
 }: FileUploadButtonProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const { error: showError } = useNotifications();
   const fileInputRef = useRef<HTMLInputElement>(null);
 

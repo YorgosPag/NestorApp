@@ -28,7 +28,7 @@ interface Stats {
 const logger = createModuleLogger('CustomerStats');
 
 export function CustomerStats({ contactId }: CustomerStatsProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 

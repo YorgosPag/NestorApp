@@ -49,7 +49,7 @@ export function ServicePresetCombobox({
   presets,
   placeholder,
 }: ServicePresetComboboxProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);

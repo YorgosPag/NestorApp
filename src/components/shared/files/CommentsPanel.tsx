@@ -217,7 +217,7 @@ export function CommentsPanel({
   currentUserName,
   className,
 }: CommentsPanelProps) {
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const [comments, setComments] = useState<FileComment[]>([]);
   const [loading, setLoading] = useState(true);

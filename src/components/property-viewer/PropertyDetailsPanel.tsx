@@ -37,7 +37,7 @@ export function PropertyDetailsPanel({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   // Safe check για το propertyIds - εξασφαλίζουμε ότι είναι array
   const safePropertyIds = Array.isArray(propertyIds) ? propertyIds : [];
   const safeProperties = Array.isArray(properties) ? properties : [];

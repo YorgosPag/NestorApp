@@ -49,7 +49,7 @@ interface FloorMutationResponse {
 // ============================================================================
 
 export function useFloorsTabState(buildingId: string, projectId?: string) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();
   const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('floor');

@@ -35,7 +35,7 @@ interface ActualBuildingDataTabProps {
 
 export function ActualBuildingDataTab({ actualData, calculatedData, onActualDataChange, isEditing }: ActualBuildingDataTabProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
     const typography = useTypography();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

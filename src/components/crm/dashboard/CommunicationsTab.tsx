@@ -11,7 +11,7 @@ import '@/lib/design-system';
 export function CommunicationsTab() {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('crm');
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   return (
     <div className={`${colors.bg.primary} rounded-lg shadow`}>
        <div className="p-6 border-b">

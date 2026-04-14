@@ -41,7 +41,7 @@ export function TrashActionsBar({
   trashCount,
   activeContactId,
 }: TrashActionsBarProps) {
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { notify } = useNotifications();

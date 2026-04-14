@@ -40,7 +40,7 @@ export function ParagraphItem({
   handlers,
 }: ParagraphItemProps) {
   const { t } = useTranslation('obligations');
-  const { t: tCommon } = useTranslation('common');
+  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

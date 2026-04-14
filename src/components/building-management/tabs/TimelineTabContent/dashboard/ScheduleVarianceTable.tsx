@@ -40,7 +40,7 @@ export function ScheduleVarianceTable({
   baselineData,
   onClearBaseline,
 }: ScheduleVarianceTableProps) {
-  const { t } = useTranslation("building");
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
 

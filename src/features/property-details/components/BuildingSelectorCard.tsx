@@ -97,7 +97,7 @@ export function BuildingSelectorCard({
   isEditing = true,
 }: BuildingSelectorCardProps) {
   // 🏢 ENTERPRISE: Centralized hooks (ZERO inline styles)
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

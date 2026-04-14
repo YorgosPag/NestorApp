@@ -80,7 +80,7 @@ export function StepFloorplanType({
 }: StepFloorplanTypeProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
 
   return (
     <div className="space-y-6 py-4">

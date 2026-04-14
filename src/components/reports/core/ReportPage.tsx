@@ -124,7 +124,7 @@ export function ReportPage({
   const colors = useSemanticColors();
   const typography = useTypography();
 
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   // Internal date range state (uncontrolled mode)
   const [internalDateRange, setInternalDateRange] = useState<DateRangeValue>(

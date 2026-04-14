@@ -39,7 +39,7 @@ interface GuideAnalysisPanelProps {
 }
 
 export const GuideAnalysisPanel: React.FC<GuideAnalysisPanelProps> = ({ isVisible, onClose }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   return (
     <FloatingPanel

@@ -37,7 +37,7 @@ interface ContactsToolbarProps {
 
 export function ContactsToolbar(props: ContactsToolbarProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('contacts');
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   const {
     selectedItems = [],

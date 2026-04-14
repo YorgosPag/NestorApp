@@ -35,7 +35,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { SUPPORTED_LANGUAGES, type Language } from '@/i18n/lazy-config';
 
 export function PreferencesPageContent() {
-  const { t, i18n, changeLanguage } = useTranslation('common');
+  const { t, i18n, changeLanguage } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { theme, setTheme } = useTheme();
   const colors = useSemanticColors();
   const borders = useBorderTokens();

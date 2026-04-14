@@ -86,7 +86,7 @@ export function HierarchicalEntryPointSelector({
   navigateToFloorsLabel,
 }: HierarchicalEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
-  const { t, i18n } = useTranslation('files');
+  const { t, i18n } = useTranslation(['files', 'files-media']);
   const [viewState, setViewState] = useState<ViewState>('groups');
   const [activeGroup, setActiveGroup] = useState<StudyGroup | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

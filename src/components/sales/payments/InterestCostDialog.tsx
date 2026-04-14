@@ -112,7 +112,7 @@ export function InterestCostDialog({
   onUpdateSpreads,
 }: InterestCostDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation('payments');
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
   const [discountSource, setDiscountSource] = useState<DiscountRateSource>('euribor_3M');
   const [manualRate, setManualRate] = useState(5);
   const [waterfallOpen, setWaterfallOpen] = useState(false);

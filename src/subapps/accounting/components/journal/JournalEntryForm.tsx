@@ -81,7 +81,7 @@ function getQuarterFromDate(dateStr: string): FiscalQuarter {
 // ============================================================================
 
 export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps) {
-  const { t } = useTranslation('accounting');
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const { user } = useAuth();
 

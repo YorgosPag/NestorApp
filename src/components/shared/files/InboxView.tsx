@@ -63,7 +63,7 @@ export function InboxView({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const translateDisplayName = useFileDisplayName();
 
   const { inboxFiles, loading, error, fetchInboxFiles } = useInboxFiles(companyId);

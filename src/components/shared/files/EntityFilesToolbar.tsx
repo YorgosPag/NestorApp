@@ -78,7 +78,7 @@ export function EntityFilesToolbar({
   workspaceName,
 }: EntityFilesToolbarProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('files');
+  const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
 
   return (

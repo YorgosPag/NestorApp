@@ -41,7 +41,7 @@ export function PropertyCard({
 }: PropertyCardProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
   // Δημιουργία status configuration
   const status: CardStatus = {

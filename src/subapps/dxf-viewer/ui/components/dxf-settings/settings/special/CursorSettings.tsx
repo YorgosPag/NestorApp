@@ -26,7 +26,7 @@ export function CursorSettings() {
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
   // 🌐 i18n
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   // Αφαιρείται το tab state - όλες οι ρυθμίσεις θα εμφανίζονται μαζί
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state

@@ -38,7 +38,7 @@ const logger = createModuleLogger('CreateCompanyQuickLink');
 export function CreateCompanyQuickLink({
   onRecovered,
 }: PolicyRecoveryContext) {
-  const { t } = useTranslation('building');
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const [open, setOpen] = useState(false);
   // Ref for the contactId captured via RealtimeService — avoids race with
   // onContactAdded which fires without the id.

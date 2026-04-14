@@ -64,7 +64,7 @@ export function GenericPeriodSelector({
   theme: _theme = 'compact',
   disabled = false,
 }: GenericPeriodSelectorProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   // Φιλτράρισμα enabled periods
   const enabledPeriods = periods.filter(period => period.enabled !== false);
 
