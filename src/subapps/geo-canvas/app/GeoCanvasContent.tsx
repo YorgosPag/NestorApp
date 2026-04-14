@@ -126,12 +126,17 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
   const hasFloorPlanResult = Boolean(floorPlanUpload.result && floorPlanUpload.result.success);
 
+  // Stable no-op callbacks — prevent new references on every render
+  const handlePolygonComplete = useCallback(() => {}, []);
+  const handleMapReady = useCallback((map: MapInstance) => { mapRef.current = map; }, []);
+  const handleFloorPlanUploaded = useCallback(() => {}, []);
+
   const roleWorkspacePanel = isCitizen
-    ? <CitizenDrawingInterface mapRef={mapRef} onPolygonComplete={() => {}} onLocationSelected={boundary.handleLocationSelected} onAdminBoundarySelected={boundary.handleAdminBoundarySelected} boundaryLayers={boundary.boundaryLayers} onLayerToggle={boundary.handleLayerToggle} onLayerOpacityChange={boundary.handleLayerOpacityChange} onLayerStyleChange={boundary.handleLayerStyleChange} onLayerRemove={boundary.handleLayerRemove} onAddNewBoundary={boundary.handleAddNewBoundary} />
+    ? <CitizenDrawingInterface mapRef={mapRef} onPolygonComplete={handlePolygonComplete} onLocationSelected={boundary.handleLocationSelected} onAdminBoundarySelected={boundary.handleAdminBoundarySelected} boundaryLayers={boundary.boundaryLayers} onLayerToggle={boundary.handleLayerToggle} onLayerOpacityChange={boundary.handleLayerOpacityChange} onLayerStyleChange={boundary.handleLayerStyleChange} onLayerRemove={boundary.handleLayerRemove} onAddNewBoundary={boundary.handleAddNewBoundary} />
     : isProfessional
-      ? <ProfessionalDrawingInterface mapRef={mapRef} onPolygonComplete={() => {}} onFloorPlanUploaded={() => {}} />
+      ? <ProfessionalDrawingInterface mapRef={mapRef} onPolygonComplete={handlePolygonComplete} onFloorPlanUploaded={handleFloorPlanUploaded} />
       : isTechnical
-        ? <TechnicalDrawingInterface mapRef={mapRef} onPolygonComplete={() => {}} />
+        ? <TechnicalDrawingInterface mapRef={mapRef} onPolygonComplete={handlePolygonComplete} />
         : null;
 
 
@@ -218,7 +223,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             {activeView === 'georeferencing' && (
               <div className="absolute inset-0">
                 <ComponentErrorBoundary componentName="InteractiveMap">
-                  <InteractiveMap className="w-full h-full" onCoordinateClick={handleCoordinateClick} showControlPoints showTransformationPreview isPickingCoordinates={controlPoints.pickingState === 'picking-geo'} transformState={transformState} enablePolygonDrawing searchMarker={boundary.searchMarker} administrativeBoundaries={boundary.administrativeBoundaries} onPolygonComplete={() => {}} onMapReady={(map) => { mapRef.current = map; }} />
+                  <InteractiveMap className="w-full h-full" onCoordinateClick={handleCoordinateClick} showControlPoints showTransformationPreview isPickingCoordinates={controlPoints.pickingState === 'picking-geo'} transformState={transformState} enablePolygonDrawing searchMarker={boundary.searchMarker} administrativeBoundaries={boundary.administrativeBoundaries} onPolygonComplete={handlePolygonComplete} onMapReady={handleMapReady} />
                 </ComponentErrorBoundary>
 
                 {floorPlanUpload.result && floorPlanUpload.result.success && (
