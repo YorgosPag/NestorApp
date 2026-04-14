@@ -287,13 +287,24 @@ export function PolygonSystemProvider({
     );
     const missingFeatures: GeoJSON.Feature[] = state.polygons
       .filter(p => !managerIds.has(p.id))
-      .map(p => ({
-        type: 'Feature' as const,
-        geometry: p.points.length >= 2
-          ? { type: 'Polygon' as const, coordinates: [p.points.map(pt => [pt.x, pt.y])] }
-          : { type: 'Point' as const, coordinates: [p.points[0]?.x ?? 0, p.points[0]?.y ?? 0] },
-        properties: { id: p.id, type: p.type, ...(p.config ?? {}) }
-      }));
+      .map(p => {
+        const isPoint = p.config?.pointMode === true || p.points.length === 1;
+        const coords = p.points.map(pt => [pt.x, pt.y]);
+        // GeoJSON Polygon spec: ring must be closed (first === last point)
+        if (!isPoint && p.points.length >= 3) {
+          coords.push([p.points[0].x, p.points[0].y]);
+        }
+        const geometry: GeoJSON.Geometry = isPoint || p.points.length < 3
+          ? p.points.length <= 1
+            ? { type: 'Point' as const, coordinates: [p.points[0]?.x ?? 0, p.points[0]?.y ?? 0] }
+            : { type: 'LineString' as const, coordinates: coords }
+          : { type: 'Polygon' as const, coordinates: [coords] };
+        return {
+          type: 'Feature' as const,
+          geometry,
+          properties: { id: p.id, type: p.type, ...(p.config ?? {}) }
+        };
+      });
 
     return {
       type: 'FeatureCollection',
