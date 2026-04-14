@@ -757,7 +757,8 @@
       "municipal_unit": "Municipal Unit",
       "community": "Community",
       "unknown": "Unknown"
-    }
+    },
+    "layersAvailableCount": "{count} layers"
   },
   "citizenDrawing": {
     "searchTitle": "Address search or GPS",

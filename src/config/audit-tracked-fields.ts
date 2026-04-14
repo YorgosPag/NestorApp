@@ -113,8 +113,10 @@ const PROJECT_TRACKED_FIELDS_RAW: Record<string, string> = {
   linkedCompanyName: 'Επωνυμία συνδεδεμένης εταιρείας',
 
   // ── Location ──
-  address: 'Διεύθυνση',
-  city: 'Πόλη',
+  // NOTE: `address` and `city` are legacy fields auto-derived from addresses[].isPrimary.
+  // They are intentionally excluded from tracking to avoid duplicate audit entries
+  // whenever an address is added/edited (the `addresses` collection field already
+  // captures all changes with full sub-field detail).
   addresses: 'Διευθύνσεις',
   location: 'Τοποθεσία',
 
@@ -508,9 +510,7 @@ const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
   status: 'Κατάσταση',
   category: 'Κατηγορία Κτιρίου',
   projectId: 'Έργο',
-  // Location
-  address: 'Διεύθυνση',
-  city: 'Πόλη',
+  // Location — `address`/`city` excluded (legacy derived fields, tracked via `addresses` collection)
   addresses: 'Διευθύνσεις',
   // Metrics
   totalArea: 'Συνολικό εμβαδόν',

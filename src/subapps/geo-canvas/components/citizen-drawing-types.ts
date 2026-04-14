@@ -8,6 +8,7 @@
  */
 
 import * as React from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // MAP TYPES
@@ -127,25 +128,28 @@ interface AddressSearchPanelProps {
   onClose: () => void;
 }
 
-export const AddressSearchPanel = ({ onClose }: AddressSearchPanelProps) => (
-  React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
-    React.createElement('p', { className: 'text-slate-200 text-sm' }, 'Address Search Panel - Mock Implementation'),
-    React.createElement('button', { onClick: onClose, className: 'mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm' }, 'Close')
-  )
-);
+export const AddressSearchPanel = ({ onClose }: AddressSearchPanelProps) => {
+  const { t } = useTranslation('geo-canvas');
+  return React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
+    React.createElement('p', { className: 'text-slate-200 text-sm' }, t('addressSearch.title')),
+    React.createElement('button', { onClick: onClose, className: 'mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm' }, t('alertManagement.close'))
+  );
+};
 
-export const AdminBoundaryDemo = () => (
-  React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
-    React.createElement('p', { className: 'text-slate-200 text-sm' }, 'Admin Boundary Demo - Mock Implementation')
-  )
-);
+export const AdminBoundaryDemo = () => {
+  const { t } = useTranslation('geo-canvas');
+  return React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
+    React.createElement('p', { className: 'text-slate-200 text-sm' }, t('adminBoundary.demoTitle'))
+  );
+};
 
-export const BoundaryLayerControlPanel = ({ layers }: BoundaryLayerControlPanelProps) => (
-  React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
-    React.createElement('p', { className: 'text-slate-200 text-sm' }, 'Boundary Layer Control Panel - Mock Implementation'),
-    React.createElement('p', { className: 'text-sm text-slate-400' }, `${layers?.length || 0} layers available`)
-  )
-);
+export const BoundaryLayerControlPanel = ({ layers }: BoundaryLayerControlPanelProps) => {
+  const { t } = useTranslation('geo-canvas');
+  return React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
+    React.createElement('p', { className: 'text-slate-200 text-sm' }, t('boundaryLayer.title')),
+    React.createElement('p', { className: 'text-sm text-slate-400' }, t('boundaryLayer.layersAvailableCount', { count: layers?.length || 0 }))
+  );
+};
 
 // ============================================================================
 // MOCK HOOKS

@@ -757,7 +757,8 @@
       "municipal_unit": "Δημοτική Ενότητα",
       "community": "Κοινότητα",
       "unknown": "Άγνωστο"
-    }
+    },
+    "layersAvailableCount": "{count} επίπεδα"
   },
   "citizenDrawing": {
     "searchTitle": "Αναζήτηση διεύθυνσης ή GPS",
