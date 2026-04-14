@@ -1,27 +1,3 @@
-/**
- * ROLE: DOMAIN-SPECIFIC MAP STYLING LAYER
- *
- * Canonical styling and interaction definitions for
- * interactive geo maps.
- *
- * This file MAY:
- * - Replace usage of canvasUtilities.geoInteractive in map UI
- * - Provide clearer naming and composition
- *
- * This file MUST NOT:
- * - Reimplement low-level geometry or math
- * - Be imported by canvasUtilities (one-way dependency)
- *
- * ✅ Enterprise Standards:
- * - TypeScript strict typing
- * - Design tokens integration
- * - Zero hardcoded values
- * - Geographic interface patterns
- * - Professional architecture
- *
- * @module InteractiveMap.styles
- */
-
 import type { CSSProperties } from 'react';
 import {
   mapInteractionTokens,
@@ -29,15 +5,12 @@ import {
   colors,
   spacing,
   typography,
-  shadows,
   zIndex
 } from '../../../styles/design-tokens';
 import { GEO_COLORS, withOpacity } from '../config/color-config';
+import { GEO_CANVAS_ZINDEX } from '../config';
 
-// ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
-// ============================================================================
-
 interface ControlPointStylesType {
   readonly interaction: (isSelected: boolean, shouldHighlight: boolean, isComplete: boolean) => CSSProperties;
 }
@@ -49,7 +22,7 @@ interface AccuracyStylesType {
 }
 
 interface MarkerStylesType {
-  readonly pin: (radius: number, opacity: number) => CSSProperties;
+  readonly pin: (sizePx: number, opacity: number) => CSSProperties;
   readonly centerDot: () => CSSProperties;
   readonly dynamicPin: (strokeColor: string, fillColor: string) => CSSProperties;
   readonly dynamicCenterDot: () => CSSProperties;
@@ -74,10 +47,7 @@ interface InteractiveMapStylesType {
   };
 }
 
-// ============================================================================
 // 🎯 CONTROL POINT STYLING - ENTERPRISE CONTROL PATTERNS
-// ============================================================================
-
 /**
  * 🎯 CONTROL POINTS: Professional control point interaction styling
  * Replaces: canvasUtilities.geoInteractive.controlPointInteraction()
@@ -100,10 +70,7 @@ const controlPointStyles: ControlPointStylesType = {
   }
 } as const;
 
-// ============================================================================
 // 🎯 ACCURACY VISUALIZATION - ENTERPRISE ACCURACY PATTERNS
-// ============================================================================
-
 /**
  * 🎯 ACCURACY: Professional accuracy circle and zone styling
  * Replaces: canvasUtilities.geoInteractive.accuracyCircle* functions
@@ -158,10 +125,7 @@ const accuracyStyles: AccuracyStylesType = {
   })
 } as const;
 
-// ============================================================================
 // 🎯 MARKER STYLING - ENTERPRISE MARKER PATTERNS
-// ============================================================================
-
 /**
  * 🎯 MARKERS: Professional pin and marker styling
  * Replaces: canvasUtilities.geoInteractive.pinMarker, dynamicPinMarker functions
@@ -171,14 +135,13 @@ const markerStyles: MarkerStylesType = {
    * Pin marker styling
    * Replaces: canvasUtilities.geoInteractive.pinMarker()
    */
-  pin: (radius: number, opacity: number): CSSProperties => ({
-    width: `${radius * 2}px`,
-    height: `${radius * 2}px`,
+  pin: (sizePx: number, opacity: number): CSSProperties => ({
+    width: `${sizePx * 2}px`,
+    height: `${sizePx * 2}px`,
     borderRadius: '50%',
-    backgroundColor: colors.red[500],
-    border: `2px solid ${colors.red[300]}`,
+    backgroundColor: colors.blue[500],
+    border: `2px solid ${colors.blue[300]}`,
     opacity,
-    transform: 'translate(-50%, -50%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -207,7 +170,6 @@ const markerStyles: MarkerStylesType = {
     borderRadius: '50%',
     backgroundColor: fillColor,
     border: `2px solid ${strokeColor}`,
-    transform: 'translate(-50%, -50%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -237,16 +199,12 @@ const markerStyles: MarkerStylesType = {
     borderRadius: '50%',
     backgroundColor: colors.blue[500],
     border: `2px solid ${colors.blue[300]}`,
-    transform: 'translate(-50%, -50%)',
     zIndex: zIndex.banner + index,
     cursor: 'pointer' as const
   })
 } as const;
 
-// ============================================================================
 // 🎯 LABEL STYLING - ENTERPRISE LABEL PATTERNS
-// ============================================================================
-
 /**
  * 🎯 LABELS: Professional label and text styling
  * Replaces: canvasUtilities.geoInteractive label functions
@@ -299,10 +257,7 @@ const labelStyles: LabelStylesType = {
   })
 } as const;
 
-// ============================================================================
 // 🏗️ LAYOUT STYLES - ENTERPRISE MAP LAYOUT
-// ============================================================================
-
 /**
  * 🎯 LAYOUT: InteractiveMap layout and container styling
  */
@@ -331,16 +286,12 @@ const layoutStyles = {
     borderRadius: '50%',
     backgroundColor: pointColor,
     border: `2px solid ${strokeColor}`,
-    transform: 'translate(-50%, -50%)',
     cursor: 'pointer' as const,
-    zIndex: 900
+    zIndex: GEO_CANVAS_ZINDEX.POLYGON_VERTEX
   })
 } as const;
 
-// ============================================================================
 // 🎯 MAIN EXPORT - ENTERPRISE INTERACTIVE MAP STYLES
-// ============================================================================
-
 /**
  * 🗺️ ENTERPRISE INTERACTIVE MAP STYLES EXPORT
  *
@@ -364,10 +315,7 @@ export const interactiveMapStyles: InteractiveMapStylesType = {
   layout: layoutStyles
 } as const;
 
-// ============================================================================
 // 🎯 UTILITY FUNCTIONS - DYNAMIC MAP CALCULATIONS
-// ============================================================================
-
 /**
  * 🎯 CURSOR STATE UTILITY
  * Determines map cursor based on interaction state
@@ -409,146 +357,7 @@ export const radiusToPixels = (radiusInMeters: number, zoomLevel: number): numbe
   return radiusInMeters * pixelsPerMeter;
 };
 
-/**
- * 🎯 DRAGGABLE PANEL CONTAINER UTILITY
- * Styling for draggable panels in the geo interface
- * Replaces: canvasUtilities.geoInteractive.draggablePanelContainer()
- */
-export const draggablePanelContainer = (
-  position: { x: number; y: number },
-  isDragging: boolean,
-  width?: number
-): CSSProperties => ({
-  position: 'absolute',
-  left: `${position.x}px`,
-  top: `${position.y}px`,
-  width: width ? `${width}px` : 'auto',
-  minWidth: '200px', // Keep as specific requirement for panels
-  backgroundColor: colors.background.primary,
-  border: `1px solid ${colors.border.primary}`,
-  borderRadius: spacing.sm,
-  boxShadow: isDragging
-    ? shadows.xl
-    : shadows.lg,
-  zIndex: zIndex.dropdown,
-  cursor: isDragging ? 'grabbing' : 'auto',
-  userSelect: 'none' as const,
-  backdropFilter: 'blur(4px)',
-  transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-  transition: isDragging ? 'none' : 'all 0.2s ease-in-out'
-});
-
-/**
- * 🎯 DRAGGABLE PANEL HANDLE UTILITY
- * Styling for draggable panel handles
- * Replaces: canvasUtilities.geoInteractive.draggablePanelHandle()
- */
-export const draggablePanelHandle = (isDragging: boolean): CSSProperties => ({
-  padding: `${spacing.sm} ${spacing.component.gap.md}`,
-  backgroundColor: isDragging ? colors.gray[100] : colors.gray[50],
-  borderBottom: `1px solid ${colors.border.secondary}`,
-  borderTopLeftRadius: spacing.sm,
-  borderTopRightRadius: spacing.sm,
-  cursor: isDragging ? 'grabbing' : 'grab',
-  userSelect: 'none' as const,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  fontSize: typography.fontSize.sm,
-  fontWeight: 500,
-  color: colors.text.primary,
-  transition: isDragging ? 'none' : 'background-color 0.2s ease-in-out'
-});
-
-/**
- * 🎯 FLOOR PLAN OVERLAY UTILITY
- * Styling for floor plan overlay containers
- * Replaces: canvasUtilities.geoInteractive.floorPlanOverlay()
- */
-export const floorPlanOverlay = (
-  width: string = '100%',
-  height: string = '100%',
-  opacity: number = 0.8
-): CSSProperties => ({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width,
-  height,
-  opacity,
-  pointerEvents: 'none' as const,
-  zIndex: zIndex.base,
-  mixBlendMode: 'multiply' as const
-});
-
-/**
- * 🎯 FIXED SIDEBAR PANEL UTILITY
- * Styling for fixed sidebar panels
- * Replaces: canvasUtilities.geoInteractive.fixedSidebarPanel()
- */
-export const fixedSidebarPanel = (side: 'left' | 'right', width: string): CSSProperties => ({
-  position: 'fixed',
-  top: 0,
-  bottom: 0,
-  [side]: 0,
-  width,
-  backgroundColor: colors.background.primary,
-  borderLeft: side === 'right' ? `1px solid ${colors.border.secondary}` : 'none',
-  borderRight: side === 'left' ? `1px solid ${colors.border.secondary}` : 'none',
-  zIndex: zIndex.dropdown,
-  overflowY: 'auto' as const,
-  backdropFilter: 'blur(8px)'
-});
-
-/**
- * 🎯 DRAGGABLE PANEL TAB NAVIGATION UTILITY
- * Styling for tab navigation in draggable panels
- * Replaces: canvasUtilities.geoInteractive.draggablePanelTabNavigation()
- */
-export const draggablePanelTabNavigation = (): CSSProperties => ({
-  display: 'flex',
-  borderBottom: `1px solid ${colors.border.secondary}`,
-  backgroundColor: colors.gray[50]
-});
-
-/**
- * 🎯 DRAGGABLE PANEL TAB BUTTON UTILITY
- * Styling for tab buttons in draggable panels
- * Replaces: canvasUtilities.geoInteractive.draggablePanelTabButton()
- */
-export const draggablePanelTabButton = (isActive: boolean): CSSProperties => ({
-  flex: 1,
-  padding: `${spacing.sm} ${spacing.md}`,
-  fontSize: typography.fontSize.sm,
-  fontWeight: isActive ? 600 : 400,
-  color: isActive ? colors.blue[500] : colors.gray[500],
-  backgroundColor: isActive ? colors.background.primary : GEO_COLORS.TRANSPARENT,
-  border: 'none',
-  borderBottom: isActive ? `2px solid ${colors.blue[500]}` : '2px solid transparent',
-  cursor: 'pointer',
-  transition: 'all 0.2s ease-in-out'
-  // ✅ ENTERPRISE FIX: Removed CSS pseudo-selectors - handled via CSS classes or state
-});
-
-/**
- * 🎯 DRAGGABLE PANEL PROGRESS BAR UTILITY
- * Styling for progress bars in draggable panels
- * Replaces: canvasUtilities.geoInteractive.draggablePanelProgressBar()
- */
-export const draggablePanelProgressBar = (percentage: number): CSSProperties => ({
-  width: '100%',
-  height: spacing.xs,
-  backgroundColor: colors.border.secondary,
-  borderRadius: spacing.xs,
-  overflow: 'hidden',
-  position: 'relative'
-  // ✅ ENTERPRISE FIX: Removed CSS pseudo-elements - progress bar fill should be separate element
-});
-
-// ============================================================================
 // 🔒 TYPE EXPORTS - ENTERPRISE TYPE SAFETY
-// ============================================================================
-
 export type {
   InteractiveMapStylesType,
   ControlPointStylesType,
@@ -557,27 +366,14 @@ export type {
   LabelStylesType
 };
 
-/**
- * ✅ ENTERPRISE INTERACTIVE MAP STYLING MODULE COMPLETE (2025-12-16)
- *
- * Features Implemented:
- * ✅ TypeScript strict typing με readonly properties
- * ✅ Design tokens integration (ZERO hardcoded values)
- * ✅ Geographic interface patterns (markers, control points, accuracy)
- * ✅ Dynamic styling utilities (cursor states, accuracy levels, radius conversion)
- * ✅ Professional architecture με clear separation of concerns
- * ✅ Performance optimization (const assertions, tree-shakable)
- * ✅ Developer experience (JSDoc, clear naming, utility functions)
- *
- * Inline Style Categories Eliminated:
- * 🎯 Control Points: Interactive states, highlighting, completion states
- * 🎯 Accuracy Circles: Dynamic radius, colors, opacity levels
- * 🎯 Markers: Pin styling, center dots, dynamic colors
- * 🎯 Labels: Radius labels, preview labels, legend items
- * 🎯 Layout: Map containers, animation delays, polygon vertices
- *
- * This module eliminates 15+ inline style violations από το
- * InteractiveMap component και establishes enterprise-grade
- * styling patterns για geographic interface development.
- */
+// 🎯 PANEL UTILITIES — re-exported from InteractiveMap.panel-utilities (SRP)
+export {
+  draggablePanelContainer,
+  draggablePanelHandle,
+  floorPlanOverlay,
+  fixedSidebarPanel,
+  draggablePanelTabNavigation,
+  draggablePanelTabButton,
+  draggablePanelProgressBar
+} from './InteractiveMap.panel-utilities';
 

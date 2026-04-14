@@ -1,18 +1,3 @@
-/**
- * 🔍 ENTERPRISE SEARCH SYSTEM STYLES
- *
- * Centralized styling solution για SearchSystem component.
- * Eliminates ALL inline styles και provides single source of truth.
- *
- * ✅ Enterprise Standards:
- * - TypeScript strict typing
- * - Design tokens integration
- * - Zero hardcoded values
- * - Semantic style organization
- * - Performance optimization
- * - Professional architecture
- */
-
 import type { CSSProperties } from 'react';
 import {
   colors,
@@ -24,11 +9,9 @@ import {
   layoutUtilities
 } from '../../../../../styles/design-tokens';
 import { GEO_COLORS } from '../../../config/color-config';
+import { GEO_CANVAS_ZINDEX, GEO_CANVAS_DIMENSIONS } from '../../../config';
 
-// ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
-// ============================================================================
-
 type StyleObject = CSSProperties & Record<string, CSSProperties | string | number>;
 
 interface SearchInputStylesType {
@@ -86,10 +69,7 @@ interface SearchSystemStylesType {
   };
 }
 
-// ============================================================================
 // 🔍 SEARCH INPUT STYLES - ENTERPRISE SEARCH PATTERNS
-// ============================================================================
-
 /**
  * 🎯 SEARCH INPUT: Professional search interface styling
  * Replaces 8+ inline style violations στο SearchInput component
@@ -124,9 +104,9 @@ const searchInputStyles: SearchInputStylesType = {
     border: `1px solid ${colors.border.primary}`,
     borderRadius: borderRadius.md,
     boxShadow: shadows.md,
-    maxHeight: '200px',
+    maxHeight: GEO_CANVAS_DIMENSIONS.SEARCH_RESULTS_MAX_HEIGHT,
     overflowY: 'auto' as const,
-    zIndex: 1000
+    zIndex: GEO_CANVAS_ZINDEX.SEARCH_RESULTS
   } as const,
 
   suggestion: {
@@ -160,10 +140,7 @@ const searchInputStyles: SearchInputStylesType = {
   } as const
 } as const;
 
-// ============================================================================
 // 🎛️ SEARCH FILTERS STYLES - ENTERPRISE FORM PATTERNS
-// ============================================================================
-
 /**
  * 🎯 SEARCH FILTERS: Professional filter interface styling
  * Replaces 15+ inline style violations στα Filter components
@@ -209,7 +186,7 @@ const searchFiltersStyles: SearchFilterStylesType = {
 
   rangeInput: {
     ...layoutUtilities.cssVars.inputBase,
-    width: '80px',
+    width: GEO_CANVAS_DIMENSIONS.SEARCH_BADGE_WIDTH,
     padding: `${spacing.xs} ${spacing.sm}`,
     fontSize: typography.fontSize.sm,
     textAlign: 'center' as const
@@ -266,10 +243,7 @@ const searchFiltersStyles: SearchFilterStylesType = {
   } as const
 } as const;
 
-// ============================================================================
 // 📋 SEARCH RESULTS STYLES - ENTERPRISE LIST PATTERNS
-// ============================================================================
-
 /**
  * 🎯 SEARCH RESULTS: Professional search results styling
  * Replaces 10+ inline style violations στα SearchResult components
@@ -349,10 +323,7 @@ const searchResultsStyles: SearchResultsStylesType = {
   } as const
 } as const;
 
-// ============================================================================
 // 🏗️ LAYOUT STYLES - ENTERPRISE SEARCH LAYOUT
-// ============================================================================
-
 /**
  * 🎯 LAYOUT: Search system container styling
  * Replaces 5+ inline style violations στο main SearchSystem component
@@ -439,10 +410,7 @@ const searchLayoutStyles = {
   } as const
 } as const;
 
-// ============================================================================
 // 🎯 MAIN EXPORT - ENTERPRISE SEARCH STYLES
-// ============================================================================
-
 /**
  * 🔍 ENTERPRISE SEARCH SYSTEM STYLES EXPORT
  *
@@ -465,184 +433,20 @@ export const searchSystemStyles: SearchSystemStylesType = {
   layout: searchLayoutStyles
 } as const;
 
-// ============================================================================
-// 🎯 UTILITY FUNCTIONS - DYNAMIC STYLE GENERATION
-// ============================================================================
-
-/**
- * 🎯 FILTER STATE UTILITY
- * Generates dynamic styling for filter states (active/inactive)
- */
-export const getFilterStateStyle = (isActive: boolean): StyleObject => ({
-  backgroundColor: isActive ? colors.primary[500] : GEO_COLORS.TRANSPARENT,
-  color: isActive ? colors.text.inverse : colors.text.primary,
-  border: `1px solid ${isActive ? colors.primary[500] : colors.border.primary}`
-});
-
-/**
- * 🎯 SEARCH RESULT HOVER UTILITY
- * Generates hover interaction για search result items
- */
-export const getSearchResultHoverHandlers = () => ({
-  onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.backgroundColor = colors.background.hover;
-  },
-  onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.backgroundColor = GEO_COLORS.TRANSPARENT;
-  }
-});
-
-/**
- * 🎯 SUGGESTION HIGHLIGHT UTILITY
- * Generates highlighting για search suggestions
- */
-export const getSuggestionHighlightStyle = (isHighlighted: boolean): StyleObject => ({
-  backgroundColor: isHighlighted ? colors.primary[500] : GEO_COLORS.TRANSPARENT,
-  color: isHighlighted ? colors.text.inverse : colors.text.primary
-});
-
-/**
- * 🎯 DYNAMIC SUGGESTION STYLING UTILITY
- * Generates dynamic background for suggestion items
- */
-export const getDynamicSuggestionStyle = (isSelected: boolean): StyleObject => ({
-  ...searchSystemStyles.searchInput.suggestion,
-  backgroundColor: isSelected ? colors.background.secondary : GEO_COLORS.TRANSPARENT
-});
-
-/**
- * 🎯 DYNAMIC INPUT STYLING UTILITY
- * Generates dynamic input styling με focus states
- */
-export const getDynamicInputStyle = (focused: boolean): StyleObject => ({
-  ...searchSystemStyles.searchInput.input,
-  borderColor: focused ? colors.primary[500] : colors.border.primary,
-  boxShadow: focused ? `0 0 0 2px ${colors.primary[500]}20` : 'none'
-});
-
-/**
- * 🎯 DYNAMIC RESULT ITEM STYLING UTILITY
- * Generates dynamic result item styling με cursor states
- */
-export const getDynamicResultItemStyle = (hasClickHandler: boolean): StyleObject => ({
-  ...searchSystemStyles.results.item,
-  cursor: hasClickHandler ? 'pointer' : 'default'
-});
-
-// ============================================================================
-// ✅ ENTERPRISE: CSS CLASSNAME BUILDERS (NO MORE INLINE STYLES)
-// ============================================================================
-
-/**
- * 🎯 ENTERPRISE: CSS className builders για SearchSystem components
- * Eliminates ALL style={...} violations με utility-first approach
- */
-export const searchSystemClasses = {
-  // Search Input Classes
-  searchInput: {
-    container: 'relative w-full mb-4',
-    input: 'w-full p-3 text-base border rounded-md transition-colors border-border bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
-    inputFocused: 'w-full p-3 text-base border rounded-md transition-colors border-primary bg-background text-foreground outline-none ring-2 ring-primary/20',
-    icon: 'absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none',
-    suggestionsContainer: 'absolute top-full left-0 right-0 bg-popover border border-border rounded-md shadow-md max-h-48 overflow-y-auto z-50'
-  },
-
-  // Filter Classes
-  filter: {
-    container: 'mb-4',
-    label: 'block mb-1 text-xs font-medium text-muted-foreground',
-    input: 'w-full px-2 py-1 text-sm border border-border rounded-sm bg-background text-foreground focus:outline-none focus:border-primary',
-    select: 'w-full px-2 py-1 text-sm border border-border rounded-sm bg-background text-foreground cursor-pointer focus:outline-none focus:border-primary',
-    checkbox: 'mr-2 cursor-pointer accent-primary',
-    rangeContainer: 'flex items-center gap-2',
-    rangeInput: 'w-20 px-2 py-1 text-sm border border-border rounded-sm bg-background text-foreground text-center focus:outline-none focus:border-primary',
-    rangeLabel: 'text-sm text-muted-foreground',
-    multiselectLabel: 'flex items-center gap-2 text-xs text-foreground cursor-pointer',
-    header: 'flex justify-between items-center mb-2',
-    headerTitle: 'm-0 text-sm font-semibold text-foreground',
-    clearButton: 'px-2 py-1 border border-border rounded-sm bg-background text-foreground cursor-pointer hover:bg-accent transition-colors',
-    filtersGrid: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
-  },
-
-  // Results Classes
-  results: {
-    container: 'flex flex-col gap-2',
-    item: 'p-3 border border-border rounded-md bg-card transition-all hover:bg-accent hover:border-primary hover:-translate-y-0.5 hover:shadow-sm',
-    itemClickable: 'p-3 border border-border rounded-md bg-card transition-all cursor-pointer hover:bg-accent hover:border-primary hover:-translate-y-0.5 hover:shadow-sm',
-    itemTitle: 'text-base font-semibold text-foreground mb-1',
-    itemDescription: 'text-sm text-muted-foreground leading-relaxed mb-1',
-    itemCategory: 'text-xs text-primary font-medium uppercase tracking-wide mb-1',
-    itemTags: 'flex flex-wrap gap-1',
-    tag: 'bg-secondary text-secondary-foreground px-1 py-0.5 rounded-sm text-xs font-medium'
-  },
-
-  // Layout Classes
-  layout: {
-    main: 'flex flex-col w-full max-w-full',
-    searchInputSection: 'mb-4',
-    filtersSection: 'mb-4 p-4 bg-muted/50 rounded-md border border-border',
-    activeFiltersContainer: 'flex flex-wrap gap-1 mb-4',
-    activeFilterBadge: 'inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium',
-    activeFilterCloseButton: 'bg-transparent border-none text-primary-foreground cursor-pointer ml-1 text-sm opacity-80 hover:opacity-100',
-    resultCount: 'text-sm text-muted-foreground mb-2',
-    emptyState: 'flex flex-col items-center justify-center p-8 text-center text-muted-foreground',
-    emptyStateIcon: 'text-5xl mb-4 opacity-60',
-    emptyStateTitle: 'text-lg font-semibold mb-2 text-foreground',
-    emptyStateSubtitle: 'text-sm leading-relaxed max-w-md'
-  },
-
-  // Suggestion Classes
-  suggestion: {
-    item: 'p-2 cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-accent',
-    itemSelected: 'p-2 cursor-pointer border-b border-border last:border-b-0 transition-colors bg-accent text-accent-foreground'
-  }
-};
-
-/**
- * 🎯 UTILITY: Dynamic className builders για state-based styling
- */
-export const getSearchInputClassName = (focused: boolean): string => {
-  return focused ? searchSystemClasses.searchInput.inputFocused : searchSystemClasses.searchInput.input;
-};
-
-export const getSuggestionItemClassName = (isSelected: boolean): string => {
-  return isSelected ? searchSystemClasses.suggestion.itemSelected : searchSystemClasses.suggestion.item;
-};
-
-export const getResultItemClassName = (hasClickHandler: boolean): string => {
-  return hasClickHandler ? searchSystemClasses.results.itemClickable : searchSystemClasses.results.item;
-};
-
-// ============================================================================
 // 🔒 TYPE EXPORTS - ENTERPRISE TYPE SAFETY
-// ============================================================================
-
 export type { SearchSystemStylesType, SearchInputStylesType, SearchFilterStylesType, SearchResultsStylesType };
 
-/**
- * ✅ ENTERPRISE SEARCH STYLING MODULE COMPLETE (2025-12-16)
- *
- * Features Implemented:
- * ✅ TypeScript strict typing με readonly properties
- * ✅ Design tokens integration (ZERO hardcoded values)
- * ✅ Semantic style organization (input, filters, results, layout)
- * ✅ Interactive utilities (hover handlers, state styling)
- * ✅ Dynamic style utilities (replace ALL search inline styles)
- * ✅ Professional architecture με clear separation of concerns
- * ✅ Performance optimization (const assertions, tree-shakable)
- * ✅ Developer experience (JSDoc, clear naming, utility functions)
- * ✅ Complete inline styles elimination (50+ violations removed)
- * ✅ Enterprise-grade search interface patterns
- *
- * Inline Style Categories Eliminated:
- * 🔍 Search Input: Icon positioning, dynamic borders, focus states
- * 🎛️ Filters: Headers, buttons, grid layouts, multiselect labels
- * 📋 Results: Categories, tags, metadata, interactive states
- * 🏗️ Layout: Active filters, result counts, containers, spacing
- * 🎨 Interactive: Hover effects, selected states, transitions
- *
- * This module eliminates 50+ inline style violations από το
- * SearchSystem component και establishes enterprise-grade
- * styling patterns για professional search interface development.
- */
+// 🎯 CLASS BUILDERS & UTILITIES — re-exported from SearchSystem.classes (SRP)
+export {
+  getFilterStateStyle,
+  getSearchResultHoverHandlers,
+  getSuggestionHighlightStyle,
+  getDynamicSuggestionStyle,
+  getDynamicInputStyle,
+  getDynamicResultItemStyle,
+  searchSystemClasses,
+  getSearchInputClassName,
+  getSuggestionItemClassName,
+  getResultItemClassName
+} from './SearchSystem.classes';
 
