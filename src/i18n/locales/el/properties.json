@@ -514,7 +514,8 @@
         }
       },
       "nameSuggestion": {
-        "conflictWarning": "Το όνομα μοιάζει να αντιστοιχεί σε «{inferredType}» — επιλεγμένος τύπος: «{selectedType}»"
+        "conflictWarning": "Το όνομα μοιάζει να αντιστοιχεί σε «{inferredType}» — επιλεγμένος τύπος: «{selectedType}»",
+        "suggested": "Προτεινόμενο: {name}"
       }
     },
     "linkBuildingToProject": {

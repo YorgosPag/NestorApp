@@ -192,6 +192,10 @@ export function useAddPropertyDialogState({
     return () => unsubscribe();
   }, [formData.buildingId, user]);
 
+  // Name suggestion: tracks whether user has manually edited the name field.
+  // If false → auto-fill on type select. If true → show hint only.
+  const [nameOverridden, setNameOverridden] = useState(false);
+
   // ADR-233: Code suggestion
   const [codeOverridden, setCodeOverridden] = useState(false);
 
@@ -232,6 +236,7 @@ export function useAddPropertyDialogState({
       resetForm();
       setActiveTab('basic');
       setCodeOverridden(false);
+      setNameOverridden(false);
     }
   }, [open, resetForm]);
 
@@ -243,8 +248,13 @@ export function useAddPropertyDialogState({
     handleLevelsChange([]);
   };
 
+  // Derived: suggested name for the currently selected type.
+  const suggestedName = isPropertyType(formData.type)
+    ? PROPERTY_TYPE_LABELS_EL[formData.type]
+    : '';
+
   // ADR-284: Type change handler — when switching to standalone, clear building/floor.
-  // Auto-suggests name from selected type when name field is empty.
+  // Auto-fills name if user hasn't manually edited it (nameOverridden = false).
   const handleTypeChange = (value: string) => {
     handleSelectChange('type', value);
     if (isStandaloneUnitType(value as PropertyType | '')) {
@@ -253,7 +263,7 @@ export function useAddPropertyDialogState({
       handleNumberChange('floor', '');
       handleLevelsChange([]);
     }
-    if (!formData.name.trim() && isPropertyType(value)) {
+    if (!nameOverridden && isPropertyType(value)) {
       handleSelectChange('name', PROPERTY_TYPE_LABELS_EL[value]);
     }
   };
@@ -312,5 +322,8 @@ export function useAddPropertyDialogState({
     // Name suggestion / conflict
     nameTypeConflict,
     nameInferredType,
+    nameOverridden,
+    setNameOverridden,
+    suggestedName,
   };
 }

@@ -93,6 +93,7 @@ export function AddPropertyDialog({
     showLinkBuildingDialog, setShowLinkBuildingDialog,
     selectedBuilding,
     nameTypeConflict, nameInferredType,
+    nameOverridden, setNameOverridden, suggestedName,
   } = useAddPropertyDialogState({ open, onPropertyAdded, onOpenChange, buildings });
 
 
@@ -171,10 +172,24 @@ export function AddPropertyDialog({
               <FormGrid>
                 <FormField label={t('dialog.addUnit.fields.name')} htmlFor="name" required>
                   <FormInput>
-                    <Input id="name" name="name" value={formData.name} onChange={handleChange}
+                    <Input id="name" name="name" value={formData.name}
+                      onChange={(e) => {
+                        handleChange(e);
+                        if (!nameOverridden && e.target.value !== suggestedName) setNameOverridden(true);
+                        if (!e.target.value) setNameOverridden(false);
+                      }}
                       placeholder={t('dialog.addUnit.placeholders.name')} disabled={loading}
                       className={errors.name ? 'border-destructive' : ''} />
                     {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                    {nameOverridden && suggestedName && formData.name !== suggestedName && (
+                      <button
+                        type="button"
+                        onClick={() => { handleSelectChange('name', suggestedName); setNameOverridden(false); }}
+                        className={cn("text-xs mt-1 underline cursor-pointer", colors.text.muted)}
+                      >
+                        {t('dialog.addUnit.nameSuggestion.suggested', { name: suggestedName })}
+                      </button>
+                    )}
                     {nameTypeConflict && nameInferredType && (
                       <p className="text-xs text-amber-600 mt-1">
                         {t('dialog.addUnit.nameSuggestion.conflictWarning', {

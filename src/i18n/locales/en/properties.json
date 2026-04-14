@@ -514,7 +514,8 @@
         }
       },
       "nameSuggestion": {
-        "conflictWarning": "Name seems to match «{inferredType}» — selected type: «{selectedType}»"
+        "conflictWarning": "Name seems to match «{inferredType}» — selected type: «{selectedType}»",
+        "suggested": "Suggested: {name}"
       }
     },
     "linkBuildingToProject": {
