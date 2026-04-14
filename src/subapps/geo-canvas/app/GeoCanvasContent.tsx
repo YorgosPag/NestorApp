@@ -157,7 +157,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               <Globe className={iconSizes.lg} />
               {t('title')}
             </h1>
-            <p className="text-gray-400 text-sm">{t('subtitle')} ({t('phases.foundation')})</p>
+            <p className="text-gray-400 text-sm">{t('subtitle')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <button
@@ -168,8 +168,6 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               <span className="text-sm font-medium">{t('alertDashboard.title')}</span>
             </button>
             {(isProfessional || isTechnical) && <FloorPlanUploadButton onClick={handleFloorPlanUploadClick} />}
-            <div className={`px-3 py-1 ${colors.bg.success} rounded-full text-xs`}>{t('phases.transformation')}</div>
-            <div className={`px-3 py-1 ${colors.bg.info} rounded-full text-xs`}>{t('status.transformationReady')}</div>
           </div>
         </div>
       </header>
