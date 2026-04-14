@@ -11,6 +11,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
+import { TrashService } from '@/services/trash.service';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -34,6 +35,7 @@ interface UsePolygonHandlersProps {
   firstConnectionPoint: Property | null;
   setIsConnecting: (isConnecting: boolean) => void;
   setFirstConnectionPoint: (property: Property | null) => void;
+  forceDataRefresh: () => void;
 }
 
 export function usePolygonHandlers({
@@ -46,8 +48,9 @@ export function usePolygonHandlers({
   firstConnectionPoint,
   setIsConnecting,
   setFirstConnectionPoint,
+  forceDataRefresh,
 }: UsePolygonHandlersProps) {
-  const { success: notifySuccess, error: notifyError, warning } = useNotifications();
+  const { success: notifySuccess, error: notifyError, warning, notify } = useNotifications();
   const { t } = useTranslation('properties');
   const { requestDelete, Dialogs: PropertyDeletionDialogs } = usePropertyDeletionGuard();
 
@@ -255,7 +258,23 @@ export function usePolygonHandlers({
           `Deleted property ${targetProperty.id}`,
         );
         setSelectedProperties((previous) => previous.filter((id) => id !== targetProperty.id));
-        notifySuccess(t('viewer.messages.deleteSuccess'));
+        const deletedId = targetProperty.id;
+        notify(t('viewer.messages.movedToTrash'), {
+          type: 'success',
+          duration: 6000,
+          actions: [{
+            label: t('viewer.messages.undo'),
+            onClick: async () => {
+              try {
+                await TrashService.restore('property', deletedId);
+                forceDataRefresh();
+                notifySuccess(t('viewer.messages.undoSuccess'));
+              } catch {
+                notifyError(t('viewer.messages.undoFailed'));
+              }
+            },
+          }],
+        });
       },
     );
   };

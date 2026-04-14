@@ -181,6 +181,7 @@ export function usePropertyViewer() {
     firstConnectionPoint,
     setIsConnecting,
     setFirstConnectionPoint,
+    forceDataRefresh,
   });
 
   const selectedProperty = useMemo(

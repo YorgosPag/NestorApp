@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { Filter } from 'lucide-react';
+import { Filter, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Breadcrumb from centralized navigation
@@ -34,6 +34,10 @@ interface PropertiesHeaderProps {
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
+  // Trash view toggle
+  showTrash?: boolean;
+  onToggleTrash?: () => void;
+  trashCount?: number;
 }
 
 export function PropertiesHeader({
@@ -45,9 +49,13 @@ export function PropertiesHeader({
   setSearchTerm,
   showFilters,
   setShowFilters,
+  showTrash,
+  onToggleTrash,
+  trashCount,
 }: PropertiesHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
+  const { t: tViewer } = useTranslation('properties-viewer');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -75,21 +83,43 @@ export function PropertiesHeader({
           viewMode: viewMode as CoreViewMode,
           onViewModeChange: (mode) => setViewMode(mode as PropertiesViewMode),
           viewModes: ['list', 'grid'] as CoreViewMode[],
-          // Mobile-only filter button
-          customActions: setShowFilters ? [
-            <button
-              key="mobile-filter"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`md:hidden ${spacing.padding.sm} rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-                showFilters
-                  ? `bg-primary text-primary-foreground ${quick.focus}`
-                  : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
-              }`}
-              aria-label="Toggle filters"
-            >
-              <Filter className={iconSizes.sm} />
-            </button>
-          ] : undefined
+          // Trash toggle + mobile filter buttons
+          customActions: [
+            ...(onToggleTrash ? [
+              <button
+                key="trash-toggle"
+                onClick={onToggleTrash}
+                className={`relative ${spacing.padding.sm} rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                  showTrash
+                    ? `bg-destructive/10 text-destructive border border-destructive/30`
+                    : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
+                }`}
+                aria-label={tViewer('trash.viewTrash')}
+                title={tViewer('trash.viewTrash')}
+              >
+                <Trash2 className={iconSizes.sm} />
+                {(trashCount ?? 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-medium">
+                    {trashCount}
+                  </span>
+                )}
+              </button>
+            ] : []),
+            ...(setShowFilters ? [
+              <button
+                key="mobile-filter"
+                onClick={() => setShowFilters(!showFilters)}
+                className={`md:hidden ${spacing.padding.sm} rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                  showFilters
+                    ? `bg-primary text-primary-foreground ${quick.focus}`
+                    : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
+                }`}
+                aria-label="Toggle filters"
+              >
+                <Filter className={iconSizes.sm} />
+              </button>
+            ] : []),
+          ].filter((x): x is React.ReactElement => Boolean(x)) || undefined
         }}
       />
   );

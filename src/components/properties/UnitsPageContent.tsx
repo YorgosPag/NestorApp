@@ -4,7 +4,9 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
+import { usePropertiesTrashState } from '@/hooks/usePropertiesTrashState';
 import { PropertiesHeader } from '@/components/properties/page/PropertiesHeader';
+import { PropertyTrashActionsBar } from '@/components/properties/trash/PropertyTrashActionsBar';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   TrendingUp,
@@ -158,6 +160,24 @@ export function PropertiesManagementContent() {
     setNewUnitTemplate(null);
     handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
   }, [handlePolygonSelect]);
+
+  // 🗑️ Trash state
+  const {
+    showTrash,
+    trashCount,
+    trashedProperties,
+    loadingTrash,
+    showPermanentDeleteDialog: _showPermanentDeleteDialog,
+    setShowPermanentDeleteDialog: _setShowPermanentDeleteDialog,
+    handleToggleTrash,
+    handleTrashActionComplete,
+    handleRestoreProperties: _handleRestoreProperties,
+    handlePermanentDeleteProperties,
+  } = usePropertiesTrashState({
+    selectedPropertyIds,
+    setSelectedProperties,
+    forceDataRefresh,
+  });
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -389,6 +409,9 @@ export function PropertiesManagementContent() {
           setSearchTerm={setSearchTerm}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
+          showTrash={showTrash}
+          onToggleTrash={handleToggleTrash}
+          trashCount={trashCount}
         />
 
         {showDashboard && (
@@ -436,8 +459,39 @@ export function PropertiesManagementContent() {
           </div>
         )}
 
+        {/* 🗑️ Trash mode: ActionsBar + trash list */}
+        {showTrash && (
+          <PropertyTrashActionsBar
+            selectedIds={selectedPropertyIds}
+            onBack={handleToggleTrash}
+            onRefresh={handleTrashActionComplete}
+            onPermanentDelete={handlePermanentDeleteProperties}
+            trashCount={trashCount}
+            activePropertyId={selectedProperty?.id ?? null}
+          />
+        )}
+
         <ListContainer>
-          {viewMode === 'list' ? (
+          {showTrash ? (
+            loadingTrash ? (
+              <PageLoadingState icon={NAVIGATION_ENTITIES.property.icon} message={t('page.loading')} layout="contained" />
+            ) : (
+              <PropertiesSidebar
+                units={trashedProperties}
+                selectedProperty={selectedProperty || null}
+                onSelectProperty={handlePolygonSelect}
+                selectedPropertyIds={selectedPropertyIds}
+                viewerProps={viewerProps}
+                floors={safeFloors}
+                setShowHistoryPanel={setShowHistoryPanel}
+                onAssignmentSuccess={handleAssignmentSuccess}
+                isCreatingNewUnit={false}
+                onPropertyCreated={handleUnitCreated}
+                onCancelCreate={handleCancelCreate}
+                defaultTab={urlTab || undefined}
+              />
+            )
+          ) : viewMode === 'list' ? (
             <PropertiesSidebar
               units={searchFilteredProperties}
               selectedProperty={isCreatingNewUnit ? newUnitTemplate : (selectedProperty || null)}

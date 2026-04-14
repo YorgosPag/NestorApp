@@ -577,6 +577,7 @@ export const API_ROUTES = {
     LOAN: (propertyId: string) => `/api/properties/${propertyId}/payment-plan/loan` as const,
     LOANS: (propertyId: string) => `/api/properties/${propertyId}/payment-plan/loans` as const,
     CHEQUES: (propertyId: string) => `/api/properties/${propertyId}/cheques` as const,
+    TRASH: '/api/properties/trash',
   },
 
   // ── Parking ───────────────────────────────────────────────────────────
