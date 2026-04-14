@@ -521,6 +521,7 @@ export const API_ROUTES = {
     LANDOWNERS_SAVE_PREVIEW: (projectId: string) => `/api/projects/${projectId}/landowners-save-preview` as const,
     ENGINEER_IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/engineer-impact-preview` as const,
     BROKER_TERMINATE_PREVIEW: (projectId: string) => `/api/projects/${projectId}/broker-terminate-preview` as const,
+    TRASH: '/api/projects/trash',
   },
 
   PROCUREMENT: {

@@ -13,7 +13,8 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, RotateCcw, Trash2, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useIconSizes, useSemanticColors } from "@/hooks/useDesignTokens";
+import { useIconSizes } from "@/hooks/useIconSizes";
+import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 
 interface TrashActionsBarProps {
   /** Selected entity IDs in trash view */

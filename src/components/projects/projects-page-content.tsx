@@ -31,6 +31,8 @@ import { Button } from '@/components/ui/button';
 import { deleteProject } from '@/services/projects-client.service';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
+import { useProjectsTrashState } from '@/hooks/useProjectsTrashState';
+import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 
@@ -38,7 +40,7 @@ const logger = createModuleLogger('ProjectsPageContent');
 
 export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
 
   // Note: Deep-link tab is read from useProjectsPageState (same useSearchParams instance)
 
@@ -46,7 +48,7 @@ export function ProjectsPageContent() {
   const { companies, syncBreadcrumb } = useNavigation();
 
   // Φόρτωση έργων από Firestore αντί για sample data
-  const { projects: firestoreProjects, loading, error } = useFirestoreProjects();
+  const { projects: firestoreProjects, loading, error, refetch: refetchProjects } = useFirestoreProjects();
 
   const {
     selectedProject,
@@ -145,6 +147,21 @@ export function ProjectsPageContent() {
   const { checking: checkingDeletion, checkBeforeDelete, BlockedDialog } = useDeletionGuard('project');
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 🗑️ ADR-308: Trash view state
+  const {
+    showTrash,
+    trashCount,
+    trashedProjects,
+    loadingTrash,
+    showPermanentDeleteDialog,
+    pendingPermanentDeleteIds,
+    handleToggleTrash,
+    handleRestoreProjects,
+    handlePermanentDeleteProjects,
+    handleConfirmPermanentDelete,
+    handleCancelPermanentDelete,
+  } = useProjectsTrashState({ forceDataRefresh: refetchProjects });
 
   const handleDeleteProject = React.useCallback(async (project: Project) => {
     const allowed = await checkBeforeDelete(project.id);
@@ -337,6 +354,8 @@ export function ProjectsPageContent() {
             onNewProject={handleNewProject}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
+            showTrash={showTrash}
+            onToggleTrash={handleToggleTrash}
         />
 
         {showDashboard && (
@@ -368,8 +387,19 @@ export function ProjectsPageContent() {
 
 
         <ListContainer>
+          {/* 🗑️ ADR-308: Trash actions bar — shown only in trash view */}
+          {showTrash && !loadingTrash && (
+            <TrashActionsBar
+              selectedIds={selectedProject ? [selectedProject.id] : []}
+              onBack={handleToggleTrash}
+              onRestore={handleRestoreProjects}
+              onPermanentDelete={handlePermanentDeleteProjects}
+              trashCount={trashCount}
+            />
+          )}
+
           <ProjectViewSwitch
-            projects={filteredProjects}
+            projects={showTrash ? trashedProjects : filteredProjects}
             selectedProject={selectedProject}
             onSelectProject={(project) => {
               setSelectedProject(project);
@@ -378,28 +408,39 @@ export function ProjectsPageContent() {
             companies={companies}
             viewMode={viewMode}
             initialTab={tabFromUrl || undefined}
-            onNewProject={handleNewProject}
-            onDeleteProject={handleDeleteProject}
-            startInEditMode={startInEditMode}
-            isCreateMode={isCreateMode}
-            onProjectCreated={handleProjectCreated}
-            onCancelCreate={handleCancelCreate}
-            onDraftStatusChange={handleDraftStatusChange}
+            onNewProject={showTrash ? undefined : handleNewProject}
+            onDeleteProject={showTrash ? undefined : handleDeleteProject}
+            startInEditMode={showTrash ? false : startInEditMode}
+            isCreateMode={showTrash ? false : isCreateMode}
+            onProjectCreated={showTrash ? undefined : handleProjectCreated}
+            onCancelCreate={showTrash ? undefined : handleCancelCreate}
+            onDraftStatusChange={showTrash ? undefined : handleDraftStatusChange}
           />
         </ListContainer>
 
         {/* 🛡️ ADR-226 Phase 3: Deletion Guard — blocked dialog */}
         {BlockedDialog}
 
-        {/* 🏢 ENTERPRISE: Delete confirmation (shown only when guard allows) */}
+        {/* 🏢 ENTERPRISE: Soft-delete confirmation (move to trash) */}
         <DeleteConfirmDialog
           open={!!projectToDelete}
           onOpenChange={(open) => { if (!open) setProjectToDelete(null); }}
-          title={t('detailsHeader.actions.delete')}
-          description={t('detailsHeader.actions.confirmDelete', { name: projectToDelete?.name ?? '' })}
+          title={t('moveToTrash', { ns: 'trash' })}
+          description={t('softDeleteDialog.description', { ns: 'trash' })}
           onConfirm={handleConfirmDelete}
           loading={isDeleting}
           disabled={checkingDeletion}
+        />
+
+        {/* 🗑️ ADR-308: Permanent delete confirmation */}
+        <DeleteConfirmDialog
+          open={showPermanentDeleteDialog}
+          onOpenChange={(open) => { if (!open) handleCancelPermanentDelete(); }}
+          title={t('permanentDeleteDialog.title', { ns: 'trash' })}
+          description={t('permanentDeleteDialog.body', { ns: 'trash' })}
+          onConfirm={handleConfirmPermanentDelete}
+          loading={false}
+          disabled={pendingPermanentDeleteIds.length === 0}
         />
       </PageContainer>
   );

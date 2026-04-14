@@ -51,8 +51,8 @@ export function ActionsTabContent({
   onEditProject,
   onDeleteProject
 }: TabContentProps) {
-  // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  // 🏢 ENTERPRISE: i18n hook — 'trash' namespace for "Μεταφορά στον κάδο" button (ADR-308)
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();
@@ -79,15 +79,15 @@ export function ActionsTabContent({
       </Button>
 
       <Button
-        variant="destructive"
+        variant="outline"
         size="sm"
         onClick={() => onDeleteProject?.(selectedItems)}
         disabled={selectedItems.length === 0}
       >
         <Trash2 className={`${iconSizes.sm} mr-1`} />
-        {t('toolbar.delete')}
+        {t('moveToTrash', { ns: 'trash' })}
         {selectedItems.length > 0 && (
-          <span className={`ml-1 ${colors.bg.primary} text-destructive px-1 rounded ${typography.body.xs}`}>
+          <span className={`ml-1 ${colors.bg.primary} text-muted-foreground px-1 rounded ${typography.body.xs}`}>
             {selectedItems.length}
           </span>
         )}

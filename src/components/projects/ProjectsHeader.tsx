@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Filter } from 'lucide-react';
+import { Filter, Trash2 } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -36,6 +36,9 @@ interface ProjectsHeaderProps {
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
+  // Trash view toggle (ADR-308)
+  showTrash?: boolean;
+  onToggleTrash?: () => void;
 }
 
 // 🏢 ENTERPRISE: Type moved to interface section above
@@ -48,9 +51,11 @@ export function ProjectsHeader({
   onNewProject: _onNewProject,
   showFilters,
   setShowFilters,
+  showTrash,
+  onToggleTrash,
 }: ProjectsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -75,20 +80,37 @@ export function ProjectsHeader({
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         // addButton removed — project creation is not available from this page
         // Mobile-only filter button
-        customActions: setShowFilters ? [
-          <button
-            key="mobile-filter"
-            onClick={() => setShowFilters(!showFilters)}
-            className={`md:hidden p-2 ${quick.button} transition-colors ${
-              showFilters
-                ? `bg-primary text-primary-foreground ${getStatusBorder('default')}`
-                : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
-            }`}
-            aria-label={t('filters.toggleFilters')}
-          >
-            <Filter className={iconSizes.sm} />
-          </button>
-        ] : undefined
+        customActions: [
+          ...(setShowFilters ? [
+            <button
+              key="mobile-filter"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`md:hidden p-2 ${quick.button} transition-colors ${
+                showFilters
+                  ? `bg-primary text-primary-foreground ${getStatusBorder('default')}`
+                  : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+              }`}
+              aria-label={t('filters.toggleFilters')}
+            >
+              <Filter className={iconSizes.sm} />
+            </button>
+          ] : []),
+          ...(onToggleTrash ? [
+            <button
+              key="trash-toggle"
+              onClick={onToggleTrash}
+              className={`p-2 ${quick.button} transition-colors ${
+                showTrash
+                  ? `bg-destructive/10 text-destructive ${getStatusBorder('default')}`
+                  : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+              }`}
+              aria-label={t('trashView', { ns: 'trash' })}
+              aria-pressed={showTrash}
+            >
+              <Trash2 className={iconSizes.sm} />
+            </button>
+          ] : []),
+        ].filter(Boolean)
       }}
     />
   );

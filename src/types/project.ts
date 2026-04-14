@@ -10,6 +10,9 @@ import type { ProjectType } from '@/constants/project-types';
 // `src/constants/project-statuses.ts`. Re-exported εδώ για backward-compat.
 export type { ProjectStatus };
 
+// ADR-308 — Soft-delete mixin
+import type { SoftDeletableFields } from '@/types/soft-deletable';
+
 // ADR-287 — ProjectType SSoT: canonical union lives στο
 // `src/constants/project-types.ts`. Re-exported εδώ για backward-compat.
 export type { ProjectType };
@@ -23,7 +26,7 @@ export type ProjectRiskLevel = 'low' | 'medium' | 'high' | 'critical';
 /** 🏢 ENTERPRISE: Complexity levels for project estimation */
 export type ProjectComplexity = 'simple' | 'moderate' | 'complex' | 'highly_complex';
 
-export interface Project {
+export interface Project extends SoftDeletableFields {
   id: string;
   /** 🏢 ENTERPRISE: Human-readable project code (e.g., "PRJ-001") */
   projectCode?: string;
@@ -108,6 +111,7 @@ export interface Project {
   bartexPercentage?: number | null;
   /** ADR-244: Denormalized contact IDs for Firestore array-contains queries */
   landownerContactIds?: string[] | null;
+
 }
 
 /**
