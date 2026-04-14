@@ -427,6 +427,7 @@ export function ProjectsPageContent() {
           onOpenChange={(open) => { if (!open) setProjectToDelete(null); }}
           title={t('moveToTrash', { ns: 'trash' })}
           description={t('softDeleteDialog.description', { ns: 'trash' })}
+          confirmText={t('softDeleteDialog.confirm', { ns: 'trash' })}
           onConfirm={handleConfirmDelete}
           loading={isDeleting}
           disabled={checkingDeletion}
