@@ -1,8 +1,6 @@
 {
   "ika": {
-    "workers": {
-      "searchPlaceholder": "Search placeholder"
-    },
+    "workers": "Workers",
     "timesheet": "Timesheet",
     "stampsCalculation": "Stamps Calculation",
     "apdPayments": "APD & Payments",

@@ -1,8 +1,6 @@
 {
   "ika": {
-    "workers": {
-      "searchPlaceholder": "Αναζήτηση εργαζομένων..."
-    },
+    "workers": "Εργαζόμενοι",
     "timesheet": "Παρουσιολόγιο",
     "stampsCalculation": "Υπολογισμός Ενσήμων",
     "apdPayments": "ΑΠΔ & Πληρωμές",

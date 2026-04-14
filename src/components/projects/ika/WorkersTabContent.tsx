@@ -205,7 +205,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
                 onContactSelect={handleContactSelect}
                 excludeContactIds={excludeContactIds}
                 allowedContactTypes={['individual']}
-                placeholder={t('ika.workers.searchPlaceholder')}
+                placeholder={t('ika.workersTab.searchPlaceholder')}
                 searchConfig={{ autoLoadContacts: true, maxResults: 20 }}
               />
 
