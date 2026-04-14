@@ -1,13 +1,16 @@
 /**
- * Project Associations Tab — Σύνδεση Επαφών με Έργο
+ * Project Associations Tab — Σύνδεση Μηχανικών/Επαφών με Έργο
  *
- * Αντικαθιστά τον παλιό ContributorsTab (stub).
  * Wrapper → EntityAssociationsManager entityType=ENTITY_TYPES.PROJECT
+ * Integrates useGuardedEngineerRemoval (ADR-305): impact guard before removing
+ * a project engineer with open obligations.
  */
 
 'use client';
 
+import { useCallback } from 'react';
 import { EntityAssociationsManager } from '@/components/associations/EntityAssociationsManager';
+import { useGuardedEngineerRemoval } from '@/hooks/useGuardedEngineerRemoval';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 
 interface ProjectAssociationsTabProps {
@@ -19,7 +22,25 @@ export function ProjectAssociationsTab({ project, data }: ProjectAssociationsTab
   const projectData = project ?? data;
   const projectId = projectData?.id;
 
+  const { ImpactDialog, runRemoveOperation } = useGuardedEngineerRemoval(projectId ?? '');
+
+  const handleRemoveIntercept = useCallback(
+    (contactId: string, role: string, proceed: () => Promise<void>) => {
+      void runRemoveOperation({ contactId, role }, proceed);
+    },
+    [runRemoveOperation],
+  );
+
   if (!projectId) return null;
 
-  return <EntityAssociationsManager entityType={ENTITY_TYPES.PROJECT} entityId={projectId} />;
+  return (
+    <>
+      <EntityAssociationsManager
+        entityType={ENTITY_TYPES.PROJECT}
+        entityId={projectId}
+        onRemoveIntercept={handleRemoveIntercept}
+      />
+      {ImpactDialog}
+    </>
+  );
 }

@@ -518,6 +518,8 @@ export const API_ROUTES = {
     IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/impact-preview` as const,
     ADDRESS_IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/address-impact-preview` as const,
     OWNERSHIP_IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/ownership-impact-preview` as const,
+    LANDOWNERS_SAVE_PREVIEW: (projectId: string) => `/api/projects/${projectId}/landowners-save-preview` as const,
+    ENGINEER_IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/engineer-impact-preview` as const,
   },
 
   PROCUREMENT: {

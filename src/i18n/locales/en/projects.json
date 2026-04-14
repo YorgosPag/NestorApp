@@ -441,6 +441,13 @@
       "unlockWithContracts": "There are legal contracts referencing this finalized ownership table. Unlocking is allowed but any share changes will not automatically update existing contracts.",
       "unlockWithHistory": "Unlocking will create a new revision in the table history. Ensure you have a valid reason for the change before proceeding."
     },
+    "landownersSave": {
+      "withOwnershipTables": "There are ownership tables storing a snapshot of the landowners list. This change does not automatically update the tables — recalculation is required.",
+      "withBartexChange": "Changing the bartex percentage with existing ownership tables. The tables will need to be recalculated and re-finalized."
+    },
+    "engineerRemove": {
+      "withObligations": "This engineer has obligations assigned to them in this project. Removing them from the project does not reassign those obligations — review and reassign manually."
+    },
     "dependencies": {
       "buildings": {
         "label": "Project buildings",

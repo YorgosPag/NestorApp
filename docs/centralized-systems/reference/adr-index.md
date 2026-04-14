@@ -323,6 +323,8 @@
 | **ADR-301** | Storage Rules Test Coverage SSoT + CHECK 3.19 (Phase A — 4 paths, 48 cells) | ✅ IMPLEMENTED | 2026-04-14 | Security / Testing Infrastructure / SSoT Enforcement | [📄](../../../adrs/ADR-301-storage-rules-test-coverage-ssot.md) |
 | **ADR-302** | Project Field Mutation Impact System — status transition matrix + declarative registry | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety / SSoT Enforcement | [📄](../../../adrs/ADR-302-project-field-mutation-impact.md) |
 | **ADR-303** | Project Addresses Tab Mutation Impact Guard — per-operation guard (add/edit/delete/set-primary) | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety | [📄](../../../adrs/ADR-303-project-addresses-mutation-impact.md) |
+| **ADR-304** | Project Ownership Table (Πίνακας Χιλιοστών) Mutation Impact Guard — FINALIZE/UNLOCK guards | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety | [📄](../../../adrs/ADR-304-project-ownership-table-mutation-impact.md) |
+| **ADR-305** | Project Landowners & Engineers Tab Mutation Impact Guard — SAVE guard + engineer remove guard | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety | [📄](../../../adrs/ADR-305-project-landowners-engineers-mutation-impact.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

@@ -62,6 +62,13 @@ export interface EntityAssociationsManagerProps {
   entityId: string;
   /** Parent project ID — enables inheritance (Project contacts appear in Building) */
   parentProjectId?: string;
+  /**
+   * Optional intercept for remove action.
+   * When provided, bypasses the default AlertDialog and delegates full control
+   * to the caller (e.g. project-specific impact-guard).
+   * The caller must call `proceed()` to execute the actual removal.
+   */
+  onRemoveIntercept?: (contactId: string, role: string, proceed: () => Promise<void>) => void;
 }
 
 // ============================================================================
@@ -72,6 +79,7 @@ export function EntityAssociationsManager({
   entityType,
   entityId,
   parentProjectId,
+  onRemoveIntercept,
 }: EntityAssociationsManagerProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const spacing = useSpacingTokens();
@@ -204,7 +212,17 @@ export function EntityAssociationsManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setRemoveLinkId(link.linkId)}
+                    onClick={() => {
+                      if (onRemoveIntercept) {
+                        onRemoveIntercept(
+                          link.contactId,
+                          link.role ?? '',
+                          () => removeLink(link.linkId),
+                        );
+                      } else {
+                        setRemoveLinkId(link.linkId);
+                      }
+                    }}
                     aria-label={t('associations.removeConfirm')}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />

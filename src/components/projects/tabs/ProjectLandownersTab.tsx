@@ -20,6 +20,7 @@ import { LandownerRemovalDialog } from '@/components/shared/owners/LandownerRemo
 import { isOwnersValid } from '@/lib/ownership/owner-utils';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useLandownerUnlinkGuard } from '@/hooks/useLandownerUnlinkGuard';
+import { useGuardedLandownersSave } from '@/hooks/useGuardedLandownersSave';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -125,6 +126,9 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   const [bartexPct, setBartexPct] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Save guard (ownership table snapshot staleness)
+  const { ImpactDialog: SaveImpactDialog, runSaveOperation } = useGuardedLandownersSave(projectId ?? '');
+
   // Removal guard
   const { checkBeforeRemove, resetCheck } = useLandownerUnlinkGuard();
   const [removalDialog, setRemovalDialog] = useState<RemovalDialogState>({
@@ -226,8 +230,8 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     }
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (!projectId || !canSave) return;
+  const executeSave = useCallback(async () => {
+    if (!projectId) return;
 
     setSaving(true);
     // Prevent stale projectData from overwriting local state after save
@@ -256,7 +260,23 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     } finally {
       setSaving(false);
     }
-  }, [projectId, canSave, owners, bartexPct, showSuccess, showError, t]);
+  }, [projectId, owners, bartexPct, showSuccess, showError, t]);
+
+  const handleSave = useCallback(async () => {
+    if (!projectId || !canSave) return;
+
+    const landownersChanged = hasChanges(owners, persisted.entries, bartexPct, persisted.bartexPct)
+      && owners.some((o, i) => {
+        const pe = persisted.entries[i];
+        return o.contactId !== pe?.contactId || o.ownershipPct !== pe?.landOwnershipPct;
+      });
+    const bartexChanged = bartexPct !== persisted.bartexPct;
+
+    await runSaveOperation(
+      { landownersChanged, bartexChanged },
+      executeSave,
+    );
+  }, [projectId, canSave, owners, bartexPct, persisted, runSaveOperation, executeSave]);
 
   // ── Loading guard ──────────────────────────────────────────────────────
   if (!projectData) {
@@ -301,6 +321,9 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
           placeholder: t('ownership.landownersTab.selectContact'),
         }}
       />
+
+      {/* Save impact guard dialog */}
+      {SaveImpactDialog}
 
       {/* Safety dialog for landowner removal */}
       <LandownerRemovalDialog
