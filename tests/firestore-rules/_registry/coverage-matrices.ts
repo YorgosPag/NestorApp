@@ -402,3 +402,12 @@ export {
   photoSharesMatrix,
 } from './coverage-matrices-dxf';
 
+// Phase C.4 BoQ/commissions/ownership matrix functions live in coverage-matrices-boq.ts
+// (extracted per Google SRP 500-line rule — ADR-298 Phase C.4, 2026-04-14).
+export {
+  boqCategoriesMatrix,
+  brokerageMatrix,
+  commissionRecordsMatrix,
+  ownershipTablesMatrix,
+} from './coverage-matrices-boq';
+

@@ -58,6 +58,12 @@ import {
   fileTenantFullMatrix,
   photoSharesMatrix,
 } from './coverage-matrices-dxf';
+import {
+  boqCategoriesMatrix,
+  brokerageMatrix,
+  commissionRecordsMatrix,
+  ownershipTablesMatrix,
+} from './coverage-matrices-boq';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -712,6 +718,55 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     // Full CRUD: isSuperAdminOnly || (companyId && belongsToCompany).
     matrix: fileTenantFullMatrix(),
   },
+  // ── ADR-298 Phase C.4 — BoQ / Commissions / Ownership collections (2026-04-14) ──
+  {
+    collection: 'boq_items',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/boq-items.rules.test.ts',
+    rulesRange: [2791, 2837],
+    // Full CRUD: isSuperAdminOnly || belongsToCompany(companyId).
+    // Delete gated on status in ['draft', 'submitted'] — seed with status='draft'.
+    // Update immutable: buildingId, projectId, companyId must not change.
+    matrix: fileTenantFullMatrix(),
+  },
+  {
+    collection: 'boq_categories',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/boq-categories.rules.test.ts',
+    rulesRange: [2846, 2861],
+    // Read-only: `allow create, update, delete: if false` — reserved for future admin UI.
+    // Reads: isSuperAdminOnly || (companyId && belongsToCompany) || !companyId (system defaults).
+    matrix: boqCategoriesMatrix(),
+  },
+  {
+    collection: 'brokerage_agreements',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/brokerage-agreements.rules.test.ts',
+    rulesRange: [2868, 2905],
+    // Delete: createdBy==uid || isSuperAdminOnly (NO isCompanyAdminOfCompany).
+    // same_tenant_admin can update (isCompanyAdminOfCompany) but NOT delete.
+    // Seed doc: createdBy=same_tenant_user.uid.
+    matrix: brokerageMatrix(),
+  },
+  {
+    collection: 'commission_records',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/commission-records.rules.test.ts',
+    rulesRange: [2910, 2942],
+    // Delete: isSuperAdminOnly ONLY. No createdBy leg — super_admin is the only
+    // persona allowed to permanently delete a commission record.
+    // Update: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly.
+    matrix: commissionRecordsMatrix(),
+  },
+  {
+    collection: 'ownership_tables',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/ownership-tables.rules.test.ts',
+    rulesRange: [2950, 2977],
+    // Delete: isSuperAdminOnly ONLY. Update: belongsToCompany (not createdBy).
+    // Nested revisions subcollection excluded from top-level CHECK 3.16 scope.
+    matrix: ownershipTablesMatrix(),
+  },
 ] as const;
 
 /**
@@ -792,11 +847,11 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'search_documents',
   'voice_commands',
   // — BoQ / commissions / ownership —
-  'boq_items',
-  'boq_categories',
-  'brokerage_agreements',
-  'commission_records',
-  'ownership_tables',
+  // boq_items            → moved to COVERAGE (ADR-298 Phase C.4, 2026-04-14)
+  // boq_categories       → moved to COVERAGE (ADR-298 Phase C.4, 2026-04-14)
+  // brokerage_agreements → moved to COVERAGE (ADR-298 Phase C.4, 2026-04-14)
+  // commission_records   → moved to COVERAGE (ADR-298 Phase C.4, 2026-04-14)
+  // ownership_tables     → moved to COVERAGE (ADR-298 Phase C.4, 2026-04-14)
   // — Accounting (sole proprietor subapp) —
   // accounting_journal_entries      → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
   // accounting_invoices             → moved to COVERAGE (ADR-298 Phase B.2, 2026-04-13)
