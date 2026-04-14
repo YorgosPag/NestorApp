@@ -227,37 +227,93 @@ Flag: `alwaysNotify: true` → dialog appare anche con zero dipendenze.
 
 ---
 
-## 6. Analisi dipendenze per campo (non-status)
+## 6. Analisi per campo — Campi scheda Generale (non-status)
 
-### 6.1 `name` / `title`
+> **Metodo**: solo le dipendenze con `projectName` **salvato in Firestore** contano.
+> Servizi che leggono il nome a runtime (report, PDF, email) NON sono dipendenze —
+> prendono il dato diretto dal documento progetto al momento dell'uso.
 
-| Dipendenza | Mode | Razionale |
-|------------|------|-----------|
-| `buildings` | warn | `projectName` potrebbe essere denormalizzato negli edifici |
-| `files` | info | Documenti indicizzati per nome progetto |
-| `contactLinks` | info | Link con label progetto |
+---
 
-**Scenario**: `projectIdentity` (già definito in `PROJECT_MUTATION_FIELD_KIND_MAP`)
+### 6.1 Campo `name` (titolo progetto)
 
-### 6.2 `licenseNumber` / `issuingAuthority` / `issueDate`
+**Analisi denormalizzazione:**
 
-| Dipendenza | Mode | Razionale |
-|------------|------|-----------|
-| `legalContracts` | warn | Contratti possono referenziare numero licenza |
-| `buildings` | info | Dati permesso copiati nell'edificio |
+| Collezione Firestore | Campo | Salvato? | Note |
+|----------------------|-------|----------|------|
+| `legal_contracts` | `projectName: string` | ✅ SÌ | ObligationDocument — già tracciato come `legalContracts` |
+| `calendar_events` | `projectName?: string` | ✅ SÌ | "resolved from projectId" ma persistito — **nuova dipendenza #16** |
+| `buildings` | — | ❌ NO | Link via `projectId`, nome non denormalizzato |
+| `properties` | — | ❌ NO | Link via `projectId` |
+| `files` | — | ❌ NO | Link via `projectId` |
+| `contact_links` | — | ❌ NO | Link via `targetEntityId` |
+| `interest_calculator` | `projectName` | ❌ NO | Computed at runtime, non persisted |
 
-**Scenario**: `permitMetadata` (già definito)
+**Regole approvate:**
 
-### 6.3 `description`
+| Dipendenza | Mode | Messaggio utente (el) |
+|------------|------|-----------------------|
+| `legalContracts` | **warn** | "X συμβόλαια έχουν το παλιό όνομα αποθηκευμένο. Ενημερώστε τα χειροκίνητα." |
+| `calendarEvents` *(nuova #16)* | **info** | "X ημερολογιακά γεγονότα αναφέρουν το παλιό όνομα." |
 
-Nessuna dipendenza critica. → `allow` sempre.
+**Query per `calendarEvents`:**
+```
+collection: COLLECTIONS.CALENDAR
+where: projectId == projectId
+```
 
-### 6.4 `linkedCompanyId` (company link)
+**Scenario**: `projectIdentity` — `name` + `title` + `description`
 
-**Già implementato correttamente:**
-- `link` (nessun link precedente → nuovo): `warn` 
-- `unlink` (rimuove link): `block` se qualsiasi dipendenza > 0
-- `reassign` (cambia company): `block` se qualsiasi dipendenza > 0
+---
+
+### 6.2 Campo `title` (licenseTitle — τίτλος αρχιτεκτονικής μελέτης)
+
+**Analisi denormalizzazione:** Nessuna. `title` è salvato SOLO nel documento progetto.
+Nessun altra collezione Firestore lo persiste.
+
+**Regola:** → **allow sempre** (nessun dialog).
+
+---
+
+### 6.3 Campi permesso: `licenseNumber` / `issuingAuthority` / `issueDate` / `buildingBlock` / `protocolNumber`
+
+**Analisi denormalizzazione:**
+
+| Collezione Firestore | Campo | Salvato? |
+|----------------------|-------|----------|
+| `legal_contracts` | Possibile riferimento al numero licenza | ⚠️ DA VERIFICARE implementazione |
+| `buildings` | Dati permesso copiati? | ⚠️ DA VERIFICARE |
+
+**Regole approvate (conservative — da raffinare se verifica conferma):**
+
+| Dipendenza | Mode | Messaggio utente (el) |
+|------------|------|-----------------------|
+| `legalContracts` | **warn** | "Ελέγξτε αν τα συμβόλαια αναφέρονται στον αριθμό άδειας." |
+| `buildings` | **info** | "Τα κτήρια μπορεί να έχουν αντίγραφο των στοιχείων άδειας." |
+
+**Scenario**: `permitMetadata` (già definito in `PROJECT_MUTATION_FIELD_KIND_MAP`)
+
+---
+
+### 6.4 Campo `description`
+
+**Analisi denormalizzazione:** Nessuna. Campo libero, nessuna dipendenza Firestore.
+
+**Regola:** → **allow sempre** (nessun dialog).
+
+---
+
+### 6.5 Campo `linkedCompanyId` (company link — ADR-232)
+
+**Già implementato correttamente nel service attuale:**
+
+| Tipo cambio | Mode | Dipendenze bloccanti |
+|------------|------|---------------------|
+| `link` (nuovo link) | warn | tutte le 14 dipendenze |
+| `unlink` (rimuove link) | **block** | tutte le 14 dipendenze |
+| `reassign` (cambia company) | **block** | tutte le 14 dipendenze |
+
+**Nessuna modifica necessaria per questo campo.**
 
 ---
 
@@ -325,3 +381,4 @@ Scenari di test:
 |------|---------|-------------|
 | 2026-04-14 | 1.0.0 | ADR creata. Ricerca completa. Status: Draft. |
 | 2026-04-14 | 1.1.0 | §5 completato: matrice status approvata. 5 decisioni: cancelled+contracts=BLOCK, cancelled+soldProperties=BLOCK, planning→in_progress senza edifici=INFO, riapertura=WARN sempre, on_hold→cancelled stesse regole cancelled. Aggiunta 15° dipendenza `soldProperties`. |
+| 2026-04-14 | 1.2.0 | §6 completato: analisi denormalizzazione per tutti i campi non-status. `name`→legalContracts(WARN)+calendarEvents(INFO nuova dep #16). `title`→allow. `description`→allow. `licenseNumber/issuingAuthority/issueDate/buildingBlock/protocolNumber`→legalContracts(WARN)+buildings(INFO). `linkedCompanyId`→invariato. |
