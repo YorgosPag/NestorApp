@@ -124,9 +124,9 @@ L'API route, il dialog, il hook e il cablaggio UI restano invariati.
 
 ---
 
-## 5. Matrice transizioni status (Decision Core)
+## 5. Campo `status` — Matrice transizioni (Decisioni approvate 2026-04-14)
 
-### 5.1 Definizioni
+### 5.1 Tipi TypeScript
 
 ```typescript
 type StatusTransitionTarget =
@@ -138,50 +138,92 @@ type StatusTransitionTarget =
 
 type TransitionRule = Partial<Record<ProjectMutationDependencyId, 'block' | 'warn' | 'info'>>;
 
-// Registry: per ogni target-status, regole da applicare
-// (indipendente dallo status di partenza, salvo eccezioni)
-type StatusTransitionRegistry = Record<StatusTransitionTarget, TransitionRule>;
+/** Per transizioni speciali: regole dipendenti dallo status di partenza */
+interface DirectionalTransitionRule {
+  readonly from: ReadonlyArray<ProjectStatus>;
+  readonly to: ReadonlyArray<ProjectStatus>;
+  readonly dependencies: TransitionRule;
+  /**
+   * Se true: mostra sempre il dialog (anche con count = 0).
+   * Usato per la riapertura di progetti completati/cancellati.
+   */
+  readonly alwaysNotify?: boolean;
+}
+
+type StatusTransitionRegistry = {
+  readonly byTarget: Record<StatusTransitionTarget, TransitionRule>;
+  readonly directional: ReadonlyArray<DirectionalTransitionRule>;
+};
 ```
 
-### 5.2 Matrice completa
+### 5.2 Matrice per target-status (indipendente da where-from)
 
-| Dipendenza | → completed | → cancelled | → on_hold | → in_progress | → planning |
-|------------|-------------|-------------|-----------|---------------|------------|
-| `buildings` | info | warn | info | info | — |
-| `properties` | info | warn | — | — | — |
-| `propertyPaymentPlans` | warn | warn | — | — | — |
-| `contactLinks` | — | warn | — | — | — |
-| `communications` | — | info | — | — | — |
-| `obligations` | warn | **block** | warn | — | — |
-| `legalContracts` | warn | **block** | warn | — | — |
-| `ownershipTables` | info | warn | — | — | — |
-| `purchaseOrders` | warn | **block** | warn | — | — |
-| `attendanceEvents` | warn | warn | warn | — | — |
-| `employmentRecords` | warn | warn | warn | — | — |
-| `accountingInvoices` | info | info | — | — | — |
-| `files` | info | info | — | — | — |
-| `boqItems` | warn | warn | — | — | — |
+| Dipendenza | → completed | → cancelled | → on_hold | Messaggio utente (el) |
+|------------|:-----------:|:-----------:|:---------:|----------------------|
+| `legalContracts` | warn | **🔴 block** | warn | Συμβόλαια σε εξέλιξη |
+| `obligations` | warn | **🔴 block** | warn | Εκκρεμείς υποχρεώσεις |
+| `purchaseOrders` | warn | **🔴 block** | warn | Εκκρεμείς παραγγελίες |
+| `soldProperties`* | — | **🔴 block** | — | Πωλημένες μονάδες |
+| `propertyPaymentPlans` | warn | warn | — | Πρόγραμμα δόσεων |
+| `properties` | info | warn | — | Συνδεδεμένες μονάδες |
+| `attendanceEvents` | warn | warn | warn | Παρουσίες εργαζομένων |
+| `employmentRecords` | warn | warn | warn | Εγγραφές ΕΦΚΑ |
+| `boqItems` | warn | warn | — | Εκκρεμή BoQ |
+| `buildings` | info | warn | info | Συνδεδεμένα κτήρια |
+| `contactLinks` | — | warn | — | Ενεργοί σύνδεσμοι |
+| `ownershipTables` | info | warn | — | Πίνακες ιδιοκτησίας |
+| `accountingInvoices` | info | info | — | Τιμολόγια |
+| `files` | info | info | — | Αρχεία |
 
-### 5.3 Razionale per le scelte critiche
+> **`soldProperties`*** — nuova query compound:
+> `collection: properties, where: projectId == id AND commercial.saleStatus == 'sold'`
+> Da aggiungere come 15° dipendenza in `PROJECT_MUTATION_DEPENDENCY_IDS`.
+> Verifica durante implementazione il nome esatto del campo `saleStatus`.
 
-**`cancelled` + `legalContracts/obligations/purchaseOrders` → BLOCK**
-Obblighi legali/contrattuali attivi: cancellare il progetto crea esposizione legale.
-L'utente DEVE prima risolvere (chiudere/trasferire) questi record.
+### 5.3 Transizioni speciali — Direzionali
 
-**`completed` + `attendanceEvents/employmentRecords` → WARN**
-Lavoratori ancora registrati come presenti in cantiere: il progetto "completato"
-dovrebbe avere zero presenze attive. Avverto ma non blocco (potrebbe essere un
-ritardo amministrativo legittimo).
+#### 5.3.1 `planning → in_progress` (avvio cantiere)
 
-**`completed` + `legalContracts` → WARN (non block)**
-Contratti possono rimanere come documentazione storica. Non bloccante.
+Caso speciale: INFO proattiva quando count **= 0** (non > 0 come tutti gli altri).
 
-**`on_hold` + `attendanceEvents/employmentRecords` → WARN**
-Sospendere il progetto con dipendenti attivi: impatto su EFKA (ADR-090).
-Avverto l'utente.
+| Condizione | Dipendenza | Mode | Messaggio utente |
+|-----------|-----------|------|-----------------|
+| `buildings = 0` | buildings | **info** | "Δεν έχετε δημιουργήσει κτήρια για αυτό το έργο." |
+| `employmentRecords = 0` | employmentRecords | **info** | "Δεν υπάρχουν εγγεγραμμένοι εργαζόμενοι." |
 
-**`in_progress` / `planning` — quasi nessuna regola**
-Transizioni "forward" sono generalmente sicure.
+Se entrambi = 0 → dialog INFO con checklist di avvio.
+Se entrambi > 0 → allow diretto (cantiere già configurato).
+
+#### 5.3.2 Re-apertura: `completed` / `cancelled` → qualsiasi
+
+Sempre WARN, indipendentemente dai count. Riaprire un progetto chiuso è sempre un evento significativo.
+
+| Dipendenza | Mode | Messaggio utente |
+|-----------|------|-----------------|
+| *(sempre)* | **warn** | "Ανοίγετε εκ νέου ένα κλειστό έργο. Ελέγξτε δηλώσεις ΕΦΚΑ και συμβόλαια." |
+| `employmentRecords > 0` | **warn** | + "Υπάρχουν εγγραφές απασχόλησης που χρειάζονται επανέλεγχο." |
+
+Flag: `alwaysNotify: true` → dialog appare anche con zero dipendenze.
+
+#### 5.3.3 `in_progress` / `on_hold` → `planning` (retrocessione)
+
+| Dipendenza | Mode | Messaggio |
+|-----------|------|----------|
+| `buildings > 0` | warn | "Υπάρχουν ήδη κτήρια δημιουργημένα." |
+| `properties > 0` | warn | "Υπάρχουν ήδη συνδεδεμένες μονάδες." |
+| `attendanceEvents > 0` | warn | "Υπάρχουν παρουσίες καταγεγραμμένες." |
+
+### 5.4 Razionale decisioni critiche
+
+| Decisione | Razionale |
+|-----------|-----------|
+| `cancelled` + `legalContracts/obligations/purchaseOrders` → **BLOCK** | Esposizione legale attiva. L'utente DEVE risolvere prima. Nessuna eccezione. |
+| `cancelled` + `soldProperties` → **BLOCK** | Unità già vendute = obblighi verso acquirenti. Non cancellabile. |
+| `cancelled` + `properties` (non vendute) → **WARN** | Unità disponibili possono essere ri-assegnate. Non bloccante. |
+| `completed` + tutti i pending → **WARN** (non block) | Il completamento amministrativo può precedere la chiusura documentale. Legittimo. |
+| `on_hold` + `attendanceEvents/employmentRecords` → **WARN** | Impatto su dichiarazioni ΕΦΚΑ (ADR-090). Avviso obbligatorio. |
+| Riapertura → **WARN sempre** | Evento raro e significativo. Dialog sempre, anche con progetto vuoto. |
+| `planning → in_progress` senza edifici → **INFO** (count=0) | Checklist proattiva Google-style. Guida l'utente invece di bloccarlo. |
 
 ---
 
@@ -282,3 +324,4 @@ Scenari di test:
 | Data | Versione | Cambiamento |
 |------|---------|-------------|
 | 2026-04-14 | 1.0.0 | ADR creata. Ricerca completa. Status: Draft. |
+| 2026-04-14 | 1.1.0 | §5 completato: matrice status approvata. 5 decisioni: cancelled+contracts=BLOCK, cancelled+soldProperties=BLOCK, planning→in_progress senza edifici=INFO, riapertura=WARN sempre, on_hold→cancelled stesse regole cancelled. Aggiunta 15° dipendenza `soldProperties`. |
