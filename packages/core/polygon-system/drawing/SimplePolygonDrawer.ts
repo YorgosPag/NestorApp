@@ -86,6 +86,8 @@ export class SimplePolygonDrawer {
       points: [],
       isClosed: false,
       style: this.state.style,
+      // Store full style as config so consumers can read pointMode, radius, etc.
+      config: style as unknown as Record<string, unknown>,
       metadata: {
         createdAt: new Date(),
         modifiedAt: new Date()

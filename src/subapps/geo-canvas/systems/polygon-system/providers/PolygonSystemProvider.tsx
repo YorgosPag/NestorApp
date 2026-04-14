@@ -8,9 +8,9 @@
 
 'use client';
 
-import React, { createContext, useReducer, useRef, useCallback, useEffect } from 'react';
+import React, { createContext, useReducer, useRef, useCallback, useEffect, useState } from 'react';
 import { usePolygonSystem } from '@geo-alert/core';
-import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
+import type { PolygonType, UniversalPolygon, PolygonPoint } from '@geo-alert/core';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type {
   UserRole,
@@ -179,6 +179,14 @@ export function PolygonSystemProvider({
     currentRole: initialRole
   });
 
+  // State = reactivity; Ref = sync read (avoids stale closure in setTimeout)
+  const [liveDrawingPoints, setLiveDrawingPoints] = useState<PolygonPoint[]>([]);
+  const liveDrawingPointsRef = useRef<PolygonPoint[]>([]);
+  const [liveDrawingConfig, setLiveDrawingConfig] = useState<DrawingConfig | null>(null);
+  const liveDrawingConfigRef = useRef<DrawingConfig | null>(null);
+  const [liveDrawingType, setLiveDrawingType] = useState<PolygonType>('simple');
+  const liveDrawingTypeRef = useRef<PolygonType>('simple');
+
   // Get current configuration
   const config = React.useMemo(() => {
     const baseConfig = getRoleConfig(state.currentRole);
@@ -209,13 +217,12 @@ export function PolygonSystemProvider({
     snapTolerance: config.snapTolerance
   });
 
-  // Manual initialization when we have both canvas and map
+  // Manual initialization with canvas (map optional — rendering handled by PolygonSystemLayers)
   useEffect(() => {
-    if (dummyCanvasRef.current && state.mapRef?.current && !corePolygonSystem.manager) {
-      const map = state.mapRef.current.getMap?.() as MaplibreMap | undefined;
-      if (map && corePolygonSystem.initialize) {
-        corePolygonSystem.initialize(dummyCanvasRef.current, map);
-      }
+    if (dummyCanvasRef.current && !corePolygonSystem.manager && corePolygonSystem.initialize) {
+      // state.mapRef.current IS the MapLibre map directly (no getMap() wrapper needed)
+      const mapInstance = state.mapRef?.current as unknown as MaplibreMap | undefined;
+      corePolygonSystem.initialize(dummyCanvasRef.current, mapInstance);
     }
   }, [state.mapRef, corePolygonSystem.initialize, corePolygonSystem.manager]);
 
@@ -228,7 +235,15 @@ export function PolygonSystemProvider({
   }, []);
 
   const startDrawing = useCallback((type: PolygonType, drawingConfig?: DrawingConfig) => {
-    // Start drawing with core system
+    // Reset live drawing state (both state and refs)
+    liveDrawingPointsRef.current = [];
+    liveDrawingConfigRef.current = drawingConfig ?? null;
+    liveDrawingTypeRef.current = type;
+    setLiveDrawingPoints([]);
+    setLiveDrawingConfig(drawingConfig ?? null);
+    setLiveDrawingType(type);
+
+    // Also start in core system (manager may or may not be initialized)
     corePolygonSystem.startDrawing(type, {
       fillColor: drawingConfig?.fillColor || config.visualFeedback.lines.drawing.color + '40',
       strokeColor: drawingConfig?.strokeColor || config.visualFeedback.lines.drawing.color,
@@ -240,12 +255,39 @@ export function PolygonSystemProvider({
   }, [state.currentRole, config, corePolygonSystem]);
 
   const finishDrawing = useCallback(() => {
-    const polygon = corePolygonSystem.finishDrawing();
+    let polygon = corePolygonSystem.finishDrawing();
 
     // ✅ ENTERPRISE: Apply stored configuration to finished polygon
     if (polygon && state.currentDrawing?.config) {
       polygon.config = { ...polygon.config, ...state.currentDrawing.config };
     }
+
+    const refPoints = liveDrawingPointsRef.current;
+    const refConfig = liveDrawingConfigRef.current;
+    const refType = liveDrawingTypeRef.current;
+    if (!polygon && refPoints.length > 0) {
+      const mergedConfig = refConfig as unknown as Record<string, unknown>;
+      polygon = {
+        id: `polygon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: refType,
+        points: [...refPoints],
+        isClosed: refPoints.length >= 3,
+        style: {
+          strokeColor: (refConfig?.strokeColor as string) || config.visualFeedback.lines.drawing.color,
+          fillColor: (refConfig?.fillColor as string) || config.visualFeedback.lines.drawing.color + '40',
+          strokeWidth: (refConfig?.strokeWidth as number) || config.visualFeedback.lines.drawing.width,
+          fillOpacity: 0.2,
+          strokeOpacity: 1,
+        },
+        config: mergedConfig,
+        metadata: { createdAt: new Date(), modifiedAt: new Date() }
+      };
+    }
+
+    liveDrawingPointsRef.current = [];
+    liveDrawingConfigRef.current = null;
+    setLiveDrawingPoints([]);
+    setLiveDrawingConfig(null);
 
     if (polygon) {
       dispatch({ type: 'FINISH_DRAWING', payload: polygon });
@@ -254,21 +296,37 @@ export function PolygonSystemProvider({
     }
 
     return polygon;
-  }, [state.currentRole, corePolygonSystem, state.currentDrawing]);
+  }, [state.currentRole, corePolygonSystem, state.currentDrawing, config]);
 
   const cancelDrawing = useCallback(() => {
     corePolygonSystem.cancelDrawing();
+    liveDrawingPointsRef.current = [];
+    liveDrawingConfigRef.current = null;
+    setLiveDrawingPoints([]);
+    setLiveDrawingConfig(null);
     dispatch({ type: 'CANCEL_DRAWING' });
   }, [state.currentRole, corePolygonSystem]);
 
   const clearAll = useCallback(() => {
     corePolygonSystem.clearAll();
+    liveDrawingPointsRef.current = [];
+    liveDrawingConfigRef.current = null;
+    setLiveDrawingPoints([]);
+    setLiveDrawingConfig(null);
     dispatch({ type: 'CLEAR_ALL' });
   }, [state.currentRole, corePolygonSystem]);
 
   const addPoint = useCallback((longitude: number, latitude: number) => {
-    // Add point to core system using geo coordinates directly
-    // For map-based polygons, x=longitude and y=latitude (geo coordinates)
+    const newPoint: PolygonPoint = {
+      x: longitude,
+      y: latitude,
+      id: `point_${liveDrawingPointsRef.current.length}`,
+      label: `Point ${liveDrawingPointsRef.current.length + 1}`
+    };
+    liveDrawingPointsRef.current = [...liveDrawingPointsRef.current, newPoint];
+    setLiveDrawingPoints([...liveDrawingPointsRef.current]);
+
+    // Also try manager (silently no-ops if null)
     if (corePolygonSystem.addPoint) {
       corePolygonSystem.addPoint(longitude, latitude, { lng: longitude, lat: latitude });
     }
@@ -323,20 +381,59 @@ export function PolygonSystemProvider({
     }
   }, [state.polygons]);
 
-  // Notification system
-  // Export functionality
+  // Export — includes fallback polygons from state (manager may be empty)
   const exportAsGeoJSON = useCallback(() => {
-    if (corePolygonSystem.exportAsGeoJSON) {
-      return corePolygonSystem.exportAsGeoJSON();
-    } else {
-      return { type: 'FeatureCollection', features: [] } as GeoJSON.FeatureCollection;
-    }
-  }, [state.currentRole, corePolygonSystem]);
+    const managerGeoJSON = corePolygonSystem.exportAsGeoJSON
+      ? corePolygonSystem.exportAsGeoJSON()
+      : { type: 'FeatureCollection' as const, features: [] as GeoJSON.Feature[] };
 
-  // Get current drawing state for live preview
+    // If manager has all polygons, return as-is
+    if (managerGeoJSON.features.length >= state.polygons.length) {
+      return managerGeoJSON as GeoJSON.FeatureCollection;
+    }
+
+    // Fallback: build features from state.polygons for any not in manager
+    const managerIds = new Set(
+      managerGeoJSON.features.map(f => (f.properties as Record<string, unknown> | null)?.id as string)
+    );
+    const missingFeatures: GeoJSON.Feature[] = state.polygons
+      .filter(p => !managerIds.has(p.id))
+      .map(p => ({
+        type: 'Feature' as const,
+        geometry: p.points.length >= 2
+          ? { type: 'Polygon' as const, coordinates: [p.points.map(pt => [pt.x, pt.y])] }
+          : { type: 'Point' as const, coordinates: [p.points[0]?.x ?? 0, p.points[0]?.y ?? 0] },
+        properties: { id: p.id, type: p.type, ...(p.config ?? {}) }
+      }));
+
+    return {
+      type: 'FeatureCollection',
+      features: [...managerGeoJSON.features, ...missingFeatures]
+    } as GeoJSON.FeatureCollection;
+  }, [state.currentRole, corePolygonSystem, state.polygons]);
+
+  // Live preview: React state primary, manager fallback
   const getCurrentDrawing = useCallback(() => {
+    if (liveDrawingPoints.length > 0 || liveDrawingConfig !== null) {
+      return {
+        id: 'live-drawing',
+        type: liveDrawingType,
+        points: liveDrawingPoints,
+        isClosed: false,
+        style: {
+          strokeColor: (liveDrawingConfig?.strokeColor as string) || '#3b82f6',
+          fillColor: (liveDrawingConfig?.fillColor as string) || '#3b82f640',
+          strokeWidth: (liveDrawingConfig?.strokeWidth as number) || 2,
+          fillOpacity: 0.2,
+          strokeOpacity: 1,
+        },
+        config: liveDrawingConfig as unknown as Record<string, unknown>,
+        metadata: { createdAt: new Date(), modifiedAt: new Date() }
+      } as UniversalPolygon;
+    }
+    // Fallback to manager
     return corePolygonSystem.manager?.getCurrentDrawing() || null;
-  }, [corePolygonSystem.manager]);
+  }, [liveDrawingPoints, liveDrawingConfig, liveDrawingType, corePolygonSystem.manager]);
 
   const showNotification = useCallback((
     message: string,
