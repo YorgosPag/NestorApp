@@ -5,14 +5,15 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { AlertTriangle, Settings, Bell, Plus } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 // Core Alert Engine Integration
 import {
-  geoAlertEngine
+  geoAlertEngine,
+  initializeAlertEngine
 } from '@geo-alert/core';
 import type { Alert, RuleContext, RuleEvaluationResult } from '@geo-alert/core/alert-engine';
 
@@ -43,8 +44,18 @@ export function AlertManagementPanel({
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'preferences'>('create');
 
   // Alert Engine Integration
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(geoAlertEngine.isSystemInitialized);
   const alertDetector = geoAlertEngine.detection;
+
+  useEffect(() => {
+    if (geoAlertEngine.isSystemInitialized) {
+      setIsInitialized(true);
+      return;
+    }
+    initializeAlertEngine()
+      .then(() => setIsInitialized(true))
+      .catch(() => setIsInitialized(true)); // show UI even if init fails
+  }, []);
   const { sendSpatialAlert } = useAlertNotifications();
 
   // UI State
