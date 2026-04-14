@@ -68,15 +68,10 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
 }) => {
   const { t } = useTranslation('geo-canvas-drawing');
 
-  // Early return για performance
-  if (!enablePolygonDrawing || !systemIsDrawing) {
-    return null;
-  }
-
-  // Get current drawing state
+  // Get current drawing state (before hooks — value used in memos below)
   const drawing = currentDrawing || (getCurrentDrawing ? getCurrentDrawing() : null);
 
-  // ✅ ENTERPRISE: Point mode preview calculation
+  // ✅ ENTERPRISE: Point mode preview calculation — hook BEFORE any early return
   const pointModePreview = useMemo(() => {
     if (!drawing?.config?.pointMode || !hoveredCoordinate || drawing.points.length > 0) {
       return null;
@@ -157,6 +152,11 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
       lineGeoJSON
     };
   }, [drawing]);
+
+  // Early return after all hooks
+  if (!enablePolygonDrawing || !systemIsDrawing) {
+    return null;
+  }
 
   // ✅ RENDER: Point mode preview
   if (pointModePreview) {
