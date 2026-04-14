@@ -37,9 +37,9 @@ import {
   AddressSearchPanel,
   AdminBoundaryDemo,
   BoundaryLayerControlPanel,
-  useCentralizedPolygonSystem,
   useMockRealEstateService,
 } from './citizen-drawing-types';
+import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 
 interface CitizenDrawingInterfaceProps {
   mapRef: React.RefObject<MapboxMap | null>;

@@ -484,10 +484,10 @@ export function PolygonSystemProvider({
   // SYNC WITH CORE SYSTEM
   // ============================================================================
 
-  // Sync polygons from core system
+  // Sync polygons from core system only when manager has more (additive sync)
   useEffect(() => {
     const currentPolygons = corePolygonSystem.polygons || [];
-    if (currentPolygons.length !== state.polygons.length) {
+    if (currentPolygons.length > state.polygons.length) {
       dispatch({ type: 'SET_POLYGONS', payload: currentPolygons });
     }
   }, [corePolygonSystem.polygons, state.polygons.length]);
