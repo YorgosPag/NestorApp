@@ -81,7 +81,11 @@
         "freehand": "Freehand Drawing",
         "freehandDrawing": "Drag & Draw",
         "realEstate": "Real Estate",
-        "realEstateDescription": "Notifications"
+        "realEstateDescription": "Notifications",
+        "addressSearch": "Address Search",
+        "boundariesDemo": "Boundaries Demo",
+        "layerControl": "Layer Control",
+        "layersCount": "{count} layers"
       },
       "actions": {
         "complete": "Complete",

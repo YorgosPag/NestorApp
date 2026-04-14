@@ -248,14 +248,14 @@ export function CitizenDrawingInterface({
       {/* Utility Row */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         {[
-          { onClick: () => setShowAddressSearch(!showAddressSearch), active: showAddressSearch, icon: <Search className={`${iconSizes.xl} mb-2 text-indigo-600`} />, label: 'Address Search', status: 'info' },
-          { onClick: () => setShowAdminDemo(!showAdminDemo), active: showAdminDemo, icon: <Building2 className={`${iconSizes.xl} mb-2 text-violet-600`} />, label: 'Boundaries Demo', status: 'info' },
-          { onClick: () => setShowBoundaryControl(!showBoundaryControl), active: showBoundaryControl, icon: <Settings className={`${iconSizes.xl} mb-2 text-emerald-600`} />, label: `Layer Control`, status: 'success' },
+          { onClick: () => setShowAddressSearch(!showAddressSearch), active: showAddressSearch, icon: <Search className={`${iconSizes.xl} mb-2 text-indigo-600`} />, label: t('drawingInterfaces.citizen.tools.addressSearch'), isLayerControl: false, status: 'info' },
+          { onClick: () => setShowAdminDemo(!showAdminDemo), active: showAdminDemo, icon: <Building2 className={`${iconSizes.xl} mb-2 text-violet-600`} />, label: t('drawingInterfaces.citizen.tools.boundariesDemo'), isLayerControl: false, status: 'info' },
+          { onClick: () => setShowBoundaryControl(!showBoundaryControl), active: showBoundaryControl, icon: <Settings className={`${iconSizes.xl} mb-2 text-emerald-600`} />, label: t('drawingInterfaces.citizen.tools.layerControl'), isLayerControl: true, status: 'success' },
         ].map((btn, i) => (
           <button key={i} onClick={btn.onClick} className={`flex flex-col items-center justify-center p-4 ${quick.card} transition-all duration-200 min-h-[100px] ${btn.active ? `${getStatusBorder(btn.status as 'info' | 'success')} ${colors.bg[btn.status as 'info' | 'success']}/10` : `${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`} cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}>
             {btn.icon}
             <span className="text-sm font-medium">{btn.label}</span>
-            {btn.label === 'Layer Control' && <span className={`text-xs ${colors.text.muted}`}>{boundaryLayers.length} layers</span>}
+            {btn.isLayerControl && <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.layersCount', { count: boundaryLayers.length })}</span>}
           </button>
         ))}
       </div>

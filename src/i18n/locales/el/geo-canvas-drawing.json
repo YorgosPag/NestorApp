@@ -81,7 +81,11 @@
         "freehand": "Ελεύθερο Σχέδιο",
         "freehandDrawing": "Σύρετε & Σχεδιάστε",
         "realEstate": "Ακίνητα",
-        "realEstateDescription": "Ειδοποιήσεις"
+        "realEstateDescription": "Ειδοποιήσεις",
+        "addressSearch": "Αναζήτηση Διεύθυνσης",
+        "boundariesDemo": "Επίδειξη Ορίων",
+        "layerControl": "Επίπεδα Χάρτη",
+        "layersCount": "{count} επίπεδα"
       },
       "actions": {
         "complete": "Ολοκλήρωση",
