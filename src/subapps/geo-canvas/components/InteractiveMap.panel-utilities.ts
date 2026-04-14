@@ -37,7 +37,7 @@ export const draggablePanelContainer = (
   boxShadow: isDragging ? shadows.xl : shadows.lg,
   zIndex: zIndex.dropdown,
   cursor: isDragging ? 'grabbing' : 'auto',
-  userSelect: 'none' as const,
+  userSelect: isDragging ? 'none' as const : 'text' as const,
   backdropFilter: 'blur(4px)',
   transform: isDragging ? 'scale(1.02)' : 'scale(1)',
   transition: isDragging ? 'none' : 'all 0.2s ease-in-out'
@@ -48,7 +48,7 @@ export const draggablePanelContainer = (
  */
 export const draggablePanelHandle = (isDragging: boolean): CSSProperties => ({
   padding: `${spacing.sm} ${spacing.component.gap.md}`,
-  backgroundColor: isDragging ? colors.gray[100] : colors.gray[50],
+  backgroundColor: 'hsl(var(--muted))',
   borderBottom: `1px solid ${colors.border.secondary}`,
   borderTopLeftRadius: spacing.sm,
   borderTopRightRadius: spacing.sm,
