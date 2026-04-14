@@ -19,6 +19,7 @@ import { componentSizes } from '@/styles/design-tokens';
 import { notificationConfig } from '@/config/error-reporting';
 import { EMAIL_PROVIDERS } from './email-compose';
 import { ERROR_DIALOG_BUTTON_IDS } from './errorDialogTour';
+import { translateErrorMessage } from './error-message-translator';
 import type { ErrorFallbackUIProps } from './types';
 
 export function ErrorFallbackUI({
@@ -74,10 +75,10 @@ export function ErrorFallbackUI({
             </div>
           </header>
 
-          {/* Error Message */}
+          {/* Error Message — translated via error-message-translator SSoT */}
           <section className={`${spacingTokens.margin.bottom.lg} ${spacingTokens.padding.md} ${colors.bg.error} ${borderTokens.quick.error} ${borderTokens.radiusClass.md}`}>
             <p className={`${colors.text.error} ${typography.label.sm}`}>
-              {error.message}
+              {translateErrorMessage(error, t)}
             </p>
           </section>
 

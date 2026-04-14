@@ -9,6 +9,7 @@
 // ============================================================================
 
 import React, { Component, type ErrorInfo as ReactErrorInfo } from 'react';
+import i18next from 'i18next';
 import { getStatusColor } from '@/lib/design-system';
 import { errorTracker } from '@/services/ErrorTracker';
 import { generateErrorId } from '@/services/enterprise-id.service';
@@ -206,22 +207,21 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         );
       }
 
-      // Minimal fallback when tokens not injected (should not happen with enterprise wrappers)
-      // Emergency fallback — no i18n context available at class component level
+      // Emergency fallback — tokens not injected, no hook-based TFunction available.
+      // Uses i18next global instance directly (class component pattern).
+      const tFallback = i18next.t.bind(i18next);
       const borderColor = getStatusColor('error', 'border');
       const textColor = getStatusColor('error', 'text');
-      const FALLBACK_TITLE = 'Something went wrong';
-      const FALLBACK_RETRY = 'Try Again';
       return (
         <main className="min-h-screen bg-background flex items-center justify-center p-4">
           <article className={`max-w-md w-full bg-card border ${borderColor} p-8 rounded-lg shadow-lg`}>
-            <h1 className={`text-xl font-semibold ${textColor} mb-4`}>{FALLBACK_TITLE}</h1>
-            <p className={`text-sm ${textColor} mb-4`}>{error.message}</p>
+            <h1 className={`text-xl font-semibold ${textColor} mb-4`}>{tFallback('errors:boundary.title')}</h1>
+            <p className={`text-sm ${textColor} mb-4`}>{tFallback('errors:generic.unknown')}</p>
             <button
               onClick={this.retry}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
             >
-              {FALLBACK_RETRY}
+              {tFallback('errors:actions.tryAgain')}
             </button>
           </article>
         </main>

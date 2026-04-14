@@ -94,6 +94,17 @@
     "digest": "Digest",
     "adminEmail": "Administrator Email"
   },
+  "runtime": {
+    "referenceError": "Reference error: \"{identifier}\" is not defined",
+    "maximumUpdateDepth": "Infinite UI update loop detected",
+    "maximumCallStack": "Maximum call stack exceeded — possible infinite recursion",
+    "unexpectedEndOfInput": "Unexpected end of input — data parsing error",
+    "unexpectedToken": "Unexpected token — data format error",
+    "invalidHookCall": "Invalid React Hook call — likely used conditionally",
+    "nullReference": "Attempted to access a property of a {type} object",
+    "chunkLoadError": "Resource failed to load — try refreshing the page",
+    "reactMinified": "Internal React error (code {code})"
+  },
   "confirm": "Confirm",
   "cancel": "Cancel"
 }

@@ -27,6 +27,9 @@ export { openEmailCompose, EMAIL_PROVIDERS } from './email-compose';
 // Error Helpers
 export { getUserId, getErrorSeverity, formatErrorForEmail, goHome, goBack } from './error-helpers';
 
+// Error Message Translator
+export { translateErrorMessage, getErrorTranslationKey } from './error-message-translator';
+
 // Hooks
 export { useErrorActions } from './useErrorActions';
 export { useErrorReporting } from './useErrorReporting';

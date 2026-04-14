@@ -18,6 +18,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { componentSizes } from '@/styles/design-tokens';
 import { ErrorBoundary } from './ErrorBoundaryClass';
+import { translateErrorMessage } from './error-message-translator';
 import type { ErrorBoundaryProps, DesignTokenProps } from './types';
 
 // ── Shared hook: eliminates 4x repeated 5-hook pattern ───────────────────
@@ -84,7 +85,7 @@ export function ComponentErrorBoundary({
                 {tokens.t('boundary.title')}
               </p>
               <p className={`${tokens.typography.body.sm} ${tokens.colors.text.error}`}>
-                {error.message}
+                {translateErrorMessage(error, tokens.t)}
               </p>
             </div>
             <Button onClick={retry} variant="outline" size="sm">
