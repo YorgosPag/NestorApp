@@ -192,9 +192,9 @@
     "addArticle": "Προσθήκη άρθρου",
     "duplicateSection": "Αντιγραφή ενότητας",
     "contentLabel": "Περιεχόμενο Ενότητας",
-    "articleNumber": "Article number",
-    "articleNumberPlaceholder": "Article number placeholder",
-    "order": "Order"
+    "articleNumber": "Αριθμός άρθρου",
+    "articleNumberPlaceholder": "π.χ. 1.1",
+    "order": "Σειρά"
   },
   "exportOptions": {
     "title": "Επιλογές Εξαγωγής",
@@ -359,10 +359,10 @@
     }
   },
   "toc": {
-    "title": "Title",
-    "sectionCount": "Section count",
-    "collapseAll": "Collapse all",
-    "expandAll": "Expand all",
-    "clickToNavigate": "Click to navigate"
+    "title": "Πίνακας Περιεχομένων",
+    "sectionCount": "Αριθμός τμημάτων",
+    "collapseAll": "Σύμπτυξη όλων",
+    "expandAll": "Ανάπτυξη όλων",
+    "clickToNavigate": "Κλικ για πλοήγηση"
   }
 }

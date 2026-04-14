@@ -135,7 +135,7 @@
       "revokeAllDescription": "Θα αποσυνδεθούν όλες οι συσκευές εκτός από αυτή. Οι χρήστες θα χρειαστεί να συνδεθούν ξανά.",
       "revokeAll": "Αποσύνδεση όλων",
       "comingSoon": "Σύντομα",
-      "twoFactorTitle": "Two factor title"
+      "twoFactorTitle": "Τίτλος διπλής επαλήθευσης"
     },
     "privacy": {
       "title": "Απόρρητο",

@@ -278,8 +278,8 @@
         "decentralized": "e.g. Decentralized Admin of Attica...",
         "geographic": "e.g. Attica, Northern Greece..."
       },
-      "searchHint": "Πληκτρολογήστε για αναζήτηση...",
-      "postalCodePlaceholder": "π.χ. 69100"
+      "searchHint": "Type to search...",
+      "postalCodePlaceholder": "e.g. 10001"
     }
   }
 }

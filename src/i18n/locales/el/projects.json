@@ -497,17 +497,17 @@
     "nameRequired": "Ο τίτλος του έργου είναι υποχρεωτικός.",
     "statusRequired": "Η κατάσταση του έργου είναι υποχρεωτική."
   },
-  "allTypes": "All types",
-  "allStatuses": "All statuses",
-  "allLevels": "All levels",
+  "allTypes": "Όλοι οι τύποι",
+  "allStatuses": "Όλες οι καταστάσεις",
+  "allLevels": "Όλα τα επίπεδα",
   "parking": {
     "stats": {
-      "occupied": "Occupied"
+      "occupied": "Κατειλημμένα"
     }
   },
   "structure": {
-    "noUnits": "No units",
-    "noStorages": "No storages",
-    "noParkingSpots": "No parking spots"
+    "noUnits": "Δεν υπάρχουν μονάδες",
+    "noStorages": "Δεν υπάρχουν αποθήκες",
+    "noParkingSpots": "Δεν υπάρχουν θέσεις στάθμευσης"
   }
 }

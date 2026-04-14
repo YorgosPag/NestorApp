@@ -85,7 +85,7 @@
       "contactId": "Επαφή",
       "projectId": "Έργο",
       "unitId": "Μονάδα",
-      "propertyId": "Property id"
+      "propertyId": "Κωδικός ακινήτου"
     },
     "loadingPlaceholder": "Φόρτωση..."
   },

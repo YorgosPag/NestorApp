@@ -79,7 +79,7 @@
     "pdf": "PDF",
     "copyText": "Αντιγραφή Κειμένου",
     "cancelPO": "Ακύρωση PO",
-    "notFound": "Not found"
+    "notFound": "Δεν βρέθηκε"
   },
   "email": {
     "sendButton": "Αποστολή μέσω Email",

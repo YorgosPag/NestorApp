@@ -403,7 +403,7 @@
       "customerActions": "Ενέργειες πελάτη",
       "customerDetails": "Στοιχεία πελάτη: {name}"
     },
-    "changeUnit": "Change unit"
+    "changeUnit": "Αλλαγή μονάδας"
   },
   "sharing": {
     "shareOn": "Κοινοποίηση σε {platform}",

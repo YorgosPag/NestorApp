@@ -16,40 +16,40 @@
     }
   },
   "service": {
-    "registryEmpty": "Registry empty"
+    "registryEmpty": "Το μητρώο είναι κενό"
   },
   "toolbar": {
     "tabs": {
       "actions": {
-        "newContact": "New contact",
-        "newContactTooltip": "New contact tooltip",
-        "edit": "Edit",
-        "editTooltip": "Edit tooltip",
-        "delete": "Delete",
-        "deleteCount": "Delete count",
-        "deleteSelected": "Delete selected",
-        "deleteSelectFirst": "Delete select first",
-        "refresh": "Refresh",
-        "refreshTooltip": "Refresh tooltip"
+        "newContact": "Νέα επαφή",
+        "newContactTooltip": "Δημιουργία νέας επαφής",
+        "edit": "Επεξεργασία",
+        "editTooltip": "Επεξεργασία επαφής",
+        "delete": "Διαγραφή",
+        "deleteCount": "Διαγραφή επιλεγμένων",
+        "deleteSelected": "Διαγραφή επιλεγμένων",
+        "deleteSelectFirst": "Επιλέξτε πρώτα επαφές για διαγραφή",
+        "refresh": "Ανανέωση",
+        "refreshTooltip": "Ανανέωση λίστας"
       }
     },
     "actions": {
-      "new": "New",
-      "edit": "Edit",
-      "delete": "Delete"
+      "new": "Νέο",
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή"
     }
   },
   "customer": {
-    "propertiesCount": "Properties count",
-    "loadError": "Load error"
+    "propertiesCount": "Αριθμός ακινήτων",
+    "loadError": "Σφάλμα φόρτωσης"
   },
   "employer": {
-    "linkedBadge": "Linked badge"
+    "linkedBadge": "Συνδεδεμένο"
   },
   "common": {
-    "clear": "Clear"
+    "clear": "Καθαρισμός"
   },
   "esco": {
-    "badge": "Badge"
+    "badge": "ESCO"
   }
 }

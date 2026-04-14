@@ -31,8 +31,8 @@
       "descriptionPlaceholder": "Προαιρετική περιγραφή...",
       "notes": "Σημειώσεις",
       "notesPlaceholder": "Προαιρετικές σημειώσεις...",
-      "createError": "Create error",
-      "createDescription": "Create description"
+      "createError": "Σφάλμα δημιουργίας",
+      "createDescription": "Συμπληρώστε τα στοιχεία του νέου χώρου αποθήκευσης"
     }
   },
   "sizes": {
@@ -223,10 +223,10 @@
     "print": "Εκτύπωση",
     "ownerLabel": "Ιδιοκτήτης:",
     "newStorage": "Νέα Αποθήκη",
-    "saving": "Saving...",
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete"
+    "saving": "Αποθήκευση...",
+    "save": "Αποθήκευση",
+    "cancel": "Ακύρωση",
+    "delete": "Διαγραφή"
   },
   "page": {
     "backToProjects": "Επιστροφή στα Έργα",
@@ -344,7 +344,7 @@
     }
   },
   "common": {
-    "storage": "Storage",
-    "parking": "Parking"
+    "storage": "Αποθήκη",
+    "parking": "Στάθμευση"
   }
 }

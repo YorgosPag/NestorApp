@@ -226,7 +226,7 @@
       "amount": "Ποσό",
       "daysOverdue": "Ημέρες Καθυστέρησης",
       "noOverdue": "Δεν υπάρχουν πωληθέντα ακίνητα",
-      "unit": "Unit"
+      "unit": "Μονάδα"
     },
     "pipeline": {
       "title": "Ροή Πωλήσεων",
@@ -310,8 +310,8 @@
       "description": "Ακίνητα ομαδοποιημένα ανά πιστοποιητικό ενεργειακής απόδοσης"
     },
     "propertyStatus": {
-      "title": "Title",
-      "description": "Description"
+      "title": "Κατάσταση ακινήτων",
+      "description": "Κατανομή ακινήτων ανά κατάσταση"
     }
   },
   "contacts": {
@@ -471,124 +471,124 @@
     "description": "Ανάλυση χρονοδιαγράμματος κατασκευής και διαχείριση δεδουλευμένης αξίας"
   },
   "crm": {
-    "description": "Description",
+    "description": "Επισκόπηση δραστηριότητας CRM",
     "comms": {
-      "count": "Count",
-      "title": "Title",
-      "description": "Description"
+      "count": "Πλήθος",
+      "title": "Επικοινωνίες",
+      "description": "Επικοινωνίες ανά τύπο"
     },
     "kpis": {
-      "title": "Title",
-      "opportunities": "Opportunities",
-      "wonDeals": "Won deals",
-      "winRate": "Win rate",
-      "avgDeal": "Avg deal",
-      "totalTasks": "Total tasks",
-      "overdueTasks": "Overdue tasks",
-      "communications": "Communications",
-      "lostDeals": "Lost deals"
+      "title": "Βασικοί δείκτες CRM",
+      "opportunities": "Ευκαιρίες",
+      "wonDeals": "Κερδισμένες συμφωνίες",
+      "winRate": "Ποσοστό επιτυχίας",
+      "avgDeal": "Μέση συμφωνία",
+      "totalTasks": "Σύνολο εργασιών",
+      "overdueTasks": "Εκπρόθεσμες εργασίες",
+      "communications": "Επικοινωνίες",
+      "lostDeals": "Χαμένες συμφωνίες"
     },
     "leads": {
-      "title": "Title",
-      "description": "Description"
+      "title": "Υποψήφιοι πελάτες",
+      "description": "Κατανομή υποψήφιων πελατών ανά στάδιο"
     },
     "pipeline": {
-      "count": "Count",
-      "value": "Value",
-      "title": "Title",
-      "description": "Description"
+      "count": "Πλήθος",
+      "value": "Αξία",
+      "title": "Αγωγός πωλήσεων",
+      "description": "Κατάσταση αγωγού πωλήσεων"
     },
     "taskStatuses": {
-      "pending": "Pending",
-      "in_progress": "In_progress",
-      "completed": "Completed",
-      "cancelled": "Cancelled"
+      "pending": "Εκκρεμεί",
+      "in_progress": "Σε εξέλιξη",
+      "completed": "Ολοκληρώθηκε",
+      "cancelled": "Ακυρώθηκε"
     },
     "priorities": {
-      "low": "Low",
-      "medium": "Medium",
-      "high": "High",
-      "critical": "Critical"
+      "low": "Χαμηλή",
+      "medium": "Μεσαία",
+      "high": "Υψηλή",
+      "critical": "Κρίσιμη"
     },
     "tasks": {
-      "title": "Title",
-      "description": "Description"
+      "title": "Εργασίες",
+      "description": "Κατανομή εργασιών ανά κατάσταση"
     },
     "team": {
-      "tasks": "Tasks",
-      "title": "Title",
-      "description": "Description"
+      "tasks": "Εργασίες",
+      "title": "Απόδοση ομάδας",
+      "description": "Δραστηριότητα ανά μέλος ομάδας"
     }
   },
   "spaces": {
-    "description": "Description",
+    "description": "Επισκόπηση χώρων στάθμευσης και αποθήκευσης",
     "parking": {
       "statuses": {
-        "available": "Available",
-        "occupied": "Occupied",
-        "reserved": "Reserved",
-        "sold": "Sold",
-        "maintenance": "Maintenance"
+        "available": "Διαθέσιμο",
+        "occupied": "Κατειλημμένο",
+        "reserved": "Δεσμευμένο",
+        "sold": "Πωλήθηκε",
+        "maintenance": "Συντήρηση"
       },
       "types": {
-        "standard": "Standard",
-        "handicapped": "Handicapped",
-        "motorcycle": "Motorcycle",
-        "electric": "Electric",
-        "visitor": "Visitor"
+        "standard": "Κανονικό",
+        "handicapped": "ΑΜΕΑ",
+        "motorcycle": "Μοτοσυκλέτα",
+        "electric": "Ηλεκτρικό",
+        "visitor": "Επισκέπτης"
       },
-      "title": "Title",
-      "description": "Description",
+      "title": "Θέσεις στάθμευσης",
+      "description": "Κατανομή θέσεων στάθμευσης",
       "zones": {
-        "pilotis": "Pilotis",
-        "underground": "Underground",
-        "open_space": "Open_space",
-        "rooftop": "Rooftop",
-        "covered_outdoor": "Covered_outdoor"
+        "pilotis": "Πιλοτή",
+        "underground": "Υπόγειο",
+        "open_space": "Ακάλυπτος",
+        "rooftop": "Οροφή",
+        "covered_outdoor": "Στεγασμένος εξωτερικός"
       },
-      "zoneTitle": "Zone title",
-      "zoneDescription": "Zone description"
+      "zoneTitle": "Ανά ζώνη",
+      "zoneDescription": "Κατανομή θέσεων ανά ζώνη"
     },
     "kpis": {
-      "title": "Title",
-      "totalParking": "Total parking",
-      "totalStorage": "Total storage",
-      "parkingUtilization": "Parking utilization",
-      "storageUtilization": "Storage utilization",
-      "totalValue": "Total value",
-      "totalArea": "Total area",
-      "avgPricePerSqm": "Avg price per sqm",
-      "totalSold": "Total sold",
-      "linked": "Linked",
-      "unlinked": "Unlinked"
+      "title": "Βασικοί δείκτες χώρων",
+      "totalParking": "Σύνολο στάθμευσης",
+      "totalStorage": "Σύνολο αποθηκών",
+      "parkingUtilization": "Χρήση στάθμευσης",
+      "storageUtilization": "Χρήση αποθηκών",
+      "totalValue": "Συνολική αξία",
+      "totalArea": "Συνολικό εμβαδόν",
+      "avgPricePerSqm": "Μέση τιμή/τ.μ.",
+      "totalSold": "Σύνολο πωλήσεων",
+      "linked": "Συνδεδεμένο",
+      "unlinked": "Ασύνδετο"
     },
     "byBuilding": {
-      "parkingValue": "Parking value",
-      "storageValue": "Storage value",
-      "title": "Title",
-      "description": "Description"
+      "parkingValue": "Αξία στάθμευσης",
+      "storageValue": "Αξία αποθηκών",
+      "title": "Ανά κτίριο",
+      "description": "Στατιστικά χώρων ανά κτίριο"
     },
     "storage": {
       "statuses": {
-        "available": "Available",
-        "occupied": "Occupied",
-        "maintenance": "Maintenance",
-        "reserved": "Reserved",
-        "sold": "Sold",
-        "unavailable": "Unavailable"
+        "available": "Διαθέσιμη",
+        "occupied": "Κατειλημμένη",
+        "maintenance": "Συντήρηση",
+        "reserved": "Δεσμευμένη",
+        "sold": "Πωλήθηκε",
+        "unavailable": "Μη διαθέσιμη"
       },
       "types": {
-        "large": "Large",
-        "small": "Small",
-        "basement": "Basement",
-        "ground": "Ground",
-        "special": "Special",
-        "storage": "Storage",
-        "garage": "Garage",
-        "warehouse": "Warehouse"
+        "large": "Μεγάλη",
+        "small": "Μικρή",
+        "basement": "Υπόγεια",
+        "ground": "Ισόγεια",
+        "special": "Ειδική",
+        "storage": "Αποθήκη",
+        "garage": "Γκαράζ",
+        "warehouse": "Αποθηκευτικός χώρος"
       },
-      "title": "Title",
-      "description": "Description"
+      "title": "Αποθήκες",
+      "description": "Κατανομή αποθηκών ανά κατάσταση"
     }
   }
 }

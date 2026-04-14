@@ -149,20 +149,20 @@
     "selectBankPlaceholder": "Επιλέξτε τράπεζα...",
     "selectFile": "Αρχείο CSV",
     "chooseFile": "Επιλογή Αρχείου",
-    "noTransactionsDescription": "No transactions description",
-    "importError": "Import error",
-    "uploading": "Uploading",
-    "upload": "Upload",
-    "unmatchedTransactions": "Unmatched transactions",
-    "allTransactionsMatched": "All transactions matched",
-    "bankDescription": "Bank description",
-    "matchCandidates": "Match candidates",
-    "selectTransactionToMatch": "Select transaction to match",
-    "noCandidatesFound": "No candidates found",
-    "candidateLabel": "Candidate label",
-    "confidence": "Confidence",
-    "actions": "Actions",
-    "matchAction": "Match action"
+    "noTransactionsDescription": "Δεν υπάρχουν συναλλαγές τράπεζας",
+    "importError": "Σφάλμα εισαγωγής",
+    "uploading": "Μεταφόρτωση...",
+    "upload": "Μεταφόρτωση",
+    "unmatchedTransactions": "Αντιστοίχιστες συναλλαγές",
+    "allTransactionsMatched": "Όλες οι συναλλαγές αντιστοιχίστηκαν",
+    "bankDescription": "Περιγραφή τράπεζας",
+    "matchCandidates": "Υποψήφιες αντιστοιχίσεις",
+    "selectTransactionToMatch": "Επιλέξτε συναλλαγή για αντιστοίχιση",
+    "noCandidatesFound": "Δεν βρέθηκαν υποψήφιες",
+    "candidateLabel": "Υποψήφια συναλλαγή",
+    "confidence": "Εμπιστοσύνη",
+    "actions": "Ενέργειες",
+    "matchAction": "Αντιστοίχιση"
   },
   "efka": {
     "title": "Εισφορές ΕΦΚΑ",
@@ -237,22 +237,22 @@
       "tools": "Εργαλεία",
       "other": "Λοιπά"
     },
-    "requiredFields": "Required fields",
-    "invalidCost": "Invalid cost",
-    "createError": "Create error",
-    "addAssetTitle": "Add asset title",
-    "name": "Name",
-    "namePlaceholder": "Name placeholder",
-    "categoryPlaceholder": "Category placeholder",
-    "residualValue": "Residual value",
-    "notes": "Notes",
-    "notesPlaceholder": "Notes placeholder",
-    "creating": "Creating...",
-    "noDepreciationRecords": "No depreciation records",
-    "year": "Year",
-    "openingValue": "Opening value",
-    "depreciation": "Depreciation",
-    "closingValue": "Closing value"
+    "requiredFields": "Τα πεδία με * είναι υποχρεωτικά",
+    "invalidCost": "Μη έγκυρο κόστος",
+    "createError": "Σφάλμα δημιουργίας",
+    "addAssetTitle": "Προσθήκη πάγιου",
+    "name": "Όνομα",
+    "namePlaceholder": "π.χ. Εκτυπωτής γραφείου",
+    "categoryPlaceholder": "Επιλέξτε κατηγορία",
+    "residualValue": "Υπολειμματική αξία",
+    "notes": "Σημειώσεις",
+    "notesPlaceholder": "Προαιρετικές σημειώσεις",
+    "creating": "Δημιουργία...",
+    "noDepreciationRecords": "Δεν υπάρχουν εγγραφές απόσβεσης",
+    "year": "Έτος",
+    "openingValue": "Αρχική αξία",
+    "depreciation": "Απόσβεση",
+    "closingValue": "Τελική αξία"
   },
   "documents": {
     "title": "Παραστατικά AI",
@@ -358,23 +358,23 @@
       "from": "Από",
       "to": "Έως"
     },
-    "dueDate": "Due date",
-    "amount": "Amount",
-    "status": "Status",
-    "bracket": "Bracket",
-    "taxableInBracket": "Taxable in bracket",
-    "grossIncome": "Gross income",
-    "deductibleExpenses": "Deductible expenses",
-    "finalAmount": "Final amount",
-    "projectedIncome": "Projected income",
-    "projectedExpenses": "Projected expenses",
-    "projectedFinal": "Projected final",
-    "outputVAT": "Output v a t",
-    "inputVAT": "Input v a t",
-    "vatPayable": "Vat payable",
-    "vatCredit": "Vat credit",
-    "vatPaid": "Vat paid",
-    "vatSettlement": "Vat settlement"
+    "dueDate": "Ημερομηνία λήξης",
+    "amount": "Ποσό",
+    "status": "Κατάσταση",
+    "bracket": "Κλιμάκιο",
+    "taxableInBracket": "Φορολογητέο στο κλιμάκιο",
+    "grossIncome": "Μικτό εισόδημα",
+    "deductibleExpenses": "Εκπιπτόμενα έξοδα",
+    "finalAmount": "Τελικό ποσό",
+    "projectedIncome": "Προβλεπόμενα έσοδα",
+    "projectedExpenses": "Προβλεπόμενα έξοδα",
+    "projectedFinal": "Προβλεπόμενο τελικό",
+    "outputVAT": "ΦΠΑ εκροών",
+    "inputVAT": "ΦΠΑ εισροών",
+    "vatPayable": "Πληρωτέος ΦΠΑ",
+    "vatCredit": "Πίστωση ΦΠΑ",
+    "vatPaid": "Καταβληθείς ΦΠΑ",
+    "vatSettlement": "Εκκαθάριση ΦΠΑ"
   },
   "tax": {
     "partnerBreakdown": {
@@ -392,9 +392,9 @@
       "taxableAmount": "Φορολογητέο",
       "taxAmount": "Φόρος"
     },
-    "totalIncome": "Total income",
-    "totalExpenses": "Total expenses",
-    "taxableIncome": "Taxable income"
+    "totalIncome": "Συνολικό εισόδημα",
+    "totalExpenses": "Συνολικά έξοδα",
+    "taxableIncome": "Φορολογητέο εισόδημα"
   },
   "forms": {
     "save": "Αποθήκευση",
@@ -429,7 +429,7 @@
     "sendEmailDialog": {
       "title": "Αποστολή Τιμολογίου μέσω Email",
       "toLabel": "Παραλήπτης",
-      "toPlaceholder": "email@example.com",
+      "toPlaceholder": "email@παράδειγμα.com",
       "subjectLabel": "Θέμα",
       "languageLabel": "Γλώσσα Email",
       "languageEl": "Ελληνικά",
@@ -444,7 +444,7 @@
       "invalidEmail": "Μη έγκυρη διεύθυνση email",
       "pdfAttachmentNote": "Το PDF θα επισυναφθεί αυτόματα."
     },
-    "back": "Back"
+    "back": "Πίσω"
   },
   "common": {
     "fiscalYear": "Φορολογικό Έτος",
@@ -490,7 +490,7 @@
       "11": "Νοέμβριος",
       "12": "Δεκέμβριος"
     },
-    "cancel": "Cancel"
+    "cancel": "Ακύρωση"
   },
   "categories": {
     "income": {
@@ -537,7 +537,7 @@
       "vehicle_expenses": "Service, ελαστικά, ΚΤΕΟ, διόδια",
       "vehicle_insurance": "Ετήσια ασφάλεια επαγγελματικού οχήματος",
       "office_supplies": "Χαρτικά, μελάνια, αναλώσιμα εκτυπωτή",
-      "software": "AutoCAD, Office 365, Cloud, SaaS subscriptions",
+      "software": "AutoCAD, Office 365, Cloud, συνδρομές SaaS",
       "equipment": "Μικροεξοπλισμός κάτω από 1.500€ (δεν αποσβένεται)",
       "travel": "Αεροπορικά, ξενοδοχεία, ημερήσιες αποζημιώσεις",
       "training": "Επαγγελματικά σεμινάρια, πιστοποιήσεις",
@@ -550,8 +550,8 @@
       "other_expense": "Μη κατηγοριοποιημένα λειτουργικά έξοδα"
     },
     "groups": {
-      "standard": "Standard",
-      "custom": "Custom"
+      "standard": "Τυπικές",
+      "custom": "Προσαρμοσμένες"
     }
   },
   "vatConfig": {
@@ -819,7 +819,7 @@
       "subject": "Θέμα",
       "language": "Γλώσσα",
       "langEl": "Ελληνικά",
-      "langEn": "English",
+      "langEn": "Αγγλικά",
       "pdfNote": "Θα επισυναφθεί αυτόματα το PDF της βεβαίωσης.",
       "preview": "Προεπισκόπηση",
       "customer": "Πελάτης: {name} ({vat})",
@@ -873,23 +873,23 @@
   },
   "apyCertificates": {
     "reminderEmail": {
-      "invalidEmail": "Invalid email",
-      "sendError": "Send error",
-      "title": "Title",
-      "to": "To",
-      "customer": "Customer",
-      "subject": "Subject",
-      "language": "Language",
-      "langEl": "Lang el",
-      "langEn": "Lang en",
-      "pdfNote": "Pdf note",
-      "preview": "Preview",
-      "sendSuccess": "Send success",
-      "cancel": "Cancel",
-      "sending": "Sending...",
-      "send": "Send"
+      "invalidEmail": "Μη έγκυρο email",
+      "sendError": "Σφάλμα αποστολής",
+      "title": "Αποστολή υπενθύμισης",
+      "to": "Προς",
+      "customer": "Πελάτης",
+      "subject": "Θέμα",
+      "language": "Γλώσσα",
+      "langEl": "Ελληνικά",
+      "langEn": "Αγγλικά",
+      "pdfNote": "Το PDF θα επισυναφθεί αυτόματα",
+      "preview": "Προεπισκόπηση",
+      "sendSuccess": "Το email εστάλη επιτυχώς",
+      "cancel": "Ακύρωση",
+      "sending": "Αποστολή...",
+      "send": "Αποστολή"
     }
   },
-  "installmentsPaid": "Installments paid",
-  "installmentNumber": "Installment number"
+  "installmentsPaid": "Δόσεις καταβληθείσες",
+  "installmentNumber": "Αριθμός δόσης"
 }

@@ -297,10 +297,10 @@
         "benefit": "Precise calibration for custom scale"
       },
       "settings__dup2": {
-        "title": "Ρυθμίσεις Βαθμονόμησης",
-        "distanceLabel": "Γνωστή Απόσταση:",
-        "placeholder": "π.χ. 100",
-        "hint": "Στο επόμενο βήμα μπορείτε να επιλέξετε δύο σημεία στο σχέδιο που αντιστοιχούν σε αυτή την απόσταση."
+        "title": "Calibration Settings",
+        "distanceLabel": "Known Distance:",
+        "placeholder": "e.g. 100",
+        "hint": "In the next step you can select two points on the drawing that correspond to this distance."
       },
       "settings": {
         "title": "Title",

@@ -17,7 +17,7 @@
     "nextSlide": "Επόμενη διαφάνεια",
     "previousSlide": "Προηγούμενη διαφάνεια",
     "moveToTrash": "Μεταφορά στον Κάδο",
-    "confirm": "Confirm"
+    "confirm": "Επιβεβαίωση"
   },
   "periods": {
     "day": "Ημέρα",
@@ -682,7 +682,7 @@
       "company": "Αυτό το νομικό πρόσωπο συνδέεται με τα παρακάτω:",
       "service": "Αυτή η δημόσια υπηρεσία αναφέρεται στα παρακάτω:"
     },
-    "unavailableCount": "Unavailable count"
+    "unavailableCount": "Μη διαθέσιμος αριθμός"
   },
   "doyPicker": {
     "search": "Αναζήτηση Δ.Ο.Υ...",
@@ -1038,7 +1038,7 @@
       "ariaLabel": "Φίλτρα τύπου μονάδας",
       "all": "Όλες",
       "allTooltip": "Εμφάνιση όλων των τύπων",
-      "studio": "Studio",
+      "studio": "Στούντιο",
       "studioTooltip": "Studio / Γκαρσονιέρα",
       "apartment": "Διαμέρισμα",
       "apartmentTooltip": "Διαμέρισμα",
@@ -1082,25 +1082,25 @@
     }
   },
   "common": {
-    "loading": "Loading...",
-    "retry": "Retry",
-    "cancel": "Cancel",
-    "saving": "Saving...",
-    "save": "Save"
+    "loading": "Φόρτωση...",
+    "retry": "Επανάληψη",
+    "cancel": "Ακύρωση",
+    "saving": "Αποθήκευση...",
+    "save": "Αποθήκευση"
   },
   "viewer": {
     "messages": {
-      "updateSuccess": "Update success"
+      "updateSuccess": "Η ενημέρωση ολοκληρώθηκε"
     }
   },
   "delete": {
-    "title": "Title",
-    "description": "Description"
+    "title": "Διαγραφή",
+    "description": "Είστε σίγουροι ότι θέλετε να διαγράψετε;"
   },
   "toolbar": {
-    "refresh": "Refresh"
+    "refresh": "Ανανέωση"
   },
   "entityLinks": {
-    "error": "An error occurred"
+    "error": "Παρουσιάστηκε σφάλμα"
   }
 }

@@ -37,7 +37,7 @@
     "electrical": "Ηλεκτρολογικά",
     "plumbing": "Υδραυλικά",
     "hvac": "Κλιματισμός",
-    "internet": "Internet",
+    "internet": "Ίντερνετ",
     "phone": "Τηλέφωνο"
   },
   "names": {
@@ -71,10 +71,10 @@
     "ui": {
       "clearAllCount": "Καθαρισμός όλων ({count})",
       "itemsSelected": "{count} επιλεγμένα",
-      "selectedOfTotal": "Selected of total",
-      "buildingsCount": "Buildings count",
-      "selectActionForSelected": "Select action for selected",
-      "searchPlaceholder": "Search placeholder"
+      "selectedOfTotal": "Επιλεγμένα από σύνολο",
+      "buildingsCount": "Αριθμός κτιρίων",
+      "selectActionForSelected": "Επιλέξτε ενέργεια για επιλεγμένα",
+      "searchPlaceholder": "Αναζήτηση κτιρίων..."
     },
     "communications": {
       "channels": {
@@ -167,8 +167,8 @@
       "statsDashboard": "Στατιστικά Πίνακα Ελέγχου",
       "timeline": "Χρονοδιάγραμμα",
       "import": "Εισαγωγή Δεδομένων",
-      "pdf": "Pdf",
-      "stats": "Stats"
+      "pdf": "PDF",
+      "stats": "Στατιστικά"
     }
   },
   "categories": {
@@ -611,22 +611,22 @@
     "maisonette": "Μεζονέτα"
   },
   "actions": {
-    "removeFromFavorites": "Remove from favorites",
-    "addToFavorites": "Add to favorites"
+    "removeFromFavorites": "Αφαίρεση από αγαπημένα",
+    "addToFavorites": "Προσθήκη στα αγαπημένα"
   },
-  "allTypes": "All types",
-  "allStatuses": "All statuses",
+  "allTypes": "Όλοι οι τύποι",
+  "allStatuses": "Όλες οι καταστάσεις",
   "spaces": {
     "parking": {
       "toolbar": {
-        "newSpot": "New spot",
-        "deleteSelected": "Delete selected",
-        "saveChanges": "Save changes",
-        "refreshData": "Refresh data",
-        "exportData": "Export data",
-        "importData": "Import data",
-        "selectedCount": "Selected count",
-        "help": "Help"
+        "newSpot": "Νέα θέση",
+        "deleteSelected": "Διαγραφή επιλεγμένων",
+        "saveChanges": "Αποθήκευση αλλαγών",
+        "refreshData": "Ανανέωση δεδομένων",
+        "exportData": "Εξαγωγή δεδομένων",
+        "importData": "Εισαγωγή δεδομένων",
+        "selectedCount": "Επιλεγμένα",
+        "help": "Βοήθεια"
       }
     }
   }

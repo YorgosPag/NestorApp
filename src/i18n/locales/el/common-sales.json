@@ -169,11 +169,11 @@
         "description": "Εδώ βλέπετε όλα τα ακίνητα που είναι ενεργά προς πώληση. Περιλαμβάνονται τιμές, ενδιαφέρον αγοραστών και στατιστικά πωλήσεων."
       },
       "filters": {
-        "toggle": "Toggle"
+        "toggle": "Εναλλαγή"
       },
-      "loading": "Loading...",
-      "gridLabel": "Grid label",
-      "unitDetails": "Unit details"
+      "loading": "Φόρτωση...",
+      "gridLabel": "Προβολή πλέγματος",
+      "unitDetails": "Στοιχεία μονάδας"
     },
     "tabs": {
       "saleInfo": "Πώληση",
@@ -189,7 +189,7 @@
       "photosHint": "Οι φωτογραφίες διαχειρίζονται στη σελίδα Χώροι → Ακίνητα",
       "videosHint": "Τα βίντεο διαχειρίζονται στη σελίδα Χώροι → Ακίνητα",
       "videosNoAuth": "Απαιτείται σύνδεση για να δείτε τα βίντεο.",
-      "unitSummary": "Unit summary"
+      "unitSummary": "Σύνοψη μονάδας"
     },
     "actions": {
       "changePrice": "Αλλαγή Τιμής",
@@ -229,7 +229,7 @@
       "permit": "Τίτλος Αδείας",
       "building": "Κτίριο",
       "property": "Ακίνητο",
-      "unit": "Unit"
+      "unit": "Μονάδα"
     },
     "propertySummary": {
       "physicalData": "Φυσικά Στοιχεία",
@@ -341,7 +341,7 @@
       "noContracts": "Δεν υπάρχουν συμβόλαια. Δημιουργήστε το πρώτο.",
       "noBuyer": "Δεν υπάρχει αγοραστής",
       "noBuyerDesc": "Πρέπει πρώτα να ορίσετε αγοραστή (Κράτηση/Πώληση)",
-      "scopeUnit": "Scope unit"
+      "scopeUnit": "Μονάδα πεδίου"
     },
     "errors": {
       "noBuilding": "Το ακίνητο δεν είναι συνδεδεμένο με κτίριο. Μεταβείτε στη Διαχείριση Ακινήτων → Πληροφορίες και συνδέστε κτίριο.",
@@ -380,7 +380,7 @@
       "pricePerSqm": "€/m²",
       "daysOnMarket": "Ημέρες",
       "buyer": "Αγοραστής",
-      "unknownBuyer": "…",
+      "unknownBuyer": "—",
       "deposit": "Προκαταβολή",
       "finalPrice": "Τελική τιμή"
     },
@@ -451,16 +451,16 @@
       "typeAriaLabel": "Φίλτρο τύπου μονάδας"
     },
     "unitSummary": {
-      "physicalData": "Physical data",
-      "type": "Type",
-      "area": "Area",
-      "floor": "Floor",
-      "building": "Building",
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms",
-      "orientation": "Orientation",
-      "energy": "Energy",
-      "openInSpaces": "Open in spaces"
+      "physicalData": "Φυσικά χαρακτηριστικά",
+      "type": "Τύπος",
+      "area": "Εμβαδόν",
+      "floor": "Όροφος",
+      "building": "Κτίριο",
+      "bedrooms": "Υπνοδωμάτια",
+      "bathrooms": "Μπάνια",
+      "orientation": "Προσανατολισμός",
+      "energy": "Ενέργεια",
+      "openInSpaces": "Άνοιγμα στους χώρους"
     }
   },
   "salesStorage": {

@@ -243,8 +243,8 @@
       }
     },
     "errors": {
-      "alreadyExists": "Already exists",
-      "contactsNotFound": "Contacts not found"
+      "alreadyExists": "Υπάρχει ήδη",
+      "contactsNotFound": "Δεν βρέθηκαν επαφές"
     }
   },
   "communication": {

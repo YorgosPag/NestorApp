@@ -575,15 +575,15 @@
     "lost": "Χάθηκε"
   },
   "modal": {
-    "title": "Title",
-    "to": "To",
-    "selectType": "Select type",
-    "subjectLabel": "Subject label",
-    "subjectPlaceholder": "Subject placeholder",
-    "contentLabel": "Content label",
-    "contentPlaceholder": "Content placeholder",
-    "sending": "Sending...",
-    "send": "Send",
-    "cancel": "Cancel"
+    "title": "Αποστολή μηνύματος",
+    "to": "Προς",
+    "selectType": "Επιλέξτε τύπο",
+    "subjectLabel": "Θέμα",
+    "subjectPlaceholder": "Εισάγετε θέμα...",
+    "contentLabel": "Περιεχόμενο",
+    "contentPlaceholder": "Γράψτε το μήνυμά σας...",
+    "sending": "Αποστολή...",
+    "send": "Αποστολή",
+    "cancel": "Ακύρωση"
   }
 }

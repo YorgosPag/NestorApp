@@ -464,11 +464,11 @@
       "openTooltip": "Άνοιγμα στις Θέσεις Στάθμευσης"
     },
     "units": {
-      "title": "Title",
-      "listLabel": "List label",
-      "empty": "No items found",
-      "defaultSubtitle": "Default subtitle",
-      "openTooltip": "Open tooltip"
+      "title": "Μονάδες",
+      "listLabel": "Λίστα μονάδων",
+      "empty": "Δεν βρέθηκαν στοιχεία",
+      "defaultSubtitle": "Επιλέξτε κτίριο για προβολή μονάδων",
+      "openTooltip": "Άνοιγμα"
     }
   }
 }

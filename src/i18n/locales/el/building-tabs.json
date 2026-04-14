@@ -428,10 +428,10 @@
       "loading": "Φόρτωση αποθηκευτικών χώρων..."
     },
     "parkingFloorplan": {
-      "title": "Title"
+      "title": "Κάτοψη στάθμευσης"
     },
     "projectFloorplan": {
-      "title": "Title"
+      "title": "Κάτοψη έργου"
     }
   }
 }

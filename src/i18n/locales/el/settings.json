@@ -1,9 +1,9 @@
 {
   "shortcuts": {
-    "title": "Keyboard Shortcuts",
-    "description": "View all available keyboard shortcuts",
-    "searchPlaceholder": "Search shortcuts...",
-    "categoryPlaceholder": "All categories",
-    "print": "Print"
+    "title": "Συντομεύσεις πληκτρολογίου",
+    "description": "Προβολή όλων των διαθέσιμων συντομεύσεων",
+    "searchPlaceholder": "Αναζήτηση συντομεύσεων...",
+    "categoryPlaceholder": "Όλες οι κατηγορίες",
+    "print": "Εκτύπωση"
   }
 }

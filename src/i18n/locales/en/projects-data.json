@@ -368,63 +368,63 @@
   },
   "address": {
     "types": {
-      "site": "Εργοτάξιο",
-      "entrance": "Είσοδος",
-      "delivery": "Παραλαβή",
-      "legal": "Νομική",
-      "postal": "Ταχυδρομική",
-      "billing": "Τιμολόγησης",
-      "correspondence": "Αλληλογραφίας",
-      "other": "Άλλο"
+      "site": "Construction Site",
+      "entrance": "Entrance",
+      "delivery": "Delivery",
+      "legal": "Legal",
+      "postal": "Postal",
+      "billing": "Billing",
+      "correspondence": "Correspondence",
+      "other": "Other"
     },
     "blockSides": {
-      "north": "Βόρεια",
-      "south": "Νότια",
-      "east": "Ανατολική",
-      "west": "Δυτική",
-      "northeast": "Βορειοανατολική",
-      "northwest": "Βορειοδυτική",
-      "southeast": "Νοτιοανατολική",
-      "southwest": "Νοτιοδυτική",
-      "corner": "Γωνία",
-      "internal": "Εσωτερική"
+      "north": "North",
+      "south": "South",
+      "east": "East",
+      "west": "West",
+      "northeast": "Northeast",
+      "northwest": "Northwest",
+      "southeast": "Southeast",
+      "southwest": "Southwest",
+      "corner": "Corner",
+      "internal": "Internal"
     },
     "fields": {
-      "street": "Οδός",
-      "number": "Αριθμός",
-      "city": "Πόλη",
-      "postalCode": "Τ.Κ.",
-      "region": "Περιοχή",
-      "country": "Χώρα",
-      "label": "Ετικέτα",
-      "blockSide": "Πλευρά Ο.Τ.",
-      "cadastralCode": "ΚΑΕΚ",
-      "municipality": "Δήμος",
-      "neighborhood": "Συνοικία",
-      "coordinates": "Συντεταγμένες"
+      "street": "Street",
+      "number": "Number",
+      "city": "City",
+      "postalCode": "Postal Code",
+      "region": "Region",
+      "country": "Country",
+      "label": "Label",
+      "blockSide": "Block Side",
+      "cadastralCode": "Cadastral Code",
+      "municipality": "Municipality",
+      "neighborhood": "Neighborhood",
+      "coordinates": "Coordinates"
     },
     "labels": {
-      "primary": "Κύρια Διεύθυνση",
-      "secondary": "Δευτερεύουσα Διεύθυνση",
-      "addAddress": "Προσθήκη Διεύθυνσης",
-      "editAddress": "Επεξεργασία Διεύθυνσης",
-      "removeAddress": "Αφαίρεση Διεύθυνσης",
-      "primaryAddress": "Κύρια Διεύθυνση",
-      "additionalAddresses": "Πρόσθετες Διευθύνσεις",
-      "multipleAddresses": "Πολλαπλές Διευθύνσεις"
+      "primary": "Primary Address",
+      "secondary": "Secondary Address",
+      "addAddress": "Add Address",
+      "editAddress": "Edit Address",
+      "removeAddress": "Remove Address",
+      "primaryAddress": "Primary Address",
+      "additionalAddresses": "Additional Addresses",
+      "multipleAddresses": "Multiple Addresses"
     },
     "validation": {
-      "streetRequired": "Η οδός είναι υποχρεωτική",
-      "cityRequired": "Η πόλη είναι υποχρεωτική",
-      "postalCodeRequired": "Ο ταχυδρομικός κώδικας είναι υποχρεωτικός",
-      "countryRequired": "Η χώρα είναι υποχρεωτική",
-      "exactlyOnePrimary": "Πρέπει να υπάρχει ακριβώς μία κύρια διεύθυνση",
-      "uniqueIds": "Οι κωδικοί διευθύνσεων πρέπει να είναι μοναδικοί"
+      "streetRequired": "Street is required",
+      "cityRequired": "City is required",
+      "postalCodeRequired": "Postal code is required",
+      "countryRequired": "Country is required",
+      "exactlyOnePrimary": "Exactly one primary address is required",
+      "uniqueIds": "Address IDs must be unique"
     },
     "map": {
-      "loading": "Εντοπισμός διευθύνσεων στον χάρτη...",
-      "error": "Δεν ήταν δυνατός ο εντοπισμός των διευθύνσεων στον χάρτη. Βεβαιωθείτε ότι οι διευθύνσεις είναι έγκυρες.",
-      "partialStatus": "{count} από {total} διευθύνσεις"
+      "loading": "Locating addresses on map...",
+      "error": "Could not locate addresses on map. Make sure the addresses are valid.",
+      "partialStatus": "{count} of {total} addresses"
     }
   },
   "locations": {

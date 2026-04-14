@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "Missing i18n keys baseline — t() calls without matching locale entry",
-    "generated": "2026-04-14T08:25:26Z",
+    "generated": "2026-04-14T08:28:34Z",
     "totalViolations": 0,
     "totalFiles": 0,
     "rule": "Counts can only decrease. New files = zero tolerance."

@@ -17,7 +17,7 @@
       "ariaLabel": "Λίστα Θέσεων Στάθμευσης",
       "noResults": "Δεν βρέθηκαν θέσεις στάθμευσης",
       "noResultsForTerm": "για τον όρο \"{term}\"",
-      "noResultsHint": "No results hint"
+      "noResultsHint": "Δεν βρέθηκαν αποτελέσματα"
     },
     "accessibility": {
       "toggleFilters": "Εναλλαγή φίλτρων"

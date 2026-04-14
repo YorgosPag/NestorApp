@@ -63,57 +63,57 @@
   },
   "form": {
     "basicInfo": {
-      "title": "Βασικές Πληροφορίες",
-      "name": "Ονοματεπώνυμο",
+      "title": "Basic Information",
+      "name": "Full Name",
       "email": "Email",
-      "phone": "Τηλέφωνο",
-      "role": "Ρόλος",
-      "department": "Τμήμα",
-      "company": "Εταιρεία",
-      "location": "Τοποθεσία"
+      "phone": "Phone",
+      "role": "Role",
+      "department": "Department",
+      "company": "Company",
+      "location": "Location"
     },
     "profile": {
-      "title": "Προφίλ",
-      "avatar": "Φωτογραφία προφίλ",
-      "bio": "Βιογραφικό",
-      "specialties": "Ειδικότητες",
-      "skills": "Δεξιότητες",
-      "certifications": "Πιστοποιήσεις"
+      "title": "Profile",
+      "avatar": "Profile Photo",
+      "bio": "Bio",
+      "specialties": "Specialties",
+      "skills": "Skills",
+      "certifications": "Certifications"
     },
     "security": {
-      "title": "Ασφάλεια",
-      "status": "Κατάσταση λογαριασμού",
-      "permissions": "Δικαιώματα",
-      "lastLogin": "Τελευταία σύνδεση",
-      "passwordReset": "Επαναφορά κωδικού"
+      "title": "Security",
+      "status": "Account Status",
+      "permissions": "Permissions",
+      "lastLogin": "Last Login",
+      "passwordReset": "Password Reset"
     }
   },
   "filters": {
-    "all": "Όλοι οι χρήστες",
-    "active": "Ενεργοί",
-    "inactive": "Ανενεργοί",
-    "admins": "Διαχειριστές",
-    "managers": "Μάνατζερ",
-    "agents": "Πράκτορες",
-    "recentlyActive": "Πρόσφατα ενεργοί",
-    "newUsers": "Νέοι χρήστες"
+    "all": "All Users",
+    "active": "Active",
+    "inactive": "Inactive",
+    "admins": "Admins",
+    "managers": "Managers",
+    "agents": "Agents",
+    "recentlyActive": "Recently Active",
+    "newUsers": "New Users"
   },
   "search": {
-    "placeholder": "Αναζήτηση χρηστών...",
-    "byName": "Αναζήτηση με όνομα",
-    "byEmail": "Αναζήτηση με email",
-    "byRole": "Αναζήτηση με ρόλο",
-    "byDepartment": "Αναζήτηση με τμήμα"
+    "placeholder": "Search users...",
+    "byName": "Search by name",
+    "byEmail": "Search by email",
+    "byRole": "Search by role",
+    "byDepartment": "Search by department"
   },
   "bulk": {
-    "selected": "επιλεγμένοι χρήστες",
+    "selected": "selected users",
     "actions": {
-      "activate": "Ενεργοποίηση",
-      "deactivate": "Απενεργοποίηση",
-      "delete": "Διαγραφή",
-      "export": "Εξαγωγή",
-      "assignRole": "Ανάθεση ρόλου",
-      "sendMessage": "Αποστολή μηνύματος"
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "export": "Export",
+      "assignRole": "Assign role",
+      "sendMessage": "Send message"
     }
   },
   "messages": {
@@ -129,9 +129,9 @@
     "saveError": "Error saving user"
   },
   "confirmations": {
-    "delete": "Είστε σίγουροι ότι θέλετε να διαγράψετε τον χρήστη {name};",
-    "deactivate": "Είστε σίγουροι ότι θέλετε να απενεργοποιήσετε τον χρήστη {name};",
-    "resetPassword": "Είστε σίγουροι ότι θέλετε να επαναφέρετε τον κωδικό του χρήστη {name};",
-    "bulkAction": "Είστε σίγουροι ότι θέλετε να εφαρμόσετε αυτή την ενέργεια σε {count} χρήστες;"
+    "delete": "Are you sure you want to delete user {name}?",
+    "deactivate": "Are you sure you want to deactivate user {name}?",
+    "resetPassword": "Are you sure you want to reset the password for user {name}?",
+    "bulkAction": "Are you sure you want to apply this action to {count} users?"
   }
 }

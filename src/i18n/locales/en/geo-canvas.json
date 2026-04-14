@@ -80,9 +80,9 @@
   "georeferencing": {
     "title": "🗺️ DXF Georeferencing",
     "subtitle": "Transform DXF files to geographic coordinates",
-    "workspace": "Χώρος Εργασίας Γεωαναφοράς DXF",
-    "engineDescription": "Μηχανή μετασχηματισμού συντεταγμένων",
-    "coordinateTransform": "Μετασχηματισμός συντεταγμένων DXF → Γεωγραφικές συντεταγμένες",
+    "workspace": "DXF Georeferencing Workspace",
+    "engineDescription": "Coordinate transformation engine",
+    "coordinateTransform": "DXF → Geographic Coordinate Transformation",
     "steps": {
       "upload": "1. Upload DXF",
       "points": "2. Control Points",
@@ -90,10 +90,10 @@
       "validate": "4. Validate"
     },
     "workflow": {
-      "step1": "Βήμα 1: Προσθήκη σημείων ελέγχου με DXF και Γεωγραφικές συντεταγμένες",
-      "step2": "Βήμα 2: Εξασφάλιση καλής χωρικής κατανομής (γωνίες + κέντρο)",
-      "step3": "Βήμα 3: Βαθμονόμηση μετασχηματισμού για αντιστοίχιση συντεταγμένων",
-      "step4": "Βήμα 4: Επικύρωση ακρίβειας (στόχος: <5m RMS σφάλμα)"
+      "step1": "Step 1: Add control points with DXF and Geographic coordinates",
+      "step2": "Step 2: Ensure good spatial distribution (corners + center)",
+      "step3": "Step 3: Calibrate transformation to map coordinates",
+      "step4": "Step 4: Validate accuracy (target: <5m RMS error)"
     },
     "uploadArea": {
       "title": "Upload DXF File",
@@ -105,18 +105,18 @@
     "controlPoints": {
       "title": "Control Points",
       "description": "Define at least 3 control points for accurate georeferencing",
-      "count": "Σημεία Ελέγχου",
+      "count": "Control Points",
       "addPoint": "➕ Add Point",
       "removePoint": " Remove",
       "accuracy": "Accuracy:",
       "status": "Status:",
-      "none": "Δεν προστέθηκαν σημεία ελέγχου ακόμη",
-      "minimum": "Προσθέστε τουλάχιστον 3 σημεία για γεωαναφορά",
+      "none": "No control points added yet",
+      "minimum": "Add at least 3 points for georeferencing",
       "features": {
-        "addEdit": "• Προσθήκη/Επεξεργασία σημείων ελέγχου",
-        "mapping": "• Αντιστοίχιση DXF ↔ Γεωγραφικών",
-        "validation": "• Επικύρωση ακρίβειας",
-        "distribution": "• Χωρική κατανομή"
+        "addEdit": "• Add/Edit control points",
+        "mapping": "• DXF ↔ Geographic mapping",
+        "validation": "• Accuracy validation",
+        "distribution": "• Spatial distribution"
       },
       "coordinates": {
         "local": "Local Coordinates (DXF)",
@@ -129,8 +129,8 @@
     },
     "transformation": {
       "title": "Transformation",
-      "controls": "Έλεγχοι Μετασχηματισμού",
-      "engine": "Μηχανή Μετασχηματισμού",
+      "controls": "Transformation Controls",
+      "engine": "Transformation Engine",
       "method": "Method:",
       "methods": {
         "affine": "Affine (6 parameters)",
@@ -138,13 +138,13 @@
         "tps": "Thin Plate Spline"
       },
       "execute": "Execute Transformation",
-      "calibrate": "Βαθμονόμηση Μετασχηματισμού",
-      "notCalibrated": "❌ Μη Βαθμονομημένο",
+      "calibrate": "Calibrate Transformation",
+      "notCalibrated": "❌ Not Calibrated",
       "features": {
-        "affine": "• Affine μετασχηματισμός",
-        "leastSquares": "• Βαθμονόμηση ελάχιστων τετραγώνων",
-        "rmsCalculation": "• Υπολογισμός ακρίβειας RMS",
-        "inverse": "• Αντίστροφος μετασχηματισμός"
+        "affine": "• Affine transformation",
+        "leastSquares": "• Least squares calibration",
+        "rmsCalculation": "• RMS accuracy calculation",
+        "inverse": "• Inverse transformation"
       },
       "results": {
         "title": "Transformation Results",
@@ -221,72 +221,72 @@
     }
   },
   "progress": {
-    "title": "Πρόοδος Φάσεων",
-    "phase1": "Φάση 1: Θεμέλια",
-    "phase1Description": "Αρχιτεκτονική + Τύποι Ολοκληρώθηκαν",
-    "phase2": "Φάση 2: Μετασχηματισμός",
-    "phase2Description": "Γεωαναφορά DXF Έτοιμη",
-    "phase3": "Φάση 3: MapLibre",
-    "phase3Description": "Διαδραστική χαρτογράφηση",
-    "phase4": "Φάση 4: PostGIS",
-    "phase4Description": "Χωρική βάση δεδομένων",
-    "phase5": "Φάση 5: Ειδοποιήσεις",
-    "phase5Description": "Μηχανή γεω-ειδοποιήσεων"
+    "title": "Phase Progress",
+    "phase1": "Phase 1: Foundation",
+    "phase1Description": "Architecture + Types Complete",
+    "phase2": "Phase 2: Transformation",
+    "phase2Description": "DXF Georeferencing Ready",
+    "phase3": "Phase 3: MapLibre",
+    "phase3Description": "Interactive mapping",
+    "phase4": "Phase 4: PostGIS",
+    "phase4Description": "Spatial database",
+    "phase5": "Phase 5: Notifications",
+    "phase5Description": "Geo-notification engine"
   },
   "features": {
-    "title": "Διαθέσιμα Χαρακτηριστικά",
-    "controlPointManagement": "Διαχείριση Σημείων Ελέγχου",
-    "affineTransformation": "Affine Μετασχηματισμός",
-    "accuracyValidation": "Επικύρωση Ακρίβειας",
-    "spatialDistribution": "Ανάλυση Χωρικής Κατανομής",
-    "rmsCalculation": "Υπολογισμός RMS Σφάλματος",
-    "coordinateTransformation": "Μετασχηματισμός Συντεταγμένων"
+    "title": "Available Features",
+    "controlPointManagement": "Control Point Management",
+    "affineTransformation": "Affine Transformation",
+    "accuracyValidation": "Accuracy Validation",
+    "spatialDistribution": "Spatial Distribution Analysis",
+    "rmsCalculation": "RMS Error Calculation",
+    "coordinateTransformation": "Coordinate Transformation"
   },
   "technical": {
-    "title": "Τεχνικές Προδιαγραφές",
-    "transformation": "Μετασχηματισμός:",
-    "transformationValue": "Affine + Ελάχιστα Τετράγωνα",
-    "accuracy": "Ακρίβεια:",
-    "accuracyValue": "Επίπεδο χιλιοστού",
-    "crsSupport": "Υποστήριξη CRS:",
+    "title": "Technical Specifications",
+    "transformation": "Transformation:",
+    "transformationValue": "Affine + Least Squares",
+    "accuracy": "Accuracy:",
+    "accuracyValue": "Millimeter level",
+    "crsSupport": "CRS Support:",
     "crsSupportValue": "WGS84, GGRS87, UTM",
-    "mathEngine": "Μαθηματική Μηχανή:",
+    "mathEngine": "Math Engine:",
     "mathEngineValue": "Enterprise TypeScript",
-    "standards": "Πρότυπα:",
+    "standards": "Standards:",
     "standardsValue": "ISO 19107, OGC"
   },
   "next": {
-    "title": "Επόμενο (Φάση 3)",
-    "maplibre": "• Ενσωμάτωση MapLibre GL JS",
-    "interactivePicking": "• Διαδραστική επιλογή συντεταγμένων",
-    "realtimePreview": "• Προεπισκόπηση σε πραγματικό χρόνο",
-    "basemapLayers": "• Πολλαπλά επίπεδα βάσης",
-    "visualIndicators": "• Οπτικοί δείκτες ακρίβειας"
+    "title": "Next (Phase 3)",
+    "maplibre": "• MapLibre GL JS integration",
+    "interactivePicking": "• Interactive coordinate picking",
+    "realtimePreview": "• Real-time preview",
+    "basemapLayers": "• Multiple base layers",
+    "visualIndicators": "• Visual accuracy indicators"
   },
   "actions": {
-    "savePoints": "💾 Αποθήκευση Σημείων",
-    "loadPoints": "📂 Φόρτωση Σημείων",
-    "clearAllPoints": "Καθαρισμός Όλων των Σημείων",
-    "addPoint": "+ Προσθήκη Σημείου"
+    "savePoints": "💾 Save Points",
+    "loadPoints": "📂 Load Points",
+    "clearAllPoints": "Clear All Points",
+    "addPoint": "+ Add Point"
   },
   "validation": {
-    "status": "Κατάσταση Επικύρωσης",
-    "ready": "Έτοιμο για Βαθμονόμηση",
-    "needsImprovement": "Χρειάζεται Βελτίωση",
+    "status": "Validation Status",
+    "ready": "Ready for Calibration",
+    "needsImprovement": "Needs Improvement",
     "statistics": {
-      "controlPoints": "Σημεία Ελέγχου:",
-      "avgAccuracy": "Μέση Ακρίβεια:",
-      "maxError": "Μέγιστο Σφάλμα:",
-      "distribution": "Κατανομή:"
+      "controlPoints": "Control Points:",
+      "avgAccuracy": "Avg Accuracy:",
+      "maxError": "Max Error:",
+      "distribution": "Distribution:"
     },
     "sections": {
-      "errors": "Σφάλματα:",
-      "warnings": "Προειδοποιήσεις:",
-      "recommendations": "Συστάσεις:"
+      "errors": "Errors:",
+      "warnings": "Warnings:",
+      "recommendations": "Recommendations:"
     }
   },
-  "panelTitle": "Σημεία Ελέγχου",
-  "addControlPoint": "Προσθήκη Σημείου Ελέγχου",
+  "panelTitle": "Control Points",
+  "addControlPoint": "Add Control Point",
   "panelHeader": {
     "title": "🗺️ DXF Georeferencing",
     "subtitle": "Phase 2: Coordinate transformation engine"
@@ -418,23 +418,23 @@
   },
   "phaseDetails": {
     "phase1Features": {
-      "foundationStructure": "• Δομή θεμελίων",
-      "enterpriseTypeSystem": "• Σύστημα τύπων Enterprise",
-      "configurationSetup": "• Ρύθμιση διαμόρφωσης",
-      "routerIntegrationReady": "• Ενσωμάτωση router έτοιμη"
+      "foundationStructure": "• Foundation structure",
+      "enterpriseTypeSystem": "• Enterprise type system",
+      "configurationSetup": "• Configuration setup",
+      "routerIntegrationReady": "• Router integration ready"
     },
     "phase2Features": {
-      "dxfTransformationEngine": "• Μηχανή μετασχηματισμού DXF",
-      "coordinateSystemSupport": "• Υποστήριξη συστήματος συντεταγμένων",
-      "georeferencingTools": "• Εργαλεία γεωαναφοράς",
-      "controlPointManagement": "• Διαχείριση σημείων ελέγχου"
+      "dxfTransformationEngine": "• DXF transformation engine",
+      "coordinateSystemSupport": "• Coordinate system support",
+      "georeferencingTools": "• Georeferencing tools",
+      "controlPointManagement": "• Control point management"
     },
     "architectureOverview": {
-      "title": "Επισκόπηση Αρχιτεκτονικής",
-      "centralizedSystem": "Κεντρικοποιημένο Σύστημα: Ενσωματωμένο στο οικοσύστημα DXF Viewer",
-      "technologyStack": "Στοίβα Τεχνολογίας: React + TypeScript + MapLibre GL JS",
-      "dataFlow": "Ροή Δεδομένων: DXF → Μετασχηματισμός → GeoJSON → Χάρτης → Ειδοποιήσεις",
-      "standards": "Πρότυπα: ISO 19107, OGC, συμβάσεις AutoCAD"
+      "title": "Architecture Overview",
+      "centralizedSystem": "Centralized System: Integrated into DXF Viewer ecosystem",
+      "technologyStack": "Technology Stack: React + TypeScript + MapLibre GL JS",
+      "dataFlow": "Data Flow: DXF → Transformation → GeoJSON → Map → Notifications",
+      "standards": "Standards: ISO 19107, OGC, AutoCAD conventions"
     }
   },
   "map": {
@@ -466,19 +466,19 @@
       "lat": "Latitude"
     },
     "coordinate": {
-      "displayLabel": "Εμφάνιση Συντεταγμένων",
-      "currentPosition": "Τρέχουσα Θέση",
-      "longitude": "Γεωγρ. Μήκος",
-      "latitude": "Γεωγρ. Πλάτος",
-      "altitude": "Υψόμετρο",
-      "loading": "Φόρτωση...",
-      "clickPrompt": "Κλικ για προσθήκη {mode} σημείου",
-      "geographic": "γεωγραφικό",
+      "displayLabel": "Display Coordinates",
+      "currentPosition": "Current Position",
+      "longitude": "Longitude",
+      "latitude": "Latitude",
+      "altitude": "Altitude",
+      "loading": "Loading...",
+      "clickPrompt": "Click to add {mode} point",
+      "geographic": "geographic",
       "dxf": "DXF"
     },
     "styleSelector": {
       "style": "Style:",
-      "quickSwitcher": "Γρήγορη Αλλαγή Στυλ"
+      "quickSwitcher": "Quick Style Switcher"
     }
   },
   "accuracy": {

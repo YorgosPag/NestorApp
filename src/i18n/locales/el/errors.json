@@ -94,6 +94,6 @@
     "digest": "Digest",
     "adminEmail": "Email Διαχειριστή"
   },
-  "confirm": "Confirm",
-  "cancel": "Cancel"
+  "confirm": "Επιβεβαίωση",
+  "cancel": "Ακύρωση"
 }

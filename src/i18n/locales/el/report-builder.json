@@ -127,12 +127,12 @@
     "sortBySubtotal": "Ταξινόμηση κατά {column} υποσύνολο"
   },
   "messages": {
-    "loaded": "Loaded",
-    "unsavedChanges": "Unsaved changes"
+    "loaded": "Φορτώθηκε",
+    "unsavedChanges": "Μη αποθηκευμένες αλλαγές"
   },
   "actions": {
-    "save": "Save",
-    "saveAs": "Save as",
-    "load": "Load"
+    "save": "Αποθήκευση",
+    "saveAs": "Αποθήκευση ως",
+    "load": "Φόρτωση"
   }
 }
