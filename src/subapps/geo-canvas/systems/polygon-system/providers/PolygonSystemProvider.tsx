@@ -80,22 +80,32 @@ export function PolygonSystemProvider({
     }
   }, []);
 
-  // Core polygon system from @geo-alert/core
-  const corePolygonSystem = usePolygonSystem({
-    autoInit: false, // We'll initialize manually
+  // 🔧 FIX: Memoize options so usePolygonSystem callbacks (initialize, addPoint, etc.)
+  // don't get recreated every render — was causing all context consumers to re-render
+  const polygonSystemOptions = React.useMemo(() => ({
+    autoInit: false as const,
     debug: config.debug,
     enableSnapping: config.enableSnapping,
     snapTolerance: config.snapTolerance
-  });
+  }), [config.debug, config.enableSnapping, config.snapTolerance]);
+
+  const corePolygonSystem = usePolygonSystem(polygonSystemOptions);
+
+  // 🔧 FIX: Ref to corePolygonSystem — callbacks use ref instead of object in deps
+  // Prevents all PolygonSystemProvider callbacks from being recreated every render
+  const coreSystemRef = React.useRef(corePolygonSystem);
+  React.useEffect(() => { coreSystemRef.current = corePolygonSystem; });
 
   // Manual initialization with canvas (map optional — rendering handled by PolygonSystemLayers)
+  // Initialize once when canvas is ready and manager not yet set
+  // Use ref to avoid dependency on corePolygonSystem object (which changes every render)
   useEffect(() => {
-    if (dummyCanvasRef.current && !corePolygonSystem.manager && corePolygonSystem.initialize) {
-      // state.mapRef.current IS the MapLibre map directly (no getMap() wrapper needed)
+    const core = coreSystemRef.current;
+    if (dummyCanvasRef.current && !core.manager && core.initialize) {
       const mapInstance = state.mapRef?.current as unknown as MaplibreMap | undefined;
-      corePolygonSystem.initialize(dummyCanvasRef.current, mapInstance);
+      core.initialize(dummyCanvasRef.current, mapInstance);
     }
-  }, [state.mapRef, corePolygonSystem.initialize, corePolygonSystem.manager]);
+  }, [state.mapRef]);
 
   // ============================================================================
   // ACTIONS IMPLEMENTATION
@@ -116,10 +126,10 @@ export function PolygonSystemProvider({
 
     // Cancel any existing manager drawing first — startDrawing() calls finishDrawing()
     // internally which validates (and errors) when manager has 0 points (React is SSoT).
-    corePolygonSystem.cancelDrawing();
+    coreSystemRef.current.cancelDrawing();
 
     // Also start in core system (manager may or may not be initialized)
-    corePolygonSystem.startDrawing(type, {
+    coreSystemRef.current.startDrawing(type, {
       fillColor: drawingConfig?.fillColor || config.visualFeedback.lines.drawing.color + '40',
       strokeColor: drawingConfig?.strokeColor || config.visualFeedback.lines.drawing.color,
       strokeWidth: drawingConfig?.strokeWidth || config.visualFeedback.lines.drawing.width,
@@ -127,7 +137,8 @@ export function PolygonSystemProvider({
     });
 
     dispatch({ type: 'START_DRAWING', payload: { type, config: drawingConfig } });
-  }, [state.currentRole, config, corePolygonSystem]);
+  // coreSystemRef is a stable ref — excluded from deps intentionally (escape hatch pattern)
+  }, [config]);
 
   const finishDrawing = useCallback(() => {
     const refPoints = liveDrawingPointsRef.current;
@@ -137,7 +148,7 @@ export function PolygonSystemProvider({
     // React state is SSoT for points — never call manager.finishDrawing() with 0 points.
     // If ref has no points, cancel the manager session and return null.
     if (refPoints.length === 0) {
-      corePolygonSystem.cancelDrawing();
+      coreSystemRef.current.cancelDrawing();
       liveDrawingPointsRef.current = [];
       liveDrawingConfigRef.current = null;
       setLiveDrawingPoints([]);
@@ -184,25 +195,27 @@ export function PolygonSystemProvider({
     }
 
     return polygon;
-  }, [state.currentRole, corePolygonSystem, state.currentDrawing, config]);
+  // coreSystemRef stable ref — escape hatch pattern
+  }, [state.currentDrawing, config]);
 
   const cancelDrawing = useCallback(() => {
-    corePolygonSystem.cancelDrawing();
+    coreSystemRef.current.cancelDrawing();
     liveDrawingPointsRef.current = [];
     liveDrawingConfigRef.current = null;
     setLiveDrawingPoints([]);
     setLiveDrawingConfig(null);
     dispatch({ type: 'CANCEL_DRAWING' });
-  }, [state.currentRole, corePolygonSystem]);
+  // coreSystemRef stable ref — escape hatch pattern
+  }, []);
 
   const clearAll = useCallback(() => {
-    corePolygonSystem.clearAll();
+    coreSystemRef.current.clearAll();
     liveDrawingPointsRef.current = [];
     liveDrawingConfigRef.current = null;
     setLiveDrawingPoints([]);
     setLiveDrawingConfig(null);
     dispatch({ type: 'CLEAR_ALL' });
-  }, [state.currentRole, corePolygonSystem]);
+  }, []);
 
   const addPoint = useCallback((longitude: number, latitude: number) => {
     const newPoint: PolygonPoint = {
@@ -215,10 +228,10 @@ export function PolygonSystemProvider({
     setLiveDrawingPoints([...liveDrawingPointsRef.current]);
 
     // Also try manager (silently no-ops if null)
-    if (corePolygonSystem.addPoint) {
-      corePolygonSystem.addPoint(longitude, latitude, { lng: longitude, lat: latitude });
+    if (coreSystemRef.current.addPoint) {
+      coreSystemRef.current.addPoint(longitude, latitude, { lng: longitude, lat: latitude });
     }
-  }, [state.currentRole, corePolygonSystem]);
+  }, []);
 
   // Legacy compatibility
   const handlePolygonClosure = useCallback(() => {
@@ -272,8 +285,8 @@ export function PolygonSystemProvider({
 
   // Export — includes fallback polygons from state (manager may be empty)
   const exportAsGeoJSON = useCallback(() => {
-    const managerGeoJSON = corePolygonSystem.exportAsGeoJSON
-      ? corePolygonSystem.exportAsGeoJSON()
+    const managerGeoJSON = coreSystemRef.current.exportAsGeoJSON
+      ? coreSystemRef.current.exportAsGeoJSON()
       : { type: 'FeatureCollection' as const, features: [] as GeoJSON.Feature[] };
 
     // If manager has all polygons, return as-is
@@ -310,7 +323,8 @@ export function PolygonSystemProvider({
       type: 'FeatureCollection',
       features: [...managerGeoJSON.features, ...missingFeatures]
     } as GeoJSON.FeatureCollection;
-  }, [state.currentRole, corePolygonSystem, state.polygons]);
+  // coreSystemRef stable ref — escape hatch pattern
+  }, [state.polygons]);
 
   // Live preview: React state primary, manager fallback
   const getCurrentDrawing = useCallback(() => {
@@ -332,8 +346,9 @@ export function PolygonSystemProvider({
       } as UniversalPolygon;
     }
     // Fallback to manager
-    return corePolygonSystem.manager?.getCurrentDrawing() || null;
-  }, [liveDrawingPoints, liveDrawingConfig, liveDrawingType, corePolygonSystem.manager]);
+    return coreSystemRef.current.manager?.getCurrentDrawing() || null;
+  // coreSystemRef stable ref — escape hatch pattern
+  }, [liveDrawingPoints, liveDrawingConfig, liveDrawingType]);
 
   const showNotification = useCallback((
     message: string,
@@ -356,7 +371,9 @@ export function PolygonSystemProvider({
   // CONTEXT VALUE
   // ============================================================================
 
-  const actions: PolygonSystemActions = {
+  // 🔧 FIX: Memoize actions — was new object every render, causing all context
+  // consumers (InteractiveMapContainer) to re-render on every Provider render
+  const actions = React.useMemo<PolygonSystemActions>(() => ({
     setRole,
     startDrawing,
     finishDrawing,
@@ -374,26 +391,28 @@ export function PolygonSystemProvider({
     deletePolygon,
     movePolygonPoint,
     showNotification
-  };
+  }), [setRole, startDrawing, finishDrawing, cancelDrawing, clearAll, addPoint, exportAsGeoJSON, getCurrentDrawing, handlePolygonClosure, setMapRef, setMapLoaded, setCoordinatePicking, blockCoordinatePicking, updatePolygonConfig, deletePolygon, movePolygonPoint, showNotification]);
 
-  const contextValue: PolygonSystemContextType = {
+  // 🔧 FIX: Memoize contextValue — was new object every render
+  const contextValue = React.useMemo<PolygonSystemContextType>(() => ({
     state,
     actions,
     config,
     liveDrawingPointCount: liveDrawingPoints.length
-  };
+  }), [state, actions, config, liveDrawingPoints.length]);
 
   // ============================================================================
   // SYNC WITH CORE SYSTEM
   // ============================================================================
 
   // Sync polygons from core system only when manager has more (additive sync)
+  // Uses ref to avoid adding corePolygonSystem to deps (would trigger on every render)
   useEffect(() => {
-    const currentPolygons = corePolygonSystem.polygons || [];
+    const currentPolygons = coreSystemRef.current.polygons || [];
     if (currentPolygons.length > state.polygons.length) {
       dispatch({ type: 'SET_POLYGONS', payload: currentPolygons });
     }
-  }, [corePolygonSystem.polygons, state.polygons.length]);
+  }, [state.polygons.length]);
 
   return (
     <PolygonSystemContext.Provider value={contextValue}>

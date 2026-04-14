@@ -6,27 +6,20 @@ import type { FloorPlanControlPoint } from '../floor-plan-system/types/control-p
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
-
 // ? ENTERPRISE: GeoJSON types for administrative boundaries
 type GeoJSONFeature = GeoJSON.Feature;
 type GeoJSONFeatureCollection = GeoJSON.FeatureCollection;
-
 // ✅ ENTERPRISE: Import centralized PolygonType from core
 import type { PolygonType, UniversalPolygon } from '@geo-alert/core/polygon-system/types';
-
 // Local polygon extensions for InteractiveMap compatibility
 type LocalPolygonType = PolygonType | 'complex';
-
 // Enterprise Services & Hooks
 import { elevationService } from '../services/map/ElevationService';
 import { getAllMapStyleUrls, type MapStyleType } from '../services/map/MapStyleManager';
 import { useMapInteractions, type TransformState, type DrawingData, type MapInstance, type GeoPolygon } from '../hooks/map/useMapInteractions';
 import { useMapState } from '../hooks/map/useMapState';
-// 🏢 ENTERPRISE: Import maplibre types for proper map reference typing
-
 // Centralized Systems
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
-
 // UI Components
 import {
   GeoCoordinateDisplay,
@@ -34,10 +27,8 @@ import {
   GeoMapControls,
   GeoStatusBar
 } from './map-overlays';
-
 // Presentation Layer
 import { InteractiveMapPresentation } from './InteractiveMapPresentation';
-
 // Configuration
 import { GEOGRAPHIC_CONFIG } from '../../../config/geographic-config';
 
@@ -111,6 +102,8 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   const { getStatusBorder } = useBorderTokens();
   // 🏢 ENTERPRISE: Proper type for MapLibre map reference
   const mapRef = useRef<MaplibreMapType | null>(null);
+  // 🔧 FIX: Ref to avoid stale closure in async elevation callback
+  const hoveredCoordinateRef = useRef<GeoCoordinate | null>(null);
 
   // Centralized map state management
   const mapState = useMapState({
@@ -201,13 +194,19 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     cancelDrawing
   });
 
+  // 🔧 FIX: Sync ref so async elevation callback always reads current coordinate
+  useEffect(() => {
+    hoveredCoordinateRef.current = mapState.hoveredCoordinate;
+  }, [mapState.hoveredCoordinate]);
+
   // 🎯 BUSINESS LOGIC: ELEVATION HANDLING
+  // Uses ref to avoid stale closure — no mapState.hoveredCoordinate in deps
   const fetchElevationForCoordinate = useCallback(async (lng: number, lat: number) => {
     try {
       const result = await elevationService.getElevation(lng, lat);
 
       if (result !== null) {
-        const previous = mapState.hoveredCoordinate;
+        const previous = hoveredCoordinateRef.current;
         if (!previous) return;
 
         const isSameCoordinate =
@@ -328,7 +327,8 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   }, [systemIsDrawing, mapState.setForceUpdate]);
 
   // 🎯 BUSINESS LOGIC: MAP STYLE MANAGEMENT
-  const mapStyleUrls = getAllMapStyleUrls();
+  // 🔧 FIX: Memoize to prevent new object reference every render
+  const mapStyleUrls = React.useMemo(() => getAllMapStyleUrls(), []);
   const geoPolygons = React.useMemo<GeoPolygon[]>(() => {
     return polygons
       .map((polygon) => {
@@ -347,11 +347,24 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   }, [polygons]);
 
   // 🎯 PRESENTATION LAYER DELEGATION
-  const currentDrawingPreview = (() => {
+  // 🔧 FIX: useMemo prevents new object every render → breaks Presentation memo comparison
+  const currentDrawingPreview = React.useMemo(() => {
     const drawing = getCurrentDrawing();
-    return drawing ? { points: drawing.points.map((point) => ({ x: point.x, y: point.y })), config: drawing.config } : null;
-  })();
- 
+    return drawing
+      ? { points: drawing.points.map((point) => ({ x: point.x, y: point.y })), config: drawing.config }
+      : null;
+  }, [getCurrentDrawing]);
+
+  // 🔧 FIX: Memoize onLoad — new function every render caused Map re-init
+  const onMapLoad = React.useMemo(
+    () => mapInteractionHandlers.handleMapLoad(
+      onMapReady, enablePolygonDrawing, setMapRef, geoPolygons, stats,
+      startDrawingForMap, finishDrawing, cancelDrawing, systemIsDrawing
+    ),
+    // setMapRef is stable (useCallback []), handleMapLoad is stable (useCallback [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onMapReady, enablePolygonDrawing, geoPolygons, stats, startDrawingForMap, finishDrawing, cancelDrawing, systemIsDrawing]
+  );
 
   return (
     <div className={`relative ${className}`}>
@@ -360,17 +373,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
         mapStyle={mapStyleUrls[mapState.currentMapStyle] || mapStyleUrls.osm}
         viewState={mapState.viewState}
         onViewStateChange={mapState.setViewState}
-        onLoad={mapInteractionHandlers.handleMapLoad(
-          onMapReady,
-          enablePolygonDrawing,
-          setMapRef,
-          geoPolygons,
-          stats,
-          startDrawingForMap,
-          finishDrawing,
-          cancelDrawing,
-          systemIsDrawing
-        )}
+        onLoad={onMapLoad}
 
         // Event Handlers
         onClick={mapInteractionHandlers.handleMapClick}

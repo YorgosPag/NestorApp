@@ -194,7 +194,7 @@ export function AuditTimelineEntry({
               if (change.kind === 'collection' && change.op) {
                 const rawLabel = change.itemLabel ?? change.itemKey ?? '';
                 const itemLabel = rawLabel !== ''
-                  ? rawLabel
+                  ? (resolveAuditValue(change.field, rawLabel, t) ?? rawLabel)
                   : t('audit.collection.emptyItem');
                 const message = t(`audit.collection.${change.op}`, {
                   field: fieldLabel,

@@ -106,7 +106,7 @@ export const HOVER_BACKGROUND_EFFECTS = {
 
 export const INTERACTIVE_PATTERNS = {
   PRIMARY_HOVER: 'hover:bg-blue-700',
-  SUBTLE_HOVER: 'hover:bg-gray-100'
+  SUBTLE_HOVER: 'hover:bg-slate-700/60'
 };
 
 export const HOVER_SHADOWS = {
@@ -128,22 +128,22 @@ interface AddressSearchPanelProps {
 }
 
 export const AddressSearchPanel = ({ onClose }: AddressSearchPanelProps) => (
-  React.createElement('div', { className: 'p-4 bg-blue-50 rounded-md' },
-    React.createElement('p', null, 'Address Search Panel - Mock Implementation'),
-    React.createElement('button', { onClick: onClose, className: 'mt-2 px-3 py-1 bg-blue-500 text-white rounded' }, 'Close')
+  React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
+    React.createElement('p', { className: 'text-slate-200 text-sm' }, 'Address Search Panel - Mock Implementation'),
+    React.createElement('button', { onClick: onClose, className: 'mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm' }, 'Close')
   )
 );
 
 export const AdminBoundaryDemo = () => (
-  React.createElement('div', { className: 'p-4 bg-green-50 rounded-md' },
-    React.createElement('p', null, 'Admin Boundary Demo - Mock Implementation')
+  React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
+    React.createElement('p', { className: 'text-slate-200 text-sm' }, 'Admin Boundary Demo - Mock Implementation')
   )
 );
 
 export const BoundaryLayerControlPanel = ({ layers }: BoundaryLayerControlPanelProps) => (
-  React.createElement('div', { className: 'p-4 bg-purple-50 rounded-md' },
-    React.createElement('p', null, 'Boundary Layer Control Panel - Mock Implementation'),
-    React.createElement('p', { className: 'text-sm text-gray-600' }, `${layers?.length || 0} layers available`)
+  React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
+    React.createElement('p', { className: 'text-slate-200 text-sm' }, 'Boundary Layer Control Panel - Mock Implementation'),
+    React.createElement('p', { className: 'text-sm text-slate-400' }, `${layers?.length || 0} layers available`)
   )
 );
 

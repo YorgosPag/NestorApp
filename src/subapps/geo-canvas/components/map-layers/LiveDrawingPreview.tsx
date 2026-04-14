@@ -192,9 +192,10 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
         <Marker
           longitude={pointModePreview.coordinate.lng}
           latitude={pointModePreview.coordinate.lat}
+          anchor="center"
         >
           <div
-            style={interactiveMapStyles.markers.pin(pointModePreview.radius, 0.7)}
+            style={interactiveMapStyles.markers.pin(8, 0.7)}
             title={t('mapLayers.pinPreviewTitle', { radius: pointModePreview.radius })}
           >
             {/* Pin center dot */}
@@ -208,6 +209,7 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
         <Marker
           longitude={pointModePreview.coordinate.lng}
           latitude={pointModePreview.coordinate.lat + pointModePreview.radiusInDegrees * 0.7}
+          anchor="center"
         >
           <div
             style={interactiveMapStyles.labels.previewLabel(0.8)}
@@ -229,6 +231,7 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
             key={`preview-point-${index}`}
             longitude={point.x}
             latitude={point.y}
+            anchor="center"
           >
             <div
               style={interactiveMapStyles.markers.drawingPoint(index)}
