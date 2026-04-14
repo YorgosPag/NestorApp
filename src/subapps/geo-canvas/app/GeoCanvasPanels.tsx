@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { Globe, CheckCircle, Construction, RefreshCcw } from 'lucide-react';
+import { Globe, RefreshCcw } from 'lucide-react';
 import { ComponentErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { UserTypeSelector } from '../components/UserTypeSelector';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -156,46 +156,6 @@ export function FoundationView({ t, isLoading, colors, iconSizes, userType, onUs
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-6 text-left lg:grid-cols-2">
-          <div className={`${colors.bg.primary} p-6 rounded-lg`}>
-            <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
-              <CheckCircle className={iconSizes.md} />
-              {t('sidebar.phaseProgress.phase1Title')}
-            </h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>{t('phaseDetails.phase1Features.foundationStructure')}</li>
-              <li>{t('phaseDetails.phase1Features.enterpriseTypeSystem')}</li>
-              <li>{t('phaseDetails.phase1Features.configurationSetup')}</li>
-              <li>{t('phaseDetails.phase1Features.routerIntegrationReady')}</li>
-            </ul>
-          </div>
-
-          <div className={`${colors.bg.primary} p-6 rounded-lg`}>
-            <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
-              <CheckCircle className={iconSizes.md} />
-              {t('sidebar.phaseProgress.phase2Title')}
-            </h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>{t('phaseDetails.phase2Features.dxfTransformationEngine')}</li>
-              <li>{t('phaseDetails.phase2Features.coordinateSystemSupport')}</li>
-              <li>{t('phaseDetails.phase2Features.georeferencingTools')}</li>
-              <li>{t('phaseDetails.phase2Features.controlPointManagement')}</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className={`mt-8 p-6 ${colors.bg.primary} rounded-lg`}>
-          <h3 className="text-lg font-semibold mb-4 text-blue-400 flex items-center gap-2">
-            <Construction className={iconSizes.md} />
-            {t('phaseDetails.architectureOverview.title')}
-          </h3>
-          <div className="text-sm text-gray-300 space-y-2">
-            <p><strong>{t('phaseDetails.architectureOverview.centralizedSystem')}</strong></p>
-            <p><strong>{t('phaseDetails.architectureOverview.technologyStack')}</strong></p>
-            <p><strong>{t('phaseDetails.architectureOverview.dataFlow')}</strong></p>
-            <p><strong>{t('phaseDetails.architectureOverview.standards')}</strong></p>
-          </div>
-        </div>
       </div>
     </div>
   );

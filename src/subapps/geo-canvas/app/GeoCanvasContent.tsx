@@ -42,7 +42,7 @@ import type { GeoCanvasAppProps, GeoCoordinate } from '../types';
 import type { MapInstance } from '../hooks/map/useMapInteractions';
 
 import { useBoundaryLayers } from './useBoundaryLayers';
-import { SystemStatusPanel, FoundationView } from './GeoCanvasPanels';
+import { FoundationView } from './GeoCanvasPanels';
 
 type MapLibreMapInstance = MapInstance | null;
 
@@ -134,7 +134,6 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         ? <TechnicalDrawingInterface mapRef={mapRef} onPolygonComplete={() => {}} />
         : null;
 
-  const statusPanel = <SystemStatusPanel t={t} colors={colors} borders={borders} iconSizes={iconSizes} />;
 
   if (isLoading) {
     return (
@@ -249,26 +248,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         </div>
 
         {!isMobile && (
-          <aside className={`w-80 ${colors.bg.primary} ${borders.quick.separatorV} p-4`}>{statusPanel}</aside>
+          <aside className={`w-80 ${colors.bg.primary} ${borders.quick.separatorV} p-4`} />
         )}
       </main>
 
-      {/* FOOTER */}
-      {!isMobile && (
-        <footer className={`${colors.bg.primary} ${borders.quick.separatorH} p-3`}>
-          <nav className="flex items-center justify-between text-sm">
-            <ul className="flex flex-wrap items-center gap-2 sm:gap-4 list-none">
-              <li className="text-green-400">● {t('footer.status.active')}</li>
-              <li className="text-green-400">{t('footer.status.phase2DxfTransformation')}</li>
-              <li className="text-blue-400">{t('footer.status.georeferencingReady')}</li>
-            </ul>
-            <section className="flex items-center space-x-4">
-              <span className="text-gray-400">{t('sidebar.technicalSpecs.standardsValue')} | OGC Standards | {t('sidebar.technicalSpecs.mathEngineValue')}</span>
-              <span className="text-blue-400 flex items-center gap-2"><Globe className={iconSizes.sm} />Pagonis-Nestor Geo-Canvas v2.0</span>
-            </section>
-          </nav>
-        </footer>
-      )}
 
       {/* MOBILE SHEETS */}
       {isMobile && activeView === 'georeferencing' && (
@@ -281,12 +264,6 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {hasFloorPlanResult && (isProfessional || isTechnical) && (<section className={`p-3 rounded-lg ${colors.bg.primary} ${borders.quick.card}`}><FloorPlanControlPointPicker controlPoints={controlPoints} /></section>)}
                 {roleWorkspacePanel && (<section className={`p-3 rounded-lg ${colors.bg.primary} ${borders.quick.card}`}>{roleWorkspacePanel}</section>)}
               </div>
-            </SheetContent>
-          </Sheet>
-          <Sheet open={mobileStatusOpen} onOpenChange={setMobileStatusOpen}>
-            <SheetContent side="bottom" className="h-[78vh] p-0" aria-label="GeoCanvas Status">
-              <SheetHeader className="p-4 pb-0"><SheetTitle>System Status</SheetTitle><SheetDescription>Operational and technical status for GeoCanvas.</SheetDescription></SheetHeader>
-              <div className="h-[calc(78vh-64px)] overflow-y-auto p-4">{statusPanel}</div>
             </SheetContent>
           </Sheet>
         </>
