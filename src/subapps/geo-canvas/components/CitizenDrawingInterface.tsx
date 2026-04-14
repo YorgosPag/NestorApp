@@ -210,7 +210,7 @@ export function CitizenDrawingInterface({
   );
 
   return (
-    <div className={`${colors.bg.primary} ${quick.card} shadow-lg p-4`}>
+    <div className={`${colors.bg.primary} ${colors.text.foreground} ${quick.card} shadow-lg p-4`}>
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between">
