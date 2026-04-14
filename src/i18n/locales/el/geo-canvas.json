@@ -443,6 +443,7 @@
       "cancelPicking": "Ακύρωση Επιλογής",
       "cancel": "Ακύρωση",
       "mapStyle": "Στυλ Χάρτη",
+      "currentStyle": "Τρέχον Στυλ",
       "clickOnMap": "Κάντε κλικ στον χάρτη...",
       "openStreetMap": "OpenStreetMap",
       "satellite": "Δορυφορικός",
@@ -450,7 +451,9 @@
       "darkMode": "Σκούρο Θέμα",
       "greece": "Ελλάδα",
       "watercolor": "Ζωγραφική",
-      "toner": "Ασπρόμαυρο"
+      "toner": "Ασπρόμαυρο",
+      "coordinatePicking": "Επιλογή Συντεταγμένων",
+      "pickGeographicPointBtn": "Επιλογή Γεωγραφικού Σημείου"
     },
     "status": {
       "mapLoaded": "Χάρτης Φορτώθηκε",

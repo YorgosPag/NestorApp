@@ -443,6 +443,7 @@
       "cancelPicking": "Cancel Picking",
       "cancel": "Cancel",
       "mapStyle": "Map Style",
+      "currentStyle": "Current Style",
       "clickOnMap": "Click on map...",
       "openStreetMap": "OpenStreetMap",
       "satellite": "Satellite",
@@ -450,7 +451,9 @@
       "darkMode": "Dark Mode",
       "greece": "Greece",
       "watercolor": "Watercolor",
-      "toner": "Black & White"
+      "toner": "Black & White",
+      "coordinatePicking": "Coordinate Picking",
+      "pickGeographicPointBtn": "Pick Geographic Point"
     },
     "status": {
       "mapLoaded": "Map Loaded",
