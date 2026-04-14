@@ -356,6 +356,7 @@ export function ProjectsPageContent() {
             setShowFilters={setShowFilters}
             showTrash={showTrash}
             onToggleTrash={handleToggleTrash}
+            trashCount={trashCount}
         />
 
         {showDashboard && (

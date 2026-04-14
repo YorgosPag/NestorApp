@@ -39,6 +39,7 @@ interface ProjectsHeaderProps {
   // Trash view toggle (ADR-308)
   showTrash?: boolean;
   onToggleTrash?: () => void;
+  trashCount?: number;
 }
 
 // 🏢 ENTERPRISE: Type moved to interface section above
@@ -53,6 +54,7 @@ export function ProjectsHeader({
   setShowFilters,
   showTrash,
   onToggleTrash,
+  trashCount = 0,
 }: ProjectsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
@@ -99,7 +101,7 @@ export function ProjectsHeader({
             <button
               key="trash-toggle"
               onClick={onToggleTrash}
-              className={`p-2 ${quick.button} transition-colors ${
+              className={`relative p-2 ${quick.button} transition-colors ${
                 showTrash
                   ? `bg-destructive/10 text-destructive ${getStatusBorder('default')}`
                   : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
@@ -108,6 +110,11 @@ export function ProjectsHeader({
               aria-pressed={showTrash}
             >
               <Trash2 className={iconSizes.sm} />
+              {trashCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground leading-none">
+                  {trashCount > 99 ? '99+' : trashCount}
+                </span>
+              )}
             </button>
           ] : []),
         ].filter(Boolean)

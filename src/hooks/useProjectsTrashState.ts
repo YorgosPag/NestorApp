@@ -10,7 +10,7 @@
  * @enterprise ADR-308 — Projects Soft-Delete Trash
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { TrashService } from '@/services/trash.service';
@@ -103,6 +103,10 @@ export function useProjectsTrashState({
     setShowPermanentDeleteDialog(false);
     setPendingPermanentDeleteIds([]);
   }, []);
+
+  useEffect(() => {
+    void fetchTrashedProjects();
+  }, [fetchTrashedProjects]);
 
   return {
     showTrash,
