@@ -387,6 +387,14 @@ export function PropertyFieldsEditForm({
                   const value = isMultiLevel && activeLevelId
                     ? (currentLevelData?.areas?.[areaKey] ?? 0)
                     : formData[`area${areaKey.charAt(0).toUpperCase()}${areaKey.slice(1)}` as keyof typeof formData] as number;
+                  const grossValue = isMultiLevel && activeLevelId
+                    ? (currentLevelData?.areas?.gross ?? 0)
+                    : formData.areaGross;
+                  const netExceedsGross =
+                    areaKey === 'net' &&
+                    value > 0 &&
+                    grossValue > 0 &&
+                    value > grossValue;
                   return (
                     <fieldset key={areaKey} className="space-y-1">
                       <Label className={cn("text-xs", colors.text.muted)}>{t(labelKey)}</Label>
@@ -406,9 +414,12 @@ export function PropertyFieldsEditForm({
                           }
                           if (areaKey === 'net' || areaKey === 'gross') onAreaChange(areaKey, num);
                         }}
-                        size="sm" className="text-xs"
+                        size="sm" className={cn("text-xs", netExceedsGross && "border-amber-500")}
                         disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
                       />
+                      {netExceedsGross && (
+                        <p className="text-xs text-amber-600 mt-0.5">{t('fields.areas.netExceedsGross')}</p>
+                      )}
                     </fieldset>
                   );
                 })}

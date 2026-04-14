@@ -53,7 +53,8 @@
       "net": "Net",
       "balcony": "Balcony",
       "terrace": "Terrace",
-      "garden": "Garden"
+      "garden": "Garden",
+      "netExceedsGross": "Net area cannot exceed gross area"
     },
     "layout": {
       "sectionTitle": "Layout",
