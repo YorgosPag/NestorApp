@@ -2059,7 +2059,7 @@
       ]
     },
     {
-      "collectionGroup": "parking_spaces",
+      "collectionGroup": "parking_spots",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
