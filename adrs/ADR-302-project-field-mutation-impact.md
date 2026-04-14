@@ -1,6 +1,6 @@
 # ADR-302 — Project Field Mutation Impact System
 
-**Status:** Draft  
+**Status:** Implemented  
 **Date:** 2026-04-14  
 **Authors:** YorgosPag  
 **Related:** ADR-297 (Contact Dependency Registry SSoT), ADR-256 (Project Detail Read Path), ADR-232 (Project–Company Link), ADR-090 (EFKA/IKA Attendance)
@@ -317,44 +317,56 @@ Nessun altra collezione Firestore lo persiste.
 
 ---
 
-## 7. Piano implementazione
+## 7. Implementazione (2026-04-14)
 
-### Fase A — Registry dichiarativo (config)
+### Fase A — Registry dichiarativo (COMPLETATA)
 
 **File:** `src/config/project-mutation-impact.ts`
 
-Aggiungere `PROJECT_STATUS_TRANSITION_REGISTRY: StatusTransitionRegistry`
-con la matrice della §5.2.
+Aggiunto:
+- Tipi: `TransitionDependencyMode`, `TransitionRule`, `StatusTransitionTarget`, `DirectionalTransitionRule`, `StatusTransitionRegistry`
+- Costante: `PROJECT_STATUS_TRANSITION_REGISTRY` con matrice §5.2 completa
+- Dep #15: `soldProperties` — query `commercialStatus=='sold'`
+- Dep #16: `calendarEvents` — query `collection CALENDAR where projectId==id`
 
-### Fase B — Service status-aware
+### Fase B — Service status-aware (COMPLETATA)
 
 **File:** `src/lib/firestore/project-mutation-impact-preview.service.ts`
 
-Aggiornare `buildDependencies()`:
-1. Se `mutationKinds` include `projectStatus`, estrarre `from` e `to` dai `changes`
-2. Consultare `PROJECT_STATUS_TRANSITION_REGISTRY[toStatus]`
-3. Per ogni dipendenza con count > 0, applicare il mode dal registry
-4. Combinare con la logica companyLink esistente (invariata)
+Aggiunto:
+- `countSoldProperties()` — query compound `projectId + commercialStatus=='sold'`
+- `countCalendarEvents()` — query `COLLECTIONS.CALENDAR where projectId==id`
+- `collectDependencyCounts()` estesa con le 2 nuove query (16 totale, Promise.all)
+- `MODE_RANK` + `mergeModeMap()` — helper per deduplicazione con priorità (block>warn>info)
+- `applyDirectionalRule()` — applica deps normali (count>0) e zeroCountDeps (count=0)
+- `buildDependencies()` riscritta: status-aware, restituisce `{deps, forcedWarn, messageKeyOverride}`
+- `previewProjectMutationImpact()` aggiornata: usa `forcedWarn` per forzare mode=warn nel reopen
 
-### Fase C — i18n
+Architettura mode-map:
+- Ogni kind (companyLink, projectStatus, projectIdentity, permitMetadata) contribuisce al map
+- Per stesso depId: vince il mode più alto (block > warn > info)
+- Deps finali costruiti dal map al termine
+
+### Fase C — i18n (COMPLETATA)
 
 **File:** `src/i18n/locales/el/projects.json`, `src/i18n/locales/en/projects.json`
 
-Aggiungere chiavi per messaggi specifici per transizione:
-```
-impactGuard.statusTransition.toCompleted
-impactGuard.statusTransition.toCancelled
-impactGuard.statusTransition.toOnHold
-```
+Aggiunte:
+- `impactGuard.severity.info` — "Πληροφορία ({count})" / "Info ({count})"
+- `impactGuard.statusTransition.toCompleted/toCancelled/toOnHold/reopen/toInProgress/toPlanning`
+- `impactGuard.dependencies.soldProperties` — label + remediation
+- `impactGuard.dependencies.calendarEvents` — label + remediation
 
 ### Fase D — Verifica manuale
 
 Scenari di test:
-1. Progetto con `legalContracts > 0` → status → `cancelled` → dialog BLOCK
-2. Progetto con `attendanceEvents > 0` → status → `completed` → dialog WARN
-3. Progetto senza dati → qualsiasi status → allow diretto
-4. Company unlink → BLOCK (comportamento invariato)
-5. Nome cambio → WARN se buildings > 0
+1. Progetto con `legalContracts > 0` → status → `cancelled` → dialog BLOCK ✓ (legalContracts=block)
+2. Progetto con `soldProperties > 0` → status → `cancelled` → dialog BLOCK ✓ (soldProperties=block)
+3. Progetto con `attendanceEvents > 0` → status → `completed` → dialog WARN ✓ (attendanceEvents=warn)
+4. Progetto completed → status → `in_progress` → dialog WARN sempre ✓ (alwaysNotify=true, reopen)
+5. Progetto vuoto → `planning` → `in_progress` → dialog INFO (buildings=0, employmentRecords=0) ✓
+6. Name change con `legalContracts > 0` → WARN ✓ (projectIdentity rules)
+7. Company unlink → BLOCK (invariato) ✓
 
 ---
 
@@ -382,3 +394,4 @@ Scenari di test:
 | 2026-04-14 | 1.0.0 | ADR creata. Ricerca completa. Status: Draft. |
 | 2026-04-14 | 1.1.0 | §5 completato: matrice status approvata. 5 decisioni: cancelled+contracts=BLOCK, cancelled+soldProperties=BLOCK, planning→in_progress senza edifici=INFO, riapertura=WARN sempre, on_hold→cancelled stesse regole cancelled. Aggiunta 15° dipendenza `soldProperties`. |
 | 2026-04-14 | 1.2.0 | §6 completato: analisi denormalizzazione per tutti i campi non-status. `name`→legalContracts(WARN)+calendarEvents(INFO nuova dep #16). `title`→allow. `description`→allow. `licenseNumber/issuingAuthority/issueDate/buildingBlock/protocolNumber`→legalContracts(WARN)+buildings(INFO). `linkedCompanyId`→invariato. |
+| 2026-04-14 | 2.0.0 | Implementazione completa — Fasi A→D. Registry dichiarativo, service status-aware, i18n (el+en). Status: Draft→Implemented. Architettura: mode-map con priorità block>warn>info, `zeroCountDeps` per planning→in_progress checklist, `alwaysNotify` per reopen. |

@@ -411,8 +411,17 @@
       "status": "Project status"
     },
     "severity": {
+      "info": "Info ({count})",
       "warn": "Warning ({count})",
       "block": "Blocking ({count})"
+    },
+    "statusTransition": {
+      "toCompleted": "Moving the project to 'Completed'. Review any pending obligations and attendance records.",
+      "toCancelled": "Cancelling a project with active dependencies. Resolve the records below first.",
+      "toOnHold": "Placing project on hold. Confirm the impact on worker attendance and obligations.",
+      "reopen": "You are reopening a closed project. Review EFKA declarations and active contracts.",
+      "toInProgress": "Starting project execution. Check that you have created the necessary buildings and registered workers.",
+      "toPlanning": "Reverting to planning phase. Confirm the impact on already registered data."
     },
     "dependencies": {
       "buildings": {
@@ -470,6 +479,14 @@
       "boqItems": {
         "label": "BOQ and measurements",
         "remediation": "Measurements belong to the current project. Perform the required transfer or re-approval first."
+      },
+      "soldProperties": {
+        "label": "Sold units",
+        "remediation": "Units in this project have already been sold. Cancelling a project with active sales is not allowed — resolve the contractual obligations first."
+      },
+      "calendarEvents": {
+        "label": "Calendar events",
+        "remediation": "Calendar events reference the old project name. Update them manually after saving."
       }
     }
   },
