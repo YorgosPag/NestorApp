@@ -88,6 +88,11 @@ export interface InteractiveMapPresentationProps {
   // Hover Coordinate
   hoveredCoordinate: { lat: number; lng: number } | null;
 
+  /** Callback to delete a single polygon */
+  onDeletePolygon?: (polygonId: string) => void;
+  /** Callback to move a polygon point after drag */
+  onMovePolygonPoint?: (polygonId: string, pointIndex: number, longitude: number, latitude: number) => void;
+
   /** 🗺️ ENTERPRISE: Children elements (markers, layers) to render inside the map */
   children?: React.ReactNode;
 }
@@ -142,6 +147,10 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
 
   // Hover Coordinate
   hoveredCoordinate,
+
+  // Polygon callbacks
+  onDeletePolygon,
+  onMovePolygonPoint,
 
   // Children markers/layers
   children
@@ -223,6 +232,8 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
           polygons={polygons}
           exportAsGeoJSON={exportAsGeoJSON}
           enablePolygonDrawing={enablePolygonDrawing}
+          onDeletePolygon={onDeletePolygon}
+          onMovePolygonPoint={onMovePolygonPoint}
         />
 
         {/* ================================================================ */}

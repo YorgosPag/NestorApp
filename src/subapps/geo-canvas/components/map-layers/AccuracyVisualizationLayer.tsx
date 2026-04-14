@@ -21,6 +21,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { GEO_COLORS } from '../../config/color-config';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
 import { getDynamicTextClass } from '@/components/ui/utils/dynamic-styles';
+import { GEO_CANVAS_OPACITY } from '../../config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -209,7 +210,7 @@ export const AccuracyVisualizationLayer: React.FC<AccuracyVisualizationLayerProp
               className={`pointer-events-none ${iconSizes.sm} rounded-full`}
               style={{
                 backgroundColor: accuracyInfo.color,
-                opacity: 0.6,
+                opacity: GEO_CANVAS_OPACITY.ACCURACY_BLUR,
                 filter: 'blur(2px)'
               }}
             />

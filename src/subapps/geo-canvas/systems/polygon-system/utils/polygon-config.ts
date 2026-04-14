@@ -10,9 +10,7 @@ import type {
   RoleBasedConfig
 } from '../types/polygon-system.types';
 import { GEO_COLORS } from '../../../config/color-config';
-
-// 🏢 ENTERPRISE INTEGRATION: Import existing centralized notification service
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { GEO_CANVAS_ZINDEX } from '../../../config';
 
 // ============================================================================
 // ENTERPRISE CENTRALIZED COLOR SYSTEM
@@ -73,7 +71,7 @@ const CITIZEN_CONFIG: RoleBasedConfig = {
         color: GEO_COLORS.POLYGON.COMPLETED,
         borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.3),
         animation: 'animate-bounce',
-        shadow: 'shadow-lg shadow-green-500/50'
+        shadow: 'shadow-lg'
       },
       completed: {
         size: 16,
@@ -95,19 +93,18 @@ const CITIZEN_CONFIG: RoleBasedConfig = {
       }
     },
     zIndex: {
-      controlPoints: 9999,
-      lines: 1000,
-      notifications: 10000
+      controlPoints: GEO_CANVAS_ZINDEX.CONTROL_POINTS,
+      lines: GEO_CANVAS_ZINDEX.POLYGON_LINES,
+      notifications: GEO_CANVAS_ZINDEX.NOTIFICATIONS
     }
   },
   notifications: {
     position: 'fixed top-4 right-4',
     autoRemoveDelay: 3000,
     styles: {
-      // ✅ ENTERPRISE: Semantic color mapping for notifications
-      success: `${COLOR_BRIDGE.bg.success.replace('bg-', 'bg-green-500')} text-white p-4 rounded-lg shadow-lg animate-pulse`, // Keep green-500 for visibility
-      warning: `${COLOR_BRIDGE.bg.warning.replace('bg-', 'bg-yellow-500')} text-white p-4 rounded-lg shadow-lg animate-pulse`, // Keep yellow-500 for visibility
-      error: `${COLOR_BRIDGE.bg.error.replace('bg-', 'bg-red-500')} text-white p-4 rounded-lg shadow-lg animate-pulse` // Keep red-500 for visibility
+      success: 'bg-[hsl(var(--status-success))] text-white p-4 rounded-lg shadow-lg animate-pulse',
+      warning: 'bg-[hsl(var(--status-warning))] text-white p-4 rounded-lg shadow-lg animate-pulse',
+      error: 'bg-[hsl(var(--status-error))] text-white p-4 rounded-lg shadow-lg animate-pulse'
     }
   }
 };
@@ -137,7 +134,7 @@ const PROFESSIONAL_CONFIG: RoleBasedConfig = {
         color: GEO_COLORS.POLYGON.COMPLETED,
         borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.4),
         animation: 'animate-pulse',
-        shadow: 'shadow-md shadow-emerald-500/50'
+        shadow: 'shadow-md'
       },
       completed: {
         size: 14,
@@ -159,19 +156,18 @@ const PROFESSIONAL_CONFIG: RoleBasedConfig = {
       }
     },
     zIndex: {
-      controlPoints: 9999,
-      lines: 1000,
-      notifications: 10000
+      controlPoints: GEO_CANVAS_ZINDEX.CONTROL_POINTS,
+      lines: GEO_CANVAS_ZINDEX.POLYGON_LINES,
+      notifications: GEO_CANVAS_ZINDEX.NOTIFICATIONS
     }
   },
   notifications: {
     position: 'fixed top-4 left-4',
     autoRemoveDelay: 4000,
     styles: {
-      // ✅ ENTERPRISE: Professional notification styles with semantic colors
-      success: 'bg-emerald-600 text-white p-4 rounded-lg shadow-lg', // Keep emerald-600 for professional contrast
-      warning: 'bg-amber-600 text-white p-4 rounded-lg shadow-lg',   // Keep amber-600 for professional contrast
-      error: 'bg-red-600 text-white p-4 rounded-lg shadow-lg'        // Keep red-600 for professional contrast
+      success: 'bg-[hsl(var(--status-success))] text-white p-4 rounded-lg shadow-lg',
+      warning: 'bg-[hsl(var(--status-warning))] text-white p-4 rounded-lg shadow-lg',
+      error: 'bg-[hsl(var(--status-error))] text-white p-4 rounded-lg shadow-lg'
     }
   }
 };
@@ -201,7 +197,7 @@ const TECHNICAL_CONFIG: RoleBasedConfig = {
         color: GEO_COLORS.POLYGON.DRAFT,
         borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.DRAFT, 0.3),
         animation: 'animate-ping',
-        shadow: 'shadow-sm shadow-cyan-500/50'
+        shadow: 'shadow-sm'
       },
       completed: {
         size: 12,
@@ -223,19 +219,18 @@ const TECHNICAL_CONFIG: RoleBasedConfig = {
       }
     },
     zIndex: {
-      controlPoints: 9999,
-      lines: 1000,
-      notifications: 10000
+      controlPoints: GEO_CANVAS_ZINDEX.CONTROL_POINTS,
+      lines: GEO_CANVAS_ZINDEX.POLYGON_LINES,
+      notifications: GEO_CANVAS_ZINDEX.NOTIFICATIONS
     }
   },
   notifications: {
     position: 'fixed bottom-4 right-4',
     autoRemoveDelay: 5000,
     styles: {
-      // ✅ ENTERPRISE: Technical notification styles with semantic colors
-      success: 'bg-cyan-600 text-white p-3 rounded-md shadow-md text-sm font-mono',   // Keep cyan-600 for technical contrast
-      warning: 'bg-violet-600 text-white p-3 rounded-md shadow-md text-sm font-mono', // Keep violet-600 for technical contrast
-      error: 'bg-red-700 text-white p-3 rounded-md shadow-md text-sm font-mono'       // Keep red-700 for technical contrast
+      success: 'bg-[hsl(var(--status-success))] text-white p-3 rounded-md shadow-md text-sm font-mono',
+      warning: 'bg-[hsl(var(--status-warning))] text-white p-3 rounded-md shadow-md text-sm font-mono',
+      error: 'bg-[hsl(var(--status-error))] text-white p-3 rounded-md shadow-md text-sm font-mono'
     }
   }
 };

@@ -5,6 +5,7 @@
  */
 
 import type { MapViewState, GeoServiceConfig } from '../types';
+import { zIndex } from '../../../styles/design-tokens';
 export * from './info-panels-config';
 export * from './dialog-config';
 export * from './map-core-config';
@@ -45,6 +46,7 @@ export const MAP_STYLES = {
           'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
         ],
         tileSize: 256,
+        maxzoom: 19,
         attribution: '© OpenStreetMap contributors'
       }
     },
@@ -337,4 +339,60 @@ export const GEO_CANVAS_CONFIG = {
 
 export default GEO_CANVAS_CONFIG;
 
+// ============================================================================
+// Z-INDEX TOKENS — Centralized layer hierarchy για geo-canvas
+// ============================================================================
+
+/**
+ * Centralized z-index tokens για geo-canvas.
+ * ΜΟΝΗ ΠΗΓΗ ΑΛΗΘΕΙΑΣ — χρησιμοποιείται από όλα τα components.
+ * Βασισμένο στα κεντρικά `zIndex` tokens (layout.ts).
+ */
+export const GEO_CANVAS_ZINDEX = {
+  // Map base layer ordering
+  BASE_LAYER: zIndex.base,            // 0 - base map
+  SATELLITE_LAYER: zIndex.base + 1,   // 1 - satellite overlay
+
+  // Geo drawing layers
+  POLYGON_LINES: zIndex.dropdown,     // 1000 - polygon line overlays
+  POLYGON_VERTEX: zIndex.sticky,      // 1100 - polygon vertices
+  FLOOR_PLAN: zIndex.docked + 90,     // 100 - floor plan canvas layer
+  CONTROL_POINTS: zIndex.tooltip,     // 1800 - above all UI panels
+  NOTIFICATIONS: zIndex.toast,        // 1700 - geo notification toasts
+
+  // Panel ordering (draggable panels)
+  PANEL_COORDINATES: zIndex.dropdown,     // 1000
+  PANEL_PROPERTIES: zIndex.dropdown + 1,  // 1001
+  PANEL_LAYERS: zIndex.dropdown + 2,      // 1002
+  PANEL_TOOLS: zIndex.dropdown + 3,       // 1003
+
+  // Search UI
+  SEARCH_RESULTS: zIndex.dropdown,    // 1000
+} as const;
+
+// ============================================================================
+// OPACITY TOKENS — Centralized opacity values για geo-canvas
+// ============================================================================
+
+/**
+ * Centralized opacity values για geo-canvas visual elements.
+ */
+export const GEO_CANVAS_OPACITY = {
+  ACCURACY_BLUR: 0.6,       // accuracy visualization blur overlay
+  FLOOR_PLAN_OVERLAY: 0.8,  // floor plan transparency on map
+  CHART_SUBTITLE: 0.7,      // subtitle text in charts
+} as const;
+
+// ============================================================================
+// DIMENSION TOKENS — Centralized layout dimensions για geo-canvas
+// ============================================================================
+
+/**
+ * Centralized dimension values για geo-canvas UI components.
+ */
+export const GEO_CANVAS_DIMENSIONS = {
+  SEARCH_RESULTS_MAX_HEIGHT: '200px',
+  SEARCH_BADGE_WIDTH: '80px',
+  DRAGGABLE_PANEL_MIN_WIDTH: '200px',
+} as const;
 

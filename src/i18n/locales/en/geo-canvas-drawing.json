@@ -91,7 +91,8 @@
         "complete": "Complete",
         "cancel": "Cancel",
         "drawArea": "Draw Area",
-        "clearAll": "Clear all"
+        "clearAll": "Clear all",
+        "delete": "Delete"
       },
       "instructions": {
         "realEstate": "🏠 Draw the area of interest for property notifications"
@@ -190,6 +191,8 @@
   },
   "mapLayers": {
     "pinPreviewTitle": "Pin Preview - Radius: {radius}m",
-    "pinRadiusTitle": "Pin - Radius: {radius}m"
+    "pinRadiusTitle": "Pin - Radius: {radius}m",
+    "deletePin": "Delete pin",
+    "deletePolygon": "Delete polygon"
   }
 }

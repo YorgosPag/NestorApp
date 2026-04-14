@@ -19,6 +19,7 @@ import {
   LayerConfiguration,
   MeasurementConfiguration
 } from '../enterprise-types/GeoCanvasTypes';
+import { GEO_CANVAS_ZINDEX } from '../../config';
 
 // ============================================================================
 // 🎯 ENTERPRISE DEFAULT CONFIGURATIONS - SINGLE SOURCE OF TRUTH
@@ -137,7 +138,7 @@ export const DEFAULT_PANEL_CONFIGS: PanelConfiguration[] = [
     isDraggable: true,
     isResizable: true,
     isDismissible: true,
-    zIndex: 1000
+    zIndex: GEO_CANVAS_ZINDEX.PANEL_COORDINATES
   },
   {
     id: 'properties',
@@ -150,7 +151,7 @@ export const DEFAULT_PANEL_CONFIGS: PanelConfiguration[] = [
     isDraggable: true,
     isResizable: true,
     isDismissible: true,
-    zIndex: 1001
+    zIndex: GEO_CANVAS_ZINDEX.PANEL_PROPERTIES
   },
   {
     id: 'layers',
@@ -163,7 +164,7 @@ export const DEFAULT_PANEL_CONFIGS: PanelConfiguration[] = [
     isDraggable: true,
     isResizable: true,
     isDismissible: true,
-    zIndex: 1002
+    zIndex: GEO_CANVAS_ZINDEX.PANEL_LAYERS
   },
   {
     id: 'tools',
@@ -176,7 +177,7 @@ export const DEFAULT_PANEL_CONFIGS: PanelConfiguration[] = [
     isDraggable: true,
     isResizable: true,
     isDismissible: true,
-    zIndex: 1003
+    zIndex: GEO_CANVAS_ZINDEX.PANEL_TOOLS
   }
 ];
 
@@ -190,8 +191,8 @@ export const DEFAULT_LAYER_CONFIGS: LayerConfiguration[] = [
     name: 'Base Map',
     description: 'Primary base map layer',
     isVisible: true,
-    opacity: 1.0,
-    zIndex: 0,
+    opacity: 1,
+    zIndex: GEO_CANVAS_ZINDEX.BASE_LAYER,
     source: {
       url: 'mapbox://styles/mapbox/streets-v12',
       format: 'vector'
@@ -207,8 +208,8 @@ export const DEFAULT_LAYER_CONFIGS: LayerConfiguration[] = [
     name: 'Satellite Imagery',
     description: 'High-resolution satellite imagery',
     isVisible: false,
-    opacity: 1.0,
-    zIndex: 1,
+    opacity: 1,
+    zIndex: GEO_CANVAS_ZINDEX.SATELLITE_LAYER,
     source: {
       url: 'mapbox://styles/mapbox/satellite-v9',
       format: 'raster'

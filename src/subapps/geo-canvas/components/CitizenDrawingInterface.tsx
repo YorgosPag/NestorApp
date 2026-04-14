@@ -83,7 +83,8 @@ export function CitizenDrawingInterface({
 
   const {
     polygons, stats, startDrawing, finishDrawing, cancelDrawing,
-    clearAll, isDrawing, updatePolygonConfig
+    clearAll, isDrawing, updatePolygonConfig, liveDrawingPointCount,
+    deletePolygon
   } = useCentralizedPolygonSystem();
 
   const [realEstateSettings, setRealEstateSettings] = useState<RealEstateSettings>({
@@ -156,6 +157,8 @@ export function CitizenDrawingInterface({
   }, [cancelDrawing]);
 
   const handleClearAll = useCallback(() => { clearAll(); }, [clearAll]);
+
+  const handleDeletePolygon = useCallback((id: string) => { deletePolygon(id); }, [deletePolygon]);
 
   const handleLocationFromSearch = useCallback((lat: number, lng: number, address?: Record<string, unknown>) => {
     setShowAddressSearch(false);
@@ -272,7 +275,7 @@ export function CitizenDrawingInterface({
       {/* Action Buttons */}
       {isDrawing && (
         <div className="flex gap-2 mb-4">
-          <button onClick={handleComplete} className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.success} ${colors.text.foreground} py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.SUCCESS} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
+          <button onClick={handleComplete} disabled={liveDrawingPointCount === 0} className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.success} ${colors.text.foreground} py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.SUCCESS} ${TRANSITION_PRESETS.STANDARD_COLORS} disabled:opacity-50 disabled:cursor-not-allowed`}>
             <Check className={iconSizes.md} /><span className="font-medium">{t('drawingInterfaces.citizen.actions.complete')}</span>
           </button>
           <button onClick={handleCancel} className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.error} ${colors.text.foreground} py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
@@ -286,9 +289,46 @@ export function CitizenDrawingInterface({
       )}
 
       {polygons.length > 0 && !isDrawing && (
-        <button onClick={handleClearAll} className={`w-full flex items-center justify-center gap-2 ${colors.bg.hover} ${colors.text.muted} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-          <Trash2 className={iconSizes.sm} /><span className="text-sm">{t('drawingInterfaces.citizen.actions.clearAll')} ({polygons.length})</span>
-        </button>
+        <div className="space-y-1">
+          {polygons.map((polygon, idx) => {
+            const isPoint = polygon.config?.pointMode === true;
+            const label = isPoint
+              ? `${t('drawingInterfaces.citizen.tools.point')} ${idx + 1}`
+              : `${t('drawingInterfaces.citizen.tools.polygon')} ${idx + 1}`;
+            return (
+              <div
+                key={polygon.id}
+                className={`flex items-center justify-between px-3 py-2 ${quick.card} ${colors.bg.secondary}`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {isPoint
+                    ? <MapPin className={`${iconSizes.sm} shrink-0 ${colors.text.info}`} />
+                    : <Hexagon className={`${iconSizes.sm} shrink-0 ${colors.text.success}`} />}
+                  <span className={`text-sm truncate ${colors.text.foreground}`}>{label}</span>
+                  {isPoint && (
+                    <span className={`text-xs ${colors.text.muted}`}>
+                      {polygon.config?.radius as number ?? 100}m
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleDeletePolygon(polygon.id)}
+                  className={`shrink-0 p-1 rounded ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                  title={t('drawingInterfaces.citizen.actions.delete')}
+                >
+                  <Trash2 className={iconSizes.sm} />
+                </button>
+              </div>
+            );
+          })}
+          <button
+            onClick={handleClearAll}
+            className={`w-full flex items-center justify-center gap-2 ${colors.bg.hover} ${colors.text.muted} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+          >
+            <Trash2 className={iconSizes.sm} />
+            <span className="text-sm">{t('drawingInterfaces.citizen.actions.clearAll')} ({polygons.length})</span>
+          </button>
+        </div>
       )}
 
       {selectedTool && (

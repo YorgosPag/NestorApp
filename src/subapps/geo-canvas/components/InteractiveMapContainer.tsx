@@ -1,20 +1,3 @@
-/**
- * 🧠 INTERACTIVE MAP CONTAINER - ENTERPRISE BUSINESS LOGIC
- *
- * Enterprise business logic container για InteractiveMap system.
- * Handles ALL state management, event handling, και data processing.
- *
- * ✅ Enterprise Standards:
- * - Complete business logic responsibility
- * - Zero presentation logic (delegated σε Presentation)
- * - TypeScript strict typing
- * - Centralized state management
- * - Clean hook integration
- * - Professional error handling
- *
- * @module InteractiveMapContainer
- */
-
 import * as React from 'react';
 const { useRef, useEffect, useState, useCallback } = React;
 import type { Map as MaplibreMapType } from 'maplibre-gl';
@@ -58,10 +41,7 @@ import { InteractiveMapPresentation } from './InteractiveMapPresentation';
 // Configuration
 import { GEOGRAPHIC_CONFIG } from '../../../config/geographic-config';
 
-// ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
-// ============================================================================
-
 export interface InteractiveMapContainerProps {
   onCoordinateClick?: (coordinate: GeoCoordinate) => void;
   showControlPoints?: boolean;
@@ -98,10 +78,7 @@ export interface InteractiveMapContainerProps {
   children?: React.ReactNode;
 }
 
-// ============================================================================
 // 🧠 INTERACTIVE MAP CONTAINER COMPONENT
-// ============================================================================
-
 /**
  * Enterprise business logic container για Interactive Map
  * Consolidates ALL business logic, state management, και data processing
@@ -126,16 +103,10 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   showMapControls = true, // 🗺️ ENTERPRISE: Hide coordinate picker & style selector
   children // 🗺️ ENTERPRISE: Children markers/layers
 }) => {
-  // ========================================================================
   // 🎯 ENTERPRISE: CENTRALIZED DESIGN TOKENS
-  // ========================================================================
-
   const colors = useSemanticColors();
 
-  // ========================================================================
   // 🎯 ENTERPRISE: CENTRALIZED STATE MANAGEMENT
-  // ========================================================================
-
   const { t } = useTranslationLazy('geo-canvas');
   const { getStatusBorder } = useBorderTokens();
   // 🏢 ENTERPRISE: Proper type for MapLibre map reference
@@ -164,7 +135,9 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     exportAsGeoJSON,
     getCurrentDrawing,
     isDrawing: systemIsDrawing,
-    isPolygonComplete: systemIsPolygonComplete
+    isPolygonComplete: systemIsPolygonComplete,
+    deletePolygon,
+    movePolygonPoint
   } = useCentralizedPolygonSystem();
   const startDrawingForMap = useCallback(() => {
     if (!enablePolygonDrawing) return;
@@ -174,10 +147,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     startDrawing(resolvedMode);
   }, [enablePolygonDrawing, startDrawing, defaultPolygonMode]);
 
-  // ========================================================================
   // 🎯 BUSINESS LOGIC: DRAWING STATE MANAGEMENT
-  // ========================================================================
-
   // Legacy polygon compatibility
   const [completedPolygon, setCompletedPolygon] = useState<FloorPlanControlPoint[] | null>(null);
   const isPolygonComplete = mapState.localIsPolygonComplete || systemIsPolygonComplete;
@@ -209,10 +179,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     };
   }, [getCurrentDrawing]);
 
-  // ========================================================================
   // 🎯 BUSINESS LOGIC: MAP INTERACTION HANDLERS
-  // ========================================================================
-
   const mapInteractionHandlers = useMapInteractions({
     enablePolygonDrawing,
     isPickingCoordinates,
@@ -234,10 +201,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     cancelDrawing
   });
 
-  // ========================================================================
   // 🎯 BUSINESS LOGIC: ELEVATION HANDLING
-  // ========================================================================
-
   const fetchElevationForCoordinate = useCallback(async (lng: number, lat: number) => {
     try {
       const result = await elevationService.getElevation(lng, lat);
@@ -272,10 +236,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     return () => clearTimeout(timeoutId);
   }, [mapState.hoveredCoordinate, fetchElevationForCoordinate]);
 
-  // ========================================================================
   // 🎯 BUSINESS LOGIC: POLYGON CLOSURE HANDLER
-  // ========================================================================
-
   const handleLegacyPolygonClosure = useCallback(() => {
     const currentPoints = transformState.controlPoints;
 
@@ -315,10 +276,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     }
   }, [transformState.controlPoints, onPolygonComplete, mapState.setLocalIsPolygonComplete]);
 
-  // ========================================================================
   // 🎯 BUSINESS LOGIC: POLYGON SYSTEM EFFECTS
-  // ========================================================================
-
   // Handle polygon creation callback
   useEffect(() => {
     if (onPolygonCreated && polygons.length > 0) {
@@ -369,10 +327,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     return () => clearInterval(interval);
   }, [systemIsDrawing, mapState.setForceUpdate]);
 
-  // ========================================================================
   // 🎯 BUSINESS LOGIC: MAP STYLE MANAGEMENT
-  // ========================================================================
-
   const mapStyleUrls = getAllMapStyleUrls();
   const geoPolygons = React.useMemo<GeoPolygon[]>(() => {
     return polygons
@@ -391,10 +346,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
       .filter((polygon): polygon is GeoPolygon => Boolean(polygon));
   }, [polygons]);
 
-  // ========================================================================
   // 🎯 PRESENTATION LAYER DELEGATION
-  // ========================================================================
-
   const currentDrawingPreview = (() => {
     const drawing = getCurrentDrawing();
     return drawing ? { points: drawing.points.map((point) => ({ x: point.x, y: point.y })), config: drawing.config } : null;
@@ -449,6 +401,10 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
 
         // Export Functions
         exportAsGeoJSON={exportAsGeoJSON}
+
+        // Polygon edit callbacks
+        onDeletePolygon={deletePolygon}
+        onMovePolygonPoint={movePolygonPoint}
 
         // Cursor
         cursor={mapState.clickMode !== 'off' ? 'crosshair' : systemIsDrawing ? 'crosshair' : 'default'}
@@ -538,5 +494,4 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
  * This component implements the **Container Pattern** στο enterprise architecture.
  * Handles ALL business logic και delegates presentation σε InteractiveMapPresentation.
  */
-
 

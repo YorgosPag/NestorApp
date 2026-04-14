@@ -6,6 +6,8 @@
 import React from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { GEO_COLORS } from '../../../config/color-config';
+import { typography, spacing } from '../../../../../styles/design-tokens';
+import { GEO_CANVAS_OPACITY } from '../../../config';
 
 // ============================================================================
 // LOCAL STYLE HELPERS
@@ -23,14 +25,14 @@ export const chartComponents = {
       userSelect: 'none' as const,
     }),
     tooltip: {
-      fontWeight: '500',
-      fontSize: '11px',
+      fontWeight: typography.fontWeight.medium,
+      fontSize: typography.fontSize.xs,
     },
   },
   title: {
-    container: { marginBottom: '12px', textAlign: 'center' as const },
-    main: { margin: '0', fontSize: '16px', fontWeight: '600' },
-    subtitle: { margin: '4px 0 0 0', fontSize: '12px', opacity: 0.7 },
+    container: { marginBottom: spacing.component.lg, textAlign: 'center' as const },
+    main: { margin: '0', fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold },
+    subtitle: { margin: `${spacing.xs} 0 0 0`, fontSize: typography.fontSize.xs, opacity: GEO_CANVAS_OPACITY.CHART_SUBTITLE },
   },
 };
 

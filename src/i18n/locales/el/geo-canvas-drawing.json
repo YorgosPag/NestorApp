@@ -91,7 +91,8 @@
         "complete": "Ολοκλήρωση",
         "cancel": "Ακύρωση",
         "drawArea": "Σχεδίαση Περιοχής",
-        "clearAll": "Καθαρισμός όλων"
+        "clearAll": "Καθαρισμός όλων",
+        "delete": "Διαγραφή"
       },
       "instructions": {
         "realEstate": "🏠 Σχεδιάστε την περιοχή ενδιαφέροντος για ειδοποιήσεις ακινήτων"
@@ -190,6 +191,8 @@
   },
   "mapLayers": {
     "pinPreviewTitle": "Πινέζα Προεπισκόπηση - Ακτίνα: {radius}m",
-    "pinRadiusTitle": "Πινέζα - Ακτίνα: {radius}m"
+    "pinRadiusTitle": "Πινέζα - Ακτίνα: {radius}m",
+    "deletePin": "Διαγραφή πινέζας",
+    "deletePolygon": "Διαγραφή πολυγώνου"
   }
 }

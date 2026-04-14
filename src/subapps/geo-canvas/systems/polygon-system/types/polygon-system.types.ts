@@ -185,6 +185,12 @@ export interface PolygonSystemActions {
   setCoordinatePicking: (enabled: boolean) => void;
   blockCoordinatePicking: (blocked: boolean) => void;
 
+  /** Delete individual polygon by id */
+  deletePolygon: (polygonId: string) => void;
+
+  /** Move a single point within a completed polygon */
+  movePolygonPoint: (polygonId: string, pointIndex: number, longitude: number, latitude: number) => void;
+
   /** Notification system */
   showNotification: (message: string, type: 'success' | 'warning' | 'error') => void;
 }
@@ -196,6 +202,7 @@ export interface PolygonSystemContext {
   state: PolygonSystemState;
   actions: PolygonSystemActions;
   config: RoleBasedConfig;
+  liveDrawingPointCount: number;
 }
 
 // ============================================================================
@@ -265,6 +272,12 @@ export interface CentralizedPolygonSystemHook {
     [key: string]: unknown;
   }>) => void;
 
+  /** Delete individual polygon by id */
+  deletePolygon: (polygonId: string) => void;
+
+  /** Move a single point within a completed polygon */
+  movePolygonPoint: (polygonId: string, pointIndex: number, longitude: number, latitude: number) => void;
+
   /** Export functionality */
   exportAsGeoJSON: () => GeoJSON.FeatureCollection;
 
@@ -281,6 +294,7 @@ export interface CentralizedPolygonSystemHook {
   /** State */
   isDrawing: boolean;
   currentRole: UserRole;
+  liveDrawingPointCount: number;
 }
 
 // ============================================================================

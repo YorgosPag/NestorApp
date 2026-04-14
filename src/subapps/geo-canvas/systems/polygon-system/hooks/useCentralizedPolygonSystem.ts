@@ -20,7 +20,7 @@ import type { CentralizedPolygonSystemHook } from '../types/polygon-system.types
  * @returns CentralizedPolygonSystemHook
  */
 export function useCentralizedPolygonSystem(): CentralizedPolygonSystemHook {
-  const { state, actions, config } = usePolygonSystemContext();
+  const { state, actions, config, liveDrawingPointCount } = usePolygonSystemContext();
 
   // Memoized statistics
   const stats = useMemo(() => ({
@@ -78,7 +78,11 @@ export function useCentralizedPolygonSystem(): CentralizedPolygonSystemHook {
     // STATE ACCESS
     // ========================================================================
 
+    deletePolygon: actions.deletePolygon,
+    movePolygonPoint: actions.movePolygonPoint,
+
     isDrawing: state.isDrawing,
-    currentRole: state.currentRole
+    currentRole: state.currentRole,
+    liveDrawingPointCount
   };
 }

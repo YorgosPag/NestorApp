@@ -35,6 +35,10 @@ export interface PolygonSystemLayersProps {
   exportAsGeoJSON: () => GeoJSON.FeatureCollection | null;
   /** Whether polygon drawing is enabled */
   enablePolygonDrawing?: boolean;
+  /** Callback to delete a polygon by id */
+  onDeletePolygon?: (polygonId: string) => void;
+  /** Callback to move a polygon point after drag */
+  onMovePolygonPoint?: (polygonId: string, pointIndex: number, longitude: number, latitude: number) => void;
 }
 
 export interface CircleGeometry {
@@ -90,32 +94,28 @@ const isValidCoordinate = (point: { x: number; y: number }): boolean => {
 export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
   polygons = [],
   exportAsGeoJSON,
-  enablePolygonDrawing = false
+  enablePolygonDrawing = false,
+  onDeletePolygon,
+  onMovePolygonPoint
 }) => {
   const { t } = useTranslation('geo-canvas-drawing');
 
-  // Early return για performance
-  if (!enablePolygonDrawing || !polygons || polygons.length === 0) {
-    return null;
-  }
-
   // ✅ PERFORMANCE: Memoized GeoJSON data from centralized system
+  // Must be before any early return (Rules of Hooks)
   const geojsonData = useMemo<GeoJSON.FeatureCollection | null>(() => {
+    if (!enablePolygonDrawing || !polygons || polygons.length === 0) return null;
     try {
       return exportAsGeoJSON();
     } catch (error) {
       console.warn('Failed to export GeoJSON data:', error);
       return null;
     }
-  }, [exportAsGeoJSON, polygons]);
-
-  // Early return if no valid GeoJSON data
-  if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
-    return null;
-  }
+  }, [enablePolygonDrawing, polygons, exportAsGeoJSON]);
 
   // ✅ PERFORMANCE: Memoized polygon rendering data
+  // Must be before any early return (Rules of Hooks)
   const polygonRenderData = useMemo(() => {
+    if (!geojsonData?.features) return [];
     return geojsonData.features.map((feature: GeoJSONFeature, index: number) => {
       const properties = feature.properties as Record<string, unknown> | null;
       const featureId = typeof properties?.id === 'string' ? properties.id : undefined;
@@ -135,7 +135,15 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
         index
       };
     }).filter(Boolean);
-  }, [geojsonData.features, polygons]);
+  }, [geojsonData, polygons]);
+
+  // Early returns after all hooks
+  if (!enablePolygonDrawing || !polygons || polygons.length === 0) {
+    return null;
+  }
+  if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -201,22 +209,53 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
                 />
               </Source>
 
-              {/* Pin Marker (πινέζα) */}
+              {/* Pin Marker (πινέζα) — draggable + deletable */}
               <Marker
                 longitude={point.x}
                 latitude={point.y}
+                anchor="center"
+                draggable={Boolean(onMovePolygonPoint)}
+                onDragEnd={(e) => {
+                  onMovePolygonPoint?.(polygon.id, 0, e.lngLat.lng, e.lngLat.lat);
+                }}
               >
-                <div
-                  style={interactiveMapStyles.markers.dynamicPin(
-                    polygon.style.strokeColor,
-                    polygon.style.fillColor
-                  )}
-                  title={t('mapLayers.pinRadiusTitle', { radius: pointRadius })}
-                >
-                  {/* Pin center dot */}
+                <div style={{ position: 'relative' }}>
                   <div
-                    style={interactiveMapStyles.markers.dynamicCenterDot()}
-                  />
+                    style={interactiveMapStyles.markers.dynamicPin(
+                      polygon.style.strokeColor,
+                      polygon.style.fillColor
+                    )}
+                    title={t('mapLayers.pinRadiusTitle', { radius: pointRadius })}
+                  >
+                    <div style={interactiveMapStyles.markers.dynamicCenterDot()} />
+                  </div>
+                  {onDeletePolygon && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDeletePolygon(polygon.id); }}
+                      style={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        background: '#ef4444',
+                        color: '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        zIndex: 10
+                      }}
+                      title={t('mapLayers.deletePin')}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               </Marker>
 
@@ -224,6 +263,7 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
               <Marker
                 longitude={point.x}
                 latitude={point.y + radiusInDegrees * 0.7}
+                anchor="center"
               >
                 <div
                   style={interactiveMapStyles.labels.radiusLabel()}
@@ -266,27 +306,58 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
               />
             </Source>
 
-            {/* Polygon Vertices (Points) */}
+            {/* Polygon Vertices (Points) — draggable */}
             {polygon.points.map((point, index) => {
-              // Validate coordinates
-              if (!isValidCoordinate(point)) {
-                return null;
-              }
+              if (!isValidCoordinate(point)) return null;
 
               return (
                 <Marker
                   key={`${polygon.id}-point-${index}`}
                   longitude={point.x}
                   latitude={point.y}
+                  anchor="center"
+                  draggable={Boolean(onMovePolygonPoint)}
+                  onDragEnd={(e) => {
+                    onMovePolygonPoint?.(polygon.id, index, e.lngLat.lng, e.lngLat.lat);
+                  }}
                 >
-                  <div
-                    style={interactiveMapStyles.layout.polygonVertex(
-                      polygon.style.pointRadius || 4,
-                      polygon.style.pointColor || polygon.style.strokeColor,
-                      polygon.style.strokeColor
+                  <div style={{ position: 'relative' }}>
+                    <div
+                      style={interactiveMapStyles.layout.polygonVertex(
+                        polygon.style.pointRadius || 4,
+                        polygon.style.pointColor || polygon.style.strokeColor,
+                        polygon.style.strokeColor
+                      )}
+                      title={point.label || `Point ${index + 1}`}
+                    />
+                    {index === 0 && onDeletePolygon && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeletePolygon(polygon.id); }}
+                        style={{
+                          position: 'absolute',
+                          top: -8,
+                          right: -8,
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          background: '#ef4444',
+                          color: '#fff',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          lineHeight: 1,
+                          zIndex: 10
+                        }}
+                        title={t('mapLayers.deletePolygon')}
+                      >
+                        ×
+                      </button>
                     )}
-                    title={point.label || `Point ${index + 1}`}
-                  />
+                  </div>
                 </Marker>
               );
             })}
