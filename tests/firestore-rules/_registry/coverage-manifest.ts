@@ -69,6 +69,14 @@ import {
   ownerOnlyMatrix,
   usersMatrix,
 } from './coverage-matrices-users';
+import {
+  auditLogMatrix,
+  contactRelationshipsMatrix,
+  employmentRecordsMatrix,
+  notificationsMatrix,
+  searchDocumentsMatrix,
+  voiceCommandsMatrix,
+} from './coverage-matrices-specialized';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -852,6 +860,105 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     // Write: if false — Admin SDK only.
     matrix: systemGlobalMatrix(),
   },
+  // ── ADR-298 Phase C.7 — specialized collections (2026-04-14) ─────────────
+  {
+    collection: 'contact_relationships',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/contact-relationships.rules.test.ts',
+    rulesRange: [103, 142],
+    // Create: isAuthenticated() + required fields only — NO companyId gate.
+    // Update/delete: createdBy==uid || isSuperAdminOnly. same_tenant_admin denied.
+    // Seed: createdBy=same_tenant_user.uid, companyId=SAME_TENANT_COMPANY_ID.
+    matrix: contactRelationshipsMatrix(),
+  },
+  {
+    collection: 'contact_links',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/contact-links.rules.test.ts',
+    rulesRange: [151, 187],
+    // Same pattern as contact_relationships: open create, creator-only update/delete.
+    matrix: contactRelationshipsMatrix(),
+  },
+  {
+    collection: 'relationships',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/relationships.rules.test.ts',
+    rulesRange: [1860, 1897],
+    // Create: companyId==getUserCompanyId() — no isSuperAdminOnly shortcut.
+    // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly.
+    // Seed: createdBy=same_tenant_user.uid.
+    matrix: crmDirectMatrix(),
+  },
+  {
+    collection: 'relationship_audit',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/relationship-audit.rules.test.ts',
+    rulesRange: [2381, 2385],
+    // Read: isAuthenticated() — any authenticated, no tenant isolation.
+    // Write: if false — Admin SDK only.
+    matrix: systemGlobalMatrix(),
+  },
+  {
+    collection: 'employment_records',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/employment-records.rules.test.ts',
+    rulesRange: [285, 324],
+    // Read: tenant-scoped (companyId OR crossdoc projectId). Write: open authenticated
+    // create/update (no companyId gate). Delete: if false.
+    matrix: employmentRecordsMatrix(),
+  },
+  {
+    collection: 'notifications',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/notifications.rules.test.ts',
+    rulesRange: [748, 769],
+    // Read: userId==auth.uid — owner only. Update: owner + isValidNotificationUpdate.
+    // Create/delete: if false — server-only.
+    matrix: notificationsMatrix(),
+  },
+  {
+    collection: 'audit_logs',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/audit-logs.rules.test.ts',
+    rulesRange: [2455, 2459],
+    // Top-level audit_logs (NOT the companies/{id}/audit_logs subcollection).
+    // Read: isAuthenticated() — global, no tenant isolation. Write: if false.
+    matrix: systemGlobalMatrix(),
+  },
+  {
+    collection: 'system_audit_logs',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/system-audit-logs.rules.test.ts',
+    rulesRange: [2655, 2659],
+    // Read: isAuthenticated() — global, no tenant isolation. Write: if false.
+    matrix: systemGlobalMatrix(),
+  },
+  {
+    collection: 'audit_log',
+    pattern: 'system_global',
+    testFile: 'tests/firestore-rules/suites/audit-log.rules.test.ts',
+    rulesRange: [2667, 2671],
+    // Cloud Functions purge trail. Read: isSuperAdminOnly() only. Write: if false.
+    // Pattern system_global (not immutable) — Bug #1 check only applies to immutable.
+    matrix: auditLogMatrix(),
+  },
+  {
+    collection: 'search_documents',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/search-documents.rules.test.ts',
+    rulesRange: [2742, 2758],
+    // Read: isSuperAdminOnly() || belongsToCompany(tenantId) — uses tenantId field.
+    // Write: if false — Cloud Functions / Admin SDK. Seed uses tenantId (not companyId).
+    matrix: searchDocumentsMatrix(),
+  },
+  {
+    collection: 'voice_commands',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/voice-commands.rules.test.ts',
+    rulesRange: [2770, 2781],
+    // Read: userId==auth.uid — owner only. All writes: if false — server-only.
+    matrix: voiceCommandsMatrix(),
+  },
 ] as const;
 
 /**
@@ -867,14 +974,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
  * by their parent block.
  */
 export const FIRESTORE_RULES_PENDING: readonly string[] = [
-  // — Contacts / relationships —
-  'contact_relationships',
-  'contact_links',
-  'relationships',
-  'relationship_audit',
+  // — Contacts / relationships — (all moved to COVERAGE in ADR-298 Phase C.7, 2026-04-14)
+  // contact_relationships → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
+  // contact_links         → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
+  // relationships         → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
+  // relationship_audit    → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
   // — Attendance / HR —
   // attendance_events + attendance_qr_tokens moved to COVERAGE (ADR-298 Phase B.1, 2026-04-11)
-  'employment_records',
+  // employment_records    → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
   // — Files / CAD — (all moved to COVERAGE in ADR-298 Phase C.2+C.3, 2026-04-14)
   // cad_files            → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // file_shares          → moved to COVERAGE (ADR-298 Phase C.3, 2026-04-14)
@@ -908,7 +1015,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // layer_groups     → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // — Navigation / notifications / tasks —
   // navigation_companies → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
-  'notifications',
+  // notifications        → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
   // tasks        → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   // appointments → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   // — CRM —
@@ -925,12 +1032,12 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // bot_configs → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   // — Obligations / compliance —
   // obligations, obligation_transmittals, obligation_templates → moved to COVERAGE (ADR-298 Phase B.6, 2026-04-13)
-  // — Audit / search / voice —
-  'audit_logs',
-  'system_audit_logs',
-  'audit_log',
-  'search_documents',
-  'voice_commands',
+  // — Audit / search / voice — (all moved to COVERAGE in ADR-298 Phase C.7, 2026-04-14)
+  // audit_logs        → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
+  // system_audit_logs → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
+  // audit_log         → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
+  // search_documents  → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
+  // voice_commands    → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)
   // — BoQ / commissions / ownership —
   // boq_items            → moved to COVERAGE (ADR-298 Phase C.4, 2026-04-14)
   // boq_categories       → moved to COVERAGE (ADR-298 Phase C.4, 2026-04-14)

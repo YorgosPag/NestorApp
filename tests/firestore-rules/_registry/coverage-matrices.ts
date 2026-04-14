@@ -419,3 +419,14 @@ export {
   usersMatrix,
 } from './coverage-matrices-users';
 
+// Phase C.7 specialized collections live in coverage-matrices-specialized.ts
+// (extracted per Google SRP 500-line rule — ADR-298 Phase C.7, 2026-04-14).
+export {
+  auditLogMatrix,
+  contactRelationshipsMatrix,
+  employmentRecordsMatrix,
+  notificationsMatrix,
+  searchDocumentsMatrix,
+  voiceCommandsMatrix,
+} from './coverage-matrices-specialized';
+
