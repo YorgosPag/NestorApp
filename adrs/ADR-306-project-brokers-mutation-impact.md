@@ -104,13 +104,24 @@ con `runTerminateOperation(agreementId, originalAction)` dal guard hook.
 | File | Modifica |
 |---|---|
 | `src/config/domain-constants.ts` | `BROKER_TERMINATE_PREVIEW` route constant |
-| `src/components/projects/tabs/brokerage/useBrokerageAgreements.ts` | `handleTerminate` → `runTerminateOperation` via guard |
-| `src/components/projects/tabs/ProjectBrokersTab.tsx` | `useGuardedBrokerTerminate` montato, `ImpactDialog` renderizzato |
+| `src/components/projects/tabs/ProjectBrokersTab.tsx` | `useGuardedBrokerTerminate` montato; `guardedHandleTerminate` wrappa `hook.handleTerminate`; `onConfirmTerminate` usa `guardedHandleTerminate`; `ImpactDialog` renderizzato |
 | `src/i18n/locales/el/projects.json` | `impactGuard.brokerTerminate.*` (1 chiave) |
 | `src/i18n/locales/en/projects.json` | Idem |
 
+> **Nota implementazione**: `useBrokerageAgreements.ts` NON è stato modificato. `handleTerminate`
+> rimane invariato nel hook. L'intercettazione avviene in `ProjectBrokersTab.tsx` tramite wrapper:
+> ```ts
+> const guardedHandleTerminate = useCallback(
+>   async (id: string) => {
+>     await runTerminateOperation(id, () => hook.handleTerminate(id));
+>   },
+>   [runTerminateOperation, hook.handleTerminate],
+> );
+> ```
+
 ### File NON toccati (riutilizzati as-is)
 
+- `src/components/projects/tabs/brokerage/useBrokerageAgreements.ts` — `handleTerminate` invariato ✓
 - `src/components/projects/dialogs/ProjectMutationImpactDialog.tsx` ✓
 - `src/types/project-mutation-impact.ts` ✓
 
@@ -140,3 +151,4 @@ con `runTerminateOperation(agreementId, originalAction)` dal guard hook.
 |---|---|---|
 | 2026-04-14 | 1.0.0 | ADR creata. Analisi denormalizzazione completa. Matrice impatto: solo TERMINATE con pendingCommissions → warn. Status: Draft. |
 | 2026-04-14 | 2.0.0 | Implementazione completa. 4 file creati, 5 modificati. Draft → Implemented. |
+| 2026-04-14 | 2.0.1 | Correzione §5: `useBrokerageAgreements.ts` NON modificato. Intercettazione guard avviene in `ProjectBrokersTab.tsx` tramite `guardedHandleTerminate` wrapper. |

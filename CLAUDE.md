@@ -236,16 +236,17 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 
 ## 🚨🚨🚨 SOS. SOS. N.13 — RATCHET BACKLOG SESSION-START REMINDER (ADR-299)
 
-**IN YOUR FIRST RESPONSE OF EVERY NEW SESSION**, MANDATORILY:
+**IN YOUR FIRST RESPONSE OF EVERY NEW SESSION**:
 
-1. **READ** `.claude-rules/pending-ratchet-work.md` (live checklist)
-2. **REMIND** Giorgio BRIEFLY (2-4 lines max) of what's pending
-3. **EXCEPTION**: If Giorgio gives an order for **independent work**, just 1 line pointer — don't load the response with irrelevant reminders
-
-**WHY**: Triple redundancy (CLAUDE.md → `.claude-rules/MEMORY.md` → `.claude-rules/pending-ratchet-work.md`). ADR-299 is SSoT with all pending ratchets (ADR-298 Phase B/C/E, CHECK 3.17 entity audit, i18n missing keys, resolver reachability) + hour estimates + scenarios A/B.
+1. **CHECK** first line of `.claude-rules/pending-ratchet-work.md` for `STATUS:`
+   - If `STATUS: ALL_DONE` → **SKIP reading the rest**. Say 1 line: "Nessun ratchet pendente." Done.
+   - If `STATUS: ACTIVE` → **READ** the file fully, **REMIND** Giorgio BRIEFLY (2-4 lines max) of what's pending
+2. **EXCEPTION**: If Giorgio gives an order for **independent work**, skip the reminder entirely.
 
 **UPDATE RULE**:
 - Completed ratchet → **REMOVE** line (not strikethrough) + changelog entry in `.claude-rules/pending-ratchet-work.md` + update §4 of ADR-299
+- When checklist becomes empty → set `STATUS: ALL_DONE` at top of `.claude-rules/pending-ratchet-work.md` + remove the ratchet pointer from `.claude-rules/MEMORY.md`
+- New ratchet work starts → set `STATUS: ACTIVE`
 - NEVER mark completed without explicit Giorgio order or actual merge
 - Baselines change >10% → update §2 of ADR-299
 

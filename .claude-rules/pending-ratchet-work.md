@@ -1,8 +1,9 @@
 # Pending Ratchet Work — Live Checklist
 
-**Last updated:** 2026-04-14 (Phase C.4)
+**STATUS: ALL_DONE**
+**Last updated:** 2026-04-14 (tutte le fasi completate)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
-**Purpose:** Agent-facing live checklist. Every agent starting a session in this repo MUST (per CLAUDE.md SOS N.13) read this file and report to Giorgio in its first reply what is PENDING, so Giorgio doesn't forget.
+**Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
 ---
 

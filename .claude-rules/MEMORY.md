@@ -14,7 +14,7 @@
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — NEVER ask "do you want a commit?" — Giorgio says so himself
 
 ## Pending Work
-- [🔥 Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **SOS:** Scenario A = ~21h (Phase B.2-B.6 + CHECK 3.17 + resolver reach), Scenario B = ~64h. REMIND AT EACH SESSION START (CLAUDE.md N.13).
+- [Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **STATUS: ALL_DONE** (2026-04-14). Scenario A+B completati. Nuovo ratchet? Set STATUS: ACTIVE e aggiungi righe.
 - [ADR-233 Building Code — 3 Pending Items](project_adr233_building_code_pending.md) — HIGH: uniqueness validation, MEDIUM: BuildingsList.tsx, LOW: unit tests (2026-04-05)
 
 ## Code Architecture
