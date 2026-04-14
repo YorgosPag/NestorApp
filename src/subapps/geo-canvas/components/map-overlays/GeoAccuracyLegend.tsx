@@ -124,7 +124,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
             style={interactiveMapStyles.labels.legendItem(level.color)}
             aria-hidden="true"
           />
-          <span className="text-xs text-gray-300">
+          <span className={`text-xs ${colors.text.slateMuted}`}>
             {t(`accuracy.levels.${level.level}`)}
           </span>
         </div>
@@ -138,14 +138,14 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
 
   const renderVisualizationModeSelector = () => (
     <div className="mb-3" role="group" aria-label={t('accuracy.visualization')}>
-      <div className="text-xs text-gray-400 mb-1">{t('accuracy.visualization')}</div>
+      <div className={`text-xs ${colors.text.disabled} mb-1`}>{t('accuracy.visualization')}</div>
       <div className="flex space-x-1">
         <button
           onClick={() => onVisualizationModeChange('circles')}
           className={`px-2 py-1 text-xs rounded transition-colors ${
             accuracyVisualizationMode === 'circles'
               ? `${colors.bg.info} text-white`
-              : `${colors.bg.hover} text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              : `${colors.bg.hover} ${colors.text.slateMuted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }`}
           aria-pressed={accuracyVisualizationMode === 'circles'}
         >
@@ -156,7 +156,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
           className={`px-2 py-1 text-xs rounded transition-colors ${
             accuracyVisualizationMode === 'zones'
               ? `${colors.bg.info} text-white`
-              : `${colors.bg.hover} text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              : `${colors.bg.hover} ${colors.text.slateMuted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }`}
           aria-pressed={accuracyVisualizationMode === 'zones'}
         >
@@ -174,13 +174,13 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
     accuracyStats && (
       <div className={`mt-3 pt-2 ${quick.separatorH}`} role="region" aria-label={t('accuracy.statistics')}>
         <div className="text-xs space-y-1">
-          <div className="text-gray-400">
+          <div className={colors.text.disabled}>
             {t('accuracy.stats.avgAccuracy')}: {t('accuracy.stats.format', { value: accuracyStats.avg })}
           </div>
-          <div className="text-green-400">
+          <div className={colors.text.successAccent}>
             {t('accuracy.stats.best')}: {t('accuracy.stats.format', { value: accuracyStats.best })}
           </div>
-          <div className="text-red-400">
+          <div className={colors.text.errorAccent}>
             {t('accuracy.stats.worst')}: {t('accuracy.stats.format', { value: accuracyStats.worst })}
           </div>
         </div>
@@ -199,7 +199,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
     >
       <div className="text-sm">
         {/* Header */}
-        <header className="font-semibold mb-2 text-blue-400">
+        <header className={`font-semibold mb-2 ${colors.text.infoAccent}`}>
           {t('accuracy.legend')}
         </header>
 
@@ -219,7 +219,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
             className={`w-full px-2 py-1 text-xs rounded transition-colors ${
               showAccuracyCircles
                 ? `${colors.bg.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} text-white`
-                : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-300`
+                : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.slateMuted}`
             }`}
             aria-pressed={showAccuracyCircles}
           >

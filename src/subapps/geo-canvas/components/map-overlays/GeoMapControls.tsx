@@ -106,7 +106,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
           className={`px-3 py-2 rounded text-sm transition-colors ${
             clickMode === 'add_geo'
               ? `${colors.bg.info} text-white`
-              : `${colors.bg.hover} text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              : `${colors.bg.hover} ${colors.text.slateMuted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }`}
           aria-pressed={clickMode === 'add_geo'}
         >
@@ -141,7 +141,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
       <div className={`${colors.bg.secondary} bg-opacity-90 rounded-lg p-2`} role="group" aria-label={t('map.controls.mapStyle')}>
         {/* Header with Status Indicator */}
         <div className="flex items-center justify-between mb-2">
-          <div className="text-xs text-gray-400">{t('map.controls.mapStyle')}</div>
+          <div className={`text-xs ${colors.text.disabled}`}>{t('map.controls.mapStyle')}</div>
           <div
             className={`${iconSizes.xs} rounded-full ${mapLoaded ? colors.bg.success : colors.bg.warning}`}
             title={mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}
@@ -194,7 +194,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
 
         {/* Current Style Display */}
         {currentMapStyle && (
-          <div className="text-xs text-gray-500 mt-1" role="status">
+          <div className={`text-xs ${colors.text.muted} mt-1`} role="status">
             {t('map.controls.currentStyle')}: {currentStyleName}
           </div>
         )}

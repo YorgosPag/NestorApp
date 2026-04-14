@@ -148,16 +148,16 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
 
   const renderControlPointStats = () => (
     <div className="space-y-1" role="group" aria-label={t('map.status.controlPoints')}>
-      <div className="text-xs text-gray-400">
+      <div className={`text-xs ${colors.text.disabled}`}>
         {t('map.status.points')}: {controlPoints?.length ?? 0}
       </div>
 
       {controlPoints && controlPoints.length > 0 && showAccuracyCircles && accuracyStats && (
         <>
-          <div className="text-xs text-gray-400">
+          <div className={`text-xs ${colors.text.disabled}`}>
             {t('accuracy.stats.avgAccuracy')}: {t('accuracy.stats.format', { value: accuracyStats.avg })}
           </div>
-          <div className="text-xs text-gray-400">
+          <div className={`text-xs ${colors.text.disabled}`}>
             {t('accuracy.stats.best')}: {t('accuracy.stats.format', { value: accuracyStats.best })}
           </div>
         </>

@@ -104,7 +104,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
       <div className="text-sm space-y-1">
         {/* Quick Style Switcher */}
         <header className="flex justify-between items-center mb-2">
-          <span className="text-xs text-gray-400">{t('map.styleSelector.style')}</span>
+          <span className={`text-xs ${colors.text.disabled}`}>{t('map.styleSelector.style')}</span>
           <div className="flex space-x-1" role="group" aria-label={t('map.styleSelector.quickSwitcher')}>
             {(['osm', 'satellite', 'terrain', 'dark', 'greece', 'watercolor', 'toner'] as const).map((style) => (
               <Tooltip key={style}>
@@ -114,7 +114,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
                     className={`${iconSizes.lg} rounded text-xs transition-colors ${
                       currentMapStyle === style
                         ? `${colors.bg.info} text-white`
-                        : `${colors.bg.hover} text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                        : `${colors.bg.hover} ${colors.text.disabled} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                     }`}
                     aria-pressed={currentMapStyle === style}
                   >
@@ -151,7 +151,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
 
         {/* Active Mode Indicator */}
         {clickMode !== 'off' && (
-          <div className="text-yellow-400 text-xs mt-2" role="alert">
+          <div className={`${colors.text.warningLight} text-xs mt-2`} role="alert">
             {t('map.coordinate.clickPrompt', {
               mode: clickMode === 'add_geo'
                 ? t('map.coordinate.geographic')
