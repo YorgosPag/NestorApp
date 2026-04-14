@@ -12,7 +12,7 @@
  * @enterprise ADR-230 / SPEC-230B
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -26,6 +26,7 @@ import { Briefcase, Plus } from 'lucide-react';
 import { BrokerageInlineForm } from './brokerage/BrokerageInlineForm';
 import { BrokerageAgreementCard } from './brokerage/BrokerageAgreementCard';
 import { useBrokerageAgreements } from './brokerage/useBrokerageAgreements';
+import { useGuardedBrokerTerminate } from '@/hooks/useGuardedBrokerTerminate';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -55,6 +56,14 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   const companyId = companyIdResult?.companyId ?? '';
 
   const hook = useBrokerageAgreements(projectId, t);
+  const { runTerminateOperation, ImpactDialog } = useGuardedBrokerTerminate(projectId ?? '');
+
+  const guardedHandleTerminate = useCallback(
+    async (id: string) => {
+      await runTerminateOperation(id, () => hook.handleTerminate(id));
+    },
+    [runTerminateOperation, hook.handleTerminate],
+  );
 
   const propertyNameMap = useMemo(
     () => new Map(hook.units.map((u) => [u.id, u.name])),
@@ -150,7 +159,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
                 isRenewing={hook.renewingId === a.id}
                 renewDate={hook.renewingId === a.id ? hook.renewDate : ''}
                 onRenewDateChange={hook.setRenewDate}
-                onConfirmTerminate={() => hook.handleTerminate(a.id)}
+                onConfirmTerminate={() => guardedHandleTerminate(a.id)}
                 onConfirmRenew={() => hook.handleRenew(a.id)}
                 onCancelAction={hook.cancelAction}
                 isFormActive={hook.isFormVisible}
@@ -186,7 +195,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
                 isRenewing={hook.renewingId === a.id}
                 renewDate={hook.renewingId === a.id ? hook.renewDate : ''}
                 onRenewDateChange={hook.setRenewDate}
-                onConfirmTerminate={() => hook.handleTerminate(a.id)}
+                onConfirmTerminate={() => guardedHandleTerminate(a.id)}
                 onConfirmRenew={() => hook.handleRenew(a.id)}
                 onCancelAction={hook.cancelAction}
                 isFormActive={hook.isFormVisible}
@@ -203,6 +212,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
           </ul>
         </article>
       )}
+      {ImpactDialog}
     </section>
   );
 }

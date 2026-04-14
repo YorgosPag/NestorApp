@@ -448,6 +448,9 @@
     "engineerRemove": {
       "withObligations": "This engineer has obligations assigned to them in this project. Removing them from the project does not reassign those obligations — review and reassign manually."
     },
+    "brokerTerminate": {
+      "withPendingCommissions": "This brokerage agreement has pending commissions that have not been paid. Terminating the agreement does not automatically cancel pending commissions — review and complete or cancel them manually."
+    },
     "dependencies": {
       "buildings": {
         "label": "Project buildings",
