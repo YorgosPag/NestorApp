@@ -431,6 +431,16 @@
       "deleteDelivery": "Deleting this delivery address does not update existing purchase orders automatically.",
       "deletePrimaryBlocked": "You cannot delete the primary address. Set another address as primary first, then delete this one."
     },
+    "ownershipMutation": {
+      "finalizeWithContracts": "There are legal contracts on this project. Finalizing will write millesimal shares to the units — verify that the contracts reflect the new ownership distribution.",
+      "finalizeWithPaymentPlans": "There are payment plans linked to units in this project. Changing millesimal shares may affect computed values.",
+      "finalizeReFinalize": "This table has already been finalized before. Re-finalizing will overwrite stored millesimal shares in units, storage units, and parking spots.",
+      "finalizeSoldProperties": "Units in this project have already been sold. Changing millesimal shares on sold units is not permitted — active contractual obligations exist.",
+      "unlockRegistered": "This table has been registered with the Land Registry (status: registered). Editing is not permitted — the shares are legally binding.",
+      "unlockSoldProperties": "Units in this project have already been sold. Unlocking a table with sold units is not permitted — review the active ownership documents first.",
+      "unlockWithContracts": "There are legal contracts referencing this finalized ownership table. Unlocking is allowed but any share changes will not automatically update existing contracts.",
+      "unlockWithHistory": "Unlocking will create a new revision in the table history. Ensure you have a valid reason for the change before proceeding."
+    },
     "dependencies": {
       "buildings": {
         "label": "Project buildings",

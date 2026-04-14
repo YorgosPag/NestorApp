@@ -98,7 +98,7 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
   } = ownership;
 
   const handlers = useOwnershipTableHandlers({
-    ownership, buildingIds, t, showSuccess, showError,
+    ownership, projectId: resolvedProjectId, buildingIds, t, showSuccess, showError,
     userId: user?.uid, confirm,
     setShowUnlockInput, setUnlockReason, unlockReason,
   });
@@ -492,9 +492,9 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
       {table.notes && <p className={cn(typography.special.tertiary, 'italic')}>{table.notes}</p>}
       <RevisionHistory revisions={revisions} t={t} typography={typography} spacing={spacingTokens} colors={colors} borders={borders} />
       {error && <p className={cn(typography.body.sm, 'text-destructive')}>{error}</p>}
-
     </FullscreenOverlay>
     <ConfirmDialog {...dialogProps} />
+    {handlers.ImpactDialog}
     </>
   );
 }

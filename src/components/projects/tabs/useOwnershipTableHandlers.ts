@@ -11,8 +11,10 @@
  */
 
 import { useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { getErrorMessage } from '@/lib/error-utils';
 import { validateBuildingData } from '@/services/ownership/ownership-table-service';
+import { useGuardedOwnershipTableMutation } from '@/hooks/useGuardedOwnershipTableMutation';
 import type { UseOwnershipTableReturn } from '@/hooks/ownership/useOwnershipTable';
 import type { CalculationMethod } from '@/types/ownership-table';
 
@@ -23,6 +25,8 @@ import type { CalculationMethod } from '@/types/ownership-table';
 interface HandlerDeps {
   /** The full return value from useOwnershipTable */
   ownership: UseOwnershipTableReturn;
+  /** Project ID — required for the ownership mutation impact guard */
+  projectId: string;
   /** Building IDs linked to the project */
   buildingIds: string[];
   /** i18n translation function */
@@ -53,6 +57,10 @@ export interface OwnershipTableHandlers {
   handleUnlock: () => Promise<void>;
   handleDeleteDraft: () => Promise<void>;
   handleMethodChange: (method: string) => void;
+  /** Impact guard dialog — must be rendered in the parent component */
+  ImpactDialog: ReactNode;
+  /** True while the impact guard is checking dependencies */
+  guardChecking: boolean;
 }
 
 // ============================================================================
@@ -62,6 +70,7 @@ export interface OwnershipTableHandlers {
 export function useOwnershipTableHandlers(deps: HandlerDeps): OwnershipTableHandlers {
   const {
     ownership,
+    projectId,
     buildingIds,
     t,
     showSuccess,
@@ -83,6 +92,9 @@ export function useOwnershipTableHandlers(deps: HandlerDeps): OwnershipTableHand
     unlock,
     deleteDraft,
   } = ownership;
+
+  const { ImpactDialog, checking: guardChecking, runOwnershipOperation } =
+    useGuardedOwnershipTableMutation(projectId);
 
   // -------------------------------------------------------
   // Auto-populate rows from building data
@@ -194,32 +206,52 @@ export function useOwnershipTableHandlers(deps: HandlerDeps): OwnershipTableHand
   }, [save, showSuccess, t]);
 
   // -------------------------------------------------------
-  // Finalize (lock)
+  // Finalize (lock) — guarded via ADR-304
   // -------------------------------------------------------
   const handleFinalize = useCallback(async () => {
-    if (!userId) return;
-    try {
-      await finalize(userId);
-      showSuccess(t('common:ownership.actions.finalize'));
-    } catch (err) {
-      showError(getErrorMessage(err, t('common:ownership.messages.deleteError')));
-    }
-  }, [finalize, userId, showSuccess, showError, t]);
+    if (!userId || !table) return;
+    await runOwnershipOperation(
+      {
+        operation: 'finalize',
+        tableId: table.id,
+        tableVersion: table.version,
+        tableStatus: table.status,
+      },
+      async () => {
+        try {
+          await finalize(userId);
+          showSuccess(t('common:ownership.actions.finalize'));
+        } catch (err) {
+          showError(getErrorMessage(err, t('common:ownership.messages.deleteError')));
+        }
+      },
+    );
+  }, [finalize, runOwnershipOperation, table, userId, showSuccess, showError, t]);
 
   // -------------------------------------------------------
-  // Unlock
+  // Unlock — guarded via ADR-304
   // -------------------------------------------------------
   const handleUnlock = useCallback(async () => {
-    if (!unlockReason.trim() || !userId) return;
-    try {
-      await unlock(userId, unlockReason);
-      showSuccess(t('common:ownership.actions.unlock'));
-      setShowUnlockInput(false);
-      setUnlockReason('');
-    } catch (err) {
-      showError(getErrorMessage(err));
-    }
-  }, [unlock, unlockReason, userId, showSuccess, showError, t, setShowUnlockInput, setUnlockReason]);
+    if (!unlockReason.trim() || !userId || !table) return;
+    await runOwnershipOperation(
+      {
+        operation: 'unlock',
+        tableId: table.id,
+        tableVersion: table.version,
+        tableStatus: table.status,
+      },
+      async () => {
+        try {
+          await unlock(userId, unlockReason);
+          showSuccess(t('common:ownership.actions.unlock'));
+          setShowUnlockInput(false);
+          setUnlockReason('');
+        } catch (err) {
+          showError(getErrorMessage(err));
+        }
+      },
+    );
+  }, [unlock, runOwnershipOperation, table, unlockReason, userId, showSuccess, showError, t, setShowUnlockInput, setUnlockReason]);
 
   // -------------------------------------------------------
   // Delete draft
@@ -256,5 +288,7 @@ export function useOwnershipTableHandlers(deps: HandlerDeps): OwnershipTableHand
     handleUnlock,
     handleDeleteDraft,
     handleMethodChange,
+    ImpactDialog,
+    guardChecking,
   };
 }
