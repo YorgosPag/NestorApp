@@ -1,6 +1,6 @@
 # ADR-303 — Project Addresses Tab Mutation Impact Guard
 
-**Status:** Draft
+**Status:** Implemented
 **Data:** 2026-04-14
 **Autori:** YorgosPag
 **Correlati:** ADR-302 (Project Field Mutation Impact System), ADR-167 (Multi-Address System), ADR-090 (Attendance Geofence)
@@ -210,23 +210,25 @@ Nuovo hook: `useGuardedProjectAddressMutation` (pattern identico a `useGuardedPr
 
 ---
 
-## 7. File da creare/modificare
+## 7. Implementazione (2026-04-14)
 
-### Da CREARE
-- `src/lib/firestore/project-address-mutation-impact.service.ts` — query engine
-- `src/hooks/useGuardedProjectAddressMutation.tsx` — hook React
+### File creati
+- `src/lib/firestore/project-address-mutation-impact.service.ts` — query engine (lightweight: solo purchaseOrders + buildings in parallelo), rule engine per 4 operazioni, `forcedBlock` per delete isPrimary
+- `src/app/api/projects/[projectId]/address-impact-preview/route.ts` — POST endpoint con Zod schema, withAuth + withStandardRateLimit, identico pattern di ADR-302
+- `src/hooks/useProjectAddressMutationImpactGuard.tsx` — base guard hook (Google INP pattern, setTimeout decouple)
+- `src/hooks/useGuardedProjectAddressMutation.tsx` — thin wrapper con `runAddressOperation()`
 
-### Da MODIFICARE
-- `src/i18n/locales/el/projects.json` — chiavi `impactGuard.addressMutation.*`
+### File modificati
+- `src/config/domain-constants.ts` — aggiunto `API_ROUTES.PROJECTS.ADDRESS_IMPACT_PREVIEW`
+- `src/i18n/locales/el/projects.json` — `impactGuard.addressMutation.*` (6 chiavi)
 - `src/i18n/locales/en/projects.json` — idem
 
-### NON toccare
-- `src/app/api/projects/[projectId]/impact-preview/route.ts` — esistente, o nuovo endpoint dedicato
-- `src/components/projects/dialogs/ProjectMutationImpactDialog.tsx` — riutilizzato as-is
-- `src/hooks/useProjectMutationImpactGuard.tsx` — non toccato
+### NON toccato
+- `src/components/projects/dialogs/ProjectMutationImpactDialog.tsx` — riutilizzato as-is ✓
+- `src/hooks/useProjectMutationImpactGuard.tsx` — non toccato ✓
 
-> ⚠️ **Da decidere con Giorgio:** serve una nuova API route
-> (`/api/projects/[projectId]/address-impact-preview`) o si estende quella esistente?
+### Decisione architetturale (§6.2)
+**Opzione A scelta**: route separata `/address-impact-preview`. Input schema incompatibile con il guard generale (`ProjectUpdatePayload` vs `ProjectAddressMutationRequest`). Reuso totale di dialog, tipi, pattern.
 
 ---
 
@@ -246,4 +248,5 @@ Nuovo hook: `useGuardedProjectAddressMutation` (pattern identico a `useGuardedPr
 
 | Data | Versione | Cambiamento |
 |------|---------|-------------|
+| 2026-04-14 | 2.0.0 | Implementazione completa. 4 file creati, 3 modificati. Draft → Implemented. |
 | 2026-04-14 | 1.0.0 | ADR creata. Analisi denormalizzazione completa. Matrice impatto per 4 operazioni (add/edit/delete/set-primary). Architettura: service separato, stesso dialog/hook/tipo ADR-302. Status: Draft. |

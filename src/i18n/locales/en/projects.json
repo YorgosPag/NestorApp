@@ -423,6 +423,14 @@
       "toInProgress": "Starting project execution. Check that you have created the necessary buildings and registered workers.",
       "toPlanning": "Reverting to planning phase. Confirm the impact on already registered data."
     },
+    "addressMutation": {
+      "editDelivery": "The delivery address has changed. Purchase orders referencing this address are not updated automatically.",
+      "editPrimary": "This is the primary address. Buildings that inherit from the project will receive the updated address.",
+      "reclassifyDelivery": "The address type was changed away from 'Delivery'. Purchase orders referencing this address are not updated automatically.",
+      "setPrimary": "Changing the primary address. Buildings that inherit from the project will receive the new primary address.",
+      "deleteDelivery": "Deleting this delivery address does not update existing purchase orders automatically.",
+      "deletePrimaryBlocked": "You cannot delete the primary address. Set another address as primary first, then delete this one."
+    },
     "dependencies": {
       "buildings": {
         "label": "Project buildings",
