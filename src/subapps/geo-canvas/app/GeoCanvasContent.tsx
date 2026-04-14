@@ -137,7 +137,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
   if (isLoading) {
     return (
-      <div className={`w-full h-full flex items-center justify-center ${colors.bg.secondary} text-white`}>
+      <div className={`dark w-full h-full flex items-center justify-center ${colors.bg.secondary}`}>
         <div className="text-center">
           <AnimatedSpinner size="large" className="mx-auto mb-4" />
           <p className="text-white">{t('loadingStates.loadingTranslations')}</p>
@@ -148,7 +148,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
   return (
     <PolygonSystemProvider initialRole="citizen">
-      <div className={`w-full h-full flex flex-col ${colors.bg.secondary} text-white`}>
+      <div className={`dark w-full h-full flex flex-col ${colors.bg.secondary}`}>
       {/* HEADER */}
       <header className={`${colors.bg.primary} ${borders.quick.separatorH} p-3 sm:p-4`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

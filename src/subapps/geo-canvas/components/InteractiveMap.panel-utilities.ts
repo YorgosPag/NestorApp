@@ -31,7 +31,7 @@ export const draggablePanelContainer = (
   top: `${position.y}px`,
   width: width ? `${width}px` : 'auto',
   minWidth: GEO_CANVAS_DIMENSIONS.DRAGGABLE_PANEL_MIN_WIDTH,
-  backgroundColor: colors.background.primary,
+  backgroundColor: 'hsl(var(--background))',
   border: `1px solid ${colors.border.primary}`,
   borderRadius: spacing.sm,
   boxShadow: isDragging ? shadows.xl : shadows.lg,
