@@ -15,7 +15,7 @@
 import * as React from 'react';
 const { useState, useCallback, useEffect } = React;
 
-import { MapPin, Hexagon, Hand, Trash2, Check, X, Search, Building2, Settings } from 'lucide-react';
+import { MapPin, Hexagon, Trash2, Check, X, Search, Building2, Settings } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { GEO_COLORS } from '../config/color-config';
@@ -73,7 +73,7 @@ export function CitizenDrawingInterface({
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
-  const [selectedTool, setSelectedTool] = useState<'point' | 'polygon' | 'freehand' | 'real-estate' | null>(null);
+  const [selectedTool, setSelectedTool] = useState<'point' | 'polygon' | 'real-estate' | null>(null);
   const [pointRadius, setPointRadius] = useState<number>(100);
   const [lastPointPolygonId, setLastPointPolygonId] = useState<string | null>(null);
   const [showAdminDemo, setShowAdminDemo] = useState(false);
@@ -116,19 +116,18 @@ export function CitizenDrawingInterface({
     setShowRealEstateSetup(false);
   }, [realEstateSettings, addRealEstatePolygon, onRealEstateAlertCreated]);
 
-  const handleToolSelect = useCallback((tool: 'point' | 'polygon' | 'freehand' | 'real-estate') => {
+  const handleToolSelect = useCallback((tool: 'point' | 'polygon' | 'real-estate') => {
     if (isDrawing) cancelDrawing();
     setSelectedTool(tool);
 
     const toolConfigs = {
       point: { fillColor: GEO_COLORS.withOpacity(GEO_COLORS.USER_INTERFACE.CITIZEN_STROKE, 0.2), strokeColor: GEO_COLORS.USER_INTERFACE.CITIZEN_STROKE, strokeWidth: 2, pointMode: true, radius: pointRadius },
       polygon: { fillColor: GEO_COLORS.USER_INTERFACE.CITIZEN_POLYGON_FILL, strokeColor: GEO_COLORS.USER_INTERFACE.CITIZEN_POLYGON_STROKE, strokeWidth: 2 },
-      freehand: { fillColor: GEO_COLORS.USER_INTERFACE.CITIZEN_AREA_FILL, strokeColor: GEO_COLORS.USER_INTERFACE.CITIZEN_AREA_STROKE, strokeWidth: 2 },
     };
 
     if (tool === 'real-estate') {
       setShowRealEstateSetup(true);
-    } else {
+    } else if (tool === 'point' || tool === 'polygon') {
       startDrawing('simple', toolConfigs[tool]);
     }
   }, [isDrawing, startDrawing, cancelDrawing, pointRadius]);
@@ -236,23 +235,20 @@ export function CitizenDrawingInterface({
       )}
 
       {/* Tool Buttons */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         {toolButton('point', <MapPin className={`${iconSizes.xl} mb-2 ${colors.text.info}`} />, t('drawingInterfaces.citizen.tools.point'), t('drawingInterfaces.citizen.tools.pointDescription'))}
         {toolButton('polygon', <Hexagon className={`${iconSizes.xl} mb-2 ${colors.text.success}`} />, t('drawingInterfaces.citizen.tools.polygon'), t('drawingInterfaces.citizen.tools.polygonDescription'))}
-      </div>
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        {toolButton('freehand', <Hand className={`${iconSizes.xl} mb-2 ${colors.text.accent}`} />, t('drawingInterfaces.citizen.tools.freehand'), t('drawingInterfaces.citizen.tools.freehandDrawing'))}
         {toolButton('real-estate', <NAVIGATION_ENTITIES.property.icon className={`${iconSizes.xl} mb-2 ${NAVIGATION_ENTITIES.property.color}`} />, t('drawingInterfaces.citizen.tools.realEstate'), t('drawingInterfaces.citizen.tools.realEstateDescription'), true)}
       </div>
 
       {/* Utility Row */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         {[
-          { onClick: () => setShowAddressSearch(!showAddressSearch), active: showAddressSearch, icon: <Search className={`${iconSizes.xl} mb-2 text-indigo-600`} />, label: t('drawingInterfaces.citizen.tools.addressSearch'), isLayerControl: false, status: 'info' },
-          { onClick: () => setShowAdminDemo(!showAdminDemo), active: showAdminDemo, icon: <Building2 className={`${iconSizes.xl} mb-2 text-violet-600`} />, label: t('drawingInterfaces.citizen.tools.boundariesDemo'), isLayerControl: false, status: 'info' },
-          { onClick: () => setShowBoundaryControl(!showBoundaryControl), active: showBoundaryControl, icon: <Settings className={`${iconSizes.xl} mb-2 text-emerald-600`} />, label: t('drawingInterfaces.citizen.tools.layerControl'), isLayerControl: true, status: 'success' },
+          { onClick: () => setShowAddressSearch(!showAddressSearch), active: showAddressSearch, icon: <Search className={`${iconSizes.xl} mb-2 ${colors.text.info}`} />, label: t('drawingInterfaces.citizen.tools.addressSearch'), isLayerControl: false, status: 'info' as const },
+          { onClick: () => setShowAdminDemo(!showAdminDemo), active: showAdminDemo, icon: <Building2 className={`${iconSizes.xl} mb-2 ${colors.text.muted}`} />, label: t('drawingInterfaces.citizen.tools.boundariesDemo'), isLayerControl: false, status: 'info' as const },
+          { onClick: () => setShowBoundaryControl(!showBoundaryControl), active: showBoundaryControl, icon: <Settings className={`${iconSizes.xl} mb-2 ${colors.text.success}`} />, label: t('drawingInterfaces.citizen.tools.layerControl'), isLayerControl: true, status: 'success' as const },
         ].map((btn, i) => (
-          <button key={i} onClick={btn.onClick} className={`flex flex-col items-center justify-center p-4 ${quick.card} transition-all duration-200 min-h-[100px] ${btn.active ? `${getStatusBorder(btn.status as 'info' | 'success')} ${colors.bg[btn.status as 'info' | 'success']}/10` : `${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`} cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}>
+          <button key={i} onClick={btn.onClick} className={`flex flex-col items-center justify-center p-4 ${quick.card} transition-all duration-200 min-h-[100px] ${btn.active ? `${getStatusBorder(btn.status)} ${btn.status === 'success' ? colors.bg.successSubtle : colors.bg.infoSubtle}` : `${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`} cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}>
             {btn.icon}
             <span className="text-sm font-medium">{btn.label}</span>
             {btn.isLayerControl && <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.layersCount', { count: boundaryLayers.length })}</span>}
@@ -300,7 +296,6 @@ export function CitizenDrawingInterface({
           <p className={`text-sm ${colors.text.info}`}>
             {selectedTool === 'point' && t('instructions.citizen.placePoint')}
             {selectedTool === 'polygon' && t('instructions.citizen.addPolygonPoints')}
-            {selectedTool === 'freehand' && t('instructions.citizen.drawFreehand')}
             {selectedTool === 'real-estate' && t('drawingInterfaces.citizen.instructions.realEstate')}
           </p>
         </div>

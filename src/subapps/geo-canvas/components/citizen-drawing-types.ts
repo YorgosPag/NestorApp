@@ -97,11 +97,11 @@ export interface BoundaryLayerControlPanelProps {
 // ============================================================================
 
 export const HOVER_BACKGROUND_EFFECTS = {
-  LIGHT: 'hover:bg-opacity-10',
-  SUCCESS: 'hover:bg-green-600',
-  DESTRUCTIVE: 'hover:bg-red-600',
-  WARNING_BUTTON: 'hover:bg-yellow-600',
-  MUTED: 'hover:bg-gray-300'
+  LIGHT: 'hover:bg-accent/30',
+  SUCCESS: 'hover:bg-[hsl(var(--bg-success))]/80',
+  DESTRUCTIVE: 'hover:bg-[hsl(var(--bg-error))]/80',
+  WARNING_BUTTON: 'hover:bg-[hsl(var(--bg-warning))]/80',
+  MUTED: 'hover:bg-muted'
 };
 
 export const INTERACTIVE_PATTERNS = {
