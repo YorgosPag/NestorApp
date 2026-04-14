@@ -512,6 +512,9 @@
             "pickOther": "Επίλεξε άλλο Κτίριο"
           }
         }
+      },
+      "nameSuggestion": {
+        "conflictWarning": "Το όνομα μοιάζει να αντιστοιχεί σε «{inferredType}» — επιλεγμένος τύπος: «{selectedType}»"
       }
     },
     "linkBuildingToProject": {

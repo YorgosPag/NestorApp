@@ -20,7 +20,13 @@ import { isMultiLevelCapableType, ENTITY_TYPES } from '@/config/domain-constants
 import { getProjectsList, type ProjectListItem } from '@/components/building-management/building-services';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyType, OperationalStatus, CommercialStatus } from '@/types/property';
-import { PROPERTY_TYPES } from '@/constants/property-types';
+import {
+  PROPERTY_TYPES,
+  PROPERTY_TYPE_LABELS_EL,
+  isPropertyType,
+  normalizePropertyType,
+  arePropertyTypesEquivalent,
+} from '@/constants/property-types';
 import type { Building } from '@/types/building/contracts';
 
 const logger = createModuleLogger('AddPropertyDialogState');
@@ -237,7 +243,8 @@ export function useAddPropertyDialogState({
     handleLevelsChange([]);
   };
 
-  // ADR-284: Type change handler — when switching to standalone, clear building/floor
+  // ADR-284: Type change handler — when switching to standalone, clear building/floor.
+  // Auto-suggests name from selected type when name field is empty.
   const handleTypeChange = (value: string) => {
     handleSelectChange('type', value);
     if (isStandaloneUnitType(value as PropertyType | '')) {
@@ -246,7 +253,22 @@ export function useAddPropertyDialogState({
       handleNumberChange('floor', '');
       handleLevelsChange([]);
     }
+    if (!formData.name.trim() && isPropertyType(value)) {
+      handleSelectChange('name', PROPERTY_TYPE_LABELS_EL[value]);
+    }
   };
+
+  // Derived: detect conflict between manually entered name and selected type.
+  // Fires only when the name resolves to a *different* canonical type via alias map.
+  const nameInferredType = useMemo(
+    () => normalizePropertyType(formData.name),
+    [formData.name],
+  );
+
+  const nameTypeConflict = useMemo(() => {
+    if (!formData.name || !formData.type || !nameInferredType) return false;
+    return !arePropertyTypesEquivalent(nameInferredType, formData.type);
+  }, [formData.name, formData.type, nameInferredType]);
 
   // Floor selection handler
   const handleFloorSelection = (value: string) => {
@@ -287,5 +309,8 @@ export function useAddPropertyDialogState({
     showLinkBuildingDialog,
     setShowLinkBuildingDialog,
     selectedBuilding,
+    // Name suggestion / conflict
+    nameTypeConflict,
+    nameInferredType,
   };
 }

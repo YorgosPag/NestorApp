@@ -512,6 +512,9 @@
             "pickOther": "Pick another Building"
           }
         }
+      },
+      "nameSuggestion": {
+        "conflictWarning": "Name seems to match «{inferredType}» — selected type: «{selectedType}»"
       }
     },
     "linkBuildingToProject": {

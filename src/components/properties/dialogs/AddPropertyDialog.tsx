@@ -92,6 +92,7 @@ export function AddPropertyDialog({
     showAddFloorDialog, setShowAddFloorDialog,
     showLinkBuildingDialog, setShowLinkBuildingDialog,
     selectedBuilding,
+    nameTypeConflict, nameInferredType,
   } = useAddPropertyDialogState({ open, onPropertyAdded, onOpenChange, buildings });
 
 
@@ -174,6 +175,14 @@ export function AddPropertyDialog({
                       placeholder={t('dialog.addUnit.placeholders.name')} disabled={loading}
                       className={errors.name ? 'border-destructive' : ''} />
                     {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                    {nameTypeConflict && nameInferredType && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        {t('dialog.addUnit.nameSuggestion.conflictWarning', {
+                          inferredType: t(`types.${nameInferredType}`),
+                          selectedType: t(`types.${formData.type}`),
+                        })}
+                      </p>
+                    )}
                   </FormInput>
                 </FormField>
 
