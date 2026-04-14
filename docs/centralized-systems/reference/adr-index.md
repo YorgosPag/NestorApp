@@ -321,6 +321,7 @@
 | **ADR-299** | Ratchet Backlog Master Roadmap (SSoT για όλα τα pre-commit ratchets + hour estimates + scenarios A/B) | ✅ APPROVED | 2026-04-11 | Governance / Technical Debt Tracking / SSoT Enforcement | [📄](../../../adrs/ADR-299-ratchet-backlog-master-roadmap.md) |
 | **ADR-300** | Project Status Pill — Google-grade Header State (Linear pattern) | ✅ IMPLEMENTED | 2026-04-13 | UI / Information Architecture | [📄](../../../adrs/ADR-300-project-status-pill-google-grade.md) |
 | **ADR-301** | Storage Rules Test Coverage SSoT + CHECK 3.19 (Phase A — 4 paths, 48 cells) | ✅ IMPLEMENTED | 2026-04-14 | Security / Testing Infrastructure / SSoT Enforcement | [📄](../../../adrs/ADR-301-storage-rules-test-coverage-ssot.md) |
+| **ADR-302** | Project Field Mutation Impact System — status transition matrix + declarative registry | 📋 DRAFT | 2026-04-14 | Data Architecture / UX Safety / SSoT Enforcement | [📄](../../../adrs/ADR-302-project-field-mutation-impact.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
