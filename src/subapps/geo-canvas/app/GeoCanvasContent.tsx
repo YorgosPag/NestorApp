@@ -245,9 +245,6 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
           </div>
         </div>
 
-        {!isMobile && (
-          <aside className={`w-80 ${colors.bg.primary} ${borders.quick.separatorV} p-4`} />
-        )}
       </main>
 
 
