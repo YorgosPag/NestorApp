@@ -106,5 +106,24 @@
     "reactMinified": "Εσωτερικό σφάλμα React (κωδικός {code})"
   },
   "confirm": "Επιβεβαίωση",
-  "cancel": "Ακύρωση"
+  "cancel": "Ακύρωση",
+  "errorTracking": {
+    "title": "Παρακολούθηση Σφαλμάτων",
+    "errorsCount": "Σφάλματα: {count}",
+    "clear": "Εκκαθάριση",
+    "session": "Συνεδρία",
+    "totalErrors": "Σύνολο Σφαλμάτων",
+    "filterPlaceholder": "Φιλτράρισμα σφαλμάτων...",
+    "noErrors": "Δεν καταγράφηκαν σφάλματα",
+    "noErrorsMatch": "Κανένα σφάλμα δεν ταιριάζει",
+    "errorDetails": "Λεπτομέρειες Σφάλματος",
+    "summary": "Σύνοψη",
+    "errorId": "ID Σφάλματος",
+    "severity": "Σοβαρότητα",
+    "category": "Κατηγορία",
+    "occurrences": "Εμφανίσεις",
+    "message": "Μήνυμα",
+    "context": "Πλαίσιο",
+    "stackTrace": "Ίχνος Στοίβας"
+  }
 }

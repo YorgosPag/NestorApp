@@ -106,5 +106,24 @@
     "reactMinified": "Internal React error (code {code})"
   },
   "confirm": "Confirm",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "errorTracking": {
+    "title": "Error Tracking",
+    "errorsCount": "Errors: {count}",
+    "clear": "Clear",
+    "session": "Session",
+    "totalErrors": "Total Errors",
+    "filterPlaceholder": "Filter errors...",
+    "noErrors": "No errors captured",
+    "noErrorsMatch": "No errors match filter",
+    "errorDetails": "Error Details",
+    "summary": "Summary",
+    "errorId": "Error ID",
+    "severity": "Severity",
+    "category": "Category",
+    "occurrences": "Occurrences",
+    "message": "Message",
+    "context": "Context",
+    "stackTrace": "Stack Trace"
+  }
 }

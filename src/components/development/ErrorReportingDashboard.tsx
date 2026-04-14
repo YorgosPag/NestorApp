@@ -15,6 +15,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -32,6 +33,7 @@ export function ErrorReportingDashboard({
   position = 'bottom-right',
   minimized = true
 }: ErrorReportingDashboardProps) {
+  const { t } = useTranslation('errors');
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -99,7 +101,7 @@ export function ErrorReportingDashboard({
           <div className="flex items-center space-x-2">
             <div className={`${iconSizes.xs} ${colors.bg.success} ${radius.full} animate-pulse`} />
             <span className="text-sm font-mono">
-              🛡️ Errors: {stats.totalErrors}
+              🛡️ {t('errorTracking.errorsCount', { count: stats.totalErrors })}
             </span>
           </div>
           {stats.totalErrors > 0 && (
@@ -123,15 +125,15 @@ export function ErrorReportingDashboard({
           <div className="flex items-center justify-between p-4 border-b ${getStatusBorder('muted')}">
             <div className="flex items-center space-x-2">
               <div className={`${iconSizes.xs} ${colors.bg.success} ${radius.full} animate-pulse`} />
-              <h3 className="font-semibold">🛡️ Error Tracking</h3>
+              <h3 className="font-semibold">🛡️ {t('errorTracking.title')}</h3>
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={clearAllErrors}
                 className={`text-xs ${colors.bg.error} px-2 py-1 ${radius.md} ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                title="Clear All Errors"
+                title={t('errorTracking.clear')}
               >
-                Clear
+                {t('errorTracking.clear')}
               </button>
               <button
                 onClick={() => setIsMinimized(true)}
@@ -146,11 +148,11 @@ export function ErrorReportingDashboard({
           <div className="p-4 border-b ${getStatusBorder('muted')}">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <div className={colors.text.muted}>Session</div>
+                <div className={colors.text.muted}>{t('errorTracking.session')}</div>
                 <div className="font-mono text-xs">{stats.sessionId.substring(0, 8)}</div>
               </div>
               <div>
-                <div className={colors.text.muted}>Total Errors</div>
+                <div className={colors.text.muted}>{t('errorTracking.totalErrors')}</div>
                 <div className="font-bold">{stats.totalErrors}</div>
               </div>
             </div>
@@ -179,7 +181,7 @@ export function ErrorReportingDashboard({
           <div className="p-3 border-b ${getStatusBorder('muted')}">
             <input
               type="text"
-              placeholder="Filter errors..."
+              placeholder={t('errorTracking.filterPlaceholder')}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               className={`w-full ${colors.bg.backgroundTertiary} ${quick.input} ${radius.md} px-3 py-1 text-sm focus:outline-none focus:${getStatusBorder('info')}`}
@@ -190,7 +192,7 @@ export function ErrorReportingDashboard({
           <div className="flex-1 overflow-y-auto">
             {filteredErrors.length === 0 ? (
               <div className={cn("p-4 text-center text-sm", colors.text.muted)}>
-                {filter ? 'No errors match filter' : 'No errors captured'}
+                {filter ? t('errorTracking.noErrorsMatch') : t('errorTracking.noErrors')}
               </div>
             ) : (
               <div className="divide-y divide-gray-700">
@@ -236,7 +238,7 @@ export function ErrorReportingDashboard({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4">
           <div className={`${colors.bg.backgroundSecondary} ${colors.text.inverted} ${radius.lg} max-w-4xl w-full max-h-[90vh] overflow-y-auto`}>
             <div className="flex items-center justify-between p-4 border-b ${getStatusBorder('muted')}">
-              <h3 className="font-semibold">Error Details</h3>
+              <h3 className="font-semibold">{t('errorTracking.errorDetails')}</h3>
               <button
                 onClick={() => setSelectedError(null)}
                 className={`${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
@@ -248,25 +250,25 @@ export function ErrorReportingDashboard({
             <div className="p-4 space-y-4">
               {/* Error Summary */}
               <div>
-                <h4 className="font-medium mb-2">Summary</h4>
+                <h4 className="font-medium mb-2">{t('errorTracking.summary')}</h4>
                 <div className={`${colors.bg.backgroundTertiary} p-3 ${radius.md} text-sm`}>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className={colors.text.muted}>Error ID</div>
+                      <div className={colors.text.muted}>{t('errorTracking.errorId')}</div>
                       <div className="font-mono text-xs">{selectedError.id}</div>
                     </div>
                     <div>
-                      <div className={colors.text.muted}>Severity</div>
+                      <div className={colors.text.muted}>{t('errorTracking.severity')}</div>
                       <div className={getStatusColor(selectedError.severity)}>
                         {selectedError.severity.toUpperCase()}
                       </div>
                     </div>
                     <div>
-                      <div className={colors.text.muted}>Category</div>
+                      <div className={colors.text.muted}>{t('errorTracking.category')}</div>
                       <div>{selectedError.category}</div>
                     </div>
                     <div>
-                      <div className={colors.text.muted}>Occurrences</div>
+                      <div className={colors.text.muted}>{t('errorTracking.occurrences')}</div>
                       <div>{selectedError.count}x</div>
                     </div>
                   </div>
@@ -275,7 +277,7 @@ export function ErrorReportingDashboard({
 
               {/* Error Message */}
               <div>
-                <h4 className="font-medium mb-2">Message</h4>
+                <h4 className="font-medium mb-2">{t('errorTracking.message')}</h4>
                 <div className={`${colors.bg.backgroundTertiary} p-3 ${radius.md} text-sm`}>
                   {selectedError.message}
                 </div>
@@ -283,7 +285,7 @@ export function ErrorReportingDashboard({
 
               {/* Context */}
               <div>
-                <h4 className="font-medium mb-2">Context</h4>
+                <h4 className="font-medium mb-2">{t('errorTracking.context')}</h4>
                 <div className={`${colors.bg.backgroundTertiary} p-3 ${radius.md} text-sm`}>
                   <pre className="whitespace-pre-wrap">
                     {JSON.stringify(selectedError.context, null, 2)}
@@ -294,7 +296,7 @@ export function ErrorReportingDashboard({
               {/* Stack Trace */}
               {selectedError.stack && (
                 <div>
-                  <h4 className="font-medium mb-2">Stack Trace</h4>
+                  <h4 className="font-medium mb-2">{t('errorTracking.stackTrace')}</h4>
                   <div className={`${colors.bg.backgroundTertiary} p-3 ${radius.md} text-xs overflow-x-auto`}>
                     <pre className="whitespace-pre-wrap">
                       {selectedError.stack}
