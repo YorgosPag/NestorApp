@@ -28,6 +28,7 @@ import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatNumber, formatFloorLabel } from '@/lib/intl-utils';
+import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 
 // 🏢 DOMAIN TYPES
 import type { Property } from '@/types/property-viewer';
@@ -235,7 +236,7 @@ export function PropertyGridCard({
     <GridCard
       entityType={ENTITY_TYPES.PROPERTY}
       title={property.name || property.code || property.id}
-      subtitle={t(`types.${property.type}`, { defaultValue: property.type })}
+      subtitle={buildCardSubtitle(t(`types.${property.type}`, { defaultValue: property.type }), property.code)}
       badges={badges}
       stats={stats}
       isSelected={isSelected}

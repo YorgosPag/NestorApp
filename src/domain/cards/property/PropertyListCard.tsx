@@ -25,6 +25,7 @@ import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatCurrency, formatFloorLabel } from '@/lib/intl-utils';
+import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 
 // 🏢 DOMAIN TYPES
 import type { Property } from '@/types/property-viewer';
@@ -202,7 +203,7 @@ export function PropertyListCard({
     const parts: string[] = [];
     if (property.type) {
       const typeLabel = t(`types.${property.type}`, { ns: 'properties', defaultValue: property.type });
-      parts.push(property.code ? `${typeLabel} · ${property.code}` : typeLabel);
+      parts.push(buildCardSubtitle(typeLabel, property.code));
     }
     if (property.project) parts.push(property.project);
     return parts.join(' • ') || undefined;

@@ -25,6 +25,7 @@ import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatCurrency, formatFloorString } from '@/lib/intl-utils';
+import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 
 // 🏢 DOMAIN TYPES
 import type { Storage } from '@/types/storage/contracts';
@@ -196,7 +197,7 @@ export function StorageListCard({
     <ListCard
       entityType="storage"
       title={storage.name || storage.id}
-      subtitle={typeLabel}
+      subtitle={buildCardSubtitle(typeLabel, storage.code)}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
