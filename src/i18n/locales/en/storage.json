@@ -32,7 +32,9 @@
       "notes": "Notes",
       "notesPlaceholder": "Optional notes...",
       "createError": "Create error",
-      "createDescription": "Create description"
+      "createDescription": "Create description",
+      "nameRequired": "Name is required",
+      "buildingRequired": "Please select a building"
     }
   },
   "sizes": {

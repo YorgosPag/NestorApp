@@ -67,7 +67,8 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
   // Form state
   const [buildingId, setBuildingId] = useState('');
   const [code, setCode] = useState('');
-  const [name, setName] = useState('');
+  const [name, setName] = useState('Αποθήκη');
+  const [nameManuallyChanged, setNameManuallyChanged] = useState(false);
   const [type, setType] = useState<StorageType>('storage');
   const [status, setStatus] = useState<StorageStatus>('available');
   const [floor, setFloor] = useState('');
@@ -77,12 +78,28 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; buildingId?: string }>({});
   // codeOverridden is managed internally by EntityCodeField
+
+  const NAME_SUGGESTIONS: Partial<Record<StorageType, string>> = {
+    storage: 'Αποθήκη',
+    parking: 'Θέση Στάθμευσης',
+    garage: 'Γκαράζ',
+    warehouse: 'Αποθήκη Αποθεμάτων',
+  };
+
+  const handleTypeChange = (v: StorageType) => {
+    setType(v);
+    if (!nameManuallyChanged) {
+      setName(NAME_SUGGESTIONS[v] ?? 'Αποθήκη');
+    }
+  };
 
   const resetForm = () => {
     setBuildingId('');
     setCode('');
-    setName('');
+    setName('Αποθήκη');
+    setNameManuallyChanged(false);
     setType('storage');
     setStatus('available');
     setFloor('');
@@ -91,6 +108,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
     setDescription('');
     setNotes('');
     setError(null);
+    setFieldErrors({});
   };
 
   const handleClose = () => {
@@ -101,7 +119,14 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
   };
 
   const handleCreate = async () => {
-    if (!name.trim() || !buildingId) return;
+    const errs: { name?: string; buildingId?: string } = {};
+    if (!name.trim()) errs.name = t('storages.form.nameRequired');
+    if (!buildingId) errs.buildingId = t('storages.form.buildingRequired');
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
 
     setCreating(true);
     setError(null);
@@ -165,7 +190,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
             <span className="text-sm font-medium">
               {tBuilding('pages.parking.form.building', 'Κτίριο')} *
             </span>
-            <Select value={buildingId} onValueChange={setBuildingId} disabled={creating}>
+            <Select value={buildingId} onValueChange={(v) => { setBuildingId(v); if (fieldErrors.buildingId) setFieldErrors(p => ({ ...p, buildingId: undefined })); }} disabled={creating}>
               <SelectTrigger>
                 <SelectValue placeholder={
                   buildingsLoading
@@ -181,6 +206,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
                 ))}
               </SelectContent>
             </Select>
+            {fieldErrors.buildingId && <p className="text-sm text-destructive">{fieldErrors.buildingId}</p>}
           </label>
 
           {/* ADR-233: Code field with auto-suggest */}
@@ -206,17 +232,18 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
               </span>
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); setNameManuallyChanged(true); if (fieldErrors.name) setFieldErrors(p => ({ ...p, name: undefined })); }}
                 placeholder={t('storages.form.namePlaceholder')}
                 disabled={creating}
                 autoFocus
               />
+              {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
                 {t('storages.form.type')}
               </span>
-              <Select value={type} onValueChange={(v) => setType(v as StorageType)} disabled={creating}>
+              <Select value={type} onValueChange={(v) => handleTypeChange(v as StorageType)} disabled={creating}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -337,7 +364,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={!isValid || creating}
+            disabled={creating}
           >
             {creating && <Spinner size="small" color="inherit" className="mr-2" />}
             {t('storages.form.create')}
