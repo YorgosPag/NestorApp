@@ -40,6 +40,7 @@ import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 
 const logger = createModuleLogger('ParkingGeneralTab');
 
@@ -146,12 +147,44 @@ export function ParkingGeneralTab({
     versionRef.current = (parking as unknown as { _v?: number })._v;
   }, [parking.id]);
 
+  // ADR-233: Name suggestion for createMode
+  const buildName = useEntityNameSuggestion();
+  const nameManuallyChanged = useRef(false);
+
+  // Seed initial name when in createMode (translations are loaded at mount time)
+  useEffect(() => {
+    if (createMode) {
+      setForm(prev => ({ ...prev, number: buildName(t('types.standard'), 0) }));
+    }
+  // Runs once on mount — intentional
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Building link callbacks
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 
   const updateField = <K extends keyof ParkingFormState>(key: K, value: ParkingFormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
+
+  const handleNumberChange = useCallback((value: string) => {
+    nameManuallyChanged.current = true;
+    updateField('number', value);
+  }, []);
+
+  const handleTypeChange = useCallback((v: ParkingSpotType) => {
+    updateField('type', v);
+    if (createMode && !nameManuallyChanged.current) {
+      setForm(prev => ({ ...prev, type: v, number: buildName(t(`types.${v}`), parseFloat(prev.area) || 0) }));
+    }
+  }, [buildName, t, createMode]);
+
+  const handleAreaChange = useCallback((value: string) => {
+    updateField('area', value);
+    if (createMode && !nameManuallyChanged.current) {
+      setForm(prev => ({ ...prev, area: value, number: buildName(t(`types.${prev.type}`), parseFloat(value) || 0) }));
+    }
+  }, [buildName, t, createMode]);
 
   // ADR-200: Centralized entity linking via useEntityLink
   const buildingLink = useEntityLink({
@@ -356,10 +389,10 @@ export function ParkingGeneralTab({
               t={t}
             />
             <fieldset className="space-y-1.5">
-              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.spotCode')}</Label>
+              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.spotName')}</Label>
               <Input
                 value={form.number}
-                onChange={(e) => updateField('number', e.target.value)}
+                onChange={(e) => handleNumberChange(e.target.value)}
                 className="h-8 text-sm"
                 disabled={!isEditing}
               />
@@ -368,7 +401,7 @@ export function ParkingGeneralTab({
               <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.type')}</Label>
               <Select
                 value={form.type}
-                onValueChange={(v) => updateField('type', v as ParkingSpotType)}
+                onValueChange={(v) => handleTypeChange(v as ParkingSpotType)}
                 disabled={!isEditing}
               >
                 <SelectTrigger className="h-8 text-sm">
@@ -408,7 +441,7 @@ export function ParkingGeneralTab({
                 type="number"
                 step="0.01"
                 value={form.area}
-                onChange={(e) => updateField('area', e.target.value)}
+                onChange={(e) => handleAreaChange(e.target.value)}
                 placeholder="m²"
                 className="h-8 text-sm"
                 disabled={!isEditing}
