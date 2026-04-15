@@ -38,9 +38,13 @@ import { PageLoadingState, PageErrorState } from '@/core/states';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useAPYCertificates } from '../../hooks/useAPYCertificates';
+import { createStaleCache } from '@/lib/stale-cache';
 import type { APYCertificate, APYEmailSendRecord } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { SendReminderEmailDialog } from './SendReminderEmailDialog';
+
+// ADR-300: Module-level cache — keyed by certificateId, survives re-navigation
+const apyCertCache = createStaleCache<APYCertificate>('accounting-apy-detail');
 
 // ============================================================================
 // TYPES
@@ -131,8 +135,9 @@ export function APYCertificateDetails({
   const { user } = useAuth();
   const { updateCertificate } = useAPYCertificates({ autoFetch: false });
 
-  const [cert, setCert] = useState<APYCertificate | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [cert, setCert] = useState<APYCertificate | null>(apyCertCache.get(certificateId));
+  const [loading, setLoading] = useState(!apyCertCache.hasLoaded(certificateId));
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [markingReceived, setMarkingReceived] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -140,7 +145,8 @@ export function APYCertificateDetails({
 
   const fetchCertificate = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!apyCertCache.hasLoaded(certificateId)) setLoading(true);
     setFetchError(null);
     try {
       const token = await user.getIdToken();
@@ -152,6 +158,8 @@ export function APYCertificateDetails({
         throw new Error(errorData.error ?? `HTTP ${response.status}`);
       }
       const data: { data: APYCertificate } = await response.json();
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      apyCertCache.set(data.data, certificateId);
       setCert(data.data);
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : t('apy.fetchFailed'));

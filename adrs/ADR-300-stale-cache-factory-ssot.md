@@ -148,6 +148,13 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/hooks/useBuildingFloorplans.ts` | `useAsyncData` no cache | `buildingFloorplansCache = createStaleCache<FloorplanResult>('building-floorplans')` keyed by buildingId | 2026-04-15 |
 | `src/hooks/useBuildingMilestones.ts` | `useAsyncData` no cache | `buildingMilestonesCache = createStaleCache<BuildingMilestone[]>('building-milestones')` keyed by buildingId | 2026-04-15 |
 | `src/hooks/useBOQItems.ts` | `useAsyncData` no cache | `boqItemsCache = createStaleCache<BOQItem[]>('boq-items')` keyed by buildingId | 2026-04-15 |
+| `src/subapps/accounting/components/invoices/InvoicesPageContent.tsx` | `useState([])` + `setLoading(true)` unconditional | `invoicesCache = createStaleCache<Invoice[]>('accounting-invoices')` keyed by fiscalYear+type+payStatus | 2026-04-15 |
+| `src/subapps/accounting/hooks/useJournalEntries.ts` | `useState([])` + `setLoading(true)` unconditional | `journalCache = createStaleCache<JournalEntry[]>('accounting-journal')` keyed by type+category+year+quarter | 2026-04-15 |
+| `src/subapps/accounting/hooks/useBankTransactions.ts` | `useState([])` + `setLoading(true)` unconditional | `bankTransactionsCache = createStaleCache<BankTransaction[]>('accounting-bank')` keyed by accountId+direction+matchStatus | 2026-04-15 |
+| `src/subapps/accounting/hooks/useExpenseDocuments.ts` | `useState([])` + `setLoading(true)` unconditional | `expenseDocsCache = createStaleCache<ReceivedExpenseDocument[]>('accounting-documents')` keyed by fiscalYear+status | 2026-04-15 |
+| `src/subapps/accounting/components/invoices/EditInvoicePageContent.tsx` | `useState(null)` + `setLoading(true)` unconditional | `editInvoiceCache = createStaleCache<Invoice>('accounting-invoice-detail')` keyed by invoiceId | 2026-04-15 |
+| `src/subapps/accounting/components/apy-certificates/APYCertificateDetails.tsx` | `useState(null)` + `setLoading(true)` unconditional | `apyCertCache = createStaleCache<APYCertificate>('accounting-apy-detail')` keyed by certificateId | 2026-04-15 |
+| `src/subapps/accounting/hooks/useMatchingConfig.ts` | `useState(DEFAULT_MATCHING_CONFIG)` + `setLoading(true)` unconditional | `matchingConfigCache = createStaleCache<MatchingConfig>('accounting-matching-config')` single-key | 2026-04-15 |
 
 ---
 

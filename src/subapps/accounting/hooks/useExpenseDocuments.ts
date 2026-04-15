@@ -13,10 +13,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
+import { createStaleCache } from '@/lib/stale-cache';
 import type {
   ReceivedExpenseDocument,
   DocumentProcessingStatus,
 } from '@/subapps/accounting/types';
+
+// ADR-300: Module-level cache — survives React unmount/remount (navigation)
+const expenseDocsCache = createStaleCache<ReceivedExpenseDocument[]>('accounting-documents');
 
 // ============================================================================
 // TYPES
@@ -42,8 +46,10 @@ export function useExpenseDocuments(options: UseExpenseDocumentsOptions): UseExp
   const { fiscalYear, status } = options;
   const { user } = useAuth();
 
-  const [documents, setDocuments] = useState<ReceivedExpenseDocument[]>([]);
-  const [loading, setLoading] = useState(false);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const cacheKey = `${fiscalYear}-${status ?? 'all'}`;
+  const [documents, setDocuments] = useState<ReceivedExpenseDocument[]>(expenseDocsCache.get(cacheKey) ?? []);
+  const [loading, setLoading] = useState(!expenseDocsCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
 
   const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
@@ -55,8 +61,10 @@ export function useExpenseDocuments(options: UseExpenseDocumentsOptions): UseExp
   const fetchDocuments = useCallback(async (): Promise<void> => {
     if (!user) return;
 
+    const key = `${fiscalYear}-${status ?? 'all'}`;
     try {
-      setLoading(true);
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!expenseDocsCache.hasLoaded(key)) setLoading(true);
       setError(null);
 
       const headers = await getAuthHeaders();
@@ -72,6 +80,8 @@ export function useExpenseDocuments(options: UseExpenseDocumentsOptions): UseExp
       }
 
       const data: { success: boolean; data: ReceivedExpenseDocument[] } = await response.json();
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      expenseDocsCache.set(data.data, key);
       setDocuments(data.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load documents';

@@ -11,9 +11,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { createStaleCache } from '@/lib/stale-cache';
 import type { MatchingConfig } from '@/subapps/accounting/types';
 import { DEFAULT_MATCHING_CONFIG } from '@/subapps/accounting/types';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
+
+// ADR-300: Module-level cache — survives React unmount/remount (navigation)
+const matchingConfigCache = createStaleCache<MatchingConfig>('accounting-matching-config');
 
 /**
  * Read/write matching config from Firestore.
@@ -21,21 +25,24 @@ import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
  */
 export function useMatchingConfig() {
   const { user } = useAuth();
-  const [config, setConfig] = useState<MatchingConfig>(DEFAULT_MATCHING_CONFIG);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [config, setConfig] = useState<MatchingConfig>(matchingConfigCache.get() ?? DEFAULT_MATCHING_CONFIG);
+  const [loading, setLoading] = useState(!matchingConfigCache.hasLoaded());
   const [saving, setSaving] = useState(false);
 
   const loadConfig = useCallback(async () => {
     try {
-      setLoading(true);
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!matchingConfigCache.hasLoaded()) setLoading(true);
       const { getFirestore, doc, getDoc } = await import('firebase/firestore');
       const { getApp } = await import('firebase/app');
       const db = getFirestore(getApp());
       const docRef = doc(db, COLLECTIONS.ACCOUNTING_SETTINGS, SYSTEM_DOCS.ACCT_MATCHING_CONFIG);
       const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        setConfig(snap.data() as MatchingConfig);
-      }
+      const loaded = snap.exists() ? (snap.data() as MatchingConfig) : DEFAULT_MATCHING_CONFIG;
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      matchingConfigCache.set(loaded);
+      setConfig(loaded);
     } catch {
       // Keep default config on error
     } finally {
@@ -56,6 +63,8 @@ export function useMatchingConfig() {
       const db = getFirestore(getApp());
       const docRef = doc(db, COLLECTIONS.ACCOUNTING_SETTINGS, SYSTEM_DOCS.ACCT_MATCHING_CONFIG);
       await setDoc(docRef, newConfig, { merge: true });
+      // ADR-300: Keep cache in sync after successful save
+      matchingConfigCache.set(newConfig);
       setConfig(newConfig);
       return true;
     } catch {

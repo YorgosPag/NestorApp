@@ -22,8 +22,12 @@ import { InvoiceForm } from './forms/InvoiceForm';
 import type { Invoice } from '@/subapps/accounting/types';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createStaleCache } from '@/lib/stale-cache';
 
 import { cn } from '@/lib/utils';
+
+// ADR-300: Module-level cache — keyed by invoiceId, survives re-navigation
+const editInvoiceCache = createStaleCache<Invoice>('accounting-invoice-detail');
 
 // ============================================================================
 // TYPES
@@ -46,13 +50,15 @@ export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProp
   const router = useRouter();
   const { user } = useAuth();
 
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [invoice, setInvoice] = useState<Invoice | null>(editInvoiceCache.get(invoiceId));
+  const [loading, setLoading] = useState(!editInvoiceCache.hasLoaded(invoiceId));
   const [error, setError] = useState<string | null>(null);
 
   const fetchInvoice = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!editInvoiceCache.hasLoaded(invoiceId)) setLoading(true);
     try {
       const token = await user.getIdToken();
       const res = await fetch(API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId), {
@@ -60,7 +66,10 @@ export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProp
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setInvoice(data.data ?? null);
+      const loaded: Invoice | null = data.data ?? null;
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      if (loaded) editInvoiceCache.set(loaded, invoiceId);
+      setInvoice(loaded);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invoice');
     } finally {

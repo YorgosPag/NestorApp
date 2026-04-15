@@ -13,12 +13,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
+import { createStaleCache } from '@/lib/stale-cache';
 import type {
   BankTransaction,
   TransactionDirection,
   MatchStatus,
   ImportBatch,
 } from '@/subapps/accounting/types';
+
+// ADR-300: Module-level cache — survives React unmount/remount (navigation)
+const bankTransactionsCache = createStaleCache<BankTransaction[]>('accounting-bank');
 
 // ============================================================================
 // TYPES
@@ -56,8 +60,10 @@ export function useBankTransactions(options: UseBankTransactionsOptions = {}): U
   const { accountId, direction, matchStatus, autoFetch = true } = options;
   const { user } = useAuth();
 
-  const [transactions, setTransactions] = useState<BankTransaction[]>([]);
-  const [loading, setLoading] = useState(false);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const cacheKey = `${accountId ?? 'all'}-${direction ?? 'all'}-${matchStatus ?? 'all'}`;
+  const [transactions, setTransactions] = useState<BankTransaction[]>(bankTransactionsCache.get(cacheKey) ?? []);
+  const [loading, setLoading] = useState(!bankTransactionsCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
 
   const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
@@ -78,8 +84,10 @@ export function useBankTransactions(options: UseBankTransactionsOptions = {}): U
   const fetchTransactions = useCallback(async (): Promise<void> => {
     if (!user) return;
 
+    const key = `${accountId ?? 'all'}-${direction ?? 'all'}-${matchStatus ?? 'all'}`;
     try {
-      setLoading(true);
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!bankTransactionsCache.hasLoaded(key)) setLoading(true);
       setError(null);
 
       const headers = await getAuthHeaders();
@@ -92,7 +100,10 @@ export function useBankTransactions(options: UseBankTransactionsOptions = {}): U
       }
 
       const result: { success: boolean; data: { items: BankTransaction[] } } = await response.json();
-      setTransactions(result.data?.items ?? []);
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      const items = result.data?.items ?? [];
+      bankTransactionsCache.set(items, key);
+      setTransactions(items);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.bankTransactionsLoadFailed';
       setError(message);
@@ -100,7 +111,7 @@ export function useBankTransactions(options: UseBankTransactionsOptions = {}): U
     } finally {
       setLoading(false);
     }
-  }, [user, getAuthHeaders, buildQueryString]);
+  }, [user, getAuthHeaders, buildQueryString, accountId, direction, matchStatus]);
 
   const importTransactions = useCallback(
     async (targetAccountId: string, file: File): Promise<ImportBatch | null> => {

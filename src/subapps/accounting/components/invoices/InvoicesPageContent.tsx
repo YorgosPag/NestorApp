@@ -34,8 +34,12 @@ import { InvoicesTable } from './InvoicesTable';
 import { InvoiceDetails } from './details/InvoiceDetails';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createStaleCache } from '@/lib/stale-cache';
 
 import { cn } from '@/lib/utils';
+
+// ADR-300: Module-level cache — survives React unmount/remount (navigation)
+const invoicesCache = createStaleCache<Invoice[]>('accounting-invoices');
 
 // ============================================================================
 // TYPES
@@ -129,8 +133,10 @@ export function InvoicesPageContent() {
   // Detail view — ?view=invoiceId
   const viewInvoiceId = searchParams.get('view');
 
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const initialKey = `${DEFAULT_FILTERS.fiscalYear}-${DEFAULT_FILTERS.type}-${DEFAULT_FILTERS.paymentStatus}`;
+  const [invoices, setInvoices] = useState<Invoice[]>(invoicesCache.get(initialKey) ?? []);
+  const [loading, setLoading] = useState(!invoicesCache.hasLoaded(initialKey));
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<InvoiceFilterState>({ ...DEFAULT_FILTERS });
   const [showDashboard, setShowDashboard] = useState(true);
@@ -142,7 +148,9 @@ export function InvoicesPageContent() {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    const cacheKey = `${filters.fiscalYear}-${filters.type}-${filters.paymentStatus}`;
+    if (!invoicesCache.hasLoaded(cacheKey)) setLoading(true);
     setError(null);
 
     try {
@@ -161,7 +169,10 @@ export function InvoicesPageContent() {
       }
 
       const json = await res.json();
-      setInvoices(json.data?.items ?? []);
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      const items: Invoice[] = json.data?.items ?? [];
+      invoicesCache.set(items, cacheKey);
+      setInvoices(items);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

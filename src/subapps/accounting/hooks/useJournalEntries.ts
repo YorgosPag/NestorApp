@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
+import { createStaleCache } from '@/lib/stale-cache';
 import type {
   JournalEntry,
   EntryType,
@@ -20,6 +21,9 @@ import type {
   FiscalQuarter,
   CreateJournalEntryInput,
 } from '@/subapps/accounting/types';
+
+// ADR-300: Module-level cache — survives React unmount/remount (navigation)
+const journalCache = createStaleCache<JournalEntry[]>('accounting-journal');
 
 // ============================================================================
 // TYPES
@@ -59,8 +63,10 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
   const { type, category, fiscalYear, quarter, autoFetch = true } = options;
   const { user } = useAuth();
 
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(false);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const cacheKey = `${type ?? 'all'}-${category ?? 'all'}-${fiscalYear ?? 'all'}-${quarter ?? 'all'}`;
+  const [entries, setEntries] = useState<JournalEntry[]>(journalCache.get(cacheKey) ?? []);
+  const [loading, setLoading] = useState(!journalCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
 
   const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
@@ -82,8 +88,10 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
   const fetchEntries = useCallback(async (): Promise<void> => {
     if (!user) return;
 
+    const key = `${type ?? 'all'}-${category ?? 'all'}-${fiscalYear ?? 'all'}-${quarter ?? 'all'}`;
     try {
-      setLoading(true);
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!journalCache.hasLoaded(key)) setLoading(true);
       setError(null);
 
       const headers = await getAuthHeaders();
@@ -96,7 +104,10 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
       }
 
       const result: { success: boolean; data: { items: JournalEntry[] } } = await response.json();
-      setEntries(result.data?.items ?? []);
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      const items = result.data?.items ?? [];
+      journalCache.set(items, key);
+      setEntries(items);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.journalEntriesLoadFailed';
       setError(message);
@@ -104,7 +115,7 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
     } finally {
       setLoading(false);
     }
-  }, [user, getAuthHeaders, buildQueryString]);
+  }, [user, getAuthHeaders, buildQueryString, type, category, fiscalYear, quarter]);
 
   const createEntry = useCallback(
     async (data: CreateJournalEntryInput): Promise<{ id: string } | null> => {
