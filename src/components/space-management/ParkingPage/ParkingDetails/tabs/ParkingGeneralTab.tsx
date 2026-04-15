@@ -38,6 +38,7 @@ import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
+import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 const logger = createModuleLogger('ParkingGeneralTab');
@@ -345,7 +346,7 @@ export function ParkingGeneralTab({
               onChange={(v) => updateField('code', v)}
               entityType="parking"
               buildingId={buildingLink.linkedId || ''}
-              floorLevel={form.floor ? parseInt(form.floor, 10) || 0 : 0}
+              floorLevel={parseFloorLevel(form.floor ?? '')}
               locationZone={parking.locationZone || undefined}
               label={t('general.fields.code')}
               placeholderFallback="A-PK-Y1.01"

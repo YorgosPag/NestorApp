@@ -82,8 +82,8 @@ export function useEntityCodeSuggestion({
       return;
     }
 
-    // For storage, floor is required — code segments encode the floor level
-    if (entityType === 'storage' && floorLevel === '') {
+    // For storage and parking, floor is required — code segments encode the floor level
+    if ((entityType === 'storage' || entityType === 'parking') && floorLevel === '') {
       setSuggestedCode(null);
       return;
     }
@@ -157,6 +157,23 @@ export function useEntityCodeSuggestion({
   }, []);
 
   return { suggestedCode, isLoading };
+}
+
+// =============================================================================
+// UTILITY — SSoT for floor-level parsing (used by all entity dialogs/forms)
+// =============================================================================
+
+/**
+ * Parses a raw floor string from a form field into the typed value expected
+ * by useEntityCodeSuggestion / EntityCodeField.
+ *
+ * Returns '' when floor is not yet selected (blocks auto-coding until floor is set).
+ * Returns 0 for ground floor ("0"), negative for basement ("-1", etc.).
+ *
+ * @see ADR-233 — Entity Coding System
+ */
+export function parseFloorLevel(floor: string): number | '' {
+  return floor ? parseInt(floor, 10) || 0 : '';
 }
 
 export default useEntityCodeSuggestion;

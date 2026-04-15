@@ -37,6 +37,7 @@ import { Spinner } from '@/components/ui/spinner';
 import type { StorageType, StorageStatus } from '@/types/storage/contracts';
 import { typeLabels, statusLabels } from '@/types/storage/constants';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
+import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 
 // ============================================================================
 // TYPES
@@ -215,7 +216,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
             onChange={setCode}
             entityType="storage"
             buildingId={buildingId}
-            floorLevel={floor ? parseInt(floor, 10) || 0 : ''}
+            floorLevel={parseFloorLevel(floor)}
             label={t('general.fields.code')}
             placeholderFallback="A-AP-Y1.01"
             infoExample="π.χ. A-AP-Y1.01 (Κτίριο A, Αποθήκη, Υπόγ.1, #01)"

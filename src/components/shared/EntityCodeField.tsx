@@ -9,7 +9,7 @@
  * @module components/shared/EntityCodeField
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -43,8 +43,8 @@ interface EntityCodeFieldProps {
   entityType: 'property' | 'storage' | 'parking';
   /** Building ID for code suggestion context */
   buildingId: string;
-  /** Floor level for code suggestion context */
-  floorLevel: number;
+  /** Floor level for code suggestion context. Pass '' when floor not yet selected. */
+  floorLevel: number | '';
   /** Property type (required for entityType='property') */
   propertyType?: PropertyType;
   /** Location zone (parking only) */
@@ -93,6 +93,11 @@ export function EntityCodeField({
   const colors = useSemanticColors();
   const [codeOverridden, setCodeOverridden] = useState(!!value);
 
+  // Track the last code that was applied by auto-suggest (not manually typed).
+  // Allows re-applying a new suggestion when building or floor changes,
+  // as long as the user has not manually overridden the field.
+  const lastAutoApplied = useRef<string | null>(value || null);
+
   const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
     entityType,
     buildingId,
@@ -102,9 +107,12 @@ export function EntityCodeField({
     disabled: codeOverridden || disabled,
   });
 
-  // Auto-populate when suggestion arrives and field is empty
+  // Auto-populate when suggestion arrives:
+  // - field is empty, OR
+  // - field currently holds the previously auto-applied code (not manually typed)
   useEffect(() => {
-    if (suggestedCode && !codeOverridden && !value) {
+    if (suggestedCode && !codeOverridden && (!value || value === lastAutoApplied.current)) {
+      lastAutoApplied.current = suggestedCode;
       onChange(suggestedCode);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,7 +121,10 @@ export function EntityCodeField({
   const handleChange = (newValue: string) => {
     onChange(newValue);
     if (!codeOverridden && newValue !== suggestedCode) setCodeOverridden(true);
-    if (!newValue) setCodeOverridden(false);
+    if (!newValue) {
+      setCodeOverridden(false);
+      lastAutoApplied.current = null;
+    }
   };
 
   const isForm = variant === 'form';

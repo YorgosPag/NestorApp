@@ -40,6 +40,7 @@ import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
+import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 const logger = createModuleLogger('StorageGeneralTab');
@@ -299,7 +300,7 @@ export function StorageGeneralTab({
               onChange={(v) => updateField('code', v)}
               entityType="storage"
               buildingId={buildingLink.linkedId || ''}
-              floorLevel={form.floor ? parseInt(form.floor, 10) || 0 : ''}
+              floorLevel={parseFloorLevel(form.floor ?? '')}
               label={t('general.fields.code')}
               placeholderFallback="A-AP-Y1.01"
               infoExample="π.χ. A-AP-Y1.01 (Κτίριο A, Αποθήκη, Υπόγ.1, #01)"

@@ -46,6 +46,7 @@ import type {
   ParkingLocationZone,
 } from '@/types/parking';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
+import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 
 // ============================================================================
 // TYPES
@@ -211,7 +212,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
             onChange={setCode}
             entityType="parking"
             buildingId={buildingId}
-            floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
+            floorLevel={parseFloorLevel(floor)}
             locationZone={locationZone || undefined}
             label={tParking('general.fields.code')}
             placeholderFallback="A-PK-Y1.01"
