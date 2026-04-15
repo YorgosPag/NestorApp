@@ -20,13 +20,22 @@ import { useConstructionGanttCrud } from './construction-gantt/useConstructionGa
 import { useConstructionGanttDialog } from './construction-gantt/useConstructionGanttDialog';
 import { useConstructionGanttInteractions } from './construction-gantt/useConstructionGanttInteractions';
 import type { UseConstructionGanttReturn } from './construction-gantt/construction-gantt-types';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useConstructionGantt');
 
+interface ConstructionGanttData {
+  phases: ConstructionPhase[];
+  tasks: ConstructionTask[];
+}
+
+const constructionGanttCache = createStaleCache<ConstructionGanttData>('construction-gantt');
+
 export function useConstructionGantt(buildingId: string): UseConstructionGanttReturn {
-  const [phases, setPhases] = useState<ConstructionPhase[]>([]);
-  const [tasks, setTasks] = useState<ConstructionTask[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = constructionGanttCache.get(buildingId);
+  const [phases, setPhases] = useState<ConstructionPhase[]>(cached?.phases ?? []);
+  const [tasks, setTasks] = useState<ConstructionTask[]>(cached?.tasks ?? []);
+  const [loading, setLoading] = useState(!constructionGanttCache.hasLoaded(buildingId));
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -34,11 +43,12 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
       return;
     }
 
-    setLoading(true);
+    if (!constructionGanttCache.hasLoaded(buildingId)) setLoading(true);
     setError(null);
 
     try {
       const data = await getConstructionData(buildingId);
+      constructionGanttCache.set({ phases: data.phases, tasks: data.tasks }, buildingId);
       setPhases(data.phases);
       setTasks(data.tasks);
     } catch (loadError) {

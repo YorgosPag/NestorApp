@@ -6,12 +6,19 @@ import type { Communication } from '@/types/crm';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { RealtimeService } from '@/services/realtime';
 import type { CommunicationCreatedPayload, CommunicationUpdatedPayload, CommunicationDeletedPayload } from '@/services/realtime';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const communicationsHistoryCache = createStaleCache<Communication[]>('communications-history');
 
 export function useCommunicationsHistory(contactId?: string) {
   // 🏢 ENTERPRISE: Proper type instead of any[]
   const { t } = useTranslation('communications');
-  const [communications, setCommunications] = useState<Communication[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [communications, setCommunications] = useState<Communication[]>(
+    contactId ? (communicationsHistoryCache.get(contactId) ?? []) : []
+  );
+  const [loading, setLoading] = useState(
+    contactId ? !communicationsHistoryCache.hasLoaded(contactId) : false
+  );
   const [error, setError] = useState<string|null>(null);
 
   const fetchCommunications = useCallback(async () => {
@@ -22,9 +29,10 @@ export function useCommunicationsHistory(contactId?: string) {
       return;
     }
     try {
-      setLoading(true);
+      if (!communicationsHistoryCache.hasLoaded(contactId)) setLoading(true);
       const commsData = await getCommunicationsByContact(contactId);
       if (isMounted) {
+        communicationsHistoryCache.set(commsData, contactId);
         setCommunications(commsData);
         setError(null);
       }

@@ -29,6 +29,9 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
 import { useContactName } from '@/components/contacts/relationships/hooks/useContactName';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const taskDetailCache = createStaleCache<CrmTask>('crm-task-detail');
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
@@ -78,8 +81,12 @@ export function TaskDetailPageContent() {
   const sectionSpacing = getSpacingClass('m', 'md', 'b');
   const { t: tFilters } = useTranslation('filters');
 
-  const [task, setTask] = useState<CrmTask | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [task, setTask] = useState<CrmTask | null>(
+    taskId ? (taskDetailCache.get(taskId) ?? null) : null
+  );
+  const [loading, setLoading] = useState(
+    taskId ? !taskDetailCache.hasLoaded(taskId) : true
+  );
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
@@ -123,13 +130,14 @@ export function TaskDetailPageContent() {
     }
 
     try {
-      setLoading(true);
+      if (!taskDetailCache.hasLoaded(taskId)) setLoading(true);
       setError(null);
       const data = await getTaskById(taskId);
       if (!data) {
         setNotFound(true);
         setTask(null);
       } else {
+        taskDetailCache.set(data, taskId);
         setNotFound(false);
         setTask(data);
       }

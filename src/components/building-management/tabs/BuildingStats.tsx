@@ -12,7 +12,10 @@ import { useCompanyId } from '@/hooks/useCompanyId';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 import '@/lib/design-system';
+
+const buildingStatsCache = createStaleCache<StatsType>('building-stats');
 
 const logger = createModuleLogger('BuildingStats');
 
@@ -26,15 +29,16 @@ interface BuildingStatsProps {
 export function BuildingStats({ buildingId }: BuildingStatsProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const companyId = useCompanyId()?.companyId;
-  const [stats, setStats] = useState<StatsType | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<StatsType | null>(buildingStatsCache.get(buildingId) ?? null);
+  const [loading, setLoading] = useState(!buildingStatsCache.hasLoaded(buildingId));
 
   useEffect(() => {
     const fetchStats = async () => {
       if (!buildingId || !companyId) return;
-      setLoading(true);
+      if (!buildingStatsCache.hasLoaded(buildingId)) setLoading(true);
       try {
         const buildingStats = await getBuildingStats(buildingId, companyId);
+        buildingStatsCache.set(buildingStats, buildingId);
         setStats(buildingStats);
       } catch (error) {
         logger.error('Failed to fetch building stats', { error });

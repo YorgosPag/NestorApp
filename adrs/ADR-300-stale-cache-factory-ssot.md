@@ -176,6 +176,16 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/crm/leads/lead-detail/hooks/useLead.ts` | `useState(null)` + `setLoading(true)` unconditional | `leadCache = createStaleCache<Opportunity>('crm-lead-detail')` keyed by leadId | 2026-04-16 |
 | `src/components/crm/leads/lead-detail/hooks/useLeadTasks.ts` | `useState([])` + `setLoading(true)` unconditional | `leadTasksCache = createStaleCache<CrmTask[]>('crm-lead-tasks')` keyed by leadId | 2026-04-16 |
 | `src/hooks/useFloorplanFiles.ts` | `useState([])` + `setLoading(true)` unconditional | `floorplanFilesCache = createStaleCache<FileRecord[]>('floorplan-files')` keyed by `${entityType}-${entityId}-${purposeFilter}` | 2026-04-16 |
+| `src/components/building-management/hooks/useConstructionGantt.ts` | `useState(true)` unconditional | `constructionGanttCache = createStaleCache<{phases, tasks}>('construction-gantt')` keyed by buildingId | 2026-04-16 |
+| `src/components/communications/hooks/useCommunicationsHistory.ts` | `useState(true)` unconditional | `communicationsHistoryCache = createStaleCache<Communication[]>('communications-history')` keyed by contactId | 2026-04-16 |
+| `src/components/projects/ika/hooks/useGeofenceConfig.ts` | `useState(true)` unconditional | `geofenceConfigCache = createStaleCache<GeofenceCachedConfig>('geofence-config')` keyed by projectId; caches defaults on no-config response | 2026-04-16 |
+| `src/components/projects/ika/hooks/useLaborComplianceConfig.ts` | `useState(true)` unconditional | `laborComplianceConfigCache = createStaleCache<LaborComplianceConfig>('labor-compliance-config')` single-key; caches defaults when no remote config | 2026-04-16 |
+| `src/hooks/useFirestoreProjectsPaginated.ts` | `useState(true)` unconditional | `paginatedProjectsCache = createStaleCache<{projects, hasNext}>('projects-paginated')` keyed by `filters.status ?? 'all'`; caches first page only | 2026-04-16 |
+| `src/components/building-management/tabs/BuildingStats.tsx` | `useState(true)` unconditional | `buildingStatsCache = createStaleCache<BuildingStats>('building-stats')` keyed by buildingId | 2026-04-16 |
+| `src/components/projects/tabs/ProjectStats.tsx` | `useState(true)` unconditional | `projectStatsCache = createStaleCache<ProjectStats>('project-stats')` keyed by projectId | 2026-04-16 |
+| `src/components/contacts/tabs/ContactPurchaseOrdersTab.tsx` | `useState(true)` unconditional | `contactPurchaseOrdersCache = createStaleCache<PurchaseOrder[]>('contact-purchase-orders')` keyed by contactId | 2026-04-16 |
+| `src/components/storage/pages/StorageDetailPageContent.tsx` | `useState(true)` unconditional | `storageDetailCache = createStaleCache<StorageUnit>('storage-detail')` keyed by storageId | 2026-04-16 |
+| `src/components/crm/tasks/TaskDetailPageContent.tsx` | `useState(true)` unconditional | `taskDetailCache = createStaleCache<CrmTask>('crm-task-detail')` keyed by taskId | 2026-04-16 |
 
 ---
 

@@ -19,6 +19,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { PurchaseOrder } from '@/types/procurement';
 import { PO_STATUS_META } from '@/types/procurement';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const contactPurchaseOrdersCache = createStaleCache<PurchaseOrder[]>('contact-purchase-orders');
 
 // ============================================================================
 // TYPES
@@ -55,15 +58,19 @@ function formatDate(iso: string): string {
 export function ContactPurchaseOrdersTab({ contactId }: ContactPurchaseOrdersTabProps) {
   const { t } = useTranslation('procurement');
   const router = useRouter();
-  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<PurchaseOrder[]>(
+    contactPurchaseOrdersCache.get(contactId) ?? []
+  );
+  const [loading, setLoading] = useState(!contactPurchaseOrdersCache.hasLoaded(contactId));
 
   const fetchOrders = useCallback(async () => {
     try {
       const res = await fetch(`/api/procurement?supplierId=${contactId}`);
       if (!res.ok) return;
       const json = await res.json();
-      setOrders(json.data ?? []);
+      const fetched: PurchaseOrder[] = json.data ?? [];
+      contactPurchaseOrdersCache.set(fetched, contactId);
+      setOrders(fetched);
     } catch {
       // Silently fail — tab shows empty state
     } finally {

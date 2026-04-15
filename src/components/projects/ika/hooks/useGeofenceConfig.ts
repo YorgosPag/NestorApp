@@ -17,6 +17,16 @@ import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import { generateCircleGeoJSON } from '../map-shared/geo-math';
 import type { GeofenceApiResponse } from '../map-shared/geofence-api-types';
 import { saveGeofenceConfigWithPolicy } from '@/services/ika/ika-mutation-gateway';
+import { createStaleCache } from '@/lib/stale-cache';
+
+interface GeofenceCachedConfig {
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  enabled: boolean;
+}
+
+const geofenceConfigCache = createStaleCache<GeofenceCachedConfig>('geofence-config');
 
 // =============================================================================
 // CONSTANTS
@@ -31,14 +41,16 @@ export const DEFAULT_RADIUS = 200;
 // =============================================================================
 
 export function useGeofenceConfig(projectId: string, t: (key: string) => string) {
-  // Geofence state
-  const [latitude, setLatitude] = useState(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE);
-  const [longitude, setLongitude] = useState(GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE);
-  const [radiusMeters, setRadiusMeters] = useState(DEFAULT_RADIUS);
-  const [enabled, setEnabled] = useState(false);
+  const _cachedGeofence = geofenceConfigCache.get(projectId);
+
+  // Geofence state — seeded from cache on re-navigation
+  const [latitude, setLatitude] = useState(_cachedGeofence?.latitude ?? GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE);
+  const [longitude, setLongitude] = useState(_cachedGeofence?.longitude ?? GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE);
+  const [radiusMeters, setRadiusMeters] = useState(_cachedGeofence?.radiusMeters ?? DEFAULT_RADIUS);
+  const [enabled, setEnabled] = useState(_cachedGeofence?.enabled ?? false);
 
   // UI state
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!geofenceConfigCache.hasLoaded(projectId));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -51,7 +63,7 @@ export function useGeofenceConfig(projectId: string, t: (key: string) => string)
   useEffect(() => {
     async function loadGeofence() {
       try {
-        setIsLoading(true);
+        if (!geofenceConfigCache.hasLoaded(projectId)) setIsLoading(true);
         const res = await fetch(`${API_ROUTES.ATTENDANCE.GEOFENCE}?projectId=${projectId}`);
         const data = (await res.json()) as GeofenceApiResponse;
 
@@ -60,6 +72,20 @@ export function useGeofenceConfig(projectId: string, t: (key: string) => string)
           setLongitude(data.geofence.longitude);
           setRadiusMeters(data.geofence.radiusMeters);
           setEnabled(data.geofence.enabled);
+          geofenceConfigCache.set({
+            latitude: data.geofence.latitude,
+            longitude: data.geofence.longitude,
+            radiusMeters: data.geofence.radiusMeters,
+            enabled: data.geofence.enabled,
+          }, projectId);
+        } else {
+          // No config yet — mark as loaded with defaults
+          geofenceConfigCache.set({
+            latitude: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
+            longitude: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
+            radiusMeters: DEFAULT_RADIUS,
+            enabled: false,
+          }, projectId);
         }
       } catch {
         // Not configured yet — use defaults

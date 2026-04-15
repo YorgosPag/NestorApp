@@ -11,7 +11,10 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
+
 const logger = createModuleLogger('ProjectStats');
+const projectStatsCache = createStaleCache<StatsType>('project-stats');
 
 // 🏢 ENTERPRISE: Centralized Property Icon
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
@@ -22,15 +25,16 @@ interface ProjectStatsProps {
 
 export function ProjectStats({ projectId }: ProjectStatsProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
-  const [stats, setStats] = useState<StatsType | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<StatsType | null>(projectStatsCache.get(projectId) ?? null);
+  const [loading, setLoading] = useState(!projectStatsCache.hasLoaded(projectId));
 
   useEffect(() => {
     const fetchStats = async () => {
       if (!projectId) return;
-      setLoading(true);
+      if (!projectStatsCache.hasLoaded(projectId)) setLoading(true);
       try {
         const projectStats = await getProjectStats(projectId);
+        projectStatsCache.set(projectStats, projectId);
         setStats(projectStats);
       } catch (error) {
         logger.error('Failed to fetch project stats:', { error: error });

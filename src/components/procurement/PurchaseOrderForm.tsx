@@ -9,6 +9,7 @@
  * @see ADR-267 §Phase A
  */
 
+import { useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,9 @@ import type { PurchaseOrder, POVatRate } from '@/types/procurement';
 import { usePurchaseOrderForm } from '@/hooks/procurement';
 import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { POProjectSelector, POSupplierSelector, POBuildingSelector } from './POEntitySelectors';
+import type { FirestoreProject } from '@/hooks/useFirestoreProjects';
+import { formatAddressLine } from '@/types/project/address-helpers';
 
 interface PurchaseOrderFormProps {
   existingPO?: PurchaseOrder | null;
@@ -63,6 +67,45 @@ export function PurchaseOrderForm({
     }
   };
 
+  /**
+   * When a project is selected:
+   * 1. Set projectId
+   * 2. Clear building (belongs to previous project)
+   * 3. Auto-fill delivery address if field is empty
+   *    Priority: addresses[type=delivery] → addresses[type=site] → legacy address+city
+   */
+  const handleProjectSelect = useCallback(
+    (projectId: string, project?: FirestoreProject) => {
+      setField('projectId', projectId);
+      setField('buildingId', null);
+
+      if (project && !form.deliveryAddress) {
+        const deliveryAddr = project.addresses?.find(
+          (a) => a.type === 'delivery'
+        );
+        if (deliveryAddr) {
+          setField('deliveryAddress', formatAddressLine(deliveryAddr));
+          return;
+        }
+
+        const siteAddr =
+          project.addresses?.find((a) => a.type === 'site' && a.isPrimary) ??
+          project.addresses?.find((a) => a.type === 'site');
+        if (siteAddr) {
+          setField('deliveryAddress', formatAddressLine(siteAddr));
+          return;
+        }
+
+        // Legacy fallback
+        const legacyParts = [project.address, project.city].filter(Boolean);
+        if (legacyParts.length > 0) {
+          setField('deliveryAddress', legacyParts.join(', '));
+        }
+      }
+    },
+    [setField, form.deliveryAddress]
+  );
+
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat('el-GR', {
       style: 'currency',
@@ -85,32 +128,30 @@ export function PurchaseOrderForm({
             {/* Project */}
             <div className="space-y-1.5">
               <Label>{t('form.project')} *</Label>
-              <Input
+              <POProjectSelector
                 value={form.projectId}
-                onChange={(e) => setField('projectId', e.target.value)}
-                placeholder={t('form.projectPlaceholder')}
+                onSelect={(projectId, project) =>
+                  handleProjectSelect(projectId, project ?? undefined)
+                }
               />
             </div>
 
             {/* Supplier */}
             <div className="space-y-1.5">
               <Label>{t('form.supplier')} *</Label>
-              <Input
+              <POSupplierSelector
                 value={form.supplierId}
-                onChange={(e) => setField('supplierId', e.target.value)}
-                placeholder={t('form.supplierPlaceholder')}
+                onSelect={(id) => setField('supplierId', id)}
               />
             </div>
 
             {/* Building (optional) */}
             <div className="space-y-1.5">
               <Label>{t('form.building')}</Label>
-              <Input
+              <POBuildingSelector
                 value={form.buildingId ?? ''}
-                onChange={(e) =>
-                  setField('buildingId', e.target.value || null)
-                }
-                placeholder={t('form.buildingPlaceholder')}
+                projectId={form.projectId || null}
+                onSelect={(id) => setField('buildingId', id)}
               />
             </div>
 

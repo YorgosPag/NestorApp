@@ -36,8 +36,11 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 import '@/lib/design-system';
+
 const logger = createModuleLogger('StorageDetailPage');
+const storageDetailCache = createStaleCache<StorageUnit>('storage-detail');
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) {
     const iconSizes = useIconSizes();
@@ -58,14 +61,19 @@ export function StorageDetailPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation('storage');
-  const [unit, setUnit] = useState<StorageUnit | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [unit, setUnit] = useState<StorageUnit | null>(
+    params.id ? (storageDetailCache.get(params.id) ?? null) : null
+  );
+  const [loading, setLoading] = useState(
+    params.id ? !storageDetailCache.hasLoaded(params.id) : true
+  );
 
   useEffect(() => {
     if (params.id) {
       getStorageUnitById(params.id)
         .then(data => {
           if (data) {
+            storageDetailCache.set(data, params.id);
             setUnit(data);
           }
         })

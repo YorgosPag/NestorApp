@@ -10,6 +10,14 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import { createModuleLogger } from '@/lib/telemetry';
 import { applyUpdates } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createStaleCache } from '@/lib/stale-cache';
+
+interface PaginatedProjectsSnapshot {
+  projects: ProjectSummary[];
+  hasNext: boolean;
+}
+
+const paginatedProjectsCache = createStaleCache<PaginatedProjectsSnapshot>('projects-paginated');
 
 const logger = createModuleLogger('useFirestoreProjectsPaginated');
 
@@ -84,10 +92,12 @@ export function useFirestoreProjectsPaginated(
   initialFilters: ProjectFilters = {},
   pageSize: number = 20
 ): UseFirestoreProjectsPaginatedResult {
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const _initialCacheKey = initialFilters.status ?? 'all';
+  const _initialCached = paginatedProjectsCache.get(_initialCacheKey);
+  const [projects, setProjects] = useState<ProjectSummary[]>(_initialCached?.projects ?? []);
+  const [loading, setLoading] = useState(!paginatedProjectsCache.hasLoaded(_initialCacheKey));
   const [error, setError] = useState<string | null>(null);
-  const [hasNext, setHasNext] = useState(false);
+  const [hasNext, setHasNext] = useState(_initialCached?.hasNext ?? false);
   const [filters, setFilters] = useState<ProjectFilters>(initialFilters);
 
   // Refs to avoid stale closure issues in loadNext/refresh callbacks
@@ -227,14 +237,25 @@ export function useFirestoreProjectsPaginated(
   // Initialize on mount or server-side filter change (status)
   // companyId is auto-injected by tenant config — no need to watch it
   useEffect(() => {
-    allProjectsRef.current = [];
+    const cacheKey = filters.status ?? 'all';
+    const cached = paginatedProjectsCache.get(cacheKey);
+
+    allProjectsRef.current = cached?.projects ?? [];
     lastDocRef.current = null;
-    setHasNext(false);
-    setLoading(false); // Reset loading so loadNext can proceed
+
+    // Show stale data immediately (stale-while-revalidate)
+    if (cached) {
+      setProjects(filteredProjects(cached.projects));
+      setHasNext(cached.hasNext);
+    } else {
+      setHasNext(false);
+    }
+
+    setLoading(!paginatedProjectsCache.hasLoaded(cacheKey));
 
     // Trigger first page load
     void (async () => {
-      setLoading(true);
+      if (!paginatedProjectsCache.hasLoaded(cacheKey)) setLoading(true);
       setError(null);
       try {
         const constraints: QueryConstraint[] = [orderBy('lastUpdate', 'desc')];
@@ -249,6 +270,7 @@ export function useFirestoreProjectsPaginated(
 
         const newItems = result.documents.map(toProject);
         allProjectsRef.current = newItems;
+        paginatedProjectsCache.set({ projects: newItems, hasNext: result.size === pageSize }, cacheKey);
         setProjects(filteredProjects(newItems));
         lastDocRef.current = result.lastDocument;
         setHasNext(result.size === pageSize);
