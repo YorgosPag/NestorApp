@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
@@ -75,8 +75,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   // Form state
   const [buildingId, setBuildingId] = useState('');
   const [code, setCode] = useState('');
-  // Initialize with default type label — same pattern as AddStorageDialog
-  const [number, setNumber] = useState(() => tParking('types.standard'));
+  const [number, setNumber] = useState('');
   const [type, setType] = useState<ParkingSpotType>('standard');
   const [status, setStatus] = useState<ParkingSpotStatus>('available');
   const [locationZone, setLocationZone] = useState<ParkingLocationZone | ''>('');
@@ -91,6 +90,14 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
 
   // ADR-233: Name = type label + area (τ.μ.) — tracks whether user manually edited the name
   const nameManuallyChanged = useRef(false);
+
+  // Set initial name every time dialog opens (translations guaranteed loaded by then)
+  useEffect(() => {
+    if (open && !nameManuallyChanged.current) {
+      setNumber(buildName(tParking('types.standard'), 0));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // ADR-233: Type change → update name suggestion
   const handleTypeChange = (v: ParkingSpotType) => {
