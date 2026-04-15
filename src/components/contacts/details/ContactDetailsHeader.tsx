@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
-import { EntityDetailsHeader, createEntityAction, type EntityHeaderBadge } from '@/core/entity-headers';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { UserPlus } from 'lucide-react';
@@ -17,8 +17,9 @@ import type { ContactStatus } from '@/core/types/BadgeTypes';
 import { isNonEmptyString } from '@/lib/type-guards';
 import { getContactDisplayName, getContactInitials, isIndividualContact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { CONTACT_TYPES, getContactIcon } from '@/constants/contacts';
-import { getActivePersonaTypes } from '@/types/contacts/personas';
-import { ROLE_PERSONA_TYPES, getPersonaMetadata } from '@/config/persona-config';
+import type { PersonaType } from '@/types/contacts/personas';
+import { ROLE_PERSONA_TYPES } from '@/config/persona-config';
+import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector';
 
 const logger = createModuleLogger('ContactDetailsHeader');
 
@@ -34,6 +35,9 @@ interface ContactDetailsHeaderProps {
   onCancelEdit?: () => void;
   // 🏢 ENTERPRISE: Hide edit controls on subcollection tabs (banking, files, relationships)
   hideEditControls?: boolean;
+  // 🎭 ADR-121: Role persona toggle chips (SAP Business Partner pattern)
+  activePersonas?: PersonaType[];
+  onPersonaToggle?: (personaType: PersonaType) => void;
 }
 
 export function ContactDetailsHeader({
@@ -44,7 +48,9 @@ export function ContactDetailsHeader({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
-  hideEditControls = false
+  hideEditControls = false,
+  activePersonas,
+  onPersonaToggle,
 }: ContactDetailsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
@@ -174,21 +180,6 @@ export function ContactDetailsHeader({
     }
   };
 
-  // 🎭 ADR-282: Role persona badges in header
-  const roleBadges: EntityHeaderBadge[] = (() => {
-    if (!isIndividualContact(contact)) return [];
-    const activeTypes = getActivePersonaTypes(contact.personas);
-    return activeTypes
-      .filter(pt => (ROLE_PERSONA_TYPES as readonly string[]).includes(pt))
-      .map(pt => {
-        const meta = getPersonaMetadata(pt);
-        return {
-          type: 'category' as const,
-          value: meta ? t(meta.label) : pt,
-          variant: 'outline' as const,
-        };
-      });
-  })();
 
   return (
     <>
@@ -198,7 +189,6 @@ export function ContactDetailsHeader({
           key={`contact-header-${contact.id}-${avatarKey}`}
           icon={Icon}
           title={displayName}
-          badges={roleBadges}
           avatarImageUrl={avatarImageUrl}
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
           actions={[
@@ -223,6 +213,17 @@ export function ContactDetailsHeader({
           ]}
           variant="detailed"
         />
+
+        {/* 🎭 ADR-121: Role persona chips — SAP Business Partner pattern */}
+        {isIndividualContact(contact) && onPersonaToggle && (
+          <PersonaSelector
+            activePersonas={activePersonas ?? []}
+            onToggle={onPersonaToggle}
+            visibleTypes={ROLE_PERSONA_TYPES}
+            disabled={false}
+            className="px-6 pb-3 -mt-2"
+          />
+        )}
       </div>
 
       {/* 📱 MOBILE: Hidden (no header duplication) */}

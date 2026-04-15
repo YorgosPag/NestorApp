@@ -52,6 +52,8 @@ interface PersonaSelectorProps {
   onToggle: (personaType: PersonaType) => void;
   disabled?: boolean;
   className?: string;
+  /** When provided, only these persona types are shown. Default: all personas. */
+  visibleTypes?: readonly PersonaType[];
 }
 
 export function PersonaSelector({
@@ -59,6 +61,7 @@ export function PersonaSelector({
   onToggle,
   disabled = false,
   className,
+  visibleTypes,
 }: PersonaSelectorProps) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
@@ -87,7 +90,10 @@ export function PersonaSelector({
         </legend>
 
         <div role="group" className="flex flex-wrap gap-2">
-          {PERSONA_METADATA.map((persona) => {
+          {(visibleTypes
+            ? PERSONA_METADATA.filter((p) => visibleTypes.includes(p.type))
+            : PERSONA_METADATA
+          ).map((persona) => {
             const isActive = activePersonas.includes(persona.type);
             const IconComponent = PERSONA_ICON_MAP[persona.icon];
 

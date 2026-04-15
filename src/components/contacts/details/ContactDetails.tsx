@@ -5,6 +5,7 @@ import React from 'react';
 import { Users } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { PersonaType } from '@/types/contacts/personas';
 import { DetailsContainer } from '@/core/containers';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { AddPropertyToContactDialog } from './AddPropertyToContactDialog';
@@ -34,6 +35,7 @@ export function ContactDetails({
     handleLogoChange,
     handleMultiplePhotosChange,
     handleMultiplePhotoUploadComplete,
+    handlePersonaToggle,
     handlePhotoClick,
     handleSaveEdit,
     handleSelectChange,
@@ -70,6 +72,8 @@ export function ContactDetails({
             }}
             onCancelEdit={handleCancelEdit}
             hideEditControls={readOnly || isSubcollectionTab}
+            activePersonas={enhancedFormData.activePersonas as PersonaType[]}
+            onPersonaToggle={readOnly ? undefined : handlePersonaToggle}
           />
         }
         onCreateAction={readOnly ? undefined : onNewContact}
