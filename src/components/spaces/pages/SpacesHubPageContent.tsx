@@ -20,6 +20,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
+import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
+import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
+import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import '@/lib/design-system';
 
 export function SpacesHubPageContent() {
@@ -28,10 +31,23 @@ export function SpacesHubPageContent() {
   const colors = useSemanticColors();
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
+  const { properties, loading: propertiesLoading } = useFirestoreProperties();
+  const { storages, loading: storagesLoading } = useFirestoreStorages();
+  const { parkingSpots, loading: parkingLoading } = useFirestoreParkingSpots();
+
+  const isLoading = propertiesLoading || storagesLoading || parkingLoading;
+
+  const propertiesCount = properties.length;
+  const storagesCount = storages.length;
+  const parkingCount = parkingSpots.length;
+  const totalCount = propertiesCount + storagesCount + parkingCount;
+
+  const fmt = (n: number) => isLoading ? '…' : n.toLocaleString('el-GR');
+
   const spacesStats: DashboardStat[] = [
     {
       title: t('spaces.stats.totalSpaces'),
-      value: '1,247',
+      value: fmt(totalCount),
       description: t('spaces.stats.allPhysicalSpaces'),
       icon: Layout,
       color: 'blue',
@@ -39,7 +55,7 @@ export function SpacesHubPageContent() {
     },
     {
       title: t('spaces.stats.apartments'),
-      value: '486',
+      value: fmt(propertiesCount),
       description: t('spaces.stats.residentialSpaces'),
       icon: NAVIGATION_ENTITIES.property.icon,
       color: 'green',
@@ -47,7 +63,7 @@ export function SpacesHubPageContent() {
     },
     {
       title: t('spaces.stats.storageUnits'),
-      value: '324',
+      value: fmt(storagesCount),
       description: t('spaces.stats.storageSpaces'),
       icon: Package,
       color: 'orange',
@@ -55,7 +71,7 @@ export function SpacesHubPageContent() {
     },
     {
       title: t('spaces.stats.parkingSpaces'),
-      value: '437',
+      value: fmt(parkingCount),
       description: t('spaces.stats.parkingAreas'),
       icon: Car,
       color: 'purple',
@@ -97,7 +113,7 @@ export function SpacesHubPageContent() {
                 <p className={`text-sm ${colors.text.muted} mb-2`}>
                   {t('spaces.cards.apartments.description')}
                 </p>
-                <div className="text-2xl font-bold">486</div>
+                <div className="text-2xl font-bold">{fmt(propertiesCount)}</div>
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.apartments.details')}
                 </p>
@@ -113,7 +129,7 @@ export function SpacesHubPageContent() {
                 <p className={`text-sm ${colors.text.muted} mb-2`}>
                   {t('spaces.cards.storage.description')}
                 </p>
-                <div className="text-2xl font-bold">324</div>
+                <div className="text-2xl font-bold">{fmt(storagesCount)}</div>
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.storage.details')}
                 </p>
@@ -129,7 +145,7 @@ export function SpacesHubPageContent() {
                 <p className={`text-sm ${colors.text.muted} mb-2`}>
                   {t('spaces.cards.parking.description')}
                 </p>
-                <div className="text-2xl font-bold">437</div>
+                <div className="text-2xl font-bold">{fmt(parkingCount)}</div>
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.parking.details')}
                 </p>
@@ -145,7 +161,7 @@ export function SpacesHubPageContent() {
                 <p className={`text-sm ${colors.text.muted} mb-2`}>
                   {t('spaces.cards.common.description')}
                 </p>
-                <div className="text-2xl font-bold">42</div>
+                <div className="text-2xl font-bold">0</div>
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.common.details')}
                 </p>
