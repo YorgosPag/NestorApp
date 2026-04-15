@@ -65,6 +65,9 @@ export function StorageGeneralTab({
   // resolved via silent last-write-wins retry below — never a dialog.
   const versionRef = useRef<number | undefined>((storage as unknown as { _v?: number })._v);
 
+  // Create mode error feedback
+  const [createError, setCreateError] = useState<string | null>(null);
+
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
 
@@ -72,6 +75,7 @@ export function StorageGeneralTab({
   useEffect(() => {
     setForm(buildFormState(storage));
     versionRef.current = (storage as unknown as { _v?: number })._v;
+    if (createMode) setCreateError(null);
   }, [storage.id]);
 
   // Building link callbacks
@@ -109,25 +113,29 @@ export function StorageGeneralTab({
 
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
-    try {
-      if (createMode) {
-        // CREATE MODE: POST new storage
-        if (!form.name.trim()) return false;
+    if (createMode) {
+      setCreateError(null);
 
-        const payload: Record<string, unknown> = {
-          name: form.name.trim(),
-          type: form.type,
-          status: form.status,
-        };
-        if (form.code.trim()) payload.code = form.code.trim();
-        if (buildingLink.linkedId) payload.buildingId = buildingLink.linkedId;
-        if (form.floor.trim()) payload.floor = form.floor.trim();
-        if (form.floorId) payload.floorId = form.floorId;
-        if (form.area) payload.area = parseFloat(form.area);
-        if (form.price) payload.price = parseFloat(form.price);
-        if (form.description.trim()) payload.description = form.description.trim();
-        if (form.notes.trim()) payload.notes = form.notes.trim();
+      if (!form.name.trim()) {
+        setCreateError(t('storages.form.nameRequired'));
+        return false;
+      }
 
+      const payload: Record<string, unknown> = {
+        name: form.name.trim(),
+        type: form.type,
+        status: form.status,
+      };
+      if (form.code.trim()) payload.code = form.code.trim();
+      if (buildingLink.linkedId) payload.buildingId = buildingLink.linkedId;
+      if (form.floor.trim()) payload.floor = form.floor.trim();
+      if (form.floorId) payload.floorId = form.floorId;
+      if (form.area) payload.area = parseFloat(form.area);
+      if (form.price) payload.price = parseFloat(form.price);
+      if (form.description.trim()) payload.description = form.description.trim();
+      if (form.notes.trim()) payload.notes = form.notes.trim();
+
+      try {
         const result = await createStorageWithPolicy<{ storageId: string }>({ payload });
 
         if (result?.storageId) {
@@ -138,9 +146,19 @@ export function StorageGeneralTab({
           });
           logger.info('Storage created', { id: result.storageId });
           onCreated?.(result.storageId);
+          return true;
         }
-        return true;
+
+        setCreateError(t('storages.form.createError'));
+        return false;
+      } catch (err) {
+        logger.error('Failed to create storage', { error: err instanceof Error ? err.message : String(err) });
+        setCreateError(err instanceof Error ? err.message : t('storages.form.createError'));
+        return false;
       }
+    }
+
+    try {
 
       // EDIT MODE: PATCH existing storage
       const payload: Record<string, unknown> = {};
@@ -220,7 +238,7 @@ export function StorageGeneralTab({
       logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
-  }, [form, storage, onEditingChange, buildingLink, createMode, onCreated]);
+  }, [form, storage, onEditingChange, buildingLink, createMode, onCreated, t]);
 
   // Register save ref for header delegation
   useEffect(() => {
@@ -236,6 +254,9 @@ export function StorageGeneralTab({
 
   return (
     <div className="p-2 space-y-2">
+      {createMode && createError && (
+        <p className="text-sm text-destructive px-1">{createError}</p>
+      )}
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />

@@ -52,7 +52,7 @@ export type { Storage } from '@/types/storage/contracts';
 /** Empty storage for create mode — GeneralTab initializes all fields from this */
 const EMPTY_STORAGE: import('@/types/storage/contracts').Storage = {
   id: '',
-  name: '',
+  name: 'Αποθήκη',
   type: 'storage',
   status: 'available',
   building: '',
