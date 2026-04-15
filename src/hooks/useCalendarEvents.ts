@@ -16,6 +16,12 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { getCalendarEvents } from '@/services/calendar/CalendarEventService';
 import type { CalendarEvent, CalendarEventType } from '@/types/calendar-event';
 import { useAsyncData } from '@/hooks/useAsyncData';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+// Keyed by dateRange+userId+eventTypes so different views don't collide
+const calendarEventsCache = createStaleCache<CalendarEvent[]>('calendar-events');
 
 // ============================================================================
 // TYPES
@@ -51,6 +57,9 @@ export interface UseCalendarEventsReturn {
 export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalendarEventsReturn {
   const { isAuthenticated, loading: authLoading } = useAuth();
 
+  // ADR-300: Cache key encodes all params so different views don't collide
+  const cacheKey = `${options.dateRange.start.getTime()}-${options.dateRange.end.getTime()}-${options.userId ?? 'all'}-${options.eventTypes?.join(',') ?? 'all'}`;
+
   const { data, loading, error, refetch } = useAsyncData({
     fetcher: async () => {
       const result = await getCalendarEvents(
@@ -60,10 +69,13 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       );
 
       // Filter by event types if specified
-      if (options.eventTypes && options.eventTypes.length > 0) {
-        return result.filter((e) => options.eventTypes!.includes(e.eventType));
-      }
-      return result;
+      const filtered = options.eventTypes && options.eventTypes.length > 0
+        ? result.filter((e) => options.eventTypes!.includes(e.eventType))
+        : result;
+
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      calendarEventsCache.set(filtered, cacheKey);
+      return filtered;
     },
     deps: [
       options.dateRange.start.getTime(),
@@ -72,6 +84,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       options.eventTypes?.join(','),
     ],
     enabled: !authLoading && isAuthenticated,
+    initialData: calendarEventsCache.get(cacheKey),
+    silentInitialFetch: calendarEventsCache.hasLoaded(cacheKey),
   });
 
   // Stabilize events reference — avoid creating new [] on every render when data is null

@@ -34,6 +34,11 @@ import { PageHeader } from '@/core/headers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { PageContainer } from '@/core/containers';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const teamsCache = createStaleCache<DisplayTeam[]>('crm-teams');
 
 interface TeamMember {
   id: string;
@@ -56,15 +61,17 @@ export function CrmTeamsPageContent() {
   const colors = useSemanticColors();
   const { user: _user } = useAuth();
   const resolvedCompanyId = useCompanyId()?.companyId;
-  const [teams, setTeams] = useState<DisplayTeam[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [teams, setTeams] = useState<DisplayTeam[]>(teamsCache.get() ?? []);
+  const [loading, setLoading] = useState(!teamsCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
   const [showDashboard, setShowDashboard] = useState(false);
 
   useEffect(() => {
     const loadTeamsData = async () => {
       try {
-        setLoading(true);
+        // ADR-300: Only show spinner on first load — not on re-navigation
+        if (!teamsCache.hasLoaded()) setLoading(true);
         setError(null);
 
         if (!resolvedCompanyId) {
@@ -121,6 +128,8 @@ export function CrmTeamsPageContent() {
           })
         );
 
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        teamsCache.set(displayTeams);
         setTeams(displayTeams);
       } catch (err) {
         logger.error('Failed to load teams data', { error: err instanceof Error ? err.message : 'Unknown error' });

@@ -2,30 +2,39 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { Opportunity } from '@/types/crm';
-import { 
-    addOpportunity as apiAddOpportunity, 
-    getOpportunities as apiGetOpportunities, 
-    deleteOpportunity as apiDeleteOpportunity 
+import {
+    addOpportunity as apiAddOpportunity,
+    getOpportunities as apiGetOpportunities,
+    deleteOpportunity as apiDeleteOpportunity
 } from '@/services/opportunities.service';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useOpportunities');
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const oppsCache = createStaleCache<Opportunity[]>('crm-pipeline');
 
 export function useOpportunities() {
     const notifications = useNotifications();
     const { t } = useTranslation(['crm', 'crm-inbox']);
-    const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-    const [loading, setLoading] = useState(true);
+    // ADR-300: Seed from cache → zero flash on re-navigation
+    const [opportunities, setOpportunities] = useState<Opportunity[]>(oppsCache.get() ?? []);
+    const [loading, setLoading] = useState(!oppsCache.hasLoaded());
     const [error, setError] = useState<string | null>(null);
 
     // 🌐 i18n: All messages converted to i18n keys - 2026-01-18
     const fetchOpportunities = useCallback(async () => {
-        setLoading(true);
+        // ADR-300: Only show spinner on first load — not on re-navigation
+        if (!oppsCache.hasLoaded()) setLoading(true);
         setError(null);
         try {
             const fetchedOpportunities = await apiGetOpportunities();
+            // ADR-300: Write to module-level cache so next remount skips spinner
+            oppsCache.set(fetchedOpportunities);
             setOpportunities(fetchedOpportunities);
         } catch (err) {
             const loadErrorMessage = t("opportunities.errors.loadFailed");

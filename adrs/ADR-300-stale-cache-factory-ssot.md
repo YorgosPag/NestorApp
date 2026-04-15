@@ -131,12 +131,16 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/hooks/useFirestoreProperties.ts` | `useAsyncData` no cache | `propertiesCache = createStaleCache<Property[]>('properties')` keyed by buildingId+floorId | 2026-04-15 |
 | `src/services/realtime/hooks/useRealtimeOpportunities.ts` | `useState([])` + `setLoading(true)` unconditional | `opportunitiesCache = createStaleCache<Opportunity[]>('opportunities')` | 2026-04-15 |
 | `src/services/realtime/hooks/useRealtimeTasks.ts` | `useState([])` + `setLoading(true)` unconditional | `tasksCache = createStaleCache<CrmTask[]>('tasks')` | 2026-04-15 |
+| `src/components/crm/hooks/useOpportunities.ts` | `useState([])` + `setLoading(true)` unconditional | `oppsCache = createStaleCache<Opportunity[]>('crm-pipeline')` | 2026-04-15 |
+| `src/hooks/useCalendarEvents.ts` | `useAsyncData` no cache | `calendarEventsCache = createStaleCache<CalendarEvent[]>('calendar-events')` keyed by dateRange+userId+eventTypes | 2026-04-15 |
+| `src/components/crm/pages/CrmTeamsPageContent.tsx` | `useState([])` + `setLoading(true)` unconditional | `teamsCache = createStaleCache<DisplayTeam[]>('crm-teams')` | 2026-04-15 |
 
 ---
 
 ## 7. Out of Scope
 
-- **Properties** (`SharedPropertiesProvider`): uses React Context — already centralized, no flash issue, different architecture (pre-loads at app shell level). No change needed.
+- **Properties** (`SharedPropertiesProvider`): uses React Context with lazy activation — pre-loads data on first use, not on nav. The Sales pages that consume it (`useSalesPropertiesViewerState`) don't re-trigger loading on re-navigation. No change needed.
+- **Communications** (`useConversations` in `useInboxApi.ts`): polling-based REST API, not Firestore. Flash pattern doesn't apply. No change needed.
 - **Cache invalidation on logout**: `cache.clear()` is available. Wire into auth logout handler in a future ADR if needed.
 - **TTL-based expiry**: Not needed — data stays valid until next RealtimeService event or next navigation.
 
