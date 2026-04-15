@@ -260,6 +260,7 @@ A-AP-Y1.07    Αποθήκη (ανεξάρτητος κωδικός)
 | 2026-03-15 | Αποφάσεις: separator παύλα, αυτόματη δημιουργία, override, explicit linking |
 | 2026-03-15 | **ΟΛΕΣ ΟΙ ΑΠΟΦΑΣΕΙΣ CONFIRMED** — ADR έτοιμο για υλοποίηση |
 | 2026-03-15 | **IMPLEMENTATION COMPLETE** — Config, Service, API, Hook, UI (AddUnit + Parking), server-side fallback |
+| 2026-04-15 | **SSoT SEALED** — `useEntityCodeSuggestion` sealed inside `EntityCodeField` (sole consumer). Property edit form migrated from custom `<Input>` to `EntityCodeField`. All 3 entity types (property/storage/parking) now use identical code path. `parseFloorLevel` used at all call-sites. `entity-code-field` SSoT module added to `.ssot-registry.json` — pre-commit blocks new direct hook imports. |
 
 ---
 

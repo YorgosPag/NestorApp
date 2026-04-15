@@ -51,6 +51,18 @@
         "src/app/api/cad-files/dual-write-to-files.ts"
       ]
     },
+    "entity-code-field": {
+      "ssotFile": "src/components/shared/EntityCodeField.tsx",
+      "description": "useEntityCodeSuggestion hook must only be imported/called from EntityCodeField — sealed abstraction (ADR-233). parseFloorLevel utility from the same module is allowed everywhere.",
+      "forbiddenPatterns": [
+        "import\\s*\\{[^}]*useEntityCodeSuggestion",
+        "useEntityCodeSuggestion\\s*\\("
+      ],
+      "allowlist": [
+        "src/components/shared/EntityCodeField.tsx",
+        "src/hooks/useEntityCodeSuggestion.ts"
+      ]
+    },
     "intent-badge-utils": {
       "ssotFile": "src/components/admin/shared/intent-badge-utils.ts",
       "description": "Intent/confidence badge variants must use centralized intent-badge-utils",

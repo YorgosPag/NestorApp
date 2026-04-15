@@ -16,7 +16,6 @@ import { aggregateLevelData } from '@/services/multi-level.service';
 import { useAutoLevelCreation } from '../hooks/useAutoLevelCreation';
 import { AutoLevelDialogs } from './AutoLevelDialogs';
 import { createModuleLogger } from '@/lib/telemetry';
-import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
 import { ReadOnlyCompactView } from './PropertyFieldsReadOnly';
 import { PropertyFieldsEditForm } from './PropertyFieldsEditForm';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
@@ -74,7 +73,8 @@ export function PropertyFieldsBlock({
   const [localEditing, setLocalEditing] = useState(false);
   const isEditing = isEditMode || localEditing;
   const [, setIsSaving] = useState(false);
-  const [codeOverridden, setCodeOverridden] = useState(!!property.code);
+  // Latest suggestion received from EntityCodeField — used as fallback in save payloads (ADR-233)
+  const [latestSuggestion, setLatestSuggestion] = useState<string | null>(null);
 
   // ADR-233: Track type locally for instant code suggestion response
   const [localType, setLocalType] = useState(property.type ?? '');
@@ -155,7 +155,6 @@ export function PropertyFieldsBlock({
         floor: codeFloorLevel,
         type: localType,
       };
-      setCodeOverridden(!!property.code);
       setFormData(p => ({ ...p, code: property.code ?? '' }));
       return;
     }
@@ -166,7 +165,8 @@ export function PropertyFieldsBlock({
       localType !== prev.type;
     if (changed) {
       codeRegenerationPending.current = true;
-      setCodeOverridden(false);
+      // Clear code — EntityCodeField detects empty value and resets its override state,
+      // allowing the next auto-suggestion to be applied automatically.
       setFormData(p => ({ ...p, code: '' }));
       prevCodeInputsRef.current = {
         buildingId: codeBuildingId,
@@ -176,24 +176,9 @@ export function PropertyFieldsBlock({
     }
   }, [codeBuildingId, codeFloorLevel, localType, property.id, property.code]);
 
+  // ADR-233: Gate suggestion — EntityCodeField receives empty buildingId when
+  // hierarchy is incomplete, which naturally disables the auto-suggest hook.
   const hasAllCodeInputs = !!codeBuildingId && !!localType && !!codeFloorId;
-
-  const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
-    entityType: ENTITY_TYPES.PROPERTY,
-    buildingId: codeBuildingId,
-    floorLevel: codeFloorLevel,
-    propertyType: (localType as PropertyType) || undefined,
-    disabled: codeOverridden || !hasAllCodeInputs,
-  });
-
-  // ADR-233: Contextual placeholder — tells user what's missing before code can be generated
-  const codePlaceholderHint = !codeBuildingId
-    ? t('entityCode.needBuilding')
-    : !localType
-      ? t('entityCode.needType')
-      : !codeFloorId
-        ? t('entityCode.needFloor')
-        : suggestedCode || t('fields.identity.codePlaceholder');
   const handleLevelsChange = useCallback((newLevels: PropertyLevel[]) => {
     setFormData(prev => ({
       ...prev,
@@ -288,21 +273,24 @@ export function PropertyFieldsBlock({
     }));
   }, [property]);
 
-  useEffect(() => {
-    if (suggestedCode && !codeOverridden && !formData.code) {
-      setFormData(prev => ({ ...prev, code: suggestedCode }));
-      if (codeRegenerationPending.current && onAutoSaveFields) {
-        codeRegenerationPending.current = false;
-        onAutoSaveFields({ code: suggestedCode });
-      }
-    }
-  }, [suggestedCode, codeOverridden, formData.code, onAutoSaveFields]);
-
   const buildUpdatesFromForm = useCallback(
     (): Partial<Property> =>
-      buildPropertyUpdatesFromForm({ formData, property, suggestedCode, isMultiLevel }),
-    [formData, property, suggestedCode, isMultiLevel],
+      buildPropertyUpdatesFromForm({ formData, property, suggestedCode: latestSuggestion, isMultiLevel }),
+    [formData, property, latestSuggestion, isMultiLevel],
   );
+
+  // ADR-233: Called by EntityCodeField.onChange — keeps formData.code in sync
+  const handleCodeChange = useCallback((code: string) => {
+    setFormData(prev => ({ ...prev, code }));
+  }, []);
+
+  // ADR-233: Called by EntityCodeField.onAutoApply — triggers auto-save after input change
+  const handleCodeAutoApply = useCallback((code: string) => {
+    if (codeRegenerationPending.current && onAutoSaveFields) {
+      codeRegenerationPending.current = false;
+      onAutoSaveFields({ code });
+    }
+  }, [onAutoSaveFields]);
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
@@ -326,7 +314,7 @@ export function PropertyFieldsBlock({
         }
 
         const propertyData = buildCreationPayload({
-          formData, updates, suggestedCode: suggestedCode || '',
+          formData, updates, suggestedCode: latestSuggestion || '',
           defaultName: t('navigation.actions.newUnit.defaultName'),
         });
         const result = await createPropertyWithPolicy({ propertyData });
@@ -369,7 +357,7 @@ export function PropertyFieldsBlock({
   }, [buildUpdatesFromForm, formData.areaGross, formData.floor, formData.name, formData.type,
     formData.projectId, formData.buildingId, formData.floorId, formData.levels.length,
     isCreatingNewUnit, onExitEditMode, onPropertyCreated, property.id, property.buildingId,
-    property.commercialStatus, property.floorId, runExistingPropertyUpdate, suggestedCode,
+    property.commercialStatus, property.floorId, runExistingPropertyUpdate, latestSuggestion,
     success, notifyError, t]);
 
   const toggleArrayItem = useCallback(<T extends string>(
@@ -434,11 +422,12 @@ export function PropertyFieldsBlock({
         toggleArrayItem={toggleArrayItem}
         updateLevelField={updateLevelField}
         handleSave={handleSave}
-        suggestedCode={suggestedCode || ''}
-        codePlaceholderHint={codePlaceholderHint}
-        codeOverridden={codeOverridden}
-        setCodeOverridden={setCodeOverridden}
-        codeLoading={codeLoading}
+        codeBuildingId={hasAllCodeInputs ? codeBuildingId : ''}
+        codeFloorLevel={codeFloorLevel}
+        codePropertyType={(localType as PropertyType) || undefined}
+        onCodeChange={handleCodeChange}
+        onCodeAutoApply={handleCodeAutoApply}
+        onSuggestionChange={setLatestSuggestion}
         onTypeChange={handleTypeChange}
         onNameManualEdit={handleNameManualEdit}
         onAreaChange={handleAreaChange}

@@ -32,6 +32,7 @@ import {
 import { Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
+import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -220,7 +221,7 @@ export function PropertyInlineCreateForm({
           onChange={setCode}
           entityType={ENTITY_TYPES.PROPERTY}
           buildingId={buildingId}
-          floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
+          floorLevel={parseFloorLevel(floor)}
           propertyType={type || undefined}
           label={tUnits('fields.identity.code')}
           placeholderFallback="A-DI-1.01"

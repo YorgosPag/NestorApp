@@ -11,7 +11,7 @@
  */
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { CommercialStatus, OperationalStatus, LevelData, PropertyLevel } from '@/types/property';
+import type { CommercialStatus, OperationalStatus, LevelData, PropertyLevel, PropertyType } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 import type { TFunction } from 'i18next';
 
@@ -100,16 +100,19 @@ export interface PropertyFieldsEditFormProps {
   updateLevelField: <K extends keyof LevelData>(field: K, value: LevelData[K]) => void;
   /** Save handler */
   handleSave: () => void;
-  /** Entity code suggestion */
-  suggestedCode: string;
-  /** Contextual placeholder for code field — shows what's missing or the suggestion */
-  codePlaceholderHint: string;
-  /** Whether code has been manually overridden */
-  codeOverridden: boolean;
-  /** Set code override state */
-  setCodeOverridden: (v: boolean) => void;
-  /** Whether code suggestion is loading */
-  codeLoading: boolean;
+  // ── ADR-233: Entity code — sealed via EntityCodeField ──────────────────────
+  /** Building ID to pass to EntityCodeField (empty string disables suggestion) */
+  codeBuildingId: string;
+  /** Floor level to pass to EntityCodeField */
+  codeFloorLevel: number;
+  /** Property type to pass to EntityCodeField */
+  codePropertyType: PropertyType | undefined;
+  /** Called by EntityCodeField.onChange — updates formData.code in orchestrator */
+  onCodeChange: (code: string) => void;
+  /** Called by EntityCodeField when auto-suggestion is applied — drives auto-save */
+  onCodeAutoApply: (code: string) => void;
+  /** Called by EntityCodeField when suggestion value changes — orchestrator keeps reference */
+  onSuggestionChange: (suggestion: string | null) => void;
   /** ADR-233: Notify parent when type changes in form — triggers code re-suggestion */
   onTypeChange: (type: string) => void;
   /** Notify parent when user manually edits the name — disables auto-suggestion */

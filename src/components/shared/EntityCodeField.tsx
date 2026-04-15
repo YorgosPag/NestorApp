@@ -37,7 +37,7 @@ type TranslationFn = {
 interface EntityCodeFieldProps {
   /** Current code value */
   value: string;
-  /** Called when user changes value */
+  /** Called when user changes value (both manual and auto-applied) */
   onChange: (value: string) => void;
   /** Entity type for code suggestion */
   entityType: 'property' | 'storage' | 'parking';
@@ -53,12 +53,25 @@ interface EntityCodeFieldProps {
   label: string;
   /** Placeholder when no suggestion available */
   placeholderFallback: string;
-  /** Example to show in Popover */
-  infoExample: string;
+  /** Example to show in Popover (ignored when infoContent is provided) */
+  infoExample?: string;
+  /** Custom Popover body content — replaces default infoExample paragraph */
+  infoContent?: React.ReactNode;
   /** Whether the field is disabled */
   disabled?: boolean;
   /** Whether to show as compact (dialogs) vs full (detail forms) */
   variant?: 'form' | 'dialog';
+  /**
+   * Called when the auto-suggestion is applied (not on manual user input).
+   * Use this to trigger side-effects like auto-save.
+   */
+  onAutoApply?: (code: string) => void;
+  /**
+   * Called whenever the internal suggestedCode value changes.
+   * Allows parent orchestrators to keep a reference to the latest suggestion
+   * for use in save payloads (e.g. as a fallback when formData.code is empty).
+   */
+  onSuggestionChange?: (suggestion: string | null) => void;
   /** @deprecated No longer needed — component uses its own useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']) */
   t?: TranslationFn;
 }
@@ -85,8 +98,11 @@ export function EntityCodeField({
   label,
   placeholderFallback,
   infoExample,
+  infoContent,
   disabled = false,
   variant = 'form',
+  onAutoApply,
+  onSuggestionChange,
   t: _t,
 }: EntityCodeFieldProps): React.JSX.Element {
   const { t: tc } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
@@ -107,6 +123,21 @@ export function EntityCodeField({
     disabled: codeOverridden || disabled,
   });
 
+  // When value is cleared externally (e.g. parent resets on building/floor/type change),
+  // reset internal override state so the next suggestion is auto-applied.
+  useEffect(() => {
+    if (!value) {
+      setCodeOverridden(false);
+      lastAutoApplied.current = null;
+    }
+  }, [value]);
+
+  // Propagate suggestion changes to parent orchestrators that need it for save payloads.
+  useEffect(() => {
+    onSuggestionChange?.(suggestedCode);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestedCode]);
+
   // Auto-populate when suggestion arrives:
   // - field is empty, OR
   // - field currently holds the previously auto-applied code (not manually typed)
@@ -114,6 +145,7 @@ export function EntityCodeField({
     if (suggestedCode && !codeOverridden && (!value || value === lastAutoApplied.current)) {
       lastAutoApplied.current = suggestedCode;
       onChange(suggestedCode);
+      onAutoApply?.(suggestedCode);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestedCode, codeOverridden]);
@@ -137,12 +169,12 @@ export function EntityCodeField({
       {isForm ? (
         <Label className={labelClassName}>
           {label}
-          <CodeInfoPopover infoExample={infoExample} />
+          <CodeInfoPopover infoExample={infoExample} infoContent={infoContent} />
         </Label>
       ) : (
         <span className={labelClassName}>
           {label}
-          <CodeInfoPopover infoExample={infoExample} />
+          <CodeInfoPopover infoExample={infoExample} infoContent={infoContent} />
         </span>
       )}
       <Input
@@ -182,8 +214,10 @@ export function EntityCodeField({
 
 function CodeInfoPopover({
   infoExample,
+  infoContent,
 }: {
-  infoExample: string;
+  infoExample?: string;
+  infoContent?: React.ReactNode;
 }) {
   const { t: tc } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
@@ -200,13 +234,17 @@ function CodeInfoPopover({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 text-xs" side="right" align="start">
-        <h4 className="font-semibold mb-1">
-          {tc('entityCode.infoTitle')}
-        </h4>
-        <p className={cn(colors.text.muted, "mb-1")}>
-          {tc('entityCode.infoFormat')}
-        </p>
-        <p className={colors.text.muted}>{infoExample}</p>
+        {infoContent ?? (
+          <>
+            <h4 className="font-semibold mb-1">
+              {tc('entityCode.infoTitle')}
+            </h4>
+            <p className={cn(colors.text.muted, "mb-1")}>
+              {tc('entityCode.infoFormat')}
+            </p>
+            <p className={colors.text.muted}>{infoExample}</p>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );
