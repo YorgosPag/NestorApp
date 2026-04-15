@@ -15,8 +15,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { usePropertyForm, isStandaloneUnitType } from '../hooks/usePropertyForm';
-import { useEntityCodeSuggestion } from '@/hooks/useEntityCodeSuggestion';
-import { isMultiLevelCapableType, ENTITY_TYPES } from '@/config/domain-constants';
+import { isMultiLevelCapableType } from '@/config/domain-constants';
 import { getProjectsList, type ProjectListItem } from '@/components/building-management/building-services';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyType, OperationalStatus, CommercialStatus } from '@/types/property';
@@ -196,22 +195,8 @@ export function useAddPropertyDialogState({
   // If false → auto-fill on type select. If true → show hint only.
   const [nameOverridden, setNameOverridden] = useState(false);
 
-  // ADR-233: Code suggestion
-  const [codeOverridden, setCodeOverridden] = useState(false);
-
-  const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
-    entityType: ENTITY_TYPES.PROPERTY,
-    buildingId: formData.buildingId,
-    floorLevel: formData.floor,
-    propertyType: formData.type || undefined,
-    disabled: codeOverridden,
-  });
-
-  useEffect(() => {
-    if (suggestedCode && !codeOverridden) {
-      handleSelectChange('code', suggestedCode);
-    }
-  }, [suggestedCode, codeOverridden, handleSelectChange]);
+  // ADR-233: Latest suggestion from EntityCodeField — used as fallback in save payloads
+  const [latestSuggestion, setLatestSuggestion] = useState<string | null>(null);
 
   // ADR-236: Multi-level detection
   const isMultiLevelType = isMultiLevelCapableType(formData.type);
@@ -235,8 +220,8 @@ export function useAddPropertyDialogState({
     if (open) {
       resetForm();
       setActiveTab('basic');
-      setCodeOverridden(false);
       setNameOverridden(false);
+      setLatestSuggestion(null);
     }
   }, [open, resetForm]);
 
@@ -293,10 +278,8 @@ export function useAddPropertyDialogState({
     ...form,
     floorOptions,
     floorsLoading,
-    codeOverridden,
-    setCodeOverridden,
-    suggestedCode,
-    codeLoading,
+    latestSuggestion,
+    setLatestSuggestion,
     isMultiLevelType,
     activeTab,
     setActiveTab,

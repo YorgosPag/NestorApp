@@ -47,10 +47,12 @@ import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-toke
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isValidEntityCodeFormat } from '@/services/entity-code.service';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { EntityCodeField } from '@/components/shared/EntityCodeField';
+import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 import type { AddPropertyDialogProps } from './useAddPropertyDialogState';
 import {
@@ -81,8 +83,7 @@ export function AddPropertyDialog({
     formData, loading, errors, isValid,
     handleSubmit, handleChange, handleSelectChange, handleNumberChange, handleLevelsChange,
     floorOptions, floorsLoading,
-    codeOverridden, setCodeOverridden,
-    suggestedCode, codeLoading,
+    latestSuggestion, setLatestSuggestion,
     isMultiLevelType,
     activeTab, setActiveTab,
     handleBuildingChange, handleFloorSelection,
@@ -201,28 +202,47 @@ export function AddPropertyDialog({
                   </FormInput>
                 </FormField>
 
-                <FormField label={t('dialog.addUnit.fields.code')} htmlFor="code">
-                  <FormInput>
-                    <Input id="code" name="code" value={formData.code}
-                      onChange={(e) => {
-                        handleChange(e);
-                        if (!codeOverridden && e.target.value !== suggestedCode) setCodeOverridden(true);
-                        if (!e.target.value) setCodeOverridden(false);
-                      }}
-                      placeholder={t('dialog.addUnit.placeholders.code')} disabled={loading} />
-                    {codeLoading && (
-                      <p className={cn("text-xs mt-1", colors.text.muted)}>{t('entityCode.loading')}</p>
-                    )}
-                    {suggestedCode && codeOverridden && formData.code !== suggestedCode && (
-                      <p className={cn("text-xs mt-1", colors.text.muted)}>
-                        {t('entityCode.suggested', { code: suggestedCode })}
-                      </p>
-                    )}
-                    {formData.code && !isValidEntityCodeFormat(formData.code) && (
-                      <p className="text-xs text-amber-600 mt-1">{t('entityCode.formatWarning')}</p>
-                    )}
-                  </FormInput>
-                </FormField>
+                {/* ADR-233: Code field — sealed via EntityCodeField (SSoT) */}
+                <EntityCodeField
+                  value={formData.code}
+                  onChange={(v) => handleSelectChange('code', v)}
+                  entityType={ENTITY_TYPES.PROPERTY}
+                  buildingId={formData.buildingId}
+                  floorLevel={parseFloorLevel(String(formData.floor))}
+                  propertyType={formData.type || undefined}
+                  onSuggestionChange={setLatestSuggestion}
+                  label={t('dialog.addUnit.fields.code')}
+                  placeholderFallback="A-DI-1.01"
+                  infoContent={
+                    <>
+                      <h4 className="font-semibold mb-2">{t('entityCode.infoTitle')}</h4>
+                      <p className={cn("mb-2", colors.text.muted)}>{t('entityCode.infoFormat')}</p>
+                      <p className={cn("mb-3", colors.text.muted)}>{t('entityCode.infoExample')}</p>
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-1 font-medium">{t('entityCode.infoResidential')}</th>
+                            <th className="text-left py-1 font-medium">{t('entityCode.infoCommercial')}</th>
+                            <th className="text-left py-1 font-medium">{t('entityCode.infoAuxiliary')}</th>
+                          </tr>
+                        </thead>
+                        <tbody className={colors.text.muted}>
+                          <tr><td>DI = {t('types.apartment')}</td><td>KA = {t('types.shop')}</td><td>AP = {t('types.storage')}</td></tr>
+                          <tr><td>GK = {t('types.apartment_1br')}</td><td>GR = {t('types.office')}</td><td>PK = Parking</td></tr>
+                          <tr><td>ST = {t('types.studio')}</td><td>AI = {t('types.hall')}</td><td>PY = {t('types.outdoor')}</td></tr>
+                          <tr><td>ME = {t('types.maisonette')}</td><td colSpan={2} rowSpan={5} /></tr>
+                          <tr><td>RE = {t('types.penthouse')}</td></tr>
+                          <tr><td>LO = Loft</td></tr>
+                          <tr><td>MO = {t('types.detached_house')}</td></tr>
+                          <tr><td>BI = {t('types.villa')}</td></tr>
+                        </tbody>
+                      </table>
+                      <p className={cn("mt-2 text-xs", colors.text.muted)}>{t('entityCode.infoFloors')}</p>
+                    </>
+                  }
+                  disabled={loading}
+                  variant="dialog"
+                />
 
                 <FormField label={t('dialog.addUnit.fields.type')} htmlFor="type" required>
                   <FormInput>

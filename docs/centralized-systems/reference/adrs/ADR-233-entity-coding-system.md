@@ -408,3 +408,15 @@ Client (AddUnitDialog)           Server (API)
    - `buildBuildingCode()` / `getGreekLetterAt()`: full 24-letter coverage, Ω→25 numeric fallback.
 
 **Affected files:** `src/app/api/buildings/route.ts`, `src/app/api/buildings/building-update.handler.ts`, `src/components/building-management/BuildingsList.tsx`, `src/config/__tests__/entity-code-config.test.ts` (new)
+
+### 2026-04-15: AddPropertyDialog sealed — 100% SSoT for `useEntityCodeSuggestion`
+
+**Problem:** `useAddPropertyDialogState.ts` chiamava `useEntityCodeSuggestion` direttamente (3 violazioni SSoT). Era l'unico entry point rimasto fuori dal pattern `EntityCodeField`.
+
+**Fix:**
+- `useAddPropertyDialogState.ts`: rimosso `useEntityCodeSuggestion` import + call, `codeOverridden` state, `codeLoading`, `suggestedCode`, e il `useEffect` di auto-apply. Aggiunto `latestSuggestion` state (da `onSuggestionChange`) per fallback nei save payload.
+- `AddPropertyDialog.tsx`: sostituito custom `<Input>` + Popover + feedback inline con `<EntityCodeField>` (stesso pattern di `PropertyFieldsEditForm`, `AddStorageDialog`, `AddParkingDialog`). Aggiunto `infoContent` con la rich table dei prefissi.
+
+**Risultato:** `useEntityCodeSuggestion` viene chiamato SOLO da `EntityCodeField`. Zero codice di codificazione disperso. SSoT baseline: 21 violations / 20 file (−3).
+
+**Affected files:** `useAddPropertyDialogState.ts`, `AddPropertyDialog.tsx`, `.ssot-violations-baseline.json`
