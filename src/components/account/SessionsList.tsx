@@ -11,6 +11,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   Monitor,
   Smartphone,
@@ -50,6 +51,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('SessionsList');
+
+const sessionsListCache = createStaleCache<SessionDisplayItem[]>('account-sessions');
 
 // ============================================================================
 // COMPONENT PROPS
@@ -112,8 +115,8 @@ export function SessionsList({ userId, onSessionsChange }: SessionsListProps) {
   const typography = useTypography();
 
   // State
-  const [sessions, setSessions] = useState<SessionDisplayItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [sessions, setSessions] = useState<SessionDisplayItem[]>(sessionsListCache.get(userId) ?? []);
+  const [isLoading, setIsLoading] = useState(!sessionsListCache.hasLoaded(userId));
   const [error, setError] = useState<string | null>(null);
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
   const [isRevokingAll, setIsRevokingAll] = useState(false);
@@ -129,11 +132,12 @@ export function SessionsList({ userId, onSessionsChange }: SessionsListProps) {
   const fetchSessions = useCallback(async () => {
     if (!userId) return;
 
-    setIsLoading(true);
+    if (!sessionsListCache.hasLoaded(userId)) setIsLoading(true);
     setError(null);
 
     try {
       const sessionsList = await sessionService.getSessionsForDisplay(userId);
+      sessionsListCache.set(sessionsList, userId);
       setSessions(sessionsList);
     } catch (err) {
       logger.error('Failed to fetch sessions', { error: err });

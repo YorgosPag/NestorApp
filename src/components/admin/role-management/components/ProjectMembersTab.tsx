@@ -12,6 +12,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { createStaleCache } from '@/lib/stale-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -40,6 +41,8 @@ import type {
 } from '../types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+
+const adminProjectsListCache = createStaleCache<ProjectSummary[]>('admin-project-members');
 
 // =============================================================================
 // PROPS
@@ -74,10 +77,10 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
   const { success, error: notifyError } = useNotifications();
 
   // State
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>(adminProjectsListCache.get() ?? []);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [members, setMembers] = useState<ProjectMemberEntry[]>([]);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(!adminProjectsListCache.hasLoaded());
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
@@ -90,16 +93,16 @@ export function ProjectMembersTab({ canEdit }: ProjectMembersTabProps) {
   // Fetch projects
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    setIsLoadingProjects(true);
+    if (!adminProjectsListCache.hasLoaded()) setIsLoadingProjects(true);
     // apiClient unwraps canonical { success, data } → returns data directly
     // Projects list returns { projects: [...], count, loadedAt, source }
     apiClient
       .get<{ projects: ProjectListItem[] }>(API_ROUTES.PROJECTS.LIST)
       .then((data) => {
         const items = Array.isArray(data?.projects) ? data.projects : [];
-        setProjects(
-          items.map((p) => ({ id: p.id, name: p.name, status: p.status }))
-        );
+        const mapped = items.map((p) => ({ id: p.id, name: p.name, status: p.status }));
+        adminProjectsListCache.set(mapped);
+        setProjects(mapped);
       })
       .catch((err) => {
         const message = err instanceof Error ? err.message : 'Failed to load projects';

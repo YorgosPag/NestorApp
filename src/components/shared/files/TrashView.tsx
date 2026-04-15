@@ -20,6 +20,7 @@
 'use client';
 
 import React, { useCallback, useState, useEffect } from 'react';
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   Trash2,
   RotateCcw,
@@ -55,6 +56,8 @@ import '@/lib/design-system';
 // ============================================================================
 
 const logger = createModuleLogger('TRASH_VIEW');
+
+const trashViewCache = createStaleCache<FileRecord[]>('file-trash');
 
 // ============================================================================
 // TYPES
@@ -149,8 +152,9 @@ export function TrashView({
   const { success, error: showError } = useNotifications();
 
   // State
-  const [trashedFiles, setTrashedFiles] = useState<FileRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const _trashCacheKey = `${companyId}-${entityType ?? 'all'}-${entityId ?? 'all'}`;
+  const [trashedFiles, setTrashedFiles] = useState<FileRecord[]>(trashViewCache.get(_trashCacheKey) ?? []);
+  const [loading, setLoading] = useState(!trashViewCache.hasLoaded(_trashCacheKey));
   const [error, setError] = useState<Error | null>(null);
 
   // Dialog state
@@ -163,8 +167,9 @@ export function TrashView({
   // =========================================================================
 
   const fetchTrashedFiles = useCallback(async () => {
+    const cacheKey = `${companyId}-${entityType ?? 'all'}-${entityId ?? 'all'}`;
     try {
-      setLoading(true);
+      if (!trashViewCache.hasLoaded(cacheKey)) setLoading(true);
       setError(null);
 
       logger.info('Fetching trashed files', { companyId, entityType, entityId });
@@ -176,6 +181,7 @@ export function TrashView({
       });
 
       logger.info('Trashed files fetched', { count: files.length });
+      trashViewCache.set(files, cacheKey);
       setTrashedFiles(files);
     } catch (err) {
       const fetchError = err instanceof Error ? err : new Error('Failed to fetch trashed files');

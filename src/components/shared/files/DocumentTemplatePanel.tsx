@@ -13,6 +13,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   FileSignature,
   Plus,
@@ -42,6 +43,8 @@ import {
 } from '@/services/filesystem/file-mutation-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
+
+const documentTemplatesCache = createStaleCache<DocumentTemplate[]>('file-document-templates');
 
 // ============================================================================
 // TYPES
@@ -95,8 +98,8 @@ export function DocumentTemplatePanel({
       entries.map(([key, translationKey]) => [key, t(translationKey)])
     ) as Record<TemplateCategory, string>;
   }, [t]);
-  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState<DocumentTemplate[]>(documentTemplatesCache.get(companyId) ?? []);
+  const [loading, setLoading] = useState(!documentTemplatesCache.hasLoaded(companyId));
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<string | null>(null);
@@ -109,9 +112,10 @@ export function DocumentTemplatePanel({
 
   // Fetch templates
   const fetchTemplates = useCallback(async () => {
-    setLoading(true);
+    if (!documentTemplatesCache.hasLoaded(companyId)) setLoading(true);
     try {
       const data = await DocumentTemplateService.getTemplates(companyId);
+      documentTemplatesCache.set(data, companyId);
       setTemplates(data);
     } finally {
       setLoading(false);

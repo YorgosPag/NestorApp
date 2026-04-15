@@ -12,6 +12,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { createStaleCache } from '@/lib/stale-cache';
 import { Button } from '@/components/ui/button';
 
 import { AuditFilters } from './AuditFilters';
@@ -22,6 +23,8 @@ import type { AuditLogFilters, AuditLogResponse, FrontendAuditEntry } from '../t
 import { DEFAULT_AUDIT_FILTERS } from '../types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+
+const adminAuditLogCache = createStaleCache<FrontendAuditEntry[]>('admin-audit-log');
 
 // =============================================================================
 // PROPS
@@ -39,10 +42,10 @@ export function AuditTab({ canExport }: AuditTabProps) {
   const { t } = useTranslation('admin');
   const { error: notifyError } = useNotifications();
 
-  const [entries, setEntries] = useState<FrontendAuditEntry[]>([]);
+  const [entries, setEntries] = useState<FrontendAuditEntry[]>(adminAuditLogCache.get() ?? []);
   const [filters, setFilters] = useState<AuditLogFilters>(DEFAULT_AUDIT_FILTERS);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!adminAuditLogCache.hasLoaded());
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // ---------------------------------------------------------------------------
@@ -52,7 +55,7 @@ export function AuditTab({ canExport }: AuditTabProps) {
     const isMore = !!cursor;
     if (isMore) {
       setIsLoadingMore(true);
-    } else {
+    } else if (!adminAuditLogCache.hasLoaded()) {
       setIsLoading(true);
     }
 
@@ -73,6 +76,7 @@ export function AuditTab({ canExport }: AuditTabProps) {
       if (isMore) {
         setEntries((prev) => [...prev, ...data.entries]);
       } else {
+        adminAuditLogCache.set(data.entries);
         setEntries(data.entries);
       }
       setNextCursor(data.nextCursor);

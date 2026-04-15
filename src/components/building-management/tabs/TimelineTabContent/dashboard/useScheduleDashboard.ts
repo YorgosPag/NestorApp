@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createStaleCache } from '@/lib/stale-cache';
 import type { ConstructionPhase, ConstructionTask, DelayReason } from '@/types/building/construction';
 import { DELAY_REASONS } from '@/types/building/construction';
 import type { BuildingMilestone } from '@/types/building/milestone';
@@ -32,6 +33,8 @@ import type {
   ScheduleKPIs,
   DelayBreakdownDataPoint,
 } from './schedule-dashboard.types';
+
+const scheduleDashboardBoqCache = createStaleCache<BOQItem[]>('building-schedule-dashboard');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -239,18 +242,20 @@ export function useScheduleDashboard({
   } = useConstructionGantt(buildingId);
 
   // BOQ lazy fetch
-  const [boqItems, setBoqItems] = useState<BOQItem[]>([]);
-  const [boqLoading, setBoqLoading] = useState(true);
+  const _boqCacheKey = buildingId;
+  const [boqItems, setBoqItems] = useState<BOQItem[]>(scheduleDashboardBoqCache.get(_boqCacheKey) ?? []);
+  const [boqLoading, setBoqLoading] = useState(!scheduleDashboardBoqCache.hasLoaded(_boqCacheKey));
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [lookAheadDays, setLookAheadDays] = useState(14);
 
   useEffect(() => {
     let cancelled = false;
-    setBoqLoading(true);
+    if (!scheduleDashboardBoqCache.hasLoaded(buildingId)) setBoqLoading(true);
     boqService
       .getByBuilding(companyId, buildingId)
       .then(items => {
         if (!cancelled) {
+          scheduleDashboardBoqCache.set(items, buildingId);
           setBoqItems(items);
           setLastUpdated(new Date());
         }

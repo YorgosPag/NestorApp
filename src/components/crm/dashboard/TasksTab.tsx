@@ -41,6 +41,9 @@ import { HOVER_SHADOWS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Auth hook for race condition prevention
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const crmDashboardLeadsCache = createStaleCache<Opportunity[]>('crm-dashboard-tasks');
 // 🏢 ENTERPRISE: Centralized Badge component (replaces raw <span> badges)
 import { Badge } from '@/components/ui/badge';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -126,8 +129,8 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
   // 🏢 ENTERPRISE: Real-time tasks (ADR-227 Phase 1) — replaces one-time getTasks()
   const { tasks, loading: tasksLoading, error: tasksError } = useRealtimeTasks(!authLoading && isAuthenticated);
-  const [leads, setLeads] = useState<Opportunity[]>([]);
-  const [leadsLoading, setLeadsLoading] = useState(true);
+  const [leads, setLeads] = useState<Opportunity[]>(crmDashboardLeadsCache.get() ?? []);
+  const [leadsLoading, setLeadsLoading] = useState(!crmDashboardLeadsCache.hasLoaded());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CrmTask | null>(null);
 
@@ -135,8 +138,9 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   const fetchLeads = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      setLeadsLoading(true);
+      if (!crmDashboardLeadsCache.hasLoaded()) setLeadsLoading(true);
       const leadsData = await getOpportunities();
+      crmDashboardLeadsCache.set(leadsData);
       setLeads(leadsData);
     } catch (err) {
       logger.error('Error fetching leads', { error: err });

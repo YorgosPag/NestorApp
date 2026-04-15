@@ -18,6 +18,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { getString, getNumber, getBoolean, getStringArray } from '@/lib/firestore/field-extractors';
 import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import { createStaleCache } from '@/lib/stale-cache';
 import type { DocumentData } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
@@ -29,6 +30,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useRealtimeTriageCommunications');
+
+const inboxTriageCache = createStaleCache<Array<Communication & { id: string }>>('inbox-triage');
 
 // ============================================================================
 // TYPES
@@ -183,8 +186,10 @@ export function useRealtimeTriageCommunications(
   const { success } = useNotifications();
   const { t } = useTranslation('admin');
 
-  const [communications, setCommunications] = useState<Array<Communication & { id: string }>>([]);
-  const [loading, setLoading] = useState(true);
+  const [communications, setCommunications] = useState<Array<Communication & { id: string }>>(
+    inboxTriageCache.get(companyId ?? '') ?? []
+  );
+  const [loading, setLoading] = useState(!inboxTriageCache.hasLoaded(companyId ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
 
@@ -196,8 +201,8 @@ export function useRealtimeTriageCommunications(
   // =========================================================================
 
   useEffect(() => {
-    // Reset state
-    setCommunications([]);
+    // Reset state — seed from cache to avoid flash on companyId change
+    setCommunications(inboxTriageCache.get(companyId ?? '') ?? []);
     setError(null);
     setConnected(false);
     previousIdsRef.current.clear();
@@ -210,7 +215,7 @@ export function useRealtimeTriageCommunications(
       return;
     }
 
-    setLoading(true);
+    if (!inboxTriageCache.hasLoaded(companyId)) setLoading(true);
 
     // Build constraints — companyId auto-injected by firestoreQueryService
     const constraints: QueryConstraint[] = [];
@@ -246,6 +251,7 @@ export function useRealtimeTriageCommunications(
           previousIdsRef.current = new Set(result.documents.map(doc => doc.id));
         }
 
+        inboxTriageCache.set(docs, companyId);
         setCommunications(docs);
         setConnected(true);
         setLoading(false);

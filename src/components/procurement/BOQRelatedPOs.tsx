@@ -12,12 +12,15 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { createStaleCache } from '@/lib/stale-cache';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { PurchaseOrder, PurchaseOrderItem } from '@/types/procurement';
 import { PO_STATUS_META } from '@/types/procurement';
+
+const boqRelatedPOsCache = createStaleCache<LinkedPOInfo[]>('procurement-boq-pos');
 
 // ============================================================================
 // TYPES
@@ -52,10 +55,13 @@ function formatEuro(amount: number): string {
 export function BOQRelatedPOs({ projectId, boqItemId }: BOQRelatedPOsProps) {
   const { t } = useTranslation('procurement');
   const router = useRouter();
-  const [linkedPOs, setLinkedPOs] = useState<LinkedPOInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const _boqPOsCacheKey = `${projectId}-${boqItemId}`;
+  const [linkedPOs, setLinkedPOs] = useState<LinkedPOInfo[]>(boqRelatedPOsCache.get(_boqPOsCacheKey) ?? []);
+  const [loading, setLoading] = useState(!boqRelatedPOsCache.hasLoaded(_boqPOsCacheKey));
 
   const fetchAndFilter = useCallback(async () => {
+    const cacheKey = `${projectId}-${boqItemId}`;
+    if (!boqRelatedPOsCache.hasLoaded(cacheKey)) setLoading(true);
     try {
       const res = await fetch(`/api/procurement?projectId=${projectId}`);
       if (!res.ok) return;
@@ -72,6 +78,7 @@ export function BOQRelatedPOs({ projectId, boqItemId }: BOQRelatedPOsProps) {
         }
       }
 
+      boqRelatedPOsCache.set(matches, cacheKey);
       setLinkedPOs(matches);
     } catch {
       // Silently fail

@@ -18,6 +18,7 @@
 'use client';
 
 import React, { useCallback, useState, useEffect } from 'react';
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   Archive,
   RotateCcw,
@@ -49,6 +50,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 // ============================================================================
 
 const logger = createModuleLogger('ARCHIVE_VIEW');
+
+const archiveViewCache = createStaleCache<FileRecord[]>('file-archive');
 
 // ============================================================================
 // TYPES
@@ -90,8 +93,9 @@ export function ArchiveView({
   const translateDisplayName = useFileDisplayName();
   const { success, error: showError } = useNotifications();
 
-  const [archivedFiles, setArchivedFiles] = useState<FileRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const _archiveCacheKey = `${companyId}-${entityType ?? 'all'}-${entityId ?? 'all'}`;
+  const [archivedFiles, setArchivedFiles] = useState<FileRecord[]>(archiveViewCache.get(_archiveCacheKey) ?? []);
+  const [loading, setLoading] = useState(!archiveViewCache.hasLoaded(_archiveCacheKey));
   const [error, setError] = useState<Error | null>(null);
 
   const [unarchiveDialogOpen, setUnarchiveDialogOpen] = useState(false);
@@ -103,8 +107,9 @@ export function ArchiveView({
   // =========================================================================
 
   const fetchArchivedFiles = useCallback(async () => {
+    const cacheKey = `${companyId}-${entityType ?? 'all'}-${entityId ?? 'all'}`;
     try {
-      setLoading(true);
+      if (!archiveViewCache.hasLoaded(cacheKey)) setLoading(true);
       setError(null);
 
       logger.info('Fetching archived files', { companyId, entityType, entityId });
@@ -116,6 +121,7 @@ export function ArchiveView({
       });
 
       logger.info('Archived files fetched', { count: files.length });
+      archiveViewCache.set(files, cacheKey);
       setArchivedFiles(files);
     } catch (err) {
       const fetchError = err instanceof Error ? err : new Error('Failed to fetch archived files');

@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   Bell,
   Mail,
@@ -55,6 +56,8 @@ import {
 
 const logger = createModuleLogger('NotificationSettings');
 
+const notificationSettingsCache = createStaleCache<UserNotificationSettings | null>('account-notification-settings');
+
 // Re-export types for backward compatibility
 export type { NotificationSettingsProps, CategoryConfig };
 
@@ -71,8 +74,8 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
   const typography = useTypography();
 
   // State
-  const [settings, setSettings] = useState<UserNotificationSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [settings, setSettings] = useState<UserNotificationSettings | null>(notificationSettingsCache.get(userId) ?? null);
+  const [isLoading, setIsLoading] = useState(!notificationSettingsCache.hasLoaded(userId));
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -88,9 +91,10 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
 
     const loadSettings = async () => {
       try {
-        setIsLoading(true);
+        if (!notificationSettingsCache.hasLoaded(userId)) setIsLoading(true);
         setError(null);
         const userSettings = await userNotificationSettingsService.getSettings(userId);
+        notificationSettingsCache.set(userSettings, userId);
         setSettings(userSettings);
         onSettingsChange?.(userSettings);
       } catch (err) {
