@@ -14,8 +14,13 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { RealtimeService } from '@/services/realtime';
 import type { ObligationCreatedPayload, ObligationUpdatedPayload, ObligationDeletedPayload } from '@/services/realtime';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useObligations');
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const obligationsCache = createStaleCache<ObligationDocument[]>('obligations');
 
 const DEFAULT_STATS = {
   total: 0,
@@ -41,9 +46,13 @@ export function useObligations() {
     fetcher: async () => {
       const result = await repository.getAll();
       logger.info('Loaded obligations from Firebase', { count: result.length });
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      obligationsCache.set(result);
       return result;
     },
     deps: [repository],
+    initialData: obligationsCache.get(),
+    silentInitialFetch: obligationsCache.hasLoaded(),
   });
 
   const obligations = data ?? [];

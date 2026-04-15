@@ -49,6 +49,11 @@ import {
   groupFilesByCategory,
   calculateStats,
 } from './useAllCompanyFiles.helpers';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
+
+// ADR-300: Module-level cache keyed by companyId — survives remount
+const allCompanyFilesCache = createStaleCache<FileRecord[]>('files');
 // Re-export types for backward compatibility
 export type {
   FileEntityType,
@@ -139,10 +144,10 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
     autoFetch = true,
   } = params;
 
-  // State
-  const [files, setFiles] = useState<FileRecord[]>([]);
+  // ADR-300: Seed from module-level cache keyed by companyId → zero flash on re-navigation
+  const [files, setFiles] = useState<FileRecord[]>(allCompanyFilesCache.get(companyId) ?? []);
   const [trashedFiles, setTrashedFiles] = useState<FileRecord[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!allCompanyFilesCache.hasLoaded(companyId));
   const [error, setError] = useState<Error | null>(null);
 
   // Refs for cleanup
@@ -168,6 +173,9 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
       where('isDeleted', '==', false),
       where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE)
     );
+
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!allCompanyFilesCache.hasLoaded(companyId)) setLoading(true);
 
     // Subscribe to real-time updates
     const unsubscribe = onSnapshot(
@@ -212,6 +220,8 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
           companyId,
         });
 
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        allCompanyFilesCache.set(activeFiles, companyId);
         setFiles(activeFiles);
         setLoading(false);
         setError(null);

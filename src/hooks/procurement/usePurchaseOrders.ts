@@ -13,6 +13,11 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
+
+// ADR-300: Cache only the default (no-filter) list — state on re-navigation
+const purchaseOrdersCache = createStaleCache<PurchaseOrder[]>('procurement');
 
 // ============================================================================
 // FILTER STATE
@@ -59,10 +64,18 @@ async function fetchPurchaseOrders(filters: POFilters): Promise<PurchaseOrder[]>
 export function usePurchaseOrders() {
   const [filters, setFilters] = useState<POFilters>(DEFAULT_FILTERS);
 
+  const isDefaultFilters = !filters.status && !filters.projectId && !filters.supplierId;
+
   const { data: allPOs, loading, error, refetch } = useAsyncData<PurchaseOrder[]>({
-    fetcher: () => fetchPurchaseOrders(filters),
+    fetcher: async () => {
+      const result = await fetchPurchaseOrders(filters);
+      // ADR-300: Cache only the default state — what user sees on re-navigation
+      if (isDefaultFilters) purchaseOrdersCache.set(result);
+      return result;
+    },
     deps: [filters.status, filters.projectId, filters.supplierId],
-    initialData: [],
+    initialData: isDefaultFilters ? (purchaseOrdersCache.get() ?? []) : [],
+    silentInitialFetch: isDefaultFilters && purchaseOrdersCache.hasLoaded(),
   });
 
   // Client-side text search (instant, no API call)

@@ -13,6 +13,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   Receipt,
   BookOpen,
@@ -47,6 +49,9 @@ interface DashboardStats {
   pendingInvoices: number;
 }
 
+// ADR-300: Module-level cache keyed by fiscal year — survives remount
+const accountingStatsCache = createStaleCache<DashboardStats>('accounting-dashboard');
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -62,20 +67,24 @@ export function AccountingDashboard() {
   const { user } = useAuth();
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [stats, setStats] = useState<DashboardStats>({
-    totalIncome: 0,
-    totalExpenses: 0,
-    vatOwed: 0,
-    pendingInvoices: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [stats, setStats] = useState<DashboardStats>(
+    accountingStatsCache.get(String(new Date().getFullYear())) ?? {
+      totalIncome: 0,
+      totalExpenses: 0,
+      vatOwed: 0,
+      pendingInvoices: 0,
+    }
+  );
+  const [loading, setLoading] = useState(!accountingStatsCache.hasLoaded(String(new Date().getFullYear())));
 
   const fetchStats = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // ADR-300: Skip spinner if cache has data for this year
+    if (!accountingStatsCache.hasLoaded(String(selectedYear))) setLoading(true);
     try {
       const token = await user.getIdToken();
       const headers: HeadersInit = { Authorization: `Bearer ${token}` };
@@ -95,12 +104,15 @@ export function AccountingDashboard() {
       const incomeEntries = entries.filter((e: { type: string }) => e.type === 'income');
       const expenseEntries = entries.filter((e: { type: string }) => e.type === 'expense');
 
-      setStats({
+      const newStats: DashboardStats = {
         totalIncome: incomeEntries.reduce((s: number, e: { grossAmount: number }) => s + e.grossAmount, 0),
         totalExpenses: expenseEntries.reduce((s: number, e: { grossAmount: number }) => s + e.grossAmount, 0),
         vatOwed: vatData?.data?.annualVatPayable ?? vatData?.data?.vatPayable ?? 0,
         pendingInvoices: invoicesData?.data?.items?.length ?? 0,
-      });
+      };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      accountingStatsCache.set(newStats, String(selectedYear));
+      setStats(newStats);
     } catch {
       // Stats will remain at defaults
     } finally {

@@ -124,6 +124,10 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/app/page.tsx` | `useState(false)` + `hasInitializedRef` | `dashboardAuthCache = createStaleCache<boolean>('dashboard-auth')` | 2026-04-15 |
 | `src/hooks/useFirestoreProjects.ts` | `useState([])` + `loading: true` + `hasLoadedOnceRef(false)` | `projectsCache = createStaleCache<FirestoreProject[]>('projects')` | 2026-04-15 |
 | `src/hooks/useFirestoreBuildings.ts` | `useState([])` + `setLoading(true)` unconditional | `buildingsCache = createStaleCache<Building[]>('buildings')` | 2026-04-15 |
+| `src/hooks/useObligations.ts` | `useAsyncData` no cache | `obligationsCache = createStaleCache<ObligationDocument[]>('obligations')` | 2026-04-15 |
+| `src/hooks/procurement/usePurchaseOrders.ts` | `useAsyncData` no cache | `purchaseOrdersCache = createStaleCache<PurchaseOrder[]>('procurement')` (default filters only) | 2026-04-15 |
+| `src/components/file-manager/hooks/useAllCompanyFiles.ts` | `useState([])` + `setLoading(true)` unconditional | `allCompanyFilesCache = createStaleCache<FileRecord[]>('files')` keyed by companyId | 2026-04-15 |
+| `src/subapps/accounting/components/dashboard/AccountingDashboard.tsx` | `useState(true)` + `setLoading(true)` unconditional | `accountingStatsCache = createStaleCache<DashboardStats>('accounting-dashboard')` keyed by year | 2026-04-15 |
 
 ---
 
