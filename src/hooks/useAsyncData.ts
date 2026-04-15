@@ -34,8 +34,23 @@ export interface UseAsyncDataReturn<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
-  /** Re-execute the fetcher manually */
+  /** Re-execute the fetcher manually (shows loading state) */
   refetch: () => Promise<void>;
+  /**
+   * Re-execute the fetcher without flipping loading to true.
+   * Use for background sync after optimistic updates — the UI stays
+   * stable and silently reconciles with server state on completion.
+   */
+  silentRefetch: () => Promise<void>;
+  /**
+   * Optimistically mutate local state without a network round-trip.
+   * Use before silentRefetch to give instant UI feedback.
+   *
+   * @example
+   * patch(prev => ({ ...prev, items: [...(prev?.items ?? []), newItem] }));
+   * silentRefetch(); // reconcile with server in background
+   */
+  patch: (updater: (prev: T | null) => T) => void;
 }
 
 // =============================================================================
@@ -81,6 +96,24 @@ export function useAsyncData<T>(options: UseAsyncDataOptions<T>): UseAsyncDataRe
     }
   }, []);
 
+  /** Fetch without flipping loading — for post-optimistic background sync */
+  const silentExecute = useCallback(async () => {
+    const id = ++callIdRef.current;
+    try {
+      const result = await fetcherRef.current();
+      if (mountedRef.current && callIdRef.current === id) {
+        setData(result);
+      }
+    } catch {
+      // Silent: optimistic state already shown, server error not surfaced
+    }
+  }, []);
+
+  /** Mutate local state immediately without a network round-trip */
+  const patch = useCallback((updater: (prev: T | null) => T) => {
+    setData(prev => updater(prev));
+  }, []);
+
   // Serialize deps for stable comparison
   const depsKey = JSON.stringify(deps);
 
@@ -101,5 +134,5 @@ export function useAsyncData<T>(options: UseAsyncDataOptions<T>): UseAsyncDataRe
     };
   }, []);
 
-  return { data, loading, error, refetch: execute };
+  return { data, loading, error, refetch: execute, silentRefetch: silentExecute, patch };
 }

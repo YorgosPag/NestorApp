@@ -62,7 +62,7 @@ export function useFirestoreParkingSpots(
   const { buildingId, projectId, autoFetch = true } = options;
   const { user, loading: authLoading } = useAuth();
 
-  const { data, loading, error, refetch } = useAsyncData<ParkingFetchResult>({
+  const { data, loading, error, refetch, silentRefetch, patch } = useAsyncData<ParkingFetchResult>({
     fetcher: async () => {
       logger.info('Fetching parking spots');
 
@@ -85,9 +85,22 @@ export function useFirestoreParkingSpots(
 
   // Real-time sync
   useEffect(() => {
-    const unsubCreate = RealtimeService.subscribe('PARKING_CREATED', () => {
-      logger.debug('Parking created event received, refetching');
-      refetch();
+    const unsubCreate = RealtimeService.subscribe('PARKING_CREATED', (payload) => {
+      logger.debug('Parking created — optimistic insert then silent sync');
+      // 1. Instant optimistic insert: spot appears immediately, no loading flicker
+      const optimisticSpot: ParkingSpot = {
+        id: payload.parkingSpotId,
+        number: payload.parkingSpot.number ?? '',
+        type: (payload.parkingSpot.type as ParkingSpot['type']) ?? 'standard',
+        status: (payload.parkingSpot.status as ParkingSpot['status']) ?? 'available',
+        buildingId: payload.parkingSpot.buildingId ?? null,
+      };
+      patch(prev => ({
+        spots: [...(prev?.spots ?? []), optimisticSpot],
+        cached: false,
+      }));
+      // 2. Silent background sync to reconcile with full server data
+      silentRefetch();
     });
     const unsubUpdate = RealtimeService.subscribe('PARKING_UPDATED', () => {
       logger.debug('Parking updated event received, refetching');
@@ -103,7 +116,7 @@ export function useFirestoreParkingSpots(
       unsubUpdate();
       unsubDelete();
     };
-  }, [refetch]);
+  }, [refetch, silentRefetch, patch]);
 
   return {
     parkingSpots: data?.spots ?? [],
