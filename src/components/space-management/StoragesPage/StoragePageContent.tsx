@@ -42,6 +42,8 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
+import { useStoragesTrashState } from '@/hooks/useStoragesTrashState';
+import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('StoragePage');
@@ -62,7 +64,7 @@ const EMPTY_STORAGE: import('@/types/storage/contracts').Storage = {
 
 export function StoragePageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
   const _colors = useSemanticColors();
@@ -87,6 +89,21 @@ export function StoragePageContent() {
   } = useStoragesPageState(storages);
 
   const stats = useStorageStats(filteredStorages);
+
+  // 🗑️ ADR-281: Trash view state
+  const {
+    showTrash,
+    trashCount,
+    trashedStorages,
+    loadingTrash,
+    showPermanentDeleteDialog,
+    pendingPermanentDeleteIds,
+    handleToggleTrash,
+    handleRestoreStorages,
+    handlePermanentDeleteStorages,
+    handleConfirmPermanentDelete,
+    handleCancelPermanentDelete,
+  } = useStoragesTrashState({ forceDataRefresh: refetch });
 
   // Delete dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -246,6 +263,9 @@ export function StoragePageContent() {
             setSearchTerm={setSearchTerm}
             showFilters={showMobileFilters}
             setShowFilters={setShowMobileFilters}
+            showTrash={showTrash}
+            onToggleTrash={handleToggleTrash}
+            trashCount={trashCount}
           />
 
         {/* Dashboard */}
@@ -299,12 +319,23 @@ export function StoragePageContent() {
           />
         </aside>
 
+        {/* 🗑️ ADR-281: Trash actions bar — shown only in trash view */}
+        {showTrash && !loadingTrash && (
+          <TrashActionsBar
+            selectedIds={selectedStorage ? [selectedStorage.id] : []}
+            onBack={handleToggleTrash}
+            onRestore={handleRestoreStorages}
+            onPermanentDelete={handlePermanentDeleteStorages}
+            trashCount={trashCount}
+          />
+        )}
+
         {/* Content */}
         <ListContainer>
           {viewMode === 'grid' ? (
             /* 🏢 ENTERPRISE: Full-width Grid View */
             <StorageGridView
-              storages={filteredStorages}
+              storages={showTrash ? trashedStorages : filteredStorages}
               selectedStorage={selectedStorage}
               onSelectStorage={(s) => {
                 setSelectedStorage(toggleSelect(selectedStorage, s));
@@ -315,18 +346,18 @@ export function StoragePageContent() {
             /* 🏢 ENTERPRISE: List View with Details Panel */
             <>
               <StoragesList
-                storages={filteredStorages}
+                storages={showTrash ? trashedStorages : filteredStorages}
                 selectedStorage={selectedStorage}
                 onSelectStorage={(s) => {
                   setSelectedStorage(toggleSelect(selectedStorage, s));
                   setShowCreateForm(false);
                 }}
-                onNewItem={() => {
+                onNewItem={showTrash ? undefined : () => {
                   setShowCreateForm(true);
                   setSelectedStorage(null);
                 }}
               />
-              {showCreateForm ? (
+              {showCreateForm && !showTrash ? (
                 <DetailsContainer
                   selectedItem={{ id: 'create' }}
                   header={
@@ -355,11 +386,11 @@ export function StoragePageContent() {
               ) : (
                 <StorageDetails
                   storage={selectedStorage}
-                  onNewStorage={() => {
+                  onNewStorage={showTrash ? undefined : () => {
                     setShowCreateForm(true);
                     setSelectedStorage(null);
                   }}
-                  onDelete={() => setShowDeleteDialog(true)}
+                  onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
                 />
               )}
             </>
@@ -379,7 +410,7 @@ export function StoragePageContent() {
           />
         </MobileDetailsSlideIn>
 
-        {/* Delete Storage Confirmation */}
+        {/* Delete Storage Confirmation (move to trash) */}
         <DeleteConfirmDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
@@ -387,6 +418,17 @@ export function StoragePageContent() {
           description={t('pages.storage.deleteDialog.description', { name: selectedStorage?.name ?? '' })}
           onConfirm={handleDeleteStorage}
           loading={isDeleting}
+        />
+
+        {/* 🗑️ ADR-281: Permanent delete confirmation */}
+        <DeleteConfirmDialog
+          open={showPermanentDeleteDialog}
+          onOpenChange={(open) => { if (!open) handleCancelPermanentDelete(); }}
+          title={t('permanentDeleteDialog.title', { ns: 'trash' })}
+          description={t('permanentDeleteDialog.body', { ns: 'trash' })}
+          onConfirm={handleConfirmPermanentDelete}
+          loading={false}
+          disabled={pendingPermanentDeleteIds.length === 0}
         />
       </PageContainer>
   );

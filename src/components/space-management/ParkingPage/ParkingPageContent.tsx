@@ -50,6 +50,8 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
 import type { ParkingSpot } from '@/types/parking';
+import { useParkingTrashState } from '@/hooks/useParkingTrashState';
+import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('ParkingPage');
@@ -69,7 +71,7 @@ const EMPTY_PARKING: ParkingSpot = {
 
 export function ParkingPageContent() {
   // ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
   const iconSizes = useIconSizes();
   const _colors = useSemanticColors();
 
@@ -122,6 +124,21 @@ export function ParkingPageContent() {
       }
     }
   }, [selectedParking?.id, buildings.length, companies.length, projects.length, syncBreadcrumb]);
+
+  // 🗑️ ADR-281: Trash view state
+  const {
+    showTrash,
+    trashCount,
+    trashedParkingSpots,
+    loadingTrash,
+    showPermanentDeleteDialog,
+    pendingPermanentDeleteIds,
+    handleToggleTrash,
+    handleRestoreParkingSpots,
+    handlePermanentDeleteParkingSpots,
+    handleConfirmPermanentDelete,
+    handleCancelPermanentDelete,
+  } = useParkingTrashState({ forceDataRefresh: refetch });
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -232,6 +249,9 @@ export function ParkingPageContent() {
             setSearchTerm={setSearchTerm}
             showFilters={showMobileFilters}
             setShowFilters={setShowMobileFilters}
+            showTrash={showTrash}
+            onToggleTrash={handleToggleTrash}
+            trashCount={trashCount}
           />
 
         {/* Dashboard */}
@@ -285,12 +305,23 @@ export function ParkingPageContent() {
           />
         </aside>
 
+        {/* 🗑️ ADR-281: Trash actions bar — shown only in trash view */}
+        {showTrash && !loadingTrash && (
+          <TrashActionsBar
+            selectedIds={selectedParking ? [selectedParking.id] : []}
+            onBack={handleToggleTrash}
+            onRestore={handleRestoreParkingSpots}
+            onPermanentDelete={handlePermanentDeleteParkingSpots}
+            trashCount={trashCount}
+          />
+        )}
+
         {/* Content */}
         <ListContainer>
           {viewMode === 'grid' ? (
             /* ENTERPRISE: Full-width Grid View */
             <ParkingGridView
-              parkingSpots={filteredParkingSpots}
+              parkingSpots={showTrash ? trashedParkingSpots : filteredParkingSpots}
               selectedParking={selectedParking}
               onSelectParking={(p) => {
                 setSelectedParking(toggleSelect(selectedParking, p));
@@ -301,18 +332,18 @@ export function ParkingPageContent() {
             /* ENTERPRISE: List View with Details Panel */
             <>
               <ParkingsList
-                parkingSpots={filteredParkingSpots}
+                parkingSpots={showTrash ? trashedParkingSpots : filteredParkingSpots}
                 selectedParking={selectedParking}
                 onSelectParking={(p) => {
                   setSelectedParking(toggleSelect(selectedParking, p));
                   setShowCreateForm(false);
                 }}
-                onNewItem={() => {
+                onNewItem={showTrash ? undefined : () => {
                   setShowCreateForm(true);
                   setSelectedParking(null);
                 }}
               />
-              {showCreateForm ? (
+              {showCreateForm && !showTrash ? (
                 <DetailsContainer
                   selectedItem={{ id: 'create' }}
                   header={
@@ -341,11 +372,11 @@ export function ParkingPageContent() {
               ) : (
                 <ParkingDetails
                   parking={selectedParking}
-                  onNewParking={() => {
+                  onNewParking={showTrash ? undefined : () => {
                     setShowCreateForm(true);
                     setSelectedParking(null);
                   }}
-                  onDelete={() => setShowDeleteDialog(true)}
+                  onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
                 />
               )}
             </>
@@ -365,7 +396,7 @@ export function ParkingPageContent() {
           />
         </MobileDetailsSlideIn>
 
-        {/* Delete Parking Confirmation */}
+        {/* Delete Parking Confirmation (move to trash) */}
         <DeleteConfirmDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
@@ -373,6 +404,17 @@ export function ParkingPageContent() {
           description={t('pages.parking.deleteDialog.description', { number: selectedParking?.number ?? '' })}
           onConfirm={handleDeleteParking}
           loading={isDeleting}
+        />
+
+        {/* 🗑️ ADR-281: Permanent delete confirmation */}
+        <DeleteConfirmDialog
+          open={showPermanentDeleteDialog}
+          onOpenChange={(open) => { if (!open) handleCancelPermanentDelete(); }}
+          title={t('permanentDeleteDialog.title', { ns: 'trash' })}
+          description={t('permanentDeleteDialog.body', { ns: 'trash' })}
+          onConfirm={handleConfirmPermanentDelete}
+          loading={false}
+          disabled={pendingPermanentDeleteIds.length === 0}
         />
       </PageContainer>
   );

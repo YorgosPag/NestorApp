@@ -592,12 +592,16 @@ export const API_ROUTES = {
   PARKING: {
     LIST: '/api/parking',
     BY_ID: (id: string) => `/api/parking/${id}` as const,
+    /** ADR-281 pattern — Soft-delete trash view */
+    TRASH: '/api/parking/trash',
   },
 
   // ── Storages ──────────────────────────────────────────────────────────
   STORAGES: {
     LIST: '/api/storages',
     BY_ID: (id: string) => `/api/storages/${id}` as const,
+    /** ADR-281 pattern — Soft-delete trash view */
+    TRASH: '/api/storages/trash',
   },
 
   // ── Spaces (cross-type) ────────────────────────────────────────────

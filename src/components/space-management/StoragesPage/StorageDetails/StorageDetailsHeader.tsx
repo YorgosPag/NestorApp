@@ -47,7 +47,7 @@ export function StorageDetailsHeader({
   onNewStorage,
   onDelete,
 }: StorageDetailsHeaderProps) {
-  const { t } = useTranslation('storage');
+  const { t } = useTranslation(['storage', 'trash']);
 
   // Edit mode: Save (green), Cancel (white)
   // Normal mode: New (green), Edit (blue), Delete (red)
@@ -59,7 +59,7 @@ export function StorageDetailsHeader({
     : [
         createEntityAction('new', t('header.newStorage'), () => onNewStorage?.()),
         createEntityAction('edit', t('header.edit'), onStartEdit),
-        createEntityAction('delete', t('header.delete'), () => onDelete?.()),
+        createEntityAction('delete', t('moveToTrash', { ns: 'trash' }), () => onDelete?.()),
       ];
 
   return (

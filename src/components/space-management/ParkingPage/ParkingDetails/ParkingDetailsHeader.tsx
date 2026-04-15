@@ -47,7 +47,7 @@ export function ParkingDetailsHeader({
   onNewParking,
   onDelete,
 }: ParkingDetailsHeaderProps) {
-  const { t } = useTranslation('parking');
+  const { t } = useTranslation(['parking', 'trash']);
 
   // 🏢 ENTERPRISE: Actions via centralized presets
   // Edit mode: Save (🟢), Cancel (⚪)
@@ -60,7 +60,7 @@ export function ParkingDetailsHeader({
     : [
         createEntityAction('new', t('header.newParking'), () => onNewParking?.()),
         createEntityAction('edit', t('header.edit'), onStartEdit),
-        createEntityAction('delete', t('header.delete'), () => onDelete?.()),
+        createEntityAction('delete', t('moveToTrash', { ns: 'trash' }), () => onDelete?.()),
       ];
 
   return (

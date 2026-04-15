@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Warehouse, Filter } from 'lucide-react';
+import { Warehouse, Filter, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import type { ViewMode } from '@/core/headers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -26,6 +26,10 @@ interface StoragesHeaderProps {
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
+  // Trash view toggle (ADR-281)
+  showTrash?: boolean;
+  onToggleTrash?: () => void;
+  trashCount?: number;
 }
 
 export function StoragesHeader({
@@ -37,11 +41,14 @@ export function StoragesHeader({
   setSearchTerm,
   showFilters,
   setShowFilters,
+  showTrash,
+  onToggleTrash,
+  trashCount = 0,
 }: StoragesHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('storage');
+  const { t } = useTranslation(['storage', 'trash']);
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
   return (
@@ -66,21 +73,42 @@ export function StoragesHeader({
         viewMode: viewMode as ViewMode,
         onViewModeChange: (mode) => setViewMode(mode as StoragesViewMode),
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
-        // Mobile-only filter button
-        customActions: setShowFilters ? [
-          <button
-            key="mobile-filter"
-            onClick={() => setShowFilters(!showFilters)}
-            className={`md:hidden p-2 rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-              showFilters
-                ? `bg-primary text-primary-foreground ${quick.focus}`
-                : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
-            }`}
-            aria-label={t('storages.accessibility.toggleFilters')}
-          >
-            <Filter className={iconSizes.sm} />
-          </button>
-        ] : undefined
+        customActions: [
+          ...(setShowFilters ? [
+            <button
+              key="mobile-filter"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`md:hidden p-2 ${radius.md} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                showFilters
+                  ? `bg-primary text-primary-foreground ${quick.focus}`
+                  : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+              }`}
+              aria-label={t('storages.accessibility.toggleFilters')}
+            >
+              <Filter className={iconSizes.sm} />
+            </button>
+          ] : []),
+          ...(onToggleTrash ? [
+            <button
+              key="trash-toggle"
+              onClick={onToggleTrash}
+              className={`relative p-2 ${quick.button} transition-colors ${
+                showTrash
+                  ? `bg-destructive/10 text-destructive ${getStatusBorder('default')}`
+                  : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+              }`}
+              aria-label={t('trashView', { ns: 'trash' })}
+              aria-pressed={showTrash}
+            >
+              <Trash2 className={iconSizes.sm} />
+              {trashCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground leading-none">
+                  {trashCount > 99 ? '99+' : trashCount}
+                </span>
+              )}
+            </button>
+          ] : []),
+        ].filter(Boolean)
       }}
     />
   );
