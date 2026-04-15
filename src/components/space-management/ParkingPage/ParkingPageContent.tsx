@@ -222,7 +222,11 @@ export function ParkingPageContent() {
 
   // Loading state
   if (loading) {
-    return <PageLoadingState icon={Car} message={t('pages.parking.loading')} />;
+    return (
+      <PageContainer ariaLabel={t('pages.parking.pageLabel')}>
+        <PageLoadingState icon={Car} message={t('pages.parking.loading')} layout="contained" />
+      </PageContainer>
+    );
   }
 
   // Error state

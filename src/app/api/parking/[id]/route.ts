@@ -32,6 +32,8 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { requireParkingInTenant } from '@/lib/auth/tenant-isolation';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { indexEntityForSearch } from '@/lib/search/search-indexer';
+import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const UpdateParkingSchema = z.object({
   number: z.string().max(50).optional(),
@@ -149,6 +151,14 @@ export const PATCH = withStandardRateLimit(
             });
           });
         }
+
+        // ADR-029: Re-index for global search (non-fatal)
+        void indexEntityForSearch({
+          entityType: SEARCH_ENTITY_TYPES.PARKING,
+          entityId: id,
+          entityData: { ...existing, ...updateData, id },
+          tenantId: ctx.companyId,
+        });
 
         logger.info('Parking spot updated', { id, companyId: ctx.companyId });
 

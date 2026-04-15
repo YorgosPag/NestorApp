@@ -236,7 +236,11 @@ export function StoragePageContent() {
 
   // Loading state
   if (loading) {
-    return <PageLoadingState icon={Warehouse} message={t('pages.storage.loading')} />;
+    return (
+      <PageContainer ariaLabel={t('pages.storage.pageLabel')}>
+        <PageLoadingState icon={Warehouse} message={t('pages.storage.loading')} layout="contained" />
+      </PageContainer>
+    );
   }
 
   // Error state

@@ -28,6 +28,12 @@ export interface UseAsyncDataOptions<T> {
   initialData?: T;
   /** Optional error callback (e.g. toast notification) */
   onError?: (message: string) => void;
+  /**
+   * When true + initialData provided: show stale data immediately and fetch
+   * silently in background without triggering a loading state.
+   * Implements stale-while-revalidate for instant navigation (no flash).
+   */
+  silentInitialFetch?: boolean;
 }
 
 export interface UseAsyncDataReturn<T> {
@@ -58,10 +64,15 @@ export interface UseAsyncDataReturn<T> {
 // =============================================================================
 
 export function useAsyncData<T>(options: UseAsyncDataOptions<T>): UseAsyncDataReturn<T> {
-  const { deps = [], enabled = true, initialData } = options;
+  const { deps = [], enabled = true, initialData, silentInitialFetch = false } = options;
+
+  const hasInitialData = initialData !== null && initialData !== undefined;
+  const useStale = silentInitialFetch && hasInitialData;
 
   const [data, setData] = useState<T | null>(initialData ?? null);
-  const [loading, setLoading] = useState(enabled !== false);
+  // Stale-while-revalidate: if we have cached initialData + silentInitialFetch,
+  // start with loading=false and fetch silently in background.
+  const [loading, setLoading] = useState(useStale ? false : (enabled !== false));
   const [error, setError] = useState<string | null>(null);
 
   const mountedRef = useRef(true);
@@ -119,7 +130,11 @@ export function useAsyncData<T>(options: UseAsyncDataOptions<T>): UseAsyncDataRe
 
   useEffect(() => {
     if (enabled) {
-      execute();
+      if (useStale) {
+        silentExecute(); // stale-while-revalidate: no loading flash
+      } else {
+        execute();
+      }
     } else {
       setLoading(false);
     }

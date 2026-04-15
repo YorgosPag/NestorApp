@@ -96,7 +96,8 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
       const displayName = doc.displayName as string | undefined;
       const firstName = doc.firstName as string | undefined;
       const lastName = doc.lastName as string | undefined;
-      return displayName || `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown';
+      const companyName = doc.companyName as string | undefined;
+      return displayName || `${firstName || ''} ${lastName || ''}`.trim() || companyName || 'Unknown';
     },
     subtitleFields: ['email', 'phone'],
     searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName'],
@@ -125,9 +126,9 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
   // =========================================================================
   [SEARCH_ENTITY_TYPES.PARKING]: {
     collection: COLLECTIONS.PARKING_SPACES,
-    titleField: 'parkingNumber',
+    titleField: 'number',
     subtitleFields: ['type', 'status'],
-    searchableFields: ['parkingNumber', 'type', 'notes'],
+    searchableFields: ['number', 'type', 'notes'],
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
@@ -144,9 +145,9 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
   // =========================================================================
   [SEARCH_ENTITY_TYPES.STORAGE]: {
     collection: COLLECTIONS.STORAGE,
-    titleField: 'storageNumber',
+    titleField: 'name',
     subtitleFields: ['type', 'status'],
-    searchableFields: ['storageNumber', 'type', 'notes'],
+    searchableFields: ['name', 'type', 'notes'],
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'buildings:buildings:view' satisfies PermissionId,

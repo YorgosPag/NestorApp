@@ -81,6 +81,7 @@ export function useStoragesPageState(initialStorages: Storage[]) {
     loggerName: 'useStoragesPageState',
     defaultFilters: defaultStorageFilters,
     filterFn: stableFilterFn,
+    autoSelectFirstItem: false,
   };
 
   const {

@@ -1,7 +1,18 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { LazyRoutes } from '@/utils/lazyRoutes';
+interface StorageDetailRedirectProps {
+  params: Promise<{ id: string }>;
+}
 
-export default function StorageUnitPage() {
-  return <LazyRoutes.StorageDetail />;
+/**
+ * Canonical storage deep-link handler.
+ *
+ * Redirects `/storage/:id` → `/spaces/storage?storageId=:id`.
+ * Used by: AuditTimeline, OverdueAlert notifications, ShareButton.
+ *
+ * Pattern: permanent redirect (308) — no client bundle, pure server component.
+ */
+export default async function StorageDetailRedirect({ params }: StorageDetailRedirectProps) {
+  const { id } = await params;
+  redirect(`/spaces/storage?storageId=${id}`);
 }

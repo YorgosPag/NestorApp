@@ -65,6 +65,7 @@ export function useParkingPageState(initialParkingSpots: ParkingSpot[]) {
     loggerName: 'useParkingPageState',
     defaultFilters: defaultParkingFilters,
     filterFn: stableFilterFn,
+    autoSelectFirstItem: false,
   };
 
   const {

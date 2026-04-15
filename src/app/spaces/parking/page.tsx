@@ -1,15 +1,13 @@
 'use client';
 
-/**
- * @module /spaces/parking
- * @enterprise Parking Management
- * @lazy ADR-294 Batch 3 — Thin wrapper, content loaded via dynamic import
- */
-
-import { LazyRoutes } from '@/utils/lazyRoutes';
-
-const SpacesParking = LazyRoutes.SpacesParking;
+import { Suspense } from 'react';
+import { StaticPageLoading } from '@/core/states';
+import { ParkingPageContent } from '@/components/space-management/ParkingPage/ParkingPageContent';
 
 export default function ParkingPage() {
-  return <SpacesParking />;
+  return (
+    <Suspense fallback={<StaticPageLoading />}>
+      <ParkingPageContent />
+    </Suspense>
+  );
 }
