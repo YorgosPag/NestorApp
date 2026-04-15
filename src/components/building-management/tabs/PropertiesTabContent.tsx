@@ -411,7 +411,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
           <BuildingSpaceCardGrid<Property>
             items={filteredUnits}
             getKey={(u) => u.id}
-            getName={(u) => u.name}
+            getName={(u) => u.name || u.code || u.id}
             renderStatus={(u) => getStatusBadge(u.status)}
             fields={unitCardFields}
             actions={{

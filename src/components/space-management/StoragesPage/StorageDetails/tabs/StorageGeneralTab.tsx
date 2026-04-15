@@ -299,7 +299,7 @@ export function StorageGeneralTab({
               onChange={(v) => updateField('code', v)}
               entityType="storage"
               buildingId={buildingLink.linkedId || ''}
-              floorLevel={form.floor ? parseInt(form.floor, 10) || 0 : 0}
+              floorLevel={form.floor ? parseInt(form.floor, 10) || 0 : ''}
               label={t('general.fields.code')}
               placeholderFallback="A-AP-Y1.01"
               infoExample="π.χ. A-AP-Y1.01 (Κτίριο A, Αποθήκη, Υπόγ.1, #01)"

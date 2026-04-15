@@ -82,6 +82,12 @@ export function useEntityCodeSuggestion({
       return;
     }
 
+    // For storage, floor is required — code segments encode the floor level
+    if (entityType === 'storage' && floorLevel === '') {
+      setSuggestedCode(null);
+      return;
+    }
+
     const controller = new AbortController();
     abortController.current = controller;
 

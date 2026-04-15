@@ -215,7 +215,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
             onChange={setCode}
             entityType="storage"
             buildingId={buildingId}
-            floorLevel={floor ? parseInt(floor, 10) || 0 : 0}
+            floorLevel={floor ? parseInt(floor, 10) || 0 : ''}
             label={t('general.fields.code')}
             placeholderFallback="A-AP-Y1.01"
             infoExample="π.χ. A-AP-Y1.01 (Κτίριο A, Αποθήκη, Υπόγ.1, #01)"

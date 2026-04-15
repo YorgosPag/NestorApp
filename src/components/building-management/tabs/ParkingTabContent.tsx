@@ -209,7 +209,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
           <BuildingSpaceCardGrid<ParkingSpot>
             items={state.filteredSpots}
             getKey={(s) => s.id}
-            getName={(s) => s.number}
+            getName={(s) => s.number || s.code || s.id}
             renderStatus={(s) => getStatusBadge(s.status)}
             fields={parkingCardFields}
             actions={{
