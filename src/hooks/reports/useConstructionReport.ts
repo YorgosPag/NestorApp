@@ -5,7 +5,7 @@
  * @enterprise ADR-265 Phase 11 — Construction & Timeline Report hook
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Milestone, Construction, BarChart3, TrendingUp,
@@ -19,17 +19,11 @@ import type {
   BOQComparisonItem,
 } from '@/components/reports/sections/construction/types';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
-// ---------------------------------------------------------------------------
-// Cache
-// ---------------------------------------------------------------------------
-
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: ConstructionReportPayload;
-  timestamp: number;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const constructionReportCache = createStaleCache<ConstructionReportPayload>('report-construction');
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -124,29 +118,22 @@ function buildBOQComparison(
 
 export function useConstructionReport(): UseConstructionReportReturn {
   const { t } = useTranslation('reports');
-  const cacheRef = useRef<CachedData | null>(null);
-  const [payload, setPayload] = useState<ConstructionReportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [payload, setPayload] = useState<ConstructionReportPayload | null>(constructionReportCache.get());
+  const [loading, setLoading] = useState(!constructionReportCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (force = false) => {
-    if (!force && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL) {
-        setPayload(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!constructionReportCache.hasLoaded() || force) setLoading(true);
     setError(null);
 
     try {
       const data = await apiClient.get<ConstructionReportPayload>(
         '/api/reports/construction',
       );
-      cacheRef.current = { payload: data, timestamp: Date.now() };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      constructionReportCache.set(data);
       setPayload(data);
     } catch (err) {
       setError(getErrorMessage(err));

@@ -8,7 +8,7 @@
  * into chart-ready view models. 5-min in-memory cache (ADR 12.23).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Wallet, Calculator, TrendingDown, TrendingUp,
@@ -24,6 +24,8 @@ import type {
   RevenueByBuilding,
 } from '@/components/reports/sections/financial/types';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 // API response shape (before flatten)
 interface ApiFinancialResponse {
@@ -33,15 +35,11 @@ interface ApiFinancialResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Cache (ADR decision 12.23)
+// Cache (ADR-300: module-level stale-while-revalidate)
 // ---------------------------------------------------------------------------
 
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: FinancialReportPayload;
-  timestamp: number;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const financialReportCache = createStaleCache<FinancialReportPayload>('report-financial');
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -175,23 +173,14 @@ function formatEuro(value: number): string {
 
 export function useFinancialReport(): UseFinancialReportReturn {
   const { t } = useTranslation('reports');
-  const cacheRef = useRef<CachedData | null>(null);
-  const [payload, setPayload] = useState<FinancialReportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [payload, setPayload] = useState<FinancialReportPayload | null>(financialReportCache.get());
+  const [loading, setLoading] = useState(!financialReportCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (force = false) => {
-    // Check cache
-    if (!force && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL) {
-        setPayload(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!financialReportCache.hasLoaded() || force) setLoading(true);
     setError(null);
 
     try {
@@ -213,7 +202,8 @@ export function useFinancialReport(): UseFinancialReportReturn {
         generatedAt: response.financial.generatedAt,
       };
 
-      cacheRef.current = { payload: merged, timestamp: Date.now() };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      financialReportCache.set(merged);
       setPayload(merged);
     } catch (err) {
       setError(getErrorMessage(err));

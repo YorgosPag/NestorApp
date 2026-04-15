@@ -5,7 +5,7 @@
  * @enterprise ADR-265 Phase 8 — CRM & Pipeline Report hook
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Target, Trophy, Percent, DollarSign,
@@ -20,17 +20,11 @@ import type {
   SourceItem,
 } from '@/components/reports/sections/crm/types';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
-// ---------------------------------------------------------------------------
-// Cache
-// ---------------------------------------------------------------------------
-
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: CrmReportPayload;
-  timestamp: number;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const crmReportCache = createStaleCache<CrmReportPayload>('report-crm');
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -128,29 +122,22 @@ function buildTeamBars(
 
 export function useCrmReport(): UseCrmReportReturn {
   const { t } = useTranslation('reports');
-  const cacheRef = useRef<CachedData | null>(null);
-  const [payload, setPayload] = useState<CrmReportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [payload, setPayload] = useState<CrmReportPayload | null>(crmReportCache.get());
+  const [loading, setLoading] = useState(!crmReportCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (force = false) => {
-    if (!force && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL) {
-        setPayload(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!crmReportCache.hasLoaded() || force) setLoading(true);
     setError(null);
 
     try {
       const data = await apiClient.get<CrmReportPayload>(
         '/api/reports/crm',
       );
-      cacheRef.current = { payload: data, timestamp: Date.now() };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      crmReportCache.set(data);
       setPayload(data);
     } catch (err) {
       setError(getErrorMessage(err));

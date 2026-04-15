@@ -5,7 +5,7 @@
  * @enterprise ADR-265 Phase 7 — Projects & Buildings Report hook
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FolderKanban, Wallet, TrendingUp, Building2,
@@ -21,17 +21,15 @@ import type {
 } from '@/components/reports/sections/projects/types';
 import type { ProjectProgressItem, PricePerSqmItem, BOQVarianceItem } from '@/services/report-engine';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 // ---------------------------------------------------------------------------
-// Cache
+// Cache (ADR-300: module-level stale-while-revalidate)
 // ---------------------------------------------------------------------------
 
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: ProjectsReportPayload;
-  timestamp: number;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const projectsReportCache = createStaleCache<ProjectsReportPayload>('report-projects');
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -130,29 +128,22 @@ function buildEnergyClassItems(
 
 export function useProjectsReport(): UseProjectsReportReturn {
   const { t } = useTranslation('reports');
-  const cacheRef = useRef<CachedData | null>(null);
-  const [payload, setPayload] = useState<ProjectsReportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [payload, setPayload] = useState<ProjectsReportPayload | null>(projectsReportCache.get());
+  const [loading, setLoading] = useState(!projectsReportCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (force = false) => {
-    if (!force && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL) {
-        setPayload(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!projectsReportCache.hasLoaded() || force) setLoading(true);
     setError(null);
 
     try {
       const data = await apiClient.get<ProjectsReportPayload>(
         '/api/reports/projects',
       );
-      cacheRef.current = { payload: data, timestamp: Date.now() };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      projectsReportCache.set(data);
       setPayload(data);
     } catch (err) {
       setError(getErrorMessage(err));

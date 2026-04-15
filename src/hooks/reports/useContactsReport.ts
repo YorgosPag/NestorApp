@@ -5,7 +5,7 @@
  * @enterprise ADR-265 Phase 9 — Contacts & Customers Report hook
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Users, UserPlus, UserCheck, Building2,
@@ -19,17 +19,15 @@ import type {
 } from '@/components/reports/sections/contacts/types';
 import type { TopBuyerItem } from '@/services/report-engine';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 // ---------------------------------------------------------------------------
-// Cache
+// Cache (ADR-300: module-level stale-while-revalidate)
 // ---------------------------------------------------------------------------
 
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: ContactsReportPayload;
-  timestamp: number;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const contactsReportCache = createStaleCache<ContactsReportPayload>('report-contacts');
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -109,29 +107,22 @@ function buildCityBars(data: Record<string, number>): CityDistributionItem[] {
 
 export function useContactsReport(): UseContactsReportReturn {
   const { t } = useTranslation('reports');
-  const cacheRef = useRef<CachedData | null>(null);
-  const [payload, setPayload] = useState<ContactsReportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [payload, setPayload] = useState<ContactsReportPayload | null>(contactsReportCache.get());
+  const [loading, setLoading] = useState(!contactsReportCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (force = false) => {
-    if (!force && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL) {
-        setPayload(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!contactsReportCache.hasLoaded() || force) setLoading(true);
     setError(null);
 
     try {
       const data = await apiClient.get<ContactsReportPayload>(
         '/api/reports/contacts',
       );
-      cacheRef.current = { payload: data, timestamp: Date.now() };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      contactsReportCache.set(data);
       setPayload(data);
     } catch (err) {
       setError(getErrorMessage(err));

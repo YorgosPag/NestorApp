@@ -13,6 +13,12 @@ import type {
   SupplierPriceTrend,
   SupplierComparison,
 } from '@/types/procurement';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
+
+// ADR-300: Module-level caches survive React unmount/remount (navigation)
+const supplierMetricsCache = createStaleCache<MetricsResponse>('supplier-metrics');
+const supplierComparisonCache = createStaleCache<SupplierComparison>('supplier-comparison');
 
 // ============================================================================
 // SINGLE SUPPLIER METRICS
@@ -41,10 +47,19 @@ export function useSupplierMetrics(
   supplierId: string | null,
   categoryCode: string | null = null
 ) {
+  const cacheKey = supplierId ? `${supplierId}_${categoryCode ?? 'null'}` : null;
+
   const { data, loading, error, refetch } = useAsyncData<MetricsResponse>({
-    fetcher: () => fetchMetrics(supplierId!, categoryCode),
+    fetcher: async () => {
+      const result = await fetchMetrics(supplierId!, categoryCode);
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      if (cacheKey) supplierMetricsCache.set(result, cacheKey);
+      return result;
+    },
     deps: [supplierId, categoryCode],
     enabled: !!supplierId,
+    initialData: cacheKey ? supplierMetricsCache.get(cacheKey) : null,
+    silentInitialFetch: !!cacheKey && supplierMetricsCache.hasLoaded(cacheKey),
   });
 
   return {
@@ -70,8 +85,15 @@ async function fetchComparison(): Promise<SupplierComparison> {
 /** Fetch comparison of all suppliers */
 export function useSupplierComparison() {
   const { data, loading, error, refetch } = useAsyncData<SupplierComparison>({
-    fetcher: fetchComparison,
+    fetcher: async () => {
+      const result = await fetchComparison();
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      supplierComparisonCache.set(result);
+      return result;
+    },
     deps: [],
+    initialData: supplierComparisonCache.get(),
+    silentInitialFetch: supplierComparisonCache.hasLoaded(),
   });
 
   return {

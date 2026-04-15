@@ -5,7 +5,7 @@
  * @enterprise ADR-265 Phase 10 — Spaces (Parking/Storage) Report hook
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ParkingCircle, Warehouse, BarChart3, CircleDollarSign,
@@ -18,17 +18,11 @@ import type {
   BuildingValueItem,
 } from '@/components/reports/sections/spaces/types';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
-// ---------------------------------------------------------------------------
-// Cache
-// ---------------------------------------------------------------------------
-
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: SpacesReportPayload;
-  timestamp: number;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const spacesReportCache = createStaleCache<SpacesReportPayload>('report-spaces');
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -117,29 +111,22 @@ function buildBuildingValues(
 
 export function useSpacesReport(): UseSpacesReportReturn {
   const { t } = useTranslation('reports');
-  const cacheRef = useRef<CachedData | null>(null);
-  const [payload, setPayload] = useState<SpacesReportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [payload, setPayload] = useState<SpacesReportPayload | null>(spacesReportCache.get());
+  const [loading, setLoading] = useState(!spacesReportCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (force = false) => {
-    if (!force && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL) {
-        setPayload(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!spacesReportCache.hasLoaded() || force) setLoading(true);
     setError(null);
 
     try {
       const data = await apiClient.get<SpacesReportPayload>(
         '/api/reports/spaces',
       );
-      cacheRef.current = { payload: data, timestamp: Date.now() };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      spacesReportCache.set(data);
       setPayload(data);
     } catch (err) {
       setError(getErrorMessage(err));

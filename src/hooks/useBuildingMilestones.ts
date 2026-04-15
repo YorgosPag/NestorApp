@@ -17,8 +17,14 @@ import {
   deleteMilestone,
 } from '@/services/milestone-service';
 import { useAsyncData } from '@/hooks/useAsyncData';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useBuildingMilestones');
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+// Keyed by buildingId
+const buildingMilestonesCache = createStaleCache<BuildingMilestone[]>('building-milestones');
 
 interface UseBuildingMilestonesReturn {
   milestones: BuildingMilestone[];
@@ -32,9 +38,16 @@ interface UseBuildingMilestonesReturn {
 
 export function useBuildingMilestones(buildingId: string): UseBuildingMilestonesReturn {
   const { data, loading, error, refetch } = useAsyncData({
-    fetcher: () => getMilestones(buildingId),
+    fetcher: async () => {
+      const result = await getMilestones(buildingId);
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      buildingMilestonesCache.set(result, buildingId);
+      return result;
+    },
     deps: [buildingId],
     enabled: !!buildingId,
+    initialData: buildingMilestonesCache.get(buildingId),
+    silentInitialFetch: buildingMilestonesCache.hasLoaded(buildingId),
   });
 
   const milestones = data ?? [];

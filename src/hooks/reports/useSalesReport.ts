@@ -5,7 +5,7 @@
  * @enterprise ADR-265 Phase 6 — Sales & Collections Report hook
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Wallet, TrendingUp, ShoppingCart, Home,
@@ -17,17 +17,11 @@ import type { FunnelStage } from '@/components/reports/core';
 import type { SalesReportPayload } from '@/components/reports/sections/sales/types';
 import type { AgingBucketResult } from '@/services/report-engine';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
-// ---------------------------------------------------------------------------
-// Cache
-// ---------------------------------------------------------------------------
-
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: SalesReportPayload;
-  timestamp: number;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const salesReportCache = createStaleCache<SalesReportPayload>('report-sales');
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -149,29 +143,22 @@ function formatEuro(value: number): string {
 
 export function useSalesReport(): UseSalesReportReturn {
   const { t } = useTranslation('reports');
-  const cacheRef = useRef<CachedData | null>(null);
-  const [payload, setPayload] = useState<SalesReportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [payload, setPayload] = useState<SalesReportPayload | null>(salesReportCache.get());
+  const [loading, setLoading] = useState(!salesReportCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (force = false) => {
-    if (!force && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL) {
-        setPayload(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!salesReportCache.hasLoaded() || force) setLoading(true);
     setError(null);
 
     try {
       const data = await apiClient.get<SalesReportPayload>(
         '/api/reports/sales',
       );
-      cacheRef.current = { payload: data, timestamp: Date.now() };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      salesReportCache.set(data);
       setPayload(data);
     } catch (err) {
       setError(getErrorMessage(err));

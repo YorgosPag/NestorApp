@@ -19,8 +19,13 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { useAsyncData } from '@/hooks/useAsyncData';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useLeadsList');
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const leadsListCache = createStaleCache<Opportunity[]>('crm-leads');
 
 export function useLeadsList(refreshTrigger?: number | string | boolean | null) {
   const router = useRouter();
@@ -29,8 +34,15 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
   const { confirm, dialogProps } = useConfirmDialog();
 
   const { data, loading, error, refetch: fetchLeads } = useAsyncData({
-    fetcher: () => getOpportunities(),
+    fetcher: async () => {
+      const result = await getOpportunities();
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      leadsListCache.set(result);
+      return result;
+    },
     deps: [refreshTrigger],
+    initialData: leadsListCache.get(),
+    silentInitialFetch: leadsListCache.hasLoaded(),
   });
 
   const leads = data ?? [];

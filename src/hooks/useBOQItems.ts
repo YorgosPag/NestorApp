@@ -31,8 +31,14 @@ import {
 } from '@/services/measurements/boq-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAsyncData } from '@/hooks/useAsyncData';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useBOQItems');
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+// Keyed by buildingId
+const boqItemsCache = createStaleCache<BOQItem[]>('boq-items');
 
 // ============================================================================
 // FILTER TYPES
@@ -106,9 +112,16 @@ export function useBOQItems(
   // --- FETCH via useAsyncData ---
 
   const { data, loading, error: fetchError, refetch: refreshItems } = useAsyncData({
-    fetcher: () => boqService.getByBuilding(companyId, buildingId),
+    fetcher: async () => {
+      const result = await boqService.getByBuilding(companyId, buildingId);
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      boqItemsCache.set(result, buildingId);
+      return result;
+    },
     deps: [companyId, buildingId],
     enabled: !!buildingId && !!companyId,
+    initialData: boqItemsCache.get(buildingId),
+    silentInitialFetch: boqItemsCache.hasLoaded(buildingId),
   });
 
   const items = data ?? [];

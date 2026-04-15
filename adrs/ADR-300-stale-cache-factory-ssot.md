@@ -134,6 +134,20 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/crm/hooks/useOpportunities.ts` | `useState([])` + `setLoading(true)` unconditional | `oppsCache = createStaleCache<Opportunity[]>('crm-pipeline')` | 2026-04-15 |
 | `src/hooks/useCalendarEvents.ts` | `useAsyncData` no cache | `calendarEventsCache = createStaleCache<CalendarEvent[]>('calendar-events')` keyed by dateRange+userId+eventTypes | 2026-04-15 |
 | `src/components/crm/pages/CrmTeamsPageContent.tsx` | `useState([])` + `setLoading(true)` unconditional | `teamsCache = createStaleCache<DisplayTeam[]>('crm-teams')` | 2026-04-15 |
+| `src/hooks/reports/useCrmReport.ts` | `useRef` TTL cache (resets on unmount) | `crmReportCache = createStaleCache<CrmReportPayload>('report-crm')` | 2026-04-15 |
+| `src/hooks/reports/useCashFlowReport.ts` | `useRef` TTL cache (resets on unmount) | `cashFlowCache = createStaleCache<CashFlowAPIResponse>('report-cash-flow')` keyed by filterKey | 2026-04-15 |
+| `src/hooks/reports/useFinancialReport.ts` | `useRef` TTL cache (resets on unmount) | `financialReportCache = createStaleCache<FinancialReportPayload>('report-financial')` | 2026-04-15 |
+| `src/hooks/reports/useProjectsReport.ts` | `useRef` TTL cache (resets on unmount) | `projectsReportCache = createStaleCache<ProjectsReportPayload>('report-projects')` | 2026-04-15 |
+| `src/hooks/reports/useContactsReport.ts` | `useRef` TTL cache (resets on unmount) | `contactsReportCache = createStaleCache<ContactsReportPayload>('report-contacts')` | 2026-04-15 |
+| `src/hooks/reports/useComplianceReport.ts` | `useRef` TTL cache (resets on unmount) | `complianceReportCache = createStaleCache<ComplianceReportPayload>('report-compliance')` | 2026-04-15 |
+| `src/hooks/reports/useConstructionReport.ts` | `useRef` TTL cache (resets on unmount) | `constructionReportCache = createStaleCache<ConstructionReportPayload>('report-construction')` | 2026-04-15 |
+| `src/hooks/reports/useSalesReport.ts` | `useRef` TTL cache (resets on unmount) | `salesReportCache = createStaleCache<SalesReportPayload>('report-sales')` | 2026-04-15 |
+| `src/hooks/reports/useSpacesReport.ts` | `useRef` TTL cache (resets on unmount) | `spacesReportCache = createStaleCache<SpacesReportPayload>('report-spaces')` | 2026-04-15 |
+| `src/components/leads/hooks/useLeadsList.ts` | `useAsyncData` no cache | `leadsListCache = createStaleCache<Opportunity[]>('crm-leads')` | 2026-04-15 |
+| `src/hooks/procurement/useSupplierMetrics.ts` | `useAsyncData` no cache | `supplierMetricsCache` + `supplierComparisonCache` keyed by supplierId | 2026-04-15 |
+| `src/hooks/useBuildingFloorplans.ts` | `useAsyncData` no cache | `buildingFloorplansCache = createStaleCache<FloorplanResult>('building-floorplans')` keyed by buildingId | 2026-04-15 |
+| `src/hooks/useBuildingMilestones.ts` | `useAsyncData` no cache | `buildingMilestonesCache = createStaleCache<BuildingMilestone[]>('building-milestones')` keyed by buildingId | 2026-04-15 |
+| `src/hooks/useBOQItems.ts` | `useAsyncData` no cache | `boqItemsCache = createStaleCache<BOQItem[]>('boq-items')` keyed by buildingId | 2026-04-15 |
 
 ---
 

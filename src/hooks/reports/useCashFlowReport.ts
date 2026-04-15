@@ -6,7 +6,7 @@
  * @description Fetches cash flow projection, transforms into view models for UI.
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Banknote, TrendingUp, TrendingDown, AlertTriangle,
@@ -24,18 +24,12 @@ import type {
   CashFlowConfig,
 } from '@/services/cash-flow/cash-flow.types';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
-// ---------------------------------------------------------------------------
-// Cache
-// ---------------------------------------------------------------------------
-
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: CashFlowAPIResponse;
-  timestamp: number;
-  filterKey: string;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+// Keyed by filterKey (projectFilter_buildingFilter) so different filters don't collide
+const cashFlowCache = createStaleCache<CashFlowAPIResponse>('report-cash-flow');
 
 // ---------------------------------------------------------------------------
 // Chart data types
@@ -79,31 +73,23 @@ export interface UseCashFlowReportReturn {
 export function useCashFlowReport(): UseCashFlowReportReturn {
   const { t } = useTranslation('cash-flow');
 
-  const [data, setData] = useState<CashFlowAPIResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeScenario, setActiveScenario] = useState<CashFlowScenario>('realistic');
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [buildingFilter, setBuildingFilter] = useState<string | undefined>();
-
-  const cacheRef = useRef<CachedData | null>(null);
 
   const filterKey = useMemo(
     () => `${projectFilter ?? 'all'}_${buildingFilter ?? 'all'}`,
     [projectFilter, buildingFilter],
   );
 
-  const fetchData = useCallback(async (skipCache = false) => {
-    if (!skipCache && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL && cacheRef.current.filterKey === filterKey) {
-        setData(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [data, setData] = useState<CashFlowAPIResponse | null>(cashFlowCache.get(filterKey));
+  const [loading, setLoading] = useState(!cashFlowCache.hasLoaded(filterKey));
+  const [error, setError] = useState<string | null>(null);
+  const [activeScenario, setActiveScenario] = useState<CashFlowScenario>('realistic');
 
-    setLoading(true);
+  const fetchData = useCallback(async (skipCache = false) => {
+    // ADR-300: Only show spinner on first load for this filterKey — not on re-navigation
+    if (!cashFlowCache.hasLoaded(filterKey) || skipCache) setLoading(true);
     setError(null);
 
     try {
@@ -117,7 +103,8 @@ export function useCashFlowReport(): UseCashFlowReportReturn {
 
       const payload = await apiClient.get<CashFlowAPIResponse>(url);
 
-      cacheRef.current = { payload, timestamp: Date.now(), filterKey };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      cashFlowCache.set(payload, filterKey);
       setData(payload);
     } catch (err) {
       setError(getErrorMessage(err));

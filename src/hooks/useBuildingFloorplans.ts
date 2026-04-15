@@ -11,6 +11,12 @@ import { BuildingFloorplanService, type BuildingFloorplanData } from '@/services
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { RealtimeService } from '@/services/realtime';
 import type { FloorplanCreatedPayload, FloorplanDeletedPayload } from '@/services/realtime';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+// Keyed by buildingId
+const buildingFloorplansCache = createStaleCache<FloorplanResult>('building-floorplans');
 
 interface FloorplanResult {
   building: BuildingFloorplanData | null;
@@ -34,10 +40,15 @@ export function useBuildingFloorplans(buildingId: string | number): UseBuildingF
         BuildingFloorplanService.loadFloorplan(buildingIdStr, 'building'),
         BuildingFloorplanService.loadFloorplan(buildingIdStr, 'storage'),
       ]);
-      return { building: buildingData, storage: storageData };
+      const result = { building: buildingData, storage: storageData };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      buildingFloorplansCache.set(result, buildingIdStr);
+      return result;
     },
     deps: [buildingIdStr],
     enabled: !!buildingIdStr,
+    initialData: buildingFloorplansCache.get(buildingIdStr),
+    silentInitialFetch: buildingFloorplansCache.hasLoaded(buildingIdStr),
   });
 
   // 🏢 ENTERPRISE: Event bus subscribers for cross-tab floorplan sync (ADR-228 Tier 2)

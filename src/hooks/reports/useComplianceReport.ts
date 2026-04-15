@@ -5,7 +5,7 @@
  * @enterprise ADR-265 Phase 12 — Compliance & Labor Report hook
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Users, Clock, Timer, Stamp,
@@ -15,17 +15,11 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ReportKPI } from '@/components/reports/core';
 import type { ComplianceReportPayload } from '@/components/reports/sections/compliance/types';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
-// ---------------------------------------------------------------------------
-// Cache
-// ---------------------------------------------------------------------------
-
-const CACHE_TTL = 5 * 60 * 1000;
-
-interface CachedData {
-  payload: ComplianceReportPayload;
-  timestamp: number;
-}
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const complianceReportCache = createStaleCache<ComplianceReportPayload>('report-compliance');
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -87,29 +81,22 @@ function buildInsuranceBars(
 
 export function useComplianceReport(): UseComplianceReportReturn {
   const { t } = useTranslation('reports');
-  const cacheRef = useRef<CachedData | null>(null);
-  const [payload, setPayload] = useState<ComplianceReportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [payload, setPayload] = useState<ComplianceReportPayload | null>(complianceReportCache.get());
+  const [loading, setLoading] = useState(!complianceReportCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (force = false) => {
-    if (!force && cacheRef.current) {
-      const age = Date.now() - cacheRef.current.timestamp;
-      if (age < CACHE_TTL) {
-        setPayload(cacheRef.current.payload);
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!complianceReportCache.hasLoaded() || force) setLoading(true);
     setError(null);
 
     try {
       const data = await apiClient.get<ComplianceReportPayload>(
         '/api/reports/compliance',
       );
-      cacheRef.current = { payload: data, timestamp: Date.now() };
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      complianceReportCache.set(data);
       setPayload(data);
     } catch (err) {
       setError(getErrorMessage(err));
