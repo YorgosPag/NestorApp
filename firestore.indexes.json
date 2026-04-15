@@ -179,6 +179,20 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "lastUpdate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "projects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "progress",
           "order": "DESCENDING"
         }
@@ -1167,8 +1181,7 @@
           "order": "DESCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "contact_links",
       "queryScope": "COLLECTION",
@@ -1186,8 +1199,7 @@
           "order": "ASCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "attendance_qr_tokens",
       "queryScope": "COLLECTION",
@@ -1251,8 +1263,7 @@
           "order": "ASCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "employment_records",
       "queryScope": "COLLECTION",
@@ -1316,8 +1327,7 @@
           "order": "ASCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "skills",
       "queryScope": "COLLECTION",
@@ -1565,8 +1575,7 @@
           "order": "ASCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "file_audit_log",
       "queryScope": "COLLECTION",
@@ -1622,8 +1631,7 @@
           "order": "ASCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "file_approvals",
       "queryScope": "COLLECTION",
@@ -1711,8 +1719,7 @@
           "order": "ASCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "entity_audit_trail",
       "queryScope": "COLLECTION",
@@ -1866,8 +1873,7 @@
           "order": "ASCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "opportunities",
       "queryScope": "COLLECTION",
@@ -1923,8 +1929,7 @@
           "order": "DESCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "building_milestones",
       "queryScope": "COLLECTION",
@@ -1980,8 +1985,7 @@
           "order": "ASCENDING"
         }
       ]
-    }
-    ,
+    },
     {
       "collectionGroup": "accounting_audit_log",
       "queryScope": "COLLECTION",
@@ -2060,122 +2064,236 @@
       "collectionGroup": "contacts",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "properties",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "properties",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "buildingId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "__name__", "order": "ASCENDING" }
+        {
+          "fieldPath": "buildingId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "properties",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "companyId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "__name__", "order": "ASCENDING" }
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "buildings",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "projects",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "parking_spots",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "storage",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "photo_shares",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "contactId", "order": "ASCENDING" },
-        { "fieldPath": "companyId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "contactId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "floors",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "buildingId", "order": "ASCENDING" },
-        { "fieldPath": "companyId", "order": "ASCENDING" }
+        {
+          "fieldPath": "buildingId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "purchase_orders",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "companyId", "order": "ASCENDING" },
-        { "fieldPath": "isDeleted", "order": "ASCENDING" },
-        { "fieldPath": "dateCreated", "order": "DESCENDING" }
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateCreated",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "purchase_orders",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "companyId", "order": "ASCENDING" },
-        { "fieldPath": "isDeleted", "order": "ASCENDING" },
-        { "fieldPath": "projectId", "order": "ASCENDING" },
-        { "fieldPath": "dateCreated", "order": "DESCENDING" }
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateCreated",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "purchase_orders",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "companyId", "order": "ASCENDING" },
-        { "fieldPath": "isDeleted", "order": "ASCENDING" },
-        { "fieldPath": "supplierId", "order": "ASCENDING" },
-        { "fieldPath": "dateCreated", "order": "DESCENDING" }
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "supplierId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateCreated",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "purchase_orders",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "companyId", "order": "ASCENDING" },
-        { "fieldPath": "isDeleted", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "dateCreated", "order": "DESCENDING" }
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateCreated",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],
