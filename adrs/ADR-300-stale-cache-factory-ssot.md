@@ -198,6 +198,10 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/shared/files/AuditLogPanel.tsx` | `useState([])` + `setLoading(true)` unconditional | `fileAuditLogCache = createStaleCache<FileAuditRecord[]>('file-audit-log')` keyed by fileId | 2026-04-16 |
 | `src/components/shared/files/CommentsPanel.tsx` | `useState([])` + `setLoading(true)` unconditional (onSnapshot) | `fileCommentsCache = createStaleCache<FileComment[]>('file-comments')` keyed by fileId | 2026-04-16 |
 | `src/components/shared/files/FolderManager.tsx` | `useState([])` + `setLoading(true)` unconditional | `fileFoldersCache = createStaleCache<FileFolder[]>('file-folders')` keyed by companyId | 2026-04-16 |
+| `src/components/crm/notifications/useNotifications.ts` | `useState([])` + `useState(true)` unconditional | `crmNotificationsCache = createStaleCache<CrmNotificationData[]>('crm-notifications')` keyed by userId; seeded on realtime subscription callback | 2026-04-16 |
+| `src/components/admin/ai-inbox/useAIInboxState.ts` | `serverLoading: useState(true)` + `serverStatsLoading: useState(true)` unconditional (server/super-admin path) | `aiInboxCommsCache` + `aiInboxStatsCache` keyed by companyId; realtime path unaffected | 2026-04-16 |
+| `src/components/admin/operator-inbox/useOperatorInboxState.ts` | `useState([])` + `useState(true)` unconditional | `operatorInboxCache = createStaleCache<OperatorInboxCached>('operator-inbox-state')` single-key; caches `{items, stats}` together | 2026-04-16 |
+| `src/hooks/inbox/useInboxApi.ts` | `useConversations: useState([])` + `useState(true)` unconditional | `conversationsCache = createStaleCache<ConversationListItem[]>('inbox-conversations')` keyed by `${userId}-${status}-${channel}`; only page 1 cached | 2026-04-16 |
 | `src/components/shared/files/VersionHistory.tsx` | `useState([])` + `setLoading(true)` unconditional | `fileVersionHistoryCache = createStaleCache<FileVersionSnapshot[]>('file-version-history')` keyed by fileId | 2026-04-16 |
 
 ---

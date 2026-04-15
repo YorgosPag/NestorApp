@@ -18,8 +18,16 @@ import {
   defaultOperatorInboxFilters,
   type OperatorInboxFilterState,
 } from '@/components/core/AdvancedFilters';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('OPERATOR_INBOX_STATE');
+
+interface OperatorInboxCached {
+  items: PipelineQueueItem[];
+  stats: ProposedItemStats;
+}
+
+const operatorInboxCache = createStaleCache<OperatorInboxCached>('operator-inbox-state');
 
 // ============================================================================
 // TYPES
@@ -40,9 +48,10 @@ export function useOperatorInboxState() {
   const { t } = useTranslation('admin');
   const { success, error: notifyError } = useNotifications();
 
-  const [items, setItems] = useState<PipelineQueueItem[]>([]);
-  const [stats, setStats] = useState<ProposedItemStats>({ proposed: 0, approved: 0, rejected: 0 });
-  const [loading, setLoading] = useState(true);
+  const _cached = operatorInboxCache.get();
+  const [items, setItems] = useState<PipelineQueueItem[]>(_cached?.items ?? []);
+  const [stats, setStats] = useState<ProposedItemStats>(_cached?.stats ?? { proposed: 0, approved: 0, rejected: 0 });
+  const [loading, setLoading] = useState(!operatorInboxCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,14 +60,21 @@ export function useOperatorInboxState() {
   const [filters, setFilters] = useState<OperatorInboxFilterState>(defaultOperatorInboxFilters);
 
   const fetchData = useCallback(async (showRefreshIndicator = false) => {
-    if (showRefreshIndicator) setRefreshing(true);
+    if (showRefreshIndicator) {
+      setRefreshing(true);
+    } else if (!operatorInboxCache.hasLoaded()) {
+      setLoading(true);
+    }
     try {
       const response = await fetch(API_ROUTES.ADMIN.OPERATOR_INBOX, { credentials: 'include' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json() as OperatorInboxApiResponse;
       if (!data.success) throw new Error(data.error ?? 'Unknown error');
-      setItems(data.items ?? []);
-      setStats(data.stats ?? { proposed: 0, approved: 0, rejected: 0 });
+      const freshItems = data.items ?? [];
+      const freshStats = data.stats ?? { proposed: 0, approved: 0, rejected: 0 };
+      operatorInboxCache.set({ items: freshItems, stats: freshStats });
+      setItems(freshItems);
+      setStats(freshStats);
       setError(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch data';

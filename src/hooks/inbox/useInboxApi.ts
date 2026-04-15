@@ -18,6 +18,7 @@ import { useInterval } from '@/hooks/useInterval';
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createStaleCache } from '@/lib/stale-cache';
 import { getErrorMessage } from '@/lib/error-utils';
 import {
   INBOX_POLL_MS,
@@ -30,6 +31,8 @@ import type { ConversationStatus, MessageDirection, DeliveryStatus, MessageAttac
 import type { CommunicationChannel } from '@/types/communications';
 import type { SenderType } from '@/config/domain-constants';
 import { useRealtimeMessages } from './useRealtimeMessages';
+
+const conversationsCache = createStaleCache<ConversationListItem[]>('inbox-conversations');
 
 // ============================================================================
 // API RESPONSE TYPES
@@ -130,10 +133,6 @@ interface SendMessageResponse {
 }
 
 // ============================================================================
-// NOTE: Auth is handled by apiClient automatically
-// ============================================================================
-
-// ============================================================================
 // useConversations HOOK
 // ============================================================================
 
@@ -172,8 +171,11 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
   // 🏢 ENTERPRISE: Wait for auth state before fetching
   const { user, loading: authLoading } = useAuth();
 
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const _convCacheKey = `${user?.uid ?? ''}-${status ?? 'all'}-${channel ?? 'all'}`;
+  const [conversations, setConversations] = useState<ConversationListItem[]>(
+    conversationsCache.get(_convCacheKey) ?? []
+  );
+  const [loading, setLoading] = useState(!conversationsCache.hasLoaded(_convCacheKey));
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -183,9 +185,10 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
   const mountedRef = useRef(true);
 
   const fetchConversations = useCallback(async (pageNum: number = currentPage, append: boolean = false) => {
+    const cacheKey = `${user?.uid ?? ''}-${status ?? 'all'}-${channel ?? 'all'}`;
     try {
       if (!append) {
-        setLoading(true);
+        if (!conversationsCache.hasLoaded(cacheKey)) setLoading(true);
       }
       setError(null);
 
@@ -195,12 +198,7 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       if (status) params.set('status', status);
       if (channel) params.set('channel', channel);
 
-      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      // apiClient.get() automatically unwraps canonical { success: true, data: T } responses
-      // Returns T directly (not wrapped in .data)
       const result = await apiClient.get<ConversationsResponse>(`${API_ROUTES.CONVERSATIONS.LIST}?${params.toString()}`);
-
-      // 🏢 ENTERPRISE: Null safety check (Defense-in-Depth)
       if (!result || !Array.isArray(result.conversations)) {
         throw new Error('Invalid API response format');
       }
@@ -209,6 +207,7 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
         if (append) {
           setConversations(prev => [...prev, ...result.conversations]);
         } else {
+          if (pageNum === 1) conversationsCache.set(result.conversations, cacheKey);
           setConversations(result.conversations);
         }
         setTotalCount(result.totalCount ?? 0);
@@ -360,9 +359,6 @@ export function useConversationMessages(
       params.set('pageSize', String(pageSize));
       params.set('order', order);
 
-      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      // apiClient.get() automatically unwraps canonical { success: true, data: T } responses
-      // Returns T directly (not wrapped in .data)
       const result = await apiClient.get<MessagesResponse>(`${API_ROUTES.CONVERSATIONS.MESSAGES(conversationId)}?${params.toString()}`);
 
       if (mountedRef.current) {
@@ -474,9 +470,6 @@ export function useSendMessage(conversationId: string | null): UseSendMessageRes
       setSending(true);
       setError(null);
 
-      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      // apiClient.post() automatically unwraps canonical { success: true, data: T } responses
-      // Returns T directly (not wrapped in .data)
       const result = await apiClient.post<SendMessageResponse>(
         API_ROUTES.CONVERSATIONS.SEND(conversationId),
         options

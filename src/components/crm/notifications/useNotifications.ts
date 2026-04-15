@@ -19,8 +19,11 @@ import type { Notification, Severity } from '@/types/notification';
 import { formatRelativeTime } from '@/lib/intl-utils';
 import i18n from '@/i18n/config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('crm/notifications');
+
+const crmNotificationsCache = createStaleCache<CrmNotificationData[]>('crm-notifications');
 
 // ============================================================================
 // TYPES
@@ -122,8 +125,10 @@ function transformNotification(notification: Notification): CrmNotificationData 
  */
 export function useNotifications(): UseNotificationsResult {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<CrmNotificationData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<CrmNotificationData[]>(
+    crmNotificationsCache.get(user?.uid ?? '') ?? []
+  );
+  const [loading, setLoading] = useState(!crmNotificationsCache.hasLoaded(user?.uid ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -135,13 +140,14 @@ export function useNotifications(): UseNotificationsResult {
       return;
     }
 
-    setLoading(true);
+    if (!crmNotificationsCache.hasLoaded(user.uid)) setLoading(true);
     setError(null);
 
     const unsubscribe = subscribeToNotifications(
       user.uid,
       (firestoreNotifications: Notification[]) => {
         const transformed = firestoreNotifications.map(transformNotification);
+        crmNotificationsCache.set(transformed, user.uid);
         setNotifications(transformed);
         setLoading(false);
       },

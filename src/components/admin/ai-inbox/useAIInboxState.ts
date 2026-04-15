@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { createStaleCache } from '@/lib/stale-cache';
 import { useRealtimeTriageCommunications } from '@/hooks/inbox/useRealtimeTriageCommunications';
 import type { Communication, TriageStatus } from '@/types/crm';
 import { TRIAGE_STATUSES } from '@/types/crm';
@@ -34,6 +35,9 @@ import { getDisplayContent, resolveFirestoreTimestamp } from './ai-inbox-helpers
 // ============================================================================
 
 const logger = createModuleLogger('AI_INBOX_STATE');
+
+const aiInboxCommsCache = createStaleCache<Array<Communication & { id: string }>>('ai-inbox-state');
+const aiInboxStatsCache = createStaleCache<TriageStats>('ai-inbox-stats');
 
 const TRIAGE_STATUS_SET = new Set<TriageStatus>(Object.values(TRIAGE_STATUSES));
 
@@ -113,9 +117,12 @@ export function useAIInboxState(adminContext: AdminContext): AIInboxState {
   // SERVER ACTION STATE (super admin fallback)
   // =========================================================================
 
-  const [serverCommunications, setServerCommunications] = useState<Array<Communication & { id: string }>>([]);
-  const [serverLoading, setServerLoading] = useState(true);
-  const [serverStatsLoading, setServerStatsLoading] = useState(true);
+  const _cacheKey = adminContext.companyId ?? '';
+  const [serverCommunications, setServerCommunications] = useState<Array<Communication & { id: string }>>(
+    aiInboxCommsCache.get(_cacheKey) ?? []
+  );
+  const [serverLoading, setServerLoading] = useState(!aiInboxCommsCache.hasLoaded(_cacheKey));
+  const [serverStatsLoading, setServerStatsLoading] = useState(!aiInboxStatsCache.hasLoaded(_cacheKey));
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [serverStats, setServerStats] = useState<TriageStats | null>(null);
@@ -189,7 +196,7 @@ export function useAIInboxState(adminContext: AdminContext): AIInboxState {
 
   const loadTriageCommunications = useCallback(async () => {
     if (isRealtimeEnabled) return;
-    setServerLoading(true);
+    if (!aiInboxCommsCache.hasLoaded(adminContext.companyId ?? '')) setServerLoading(true);
     setError(null);
 
     try {
@@ -197,6 +204,7 @@ export function useAIInboxState(adminContext: AdminContext): AIInboxState {
       if (!result.ok) {
         throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
       }
+      aiInboxCommsCache.set(result.data as Array<Communication & { id: string }>, adminContext.companyId ?? '');
       setServerCommunications(result.data as Array<Communication & { id: string }>);
       logger.info('Loaded pending communications (super admin)', {
         count: result.data.length,
@@ -213,13 +221,14 @@ export function useAIInboxState(adminContext: AdminContext): AIInboxState {
 
   const loadTriageStats = useCallback(async () => {
     if (isRealtimeEnabled) return;
-    setServerStatsLoading(true);
+    if (!aiInboxStatsCache.hasLoaded(adminContext.companyId ?? '')) setServerStatsLoading(true);
 
     try {
       const result = await getTriageStats(undefined, adminContext.operationId);
       if (!result.ok) {
         throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
       }
+      aiInboxStatsCache.set(result.data, adminContext.companyId ?? '');
       setServerStats(result.data);
     } catch (err) {
       logger.error('Failed to load triage stats', { error: err });
