@@ -169,6 +169,13 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/admin/role-management/components/UsersTab.tsx` | `useState([])` + `setIsLoading(true)` unconditional | `companyUsersCache = createStaleCache<CompanyUser[]>('admin-users')` single-key | 2026-04-15 |
 | `src/components/admin/pages/AdminSetupPageContent.tsx` | `useState(null)` + `setCheckingConfig(true)` unconditional | `adminConfigCache = createStaleCache<AdminConfig \| null>('admin-setup-config')` single-key; stores `null` when NOT_CONFIGURED | 2026-04-15 |
 | `src/components/sales/financial-intelligence/PortfolioDashboard.tsx` | `useState(null/[])` + `setLoading(true)` unconditional | `portfolioCache` + `debtMaturityCache` single-key; budget variance not cached (user-selection-dependent) | 2026-04-15 |
+| `src/hooks/useContactsState.ts` | `useState([])` + `setIsLoading(true)` unconditional | `contactsStateCache = createStaleCache<Contact[]>('contacts-state')` single-key | 2026-04-16 |
+| `src/components/contacts/details/CustomerPropertiesTable.tsx` | `useState([])` + `setLoading(true)` unconditional | `customerPropertiesCache = createStaleCache<Property[]>('contact-properties')` keyed by contactId | 2026-04-16 |
+| `src/components/contacts/details/CustomerStats.tsx` | `useState(null)` + `setLoading(true)` unconditional | `customerStatsCache = createStaleCache<Stats \| null>('contact-stats')` keyed by contactId; stores `null` when no properties | 2026-04-16 |
+| `src/components/contacts/tabs/ContactBankingTab.tsx` | `useState([])` + `setLoading(true)` unconditional (both loadAccounts + subscription) | `bankAccountsCache = createStaleCache<BankAccount[]>('contact-banking')` keyed by contactId | 2026-04-16 |
+| `src/components/crm/leads/lead-detail/hooks/useLead.ts` | `useState(null)` + `setLoading(true)` unconditional | `leadCache = createStaleCache<Opportunity>('crm-lead-detail')` keyed by leadId | 2026-04-16 |
+| `src/components/crm/leads/lead-detail/hooks/useLeadTasks.ts` | `useState([])` + `setLoading(true)` unconditional | `leadTasksCache = createStaleCache<CrmTask[]>('crm-lead-tasks')` keyed by leadId | 2026-04-16 |
+| `src/hooks/useFloorplanFiles.ts` | `useState([])` + `setLoading(true)` unconditional | `floorplanFilesCache = createStaleCache<FileRecord[]>('floorplan-files')` keyed by `${entityType}-${entityId}-${purposeFilter}` | 2026-04-16 |
 
 ---
 

@@ -5,12 +5,16 @@ import { getOpportunityById } from '@/services/opportunities.service';
 import type { Opportunity } from '@/types/crm';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useLead');
 
+// ADR-300: module-level cache keyed by leadId
+const leadCache = createStaleCache<Opportunity>('crm-lead-detail');
+
 export function useLead(id: string) {
-  const [lead, setLead] = useState<Opportunity | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [lead, setLead] = useState<Opportunity | null>(leadCache.get(id));
+  const [loading, setLoading] = useState(!leadCache.hasLoaded(id));
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation(['crm', 'crm-inbox']);
 
@@ -21,12 +25,13 @@ export function useLead(id: string) {
         return;
     }
 
-    setLoading(true);
+    if (!leadCache.hasLoaded(id)) setLoading(true);
     setError(null);
     try {
       const data = await getOpportunityById(id);
       if (signal?.aborted) return;
       if (data) {
+        leadCache.set(data, id);
         setLead(data);
       } else {
         setError(t('leadDetails.notFound'));

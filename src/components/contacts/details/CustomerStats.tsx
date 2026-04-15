@@ -11,9 +11,13 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createStaleCache } from '@/lib/stale-cache';
 
 // 🏢 ENTERPRISE: Centralized Property Icon
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
+
+// ADR-300: module-level cache keyed by contactId
+const customerStatsCache = createStaleCache<Stats | null>('contact-stats');
 
 interface CustomerStatsProps {
   contactId: string;
@@ -29,8 +33,8 @@ const logger = createModuleLogger('CustomerStats');
 
 export function CustomerStats({ contactId }: CustomerStatsProps) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats | null>(customerStatsCache.get(contactId));
+  const [loading, setLoading] = useState(!customerStatsCache.hasLoaded(contactId));
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -38,19 +42,21 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
         setLoading(false);
         return;
       }
-      setLoading(true);
+      if (!customerStatsCache.hasLoaded(contactId)) setLoading(true);
       try {
         const units = await getPropertiesByOwner(contactId);
-        if (units.length > 0) {
-            const propertiesCount = units.length;
-            const totalArea = units.reduce((sum, unit) => sum + (unit.area || 0), 0);
-            const totalValue = units.reduce((sum, unit) => sum + (unit.price || 0), 0);
-            setStats({ propertiesCount, totalArea, totalValue });
-        } else {
-            setStats(null);
-        }
+        const computed = units.length > 0
+          ? {
+              propertiesCount: units.length,
+              totalArea: units.reduce((sum, unit) => sum + (unit.area || 0), 0),
+              totalValue: units.reduce((sum, unit) => sum + (unit.price || 0), 0),
+            }
+          : null;
+        customerStatsCache.set(computed, contactId);
+        setStats(computed);
       } catch (error) {
         logger.error('Failed to fetch customer stats', { error });
+        customerStatsCache.set(null, contactId);
         setStats(null);
       } finally {
         setLoading(false);

@@ -39,7 +39,12 @@ import { groupByKey } from '@/utils/collection-utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { createStaleCache } from '@/lib/stale-cache';
+
 const logger = createModuleLogger('ContactBankingTab');
+
+// ADR-300: module-level cache keyed by contactId
+const bankAccountsCache = createStaleCache<BankAccount[]>('contact-banking');
 
 interface ContactBankingTabProps {
   data: Contact;
@@ -69,8 +74,8 @@ export function ContactBankingTab({
   const { confirm, dialogProps } = useConfirmDialog();
   const disabled = additionalData?.disabled ?? false;
 
-  const [accounts, setAccounts] = useState<BankAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState<BankAccount[]>(bankAccountsCache.get(contactId) ?? []);
+  const [loading, setLoading] = useState(!bankAccountsCache.hasLoaded(contactId));
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,9 +94,10 @@ export function ContactBankingTab({
     }
 
     try {
-      setLoading(true);
+      if (!bankAccountsCache.hasLoaded(contactId)) setLoading(true);
       setError(null);
       const loadedAccounts = await BankAccountsService.getAccounts(contactId);
+      bankAccountsCache.set(loadedAccounts, contactId);
       setAccounts(loadedAccounts);
     } catch (err) {
       logger.error('[ContactBankingTab] Error loading accounts:', { error: err });
@@ -107,6 +113,7 @@ export function ContactBankingTab({
     const unsubscribe = BankAccountsService.subscribeToAccounts(
       contactId,
       (updatedAccounts) => {
+        bankAccountsCache.set(updatedAccounts, contactId);
         setAccounts(updatedAccounts);
         setLoading(false);
       },

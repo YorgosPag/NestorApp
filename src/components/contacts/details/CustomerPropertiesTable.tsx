@@ -17,6 +17,10 @@ import { ENTITY_ROUTES } from '@/lib/routes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createStaleCache } from '@/lib/stale-cache';
+
+// ADR-300: module-level cache keyed by contactId
+const customerPropertiesCache = createStaleCache<Property[]>('contact-properties');
 
 // 🏢 ENTERPRISE: Centralized Property Icon & Color
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
@@ -35,8 +39,8 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
     const colors = useSemanticColors();
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
-    const [properties, setProperties] = useState<Property[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [properties, setProperties] = useState<Property[]>(customerPropertiesCache.get(contactId) ?? []);
+    const [loading, setLoading] = useState(!customerPropertiesCache.hasLoaded(contactId));
     const router = useRouter();
 
     useEffect(() => {
@@ -45,9 +49,10 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                 setLoading(false);
                 return;
             }
-            setLoading(true);
+            if (!customerPropertiesCache.hasLoaded(contactId)) setLoading(true);
             try {
                 const ownedProperties = await getPropertiesByOwner(contactId);
+                customerPropertiesCache.set(ownedProperties, contactId);
                 setProperties(ownedProperties);
             } catch (error) {
                 logger.error('Failed to fetch customer properties', { error });

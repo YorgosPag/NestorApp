@@ -29,6 +29,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
 import type { EntityType } from '@/config/domain-constants';
 import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
+import { createStaleCache } from '@/lib/stale-cache';
 
 // ============================================================================
 // TYPES
@@ -66,6 +67,9 @@ export interface UseFloorplanFilesReturn {
 
 const logger = createModuleLogger('useFloorplanFiles');
 
+// ADR-300: module-level cache keyed by `${entityType}-${entityId}-${purposeFilter}`
+const floorplanFilesCache = createStaleCache<FileRecord[]>('floorplan-files');
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -100,9 +104,11 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
 
   const { user, loading: authLoading } = useAuth();
 
+  const cacheKey = `${entityType}-${entityId ?? ''}-${purposeFilter ?? ''}`;
+
   // State
-  const [files, setFiles] = useState<FileRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [files, setFiles] = useState<FileRecord[]>(floorplanFilesCache.get(cacheKey) ?? []);
+  const [loading, setLoading] = useState(!floorplanFilesCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -157,7 +163,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
       return;
     }
 
-    setLoading(true);
+    if (!floorplanFilesCache.hasLoaded(cacheKey)) setLoading(true);
     setError(null);
 
     logger.info('Setting up listener', { companyId, entityType, entityId, purposeFilter });
@@ -185,6 +191,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
             });
           }
 
+          floorplanFilesCache.set(filteredFiles, cacheKey);
           setFiles(filteredFiles);
           setLoading(false);
 
@@ -219,7 +226,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
       logger.info('Unsubscribing');
       unsubscribe();
     };
-  }, [companyId, entityType, entityId, purposeFilter, user, authLoading, refreshTrigger, processUnprocessedFiles]);
+  }, [companyId, entityType, entityId, purposeFilter, cacheKey, user, authLoading, refreshTrigger, processUnprocessedFiles]);
 
   // =========================================================================
   // COMPUTED

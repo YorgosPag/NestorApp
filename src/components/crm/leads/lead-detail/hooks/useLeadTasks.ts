@@ -5,12 +5,16 @@ import { getTasksByLead } from '@/services/tasks.service';
 import type { CrmTask } from '@/types/crm';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useLeadTasks');
 
+// ADR-300: module-level cache keyed by leadId
+const leadTasksCache = createStaleCache<CrmTask[]>('crm-lead-tasks');
+
 export function useLeadTasks(leadId: string) {
-  const [tasks, setTasks] = useState<CrmTask[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<CrmTask[]>(leadTasksCache.get(leadId) ?? []);
+  const [loading, setLoading] = useState(!leadTasksCache.hasLoaded(leadId));
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation(['crm', 'crm-inbox']);
 
@@ -20,11 +24,12 @@ export function useLeadTasks(leadId: string) {
         return;
     }
 
-    setLoading(true);
+    if (!leadTasksCache.hasLoaded(leadId)) setLoading(true);
     setError(null);
     try {
       const data = await getTasksByLead(leadId);
       if (!signal?.aborted) {
+        leadTasksCache.set(data, leadId);
         setTasks(data);
       }
     } catch (err) {

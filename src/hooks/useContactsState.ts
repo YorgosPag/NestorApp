@@ -21,8 +21,12 @@ import { useAuth } from '@/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized AI sync bridge + tab visibility hooks
 import { useAISyncBridge } from '@/hooks/useAISyncBridge';
 import { useTabVisibilityRefresh } from '@/hooks/useTabVisibilityRefresh';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useContactsState');
+
+// ADR-300: module-level cache — survives navigation, shared across hook instances
+const contactsStateCache = createStaleCache<Contact[]>('contacts-state');
 
 
 export type ViewMode = 'list' | 'grid';
@@ -40,12 +44,12 @@ export function useContactsState() {
   const contactIdFromUrl = searchParams.get('contactId');
   const { user, loading: authLoading } = useAuth();
 
-  const [allContacts, setAllContacts] = useState<Contact[]>([]);
+  const [allContacts, setAllContacts] = useState<Contact[]>(contactsStateCache.get() ?? []);
   const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showDashboard, setShowDashboard] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!contactsStateCache.hasLoaded());
   const [refreshKey, setRefreshKey] = useState(0);
   
   // State for filters
@@ -81,7 +85,7 @@ export function useContactsState() {
       return;
     }
 
-    setIsLoading(true);
+    if (!contactsStateCache.hasLoaded()) setIsLoading(true);
     let unsubContacts: (() => void) | null = null;
     let retryTimer: number | null = null;
 
@@ -94,6 +98,7 @@ export function useContactsState() {
         // Contacts: real-time subscription (ADR-227 Phase 2: canonical pattern)
         unsubContacts = ContactsService.subscribeToContacts(
           (contacts) => {
+            contactsStateCache.set(contacts);
             setAllContacts(contacts);
             setIsLoading(false);
           },
