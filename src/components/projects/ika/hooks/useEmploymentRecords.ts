@@ -24,11 +24,15 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import type { EmploymentRecord, ApdStatus, WorkerStampsSummary } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   saveEmploymentRecordsWithPolicy,
   updateEmploymentRecordApdStatusWithPolicy,
 } from '@/services/ika/ika-mutation-gateway';
 const logger = createModuleLogger('useEmploymentRecords');
+
+// ADR-300: Module-level cache — keyed by projectId+year+month, survives re-navigation
+const employmentRecordsCache = createStaleCache<EmploymentRecord[]>('project-employment-records');
 
 /** Parameters for saving employment records in batch */
 export interface SaveEmploymentRecordsParams {
@@ -66,8 +70,10 @@ export function useEmploymentRecords(
   year: number
 ): UseEmploymentRecordsReturn {
   const companyId = useCompanyId()?.companyId;
-  const [records, setRecords] = useState<EmploymentRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const cacheKey = `${projectId ?? 'none'}-${year}-${month}`;
+  const [records, setRecords] = useState<EmploymentRecord[]>(employmentRecordsCache.get(cacheKey) ?? []);
+  const [isLoading, setIsLoading] = useState(!employmentRecordsCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -86,8 +92,10 @@ export function useEmploymentRecords(
         return;
       }
 
+      const key = `${projectId}-${year}-${month}`;
       try {
-        setIsLoading(true);
+        // ADR-300: Only show spinner on first load — not on re-navigation
+        if (!employmentRecordsCache.hasLoaded(key)) setIsLoading(true);
         setError(null);
 
         const recordsQuery = query(
@@ -127,6 +135,8 @@ export function useEmploymentRecords(
           };
         });
 
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        employmentRecordsCache.set(fetchedRecords, key);
         setRecords(fetchedRecords);
       } catch (err) {
         if (mounted) {

@@ -23,8 +23,12 @@ import type { ContactRelationship } from '@/types/contacts/relationships/interfa
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121) — enrich workers from persona data
 import { isConstructionWorkerPersona } from '@/types/contacts/personas';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useProjectWorkers');
+
+// ADR-300: Module-level cache — keyed by projectId, survives re-navigation
+const projectWorkersCache = createStaleCache<ProjectWorker[]>('project-workers');
 
 interface UseProjectWorkersReturn {
   workers: ProjectWorker[];
@@ -38,8 +42,9 @@ interface UseProjectWorkersReturn {
  * Enriches with contact details and relationship data.
  */
 export function useProjectWorkers(projectId: string | undefined): UseProjectWorkersReturn {
-  const [workers, setWorkers] = useState<ProjectWorker[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [workers, setWorkers] = useState<ProjectWorker[]>(projectWorkersCache.get(projectId ?? '') ?? []);
+  const [isLoading, setIsLoading] = useState(!projectWorkersCache.hasLoaded(projectId ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -58,7 +63,8 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
       }
 
       try {
-        setIsLoading(true);
+        // ADR-300: Only show spinner on first load — not on re-navigation
+        if (!projectWorkersCache.hasLoaded(projectId)) setIsLoading(true);
         setError(null);
 
         // 1. Get all contact links for this project
@@ -168,6 +174,8 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
         }
 
         if (mounted) {
+          // ADR-300: Write to module-level cache so next remount skips spinner
+          projectWorkersCache.set(enrichedWorkers, projectId);
           setWorkers(enrichedWorkers);
         }
       } catch (err) {

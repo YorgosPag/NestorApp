@@ -13,6 +13,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createStaleCache } from '@/lib/stale-cache';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,9 @@ import { DEFAULT_FILTERS } from '../types';
 import { GLOBAL_ROLES } from '@/lib/auth/types';
 import type { GlobalRole } from '@/lib/auth/types';
 
+// ADR-300: Module-level cache — company-wide user list, survives re-navigation
+const companyUsersCache = createStaleCache<CompanyUser[]>('admin-users');
+
 // =============================================================================
 // PROPS
 // =============================================================================
@@ -68,24 +72,29 @@ export function UsersTab({ canEdit }: UsersTabProps) {
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
-  const [users, setUsers] = useState<CompanyUser[]>([]);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [users, setUsers] = useState<CompanyUser[]>(companyUsersCache.get() ?? []);
   const [filters, setFilters] = useState<UserListFilters>(DEFAULT_FILTERS);
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!companyUsersCache.hasLoaded());
   const [suspendReason, setSuspendReason] = useState('');
 
   // ---------------------------------------------------------------------------
   // Fetch users
   // ---------------------------------------------------------------------------
   const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!companyUsersCache.hasLoaded()) setIsLoading(true);
     try {
       // apiClient unwraps canonical { success, data } → returns data directly
       const data = await apiClient.get<UserListResponse['data']>(
         API_ROUTES.ADMIN.ROLE_MANAGEMENT.USERS
       );
-      setUsers(Array.isArray(data?.users) ? data.users : []);
+      const loaded = Array.isArray(data?.users) ? data.users : [];
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      companyUsersCache.set(loaded);
+      setUsers(loaded);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load users';
       notifyError(message);

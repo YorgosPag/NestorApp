@@ -31,6 +31,7 @@ import type { ContactLinkCreatedPayload, ContactLinkDeletedPayload } from '@/ser
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createStaleCache } from '@/lib/stale-cache';
 import { maybeFillProfessionFromRole } from '@/services/profession-bridge.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EntityType } from '@/config/domain-constants';
@@ -38,6 +39,10 @@ import type { ContactLink } from '@/types/associations';
 import type { EntityAssociationLink, ContactEntityLink, GroupedContactEntityLinks } from '@/types/entity-associations';
 
 const logger = createModuleLogger('useEntityAssociations');
+
+// ADR-300: Module-level caches — keyed by entity/contact, survive re-navigation
+const entityContactLinksCache = createStaleCache<EntityAssociationLink[]>('entity-contact-links');
+const contactEntityLinksCache = createStaleCache<GroupedContactEntityLinks>('contact-entity-links');
 
 // ============================================================================
 // ENTITY-SIDE HOOK: Entity → linked contacts
@@ -75,8 +80,10 @@ export function useEntityContactLinks(
 ): UseEntityContactLinksReturn {
   const { user } = useAuth();
   const { info } = useNotifications();
-  const [links, setLinks] = useState<EntityAssociationLink[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const entityCacheKey = `${entityType}-${entityId ?? 'none'}-${options?.parentProjectId ?? 'none'}`;
+  const [links, setLinks] = useState<EntityAssociationLink[]>(entityContactLinksCache.get(entityCacheKey) ?? []);
+  const [isLoading, setIsLoading] = useState(!entityContactLinksCache.hasLoaded(entityCacheKey));
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { checkBeforeRemove, BlockedDialog: LinkRemovalBlockedDialog } = useLinkRemovalGuard();
@@ -96,7 +103,9 @@ export function useEntityContactLinks(
     let cancelled = false;
 
     const fetchLinks = async () => {
-      setIsLoading(true);
+      const key = `${entityType}-${entityId}-${parentProjectId ?? 'none'}`;
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!entityContactLinksCache.hasLoaded(key)) setIsLoading(true);
       setError(null);
 
       try {
@@ -138,8 +147,11 @@ export function useEntityContactLinks(
         );
 
         if (!cancelled) {
-          // Direct links first, then inherited
-          setLinks([...directResolved, ...inheritedResolved]);
+          const allLinks = [...directResolved, ...inheritedResolved];
+          // ADR-300: Write to module-level cache so next remount skips spinner
+          const key = `${entityType}-${entityId}-${parentProjectId ?? 'none'}`;
+          entityContactLinksCache.set(allLinks, key);
+          setLinks(allLinks);
         }
       } catch (err) {
         if (!cancelled) {
@@ -279,12 +291,11 @@ export function useContactEntityLinks(
   contactId: string | undefined
 ): UseContactEntityLinksReturn {
   const { user } = useAuth();
-  const [grouped, setGrouped] = useState<GroupedContactEntityLinks>({
-    projects: [],
-    buildings: [],
-    properties: [],
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [grouped, setGrouped] = useState<GroupedContactEntityLinks>(
+    contactEntityLinksCache.get(contactId ?? '') ?? { projects: [], buildings: [], properties: [] }
+  );
+  const [isLoading, setIsLoading] = useState(!contactEntityLinksCache.hasLoaded(contactId ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -300,7 +311,8 @@ export function useContactEntityLinks(
     let cancelled = false;
 
     const fetchLinks = async () => {
-      setIsLoading(true);
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!contactEntityLinksCache.hasLoaded(contactId)) setIsLoading(true);
       setError(null);
 
       try {
@@ -337,7 +349,11 @@ export function useContactEntityLinks(
         // Resolve entity names (project name, building name, etc.)
         await resolveEntityNames(result);
 
-        if (!cancelled) setGrouped(result);
+        if (!cancelled) {
+          // ADR-300: Write to module-level cache so next remount skips spinner
+          contactEntityLinksCache.set(result, contactId);
+          setGrouped(result);
+        }
       } catch (err) {
         if (!cancelled) {
           const msg = getErrorMessage(err, 'Failed to load entity links');

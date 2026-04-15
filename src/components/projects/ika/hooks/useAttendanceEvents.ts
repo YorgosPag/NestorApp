@@ -25,9 +25,13 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 import { createAttendanceEventWithPolicy } from '@/services/ika/ika-mutation-gateway';
 
 const logger = createModuleLogger('useAttendanceEvents');
+
+// ADR-300: Module-level cache — keyed by projectId+date, survives re-navigation
+const attendanceEventsCache = createStaleCache<AttendanceEvent[]>('project-attendance-events');
 
 /** Parameters for creating a new attendance event */
 export interface CreateAttendanceEventParams {
@@ -84,8 +88,10 @@ export function useAttendanceEvents(
   selectedDate: Date
 ): UseAttendanceEventsReturn {
   const companyId = useCompanyId()?.companyId;
-  const [events, setEvents] = useState<AttendanceEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const dateCacheKey = `${projectId ?? 'none'}-${selectedDate.toISOString().substring(0, 10)}`;
+  const [events, setEvents] = useState<AttendanceEvent[]>(attendanceEventsCache.get(dateCacheKey) ?? []);
+  const [isLoading, setIsLoading] = useState(!attendanceEventsCache.hasLoaded(dateCacheKey));
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -104,8 +110,10 @@ export function useAttendanceEvents(
         return;
       }
 
+      const key = `${projectId}-${selectedDate.toISOString().substring(0, 10)}`;
       try {
-        setIsLoading(true);
+        // ADR-300: Only show spinner on first load — not on re-navigation
+        if (!attendanceEventsCache.hasLoaded(key)) setIsLoading(true);
         setError(null);
 
         const startOfDayStr = toStartOfDay(selectedDate);
@@ -142,6 +150,8 @@ export function useAttendanceEvents(
           };
         });
 
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        attendanceEventsCache.set(fetchedEvents, key);
         setEvents(fetchedEvents);
       } catch (err) {
         if (mounted) {

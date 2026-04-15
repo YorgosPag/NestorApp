@@ -27,7 +27,11 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createStaleCache } from '@/lib/stale-cache';
 const logger = createModuleLogger('AdminSetupPage');
+
+// ADR-300: Module-level cache — admin setup config, survives re-navigation
+const adminConfigCache = createStaleCache<AdminConfig | null>('admin-setup-config');
 
 // =============================================================================
 // TYPES
@@ -57,8 +61,9 @@ export function AdminSetupPageContent() {
   const colors = useSemanticColors();
   const router = useRouter();
 
-  const [currentConfig, setCurrentConfig] = useState<AdminConfig | null>(null);
-  const [checkingConfig, setCheckingConfig] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [currentConfig, setCurrentConfig] = useState<AdminConfig | null>(adminConfigCache.get() ?? null);
+  const [checkingConfig, setCheckingConfig] = useState(!adminConfigCache.hasLoaded());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -73,7 +78,8 @@ export function AdminSetupPageContent() {
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) return;
 
-    setCheckingConfig(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!adminConfigCache.hasLoaded()) setCheckingConfig(true);
     setError(null);
 
     try {
@@ -89,8 +95,11 @@ export function AdminSetupPageContent() {
       const data: SetupResponse = await response.json();
 
       if (data.success && data.config) {
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        adminConfigCache.set(data.config);
         setCurrentConfig(data.config);
       } else if (data.error === 'NOT_CONFIGURED' || data.error === 'ADMIN_SECTION_MISSING') {
+        adminConfigCache.set(null);
         setCurrentConfig(null);
       }
     } catch (err) {

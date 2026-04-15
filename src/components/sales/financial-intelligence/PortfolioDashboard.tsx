@@ -51,6 +51,7 @@ import {
   removeDebtMaturityEntryWithPolicy,
   saveBudgetVarianceWithPolicy,
 } from '@/services/financial-intelligence/financial-intelligence-mutation-gateway';
+import { createStaleCache } from '@/lib/stale-cache';
 
 // =============================================================================
 // TYPES
@@ -74,6 +75,10 @@ interface BudgetApiResponse {
     analysis: BudgetVarianceAnalysis | null;
   };
 }
+
+// ADR-300: Module-level caches — survive React unmount/remount (navigation)
+const portfolioCache = createStaleCache<{ portfolio: PortfolioSummary; projects: ProjectFinancialSummary[] }>('portfolio-summary');
+const debtMaturityCache = createStaleCache<DebtMaturityEntry[]>('portfolio-debt-maturity');
 
 // =============================================================================
 // HEALTH STATUS BADGE MAP
@@ -100,13 +105,14 @@ export function PortfolioDashboard() {
   const colors = useSemanticColors();
   const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
 
-  // State
-  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
-  const [projects, setProjects] = useState<ProjectFinancialSummary[]>([]);
-  const [debtEntries, setDebtEntries] = useState<DebtMaturityEntry[]>([]);
+  // State — ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const cachedPortfolio = portfolioCache.get();
+  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(cachedPortfolio?.portfolio ?? null);
+  const [projects, setProjects] = useState<ProjectFinancialSummary[]>(cachedPortfolio?.projects ?? []);
+  const [debtEntries, setDebtEntries] = useState<DebtMaturityEntry[]>(debtMaturityCache.get() ?? []);
   const [budgetAnalysis, setBudgetAnalysis] = useState<BudgetVarianceAnalysis | null>(null);
   const [selectedBudgetProject, setSelectedBudgetProject] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!portfolioCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   // =========================================================================
@@ -118,6 +124,8 @@ export function PortfolioDashboard() {
       const res = await fetch(API_ROUTES.FINANCIAL_INTELLIGENCE.PORTFOLIO);
       if (!res.ok) throw new Error(`Portfolio fetch failed: ${res.status}`);
       const json = await res.json() as PortfolioApiResponse;
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      portfolioCache.set({ portfolio: json.data.portfolio, projects: json.data.projects });
       setPortfolio(json.data.portfolio);
       setProjects(json.data.projects);
     } catch (err) {
@@ -130,6 +138,8 @@ export function PortfolioDashboard() {
       const res = await fetch(API_ROUTES.FINANCIAL_INTELLIGENCE.DEBT_MATURITY);
       if (!res.ok) return;
       const json = await res.json() as DebtApiResponse;
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      debtMaturityCache.set(json.data.entries);
       setDebtEntries(json.data.entries);
     } catch {
       // Non-critical — debt wall is optional
@@ -149,7 +159,8 @@ export function PortfolioDashboard() {
 
   useEffect(() => {
     async function init() {
-      setLoading(true);
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!portfolioCache.hasLoaded()) setLoading(true);
       await Promise.all([fetchPortfolio(), fetchDebtMaturity()]);
       setLoading(false);
     }

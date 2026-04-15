@@ -20,10 +20,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { FloorFloorplanService, type FloorFloorplanData } from '@/services/floorplans/FloorFloorplanService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createStaleCache } from '@/lib/stale-cache';
 import { RealtimeService } from '@/services/realtime';
 import type { FloorplanCreatedPayload, FloorplanDeletedPayload } from '@/services/realtime';
 
 const logger = createModuleLogger('useFloorFloorplans');
+
+// ADR-300: Module-level cache — keyed by effective floorId or buildingId+floorNumber
+const floorFloorplansCache = createStaleCache<FloorFloorplanData | null>('floor-floorplans');
 
 // ============================================================================
 // TYPES
@@ -82,8 +86,12 @@ interface ResolvedFloor {
 export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFloorplansReturn {
   const { floorId, buildingId, floorNumber, companyId } = params;
 
-  const [floorFloorplan, setFloorFloorplan] = useState<FloorFloorplanData | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const initCacheKey = floorId ?? `${buildingId ?? 'none'}-${floorNumber ?? 'none'}`;
+  const [floorFloorplan, setFloorFloorplan] = useState<FloorFloorplanData | null>(
+    floorFloorplansCache.get(initCacheKey) ?? null
+  );
+  const [loading, setLoading] = useState(!floorFloorplansCache.hasLoaded(initCacheKey));
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -151,8 +159,10 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       return;
     }
 
+    const cacheKey = floorId ?? `${buildingId ?? 'none'}-${floorNumber ?? 'none'}`;
     try {
-      setLoading(true);
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!floorFloorplansCache.hasLoaded(cacheKey)) setLoading(true);
       setError(null);
 
       // Step 1: Resolve floorId + floor's companyId
@@ -188,6 +198,8 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
 
       // 🏢 ADR-292 Phase 4: Enterprise FileRecord path ONLY (legacy fallback eliminated)
       const floorplanData = await loadEnterprise(effectiveFloorId, floorCompanyId);
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      floorFloorplansCache.set(floorplanData, cacheKey);
       setFloorFloorplan(floorplanData);
 
       if (floorplanData) {

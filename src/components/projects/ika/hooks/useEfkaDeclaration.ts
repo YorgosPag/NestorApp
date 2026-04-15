@@ -19,9 +19,13 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EfkaDeclarationData, EfkaDeclarationStatus } from '../contracts';
 import { createDefaultEfkaDeclaration } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 import { updateEfkaDeclarationWithPolicy } from '@/services/ika/ika-mutation-gateway';
 
 const logger = createModuleLogger('useEfkaDeclaration');
+
+// ADR-300: Module-level cache — keyed by projectId, survives re-navigation
+const efkaDeclarationCache = createStaleCache<EfkaDeclarationData | null>('project-efka-declaration');
 
 interface UseEfkaDeclarationReturn {
   declaration: EfkaDeclarationData | null;
@@ -67,8 +71,11 @@ function countCompletedFields(declaration: EfkaDeclarationData | null): number {
 }
 
 export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclarationReturn {
-  const [declaration, setDeclaration] = useState<EfkaDeclarationData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [declaration, setDeclaration] = useState<EfkaDeclarationData | null>(
+    efkaDeclarationCache.get(projectId ?? '') ?? null
+  );
+  const [isLoading, setIsLoading] = useState(!efkaDeclarationCache.hasLoaded(projectId ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -88,7 +95,8 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
       }
 
       try {
-        setIsLoading(true);
+        // ADR-300: Only show spinner on first load — not on re-navigation
+        if (!efkaDeclarationCache.hasLoaded(projectId)) setIsLoading(true);
         setError(null);
 
         const projectRef = doc(db, COLLECTIONS.PROJECTS, projectId);
@@ -104,8 +112,11 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
 
         const projectData = projectSnap.data();
         const efkaData = projectData?.efkaDeclaration as EfkaDeclarationData | undefined;
+        const loaded = efkaData ?? null;
 
-        setDeclaration(efkaData ?? null);
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        efkaDeclarationCache.set(loaded, projectId);
+        setDeclaration(loaded);
       } catch (err) {
         if (mounted) {
           const message = err instanceof Error ? err.message : 'Failed to load EFKA declaration';

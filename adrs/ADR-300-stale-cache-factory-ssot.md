@@ -160,6 +160,15 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/building-management/tabs/BuildingCustomersTab.tsx` | `useState([])` + `setLoading(true)` unconditional | `buildingCustomersCache = createStaleCache<ProjectCustomer[]>('building-customers-tab')` keyed by buildingId | 2026-04-15 |
 | `src/components/building-management/tabs/PropertiesTabContent.tsx` | `useState([])` + `setLoading(true)` unconditional | `buildingPropertiesCache` + `buildingFloorsTabCache` keyed by buildingId | 2026-04-15 |
 | `src/components/building-management/StorageTab/useStorageTabState.ts` | `useState([])` + `setLoading(true)` unconditional | `buildingStorageCache = createStaleCache<StorageUnit[]>('building-storage-tab')` keyed by buildingId | 2026-04-15 |
+| `src/components/projects/ika/hooks/useProjectWorkers.ts` | `useState([])` + `setIsLoading(true)` unconditional | `projectWorkersCache = createStaleCache<ProjectWorker[]>('project-workers')` keyed by projectId | 2026-04-15 |
+| `src/components/projects/ika/hooks/useEmploymentRecords.ts` | `useState([])` + `setIsLoading(true)` unconditional | `employmentRecordsCache = createStaleCache<EmploymentRecord[]>('project-employment-records')` keyed by `${projectId}-${year}-${month}` | 2026-04-15 |
+| `src/components/projects/ika/hooks/useAttendanceEvents.ts` | `useState([])` + `setIsLoading(true)` unconditional | `attendanceEventsCache = createStaleCache<AttendanceEvent[]>('project-attendance-events')` keyed by `${projectId}-${date}` | 2026-04-15 |
+| `src/components/projects/ika/hooks/useEfkaDeclaration.ts` | `useState(null)` + `setIsLoading(true)` unconditional | `efkaDeclarationCache = createStaleCache<EfkaDeclarationData \| null>('project-efka-declaration')` keyed by projectId; stores `null` when no declaration | 2026-04-15 |
+| `src/hooks/useFloorFloorplans.ts` | `useState(null)` + `setLoading(true)` unconditional | `floorFloorplansCache = createStaleCache<FloorFloorplanData \| null>('floor-floorplans')` keyed by `floorId ?? '${buildingId}-${floorNumber}'` | 2026-04-15 |
+| `src/hooks/useEntityAssociations.ts` | `useState([])` + spinner unconditional (both hooks) | `entityContactLinksCache` keyed by `${entityType}-${entityId}-${parentProjectId}`; `contactEntityLinksCache` keyed by contactId | 2026-04-15 |
+| `src/components/admin/role-management/components/UsersTab.tsx` | `useState([])` + `setIsLoading(true)` unconditional | `companyUsersCache = createStaleCache<CompanyUser[]>('admin-users')` single-key | 2026-04-15 |
+| `src/components/admin/pages/AdminSetupPageContent.tsx` | `useState(null)` + `setCheckingConfig(true)` unconditional | `adminConfigCache = createStaleCache<AdminConfig \| null>('admin-setup-config')` single-key; stores `null` when NOT_CONFIGURED | 2026-04-15 |
+| `src/components/sales/financial-intelligence/PortfolioDashboard.tsx` | `useState(null/[])` + `setLoading(true)` unconditional | `portfolioCache` + `debtMaturityCache` single-key; budget variance not cached (user-selection-dependent) | 2026-04-15 |
 
 ---
 
