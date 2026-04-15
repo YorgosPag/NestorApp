@@ -6,11 +6,11 @@ import { useAuth } from '@/auth';
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { LayoutDashboard } from 'lucide-react';
 import { PageLoadingState } from '@/core/states';
+import { createStaleCache } from '@/lib/stale-cache';
 
-// Module-level auth cache (ADR-300 stale-while-revalidate pattern).
+// SSoT stale-while-revalidate cache (ADR-300) — stores auth-known state.
 // DashboardHome is fully static — safe to render optimistically on re-navigation.
-let _authKnown = false;
-let _wasAuthenticated = false;
+const authCache = createStaleCache<boolean>('dashboard-auth');
 
 /**
  * Main Page — ADR-179: Hybrid Navigation Dashboard
@@ -24,8 +24,7 @@ export default function MainPage() {
 
   useEffect(() => {
     if (!loading) {
-      _authKnown = true;
-      _wasAuthenticated = !!user;
+      authCache.set(!!user);
     }
     if (!loading && !user) {
       router.replace('/login');
@@ -33,9 +32,8 @@ export default function MainPage() {
   }, [user, loading, router]);
 
   // First visit: show loading until auth resolves.
-  // Subsequent navigations: if user was authenticated before, render immediately
-  // (stale-while-revalidate — DashboardHome is static, no user data needed).
-  if (loading && !(_authKnown && _wasAuthenticated)) {
+  // Subsequent navigations: cache hit → render immediately (ADR-300).
+  if (loading && !(authCache.hasLoaded() && authCache.get() === true)) {
     return <PageLoadingState icon={LayoutDashboard} message="Φόρτωση..." layout="fullscreen" />;
   }
 
