@@ -38,6 +38,7 @@ import type { StorageType, StorageStatus } from '@/types/storage/contracts';
 import { typeLabels, statusLabels } from '@/types/storage/constants';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
+import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 
 // ============================================================================
 // TYPES
@@ -64,6 +65,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
   const { t } = useTranslation('storage');
   const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { buildings, loading: buildingsLoading } = useFirestoreBuildings();
+  const buildName = useEntityNameSuggestion();
 
   // Form state
   const [buildingId, setBuildingId] = useState('');
@@ -82,24 +84,25 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; buildingId?: string }>({});
   // codeOverridden is managed internally by EntityCodeField
 
-  const NAME_SUGGESTIONS: Partial<Record<StorageType, string>> = {
-    storage: 'Αποθήκη',
-    parking: 'Θέση Στάθμευσης',
-    garage: 'Γκαράζ',
-    warehouse: 'Αποθήκη Αποθεμάτων',
-  };
-
+  // ADR-233: Name = type label + area (τ.μ.) when area > 0
   const handleTypeChange = (v: StorageType) => {
     setType(v);
     if (!nameManuallyChanged) {
-      setName(NAME_SUGGESTIONS[v] ?? 'Αποθήκη');
+      setName(buildName(t(typeLabels[v]), parseFloat(area) || 0));
+    }
+  };
+
+  const handleAreaChange = (value: string) => {
+    setArea(value);
+    if (!nameManuallyChanged) {
+      setName(buildName(t(typeLabels[type]), parseFloat(value) || 0));
     }
   };
 
   const resetForm = () => {
     setBuildingId('');
     setCode('');
-    setName('Αποθήκη');
+    setName(t(typeLabels.storage));
     setNameManuallyChanged(false);
     setType('storage');
     setStatus('available');
@@ -301,7 +304,7 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
                 type="number"
                 step="0.01"
                 value={area}
-                onChange={(e) => setArea(e.target.value)}
+                onChange={(e) => handleAreaChange(e.target.value)}
                 placeholder="25"
                 disabled={creating}
               />

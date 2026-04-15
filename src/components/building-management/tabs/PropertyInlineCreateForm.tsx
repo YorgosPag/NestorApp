@@ -13,7 +13,7 @@
  * @module components/building-management/tabs/PropertyInlineCreateForm
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -33,6 +33,7 @@ import { Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
+import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -71,6 +72,7 @@ export function PropertyInlineCreateForm({
   const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
   const { success, error: notifyError } = useNotifications();
+  const buildName = useEntityNameSuggestion();
 
   // Row 1 fields
   const [name, setName] = useState('');
@@ -90,32 +92,22 @@ export function PropertyInlineCreateForm({
 
   const [creating, setCreating] = useState(false);
 
-  // ── Auto-suggest name based on type + area ──
-  // Tracks whether user manually edited the name field.
-  // If not, name auto-updates when type or areaNet changes.
+  // ── Auto-suggest name based on type + area (ADR-233 SSoT via useEntityNameSuggestion) ──
   const userEditedName = useRef(false);
-
-  const buildSuggestedName = useCallback((unitType: PropertyType, grossArea: number): string => {
-    const typeLabel = UNIT_TYPE_LABEL_KEYS[unitType]
-      ? tUnits(UNIT_TYPE_LABEL_KEYS[unitType])
-      : unitType;
-    if (grossArea > 0) {
-      return `${typeLabel} ${grossArea} ${tUnits('units.sqm')}`;
-    }
-    return typeLabel;
-  }, [tUnits]);
 
   const handleTypeChange = (newType: PropertyType) => {
     setType(newType);
     if (!userEditedName.current) {
-      setName(buildSuggestedName(newType, parseFloat(areaGross) || 0));
+      const typeLabel = UNIT_TYPE_LABEL_KEYS[newType] ? tUnits(UNIT_TYPE_LABEL_KEYS[newType]) : newType;
+      setName(buildName(typeLabel, parseFloat(areaGross) || 0));
     }
   };
 
   const handleAreaGrossChange = (newArea: string) => {
     setAreaGross(newArea);
     if (!userEditedName.current) {
-      setName(buildSuggestedName(type, parseFloat(newArea) || 0));
+      const typeLabel = UNIT_TYPE_LABEL_KEYS[type] ? tUnits(UNIT_TYPE_LABEL_KEYS[type]) : type;
+      setName(buildName(typeLabel, parseFloat(newArea) || 0));
     }
   };
 

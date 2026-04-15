@@ -48,8 +48,10 @@
     "notSet": "Δεν έχει οριστεί",
     "notCalculated": "Δεν υπολογίζεται",
     "fields": {
-      "spotCode": "Κωδικός Θέσης",
-      "code": "Κωδικός Θέσης (ADR-233)",
+      "spotCode": "Όνομα Θέσης",
+      "spotName": "Όνομα Θέσης",
+      "spotNamePlaceholder": "π.χ. Θέση Α1",
+      "code": "Κωδικός",
       "type": "Τύπος",
       "status": "Κατάσταση",
       "area": "Επιφάνεια",

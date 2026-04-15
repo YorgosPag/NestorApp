@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
@@ -47,6 +47,7 @@ import type {
 } from '@/types/parking';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
+import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 
 // ============================================================================
 // TYPES
@@ -69,6 +70,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { t: tParking } = useTranslation('parking');
   const { buildings, loading: buildingsLoading } = useFirestoreBuildings();
+  const buildName = useEntityNameSuggestion();
 
   // Form state
   const [buildingId, setBuildingId] = useState('');
@@ -86,10 +88,30 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   const [error, setError] = useState<string | null>(null);
   // codeOverridden is managed internally by EntityCodeField
 
+  // ADR-233: Name = type label + area (τ.μ.) — tracks whether user manually edited the name
+  const nameManuallyChanged = useRef(false);
+
+  // ADR-233: Type change → update name suggestion
+  const handleTypeChange = (v: ParkingSpotType) => {
+    setType(v);
+    if (!nameManuallyChanged.current) {
+      setNumber(buildName(tParking(`types.${v}`), parseFloat(area) || 0));
+    }
+  };
+
+  // ADR-233: Area change → update name suggestion
+  const handleAreaChange = (value: string) => {
+    setArea(value);
+    if (!nameManuallyChanged.current) {
+      setNumber(buildName(tParking(`types.${type}`), parseFloat(value) || 0));
+    }
+  };
+
   const resetForm = () => {
     setBuildingId('');
     setCode('');
     setNumber('');
+    nameManuallyChanged.current = false;
     setType('standard');
     setStatus('available');
     setLocationZone('');
@@ -222,16 +244,16 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
             t={tParking}
           />
 
-          {/* Number + Type */}
+          {/* Name + Type */}
           <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
-                {t('pages.parking.form.number')} *
+                {tParking('general.fields.spotName')} *
               </span>
               <Input
                 value={number}
-                onChange={(e) => setNumber(e.target.value)}
-                placeholder="P-001"
+                onChange={(e) => { setNumber(e.target.value); nameManuallyChanged.current = true; }}
+                placeholder={tParking('general.fields.spotNamePlaceholder')}
                 disabled={creating}
                 autoFocus
               />
@@ -240,7 +262,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
               <span className="text-sm font-medium">
                 {t('pages.parking.form.type')}
               </span>
-              <Select value={type} onValueChange={(v) => setType(v as ParkingSpotType)} disabled={creating}>
+              <Select value={type} onValueChange={(v) => handleTypeChange(v as ParkingSpotType)} disabled={creating}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -318,7 +340,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
                 type="number"
                 step="0.01"
                 value={area}
-                onChange={(e) => setArea(e.target.value)}
+                onChange={(e) => handleAreaChange(e.target.value)}
                 placeholder="12"
                 disabled={creating}
               />

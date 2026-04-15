@@ -48,8 +48,10 @@
     "notSet": "Not set",
     "notCalculated": "Not calculated",
     "fields": {
-      "spotCode": "Spot Code",
-      "code": "Spot Code (ADR-233)",
+      "spotCode": "Parking Spot Name",
+      "spotName": "Parking Spot Name",
+      "spotNamePlaceholder": "e.g. Spot A1",
+      "code": "Code",
       "type": "Type",
       "status": "Status",
       "area": "Area",

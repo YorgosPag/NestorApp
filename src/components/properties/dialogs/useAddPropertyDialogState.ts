@@ -16,6 +16,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { usePropertyForm, isStandaloneUnitType } from '../hooks/usePropertyForm';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
+import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 import { getProjectsList, type ProjectListItem } from '@/components/building-management/building-services';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyType, OperationalStatus, CommercialStatus } from '@/types/property';
@@ -87,6 +88,7 @@ export function useAddPropertyDialogState({
   // Form state management
   const form = usePropertyForm({ onPropertyAdded, onOpenChange });
   const { formData, errors, handleSelectChange, handleNumberChange, handleLevelsChange, resetForm } = form;
+  const buildName = useEntityNameSuggestion();
 
   // ADR-284: Projects list for Project selector (required for both families)
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
@@ -233,13 +235,13 @@ export function useAddPropertyDialogState({
     handleLevelsChange([]);
   };
 
-  // Derived: suggested name for the currently selected type.
+  // ADR-233: Suggested name = type label + area (τ.μ.) when area > 0.
   const suggestedName = isPropertyType(formData.type)
-    ? PROPERTY_TYPE_LABELS_EL[formData.type]
+    ? buildName(PROPERTY_TYPE_LABELS_EL[formData.type], formData.area)
     : '';
 
   // ADR-284: Type change handler — when switching to standalone, clear building/floor.
-  // Auto-fills name if user hasn't manually edited it (nameOverridden = false).
+  // Auto-fills name (type + area) if user hasn't manually edited it (nameOverridden = false).
   const handleTypeChange = (value: string) => {
     handleSelectChange('type', value);
     if (isStandaloneUnitType(value as PropertyType | '')) {
@@ -249,7 +251,15 @@ export function useAddPropertyDialogState({
       handleLevelsChange([]);
     }
     if (!nameOverridden && isPropertyType(value)) {
-      handleSelectChange('name', PROPERTY_TYPE_LABELS_EL[value]);
+      handleSelectChange('name', buildName(PROPERTY_TYPE_LABELS_EL[value], formData.area));
+    }
+  };
+
+  // ADR-233: Area change handler — propagates to name suggestion if not overridden.
+  const handleAreaChange = (value: string) => {
+    handleNumberChange('area', value);
+    if (!nameOverridden && isPropertyType(formData.type)) {
+      handleSelectChange('name', buildName(PROPERTY_TYPE_LABELS_EL[formData.type], parseFloat(value) || 0));
     }
   };
 
@@ -285,6 +295,7 @@ export function useAddPropertyDialogState({
     setActiveTab,
     handleBuildingChange,
     handleFloorSelection,
+    handleAreaChange,
     // ADR-284
     projects,
     projectsLoading,

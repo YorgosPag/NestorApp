@@ -86,7 +86,7 @@ export function AddPropertyDialog({
     latestSuggestion, setLatestSuggestion,
     isMultiLevelType,
     activeTab, setActiveTab,
-    handleBuildingChange, handleFloorSelection,
+    handleBuildingChange, handleFloorSelection, handleAreaChange,
     projects, projectsLoading, reloadProjects, isStandalone, handleTypeChange,
     filteredBuildings, emptyStates,
     showAddProjectDialog, setShowAddProjectDialog,
@@ -378,7 +378,7 @@ export function AddPropertyDialog({
                 <FormField label={t('dialog.addUnit.fields.area')} htmlFor="area">
                   <FormInput>
                     <Input id="area" name="area" type="number" value={formData.area}
-                      onChange={(e) => handleNumberChange('area', e.target.value)}
+                      onChange={(e) => handleAreaChange(e.target.value)}
                       placeholder={t('dialog.addUnit.placeholders.area')} disabled={loading}
                       className={errors.area ? 'border-destructive' : ''} />
                     {errors.area && <p className="text-xs text-destructive mt-1">{errors.area}</p>}
