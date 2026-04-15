@@ -114,13 +114,15 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 
 ---
 
-## 6. Migrated Files (2026-04-15)
+## 6. Migrated Files
 
-| File | Before | After |
-|------|--------|-------|
-| `src/hooks/useFirestoreStorages.ts` | `_storagesCache: Record<string, Storage[]>` | `storagesCache = createStaleCache<Storage[]>('storages')` |
-| `src/hooks/useFirestoreParkingSpots.ts` | `_parkingCache: Record<string, ParkingFetchResult>` | `parkingCache = createStaleCache<ParkingFetchResult>('parking')` |
-| `src/components/contacts/page/useContactsPageState.ts` | `_contactsCache + _initialLoadDone` | `contactsCache = createStaleCache<Contact[]>('contacts')` |
+| File | Before | After | Date |
+|------|--------|-------|------|
+| `src/hooks/useFirestoreStorages.ts` | `_storagesCache: Record<string, Storage[]>` | `storagesCache = createStaleCache<Storage[]>('storages')` | 2026-04-15 |
+| `src/hooks/useFirestoreParkingSpots.ts` | `_parkingCache: Record<string, ParkingFetchResult>` | `parkingCache = createStaleCache<ParkingFetchResult>('parking')` | 2026-04-15 |
+| `src/components/contacts/page/useContactsPageState.ts` | `_contactsCache + _initialLoadDone` | `contactsCache = createStaleCache<Contact[]>('contacts')` | 2026-04-15 |
+| `src/app/page.tsx` | `useState(false)` + `hasInitializedRef` | `dashboardAuthCache = createStaleCache<boolean>('dashboard-auth')` | 2026-04-15 |
+| `src/hooks/useFirestoreProjects.ts` | `useState([])` + `loading: true` + `hasLoadedOnceRef(false)` | `projectsCache = createStaleCache<FirestoreProject[]>('projects')` | 2026-04-15 |
 
 ---
 

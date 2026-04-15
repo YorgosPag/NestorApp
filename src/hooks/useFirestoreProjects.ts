@@ -8,6 +8,8 @@ import type { ProjectSummary } from '@/types/project';
 import { createModuleLogger } from '@/lib/telemetry';
 import { applyUpdates } from '@/lib/utils';
 import { API_ROUTES } from '@/config/domain-constants';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useFirestoreProjects');
 
@@ -24,6 +26,9 @@ const logger = createModuleLogger('useFirestoreProjects');
 
 // 🏢 SSoT: Re-export for backward compatibility — consumers that import FirestoreProject
 export type FirestoreProject = ProjectSummary;
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const projectsCache = createStaleCache<FirestoreProject[]>('projects');
 
 // ============================================================================
 // API RESPONSE TYPE - UNWRAPPED DATA
@@ -50,13 +55,14 @@ export function useFirestoreProjects() {
   // 🔐 ENTERPRISE: Wait for auth state before making API calls
   const { user, loading: authLoading } = useAuth();
 
-  const [projects, setProjects] = useState<FirestoreProject[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [projects, setProjects] = useState<FirestoreProject[]>(projectsCache.get() ?? []);
+  const [loading, setLoading] = useState(!projectsCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
   // 🏢 ENTERPRISE: Trigger for manual refetch
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   // 🏢 ENTERPRISE: Track initial load vs refetch — only show loading spinner on first load
-  const hasLoadedOnceRef = useRef(false);
+  const hasLoadedOnceRef = useRef(projectsCache.hasLoaded());
 
   // 🏢 ENTERPRISE: AbortController ref για proper cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -155,6 +161,8 @@ export function useFirestoreProjects() {
 
         logger.info('Loaded projects', { count: result.count, source: result.source });
 
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        projectsCache.set(result.projects);
         setProjects(result.projects);
         hasLoadedOnceRef.current = true;
 
