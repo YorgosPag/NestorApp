@@ -25,6 +25,7 @@ import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatCurrency, formatFloorString } from '@/lib/intl-utils';
+import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -192,14 +193,14 @@ export function ParkingListCard({
   // 🏢 RENDER
   // ==========================================================================
 
-  // Title supports both schemas: code (types/parking) OR number (hooks)
-  const title = parking.code || parking.number || parking.id;
+  // ADR-233: number = human title (e.g. "Θέση 1"), code = system identifier in subtitle
+  const title = parking.number || parking.code || parking.id;
 
   return (
     <ListCard
       entityType="parking"
       title={title}
-      subtitle={typeLabel}
+      subtitle={buildCardSubtitle(typeLabel, parking.code)}
       badges={badges}
       stats={stats}
       isSelected={isSelected}

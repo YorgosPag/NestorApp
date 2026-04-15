@@ -26,6 +26,7 @@ import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatCurrency, formatFloorString } from '@/lib/intl-utils';
+import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 
 // 🏢 ENTERPRISE: i18n support (using custom hook with lazy loading)
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -211,14 +212,14 @@ export function ParkingGridCard({
   // 🏢 RENDER
   // ==========================================================================
 
-  // Title supports both schemas: code (types/parking) OR number (hooks)
-  const title = parking.code || parking.number || parking.id;
+  // ADR-233: number = human title (e.g. "Θέση 1"), code = system identifier in subtitle
+  const title = parking.number || parking.code || parking.id;
 
   return (
     <GridCard
       entityType="parking"
       title={title}
-      subtitle={typeLabel}
+      subtitle={buildCardSubtitle(typeLabel, parking.code)}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
