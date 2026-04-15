@@ -94,10 +94,12 @@ export async function updateBuilding(
     if (ApiClientError.isApiClientError(error) && error.statusCode === 409) {
       throw error;
     }
-    logger.error('updateBuilding failed', { error });
+    const msg = error instanceof Error ? error.message : String(error);
+    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
+    logger.error(`updateBuilding failed: ${msg}`, { statusCode });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: msg,
     };
   }
 }
@@ -167,11 +169,14 @@ export async function createBuilding(
     return { success: true, buildingId };
 
   } catch (error) {
-    logger.error('createBuilding failed', { error });
+    const msg = error instanceof Error ? error.message : String(error);
+    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
+    const errorCode = ApiClientError.isApiClientError(error) ? error.errorCode : undefined;
+    logger.error(`createBuilding failed: ${msg}`, { statusCode, errorCode });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      errorCode: ApiClientError.isApiClientError(error) ? error.errorCode : undefined,
+      error: msg,
+      errorCode,
     };
   }
 }
@@ -330,7 +335,7 @@ export async function getBuildingCodesByProject(projectId: string): Promise<stri
       .map((building) => (building.code || '').trim())
       .filter((code) => code.length > 0);
   } catch (error) {
-    logger.error('getBuildingCodesByProject failed', { error, projectId });
+    logger.error(`getBuildingCodesByProject failed: ${error instanceof Error ? error.message : String(error)}`, { projectId });
     return [];
   }
 }

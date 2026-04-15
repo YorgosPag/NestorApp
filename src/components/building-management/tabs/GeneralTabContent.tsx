@@ -26,7 +26,7 @@ import { useAutoSave } from '@/hooks/useAutoSave';
 import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
 // 🏢 SPEC-256A: Optimistic versioning — silent last-write-wins
 import { useVersionedSave } from '@/hooks/useVersionedSave';
-import { createBuildingWithPolicy, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
+import { createBuildingWithCodeRetry, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
 import '@/lib/design-system';
 
@@ -319,28 +319,29 @@ export function GeneralTabContent({
 
       if (isCreateMode) {
         const projectPayload = projectLink.getPayload();
+        const projectIdForCode = String(projectPayload.projectId ?? '');
+
         // ADR-233 §3.4 / ADR-290: prefer the reactively-suggested code already
         // shown in the UI (formData.code). Re-fetch only as a safety net — e.g.
         // if the user opened the form without selecting a project, then picks
         // one and immediately clicks Save before the preview effect resolves.
         let nextCode = formData.code?.trim() ?? '';
         if (!nextCode) {
-          const projectIdForCode = String(projectPayload.projectId ?? '');
           const existingCodes = projectIdForCode
             ? await getBuildingCodesByProject(projectIdForCode)
             : [];
           nextCode = suggestNextBuildingCode(existingCodes);
         }
         logger.info('Creating new building in Firestore', { formData, projectId: projectPayload.projectId ?? null, code: nextCode });
-        const result = await createBuildingWithPolicy({
-          payload: {
-            ...payload,
-            code: nextCode,
-            companyId: resolvedCompanyId,
-            status: 'planning',
-            // ADR-200: Include projectId from centralized hook
-            ...projectPayload,
-          },
+        // ADR-233 §3.4: createBuildingWithCodeRetry handles POLICY_DUPLICATE_CODE
+        // automatically (re-fetch fresh codes + retry once) — Google Docs pattern.
+        const result = await createBuildingWithCodeRetry({
+          ...payload,
+          code: nextCode,
+          companyId: resolvedCompanyId,
+          status: 'planning',
+          // ADR-200: Include projectId from centralized hook
+          ...projectPayload,
         });
 
         if (!result.success || !result.buildingId) {
