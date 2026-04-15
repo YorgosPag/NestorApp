@@ -42,6 +42,7 @@ import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 
 const logger = createModuleLogger('StorageGeneralTab');
 
@@ -61,6 +62,8 @@ export function StorageGeneralTab({
   const colors = useSemanticColors();
   const typography = useTypography();
   const { t } = useTranslation('storage');
+  const buildName = useEntityNameSuggestion();
+  const nameManuallyChanged = useRef(false);
 
   // 🏢 SPEC-256A Phase 2: track _v for optimistic concurrency, but any 409 is
   // resolved via silent last-write-wins retry below — never a dialog.
@@ -79,12 +82,47 @@ export function StorageGeneralTab({
     if (createMode) setCreateError(null);
   }, [storage.id]);
 
+  // ADR-233: Seed initial name in createMode — runs once on mount
+  useEffect(() => {
+    if (!createMode) return;
+    nameManuallyChanged.current = false;
+    const defaultType = STORAGE_TYPES.find(st => st.value === 'storage') ?? STORAGE_TYPES[0];
+    setForm(prev => ({ ...prev, name: buildName(t(defaultType.labelKey), 0) }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentional — seed once on mount
+
   // Building link callbacks
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 
   const updateField = <K extends keyof StorageFormState>(key: K, value: StorageFormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
+
+  // ADR-233: Name suggestion handlers for createMode
+  const handleNameChange = useCallback((value: string) => {
+    nameManuallyChanged.current = true;
+    setForm(prev => ({ ...prev, name: value }));
+  }, []);
+
+  const handleTypeChange = useCallback((v: StorageType) => {
+    if (createMode && !nameManuallyChanged.current) {
+      const typeLabelKey = STORAGE_TYPES.find(st => st.value === v)?.labelKey ?? 'general.types.storage';
+      setForm(prev => ({ ...prev, type: v, name: buildName(t(typeLabelKey), parseFloat(prev.area) || 0) }));
+    } else {
+      updateField('type', v);
+    }
+  }, [buildName, t, createMode]);
+
+  const handleAreaChange = useCallback((value: string) => {
+    if (createMode && !nameManuallyChanged.current) {
+      setForm(prev => {
+        const typeLabelKey = STORAGE_TYPES.find(st => st.value === prev.type)?.labelKey ?? 'general.types.storage';
+        return { ...prev, area: value, name: buildName(t(typeLabelKey), parseFloat(value) || 0) };
+      });
+    } else {
+      updateField('area', value);
+    }
+  }, [buildName, t, createMode]);
 
   // ADR-200: Centralized entity linking via useEntityLink
   const buildingLink = useEntityLink({
@@ -312,7 +350,7 @@ export function StorageGeneralTab({
               <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.name')}</Label>
               <Input
                 value={form.name}
-                onChange={(e) => updateField('name', e.target.value)}
+                onChange={(e) => createMode ? handleNameChange(e.target.value) : updateField('name', e.target.value)}
                 className="h-8 text-sm"
                 disabled={!isEditing}
               />
@@ -321,7 +359,7 @@ export function StorageGeneralTab({
               <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.type')}</Label>
               <Select
                 value={form.type}
-                onValueChange={(v) => updateField('type', v as StorageType)}
+                onValueChange={(v) => createMode ? handleTypeChange(v as StorageType) : updateField('type', v as StorageType)}
                 disabled={!isEditing}
               >
                 <SelectTrigger className="h-8 text-sm">
@@ -361,7 +399,7 @@ export function StorageGeneralTab({
                 type="number"
                 step="0.01"
                 value={form.area}
-                onChange={(e) => updateField('area', e.target.value)}
+                onChange={(e) => createMode ? handleAreaChange(e.target.value) : updateField('area', e.target.value)}
                 placeholder="m²"
                 className="h-8 text-sm"
                 disabled={!isEditing}
