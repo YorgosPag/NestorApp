@@ -75,7 +75,8 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   // Form state
   const [buildingId, setBuildingId] = useState('');
   const [code, setCode] = useState('');
-  const [number, setNumber] = useState('');
+  // Initialize with default type label — same pattern as AddStorageDialog
+  const [number, setNumber] = useState(() => tParking('types.standard'));
   const [type, setType] = useState<ParkingSpotType>('standard');
   const [status, setStatus] = useState<ParkingSpotStatus>('available');
   const [locationZone, setLocationZone] = useState<ParkingLocationZone | ''>('');
@@ -110,7 +111,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   const resetForm = () => {
     setBuildingId('');
     setCode('');
-    setNumber('');
+    setNumber(tParking('types.standard'));
     nameManuallyChanged.current = false;
     setType('standard');
     setStatus('available');
