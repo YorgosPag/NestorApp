@@ -25,6 +25,10 @@ import { PO_STATUS_META } from '@/types/procurement';
 import type { PurchaseOrder } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PurchaseOrderActions } from './PurchaseOrderActions';
+import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
+import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
+import { useContactById } from '@/hooks/useContactById';
+import { getContactDisplayName } from '@/types/contacts/helpers';
 
 const ActivityTab = lazy(() =>
   import('@/components/shared/audit/ActivityTab').then((m) => ({ default: m.ActivityTab }))
@@ -62,6 +66,20 @@ export function PurchaseOrderDetail({
   onCancel, onEdit, onDuplicate, onExportPDF: _onExportPDF, onCopyText,
 }: PurchaseOrderDetailProps) {
   const { t } = useTranslation('procurement');
+
+  // Resolve IDs → display names
+  const { projects } = useFirestoreProjects();
+  const { buildings } = useFirestoreBuildings();
+  const supplierContact = useContactById(po.supplierId);
+
+  const projectName = projects.find((p) => p.id === po.projectId)?.name ?? po.projectId;
+  const supplierName = supplierContact
+    ? getContactDisplayName(supplierContact)
+    : po.supplierId;
+  const buildingName = po.buildingId
+    ? (buildings.find((b) => b.id === po.buildingId)?.name ?? po.buildingId)
+    : null;
+
   const statusMeta = PO_STATUS_META[po.status];
   const sem = STATUS_SEMANTIC[statusMeta.color] ?? 'pending';
   const showDelivery = ['ordered', 'partially_delivered', 'delivered'].includes(po.status);
@@ -85,12 +103,18 @@ export function PurchaseOrderDetail({
           <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <dt className="text-muted-foreground">{t('detail.supplier')}</dt>
-              <dd className="font-medium">{po.supplierId}</dd>
+              <dd className="font-medium">{supplierName}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t('detail.project')}</dt>
-              <dd className="font-medium">{po.projectId}</dd>
+              <dd className="font-medium">{projectName}</dd>
             </div>
+            {buildingName && (
+              <div>
+                <dt className="text-muted-foreground">{t('form.building')}</dt>
+                <dd className="font-medium">{buildingName}</dd>
+              </div>
+            )}
             <div>
               <dt className="text-muted-foreground">{t('detail.dateCreated')}</dt>
               <dd className="font-medium">{formatDate(po.dateCreated)}</dd>
