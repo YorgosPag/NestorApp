@@ -72,6 +72,11 @@ export const GET = withStandardRateLimit(
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
     const queryCompanyId = searchParams.get('companyId');
+    // ADR-233 §3.4: codesOnly=true → return ALL buildings (incl. soft-deleted)
+    // with only {id, code} fields so the client can skip reserved codes when
+    // suggesting the next building code. Codes are permanent identifiers —
+    // they must not be reissued even after a building is moved to trash.
+    const codesOnly = searchParams.get('codesOnly') === 'true';
 
     // 🏢 ENTERPRISE: Super admin can access any company's buildings
     const isSuperAdmin = isRoleBypass(ctx.globalRole);
@@ -111,6 +116,21 @@ export const GET = withStandardRateLimit(
       const queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
         .where(FIELDS.COMPANY_ID, '==', tenantCompanyId);
       snapshot = await queryRef.get();
+    }
+
+    // ADR-233 §3.4: codesOnly mode — return all buildings (incl. deleted) with
+    // minimal fields so the client can compute the next available code without
+    // exposing full deleted-building data or polluting the normal list view.
+    if (codesOnly) {
+      const codes = snapshot.docs.map(doc => ({
+        id: doc.id,
+        code: (doc.data().code as string | undefined) ?? '',
+      }));
+      logger.info('[Buildings] codesOnly query', { count: codes.length, projectId: projectId || undefined });
+      return apiSuccess<BuildingsResponseData>(
+        { buildings: codes as BuildingDocument[], count: codes.length, projectId: projectId || undefined },
+        `Loaded ${codes.length} building codes`
+      );
     }
 
     // 🏢 ENTERPRISE: Ensure Firestore document ID is preserved

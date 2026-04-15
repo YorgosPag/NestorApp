@@ -318,6 +318,9 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
  * Used by GeneralTabContent (inline create mode) to auto-suggest the next
  * sequential code ("Κτήριο Α", "Κτήριο Β", ...) when the user picks a project.
  *
+ * Uses ?codesOnly=true to include soft-deleted buildings — codes are permanent
+ * identifiers and must not be reissued even after a building is trashed.
+ *
  * @param projectId - Parent project ID
  * @returns Array of codes (omits buildings without a `code` field)
  */
@@ -328,7 +331,7 @@ export async function getBuildingCodesByProject(projectId: string): Promise<stri
       count: number;
     }
     const result = await apiClient.get<BuildingsListResponse>(
-      `${API_ROUTES.BUILDINGS.LIST}?projectId=${encodeURIComponent(projectId)}`
+      `${API_ROUTES.BUILDINGS.LIST}?projectId=${encodeURIComponent(projectId)}&codesOnly=true`
     );
     if (!result?.buildings) return [];
     return result.buildings
