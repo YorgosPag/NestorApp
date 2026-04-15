@@ -26,6 +26,9 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building } from '@/types/building/contracts';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const buildingStorageTabContentCache = createStaleCache<Storage[]>('building-storage-tab-content');
 
 // ============================================================================
 // TYPES
@@ -63,9 +66,13 @@ export function StorageTab({ building }: StorageTabProps) {
   const colors = useSemanticColors();
   const { confirm, dialogProps } = useConfirmDialog();
 
+  const cacheKey = building.id;
+
   // Data state
-  const [storages, setStorages] = useState<Storage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [storages, setStorages] = useState<Storage[]>(
+    buildingStorageTabContentCache.get(cacheKey) ?? []
+  );
+  const [loading, setLoading] = useState(!buildingStorageTabContentCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
 
   // Inline create state
@@ -92,13 +99,14 @@ export function StorageTab({ building }: StorageTabProps) {
   // ============================================================================
 
   const fetchStorages = useCallback(async () => {
-    setLoading(true);
+    if (!buildingStorageTabContentCache.hasLoaded(cacheKey)) setLoading(true);
     setError(null);
     try {
       const result = await apiClient.get<StoragesApiResponse>(
         `${API_ROUTES.STORAGES.LIST}?buildingId=${building.id}`
       );
       if (result?.storages) {
+        buildingStorageTabContentCache.set(result.storages, cacheKey);
         setStorages(result.storages);
       }
     } catch (err) {
@@ -106,7 +114,7 @@ export function StorageTab({ building }: StorageTabProps) {
     } finally {
       setLoading(false);
     }
-  }, [building.id]);
+  }, [building.id, cacheKey]);
 
   useEffect(() => {
     fetchStorages();

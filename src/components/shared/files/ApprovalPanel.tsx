@@ -40,6 +40,9 @@ import {
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import '@/lib/design-system';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const fileApprovalCache = createStaleCache<FileApproval[]>('file-approval');
 
 // ============================================================================
 // TYPES
@@ -88,8 +91,8 @@ export function ApprovalPanel({
     cancelled: { ...STATUS_ICON_CONFIG.cancelled, label: t('approvals.status.cancelled') },
   }), [t]);
 
-  const [approvals, setApprovals] = useState<FileApproval[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [approvals, setApprovals] = useState<FileApproval[]>(fileApprovalCache.get(fileId) ?? []);
+  const [loading, setLoading] = useState(!fileApprovalCache.hasLoaded(fileId));
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -104,8 +107,9 @@ export function ApprovalPanel({
 
   // Real-time subscription
   useEffect(() => {
-    setLoading(true);
+    if (!fileApprovalCache.hasLoaded(fileId)) setLoading(true);
     const unsub = FileApprovalService.subscribeToApprovals(fileId, companyId, (data) => {
+      fileApprovalCache.set(data, fileId);
       setApprovals(data);
       setLoading(false);
     });

@@ -54,6 +54,9 @@ import {
   type FileAuditAction,
 } from '@/services/file-audit.service';
 import '@/lib/design-system';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const fileAuditLogCache = createStaleCache<FileAuditRecord[]>('file-audit-log');
 
 // ============================================================================
 // ACTION ICON MAP
@@ -144,19 +147,20 @@ export function AuditLogPanel({ fileId, companyId, className }: AuditLogPanelPro
   const { quick } = useBorderTokens();
   const iconSizes = useIconSizes();
 
-  const [entries, setEntries] = useState<FileAuditRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState<FileAuditRecord[]>(fileAuditLogCache.get(fileId) ?? []);
+  const [loading, setLoading] = useState(!fileAuditLogCache.hasLoaded(fileId));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      setLoading(true);
+      if (!fileAuditLogCache.hasLoaded(fileId)) setLoading(true);
       setError(null);
       try {
         const history = await FileAuditService.getFileHistory(fileId, companyId, 30);
         if (!cancelled) {
+          fileAuditLogCache.set(history, fileId);
           setEntries(history);
         }
       } catch (err) {

@@ -6,8 +6,10 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { RealtimeService } from '@/services/realtime';
 import type { FloorplanCreatedPayload, FloorplanDeletedPayload } from '@/services/realtime';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('usePropertyFloorplans');
+const propertyFloorplansCache = createStaleCache<PropertyFloorplanData | null>('property-floorplans');
 
 interface UsePropertyFloorplansReturn {
   propertyFloorplan: PropertyFloorplanData | null;
@@ -22,20 +24,23 @@ interface UsePropertyFloorplansReturn {
  * @param companyId - Company ID (REQUIRED for FileRecord lookup)
  */
 export function usePropertyFloorplans(propertyId: string | number, companyId: string): UsePropertyFloorplansReturn {
-  const [propertyFloorplan, setPropertyFloorplan] = useState<PropertyFloorplanData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const propertyIdStr = propertyId.toString();
+  const cacheKey = `${propertyIdStr}-${companyId}`;
+  const [propertyFloorplan, setPropertyFloorplan] = useState<PropertyFloorplanData | null>(
+    propertyFloorplansCache.get(cacheKey) ?? null
+  );
+  const [loading, setLoading] = useState(!propertyFloorplansCache.hasLoaded(cacheKey));
+  const [error, setError] = useState<string | null>(null);
 
   const fetchFloorplans = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!propertyFloorplansCache.hasLoaded(cacheKey)) setLoading(true);
       setError(null);
 
       logger.info('Fetching property floorplan', { propertyId: propertyIdStr, companyId });
 
       const data = await PropertyFloorplanService.loadFloorplan({ companyId, propertyId: propertyIdStr });
+      propertyFloorplansCache.set(data, cacheKey);
       setPropertyFloorplan(data);
 
       logger.info('Property floorplan loaded', { hasPropertyFloorplan: !!data });
@@ -47,7 +52,7 @@ export function usePropertyFloorplans(propertyId: string | number, companyId: st
     } finally {
       setLoading(false);
     }
-  }, [propertyIdStr, companyId]);
+  }, [propertyIdStr, companyId, cacheKey]);
 
   useEffect(() => {
     if (propertyIdStr && propertyIdStr !== '0' && propertyIdStr !== 'undefined' && companyId) {

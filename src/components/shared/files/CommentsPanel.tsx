@@ -32,6 +32,7 @@ import {
   FileCommentService,
   type FileComment,
 } from '@/services/file-comment.service';
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   addFileCommentWithPolicy,
   deleteFileCommentWithPolicy,
@@ -40,6 +41,8 @@ import {
 } from '@/services/filesystem/file-mutation-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
+
+const fileCommentsCache = createStaleCache<FileComment[]>('file-comments');
 
 // ============================================================================
 // TYPES
@@ -219,8 +222,8 @@ export function CommentsPanel({
 }: CommentsPanelProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
-  const [comments, setComments] = useState<FileComment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [comments, setComments] = useState<FileComment[]>(fileCommentsCache.get(fileId) ?? []);
+  const [loading, setLoading] = useState(!fileCommentsCache.hasLoaded(fileId));
   const [newText, setNewText] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<FileComment | null>(null);
@@ -228,8 +231,9 @@ export function CommentsPanel({
 
   // Real-time subscription (companyId required for Firestore rules)
   useEffect(() => {
-    setLoading(true);
+    if (!fileCommentsCache.hasLoaded(fileId)) setLoading(true);
     const unsub = FileCommentService.subscribeToComments(fileId, companyId, (data) => {
+      fileCommentsCache.set(data, fileId);
       setComments(data);
       setLoading(false);
     });

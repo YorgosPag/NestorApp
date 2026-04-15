@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FileFolderService, type FileFolder } from '@/services/file-folder.service';
+import { createStaleCache } from '@/lib/stale-cache';
 import {
   createFileFolderWithPolicy,
   deleteFileFolderWithPolicy,
@@ -33,6 +34,8 @@ import {
 } from '@/services/filesystem/file-mutation-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { getStatusColor } from '@/lib/design-system';
+
+const fileFoldersCache = createStaleCache<FileFolder[]>('file-folders');
 
 // 🏢 ENTERPRISE: Extracted sub-component + helpers
 import { FolderTreeItem, buildFolderTree } from './folder-tree-item';
@@ -68,8 +71,8 @@ export function FolderManager({
 }: FolderManagerProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
-  const [folders, setFolders] = useState<FileFolder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [folders, setFolders] = useState<FileFolder[]>(fileFoldersCache.get(companyId) ?? []);
+  const [loading, setLoading] = useState(!fileFoldersCache.hasLoaded(companyId));
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(externalSelectedId ?? null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -79,9 +82,10 @@ export function FolderManager({
 
   const fetchFolders = useCallback(async () => {
     if (!companyId) return;
-    setLoading(true);
+    if (!fileFoldersCache.hasLoaded(companyId)) setLoading(true);
     try {
       const data = await FileFolderService.getFolders(companyId);
+      fileFoldersCache.set(data, companyId);
       setFolders(data);
     } finally {
       setLoading(false);

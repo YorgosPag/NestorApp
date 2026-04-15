@@ -23,6 +23,9 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { Building2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const projectTimelineCache = createStaleCache<ProjectBuilding[]>('project-timeline');
 
 /** 🏢 ENTERPRISE: Building data from API */
 interface ProjectBuilding {
@@ -52,8 +55,11 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
 
-  const [buildings, setBuildings] = useState<ProjectBuilding[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = String(project.id);
+  const [buildings, setBuildings] = useState<ProjectBuilding[]>(
+    projectTimelineCache.get(cacheKey) ?? []
+  );
+  const [loading, setLoading] = useState(!projectTimelineCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
 
   // 🏢 ENTERPRISE: Fetch real buildings for this project
@@ -62,7 +68,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
 
     async function fetchBuildings() {
       try {
-        setLoading(true);
+        if (!projectTimelineCache.hasLoaded(cacheKey)) setLoading(true);
         setError(null);
 
         const result = await apiClient.get<BuildingsApiResponse>(
@@ -79,6 +85,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
           status: (b.status as BuildingStatus) || 'planning',
         }));
 
+        projectTimelineCache.set(mapped, cacheKey);
         setBuildings(mapped);
       } catch (err) {
         if (!cancelled) {
@@ -91,7 +98,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
 
     fetchBuildings();
     return () => { cancelled = true; };
-  }, [project.id]);
+  }, [project.id, cacheKey]);
 
   // 🏢 ENTERPRISE: Calculate aggregated progress from real buildings
   const aggregatedProgress = buildings.length > 0

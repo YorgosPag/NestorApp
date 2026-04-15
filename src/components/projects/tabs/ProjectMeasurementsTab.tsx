@@ -39,8 +39,15 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatCurrency as formatCurrencyIntl } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('ProjectMeasurementsTab');
+
+interface ProjectMeasurementsCached {
+  buildings: BuildingInfo[];
+  allItems: BOQItem[];
+}
+const projectMeasurementsCache = createStaleCache<ProjectMeasurementsCached>('project-measurements');
 
 // =============================================================================
 // TYPES
@@ -81,9 +88,11 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   const colors = useSemanticColors();
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
-  const [buildings, setBuildings] = useState<BuildingInfo[]>([]);
-  const [allItems, setAllItems] = useState<BOQItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = project.id ?? '';
+  const cachedMeasurements = projectMeasurementsCache.get(cacheKey);
+  const [buildings, setBuildings] = useState<BuildingInfo[]>(cachedMeasurements?.buildings ?? []);
+  const [allItems, setAllItems] = useState<BOQItem[]>(cachedMeasurements?.allItems ?? []);
+  const [loading, setLoading] = useState(!projectMeasurementsCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
   const [expandedBuildings, setExpandedBuildings] = useState<Set<string>>(new Set());
 
@@ -104,7 +113,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
   const fetchData = useCallback(async () => {
     if (!project.id) return;
 
-    setLoading(true);
+    if (!projectMeasurementsCache.hasLoaded(cacheKey)) setLoading(true);
     setError(null);
 
     try {
@@ -127,6 +136,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
       // 2. Fetch all BOQ items for this project (single query)
       const items = await boqService.getByProject(project.companyId, project.id);
       setAllItems(items);
+      projectMeasurementsCache.set({ buildings: buildingList, allItems: items }, cacheKey);
 
       logger.info('Project measurements loaded', {
         projectId: project.id,
@@ -140,7 +150,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
     } finally {
       setLoading(false);
     }
-  }, [project.id]);
+  }, [project.id, cacheKey]);
 
   useEffect(() => {
     void fetchData();

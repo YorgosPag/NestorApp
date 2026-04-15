@@ -5,9 +5,12 @@ import { type FloorplanData } from '@/services/floorplans/FloorplanService';
 import { useAuth } from '@/hooks/useAuth';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 import pako from 'pako';
 
 const logger = createModuleLogger('useProjectFloorplans');
+const projectFloorplansCache = createStaleCache<FloorplanData | null>('project-floorplans');
+const parkingFloorplansCache = createStaleCache<FloorplanData | null>('project-parking-floorplans');
 
 /** 🏢 ENTERPRISE: File type discriminator */
 type FloorplanFileType = 'dxf' | 'pdf';
@@ -133,16 +136,19 @@ function processFloorplanData(rawData: Record<string, unknown>): FloorplanData |
  * @returns FloorplanData for project and parking, with loading/error states
  */
 export function useProjectFloorplans(projectId: string | number): UseProjectFloorplansReturn {
-  const [projectFloorplan, setProjectFloorplan] = useState<FloorplanData | null>(null);
-  const [parkingFloorplan, setParkingFloorplan] = useState<FloorplanData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const projectIdStr = projectId.toString();
+  const [projectFloorplan, setProjectFloorplan] = useState<FloorplanData | null>(
+    projectFloorplansCache.get(projectIdStr) ?? null
+  );
+  const [parkingFloorplan, setParkingFloorplan] = useState<FloorplanData | null>(
+    parkingFloorplansCache.get(projectIdStr) ?? null
+  );
+  const [loading, setLoading] = useState(!projectFloorplansCache.hasLoaded(projectIdStr));
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // 🏢 ENTERPRISE: Get authentication state to prevent permission errors
   const { user, loading: authLoading } = useAuth();
-
-  const projectIdStr = projectId.toString();
 
   /**
    * 🏢 ENTERPRISE: Manual refetch trigger
@@ -159,7 +165,7 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
       return;
     }
 
-    setLoading(true);
+    if (!projectFloorplansCache.hasLoaded(projectIdStr)) setLoading(true);
     const docId = `${projectIdStr}_project`;
 
     logger.info('Setting up real-time listener for project floorplan', { docId });
@@ -187,13 +193,16 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
               hasPdfImageUrl: !!processed?.pdfImageUrl,
               timestamp: processed?.timestamp
             });
+            projectFloorplansCache.set(processed, projectIdStr);
             setProjectFloorplan(processed);
           } catch (err) {
             logger.error('Error processing project floorplan', { error: err });
+            projectFloorplansCache.set(null, projectIdStr);
             setProjectFloorplan(null);
           }
         } else {
           logger.info('Project floorplan document does not exist', { docId });
+          projectFloorplansCache.set(null, projectIdStr);
           setProjectFloorplan(null);
         }
         setLoading(false);
@@ -235,13 +244,16 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
               hasData: !!processed,
               timestamp: processed?.timestamp
             });
+            parkingFloorplansCache.set(processed, projectIdStr);
             setParkingFloorplan(processed);
           } catch (err) {
             logger.error('Error processing parking floorplan', { error: err });
+            parkingFloorplansCache.set(null, projectIdStr);
             setParkingFloorplan(null);
           }
         } else {
           logger.info('Parking floorplan document does not exist', { docId });
+          parkingFloorplansCache.set(null, projectIdStr);
           setParkingFloorplan(null);
         }
       },

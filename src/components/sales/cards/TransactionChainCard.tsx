@@ -17,6 +17,9 @@ import { API_ROUTES } from '@/config/domain-constants';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const propertyTransactionChainCache = createStaleCache<InvoiceSummary[]>('property-transaction-chain');
 
 // =============================================================================
 // TYPES
@@ -83,18 +86,22 @@ export function TransactionChainCard({ propertyId }: TransactionChainCardProps) 
   const colors = useSemanticColors();
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
-  const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState<InvoiceSummary[]>(
+    propertyTransactionChainCache.get(propertyId) ?? []
+  );
+  const [loading, setLoading] = useState(!propertyTransactionChainCache.hasLoaded(propertyId));
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchInvoices() {
       try {
+        if (!propertyTransactionChainCache.hasLoaded(propertyId)) setLoading(true);
         const response = await apiClient.get<InvoiceListResponse>(
           `${API_ROUTES.ACCOUNTING.INVOICES.LIST}?propertyId=${encodeURIComponent(propertyId)}`
         );
         if (!cancelled && response.items) {
+          propertyTransactionChainCache.set(response.items, propertyId);
           setInvoices(response.items);
         }
       } catch {

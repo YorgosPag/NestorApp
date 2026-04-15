@@ -29,8 +29,10 @@ import {
 import type { Notification } from '@/types/notification';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useNotifications');
+const notificationsCache = createStaleCache<Notification[]>('notifications');
 
 // =============================================================================
 // TYPES
@@ -81,8 +83,10 @@ export function useNotifications(
   } = options;
 
   const { user, isAuthenticated } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>(
+    notificationsCache.get(user?.uid ?? '') ?? []
+  );
+  const [loading, setLoading] = useState(!notificationsCache.hasLoaded(user?.uid ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
 
@@ -108,6 +112,7 @@ export function useNotifications(
       // One-time fetch if realtime is disabled
       fetchNotifications({ userId: user.uid, limit, unseenOnly })
         .then((result: NotificationListResult) => {
+          notificationsCache.set(result.items, user.uid);
           setNotifications(result.items);
           setLoading(false);
           setConnectionStatus('connected');
@@ -139,7 +144,8 @@ export function useNotifications(
           newNotifications.forEach(onNewNotification);
         }
 
-        // Update state
+        // Update state + cache
+        notificationsCache.set(updatedNotifications, user.uid);
         setNotifications(updatedNotifications);
         setLoading(false);
         setError(null);

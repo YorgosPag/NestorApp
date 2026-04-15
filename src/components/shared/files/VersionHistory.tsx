@@ -27,6 +27,9 @@ import { formatFlexibleDate } from '@/lib/intl-utils';
 import { FileVersionService, type FileVersionSnapshot } from '@/services/file-version.service';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import '@/lib/design-system';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const fileVersionHistoryCache = createStaleCache<FileVersionSnapshot[]>('file-version-history');
 
 // ============================================================================
 // TYPES
@@ -61,8 +64,8 @@ export function VersionHistory({
   const { quick } = useBorderTokens();
   const iconSizes = useIconSizes();
 
-  const [versions, setVersions] = useState<FileVersionSnapshot[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [versions, setVersions] = useState<FileVersionSnapshot[]>(fileVersionHistoryCache.get(fileId) ?? []);
+  const [loading, setLoading] = useState(!fileVersionHistoryCache.hasLoaded(fileId));
   const [rollingBack, setRollingBack] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { handleDownload: downloadVersion } = useFileDownload();
@@ -72,11 +75,12 @@ export function VersionHistory({
     let cancelled = false;
 
     async function load() {
-      setLoading(true);
+      if (!fileVersionHistoryCache.hasLoaded(fileId)) setLoading(true);
       setError(null);
       try {
         const history = await FileVersionService.getVersionHistory(fileId);
         if (!cancelled) {
+          fileVersionHistoryCache.set(history, fileId);
           setVersions(history);
         }
       } catch (err) {

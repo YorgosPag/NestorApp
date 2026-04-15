@@ -186,6 +186,19 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/contacts/tabs/ContactPurchaseOrdersTab.tsx` | `useState(true)` unconditional | `contactPurchaseOrdersCache = createStaleCache<PurchaseOrder[]>('contact-purchase-orders')` keyed by contactId | 2026-04-16 |
 | `src/components/storage/pages/StorageDetailPageContent.tsx` | `useState(true)` unconditional | `storageDetailCache = createStaleCache<StorageUnit>('storage-detail')` keyed by storageId | 2026-04-16 |
 | `src/components/crm/tasks/TaskDetailPageContent.tsx` | `useState(true)` unconditional | `taskDetailCache = createStaleCache<CrmTask>('crm-task-detail')` keyed by taskId | 2026-04-16 |
+| `src/hooks/useNotifications.ts` | `useState([])` + `useState(true)` unconditional | `notificationsCache = createStaleCache<Notification[]>('notifications')` keyed by userId; seeded in both realtime and one-time-fetch branches | 2026-04-16 |
+| `src/hooks/useProjectFloorplans.ts` | `useState(null)` + `setLoading(true)` unconditional | `projectFloorplansCache + parkingFloorplansCache` keyed by projectId; caches `null` when doc does not exist | 2026-04-16 |
+| `src/hooks/usePropertyFloorplans.ts` | `useState(null)` + `setLoading(true)` unconditional | `propertyFloorplansCache = createStaleCache<PropertyFloorplanData \| null>('property-floorplans')` keyed by `${propertyId}-${companyId}` | 2026-04-16 |
+| `src/components/projects/ProjectTimelineTab.tsx` | `useState([])` + `setLoading(true)` unconditional | `projectTimelineCache = createStaleCache<ProjectBuilding[]>('project-timeline')` keyed by projectId | 2026-04-16 |
+| `src/components/projects/tabs/ProjectMeasurementsTab.tsx` | `useState([])` (buildings + items) + `setLoading(true)` unconditional | `projectMeasurementsCache = createStaleCache<{buildings, allItems}>('project-measurements')` keyed by projectId | 2026-04-16 |
+| `src/components/building-management/StorageTab/index.tsx` | `useState([])` + `setLoading(true)` unconditional | `buildingStorageTabContentCache = createStaleCache<Storage[]>('building-storage-tab-content')` keyed by buildingId | 2026-04-16 |
+| `src/components/sales/cards/PropertyHierarchyCard.tsx` | `useState(null)` + `setLoading(true)` unconditional | `propertyHierarchyCache = createStaleCache<PropertyHierarchyResponse>('property-hierarchy')` keyed by propertyId | 2026-04-16 |
+| `src/components/sales/cards/TransactionChainCard.tsx` | `useState([])` + `setLoading(true)` unconditional | `propertyTransactionChainCache = createStaleCache<InvoiceSummary[]>('property-transaction-chain')` keyed by propertyId | 2026-04-16 |
+| `src/components/shared/files/ApprovalPanel.tsx` | `useState([])` + `setLoading(true)` unconditional (onSnapshot) | `fileApprovalCache = createStaleCache<FileApproval[]>('file-approval')` keyed by fileId | 2026-04-16 |
+| `src/components/shared/files/AuditLogPanel.tsx` | `useState([])` + `setLoading(true)` unconditional | `fileAuditLogCache = createStaleCache<FileAuditRecord[]>('file-audit-log')` keyed by fileId | 2026-04-16 |
+| `src/components/shared/files/CommentsPanel.tsx` | `useState([])` + `setLoading(true)` unconditional (onSnapshot) | `fileCommentsCache = createStaleCache<FileComment[]>('file-comments')` keyed by fileId | 2026-04-16 |
+| `src/components/shared/files/FolderManager.tsx` | `useState([])` + `setLoading(true)` unconditional | `fileFoldersCache = createStaleCache<FileFolder[]>('file-folders')` keyed by companyId | 2026-04-16 |
+| `src/components/shared/files/VersionHistory.tsx` | `useState([])` + `setLoading(true)` unconditional | `fileVersionHistoryCache = createStaleCache<FileVersionSnapshot[]>('file-version-history')` keyed by fileId | 2026-04-16 |
 
 ---
 

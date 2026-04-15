@@ -26,6 +26,9 @@ import type { PropertyHierarchyResponse } from '@/app/api/properties/[id]/hierar
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const propertyHierarchyCache = createStaleCache<PropertyHierarchyResponse>('property-hierarchy');
 
 // =============================================================================
 // TYPES
@@ -44,18 +47,22 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const { syncBreadcrumb } = useNavigation();
-  const [hierarchy, setHierarchy] = useState<PropertyHierarchyResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [hierarchy, setHierarchy] = useState<PropertyHierarchyResponse | null>(
+    propertyHierarchyCache.get(propertyId) ?? null
+  );
+  const [loading, setLoading] = useState(!propertyHierarchyCache.hasLoaded(propertyId));
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchHierarchy() {
       try {
+        if (!propertyHierarchyCache.hasLoaded(propertyId)) setLoading(true);
         const data = await apiClient.get<PropertyHierarchyResponse>(
           API_ROUTES.PROPERTIES.HIERARCHY(encodeURIComponent(propertyId))
         );
         if (!cancelled) {
+          propertyHierarchyCache.set(data, propertyId);
           setHierarchy(data);
 
           // 🏢 ENTERPRISE: Sync breadcrumb with actual unit hierarchy data
