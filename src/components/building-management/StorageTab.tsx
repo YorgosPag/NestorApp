@@ -34,7 +34,7 @@ import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
 import { StorageCreateForm } from './StorageTab/StorageCreateForm';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { getStatusColor } from '@/lib/design-system';
@@ -67,10 +67,10 @@ export function StorageTab({ building }: StorageTabProps) {
   ], [s.t, s.translatedGetTypeLabel, s.translatedGetStatusLabel, colors.text.muted]);
 
   const storageCardFields: SpaceCardField<StorageUnit>[] = useMemo(() => [
-    { label: s.t('storageTable.columns.type'), render: (u) => s.translatedGetTypeLabel(u.type) },
-    { label: s.t('storageTable.columns.floor'), render: (u) => u.floor || '—' },
-    { label: 'm²', render: (u) => u.area || '—' },
-    { label: s.t('storageTable.columns.price'), render: (u) => formatCurrencyWhole(u.price) },
+    buildTypeCodeField(s.t('storageTable.columns.type'), (u) => s.translatedGetTypeLabel(u.type), (u) => u.code),
+    buildFloorField(s.t('storageTable.columns.floor'), (u) => u.floor),
+    buildAreaField((u) => u.area),
+    buildPriceField(s.t('storageTable.columns.price'), (u) => u.price),
   ], [s.t, s.translatedGetTypeLabel]);
 
   // ── Loading ──
@@ -171,7 +171,7 @@ export function StorageTab({ building }: StorageTabProps) {
           <BuildingSpaceCardGrid<StorageUnit>
             items={s.filteredUnits}
             getKey={(u) => u.id}
-            getName={(u) => u.code}
+            getName={(u) => u.name || u.code}
             renderStatus={(u) => (
               <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
                 {s.translatedGetStatusLabel(u.status)}

@@ -35,7 +35,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 import { PARKING_TYPES, PARKING_STATUSES, PARKING_LOCATION_ZONES } from '@/types/parking';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -83,10 +83,10 @@ export function ParkingTabContent({ building }: { building: Building }) {
   ], [t, colors.text.muted]);
 
   const parkingCardFields: SpaceCardField<ParkingSpot>[] = useMemo(() => [
-    { label: t('general.fields.type'), render: (s) => t(`types.${s.type || 'standard'}`) },
-    { label: t('general.fields.floor'), render: (s) => s.floor || '—' },
-    { label: 'm²', render: (s) => s.area || '—' },
-    { label: t('general.fields.price'), render: (s) => formatCurrencyWhole(s.price) },
+    buildTypeCodeField(t('general.fields.type'), (s) => t(`types.${s.type || 'standard'}`), (s) => s.code),
+    buildFloorField(t('general.fields.floor'), (s) => s.floor),
+    buildAreaField((s) => s.area),
+    buildPriceField(t('general.fields.price'), (s) => s.price),
   ], [t]);
 
   if (state.loading) {

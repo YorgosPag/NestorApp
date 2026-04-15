@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -30,7 +29,7 @@ import type { Building } from '@/types/building/contracts';
 import type { Property, PropertyType } from '@/types/property';
 import { PropertyInlineCreateForm } from './PropertyInlineCreateForm';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
@@ -282,13 +281,10 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   ], [t, tUnits]);
 
   const unitCardFields: SpaceCardField<Property>[] = useMemo(() => [
-    { label: tUnits('card.stats.type'), render: (u) => {
-      const typeLabel = getPropertyTypeLabel(u.type, tUnits);
-      return u.code ? `${typeLabel} · ${u.code}` : typeLabel;
-    }},
-    { label: tUnits('card.stats.floor'), render: (u) => u.floor || '—' },
-    { label: 'm²', render: (u) => u.area || '—' },
-    { label: tUnits('table.price'), render: (u) => formatCurrencyWhole(u.price) },
+    buildTypeCodeField(tUnits('card.stats.type'), (u) => getPropertyTypeLabel(u.type, tUnits), (u) => u.code),
+    buildFloorField(tUnits('card.stats.floor'), (u) => u.floor),
+    buildAreaField((u) => u.area),
+    buildPriceField(tUnits('table.price'), (u) => u.price),
   ], [tUnits]);
 
   if (loading) {

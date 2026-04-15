@@ -15,6 +15,8 @@ export { BuildingSpaceLinkDialog } from './BuildingSpaceLinkDialog';
 export { SpaceFloorplanInline } from './SpaceFloorplanInline';
 export type { LinkableItem } from './BuildingSpaceLinkDialog';
 
+export { buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './buildingSpaceCardFields';
+
 export type {
   SpaceColumn,
   SpaceCardField,
