@@ -42,6 +42,7 @@ export function useStorageFormHandlers({
         if (isValid) {
             const unitToSave: StorageUnit = {
                 id: unit?.id || `${formData.type}_${Date.now()}`,
+                name: formData.name!,
                 code: formData.code!,
                 type: formData.type!,
                 floor: formData.floor!,

@@ -19,8 +19,8 @@ export const calculatePrice = (area: number, floor: string, type: StorageType): 
 };
 
 // Zod schema for storage unit validation
-// 🏢 ENTERPRISE: code & description are optional — API auto-generates name when code is empty
 export const storageUnitSchema = z.object({
+  name: z.string().min(1, 'Το όνομα είναι υποχρεωτικό'),
   code: z.string().optional().default(''),
   area: z.number().nonnegative().optional().default(0),
   price: z.number().nonnegative().optional().default(0),

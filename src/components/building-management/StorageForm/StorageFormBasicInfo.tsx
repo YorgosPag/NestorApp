@@ -50,6 +50,17 @@ export function StorageFormBasicInfo({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
+        <div className="space-y-2">
+          <Label>{t('storage.form.name')} *</Label>
+          <Input
+            value={formData.name || ''}
+            onChange={(e) => updateField('name', e.target.value)}
+            className={cn(errors.name && getStatusBorder('error'))}
+            placeholder={formType === 'storage' ? t('storage.form.placeholders.nameStorage') : t('storage.form.placeholders.nameParking')}
+          />
+          {errors.name && <p className="text-sm text-red-500">{errors.name}</p>} {/* eslint-disable-line design-system/enforce-semantic-colors */}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div className="space-y-2">
             <Label>{t('storage.form.code')} *</Label>

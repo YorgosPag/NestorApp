@@ -18,7 +18,10 @@ interface UseStorageFormStateProps {
 }
 
 export function useStorageFormState({ unit, formType, building }: UseStorageFormStateProps) {
+  const defaultName = formType === 'parking' ? 'Θέση Στάθμευσης' : 'Αποθήκη';
+
   const [formData, setFormData] = useState<Partial<StorageUnit>>({
+    name: defaultName,
     code: '',
     type: formType,
     floor: 'Υπόγειο',
@@ -49,6 +52,7 @@ export function useStorageFormState({ unit, formType, building }: UseStorageForm
     } else {
       setFormData(prev => ({
         ...prev,
+        name: formType === 'parking' ? 'Θέση Στάθμευσης' : 'Αποθήκη',
         code: '', type: formType, floor: 'Υπόγειο', area: 0, price: 0,
         status: 'available', description: '', linkedProperty: null,
         coordinates: { x: 0, y: 0 }, features: []
