@@ -9,6 +9,7 @@
 
 import type { FilterPanelConfig } from '../types';
 import type { POFilters, PurchaseOrderStatus } from '@/types/procurement';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 
 // =============================================================================
 // 🛒 PROCUREMENT FILTER STATE TYPE
@@ -49,9 +50,9 @@ export const defaultProcurementFilters: ProcurementFilterState = {
 export function procurementFiltersToPOFilters(f: ProcurementFilterState): POFilters {
   return {
     search: f.searchTerm,
-    status: (f.status[0] as PurchaseOrderStatus) ?? null,
-    projectId: f.projectId[0] ?? null,
-    supplierId: f.supplierId[0] ?? null,
+    status: f.status[0] === SELECT_CLEAR_VALUE || !f.status[0] ? null : (f.status[0] as PurchaseOrderStatus),
+    projectId: f.projectId[0] === SELECT_CLEAR_VALUE || !f.projectId[0] ? null : f.projectId[0],
+    supplierId: f.supplierId[0] === SELECT_CLEAR_VALUE || !f.supplierId[0] ? null : f.supplierId[0],
   };
 }
 
@@ -85,7 +86,7 @@ export const procurementFiltersConfig: FilterPanelConfig = {
           placeholder: 'filter.allStatuses',
           width: 1,
           options: [
-            { value: '', label: 'filter.allStatuses' },
+            { value: SELECT_CLEAR_VALUE, label: 'filter.allStatuses' },
             { value: 'draft', label: 'status.draft' },
             { value: 'approved', label: 'status.approved' },
             { value: 'ordered', label: 'status.ordered' },
@@ -102,7 +103,7 @@ export const procurementFiltersConfig: FilterPanelConfig = {
           placeholder: 'filter.allProjects',
           width: 1,
           options: [
-            { value: '', label: 'filter.allProjects' },
+            { value: SELECT_CLEAR_VALUE, label: 'filter.allProjects' },
           ],
         },
         {
@@ -112,7 +113,7 @@ export const procurementFiltersConfig: FilterPanelConfig = {
           placeholder: 'filter.allSuppliers',
           width: 1,
           options: [
-            { value: '', label: 'filter.allSuppliers' },
+            { value: SELECT_CLEAR_VALUE, label: 'filter.allSuppliers' },
           ],
         },
       ],

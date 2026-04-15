@@ -27,8 +27,12 @@ import {
   saveLayerManagementData,
   subscribeToLayerManagement
 } from '@/hooks/layer-management/layer-management-persistence';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useLayerManagement');
+
+type LayerDataCache = { layers: Layer[]; groups: LayerGroup[] };
+const layerManagementCache = createStaleCache<LayerDataCache>('dxf-layer-management');
 
 export interface UseLayerManagementOptions {
   floorId: string;
@@ -94,8 +98,13 @@ export function useLayerManagement({
   maxHistorySize = 50,
   enableRealtime = true
 }: UseLayerManagementOptions): UseLayerManagementReturn {
-  const [state, setState] = useState<LayerState>(() => createInitialLayerState(maxHistorySize));
-  const [isLoading, setIsLoading] = useState(true);
+  const cacheKey = `${floorId}-${buildingId}`;
+  const [state, setState] = useState<LayerState>(() => {
+    const initial = createInitialLayerState(maxHistorySize);
+    const cached = layerManagementCache.get(cacheKey);
+    return cached ? { ...initial, layers: cached.layers, groups: cached.groups } : initial;
+  });
+  const [isLoading, setIsLoading] = useState(!layerManagementCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilterState] = useState<LayerFilter>(INITIAL_LAYER_FILTER);
 
@@ -103,11 +112,12 @@ export function useLayerManagement({
 
   const loadLayers = useCallback(async () => {
     try {
-      setIsLoading(true);
+      if (!layerManagementCache.hasLoaded(cacheKey)) setIsLoading(true);
       setError(null);
 
       const loadedData = await loadLayerManagementData(persistenceContext);
 
+      layerManagementCache.set({ layers: loadedData.layers, groups: loadedData.groups }, cacheKey);
       setState((prev) => ({
         ...prev,
         layers: loadedData.layers,
@@ -119,7 +129,7 @@ export function useLayerManagement({
     } finally {
       setIsLoading(false);
     }
-  }, [persistenceContext]);
+  }, [persistenceContext, cacheKey]);
 
   useEffect(() => {
     void loadLayers();

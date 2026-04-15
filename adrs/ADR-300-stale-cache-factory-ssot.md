@@ -222,6 +222,8 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/shared/KadCodePicker.tsx` | `useState([])` + `setIsLoading(true)` unconditional | `kadOptionsCache = createStaleCache<ComboboxOption[]>('shared-kad-options')` single-key; dynamic import cached after first load | 2026-04-16 |
 | `src/subapps/accounting/components/setup/KadSection.tsx` | `useState([])` + `setIsLoading(true)` unconditional | `kadSectionCache = createStaleCache<ComboboxOption[]>('accounting-kad-options')` single-key; dynamic import cached after first load | 2026-04-16 |
 | `src/subapps/accounting/components/invoices/details/InvoiceDetails.tsx` | `useState(null)` + `setLoading(true)` unconditional | `invoiceDetailsCache = createStaleCache<Invoice>('accounting-invoice-detail-view')` keyed by invoiceId | 2026-04-16 |
+| `src/hooks/useLayerManagement.ts` | `useState(true)` unconditional | `layerManagementCache = createStaleCache<{layers, groups}>('dxf-layer-management')` keyed by `${floorId}-${buildingId}`; seeds layers+groups in initial LayerState | 2026-04-16 |
+| `src/hooks/usePolygonStyles.ts` | `useState(true)` unconditional | `polygonStylesCache = createStaleCache<{styles, themes}>('geo-polygon-styles')` keyed by `${tenantId ?? 'default'}-${theme}` | 2026-04-16 |
 
 ---
 

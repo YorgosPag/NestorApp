@@ -19,6 +19,10 @@ import type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
 import { polygonStyleService } from '@/services/polygon/EnterprisePolygonStyleService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createStaleCache } from '@/lib/stale-cache';
+
+type PolygonStylesCache = { styles: Record<PolygonType, PolygonStyle>; themes: string[] };
+const polygonStylesCache = createStaleCache<PolygonStylesCache>('geo-polygon-styles');
 
 // ============================================================================
 // HOOK TYPES
@@ -88,10 +92,12 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
   // STATE MANAGEMENT
   // ========================================================================
 
-  const [styles, setStyles] = useState<Record<PolygonType, PolygonStyle> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initialCacheKey = `${tenantId ?? 'default'}-${theme}`;
+  const cachedData = polygonStylesCache.get(initialCacheKey);
+  const [styles, setStyles] = useState<Record<PolygonType, PolygonStyle> | null>(cachedData?.styles ?? null);
+  const [loading, setLoading] = useState(!polygonStylesCache.hasLoaded(initialCacheKey));
   const [error, setError] = useState<string | null>(null);
-  const [availableThemes, setAvailableThemes] = useState<string[]>(['default', 'dark', 'high-contrast']);
+  const [availableThemes, setAvailableThemes] = useState<string[]>(cachedData?.themes ?? ['default', 'dark', 'high-contrast']);
   const [currentTheme, setCurrentTheme] = useState(theme);
 
   // ========================================================================
@@ -99,8 +105,9 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
   // ========================================================================
 
   const loadStyles = useCallback(async (targetTheme: string = currentTheme) => {
+    const cacheKey = `${tenantId ?? 'default'}-${targetTheme}`;
     try {
-      setLoading(true);
+      if (!polygonStylesCache.hasLoaded(cacheKey)) setLoading(true);
       setError(null);
 
       if (debug) {
@@ -117,6 +124,7 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
       // Load available themes
       const themes = await polygonStyleService.getAvailableThemes(tenantId);
 
+      polygonStylesCache.set({ styles: loadedStyles, themes }, cacheKey);
       setStyles(loadedStyles);
       setAvailableThemes(themes);
       setCurrentTheme(targetTheme);
