@@ -29,6 +29,8 @@ interface BuildingDetailsProps {
   onBuildingCreated?: (buildingId: string) => void;
   /** Callback to cancel create mode — deselects the temp building */
   onCancelCreate?: () => void;
+  /** Trash mode — hides edit/new/delete controls (items in trash are read-only) */
+  isTrashMode?: boolean;
 }
 
 export const BuildingDetails = React.memo(function BuildingDetails({
@@ -41,6 +43,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   isCreateMode,
   onBuildingCreated,
   onCancelCreate,
+  isTrashMode = false,
 }: BuildingDetailsProps) {
   // [ENTERPRISE] Centralized messages system
   const emptyStateMessages = useEmptyStateMessages();
@@ -90,11 +93,11 @@ export const BuildingDetails = React.memo(function BuildingDetails({
           building={building!}
           isEditing={isEditing}
           isSaving={isSaving}
-          onStartEdit={handleStartEdit}
+          onStartEdit={isTrashMode ? undefined : handleStartEdit}
           onSave={handleSave}
           onCancel={handleCancel}
-          onNewBuilding={onNewBuilding}
-          onDeleteBuilding={onDeleteBuilding}
+          onNewBuilding={isTrashMode ? undefined : onNewBuilding}
+          onDeleteBuilding={isTrashMode ? undefined : onDeleteBuilding}
         />
       }
       tabsRenderer={

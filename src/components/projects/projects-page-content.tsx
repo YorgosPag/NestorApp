@@ -387,18 +387,18 @@ export function ProjectsPageContent() {
         )}
 
 
-        <ListContainer>
-          {/* 🗑️ ADR-308: Trash actions bar — shown only in trash view */}
-          {showTrash && !loadingTrash && (
-            <TrashActionsBar
-              selectedIds={selectedProject ? [selectedProject.id] : []}
-              onBack={handleToggleTrash}
-              onRestore={handleRestoreProjects}
-              onPermanentDelete={handlePermanentDeleteProjects}
-              trashCount={trashCount}
-            />
-          )}
+        {/* 🗑️ ADR-308: Trash actions bar — shown only in trash view, outside ListContainer so it spans full width */}
+        {showTrash && !loadingTrash && (
+          <TrashActionsBar
+            selectedIds={selectedProject ? [selectedProject.id] : []}
+            onBack={handleToggleTrash}
+            onRestore={handleRestoreProjects}
+            onPermanentDelete={handlePermanentDeleteProjects}
+            trashCount={trashCount}
+          />
+        )}
 
+        <ListContainer>
           <ProjectViewSwitch
             projects={showTrash ? trashedProjects : filteredProjects}
             selectedProject={selectedProject}
@@ -416,6 +416,7 @@ export function ProjectsPageContent() {
             onProjectCreated={showTrash ? undefined : handleProjectCreated}
             onCancelCreate={showTrash ? undefined : handleCancelCreate}
             onDraftStatusChange={showTrash ? undefined : handleDraftStatusChange}
+            isTrashMode={showTrash}
           />
         </ListContainer>
 

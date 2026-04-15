@@ -45,10 +45,12 @@ interface ProjectViewSwitchProps {
   onCancelCreate?: () => void;
   /** ADR-300 §Addendum — draft-mode status pill persistence (Fill then Create) */
   onDraftStatusChange?: (next: ProjectStatus) => void;
+  /** Trash mode — disables edit actions (items in trash are read-only) */
+  isTrashMode?: boolean;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode, isCreateMode, onProjectCreated, onCancelCreate, onDraftStatusChange }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode, isCreateMode, onProjectCreated, onCancelCreate, onDraftStatusChange, isTrashMode = false }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -138,6 +140,7 @@ export function ProjectViewSwitch({
             onProjectCreated={onProjectCreated}
             onCancelCreate={onCancelCreate}
             onDraftStatusChange={onDraftStatusChange}
+            isTrashMode={isTrashMode}
             />
           )}
         </MobileDetailsSlideIn>
@@ -156,7 +159,7 @@ export function ProjectViewSwitch({
             onSelectProject={(p) => onSelectProject(toggleSelect(selectedProject, p))}
             companies={companies}
             onNewProject={onNewProject}
-            onEditProject={selectedProject ? handleEditProject : undefined}
+            onEditProject={selectedProject && !isTrashMode ? handleEditProject : undefined}
             onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
         />
         <ProjectDetails
@@ -170,6 +173,7 @@ export function ProjectViewSwitch({
           onProjectCreated={onProjectCreated}
           onCancelCreate={onCancelCreate}
           onDraftStatusChange={onDraftStatusChange}
+          isTrashMode={isTrashMode}
         />
       </div>
 
@@ -181,7 +185,7 @@ export function ProjectViewSwitch({
             onSelectProject={(p) => onSelectProject(toggleSelect(selectedProject, p))}
             companies={companies}
             onNewProject={onNewProject}
-            onEditProject={selectedProject ? handleEditProject : undefined}
+            onEditProject={selectedProject && !isTrashMode ? handleEditProject : undefined}
             onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
         />
       </div>
@@ -213,6 +217,7 @@ export function ProjectViewSwitch({
             onProjectCreated={onProjectCreated}
             onCancelCreate={onCancelCreate}
             onDraftStatusChange={onDraftStatusChange}
+            isTrashMode={isTrashMode}
           />
         )}
       </MobileDetailsSlideIn>

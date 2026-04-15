@@ -37,6 +37,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building as BuildingType } from '@/types/building/contracts';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
+import { useBuildingsTrashState } from '@/hooks/useBuildingsTrashState';
+import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 
@@ -47,7 +49,7 @@ export type { Building } from '@/types/building/contracts';
 
 export function BuildingsPageContent() {
   // [ENTERPRISE] i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
   const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -56,7 +58,7 @@ export function BuildingsPageContent() {
   const { companies, projects, syncBreadcrumb } = useNavigation();
 
   // Load buildings from Firestore
-  const { buildings: buildingsData, loading: buildingsLoading, error: buildingsError } = useFirestoreBuildings();
+  const { buildings: buildingsData, loading: buildingsLoading, error: buildingsError, refetch: refetchBuildings } = useFirestoreBuildings();
 
   const {
     selectedBuilding,
@@ -136,6 +138,21 @@ export function BuildingsPageContent() {
       setSelectedBuilding(null);
     }
   }, [isCreateMode, setSelectedBuilding]);
+
+  // 🗑️ ADR-308: Trash view state
+  const {
+    showTrash,
+    trashCount,
+    trashedBuildings,
+    loadingTrash,
+    showPermanentDeleteDialog,
+    pendingPermanentDeleteIds,
+    handleToggleTrash,
+    handleRestoreBuildings,
+    handlePermanentDeleteBuildings,
+    handleConfirmPermanentDelete,
+    handleCancelPermanentDelete,
+  } = useBuildingsTrashState({ forceDataRefresh: refetchBuildings });
 
   // 🛡️ ADR-226 Phase 3: Deletion Guard — replaces cascade preview
   const { checking: checkingDeletion, checkBeforeDelete, BlockedDialog } = useDeletionGuard('building');
@@ -301,7 +318,10 @@ export function BuildingsPageContent() {
           setShowDashboard={setShowDashboard}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
-          onNewBuilding={handleNewBuilding}
+          onNewBuilding={showTrash ? undefined : handleNewBuilding}
+          showTrash={showTrash}
+          onToggleTrash={handleToggleTrash}
+          trashCount={trashCount}
         />
 
         {showDashboard && (
@@ -331,13 +351,24 @@ export function BuildingsPageContent() {
           </aside>
         )}
 
+        {/* 🗑️ ADR-308: Trash actions bar — shown only in trash view, outside ListContainer so it spans full width */}
+        {showTrash && !loadingTrash && (
+          <TrashActionsBar
+            selectedIds={selectedBuilding ? [selectedBuilding.id] : []}
+            onBack={handleToggleTrash}
+            onRestore={handleRestoreBuildings}
+            onPermanentDelete={handlePermanentDeleteBuildings}
+            trashCount={trashCount}
+          />
+        )}
+
         <ListContainer>
           {viewMode === 'list' ? (
             <>
               {/* [DESKTOP] Standard split layout */}
               <section className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden" role="region" aria-label={t('pages.buildings.views.desktopView')}>
                 <BuildingsList
-                  buildings={baseFilteredBuildings}
+                  buildings={showTrash ? trashedBuildings : baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={(building) => {
                     startTransition(() => {
@@ -345,27 +376,28 @@ export function BuildingsPageContent() {
                       setStartInEditMode(false);
                     });
                   }}
-                  onNewBuilding={handleNewBuilding}
-                  onEditBuilding={selectedBuilding ? handleEditBuilding : undefined}
-                  onDeleteBuilding={selectedBuilding ? handleDeleteBuilding : undefined}
+                  onNewBuilding={showTrash ? undefined : handleNewBuilding}
+                  onEditBuilding={selectedBuilding && !showTrash ? handleEditBuilding : undefined}
+                  onDeleteBuilding={selectedBuilding && !showTrash ? handleDeleteBuilding : undefined}
                 />
                 <BuildingDetails
                   building={selectedBuilding!}
-                  onNewBuilding={handleNewBuilding}
-                  onDeleteBuilding={handleDeleteBuilding}
-                  startInEditMode={startInEditMode}
-                  isEditing={isEditingBuilding}
-                  onSetEditing={setIsEditingBuilding}
-                  isCreateMode={isCreateMode}
-                  onBuildingCreated={handleBuildingCreated}
-                  onCancelCreate={handleCancelCreate}
+                  onNewBuilding={showTrash ? undefined : handleNewBuilding}
+                  onDeleteBuilding={showTrash ? undefined : handleDeleteBuilding}
+                  startInEditMode={showTrash ? false : startInEditMode}
+                  isEditing={showTrash ? false : isEditingBuilding}
+                  isTrashMode={showTrash}
+                  onSetEditing={showTrash ? undefined : setIsEditingBuilding}
+                  isCreateMode={showTrash ? false : isCreateMode}
+                  onBuildingCreated={showTrash ? undefined : handleBuildingCreated}
+                  onCancelCreate={showTrash ? undefined : handleCancelCreate}
                 />
               </section>
 
               {/* [MOBILE] Show only BuildingsList when no building is selected */}
               <section className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`} role="region" aria-label={t('pages.buildings.views.mobileList')}>
                 <BuildingsList
-                  buildings={baseFilteredBuildings}
+                  buildings={showTrash ? trashedBuildings : baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={(building) => {
                     startTransition(() => {
@@ -373,9 +405,9 @@ export function BuildingsPageContent() {
                       setStartInEditMode(false);
                     });
                   }}
-                  onNewBuilding={handleNewBuilding}
-                  onEditBuilding={selectedBuilding ? handleEditBuilding : undefined}
-                  onDeleteBuilding={selectedBuilding ? handleDeleteBuilding : undefined}
+                  onNewBuilding={showTrash ? undefined : handleNewBuilding}
+                  onEditBuilding={selectedBuilding && !showTrash ? handleEditBuilding : undefined}
+                  onDeleteBuilding={selectedBuilding && !showTrash ? handleDeleteBuilding : undefined}
                 />
               </section>
 
@@ -402,14 +434,15 @@ export function BuildingsPageContent() {
                 {selectedBuilding && (
                   <BuildingDetails
                     building={selectedBuilding}
-                    onNewBuilding={handleNewBuilding}
-                    onDeleteBuilding={handleDeleteBuilding}
-                    startInEditMode={startInEditMode}
-                    isEditing={isEditingBuilding}
-                    onSetEditing={setIsEditingBuilding}
-                    isCreateMode={isCreateMode}
-                    onBuildingCreated={handleBuildingCreated}
-                    onCancelCreate={handleCancelCreate}
+                    onNewBuilding={showTrash ? undefined : handleNewBuilding}
+                    onDeleteBuilding={showTrash ? undefined : handleDeleteBuilding}
+                    startInEditMode={showTrash ? false : startInEditMode}
+                    isEditing={showTrash ? false : isEditingBuilding}
+                    onSetEditing={showTrash ? undefined : setIsEditingBuilding}
+                    isCreateMode={showTrash ? false : isCreateMode}
+                    onBuildingCreated={showTrash ? undefined : handleBuildingCreated}
+                    onCancelCreate={showTrash ? undefined : handleCancelCreate}
+                    isTrashMode={showTrash}
                   />
                 )}
               </MobileDetailsSlideIn>
@@ -437,6 +470,17 @@ export function BuildingsPageContent() {
           onConfirm={handleConfirmDelete}
           loading={isDeleting}
           disabled={checkingDeletion}
+        />
+
+        {/* 🗑️ ADR-308: Permanent delete confirmation */}
+        <DeleteConfirmDialog
+          open={showPermanentDeleteDialog}
+          onOpenChange={(open) => { if (!open) handleCancelPermanentDelete(); }}
+          title={t('permanentDeleteDialog.title', { ns: 'trash' })}
+          description={t('permanentDeleteDialog.body', { ns: 'trash' })}
+          onConfirm={handleConfirmPermanentDelete}
+          loading={false}
+          disabled={pendingPermanentDeleteIds.length === 0}
         />
       </PageContainer>
   );

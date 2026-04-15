@@ -163,6 +163,15 @@ After every completed task, display:
 Suggestion: Do /clear and give me the command again cleanly.
 ```
 
+**🔴 HANDOFF PROTOCOL** — At 🔴 level (or NOISE RULE triggers), ALWAYS offer:
+```
+🔴 Context ~90% — vuoi handoff report prima di /clear?
+```
+- If Giorgio says yes → write structured report (stato, prossimo passo, contesto critico, non fare)
+- If Giorgio says no → just say /clear
+- **NEVER** just say "fai /clear" without offering the handoff first at 🔴 level
+- **WHY**: Google-level runbook — never lose state between sessions
+
 (Note: the indicator text shown to Giorgio must be in Italian, per the LANGUAGE RULE at the top.)
 
 ## SOS. SOS. N.10 — AI PIPELINE: MANDATORY TESTING (Google Presubmit Pattern)

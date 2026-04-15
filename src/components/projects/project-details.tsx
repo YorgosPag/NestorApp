@@ -57,6 +57,8 @@ interface ProjectDetailsProps {
    * state through the standard props sync effect.
    */
   onDraftStatusChange?: (next: ProjectStatus) => void;
+  /** Trash mode — hides edit/delete controls (items in trash are read-only) */
+  isTrashMode?: boolean;
 }
 
 // ============================================================================
@@ -74,6 +76,7 @@ export function ProjectDetails({
   onProjectCreated,
   onCancelCreate,
   onDraftStatusChange,
+  isTrashMode = false,
 }: ProjectDetailsProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
 
@@ -173,6 +176,7 @@ export function ProjectDetails({
             onDeleteProject={onDeleteProject}
             isCreateMode={isCreateMode}
             onStatusChange={isCreateMode ? onDraftStatusChange : refetchProject}
+            hideEditControls={isTrashMode}
           />
         ) : null
       }

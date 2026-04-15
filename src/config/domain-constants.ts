@@ -546,6 +546,8 @@ export const API_ROUTES = {
     MILESTONES: (buildingId: string) => `/api/buildings/${buildingId}/milestones` as const,
     /** ADR-284 §3.3 Phase 3b — atomic link to Project (orphan fix) */
     LINK_PROJECT: (buildingId: string) => `/api/buildings/${buildingId}/link-project` as const,
+    /** ADR-308 pattern — Soft-delete trash view */
+    TRASH: '/api/buildings/trash',
   },
 
   // ── Floors ────────────────────────────────────────────────────────────

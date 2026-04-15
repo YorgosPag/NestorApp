@@ -17,8 +17,8 @@ interface BuildingDetailsHeaderProps {
     isEditing: boolean;
     /** Whether a save operation is in progress */
     isSaving: boolean;
-    /** Start inline editing on the General tab */
-    onStartEdit: () => void;
+    /** Start inline editing on the General tab — omit to hide the Edit button (e.g. trash mode) */
+    onStartEdit?: () => void;
     /** Trigger save (delegates to GeneralTabContent) */
     onSave: () => void;
     /** Cancel editing and revert changes */
@@ -66,11 +66,11 @@ export function BuildingDetailsHeader({
                 isNamespaceReady ? t('details.newBuilding') : 'New',
                 onNewBuilding
             )] : []),
-            createEntityAction(
+            ...(onStartEdit ? [createEntityAction(
                 'edit',
                 isNamespaceReady ? t('details.editBuilding') : 'Edit',
                 onStartEdit
-            ),
+            )] : []),
             ...(onDeleteBuilding ? [createEntityAction(
                 'delete',
                 isNamespaceReady ? t('details.deleteBuilding') : 'Delete',
