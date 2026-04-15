@@ -320,11 +320,11 @@ function ParkingCreateForm({ state, t, colors }: ParkingCreateFormProps) {
       <fieldset className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {t('general.fields.spotCode')} *
+            {t('general.fields.spotName')} *
           </span>
           <Input
             value={state.createNumber}
-            onChange={(e) => state.setCreateNumber(e.target.value)}
+            onChange={(e) => state.handleCreateNumberChange(e.target.value)}
             placeholder="P-001"
             className="h-9"
             disabled={state.creating}
@@ -335,7 +335,7 @@ function ParkingCreateForm({ state, t, colors }: ParkingCreateFormProps) {
           <span className={cn("text-xs font-medium", colors.text.muted)}>
             {t('general.fields.type')}
           </span>
-          <Select value={state.createType} onValueChange={(v) => state.setCreateType(v as ParkingSpotType)} disabled={state.creating}>
+          <Select value={state.createType} onValueChange={(v) => state.handleCreateTypeChange(v as ParkingSpotType)} disabled={state.creating}>
             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               {PARKING_TYPES.map(pt => (
@@ -393,7 +393,7 @@ function ParkingCreateForm({ state, t, colors }: ParkingCreateFormProps) {
           <Input
             type="number" step="0.01"
             value={state.createArea}
-            onChange={(e) => state.setCreateArea(e.target.value)}
+            onChange={(e) => state.handleCreateAreaChange(e.target.value)}
             placeholder="12"
             className="h-9"
             disabled={state.creating}

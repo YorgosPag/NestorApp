@@ -8,9 +8,10 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createParkingWithPolicy, deleteParkingWithPolicy, updateParkingWithPolicy } from '@/services/parking-mutation-gateway';
@@ -53,6 +54,9 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   // ---------------------------------------------------------------------------
   // Create form state
   // ---------------------------------------------------------------------------
+  const buildName = useEntityNameSuggestion();
+  const createNameManuallyChanged = useRef(false);
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createNumber, setCreateNumber] = useState('');
   const [createType, setCreateType] = useState<ParkingSpotType>('standard');
@@ -128,9 +132,41 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   // CREATE
   // ===========================================================================
 
+  // Set initial name when form opens; reset manual flag when form closes
+  useEffect(() => {
+    if (showCreateForm && !createNameManuallyChanged.current) {
+      setCreateNumber(buildName(t('types.standard'), 0));
+    }
+    if (!showCreateForm) {
+      createNameManuallyChanged.current = false;
+    }
+  // buildName is stable (useCallback inside hook); t changes only on locale switch
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreateForm]);
+
+  const handleCreateNumberChange = useCallback((value: string) => {
+    setCreateNumber(value);
+    createNameManuallyChanged.current = true;
+  }, []);
+
+  const handleCreateTypeChange = useCallback((v: ParkingSpotType) => {
+    setCreateType(v);
+    if (!createNameManuallyChanged.current) {
+      setCreateNumber(buildName(t(`types.${v}`), parseFloat(createArea) || 0));
+    }
+  }, [buildName, t, createArea]);
+
+  const handleCreateAreaChange = useCallback((value: string) => {
+    setCreateArea(value);
+    if (!createNameManuallyChanged.current) {
+      setCreateNumber(buildName(t(`types.${createType}`), parseFloat(value) || 0));
+    }
+  }, [buildName, t, createType]);
+
   const resetCreateForm = useCallback(() => {
     setShowCreateForm(false);
     setCreateNumber('');
+    createNameManuallyChanged.current = false;
     setCreateType('standard');
     setCreateStatus('available');
     setCreateFloor('');
@@ -372,6 +408,9 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     showCreateForm,
     setShowCreateForm,
     createNumber, setCreateNumber,
+    handleCreateNumberChange,
+    handleCreateTypeChange,
+    handleCreateAreaChange,
     createType, setCreateType,
     createStatus, setCreateStatus,
     createFloor, setCreateFloor,
