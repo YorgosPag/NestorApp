@@ -22,6 +22,9 @@ import type {
   GeofenceConfig,
   ProjectWorker,
 } from '../contracts';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const liveWorkerMapCache = createStaleCache<GeofenceConfig | null>('project-live-worker-map');
 
 // =============================================================================
 // TYPES
@@ -56,8 +59,8 @@ export function useLiveWorkerMap(
   t: (key: string) => string
 ) {
   // Geofence config (loaded from server)
-  const [geofence, setGeofence] = useState<GeofenceConfig | null>(null);
-  const [geofenceLoading, setGeofenceLoading] = useState(true);
+  const [geofence, setGeofence] = useState<GeofenceConfig | null>(liveWorkerMapCache.get(projectId) ?? null);
+  const [geofenceLoading, setGeofenceLoading] = useState(!liveWorkerMapCache.hasLoaded(projectId));
 
   // Popup state
   const [selectedWorker, setSelectedWorker] = useState<SelectedWorker | null>(null);
@@ -73,14 +76,18 @@ export function useLiveWorkerMap(
   useEffect(() => {
     async function loadGeofence() {
       try {
-        setGeofenceLoading(true);
+        if (!liveWorkerMapCache.hasLoaded(projectId)) setGeofenceLoading(true);
         const res = await fetch(`${API_ROUTES.ATTENDANCE.GEOFENCE}?projectId=${projectId}`);
         const data = (await res.json()) as GeofenceApiResponse;
         if (data.success && data.geofence) {
+          liveWorkerMapCache.set(data.geofence, projectId);
           setGeofence(data.geofence);
+        } else {
+          liveWorkerMapCache.set(null, projectId);
         }
       } catch {
         // Geofence not configured — map still works without it
+        liveWorkerMapCache.set(null, projectId);
       } finally {
         setGeofenceLoading(false);
       }

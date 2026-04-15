@@ -214,6 +214,14 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/account/SessionsList.tsx` | `useState([])` + `isLoading: useState(true)` unconditional | `sessionsListCache = createStaleCache<SessionDisplayItem[]>('account-sessions')` keyed by userId | 2026-04-16 |
 | `src/components/account/NotificationSettings.tsx` | `useState(null)` + `isLoading: useState(true)` unconditional; real-time subscription also updates | `notificationSettingsCache = createStaleCache<UserNotificationSettings \| null>('account-notification-settings')` keyed by userId | 2026-04-16 |
 | `src/components/shared/files/VersionHistory.tsx` | `useState([])` + `setLoading(true)` unconditional | `fileVersionHistoryCache = createStaleCache<FileVersionSnapshot[]>('file-version-history')` keyed by fileId | 2026-04-16 |
+| `src/components/projects/ika/hooks/useAttendanceLiveEvents.ts` | `useState([])` + `setIsLoading(true)` unconditional | `attendanceLiveEventsCache = createStaleCache<AttendanceEvent[]>('project-attendance-live-events')` keyed by projectId; onSnapshot seeds cache on first result | 2026-04-16 |
+| `src/components/projects/ika/hooks/useLiveWorkerMap.ts` | `useState(null)` + `setGeofenceLoading(true)` unconditional | `liveWorkerMapCache = createStaleCache<GeofenceConfig \| null>('project-live-worker-map')` keyed by projectId; caches `null` when geofence not configured | 2026-04-16 |
+| `src/components/projects/ika/LaborComplianceSettingsTabContent.tsx` | `useState(true)` unconditional; multiple derived state | `laborComplianceCache = createStaleCache<LaborComplianceDocument \| null>('labor-compliance-settings')` single-key; seeds classes/rates/year/circular/effectiveDate from cache | 2026-04-16 |
+| `src/components/sales/payments/financial-intelligence/ForwardCurveChart.tsx` | `useState(null)` + `setIsLoading(true)` unconditional | `forwardCurveCache = createStaleCache<ForwardCurveResult>('sales-forward-curve')` single-key | 2026-04-16 |
+| `src/components/shared/files/inbox-view-helpers.ts` | `useState([])` + `setLoading(true)` unconditional | `inboxViewCache = createStaleCache<InboxFileRecord[]>('file-inbox-view')` keyed by companyId | 2026-04-16 |
+| `src/components/shared/KadCodePicker.tsx` | `useState([])` + `setIsLoading(true)` unconditional | `kadOptionsCache = createStaleCache<ComboboxOption[]>('shared-kad-options')` single-key; dynamic import cached after first load | 2026-04-16 |
+| `src/subapps/accounting/components/setup/KadSection.tsx` | `useState([])` + `setIsLoading(true)` unconditional | `kadSectionCache = createStaleCache<ComboboxOption[]>('accounting-kad-options')` single-key; dynamic import cached after first load | 2026-04-16 |
+| `src/subapps/accounting/components/invoices/details/InvoiceDetails.tsx` | `useState(null)` + `setLoading(true)` unconditional | `invoiceDetailsCache = createStaleCache<Invoice>('accounting-invoice-detail-view')` keyed by invoiceId | 2026-04-16 |
 
 ---
 

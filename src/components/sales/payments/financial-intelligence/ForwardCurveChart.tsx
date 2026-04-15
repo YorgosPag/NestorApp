@@ -45,6 +45,9 @@ import type { ForwardCurveResult } from '@/types/interest-calculator';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const forwardCurveCache = createStaleCache<ForwardCurveResult>('sales-forward-curve');
 
 // =============================================================================
 // TYPES
@@ -71,15 +74,15 @@ const SHAPE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 
 
 export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
   const colors = useSemanticColors();
-  const [result, setResult] = useState<ForwardCurveResult | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [result, setResult] = useState<ForwardCurveResult | null>(forwardCurveCache.get() ?? null);
+  const [isLoading, setIsLoading] = useState(!forwardCurveCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchForwardCurve() {
-      setIsLoading(true);
+      if (!forwardCurveCache.hasLoaded()) setIsLoading(true);
       setError(null);
       try {
         const res = await fetch(API_ROUTES.ECB.FORWARD_RATES);
@@ -88,6 +91,7 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
         if (cancelled) return;
 
         if (data.success && data.result) {
+          forwardCurveCache.set(data.result);
           setResult(data.result);
         } else {
           setError(data.error ?? 'Unknown error');

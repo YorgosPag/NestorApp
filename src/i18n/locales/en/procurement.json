@@ -86,7 +86,9 @@
     "pdf": "PDF",
     "copyText": "Copy Text",
     "cancelPO": "Cancel PO",
-    "notFound": "Not found"
+    "notFound": "Not found",
+    "emptyTitle": "Select a purchase order",
+    "emptyDescription": "Click a purchase order to view its details"
   },
   "email": {
     "sendButton": "Send via Email",
@@ -190,5 +192,29 @@
     "autoMatched": "Auto-matched",
     "noMatch": "No match found",
     "matchReasons": "Match reasons"
+  },
+  "page": {
+    "pageLabel": "Procurement Page",
+    "loadingMessage": "Loading purchase orders...",
+    "dashboard": { "label": "Procurement Dashboard" },
+    "filters": { "desktop": "Filters", "mobile": "Filters" }
+  },
+  "header": {
+    "title": "Procurement",
+    "subtitle": "Manage purchase orders"
+  },
+  "filter": {
+    "allStatuses": "All statuses",
+    "allProjects": "All projects",
+    "allSuppliers": "All suppliers"
+  },
+  "status": {
+    "draft": "Draft",
+    "approved": "Approved",
+    "ordered": "Ordered",
+    "partially_delivered": "Partial Delivery",
+    "delivered": "Delivered",
+    "closed": "Closed",
+    "cancelled": "Cancelled"
   }
 }

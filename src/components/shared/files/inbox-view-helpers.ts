@@ -16,8 +16,10 @@ import { FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToISO } from '@/lib/date-local';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('INBOX_VIEW');
+const inboxViewCache = createStaleCache<InboxFileRecord[]>('file-inbox-view');
 
 // ============================================================================
 // TYPES
@@ -92,13 +94,13 @@ export function groupFilesByChatId(files: InboxFileRecord[]): ChatGroup[] {
 
 export function useInboxFiles(companyId: string) {
   const { user } = useAuth();
-  const [inboxFiles, setInboxFiles] = useState<InboxFileRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [inboxFiles, setInboxFiles] = useState<InboxFileRecord[]>(inboxViewCache.get(companyId) ?? []);
+  const [loading, setLoading] = useState(!inboxViewCache.hasLoaded(companyId));
   const [error, setError] = useState<Error | null>(null);
 
   const fetchInboxFiles = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!inboxViewCache.hasLoaded(companyId)) setLoading(true);
       setError(null);
       logger.info('Fetching inbox files', { companyId });
       const files = await FileRecordService.queryFileRecords({
@@ -108,6 +110,7 @@ export function useInboxFiles(companyId: string) {
         includeDeleted: false,
       });
       logger.info('Inbox files fetched', { count: files.length });
+      inboxViewCache.set(files as InboxFileRecord[], companyId);
       setInboxFiles(files as InboxFileRecord[]);
     } catch (err) {
       const fetchError = err instanceof Error ? err : new Error('Failed to fetch inbox files');

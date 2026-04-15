@@ -86,7 +86,9 @@
     "pdf": "PDF",
     "copyText": "Αντιγραφή Κειμένου",
     "cancelPO": "Ακύρωση PO",
-    "notFound": "Δεν βρέθηκε"
+    "notFound": "Δεν βρέθηκε",
+    "emptyTitle": "Επιλέξτε παραγγελία",
+    "emptyDescription": "Κάντε κλικ σε μια παραγγελία για να δείτε τις λεπτομέρειες"
   },
   "email": {
     "sendButton": "Αποστολή μέσω Email",
@@ -190,5 +192,29 @@
     "autoMatched": "Αυτόματη αντιστοίχιση",
     "noMatch": "Δεν βρέθηκε αντιστοίχιση",
     "matchReasons": "Λόγοι αντιστοίχισης"
+  },
+  "page": {
+    "pageLabel": "Σελίδα Προμηθειών",
+    "loadingMessage": "Φόρτωση παραγγελιών...",
+    "dashboard": { "label": "Dashboard Προμηθειών" },
+    "filters": { "desktop": "Φίλτρα", "mobile": "Φίλτρα" }
+  },
+  "header": {
+    "title": "Προμήθειες",
+    "subtitle": "Διαχείριση παραγγελιών αγοράς"
+  },
+  "filter": {
+    "allStatuses": "Όλες οι καταστάσεις",
+    "allProjects": "Όλα τα έργα",
+    "allSuppliers": "Όλοι οι προμηθευτές"
+  },
+  "status": {
+    "draft": "Πρόχειρο",
+    "approved": "Εγκρίθηκε",
+    "ordered": "Παραγγέλθηκε",
+    "partially_delivered": "Μερική Παραλαβή",
+    "delivered": "Παραλήφθηκε",
+    "closed": "Ολοκληρώθηκε",
+    "cancelled": "Ακυρώθηκε"
   }
 }

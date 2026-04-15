@@ -18,8 +18,10 @@ import { CancelInvoiceDialog } from './CancelInvoiceDialog';
 import { Badge } from '@/components/ui/badge';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-
+import { createStaleCache } from '@/lib/stale-cache';
 import { cn } from '@/lib/utils';
+
+const invoiceDetailsCache = createStaleCache<Invoice>('accounting-invoice-detail-view');
 
 interface InvoiceDetailsProps {
   invoiceId: string;
@@ -33,8 +35,8 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   const { user } = useAuth();
   const { profile: companyProfile } = useCompanySetup();
 
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [invoice, setInvoice] = useState<Invoice | null>(invoiceDetailsCache.get(invoiceId) ?? null);
+  const [loading, setLoading] = useState(!invoiceDetailsCache.hasLoaded(invoiceId));
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
@@ -43,7 +45,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!invoiceDetailsCache.hasLoaded(invoiceId)) setLoading(true);
     try {
       const token = await user.getIdToken();
       const res = await fetch(API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId), {
@@ -51,7 +53,9 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
       });
       if (res.ok) {
         const json = await res.json();
-        setInvoice(json.data ?? null);
+        const data: Invoice | null = json.data ?? null;
+        if (data) invoiceDetailsCache.set(data, invoiceId);
+        setInvoice(data);
       }
     } catch {
       // Error handled by empty state

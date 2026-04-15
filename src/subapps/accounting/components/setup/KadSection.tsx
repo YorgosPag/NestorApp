@@ -23,6 +23,9 @@ import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { Plus, Trash2 } from 'lucide-react';
 import type { CompanySetupInput, KadEntry } from '../../types';
 import type { KadCode } from '../../data/greek-kad-codes';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const kadSectionCache = createStaleCache<ComboboxOption[]>('accounting-kad-options');
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -68,17 +71,20 @@ function kadCodesToOptions(codes: KadCode[]): ComboboxOption[] {
 // ============================================================================
 
 function useKadOptions() {
-  const [options, setOptions] = useState<ComboboxOption[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [options, setOptions] = useState<ComboboxOption[]>(kadSectionCache.get() ?? []);
+  const [isLoading, setIsLoading] = useState(!kadSectionCache.hasLoaded());
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadKadCodes() {
       try {
+        if (!kadSectionCache.hasLoaded()) setIsLoading(true);
         const { GREEK_KAD_CODES } = await import('../../data/greek-kad-codes');
         if (!cancelled) {
-          setOptions(kadCodesToOptions(GREEK_KAD_CODES));
+          const loaded = kadCodesToOptions(GREEK_KAD_CODES);
+          kadSectionCache.set(loaded);
+          setOptions(loaded);
         }
       } catch (error) {
         console.error('Failed to load ΚΑΔ codes:', error);

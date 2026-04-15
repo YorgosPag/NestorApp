@@ -86,6 +86,12 @@ interface PurchaseOrderListProps {
   onCreateNew: () => void;
   onViewPO: (poId: string) => void;
   onDuplicate: (poId: string) => void;
+  /** Split-panel mode: seleziona inline invece di navigare */
+  onSelectPO?: (po: PurchaseOrder) => void;
+  /** ID del PO selezionato — per highlight riga */
+  selectedPOId?: string;
+  /** Nasconde search bar (es. quando AdvancedFiltersPanel gestisce la search) */
+  hideSearchBar?: boolean;
 }
 
 export function PurchaseOrderList({
@@ -97,6 +103,9 @@ export function PurchaseOrderList({
   onCreateNew,
   onViewPO,
   onDuplicate,
+  onSelectPO,
+  selectedPOId,
+  hideSearchBar = false,
 }: PurchaseOrderListProps) {
   const { t } = useTranslation('procurement');
 
@@ -111,21 +120,23 @@ export function PurchaseOrderList({
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={t('list.search')}
-            className="pl-9"
-          />
+      {!hideSearchBar && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={t('list.search')}
+              className="pl-9"
+            />
+          </div>
+          <Button onClick={onCreateNew}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            {t('list.createPO')}
+          </Button>
         </div>
-        <Button onClick={onCreateNew}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          {t('list.createPO')}
-        </Button>
-      </div>
+      )}
 
       {/* Section 1: Requires Action */}
       {actionRequired.length > 0 && (
@@ -144,6 +155,8 @@ export function PurchaseOrderList({
               items={actionRequired}
               onView={onViewPO}
               onDuplicate={onDuplicate}
+              onSelect={onSelectPO}
+              selectedPOId={selectedPOId}
               highlight
             />
           </CardContent>
@@ -168,6 +181,8 @@ export function PurchaseOrderList({
               items={purchaseOrders}
               onView={onViewPO}
               onDuplicate={onDuplicate}
+              onSelect={onSelectPO}
+              selectedPOId={selectedPOId}
             />
           )}
         </CardContent>
@@ -184,11 +199,15 @@ function POTable({
   items,
   onView,
   onDuplicate,
+  onSelect,
+  selectedPOId,
   highlight = false,
 }: {
   items: PurchaseOrder[];
   onView: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onSelect?: (po: PurchaseOrder) => void;
+  selectedPOId?: string;
   highlight?: boolean;
 }) {
   const { t } = useTranslation('procurement');
@@ -215,9 +234,10 @@ function POTable({
                 key={po.id}
                 className={cn(
                   'cursor-pointer',
-                  highlight && 'bg-amber-50/50 dark:bg-amber-950/20'
+                  highlight && 'bg-amber-50/50 dark:bg-amber-950/20',
+                  selectedPOId === po.id && 'bg-primary/10 border-l-2 border-l-primary',
                 )}
-                onClick={() => onView(po.id)}
+                onClick={() => onSelect ? onSelect(po) : onView(po.id)}
               >
                 <TableCell className="font-medium">{po.poNumber}</TableCell>
                 <TableCell className="max-w-[200px] truncate">
@@ -263,8 +283,9 @@ function POTable({
             className={cn(
               'rounded-lg border p-3 space-y-1.5',
               highlight && 'border-amber-300 dark:border-amber-700',
+              selectedPOId === po.id && 'border-primary bg-primary/5',
             )}
-            onClick={() => onView(po.id)}
+            onClick={() => onSelect ? onSelect(po) : onView(po.id)}
             role="button"
             tabIndex={0}
           >

@@ -28,8 +28,10 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useAttendanceLiveEvents');
+const attendanceLiveEventsCache = createStaleCache<AttendanceEvent[]>('project-attendance-live-events');
 
 // =============================================================================
 // TYPES
@@ -90,10 +92,10 @@ export function useAttendanceLiveEvents(
   selectedDate: Date
 ): UseAttendanceLiveEventsReturn {
   const companyId = useCompanyId()?.companyId;
-  const [events, setEvents] = useState<AttendanceEvent[]>([]);
+  const [events, setEvents] = useState<AttendanceEvent[]>(attendanceLiveEventsCache.get(projectId ?? '') ?? []);
   const [latestEvent, setLatestEvent] = useState<AttendanceEvent | null>(null);
   const [isLive, setIsLive] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!attendanceLiveEventsCache.hasLoaded(projectId ?? ''));
   const [error, setError] = useState<string | null>(null);
 
   // Track previous event count to detect new arrivals
@@ -109,7 +111,7 @@ export function useAttendanceLiveEvents(
       return;
     }
 
-    setIsLoading(true);
+    if (!attendanceLiveEventsCache.hasLoaded(projectId)) setIsLoading(true);
     setError(null);
     isInitialLoadRef.current = true;
 
@@ -132,6 +134,7 @@ export function useAttendanceLiveEvents(
           parseEventDoc(doc.id, doc.data() as Record<string, unknown>)
         );
 
+        attendanceLiveEventsCache.set(fetchedEvents, projectId);
         setEvents(fetchedEvents);
         setIsLive(true);
         setIsLoading(false);

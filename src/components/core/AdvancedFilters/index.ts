@@ -49,6 +49,13 @@ export {
   defaultParkingFilters
 } from './configs/parkingFiltersConfig';
 
+// Procurement Configurations (ADR-267 Phase E)
+export {
+  procurementFiltersConfig,
+  defaultProcurementFilters,
+  procurementFiltersToPOFilters,
+} from './configs/procurementFiltersConfig';
+
 // ============================================================================
 // ADR-051: UNIFIED TYPE SYSTEM
 // ============================================================================
@@ -101,6 +108,11 @@ export type {
 export type {
   ParkingFilterState
 } from './configs/parkingFiltersConfig';
+
+// Procurement Types (ADR-267 Phase E)
+export type {
+  ProcurementFilterState
+} from './configs/procurementFiltersConfig';
 
 // ============================================================================
 // ADR-051: CENTRALIZED APPLY FILTERS UTILITY

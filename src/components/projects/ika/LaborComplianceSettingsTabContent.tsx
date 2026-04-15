@@ -37,6 +37,9 @@ import {
 } from '@/services/labor-compliance/labor-compliance-mutation-gateway';
 import { useGuardedLaborComplianceSave } from '@/hooks/useGuardedLaborComplianceSave';
 import type { LaborComplianceDocument } from '@/services/labor-compliance';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const laborComplianceCache = createStaleCache<LaborComplianceDocument | null>('labor-compliance-settings');
 import type { InsuranceClass, ContributionRates } from './contracts';
 import {
   DEFAULT_INSURANCE_CLASSES,
@@ -62,26 +65,28 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
   const { checking, runSaveOperation, ImpactDialog } = useGuardedLaborComplianceSave();
 
   // --- State ---
-  const [isLoading, setIsLoading] = useState(true);
+  const _cachedDoc = laborComplianceCache.get();
+  const [isLoading, setIsLoading] = useState(!laborComplianceCache.hasLoaded());
   const [isSaving, setIsSaving] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isFromFirestore, setIsFromFirestore] = useState(false);
-  const [fullDoc, setFullDoc] = useState<LaborComplianceDocument | null>(null);
+  const [isFromFirestore, setIsFromFirestore] = useState(_cachedDoc !== null);
+  const [fullDoc, setFullDoc] = useState<LaborComplianceDocument | null>(_cachedDoc ?? null);
 
   // Editable state
-  const [classes, setClasses] = useState<InsuranceClass[]>(DEFAULT_INSURANCE_CLASSES);
-  const [rates, setRates] = useState<ContributionRates>(DEFAULT_CONTRIBUTION_RATES);
-  const [activeYear, setActiveYear] = useState(new Date().getFullYear());
-  const [sourceCircular, setSourceCircular] = useState('');
-  const [effectiveDate, setEffectiveDate] = useState('');
+  const [classes, setClasses] = useState<InsuranceClass[]>(_cachedDoc ? [..._cachedDoc.insuranceClasses] : DEFAULT_INSURANCE_CLASSES);
+  const [rates, setRates] = useState<ContributionRates>(_cachedDoc ? { ..._cachedDoc.contributionRates } : DEFAULT_CONTRIBUTION_RATES);
+  const [activeYear, setActiveYear] = useState(_cachedDoc ? _cachedDoc.activeYear : new Date().getFullYear());
+  const [sourceCircular, setSourceCircular] = useState(_cachedDoc ? (_cachedDoc.sourceCircular ?? '') : '');
+  const [effectiveDate, setEffectiveDate] = useState(_cachedDoc ? _cachedDoc.effectiveDate : '');
 
   // --- Load data ---
   const loadData = useCallback(async () => {
     try {
-      setIsLoading(true);
+      if (!laborComplianceCache.hasLoaded()) setIsLoading(true);
       const doc = await LaborComplianceService.getFullDocument();
       if (doc) {
+        laborComplianceCache.set(doc);
         setFullDoc(doc);
         setClasses([...doc.insuranceClasses]);
         setRates({ ...doc.contributionRates });
@@ -90,6 +95,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
         setEffectiveDate(doc.effectiveDate);
         setIsFromFirestore(true);
       } else {
+        laborComplianceCache.set(null);
         setFullDoc(null);
         setClasses([...DEFAULT_INSURANCE_CLASSES]);
         setRates({ ...DEFAULT_CONTRIBUTION_RATES });

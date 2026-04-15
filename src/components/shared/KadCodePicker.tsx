@@ -26,6 +26,9 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
+import { createStaleCache } from '@/lib/stale-cache';
+
+const kadOptionsCache = createStaleCache<ComboboxOption[]>('shared-kad-options');
 
 // ============================================================================
 // TYPES
@@ -47,25 +50,26 @@ export interface KadCodePickerProps {
 // ============================================================================
 
 function useKadOptions() {
-  const [options, setOptions] = useState<ComboboxOption[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [options, setOptions] = useState<ComboboxOption[]>(kadOptionsCache.get() ?? []);
+  const [isLoading, setIsLoading] = useState(!kadOptionsCache.hasLoaded());
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadKadCodes() {
       try {
+        if (!kadOptionsCache.hasLoaded()) setIsLoading(true);
         const { GREEK_KAD_CODES } = await import(
           '@/subapps/accounting/data/greek-kad-codes'
         );
         if (!cancelled) {
-          setOptions(
-            GREEK_KAD_CODES.map((kad) => ({
-              value: kad.code,
-              label: `${kad.code} — ${kad.description}`,
-              secondaryLabel: kad.description,
-            }))
-          );
+          const loaded = GREEK_KAD_CODES.map((kad) => ({
+            value: kad.code,
+            label: `${kad.code} — ${kad.description}`,
+            secondaryLabel: kad.description,
+          }));
+          kadOptionsCache.set(loaded);
+          setOptions(loaded);
         }
       } catch (error) {
         console.error('Failed to load ΚΑΔ codes:', error);
