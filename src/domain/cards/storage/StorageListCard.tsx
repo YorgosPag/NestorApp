@@ -84,11 +84,14 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 // =============================================================================
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
+  storage: 'types.storage',
   large: 'types.large',
   small: 'types.small',
   basement: 'types.basement',
   ground: 'types.ground',
   special: 'types.special',
+  garage: 'types.garage',
+  warehouse: 'types.warehouse',
 };
 
 // =============================================================================

@@ -47,11 +47,14 @@
     "special": "Ειδική"
   },
   "types": {
+    "storage": "Αποθήκη",
     "large": "Μεγάλη",
     "small": "Μικρή",
     "basement": "Υπόγεια",
     "ground": "Ισόγεια",
     "special": "Ειδική",
+    "garage": "Γκαράζ",
+    "warehouse": "Αποθήκη Εμπορευμάτων",
     "unknown": "Άγνωστο",
     "parking": "Θέση Στάθμευσης"
   },

@@ -47,11 +47,14 @@
     "special": "Special"
   },
   "types": {
+    "storage": "Storage",
     "large": "Large",
     "small": "Small",
     "basement": "Basement",
     "ground": "Ground Floor",
     "special": "Special",
+    "garage": "Garage",
+    "warehouse": "Warehouse",
     "unknown": "Unknown",
     "parking": "Parking Spot"
   },
