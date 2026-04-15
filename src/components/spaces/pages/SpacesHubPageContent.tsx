@@ -20,7 +20,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
-import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
+import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import '@/lib/design-system';
@@ -31,7 +31,7 @@ export function SpacesHubPageContent() {
   const colors = useSemanticColors();
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
-  const { properties, loading: propertiesLoading } = useFirestoreProperties();
+  const { properties, isLoading: propertiesLoading } = useSharedProperties();
   const { storages, loading: storagesLoading } = useFirestoreStorages();
   const { parkingSpots, loading: parkingLoading } = useFirestoreParkingSpots();
 
