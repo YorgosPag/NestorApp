@@ -155,6 +155,11 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/subapps/accounting/components/invoices/EditInvoicePageContent.tsx` | `useState(null)` + `setLoading(true)` unconditional | `editInvoiceCache = createStaleCache<Invoice>('accounting-invoice-detail')` keyed by invoiceId | 2026-04-15 |
 | `src/subapps/accounting/components/apy-certificates/APYCertificateDetails.tsx` | `useState(null)` + `setLoading(true)` unconditional | `apyCertCache = createStaleCache<APYCertificate>('accounting-apy-detail')` keyed by certificateId | 2026-04-15 |
 | `src/subapps/accounting/hooks/useMatchingConfig.ts` | `useState(DEFAULT_MATCHING_CONFIG)` + `setLoading(true)` unconditional | `matchingConfigCache = createStaleCache<MatchingConfig>('accounting-matching-config')` single-key | 2026-04-15 |
+| `src/components/building-management/tabs/useFloorsTabState.ts` | `useState([])` + `setLoading(true)` unconditional | `floorsCache = createStaleCache<FloorRecord[]>('building-floors')` keyed by buildingId | 2026-04-15 |
+| `src/components/building-management/tabs/useParkingTabState.ts` | `useState([])` + `setLoading(true)` unconditional | `buildingParkingCache = createStaleCache<ParkingSpot[]>('building-parking-tab')` keyed by buildingId | 2026-04-15 |
+| `src/components/building-management/tabs/BuildingCustomersTab.tsx` | `useState([])` + `setLoading(true)` unconditional | `buildingCustomersCache = createStaleCache<ProjectCustomer[]>('building-customers-tab')` keyed by buildingId | 2026-04-15 |
+| `src/components/building-management/tabs/PropertiesTabContent.tsx` | `useState([])` + `setLoading(true)` unconditional | `buildingPropertiesCache` + `buildingFloorsTabCache` keyed by buildingId | 2026-04-15 |
+| `src/components/building-management/StorageTab/useStorageTabState.ts` | `useState([])` + `setLoading(true)` unconditional | `buildingStorageCache = createStaleCache<StorageUnit[]>('building-storage-tab')` keyed by buildingId | 2026-04-15 |
 
 ---
 

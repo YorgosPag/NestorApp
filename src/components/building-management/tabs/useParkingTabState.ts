@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createStaleCache } from '@/lib/stale-cache';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -36,6 +37,9 @@ interface UseParkingTabStateParams {
   projectId: string;
 }
 
+// ADR-300: Module-level cache — keyed by buildingId, survives re-navigation
+const buildingParkingCache = createStaleCache<ParkingSpot[]>('building-parking-tab');
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -45,10 +49,10 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   // ---------------------------------------------------------------------------
-  // Data state
+  // Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation
   // ---------------------------------------------------------------------------
-  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>(buildingParkingCache.get(buildingId) ?? []);
+  const [loading, setLoading] = useState(!buildingParkingCache.hasLoaded(buildingId));
   const [error, setError] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
@@ -108,13 +112,16 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   // ===========================================================================
 
   const fetchParkingSpots = useCallback(async () => {
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!buildingParkingCache.hasLoaded(buildingId)) setLoading(true);
     setError(null);
     try {
       const result = await apiClient.get<ParkingApiResponse>(
         `${API_ROUTES.PARKING.LIST}?buildingId=${buildingId}`
       );
       if (result?.parkingSpots) {
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        buildingParkingCache.set(result.parkingSpots, buildingId);
         setParkingSpots(result.parkingSpots);
       }
     } catch (err) {

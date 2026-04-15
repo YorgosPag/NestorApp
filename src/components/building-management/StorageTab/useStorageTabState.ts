@@ -12,6 +12,7 @@ import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import type { Building } from '@/types/building/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createStaleCache } from '@/lib/stale-cache';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createStorageWithPolicy, deleteStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -22,6 +23,9 @@ import type { LinkableItem } from '../shared';
 import { getStatusLabel, getTypeLabel, filterUnits, calculateStats } from './utils';
 
 const logger = createModuleLogger('StorageTab');
+
+// ADR-300: Module-level cache — keyed by buildingId, survives re-navigation
+const buildingStorageCache = createStaleCache<StorageUnit[]>('building-storage-tab');
 
 interface StoragesApiResponse {
   storages: StorageUnit[];
@@ -40,9 +44,9 @@ export function useStorageTabState(building: Building) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { success, error: notifyError } = useNotifications();
 
-  // ── Data state ──
-  const [units, setUnits] = useState<StorageUnit[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation ──
+  const [units, setUnits] = useState<StorageUnit[]>(buildingStorageCache.get(building.id) ?? []);
+  const [loading, setLoading] = useState(!buildingStorageCache.hasLoaded(building.id));
 
   // ── Create form state ──
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -103,8 +107,9 @@ export function useStorageTabState(building: Building) {
   // ── Fetch ──
 
   const fetchStorageUnits = useCallback(async () => {
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!buildingStorageCache.hasLoaded(building.id)) setLoading(true);
     try {
-      setLoading(true);
       const result = await apiClient.get<StoragesApiResponse>(
         `${API_ROUTES.STORAGES.LIST}?buildingId=${building.id}`,
       );
@@ -126,6 +131,8 @@ export function useStorageTabState(building: Building) {
           features: s.features || [],
           coordinates: s.coordinates || { x: 0, y: 0 },
         }));
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        buildingStorageCache.set(storageUnits, building.id);
         setUnits(storageUnits);
         logger.info('Loaded storage units via API', { count: storageUnits.length, buildingId: building.id });
       }

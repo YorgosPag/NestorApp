@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { createStaleCache } from '@/lib/stale-cache';
 import { deleteFloorWithPolicy, updateFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
@@ -44,6 +45,9 @@ interface FloorMutationResponse {
   error?: string;
 }
 
+// ADR-300: Module-level cache — keyed by buildingId, survives re-navigation
+const floorsCache = createStaleCache<FloorRecord[]>('building-floors');
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -54,9 +58,9 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const { confirm, dialogProps } = useConfirmDialog();
   const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('floor');
 
-  // Data state
-  const [floors, setFloors] = useState<FloorRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [floors, setFloors] = useState<FloorRecord[]>(floorsCache.get(buildingId) ?? []);
+  const [loading, setLoading] = useState(!floorsCache.hasLoaded(buildingId));
   const [error, setError] = useState<string | null>(null);
 
   // Expand/collapse
@@ -147,14 +151,18 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   }, [floors]);
 
   const fetchFloors = useCallback(async () => {
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!floorsCache.hasLoaded(buildingId)) setLoading(true);
     setError(null);
     try {
       const result = await apiClient.get<FloorsApiResponse>(
         `${API_ROUTES.FLOORS.LIST}?buildingId=${buildingId}`
       );
       if (result?.floors) {
-        setFloors([...result.floors].sort((a, b) => a.number - b.number));
+        const sorted = [...result.floors].sort((a, b) => a.number - b.number);
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        floorsCache.set(sorted, buildingId);
+        setFloors(sorted);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load floors');

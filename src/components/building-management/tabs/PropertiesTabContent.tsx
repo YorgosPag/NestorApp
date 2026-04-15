@@ -45,6 +45,11 @@ import {
 } from '@/services/property/property-mutation-gateway';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { createStaleCache } from '@/lib/stale-cache';
+
+// ADR-300: Module-level caches — keyed by buildingId, survive re-navigation
+const buildingPropertiesCache = createStaleCache<Property[]>('building-properties-tab');
+const buildingFloorsTabCache = createStaleCache<FloorRecord[]>('building-floors-tab');
 
 type PropertyConfirmAction = { type: 'unlink'; item: Property };
 
@@ -68,10 +73,10 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 
-  // Data state
-  const [units, setUnits] = useState<Property[]>([]);
-  const [floors, setFloors] = useState<FloorRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [units, setUnits] = useState<Property[]>(buildingPropertiesCache.get(building.id) ?? []);
+  const [floors, setFloors] = useState<FloorRecord[]>(buildingFloorsTabCache.get(building.id) ?? []);
+  const [loading, setLoading] = useState(!buildingPropertiesCache.hasLoaded(building.id));
   const [error, setError] = useState<string | null>(null);
 
   // Create form visibility (form state managed by PropertyInlineCreateForm)
@@ -105,6 +110,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
       );
       if (result?.floors) {
         const sorted = [...result.floors].sort((a, b) => a.number - b.number);
+        buildingFloorsTabCache.set(sorted, building.id);
         setFloors(sorted);
       }
     } catch {
@@ -113,13 +119,16 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   }, [building.id]);
 
   const fetchProperties = useCallback(async () => {
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!buildingPropertiesCache.hasLoaded(building.id)) setLoading(true);
     setError(null);
     try {
       const result = await apiClient.get<PropertiesApiResponse>(
         `${API_ROUTES.PROPERTIES.LIST}?buildingId=${building.id}`
       );
       if (result?.properties) {
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        buildingPropertiesCache.set(result.properties, building.id);
         setUnits(result.properties);
       }
     } catch (err) {

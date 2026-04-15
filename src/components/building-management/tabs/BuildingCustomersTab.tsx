@@ -12,11 +12,15 @@ import type { ProjectCustomer } from "@/types/project";
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createStaleCache } from '@/lib/stale-cache';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('BuildingCustomersTab');
+
+// ADR-300: Module-level cache — keyed by buildingId, survives re-navigation
+const buildingCustomersCache = createStaleCache<ProjectCustomer[]>('building-customers-tab');
 
 interface BuildingCustomersTabProps {
   buildingId: string;
@@ -27,14 +31,16 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
-  const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [customers, setCustomers] = useState<ProjectCustomer[]>(buildingCustomersCache.get(buildingId) ?? []);
+  const [loading, setLoading] = useState(!buildingCustomersCache.hasLoaded(buildingId));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      setLoading(true);
+      // ADR-300: Only show spinner on first load — not on re-navigation
+      if (!buildingCustomersCache.hasLoaded(buildingId)) setLoading(true);
       setError(null);
       try {
         // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
@@ -45,7 +51,10 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
         const data = await apiClient.get<BuildingCustomersApiResponse>(API_ROUTES.BUILDINGS.CUSTOMERS(buildingId));
 
         if (mounted) {
-          setCustomers(data?.customers || []);
+          const loaded = data?.customers || [];
+          // ADR-300: Write to module-level cache so next remount skips spinner
+          buildingCustomersCache.set(loaded, buildingId);
+          setCustomers(loaded);
         }
       } catch (e) {
         logger.error("Failed to fetch building customers", { error: e });
