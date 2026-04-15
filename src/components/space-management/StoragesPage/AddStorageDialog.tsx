@@ -159,6 +159,8 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
 
         resetForm();
         onOpenChange(false);
+      } else {
+        setError(t('storages.form.createError'));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('storages.form.createError'));
@@ -166,8 +168,6 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
       setCreating(false);
     }
   };
-
-  const isValid = name.trim() && buildingId;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -348,11 +348,12 @@ export function AddStorageDialog({ open, onOpenChange }: AddStorageDialogProps) 
             />
           </label>
 
-          {/* Error */}
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
         </form>
+
+        {/* Error — outside form so always visible above buttons */}
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
 
         <DialogFooter>
           <Button
