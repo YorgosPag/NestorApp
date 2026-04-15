@@ -804,6 +804,7 @@ export const API_ROUTES = {
   // ── Misc ──────────────────────────────────────────────────────────────
   UPLOAD: { PHOTO: '/api/upload/photo' },
   SEARCH: '/api/search',
+  SEARCH_REINDEX: '/api/search/reindex',
   ENTERPRISE_IDS: { MIGRATE: '/api/enterprise-ids/migrate' },
   NAVIGATION: { COMPANY: '/api/navigation/company' },
   ENTITY_CODE: { SUGGEST: '/api/entity-code/suggest' },

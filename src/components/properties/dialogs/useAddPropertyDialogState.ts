@@ -10,10 +10,8 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { useAuth } from '@/auth/contexts/AuthContext';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { usePropertyForm, isStandaloneUnitType } from '../hooks/usePropertyForm';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
 import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
@@ -149,10 +147,9 @@ export function useAddPropertyDialogState({
   // Real-time floor subscription
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
   const [floorsLoading, setFloorsLoading] = useState(false);
-  const { user } = useAuth();
 
   useEffect(() => {
-    if (!formData.buildingId || !user) {
+    if (!formData.buildingId) {
       setFloorOptions([]);
       setFloorsLoading(false);
       return;
@@ -160,38 +157,28 @@ export function useAddPropertyDialogState({
 
     setFloorsLoading(true);
 
-    const floorsCol = collection(db, COLLECTIONS.FLOORS);
-    const constraints = [
-      where('buildingId', '==', formData.buildingId),
-      ...(user.companyId ? [where('companyId', '==', user.companyId)] : []),
-    ];
-    const q = query(floorsCol, ...constraints);
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const floors = snapshot.docs
-          .map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              number: typeof data.number === 'number' ? data.number : 0,
-              name: (data.name as string) || '',
-            };
-          })
+    const unsubscribe = firestoreQueryService.subscribe<{ id: string; number: number; name: string }>(
+      'FLOORS',
+      (result) => {
+        const floors = result.documents
+          .map((doc) => ({
+            id: doc.id,
+            number: typeof doc.number === 'number' ? doc.number : 0,
+            name: (doc.name as string) || '',
+          }))
           .sort((a, b) => a.number - b.number);
-
         setFloorOptions(floors);
         setFloorsLoading(false);
       },
       () => {
         setFloorOptions([]);
         setFloorsLoading(false);
-      }
+      },
+      { constraints: [where('buildingId', '==', formData.buildingId)] }
     );
 
     return () => unsubscribe();
-  }, [formData.buildingId, user]);
+  }, [formData.buildingId]);
 
   // Name suggestion: tracks whether user has manually edited the name field.
   // If false → auto-fill on type select. If true → show hint only.
@@ -226,6 +213,16 @@ export function useAddPropertyDialogState({
       setLatestSuggestion(null);
     }
   }, [open, resetForm]);
+
+  // ADR-233: Seed initial name on dialog open — runs after reset settles.
+  // formData.type = 'apartment' (INITIAL_FORM_DATA default) when this fires.
+  useEffect(() => {
+    if (!open) return;
+    if (isPropertyType(formData.type)) {
+      handleSelectChange('name', buildName(PROPERTY_TYPE_LABELS_EL[formData.type], 0));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]); // intentional — seed once on open
 
   // Building change handler (resets floor + levels)
   const handleBuildingChange = (value: string) => {

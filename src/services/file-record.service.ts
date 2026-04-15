@@ -58,6 +58,8 @@ import {
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { RealtimeService } from '@/services/realtime';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // 🏢 ENTERPRISE: SRP-compliant modules (ADR-065)
 import {
@@ -236,6 +238,9 @@ export class FileRecordService {
       fileId: input.fileId,
       status: coreUpdate.status,
     });
+
+    // ADR-029: Index for global search after file is ready (fire-and-forget)
+    apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'file', entityId: input.fileId }).catch(() => {});
 
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId: input.fileId,

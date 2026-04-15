@@ -31,6 +31,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
+import { SEARCH_ENTITY_TYPES } from '@/types/search';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import { computeEntityDiff, CONTACT_TRACKED_FIELDS, getContactTrackedFieldsForType } from '@/config/audit-tracked-fields';
 import { cleanupOrphanedPhotos } from '@/utils/contactForm/photo-cleanup';
@@ -197,6 +198,9 @@ export class ContactsService {
     await setDoc(docRef, createData as unknown as Contact);
 
     logger.info('CONTACT CREATED', { contactId: id, contactType: sanitizedData.type });
+
+    // ADR-029: Index for global search (fire-and-forget)
+    apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: SEARCH_ENTITY_TYPES.CONTACT, entityId: id }).catch(() => {});
 
     // Audit trail: record creation (fire-and-forget)
     const displayName = this.getDisplayName(sanitizedData as unknown as Contact);
@@ -369,6 +373,9 @@ export class ContactsService {
     deepCleanUndefined(udRecord);
 
     await updateDoc(docRef, udRecord);
+
+    // ADR-029: Reindex for global search (fire-and-forget)
+    apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: SEARCH_ENTITY_TYPES.CONTACT, entityId: id }).catch(() => {});
 
     RealtimeService.dispatch('CONTACT_UPDATED', {
       contactId: id,

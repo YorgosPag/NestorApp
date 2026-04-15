@@ -32,6 +32,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import type { AuditFieldChange } from '@/types/audit-trail';
+import { indexEntityForSearch } from '@/lib/search/search-indexer';
+import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const logger = createModuleLogger('ProjectsCreateRoute');
 
@@ -228,6 +230,14 @@ export const POST = withHighRateLimit(
         const cache = EnterpriseAPICache.getInstance();
         cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
         cache.delete(`${CACHE_KEY_PREFIX}:all`);
+
+        // ADR-029: Index for global search (non-fatal)
+        void indexEntityForSearch({
+          entityType: SEARCH_ENTITY_TYPES.PROJECT,
+          entityId: projectId,
+          entityData: { ...cleanData, projectCode, id: projectId, companyId: resolvedCompanyId },
+          tenantId: resolvedCompanyId,
+        });
 
         return apiSuccess<ProjectCreateResponse>(
           {

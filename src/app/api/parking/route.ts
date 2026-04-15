@@ -19,6 +19,8 @@ const logger = createModuleLogger('ParkingRoute');
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { indexEntityForSearch } from '@/lib/search/search-indexer';
+import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const CreateParkingSchema = z.object({
   number: z.string().min(1).max(50),
@@ -61,9 +63,7 @@ const getHandler = async (request: NextRequest) => {
 
   return handler(request);
 };
-
 export const GET = withStandardRateLimit(getHandler);
-
 // ============================================================================
 // POST — Create Parking Spot via Admin SDK
 // ============================================================================
@@ -95,10 +95,8 @@ export const POST = withStandardRateLimit(
         const parsed = safeParseBody(CreateParkingSchema, await request.json());
         if (parsed.error) throw new ApiError(400, 'Validation failed');
         const body = parsed.data;
-
         const buildingId = body.buildingId?.trim() || null;
         const resolvedProjectId = body.projectId?.trim() || null;
-
         // ADR-191: Open space parking (no buildingId) — verify project belongs to tenant
         if (!buildingId && resolvedProjectId) {
           const adminDb = getAdminFirestore();
@@ -149,6 +147,8 @@ export const POST = withStandardRateLimit(
           apiPath: '/api/parking (POST)',
         });
 
+        // ADR-029: Index for global search (non-fatal)
+        void indexEntityForSearch({ entityType: SEARCH_ENTITY_TYPES.PARKING, entityId: result.id, entityData: { ...entitySpecificFields, id: result.id, companyId: ctx.companyId }, tenantId: ctx.companyId });
         return apiSuccess<ParkingCreateResponse>(
           { parkingSpotId: result.id },
           'Parking spot created successfully'

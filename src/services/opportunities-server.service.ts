@@ -10,6 +10,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateOpportunityId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { indexEntityForSearch } from '@/lib/search/search-indexer';
+import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const logger = createModuleLogger('OpportunitiesServerService');
 
@@ -91,6 +93,15 @@ export class OpportunitiesServerService {
       await db.collection(COLLECTIONS.OPPORTUNITIES).doc(id).set(opportunity);
 
       logger.info(`Created opportunity ${id} for company ${companyId}`);
+
+      // ADR-029: Index for global search (non-fatal)
+      void indexEntityForSearch({
+        entityType: SEARCH_ENTITY_TYPES.OPPORTUNITY,
+        entityId: id,
+        entityData: opportunity,
+        tenantId: companyId,
+      });
+
       return { success: true, id };
     } catch (error) {
       logger.error('Failed to create opportunity:', error);
@@ -150,6 +161,15 @@ export class OpportunitiesServerService {
       await docRef.update(updates);
 
       logger.info(`Updated opportunity ${id}`);
+
+      // ADR-029: Reindex for global search (non-fatal)
+      void indexEntityForSearch({
+        entityType: SEARCH_ENTITY_TYPES.OPPORTUNITY,
+        entityId: id,
+        entityData: { ...existing, ...updates, id },
+        tenantId: companyId,
+      });
+
       return { success: true };
     } catch (error) {
       logger.error('Failed to update opportunity:', error);
@@ -176,6 +196,12 @@ export class OpportunitiesServerService {
       }
 
       await docRef.delete();
+
+      // ADR-029: Remove from search index (non-fatal)
+      void getDb().collection(COLLECTIONS.SEARCH_DOCUMENTS)
+        .doc(`${SEARCH_ENTITY_TYPES.OPPORTUNITY}_${id}`)
+        .delete()
+        .catch(() => {});
 
       logger.info(`Deleted opportunity ${id}`);
       return { success: true };

@@ -17,6 +17,8 @@ import { generateMessageId } from '@/services/enterprise-id.service';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { normalizeToISO, normalizeToDate } from '@/lib/date-local';
+import { indexEntityForSearch } from '@/lib/search/search-indexer';
+import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 // ── Re-exports for backward compatibility ──────────
 // In 'use server' files, only async functions can be exported.
@@ -162,6 +164,17 @@ export async function addCommunication(communicationData: Omit<Communication, 'i
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+
+  // ADR-029: Index for global search (non-fatal)
+  if (communicationData.companyId) {
+    void indexEntityForSearch({
+      entityType: SEARCH_ENTITY_TYPES.COMMUNICATION,
+      entityId: enterpriseId,
+      entityData: communicationData as Record<string, unknown>,
+      tenantId: communicationData.companyId,
+    });
+  }
+
   return { id: enterpriseId, success: true };
 }
 

@@ -76,7 +76,7 @@ const INITIAL_FORM_DATA: PropertyFormData = {
   // Tab 1: Basic Info
   name: '',
   code: '',
-  type: '',
+  type: 'apartment',
   // ADR-284: Project scope
   projectId: '',
   buildingId: '',

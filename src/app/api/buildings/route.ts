@@ -13,6 +13,8 @@ import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { indexEntityForSearch } from '@/lib/search/search-indexer';
+import { SEARCH_ENTITY_TYPES } from '@/types/search';
 import { POLICY_ERROR_CODES } from '@/lib/policy';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import {
@@ -141,12 +143,9 @@ export const GET = withStandardRateLimit(
         ...doc.data(),
         id: doc.id,  // ✅ Firestore document ID (always last to prevent override)
       })) as BuildingDocument[];
-
     // 🔄 ENTERPRISE: Server-side sort by createdAt (desc order)
     buildings.sort((a, b) => normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt));
-
     logger.info('[Buildings] Found buildings for tenant', { count: buildings.length, tenantCompanyId, projectId: projectId || undefined });
-
     // 🏢 ENTERPRISE: Return standard apiSuccess format
     return apiSuccess<BuildingsResponseData>(
       {
@@ -273,6 +272,8 @@ export const POST = withStandardRateLimit(
         auditFieldResolvers,
       });
 
+      // ADR-029: Index for global search (non-fatal)
+      void indexEntityForSearch({ entityType: SEARCH_ENTITY_TYPES.BUILDING, entityId: result.id, entityData: { ...entitySpecificFields, id: result.id, companyId: ctx.companyId }, tenantId: ctx.companyId });
       return apiSuccess<BuildingCreateResponse>(
         {
           buildingId: result.id,

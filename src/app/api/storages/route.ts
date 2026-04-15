@@ -13,6 +13,8 @@ import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { mapStorageDoc, isValidStorageType, isValidStorageStatus } from '@/lib/firestore-mappers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { indexEntityForSearch } from '@/lib/search/search-indexer';
+import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const CreateStorageSchema = z.object({
   name: z.string().min(1).max(200),
@@ -51,11 +53,8 @@ const logger = createModuleLogger('StoragesRoute');
 // - Validation at the boundary
 //
 // ============================================================================
-
-// ============================================================================
 // DATA MAPPER — Centralized in @/lib/firestore-mappers (SSoT)
 // ============================================================================
-
 
 // ============================================================================
 // RESPONSE TYPES (Type-safe withAuth) - CANONICAL FORMAT
@@ -277,6 +276,8 @@ export const POST = withStandardRateLimit(
           apiPath: '/api/storages (POST)',
         });
 
+        // ADR-029: Index for global search (non-fatal)
+        void indexEntityForSearch({ entityType: SEARCH_ENTITY_TYPES.STORAGE, entityId: result.id, entityData: { ...entitySpecificFields, id: result.id, companyId: ctx.companyId }, tenantId: ctx.companyId });
         return apiSuccess<StorageCreateResponse>(
           { storageId: result.id },
           'Storage unit created successfully'

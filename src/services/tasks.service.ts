@@ -19,6 +19,8 @@ import type { CrmTask } from '@/types/crm';
 import { TasksRepository } from './crm/tasks/repositories/TasksRepository';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // 🏢 ENTERPRISE: Singleton repository instance
 const tasksRepository = new TasksRepository();
@@ -44,6 +46,9 @@ export async function addTask(
     },
     timestamp: Date.now()
   });
+
+  // ADR-029: Index for global search (fire-and-forget)
+  apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'task', entityId: result.id }).catch(() => {});
 
   return result.id;
 }
@@ -95,6 +100,9 @@ export async function getOverdueTasks(): Promise<CrmTask[]> {
  */
 export async function updateTask(id: string, updates: Partial<CrmTask>): Promise<void> {
   await tasksRepository.update(id, updates);
+
+  // ADR-029: Reindex for global search (fire-and-forget)
+  apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'task', entityId: id }).catch(() => {});
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
   RealtimeService.dispatch('TASK_UPDATED',{
