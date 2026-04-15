@@ -173,16 +173,18 @@ export function ParkingGeneralTab({
   }, []);
 
   const handleTypeChange = useCallback((v: ParkingSpotType) => {
-    updateField('type', v);
     if (createMode && !nameManuallyChanged.current) {
       setForm(prev => ({ ...prev, type: v, number: buildName(t(`types.${v}`), parseFloat(prev.area) || 0) }));
+    } else {
+      updateField('type', v);
     }
   }, [buildName, t, createMode]);
 
   const handleAreaChange = useCallback((value: string) => {
-    updateField('area', value);
     if (createMode && !nameManuallyChanged.current) {
       setForm(prev => ({ ...prev, area: value, number: buildName(t(`types.${prev.type}`), parseFloat(value) || 0) }));
+    } else {
+      updateField('area', value);
     }
   }, [buildName, t, createMode]);
 

@@ -7,7 +7,7 @@
  * or just "{typeLabel}" when area is empty/zero.
  *
  * SSoT for ALL entity name suggestions across create dialogs:
- *   AddPropertyDialog, AddStorageDialog, AddParkingDialog, PropertyInlineCreateForm
+ *   AddPropertyDialog, AddStorageDialog, ParkingGeneralTab (createMode), PropertyInlineCreateForm, useParkingTabState
  *
  * @module hooks/useEntityNameSuggestion
  */

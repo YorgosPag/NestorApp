@@ -267,5 +267,8 @@
     "inspection": "Under Inspection",
     "maintenance": "Under Maintenance",
     "draft": "Incomplete"
+  },
+  "units": {
+    "sqm": "sq.m."
   }
 }
