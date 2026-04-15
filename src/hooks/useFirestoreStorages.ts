@@ -16,8 +16,12 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { Storage } from '@/types/storage/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAsyncData } from '@/hooks/useAsyncData';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useFirestoreStorages');
+
+// SSoT stale-while-revalidate cache (ADR-300) — keyed by buildingId or 'all'
+const storagesCache = createStaleCache<Storage[]>('storages');
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -52,6 +56,8 @@ export function useFirestoreStorages(
   const { buildingId, autoFetch = true } = options;
   const { user, loading: authLoading } = useAuth();
 
+  const cacheKey = buildingId ?? 'all';
+
   const { data, loading, error, refetch } = useAsyncData({
     fetcher: async () => {
       const url = buildingId
@@ -60,12 +66,16 @@ export function useFirestoreStorages(
 
       logger.info('Fetching storages', { buildingId });
       const result = await apiClient.get<StoragesApiResponse>(url);
-      logger.info(`Loaded ${result?.storages?.length || 0} storages`, { buildingId });
+      const storages = result?.storages || [];
+      logger.info(`Loaded ${storages.length} storages`, { buildingId });
 
-      return result?.storages || [];
+      storagesCache.set(storages, cacheKey);
+      return storages;
     },
     deps: [buildingId, user?.uid],
     enabled: autoFetch && !authLoading && !!user,
+    initialData: storagesCache.get(cacheKey),
+    silentInitialFetch: storagesCache.hasLoaded(cacheKey),
   });
 
   // Real-time sync — refetch on storage CRUD events

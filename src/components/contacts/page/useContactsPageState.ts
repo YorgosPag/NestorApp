@@ -14,8 +14,11 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { buildContactDashboardStats } from './contactDashboardStats';
 import { useContactsTrashState } from './useContactsTrashState';
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('ContactsPageContent');
+// SSoT stale-while-revalidate cache (ADR-300) — single-key (one list per session)
+const contactsCache = createStaleCache<Contact[]>('contacts');
 
 // Type guard for contacts with multiple photo URLs
 const hasMultiplePhotoURLs = (
@@ -53,8 +56,9 @@ export function useContactsPageState() {
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [contacts, setContacts] = useState<Contact[]>(contactsCache.get() ?? []);
+  // Stale-while-revalidate: if we have cached data, start with loading=false.
+  const [isLoading, setIsLoading] = useState(!contactsCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -64,13 +68,10 @@ export function useContactsPageState() {
   const [showArchiveContactDialog, setShowArchiveContactDialog] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-
   const [_showCompactToolbar, _setShowCompactToolbar] = useState(false);
-
   const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
   const [filters, setFilters] = useState<ContactFilterState>(INITIAL_FILTERS);
   const [subscriptionRetry, setSubscriptionRetry] = useState(0);
-  const initialLoadDone = useRef(false);
 
   // ---------------------------------------------------------------------------
   // Data: Firestore real-time subscription
@@ -78,16 +79,17 @@ export function useContactsPageState() {
   useEffect(() => {
     if (authLoading || !user) return;
 
-    // Only show full-page loading on initial mount — refreshes are silent
-    if (!initialLoadDone.current) {
+    // Only show full-page loading on very first visit — subsequent navigations
+    // use stale cache and refresh silently (stale-while-revalidate).
+    if (!contactsCache.hasLoaded()) {
       setIsLoading(true);
     }
     setError(null);
 
     const unsubContacts = ContactsService.subscribeToContacts(
       (freshContacts) => {
+        contactsCache.set(freshContacts);
         setContacts(freshContacts);
-        initialLoadDone.current = true;
         setIsLoading(false);
       },
       {

@@ -15,6 +15,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { ParkingSpot } from '@/types/parking';
 import { useAsyncData } from '@/hooks/useAsyncData';
+import { createStaleCache } from '@/lib/stale-cache';
 
 // =============================================================================
 // TYPE RE-EXPORTS — Canonical SSoT from @/types/parking (ADR-191)
@@ -52,6 +53,9 @@ interface ParkingFetchResult {
 
 const logger = createModuleLogger('useFirestoreParkingSpots');
 
+// SSoT stale-while-revalidate cache (ADR-300) — keyed by buildingId:projectId
+const parkingCache = createStaleCache<ParkingFetchResult>('parking');
+
 // =============================================================================
 // HOOK IMPLEMENTATION
 // =============================================================================
@@ -61,6 +65,8 @@ export function useFirestoreParkingSpots(
 ): UseFirestoreParkingReturn {
   const { buildingId, projectId, autoFetch = true } = options;
   const { user, loading: authLoading } = useAuth();
+
+  const cacheKey = `${buildingId ?? 'all'}:${projectId ?? 'all'}`;
 
   const { data, loading, error, refetch, silentRefetch, patch } = useAsyncData<ParkingFetchResult>({
     fetcher: async () => {
@@ -74,13 +80,17 @@ export function useFirestoreParkingSpots(
       const result = await apiClient.get<ParkingApiResponse>(url);
       logger.info(`Loaded ${result?.parkingSpots?.length || 0} parking spots`, { buildingId });
 
-      return {
+      const fetchResult: ParkingFetchResult = {
         spots: result?.parkingSpots || [],
         cached: result?.cached ?? false,
       };
+      parkingCache.set(fetchResult, cacheKey);
+      return fetchResult;
     },
     deps: [buildingId, projectId, user?.uid],
     enabled: autoFetch && !authLoading && !!user,
+    initialData: parkingCache.get(cacheKey),
+    silentInitialFetch: parkingCache.hasLoaded(cacheKey),
   });
 
   // Real-time sync
