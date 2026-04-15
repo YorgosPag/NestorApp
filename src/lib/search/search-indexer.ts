@@ -17,7 +17,7 @@ import 'server-only';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { normalizeSearchText } from '@/lib/search/search';
+import { normalizeSearchText, generateSearchPrefixes } from '@/lib/search/search';
 import {
   getSearchIndexConfig,
   extractTitle,
@@ -29,27 +29,6 @@ import { SEARCH_ENTITY_TYPES, type SearchEntityType } from '@/types/search';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('SearchIndexer');
-
-// =============================================================================
-// PREFIX GENERATION (same algorithm as search-backfill + /api/search)
-// =============================================================================
-
-const MAX_PREFIX_LENGTH = 5;
-
-/**
- * Generate search prefixes (3-5 char) from normalized text.
- * Each word produces prefixes of length 3, 4, 5 for Firestore array-contains-any.
- */
-export function generateSearchPrefixes(text: string): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
-  const prefixes: Set<string> = new Set();
-  for (const word of words) {
-    for (let len = 3; len <= Math.min(MAX_PREFIX_LENGTH, word.length); len++) {
-      prefixes.add(word.substring(0, len));
-    }
-  }
-  return Array.from(prefixes);
-}
 
 // =============================================================================
 // SEARCH DOCUMENT INDEXING

@@ -21,7 +21,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { logAuditEvent } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { normalizeSearchText } from '@/lib/search/search';
+import { normalizeSearchText, generateSearchPrefixes } from '@/lib/search/search';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import {
   SEARCH_ENTITY_TYPES,
@@ -54,11 +54,9 @@ interface SearchResponseData {
     types?: SearchEntityType[];
   };
 }
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
-
 /**
  * Parse entity types from query parameter.
  *
@@ -91,28 +89,6 @@ function parseLimit(limitParam: string | null): number {
 
   return parsed;
 }
-
-/**
- * Generate prefix array from normalized text.
- * Used for prefix matching in Firestore array-contains queries.
- *
- * @param text - Normalized text
- * @returns Array of prefixes (3-5 chars each)
- */
-function generateSearchPrefixes(text: string): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
-  const prefixes: Set<string> = new Set();
-
-  for (const word of words) {
-    // Generate prefixes of length 3, 4, 5
-    for (let len = 3; len <= Math.min(SEARCH_CONFIG.MAX_PREFIX_LENGTH, word.length); len++) {
-      prefixes.add(word.substring(0, len));
-    }
-  }
-
-  return Array.from(prefixes);
-}
-
 /**
  * Transform SearchDocument to SearchResult.
  * 🏢 ENTERPRISE: Includes stats and status for card display
@@ -155,7 +131,6 @@ function transformToSearchResult(doc: SearchDocument): SearchResult {
 // =============================================================================
 // API HANDLER
 // =============================================================================
-
 /**
  * GET /api/search
  *
@@ -216,51 +191,63 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
     // Alternative: /tenants/{tenantId}/searchDocuments (subcollection approach)
     const searchCollection = adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS);
 
-    // === Execute Search Queries (one per entity type) ===
-    // 🏢 ENTERPRISE: Optimized Firestore queries with composite indexes
-    // Following Google/Microsoft/Salesforce patterns for search at scale
-    // Requires: firestore.indexes.json deployed with composite index for searchDocuments
-    const allResults: SearchResult[] = [];
+    // === Execute Search Queries in parallel (Google pattern: Promise.allSettled) ===
+    // All entity type queries fire simultaneously — latency = max(queries), not sum(queries).
+    // Graceful degradation: one failing type (e.g. index still building) never kills the rest.
+    const limitedPrefixes = searchPrefixes.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
 
-    for (const entityType of typesToSearch) {
-      try {
-        // 🏢 ENTERPRISE: Composite index query
-        // Index: tenantId + entityType + audience + search.prefixes (array-contains-any) + updatedAt
+    const queryResults = await Promise.allSettled(
+      typesToSearch.map(async (entityType) => {
         let queryBuilder = searchCollection
           .where('tenantId', '==', tenantId)
           .where(FIELDS.ENTITY_TYPE, '==', entityType)
           .where('audience', '==', SEARCH_AUDIENCE.INTERNAL);
 
-        // 🔍 Prefix-based search (Firestore array-contains-any)
-        // Limit to 10 prefixes per Firestore constraints
-        if (searchPrefixes.length > 0) {
-          const limitedPrefixes = searchPrefixes.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
+        if (limitedPrefixes.length > 0) {
           queryBuilder = queryBuilder.where('search.prefixes', 'array-contains-any', limitedPrefixes);
         }
 
-        // Execute with ordering and limit
         const snapshot = await queryBuilder
           .orderBy(FIELDS.UPDATED_AT, 'desc')
           .limit(limit)
           .get();
 
-        // Transform results with secondary normalized text filter
-        for (const doc of snapshot.docs) {
-          const searchDoc = doc.data() as SearchDocument;
+        return { entityType, docs: snapshot.docs };
+      })
+    );
 
-          // Secondary precision filter: verify normalized text contains query
-          if (searchDoc.search.normalized.includes(normalizedQuery)) {
-            allResults.push(transformToSearchResult(searchDoc));
-          }
-        }
-      } catch (error) {
-        // 🚨 Index missing error handling
-        const errorMessage = getErrorMessage(error);
+    const allResults: SearchResult[] = [];
 
-        if (errorMessage.includes('index') || errorMessage.includes('FAILED_PRECONDITION')) {
-          logger.error('[Search] Missing Firestore index. Run: firebase deploy --only firestore:indexes', { entityType });
+    for (let i = 0; i < queryResults.length; i++) {
+      const result = queryResults[i];
+      const entityType = typesToSearch[i];
+
+      if (result.status === 'rejected') {
+        const errorMessage = getErrorMessage(result.reason);
+        const isIndexError =
+          errorMessage.includes('FAILED_PRECONDITION') ||
+          errorMessage.includes('index') ||
+          errorMessage.includes('requires an index');
+
+        if (isIndexError) {
+          logger.warn('[Search] Index building or missing — degraded results for type', {
+            entityType,
+            error: errorMessage,
+            hint: 'Run: firebase deploy --only firestore:indexes',
+          });
         } else {
-          logger.error('[Search] Error searching entity type', { entityType, error });
+          logger.error('[Search] Query failed for entity type', {
+            entityType,
+            error: errorMessage,
+          });
+        }
+        continue;
+      }
+
+      for (const doc of result.value.docs) {
+        const searchDoc = doc.data() as SearchDocument;
+        if (searchDoc.search.normalized.includes(normalizedQuery)) {
+          allResults.push(transformToSearchResult(searchDoc));
         }
       }
     }

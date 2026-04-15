@@ -53,6 +53,35 @@ export function normalizeSearchText(value: Searchable): string {
     .replace(/\s+/g, " "); // Collapse multiple spaces
 }
 
+// =============================================================================
+// PREFIX GENERATION (SSoT — used by search-indexer + /api/search)
+// =============================================================================
+
+/** Max prefix length (must match SEARCH_CONFIG.MAX_PREFIX_LENGTH in types/search.ts) */
+const MAX_PREFIX_LENGTH = 5;
+
+/**
+ * Generate search prefixes (3-MAX chars) from normalized text.
+ * Each word produces prefixes of length 3..MAX for Firestore array-contains-any.
+ *
+ * @param text - Already-normalized text (run through normalizeSearchText first)
+ * @returns Deduplicated prefix array
+ */
+export function generateSearchPrefixes(text: string): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const prefixes = new Set<string>();
+  for (const word of words) {
+    for (let len = 3; len <= Math.min(MAX_PREFIX_LENGTH, word.length); len++) {
+      prefixes.add(word.substring(0, len));
+    }
+  }
+  return Array.from(prefixes);
+}
+
+// =============================================================================
+// CLIENT-SIDE MATCHING
+// =============================================================================
+
 /**
  * Checks if item fields match search term
  * Empty term returns true (show all)
