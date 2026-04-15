@@ -17,7 +17,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Building2, Home, DollarSign, Maximize } from 'lucide-react';
+import { MapPin, Building2, Home, DollarSign, Maximize, Library } from 'lucide-react';
+import { PageLoadingState } from '@/core/states';
+import { PageContainer } from '@/core/containers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
@@ -45,7 +47,7 @@ import '@/lib/design-system';
 
 export function PropertyGridView() {
   const router = useRouter();
-  const { properties, filters, handleFiltersChange, dashboardStats } = usePublicPropertyViewer();
+  const { properties, filters, handleFiltersChange, dashboardStats, isLoading } = usePublicPropertyViewer();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { radius } = useBorderTokens();
@@ -120,6 +122,16 @@ export function PropertyGridView() {
   const handleViewAllFloorPlan = () => {
     router.push('/properties?view=floorplan');
   };
+
+  // Stale-while-revalidate: show loading only on first visit before data arrives.
+  // SharedPropertiesProvider persists in layout — subsequent navigations are instant.
+  if (isLoading && properties.length === 0) {
+    return (
+      <PageContainer ariaLabel={t('grid.header.title')}>
+        <PageLoadingState icon={Library} message={t('page.loading')} layout="contained" />
+      </PageContainer>
+    );
+  }
 
   return (
     <section className={`min-h-screen ${colors.bg.secondary} dark:${colors.bg.primary} overflow-x-hidden`} aria-label={t('grid.header.title')}>
