@@ -20,8 +20,13 @@ import { RealtimeService } from '@/services/realtime';
 import { applyUpdates } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate } from '@/lib/date-local';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useRealtimeOpportunities');
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const opportunitiesCache = createStaleCache<Opportunity[]>('opportunities');
 
 // ============================================================================
 // TYPES
@@ -59,8 +64,9 @@ function toOpportunity(raw: DocumentData & { id: string }): Opportunity {
 // ============================================================================
 
 export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportunitiesReturn {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(enabled);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [opportunities, setOpportunities] = useState<Opportunity[]>(opportunitiesCache.get() ?? []);
+  const [loading, setLoading] = useState(enabled && !opportunitiesCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubscriptionStatus>('idle');
   const refreshTriggerRef = useRef(0);
@@ -79,7 +85,8 @@ export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportuniti
     }
 
     setStatus('connecting');
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!opportunitiesCache.hasLoaded()) setLoading(true);
 
     const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
       'OPPORTUNITIES',
@@ -90,6 +97,8 @@ export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportuniti
 
         logger.info('Received opportunities in real-time', { count: mapped.length });
 
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        opportunitiesCache.set(mapped);
         setOpportunities(mapped);
         setLoading(false);
         setError(null);

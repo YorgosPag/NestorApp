@@ -21,8 +21,13 @@ import { toTask } from '@/services/crm/tasks/mappers';
 import { applyUpdates } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isToday, isPast } from 'date-fns';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useRealtimeTasks');
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const tasksCache = createStaleCache<CrmTask[]>('tasks');
 
 // ============================================================================
 // TYPES
@@ -108,8 +113,9 @@ const EMPTY_STATS: TaskStats = {
 // ============================================================================
 
 export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
-  const [tasks, setTasks] = useState<CrmTask[]>([]);
-  const [loading, setLoading] = useState(enabled);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [tasks, setTasks] = useState<CrmTask[]>(tasksCache.get() ?? []);
+  const [loading, setLoading] = useState(enabled && !tasksCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubscriptionStatus>('idle');
   const refreshTriggerRef = useRef(0);
@@ -128,7 +134,8 @@ export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
     }
 
     setStatus('connecting');
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!tasksCache.hasLoaded()) setLoading(true);
 
     const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
       'TASKS',
@@ -142,6 +149,8 @@ export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
 
         logger.info('Received tasks in real-time', { count: activeTasks.length });
 
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        tasksCache.set(activeTasks);
         setTasks(activeTasks);
         setLoading(false);
         setError(null);

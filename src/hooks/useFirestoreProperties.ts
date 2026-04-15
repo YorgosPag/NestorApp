@@ -14,8 +14,13 @@ import { API_ROUTES } from '@/config/domain-constants';
 import type { Property } from '@/types/property';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAsyncData } from '@/hooks/useAsyncData';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useFirestoreProperties');
+
+// ADR-300: Module-level cache keyed by buildingId+floorId — survives remount
+const propertiesCache = createStaleCache<Property[]>('properties');
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -52,6 +57,8 @@ export function useFirestoreProperties(
   const { buildingId, floorId, autoFetch = true } = options;
   const { user, loading: authLoading } = useAuth();
 
+  const cacheKey = `${buildingId ?? 'all'}_${floorId ?? ''}`;
+
   const { data, loading, error, refetch } = useAsyncData({
     fetcher: async () => {
       const params = new URLSearchParams();
@@ -66,10 +73,14 @@ export function useFirestoreProperties(
       const properties = response?.units || [];
       logger.info(`Loaded ${properties.length} properties`, { buildingId });
 
+      // ADR-300: Write to module-level cache so next remount skips spinner
+      propertiesCache.set(properties, cacheKey);
       return properties;
     },
     deps: [buildingId, floorId, user?.uid],
     enabled: autoFetch && !authLoading && !!user,
+    initialData: propertiesCache.get(cacheKey),
+    silentInitialFetch: propertiesCache.hasLoaded(cacheKey),
   });
 
   return {

@@ -128,6 +128,9 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/hooks/procurement/usePurchaseOrders.ts` | `useAsyncData` no cache | `purchaseOrdersCache = createStaleCache<PurchaseOrder[]>('procurement')` (default filters only) | 2026-04-15 |
 | `src/components/file-manager/hooks/useAllCompanyFiles.ts` | `useState([])` + `setLoading(true)` unconditional | `allCompanyFilesCache = createStaleCache<FileRecord[]>('files')` keyed by companyId | 2026-04-15 |
 | `src/subapps/accounting/components/dashboard/AccountingDashboard.tsx` | `useState(true)` + `setLoading(true)` unconditional | `accountingStatsCache = createStaleCache<DashboardStats>('accounting-dashboard')` keyed by year | 2026-04-15 |
+| `src/hooks/useFirestoreProperties.ts` | `useAsyncData` no cache | `propertiesCache = createStaleCache<Property[]>('properties')` keyed by buildingId+floorId | 2026-04-15 |
+| `src/services/realtime/hooks/useRealtimeOpportunities.ts` | `useState([])` + `setLoading(true)` unconditional | `opportunitiesCache = createStaleCache<Opportunity[]>('opportunities')` | 2026-04-15 |
+| `src/services/realtime/hooks/useRealtimeTasks.ts` | `useState([])` + `setLoading(true)` unconditional | `tasksCache = createStaleCache<CrmTask[]>('tasks')` | 2026-04-15 |
 
 ---
 
