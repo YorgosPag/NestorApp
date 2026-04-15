@@ -123,6 +123,7 @@ const myCache = createStaleCache<MyData[]>('my-entity');
 | `src/components/contacts/page/useContactsPageState.ts` | `_contactsCache + _initialLoadDone` | `contactsCache = createStaleCache<Contact[]>('contacts')` | 2026-04-15 |
 | `src/app/page.tsx` | `useState(false)` + `hasInitializedRef` | `dashboardAuthCache = createStaleCache<boolean>('dashboard-auth')` | 2026-04-15 |
 | `src/hooks/useFirestoreProjects.ts` | `useState([])` + `loading: true` + `hasLoadedOnceRef(false)` | `projectsCache = createStaleCache<FirestoreProject[]>('projects')` | 2026-04-15 |
+| `src/hooks/useFirestoreBuildings.ts` | `useState([])` + `setLoading(true)` unconditional | `buildingsCache = createStaleCache<Building[]>('buildings')` | 2026-04-15 |
 
 ---
 

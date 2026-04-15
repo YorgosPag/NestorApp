@@ -20,8 +20,13 @@ import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import type { Building } from '@/types/building/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useFirestoreBuildings');
+
+// ADR-300: Module-level cache survives React unmount/remount (navigation)
+const buildingsCache = createStaleCache<Building[]>('buildings');
 
 interface UseFirestoreBuildingsReturn {
   buildings: Building[];
@@ -45,12 +50,14 @@ function toMillis(value: unknown): number {
 }
 
 export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
-  const [buildings, setBuildings] = useState<Building[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ADR-300: Seed from module-level cache → zero flash on re-navigation
+  const [buildings, setBuildings] = useState<Building[]>(buildingsCache.get() ?? []);
+  const [loading, setLoading] = useState(!buildingsCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
+    // ADR-300: Only show spinner on first load — not on re-navigation
+    if (!buildingsCache.hasLoaded()) setLoading(true);
 
     const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
       'BUILDINGS',
@@ -63,6 +70,8 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
           .map(doc => doc as unknown as Building);
 
         logger.info('Buildings updated via real-time subscription', { count: mapped.length });
+        // ADR-300: Write to module-level cache so next remount skips spinner
+        buildingsCache.set(mapped);
         setBuildings(mapped);
         setLoading(false);
         setError(null);
