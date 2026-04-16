@@ -193,7 +193,69 @@ Auto-create levels on type change with three behaviors:
 | `src/i18n/locales/el/properties.json` | Added `multiLevel.*` i18n keys |
 | `src/i18n/locales/en/properties.json` | Added `multiLevel.*` i18n keys |
 
+## Phase 5: Bidirectional Type Symmetry (ADR-236 Phase 5 / ADR-287 Batch 22)
+
+### Problem
+Forward direction (single → multi auto-create) εφαρμόστηκε στο Phase 4. Reverse direction (multi → single cleanup) έλειπε. Όταν ο χρήστης άλλαζε τύπο από maisonette/penthouse/loft σε apartment/studio, τα level tabs παρέμεναν orphan στο UI — state leak + UX confusion.
+
+Επιπλέον, σε edit mode το `isMultiLevel` και `effectiveLevels` διάβαζαν `property.*` (Firestore prop) αντί για `formData` — άρα ακόμα και αν cleanup του formData γινόταν, η UI δεν αντιδρούσε μέχρι save+refetch.
+
+### Decision
+Google contract: **αν A→B δημιουργεί N level cards, τότε B→A τα αφαιρεί**. Silent cleanup με aggregation των per-level totals σε flat fields πριν το clear (zero perceived data loss).
+
+### SSoT Helper
+- **Location**: `src/services/property/level-reconciliation.ts`
+- **Function**: `reconcileLevelsForType({ oldType, newType, currentLevels, currentLevelData, flatFields })`
+- **Returns**: `{ transition, newLevels, newLevelData, flatPatch, clearActiveLevel, shouldAutoCreate, autoSavePayload }`
+- **Pure**: zero side effects, server-safe, fully testable
+
+### Transitions
+| From | To | Action |
+|------|----|----|
+| single | multi | Signal `shouldAutoCreate=true`. Caller (`useAutoLevelCreation`) δημιουργεί 2 levels με floor query. |
+| multi | single | Aggregate `levelData` → flat fields (areas SUM, layout SUM, orientations UNION). Clear `levels=[]`, `levelData={}`. Reset active tab. Auto-save payload για edit-mode persist. |
+| multi | multi (e.g. maisonette → penthouse) | No-op. State preserved. |
+| single | single | No-op. |
+
+### Edit-Mode Parity
+- `PropertyFieldsBlock.tsx`: `isMultiLevel` και `effectiveLevels` derive ΑΠΟ `formData` και στα δύο modes.
+- `useAutoLevelCreation`: gate `isCreatingNewUnit` αφαιρέθηκε. Auto-create simmetricos σε edit mode (apartment → maisonette σε edit τώρα δημιουργεί 2 levels αυτόματα).
+- `onUpdateProperty` callback: σε edit mode αναμεταδίδει `{ levels, isMultiLevel, floor, floorId }` στο `onAutoSaveFields` για άμεσο Firestore persist.
+
+### Auto-Save Extension
+Σε multi → single edit mode, `onAutoSaveFields` καλείται με merged payload σε ένα Firestore write:
+```typescript
+{
+  type: newType,
+  name: newName,
+  isMultiLevel: false,
+  levels: [],
+  levelData: {},
+  areas: { gross, net, balcony, terrace, garden },
+  layout: { bedrooms, bathrooms, wc },
+  orientations: [...]
+}
+```
+
+### Data Loss Boundaries
+- **Preserved**: areas, layout, orientations (aggregated into flat fields)
+- **Lost**: per-level finishes (Phase 2 contract: finishes are per-level-only — σκόπιμη απώλεια στο reverse, undo via type re-selection)
+
+### Files Changed (Phase 5)
+| File | Action |
+|------|--------|
+| `src/services/property/level-reconciliation.ts` | **NEW** — SSoT pure helper |
+| `src/services/property/__tests__/level-reconciliation.test.ts` | **NEW** — 9 unit tests |
+| `src/features/property-details/components/usePropertyFieldHandlers.ts` | Refactor — calls helper, drop `isCreatingNewUnit` gate, extends auto-save payload |
+| `src/features/property-details/components/PropertyFieldsBlock.tsx` | Derive `isMultiLevel`/`effectiveLevels` από formData στα δύο modes; `useAutoLevelCreation` σε edit mode + auto-save propagation |
+
+### Out of Scope (V1)
+- Undo toast με snapshot restore (silent cleanup ακολουθώντας Google Docs/Sheets pattern)
+- Confirmation modal πριν destructive cleanup (decision: silent, user can re-select multi-type to recreate)
+- Per-level finishes preservation σε flat (Phase 2 contract immutable)
+
 ## Changelog
+- **2026-04-17**: Phase 5 — Bidirectional type symmetry, SSoT reconciliation helper, edit-mode parity, auto-save propagation (ADR-287 Batch 22)
 - **2026-04-06**: Phase 4 — Auto-level creation on type change with always/optional/warning flows
 - **2026-03-16**: Phase 3 — Per-level unit floorplan tabs with `levelFloorId` schema field
 - **2026-03-16**: Phase 2 — Per-level data entry (areas, layout, orientations, finishes) with auto-aggregation

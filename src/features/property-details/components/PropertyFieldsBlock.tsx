@@ -192,22 +192,35 @@ export function PropertyFieldsBlock({
     setFormData(prev => ({ ...prev, floorId: '', floor: 0, levels: [], levelData: {} }));
     onActiveLevelChange?.(null);
   }, [onActiveLevelChange]);
+  // ADR-236 Phase 5 (Batch 22): Auto-level creation runs in BOTH create and edit modes
+  // for bidirectional symmetry. In edit mode, derived field changes are persisted
+  // immediately via `onAutoSaveFields` (no need to wait for Save).
   const autoLevel = useAutoLevelCreation({
-    buildingId: isCreatingNewUnit ? (formData.buildingId || null) : null,
-    currentFloorId: isCreatingNewUnit ? (formData.floorId || null) : null,
-    currentFloorNumber: isCreatingNewUnit ? formData.floor : null,
+    buildingId: formData.buildingId || null,
+    currentFloorId: formData.floorId || null,
+    currentFloorNumber: formData.floor,
     hasExistingLevels: formData.levels.length >= 2,
-    onUpdateProperty: (updates) => { if (updates.levels) handleLevelsChange(updates.levels as PropertyLevel[]); },
+    onUpdateProperty: (updates) => {
+      if (updates.levels) handleLevelsChange(updates.levels as PropertyLevel[]);
+      if (!isCreatingNewUnit && onAutoSaveFields) {
+        const payload: Record<string, unknown> = {};
+        if (updates.levels !== undefined) payload.levels = updates.levels;
+        if (updates.isMultiLevel !== undefined) payload.isMultiLevel = updates.isMultiLevel;
+        if (updates.floor !== undefined) payload.floor = updates.floor;
+        if (updates.floorId !== undefined) payload.floorId = updates.floorId;
+        if (Object.keys(payload).length > 0) onAutoSaveFields(payload);
+      }
+    },
     onWarningDismiss: isCreatingNewUnit ? handleWarningDismiss : undefined,
   });
 
   const isStandalone = isStandaloneUnitType(formData.type as PropertyType | '');
   const isHierarchyComplete = isStandalone ? !!formData.type : !!(formData.type && formData.buildingId && formData.floorId);
   const isHierarchyLocked = !!isCreatingNewUnit && !isHierarchyComplete;
-  const isMultiLevel = isCreatingNewUnit
-    ? (isMultiLevelCapableType(formData.type) && formData.levels.length >= 2)
-    : !!(property.isMultiLevel && (property.levels?.length ?? 0) >= 2);
-  const effectiveLevels: PropertyLevel[] = isCreatingNewUnit ? formData.levels : (property.levels ?? []);
+  // ADR-236 Phase 5 (Batch 22): SSoT derive from formData in BOTH modes.
+  // Previously edit-mode read property.* — orphan tabs survived type changes.
+  const isMultiLevel = isMultiLevelCapableType(formData.type) && formData.levels.length >= 2;
+  const effectiveLevels: PropertyLevel[] = formData.levels;
 
   const activeLevelId = controlledLevelId ?? null;
   const setActiveLevelId = useCallback((id: string | null) => {
@@ -379,7 +392,7 @@ export function PropertyFieldsBlock({
       formData, setFormData, setLocalType, localType,
       nameUserEdited, buildSuggestedName,
       onActiveLevelChange, onAutoSaveFields,
-      isCreatingNewUnit, autoLevel,
+      autoLevel,
     });
 
   if (isReadOnly) {
