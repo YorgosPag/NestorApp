@@ -92,7 +92,9 @@ export function StepStoragePicker({ uploadConfig, onSelect }: StepStoragePickerP
               errorFileId === file.id ? 'border-destructive bg-destructive/5' : `border-border ${colors.bg.surface}`
             }`}
           >
-            <span className="flex-1 truncate text-sm font-medium">{file.displayName}</span>
+            <span className="flex-1 truncate text-sm font-medium">
+              {file.originalFilename ?? file.displayName}
+            </span>
             <Button
               size="sm"
               variant={errorFileId === file.id ? 'destructive' : 'outline'}

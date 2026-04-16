@@ -40,6 +40,7 @@
       "building": "Building",
       "floor": "Floor",
       "property": "Property",
+      "unit": "Property",
       "upload": "Upload",
       "select": "Select"
     },
