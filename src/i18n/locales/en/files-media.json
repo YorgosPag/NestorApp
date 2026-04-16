@@ -33,13 +33,15 @@
   },
   "floorplanImport": {
     "title": "Import Floorplan",
+    "loadTitle": "Load Floorplan",
     "steps": {
       "company": "Company",
       "project": "Project",
       "building": "Building",
       "floor": "Floor",
       "property": "Property",
-      "upload": "Upload"
+      "upload": "Upload",
+      "select": "Select"
     },
     "select": {
       "company": "Select company",
@@ -52,7 +54,16 @@
     "shortcuts": {
       "project": "Upload General Project Floorplan",
       "building": "Upload General Building Floorplan",
-      "floor": "Upload Floor Floorplan"
+      "floor": "Upload Floor Floorplan",
+      "loadProject": "Load General Project Floorplan",
+      "loadBuilding": "Load General Building Floorplan",
+      "loadFloor": "Load Floor Floorplan"
+    },
+    "storagePicker": {
+      "empty": "No saved floorplans found",
+      "loading": "Loading...",
+      "loadButton": "Load",
+      "error": "Load error"
     },
     "types": {
       "building": "General Building Floorplan",

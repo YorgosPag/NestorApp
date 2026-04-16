@@ -35,6 +35,7 @@ import { useFloorplanImportState } from './hooks/useFloorplanImportState';
 import { StepEntitySelector } from './components/StepEntitySelector';
 import { StepPropertySelector } from './components/StepPropertySelector';
 import { StepUpload } from './components/StepUpload';
+import { StepStoragePicker } from './components/StepStoragePicker';
 import type { FloorplanType } from './hooks/useFloorplanImportState';
 import type { EntityType } from '@/config/domain-constants';
 import '@/lib/design-system';
@@ -57,7 +58,12 @@ export interface WizardCompleteMeta {
 interface FloorplanImportWizardProps {
   isOpen: boolean;
   onClose: () => void;
+  /** 'import' (default): step 6 = upload. 'load': step 6 = pick from saved. */
+  mode?: 'import' | 'load';
+  /** import mode: called when file upload completes */
   onComplete?: (file: File, meta: WizardCompleteMeta) => void;
+  /** load mode: called when user picks a saved floorplan. Throws on failure. */
+  onLoad?: (fileId: string, meta: WizardCompleteMeta) => Promise<void>;
 }
 
 // =============================================================================
@@ -82,11 +88,16 @@ const SELECT_PLACEHOLDER_KEYS: Record<number, string> = {
   4: 'floorplanImport.select.floor',
 };
 
-/** Shortcut floorplan card config for steps 2-4 */
-const STEP_SHORTCUT_CONFIG: Record<number, { type: FloorplanType; labelKey: string; icon: React.ElementType }> = {
-  2: { type: 'project', labelKey: 'floorplanImport.shortcuts.project', icon: FolderKanban },
-  3: { type: 'building', labelKey: 'floorplanImport.shortcuts.building', icon: Building2 },
-  4: { type: 'floor', labelKey: 'floorplanImport.shortcuts.floor', icon: Layers },
+/** Shortcut floorplan card config for steps 2-4. Labels differ by mode. */
+const STEP_SHORTCUT_CONFIG: Record<number, {
+  type: FloorplanType;
+  importLabelKey: string;
+  loadLabelKey: string;
+  icon: React.ElementType;
+}> = {
+  2: { type: 'project', importLabelKey: 'floorplanImport.shortcuts.project', loadLabelKey: 'floorplanImport.shortcuts.loadProject', icon: FolderKanban },
+  3: { type: 'building', importLabelKey: 'floorplanImport.shortcuts.building', loadLabelKey: 'floorplanImport.shortcuts.loadBuilding', icon: Building2 },
+  4: { type: 'floor', importLabelKey: 'floorplanImport.shortcuts.floor', loadLabelKey: 'floorplanImport.shortcuts.loadFloor', icon: Layers },
 };
 
 // =============================================================================
@@ -96,16 +107,23 @@ const STEP_SHORTCUT_CONFIG: Record<number, { type: FloorplanType; labelKey: stri
 export function FloorplanImportWizard({
   isOpen,
   onClose,
+  mode = 'import',
   onComplete,
+  onLoad,
 }: FloorplanImportWizardProps) {
   const { t, isNamespaceReady } = useTranslation(['files', 'files-media']);
 
   const state = useFloorplanImportState({ isOpen });
 
   const stepLabels = useMemo(
-    () => STEP_LABEL_KEYS.map((key) => t(key)),
+    () => [
+      ...STEP_LABEL_KEYS.slice(0, 5).map((key) => t(key)),
+      mode === 'load'
+        ? t('floorplanImport.steps.select')
+        : t('floorplanImport.steps.upload'),
+    ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, isNamespaceReady],
+    [t, isNamespaceReady, mode],
   );
 
   const handleUploadComplete = useCallback((file: File) => {
@@ -149,6 +167,9 @@ export function FloorplanImportWizard({
   // Determine if current step has a shortcut card and if it's enabled
   const shortcutConfig = STEP_SHORTCUT_CONFIG[state.step];
   const shortcutEnabled = !!shortcutConfig && !!getSelectedId();
+  const shortcutLabelKey = shortcutConfig
+    ? (mode === 'load' ? shortcutConfig.loadLabelKey : shortcutConfig.importLabelKey)
+    : undefined;
 
   // Navigate to a completed step by clicking its number
   const handleStepClick = useCallback((targetStep: number) => {
@@ -159,7 +180,9 @@ export function FloorplanImportWizard({
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{t('floorplanImport.title')}</DialogTitle>
+          <DialogTitle>
+            {mode === 'load' ? t('floorplanImport.loadTitle') : t('floorplanImport.title')}
+          </DialogTitle>
         </DialogHeader>
 
         {/* ── Step indicator ── */}
@@ -181,7 +204,7 @@ export function FloorplanImportWizard({
               loading={state.currentStepLoading}
               placeholder={t(SELECT_PLACEHOLDER_KEYS[state.step] ?? '')}
               emptyMessage={t('floorplanImport.noItems')}
-              shortcutLabel={shortcutEnabled ? t(shortcutConfig.labelKey) : undefined}
+              shortcutLabel={shortcutEnabled && shortcutLabelKey ? t(shortcutLabelKey) : undefined}
               shortcutIcon={shortcutEnabled ? shortcutConfig.icon : undefined}
               onShortcutClick={shortcutEnabled ? () => state.jumpToUpload(shortcutConfig.type) : undefined}
             />
@@ -201,11 +224,31 @@ export function FloorplanImportWizard({
             />
           )}
 
-          {/* Step 6: Upload */}
-          {state.step === 6 && state.uploadConfig && (
+          {/* Step 6: Upload (import mode) */}
+          {mode === 'import' && state.step === 6 && state.uploadConfig && (
             <StepUpload
               config={state.uploadConfig}
               onComplete={handleUploadComplete}
+            />
+          )}
+
+          {/* Step 6: Pick from storage (load mode) */}
+          {mode === 'load' && state.step === 6 && state.uploadConfig && (
+            <StepStoragePicker
+              uploadConfig={state.uploadConfig}
+              onSelect={async (fileId) => {
+                const cfg = state.uploadConfig!;
+                const meta: WizardCompleteMeta = {
+                  companyId: cfg.companyId,
+                  projectId: cfg.projectId,
+                  entityType: cfg.entityType as WizardCompleteMeta['entityType'],
+                  entityId: cfg.entityId,
+                  purpose: cfg.purpose ?? '',
+                  entityLabel: cfg.entityLabel,
+                };
+                await onLoad?.(fileId, meta);
+                handleClose();
+              }}
             />
           )}
         </section>

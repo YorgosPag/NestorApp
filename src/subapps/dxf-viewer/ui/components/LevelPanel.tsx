@@ -12,10 +12,9 @@ import { useTranslation } from '@/i18n';
 import { Plus, Upload, Download } from 'lucide-react';
 // 🏢 ADR-309 Phase 2: Wizard button in LevelPanel
 import { FloorplanImportWizard } from '@/features/floorplan-import';
-import type { DxfSaveContext } from '../../services/dxf-firestore.service';
+import { DxfFirestoreService, type DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { FloorplanType } from '../../systems/levels/config';
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import type { EntityType } from '@/config/domain-constants';
+import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
@@ -38,7 +37,6 @@ import { createOverlayHandlers } from '../../overlays/types';
 import { useUniversalSelection } from '../../systems/selection';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { LevelFloorLink } from './LevelFloorLink';
-import { StoredFloorplanPicker } from './StoredFloorplanPicker';
 
 interface LevelPanelProps {
   currentTool?: ToolType;
@@ -177,8 +175,8 @@ export function LevelPanel({
   const [showToolbox, setShowToolbox] = useState(false);
   // ADR-309 Phase 2: Wizard dialog state
   const [showImportWizard, setShowImportWizard] = useState(false);
-  // ADR-309 Phase 5: Load from storage picker state
-  const [showStoragePicker, setShowStoragePicker] = useState(false);
+  // ADR-309 Phase 5: Load from storage — wizard in load mode
+  const [showLoadWizard, setShowLoadWizard] = useState(false);
 
   // ADR-309 Phase 3: Map wizard entityType → FloorplanType
   const entityTypeToFloorplanType = useCallback((entityType: EntityType): FloorplanType | undefined => {
@@ -194,7 +192,6 @@ export function LevelPanel({
   const handleDeleteLevel = async (levelId: string) => {
     try {
       await deleteLevel(levelId);
-
     } catch (error) {
       console.error('❌ Failed to delete level:', error);
     }
@@ -237,45 +234,18 @@ export function LevelPanel({
   // Handle editing mode changes
   const handleEditingModeChange = (mode: EditingMode) => {
     setActiveEditingMode(mode);
-    
     if (mode === 'editing') {
-      // Enable grip editing when editing mode is selected
-      updateGripSettings({ 
-        showGrips: true,       // Βεβαιώνομαι ότι τα grips είναι visible
-        multiGripEdit: true,
-        snapToGrips: true 
-      });
-      
-      // Activate grip-edit tool instead of select
-      if (onToolChange) {
-        onToolChange('grip-edit');
-      }
-      
-      // Dispatch event for canvas to enable grip interactions
-      window.dispatchEvent(new CustomEvent('level-panel:grip-edit-enabled', { 
-        detail: { enabled: true } 
-      }));
-
+      updateGripSettings({ showGrips: true, multiGripEdit: true, snapToGrips: true });
+      if (onToolChange) onToolChange('grip-edit');
+      window.dispatchEvent(new CustomEvent('level-panel:grip-edit-enabled', { detail: { enabled: true } }));
     } else {
-      // Disable grip editing for other modes (but keep grips visible in selection mode)
       if (mode === 'selection') {
-        updateGripSettings({ 
-          showGrips: true,       // Στο selection mode, δείχνω τα grips αλλά χωρίς editing
-          multiGripEdit: false,
-          snapToGrips: false 
-        });
-        if (onToolChange) {
-          onToolChange('select');
-        }
+        updateGripSettings({ showGrips: true, multiGripEdit: false, snapToGrips: false });
+        if (onToolChange) onToolChange('select');
       } else {
-        updateGripSettings({ 
-          showGrips: false       // Κρύβω τα grips στα άλλα modes
-        });
+        updateGripSettings({ showGrips: false });
       }
-      
-      window.dispatchEvent(new CustomEvent('level-panel:grip-edit-enabled', { 
-        detail: { enabled: false } 
-      }));
+      window.dispatchEvent(new CustomEvent('level-panel:grip-edit-enabled', { detail: { enabled: false } }));
     }
   };
 
@@ -319,12 +289,9 @@ export function LevelPanel({
       )}
       {/* ADR-309 Phase 5: Load from storage — only when level has a linked entity */}
       {(currentLevel?.floorId || currentLevel?.buildingId || currentLevel?.projectId) && (
-        <Button variant="outline" className="w-full" onClick={() => setShowStoragePicker(true)}>
+        <Button variant="outline" className="w-full" onClick={() => setShowLoadWizard(true)}>
           <Download className={iconSizes.sm} />{t('panels.levels.loadFromStorage')}
         </Button>
-      )}
-      {showStoragePicker && currentLevel && currentLevelId && (
-        <StoredFloorplanPicker level={currentLevel} currentLevelId={currentLevelId} setLevelScene={setLevelScene} onClose={() => setShowStoragePicker(false)} />
       )}
 
       {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper - justify-between χωρίς νόημα με 1 child (ADR-003) */}
@@ -461,6 +428,18 @@ export function LevelPanel({
         </div>
       )}
 
+      {/* ADR-309 Phase 5: Load wizard — same wizard in load mode */}
+      <FloorplanImportWizard
+        isOpen={showLoadWizard}
+        onClose={() => setShowLoadWizard(false)}
+        mode="load"
+        onLoad={async (fileId) => {
+          if (!currentLevelId) return;
+          const record = await DxfFirestoreService.loadFromStorage(fileId);
+          if (!record?.scene) throw new Error(t('panels.levels.storagePicker.error'));
+          setLevelScene(currentLevelId, record.scene);
+        }}
+      />
       {/* ADR-309 Phase 2: Wizard dialog — same instance as toolbar (SPEC-237D) */}
       {onSceneImported && (
         <FloorplanImportWizard
