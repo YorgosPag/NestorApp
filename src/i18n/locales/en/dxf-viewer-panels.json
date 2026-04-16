@@ -183,6 +183,12 @@
     "show": "Show"
   },
   "levelCard": {
+    "title": {
+      "project": "Gen. Project Plan \"{label}\"",
+      "building": "Gen. Building Plan \"{label}\"",
+      "floor": "Floor Plan \"{label}\"",
+      "unit": "Unit Plan \"{label}\""
+    },
     "stats": {
       "elements": "Elements"
     },

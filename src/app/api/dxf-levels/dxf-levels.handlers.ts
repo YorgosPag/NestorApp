@@ -176,6 +176,10 @@ export async function handleUpdateDxfLevel(
     if (body.buildingId !== undefined) updates.buildingId = body.buildingId ?? null;
     if (body.sceneFileId !== undefined) updates.sceneFileId = body.sceneFileId ?? null;
     if (body.sceneFileName !== undefined) updates.sceneFileName = body.sceneFileName ?? null;
+    // ADR-309 Phase 3: context-aware level fields
+    if (body.floorplanType !== undefined) updates.floorplanType = body.floorplanType ?? null;
+    if (body.entityLabel !== undefined) updates.entityLabel = body.entityLabel ?? null;
+    if (body.projectId !== undefined) updates.projectId = body.projectId ?? null;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });

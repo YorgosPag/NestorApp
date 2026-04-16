@@ -5,6 +5,9 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 
+/** 🏢 ADR-309 Phase 3: Context-aware floorplan type — set by wizard on import */
+export type FloorplanType = 'project' | 'building' | 'floor' | 'unit';
+
 export interface Level {
   id: string;
   name: string;
@@ -17,6 +20,12 @@ export interface Level {
   sceneFileId?: string;
   /** 🏢 ENTERPRISE: Original filename for display in Levels panel */
   sceneFileName?: string;
+  /** 🏢 ADR-309 Phase 3: Type of floorplan — drives context-aware title in LevelPanel */
+  floorplanType?: FloorplanType;
+  /** 🏢 ADR-309 Phase 3: Human-readable entity label (e.g. "Κτίριο Α", "1ος Όροφος") */
+  entityLabel?: string;
+  /** 🏢 ADR-309 Phase 3: Project ID — set by wizard on import */
+  projectId?: string;
 }
 
 export interface FloorplanDoc {

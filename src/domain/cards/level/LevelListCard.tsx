@@ -102,6 +102,21 @@ export function LevelListCard({
   // ==========================================================================
 
   /**
+   * ADR-309 Phase 3: Context-aware title based on floorplanType + entityLabel.
+   * Falls back to level.name for legacy levels without context.
+   */
+  const contextTitle = useMemo<string>(() => {
+    if (!level.floorplanType || !level.entityLabel) return level.name;
+    switch (level.floorplanType) {
+      case 'project':  return t('levelCard.title.project',  { label: level.entityLabel });
+      case 'building': return t('levelCard.title.building', { label: level.entityLabel });
+      case 'floor':    return t('levelCard.title.floor',    { label: level.entityLabel });
+      case 'unit':     return t('levelCard.title.unit',     { label: level.entityLabel });
+      default:         return level.name;
+    }
+  }, [level.floorplanType, level.entityLabel, level.name, t]);
+
+  /**
    * 🏢 Build stats array for level info
    */
   const stats = useMemo<StatItem[]>(() => {
@@ -191,7 +206,7 @@ export function LevelListCard({
   return (
     <ListCard
       entityType={ENTITY_TYPES.BUILDING}
-      title={level.name}
+      title={contextTitle}
       badges={badges}
       stats={stats}
       actions={actions}
@@ -203,7 +218,7 @@ export function LevelListCard({
       inlineBadges
       hideIcon // Hide icon to keep it minimal like current design
       className={className}
-      aria-label={t('levelCard.ariaLabel', { name: level.name })}
+      aria-label={t('levelCard.ariaLabel', { name: contextTitle })}
     />
   );
 }

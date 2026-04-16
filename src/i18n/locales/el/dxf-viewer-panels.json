@@ -183,6 +183,12 @@
     "show": "Εμφάνιση"
   },
   "levelCard": {
+    "title": {
+      "project": "Γεν. Κάτοψη Έργου \"{label}\"",
+      "building": "Γεν. Κάτοψη Κτιρίου \"{label}\"",
+      "floor": "Κάτοψη Ορόφου \"{label}\"",
+      "unit": "Κάτοψη \"{label}\""
+    },
     "stats": {
       "elements": "Στοιχεία"
     },

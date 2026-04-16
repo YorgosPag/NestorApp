@@ -9,7 +9,7 @@ import {
   deleteDxfLevelWithPolicy,
 } from '@/services/dxf-level-mutation-gateway';
 import type { DxfLevelCreateResponse } from '@/app/api/dxf-levels/dxf-levels.types';
-import type { Level, FloorplanDoc, LevelSystemSettings } from '../config';
+import type { Level, FloorplanDoc, LevelSystemSettings, FloorplanType } from '../config';
 
 type SceneManager = ReturnType<typeof useAutoSaveSceneManager>;
 
@@ -27,6 +27,12 @@ interface UseLevelOperationsParams {
   onLevelChange?: (levelId: string | null) => void;
 }
 
+export interface LevelContextUpdate {
+  floorplanType?: FloorplanType;
+  entityLabel?: string;
+  projectId?: string;
+}
+
 export interface UseLevelOperationsResult {
   addLevel: (name: string, setAsDefault?: boolean, floorId?: string) => Promise<string | null>;
   removeLevel: (levelId: string) => Promise<void>;
@@ -39,6 +45,8 @@ export interface UseLevelOperationsResult {
   setDefaultLevel: (levelId: string) => Promise<void>;
   duplicateLevel: (levelId: string, newName?: string) => Promise<string | null>;
   linkLevelToFloor: (levelId: string, floorId: string | null, buildingId?: string | null) => Promise<void>;
+  /** ADR-309 Phase 3: Store wizard context (type + label + projectId) on a level */
+  updateLevelContext: (levelId: string, context: LevelContextUpdate) => Promise<void>;
 }
 
 /**
@@ -321,6 +329,23 @@ export function useLevelOperations({
     [enableFirestore, handleError, setLevels]
   );
 
+  const updateLevelContext = useCallback(
+    async (levelId: string, context: LevelContextUpdate): Promise<void> => {
+      try {
+        if (enableFirestore) {
+          await updateDxfLevelWithPolicy({ payload: { levelId, ...context } });
+        } else {
+          setLevels(prev =>
+            prev.map(l => l.id === levelId ? { ...l, ...context } : l)
+          );
+        }
+      } catch (err) {
+        handleError(getErrorMessage(err, 'Failed to update level context'));
+      }
+    },
+    [enableFirestore, handleError, setLevels]
+  );
+
   return {
     addLevel,
     removeLevel,
@@ -333,5 +358,6 @@ export function useLevelOperations({
     setDefaultLevel,
     duplicateLevel,
     linkLevelToFloor,
+    updateLevelContext,
   };
 }

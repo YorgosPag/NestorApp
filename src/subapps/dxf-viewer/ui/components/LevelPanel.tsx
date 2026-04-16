@@ -13,6 +13,9 @@ import { Plus, Upload } from 'lucide-react';
 // 🏢 ADR-309 Phase 2: Wizard button in LevelPanel
 import { FloorplanImportWizard } from '@/features/floorplan-import';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
+import type { FloorplanType } from '../../systems/levels/config';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import type { EntityType } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
@@ -107,6 +110,7 @@ export function LevelPanel({
     renameLevel,
     getLevelScene,
     linkLevelToFloor,
+    updateLevelContext,
   } = useLevels();
 
   const { gripSettings, updateGripSettings } = useGripContext();
@@ -160,6 +164,17 @@ export function LevelPanel({
   const [showToolbox, setShowToolbox] = useState(false);
   // ADR-309 Phase 2: Wizard dialog state
   const [showImportWizard, setShowImportWizard] = useState(false);
+
+  // ADR-309 Phase 3: Map wizard entityType → FloorplanType
+  const entityTypeToFloorplanType = useCallback((entityType: EntityType): FloorplanType | undefined => {
+    switch (entityType) {
+      case ENTITY_TYPES.PROJECT: return 'project';
+      case ENTITY_TYPES.BUILDING: return 'building';
+      case ENTITY_TYPES.FLOOR: return 'floor';
+      case ENTITY_TYPES.PROPERTY: return 'unit';
+      default: return undefined;
+    }
+  }, []);
 
   const handleDeleteLevel = async (levelId: string) => {
     try {
@@ -433,6 +448,17 @@ export function LevelPanel({
               purpose: meta.purpose || undefined,
               entityLabel: meta.entityLabel,
             };
+            // ADR-309 Phase 3: Store context on the current level for context-aware titles
+            if (currentLevelId) {
+              const floorplanType = entityTypeToFloorplanType(meta.entityType);
+              if (floorplanType) {
+                updateLevelContext(currentLevelId, {
+                  floorplanType,
+                  entityLabel: meta.entityLabel,
+                  projectId: meta.projectId,
+                });
+              }
+            }
             onSceneImported(file, undefined, saveContext);
           }}
         />

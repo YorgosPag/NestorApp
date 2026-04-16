@@ -129,6 +129,7 @@ function useLevelsSystemState({
     setDefaultLevel,
     duplicateLevel,
     linkLevelToFloor,
+    updateLevelContext,
   } = useLevelOperations({
     levels,
     setLevels,
@@ -367,6 +368,7 @@ function useLevelsSystemState({
     setDefaultLevel,
     duplicateLevel,
     linkLevelToFloor,
+    updateLevelContext,
 
     // Floorplan operations
     addFloorplan,
