@@ -32,6 +32,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
+import { PricePlausibilityWarning } from '@/components/properties/shared/PricePlausibilityWarning';
 import {
   Ruler, FileText, Lock, Layers
 } from 'lucide-react';
@@ -285,6 +286,17 @@ export function PropertyFieldsEditForm({
               />
               <SalesDashboardRequirementsAlert
                 commercialStatus={formData.commercialStatus}
+                askingPrice={formData.askingPrice ?? null}
+                grossArea={
+                  isMultiLevel && aggregatedTotals
+                    ? aggregatedTotals.areas.gross
+                    : formData.areaGross
+                }
+                className="py-2 px-3 mt-1"
+              />
+              <PricePlausibilityWarning
+                commercialStatus={formData.commercialStatus}
+                propertyType={formData.type}
                 askingPrice={formData.askingPrice ?? null}
                 grossArea={
                   isMultiLevel && aggregatedTotals

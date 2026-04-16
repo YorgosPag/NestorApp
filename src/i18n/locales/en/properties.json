@@ -858,6 +858,20 @@
         "askingPrice": "Asking price",
         "grossArea": "Gross area (m²)"
       }
+    },
+    "pricePlausibility": {
+      "hardFloor": {
+        "title": "This price looks unusually low",
+        "description": "The entered price is below the minimum plausible threshold ({absoluteFloor} €). Could it be a typo? Saving is still allowed if intentional."
+      },
+      "suspiciousLow": {
+        "title": "Price lower than typical market range",
+        "description": "The price per m² is {pricePerSqm} €/m², below the typical market range for this property type ({min}–{max} €/m²). Please verify."
+      },
+      "suspiciousHigh": {
+        "title": "Price higher than typical market range",
+        "description": "The price per m² is {pricePerSqm} €/m², above the typical market range for this property type ({min}–{max} €/m²). Please verify."
+      }
     }
   },
   "details": {
