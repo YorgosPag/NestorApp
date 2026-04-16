@@ -163,7 +163,7 @@ These collections use **ONLY `isAuthenticated()` check** WITHOUT `companyId` val
 | `project_floorplans` | 415 | `allow read: if isAuthenticated();` | ANY user can read ALL floorplans |
 | `building_floorplans` | 423 | `allow read: if isAuthenticated();` | ANY user can read ALL floorplans |
 | `unit_floorplans` | 431 | `allow read: if isAuthenticated();` | ANY user can read ALL floorplans |
-| `dxf-viewer-levels` | 440 | `allow read: if isAuthenticated();` | ANY user can read ALL DXF levels |
+| `dxf_viewer_levels` | 440 | `allow read: if isAuthenticated();` | ANY user can read ALL DXF levels |
 | `communications` | 630 | `allow read: if isAuthenticated();` | ANY user can read ALL communications |
 | `system/{docId}` | 640 | `allow read: if isAuthenticated();` | ANY user can read system docs |
 | `leads` | 665 | `allow read: if isAuthenticated();` | ANY user can read ALL leads |

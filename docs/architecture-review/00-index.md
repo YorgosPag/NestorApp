@@ -46,7 +46,7 @@
 |----|--------|-------------|
 | **PR-1A** | ✅ Complete | buildings (critical hotfix - removed public read) |
 | **PR-1B** | ✅ Complete | projects, tasks, communications, conversations, messages, external_identities, relationships, analytics, workspaces, floorplans |
-| **PR-1C** | ✅ Complete | project_floorplans, building_floorplans, unit_floorplans, layers, layerGroups, dxf-viewer-levels, dxf-overlay-levels, dxfOverlayLevels, layer-events, property-layers |
+| **PR-1C** | ✅ Complete | project_floorplans, building_floorplans, unit_floorplans, layers, layerGroups, dxf_viewer_levels, dxf_overlay_levels, layer-events, property-layers |
 | **PR-1D** | ✅ Complete | floors, storage_units, parking_spots, obligations, obligationTemplates, obligation-sections, teams, admin_building_templates, opportunities (FIX), leads (FIX), activities (FIX) |
 
 **Total Collections with Tenant Isolation**: 35+ ✅

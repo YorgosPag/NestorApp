@@ -861,6 +861,12 @@ while IFS= read -r file; do
         continue
     fi
 
+    # Skip architecture-review docs — "risk-register-and-decisions" filename
+    # triggers the sk-[...]{20,} OpenAI key pattern (false positive).
+    if echo "$file" | grep -qE '^docs/architecture-review/'; then
+        continue
+    fi
+
     # Pattern 1: API keys (common formats — OpenAI, Google, GitHub, Slack, Firebase, Stripe)
     MATCHES=$(grep -nE "(sk-[a-zA-Z0-9_-]{20,}|sk_live_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|ghp_[a-zA-Z0-9]{36}|xoxb-[a-zA-Z0-9-]+|AAAA[a-zA-Z0-9_-]{100,})" "$file" 2>/dev/null | grep -vE "^\s*(//|\*|#)" | head -3)
     if [[ -n "$MATCHES" ]]; then

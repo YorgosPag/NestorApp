@@ -48,8 +48,8 @@ This document describes the migration strategy for adding `companyId` to all Fir
 | `floorplans` | Unknown | Derive from parent entity |
 | `layers` | Unknown | Add companyId from creator |
 | `layerGroups` | Unknown | Add companyId from creator |
-| `dxf-viewer-levels` | Unknown | Add companyId from creator |
-| `dxf-overlay-levels` | Unknown | Add companyId from creator |
+| `dxf_viewer_levels` | Unknown | Add companyId from creator |
+| `dxf_overlay_levels` | Unknown | Add companyId from creator |
 
 ### 2.4 PR-1D (MED/HIGH) - Obligations + Infra + CRM FIX
 | Collection | Current State | Migration Strategy |
