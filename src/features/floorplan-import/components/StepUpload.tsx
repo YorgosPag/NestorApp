@@ -8,19 +8,24 @@
  * Wraps FileUploadZone + useFloorplanUpload for the final wizard step.
  * Shows: drag & drop → progress bar → success/error.
  *
+ * When a floorplan already exists for the target entity, shows a replacement
+ * warning. On successful upload the old FileRecord is trashed (1 per entity).
+ *
  * @module features/floorplan-import/components/StepUpload
  */
 
-import React, { useState, useCallback } from 'react';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { CheckCircle2, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
 import { useFloorplanUpload } from '@/hooks/useFloorplanUpload';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
+import { FileRecordService } from '@/services/file-record.service';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -50,17 +55,58 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
 
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
+  // ── Existing floorplan detection ──
+  const [existingFile, setExistingFile] = useState<FileRecord | null>(null);
+  const [checkingExisting, setCheckingExisting] = useState(true);
+  const checkedRef = useRef(false);
+
+  useEffect(() => {
+    if (checkedRef.current) return;
+    checkedRef.current = true;
+
+    let cancelled = false;
+    async function check() {
+      try {
+        const files = await FileRecordService.getFilesByEntity(
+          config.entityType,
+          config.entityId,
+          {
+            companyId: config.companyId,
+            category: config.category,
+            purpose: config.purpose,
+            levelFloorId: config.levelFloorId,
+          },
+        );
+        if (!cancelled && files.length > 0) {
+          setExistingFile(files[0]);
+        }
+      } finally {
+        if (!cancelled) setCheckingExisting(false);
+      }
+    }
+    check();
+    return () => { cancelled = true; };
+  }, [config]);
+
   const handleUpload = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
 
-    const file = files[0]; // Single file upload
+    const file = files[0];
     const result = await uploadFloorplan(file);
 
     if (result.success) {
+      // Trash old floorplan if replacing
+      if (existingFile) {
+        try {
+          await FileRecordService.moveToTrash(existingFile.id, config.userId);
+        } catch {
+          // Non-blocking — old record stays but new one is active
+        }
+      }
       setUploadSuccess(true);
       onComplete(file);
     }
-  }, [uploadFloorplan, onComplete]);
+  }, [uploadFloorplan, onComplete, existingFile, config.userId]);
 
   const handleRetry = useCallback(() => {
     clearError();
@@ -93,6 +139,32 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
 
   return (
     <div className="space-y-4 py-4">
+      {/* ── Existing floorplan warning ── */}
+      {checkingExisting && (
+        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-xs">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>{t('floorplanImport.existingFloorplan.checking')}</span>
+        </div>
+      )}
+      {!checkingExisting && existingFile && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm dark:border-amber-700 dark:bg-amber-950/40">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="space-y-0.5">
+            <p className="font-medium text-amber-800 dark:text-amber-200">
+              {t('floorplanImport.existingFloorplan.warning')}
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              {t('floorplanImport.existingFloorplan.details')}
+            </p>
+            {existingFile.originalFilename && (
+              <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                {t('floorplanImport.existingFloorplan.fileName', { fileName: existingFile.originalFilename })}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Upload zone ── */}
       <FileUploadZone
         onUpload={handleUpload}
@@ -118,7 +190,6 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
               aria-valuenow={progress}
               aria-valuemin={0}
               aria-valuemax={100}
-              /* Tailwind width set via style because progress is dynamic 0-100 */
               style={{ width: `${progress}%` }}
             />
           </div>

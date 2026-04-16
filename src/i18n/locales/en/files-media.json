@@ -74,6 +74,12 @@
       "floor": "Floor Floorplan",
       "property": "Property Floorplan"
     },
+    "existingFloorplan": {
+      "warning": "A floorplan already exists for this entity.",
+      "details": "Importing a new floorplan will replace the existing DXF and its saved colored layers.",
+      "fileName": "Existing: {fileName}",
+      "checking": "Checking for existing floorplan..."
+    },
     "noItems": "No items found",
     "autoSelected": "Auto-selected",
     "acceptedTypes": "DXF, PDF, JPG, PNG (up to 50MB)",

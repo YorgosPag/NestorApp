@@ -1,24 +1,15 @@
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
-// 🏢 ENTERPRISE: Refactored to use LevelListCard - 2026-01-25
 'use client';
 
-// DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_LEVEL_PANEL = false;
-
-import React, { useState, useMemo, useCallback } from 'react';
-// 🏢 ENTERPRISE: Unified EventBus for type-safe event coordination
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
-import { Plus, Upload, Download } from 'lucide-react';
-// 🏢 ADR-309 Phase 2: Wizard button in LevelPanel
+import { Upload, Download } from 'lucide-react';
 import { FloorplanImportWizard } from '@/features/floorplan-import';
 import { DxfFirestoreService, type DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { FloorplanType } from '../../systems/levels/config';
 import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
-// 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
-// 🏢 ENTERPRISE: Centralized LevelListCard from domain cards
 import { LevelListCard } from '@/domain/cards';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useOverlayStore } from '../../overlays/overlay-store';
@@ -26,46 +17,41 @@ import { PANEL_TOKENS, PANEL_LAYOUT, PanelTokenUtils } from '../../config/panel-
 import { OverlayList } from '../OverlayList';
 import { OverlayProperties } from '../OverlayProperties';
 import { useGripContext } from '../../providers/GripProvider';
-import { SceneInfoSection } from './SceneInfoSection'; // 🔺 ADDED: Import SceneInfoSection
-import { LayersSection } from './LayersSection'; // 🔺 ADDED: Import LayersSection
+import { SceneInfoSection } from './SceneInfoSection';
+import { LayersSection } from './LayersSection';
 import type { ToolType } from '../toolbar/types';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { createOverlayHandlers } from '../../overlays/types';
-// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { LevelFloorLink } from './LevelFloorLink';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { FileRecordService } from '@/services/file-record.service';
+import { useAuth } from '@/auth/hooks/useAuth';
 
 interface LevelPanelProps {
   currentTool?: ToolType;
   onToolChange?: (tool: ToolType) => void;
-  // 🔺 ADDED: Props for SceneInfoSection and LayersSection
   scene?: SceneModel | null;
   selectedEntityIds?: string[];
-  // ADR-309 Phase 2: Wizard button
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
-  // LayersSection specific props
   onEntitySelect?: (ids: string[]) => void;
   expandedKeys?: Set<string>;
   onExpandChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
-  // Layer operations
   onLayerToggle?: (layerName: string, visible: boolean) => void;
   onLayerDelete?: (layerName: string) => void;
   onLayerColorChange?: (layerName: string, color: string) => void;
   onLayerRename?: (oldName: string, newName: string) => void;
   onLayerCreate?: (name: string, color: string) => void;
-  // Entity operations
   onEntityToggle?: (entityId: string, visible: boolean) => void;
   onEntityDelete?: (entityId: string) => void;
   onEntityColorChange?: (entityId: string, color: string) => void;
   onEntityRename?: (entityId: string, newName: string) => void;
-  // Color group operations
   onColorGroupToggle?: (colorGroupName: string, layersInGroup: string[], visible: boolean) => void;
   onColorGroupDelete?: (colorGroupName: string, layersInGroup: string[]) => void;
   onColorGroupColorChange?: (colorGroupName: string, layersInGroup: string[], color: string) => void;
-  // Merge operations
   onEntitiesMerge?: (targetEntityId: string, sourceEntityIds: string[]) => void;
   onLayersMerge?: (targetLayerName: string, sourceLayerNames: string[]) => void;
   onColorGroupsMerge?: (targetColorGroup: string, sourceColorGroups: string[]) => void;
@@ -116,17 +102,12 @@ export function LevelPanel({
 
   const { gripSettings, updateGripSettings } = useGripContext();
   const notifications = useNotifications();
-
+  const { user } = useAuth();
   const overlayStore = useOverlayStore();
-  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   const universalSelection = useUniversalSelection();
-
-  // Use shared overlay handlers to eliminate duplicate code
-  // 🏢 ENTERPRISE (2026-01-25): Bridge to universal selection system - ADR-030
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete } =
     createOverlayHandlers({
       setSelectedOverlay: (id: string | null) => {
-        // 🏢 ENTERPRISE (2026-01-25): Route through universal selection system - ADR-030
         if (id) {
           universalSelection.select(id, 'overlay');
         } else {
@@ -138,24 +119,18 @@ export function LevelPanel({
       getSelectedOverlay: overlayStore.getSelectedOverlay,
       overlays: overlayStore.overlays
     }, {
-      setCurrentLevel: setCurrentLevel  // ✅ Περνάω την ίδια function που χρησιμοποιείται στο κλικ της κάρτας επιπέδου
+      setCurrentLevel,
     });
-
   const currentOverlays = currentLevelId
     ? overlayStore.getByLevel(currentLevelId)
     : [];
-
-  // ADR-309 Phase 4: Inline overlay panel only when active level is floorplanType='floor'
   const currentLevel = useMemo(
     () => (currentLevelId ? levels.find(l => l.id === currentLevelId) : undefined),
     [levels, currentLevelId]
   );
   const showOverlayPanel = currentLevel?.floorplanType === 'floor';
-
   const selectedOverlayId = universalSelection.getPrimaryId();
   const selectedOverlay = selectedOverlayId ? (overlayStore.overlays[selectedOverlayId] ?? null) : null;
-    
-  // ✅ ENTERPRISE: Proper typing for levelScenes (SceneModel instead of unknown)
   const levelScenes = useMemo(() => {
     const scenes: Record<string, SceneModel> = {};
     if (levels && getLevelScene) {
@@ -166,19 +141,15 @@ export function LevelPanel({
     }
     return scenes;
   }, [levels, getLevelScene]);
-
   const [newLevelName, setNewLevelName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [activeEditingMode, setActiveEditingMode] = useState<EditingMode>(null);
   const [showToolbox, setShowToolbox] = useState(false);
-  // ADR-309 Phase 2: Wizard dialog state
   const [showImportWizard, setShowImportWizard] = useState(false);
-  // ADR-309 Phase 5: Load from storage — wizard in load mode
   const [showLoadWizard, setShowLoadWizard] = useState(false);
 
-  // ADR-309 Phase 3: Map wizard entityType → FloorplanType
   const entityTypeToFloorplanType = useCallback((entityType: EntityType): FloorplanType | undefined => {
     switch (entityType) {
       case ENTITY_TYPES.PROJECT: return 'project';
@@ -188,14 +159,40 @@ export function LevelPanel({
       default: return undefined;
     }
   }, []);
-
-  const handleDeleteLevel = async (levelId: string) => {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const pendingDeleteLevelRef = useRef<string | null>(null);
+  const requestDeleteLevel = useCallback((levelId: string) => {
+    pendingDeleteLevelRef.current = levelId;
+    setShowDeleteConfirm(true);
+  }, []);
+  const handleConfirmDelete = useCallback(async () => {
+    const levelId = pendingDeleteLevelRef.current;
+    if (!levelId) return;
+    try {
+      const level = levels.find(l => l.id === levelId);
+      await deleteLevel(levelId);
+      // Trash underlying FileRecord if linked
+      if (level?.sceneFileId && user?.uid) {
+        try {
+          await FileRecordService.moveToTrash(level.sceneFileId, user.uid);
+        } catch {
+          // Non-blocking — level removed, file trash best-effort
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete level:', error);
+    } finally {
+      setShowDeleteConfirm(false);
+      pendingDeleteLevelRef.current = null;
+    }
+  }, [levels, deleteLevel, user?.uid]);
+  const handleCloseLevel = useCallback(async (levelId: string) => {
     try {
       await deleteLevel(levelId);
     } catch (error) {
-      console.error('❌ Failed to delete level:', error);
+      console.error('Failed to close level:', error);
     }
-  };
+  }, [deleteLevel]);
 
   const handleAddLevel = async () => {
     if (isAdding) return;
@@ -231,7 +228,6 @@ export function LevelPanel({
     setEditingName(level.name);
   };
 
-  // Handle editing mode changes
   const handleEditingModeChange = (mode: EditingMode) => {
     setActiveEditingMode(mode);
     if (mode === 'editing') {
@@ -248,24 +244,11 @@ export function LevelPanel({
       window.dispatchEvent(new CustomEvent('level-panel:grip-edit-enabled', { detail: { enabled: false } }));
     }
   };
-
-  // Handle layering tool activation
-  // ✅ FIX: Wrapped in useCallback to prevent infinite loop in useEffect dependency
   const handleLayeringActivation = useCallback(() => {
     setShowToolbox(true);
-
-    // Auto-activate editing mode when layering is activated
     setActiveEditingMode('editing');
-    updateGripSettings({
-      showGrips: true,       // Αυτόματη ενεργοποίηση grips όταν ανοίγει το layering
-      multiGripEdit: true,
-      snapToGrips: true
-    });
-
+    updateGripSettings({ showGrips: true, multiGripEdit: true, snapToGrips: true });
   }, [updateGripSettings]);
-
-  // ✅ EVENT LISTENER: Ακούω για το layering activate event από overlay clicks
-  // 🏢 ENTERPRISE: Unified EventBus.on — receives events from both EventBus.emit AND window CustomEvent
   React.useEffect(() => {
     const cleanup = EventBus.on('level-panel:layering-activate', () => {
       handleLayeringActivation();
@@ -275,26 +258,18 @@ export function LevelPanel({
 
   return (
     <div className={`${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.BASE} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.PADDING} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}`}>
-      {/* 🔺 ADDED: Scene Info Section moved from Properties */}
-      <SceneInfoSection 
-        scene={scene || null} 
-        selectedEntityIds={selectedEntityIds} 
-      />
-      {/* ADR-309 Phase 2: Wizard button — primary entry point for floorplan import */}
+      <SceneInfoSection scene={scene || null} selectedEntityIds={selectedEntityIds} />
       {onSceneImported && (
         <Button variant="default" className="w-full" onClick={() => setShowImportWizard(true)}>
           <Upload className={iconSizes.sm} />
           {t('toolbar.importFloorplanWizard')}
         </Button>
       )}
-      {/* ADR-309 Phase 5: Load from storage — only when level has a linked entity */}
       {(currentLevel?.floorId || currentLevel?.buildingId || currentLevel?.projectId) && (
         <Button variant="outline" className="w-full" onClick={() => setShowLoadWizard(true)}>
           <Download className={iconSizes.sm} />{t('panels.levels.loadFromStorage')}
         </Button>
       )}
-
-      {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper - justify-between χωρίς νόημα με 1 child (ADR-003) */}
       <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
         <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
         {t('panels.levels.projectLevels')}
@@ -308,8 +283,6 @@ export function LevelPanel({
             const isEditing = editingLevelId === level.id;
             const isOnlyLevel = levels.length === 1;
             const isSelected = currentLevelId === level.id;
-
-            // 🏢 ENTERPRISE: Inline editing mode - keep input field for rename
             if (isEditing) {
               return (
                 <div
@@ -332,8 +305,6 @@ export function LevelPanel({
                 </div>
               );
             }
-
-            // 🏢 ENTERPRISE: Normal mode - use LevelListCard
             return (
               <div key={level.id}>
                 <LevelListCard
@@ -352,7 +323,11 @@ export function LevelPanel({
                   }}
                   onDelete={(e) => {
                     e.stopPropagation();
-                    handleDeleteLevel(level.id);
+                    requestDeleteLevel(level.id);
+                  }}
+                  onClose={(e) => {
+                    e.stopPropagation();
+                    handleCloseLevel(level.id);
                   }}
                   compact
                 />
@@ -371,11 +346,6 @@ export function LevelPanel({
           <p>{t('panels.levels.noLevels')}</p>
         </div>
       )}
-
-      {/* ADR-309 §2.5: "+ Νέο Επίπεδο" hidden — new levels created via wizard only (reversible) */}
-      {/* addLevel() function remains in useLevels; only UI hidden */}
-
-      {/* 🔺 ADDED: LayersSection moved from Properties */}
       {scene && Object.keys(scene.layers).length > 0 && (
         <div className={PANEL_TOKENS.LEVEL_PANEL.SECTIONS_BORDER}>
           <LayersSection
@@ -402,10 +372,8 @@ export function LevelPanel({
         </div>
       )}
 
-      {/* ADR-309 Phase 4: Inline overlay management — visible only when floorplanType='floor' */}
       {showOverlayPanel && (
         <div className={PANEL_TOKENS.LEVEL_PANEL.OVERLAY_SECTION}>
-          {/* 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030 */}
           <OverlayList
             overlays={currentOverlays}
             selectedOverlayId={selectedOverlayId}
@@ -427,8 +395,6 @@ export function LevelPanel({
           )}
         </div>
       )}
-
-      {/* ADR-309 Phase 5: Load wizard — same wizard in load mode */}
       <FloorplanImportWizard
         isOpen={showLoadWizard}
         onClose={() => setShowLoadWizard(false)}
@@ -440,7 +406,6 @@ export function LevelPanel({
           setLevelScene(currentLevelId, record.scene);
         }}
       />
-      {/* ADR-309 Phase 2: Wizard dialog — same instance as toolbar (SPEC-237D) */}
       {onSceneImported && (
         <FloorplanImportWizard
           isOpen={showImportWizard}
@@ -456,7 +421,6 @@ export function LevelPanel({
               purpose: meta.purpose || undefined,
               entityLabel: meta.entityLabel,
             };
-            // ADR-309 Phase 3: Store context on the current level for context-aware titles
             if (currentLevelId) {
               const floorplanType = entityTypeToFloorplanType(meta.entityType);
               if (floorplanType) {
@@ -471,6 +435,14 @@ export function LevelPanel({
           }}
         />
       )}
+      <DeleteConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title={t('panels.levels.deleteConfirm.title')}
+        description={t('panels.levels.deleteConfirm.description')}
+        confirmText={t('panels.levels.deleteConfirm.confirm')}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

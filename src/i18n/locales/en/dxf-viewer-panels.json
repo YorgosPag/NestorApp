@@ -21,6 +21,12 @@
       "emptyLevel": "Empty level",
       "renameLevel": "Rename level",
       "deleteLevel": "Delete level",
+      "closeLevel": "Close floorplan",
+      "deleteConfirm": {
+        "title": "Delete floorplan",
+        "description": "The DXF floorplan and its saved colored layers will be deleted. This action cannot be undone.",
+        "confirm": "Delete"
+      },
       "noLevels": "No levels exist",
       "newLevelPlaceholder": "New level name...",
       "linkFloor": "Link floor",

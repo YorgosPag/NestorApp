@@ -38,11 +38,7 @@ export function LevelFloorLink({ levelId, floorId, onLink }: LevelFloorLinkProps
   );
 
   if (floors.length === 0) {
-    return (
-      <p className={PANEL_TOKENS.LEVEL_FLOOR_LINK?.HINT ?? 'text-xs text-muted-foreground mt-1 truncate'}>
-        {t('panels.levels.noBuildingSelected')}
-      </p>
-    );
+    return null;
   }
 
   const linkedFloor = floors.find(f => f.id === floorId);

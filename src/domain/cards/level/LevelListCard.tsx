@@ -20,7 +20,7 @@ import React, { useMemo } from 'react';
 // 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 Action icons
-import { Edit, Trash2, Layers } from 'lucide-react';
+import { Edit, Trash2, Layers, X } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized action icon colors
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
@@ -53,8 +53,10 @@ export interface LevelListCardProps {
   onSelect?: () => void;
   /** Edit/Rename handler */
   onEdit?: (event: React.MouseEvent) => void;
-  /** Delete handler */
+  /** Delete handler (with confirmation — trashes floorplan file) */
   onDelete?: (event: React.MouseEvent) => void;
+  /** Close handler (unloads floorplan from canvas without trashing file) */
+  onClose?: (event: React.MouseEvent) => void;
   /** Compact mode */
   compact?: boolean;
   /** Additional className */
@@ -92,6 +94,7 @@ export function LevelListCard({
   onSelect,
   onEdit,
   onDelete,
+  onClose,
   compact = false,
   className,
 }: LevelListCardProps) {
@@ -181,8 +184,19 @@ export function LevelListCard({
       });
     }
 
+    // Close action — unloads floorplan from canvas without trashing file
+    if (onClose) {
+      items.push({
+        id: 'close',
+        label: t('panels.levels.closeLevel'),
+        icon: X,
+        onClick: onClose,
+        className: HOVER_TEXT_EFFECTS.BLUE,
+      });
+    }
+
     return items;
-  }, [onEdit, onDelete, isOnlyLevel, t]);
+  }, [onEdit, onDelete, onClose, isOnlyLevel, t]);
 
   // ==========================================================================
   // 🏢 HANDLERS

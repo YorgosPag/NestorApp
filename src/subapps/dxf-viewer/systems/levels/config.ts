@@ -83,10 +83,9 @@ export const DEFAULT_LEVEL_CONFIG: LevelSystemConfig = {
   enableAutoSave: true,
   defaultUnits: 'mm',
   maxLevels: 50,
-  firebaseCollection: 'dxf-viewer-levels',
+  firebaseCollection: 'dxf_viewer_levels',
   defaultLevels: [
-    { name: 'Ισόγειο', order: 0, isDefault: true, visible: true },
-    { name: '1ος Όροφος', order: 1, isDefault: false, visible: true },
+    { name: 'Επίπεδο 1', order: 0, isDefault: true, visible: true },
   ],
 };
 

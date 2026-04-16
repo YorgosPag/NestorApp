@@ -10,8 +10,7 @@ import { generateLayerId, generateFloorId } from '@/services/enterprise-id.servi
 export class LevelOperations {
   static createDefaultLevels(): Level[] {
     return [
-      { id: 'ground', name: 'Ισόγειο', order: 0, isDefault: true, visible: true },
-      { id: 'first', name: '1ος Όροφος', order: 1, isDefault: false, visible: true },
+      { id: 'default', name: 'Επίπεδο 1', order: 0, isDefault: true, visible: true },
     ];
   }
 

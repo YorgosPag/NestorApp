@@ -46,7 +46,7 @@ function useLevelsSystemState({
   initialFloorplans = {},
   initialCurrentLevelId = null,
   enableFirestore = true,
-  firestoreCollection = 'dxf-viewer-levels',
+  firestoreCollection = 'dxf_viewer_levels',
   settings: initialSettings = {},
   onLevelChange,
   onFloorplanAdd,

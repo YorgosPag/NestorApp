@@ -214,7 +214,7 @@ export function FloorplanImportWizard({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>
             {mode === 'load' ? t('floorplanImport.loadTitle') : t('floorplanImport.title')}
