@@ -11,14 +11,11 @@
  * @module features/floorplan-import/components/StepStoragePicker
  */
 
-import React, { useState } from 'react';
-import { Download } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFloorplanFiles } from '@/hooks/useFloorplanFiles';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import '@/lib/design-system';
 
@@ -28,23 +25,19 @@ import '@/lib/design-system';
 
 interface StepStoragePickerProps {
   uploadConfig: FloorplanUploadConfig;
-  /**
-   * Called when the user picks a file.
-   * Throws on failure — StepStoragePicker catches and shows inline error per row.
-   */
-  onSelect: (fileId: string) => Promise<void>;
+  /** Currently selected file ID (controlled by parent wizard). */
+  selectedFileId: string | null;
+  /** Called when the user clicks a row to select a file. */
+  onFileSelected: (fileId: string) => void;
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function StepStoragePicker({ uploadConfig, onSelect }: StepStoragePickerProps) {
+export function StepStoragePicker({ uploadConfig, selectedFileId, onFileSelected }: StepStoragePickerProps) {
   const { t } = useTranslation(['files-media']);
   const colors = useSemanticColors();
-  const iconSizes = useIconSizes();
-  const [loadingFileId, setLoadingFileId] = useState<string | null>(null);
-  const [errorFileId, setErrorFileId] = useState<string | null>(null);
 
   const { files, loading } = useFloorplanFiles({
     companyId: uploadConfig.companyId,
@@ -52,19 +45,6 @@ export function StepStoragePicker({ uploadConfig, onSelect }: StepStoragePickerP
     entityId: uploadConfig.entityId,
     autoProcess: false,
   });
-
-  const handleSelect = async (fileId: string) => {
-    if (loadingFileId) return;
-    setLoadingFileId(fileId);
-    setErrorFileId(null);
-    try {
-      await onSelect(fileId);
-    } catch {
-      setErrorFileId(fileId);
-    } finally {
-      setLoadingFileId(null);
-    }
-  };
 
   if (loading) {
     return (
@@ -85,30 +65,26 @@ export function StepStoragePicker({ uploadConfig, onSelect }: StepStoragePickerP
   return (
     <ScrollArea className="h-72">
       <ul className="space-y-2 p-1" role="listbox" aria-label={t('floorplanImport.loadTitle')}>
-        {files.map((file) => (
-          <li
-            key={file.id}
-            className={`flex items-center justify-between gap-3 p-3 rounded-md border ${
-              errorFileId === file.id ? 'border-destructive bg-destructive/5' : `border-border ${colors.bg.surface}`
-            }`}
-          >
-            <span className="flex-1 truncate text-sm font-medium">
-              {file.originalFilename ?? file.displayName}
-            </span>
-            <Button
-              size="sm"
-              variant={errorFileId === file.id ? 'destructive' : 'outline'}
-              disabled={!!loadingFileId}
-              onClick={() => handleSelect(file.id)}
-              aria-label={`${t('floorplanImport.storagePicker.loadButton')} ${file.displayName}`}
+        {files.map((file) => {
+          const isSelected = file.id === selectedFileId;
+          return (
+            <li
+              key={file.id}
+              role="option"
+              aria-selected={isSelected}
+              onClick={() => onFileSelected(file.id)}
+              className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
+                isSelected
+                  ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                  : `border-border ${colors.bg.surface} hover:bg-accent/50`
+              }`}
             >
-              <Download className={iconSizes.sm} />
-              {errorFileId === file.id
-                ? t('floorplanImport.storagePicker.error')
-                : t('floorplanImport.storagePicker.loadButton')}
-            </Button>
-          </li>
-        ))}
+              <span className="flex-1 truncate text-sm font-medium">
+                {file.originalFilename ?? file.displayName}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </ScrollArea>
   );

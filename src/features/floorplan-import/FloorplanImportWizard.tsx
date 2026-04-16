@@ -18,7 +18,7 @@
  * @module features/floorplan-import/FloorplanImportWizard
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { FolderKanban, Building2, Layers } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -115,6 +115,10 @@ export function FloorplanImportWizard({
 
   const state = useFloorplanImportState({ isOpen });
 
+  // ADR-309 Phase 5: selection state for load mode step 6
+  const [selectedStorageFileId, setSelectedStorageFileId] = useState<string | null>(null);
+  const [loadingStorage, setLoadingStorage] = useState(false);
+
   const stepLabels = useMemo(
     () => [
       ...STEP_LABEL_KEYS.slice(0, 5).map((key) => t(key)),
@@ -151,8 +155,30 @@ export function FloorplanImportWizard({
 
   const handleClose = useCallback(() => {
     state.reset();
+    setSelectedStorageFileId(null);
+    setLoadingStorage(false);
     onClose();
   }, [state, onClose]);
+
+  const handleConfirmLoad = useCallback(async () => {
+    if (!selectedStorageFileId || !state.uploadConfig) return;
+    const cfg = state.uploadConfig;
+    const meta: WizardCompleteMeta = {
+      companyId: cfg.companyId,
+      projectId: cfg.projectId,
+      entityType: cfg.entityType as WizardCompleteMeta['entityType'],
+      entityId: cfg.entityId,
+      purpose: cfg.purpose ?? '',
+      entityLabel: cfg.entityLabel,
+    };
+    setLoadingStorage(true);
+    try {
+      await onLoad?.(selectedStorageFileId, meta);
+      handleClose();
+    } finally {
+      setLoadingStorage(false);
+    }
+  }, [selectedStorageFileId, state.uploadConfig, onLoad, handleClose]);
 
   const getSelectedId = (): string | null => {
     switch (state.step) {
@@ -236,19 +262,8 @@ export function FloorplanImportWizard({
           {mode === 'load' && state.step === 6 && state.uploadConfig && (
             <StepStoragePicker
               uploadConfig={state.uploadConfig}
-              onSelect={async (fileId) => {
-                const cfg = state.uploadConfig!;
-                const meta: WizardCompleteMeta = {
-                  companyId: cfg.companyId,
-                  projectId: cfg.projectId,
-                  entityType: cfg.entityType as WizardCompleteMeta['entityType'],
-                  entityId: cfg.entityId,
-                  purpose: cfg.purpose ?? '',
-                  entityLabel: cfg.entityLabel,
-                };
-                await onLoad?.(fileId, meta);
-                handleClose();
-              }}
+              selectedFileId={selectedStorageFileId}
+              onFileSelected={setSelectedStorageFileId}
             />
           )}
         </section>
@@ -269,6 +284,17 @@ export function FloorplanImportWizard({
             {state.step < 6 && (
               <Button onClick={state.handleNext} disabled={!state.canProceed}>
                 {t('floorplanImport.next')}
+              </Button>
+            )}
+
+            {mode === 'load' && state.step === 6 && (
+              <Button
+                onClick={handleConfirmLoad}
+                disabled={!selectedStorageFileId || loadingStorage}
+              >
+                {loadingStorage
+                  ? t('floorplanImport.storagePicker.loading')
+                  : t('floorplanImport.storagePicker.loadButton')}
               </Button>
             )}
           </div>
