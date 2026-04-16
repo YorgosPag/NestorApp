@@ -289,9 +289,27 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
       dxfLogger.error('DXF document missing storagePath — legacy document without canonical path (ADR-293)', { fileId });
       return null;
     }
-    const storagePath = metadata.storagePath;
-    const storageRef = ref(storage, storagePath);
-    const sceneBytes = await getBytes(storageRef);
+    // 🏢 storagePath in FileRecord may point to the original DXF file (.dxf)
+    // or to the scene JSON (.scene.json). The scene JSON is always stored at
+    // the derived .scene.json path — try that first, fall back to raw path.
+    const rawPath = metadata.storagePath;
+    const scenePath = rawPath.endsWith('.scene.json')
+      ? rawPath
+      : rawPath.replace(/\.[^/.]+$/, '.scene.json');
+
+    let sceneBytes: ArrayBuffer;
+    try {
+      const sceneRef = ref(storage, scenePath);
+      sceneBytes = await getBytes(sceneRef);
+    } catch {
+      // .scene.json not found — try the raw storagePath (in case it IS the scene)
+      if (scenePath !== rawPath) {
+        const rawRef = ref(storage, rawPath);
+        sceneBytes = await getBytes(rawRef);
+      } else {
+        throw new Error(`Scene file not found at ${scenePath}`);
+      }
+    }
     const sceneJson = new TextDecoder().decode(sceneBytes);
     const scene = JSON.parse(sceneJson) as SceneModel;
 
