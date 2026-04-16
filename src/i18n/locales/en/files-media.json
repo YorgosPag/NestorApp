@@ -65,7 +65,9 @@
       "empty": "No saved floorplans found",
       "loading": "Loading...",
       "loadButton": "Load",
-      "error": "Load error"
+      "error": "Load error",
+      "corrupt": "Corrupt",
+      "corruptFile": "File is corrupt. Please re-import the floorplan."
     },
     "types": {
       "building": "General Building Floorplan",

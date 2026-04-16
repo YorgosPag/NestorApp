@@ -19,7 +19,7 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { FolderKanban, Building2, Layers } from 'lucide-react';
+import { FolderKanban, Building2, Layers, Download } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Dialog,
@@ -31,6 +31,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { WizardProgress } from '@/subapps/dxf-viewer/ui/components/WizardProgress';
 
+import { useNotifications } from '@/providers/NotificationProvider';
 import { useFloorplanImportState } from './hooks/useFloorplanImportState';
 import { StepEntitySelector } from './components/StepEntitySelector';
 import { StepPropertySelector } from './components/StepPropertySelector';
@@ -115,9 +116,12 @@ export function FloorplanImportWizard({
 
   const state = useFloorplanImportState({ isOpen });
 
+  const notifications = useNotifications();
+
   // ADR-309 Phase 5: selection state for load mode step 6
   const [selectedStorageFileId, setSelectedStorageFileId] = useState<string | null>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
+  const [corruptFileIds, setCorruptFileIds] = useState<Set<string>>(new Set());
 
   const stepLabels = useMemo(
     () => [
@@ -157,6 +161,7 @@ export function FloorplanImportWizard({
     state.reset();
     setSelectedStorageFileId(null);
     setLoadingStorage(false);
+    setCorruptFileIds(new Set());
     onClose();
   }, [state, onClose]);
 
@@ -175,10 +180,14 @@ export function FloorplanImportWizard({
     try {
       await onLoad?.(selectedStorageFileId, meta);
       handleClose();
+    } catch {
+      setCorruptFileIds((prev) => new Set(prev).add(selectedStorageFileId));
+      setSelectedStorageFileId(null);
+      notifications.error(t('floorplanImport.storagePicker.corruptFile'));
     } finally {
       setLoadingStorage(false);
     }
-  }, [selectedStorageFileId, state.uploadConfig, onLoad, handleClose]);
+  }, [selectedStorageFileId, state.uploadConfig, onLoad, handleClose, notifications, t]);
 
   const getSelectedId = (): string | null => {
     switch (state.step) {
@@ -264,6 +273,7 @@ export function FloorplanImportWizard({
               uploadConfig={state.uploadConfig}
               selectedFileId={selectedStorageFileId}
               onFileSelected={setSelectedStorageFileId}
+              corruptFileIds={corruptFileIds}
             />
           )}
         </section>
