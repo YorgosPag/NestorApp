@@ -7,6 +7,18 @@ import { ChartTooltipItem } from "./components/Item";
 import type { ChartTooltipContentProps } from "./types";
 import '@/lib/design-system';
 
+// Recharts injects internal props at runtime that are not valid DOM attributes.
+// Defined at module level to avoid recreation on every render.
+const RECHARTS_INTERNAL_PROPS = new Set([
+  // From Recharts Tooltip.defaultProps + TooltipProps interface (complete list)
+  'accessibilityLayer', 'allowEscapeViewBox', 'animationBegin', 'animationDuration',
+  'animationEasing', 'content', 'contentStyle', 'coordinate', 'cursor', 'cursorStyle',
+  'defaultIndex', 'filterNull', 'includeHidden', 'isAnimationActive', 'itemSorter',
+  'itemStyle', 'labelStyle', 'offset', 'payloadUniqBy', 'position', 'reverseDirection',
+  'separator', 'shared', 'trigger', 'useTranslate3d', 'viewBox', 'wrapperStyle',
+  'wrapperClassName',
+]);
+
 export const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltipContentProps>(
   (
     {
@@ -31,6 +43,10 @@ export const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltip
     if (!active || !payload?.length) return null;
     const nestLabel = payload.length === 1 && indicator !== "dot";
 
+    const domRest = Object.fromEntries(
+      Object.entries(rest).filter(([k]) => !RECHARTS_INTERNAL_PROPS.has(k))
+    );
+
     return (
       <div
         ref={ref}
@@ -38,7 +54,7 @@ export const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltip
           `grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 ${colors.bg.primary} px-2.5 py-1.5 text-xs shadow-xl`,
           className
         )}
-        {...rest}
+        {...domRest}
       >
         {!nestLabel ? (
           <ChartTooltipLabel

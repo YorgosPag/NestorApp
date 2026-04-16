@@ -52,7 +52,7 @@ const PAYMENT_STATUS_VARIANTS: Record<
 // COMPONENT
 // ============================================================================
 
-export function EFKAPaymentsList({ payments }: EFKAPaymentsListProps) {
+export function EFKAPaymentsList({ payments = [] }: EFKAPaymentsListProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 

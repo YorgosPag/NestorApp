@@ -17,7 +17,11 @@
     "expired": "Ληγμένο",
     "notSold": "Δεν Πωλήθηκε",
     "underConstruction": "Υπό Κατασκευή",
-    "blocked": "Μπλοκαρισμένο"
+    "blocked": "Μπλοκαρισμένο",
+    "occupied": "Κατειλημμένο",
+    "maintenance": "Υπό Συντήρηση",
+    "planned": "Προγραμματισμένο",
+    "owner": "Ιδιοκτήτης"
   },
   "saleStatus": {
     "notSold": "Δεν Πωλήθηκε",

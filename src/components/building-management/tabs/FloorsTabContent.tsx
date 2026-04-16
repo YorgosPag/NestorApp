@@ -9,7 +9,7 @@
 
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,11 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     dialogProps, BlockedDialog,
   } = useFloorsTabState(building.id, building.projectId);
 
+  const existingFloorNumbers = useMemo(
+    () => new Set(floors.map((f) => f.number)) as ReadonlySet<number>,
+    [floors]
+  );
+
   if (loading) {
     return (
       <section className="flex items-center justify-center py-2">
@@ -89,6 +94,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
         <FloorInlineCreateForm
           buildingId={building.id}
           projectId={building.projectId}
+          existingFloorNumbers={existingFloorNumbers}
           onCreated={() => {
             setShowCreateForm(false);
             void fetchFloors();

@@ -32,16 +32,16 @@ export const MODAL_SELECT_PROJECT_STATUS_LABELS = {
  * 🌐 i18n: Uses keys from units.json namespace
  */
 export const MODAL_SELECT_UNIT_STATUS_LABELS = {
-  available: 'units.status.available',
-  occupied: 'units.status.occupied',
-  maintenance: 'units.status.maintenance',
-  for_sale: 'units.status.forSale',
-  for_rent: 'units.status.forRent',
+  available: 'properties.status.available',
+  occupied: 'properties.status.occupied',
+  maintenance: 'properties.status.maintenance',
+  for_sale: 'properties.status.forSale',
+  for_rent: 'properties.status.forRent',
   for_sale_and_rent: 'properties.status.forSaleAndRent',
-  sold: 'units.status.sold',
-  rented: 'units.status.rented',
-  under_construction: 'units.status.underConstruction',
-  planned: 'units.status.planned'
+  sold: 'properties.status.sold',
+  rented: 'properties.status.rented',
+  under_construction: 'properties.status.underConstruction',
+  planned: 'properties.status.planned'
 } as const;
 
 /**

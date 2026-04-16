@@ -17,7 +17,11 @@
     "expired": "Expired",
     "notSold": "Not Sold",
     "underConstruction": "Under Construction",
-    "blocked": "Blocked"
+    "blocked": "Blocked",
+    "occupied": "Occupied",
+    "maintenance": "Under Maintenance",
+    "planned": "Planned",
+    "owner": "Owner"
   },
   "saleStatus": {
     "notSold": "Not Sold",

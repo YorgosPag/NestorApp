@@ -206,8 +206,8 @@ export const createUnitStatuses = (colors: UseSemanticColorsReturn): Record<Unit
   maintenance: { label: storageStatusLabels.maintenance, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'wrench' },
   reserved: { label: storageStatusLabels.reserved, variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'bookmark' },
   // 🏢 ENTERPRISE: Added parking-compatible statuses
-  sold: { label: 'units.status.sold', variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'check' },
-  owner: { label: 'units.status.owner', variant: 'default', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'user' }
+  sold: { label: unitStatusLabels.sold, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'check' },
+  owner: { label: 'properties.status.owner', variant: 'default', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'user' }
 });
 
 /**

@@ -96,7 +96,7 @@ export function useCustomCategories(
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data = (await res.json()) as { categories: CustomCategoryDocument[] };
-      setCategories(data.categories);
+      setCategories(data.categories ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('setup.customCategories.errors.fetchFailed'));
     } finally {

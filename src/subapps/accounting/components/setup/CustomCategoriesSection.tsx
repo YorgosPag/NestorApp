@@ -220,13 +220,13 @@ export function CustomCategoriesSection() {
           </div>
         ) : (
           <section aria-label={t('setup.customCategories.listAriaLabel')}>
-            {categories.length === 0 ? (
+            {(categories ?? []).length === 0 ? (
               <p className={cn("text-sm py-2", colors.text.muted)}>
                 {t('setup.customCategories.empty')}
               </p>
             ) : (
               <ul className="space-y-2 mb-4" role="list">
-                {categories.map((cat) => (
+                {(categories ?? []).map((cat) => (
                   <li
                     key={cat.categoryId}
                     className="flex items-center justify-between rounded-md border p-3"
