@@ -156,17 +156,10 @@ export function useEntityLink(
   const [linkedId, setLinkedId] = useState<string | null>(initialParentId);
   const prevEntityIdRef = useRef(entityId);
 
-  // Pre-load options once and cache them in this hook.
-  // When EntityLinkCard remounts (entity switch → key change), it receives
-  // initialOptions immediately → no loading spinner on subsequent buildings.
-  const [cachedOptions, setCachedOptions] = useState<EntityLinkOption[] | undefined>(undefined);
-  useEffect(() => {
-    let cancelled = false;
-    loadOptions().then((opts) => {
-      if (!cancelled) setCachedOptions(opts);
-    }).catch(() => { /* non-fatal */ });
-    return () => { cancelled = true; };
-  }, [loadOptions]);
+  // SSoT: Hook is the single source of truth for options loading.
+  // EntityLinkCard receives options + loading state — never fetches on its own.
+  const [cachedOptions, setCachedOptions] = useState<EntityLinkOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
 
   // Realtime refresh — increments when parent entity type changes (create/update/delete)
   const [refreshSignal, setRefreshSignal] = useState(0);
@@ -180,6 +173,24 @@ export function useEntityLink(
     );
     return () => { unsubscribers.forEach((unsub) => unsub()); };
   }, [relation]);
+
+  // SSoT fetch: loads options on mount + re-fetches on realtime events.
+  // Single fetch eliminates the double-call that previously happened
+  // (hook pre-fetch + EntityLinkCard mount fetch).
+  useEffect(() => {
+    let cancelled = false;
+    // Only show spinner on initial load, not on realtime refreshes
+    if (refreshSignal === 0) setOptionsLoading(true);
+    loadOptions()
+      .then((opts) => {
+        if (!cancelled) setCachedOptions(opts);
+      })
+      .catch(() => { /* non-fatal */ })
+      .finally(() => {
+        if (!cancelled) setOptionsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [loadOptions, refreshSignal]);
 
   // Reset when switching to a different entity (cross-entity isolation)
   useEffect(() => {
@@ -243,9 +254,9 @@ export function useEntityLink(
     autoSave,
     searchable,
     hideCurrentLabel,
-    refreshSignal,
-    // Pre-loaded options — eliminates spinner on entity switch (remount)
-    ...(cachedOptions !== undefined ? { initialOptions: cachedOptions } : {}),
+    // SSoT: Hook manages all fetching — card renders what it receives
+    initialOptions: cachedOptions,
+    externalLoading: optionsLoading,
     // immediate mode → onSave for auto-save
     ...(autoSave && onSave ? { onSave } : {}),
     // form/local mode → onValueChange for parent state sync

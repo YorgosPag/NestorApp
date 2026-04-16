@@ -106,6 +106,14 @@ export interface EntityLinkCardProps {
    * Used to eliminate the spinner when EntityLinkCard remounts on entity switch.
    */
   initialOptions?: EntityLinkOption[];
+  /**
+   * External loading state from the parent hook (useEntityLink).
+   * When defined, the component enters "managed mode":
+   * - Uses this value for the loading spinner instead of internal state
+   * - Skips ALL internal fetching (hook is the SSoT for options)
+   * - Syncs options from `initialOptions` prop changes
+   */
+  externalLoading?: boolean;
 }
 
 // =============================================================================
@@ -133,6 +141,7 @@ export function EntityLinkCard({
   refreshSignal,
   hasError = false,
   initialOptions,
+  externalLoading,
 }: EntityLinkCardProps) {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
@@ -144,7 +153,10 @@ export function EntityLinkCard({
 
   const [options, setOptions] = useState<EntityLinkOption[]>(initialOptions ?? []);
   const [selectedId, setSelectedId] = useState<string>(currentValue || NONE_VALUE);
-  const [loading, setLoading] = useState(initialOptions === undefined);
+  const [internalLoading, setInternalLoading] = useState(initialOptions === undefined && externalLoading === undefined);
+  // Managed mode: hook controls loading — card never fetches on its own
+  const managedMode = externalLoading !== undefined;
+  const loading = managedMode ? externalLoading : internalLoading;
   // Track whether pre-loaded options were provided — suppresses loading spinner on mount
   const hasInitialOptionsRef = useRef(initialOptions !== undefined);
   const [saving, setSaving] = useState(false);
@@ -170,8 +182,16 @@ export function EntityLinkCard({
   // Effective saved value: only use savedValue in autoSave mode
   const effectiveSavedValue = autoSave ? savedValue : undefined;
 
-  // Load options on mount + re-fetch when refreshSignal changes (realtime events)
+  // Managed mode: sync options from hook whenever initialOptions changes
   useEffect(() => {
+    if (managedMode && initialOptions !== undefined) {
+      setOptions(initialOptions);
+    }
+  }, [managedMode, initialOptions]);
+
+  // Unmanaged mode: load options on mount + re-fetch when refreshSignal changes
+  useEffect(() => {
+    if (managedMode) return; // Hook handles all fetching in managed mode
     let cancelled = false;
     const load = async () => {
       // Silent refetch when: (a) refreshSignal fired, or (b) initialOptions were pre-loaded
@@ -183,19 +203,19 @@ export function EntityLinkCard({
           if (!cancelled) setOptions(data);
         } catch { /* non-fatal */ }
       } else {
-        setLoading(true);
+        setInternalLoading(true);
         try {
           const data = await loadOptions();
           if (!cancelled) setOptions(data);
         } catch { /* non-fatal */ }
         finally {
-          if (!cancelled) setLoading(false);
+          if (!cancelled) setInternalLoading(false);
         }
       }
     };
     load();
     return () => { cancelled = true; };
-  }, [loadOptions, refreshSignal]);
+  }, [loadOptions, refreshSignal, managedMode]);
 
   // Sync with external value changes
   // When currentValue changes (e.g. user selects a different entity in the sidebar),
