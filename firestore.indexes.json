@@ -1,7 +1,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "dxf-viewer-levels",
+      "collectionGroup": "dxf_viewer_levels",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -15,7 +15,7 @@
       ]
     },
     {
-      "collectionGroup": "dxf-viewer-levels",
+      "collectionGroup": "dxf_viewer_levels",
       "queryScope": "COLLECTION",
       "fields": [
         {
