@@ -92,7 +92,7 @@ export function useFixedAssets(options: UseFixedAssetsOptions = {}): UseFixedAss
       }
 
       const data: { assets: FixedAsset[] } = await response.json();
-      setAssets(data.assets);
+      setAssets(data.assets ?? []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.fixedAssetsLoadFailed';
       setError(message);

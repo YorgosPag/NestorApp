@@ -698,7 +698,7 @@ export const API_ROUTES = {
       BY_ID: (id: string) => `/api/accounting/apy-certificates/${id}` as const,
       SEND_EMAIL: (id: string) => `/api/accounting/apy-certificates/${id}/send-email` as const,
     },
-    FIXED_ASSETS: '/api/accounting/fixed-assets',
+    FIXED_ASSETS: '/api/accounting/assets',
     EFKA: { SUMMARY: '/api/accounting/efka/summary' },
   },
 

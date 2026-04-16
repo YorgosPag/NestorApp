@@ -135,8 +135,8 @@ export function AssetsPageContent() {
 
   // Compute dashboard stats
   const dashboardStats: DashboardStat[] = useMemo(() => {
-    const totalValue = assets.reduce((s, a) => s + a.acquisitionCost, 0);
-    const totalDepreciation = assets.reduce((s, a) => s + a.accumulatedDepreciation, 0);
+    const totalValue = (assets ?? []).reduce((s, a) => s + a.acquisitionCost, 0);
+    const totalDepreciation = (assets ?? []).reduce((s, a) => s + a.accumulatedDepreciation, 0);
     const netBookValue = totalValue - totalDepreciation;
 
     return [
