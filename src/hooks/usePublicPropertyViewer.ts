@@ -65,10 +65,14 @@ export function usePublicPropertyViewer() {
       const commercialStatus =
         property.commercialStatus ?? normalizeCommercialStatus(property.status);
 
+      // Runtime shape includes nested `areas.gross` (canonical) even though
+      // viewer type exposes only flat `area` (legacy). Read both, prefer gross.
+      const nestedGross = (property as { areas?: { gross?: number } }).areas?.gross;
+
       return isDisplayableInSalesDashboard({
         commercialStatus,
         askingPrice: property.commercial?.askingPrice ?? property.price,
-        grossArea: property.area,
+        grossArea: nestedGross ?? property.area,
       });
     });
   }, [allProperties]);
