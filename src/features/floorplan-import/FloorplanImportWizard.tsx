@@ -19,13 +19,14 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { FolderKanban, Building2, Layers, Download } from 'lucide-react';
+import { FolderKanban, Building2, Layers } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -218,6 +219,9 @@ export function FloorplanImportWizard({
           <DialogTitle>
             {mode === 'load' ? t('floorplanImport.loadTitle') : t('floorplanImport.title')}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {mode === 'load' ? t('floorplanImport.loadTitle') : t('floorplanImport.title')}
+          </DialogDescription>
         </DialogHeader>
 
         {/* ── Step indicator ── */}
