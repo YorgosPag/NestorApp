@@ -14,7 +14,7 @@
  * @since 2025-10-09
  */
 
-import { useReducer, useState, useMemo, useEffect } from 'react';
+import { useReducer, useState, useMemo, useEffect, useRef } from 'react';
 import { settingsReducer } from '../../settings/state/reducer';
 import { handleEntityUpdate, handleToggleOverride } from '../reducerHelpers';
 import { FACTORY_DEFAULTS } from '../../settings/FACTORY_DEFAULTS';
@@ -174,12 +174,15 @@ export function useEnterpriseSettingsState(): EnterpriseSettingsStateHook {
     return 'idle';
   }, [state.isSaving, state.lastError, state.isLoaded]);
 
-  // Update lastSaved when save completes
+  // Update lastSaved ONLY when transitioning from saving→done (not on initial load)
+  // Bug fix: previous code fired on every load because saveStatus='saved' after isLoaded=true
+  const prevIsSavingRef = useRef(false);
   useEffect(() => {
-    if (saveStatus === 'saved' && !state.isSaving) {
+    if (prevIsSavingRef.current && !state.isSaving && state.isLoaded) {
       setLastSaved(new Date());
     }
-  }, [saveStatus, state.isSaving]);
+    prevIsSavingRef.current = state.isSaving;
+  }, [state.isSaving, state.isLoaded]);
 
   return {
     state,

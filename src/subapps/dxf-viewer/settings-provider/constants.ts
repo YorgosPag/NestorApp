@@ -17,8 +17,11 @@
  * Enterprise provider configuration constants
  */
 export const ENTERPRISE_CONSTANTS = {
-  /** Maximum render count before infinite loop warning */
-  RENDER_LOOP_THRESHOLD: 50,
+  /** Maximum render count before infinite loop warning.
+   * React 18 StrictMode + deep provider nesting can legitimately reach 50+
+   * renders on init (2× StrictMode × N state transitions). Use 100 to catch
+   * true loops (which would be 1000+ renders). */
+  RENDER_LOOP_THRESHOLD: 100,
 
   /** Auto-save debounce delay in milliseconds */
   AUTO_SAVE_DEBOUNCE_MS: 500,
