@@ -9,7 +9,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event coordination
 import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
-import { Plus, Upload } from 'lucide-react';
+import { Plus, Upload, Download } from 'lucide-react';
 // 🏢 ADR-309 Phase 2: Wizard button in LevelPanel
 import { FloorplanImportWizard } from '@/features/floorplan-import';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
@@ -38,6 +38,7 @@ import { createOverlayHandlers } from '../../overlays/types';
 import { useUniversalSelection } from '../../systems/selection';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { LevelFloorLink } from './LevelFloorLink';
+import { StoredFloorplanPicker } from './StoredFloorplanPicker';
 
 interface LevelPanelProps {
   currentTool?: ToolType;
@@ -110,6 +111,7 @@ export function LevelPanel({
     deleteLevel,
     renameLevel,
     getLevelScene,
+    setLevelScene,
     linkLevelToFloor,
     updateLevelContext,
   } = useLevels();
@@ -175,6 +177,8 @@ export function LevelPanel({
   const [showToolbox, setShowToolbox] = useState(false);
   // ADR-309 Phase 2: Wizard dialog state
   const [showImportWizard, setShowImportWizard] = useState(false);
+  // ADR-309 Phase 5: Load from storage picker state
+  const [showStoragePicker, setShowStoragePicker] = useState(false);
 
   // ADR-309 Phase 3: Map wizard entityType → FloorplanType
   const entityTypeToFloorplanType = useCallback((entityType: EntityType): FloorplanType | undefined => {
@@ -306,17 +310,21 @@ export function LevelPanel({
         scene={scene || null} 
         selectedEntityIds={selectedEntityIds} 
       />
-      
       {/* ADR-309 Phase 2: Wizard button — primary entry point for floorplan import */}
       {onSceneImported && (
-        <Button
-          variant="default"
-          className="w-full"
-          onClick={() => setShowImportWizard(true)}
-        >
+        <Button variant="default" className="w-full" onClick={() => setShowImportWizard(true)}>
           <Upload className={iconSizes.sm} />
           {t('toolbar.importFloorplanWizard')}
         </Button>
+      )}
+      {/* ADR-309 Phase 5: Load from storage — only when level has a linked entity */}
+      {(currentLevel?.floorId || currentLevel?.buildingId || currentLevel?.projectId) && (
+        <Button variant="outline" className="w-full" onClick={() => setShowStoragePicker(true)}>
+          <Download className={iconSizes.sm} />{t('panels.levels.loadFromStorage')}
+        </Button>
+      )}
+      {showStoragePicker && currentLevel && currentLevelId && (
+        <StoredFloorplanPicker level={currentLevel} currentLevelId={currentLevelId} setLevelScene={setLevelScene} onClose={() => setShowStoragePicker(false)} />
       )}
 
       {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper - justify-between χωρίς νόημα με 1 child (ADR-003) */}
@@ -427,8 +435,6 @@ export function LevelPanel({
         </div>
       )}
 
-      {/* Editing Toolbox - shown when layering tool is active */}
-      
       {/* ADR-309 Phase 4: Inline overlay management — visible only when floorplanType='floor' */}
       {showOverlayPanel && (
         <div className={PANEL_TOKENS.LEVEL_PANEL.OVERLAY_SECTION}>

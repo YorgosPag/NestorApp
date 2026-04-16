@@ -27,7 +27,16 @@
       "linkedFloor": "Floor: {floorName}",
       "noFloorLinked": "No floor linked",
       "selectFloorPlaceholder": "-- Select floor --",
-      "noBuildingSelected": "Select a building in Hierarchy"
+      "noBuildingSelected": "Select a building in Hierarchy",
+      "loadFromStorage": "Load from Storage",
+      "storagePicker": {
+        "title": "Saved Floorplans",
+        "empty": "No saved floorplans found",
+        "loading": "Loading...",
+        "loadButton": "Load",
+        "cancel": "Cancel",
+        "error": "Load error"
+      }
     },
     "hierarchy": {
       "title": "Hierarchy",

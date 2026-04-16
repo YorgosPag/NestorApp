@@ -27,7 +27,16 @@
       "linkedFloor": "Όροφος: {floorName}",
       "noFloorLinked": "Χωρίς σύνδεση ορόφου",
       "selectFloorPlaceholder": "-- Επιλέξτε όροφο --",
-      "noBuildingSelected": "Επιλέξτε κτίριο στην Ιεραρχία"
+      "noBuildingSelected": "Επιλέξτε κτίριο στην Ιεραρχία",
+      "loadFromStorage": "Φόρτωση από αποθήκη",
+      "storagePicker": {
+        "title": "Αποθηκευμένες Κατόψεις",
+        "empty": "Δεν βρέθηκαν αποθηκευμένες κατόψεις",
+        "loading": "Φόρτωση...",
+        "loadButton": "Φόρτωση",
+        "cancel": "Ακύρωση",
+        "error": "Σφάλμα φόρτωσης"
+      }
     },
     "hierarchy": {
       "title": "Ιεραρχία",
