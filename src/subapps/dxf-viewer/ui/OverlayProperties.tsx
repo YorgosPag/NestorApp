@@ -115,10 +115,15 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
   const { levels, currentLevelId } = useLevels();
   const { selectedBuilding } = useProjectHierarchy();
 
-  const currentFloorId = useMemo(() => {
-    if (!currentLevelId) return undefined;
-    return levels.find(l => l.id === currentLevelId)?.floorId;
-  }, [levels, currentLevelId]);
+  const currentLevel = useMemo(
+    () => (currentLevelId ? levels.find(l => l.id === currentLevelId) : undefined),
+    [levels, currentLevelId]
+  );
+
+  const currentFloorId = currentLevel?.floorId;
+
+  // Derive buildingId: explicit selectedBuilding wins, then Level.buildingId stored at link-time (ADR-237)
+  const derivedBuildingId = selectedBuilding?.id ?? currentLevel?.buildingId;
 
   // Derive linked status BEFORE hooks (needed for enabled check)
   const isLinkableKind = overlay?.kind !== 'footprint';
@@ -128,12 +133,13 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
   // 🏢 ADR-258B: Floor-filtered entities for linking dropdown
   // Units: API supports floorId-only (company-scoped). Parking/Storage: needs buildingId.
+  // buildingId: selectedBuilding wins, else Level.buildingId saved at link-time (ADR-237)
   const { entities, loading: entitiesLoading } = useFloorEntitiesForLinking({
     kind: overlay?.kind ?? 'property',
-    buildingId: selectedBuilding?.id,
+    buildingId: derivedBuildingId,
     floorId: currentFloorId,
     overlays,
-    enabled: !!overlay && isLinkableKind && (!!selectedBuilding?.id || !!currentFloorId),
+    enabled: !!overlay && isLinkableKind && (!!derivedBuildingId || !!currentFloorId),
   });
 
   // Sync label with overlay changes
@@ -297,6 +303,12 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <>
           <div className={PANEL_LAYOUT.SPACING.GAP_XS}>
             <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.linkedEntity')}</Label>
+            {/* Hint: level not linked to floor yet — guide user to Level Panel */}
+            {!currentFloorId && !derivedBuildingId && (
+              <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
+                {t('overlayProperties.noFloorLinked')}
+              </p>
+            )}
             <div className="flex items-center gap-1">
               <Select
                 value={linkedEntityId ?? SELECT_CLEAR_VALUE}

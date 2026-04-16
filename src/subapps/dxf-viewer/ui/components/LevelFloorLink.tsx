@@ -18,7 +18,7 @@ import { PANEL_TOKENS } from '../../config/panel-tokens';
 interface LevelFloorLinkProps {
   levelId: string;
   floorId: string | undefined;
-  onLink: (levelId: string, floorId: string | null) => Promise<void>;
+  onLink: (levelId: string, floorId: string | null, buildingId?: string | null) => Promise<void>;
 }
 
 export function LevelFloorLink({ levelId, floorId, onLink }: LevelFloorLinkProps) {
@@ -30,9 +30,11 @@ export function LevelFloorLink({ levelId, floorId, onLink }: LevelFloorLinkProps
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const value = e.target.value;
-      void onLink(levelId, value === '' ? null : value);
+      // Pass buildingId alongside floorId so OverlayProperties can fetch entities
+      // without requiring the user to have selectedBuilding set (ADR-237)
+      void onLink(levelId, value === '' ? null : value, selectedBuilding?.id ?? null);
     },
-    [levelId, onLink]
+    [levelId, onLink, selectedBuilding]
   );
 
   if (floors.length === 0) {

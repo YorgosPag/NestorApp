@@ -11,7 +11,8 @@ export interface Level {
   order: number;
   isDefault: boolean;
   visible: boolean;
-  floorId?: string;  // Σύνδεση με building floor (ADR-237, SPEC-237A)
+  floorId?: string;    // Σύνδεση με building floor (ADR-237, SPEC-237A)
+  buildingId?: string; // Building ID del piano collegato — derivato al link-time (ADR-237)
   /** 🏢 ENTERPRISE: Persistent link to cadFiles/files document ID for scene auto-load */
   sceneFileId?: string;
   /** 🏢 ENTERPRISE: Original filename for display in Levels panel */

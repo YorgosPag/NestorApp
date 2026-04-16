@@ -147,6 +147,7 @@
     "transferDescription": "This entity is already linked to another polygon. Transfer the link to the current polygon?",
     "transferConfirm": "Transfer",
     "statusLinkedHint": "Status is determined by the linked entity",
+    "noFloorLinked": "Link this level to a floor first (Level Panel)",
     "geometry": "Geometry",
     "points": "Points:",
     "area": "Area:",

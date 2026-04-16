@@ -173,6 +173,7 @@ export async function handleUpdateDxfLevel(
     if (body.isDefault !== undefined) updates.isDefault = body.isDefault;
     if (body.visible !== undefined) updates.visible = body.visible;
     if (body.floorId !== undefined) updates.floorId = body.floorId ?? null;
+    if (body.buildingId !== undefined) updates.buildingId = body.buildingId ?? null;
     if (body.sceneFileId !== undefined) updates.sceneFileId = body.sceneFileId ?? null;
     if (body.sceneFileName !== undefined) updates.sceneFileName = body.sceneFileName ?? null;
 
