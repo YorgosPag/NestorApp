@@ -19,7 +19,6 @@ type DxfCanvasComponent = typeof import('../../canvas-v2/dxf-canvas/DxfCanvas').
 type FullLayoutDebugComponent = typeof import('../../debug/layout-debug').FullLayoutDebug;
 type AdminLayerManagerComponent = typeof import('./AdminLayerManager').AdminLayerManager;
 type LevelPanelComponent = typeof import('./LevelPanel').LevelPanel;
-type HierarchyDebugPanelComponent = typeof import('../../debug/panels/HierarchyDebugPanel').HierarchyDebugPanel;
 type DxfSettingsPanelComponent = typeof import('./DxfSettingsPanel').DxfSettingsPanel;
 type GlobalPerformanceDashboardComponent = typeof import('@/core/performance/components/GlobalPerformanceDashboard').default;
 
@@ -33,7 +32,6 @@ type DxfCanvasProps = React.ComponentPropsWithoutRef<DxfCanvasComponent>;
 type FullLayoutDebugProps = NoProps;
 type AdminLayerManagerProps = React.ComponentPropsWithoutRef<AdminLayerManagerComponent>;
 type LevelPanelProps = NonNullable<React.ComponentPropsWithoutRef<LevelPanelComponent>>;
-type HierarchyDebugPanelProps = NoProps;
 type DxfSettingsPanelProps = React.ComponentPropsWithoutRef<DxfSettingsPanelComponent>;
 type GlobalPerformanceDashboardProps = React.ComponentPropsWithoutRef<GlobalPerformanceDashboardComponent>;
 
@@ -182,9 +180,8 @@ export const LazyLevelPanel = withLazyLoad<LevelPanelProps>(
   () => import('./LevelPanel').then(m => ({ default: m.LevelPanel }))
 );
 
-export const LazyHierarchyDebugPanel = withLazyLoad<HierarchyDebugPanelProps>(
-  () => import('../../debug/panels/HierarchyDebugPanel').then(m => ({ default: m.HierarchyDebugPanel }))
-);
+// ADR-309 Phase 1: LazyHierarchyDebugPanel removed (hierarchy tab eliminated)
+// HierarchyDebugPanel component in ../../debug/panels/ is preserved — not deleted
 
 export const LazyColorPalettePanel = withLazyLoad<DxfSettingsPanelProps>(
   () => import('./DxfSettingsPanel').then(m => ({ default: m.DxfSettingsPanel }))

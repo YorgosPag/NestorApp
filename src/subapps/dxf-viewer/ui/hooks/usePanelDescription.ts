@@ -34,21 +34,11 @@ export function usePanelDescription({
   const { t } = useTranslationLazy('dxf-viewer');
 
   // ✅ Panel description logic
+  // ADR-309 Phase 1: 'hierarchy' and 'overlay' cases removed
   const getDescription = (): string => {
     switch (activePanel) {
-      case 'overlay':
-        return t('panels.overlay.description', {
-          regionCount: visibleRegions.length
-        });
-
       case 'levels':
         return t('panels.levels.description');
-
-      case 'hierarchy':
-        return t('panels.hierarchy.description');
-
-      // 🏢 ENTERPRISE: 'layers' case removed - not in FloatingPanelType
-      // See types/panel-types.ts for valid panel types
 
       case 'colors':
         return 'Ρυθμίσεις DXF - Γραμμές, Χρώματα, Κείμενο, Grips και Εμφάνιση';

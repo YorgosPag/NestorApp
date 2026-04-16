@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { BarChart, Construction, Map, Settings } from 'lucide-react';
+import { BarChart, Settings } from 'lucide-react';
 import { useTranslation } from '../../../../i18n';
 // 🏢 ENTERPRISE: Use centralized TabsOnlyTriggers (same as Contacts, ΓΕΜΗ tabs)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
@@ -34,6 +34,7 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   // 🏢 ENTERPRISE: Create tabs in TabDefinition format (same as GenericFormTabRenderer)
+  // ADR-309 Phase 1: 2 tabs only (hierarchy + overlay removed)
   const tabs: TabDefinition[] = [
     {
       id: 'levels',
@@ -41,20 +42,6 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
       icon: BarChart,
       content: null, // Content is rendered by parent
       disabled: disabledPanels['levels'],
-    },
-    {
-      id: 'hierarchy',
-      label: isCollapsed ? '' : t('panels.hierarchy.title'),
-      icon: Construction,
-      content: null,
-      disabled: disabledPanels['hierarchy'],
-    },
-    {
-      id: 'overlay',
-      label: isCollapsed ? '' : t('panels.overlay.title'),
-      icon: Map,
-      content: null,
-      disabled: disabledPanels['overlay'],
     },
     {
       id: 'colors',

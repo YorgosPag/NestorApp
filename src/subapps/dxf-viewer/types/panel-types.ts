@@ -26,9 +26,7 @@
  * Each type corresponds to a tab in the PanelTabs component.
  *
  * @description
- * - 'levels': Επίπεδα - Level management panel
- * - 'hierarchy': Ιεραρχία - Entity hierarchy tree
- * - 'overlay': Overlay - Region overlay management
+ * - 'levels': Επίπεδα - Level management panel (+ wizard button, ADR-309)
  * - 'colors': Ρυθμίσεις DXF - DXF settings (lines, text, grips)
  *
  * @example
@@ -38,7 +36,7 @@
  * const [activePanel, setActivePanel] = useState<FloatingPanelType>('levels');
  * ```
  */
-export type FloatingPanelType = 'levels' | 'hierarchy' | 'overlay' | 'colors';
+export type FloatingPanelType = 'levels' | 'colors';
 
 /**
  * 🏢 ENTERPRISE: All Panel Types (including future/hidden)
@@ -85,7 +83,7 @@ export type PanelType = FloatingPanelType;
 export function isFloatingPanelType(value: unknown): value is FloatingPanelType {
   return (
     typeof value === 'string' &&
-    ['levels', 'hierarchy', 'overlay', 'colors'].includes(value)
+    ['levels', 'colors'].includes(value)
   );
 }
 
@@ -96,8 +94,6 @@ export function isFloatingPanelType(value: unknown): value is FloatingPanelType 
  */
 export const FLOATING_PANEL_TYPES: readonly FloatingPanelType[] = [
   'levels',
-  'hierarchy',
-  'overlay',
   'colors',
 ] as const;
 
@@ -116,7 +112,7 @@ export interface PanelMetadata {
   /** Fallback label (Greek) */
   fallbackLabel: string;
   /** Lucide icon name */
-  iconName: 'BarChart' | 'Construction' | 'Map' | 'Settings';
+  iconName: 'BarChart' | 'Settings';
   /** Whether panel can be disabled */
   canBeDisabled: boolean;
 }
@@ -133,20 +129,6 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
     fallbackLabel: 'Επίπεδα',
     iconName: 'BarChart',
     canBeDisabled: false,
-  },
-  hierarchy: {
-    type: 'hierarchy',
-    labelKey: 'panels.hierarchy.title',
-    fallbackLabel: 'Ιεραρχία',
-    iconName: 'Construction',
-    canBeDisabled: true,
-  },
-  overlay: {
-    type: 'overlay',
-    labelKey: 'panels.overlay.title',
-    fallbackLabel: 'Overlay',
-    iconName: 'Map',
-    canBeDisabled: true,
   },
   colors: {
     type: 'colors',
@@ -167,10 +149,10 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
  * Defines how panels are arranged in the tab rows.
  */
 export const PANEL_LAYOUT = {
-  /** Top row panels */
-  topRow: ['levels', 'hierarchy'] as const satisfies readonly FloatingPanelType[],
-  /** Bottom row panels */
-  bottomRow: ['overlay', 'colors'] as const satisfies readonly FloatingPanelType[],
+  /** Top row panels (ADR-309: 2 tabs only) */
+  topRow: ['levels', 'colors'] as const satisfies readonly FloatingPanelType[],
+  /** Bottom row panels — empty after ADR-309 Phase 1 */
+  bottomRow: [] as const satisfies readonly FloatingPanelType[],
 } as const;
 
 /**

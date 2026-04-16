@@ -10,16 +10,14 @@ import React from 'react';
 import { EventBus } from '../../systems/events';
 import { LazyPanelWrapper } from '../components/shared';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 
 // ✅ CENTRALIZED: Use existing LazyLoadWrapper system instead of duplicate React.lazy
+// ADR-309 Phase 1: LazyHierarchyDebugPanel removed (hierarchy tab eliminated)
 import {
-  LazyAdminLayerManager as AdminLayerManager,
   LazyLevelPanel as LevelPanel,
-  LazyHierarchyDebugPanel as HierarchyDebugPanel,
   LazyColorPalettePanel as ColorPalettePanel,
 } from '../components/LazyLoadWrapper';
 
@@ -55,21 +53,10 @@ export function usePanelContentRenderer({
   layerOperations
 }: UsePanelContentRendererParams) {
   const colors = useSemanticColors();
-  const { quick } = useBorderTokens();
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
   const renderPanelContent = () => {
     switch (activePanel) {
-      case 'overlay':
-        // ✅ ENTERPRISE: Χρήση κεντρικοποιημένων tokens αντί hardcoded values
-        return (
-          <div className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING}>
-            <LazyPanelWrapper loadingText={t('panels.overlay.loading')}>
-              <AdminLayerManager className={`${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.CONTAINER.INNER_PADDING}`} />
-            </LazyPanelWrapper>
-          </div>
-        );
-
       case 'levels':
         // ✅ ENTERPRISE: Αφαίρεση περιττού κενού <div> wrapper (ADR-003 Container Nesting)
         return (
@@ -103,16 +90,8 @@ export function usePanelContentRenderer({
           </LazyPanelWrapper>
         );
 
-      case 'hierarchy':
-        // ✅ ENTERPRISE: Αφαίρεση περιττού κενού <div> wrapper (ADR-003 Container Nesting)
-        return (
-          <LazyPanelWrapper loadingText={t('panels.hierarchy.loading')}>
-            <HierarchyDebugPanel />
-          </LazyPanelWrapper>
-        );
-
-      // 🏢 ENTERPRISE: 'layers' case removed - not in FloatingPanelType
-      // See types/panel-types.ts for valid panel types
+      // ADR-309 Phase 1: 'hierarchy' and 'overlay' cases removed
+      // See types/panel-types.ts — FloatingPanelType = 'levels' | 'colors'
 
       case 'colors':
         // ✅ ENTERPRISE: Αφαίρεση περιττού κενού <div> wrapper (ADR-003 Container Nesting)
