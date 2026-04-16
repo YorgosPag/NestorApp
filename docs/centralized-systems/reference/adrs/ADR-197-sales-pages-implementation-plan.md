@@ -2032,3 +2032,9 @@ UNITS_COMPONENT_MAPPING = {
 - `src/app/spaces/storage/page.tsx` — Reference pattern (Storage Spaces page)
 - `src/app/spaces/parking/page.tsx` — Reference pattern (Parking Spaces page)
 - `src/app/sales/available-apartments/page.tsx` — Current mock implementation
+
+---
+
+## Changelog
+
+- **2026-04-16 (ADR-287 Batch 18)**: Display-eligibility gate εφαρμόζεται στη σελίδα `/sales/available-properties`. Το `useSalesPropertiesViewerState` πλέον pre-filter-άρει τα units μέσω του `isDisplayableInSalesDashboard()` SSoT helper (`src/constants/commercial-statuses.ts`): listed commercialStatus + askingPrice > 0 + grossArea > 0. Αποκλείονται incomplete listings + finalized (sold/rented) units — αποκλίνει από το αρχικό ADR-197 comment "Sold/rented units remain accessible for post-sale follow-up" γιατί η σελίδα είναι availability vetrina, όχι analytics. Sold/rented παραμένουν προσβάσιμα μέσω reports/analytics flows (`/reports/sales`, CRM closing views). Fix για UX contract mismatch: το `SalesDashboardRequirementsAlert` (Batch 16) υπόσχεται εξαίρεση, τώρα πράγματι εφαρμόζεται.

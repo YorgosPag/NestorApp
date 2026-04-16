@@ -10,6 +10,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import type { Property, CommercialStatus } from '@/types/property';
+import { isDisplayableInSalesDashboard } from '@/constants/commercial-statuses';
 
 // =============================================================================
 // 🏢 TYPES
@@ -64,11 +65,23 @@ export function useSalesPropertiesViewerState() {
   const [selectedPropertyType, setSelectedPropertyType] = useState<string>('all');
 
   // =========================================================================
-  // ALL UNITS — no pre-filtering; quick/advanced filters handle visibility
-  // Sold/rented units remain accessible for post-sale follow-up (ADR-197)
+  // DISPLAY-ELIGIBLE UNITS — Gate via SSoT `isDisplayableInSalesDashboard`.
+  // Listed commercial status + askingPrice > 0 + grossArea > 0. Coerent με το
+  // UX contract του SalesDashboardRequirementsAlert (ADR-287 Batch 18).
+  //
+  // Αποκλείονται: unavailable, reserved, sold, rented + incomplete listings.
+  // Sold/rented units παραμένουν διαθέσιμα μέσω reports/analytics pages —
+  // όχι σε αυτήν την "Διαθέσιμα Ακίνητα" vetrina (το όνομα της σελίδας
+  // υπαγορεύει scope).
   // =========================================================================
   const salesUnits = useMemo(() => {
-    return allUnits as Property[];
+    return (allUnits as Property[]).filter(unit =>
+      isDisplayableInSalesDashboard({
+        commercialStatus: unit.commercialStatus,
+        askingPrice: unit.commercial?.askingPrice,
+        grossArea: unit.areas?.gross ?? unit.area,
+      }),
+    );
   }, [allUnits]);
 
   // =========================================================================

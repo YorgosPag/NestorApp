@@ -139,6 +139,61 @@ export function requiresGrossArea(
 }
 
 // =============================================================================
+// 3b. DISPLAY ELIGIBILITY GATE — Single SSoT for sales/rental dashboards
+// =============================================================================
+//
+// Εμφάνιση σε sales dashboards & customer-facing listings (public vetrina)
+// απαιτεί και τα τρία:
+//   1) listed commercialStatus (for-sale / for-rent / for-sale-and-rent)
+//   2) askingPrice > 0
+//   3) grossArea > 0
+//
+// Coerent με το UX contract του `SalesDashboardRequirementsAlert`: όταν ο
+// alert εμφανίζεται, το property δεν πρέπει να εμφανίζεται στις δημόσιες
+// λίστες/πίνακες. Ένας κοινός gate evita drift ανάμεσα σε UI promise και
+// query behavior (Google pattern: UI = contract).
+
+/** Input contract για το display-eligibility gate. Agnostic σε data shape. */
+export interface SalesDisplayEligibilityInput {
+  commercialStatus?: CommercialStatus | string | null;
+  askingPrice?: number | null;
+  grossArea?: number | null;
+}
+
+/**
+ * Returns `true` αν το property πληροί όλες τις προϋποθέσεις για εμφάνιση
+ * σε sales/rental dashboards & customer-facing listings.
+ *
+ * Συμπεριφορά:
+ *   - Listed status required (μέσω `isListedCommercialStatus`).
+ *   - `askingPrice` πρέπει να είναι **θετικός αριθμός** (> 0). null/0/negative → excluded.
+ *   - `grossArea` πρέπει να είναι **θετικός αριθμός** (> 0). null/0/negative → excluded.
+ *
+ * Η σειρά είναι μη-σημασιολογική (όλα required), αλλά short-circuit για
+ * performance σε μεγάλες λίστες: status πρώτο (φθηνό string check).
+ *
+ * @see SalesDashboardRequirementsAlert — UI counterpart του gate.
+ * @see ADR-287 Batch 18 — SSoT for sales dashboard display eligibility.
+ */
+export function isDisplayableInSalesDashboard(
+  input: SalesDisplayEligibilityInput,
+): boolean {
+  if (!isListedCommercialStatus(input.commercialStatus)) return false;
+
+  const price = input.askingPrice;
+  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+    return false;
+  }
+
+  const area = input.grossArea;
+  if (typeof area !== 'number' || !Number.isFinite(area) || area <= 0) {
+    return false;
+  }
+
+  return true;
+}
+
+// =============================================================================
 // 4. ALIAS RESOLUTION — Greek ↔ English normalization (ADR-287 Batch 10A)
 // =============================================================================
 //

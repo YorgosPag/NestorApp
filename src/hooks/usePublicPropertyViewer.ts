@@ -2,36 +2,26 @@
 
 import { useMemo, useState } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
-import type { Property, OperationalStatus } from '@/types/property-viewer';
+import type { Property } from '@/types/property-viewer';
 import type { FilterState } from '@/types/property-viewer';
 import { tallyBy } from '@/utils/collection-utils';
+import {
+  isDisplayableInSalesDashboard,
+  normalizeCommercialStatus,
+} from '@/constants/commercial-statuses';
 
 // ============================================================================
-// 🏢 ENTERPRISE: Public Viewing Eligibility Configuration
+// 🏢 PUBLIC VIEWING ELIGIBILITY — SSoT gate (ADR-287 Batch 18)
 // ============================================================================
-// A property is eligible for public viewing if:
-// 1. It has a market status indicating availability (for-sale, for-rent, reserved)
-// 2. OR it has an operational status of 'ready' (construction complete)
+// Ένα property εμφανίζεται στο public viewer ΜΟΝΟ αν περνά το
+// `isDisplayableInSalesDashboard` gate: listed commercial status +
+// askingPrice > 0 + grossArea > 0. Legacy `status` field κανονικοποιείται
+// μέσω `normalizeCommercialStatus` όταν το canonical `commercialStatus`
+// λείπει (migration safety).
 //
-// This dual-check ensures properties appear even when only one status is set,
-// which is common during data migration or when using different status systems.
+// Coerent με το UX contract του SalesDashboardRequirementsAlert: όταν
+// εμφανίζεται ο alert, το property δεν εμφανίζεται στις public λίστες.
 // ============================================================================
-
-// ============================================================================
-// Commercial statuses that should appear in public property listings
-// Reserved/sold/rented are EXCLUDED — only actively available properties shown
-// ============================================================================
-const PUBLIC_ALLOWED_COMMERCIAL_STATUSES: ReadonlySet<string> = new Set([
-  'for-sale', 'for-rent', 'for-sale-and-rent',
-]);
-
-// Legacy market statuses (fallback when commercialStatus is absent)
-const PUBLIC_ALLOWED_LEGACY_STATUSES: ReadonlySet<string> = new Set([
-  'for-sale', 'for-rent',
-]);
-
-// Operational statuses that indicate the property is ready for viewing
-const PUBLIC_ALLOWED_OPERATIONAL_STATUSES: OperationalStatus[] = ['ready'];
 
 // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
 const DEFAULT_PUBLIC_FILTERS: FilterState = {
@@ -64,27 +54,22 @@ export function usePublicPropertyViewer() {
   const [scale, setScale] = useState(1);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_PUBLIC_FILTERS);
 
-  // Φιλτράρουμε properties για public view
-  // 🏢 ADR-197: commercialStatus υπερισχύει του legacy status
-  // Reserved/sold/rented αποκλείονται — μόνο actively available εμφανίζονται
+  // Φιλτράρουμε properties για public view μέσω SSoT gate.
+  // ADR-287 Batch 18: ενιαίος κανόνας εμφάνισης σε public vetrina & sales dashboards.
   const publicProperties = useMemo(() => {
     if (!Array.isArray(allProperties)) return [];
 
     return allProperties.filter((property: Property) => {
-      // ADR-197: commercialStatus is source of truth when present
-      if (property.commercialStatus) {
-        return PUBLIC_ALLOWED_COMMERCIAL_STATUSES.has(property.commercialStatus);
-      }
+      // ADR-197: commercialStatus is source of truth. Legacy `status`
+      // normalized as migration fallback.
+      const commercialStatus =
+        property.commercialStatus ?? normalizeCommercialStatus(property.status);
 
-      // Fallback: legacy status check (for-sale, for-rent only — NOT reserved)
-      const hasAllowedLegacyStatus = PUBLIC_ALLOWED_LEGACY_STATUSES.has(property.status);
-
-      // OR: operational status indicates ready
-      const hasAllowedOperationalStatus = property.operationalStatus
-        ? PUBLIC_ALLOWED_OPERATIONAL_STATUSES.includes(property.operationalStatus)
-        : false;
-
-      return hasAllowedLegacyStatus || hasAllowedOperationalStatus;
+      return isDisplayableInSalesDashboard({
+        commercialStatus,
+        askingPrice: property.commercial?.askingPrice ?? property.price,
+        grossArea: property.area,
+      });
     });
   }, [allProperties]);
 
