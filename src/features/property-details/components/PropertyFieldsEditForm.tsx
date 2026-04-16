@@ -17,6 +17,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { InfoLabel } from '@/components/sales/payments/financial-intelligence/InfoLabel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -35,6 +36,8 @@ import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/
 import { PricePlausibilityWarning } from '@/components/properties/shared/PricePlausibilityWarning';
 import { FloorTypePlausibilityWarning } from '@/components/properties/shared/FloorTypePlausibilityWarning';
 import { LayoutPlausibilityWarning } from '@/components/properties/shared/LayoutPlausibilityWarning';
+import { AreaPlausibilityWarning } from '@/components/properties/shared/AreaPlausibilityWarning';
+import { resolveAreaValues } from './area-values-resolver';
 import {
   Ruler, FileText, Lock, Layers
 } from 'lucide-react';
@@ -407,9 +410,18 @@ export function PropertyFieldsEditForm({
                     value > 0 &&
                     grossValue > 0 &&
                     value > grossValue;
+                  const hasTooltip = areaKey === 'balcony' || areaKey === 'terrace';
                   return (
                     <fieldset key={areaKey} className="space-y-1">
-                      <Label className={cn("text-xs", colors.text.muted)}>{t(labelKey)}</Label>
+                      {hasTooltip ? (
+                        <InfoLabel
+                          label={t(labelKey)}
+                          tooltip={t(`fields.areas.${areaKey}Tooltip`)}
+                          className={cn("text-xs", colors.text.muted)}
+                        />
+                      ) : (
+                        <Label className={cn("text-xs", colors.text.muted)}>{t(labelKey)}</Label>
+                      )}
                       <Input
                         type="number" min={0} step={0.1}
                         value={value}
@@ -437,6 +449,11 @@ export function PropertyFieldsEditForm({
                 })}
               </div>
             )}
+            <AreaPlausibilityWarning
+              propertyType={formData.type}
+              className="py-2 px-3 mt-2"
+              {...resolveAreaValues({ formData, currentLevelData, aggregatedTotals, isMultiLevel, activeLevelId })}
+            />
             {/* Millesimal shares — read-only, from ownership table */}
             {property.millesimalShares != null && property.millesimalShares > 0 && (
               <dl className="flex items-baseline gap-1.5 mt-2 pt-2 border-t border-border">

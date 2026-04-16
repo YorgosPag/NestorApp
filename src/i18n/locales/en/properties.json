@@ -903,6 +903,26 @@
         "noDedicatedBathroom": "A “{type}” usually has at least one full bathroom. Entered: {bathrooms}. Please verify.",
         "noDedicatedWC": "Commercial spaces (“{type}”) typically require at least one WC. Entered: {wc}. Please verify the layout."
       }
+    },
+    "areaPlausibility": {
+      "unusual": {
+        "title": "Unusual area measurements"
+      },
+      "implausible": {
+        "title": "Area does not match property type"
+      },
+      "reasons": {
+        "netExceedsGross": "Net area ({net} m²) cannot exceed gross area ({gross} m²). Please verify the values.",
+        "netZeroWithGross": "Gross area is {gross} m² but net area is 0 m². Net should always have a value below gross.",
+        "grossBelowMin": "A “{type}” rarely has gross area below {min} m². Entered: {gross} m². Verify type or value.",
+        "luxuryNoOutdoor": "A “{type}” without any balcony, terrace or garden is inconsistent with the type definition. Add at least one outdoor space or verify the type.",
+        "grossAboveMax": "A “{type}” typically has up to {max} m² gross area. Entered: {gross} m². Unusually large but allowed.",
+        "netRatioTooLow": "Net-to-gross ratio is {ratio} ({net}/{gross} m²), below the typical 60–95% range. Verify values or space geometry.",
+        "netRatioTooHigh": "Net-to-gross ratio is {ratio} ({net}/{gross} m²), above the typical 60–95% range. Some deduction for walls is usually expected.",
+        "netEqualsGross": "Net and gross areas are identical ({gross} m²). Net is usually slightly lower due to walls. Please verify.",
+        "noOutdoorResidential": "A “{type}” typically has at least a balcony, terrace or garden. All entered as 0. Please verify.",
+        "gardenOnNonGround": "A garden ({garden} m²) is unusual for a “{type}” — typically found in ground-floor units or houses. Please verify."
+      }
     }
   },
   "details": {

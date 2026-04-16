@@ -244,3 +244,35 @@
     - **Preserved**: Canonical `PROPERTY_TYPES` array παραμένει full (12 types) για Firestore backward compat, filters (`UNIT_TYPES_FOR_FILTER`, public property filter checkboxes), reports, super-admin search. Η αλλαγή είναι UI-only dropdown filtering — zero breaking changes σε data layer.
   - **SSoT**: Όλη η rules matrix + assessment logic σε ένα leaf module. UI component = pure view. Adding new property type → single edit σε `LAYOUT_RULES` + `PROPERTY_TYPES`.
   - **Out of scope για V1**: Cross-field priority merging (π.χ. bedroom mismatch AND missing sanitary → single combined message). Μελλοντικό enhancement αν reported alert coverage ανεπαρκής.
+- **2026-04-17 (Batch 21)**: Google-style area (gross / net / balcony / terrace / garden) plausibility check.
+  - **Created**: `src/constants/area-plausibility.ts` — SSoT για "are the area measurements plausible for this property type?" sanity check. Εξάγει:
+    - `AREA_RULES: Record<PropertyTypeCanonical, AreaRule>` — per-type `grossHardMin` / `grossTypicalMax` + `outdoorExpected` / `outdoorRequired` / `gardenTypical` / `ratioApplies` flags. Covers και τα 12 canonical types (residential + commercial + auxiliary).
+    - `AREA_RATIO_LOW` (0.60) / `AREA_RATIO_HIGH` (0.95) — net/gross ratio thresholds tuned στην ελληνική αγορά (typical 0.82–0.92).
+    - `assessAreaPlausibility(args)` → `{ verdict, reason, propertyType, rule, gross, net, balcony, terrace, garden, ratio }` με 4 verdicts (`ok`, `insufficientData`, `unusual`, `implausible`) + 10 reason codes (`netExceedsGross`, `netZeroWithGross`, `grossBelowMin`, `luxuryNoOutdoor`, `grossAboveMax`, `netRatioTooLow`, `netRatioTooHigh`, `netEqualsGross`, `noOutdoorResidential`, `gardenOnNonGround`). Single-reason surfacing — priority: physical impossibility > type-definition contradiction > range violations > ratio anomalies > outdoor expectations > garden placement.
+    - `isActionableAreaVerdict(v)` — type narrowing helper.
+  - **Definitions aligned with Greek/EU real-estate + Zillow/Idealista/Spitogatos standards**:
+    - Studio → gross 10–65 τ.μ., no outdoor expected (tiny units legit)
+    - Γκαρσονιέρα (apartment_1br) → 20–75 τ.μ., no outdoor expected
+    - Apartment → 30–250 τ.μ., outdoor expected (unusual αν όλα 0)
+    - Maisonette → 50–400 τ.μ., outdoor expected
+    - Penthouse → 50–450 τ.μ., outdoor **required** (implausible αν όλα 0 — luxury without outdoor contradicts definition)
+    - Loft → 25–300 τ.μ., flexible (industrial convertible)
+    - Detached_house → 50–700 τ.μ., outdoor + garden required
+    - Villa → 80–1500 τ.μ., outdoor + garden required (luxury standalone)
+    - Shop / office → 8/10–800 τ.μ., no outdoor checks
+    - Hall → 40–5000 τ.μ., no outdoor / no ratio check (open-plan variable)
+    - Storage → 2–50 τ.μ., no outdoor / no ratio check (auxiliary)
+  - **Physical impossibility rule** (Γιώργος direction): `net > gross` OR `gross > 0 && net === 0` → `implausible`. Η αναλογία καθαρού προς μεικτού θα πρέπει πάντα να βρίσκεται κάτω από 100% (typical 82–92%). Zero net με positive gross = ασυνέπεια data entry.
+  - **Ratio anomalies** (`unusual`, μη-blocking): `net/gross < 0.60` (πιθανή υπερβολική κοινόχρηστη επιφάνεια), `net/gross > 0.95` (υπερβολικά μικρή αφαίρεση για τοιχοποιία), `net === gross` (zero wall deduction). Range tuned στο ελληνικό market stock.
+  - **Outdoor expectations** (residential-only):
+    - Penthouse / villa / detached_house χωρίς κανένα outdoor (balcony + terrace + garden = 0) → `implausible` (luxury definition contradiction).
+    - Apartment / maisonette χωρίς κανένα outdoor → `unusual` (ελληνικά διαμερίσματα τυπικά έχουν μπαλκόνι).
+    - Studio / loft / apartment_1br — no outdoor check (legit χωρίς για μικρές μονάδες).
+  - **Garden placement rule**: Garden > 0 σε apartment / penthouse / maisonette / loft → `unusual` (γενικά εμφανίζεται σε ισόγεια ή μονοκατοικίες). Skip για shop / office / hall / storage (commercial irrelevant).
+  - **Created**: `src/components/properties/shared/AreaPlausibilityWarning.tsx` — inline amber Alert, **non-blocking**. Pure render — delega assessment στο SSoT helper. Per-reason localized messages via `alerts.areaPlausibility.reasons.<code>` i18n keys. Single warning shown (priority-ordered) για αποφυγή alert fatigue. Ratio formatted ως percentage (`{ratio}` placeholder → `85%`).
+  - **Wired**: `PropertyFieldsEditForm.tsx` — warning μέσα στην Areas card, αμέσως μετά το editable/aggregated input branch, πριν το millesimal shares read-only section. Multi-level aware: διαβάζει `aggregatedTotals.areas.*` (aggregated view), `currentLevelData.areas.*` (per-level edit), ή `formData.area{Gross,Net,Balcony,Terrace,Garden}` (single-level / creation). Coexist με το υπάρχον inline `netExceedsGross` per-input micro-feedback (border rossa + tiny hint) — complementary UX layers: inline = immediate data-entry cue, SSoT warning = semantic sanity summary.
+  - **i18n**: Νέες keys `alerts.areaPlausibility.{unusual.title, implausible.title, reasons.*}` στα `src/i18n/locales/{el,en}/properties.json`. ICU single-brace interpolation (`{type}`, `{gross}`, `{net}`, `{balcony}`, `{terrace}`, `{garden}`, `{ratio}`, `{min}`, `{max}`) per CHECK 3.9. Pure Greek translation — χρήση `τ.μ.` αντί `m²` ανά CLAUDE.md N.11 pure-Greek rule. Zero hardcoded strings.
+  - **Google pattern**: Μη-blocking sanity warning — ο χρήστης μπορεί να αποθηκεύσει ακόμα και σε `implausible` verdict (legitimate edge case: υπό-κατασκευή ακίνητο, converted industrial loft, μη-οριστικοποιημένες μετρήσεις πριν την έκδοση άδειας). Σκοπός: να πιάσουμε typos, λάθος type selection, και ασυνέπειες μεταξύ gross/net.
+  - **Field naming** (Firestore schema alignment): Canonical field names `gross` / `net` / `balcony` / `terrace` / `garden` — matching `areas?: { gross, net?, balcony?, terrace?, garden? }` από το `src/types/property.ts`. Δεν έχουμε ξεχωριστό `veranda` field — το `terrace` καλύπτει ελληνική έννοια "βεράντα".
+  - **SSoT**: Όλη η rules matrix + ratio thresholds + assessment logic σε ένα leaf module. UI component = pure view. Νέος property type → single edit σε `AREA_RULES` + `PROPERTY_TYPES`. Αλλαγή αγοραστικών tolerances (π.χ. luxury ratio > 0.95 acceptable για penthouse) → tweak των thresholds σε ένα σημείο.
+  - **Out of scope για V1**: Separate balcony/terrace plausibility ranges per type (π.χ. "villa με μπαλκόνι 200 τ.μ. είναι ασυνήθιστο"). Multi-reason combining (π.χ. `netExceedsGross` AND `luxuryNoOutdoor` → μοναδικό aggregated alert). Per-level area ratio check (V1 εξετάζει μόνο το aggregate ή current level).
