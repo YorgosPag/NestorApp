@@ -50,6 +50,7 @@
       "building": "Select building",
       "floor": "Select floor",
       "property": "Select property",
+      "unit": "Select property",
       "level": "Select property level"
     },
     "shortcuts": {
