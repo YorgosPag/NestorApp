@@ -40,6 +40,7 @@ import { AddFloorDialog } from '@/components/building-management/dialogs/AddFloo
 import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';
 import { PropertyHierarchyEmptyStates } from '@/components/properties/shared/PropertyHierarchyEmptyStates';
 import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
+import { FloorTypePlausibilityWarning } from '@/components/properties/shared/FloorTypePlausibilityWarning';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
@@ -342,6 +343,12 @@ export function AddPropertyDialog({
                   </FormInput>
                 </FormField>
                 )}
+
+                <FloorTypePlausibilityWarning
+                  propertyType={formData.type}
+                  floor={formData.floor}
+                  className="py-2 px-3"
+                />
 
                 <FormField label={t('dialog.addUnit.fields.status')} htmlFor="operationalStatus">
                   <FormInput>

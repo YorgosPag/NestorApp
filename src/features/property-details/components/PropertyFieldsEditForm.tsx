@@ -33,6 +33,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
 import { PricePlausibilityWarning } from '@/components/properties/shared/PricePlausibilityWarning';
+import { FloorTypePlausibilityWarning } from '@/components/properties/shared/FloorTypePlausibilityWarning';
 import {
   Ruler, FileText, Lock, Layers
 } from 'lucide-react';
@@ -303,6 +304,11 @@ export function PropertyFieldsEditForm({
                     ? aggregatedTotals.areas.gross
                     : formData.areaGross
                 }
+                className="py-2 px-3 mt-1"
+              />
+              <FloorTypePlausibilityWarning
+                propertyType={formData.type}
+                floor={formData.floor}
                 className="py-2 px-3 mt-1"
               />
             </fieldset>

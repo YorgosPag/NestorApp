@@ -872,6 +872,21 @@
         "title": "Price higher than typical market range",
         "description": "The price per m² is {pricePerSqm} €/m², above the typical market range for this property type ({min}–{max} €/m²). Please verify."
       }
+    },
+    "floorTypePlausibility": {
+      "bands": {
+        "basement": "basement",
+        "ground": "ground floor",
+        "upper": "upper floor"
+      },
+      "unusual": {
+        "title": "Unusual property type / floor combination",
+        "description": "The combination of “{type}” on {band} is uncommon. Please verify the type or floor is correct. Saving is still allowed."
+      },
+      "implausible": {
+        "title": "Inconsistent property type / floor combination",
+        "description": "The combination of “{type}” on {band} contradicts the type definition. Could it be a typo or wrong selection? Saving is still allowed if intentional."
+      }
     }
   },
   "details": {
