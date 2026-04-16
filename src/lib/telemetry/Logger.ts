@@ -92,6 +92,20 @@ function normalizeMetadata(metadata: Record<string, unknown> | undefined): Recor
               ),
             ),
           };
+    } else if (
+      value !== null &&
+      typeof value === 'object' &&
+      Object.keys(value).length === 0 &&
+      Object.getOwnPropertyNames(value).length > 0
+    ) {
+      // Object with non-enumerable properties only (e.g. FirebaseError, FirestoreError)
+      // Extract via getOwnPropertyNames so prototype-chain props become visible
+      const extracted: Record<string, unknown> = { _str: String(value) };
+      for (const prop of ['message', 'code', 'name', 'stack']) {
+        const v = (value as Record<string, unknown>)[prop];
+        if (v !== undefined) extracted[prop] = v;
+      }
+      out[key] = extracted;
     } else {
       out[key] = value;
     }
@@ -106,20 +120,35 @@ export class ConsoleOutput implements LogOutput {
     const correlationId = entry.correlationId ? ` [${entry.correlationId}]` : '';
 
     const message = `${timestamp}${correlationId} ${prefix} ${entry.message}`;
-    const metadata = normalizeMetadata(entry.metadata) || '';
+    const rawMeta = entry.metadata;
+    // Use JSON.stringify with a replacer that handles non-serializable values.
+    // This avoids the `{}` display bug caused by FirebaseError / FirestoreError
+    // having non-enumerable prototype properties.
+    const metaStr = rawMeta
+      ? JSON.stringify(rawMeta, (_k, v: unknown) => {
+          if (v === undefined) return '[undefined]';
+          if (typeof v === 'object' && v !== null) {
+            const asErr = v as { message?: unknown; code?: unknown; name?: unknown; stack?: unknown };
+            if (typeof asErr.message === 'string' || typeof asErr.code === 'string') {
+              return { message: asErr.message, code: asErr.code, name: asErr.name };
+            }
+          }
+          return v;
+        })
+      : '';
 
     switch (entry.level) {
       case LogLevel.ERROR:
-        console.error(message, metadata);
+        console.error(message, metaStr || '');
         break;
       case LogLevel.WARN:
-        console.warn(message, metadata);
+        console.warn(message, metaStr || '');
         break;
       case LogLevel.INFO:
-        console.info(message, metadata);
+        console.info(message, metaStr || '');
         break;
       case LogLevel.DEBUG:
-        console.debug(message, metadata);
+        console.debug(message, metaStr || '');
         break;
     }
   }

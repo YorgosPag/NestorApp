@@ -382,12 +382,14 @@ service cloud.firestore {
       // - Storage Rules to validate uploads via firestore.get() (pending files)
       // - Users to list/view ready files from their company
       allow read: if isAuthenticated()
-                  && resource.data.keys().hasAny(['companyId'])
                   && (
-                       // Company members can read all files from their company
-                       belongsToCompany(resource.data.companyId)
-                       // OR super_admin can read everything
-                       || isSuperAdminOnly()
+                       // Super admin can read everything — no companyId constraint needed
+                       isSuperAdminOnly()
+                       // Company members can read files from their company
+                       || (
+                            resource.data.keys().hasAny(['companyId'])
+                            && belongsToCompany(resource.data.companyId)
+                          )
                      );
 
       // ✍️ CREATE: Users can create pending FileRecord for their company

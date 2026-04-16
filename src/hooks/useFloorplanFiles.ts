@@ -205,9 +205,12 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
           setLoading(false);
         }
       },
-      (err: Error) => {
-        logger.error('Listener error', { error: err });
-        setError(err.message);
+      (err: unknown) => {
+        const e = err as { message?: unknown; code?: unknown; name?: unknown } | null;
+        const message = typeof e?.message === 'string' ? e.message : String(err);
+        const code = typeof e?.code === 'string' ? e.code : undefined;
+        logger.error('Listener error', { message, code, raw: String(err) });
+        setError(message);
         setLoading(false);
       },
       {
