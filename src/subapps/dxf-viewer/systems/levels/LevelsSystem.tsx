@@ -21,6 +21,7 @@ import { LevelsSystemProps, DEFAULT_IMPORT_WIZARD_STATE } from './LevelsSystem.t
 import { useLevelSceneLoader } from './hooks/useLevelSceneLoader';
 import { useLevelsFirestoreSync } from './hooks/useLevelsFirestoreSync';
 import { useLevelOperations } from './hooks/useLevelOperations';
+import { useAuth } from '@/auth';
 
 // ============================================================================
 // 🏢 ENTERPRISE: STATIC CONTEXT CREATION (ADR-125)
@@ -66,6 +67,12 @@ function useLevelsSystemState({
   const sceneManager = useAutoSaveSceneManager();
   const importWizardHook = useImportWizard();
 
+  // Auth claims for tenant-scoped Firestore query
+  const { user: firebaseUser } = useAuth();
+  const companyId = firebaseUser?.companyId ?? null;
+  const userId = firebaseUser?.uid ?? null;
+  const isSuperAdmin = firebaseUser?.globalRole === 'super_admin';
+
   const handleError = useCallback(
     async (err: string | Error) => {
       const errorMessage = typeof err === 'string' ? err : err.message;
@@ -98,6 +105,9 @@ function useLevelsSystemState({
     enableFirestore,
     firestoreCollection,
     currentLevelId,
+    companyId,
+    userId,
+    isSuperAdmin,
     setLevels,
     setCurrentLevelId,
     setIsLoading,

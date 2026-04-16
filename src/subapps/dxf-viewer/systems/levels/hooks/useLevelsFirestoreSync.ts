@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import {
   collection,
   query,
+  where,
   orderBy,
   onSnapshot,
   doc,
@@ -17,6 +18,12 @@ interface UseLevelsFirestoreSyncParams {
   enableFirestore: boolean;
   firestoreCollection: string;
   currentLevelId: string | null;
+  /** companyId from Firebase custom claims — required for tenant-scoped query */
+  companyId: string | null | undefined;
+  /** uid of the authenticated user — used for bootstrap doc ownership */
+  userId: string | null | undefined;
+  /** true when user has globalRole == 'super_admin' in their JWT */
+  isSuperAdmin: boolean;
   setLevels: (levels: Level[]) => void;
   setCurrentLevelId: (levelId: string | null) => void;
   setIsLoading: (loading: boolean) => void;
@@ -39,6 +46,9 @@ export function useLevelsFirestoreSync({
   enableFirestore,
   firestoreCollection,
   currentLevelId,
+  companyId,
+  userId,
+  isSuperAdmin,
   setLevels,
   setCurrentLevelId,
   setIsLoading,
@@ -48,15 +58,28 @@ export function useLevelsFirestoreSync({
 }: UseLevelsFirestoreSyncParams): void {
   useEffect(() => {
     if (!enableFirestore) return;
+    // Wait until auth is resolved so we can build a tenant-scoped query.
+    // Super-admins may query without a companyId filter (rule: isSuperAdminOnly()).
+    if (!isSuperAdmin && !companyId) return;
 
     setIsLoading(true);
-    const q = query(collection(db, firestoreCollection), orderBy('order', 'asc'));
+
+    // Non-super-admin users MUST include where('companyId', '==', ...) so that
+    // Firestore can statically verify every returned document satisfies the
+    // tenant-isolation rule (resource.data.companyId == getUserCompanyId()).
+    // Super-admins rely on isSuperAdminOnly() in the rule, which is request-only
+    // and does not require a where-clause.
+    const colRef = collection(db, firestoreCollection);
+    const q = isSuperAdmin
+      ? query(colRef, orderBy('order', 'asc'))
+      : query(colRef, where('companyId', '==', companyId), orderBy('order', 'asc'));
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         try {
           const fetchedLevels = snapshot.docs.map(
-            doc => ({ ...doc.data(), id: doc.id } as Level)
+            d => ({ ...d.data(), id: d.id } as Level)
           );
 
           if (fetchedLevels.length > 0) {
@@ -72,7 +95,12 @@ export function useLevelsFirestoreSync({
             defaultLevels.forEach(level => {
               const { id, ...levelData } = level;
               const docRef = doc(db, firestoreCollection, id);
-              batch.set(docRef, levelData);
+              // Include tenant-scoping fields so future reads pass security rules.
+              batch.set(docRef, {
+                ...levelData,
+                ...(companyId ? { companyId } : {}),
+                ...(userId ? { createdBy: userId } : {}),
+              });
             });
             batch.commit().then(() => console.log('Default levels created in Firestore.'));
           }
@@ -90,5 +118,5 @@ export function useLevelsFirestoreSync({
     );
 
     return () => unsubscribe();
-  }, [enableFirestore, firestoreCollection, currentLevelId, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
+  }, [enableFirestore, firestoreCollection, currentLevelId, companyId, userId, isSuperAdmin, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
 }
