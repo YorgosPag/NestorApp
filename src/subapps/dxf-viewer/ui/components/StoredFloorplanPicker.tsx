@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Download } from 'lucide-react';
 import { useTranslation } from '@/i18n';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { useFloorplanFiles } from '@/hooks/useFloorplanFiles';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import { useNotifications } from '../../../../providers/NotificationProvider';
