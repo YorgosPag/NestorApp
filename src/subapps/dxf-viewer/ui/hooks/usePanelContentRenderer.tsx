@@ -26,6 +26,7 @@ import type { SceneModel } from '../../types/scene';
 import type { ToolType } from '../toolbar/types';
 import type { PanelType } from './useFloatingPanelState';
 import type { LayerOperationsCallbacks } from './useLayerOperations';
+import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 
 interface UsePanelContentRendererParams {
   activePanel: PanelType;
@@ -36,6 +37,8 @@ interface UsePanelContentRendererParams {
   expandedKeys: Set<string>;
   setExpandedKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   layerOperations: LayerOperationsCallbacks;
+  // ADR-309 Phase 2: Wizard button in LevelPanel
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
 }
 
 /**
@@ -50,7 +53,8 @@ export function usePanelContentRenderer({
   onEntitySelect,
   expandedKeys,
   setExpandedKeys,
-  layerOperations
+  layerOperations,
+  onSceneImported,
 }: UsePanelContentRendererParams) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
@@ -66,6 +70,7 @@ export function usePanelContentRenderer({
               scene={scene}
               selectedEntityIds={selectedEntityIds}
               onEntitySelect={onEntitySelect}
+              onSceneImported={onSceneImported}
               expandedKeys={expandedKeys}
               onExpandChange={setExpandedKeys}
               onLayerToggle={layerOperations.handleLayerToggle}

@@ -13,6 +13,7 @@ import { useOverlayManager } from '../state/overlay-manager';
 // REMOVED: LayerManagementPanel - replaced with unified overlay system
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
+import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import { useLevels } from '../systems/levels';
 import { useFloatingPanelState } from './hooks/useFloatingPanelState';
 import { useLayerOperations } from './hooks/useLayerOperations';
@@ -33,6 +34,8 @@ interface FloatingPanelContainerProps {
   onEntitySelect: (ids: string[]) => void;
   zoomLevel: number;
   currentTool: ToolType;
+  // ADR-309 Phase 2: Wizard button in LevelPanel
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
 }
 
 const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, FloatingPanelContainerProps>(function FloatingPanelContainer({
@@ -40,7 +43,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   selectedEntityIds,
   onEntitySelect,
   zoomLevel,
-  currentTool
+  currentTool,
+  onSceneImported,
 }, ref) {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -87,7 +91,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     onEntitySelect,
     expandedKeys,
     setExpandedKeys,
-    layerOperations
+    layerOperations,
+    onSceneImported,
   });
 
   // ✅ ΒΗΜΑ 6: Extracted panel description logic to custom hook
@@ -160,6 +165,7 @@ export const FloatingPanelContainer = React.memo(FloatingPanelContainerInner, (p
     prevProps.selectedEntityIds.every((id, index) => id === nextProps.selectedEntityIds[index]) &&
     prevProps.onEntitySelect === nextProps.onEntitySelect &&
     prevProps.zoomLevel === nextProps.zoomLevel &&
-    prevProps.currentTool === nextProps.currentTool
+    prevProps.currentTool === nextProps.currentTool &&
+    prevProps.onSceneImported === nextProps.onSceneImported
   );
 });

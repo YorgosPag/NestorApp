@@ -35,6 +35,7 @@
 import React from 'react';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
+import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
@@ -70,6 +71,8 @@ interface SidebarSectionProps {
   setSelectedEntityIds: (ids: string[]) => void;
   currentZoom: number;
   activeTool: string;
+  // ADR-309 Phase 2: Wizard button in LevelPanel
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
 }
 
 // ============================================================================
@@ -90,6 +93,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   setSelectedEntityIds,
   currentZoom,
   activeTool,
+  onSceneImported,
 }) => {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -139,6 +143,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
             onEntitySelect={setSelectedEntityIds}
             zoomLevel={currentZoom}
             currentTool={activeTool as ToolType}
+            onSceneImported={onSceneImported}
           />
         </main>
 

@@ -256,6 +256,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         className={`flex h-full ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
       >
       {/* ✅ PHASE 5: Sidebar Section — ADR-176: Responsive */}
+      {/* ADR-309 Phase 2: handleFileImportWithEncoding passed so LevelPanel can show wizard */}
       {layoutMode === 'desktop' ? (
         <SidebarSection
           floatingRef={floatingRef}
@@ -264,6 +265,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           setSelectedEntityIds={setSelectedEntityIds}
           currentZoom={currentZoom}
           activeTool={activeTool}
+          onSceneImported={handleFileImportWithEncoding}
         />
       ) : (
         <MobileSidebarDrawer
@@ -275,6 +277,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           setSelectedEntityIds={setSelectedEntityIds}
           currentZoom={currentZoom}
           activeTool={activeTool}
+          onSceneImported={handleFileImportWithEncoding}
         />
       )}
 

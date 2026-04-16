@@ -9,7 +9,11 @@ import React, { useState, useMemo, useCallback } from 'react';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event coordination
 import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
+// 🏢 ADR-309 Phase 2: Wizard button in LevelPanel
+import { FloorplanImportWizard } from '@/features/floorplan-import';
+import type { DxfSaveContext } from '../../services/dxf-firestore.service';
+import { Button } from '@/components/ui/button';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 // 🏢 ENTERPRISE: Centralized LevelListCard from domain cards
@@ -37,6 +41,8 @@ interface LevelPanelProps {
   // 🔺 ADDED: Props for SceneInfoSection and LayersSection
   scene?: SceneModel | null;
   selectedEntityIds?: string[];
+  // ADR-309 Phase 2: Wizard button
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
   // LayersSection specific props
   onEntitySelect?: (ids: string[]) => void;
   expandedKeys?: Set<string>;
@@ -64,11 +70,12 @@ interface LevelPanelProps {
 
 type EditingMode = 'selection' | 'drawing' | 'editing' | 'status' | 'types' | null;
 
-export function LevelPanel({ 
-  currentTool, 
-  onToolChange, 
-  scene, 
+export function LevelPanel({
+  currentTool,
+  onToolChange,
+  scene,
   selectedEntityIds = [],
+  onSceneImported,
   onEntitySelect,
   expandedKeys = new Set(),
   onExpandChange,
@@ -151,6 +158,8 @@ export function LevelPanel({
   const [editingName, setEditingName] = useState('');
   const [activeEditingMode, setActiveEditingMode] = useState<EditingMode>(null);
   const [showToolbox, setShowToolbox] = useState(false);
+  // ADR-309 Phase 2: Wizard dialog state
+  const [showImportWizard, setShowImportWizard] = useState(false);
 
   const handleDeleteLevel = async (levelId: string) => {
     try {
@@ -272,6 +281,18 @@ export function LevelPanel({
         selectedEntityIds={selectedEntityIds} 
       />
       
+      {/* ADR-309 Phase 2: Wizard button — primary entry point for floorplan import */}
+      {onSceneImported && (
+        <Button
+          variant="default"
+          className="w-full"
+          onClick={() => setShowImportWizard(true)}
+        >
+          <Upload className={iconSizes.sm} />
+          {t('toolbar.importFloorplanWizard')}
+        </Button>
+      )}
+
       {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper - justify-between χωρίς νόημα με 1 child (ADR-003) */}
       <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
         <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
@@ -350,31 +371,8 @@ export function LevelPanel({
         </div>
       )}
 
-      <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_SECTION.CONTAINER}>
-        <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_SECTION.FORM}>
-          <input
-            type="text"
-            value={newLevelName}
-            onChange={(e) => setNewLevelName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddLevel()}
-            placeholder={t('panels.levels.newLevelPlaceholder')}
-            disabled={isAdding}
-            className={PANEL_TOKENS.LEVEL_PANEL.ADD_INPUT.BASE}
-          />
-          <button
-            type="button"
-            onClick={handleAddLevel}
-            disabled={isAdding}
-            className={PANEL_TOKENS.LEVEL_PANEL.ADD_BUTTON.BASE}
-          >
-            {isAdding ? (
-              <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_BUTTON.LOADING_SPINNER} />
-            ) : (
-              <Plus className={iconSizes.sm} />
-            )}
-          </button>
-        </div>
-      </div>
+      {/* ADR-309 §2.5: "+ Νέο Επίπεδο" hidden — new levels created via wizard only (reversible) */}
+      {/* addLevel() function remains in useLevels; only UI hidden */}
 
       {/* 🔺 ADDED: LayersSection moved from Properties */}
       {scene && Object.keys(scene.layers).length > 0 && (
@@ -417,8 +415,28 @@ export function LevelPanel({
               // Auto-open layers panel functionality - already integrated
             }}
         />
-        
       </div>
+
+      {/* ADR-309 Phase 2: Wizard dialog — same instance as toolbar (SPEC-237D) */}
+      {onSceneImported && (
+        <FloorplanImportWizard
+          isOpen={showImportWizard}
+          onClose={() => setShowImportWizard(false)}
+          onComplete={(file, meta) => {
+            setShowImportWizard(false);
+            const saveContext: DxfSaveContext = {
+              companyId: meta.companyId,
+              projectId: meta.projectId,
+              entityId: meta.entityId,
+              entityType: meta.entityType as DxfSaveContext['entityType'],
+              filesCategory: 'floorplans',
+              purpose: meta.purpose || undefined,
+              entityLabel: meta.entityLabel,
+            };
+            onSceneImported(file, undefined, saveContext);
+          }}
+        />
+      )}
     </div>
   );
 }

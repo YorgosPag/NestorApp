@@ -20,6 +20,7 @@ import {
 import { SidebarSection } from './SidebarSection';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { SceneModel } from '../types/scene';
+import type { DxfSaveContext } from '../services/dxf-firestore.service';
 
 interface MobileSidebarDrawerProps {
   open: boolean;
@@ -30,6 +31,8 @@ interface MobileSidebarDrawerProps {
   setSelectedEntityIds: (ids: string[]) => void;
   currentZoom: number;
   activeTool: string;
+  // ADR-309 Phase 2: Wizard button in LevelPanel
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
 }
 
 export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
@@ -41,6 +44,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   setSelectedEntityIds,
   currentZoom,
   activeTool,
+  onSceneImported,
 }) => {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -62,6 +66,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
             setSelectedEntityIds={setSelectedEntityIds}
             currentZoom={currentZoom}
             activeTool={activeTool}
+            onSceneImported={onSceneImported}
           />
         </nav>
       </SheetContent>

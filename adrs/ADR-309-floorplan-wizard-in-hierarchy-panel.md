@@ -168,3 +168,4 @@ I piani MEP saranno semplicemente **nuovi επίπεδα** importati via wizard
 | 2026-04-16 | 0.1 | Claude + Γ.Παγώνης | Bozza iniziale — UNDER DISCUSSION |
 | 2026-04-16 | 1.0 | Claude + Γ.Παγώνης | Decisioni finali approvate — APPROVED |
 | 2026-04-16 | 1.1 | Claude | **Fase 1 IMPLEMENTATA** — rimossi tab `hierarchy` e `overlay`. File modificati: `panel-types.ts`, `PanelTabs.tsx`, `usePanelContentRenderer.tsx`, `LazyLoadWrapper.tsx`, `usePanelDescription.ts`. Componenti `HierarchyDebugPanel` e `AdminLayerManager` preservati nel codebase. |
+| 2026-04-16 | 1.2 | Claude | **Fase 2 IMPLEMENTATA** — wizard button in cima a LevelPanel, sezione "+ Νέο Επίπεδο" nascosta (ADR-309 §2.5). Prop chain: `DxfViewerContent` → `SidebarSection` + `MobileSidebarDrawer` → `FloatingPanelContainer` → `usePanelContentRenderer` → `LevelPanel`. i18n key riusata: `shell.importFloorplanWizard`. |
