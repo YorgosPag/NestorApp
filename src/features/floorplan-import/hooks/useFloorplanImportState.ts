@@ -344,6 +344,31 @@ export function useFloorplanImportState(
   }, []);
 
   // ===========================================================================
+  // CONTINUE DEEPER (load mode: step 6 → next entity level)
+  // ===========================================================================
+
+  const continueDeeper = useCallback(() => {
+    if (step !== 6) return;
+    const nextStep = ((): number | null => {
+      switch (selection.floorplanType) {
+        case 'project': return 3;
+        case 'building': return 4;
+        case 'floor': return 5;
+        default: return null;
+      }
+    })();
+    if (nextStep === null) return;
+    setSelection((prev) => ({ ...prev, floorplanType: null }));
+    setStep(nextStep);
+  }, [step, selection.floorplanType]);
+
+  const canContinueDeeper =
+    step === 6 &&
+    (selection.floorplanType === 'project' ||
+      selection.floorplanType === 'building' ||
+      selection.floorplanType === 'floor');
+
+  // ===========================================================================
   // NAVIGATION
   // ===========================================================================
 
@@ -481,6 +506,8 @@ export function useFloorplanImportState(
     selectEntity: handleSelectEntity,
     selectProperty,
     jumpToUpload,
+    continueDeeper,
+    canContinueDeeper,
 
     currentStepItems: getCurrentItems(),
     currentStepLoading: getCurrentLoading(),

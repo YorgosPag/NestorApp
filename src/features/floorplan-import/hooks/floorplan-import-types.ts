@@ -48,6 +48,13 @@ export interface UseFloorplanImportStateReturn {
 
   /** Shortcut: set floorplanType and jump to upload (step 6) */
   jumpToUpload: (type: FloorplanType) => void;
+  /**
+   * Load mode only: from step 6, continue to the next deeper entity selection.
+   * project→step 3, building→step 4, floor→step 5. No-op if already at deepest.
+   */
+  continueDeeper: () => void;
+  /** True when continueDeeper() has a valid destination (load mode helper). */
+  canContinueDeeper: boolean;
 
   currentStepItems: EntityOption[];
   currentStepLoading: boolean;

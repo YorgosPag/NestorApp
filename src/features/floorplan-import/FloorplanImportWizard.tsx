@@ -288,14 +288,27 @@ export function FloorplanImportWizard({
             )}
 
             {mode === 'load' && state.step === 6 && (
-              <Button
-                onClick={handleConfirmLoad}
-                disabled={!selectedStorageFileId || loadingStorage}
-              >
-                {loadingStorage
-                  ? t('floorplanImport.storagePicker.loading')
-                  : t('floorplanImport.storagePicker.loadButton')}
-              </Button>
+              <>
+                <Button
+                  onClick={handleConfirmLoad}
+                  disabled={!selectedStorageFileId || loadingStorage}
+                >
+                  {loadingStorage
+                    ? t('floorplanImport.storagePicker.loading')
+                    : t('floorplanImport.storagePicker.loadButton')}
+                </Button>
+                {state.canContinueDeeper && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedStorageFileId(null);
+                      state.continueDeeper();
+                    }}
+                  >
+                    {t('floorplanImport.next')}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </DialogFooter>
