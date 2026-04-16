@@ -128,7 +128,7 @@ export async function seedDxfOverlayLevel(
   opts?: SeedOptions,
 ): Promise<void> {
   await withSeedContext(env, async (ctx) => {
-    await ctx.firestore().collection('dxfOverlayLevels').doc(docId).set({
+    await ctx.firestore().collection('dxf_overlay_levels').doc(docId).set({
       name: `Overlay Level ${docId}`,
       level: 0,
       companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,

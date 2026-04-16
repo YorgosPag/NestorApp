@@ -616,12 +616,12 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     matrix: crmDirectMatrix(),
   },
   {
-    collection: 'dxfOverlayLevels',
+    collection: 'dxf_overlay_levels',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/dxf_overlay_levels.rules.test.ts',
-    rulesRange: [1137, 1187],
+    rulesRange: [1051, 1098],
     // Items subcollection not tracked (nested subcollection — excluded from manifest).
-    matrix: crmDirectMatrix(),
+    matrix: fileTenantFullMatrix(),
   },
   {
     collection: 'layers',
@@ -1010,12 +1010,12 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // floorplans             → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // admin_building_templates → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // — DXF / CAD overlays —
-  // dxfOverlayLevels → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // dxf_overlay_levels → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14; renamed from dxfOverlayLevels 2026-04-16)
   // layers           → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // layer_groups     → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // — DXF Viewer levels (post-rename underscore collections, 2026-04-16) —
   'dxf_viewer_levels',    // lines 3097-3117 — tenant read + bootstrap create
-  'dxf_overlay_levels',   // lines 1051-1098 — full CRUD + items subcollection
+  // dxf_overlay_levels → moved to COVERAGE (renamed from camelCase, 2026-04-16)
   // — Navigation / notifications / tasks —
   // navigation_companies → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   // notifications        → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)

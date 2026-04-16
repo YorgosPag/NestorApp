@@ -187,7 +187,7 @@
 | `document_templates` | `generateTemplateId()` | `addDoc` auto-ID | 2026-03-17 |
 | `attendance_events` | `generateEventId()` | `addDoc` auto-ID | 2026-03-17 |
 | `navigation_companies` | `generateNavigationId()` | `addDoc` auto-ID | 2026-03-17 |
-| `dxfViewerLevels` | `generateLevelId()` | `addDoc` auto-ID | 2026-03-17 |
+| `dxf_viewer_levels` | `generateLevelId()` | `addDoc` auto-ID | 2026-03-17 |
 | `cadFiles` (DXF) | `generateFileId()` | Filename-based IDs | 2026-03-17 | ⚠️ `@deprecated` — dual-writes to `files` active |
 
 ### 3.4 Collections με Firestore Auto-Generated IDs (addDoc) ⚠️ — Remaining
@@ -302,7 +302,7 @@
 | 🟢 P4 | `document_templates` | `document-template.service.ts` | `generateTemplateId()` |
 | ⚪ P5 | `navigation_companies` | `navigation-companies.service.ts` | Auto-ID OK (internal) |
 | ⚪ P5 | `file_audit_log` | `file-audit.service.ts` | `generateAuditId()` |
-| ⚪ P5 | `dxfViewerLevels` | `LevelsSystem.tsx` | `generateLayerId()` |
+| ⚪ P5 | `dxf_viewer_levels` | `LevelsSystem.tsx` | `generateLayerId()` |
 
 **Μετατροπή Pattern:**
 ```typescript

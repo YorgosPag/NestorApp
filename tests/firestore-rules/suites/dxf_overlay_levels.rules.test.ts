@@ -1,13 +1,10 @@
 /**
- * Firestore Rules — `dxfOverlayLevels` collection (camelCase variant)
+ * Firestore Rules — `dxf_overlay_levels` collection (underscore naming)
  *
- * Pattern: tenant_direct (crmDirectMatrix) — same shape as project_floorplans.
- * No `isSuperAdminOnly()` on create → super_admin denied.
+ * Pattern: tenant_direct (fileTenantFullMatrix) — isSuperAdminOnly on create.
  * Has subcollection `items` (not tracked in manifest — nested subcollection).
  *
- * Note: the kebab-case variant `dxf_overlay_levels` is a separate rules block
- * that is NOT listed in FIRESTORE_RULES_PENDING. Only the camelCase collection
- * name matches the manifest entry.
+ * Renamed from camelCase `dxf_overlay_levels` → `dxf_overlay_levels` (2026-04-16).
  *
  * See ADR-298 §4 Phase C.2 (2026-04-14).
  *
@@ -23,10 +20,10 @@ import { PERSONA_CLAIMS, SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
-  (c) => c.collection === 'dxfOverlayLevels',
+  (c) => c.collection === 'dxf_overlay_levels',
 )!;
 
-describe('dxfOverlayLevels.rules — tenant_direct (crmDirectMatrix)', () => {
+describe('dxf_overlay_levels.rules — tenant_direct (crmDirectMatrix)', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => { env = await initEmulator(); });
@@ -42,7 +39,7 @@ describe('dxfOverlayLevels.rules — tenant_direct (crmDirectMatrix)', () => {
         const personaClaims = cell.persona !== 'anonymous' ? PERSONA_CLAIMS[cell.persona] : null;
         const uid = personaClaims?.uid ?? 'anon-uid';
         const target: AssertTarget = {
-          collection: 'dxfOverlayLevels',
+          collection: 'dxf_overlay_levels',
           docId,
           data: { updatedAt: new Date() },
           createData: {

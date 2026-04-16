@@ -123,8 +123,8 @@
 | 49 | `CAD_FILES` | `cad_files` | — | **DEPRECATED** — dual-write ενεργό, χρήση FILES |
 | 50 | `CAD_LAYERS` | `cad_layers` | — | CAD layer metadata |
 | 51 | `CAD_SESSIONS` | `cad_sessions` | — | CAD editing sessions |
-| 52 | `DXF_OVERLAY_LEVELS` | `dxfOverlayLevels` | — | DXF overlay levels |
-| 53 | `DXF_VIEWER_LEVELS` | `dxfViewerLevels` | — | DXF viewer configurations |
+| 52 | `DXF_OVERLAY_LEVELS` | `dxf_overlay_levels` | — | DXF overlay levels |
+| 53 | `DXF_VIEWER_LEVELS` | `dxf_viewer_levels` | — | DXF viewer configurations |
 
 ### 3.9 Accounting Subapp (15)
 
@@ -592,8 +592,8 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 | 23 | `file_links` | enterprise ID | — | `association.service.ts` |
 | 24 | `navigation_companies` | `generateNavigationId()` | `nav` | `navigation-companies.service.ts` |
 | 25 | `workspaces` | `generateWorkspaceId()` | `ws` | `admin/bootstrap-company/route.ts` |
-| 26 | `dxfOverlayLevels` | `generateOverlayId()` | `ovrl` | `overlay-store.tsx` |
-| 27 | `dxfViewerLevels` | `generateLevelId()` | `lvl` | `LevelsSystem.tsx` |
+| 26 | `dxf_overlay_levels` | `generateOverlayId()` | `ovrl` | `overlay-store.tsx` |
+| 27 | `dxf_viewer_levels` | `generateLevelId()` | `lvl` | `LevelsSystem.tsx` |
 | 28 | `cad_files` | `generateFileId()` | `file` | `dxf-firestore.service.ts` (dual-write) |
 | 29 | `floorplans` | enterprise ID | — | `FloorplanService.ts`, `migrations/003_*.ts` |
 | 30 | `parking_spots` | `generateParkingId()` | `park` | `admin/seed-parking/route.ts` |

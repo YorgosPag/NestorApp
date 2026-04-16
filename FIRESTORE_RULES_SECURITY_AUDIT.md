@@ -86,8 +86,7 @@ function getBuildingCompanyId(buildingId) {
 | `floor_floorplans` | ✅ `companyId` | ✅ Added 2026-02-01 |
 | `unit_floorplans` | ✅ `companyId` | ✅ PR-1C (2026-01-29) |
 | `dxf_viewer_levels` | ✅ `companyId` | ✅ PR-1C (2026-01-29) |
-| `dxf_overlay_levels` | ✅ `companyId` (both kebab/camel) | ✅ PR-1C (2026-01-29) |
-| `dxfOverlayLevels` | ✅ `companyId` (legacy support) | ✅ PR-1C (2026-01-29) |
+| `dxf_overlay_levels` | ✅ `companyId` | ✅ PR-1C (2026-01-29) |
 | `layers` | ✅ `companyId` | ✅ PR-1C (2026-01-29) |
 | `layer-events` | ✅ `companyId` | ✅ PR-1C (2026-01-29) |
 | `property-layers` | ✅ `companyId` | ✅ PR-1C (2026-01-29) |
@@ -530,10 +529,8 @@ allow read: if isAuthenticated()
 | 17 | `floor_floorplans` | ✅ `companyId` | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 679) | 🟢 SECURE |
 | 18 | `unit_floorplans` | ✅ `companyId` | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 720) | 🟢 SECURE |
 | 19 | `dxf_viewer_levels` | ✅ `companyId` | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 760) | 🟢 SECURE |
-| 20 | `dxf_overlay_levels` | ✅ `companyId` | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 802) | 🟢 SECURE |
-| 21 | `dxfOverlayLevels` | ✅ `companyId` (legacy) | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 854) | 🟢 SECURE |
-| 22 | `dxf_overlay_levels/*/items` | ✅ Parent scope | ✅ Yes | Tenant | Creator/Admin | N/A | 🟢 SECURE |
-| 23 | `dxfOverlayLevels/*/items` | ✅ Parent scope | ✅ Yes | Tenant | Creator/Admin | N/A | 🟢 SECURE |
+| 20 | `dxf_overlay_levels` | ✅ `companyId` | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 1051) | 🟢 SECURE |
+| 21 | `dxf_overlay_levels/*/items` | ✅ Parent scope | ✅ Yes | Tenant | Creator/Admin | N/A | 🟢 SECURE |
 | 24 | `layers` | ✅ `companyId` | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 910) | 🟢 SECURE |
 | 25 | `layer-events` | ✅ `companyId` | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 950) | 🟢 SECURE |
 | 26 | `property-layers` | ✅ `companyId` | ✅ Yes | Tenant | Creator/Admin | ⚠️ Yes (line 988) | 🟢 SECURE |
