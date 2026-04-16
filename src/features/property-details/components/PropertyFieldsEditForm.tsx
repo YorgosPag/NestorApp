@@ -286,10 +286,10 @@ export function PropertyFieldsEditForm({
               <SalesDashboardRequirementsAlert
                 commercialStatus={formData.commercialStatus}
                 askingPrice={formData.askingPrice ?? null}
-                netArea={
+                grossArea={
                   isMultiLevel && aggregatedTotals
-                    ? aggregatedTotals.areas.net
-                    : formData.areaNet
+                    ? aggregatedTotals.areas.gross
+                    : formData.areaGross
                 }
                 className="py-2 px-3 mt-1"
               />

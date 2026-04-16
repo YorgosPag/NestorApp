@@ -856,7 +856,7 @@
       "description": "Without the following data, this property will not appear in sales/rental dashboards:",
       "missing": {
         "askingPrice": "Asking price",
-        "netArea": "Net area (m²)"
+        "grossArea": "Gross area (m²)"
       }
     }
   },

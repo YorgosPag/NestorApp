@@ -15,12 +15,13 @@
  *
  * **SSoT**: Η λίστα των καταστάσεων που απαιτούν δεδομένα για sales dashboards
  * προέρχεται αποκλειστικά από το `LISTED_COMMERCIAL_STATUSES` μέσω
- * `requiresAskingPrice()` / `requiresNetArea()` helpers στο
+ * `requiresAskingPrice()` / `requiresGrossArea()` helpers στο
  * `@/constants/commercial-statuses`. Καμία duplicated λίστα.
  *
  * **Reuse**: Creation flow (`AddPropertyDialog` — askingPrice undefined στο
- * form, net area ως `formData.area`) και edit flow (`PropertyFieldsEditForm` —
- * askingPrice + areaNet ή aggregated multi-level net).
+ * form, gross area ως `formData.area` → αποθηκεύεται ως `property.area` top-
+ * level) και edit flow (`PropertyFieldsEditForm` — askingPrice + areaGross,
+ * multi-level-aware μέσω aggregated totals).
  *
  * @module components/properties/shared/SalesDashboardRequirementsAlert
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 16)
@@ -46,10 +47,10 @@ interface SalesDashboardRequirementsAlertProps {
    */
   readonly askingPrice?: NumericInput;
   /**
-   * Τρέχον καθαρό εμβαδό. Ίδια σημασιολογία με `askingPrice`: `undefined`
-   * (field απουσιάζει) vs value (gated).
+   * Τρέχον μεικτό εμβαδό (gross area). Ίδια σημασιολογία με `askingPrice`:
+   * `undefined` (field απουσιάζει) vs value (gated).
    */
-  readonly netArea?: NumericInput;
+  readonly grossArea?: NumericInput;
   /** Επιπλέον className για fine-tuning spacing από το parent. */
   readonly className?: string;
 }
@@ -67,7 +68,7 @@ function isMissingNumericValue(value: NumericInput): boolean {
 export function SalesDashboardRequirementsAlert({
   commercialStatus,
   askingPrice,
-  netArea,
+  grossArea,
   className,
 }: SalesDashboardRequirementsAlertProps) {
   const { t } = useTranslation(['properties', 'properties-detail']);
@@ -76,9 +77,9 @@ export function SalesDashboardRequirementsAlert({
   if (!requiresAskingPrice(commercialStatus)) return null;
 
   const missingAskingPrice = isMissingNumericValue(askingPrice);
-  const missingNetArea = isMissingNumericValue(netArea);
+  const missingGrossArea = isMissingNumericValue(grossArea);
 
-  if (!missingAskingPrice && !missingNetArea) return null;
+  if (!missingAskingPrice && !missingGrossArea) return null;
 
   return (
     <Alert
@@ -95,8 +96,8 @@ export function SalesDashboardRequirementsAlert({
           {missingAskingPrice && (
             <li>{t('alerts.salesDashboardRequirements.missing.askingPrice')}</li>
           )}
-          {missingNetArea && (
-            <li>{t('alerts.salesDashboardRequirements.missing.netArea')}</li>
+          {missingGrossArea && (
+            <li>{t('alerts.salesDashboardRequirements.missing.grossArea')}</li>
           )}
         </ul>
       </AlertDescription>

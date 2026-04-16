@@ -374,7 +374,7 @@ export function AddPropertyDialog({
 
               <SalesDashboardRequirementsAlert
                 commercialStatus={formData.commercialStatus}
-                netArea={formData.area}
+                grossArea={formData.area}
                 className="mt-4"
               />
             </TabsContent>
