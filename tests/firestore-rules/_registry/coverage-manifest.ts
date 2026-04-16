@@ -1013,6 +1013,9 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // dxfOverlayLevels → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // layers           → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
   // layer_groups     → moved to COVERAGE (ADR-298 Phase C.2, 2026-04-14)
+  // — DXF Viewer levels (post-rename underscore collections, 2026-04-16) —
+  'dxf_viewer_levels',    // lines 3097-3117 — tenant read + bootstrap create
+  'dxf_overlay_levels',   // lines 1051-1098 — full CRUD + items subcollection
   // — Navigation / notifications / tasks —
   // navigation_companies → moved to COVERAGE (ADR-298 Phase C.5, 2026-04-13)
   // notifications        → moved to COVERAGE (ADR-298 Phase C.7, 2026-04-14)

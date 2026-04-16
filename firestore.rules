@@ -1037,79 +1037,41 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🎚️ DXF-VIEWER-LEVELS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
+    // 🎚️ DXF VIEWER LEVELS — underscore naming (post-rename 2026-04-16)
     // =========================================================================
-    // 🏢 ENTERPRISE: Levels for DXF viewer layer management with tenant isolation
-    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
-    match /dxf-viewer-levels/{levelId} {
-      // 📖 READ: Tenant-scoped
+    // Code: COLLECTIONS.DXF_VIEWER_LEVELS = 'dxf_viewer_levels'
+    // Old kebab names (dxf-viewer-levels, dxf-overlay-levels, dxfOverlayLevels) removed.
+    // See commit 9344c70f for the rename.
+    // Rule for dxf_viewer_levels is at the bottom of this file (near line 3187).
+
+    // =========================================================================
+    // 🎨 DXF OVERLAY LEVELS — underscore naming (post-rename 2026-04-16)
+    // =========================================================================
+    // Code: COLLECTIONS.DXF_OVERLAY_LEVELS = 'dxf_overlay_levels'
+    match /dxf_overlay_levels/{levelId} {
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // Legacy: creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
+                       || belongsToCompany(resource.data.companyId)
                      );
 
-      // ✍️ CREATE: companyId required
       allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin
-      allow update: if isAuthenticated()
                     && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
+                         isSuperAdminOnly()
+                         || (
+                              request.resource.data.companyId == getUserCompanyId()
+                              && request.resource.data.createdBy == request.auth.uid
+                            )
                        );
-    }
 
-    // =========================================================================
-    // 🎨 DXF OVERLAY LEVELS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
-    // =========================================================================
-    // 🏢 ENTERPRISE: Overlay levels for DXF viewer with tenant isolation
-    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
-    // ⚠️ BOTH naming conventions supported for backwards compatibility
-
-    // Kebab-case version (used by overlay-store.tsx)
-    match /dxf-overlay-levels/{levelId} {
-      // 📖 READ: Tenant-scoped
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
-                     );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin
       allow update: if isAuthenticated()
                     && (
                          resource.data.createdBy == request.auth.uid
                          || isCompanyAdminOfCompany(resource.data.companyId)
                          || isSuperAdminOnly()
                        )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
+                    && request.resource.data.companyId == resource.data.companyId;
 
-      // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()
                     && (
                          resource.data.createdBy == request.auth.uid
@@ -1117,64 +1079,12 @@ service cloud.firestore {
                          || isSuperAdminOnly()
                        );
 
-      // 📁 Items subcollection - inherits parent tenant isolation
+      // 📁 Items subcollection
       match /items/{itemId} {
         allow read: if isAuthenticated()
                     && (
                          isSuperAdminOnly()
-                         || belongsToCompany(get(/databases/$(database)/documents/dxf-overlay-levels/$(levelId)).data.companyId)
-                       );
-        allow create: if isAuthenticated()
-                      && request.resource.data.companyId == getUserCompanyId();
-        allow update, delete: if isAuthenticated()
-                              && (
-                                   resource.data.createdBy == request.auth.uid
-                                   || isCompanyAdminOfCompany(resource.data.companyId)
-                                   || isSuperAdminOnly()
-                                 );
-      }
-    }
-
-    // CamelCase version (legacy support)
-    match /dxfOverlayLevels/{levelId} {
-      // 📖 READ: Tenant-scoped
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
-                     );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin
-      allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
-
-      // 📁 Items subcollection - inherits parent tenant isolation
-      match /items/{itemId} {
-        allow read: if isAuthenticated()
-                    && (
-                         isSuperAdminOnly()
-                         || belongsToCompany(get(/databases/$(database)/documents/dxfOverlayLevels/$(levelId)).data.companyId)
+                         || belongsToCompany(get(/databases/$(database)/documents/dxf_overlay_levels/$(levelId)).data.companyId)
                        );
         allow create: if isAuthenticated()
                       && request.resource.data.companyId == getUserCompanyId();
