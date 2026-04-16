@@ -22,7 +22,12 @@
       "renameLevel": "Rename level",
       "deleteLevel": "Delete level",
       "noLevels": "No levels exist",
-      "newLevelPlaceholder": "New level name..."
+      "newLevelPlaceholder": "New level name...",
+      "linkFloor": "Link floor",
+      "linkedFloor": "Floor: {floorName}",
+      "noFloorLinked": "No floor linked",
+      "selectFloorPlaceholder": "-- Select floor --",
+      "noBuildingSelected": "Select a building in Hierarchy"
     },
     "hierarchy": {
       "title": "Hierarchy",

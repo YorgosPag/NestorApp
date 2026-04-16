@@ -22,7 +22,12 @@
       "renameLevel": "Μετονομασία επιπέδου",
       "deleteLevel": "Διαγραφή επιπέδου",
       "noLevels": "Δεν υπάρχουν επίπεδα",
-      "newLevelPlaceholder": "Όνομα νέου επιπέδου..."
+      "newLevelPlaceholder": "Όνομα νέου επιπέδου...",
+      "linkFloor": "Σύνδεση ορόφου",
+      "linkedFloor": "Όροφος: {floorName}",
+      "noFloorLinked": "Χωρίς σύνδεση ορόφου",
+      "selectFloorPlaceholder": "-- Επιλέξτε όροφο --",
+      "noBuildingSelected": "Επιλέξτε κτίριο στην Ιεραρχία"
     },
     "hierarchy": {
       "title": "Ιεραρχία",

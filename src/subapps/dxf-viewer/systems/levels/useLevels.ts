@@ -40,6 +40,7 @@ export interface LevelSystemActions extends ImportWizardActions {
   toggleLevelVisibility: (levelId: string) => Promise<void>;
   setDefaultLevel: (levelId: string) => Promise<void>;
   duplicateLevel: (levelId: string, newName?: string) => Promise<string | null>;
+  linkLevelToFloor: (levelId: string, floorId: string | null) => Promise<void>;
 
   // Floorplan operations
   addFloorplan: (floorplan: Omit<FloorplanDoc, 'id' | 'importedAt'>) => string;

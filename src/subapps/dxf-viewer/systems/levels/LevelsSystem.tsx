@@ -128,6 +128,7 @@ function useLevelsSystemState({
     toggleLevelVisibility,
     setDefaultLevel,
     duplicateLevel,
+    linkLevelToFloor,
   } = useLevelOperations({
     levels,
     setLevels,
@@ -365,6 +366,7 @@ function useLevelsSystemState({
     toggleLevelVisibility,
     setDefaultLevel,
     duplicateLevel,
+    linkLevelToFloor,
 
     // Floorplan operations
     addFloorplan,

@@ -29,6 +29,7 @@ import { createOverlayHandlers } from '../../overlays/types';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
 import { isNonEmptyArray } from '@/lib/type-guards';
+import { LevelFloorLink } from './LevelFloorLink';
 
 interface LevelPanelProps {
   currentTool?: ToolType;
@@ -98,6 +99,7 @@ export function LevelPanel({
     deleteLevel,
     renameLevel,
     getLevelScene,
+    linkLevelToFloor,
   } = useLevels();
 
   const { gripSettings, updateGripSettings } = useGripContext();
@@ -311,27 +313,33 @@ export function LevelPanel({
 
             // 🏢 ENTERPRISE: Normal mode - use LevelListCard
             return (
-              <LevelListCard
-                key={level.id}
-                level={level}
-                entityCount={entityCount}
-                isSelected={isSelected}
-                isOnlyLevel={isOnlyLevel}
-                onSelect={() => {
-                  setCurrentLevel(level.id);
-                  if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
-                  EventBus.emit('level-panel:layering-activate', { levelId: level.id, source: 'card' });
-                }}
-                onEdit={(e) => {
-                  e.stopPropagation();
-                  startEditing(level);
-                }}
-                onDelete={(e) => {
-                  e.stopPropagation();
-                  handleDeleteLevel(level.id);
-                }}
-                compact
-              />
+              <div key={level.id}>
+                <LevelListCard
+                  level={level}
+                  entityCount={entityCount}
+                  isSelected={isSelected}
+                  isOnlyLevel={isOnlyLevel}
+                  onSelect={() => {
+                    setCurrentLevel(level.id);
+                    if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
+                    EventBus.emit('level-panel:layering-activate', { levelId: level.id, source: 'card' });
+                  }}
+                  onEdit={(e) => {
+                    e.stopPropagation();
+                    startEditing(level);
+                  }}
+                  onDelete={(e) => {
+                    e.stopPropagation();
+                    handleDeleteLevel(level.id);
+                  }}
+                  compact
+                />
+                <LevelFloorLink
+                  levelId={level.id}
+                  floorId={level.floorId}
+                  onLink={linkLevelToFloor}
+                />
+              </div>
             );
           })}
         </div>

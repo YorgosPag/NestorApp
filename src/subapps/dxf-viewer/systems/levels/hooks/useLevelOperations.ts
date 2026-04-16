@@ -38,6 +38,7 @@ export interface UseLevelOperationsResult {
   toggleLevelVisibility: (levelId: string) => Promise<void>;
   setDefaultLevel: (levelId: string) => Promise<void>;
   duplicateLevel: (levelId: string, newName?: string) => Promise<string | null>;
+  linkLevelToFloor: (levelId: string, floorId: string | null) => Promise<void>;
 }
 
 /**
@@ -299,6 +300,23 @@ export function useLevelOperations({
     [levels, addLevel]
   );
 
+  const linkLevelToFloor = useCallback(
+    async (levelId: string, floorId: string | null): Promise<void> => {
+      try {
+        if (enableFirestore) {
+          await updateDxfLevelWithPolicy({ payload: { levelId, floorId } });
+        } else {
+          setLevels(prev =>
+            prev.map(l => (l.id === levelId ? { ...l, floorId: floorId ?? undefined } : l))
+          );
+        }
+      } catch (err) {
+        handleError(getErrorMessage(err, 'Failed to link level to floor'));
+      }
+    },
+    [enableFirestore, handleError, setLevels]
+  );
+
   return {
     addLevel,
     removeLevel,
@@ -310,5 +328,6 @@ export function useLevelOperations({
     toggleLevelVisibility,
     setDefaultLevel,
     duplicateLevel,
+    linkLevelToFloor,
   };
 }
