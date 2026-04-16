@@ -33,7 +33,7 @@ export interface DualWriteContext {
   projectId?: string;
   buildingId?: string;
   floorId?: string;
-  entityType?: 'building' | 'floor' | 'property';
+  entityType?: 'project' | 'building' | 'floor' | 'property';
   filesCategory?: 'drawings' | 'floorplans';
   purpose?: string;
   entityLabel?: string;
@@ -57,9 +57,12 @@ export interface DualWriteParams {
  * (floor → floorId; property → floorId/buildingId; building → buildingId).
  */
 function resolveEntityId(
-  entityType: 'building' | 'floor' | 'property',
+  entityType: 'project' | 'building' | 'floor' | 'property',
   context: DualWriteContext | undefined
 ): string {
+  if (entityType === 'project') {
+    return context?.projectId ?? 'standalone';
+  }
   if (entityType === 'floor') {
     return context?.floorId ?? 'standalone';
   }
@@ -105,6 +108,7 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
     const scenePath = context.canonicalScenePath;
 
     const resolvedEntityType = (context?.entityType ?? 'building') as
+      | 'project'
       | 'building'
       | 'floor'
       | 'property';

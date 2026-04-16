@@ -22,7 +22,7 @@ export interface DxfSaveContext {
    * When absent, defaults to 'building' (backward compatibility).
    * Set to 'floor' when saving a floor-level DXF (e.g. Wizard import).
    */
-  entityType?: 'building' | 'floor' | 'property';
+  entityType?: 'project' | 'building' | 'floor' | 'property';
   /**
    * 🏢 ADR-240: File category for the `files` collection dual-write record.
    * When absent, defaults to 'drawings'. Set to 'floorplans' for floor plans.
