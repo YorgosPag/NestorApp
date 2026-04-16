@@ -218,3 +218,29 @@
   - **Scope limitation (V1)**: Δεν διακρίνει middle vs top floor. Penthouse σε floor=5 σε building 5-ορόφων δείχνει `ok` (upper), αλλά και σε floor=5 σε building 10-ορόφων δείχνει `ok`. Cross-entity lookup του `buildingTopFloor` είναι μελλοντικό batch (Batch 20 candidate) — θα αναβαθμίσει το band classification σε 4 bands + θα εκλεπτύνει τα penthouse/loft/shop/office verdicts.
   - **SSoT**: Όλη η matrix + classification + assessment logic σε ένα leaf module. Το UI component είναι pure view. Νέος property type → ADR-287 Batch 11 alias resolution (αυτόματα), + νέα row στο `FLOOR_TYPE_MATRIX` (single edit point).
   - **Family A/B consistency**: Ο helper `isStandaloneUnitType()` (Batch 14, ADR-284) επαναχρησιμοποιείται για να διακρίνει Family B. Καμία duplicate standalone list — single source.
+- **2026-04-17 (Batch 20)**: Google-style layout (bedrooms/bathrooms/WC) plausibility check + dropdown filtering για `storage`.
+  - **Created**: `src/constants/layout-plausibility.ts` — SSoT για "does the room layout match the property type?" sanity check. Εξάγει:
+    - `LAYOUT_RULES: Record<PropertyTypeCanonical, LayoutRule>` — per-type bedroom min/max + `bedroomStrict` flag + `requiresSanitary` / `requiresDedicatedBathroom` / `requiresDedicatedWC` booleans. Covers και τα 12 canonical types (residential + commercial + auxiliary).
+    - `assessLayoutPlausibility(args)` → `{ verdict, reason, propertyType, rule, bedrooms, bathrooms, wc }` με 4 verdicts (`ok`, `insufficientData`, `unusual`, `implausible`) + 6 reason codes (`bedroomMismatch`, `bedroomAtypical`, `bedroomsForbidden`, `noSanitary`, `noDedicatedBathroom`, `noDedicatedWC`). Single-reason surfacing — priority: bedroom constraints > sanitary checks.
+    - `isActionableLayoutVerdict(v)` — type narrowing helper.
+  - **Definitions aligned with Greek/EU real-estate + Zillow/Idealista patterns**:
+    - Studio (στούντιο) → strict 0 bedrooms (open-plan definition)
+    - Γκαρσονιέρα (apartment_1br) → strict 1 bedroom (ελληνικός ορισμός)
+    - Apartment / maisonette / detached_house → ≥1 bedroom strict
+    - Penthouse / villa → ≥1 / ≥2 bedroom + dedicated bathroom (luxury)
+    - Loft → flexible 0–2 bedrooms (loose, open-plan convertible)
+    - Shop / office / hall → no bedrooms, requires WC (Greek commercial code)
+    - Storage → 0 bedrooms, no sanitary requirements (auxiliary)
+  - **Created**: `src/components/properties/shared/LayoutPlausibilityWarning.tsx` — inline amber Alert, **non-blocking**. Pure render — delega assessment στο SSoT helper. Per-reason localized messages via `alerts.layoutPlausibility.reasons.<code>` i18n keys. Single warning shown (priority-ordered) για αποφυγή alert fatigue.
+  - **Wired**: `PropertyFieldsEditForm.tsx` — warning κάτω από το `FloorTypePlausibilityWarning` στην Identity card. Creation dialog (`AddPropertyDialog`) δεν wires — δεν έχει bedroom/bathroom fields στο initial creation flow.
+  - **i18n**: Νέες keys `alerts.layoutPlausibility.{unusual.title, implausible.title, reasons.*}` στα `src/i18n/locales/{el,en}/properties.json`. ICU single-brace interpolation (`{type}`, `{bedrooms}`, `{bathrooms}`, `{wc}`, `{min}`, `{max}`) per CHECK 3.9. Pure Greek translation. Zero hardcoded strings.
+  - **Google pattern**: Μη-blocking sanity warning — ο χρήστης μπορεί να αποθηκεύσει ακόμα και σε `implausible` verdict (legitimate edge case: raw/unfinished unit, loft industriale, mezzanine conversion). Σκοπός: να πιάσουμε λάθος dropdown selections + data entry errors.
+  - **Storage dropdown removal** (Γιώργος request 2026-04-17):
+    - **Added**: `CREATABLE_PROPERTY_TYPES` (leaf module `property-types.ts`) — derived από `PROPERTY_TYPES.filter((t) => t !== 'storage')`. Storage αποθήκες δημιουργούνται από dedicated storage-management σελίδα, όχι από το γενικό property unit dialog.
+    - **Applied**: Τρεις unit-creation dropdowns τώρα χρησιμοποιούν `CREATABLE_PROPERTY_TYPES`:
+      - `src/features/property-details/components/property-fields-constants.ts` — `PROPERTY_TYPE_OPTIONS`
+      - `src/components/properties/dialogs/useAddPropertyDialogState.ts` — `PROPERTY_TYPE_OPTIONS`
+      - `src/components/properties/shared/NewUnitHierarchySection.tsx` — import alias
+    - **Preserved**: Canonical `PROPERTY_TYPES` array παραμένει full (12 types) για Firestore backward compat, filters (`UNIT_TYPES_FOR_FILTER`, public property filter checkboxes), reports, super-admin search. Η αλλαγή είναι UI-only dropdown filtering — zero breaking changes σε data layer.
+  - **SSoT**: Όλη η rules matrix + assessment logic σε ένα leaf module. UI component = pure view. Adding new property type → single edit σε `LAYOUT_RULES` + `PROPERTY_TYPES`.
+  - **Out of scope για V1**: Cross-field priority merging (π.χ. bedroom mismatch AND missing sanitary → single combined message). Μελλοντικό enhancement αν reported alert coverage ανεπαρκής.

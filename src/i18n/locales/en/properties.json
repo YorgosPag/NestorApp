@@ -887,6 +887,22 @@
         "title": "Inconsistent property type / floor combination",
         "description": "The combination of “{type}” on {band} contradicts the type definition. Could it be a typo or wrong selection? Saving is still allowed if intentional."
       }
+    },
+    "layoutPlausibility": {
+      "unusual": {
+        "title": "Unusual room layout"
+      },
+      "implausible": {
+        "title": "Layout does not match property type"
+      },
+      "reasons": {
+        "bedroomMismatch": "A “{type}” typically has {min}–{max} bedrooms. Entered: {bedrooms}. Please verify the type or bedroom count.",
+        "bedroomAtypical": "A “{type}” usually has at least {min} bedrooms. Entered: {bedrooms}. Uncommon but allowed.",
+        "bedroomsForbidden": "A “{type}” has no bedrooms by definition (commercial or auxiliary space). Entered: {bedrooms}. Could the type be wrong?",
+        "noSanitary": "A “{type}” with no bathroom and no WC is unusual. Add at least one or confirm the unit is unfinished.",
+        "noDedicatedBathroom": "A “{type}” usually has at least one full bathroom. Entered: {bathrooms}. Please verify.",
+        "noDedicatedWC": "Commercial spaces (“{type}”) typically require at least one WC. Entered: {wc}. Please verify the layout."
+      }
     }
   },
   "details": {

@@ -28,7 +28,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useRealtimeBuildings } from '@/services/realtime/hooks/useRealtimeBuildings';
 import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 // ADR-145: Import από centralized SSoT (leaf module — δεν δημιουργεί circular dep).
-import { PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/constants/property-types';
+// ADR-287 Batch 20: Uses CREATABLE_PROPERTY_TYPES (excludes 'storage').
+import { CREATABLE_PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/constants/property-types';
 import { ProjectQuickCreateSheet } from '@/components/projects/dialogs/ProjectQuickCreateSheet';
 import { BuildingQuickCreateSheet } from '@/components/building-management/dialogs/BuildingQuickCreateSheet';
 import { FloorInlineCreateForm } from '@/components/building-management/tabs/FloorInlineCreateForm';

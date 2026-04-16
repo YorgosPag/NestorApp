@@ -34,6 +34,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
 import { PricePlausibilityWarning } from '@/components/properties/shared/PricePlausibilityWarning';
 import { FloorTypePlausibilityWarning } from '@/components/properties/shared/FloorTypePlausibilityWarning';
+import { LayoutPlausibilityWarning } from '@/components/properties/shared/LayoutPlausibilityWarning';
 import {
   Ruler, FileText, Lock, Layers
 } from 'lucide-react';
@@ -309,6 +310,13 @@ export function PropertyFieldsEditForm({
               <FloorTypePlausibilityWarning
                 propertyType={formData.type}
                 floor={formData.floor}
+                className="py-2 px-3 mt-1"
+              />
+              <LayoutPlausibilityWarning
+                propertyType={formData.type}
+                bedrooms={formData.bedrooms}
+                bathrooms={formData.bathrooms}
+                wc={formData.wc}
                 className="py-2 px-3 mt-1"
               />
             </fieldset>

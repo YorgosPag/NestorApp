@@ -20,6 +20,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyType, OperationalStatus, CommercialStatus } from '@/types/property';
 import {
   PROPERTY_TYPES,
+  CREATABLE_PROPERTY_TYPES,
   PROPERTY_TYPE_LABELS_EL,
   isPropertyType,
   normalizePropertyType,
@@ -34,8 +35,9 @@ const logger = createModuleLogger('AddPropertyDialogState');
 // =============================================================================
 
 // ADR-145: Derived από canonical SSoT (@/constants/property-types).
-// Previously: hardcoded 14-item list που ήταν εύκολο να βγει εκτός sync.
-export const PROPERTY_TYPE_OPTIONS: PropertyType[] = [...PROPERTY_TYPES];
+// ADR-287 Batch 20: Uses CREATABLE_PROPERTY_TYPES (excludes 'storage' — αποθήκες
+// δημιουργούνται από dedicated σελίδα, όχι από generic unit dialog).
+export const PROPERTY_TYPE_OPTIONS: PropertyType[] = [...CREATABLE_PROPERTY_TYPES];
 
 export const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
   'draft',

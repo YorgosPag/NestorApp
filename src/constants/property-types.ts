@@ -49,6 +49,23 @@ export const PROPERTY_TYPES = [
 export type PropertyTypeCanonical = (typeof PROPERTY_TYPES)[number];
 
 // =============================================================================
+// 1b. CREATABLE SUBSET — types available in unit-creation dropdowns
+// =============================================================================
+
+/**
+ * Types that appear in unit-creation dropdowns (`AddPropertyDialog`,
+ * `PropertyFieldsEditForm`, `NewUnitHierarchySection`). Excludes `storage` —
+ * αποθήκες δημιουργούνται από dedicated storage-management σελίδα, όχι από το
+ * γενικό property unit dialog (Γιώργος request 2026-04-17).
+ *
+ * **Canonical array** (`PROPERTY_TYPES`) παραμένει πλήρες — storage διατηρείται
+ * για Firestore backward compat, filters/reports/search, super-admin views.
+ * Αυτό το derived array χρησιμοποιείται **μόνο** από UI creation/edit dropdowns.
+ */
+export const CREATABLE_PROPERTY_TYPES: readonly PropertyTypeCanonical[] =
+  PROPERTY_TYPES.filter((t) => t !== 'storage');
+
+// =============================================================================
 // 2. STANDALONE DISCRIMINATOR — ADR-284 Family B
 // =============================================================================
 
