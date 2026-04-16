@@ -25,6 +25,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { PANEL_TOKENS, PANEL_LAYOUT, PanelTokenUtils } from '../../config/panel-tokens';
 import { OverlayList } from '../OverlayList';
+import { OverlayProperties } from '../OverlayProperties';
 import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection'; // 🔺 ADDED: Import SceneInfoSection
 import { LayersSection } from './LayersSection'; // 🔺 ADDED: Import LayersSection
@@ -140,9 +141,19 @@ export function LevelPanel({
       setCurrentLevel: setCurrentLevel  // ✅ Περνάω την ίδια function που χρησιμοποιείται στο κλικ της κάρτας επιπέδου
     });
 
-  const currentOverlays = currentLevelId 
+  const currentOverlays = currentLevelId
     ? overlayStore.getByLevel(currentLevelId)
     : [];
+
+  // ADR-309 Phase 4: Inline overlay panel only when active level is floorplanType='floor'
+  const currentLevel = useMemo(
+    () => (currentLevelId ? levels.find(l => l.id === currentLevelId) : undefined),
+    [levels, currentLevelId]
+  );
+  const showOverlayPanel = currentLevel?.floorplanType === 'floor';
+
+  const selectedOverlayId = universalSelection.getPrimaryId();
+  const selectedOverlay = selectedOverlayId ? (overlayStore.overlays[selectedOverlayId] ?? null) : null;
     
   // ✅ ENTERPRISE: Proper typing for levelScenes (SceneModel instead of unknown)
   const levelScenes = useMemo(() => {
@@ -418,19 +429,31 @@ export function LevelPanel({
 
       {/* Editing Toolbox - shown when layering tool is active */}
       
-      <div className={PANEL_TOKENS.LEVEL_PANEL.OVERLAY_SECTION}>
-        {/* 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030 */}
-        <OverlayList
+      {/* ADR-309 Phase 4: Inline overlay management — visible only when floorplanType='floor' */}
+      {showOverlayPanel && (
+        <div className={PANEL_TOKENS.LEVEL_PANEL.OVERLAY_SECTION}>
+          {/* 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030 */}
+          <OverlayList
             overlays={currentOverlays}
-            selectedOverlayId={universalSelection.getPrimaryId()}
+            selectedOverlayId={selectedOverlayId}
             onSelect={handleOverlaySelect}
             onEdit={handleOverlayEdit}
             onDelete={handleOverlayDelete}
             onToggleLayers={() => {
               // Auto-open layers panel functionality - already integrated
             }}
-        />
-      </div>
+          />
+          {selectedOverlay && (
+            <div className={PANEL_TOKENS.LEVEL_PANEL.SECTIONS_BORDER}>
+              <OverlayProperties
+                overlay={selectedOverlay}
+                onUpdate={(id, updates) => overlayStore.update(id, updates)}
+                overlays={overlayStore.overlays}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ADR-309 Phase 2: Wizard dialog — same instance as toolbar (SPEC-237D) */}
       {onSceneImported && (
