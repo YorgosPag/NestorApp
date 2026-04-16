@@ -73,8 +73,8 @@ floorplans/           → All floorplans with entityType field
 
 | Current (Wrong) | Target (Enterprise) | Type |
 |-----------------|---------------------|------|
-| `dxf-overlay-levels` | `dxfOverlayLevels` | Rename |
-| `dxf-viewer-levels` | `dxfViewerLevels` | Rename |
+| `dxf_overlay_levels` | `dxfOverlayLevels` | Rename |
+| `dxf_viewer_levels` | `dxfViewerLevels` | Rename |
 | `dxf_files` | `cadFiles` | Rename + Migrate |
 | `obligation-sections` | `obligationSections` | Rename |
 

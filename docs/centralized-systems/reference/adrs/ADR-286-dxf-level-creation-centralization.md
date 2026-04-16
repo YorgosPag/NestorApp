@@ -20,7 +20,7 @@
 | Σημείο | Pipeline | Status |
 |---|---|---|
 | Main `floors` API | `createEntity('floor', …)` (ADR-238) | ✅ SSOT |
-| DXF Viewer `dxf-viewer-levels` | Direct client-side `setDoc` | ❌ Bypass |
+| DXF Viewer `dxf_viewer_levels` | Direct client-side `setDoc` | ❌ Bypass |
 | Admin `seed-floors` | Direct server-side `setDoc` loop | ❌ Bypass |
 
 Οι 2 bypass-paths παραβίαζαν τις εγγυήσεις του ADR-238:
@@ -72,7 +72,7 @@ export type EntityHierarchy = 'project-child' | 'building-child' | 'tenant-scope
 
 ```typescript
 dxfLevel: {
-  collection: COLLECTIONS.DXF_VIEWER_LEVELS,  // 'dxf-viewer-levels'
+  collection: COLLECTIONS.DXF_VIEWER_LEVELS,  // 'dxf_viewer_levels'
   hierarchy: 'tenant-scoped',
   parentField: 'floorId',                      // optional FK
   idGenerator: 'generateLevelId',              // lvl_uuid-...
@@ -162,7 +162,7 @@ for (const template of FLOOR_TEMPLATES) {
 
 ### 3.7 Collection constant alignment
 
-Διορθώθηκε το `COLLECTIONS.DXF_VIEWER_LEVELS` default από `'dxfViewerLevels'` (camelCase, unused) → `'dxf-viewer-levels'` (kebab-case, actual production value). Το hardcoded literal σε `LevelsSystem.tsx`, `config.ts`, `useFloorOverlays.ts` παραμένει ενεργό.
+Διορθώθηκε το `COLLECTIONS.DXF_VIEWER_LEVELS` default από `'dxfViewerLevels'` (camelCase, unused) → `'dxf_viewer_levels'` (kebab-case, actual production value). Το hardcoded literal σε `LevelsSystem.tsx`, `config.ts`, `useFloorOverlays.ts` παραμένει ενεργό.
 
 ---
 
@@ -182,13 +182,13 @@ for (const template of FLOOR_TEMPLATES) {
 ### Negative / Trade-offs
 
 - ⚠️ Extra HTTP roundtrip για κάθε level creation (vs direct setDoc) — ~100-200ms latency
-- ⚠️ Existing `dxf-viewer-levels` documents (pre-migration) δεν έχουν audit entries — acceptable, no back-fill
+- ⚠️ Existing `dxf_viewer_levels` documents (pre-migration) δεν έχουν audit entries — acceptable, no back-fill
 - ⚠️ Batch operations (`clearAllLevels`, `reorderLevels`, `setDefaultLevel`) κάνουν N parallel HTTP calls αντί για 1 Firestore batch — acceptable γιατί τα levels είναι λίγα (<20) και security > perf
 
 ### Out of Scope
 
 - ❌ Data migration για back-fill audit events σε existing DXF levels
-- ❌ Collection rename (`dxf-viewer-levels` → `floor_scenes`) — breaking change
+- ❌ Collection rename (`dxf_viewer_levels` → `floor_scenes`) — breaking change
 - ❌ Dedicated batch endpoint (`POST /api/dxf-levels/batch`) — YAGNI, θα προστεθεί αν/όταν γίνει bottleneck
 
 ---

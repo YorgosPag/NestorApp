@@ -40,7 +40,7 @@ export interface Level {
 }
 ```
 
-**Firestore Collection**: `dxf-viewer-levels` — νέα documents αποθηκεύουν `floorId` αν δοθεί.
+**Firestore Collection**: `dxf_viewer_levels` — νέα documents αποθηκεύουν `floorId` αν δοθεί.
 
 ### 2.2 Floor Infrastructure — ΗΔΗ ΥΠΑΡΧΕΙ
 
@@ -115,7 +115,7 @@ export interface Level {
 | Scope | Αντίκτυπος |
 |-------|-----------|
 | **Backward compatible** | ✅ Optional field — existing levels χωρίς `floorId` δουλεύουν κανονικά |
-| **Firestore** | Νέο πεδίο στα `dxf-viewer-levels` documents — additive only |
+| **Firestore** | Νέο πεδίο στα `dxf_viewer_levels` documents — additive only |
 | **Existing code** | Μηδενικό breaking change — κανείς δεν χρησιμοποιεί `floorId` ακόμα |
 | **Migration** | Ζεστή: τα νέα levels αποκτούν `floorId`, τα παλιά δεν χρειάζεται |
 

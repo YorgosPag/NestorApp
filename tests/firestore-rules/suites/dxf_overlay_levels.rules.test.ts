@@ -5,7 +5,7 @@
  * No `isSuperAdminOnly()` on create → super_admin denied.
  * Has subcollection `items` (not tracked in manifest — nested subcollection).
  *
- * Note: the kebab-case variant `dxf-overlay-levels` is a separate rules block
+ * Note: the kebab-case variant `dxf_overlay_levels` is a separate rules block
  * that is NOT listed in FIRESTORE_RULES_PENDING. Only the camelCase collection
  * name matches the manifest entry.
  *

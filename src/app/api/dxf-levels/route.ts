@@ -1,7 +1,7 @@
 /**
  * 📐 DXF LEVELS API — ENTERPRISE ROUTE
  *
- * Provides centralized CRUD for DXF Viewer levels (dxf-viewer-levels collection).
+ * Provides centralized CRUD for DXF Viewer levels (dxf_viewer_levels collection).
  * Replaces direct client-side setDoc writes with server-side createEntity()
  * pipeline (ADR-286).
  *

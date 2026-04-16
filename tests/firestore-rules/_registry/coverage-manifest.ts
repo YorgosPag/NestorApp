@@ -618,7 +618,7 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
   {
     collection: 'dxfOverlayLevels',
     pattern: 'tenant_direct',
-    testFile: 'tests/firestore-rules/suites/dxf-overlay-levels.rules.test.ts',
+    testFile: 'tests/firestore-rules/suites/dxf_overlay_levels.rules.test.ts',
     rulesRange: [1137, 1187],
     // Items subcollection not tracked (nested subcollection — excluded from manifest).
     matrix: crmDirectMatrix(),

@@ -6,11 +6,11 @@
  * =============================================================================
  *
  * Loads polygon overlays from Firestore based on `floorId`.
- * Read-only — never writes to `dxf-overlay-levels`.
+ * Read-only — never writes to `dxf_overlay_levels`.
  *
  * 2-Step Firestore Query:
- * 1. Query `dxf-viewer-levels` where floorId == targetFloorId → get level IDs
- * 2. Per level: onSnapshot on `dxf-overlay-levels/{levelId}/items` → merge results
+ * 1. Query `dxf_viewer_levels` where floorId == targetFloorId → get level IDs
+ * 2. Per level: onSnapshot on `dxf_overlay_levels/{levelId}/items` → merge results
  *
  * @module hooks/useFloorOverlays
  * @enterprise ADR-237 / SPEC-237B — Overlay Bridge Core

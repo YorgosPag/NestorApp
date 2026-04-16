@@ -2,7 +2,7 @@
  * 🔷 DXF OVERLAY ITEMS API — Zod Schemas (ADR-289)
  *
  * Validation for create/upsert/update/delete flows on the
- * `dxf-overlay-levels/{levelId}/items/{overlayId}` subcollection.
+ * `dxf_overlay_levels/{levelId}/items/{overlayId}` subcollection.
  */
 
 import { z } from 'zod';

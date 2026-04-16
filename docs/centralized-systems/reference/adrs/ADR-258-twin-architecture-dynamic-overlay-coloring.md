@@ -36,7 +36,7 @@
 |---|---|
 | **Static asset** — δεν αλλάζει ποτέ | **Dynamic data** — αλλάζουν ανάλογα με πωλήσεις |
 | Η κάτοψη του αρχιτέκτονα | Ποια μονάδα πουλήθηκε, κρατήθηκε κλπ |
-| Storage: Firebase Storage (blob/file) | Storage: Firestore `dxf-overlay-levels` (structured data) |
+| Storage: Firebase Storage (blob/file) | Storage: Firestore `dxf_overlay_levels` (structured data) |
 | Ένα upload, μηδέν updates | Real-time updates μέσω `onSnapshot()` |
 | Δεν αλλάζει αν πουληθεί μονάδα | Αλλάζει χρώμα αυτόματα αν πουληθεί μονάδα |
 
@@ -275,7 +275,7 @@ const colors = getStatusColors(overlay.resolvedStatus) ?? OVERLAY_FALLBACK;
 │  │  (Static Asset)      │        │  (Dynamic Data)              │    │
 │  │                      │        │                              │    │
 │  │  Firebase Storage    │        │  Firestore:                  │    │
-│  │  floorplans/{id}     │        │  dxf-overlay-levels/         │    │
+│  │  floorplans/{id}     │        │  dxf_overlay_levels/         │    │
 │  │                      │        │  {levelId}/items             │    │
 │  │  Upload: 1 φορά      │        │                              │    │
 │  │  Updates: 0           │        │  Polygon geometry: Static    │    │

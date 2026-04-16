@@ -5,7 +5,7 @@
  *
  * PROBLEMS SOLVED:
  * 1. ❌ Fragmented Collections: building_floorplans, project_floorplans, unit_floorplans
- * 2. ❌ Inconsistent Naming: kebab-case (dxf-overlay-levels) vs snake_case (dxf_files)
+ * 2. ❌ Inconsistent Naming: kebab-case (dxf_overlay_levels) vs snake_case (dxf_files)
  * 3. ❌ Missing Configuration: 8 collections not in centralized config
  * 4. ❌ Hardcoded References: Collection names hardcoded in services
  * 5. ❌ Poor Normalization: No proper foreign key relationships
@@ -64,8 +64,8 @@ class EnterpriseArchitectureConsolidationSteps {
           { source: 'project_floorplans', target: COLLECTIONS.FLOORPLANS, entityType: ENTITY_TYPES.PROJECT },
           { source: 'unit_floorplans', target: COLLECTIONS.FLOORPLANS, entityType: 'unit' },
           { source: 'dxf_files', target: COLLECTIONS.CAD_FILES, entityType: 'mixed' },
-          { source: 'dxf-overlay-levels', target: COLLECTIONS.CAD_LAYERS, entityType: 'overlay' },
-          { source: 'dxf-viewer-levels', target: COLLECTIONS.CAD_LAYERS, entityType: 'viewer' },
+          { source: 'dxf_overlay_levels', target: COLLECTIONS.CAD_LAYERS, entityType: 'overlay' },
+          { source: 'dxf_viewer_levels', target: COLLECTIONS.CAD_LAYERS, entityType: 'viewer' },
           { source: 'parking_spots', target: COLLECTIONS.PARKING_SPACES, entityType: 'parking' }
         ];
 

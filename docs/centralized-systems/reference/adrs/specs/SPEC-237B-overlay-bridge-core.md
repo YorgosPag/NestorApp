@@ -16,7 +16,7 @@
 
 Υλοποίηση του **πυρήνα του Bridge** — ένα read-only hook που φορτώνει overlays από Firestore βάσει `floorId`, και ένα Canvas rendering layer που σχεδιάζει τα polygon overlays πάνω σε κάθε τύπο κάτοψης (DXF, PDF, εικόνα) με δυναμικά χρώματα βάσει `commercialStatus`.
 
-**Αρχιτεκτονική Αρχή**: Τα `dxf-overlay-levels` παραμένουν **SSoT** (Single Source of Truth). Ο bridge **μόνο διαβάζει** — zero writes.
+**Αρχιτεκτονική Αρχή**: Τα `dxf_overlay_levels` παραμένουν **SSoT** (Single Source of Truth). Ο bridge **μόνο διαβάζει** — zero writes.
 
 ---
 
@@ -28,7 +28,7 @@
 
 ```typescript
 // Existing real-time subscription pattern
-const collectionRef = collection(db, `dxf-overlay-levels/${levelId}/items`);
+const collectionRef = collection(db, `dxf_overlay_levels/${levelId}/items`);
 const q = query(collectionRef, orderBy('createdAt', 'asc'));
 
 const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -199,7 +199,7 @@ function useFloorOverlays(params: UseFloorOverlaysParams): {
 floorId
   → Query: Level documents where floorId === targetFloorId
   → Για κάθε matching level:
-      → onSnapshot: dxf-overlay-levels/{levelId}/items
+      → onSnapshot: dxf_overlay_levels/{levelId}/items
       → Filter: μόνο overlays με linked.unitId (skip footprints)
   → Merge & return: ReadonlyArray<FloorOverlayItem>
 ```
@@ -210,14 +210,14 @@ floorId
 
 1. **Step 1**: Βρες levels με `floorId === targetFloorId`
    ```
-   dxf-viewer-levels where floorId == "floor_xyz"
+   dxf_viewer_levels where floorId == "floor_xyz"
    → Returns: [level_abc, level_def]
    ```
 
 2. **Step 2**: Subscribe σε overlays κάθε level
    ```
-   dxf-overlay-levels/level_abc/items → onSnapshot
-   dxf-overlay-levels/level_def/items → onSnapshot
+   dxf_overlay_levels/level_abc/items → onSnapshot
+   dxf_overlay_levels/level_def/items → onSnapshot
    ```
 
 ### Polygon Format
@@ -349,8 +349,8 @@ ctx.restore();
 
 ## 6. Prohibitions
 
-- ⛔ **ΜΗΝ δημιουργήσεις** νέο Firestore collection — SSoT = `dxf-overlay-levels`
-- ⛔ **ΜΗΝ γράψεις** στο `dxf-overlay-levels` από τη δημόσια σελίδα — read-only only
+- ⛔ **ΜΗΝ δημιουργήσεις** νέο Firestore collection — SSoT = `dxf_overlay_levels`
+- ⛔ **ΜΗΝ γράψεις** στο `dxf_overlay_levels` από τη δημόσια σελίδα — read-only only
 - ⛔ **ΜΗΝ δημιουργήσεις** νέο color mapping — χρησιμοποίησε `getStatusColors()`
 - ⛔ **ΜΗΝ χρησιμοποιήσεις** SVG rendering — ήδη Canvas-based architecture
 - ⛔ **ΜΗΝ αντιγράψεις** polygon vertices σε Unit documents

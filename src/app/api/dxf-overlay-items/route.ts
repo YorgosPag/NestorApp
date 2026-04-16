@@ -2,7 +2,7 @@
  * 🔷 DXF OVERLAY ITEMS API — ENTERPRISE ROUTE (ADR-289)
  *
  * Centralized CRUD + upsert for overlay polygon items stored under
- * `dxf-overlay-levels/{levelId}/items/{overlayId}`. Replaces direct client
+ * `dxf_overlay_levels/{levelId}/items/{overlayId}`. Replaces direct client
  * Firestore writes in `overlay-store.tsx`.
  *
  * @module api/dxf-overlay-items

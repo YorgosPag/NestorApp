@@ -6,7 +6,7 @@
  * the same SSOT pipeline as floors/units/parking/storage (ADR-238).
  *
  * @see ADR-286 — DXF Level Creation Centralization
- * @see ADR-237 — Polygon Overlay Bridge (original dxf-viewer-levels spec)
+ * @see ADR-237 — Polygon Overlay Bridge (original dxf_viewer_levels spec)
  * @see ADR-238 — Entity Creation Centralization
  */
 

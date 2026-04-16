@@ -8,7 +8,7 @@
 
 Sentry reported a recurring `FirebaseError: Missing or insufficient permissions` on `/dxf/viewer` (5 occurrences per week, ONGOING). Firestore rules enforce tenant scoping (`companyId == getUserCompanyId()`) on parent documents. Two DXF-viewer write paths were creating documents **without** `companyId`/`createdBy` fields, blocking cross-user reads of their subcollections:
 
-1. `LevelsSystem.addLevel()` — wrote `dxf-overlay-levels/{id}` without tenant fields, so `onSnapshot` on the `items` subcollection failed for other users in the same tenant.
+1. `LevelsSystem.addLevel()` — wrote `dxf_overlay_levels/{id}` without tenant fields, so `onSnapshot` on the `items` subcollection failed for other users in the same tenant.
 2. `DxfFirestoreService.saveToStorage()` — wrote `cadFiles/{id}` metadata without tenant fields, so cross-user reads of scene metadata failed.
 
 The target files were `LevelsSystem.tsx` (717 lines) and `dxf-firestore.service.ts` (783 lines) — both well over the 500-line pre-commit hook limit, blocking even a one-line fix.
@@ -51,12 +51,12 @@ All callers (wizard, toolbar, migrations, auto-save manager, floorplan service) 
 ## Consequences
 
 ### Positive
-- Sentry NESTOR-APP-3 no longer fires for new `dxf-overlay-levels` / `cadFiles` documents.
+- Sentry NESTOR-APP-3 no longer fires for new `dxf_overlay_levels` / `cadFiles` documents.
 - Each split module has a single responsibility, enabling targeted tests and future edits without hitting the 500-line limit.
 - Facade pattern keeps the public API stable: zero migration work for existing callers.
 
 ### Migration considerations
-- **Existing documents** (pre-fix) still lack `companyId`/`createdBy`. They will continue to throw permissions errors for cross-user reads. A one-off backfill migration can be run on `dxf-overlay-levels/*` and `cadFiles/*` if cross-user access on historical data is needed.
+- **Existing documents** (pre-fix) still lack `companyId`/`createdBy`. They will continue to throw permissions errors for cross-user reads. A one-off backfill migration can be run on `dxf_overlay_levels/*` and `cadFiles/*` if cross-user access on historical data is needed.
 - The `createdBy` field on `cadFiles` is captured on every save — a DXF saved by user A and later saved by user B will show B as `createdBy`.
 
 ## Files Changed
@@ -67,7 +67,7 @@ All callers (wizard, toolbar, migrations, auto-save manager, floorplan service) 
 
 - **2026-04-05 — ADR-286**: `useLevelOperations.addLevel` no longer writes client-side. All DXF level CRUD now routes through `/api/dxf-levels` (server stamps `companyId`/`createdBy`).
 - **2026-04-05 — ADR-288**: `saveToStorageImpl` no longer writes `cadFiles` client-side. Metadata upserts now route through `/api/cad-files` (server stamps `companyId`/`createdBy`).
-- **2026-04-05 — ADR-289**: `overlay-store.tsx` no longer writes overlay items client-side. All `dxf-overlay-levels/{levelId}/items/*` mutations now route through `/api/dxf-overlay-items` (server stamps `companyId`/`createdBy`; audit events emitted per mutation). The CL #2 client-side `companyId`/`createdBy` stamping in `overlay-store.tsx` is obsolete and has been removed.
+- **2026-04-05 — ADR-289**: `overlay-store.tsx` no longer writes overlay items client-side. All `dxf_overlay_levels/{levelId}/items/*` mutations now route through `/api/dxf-overlay-items` (server stamps `companyId`/`createdBy`; audit events emitted per mutation). The CL #2 client-side `companyId`/`createdBy` stamping in `overlay-store.tsx` is obsolete and has been removed.
 
 ---
 

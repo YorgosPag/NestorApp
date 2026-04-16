@@ -59,8 +59,8 @@
 | building_floorplans | `belongsToCompany()` | 904-937 |
 | floor_floorplans | `belongsToCompany()` | 944-979 |
 | unit_floorplans | `belongsToCompany()` | 985-1021 |
-| dxf-viewer-levels | `belongsToCompany()` | 1028-1061 |
-| dxf-overlay-levels | `belongsToCompany()` | 1071-1101 |
+| dxf_viewer_levels | `belongsToCompany()` | 1028-1061 |
+| dxf_overlay_levels | `belongsToCompany()` | 1071-1101 |
 
 ### 1.3 Απροστάτευτες Collections (🔴 HIGH RISK)
 

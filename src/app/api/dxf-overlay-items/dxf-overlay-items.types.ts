@@ -1,7 +1,7 @@
 /**
  * 🔷 DXF OVERLAY ITEMS API — Response Types (ADR-289)
  *
- * Data payloads for the centralized `dxf-overlay-levels/{levelId}/items/{id}`
+ * Data payloads for the centralized `dxf_overlay_levels/{levelId}/items/{id}`
  * subcollection endpoint. Mirror of cad-files.types.ts / dxf-levels.types.ts.
  *
  * @see ADR-289 — DXF Overlay Item Centralization

@@ -188,7 +188,7 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
   },
   /**
    * 🔷 ADR-289: DXF Overlay polygon item. Stored under the
-   * `dxf-overlay-levels/{levelId}/items/{overlayId}` subcollection (NOT a
+   * `dxf_overlay_levels/{levelId}/items/{overlayId}` subcollection (NOT a
    * top-level collection — the `collection` field below records the parent
    * prefix for SSOT documentation only). Because createEntity() assumes flat
    * collections, the dedicated /api/dxf-overlay-items handler uses direct

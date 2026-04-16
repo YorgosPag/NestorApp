@@ -23,7 +23,7 @@ Migration DXF Viewer Firestore operations (overlays, CAD files reads). Pragmatic
 
 - `addDoc` → `generateOverlayId()` + `setDoc` (enterprise ID generation)
 - Αφαιρέθηκε import `addDoc`, προστέθηκε import `generateOverlayId`
-- Subcollection pattern (`dxf-overlay-levels/{levelId}/items`) διατηρείται as-is (firestoreQueryService δεν υποστηρίζει subcollections)
+- Subcollection pattern (`dxf_overlay_levels/{levelId}/items`) διατηρείται as-is (firestoreQueryService δεν υποστηρίζει subcollections)
 
 ### 2. `src/subapps/dxf-viewer/services/dxf-firestore.service.ts` — Reads Migrated
 
@@ -52,11 +52,11 @@ Migration DXF Viewer Firestore operations (overlays, CAD files reads). Pragmatic
 
 | Περιορισμός | Λεπτομέρεια |
 |-------------|-------------|
-| **Collection name mismatch** | Κώδικας χρησιμοποιεί `'dxf-viewer-levels'` (actual Firestore), αλλά `COLLECTIONS.DXF_VIEWER_LEVELS` = `'dxfViewerLevels'` — ΔΙΑΦΟΡΕΤΙΚΑ! Migration θα query-αρε ΛΑΘΟΣ collection. |
+| **Collection name mismatch** | Κώδικας χρησιμοποιεί `'dxf_viewer_levels'` (actual Firestore), αλλά `COLLECTIONS.DXF_VIEWER_LEVELS` = `'dxfViewerLevels'` — ΔΙΑΦΟΡΕΤΙΚΑ! Migration θα query-αρε ΛΑΘΟΣ collection. |
 | **writeBatch** | 4 batch operations χωρίς centralized εναλλακτική στο firestoreQueryService |
-| **Subcollection pattern** | Ίδιο πρόβλημα με overlay-store — `dxf-overlay-levels/{levelId}/items` |
+| **Subcollection pattern** | Ίδιο πρόβλημα με overlay-store — `dxf_overlay_levels/{levelId}/items` |
 
-**Future fix**: Correct `COLLECTIONS.DXF_VIEWER_LEVELS` value to `'dxf-viewer-levels'` πρώτα, μετά migrate.
+**Future fix**: Correct `COLLECTIONS.DXF_VIEWER_LEVELS` value to `'dxf_viewer_levels'` πρώτα, μετά migrate.
 
 ---
 

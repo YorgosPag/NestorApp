@@ -52,8 +52,8 @@ function testCollectionsConfiguration() {
     FLOORPLANS: 'floorplans',
     PARKING_SPACES: 'parking_spots',
     OBLIGATION_SECTIONS: 'obligationSections', // removed collection
-    DXF_OVERLAY_LEVELS: 'dxf-overlay-levels',
-    DXF_VIEWER_LEVELS: 'dxf-viewer-levels'
+    DXF_OVERLAY_LEVELS: 'dxf_overlay_levels',
+    DXF_VIEWER_LEVELS: 'dxf_viewer_levels'
   };
 
   let configurationScore = 0;

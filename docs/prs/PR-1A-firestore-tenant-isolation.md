@@ -65,7 +65,7 @@ allow read: if isAuthenticated()
 | `project_floorplans` | ✅ | ✅ VERIFIED |
 | `building_floorplans` | ✅ | ✅ VERIFIED |
 | `unit_floorplans` | ✅ | ✅ VERIFIED |
-| `dxf-overlay-levels` | ✅ | ✅ VERIFIED |
+| `dxf_overlay_levels` | ✅ | ✅ VERIFIED |
 | `layers` | ✅ | ✅ VERIFIED |
 | `storage_units` | Via building lookup | ✅ VERIFIED |
 | `parking_spots` | Via building lookup | ✅ VERIFIED |

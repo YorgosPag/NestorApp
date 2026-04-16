@@ -1,7 +1,7 @@
 /**
  * 🔷 DXF OVERLAY ITEMS API — ENTERPRISE HANDLERS (ADR-289)
  *
- * Centralizes writes to the `dxf-overlay-levels/{levelId}/items/{overlayId}`
+ * Centralizes writes to the `dxf_overlay_levels/{levelId}/items/{overlayId}`
  * subcollection. Replaces direct client-side setDoc/updateDoc/deleteDoc calls
  * in `overlay-store.tsx` with authenticated, audited, tenant-isolated endpoints.
  *

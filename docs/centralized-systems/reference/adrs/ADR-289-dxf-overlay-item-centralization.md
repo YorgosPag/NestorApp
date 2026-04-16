@@ -9,7 +9,7 @@
 Overlay polygons (property/parking/storage/footprint outlines drawn on top of DXF scenes) are stored under the Firestore subcollection:
 
 ```
-dxf-overlay-levels/{levelId}/items/{overlayId}
+dxf_overlay_levels/{levelId}/items/{overlayId}
 ```
 
 Until this ADR, all overlay mutations (add, update, remove, restore, vertex edits) were performed via **direct client-side Firestore writes** in `src/subapps/dxf-viewer/overlays/overlay-store.tsx`:
@@ -43,7 +43,7 @@ Introduce a dedicated API endpoint `/api/dxf-overlay-items` that handles all ove
 
 ### Subcollection handling
 
-Because `createEntity()` (ADR-238) assumes flat top-level collections and overlays live in a subcollection, the handler uses **direct adminDb writes** against the path `dxf-overlay-levels/{levelId}/items/{overlayId}` — same strategy as ADR-288 (`cadFiles` upsert). The `ENTITY_REGISTRY` entry for `dxfOverlayItem` exists purely for SSOT documentation (`collection` records the parent prefix); the handler calls `generateOverlayId()` directly and manages the subcollection path locally.
+Because `createEntity()` (ADR-238) assumes flat top-level collections and overlays live in a subcollection, the handler uses **direct adminDb writes** against the path `dxf_overlay_levels/{levelId}/items/{overlayId}` — same strategy as ADR-288 (`cadFiles` upsert). The `ENTITY_REGISTRY` entry for `dxfOverlayItem` exists purely for SSOT documentation (`collection` records the parent prefix); the handler calls `generateOverlayId()` directly and manages the subcollection path locally.
 
 ### Tenant enforcement
 
