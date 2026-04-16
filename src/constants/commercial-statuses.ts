@@ -107,6 +107,20 @@ export function isFinalizedCommercialStatus(
   );
 }
 
+/**
+ * Semantic alias: statuses που απαιτούν δήλωση `askingPrice` πριν από
+ * οποιαδήποτε sales/rental ενέργεια. Delegates στο `isListedCommercialStatus`
+ * — SSoT: η λίστα ορίζεται μία φορά στο `LISTED_COMMERCIAL_STATUSES`.
+ *
+ * Χρήση: UX hints σε property creation / edit forms για να υπενθυμίσουν
+ * στον χρήστη ότι τα listings χωρίς τιμή δεν εμφανίζονται σε sales dashboards.
+ */
+export function requiresAskingPrice(
+  value: unknown,
+): value is ListedCommercialStatus {
+  return isListedCommercialStatus(value);
+}
+
 // =============================================================================
 // 4. ALIAS RESOLUTION — Greek ↔ English normalization (ADR-287 Batch 10A)
 // =============================================================================

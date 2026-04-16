@@ -162,4 +162,10 @@
     npx ts-node scripts/migrate-property-enums.ts --apply
     ```
   - **Συμπλήρωση Batch 13**: Το write-time middleware προστατεύει ΝΕΑ writes. Το migration script καθαρίζει ΥΠΑΡΧΟΝΤΑ legacy records που γράφτηκαν πριν το Batch 13 ή απευθείας μέσω Firestore console/admin SDK bypass. Μαζί: **100% canonical data** στο collection.
+- **2026-04-16 (Batch 15)**: Semantic UX helper `requiresAskingPrice()` + shared inline alert component.
+  - **Extended**: `src/constants/commercial-statuses.ts` — νέος type-guard helper `requiresAskingPrice(value): value is ListedCommercialStatus` που delegates στο υπάρχον `isListedCommercialStatus()`. Semantic alias (δεν εισάγει duplicated λίστα), εκφράζει την UX intent "this status requires a price declaration" χωρίς να απαιτεί από τους consumers να γνωρίζουν ότι τα listed statuses συμπίπτουν σημασιολογικά με τα priced statuses.
+  - **Created**: `src/components/properties/shared/AskingPriceRequiredAlert.tsx` — single reusable inline Alert που ενεργοποιείται μέσω `requiresAskingPrice()`. Props: `commercialStatus` (required) + optional `askingPrice` gate (αν undefined → πάντα εμφανίζεται όταν το status ταιριάζει — creation flow· αν defined → εμφανίζεται μόνο όταν η τιμή λείπει/είναι 0 — edit flow).
+  - **Wired**: `AddPropertyDialog.tsx` (creation flow, sotto commercialStatus select — το dialog δεν έχει askingPrice field) + `PropertyFieldsEditForm.tsx` (edit flow, sotto askingPrice input — gate su έλλειψη τιμής).
+  - **i18n**: Νέες keys `alerts.askingPriceRequired.title` + `.description` στα `src/i18n/locales/{el,en}/properties.json` (namespace `properties`). Zero hardcoded strings.
+  - **Purpose**: UX guidance για να μην δημιουργούνται listings χωρίς τιμή (που δεν εμφανίζονται σε sales/rental dashboards). SSoT: αν μελλοντικά προστεθεί νέο listed status, αρκεί να ενημερωθεί το `LISTED_COMMERCIAL_STATUSES` — alert + semantic helper updated automatically.
   - **Scope περιορισμένο σε properties**: Buildings/contacts δεν έχουν ακόμα write-time middleware (άλλο gateway). Αν χρειαστεί, extending pattern (same normalize-read-write loop, different resolvers from `building-types.ts` / `contact-types.ts`).

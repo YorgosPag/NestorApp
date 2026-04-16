@@ -850,7 +850,11 @@
   },
   "alerts": {
     "warning": "Warning",
-    "buyerMismatch": "Buyer mismatch"
+    "buyerMismatch": "Buyer mismatch",
+    "askingPriceRequired": {
+      "title": "Asking price required",
+      "description": "The current commercial status requires an asking price. Without a price, this property will not appear in sales/rental dashboards."
+    }
   },
   "details": {
     "goToCustomer": "Go to customer"
