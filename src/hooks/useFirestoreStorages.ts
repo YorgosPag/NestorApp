@@ -1,27 +1,25 @@
 'use client';
 
 /**
- * ENTERPRISE STORAGE HOOK
+ * ENTERPRISE STORAGE HOOK — Real-time
  *
- * React hook for Firestore storage units data.
+ * React hook for Firestore storage units.
+ * Uses `firestoreQueryService.subscribe()` (onSnapshot) — ADR-227.
  * Supports optional buildingId filtering (ADR-184 — Building Spaces Tabs).
- * Uses centralized useAsyncData hook (ADR-223).
+ *
+ * No event-dispatch refetch pattern: list updates incrementally via snapshot,
+ * eliminating full-list refetch flashes on CRUD.
  */
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { where, type DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
-import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { firestoreQueryService, type QueryResult } from '@/services/firestore';
+import { mapStorageDoc } from '@/lib/firestore-mappers';
 import type { Storage } from '@/types/storage/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
-import { useAsyncData } from '@/hooks/useAsyncData';
-import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('useFirestoreStorages');
-
-// SSoT stale-while-revalidate cache (ADR-300) — keyed by buildingId or 'all'
-const storagesCache = createStaleCache<Storage[]>('storages');
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -30,7 +28,7 @@ const storagesCache = createStaleCache<Storage[]>('storages');
 interface UseFirestoreStoragesOptions {
   /** Filter by building ID (ADR-184) */
   buildingId?: string;
-  /** Auto-fetch on mount (default: true) */
+  /** Auto-subscribe on mount (default: true) */
   autoFetch?: boolean;
 }
 
@@ -38,12 +36,8 @@ interface UseFirestoreStoragesReturn {
   storages: Storage[];
   loading: boolean;
   error: string | null;
+  /** Real-time subscription auto-refreshes; this is a no-op kept for API compat. */
   refetch: () => Promise<void>;
-}
-
-interface StoragesApiResponse {
-  storages: Storage[];
-  count?: number;
 }
 
 // =============================================================================
@@ -56,56 +50,64 @@ export function useFirestoreStorages(
   const { buildingId, autoFetch = true } = options;
   const { user, loading: authLoading } = useAuth();
 
-  const cacheKey = buildingId ?? 'all';
+  const [storages, setStorages] = useState<Storage[]>([]);
+  const [loading, setLoading] = useState<boolean>(autoFetch);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data, loading, error, refetch } = useAsyncData({
-    fetcher: async () => {
-      const url = buildingId
-        ? `${API_ROUTES.STORAGES.LIST}?buildingId=${encodeURIComponent(buildingId)}`
-        : API_ROUTES.STORAGES.LIST;
+  const enabled = autoFetch && !authLoading && !!user;
 
-      logger.info('Fetching storages', { buildingId });
-      const result = await apiClient.get<StoragesApiResponse>(url);
-      const storages = result?.storages || [];
-      logger.info(`Loaded ${storages.length} storages`, { buildingId });
+  const constraints = useMemo(
+    () => (buildingId ? [where('buildingId', '==', buildingId)] : []),
+    [buildingId]
+  );
 
-      storagesCache.set(storages, cacheKey);
-      return storages;
-    },
-    deps: [buildingId, user?.uid],
-    enabled: autoFetch && !authLoading && !!user,
-    initialData: storagesCache.get(cacheKey),
-    silentInitialFetch: storagesCache.hasLoaded(cacheKey),
-  });
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Real-time sync — refetch on storage CRUD events
   useEffect(() => {
-    const unsubCreated = RealtimeService.subscribe('STORAGE_CREATED', () => {
-      logger.debug('Storage created event — refetching list');
-      refetch();
-    });
-    const unsubUpdated = RealtimeService.subscribe('STORAGE_UPDATED', () => {
-      logger.debug('Storage updated event — refetching list');
-      refetch();
-    });
-    const unsubDeleted = RealtimeService.subscribe('STORAGE_DELETED', () => {
-      logger.debug('Storage deleted event — refetching list');
-      refetch();
-    });
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'STORAGE',
+      (result: QueryResult<DocumentData>) => {
+        const mapped = result.documents
+          .map(doc => {
+            const { id, ...rest } = doc;
+            return mapStorageDoc(id as string, rest as Record<string, unknown>);
+          })
+          // ADR-281: Exclude soft-deleted records from normal list
+          .filter(s => s.status !== 'deleted');
+
+        logger.info('Storages snapshot received', { count: mapped.length, buildingId });
+        setStorages(mapped);
+        setLoading(false);
+        setError(null);
+      },
+      (err: Error) => {
+        logger.error('Storages subscription error', { error: err.message });
+        setError(err.message);
+        setLoading(false);
+      },
+      { constraints }
+    );
+
+    unsubscribeRef.current = unsubscribe;
 
     return () => {
-      unsubCreated();
-      unsubUpdated();
-      unsubDeleted();
+      unsubscribe();
+      unsubscribeRef.current = null;
     };
-  }, [refetch]);
+  }, [enabled, constraints, buildingId]);
 
-  return {
-    storages: data ?? [],
-    loading,
-    error,
-    refetch,
-  };
+  // No-op: onSnapshot delivers updates live. Kept for API backward compat.
+  const refetch = useCallback(async () => { /* noop — realtime */ }, []);
+
+  return { storages, loading, error, refetch };
 }
 
 // =============================================================================

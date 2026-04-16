@@ -3177,6 +3177,36 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📐 DXF VIEWER LEVELS — Real-time sync for floor plan levels
+    // =========================================================================
+    // 📖 READ: Tenant isolation via companyId field (onSnapshot in client)
+    // ✍️ CREATE: Client-side bootstrap only (default levels on empty collection)
+    //            API-created levels use Admin SDK (bypass rules)
+    // 🔄 UPDATE/DELETE: Admin SDK only (via /api/dxf-levels gateway)
+    // =========================================================================
+    match /dxf_viewer_levels/{levelId} {
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || belongsToCompany(resource.data.companyId)
+                     );
+
+      // Client-side bootstrap: create default levels when collection is empty
+      // Must set companyId matching user's company + createdBy matching uid
+      allow create: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              request.resource.data.companyId == getUserCompanyId()
+                              && request.resource.data.createdBy == request.auth.uid
+                            )
+                       );
+
+      // Updates and deletes go through Admin SDK (/api/dxf-levels)
+      // No client-side update/delete needed
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 
