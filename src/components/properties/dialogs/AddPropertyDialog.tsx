@@ -39,7 +39,7 @@ import { ProjectQuickCreateSheet } from '@/components/projects/dialogs/ProjectQu
 import { AddFloorDialog } from '@/components/building-management/dialogs/AddFloorDialog';
 import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';
 import { PropertyHierarchyEmptyStates } from '@/components/properties/shared/PropertyHierarchyEmptyStates';
-import { AskingPriceRequiredAlert } from '@/components/properties/shared/AskingPriceRequiredAlert';
+import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
@@ -372,8 +372,9 @@ export function AddPropertyDialog({
                 </FormField>
               </FormGrid>
 
-              <AskingPriceRequiredAlert
+              <SalesDashboardRequirementsAlert
                 commercialStatus={formData.commercialStatus}
+                netArea={formData.area}
                 className="mt-4"
               />
             </TabsContent>

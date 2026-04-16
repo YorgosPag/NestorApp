@@ -851,9 +851,13 @@
   "alerts": {
     "warning": "Warning",
     "buyerMismatch": "Buyer mismatch",
-    "askingPriceRequired": {
-      "title": "Asking price required",
-      "description": "The current commercial status requires an asking price. Without a price, this property will not appear in sales/rental dashboards."
+    "salesDashboardRequirements": {
+      "title": "Sales dashboard requirements",
+      "description": "Without the following data, this property will not appear in sales/rental dashboards:",
+      "missing": {
+        "askingPrice": "Asking price",
+        "netArea": "Net area (m²)"
+      }
     }
   },
   "details": {

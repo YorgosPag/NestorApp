@@ -121,6 +121,23 @@ export function requiresAskingPrice(
   return isListedCommercialStatus(value);
 }
 
+/**
+ * Semantic alias: statuses που απαιτούν δήλωση καθαρού εμβαδού (`areaNet`)
+ * πριν εμφανιστούν σε sales/rental dashboards & listings. Delegates στο
+ * `isListedCommercialStatus` — SSoT: η λίστα παραμένει στο
+ * `LISTED_COMMERCIAL_STATUSES`. Αν προστεθεί νέο listed status, όλοι οι
+ * semantic aliases ενημερώνονται αυτόματα.
+ *
+ * Χρήση: UX hints για να υπενθυμίσουν στον χρήστη ότι listings χωρίς
+ * καθαρό εμβαδό δεν μπορούν να υπολογίσουν €/m² και αποκλείονται από
+ * sales/rental dashboards.
+ */
+export function requiresNetArea(
+  value: unknown,
+): value is ListedCommercialStatus {
+  return isListedCommercialStatus(value);
+}
+
 // =============================================================================
 // 4. ALIAS RESOLUTION — Greek ↔ English normalization (ADR-287 Batch 10A)
 // =============================================================================

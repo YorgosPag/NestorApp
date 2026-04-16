@@ -31,7 +31,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AskingPriceRequiredAlert } from '@/components/properties/shared/AskingPriceRequiredAlert';
+import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
 import {
   Ruler, FileText, Lock, Layers
 } from 'lucide-react';
@@ -283,9 +283,14 @@ export function PropertyFieldsEditForm({
                 placeholder={t('placeholders.priceExample')}
                 disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
               />
-              <AskingPriceRequiredAlert
+              <SalesDashboardRequirementsAlert
                 commercialStatus={formData.commercialStatus}
                 askingPrice={formData.askingPrice ?? null}
+                netArea={
+                  isMultiLevel && aggregatedTotals
+                    ? aggregatedTotals.areas.net
+                    : formData.areaNet
+                }
                 className="py-2 px-3 mt-1"
               />
             </fieldset>

@@ -851,9 +851,13 @@
   "alerts": {
     "warning": "Προειδοποίηση",
     "buyerMismatch": "Αναντιστοιχία αγοραστή",
-    "askingPriceRequired": {
-      "title": "Απαιτείται ζητούμενη τιμή",
-      "description": "Η τρέχουσα εμπορική κατάσταση απαιτεί να δηλωθεί η ζητούμενη τιμή. Χωρίς τιμή, το ακίνητο δεν θα εμφανίζεται στα dashboards πωλήσεων/ενοικιάσεων."
+    "salesDashboardRequirements": {
+      "title": "Απαιτήσεις εμφάνισης σε sales dashboard",
+      "description": "Χωρίς τα παρακάτω δεδομένα, το ακίνητο δεν θα εμφανίζεται στα dashboards πωλήσεων/ενοικιάσεων:",
+      "missing": {
+        "askingPrice": "Ζητούμενη τιμή",
+        "netArea": "Καθαρό εμβαδό (m²)"
+      }
     }
   },
   "details": {
