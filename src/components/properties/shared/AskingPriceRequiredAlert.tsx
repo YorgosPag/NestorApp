@@ -20,9 +20,10 @@
  */
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 import { requiresAskingPrice } from '@/constants/commercial-statuses';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 
@@ -62,8 +63,13 @@ export function AskingPriceRequiredAlert({
   if (askingPrice !== undefined && !isAskingPriceMissing(askingPrice)) return null;
 
   return (
-    <Alert className={className}>
-      <Info className={iconSizes.sm} />
+    <Alert
+      className={cn(
+        'border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700',
+        className,
+      )}
+    >
+      <AlertTriangle className={iconSizes.sm} />
       <AlertTitle>{t('alerts.askingPriceRequired.title')}</AlertTitle>
       <AlertDescription>
         {t('alerts.askingPriceRequired.description')}
