@@ -20,6 +20,10 @@ import type {
   UsePhotosTabStateReturn,
 } from '../config/photos-tab-types';
 
+// 🏢 ADR-293 Phase 5 Batch 29: optional Firestore-fetched photos override
+// the uncontrolled internal array — gives every mount an authoritative view
+// of persisted photos instead of an empty-on-remount local state.
+
 // =============================================================================
 // HOOK PROPS
 // =============================================================================
@@ -35,6 +39,12 @@ export interface UsePhotosTabStateProps {
   entityId: string;
   /** Initial photos (for uncontrolled mode) */
   initialPhotos?: Photo[];
+  /**
+   * ADR-293 Phase 5 Batch 29 — Firestore-fetched photos. When provided in
+   * uncontrolled mode, these win over the internal state array so refreshes
+   * and remounts display the authoritative persisted list.
+   */
+  fetchedPhotos?: Photo[];
 }
 
 // =============================================================================
@@ -68,6 +78,7 @@ export function usePhotosTabState({
   entityType,
   entityId,
   initialPhotos = [],
+  fetchedPhotos,
 }: UsePhotosTabStateProps): UsePhotosTabStateReturn {
   // ---------------------------------------------------------------------------
   // Determine if controlled or uncontrolled
@@ -82,10 +93,15 @@ export function usePhotosTabState({
 
   // ---------------------------------------------------------------------------
   // Unified photos getter
+  // ADR-293 Phase 5 Batch 29: fetchedPhotos (Firestore subscription) takes
+  // precedence in uncontrolled mode over the internal array so photos
+  // survive remounts / refreshes without a manual refetch.
   // ---------------------------------------------------------------------------
   const photos = useMemo(() => {
-    return isControlled ? (externalPhotos ?? []) : internalPhotos;
-  }, [isControlled, externalPhotos, internalPhotos]);
+    if (isControlled) return externalPhotos ?? [];
+    if (fetchedPhotos !== undefined) return fetchedPhotos;
+    return internalPhotos;
+  }, [isControlled, externalPhotos, fetchedPhotos, internalPhotos]);
 
   // ---------------------------------------------------------------------------
   // Unified photos setter

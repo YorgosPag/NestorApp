@@ -43,6 +43,7 @@ import { PhotoItem } from '../../utils/PhotoItem';
 // Local hooks and config
 import { usePhotosTabState } from '../hooks/usePhotosTabState';
 import { usePhotosTabUpload } from '../hooks/usePhotosTabUpload';
+import { usePhotosTabFetch } from '../hooks/usePhotosTabFetch';
 import { usePhotosCategories } from '../hooks/usePhotosCategories';
 import { getPhotosTabConfig, getGridClasses } from '../config/photos-tab-config';
 
@@ -253,6 +254,22 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
   const resolvedEntityName = entityName || entity.name || entity.id;
 
   // ---------------------------------------------------------------------------
+  // 🏢 ADR-293 Phase 5 Batch 29: Live Firestore subscription for uncontrolled
+  // mode — gives the tab an authoritative persisted view instead of a
+  // session-only local array. Skipped when parent controls the photos array.
+  // ---------------------------------------------------------------------------
+  const isControlledMode =
+    externalPhotos !== undefined && externalOnPhotosChange !== undefined;
+
+  const { photos: fetchedPhotos } = usePhotosTabFetch({
+    entityType: config.canonicalEntityType,
+    entityId: entity.id,
+    domain: config.domain,
+    category: config.category,
+    enabled: !isControlledMode,
+  });
+
+  // ---------------------------------------------------------------------------
   // State management (internal or external)
   // ---------------------------------------------------------------------------
   const {
@@ -265,6 +282,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
     externalOnPhotosChange,
     entityType,
     entityId: entity.id,
+    fetchedPhotos: isControlledMode ? undefined : fetchedPhotos,
   });
 
   // ---------------------------------------------------------------------------

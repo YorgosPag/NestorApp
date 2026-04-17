@@ -15,6 +15,10 @@ export type { UsePhotosTabStateProps } from './usePhotosTabState';
 export { usePhotosTabUpload } from './usePhotosTabUpload';
 export type { UsePhotosTabUploadProps } from './usePhotosTabUpload';
 
+// Live Firestore subscription for entity photos (ADR-293 Phase 5 Batch 29)
+export { usePhotosTabFetch } from './usePhotosTabFetch';
+export type { UsePhotosTabFetchParams, UsePhotosTabFetchReturn } from './usePhotosTabFetch';
+
 // Category filtering hook
 export { usePhotosCategories } from './usePhotosCategories';
 export type { UsePhotosCategoriesProps } from './usePhotosCategories';
