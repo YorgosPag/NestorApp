@@ -240,6 +240,44 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 - [x] Updated test file — removed `resolveStorageErrorMessage` tests (dead code)
 - [x] **ZERO legacy upload code remaining in the codebase**
 
+### Phase 7: Entity-Polymorphic Photo Upload (Batch 29) -- COMPLETED 2026-04-17
+
+**Problem**: `PhotoUploadService.uploadContactPhotoCanonical()` hardcoded
+`entityType=CONTACT, domain=ADMIN, category=PHOTOS` regardless of caller.
+Every property/building/floor/parking/storage/project photo upload routed
+through the contact-only path and was tagged as a contact admin photo in
+Firestore. Users reported "uploaded photo doesn't appear" because the
+Photos tab's downstream reads never matched the wrong-entityType records,
+and `usePropertyMediaCounts` (Batch 28 completion meter) always returned
+`photos=0` for properties. A secondary gap: `PhotosTabBase` never fetched
+persisted photos from Firestore — every mount started with an empty array.
+
+- [x] Renamed `uploadContactPhotoCanonical` → `uploadEntityPhotoCanonical`
+  with required `entityType/entityId/domain/category` params.
+- [x] Renamed `getContactPhotos` → `getEntityPhotos` polymorphic.
+- [x] `PhotoUploadOptions`: added `entityType/entityId/domain/category/
+  entityLabel` fields; `contactId/contactName` retained as legacy aliases
+  with CONTACT/ADMIN/PHOTOS defaults for backward compat.
+- [x] `PhotosTabConfig`: added `canonicalEntityType` (separates UI tab key
+  like `parking` from canonical `ENTITY_TYPES.PARKING_SPOT`) + `domain` +
+  `category` per entity entry. Mapping: property/building/parking/storage/
+  project → SALES/PHOTOS, floor → CONSTRUCTION/PHOTOS, contact →
+  ADMIN/PHOTOS.
+- [x] Wired full chain PhotosTabConfig → usePhotosTabUpload →
+  useEnterpriseFileUpload → PhotoUploadService.uploadPhoto.
+- [x] New hook `usePhotosTabFetch` — live Firestore subscription filtered
+  by entityType/entityId/domain/category/status=ready/lifecycleState=
+  active. Query contract mirrors `usePropertyMediaCounts` (Batch 28).
+- [x] `PhotosTabBase` invokes fetch in uncontrolled mode and feeds
+  results into `usePhotosTabState` — photos now survive refresh/remount.
+- [x] Two new Firestore composite indexes on files (default + super_admin)
+  for CHECK 3.15 coverage.
+- [x] Contract tests `photos-tab-config.test.ts` lock the canonical
+  write+read contract per tab.
+- [x] Unblocks usePropertyMediaCounts photos count (Batch 28 meter) and
+  makes property/building/floor/parking/storage/project photos persist,
+  reappear on refresh, and be correctly tagged in FileRecord.
+
 ---
 
 ## Decision
@@ -262,6 +300,7 @@ normalizeForSearch()  ──────────>  FileRecord.normalizedTitl
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-17 | Phase 7 COMPLETED (Batch 29) — entity-polymorphic photo upload: `uploadContactPhotoCanonical` → `uploadEntityPhotoCanonical`, `getContactPhotos` → `getEntityPhotos`, `PhotosTabConfig` gains `canonicalEntityType` + `domain` + `category`, new `usePhotosTabFetch` live subscription + 2 composite indexes, contract tests lock write+read per tab. Unblocks Batch 28 completion meter photos count and fixes "uploaded photo doesn't appear" for property/building/floor/parking/storage/project tabs. | Claude Code |
 | 2026-04-08 | SSoT storage deletion: `deleteObject()` now called in exactly ONE place (`PhotoUploadService.deletePhoto()`). PDFProcessor.deletePDF() delegates to SSoT instead of inline `deleteObject()`. Fixed false-alarm logging: error level now checked AFTER `object-not-found` guard, not before. Removed hardcoded Greek error string (ratchet down: `photo-upload.service.ts` 1→0). | Claude Code |
 | 2026-04-08 | fix(photos): Race-condition-safe upload completion in edit mode. Added `handleMultiplePhotoUploadComplete` to `useContactPhotoHandlers` using React functional updater (`prev => ...`). Previously, edit mode fell back to `normalizedPhotosRef` (stale closure) causing 2+ concurrent uploads to overwrite each other. Deferred save never fired → `multiplePhotoURLs` not persisted. Now wired through `ContactDetails → UnifiedContactTabbedSection → IndividualFormTabRenderer`. | Claude Code |
 | 2026-04-08 | SSoT `resolveContactName()` — extracted as exported function, eliminated 4 duplicate contact name computations from `usePhotoUploadLogic.ts`, `UnifiedPhotoManager.tsx` (×3), `MultiplePhotosCompact.tsx`, `MultiplePhotosFull.tsx`. Root cause: `usePhotoUploadLogic` bypassed `getPhotoUploadHandlers` when canonical fields present, used `contactData?.name` (empty for individuals). All 5 consumers now delegate to single SSoT. | Claude Code |
