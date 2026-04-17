@@ -22,6 +22,9 @@ import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -34,9 +37,9 @@ import type {
 // HIGHLIGHT — temporary ring-pulse on jump target (Google Material Design cue)
 // =============================================================================
 
-const HIGHLIGHT_CLASSES: readonly string[] = [
+/** Ring width/offset and transition — static utilities (not color). */
+const HIGHLIGHT_STATIC_CLASSES: readonly string[] = [
   'ring-4',
-  'ring-yellow-400',
   'ring-offset-2',
   'ring-offset-background',
   'transition-shadow',
@@ -112,6 +115,15 @@ export function PropertyCompletionBreakdown({
   const { t } = useTranslation(['properties']);
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
+  const typography = useTypography();
+  const { radiusClass } = useBorderTokens();
+  const iconSizes = useIconSizes();
+
+  // Semantic ring color via SSoT — no hardcoded tailwind color class.
+  const highlightClasses = React.useMemo(
+    () => [...HIGHLIGHT_STATIC_CLASSES, colors.ring.warning],
+    [colors.ring.warning],
+  );
 
   // Track active highlight so consecutive clicks clear the previous target
   // before applying the new one (no orphan rings if user clicks quickly).
@@ -124,7 +136,7 @@ export function PropertyCompletionBreakdown({
         clearTimeout(highlightTimeoutRef.current);
       }
       if (highlightElementRef.current) {
-        highlightElementRef.current.classList.remove(...HIGHLIGHT_CLASSES);
+        highlightElementRef.current.classList.remove(...highlightClasses);
       }
     };
   }, []);
@@ -136,7 +148,7 @@ export function PropertyCompletionBreakdown({
 
   if (missingEntries.length === 0) {
     return (
-      <p className={cn('text-xs italic', colors.text.muted)}>
+      <p className={cn(typography.label.simple, 'italic', colors.text.muted)}>
         {t('completion.breakdown.allComplete')}
       </p>
     );
@@ -148,7 +160,7 @@ export function PropertyCompletionBreakdown({
       highlightTimeoutRef.current = null;
     }
     if (highlightElementRef.current) {
-      highlightElementRef.current.classList.remove(...HIGHLIGHT_CLASSES);
+      highlightElementRef.current.classList.remove(...highlightClasses);
       highlightElementRef.current = null;
     }
   };
@@ -164,10 +176,10 @@ export function PropertyCompletionBreakdown({
       const tabValue = target.slice('tab:'.length);
       const trigger = activateTab(tabValue);
       if (!trigger) return;
-      trigger.classList.add(...HIGHLIGHT_CLASSES);
+      trigger.classList.add(...highlightClasses);
       highlightElementRef.current = trigger;
       highlightTimeoutRef.current = setTimeout(() => {
-        trigger.classList.remove(...HIGHLIGHT_CLASSES);
+        trigger.classList.remove(...highlightClasses);
         highlightElementRef.current = null;
         highlightTimeoutRef.current = null;
       }, HIGHLIGHT_DURATION_MS);
@@ -181,12 +193,12 @@ export function PropertyCompletionBreakdown({
       if (!(element instanceof HTMLElement)) return;
 
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      element.classList.add(...HIGHLIGHT_CLASSES);
+      element.classList.add(...highlightClasses);
       element.focus({ preventScroll: true });
 
       highlightElementRef.current = element;
       highlightTimeoutRef.current = setTimeout(() => {
-        element.classList.remove(...HIGHLIGHT_CLASSES);
+        element.classList.remove(...highlightClasses);
         highlightElementRef.current = null;
         highlightTimeoutRef.current = null;
       }, HIGHLIGHT_DURATION_MS);
@@ -195,7 +207,7 @@ export function PropertyCompletionBreakdown({
 
   return (
     <div className={cn('w-full', spacing.spaceBetween.sm)}>
-      <p className={cn('text-sm font-semibold', colors.text.secondary)}>
+      <p className={cn(typography.card.titleCompact, colors.text.secondary)}>
         {t('completion.breakdown.heading')}
       </p>
       <ul
@@ -216,14 +228,16 @@ export function PropertyCompletionBreakdown({
                 disabled={!target}
                 onClick={() => handleJump(fieldKey)}
                 className={cn(
-                  'w-full justify-between h-9 text-sm',
+                  'w-full justify-between h-9',
+                  typography.body.sm,
                   spacing.padding.x.sm,
                 )}
               >
                 <span className={cn('flex items-center min-w-0', spacing.gap.sm)}>
                   <span
                     className={cn(
-                      'inline-block h-2 w-2 rounded-full shrink-0',
+                      'inline-block h-2 w-2 shrink-0',
+                      radiusClass.full,
                       status === 'partial'
                         ? colors.bg.warning
                         : critical
@@ -241,10 +255,10 @@ export function PropertyCompletionBreakdown({
                     colors.text.muted,
                   )}
                 >
-                  <span className="text-[10px] uppercase tracking-wide">
+                  <span className={cn(typography.label.simple, 'uppercase tracking-wide')}>
                     {t(`completion.breakdown.${weightLabelKey}`)}
                   </span>
-                  {target && <ChevronRight className="h-3 w-3" />}
+                  {target && <ChevronRight className={iconSizes.xs} />}
                 </span>
               </Button>
             </li>

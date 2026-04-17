@@ -29,6 +29,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyLevel } from '@/types/property';
@@ -80,6 +82,8 @@ export function PropertyCompletionMeter({
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+  const typography = useTypography();
+  const { radiusClass } = useBorderTokens();
 
   const levelCount = effectiveLevels?.length && effectiveLevels.length >= 1
     ? effectiveLevels.length
@@ -113,7 +117,7 @@ export function PropertyCompletionMeter({
           type="button"
           variant="ghost"
           size="sm"
-          className={cn('h-6 text-xs', spacing.padding.x.sm)}
+          className={cn('h-6', typography.label.simple, spacing.padding.x.sm)}
           onClick={() => setDismissed(false)}
         >
           <Gauge className={cn(iconSizes.xs, spacing.margin.right.xs)} />
@@ -136,7 +140,8 @@ export function PropertyCompletionMeter({
         // squeezes all children to share bounded height — meter would collapse
         // and scroll internally. `shrink-0` preserves natural height; overflow
         // is handled by the outer ScrollArea (Radix viewport).
-        'w-full shrink-0 rounded-md border',
+        'w-full shrink-0 border',
+        radiusClass.md,           // rounded-md via SSoT border token
         spacing.padding.md,       // 16px outer card padding (Google card spec)
         spacing.spaceBetween.sm,  // 8px between header / progress / label / breakdown
         colors.border.default,
@@ -146,11 +151,11 @@ export function PropertyCompletionMeter({
       <header className={cn('flex items-center justify-between', spacing.gap.sm)}>
         <div className={cn('flex items-center', spacing.gap.sm)}>
           <Gauge className={cn(iconSizes.md, textClass)} aria-hidden="true" />
-          <h3 className="text-base font-semibold">
+          <h3 className={typography.card.title}>
             {t('completion.title')}
           </h3>
           <span
-            className={cn('text-base font-bold tabular-nums', textClass)}
+            className={cn(typography.card.title, 'tabular-nums', textClass)}
             aria-live="polite"
           >
             {percentage}%
@@ -161,7 +166,7 @@ export function PropertyCompletionMeter({
             type="button"
             variant="ghost"
             size="sm"
-            className={cn('h-7 text-xs', spacing.padding.x.sm)}
+            className={cn('h-7', typography.label.simple, spacing.padding.x.sm)}
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
           >
@@ -193,7 +198,7 @@ export function PropertyCompletionMeter({
 
       <Progress value={percentage} className="h-3" />
 
-      <p className={cn('text-sm font-medium', textClass)}>
+      <p className={cn(typography.label.sm, textClass)}>
         {t(bucketLabelKey, { count: missingCritical.length })}
       </p>
 
