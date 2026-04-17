@@ -228,9 +228,15 @@ export function PropertyCompletionBreakdown({
                 disabled={!target}
                 onClick={() => handleJump(fieldKey)}
                 className={cn(
-                  'w-full justify-between h-9',
+                  // `h-auto py-0`: collapse button height to intrinsic text
+                  // line-height so vertical gap between heading baseline and
+                  // first-row text is exactly `spaceBetween.sm` (8px). Any
+                  // non-zero internal padding compounds with the 8px margin
+                  // and looks larger than 8px to the user.
+                  'w-full justify-between h-auto min-h-0',
                   typography.body.sm,
                   spacing.padding.x.sm,
+                  spacing.padding.y.none,
                 )}
               >
                 <span className={cn('flex items-center min-w-0', spacing.gap.sm)}>
