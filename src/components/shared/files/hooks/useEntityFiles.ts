@@ -20,6 +20,7 @@ import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileLinkCreatedPayload } from '@/services/realtime';
+import { buildPurposeFilter } from './useEntityFiles-purpose-filter';
 
 // ============================================================================
 // MODULE LOGGER
@@ -169,16 +170,9 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       ]);
 
       // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
-      // The wizard uploads with purpose='floorplan'; entity pages may filter by
-      // specific purposes like 'floor-floorplan' or 'project-floorplan'.
-      // Generic 'floorplan' matches any *-floorplan filter for compatibility.
-      const filterByPurpose = (file: FileRecord): boolean => {
-        if (!purpose) return true;
-        if (!file.purpose) return true;
-        if (file.purpose === purpose) return true;
-        if (file.purpose === 'floorplan' && purpose.endsWith('-floorplan')) return true;
-        return false;
-      };
+      // Helper extracted to useEntityFiles-purpose-filter — see module docs
+      // for META_PHOTO_PURPOSES and '*-floorplan' semantics (ADR-293 Phase 7).
+      const filterByPurpose = buildPurposeFilter(purpose);
 
       const filteredOwned = fetchedFiles
         .filter(FileRecordService.isVisibleInActiveLists)
@@ -261,13 +255,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       (result: QueryResult<DocumentData>) => {
         const currentPurpose = purposeRef.current;
 
-        const filterByPurpose = (file: FileRecord): boolean => {
-          if (!currentPurpose) return true;
-          if (!file.purpose) return true;
-          if (file.purpose === currentPurpose) return true;
-          if (file.purpose === 'floorplan' && currentPurpose.endsWith('-floorplan')) return true;
-          return false;
-        };
+        const filterByPurpose = buildPurposeFilter(currentPurpose);
 
         const records = result.documents
           .map(doc => doc as unknown as FileRecord)
