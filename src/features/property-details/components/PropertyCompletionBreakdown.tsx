@@ -18,7 +18,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,20 @@ import type {
   CompletionAssessment,
   FieldKey,
 } from '@/constants/property-completion';
+
+// =============================================================================
+// HIGHLIGHT — temporary ring-pulse on jump target (Google Material Design cue)
+// =============================================================================
+
+const HIGHLIGHT_CLASSES: readonly string[] = [
+  'ring-4',
+  'ring-yellow-400',
+  'ring-offset-2',
+  'ring-offset-background',
+  'transition-shadow',
+  'duration-300',
+];
+const HIGHLIGHT_DURATION_MS = 2400;
 
 // =============================================================================
 // FIELD → CARD ANCHOR MAPPING
@@ -76,6 +90,22 @@ export function PropertyCompletionBreakdown({
   const { t } = useTranslation(['properties']);
   const colors = useSemanticColors();
 
+  // Track active highlight so consecutive clicks clear the previous target
+  // before applying the new one (no orphan rings if user clicks quickly).
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightElementRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+      if (highlightElementRef.current) {
+        highlightElementRef.current.classList.remove(...HIGHLIGHT_CLASSES);
+      }
+    };
+  }, []);
+
   const missingEntries = assessment.breakdown
     .filter((b) => b.status === 'missing' || b.status === 'partial')
     .slice()
@@ -89,16 +119,35 @@ export function PropertyCompletionBreakdown({
     );
   }
 
+  const clearPreviousHighlight = () => {
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = null;
+    }
+    if (highlightElementRef.current) {
+      highlightElementRef.current.classList.remove(...HIGHLIGHT_CLASSES);
+      highlightElementRef.current = null;
+    }
+  };
+
   const handleJump = (fieldKey: FieldKey) => {
     const anchor = FIELD_TO_CARD_ANCHOR[fieldKey];
     if (!anchor || typeof document === 'undefined') return;
     const element = document.getElementById(anchor);
-    if (!element) return;
+    if (!(element instanceof HTMLElement)) return;
+
+    clearPreviousHighlight();
+
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Brief highlight — relies on CSS :target-like visual cue via focus
-    if (element instanceof HTMLElement) {
-      element.focus({ preventScroll: true });
-    }
+    element.classList.add(...HIGHLIGHT_CLASSES);
+    element.focus({ preventScroll: true });
+
+    highlightElementRef.current = element;
+    highlightTimeoutRef.current = setTimeout(() => {
+      element.classList.remove(...HIGHLIGHT_CLASSES);
+      highlightElementRef.current = null;
+      highlightTimeoutRef.current = null;
+    }, HIGHLIGHT_DURATION_MS);
   };
 
   return (
