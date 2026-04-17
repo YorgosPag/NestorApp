@@ -109,6 +109,7 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                 ? aggregatedTotals.areas.gross
                 : formData.areaGross
             }
+            operationalStatus={formData.operationalStatus}
             className="py-2 px-3 mt-1"
           />
         </CardContent>
@@ -239,6 +240,7 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
             energyClass={formData.energyClass}
             condition={formData.condition}
             interiorFeatures={formData.interiorFeatures}
+            operationalStatus={formData.operationalStatus}
             className="py-2 px-3 mt-1"
           />
         </CardContent>

@@ -77,3 +77,46 @@ export function isInProgressOperationalStatus(
     (IN_PROGRESS_OPERATIONAL_STATUSES as readonly string[]).includes(value)
   );
 }
+
+// =============================================================================
+// 4. PRE-COMPLETION SUBSET — Google-style progressive disclosure
+// =============================================================================
+
+/**
+ * Statuses που σημαίνουν ότι το unit δεν έχει φτάσει ακόμα σε completed state
+ * και επομένως ελλιπή data (finishes, systems, ΠΕΑ/energy class) θεωρούνται
+ * legitimate absence, όχι data-quality violation.
+ *
+ * **Semantic**: Pre-completion = "construction / data-entry phase". Missing
+ * warnings για finishes/systems/energyClass σωπαίνουν — ο χρήστης δεν έχει
+ * ακόμα τη δυνατότητα να τα καταχωρήσει (δεν τα έχει εγκαταστήσει / το ΠΕΑ
+ * εκδίδεται στην αποπεράτωση / το draft είναι απλώς stub).
+ *
+ * **Cross-field declarative warnings** (π.χ. user δήλωσε ρητά heating=none +
+ * condition=new) ΠΑΡΑΜΕΝΟΥΝ active — είναι εσωτερική ασυνέπεια, όχι missing.
+ *
+ * **Orientation** δεν περιλαμβάνεται — είναι geometry foundation-level, γνωστή
+ * από τη στιγμή της θεμελίωσης.
+ *
+ * @see ADR-287 Batch 27 — operationalStatus-aware missing gating
+ */
+export const PRE_COMPLETION_OPERATIONAL_STATUSES = [
+  'draft',
+  'under-construction',
+] as const satisfies readonly OperationalStatus[];
+
+export type PreCompletionOperationalStatus =
+  (typeof PRE_COMPLETION_OPERATIONAL_STATUSES)[number];
+
+/**
+ * Returns `true` if the unit is in a pre-completion state, where missing-data
+ * warnings should be suppressed (Google-style progressive disclosure).
+ */
+export function isPreCompletionOperationalStatus(
+  value: unknown,
+): value is PreCompletionOperationalStatus {
+  return (
+    typeof value === 'string' &&
+    (PRE_COMPLETION_OPERATIONAL_STATUSES as readonly string[]).includes(value)
+  );
+}

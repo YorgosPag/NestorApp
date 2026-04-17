@@ -24,11 +24,19 @@
  *   5. `needsRenovationHighEnergy`      — incoherent (unusual)
  *   6. `energyClassMissingResidential`  — residential χωρίς καταχωρημένη κλάση (unusual)
  *
+ * **Pre-completion gating (Batch 27)**: Όταν το `operationalStatus` είναι
+ * `draft` ή `under-construction`, οι "missing data" reasons
+ * (`conditionMissingResidential`, `energyClassMissingResidential`)
+ * καταπνίγονται — legitimate absence σε construction/entry phase. Cross-field
+ * declarative reasons (newWithoutHeating, needsRenovationButReady,
+ * newButLowEnergy, needsRenovationHighEnergy) παραμένουν active.
+ *
  * @module constants/condition-plausibility
- * @enterprise ADR-287 — Enum SSoT Centralization (Batch 25)
+ * @enterprise ADR-287 — Enum SSoT Centralization (Batch 27, extends Batch 25)
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 
 // =============================================================================
 // 1. SHARED TYPE DEFINITIONS (mirror property-features-enterprise)
@@ -100,10 +108,12 @@ export interface AssessConditionPlausibilityArgs {
  * **Gate order**:
  *   1. `needsRenovationButReady` (implausible) — condition set + operationalStatus=ready.
  *   2. `newWithoutHeating` (implausible) — condition set + heating=none.
- *   3. `conditionMissingResidential` (unusual) — residential χωρίς valid condition.
+ *   3. `conditionMissingResidential` (unusual) — residential χωρίς valid condition
+ *      + NOT pre-completion.
  *   4. `newButLowEnergy` (unusual).
  *   5. `needsRenovationHighEnergy` (unusual).
- *   6. `energyClassMissingResidential` (unusual) — residential χωρίς καταχωρημένη κλάση.
+ *   6. `energyClassMissingResidential` (unusual) — residential χωρίς καταχωρημένη κλάση
+ *      + NOT pre-completion.
  *   7. Otherwise → `ok`.
  *
  * Returns `insufficientData` μόνο όταν δεν είναι residential ΚΑΙ το condition
@@ -122,6 +132,9 @@ export function assessConditionPlausibility(
   const isResidential =
     propertyType !== null && RESIDENTIAL_TYPES.has(propertyType as PropertyTypeCanonical);
   const hasValidCondition = condition !== null && KNOWN_CONDITIONS.has(condition);
+  // Pre-completion (draft / under-construction) → suppress "missing" warnings
+  // (Google progressive disclosure). Declarative cross-field checks remain ON.
+  const isPreCompletion = isPreCompletionOperationalStatus(operationalStatus);
 
   // Implausible cross-field rules (Step 1-2) — απαιτούν valid condition.
   if (hasValidCondition) {
@@ -157,8 +170,9 @@ export function assessConditionPlausibility(
   }
 
   // Step 3: residential χωρίς valid condition → unusual (missing data)
+  // Suppressed σε pre-completion — condition = attribute of finished unit.
   if (!hasValidCondition) {
-    if (isResidential) {
+    if (isResidential && !isPreCompletion) {
       return buildAssessment(
         'unusual',
         'conditionMissingResidential',
@@ -215,7 +229,8 @@ export function assessConditionPlausibility(
   }
 
   // Step 6: residential χωρίς καταχωρημένη ενεργειακή κλάση → unusual
-  if (energyClass === null && isResidential) {
+  // Suppressed σε pre-completion — ΠΕΑ εκδίδεται στην αποπεράτωση.
+  if (energyClass === null && isResidential && !isPreCompletion) {
     return buildAssessment(
       'unusual',
       'energyClassMissingResidential',

@@ -70,6 +70,7 @@ export function FinishesPlausibilityWarning({
   energyClass,
   condition,
   interiorFeatures,
+  operationalStatus,
   className,
 }: FinishesPlausibilityWarningProps) {
   const { t } = useTranslation(['properties']);
@@ -83,6 +84,7 @@ export function FinishesPlausibilityWarning({
     energyClass,
     condition,
     interiorFeatures,
+    operationalStatus,
   });
 
   if (!isActionableFinishesVerdict(assessment.verdict)) return null;

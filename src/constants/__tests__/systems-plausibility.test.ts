@@ -1,5 +1,5 @@
 /**
- * Unit tests — systems-plausibility (ADR-287 Batch 25)
+ * Unit tests — systems-plausibility (ADR-287 Batch 25 + Batch 27)
  */
 import {
   assessSystemsPlausibility,
@@ -139,5 +139,85 @@ describe('assessSystemsPlausibility', () => {
     expect(isActionableSystemsVerdict('ok')).toBe(false);
     expect(isActionableSystemsVerdict('unusual')).toBe(true);
     expect(isActionableSystemsVerdict('implausible')).toBe(true);
+  });
+
+  // ===========================================================================
+  // Batch 27 — Pre-completion gating (draft + under-construction)
+  // ===========================================================================
+
+  it('suppresses heatingMissingResidential when under-construction', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'apartment',
+      heatingType: '',
+      coolingType: 'split-units',
+      condition: 'good',
+      areaGross: 80,
+      operationalStatus: 'under-construction',
+    });
+    expect(r.verdict).toBe('ok');
+    expect(r.reason).toBeNull();
+  });
+
+  it('suppresses coolingMissingResidential when draft', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'apartment',
+      heatingType: 'central',
+      coolingType: '',
+      condition: 'good',
+      areaGross: 80,
+      operationalStatus: 'draft',
+    });
+    expect(r.verdict).toBe('ok');
+  });
+
+  it('suppresses both missing warnings when under-construction all-empty', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'apartment',
+      heatingType: '',
+      coolingType: '',
+      condition: '',
+      areaGross: 80,
+      operationalStatus: 'under-construction',
+    });
+    expect(r.verdict).toBe('ok');
+  });
+
+  it('keeps heatingNoneResidential active under-construction (declarative)', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'apartment',
+      heatingType: 'none',
+      coolingType: 'split-units',
+      condition: 'good',
+      areaGross: 80,
+      operationalStatus: 'under-construction',
+    });
+    expect(r.verdict).toBe('implausible');
+    expect(r.reason).toBe('heatingNoneResidential');
+  });
+
+  it('keeps coolingOversizedTinyUnit active under-construction (declarative)', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'studio',
+      heatingType: 'autonomous',
+      coolingType: 'central-air',
+      condition: 'good',
+      areaGross: 25,
+      operationalStatus: 'under-construction',
+    });
+    expect(r.verdict).toBe('unusual');
+    expect(r.reason).toBe('coolingOversizedTinyUnit');
+  });
+
+  it('still fires heatingMissingResidential when inspection (not pre-completion)', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'apartment',
+      heatingType: '',
+      coolingType: 'split-units',
+      condition: 'good',
+      areaGross: 80,
+      operationalStatus: 'inspection',
+    });
+    expect(r.verdict).toBe('unusual');
+    expect(r.reason).toBe('heatingMissingResidential');
   });
 });

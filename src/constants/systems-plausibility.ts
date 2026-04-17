@@ -23,11 +23,19 @@
  *   5. `coolingOversizedTinyUnit`      — central-air σε <40 τ.μ. (unusual)
  *   6. `coolingNoneLargeUnit`          — residential >120 τ.μ. χωρίς ψύξη (unusual)
  *
+ * **Pre-completion gating (Batch 27)**: Όταν το `operationalStatus` είναι
+ * `draft` ή `under-construction`, οι missing-data reasons
+ * (`heatingMissingResidential`, `coolingMissingResidential`) καταπνίγονται —
+ * heating/cooling ενδέχεται να μην έχουν εγκατασταθεί ακόμα. Cross-field
+ * declarative reasons (heatingNoneNewBuild, heatingNoneResidential,
+ * coolingOversizedTinyUnit, coolingNoneLargeUnit) παραμένουν active.
+ *
  * @module constants/systems-plausibility
- * @enterprise ADR-287 — Enum SSoT Centralization (Batch 25)
+ * @enterprise ADR-287 — Enum SSoT Centralization (Batch 27, extends Batch 25)
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 
 // =============================================================================
 // 1. SHARED CONSTANTS
@@ -118,6 +126,7 @@ export interface SystemsAssessment {
   readonly coolingType: string | null;
   readonly condition: string | null;
   readonly areaGross: number | null;
+  readonly operationalStatus: string | null;
 }
 
 export interface AssessSystemsPlausibilityArgs {
@@ -126,6 +135,7 @@ export interface AssessSystemsPlausibilityArgs {
   readonly coolingType: string | undefined | null;
   readonly condition: string | undefined | null;
   readonly areaGross: number | string | undefined | null;
+  readonly operationalStatus?: string | undefined | null;
 }
 
 /**
@@ -135,8 +145,10 @@ export interface AssessSystemsPlausibilityArgs {
  *   1. `propertyType` known → otherwise `insufficientData`.
  *   2. `heatingNoneNewBuild` (implausible).
  *   3. `heatingNoneResidential` (implausible).
- *   4. `heatingMissingResidential` (unusual) — residential με κενό heatingType.
- *   5. `coolingMissingResidential` (unusual) — residential με κενό coolingType.
+ *   4. `heatingMissingResidential` (unusual) — residential με κενό heatingType
+ *      + NOT pre-completion.
+ *   5. `coolingMissingResidential` (unusual) — residential με κενό coolingType
+ *      + NOT pre-completion.
  *   6. `coolingOversizedTinyUnit` (unusual).
  *   7. `coolingNoneLargeUnit` (unusual).
  *   8. Otherwise → `ok`.
@@ -154,6 +166,11 @@ export function assessSystemsPlausibility(
   const coolingType = normalize(args.coolingType);
   const condition = normalize(args.condition);
   const areaGross = toNonNegativeNumber(args.areaGross);
+  const operationalStatus = normalize(args.operationalStatus);
+  // Pre-completion (draft / under-construction) → suppress missing-data
+  // warnings (heating/cooling not yet installed). Declarative cross-field
+  // reasons (heatingNone* with explicit user choice) stay active.
+  const isPreCompletion = isPreCompletionOperationalStatus(operationalStatus);
 
   if (!isKnownPropertyType(propertyType)) {
     return {
@@ -164,6 +181,7 @@ export function assessSystemsPlausibility(
       coolingType,
       condition,
       areaGross,
+      operationalStatus,
     };
   }
 
@@ -180,6 +198,7 @@ export function assessSystemsPlausibility(
       coolingType,
       condition,
       areaGross,
+      operationalStatus,
     );
   }
 
@@ -196,13 +215,16 @@ export function assessSystemsPlausibility(
       coolingType,
       condition,
       areaGross,
+      operationalStatus,
     );
   }
 
   // Step 4: residential χωρίς καταχωρημένη θέρμανση (missing, not explicit none)
+  // Suppressed σε pre-completion — heating ενδέχεται να μην έχει εγκατασταθεί.
   if (
     heatingType === null &&
-    RESIDENTIAL_TYPES.has(propertyType)
+    RESIDENTIAL_TYPES.has(propertyType) &&
+    !isPreCompletion
   ) {
     return buildAssessment(
       'unusual',
@@ -212,13 +234,16 @@ export function assessSystemsPlausibility(
       coolingType,
       condition,
       areaGross,
+      operationalStatus,
     );
   }
 
   // Step 5: residential χωρίς καταχωρημένη ψύξη (missing, not explicit none)
+  // Suppressed σε pre-completion — cooling ενδέχεται να μην έχει εγκατασταθεί.
   if (
     coolingType === null &&
-    RESIDENTIAL_TYPES.has(propertyType)
+    RESIDENTIAL_TYPES.has(propertyType) &&
+    !isPreCompletion
   ) {
     return buildAssessment(
       'unusual',
@@ -228,6 +253,7 @@ export function assessSystemsPlausibility(
       coolingType,
       condition,
       areaGross,
+      operationalStatus,
     );
   }
 
@@ -247,6 +273,7 @@ export function assessSystemsPlausibility(
       coolingType,
       condition,
       areaGross,
+      operationalStatus,
     );
   }
 
@@ -265,10 +292,20 @@ export function assessSystemsPlausibility(
       coolingType,
       condition,
       areaGross,
+      operationalStatus,
     );
   }
 
-  return buildAssessment('ok', null, propertyType, heatingType, coolingType, condition, areaGross);
+  return buildAssessment(
+    'ok',
+    null,
+    propertyType,
+    heatingType,
+    coolingType,
+    condition,
+    areaGross,
+    operationalStatus,
+  );
 }
 
 export function isActionableSystemsVerdict(
@@ -289,8 +326,18 @@ function buildAssessment(
   coolingType: string | null,
   condition: string | null,
   areaGross: number | null,
+  operationalStatus: string | null,
 ): SystemsAssessment {
-  return { verdict, reason, propertyType, heatingType, coolingType, condition, areaGross };
+  return {
+    verdict,
+    reason,
+    propertyType,
+    heatingType,
+    coolingType,
+    condition,
+    areaGross,
+    operationalStatus,
+  };
 }
 
 function isKnownPropertyType(value: unknown): value is PropertyTypeCanonical {

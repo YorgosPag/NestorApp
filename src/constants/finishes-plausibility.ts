@@ -29,11 +29,20 @@
  * gate (Batch 25): κάθε κατοικία έχει κατά κανόνα δάπεδα + κουφώματα + υαλοπίνακες,
  * άρα missing πρέπει να προειδοποιεί ανεξαρτήτως condition.
  *
+ * **Pre-completion gating (Batch 27)**: Όταν το `operationalStatus` είναι
+ * `draft` ή `under-construction`, οι missing-data reasons
+ * (`glazingMissingResidential`, `flooringMissingResidential`,
+ * `framesMissingResidential`) καταπνίγονται — τα finishes ενδέχεται να μην
+ * έχουν τοποθετηθεί ακόμα. Cross-field declarative reasons
+ * (glazingSingleHighEnergy, carpetWithUnderfloor, glazingTripleLowEnergy)
+ * παραμένουν active.
+ *
  * @module constants/finishes-plausibility
- * @enterprise ADR-287 — Enum SSoT Centralization (Batch 25)
+ * @enterprise ADR-287 — Enum SSoT Centralization (Batch 27, extends Batch 25)
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 
 // =============================================================================
 // 1. SHARED CONSTANTS
@@ -91,6 +100,7 @@ export interface FinishesAssessment {
   readonly glazing: string | null;
   readonly energyClass: string | null;
   readonly condition: string | null;
+  readonly operationalStatus: string | null;
 }
 
 export interface AssessFinishesPlausibilityArgs {
@@ -101,6 +111,7 @@ export interface AssessFinishesPlausibilityArgs {
   readonly energyClass: string | undefined | null;
   readonly condition: string | undefined | null;
   readonly interiorFeatures: readonly string[] | undefined | null;
+  readonly operationalStatus?: string | undefined | null;
 }
 
 /**
@@ -110,12 +121,16 @@ export interface AssessFinishesPlausibilityArgs {
  *   1. `glazingSingleHighEnergy` (implausible) — physically incompatible.
  *   2. `carpetWithUnderfloor` (unusual) — counterproductive.
  *   3. `glazingTripleLowEnergy` (unusual) — incoherent investment.
- *   4. `glazingMissingResidential` (unusual) — missing glazing σε residential.
- *   5. `flooringMissingResidential` (unusual) — missing flooring σε residential.
- *   6. `framesMissingResidential` (unusual) — missing frames σε residential.
+ *   4. `glazingMissingResidential` (unusual) — missing glazing σε residential,
+ *      NOT pre-completion.
+ *   5. `flooringMissingResidential` (unusual) — missing flooring σε residential,
+ *      NOT pre-completion.
+ *   6. `framesMissingResidential` (unusual) — missing frames σε residential,
+ *      NOT pre-completion.
  *   7. Otherwise → `ok`.
  *
- * Returns `insufficientData` σε περίπτωση που ΟΛΑ τα fields είναι κενά.
+ * Returns `insufficientData` σε περίπτωση που ΟΛΑ τα fields είναι κενά και
+ * είτε δεν είναι residential είτε είναι σε pre-completion state.
  */
 export function assessFinishesPlausibility(
   args: AssessFinishesPlausibilityArgs,
@@ -129,6 +144,12 @@ export function assessFinishesPlausibility(
   const interiorFeatures = Array.isArray(args.interiorFeatures)
     ? args.interiorFeatures.filter(Boolean)
     : [];
+  const operationalStatus = normalize(args.operationalStatus);
+  // Pre-completion (draft / under-construction) → suppress missing-data
+  // warnings (finishes not yet installed). Declarative cross-field reasons
+  // (glazingSingleHighEnergy, carpetWithUnderfloor, glazingTripleLowEnergy)
+  // stay active.
+  const isPreCompletion = isPreCompletionOperationalStatus(operationalStatus);
 
   const isResidential =
     propertyType !== null && RESIDENTIAL_TYPES.has(propertyType as PropertyTypeCanonical);
@@ -140,11 +161,11 @@ export function assessFinishesPlausibility(
     energyClass === null &&
     condition === null;
 
-  // Residential types ΠΑΝΤΑ αξιολογούνται — ακόμα και στο creation (όλα τα
-  // fields κενά) οι missing rules πρέπει να σκάσουν. Μόνο για
-  // non-residential ή άγνωστο type γυρνάμε insufficientData όταν δεν έχουμε
-  // κανένα signal.
-  if (allEmpty && !isResidential) {
+  // Residential types ΠΑΝΤΑ αξιολογούνται (εκτός pre-completion) — ακόμα και
+  // στο creation (όλα τα fields κενά) οι missing rules πρέπει να σκάσουν.
+  // Για non-residential ή άγνωστο type ή pre-completion-residential-allEmpty
+  // γυρνάμε insufficientData όταν δεν έχουμε declarative signal.
+  if (allEmpty && (!isResidential || isPreCompletion)) {
     return {
       verdict: 'insufficientData',
       reason: null,
@@ -154,6 +175,7 @@ export function assessFinishesPlausibility(
       glazing,
       energyClass,
       condition,
+      operationalStatus,
     };
   }
 
@@ -172,6 +194,7 @@ export function assessFinishesPlausibility(
       glazing,
       energyClass,
       condition,
+      operationalStatus,
     );
   }
 
@@ -189,6 +212,7 @@ export function assessFinishesPlausibility(
       glazing,
       energyClass,
       condition,
+      operationalStatus,
     );
   }
 
@@ -207,11 +231,13 @@ export function assessFinishesPlausibility(
       glazing,
       energyClass,
       condition,
+      operationalStatus,
     );
   }
 
   // Step 4: residential χωρίς καταχωρημένους υαλοπίνακες
-  if (glazing === null && isResidential) {
+  // Suppressed σε pre-completion — glazing ενδέχεται να μην έχει εγκατασταθεί.
+  if (glazing === null && isResidential && !isPreCompletion) {
     return buildAssessment(
       'unusual',
       'glazingMissingResidential',
@@ -221,11 +247,13 @@ export function assessFinishesPlausibility(
       glazing,
       energyClass,
       condition,
+      operationalStatus,
     );
   }
 
   // Step 5: residential χωρίς καταχωρημένο δάπεδο
-  if (flooring.length === 0 && isResidential) {
+  // Suppressed σε pre-completion — flooring ενδέχεται να μην έχει τοποθετηθεί.
+  if (flooring.length === 0 && isResidential && !isPreCompletion) {
     return buildAssessment(
       'unusual',
       'flooringMissingResidential',
@@ -235,11 +263,13 @@ export function assessFinishesPlausibility(
       glazing,
       energyClass,
       condition,
+      operationalStatus,
     );
   }
 
   // Step 6: residential χωρίς καταχωρημένα κουφώματα
-  if (windowFrames === null && isResidential) {
+  // Suppressed σε pre-completion — frames ενδέχεται να μην έχουν εγκατασταθεί.
+  if (windowFrames === null && isResidential && !isPreCompletion) {
     return buildAssessment(
       'unusual',
       'framesMissingResidential',
@@ -249,6 +279,7 @@ export function assessFinishesPlausibility(
       glazing,
       energyClass,
       condition,
+      operationalStatus,
     );
   }
 
@@ -261,6 +292,7 @@ export function assessFinishesPlausibility(
     glazing,
     energyClass,
     condition,
+    operationalStatus,
   );
 }
 
@@ -283,6 +315,7 @@ function buildAssessment(
   glazing: string | null,
   energyClass: string | null,
   condition: string | null,
+  operationalStatus: string | null,
 ): FinishesAssessment {
   return {
     verdict,
@@ -293,6 +326,7 @@ function buildAssessment(
     glazing,
     energyClass,
     condition,
+    operationalStatus,
   };
 }
 

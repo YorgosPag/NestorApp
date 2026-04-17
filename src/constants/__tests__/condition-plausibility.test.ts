@@ -1,5 +1,5 @@
 /**
- * Unit tests — condition-plausibility (ADR-287 Batch 25)
+ * Unit tests — condition-plausibility (ADR-287 Batch 25 + Batch 27)
  */
 import {
   assessConditionPlausibility,
@@ -151,5 +151,92 @@ describe('assessConditionPlausibility', () => {
     expect(isActionableConditionVerdict('insufficientData')).toBe(false);
     expect(isActionableConditionVerdict('unusual')).toBe(true);
     expect(isActionableConditionVerdict('implausible')).toBe(true);
+  });
+
+  // ===========================================================================
+  // Batch 27 — Pre-completion gating (draft + under-construction)
+  // ===========================================================================
+
+  it('suppresses conditionMissingResidential when under-construction', () => {
+    const r = assessConditionPlausibility({
+      propertyType: 'apartment',
+      condition: '',
+      operationalStatus: 'under-construction',
+      heatingType: '',
+      energyClass: '',
+    });
+    expect(r.verdict).toBe('insufficientData');
+    expect(r.reason).toBeNull();
+  });
+
+  it('suppresses conditionMissingResidential when draft', () => {
+    const r = assessConditionPlausibility({
+      propertyType: 'apartment',
+      condition: '',
+      operationalStatus: 'draft',
+      heatingType: '',
+      energyClass: '',
+    });
+    expect(r.verdict).toBe('insufficientData');
+    expect(r.reason).toBeNull();
+  });
+
+  it('suppresses energyClassMissingResidential when under-construction', () => {
+    const r = assessConditionPlausibility({
+      propertyType: 'apartment',
+      condition: 'good',
+      operationalStatus: 'under-construction',
+      heatingType: 'central',
+      energyClass: '',
+    });
+    expect(r.verdict).toBe('ok');
+    expect(r.reason).toBeNull();
+  });
+
+  it('suppresses energyClassMissingResidential when draft', () => {
+    const r = assessConditionPlausibility({
+      propertyType: 'apartment',
+      condition: 'good',
+      operationalStatus: 'draft',
+      heatingType: 'central',
+      energyClass: '',
+    });
+    expect(r.verdict).toBe('ok');
+  });
+
+  it('keeps newWithoutHeating active under-construction (declarative)', () => {
+    const r = assessConditionPlausibility({
+      propertyType: 'apartment',
+      condition: 'new',
+      operationalStatus: 'under-construction',
+      heatingType: 'none',
+      energyClass: 'A',
+    });
+    expect(r.verdict).toBe('implausible');
+    expect(r.reason).toBe('newWithoutHeating');
+  });
+
+  it('keeps newButLowEnergy active under-construction (declarative)', () => {
+    const r = assessConditionPlausibility({
+      propertyType: 'apartment',
+      condition: 'new',
+      operationalStatus: 'under-construction',
+      heatingType: 'central',
+      energyClass: 'F',
+    });
+    expect(r.verdict).toBe('unusual');
+    expect(r.reason).toBe('newButLowEnergy');
+  });
+
+  it('still fires conditionMissingResidential when maintenance (not pre-completion)', () => {
+    const r = assessConditionPlausibility({
+      propertyType: 'apartment',
+      condition: '',
+      operationalStatus: 'maintenance',
+      heatingType: 'central',
+      energyClass: 'B',
+    });
+    expect(r.verdict).toBe('unusual');
+    expect(r.reason).toBe('conditionMissingResidential');
   });
 });

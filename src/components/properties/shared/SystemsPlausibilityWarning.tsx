@@ -66,6 +66,7 @@ export function SystemsPlausibilityWarning({
   coolingType,
   condition,
   areaGross,
+  operationalStatus,
   className,
 }: SystemsPlausibilityWarningProps) {
   const { t } = useTranslation(['properties']);
@@ -77,6 +78,7 @@ export function SystemsPlausibilityWarning({
     coolingType,
     condition,
     areaGross,
+    operationalStatus,
   });
 
   if (!isActionableSystemsVerdict(assessment.verdict)) return null;
