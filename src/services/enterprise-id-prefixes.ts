@@ -70,6 +70,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   DEPLOYMENT: 'deploy',
   PIPELINE: 'pipe',
   BACKUP: 'backup',
+  RESTORE: 'rst',
   MIGRATION: 'migr',
   TEMPLATE: 'tpl',
   OPERATION: 'op',

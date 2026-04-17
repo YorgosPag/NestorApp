@@ -71,6 +71,7 @@ export const generateDeploymentId = () => enterpriseIdService.generateDeployment
 export const generateContainerId = () => enterpriseIdService.generateContainerId();
 export const generatePipelineId = () => enterpriseIdService.generatePipelineId();
 export const generateBackupId = () => enterpriseIdService.generateBackupId();
+export const generateRestoreId = () => enterpriseIdService.generateRestoreId();
 export const generateMigrationId = () => enterpriseIdService.generateMigrationId();
 export const generateTemplateId = () => enterpriseIdService.generateTemplateId();
 export const generateOperationId = () => enterpriseIdService.generateOperationId();

@@ -230,6 +230,23 @@ export class BackupGcsService {
   }
 
   /**
+   * Write a raw JSON file to GCS (for snapshots, metadata).
+   */
+  async writeJsonFile(
+    gcsPath: string,
+    data: Record<string, unknown>,
+    metadata?: Record<string, string>,
+  ): Promise<void> {
+    const content = JSON.stringify(data, null, 2);
+    const file = this.bucket.file(gcsPath);
+    await file.save(content, {
+      contentType: 'application/json',
+      metadata,
+    });
+    logger.info(`Written JSON: ${gcsPath}`);
+  }
+
+  /**
    * Get the bucket name (for status/config reporting).
    */
   getBucketName(): string {

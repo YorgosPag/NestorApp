@@ -248,3 +248,150 @@ export interface BackupConfig {
   /** GCS bucket name for backups */
   bucketName: string;
 }
+
+// ---------------------------------------------------------------------------
+// Restore types (Phase 4 — ADR-313)
+// ---------------------------------------------------------------------------
+
+export type RestorePhase =
+  | 'validating'
+  | 'creating_snapshot'
+  | 'reconciling_schema'
+  | 'restoring_collections'
+  | 'restoring_subcollections'
+  | 'completed'
+  | 'failed';
+
+export interface RestoreStatus {
+  /** Restore operation ID */
+  restoreId: string;
+
+  /** Source backup ID */
+  backupId: string;
+
+  /** Current phase */
+  phase: RestorePhase;
+
+  /** Currently processing collection */
+  currentCollection?: string;
+
+  /** Collections already restored */
+  processedCollections: number;
+
+  /** Total collections to restore */
+  totalCollections: number;
+
+  /** Documents restored so far */
+  documentsRestored: number;
+
+  /** Documents skipped (immutable existing) */
+  documentsSkipped: number;
+
+  /** ISO 8601 — when restore started */
+  startedAt: string;
+
+  /** ISO 8601 — when restore completed/failed */
+  completedAt?: string;
+
+  /** Error message if failed */
+  error?: string;
+
+  /** Who triggered the restore */
+  triggeredBy: string;
+
+  /** Pre-restore snapshot ID (for future rollback) */
+  snapshotId?: string;
+}
+
+export interface RestoreOptions {
+  /** Specific collection keys to restore (empty = all) */
+  collections?: string[];
+
+  /** Skip immutable collections entirely */
+  skipImmutable?: boolean;
+
+  /** Use merge: true on set() — preserves fields not in backup */
+  mergeMode?: boolean;
+
+  /** Dry run — preview only, no writes */
+  dryRun?: boolean;
+}
+
+/** Result of schema reconciliation for a single collection */
+export interface CollectionReconciliation {
+  /** Collection key */
+  collectionKey: string;
+
+  /** Collection name */
+  collectionName: string;
+
+  /** Fields present in backup data */
+  backupFields: string[];
+
+  /** Whether collection is immutable */
+  isImmutable: boolean;
+
+  /** Documents in backup */
+  documentCount: number;
+
+  /** Documents that already exist in current DB (preview only) */
+  existingCount: number;
+
+  /** Documents that would be created (new) */
+  newCount: number;
+
+  /** Documents that would be updated (existing, non-immutable) */
+  updateCount: number;
+
+  /** Documents that would be skipped (existing, immutable) */
+  skipCount: number;
+}
+
+export interface RestorePreview {
+  /** Source backup metadata */
+  backupId: string;
+  backupCreatedAt: string;
+  backupType: 'full' | 'incremental';
+
+  /** Per-collection reconciliation */
+  collections: CollectionReconciliation[];
+  subcollections: CollectionReconciliation[];
+
+  /** Aggregate counts */
+  totalDocuments: number;
+  totalNew: number;
+  totalUpdate: number;
+  totalSkip: number;
+
+  /** Warnings */
+  warnings: string[];
+}
+
+/** Pre-restore snapshot — saved to GCS before any writes */
+export interface PreRestoreSnapshot {
+  /** Snapshot ID */
+  id: string;
+
+  /** Restore operation this snapshot belongs to */
+  restoreId: string;
+
+  /** Source backup ID */
+  backupId: string;
+
+  /** ISO 8601 */
+  createdAt: string;
+
+  /** Per-collection: doc IDs that will be overwritten */
+  collections: PreRestoreCollectionSnapshot[];
+}
+
+export interface PreRestoreCollectionSnapshot {
+  /** Collection name */
+  collectionName: string;
+
+  /** Document IDs that exist and will be overwritten */
+  existingDocIds: string[];
+
+  /** Count of existing docs */
+  existingCount: number;
+}

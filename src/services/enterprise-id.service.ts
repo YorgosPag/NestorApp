@@ -29,7 +29,7 @@ export {
   generateControlPointId, generateEntityId, generateCustomizationId,
   generateErrorId, generateMetricId, generateAlertId, generateTraceId,
   generateSpanId, generateSearchId, generateAuditId, generateDeploymentId,
-  generateContainerId, generatePipelineId, generateBackupId, generateMigrationId,
+  generateContainerId, generatePipelineId, generateBackupId, generateRestoreId, generateMigrationId,
   generateTemplateId, generateOperationId, generateBoqItemId, generateBoqCategoryId,
   generateBoqPriceListId, generateBoqTemplateId, generateJournalEntryId,
   generateInvoiceAccId, generateBankTransactionId, generateFixedAssetId,
@@ -193,6 +193,7 @@ export class EnterpriseIdService {
   generateContainerId(): string { return this.generateId(P.CONTAINER).id; }
   generatePipelineId(): string { return this.generateId(P.PIPELINE).id; }
   generateBackupId(): string { return this.generateId(P.BACKUP).id; }
+  generateRestoreId(): string { return this.generateId(P.RESTORE).id; }
   generateMigrationId(): string { return this.generateId(P.MIGRATION).id; }
   generateTemplateId(): string { return this.generateId(P.TEMPLATE).id; }
   generateOperationId(): string { return this.generateId(P.OPERATION).id; }

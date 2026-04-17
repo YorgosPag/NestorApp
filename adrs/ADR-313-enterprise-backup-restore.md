@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Phase 1 IN PROGRESS |
+| **Status** | Phase 4 COMPLETE |
 | **Date** | 2026-04-17 |
 | **Category** | Infrastructure / Data Protection / Disaster Recovery |
 | **Canonical Location** | `src/services/backup/` |
@@ -57,17 +57,18 @@ src/services/backup/
 ├── backup-serializer.ts         # Firestore → JSON-safe (Timestamp, GeoPoint, Ref)
 ├── backup.service.ts            # BackupService: export collections + subcollections
 ├── backup-gcs.service.ts        # Scrittura/lettura backup su GCS bucket
-├── restore.service.ts           # RestoreService: validate, preview, execute (Fase 4)
-├── schema-reconciler.ts         # Schema diff + reconciliation logic (Fase 4)
+├── restore.service.ts           # RestoreService: validate, preview, execute ✅
+├── restore-helpers.ts           # Tier ordering, ref resolution (SRP split) ✅
+├── schema-reconciler.ts         # Schema reconciliation — Approach B (Google) ✅
 └── incremental-backup.service.ts # Delta backup via entity_audit_trail (Fase 5)
 
 src/app/api/admin/backup/
 ├── full/route.ts                # POST — trigger full backup
 └── status/route.ts              # GET — stato backup in corso
 
-src/app/api/admin/restore/       # (Fase 4)
+src/app/api/admin/restore/       # ✅ Phase 4
 ├── route.ts                     # POST — trigger restore
-└── preview/route.ts             # GET — dry-run preview
+└── preview/route.ts             # POST — dry-run preview
 ```
 
 ### 3.3 Infrastruttura SSoT riutilizzata
@@ -227,9 +228,31 @@ Estensione BackupService: `exportAllCollections()` + `exportAllSubcollections()`
 
 `StorageBackupService`: lista file, download parallelo (concurrency=10), SHA-256, cross-ref con FILES collection.
 
-### Fase 4: Restore completo (5-7 giorni)
+### Fase 4: Restore completo (5-7 giorni) — COMPLETE
 
-`RestoreService` + `SchemaReconciler`. Import ordinato per tier. Dry-run preview. Pre-restore snapshot per rollback.
+**Deliverable**: RestoreService + SchemaReconciler + API endpoints + pre-restore snapshot
+
+Schema reconciliation uses **Approach B (Google pattern)**: restore writes only what the backup contains, `merge: true` preserves fields in current DB not present in backup. No extra schema scan needed.
+
+File nuovi:
+- `src/services/backup/schema-reconciler.ts` — Reconciles backup vs current DB state per collection
+- `src/services/backup/restore.service.ts` — RestoreService: validate, preview, execute with tier-ordered import
+- `src/app/api/admin/restore/route.ts` — POST trigger restore (withAuth + withSensitiveRateLimit)
+- `src/app/api/admin/restore/preview/route.ts` — POST dry-run preview
+
+Modifica:
+- `src/services/backup/backup-manifest.types.ts` — RestoreStatus, RestoreOptions, PreRestoreSnapshot, CollectionReconciliation, RestorePreview types
+- `src/services/backup/backup-gcs.service.ts` — writeJsonFile() method for snapshots
+- `src/services/enterprise-id-prefixes.ts` — RESTORE: 'rst' prefix
+- `src/services/enterprise-id.service.ts` + `enterprise-id-convenience.ts` — generateRestoreId()
+
+**Key features:**
+- Tier-ordered import (system → tenants → core → structures → relations → content → domain → AI/system)
+- Immutable collections: skip existing docs, insert only new
+- Pre-restore snapshot saved to GCS (`{backupId}/snapshots/snapshot_{restoreId}.json`)
+- Batch writes with BATCH_SIZE_WRITE=200
+- DocumentReference resolution during restore (path strings → actual refs)
+- Progress tracking in `system/restore_status`
 
 ### Fase 5: Backup incrementale (3-4 giorni)
 
@@ -278,3 +301,4 @@ gs://{projectId}-backups/
 | Data | Fase | Descrizione |
 |------|------|------------|
 | 2026-04-17 | 1 | ADR creato. Tipi manifest, serializer, BackupService, GCS service, API endpoints |
+| 2026-04-17 | 4 | RestoreService, SchemaReconciler (Approach B), API routes, pre-restore snapshot, generateRestoreId, restore types |
