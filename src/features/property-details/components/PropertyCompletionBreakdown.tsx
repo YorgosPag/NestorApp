@@ -251,7 +251,7 @@ export function PropertyCompletionBreakdown({
                 <span
                   className={cn(
                     'flex items-center shrink-0',
-                    spacing.gap.xs,
+                    spacing.gap.sm,
                     colors.text.muted,
                   )}
                 >

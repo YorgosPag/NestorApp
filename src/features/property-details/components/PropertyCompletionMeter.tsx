@@ -117,10 +117,10 @@ export function PropertyCompletionMeter({
           type="button"
           variant="ghost"
           size="sm"
-          className={cn('h-6', typography.label.simple, spacing.padding.x.sm)}
+          className={cn('h-6', typography.label.simple, spacing.padding.x.sm, spacing.gap.sm)}
           onClick={() => setDismissed(false)}
         >
-          <Gauge className={cn(iconSizes.xs, spacing.margin.right.xs)} />
+          <Gauge className={iconSizes.xs} />
           {t('completion.reshow')}
         </Button>
       </section>
@@ -142,7 +142,7 @@ export function PropertyCompletionMeter({
         // is handled by the outer ScrollArea (Radix viewport).
         'w-full shrink-0 border',
         radiusClass.md,           // rounded-md via SSoT border token
-        spacing.padding.md,       // 16px outer card padding (Google card spec)
+        spacing.padding.sm,       // 8px outer card padding — uniform SSoT
         spacing.spaceBetween.sm,  // 8px between header / progress / label / breakdown
         colors.border.default,
         colors.bg.secondary,
@@ -161,23 +161,23 @@ export function PropertyCompletionMeter({
             {percentage}%
           </span>
         </div>
-        <div className={cn('flex items-center', spacing.gap.xs)}>
+        <div className={cn('flex items-center', spacing.gap.sm)}>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className={cn('h-7', typography.label.simple, spacing.padding.x.sm)}
+            className={cn('h-7', typography.label.simple, spacing.padding.x.sm, spacing.gap.sm)}
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
           >
             {expanded ? (
               <>
-                <ChevronUp className={cn(iconSizes.xs, spacing.margin.right.xs)} />
+                <ChevronUp className={iconSizes.xs} />
                 {t('completion.hideDetails')}
               </>
             ) : (
               <>
-                <ChevronDown className={cn(iconSizes.xs, spacing.margin.right.xs)} />
+                <ChevronDown className={iconSizes.xs} />
                 {t('completion.showDetails')}
               </>
             )}
@@ -203,7 +203,9 @@ export function PropertyCompletionMeter({
       </p>
 
       {expanded && (
-        <div className={cn(spacing.padding.top.sm, 'border-t border-[hsl(var(--border))]')}>
+        // No padding-top: outer `spaceBetween.sm` already gives the 8px gap
+        // above the divider. Doubling here would produce 16px.
+        <div className="border-t border-[hsl(var(--border))]">
           <PropertyCompletionBreakdown assessment={assessment} />
         </div>
       )}
