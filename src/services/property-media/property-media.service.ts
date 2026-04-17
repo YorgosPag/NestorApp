@@ -55,8 +55,7 @@ export interface PropertyMediaItem {
 }
 
 export interface PropertyMediaBuffer extends PropertyMediaItem {
-  buffer: Buffer;
-  base64: string;
+  bytes: Uint8Array;
   jsPdfFormat: 'JPEG' | 'PNG';
 }
 
@@ -187,10 +186,15 @@ export async function downloadPropertyMedia(
         const [buffer] = await bucket.file(meta.storagePath).download();
         const format = JS_PDF_FORMAT_BY_MIME[(meta.contentType ?? '').toLowerCase()];
         if (!format) return;
+        // Hand jsPDF raw bytes (Uint8Array) — on Node the base64/string path
+        // tries to resolve a browser `Image` constructor and silently
+        // produces an empty image. Raw bytes skip that codepath entirely.
+        // Slice the backing ArrayBuffer to the Buffer's logical range so we
+        // never expose the underlying pooled allocator to the PDF engine.
+        const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         buffers.push({
           ...meta,
-          buffer,
-          base64: buffer.toString('base64'),
+          bytes,
           jsPdfFormat: format,
         });
       } catch (err) {

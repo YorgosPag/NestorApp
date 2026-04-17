@@ -20,7 +20,7 @@ import { COLORS, FONT_SIZES, FONTS, LINE_SPACING } from '../layout';
 
 export interface ShowcasePhotoAsset {
   id: string;
-  base64: string;
+  bytes: Uint8Array;
   format: 'JPEG' | 'PNG';
   displayName?: string;
 }
@@ -344,7 +344,7 @@ export class PropertyShowcaseRenderer {
       const x = margins.left + col * (cellWidth + gap);
       if (rowY + cellHeight > maxBottom) break;
       try {
-        doc.addImage(photo.base64, photo.format, x, rowY, cellWidth, cellHeight, photo.id, 'FAST');
+        doc.addImage(photo.bytes, photo.format, x, rowY, cellWidth, cellHeight, photo.id, 'FAST');
       } catch {
         doc.setDrawColor(...COLORS.GRAY);
         doc.rect(x, rowY, cellWidth, cellHeight, 'S');

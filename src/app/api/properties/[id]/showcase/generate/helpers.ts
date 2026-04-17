@@ -182,7 +182,7 @@ export async function loadShowcasePhotos(
 function toShowcasePhotoAsset(m: PropertyMediaBuffer): ShowcasePhotoAsset {
   return {
     id: m.id,
-    base64: m.base64,
+    bytes: m.bytes,
     format: m.jsPdfFormat,
     displayName: m.displayName,
   };
