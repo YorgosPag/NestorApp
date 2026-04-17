@@ -11,6 +11,7 @@ import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { generateOpaqueToken } from '@/services/enterprise-id.service';
 import type {
   PropertyShowcasePDFData,
   PropertyShowcasePDFLabels,
@@ -174,17 +175,25 @@ export function buildPdfData(
   };
 }
 
+export interface UploadedPdfRef {
+  /** Public download URL (Firebase download-token pattern, permanent until file/token is revoked). */
+  url: string;
+  /** Download token stored in object metadata; persists on the share record for URL reconstruction. */
+  downloadToken: string;
+}
+
 export async function uploadPdfToStorage(
   pdfBytes: Uint8Array,
-  storagePath: string,
-  ttlHours: number
-): Promise<string> {
+  storagePath: string
+): Promise<UploadedPdfRef> {
   const bucket = getAdminStorage().bucket();
   const fileRef = bucket.file(storagePath);
 
   if (pdfBytes.byteLength === 0) {
     throw new Error('PDF buffer is empty — generator produced 0 bytes');
   }
+
+  const downloadToken = generateOpaqueToken();
 
   logger.info('Uploading showcase PDF', {
     bucket: bucket.name, storagePath, sizeBytes: pdfBytes.byteLength,
@@ -196,25 +205,35 @@ export async function uploadPdfToStorage(
     resumable: false,
   });
 
+  // Write the Firebase download-token in a separate setMetadata() call. Nesting
+  // `metadata: { metadata: { firebaseStorageDownloadTokens: ... } }` inside
+  // `save()` options did not persist the custom metadata field (resulted in
+  // 403 Permission denied on the firebasestorage.googleapis.com endpoint).
+  // An explicit setMetadata after save reliably writes it.
+  await fileRef.setMetadata({
+    metadata: { firebaseStorageDownloadTokens: downloadToken },
+  });
+
   const [exists] = await fileRef.exists();
   if (!exists) {
     throw new Error(`Upload reported success but object is missing: ${bucket.name}/${storagePath}`);
   }
 
-  logger.info('Post-save diagnostics', {
-    bucketName: bucket.name,
-    cloudStorageURI: fileRef.cloudStorageURI.href,
-    publicUrl: fileRef.publicUrl(),
-  });
+  // Firebase download-token URL: works against the `.firebasestorage.app`
+  // bucket domain where GCS XML API signed URLs (storage.googleapis.com/...)
+  // fail with NoSuchKey because XML API does not resolve the alias host.
+  // See ADR-312 2026-04-18 changelog.
+  const url = buildDownloadTokenUrl(bucket.name, storagePath, downloadToken);
+  return { url, downloadToken };
+}
 
-  // Signed URL: buckets with Uniform Bucket-Level Access ignore per-object
-  // ACLs so makePublic() returns success without actually making the blob
-  // readable. Signed URL works regardless. TTL matches share TTL.
-  const [signed] = await fileRef.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + ttlHours * 60 * 60 * 1000,
-  });
-  return signed;
+export function buildDownloadTokenUrl(
+  bucketName: string,
+  storagePath: string,
+  downloadToken: string
+): string {
+  const encodedPath = encodeURIComponent(storagePath);
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 }
 
 export async function deactivateShowcaseShares(

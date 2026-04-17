@@ -52,7 +52,7 @@ export {
   generateChatHistoryDocId, generateOwnershipTableId, generateOwnershipRevisionId,
   generatePurchaseOrderId, generatePOItemId,
   generatePOAttachmentId, generateSavedReportId, generateRecurringPaymentId,
-  generateOptimisticId, generateTempId, validateEnterpriseId, parseEnterpriseId,
+  generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId,
 } from './enterprise-id-convenience';
 
@@ -305,6 +305,15 @@ export class EnterpriseIdService {
   /** ADR-235: Deterministic revision key — one revision per version */
   generateOwnershipRevisionId(version: number): string {
     return `${P.OWNERSHIP_TABLE}_rev_v${version}`;
+  }
+
+  /**
+   * Opaque, unprefixed UUID v4 for non-entity tokens (download tokens, nonces, etc).
+   * Use this instead of inline `crypto.randomUUID()` to satisfy CLAUDE.md N.6 and
+   * keep all randomness routed through the enterprise-id SSoT.
+   */
+  generateOpaqueToken(): string {
+    return this.generateSecureUuid();
   }
 
   // --- Utility Methods ---

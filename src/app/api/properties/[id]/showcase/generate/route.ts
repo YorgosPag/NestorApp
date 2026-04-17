@@ -102,6 +102,7 @@ async function writeShowcaseShareRecord(args: {
   companyId: string;
   createdBy: string;
   storagePath: string;
+  pdfDownloadToken: string;
   expiresAt: Date;
 }): Promise<void> {
   const adminDb = getAdminFirestore();
@@ -120,6 +121,7 @@ async function writeShowcaseShareRecord(args: {
     showcasePropertyId: args.propertyId,
     showcaseMode: true,
     pdfStoragePath: args.storagePath,
+    pdfDownloadToken: args.pdfDownloadToken,
   });
 }
 
@@ -160,8 +162,11 @@ async function handleGenerate(
   const pdfBytes = await generatePdfOrThrow(propertyId, pdfData);
 
   let pdfUrl: string;
+  let pdfDownloadToken: string;
   try {
-    pdfUrl = await uploadPdfToStorage(pdfBytes, storagePath, SHOWCASE_TTL_HOURS);
+    const uploaded = await uploadPdfToStorage(pdfBytes, storagePath);
+    pdfUrl = uploaded.url;
+    pdfDownloadToken = uploaded.downloadToken;
   } catch (err) {
     logger.error('PDF upload failed', {
       propertyId, storagePath, error: err instanceof Error ? err.message : String(err),
@@ -177,6 +182,7 @@ async function handleGenerate(
     companyId: ctx.companyId,
     createdBy: ctx.uid,
     storagePath,
+    pdfDownloadToken,
     expiresAt,
   });
 

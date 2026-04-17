@@ -66,6 +66,8 @@ export interface FileShareRecord {
   showcaseMode?: boolean;
   /** Storage path of the generated showcase PDF (ADR-312) */
   pdfStoragePath?: string;
+  /** Firebase download token for the showcase PDF (ADR-312 2026-04-18). Used to build public download URL: `https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encodedPath}?alt=media&token={downloadToken}` — bypasses GCS XML API signed URLs which do not resolve the `.firebasestorage.app` bucket alias. */
+  pdfDownloadToken?: string;
 }
 
 /** Input for creating a share link */
@@ -87,6 +89,8 @@ export interface CreateShareInput {
   showcaseMode?: boolean;
   /** Storage path of the generated showcase PDF (ADR-312) */
   pdfStoragePath?: string;
+  /** Firebase download token for the showcase PDF (ADR-312 2026-04-18) */
+  pdfDownloadToken?: string;
 }
 
 /** Result of share validation */
@@ -148,6 +152,7 @@ export class FileShareService {
       showcasePropertyId: input.showcasePropertyId ?? undefined,
       showcaseMode: input.showcaseMode ?? undefined,
       pdfStoragePath: input.pdfStoragePath ?? undefined,
+      pdfDownloadToken: input.pdfDownloadToken ?? undefined,
     };
 
     // Hash password if provided
@@ -224,6 +229,7 @@ export class FileShareService {
       showcasePropertyId: data.showcasePropertyId,
       showcaseMode: data.showcaseMode,
       pdfStoragePath: data.pdfStoragePath,
+      pdfDownloadToken: data.pdfDownloadToken,
     };
 
     // Check expiration

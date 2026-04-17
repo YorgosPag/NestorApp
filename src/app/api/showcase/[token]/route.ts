@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { buildDownloadTokenUrl } from '@/app/api/properties/[id]/showcase/generate/helpers';
 
 const logger = createModuleLogger('ShowcasePublicApi');
 
@@ -107,16 +108,14 @@ async function loadFilesByCategory(
   return items;
 }
 
-async function buildPdfUrl(storagePath: string | undefined): Promise<string | undefined> {
-  if (!storagePath) return undefined;
+function buildPdfUrl(
+  storagePath: string | undefined,
+  downloadToken: string | undefined
+): string | undefined {
+  if (!storagePath || !downloadToken) return undefined;
   try {
-    const bucket = getAdminStorage().bucket();
-    const fileRef = bucket.file(storagePath);
-    const [signed] = await fileRef.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 1000 * 60 * 60, // 1-hour freshness per resolve
-    });
-    return signed;
+    const bucketName = getAdminStorage().bucket().name;
+    return buildDownloadTokenUrl(bucketName, storagePath, downloadToken);
   } catch (err) {
     logger.warn('buildPdfUrl failed', { storagePath, error: err instanceof Error ? err.message : String(err) });
     return undefined;
@@ -208,7 +207,10 @@ export async function GET(
     photos,
     floorplans,
     videoUrl: (share.note as string | undefined) || undefined,
-    pdfUrl: await buildPdfUrl(share.pdfStoragePath as string | undefined),
+    pdfUrl: buildPdfUrl(
+      share.pdfStoragePath as string | undefined,
+      share.pdfDownloadToken as string | undefined
+    ),
     expiresAt,
   };
 

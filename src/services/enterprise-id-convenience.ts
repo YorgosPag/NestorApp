@@ -170,6 +170,9 @@ export const generateRecurringPaymentId = () => enterpriseIdService.generateRecu
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();
 
+// Opaque tokens (Firebase download tokens, nonces, etc) — see CLAUDE.md N.6
+export const generateOpaqueToken = () => enterpriseIdService.generateOpaqueToken();
+
 // Validation & Utility
 export const validateEnterpriseId = (id: string) => enterpriseIdService.validateId(id);
 export const parseEnterpriseId = (id: string) => enterpriseIdService.parseId(id);
