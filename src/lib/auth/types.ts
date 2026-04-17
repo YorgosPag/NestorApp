@@ -1,12 +1,5 @@
 /**
- * @fileoverview Authorization Types - RFC v6 Implementation
- * @version 1.0.0
- * @author Nestor Construct Platform
- * @since 2026-01-14
- *
- * Enterprise-grade authorization types following RFC v6 specification.
- * Provides compile-time safety for all permission-related operations.
- *
+ * Authorization Types - RFC v6 Implementation
  * @see docs/rfc/authorization-rbac.md
  */
 
@@ -14,10 +7,7 @@
 // GLOBAL ROLES (Coarse-grained, stored in Custom Claims)
 // =============================================================================
 
-/**
- * Global roles array - Single source of truth.
- * Used for validation and type derivation.
- */
+/** Global roles array - Single source of truth. */
 export const GLOBAL_ROLES = [
   "super_admin", // Break-glass, system-wide access
   "company_admin", // Company management
@@ -26,8 +16,7 @@ export const GLOBAL_ROLES = [
 ] as const;
 
 /**
- * Global roles determine company-wide access level.
- * Stored in Firebase Custom Claims for fast verification without Firestore reads.
+ * Global roles — stored in Firebase Custom Claims.
  */
 export type GlobalRole = (typeof GLOBAL_ROLES)[number];
 
@@ -51,18 +40,9 @@ export type ProjectRole =
   | "vendor"; // External suppliers
 
 // =============================================================================
-// PERMISSION REGISTRY (Compile-time Safety)
+// PERMISSION REGISTRY (Compile-time Safety) — Pattern: domain:resource:action
 // =============================================================================
 
-/**
- * Permission Registry - Single source of truth for all permissions.
- * Using `as const` ensures compile-time safety and autocomplete.
- *
- * Pattern: `domain:resource:action`
- *
- * @example
- * hasPermission(ctx, 'comm:conversations:list')
- */
 export const PERMISSIONS = {
   // Communications
   "comm:conversations:list": true,
@@ -153,6 +133,7 @@ export const PERMISSIONS = {
   "admin:direct:operations": true, // Direct database operations (bypass normal flows)
   "admin:debug:read": true, // Debug utilities (read-only inspection)
   "admin:system:configure": true, // System configuration (webhooks, integrations)
+  "admin:backup:execute": true, // Backup & restore operations (ADR-313)
 
   // Reports
   "reports:reports:view": true,
@@ -174,20 +155,14 @@ export const PERMISSIONS = {
   "specs:specs:view": true,
 } as const;
 
-/**
- * Permission ID derived from registry.
- * Provides compile-time safety - invalid permissions cause TypeScript errors.
- */
+/** Permission ID derived from registry. */
 export type PermissionId = keyof typeof PERMISSIONS;
 
 // =============================================================================
 // GRANT SCOPES (For Property Delegation)
 // =============================================================================
 
-/**
- * Grant Scopes Registry - Permissions that can be delegated to external users.
- * Used in /properties/{propertyId}/grants/{granteeUid}
- */
+/** Grant Scopes — permissions delegated to external users via property grants. */
 export const GRANT_SCOPES = {
   "unit:read_basic": true,
   "unit:docs:view_basic": true,
@@ -198,18 +173,14 @@ export const GRANT_SCOPES = {
   "legal:contracts:view": true,
 } as const;
 
-/**
- * Grant Scope ID for unit-level delegation.
- */
+/** Grant Scope ID for unit-level delegation. */
 export type GrantScope = keyof typeof GRANT_SCOPES;
 
 // =============================================================================
 // AUDIT TYPES
 // =============================================================================
 
-/**
- * Audit Actions Registry - All auditable actions in the system.
- */
+/** Audit Actions Registry — all auditable actions. */
 export const AUDIT_ACTIONS = {
   role_changed: true,
   permission_granted: true,
@@ -261,14 +232,10 @@ export const AUDIT_ACTIONS = {
   "procurement.po.invoice_linked": true,
 } as const;
 
-/**
- * Audit action type derived from registry.
- */
+/** Audit action type derived from registry. */
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
 
-/**
- * Audit Target Types Registry.
- */
+/** Audit Target Types Registry. */
 export const AUDIT_TARGET_TYPES = {
   user: true,
   project: true,
@@ -298,14 +265,10 @@ export const AUDIT_TARGET_TYPES = {
   purchase_order: true,
 } as const;
 
-/**
- * Audit target type derived from registry.
- */
+/** Audit target type derived from registry. */
 export type AuditTargetType = keyof typeof AUDIT_TARGET_TYPES;
 
-/**
- * Typed audit change value (NO any!).
- */
+/** Typed audit change value. */
 export interface AuditChangeValue {
   type:
     | "role"
@@ -324,9 +287,7 @@ export interface AuditChangeValue {
   value: string | string[] | Record<string, unknown>;
 }
 
-/**
- * Audit metadata for context.
- */
+/** Audit metadata for context. */
 export interface AuditMetadata {
   ipAddress?: string;
   userAgent?: string;
@@ -334,9 +295,7 @@ export interface AuditMetadata {
   reason?: string;
 }
 
-/**
- * Complete audit log entry.
- */
+/** Complete audit log entry. */
 export interface AuditLogEntry {
   companyId: string; // RFC v6 P0-2: Required for tenant isolation
   action: AuditAction;
@@ -353,10 +312,7 @@ export interface AuditLogEntry {
 // CUSTOM CLAIMS CONTRACT
 // =============================================================================
 
-/**
- * Firebase Custom Claims structure.
- * Used for coarse-grained authorization without Firestore reads.
- */
+/** Firebase Custom Claims structure. */
 export interface CustomClaims {
   /** Tenant anchor - required for multi-tenant isolation */
   companyId: string;
@@ -374,10 +330,7 @@ export interface CustomClaims {
 // AUTH CONTEXT (Request-Scoped)
 // =============================================================================
 
-/**
- * Authenticated request context.
- * Built from Firebase ID token verification.
- */
+/** Authenticated request context (from Firebase ID token). */
 export interface AuthContext {
   uid: string;
   email: string;
@@ -387,30 +340,20 @@ export interface AuthContext {
   isAuthenticated: true;
 }
 
-/**
- * Unauthenticated context with reason.
- */
+/** Unauthenticated context with reason. */
 export interface UnauthenticatedContext {
   isAuthenticated: false;
   reason: "missing_token" | "invalid_token" | "missing_claims";
 }
 
-/**
- * Union type for request context.
- */
+/** Union type for request context. */
 export type RequestContext = AuthContext | UnauthenticatedContext;
 
 // =============================================================================
 // COMPANY MEMBERSHIP (ADR-244: Role Management — Source of Truth for RBAC)
 // =============================================================================
 
-/**
- * Company member document structure.
- * Stored in /companies/{companyId}/members/{uid}
- *
- * This is the SOURCE OF TRUTH for user authorization data.
- * Firebase Custom Claims contain a sync copy of globalRole.
- */
+/** Company member document — SOURCE OF TRUTH for RBAC (stored in /companies/{cid}/members/{uid}). */
 export interface CompanyMemberDocument {
   /** Firebase Auth UID */
   uid: string;
@@ -432,10 +375,7 @@ export interface CompanyMemberDocument {
 // PROJECT MEMBERSHIP
 // =============================================================================
 
-/**
- * Project member document structure.
- * Stored in /projects/{projectId}/members/{uid}
- */
+/** Project member document (stored in /projects/{pid}/members/{uid}). */
 export interface ProjectMember {
   /** Duplicated for Firestore rules efficiency */
   companyId: string;
@@ -456,10 +396,7 @@ export interface ProjectMember {
 // PROPERTY OWNERSHIP & GRANTS
 // =============================================================================
 
-/**
- * Property owner document structure.
- * Stored in /properties/{propertyId}/owners/{uid}
- */
+/** Property owner document (stored in /properties/{pid}/owners/{uid}). */
 export interface PropertyOwner {
   /** Duplicated for rules validation */
   companyId: string;
@@ -473,11 +410,7 @@ export interface PropertyOwner {
   notes?: string;
 }
 
-
-/**
- * Property grant document structure.
- * Stored in /properties/{propertyId}/grants/{granteeUid}
- */
+/** Property grant document (stored in /properties/{pid}/grants/{granteeUid}). */
 export interface PropertyGrant {
   /** Duplicated for rules validation */
   companyId: string;
@@ -498,38 +431,28 @@ export interface PropertyGrant {
   revokedBy?: string;
 }
 
-
 // =============================================================================
 // TYPE GUARDS
 // =============================================================================
 
-/**
- * Type guard to check if context is authenticated.
- */
+/** Type guard — is context authenticated? */
 export function isAuthenticated(ctx: RequestContext): ctx is AuthContext {
   return ctx.isAuthenticated === true;
 }
 
-/**
- * Type guard to check if a string is a valid PermissionId.
- */
+/** Type guard — is string a valid PermissionId? */
 export function isValidPermission(
   permission: string,
 ): permission is PermissionId {
   return permission in PERMISSIONS;
 }
 
-/**
- * Type guard to check if a string is a valid GrantScope.
- */
+/** Type guard — is string a valid GrantScope? */
 export function isValidGrantScope(scope: string): scope is GrantScope {
   return scope in GRANT_SCOPES;
 }
 
-/**
- * Type guard to check if a string is a valid GlobalRole.
- * Uses centralized GLOBAL_ROLES constant.
- */
+/** Type guard — is string a valid GlobalRole? */
 export function isValidGlobalRole(role: string): role is GlobalRole {
   return (GLOBAL_ROLES as readonly string[]).includes(role);
 }
