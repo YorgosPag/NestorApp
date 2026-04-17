@@ -54,6 +54,7 @@ import {
 } from './property-fields-constants';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 import { PropertyFieldsDetailCards } from './PropertyFieldsDetailCards';
+import { PropertyDescriptionField } from './PropertyDescriptionField';
 
 export function PropertyFieldsEditForm({
   formData,
@@ -341,19 +342,14 @@ export function PropertyFieldsEditForm({
                 </SelectContent>
               </Select>
             </fieldset>
-            <fieldset className="space-y-1">
-              <Label className={cn("text-xs", colors.text.muted)}>
-                {t('fields.identity.description')}
-              </Label>
-              <Textarea
-                id="unit-description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="h-16 text-xs resize-none"
-                placeholder={t('fields.identity.descriptionPlaceholder')}
-                disabled={!isEditing || isHierarchyLocked}
-              />
-            </fieldset>
+            <PropertyDescriptionField
+              value={formData.description}
+              onChange={(next) => setFormData(prev => ({ ...prev, description: next }))}
+              propertyId={property?.id}
+              isEditing={isEditing}
+              isHierarchyLocked={isHierarchyLocked}
+              t={t}
+            />
           </CardContent>
         </Card>
 

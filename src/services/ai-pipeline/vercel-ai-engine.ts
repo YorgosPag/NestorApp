@@ -32,8 +32,8 @@
 
 import 'server-only';
 import { generateText, stepCountIs, type ModelMessage, type ToolSet } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { AI_ANALYSIS_DEFAULTS, AI_COST_CONFIG } from '@/config/ai-analysis-config';
+import { getOpenAIProvider } from '@/services/ai/openai-provider';
 import { buildAgenticSystemPrompt } from './agentic-system-prompt';
 import { enhanceSystemPrompt } from './prompt-enhancer';
 import { extractSuggestions, cleanAITextReply, enrichWithAttachments } from './agentic-reply-utils';
@@ -108,23 +108,8 @@ const WRITE_TOOL_NAMES = new Set([
 ]);
 
 // ============================================================================
-// OPENAI PROVIDER (lazy singleton)
+// OPENAI PROVIDER — moved to @/services/ai/openai-provider (SSoT, ADR-294)
 // ============================================================================
-
-let _openaiProvider: ReturnType<typeof createOpenAI> | null = null;
-
-function getOpenAIProvider() {
-  if (!_openaiProvider) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
-
-    _openaiProvider = createOpenAI({
-      apiKey,
-      baseURL: AI_ANALYSIS_DEFAULTS.OPENAI.BASE_URL,
-    });
-  }
-  return _openaiProvider;
-}
 
 // ============================================================================
 // MAIN FUNCTION — Drop-in replacement for executeAgenticLoop()

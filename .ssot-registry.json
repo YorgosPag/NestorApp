@@ -138,6 +138,16 @@
 
     "_comment_tier2": "=== TIER 2: SECURITY (bypass = vulnerability) ===",
 
+    "openai-provider": {
+      "ssotFile": "src/services/ai/openai-provider.ts",
+      "description": "OpenAI provider creation must use getOpenAIProvider() — no inline createOpenAI() calls outside the SSoT module",
+      "forbiddenPatterns": [
+        "createOpenAI\\s*\\("
+      ],
+      "allowlist": [
+        "src/services/ai/openai-provider.ts"
+      ]
+    },
     "ai-role-access-matrix": {
       "ssotFile": "src/config/ai-role-access-matrix.ts",
       "description": "AI role permissions must use AI_ROLE_ACCESS_MATRIX — no inline access configs",

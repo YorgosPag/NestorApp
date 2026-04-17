@@ -41,7 +41,9 @@
       "commercialStatusPlaceholder": "Select status...",
       "propertyStatus": "Operational Status",
       "description": "Description",
-      "descriptionPlaceholder": "Add a description for this unit..."
+      "descriptionPlaceholder": "Add a description for this unit...",
+      "aiGenerateButton": "Generate with AI",
+      "aiGenerateTooltip": "Generate a description based on all unit data"
     },
     "commercial": {
       "askingPrice": "Asking Price (€)"
@@ -52,7 +54,9 @@
       "gross": "Gross",
       "net": "Net",
       "balcony": "Balcony",
+      "balconyTooltip": "A projecting (cantilever) open-air space extending from the building façade on an upper floor, without supports below. Enclosed by a parapet or railing. Per the Greek Building Code (Law 4067/2012) it counts toward coverage and buildable area under specific conditions.",
       "terrace": "Terrace",
+      "terraceTooltip": "An open-air space resting on a slab, the ground, or a rooftop, which may be supported by walls or columns. Typically covered by a pergola or canopy and larger than a balcony. Acts as an extension of the interior living space.",
       "garden": "Garden",
       "netExceedsGross": "Net area cannot exceed gross area"
     },
@@ -241,5 +245,17 @@
   },
   "inlineEdit": {
     "updated": "Property updated successfully"
+  },
+  "aiDescriptionDialog": {
+    "title": "AI Description",
+    "subtitle": "The AI analyzed the unit data and suggests the description below. You can edit it before accepting.",
+    "regenerate": "Regenerate",
+    "cancel": "Cancel",
+    "accept": "Accept",
+    "loading": "Generating description...",
+    "editPlaceholder": "The description will appear here...",
+    "errorGeneric": "Generation failed. Please try again.",
+    "errorRateLimit": "Too many requests. Please wait a moment and try again.",
+    "errorUnauthorized": "You do not have permission for this action."
   }
 }

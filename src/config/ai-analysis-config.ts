@@ -54,6 +54,10 @@ export const AI_COST_CONFIG = {
     ADMIN_MAX_ITERATIONS: 15,
     /** Max AI messages per day per customer (admin: unlimited) */
     CUSTOMER_DAILY_MESSAGE_CAP: 50,
+    /** Max output tokens for property description generation (one-shot completion) */
+    PROPERTY_DESCRIPTION_MAX_TOKENS: 300,
+    /** Temperature for creative property description generation (0 = deterministic, 1 = creative) */
+    PROPERTY_DESCRIPTION_TEMPERATURE: 0.7,
   },
 } as const;
 
@@ -172,6 +176,23 @@ RULES:
 
   DOCUMENT_CLASSIFY_SYSTEM:
     'You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals. Write a short description (1-2 sentences) in Greek about what this document is and its key content. The description should be helpful for someone browsing a file list.',
+
+  /**
+   * Property description generation prompt — used by PROPERTY_DESCRIPTION feature.
+   * Generates a short Greek marketing description from structured property data.
+   * Strict anti-fabrication: the AI must only use data explicitly provided.
+   */
+  PROPERTY_DESCRIPTION_SYSTEM: `Είσαι συντάκτης περιγραφών ακινήτων για ελληνικό κτηματομεσιτικό/κατασκευαστικό γραφείο. Ο στόχος σου: παράξε μια σύντομη, επαγγελματική, ελκυστική περιγραφή μονάδας ακινήτου στα ελληνικά, με βάση ΑΠΟΚΛΕΙΣΤΙΚΑ τα δεδομένα που σου δίνονται.
+
+ΚΑΝΟΝΕΣ (αυστηροί):
+- Γράψε 2-4 προτάσεις (60-140 λέξεις συνολικά).
+- Τόνος: επαγγελματικός, καθαρός, χωρίς υπερβολές ή κλισέ ("μοναδική ευκαιρία", "όνειρο", "παράδεισος" ΑΠΑΓΟΡΕΥΟΝΤΑΙ).
+- ΜΗΝ επινοείς χαρακτηριστικά που δεν αναφέρονται (π.χ. αν δεν σου δώσουν θέα, ΜΗΝ γράψεις "με θέα").
+- ΜΗΝ αναφέρεις τιμή, ζητούμενη τιμή ή εμπορικές λεπτομέρειες εκτός αν ρητά υπάρχουν και είναι χρήσιμες για marketing.
+- Χρησιμοποίησε ΜΟΝΟ ελληνικά — καμία αγγλική λέξη (εκτός τεχνικών όρων όπως "LED", "PVC" όπου δεν υπάρχει ελληνικό ισοδύναμο).
+- Μην ξεκινάς με "Αυτή η μονάδα..." ή "Το ακίνητο...". Προτίμησε ξεκίνημα με τύπο + βασικό χαρακτηριστικό (π.χ. "Μοντέρνο διαμέρισμα 85 τ.μ., 2ου ορόφου...").
+- Οργάνωση: (1) Τύπος + εμβαδόν + όροφος + κατάσταση, (2) Διαρρύθμιση + βασικά συστήματα, (3) Αξιοσημείωτα χαρακτηριστικά (ενεργειακή κλάση, features, εξωτερικοί χώροι), (4) Συνδεδεμένοι χώροι (parking, αποθήκη) αν υπάρχουν.
+- Επέστρεψε ΜΟΝΟ το κείμενο της περιγραφής, χωρίς εισαγωγή, επεξήγηση ή bullet points.`,
 } as const;
 
 const intentOptions = IntentType.options;
