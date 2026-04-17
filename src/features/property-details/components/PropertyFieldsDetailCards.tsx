@@ -217,8 +217,8 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                   value={formData.condition}
                   disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}
-                  placeholder={t('fields.clearSelection.condition')}
-                  clearLabel={t('fields.clearSelection.condition')}
+                  placeholder={t('clearSelection.condition')}
+                  clearLabel={t('clearSelection.condition')}
                 >
                   {CONDITION_OPTIONS.map((c) => (
                     <SelectItem key={c} value={c} className="text-xs">{t(`condition.${c}`)}</SelectItem>
@@ -234,8 +234,8 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                   value={formData.energyClass}
                   disabled={!isEditing || isSoldOrRented}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}
-                  placeholder={t('fields.clearSelection.energyClass')}
-                  clearLabel={t('fields.clearSelection.energyClass')}
+                  placeholder={t('clearSelection.energyClass')}
+                  clearLabel={t('clearSelection.energyClass')}
                 >
                   {ENERGY_CLASS_OPTIONS.map((e) => (
                     <SelectItem key={e} value={e} className="text-xs">{e}</SelectItem>

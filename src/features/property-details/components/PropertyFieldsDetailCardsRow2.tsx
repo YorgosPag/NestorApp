@@ -73,8 +73,8 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                 value={formData.heatingType}
                 disabled={!isEditing || isSoldOrRented}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}
-                placeholder={t('fields.clearSelection.heating')}
-                clearLabel={t('fields.clearSelection.heating')}
+                placeholder={t('clearSelection.heating')}
+                clearLabel={t('clearSelection.heating')}
               >
                 {HEATING_OPTIONS.map((h) => (
                   <SelectItem key={h} value={h} className="text-xs">{t(`systems.heating.${h}`)}</SelectItem>
@@ -90,8 +90,8 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                 value={formData.coolingType}
                 disabled={!isEditing || isSoldOrRented}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}
-                placeholder={t('fields.clearSelection.cooling')}
-                clearLabel={t('fields.clearSelection.cooling')}
+                placeholder={t('clearSelection.cooling')}
+                clearLabel={t('clearSelection.cooling')}
               >
                 {COOLING_OPTIONS.map((c) => (
                   <SelectItem key={c} value={c} className="text-xs">{t(`systems.cooling.${c}`)}</SelectItem>
@@ -184,8 +184,8 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                           setFormData(prev => ({ ...prev, windowFrames: value }));
                         }
                       }}
-                      placeholder={t('fields.clearSelection.frames')}
-                      clearLabel={t('fields.clearSelection.frames')}
+                      placeholder={t('clearSelection.frames')}
+                      clearLabel={t('clearSelection.frames')}
                     >
                       {FRAME_OPTIONS.map((f) => (
                         <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
@@ -207,8 +207,8 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                           setFormData(prev => ({ ...prev, glazing: value }));
                         }
                       }}
-                      placeholder={t('fields.clearSelection.glazing')}
-                      clearLabel={t('fields.clearSelection.glazing')}
+                      placeholder={t('clearSelection.glazing')}
+                      clearLabel={t('clearSelection.glazing')}
                     >
                       {GLAZING_OPTIONS.map((g) => (
                         <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>

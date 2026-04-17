@@ -3,16 +3,16 @@
     "location": {
       "floor": "Floor",
       "noFloorHint": "Connect a building first"
-    },
-    "clearSelection": {
-      "heating": "Select heating",
-      "cooling": "Select cooling",
-      "frames": "Select window frames",
-      "glazing": "Select glazing",
-      "condition": "Select condition",
-      "energyClass": "Select energy class",
-      "floor": "No floor"
     }
+  },
+  "clearSelection": {
+    "heating": "Select heating",
+    "cooling": "Select cooling",
+    "frames": "Select window frames",
+    "glazing": "Select glazing",
+    "condition": "Select condition",
+    "energyClass": "Select energy class",
+    "floor": "No floor"
   },
   "list": {
     "title": "Properties",

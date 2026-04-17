@@ -245,7 +245,7 @@ export function NewUnitHierarchySection({
                   disabled={!selection.buildingId || floorsLoading}
                   id="new-unit-floor"
                   placeholder={t('dialog.addUnit.placeholders.floor')}
-                  clearLabel={t('fields.clearSelection.floor')}
+                  clearLabel={t('clearSelection.floor')}
                 >
                   {floorOptions.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
