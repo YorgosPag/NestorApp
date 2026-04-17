@@ -30,6 +30,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { verifyCronAuthorization } from '@/lib/cron-auth';
 import {
   processAIPipelineBatch,
   getAIPipelineQueueHealth,
@@ -39,39 +40,6 @@ import { QUEUE_STATUS } from '@/constants/entity-status-values';
 import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('AI_PIPELINE_CRON');
-
-// ============================================================================
-// AUTHORIZATION
-// ============================================================================
-
-/**
- * Verify Vercel Cron authorization
- *
- * Vercel sends CRON_SECRET in Authorization header for cron jobs.
- */
-function verifyCronAuthorization(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  // If no secret configured, allow all (for development)
-  if (!cronSecret) {
-    logger.warn('CRON_SECRET not configured - allowing unauthenticated access');
-    return true;
-  }
-
-  // Verify Bearer token
-  if (authHeader === `Bearer ${cronSecret}`) {
-    return true;
-  }
-
-  // Also check X-Cron-Secret header (alternative)
-  const cronSecretHeader = request.headers.get('x-cron-secret');
-  if (cronSecretHeader === cronSecret) {
-    return true;
-  }
-
-  return false;
-}
 
 // ============================================================================
 // SHARED BATCH PROCESSING LOGIC (DRY)

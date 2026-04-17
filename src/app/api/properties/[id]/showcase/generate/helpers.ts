@@ -205,11 +205,7 @@ export async function uploadPdfToStorage(
     resumable: false,
   });
 
-  // Write the Firebase download-token in a separate setMetadata() call. Nesting
-  // `metadata: { metadata: { firebaseStorageDownloadTokens: ... } }` inside
-  // `save()` options did not persist the custom metadata field (resulted in
-  // 403 Permission denied on the firebasestorage.googleapis.com endpoint).
-  // An explicit setMetadata after save reliably writes it.
+  // Write the Firebase download-token in a separate setMetadata() call.
   await fileRef.setMetadata({
     metadata: { firebaseStorageDownloadTokens: downloadToken },
   });
@@ -218,6 +214,15 @@ export async function uploadPdfToStorage(
   if (!exists) {
     throw new Error(`Upload reported success but object is missing: ${bucket.name}/${storagePath}`);
   }
+
+  // Diagnostic: read back metadata to confirm custom field persisted.
+  const [metadataSnap] = await fileRef.getMetadata();
+  logger.info('Post-setMetadata diagnostic', {
+    customMetadata: metadataSnap.metadata ?? null,
+    tokenInMetadata: metadataSnap.metadata?.firebaseStorageDownloadTokens ?? null,
+    expectedToken: downloadToken,
+    match: metadataSnap.metadata?.firebaseStorageDownloadTokens === downloadToken,
+  });
 
   // Firebase download-token URL: works against the `.firebasestorage.app`
   // bucket domain where GCS XML API signed URLs (storage.googleapis.com/...)

@@ -16,6 +16,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
+import { verifyCronAuthorization } from '@/lib/cron-auth';
 import { OverdueAlertService } from '@/services/overdue-alert.service';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -24,31 +25,6 @@ const logger = createModuleLogger('OVERDUE_ALERTS_CRON');
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
-
-// =============================================================================
-// CRON AUTH — reuse pattern from email-ingestion
-// =============================================================================
-
-function verifyCronAuthorization(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret) {
-    logger.error('CRON_SECRET not configured — blocking unauthenticated access');
-    return false;
-  }
-
-  if (authHeader === `Bearer ${cronSecret}`) {
-    return true;
-  }
-
-  const cronSecretHeader = request.headers.get('x-cron-secret');
-  if (cronSecretHeader === cronSecret) {
-    return true;
-  }
-
-  return false;
-}
 
 // =============================================================================
 // GET /api/cron/overdue-alerts

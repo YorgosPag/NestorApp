@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Phase 4 COMPLETE, Phase 3 COMPLETE |
+| **Status** | Phase 1-4 COMPLETE |
 | **Date** | 2026-04-17 |
 | **Category** | Infrastructure / Data Protection / Disaster Recovery |
 | **Canonical Location** | `src/services/backup/` |
@@ -220,9 +220,27 @@ File nuovi:
 Modifica:
 - `src/config/firestore-collections.ts` — `SUBCOLLECTION_PARENTS` + `IMMUTABLE_COLLECTIONS`
 
-### Fase 2: Export completo Firestore (3-4 giorni)
+### Fase 2: Scheduled Backup — COMPLETE
 
-Estensione BackupService: `exportAllCollections()` + `exportAllSubcollections()`. Progress tracking in `system/backup_status`.
+Cron endpoint + scheduler service + retention policy.
+
+File nuovi:
+- `src/lib/cron-auth.ts` — SSoT centralizzato per Vercel Cron authorization (sostituisce 4 copie inline)
+- `src/services/backup/backup-scheduler.service.ts` — BackupSchedulerService: config check, execute, retention cleanup
+- `src/app/api/cron/backup/route.ts` — GET cron endpoint, daily at 01:00 UTC
+
+Modifica:
+- `vercel.json` — aggiunto cron entry `/api/cron/backup` schedule `0 1 * * *`
+- `src/app/api/cron/overdue-alerts/route.ts` — usa `verifyCronAuthorization` centralizzato
+- `src/app/api/cron/email-ingestion/route.ts` — usa `verifyCronAuthorization` centralizzato
+- `src/app/api/cron/ai-pipeline/route.ts` — usa `verifyCronAuthorization` centralizzato
+- `src/app/api/cron/file-purge/route.ts` — usa `verifyCronAuthorization` centralizzato
+
+Config Firestore `system/backup_config`:
+- `scheduleEnabled: boolean` — abilita/disabilita
+- `retentionCount: number` — quanti backup mantenere (default 7)
+- `lastBackupId/lastBackupAt` — aggiornati automaticamente
+- Guard: min 20h tra backup consecutivi (anti double-trigger)
 
 ### Fase 3: Export Firebase Storage — COMPLETE
 
@@ -310,4 +328,5 @@ gs://{projectId}-backups/
 |------|------|------------|
 | 2026-04-17 | 1 | ADR creato. Tipi manifest, serializer, BackupService, GCS service, API endpoints |
 | 2026-04-17 | 4 | RestoreService, SchemaReconciler (Approach B), API routes, pre-restore snapshot, generateRestoreId, restore types |
-| 2026-04-17 | 3 | StorageBackupService: lista file, download parallelo (concurrency=10), SHA-256, cross-ref FILES, writeRawFile() in GCS, backupId generato all'inizio |
+| 2026-04-17 | 3 | StorageBackupService: streaming pipeline, SHA-256 transform, cross-ref FILES, size guard, backupId upfront |
+| 2026-04-17 | 2 | BackupSchedulerService, cron endpoint /api/cron/backup (01:00 UTC), retention policy, SSoT cron-auth.ts (4 copie → 1) |

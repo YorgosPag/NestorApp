@@ -801,6 +801,17 @@
       "allowlist": [
         "src/lib/file-types/preview-registry.ts"
       ]
+    },
+    "cron-auth": {
+      "ssotFile": "src/lib/cron-auth.ts",
+      "description": "Vercel Cron authorization must use centralized verifyCronAuthorization — no inline CRON_SECRET checks",
+      "forbiddenPatterns": [
+        "function\\s+verifyCronAuthorization\\s*\\(",
+        "process\\.env\\.CRON_SECRET"
+      ],
+      "allowlist": [
+        "src/lib/cron-auth.ts"
+      ]
     }
   }
 }
