@@ -48,29 +48,50 @@ const HIGHLIGHT_DURATION_MS = 2400;
 // =============================================================================
 
 /**
- * Maps each scorable field-key to the card anchor ID μέσα στο property-details
- * info tab. Null means no in-tab anchor exists yet (media fields live in
- * dedicated tabs — V1 no-op on click).
+ * Maps each scorable field-key to a jump target. Two shapes supported:
+ *   - `card:{anchorId}` → scroll to the element with matching `id=` in the
+ *     current info tab (PropertyFieldsDetailCards + Row2 cards).
+ *   - `tab:{tabValue}`  → activate the Radix Tabs trigger with that value
+ *     (photos, videos, floor-plan, etc). Used για media fields που ζουν
+ *     σε άλλο tab.
+ *   - `null`            → no jump target (silent no-op; button disabled).
  */
-const FIELD_TO_CARD_ANCHOR: Record<FieldKey, string | null> = {
+const FIELD_TO_JUMP_TARGET: Record<FieldKey, string | null> = {
   type: null, // Lives in identity card — no anchor yet (V2 candidate)
   areaGross: null,
   areaNet: null,
-  bedrooms: 'field-layout',
-  bathrooms: 'field-layout',
-  orientations: 'field-orientation',
-  condition: 'field-condition-energy',
-  energyClass: 'field-condition-energy',
-  heatingType: 'field-systems',
-  coolingType: 'field-systems',
-  windowFrames: 'field-finishes',
-  glazing: 'field-finishes',
-  flooring: 'field-finishes',
-  interiorFeatures: 'field-features',
-  securityFeatures: 'field-features',
-  floorplan: null, // Lives in dedicated Floorplan tab
-  photos: null, // Lives in dedicated Photos tab
+  bedrooms: 'card:field-layout',
+  bathrooms: 'card:field-layout',
+  orientations: 'card:field-orientation',
+  condition: 'card:field-condition-energy',
+  energyClass: 'card:field-condition-energy',
+  heatingType: 'card:field-systems',
+  coolingType: 'card:field-systems',
+  windowFrames: 'card:field-finishes',
+  glazing: 'card:field-finishes',
+  flooring: 'card:field-finishes',
+  interiorFeatures: 'card:field-features',
+  securityFeatures: 'card:field-features',
+  floorplan: 'tab:floor-plan', // Dedicated floorplan tab
+  photos: 'tab:photos', // Dedicated photos tab
 };
+
+/**
+ * Activate a Radix Tabs trigger by its `value`. Radix renders each trigger
+ * with a generated id ending in `-trigger-{value}` — we locate it via
+ * attribute-ends-with selector and dispatch a click. Falls back to no-op
+ * if no matching trigger is found (e.g. tab disabled via config).
+ */
+function activateTab(tabValue: string): HTMLElement | null {
+  if (typeof document === 'undefined') return null;
+  const escaped = tabValue.replace(/"/g, '\\"');
+  const trigger = document.querySelector<HTMLElement>(
+    `[role="tab"][id$="-trigger-${escaped}"]`,
+  );
+  if (!trigger) return null;
+  trigger.click();
+  return trigger;
+}
 
 // =============================================================================
 // PROPS
@@ -131,23 +152,43 @@ export function PropertyCompletionBreakdown({
   };
 
   const handleJump = (fieldKey: FieldKey) => {
-    const anchor = FIELD_TO_CARD_ANCHOR[fieldKey];
-    if (!anchor || typeof document === 'undefined') return;
-    const element = document.getElementById(anchor);
-    if (!(element instanceof HTMLElement)) return;
+    const target = FIELD_TO_JUMP_TARGET[fieldKey];
+    if (!target || typeof document === 'undefined') return;
 
     clearPreviousHighlight();
 
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    element.classList.add(...HIGHLIGHT_CLASSES);
-    element.focus({ preventScroll: true });
+    // Tab jump — activate the Radix Tabs trigger, then highlight it briefly.
+    if (target.startsWith('tab:')) {
+      const tabValue = target.slice('tab:'.length);
+      const trigger = activateTab(tabValue);
+      if (!trigger) return;
+      trigger.classList.add(...HIGHLIGHT_CLASSES);
+      highlightElementRef.current = trigger;
+      highlightTimeoutRef.current = setTimeout(() => {
+        trigger.classList.remove(...HIGHLIGHT_CLASSES);
+        highlightElementRef.current = null;
+        highlightTimeoutRef.current = null;
+      }, HIGHLIGHT_DURATION_MS);
+      return;
+    }
 
-    highlightElementRef.current = element;
-    highlightTimeoutRef.current = setTimeout(() => {
-      element.classList.remove(...HIGHLIGHT_CLASSES);
-      highlightElementRef.current = null;
-      highlightTimeoutRef.current = null;
-    }, HIGHLIGHT_DURATION_MS);
+    // Card jump — scroll to the card anchor in the info tab + pulse ring.
+    if (target.startsWith('card:')) {
+      const anchorId = target.slice('card:'.length);
+      const element = document.getElementById(anchorId);
+      if (!(element instanceof HTMLElement)) return;
+
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add(...HIGHLIGHT_CLASSES);
+      element.focus({ preventScroll: true });
+
+      highlightElementRef.current = element;
+      highlightTimeoutRef.current = setTimeout(() => {
+        element.classList.remove(...HIGHLIGHT_CLASSES);
+        highlightElementRef.current = null;
+        highlightTimeoutRef.current = null;
+      }, HIGHLIGHT_DURATION_MS);
+    }
   };
 
   return (
@@ -157,7 +198,7 @@ export function PropertyCompletionBreakdown({
       </p>
       <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5 w-full">
         {missingEntries.map(({ fieldKey, weight, critical, status }) => {
-          const anchor = FIELD_TO_CARD_ANCHOR[fieldKey];
+          const target = FIELD_TO_JUMP_TARGET[fieldKey];
           const weightLabelKey = resolveWeightLabelKey(weight);
           return (
             <li key={fieldKey} className="w-full">
@@ -165,7 +206,7 @@ export function PropertyCompletionBreakdown({
                 type="button"
                 variant="ghost"
                 size="sm"
-                disabled={!anchor}
+                disabled={!target}
                 onClick={() => handleJump(fieldKey)}
                 className="w-full justify-between h-9 px-2 text-sm"
               >
@@ -187,7 +228,7 @@ export function PropertyCompletionBreakdown({
                   <span className="text-[10px] uppercase tracking-wide">
                     {t(`completion.breakdown.${weightLabelKey}`)}
                   </span>
-                  {anchor && <ChevronRight className="h-3 w-3" />}
+                  {target && <ChevronRight className="h-3 w-3" />}
                 </span>
               </Button>
             </li>
