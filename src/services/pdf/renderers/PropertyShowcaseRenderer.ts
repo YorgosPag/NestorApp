@@ -16,7 +16,7 @@
 
 import type { IPDFDoc, Margins } from '../contracts';
 import { TextRenderer } from './TextRenderer';
-import { COLORS, FONT_SIZES, LINE_SPACING } from '../layout';
+import { COLORS, FONT_SIZES, FONTS, LINE_SPACING } from '../layout';
 
 export interface PropertyShowcasePDFData {
   property: {
@@ -103,7 +103,12 @@ const formatDate = (date: Date, locale: 'el' | 'en' = 'el'): string => {
 };
 
 export class PropertyShowcaseRenderer {
-  private textRenderer = new TextRenderer();
+  // Showcase PDFs must render Greek labels + user content, so the renderer
+  // is pinned to the Unicode font (Roboto Identity-H) registered by
+  // `PropertyShowcasePDFService` via `registerGreekFont()`. Without this,
+  // `TextRenderer` falls back to Helvetica (no Greek glyphs) and every
+  // label turns into gibberish (incident 2026-04-17).
+  private textRenderer = new TextRenderer({ font: FONTS.UNICODE });
 
   render(
     doc: IPDFDoc,

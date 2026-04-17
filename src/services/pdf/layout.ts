@@ -16,6 +16,10 @@ export const COLORS = {
 
 export const FONTS = {
   HELVETICA: 'helvetica',
+  // ADR-267 SSoT — embedded Roboto TTF with Identity-H encoding. Caller must
+  // have invoked `registerGreekFont(doc)` before using this value; otherwise
+  // jsPDF falls back to Helvetica with garbled Greek glyphs.
+  UNICODE: 'Roboto',
 };
 
 export const FONT_STYLES = {
