@@ -89,7 +89,9 @@ export function PropertyCompletionMeter({
     levelCount,
   });
 
-  const [expanded, setExpanded] = useState(false);
+  // Default expanded — Google My Business / LinkedIn "what's next" always-
+  // visible coaching panel. User can collapse if distracting.
+  const [expanded, setExpanded] = useState(true);
 
   // Note: `assessment.shouldHide` (draft) intentionally NOT used as render
   // gate — `buildFormDataFromProperty` defaults missing operationalStatus to
@@ -127,19 +129,19 @@ export function PropertyCompletionMeter({
     <section
       aria-label={t('completion.aria')}
       className={cn(
-        'rounded-md border p-3 space-y-2',
+        'rounded-md border p-4 space-y-3',
         colors.border.default,
         colors.bg.secondary,
       )}
     >
       <header className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Gauge className={cn(iconSizes.sm, textClass)} aria-hidden="true" />
-          <h3 className="text-sm font-medium">
+          <Gauge className={cn(iconSizes.md, textClass)} aria-hidden="true" />
+          <h3 className="text-base font-semibold">
             {t('completion.title')}
           </h3>
           <span
-            className={cn('text-sm font-semibold tabular-nums', textClass)}
+            className={cn('text-base font-bold tabular-nums', textClass)}
             aria-live="polite"
           >
             {percentage}%
@@ -180,14 +182,14 @@ export function PropertyCompletionMeter({
         </div>
       </header>
 
-      <Progress value={percentage} className="h-2" />
+      <Progress value={percentage} className="h-3" />
 
-      <p className={cn('text-xs', textClass)}>
+      <p className={cn('text-sm font-medium', textClass)}>
         {t(bucketLabelKey, { count: missingCritical.length })}
       </p>
 
       {expanded && (
-        <div className="pt-1 border-t border-[hsl(var(--border))]">
+        <div className="pt-2 border-t border-[hsl(var(--border))]">
           <PropertyCompletionBreakdown assessment={assessment} />
         </div>
       )}
