@@ -186,6 +186,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   project: {
     entityType: ENTITY_TYPES.PROJECT,
+    canonicalEntityType: ENTITY_TYPES.PROJECT,
     title: 'photos.tabs.project',
     titleIcon: 'Briefcase',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,
@@ -207,6 +208,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   building: {
     entityType: ENTITY_TYPES.BUILDING,
+    canonicalEntityType: ENTITY_TYPES.BUILDING,
     title: 'photos.tabs.building',
     titleIcon: 'Building2',
     maxPhotos: PHOTO_MAX_COUNTS.EXTENDED,
@@ -228,6 +230,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   contact: {
     entityType: ENTITY_TYPES.CONTACT,
+    canonicalEntityType: ENTITY_TYPES.CONTACT,
     title: 'photos.tabs.contact',
     titleIcon: 'User',
     maxPhotos: PHOTO_MAX_COUNTS.CONTACT,
@@ -253,6 +256,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   storage: {
     entityType: 'storage',
+    canonicalEntityType: ENTITY_TYPES.STORAGE,
     title: 'photos.tabs.storage',
     titleIcon: 'Warehouse',
     maxPhotos: PHOTO_MAX_COUNTS.STORAGE,
@@ -274,6 +278,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   property: {
     entityType: ENTITY_TYPES.PROPERTY,
+    canonicalEntityType: ENTITY_TYPES.PROPERTY,
     title: 'photos.tabs.unit',
     titleIcon: 'Home',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,
@@ -295,6 +300,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   parking: {
     entityType: 'parking',
+    canonicalEntityType: ENTITY_TYPES.PARKING_SPOT,
     title: 'photos.tabs.parking',
     titleIcon: 'Car',
     maxPhotos: 10,
@@ -320,6 +326,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   floor: {
     entityType: 'floor',
+    canonicalEntityType: ENTITY_TYPES.FLOOR,
     title: 'photos.tabs.floor',
     titleIcon: 'Layers',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,

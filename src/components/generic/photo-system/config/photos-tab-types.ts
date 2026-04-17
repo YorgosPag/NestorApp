@@ -15,7 +15,7 @@
 // ============================================================================
 
 import type { ComponentType } from 'react';
-import type { FileDomain, FileCategory } from '@/config/domain-constants';
+import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 
 // =============================================================================
 // CORE TYPES - IMPORT FROM EXISTING SOURCES
@@ -139,8 +139,15 @@ export interface PhotoGridCols {
  * PhotosTabBase configuration per entity type
  */
 export interface PhotosTabConfig {
-  /** Entity type identifier */
+  /** Entity type identifier (tab UI key; may differ from canonical EntityType). */
   entityType: PhotosTabEntityType;
+  /**
+   * Canonical ENTITY_TYPES value for FileRecord write + read.
+   * Differs from tab key when UI slug diverges from canonical slug
+   * (e.g. tab "parking" → canonical "parking_spot").
+   * ADR-293 Phase 5 Batch 29.
+   */
+  canonicalEntityType: EntityType;
   /** Tab title (Greek) */
   title: string;
   /** Lucide icon name for title */

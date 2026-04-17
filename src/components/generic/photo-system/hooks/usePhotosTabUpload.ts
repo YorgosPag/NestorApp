@@ -101,6 +101,9 @@ export function usePhotosTabUpload({
 }: UsePhotosTabUploadProps): UsePhotosTabUploadReturn {
   // ---------------------------------------------------------------------------
   // USE EXISTING ENTERPRISE HOOK - NO DUPLICATION!
+  // ADR-293 Phase 5 Batch 29: entity-polymorphic fields replace the legacy
+  // contact-only path. contactId still forwarded as alias for BC; entityType/
+  // domain/category drive canonical FileRecord tagging.
   // ---------------------------------------------------------------------------
   const enterpriseUpload = useEnterpriseFileUpload({
     fileType: 'image',
@@ -112,6 +115,12 @@ export function usePhotosTabUpload({
     companyId,
     contactId: entityId,
     createdBy,
+    // 🏢 ADR-293 Phase 5: entity-polymorphic tagging
+    entityType: config.canonicalEntityType,
+    entityId,
+    domain: config.domain,
+    category: config.category,
+    entityLabel: entityName,
   });
 
   // ---------------------------------------------------------------------------

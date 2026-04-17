@@ -9,6 +9,7 @@ import {
   type FileType,
   type UploadPurpose
 } from '@/config/file-upload-config';
+import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import {
   validateFile,
   type FileValidationResult
@@ -66,6 +67,18 @@ export interface UseEnterpriseFileUploadConfig {
   createdBy?: string;
   /** 🏢 CANONICAL: Entity name for display name generation */
   contactName?: string;
+
+  // 🏢 ADR-293 Phase 5 — ENTITY-POLYMORPHIC (Batch 29)
+  /** Target entity type (property, building, contact, ...). Defaults to CONTACT when absent. */
+  entityType?: EntityType;
+  /** Target entity ID; supersedes contactId when provided. */
+  entityId?: string;
+  /** File domain (sales, construction, admin, ...). Defaults to ADMIN when absent. */
+  domain?: FileDomain;
+  /** File category (photos, floorplans, ...). Defaults to PHOTOS. */
+  category?: FileCategory;
+  /** Human-readable entity label; supersedes contactName when provided. */
+  entityLabel?: string;
 }
 
 export interface UseEnterpriseFileUploadActions {
@@ -335,6 +348,9 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
         }
 
         // 🏢 ADR-293: All uploads use canonical pipeline (legacy eliminated)
+        // ADR-293 Phase 5 Batch 29: entity-polymorphic fields forwarded alongside
+        // legacy contact aliases so PhotoUploadService routes to the correct
+        // entityType/domain/category.
         result = await PhotoUploadService.uploadPhoto(fileToUpload, {
           onProgress,
           enableCompression: config.fileType === 'image',
@@ -346,6 +362,11 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
           contactId: config.contactId,
           createdBy: config.createdBy,
           contactName: config.contactName,
+          entityType: config.entityType,
+          entityId: config.entityId,
+          domain: config.domain,
+          category: config.category,
+          entityLabel: config.entityLabel,
         });
 
         logger.info('ENTERPRISE: PhotoUploadService completed', {
