@@ -36,9 +36,9 @@ import type {
   BackupManifest,
   CollectionManifestEntry,
   SubcollectionManifestEntry,
-  StorageManifestEntry,
   BackupStatus,
   BackupPhase,
+  StatusCallback,
   SerializedDocument,
 } from './backup-manifest.types';
 import type { StorageExportResult } from './storage-backup.service';
@@ -64,12 +64,6 @@ export interface SubcollectionExportResult {
   entry: SubcollectionManifestEntry;
   documents: SerializedDocument[];
 }
-
-// ---------------------------------------------------------------------------
-// Status callback
-// ---------------------------------------------------------------------------
-
-export type StatusCallback = (status: Partial<BackupStatus>) => Promise<void>;
 
 // ---------------------------------------------------------------------------
 // BackupService

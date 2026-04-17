@@ -3,15 +3,19 @@
  * STORAGE BACKUP SERVICE — ADR-313 Phase 3
  * =============================================================================
  *
- * Exports Firebase Storage files to the backup GCS bucket.
- * Lists all files recursively, downloads with concurrency limit,
- * computes SHA-256, and cross-references with the FILES collection.
+ * Exports Firebase Storage files to the backup GCS bucket using streaming.
  *
- * Architecture:
- * - getAdminStorage() for Firebase Storage access
- * - COLLECTIONS.FILES for cross-referencing storagePath → FileRecord
- * - Parallel download with configurable concurrency (default 10)
- * - SHA-256 integrity hash per file
+ * Google-level patterns:
+ * - Stream-to-stream copy: source → SHA-256 transform → destination
+ *   Memory: O(chunk_size) not O(file_size) — safe for any file size
+ * - Concurrency-limited parallel processing (default 10)
+ * - Cross-reference with FILES collection for manifest enrichment
+ * - Size guard: skip files > MAX_FILE_SIZE_BYTES with warning
+ *
+ * SSoT:
+ * - getAdminStorage() / getAdminFirestore() from firebaseAdmin
+ * - COLLECTIONS.FILES from firestore-collections.ts
+ * - StatusCallback from backup-manifest.types.ts (shared with BackupService)
  *
  * @module services/backup/storage-backup.service
  * @see adrs/ADR-313-enterprise-backup-restore.md §6 Phase 3
@@ -22,10 +26,12 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createHash } from 'crypto';
+import { Transform } from 'stream';
+import { pipeline } from 'stream/promises';
 
 import type { Bucket, File as GcsFile } from '@google-cloud/storage';
 import type { Firestore } from 'firebase-admin/firestore';
-import type { StorageManifestEntry, BackupStatus } from './backup-manifest.types';
+import type { StorageManifestEntry, StatusCallback } from './backup-manifest.types';
 import type { BackupGcsService } from './backup-gcs.service';
 
 const logger = createModuleLogger('StorageBackupService');
@@ -37,6 +43,12 @@ const logger = createModuleLogger('StorageBackupService');
 const DEFAULT_CONCURRENCY = 10;
 const PROGRESS_LOG_INTERVAL = 50;
 
+/** Files larger than 500 MB are skipped with a warning */
+const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+
+/** Files larger than 50 MB log a warning (but still export) */
+const LARGE_FILE_WARN_BYTES = 50 * 1024 * 1024;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -46,16 +58,6 @@ export interface StorageExportResult {
   totalBytes: number;
   warnings: string[];
 }
-
-export type StorageProgressCallback = (
-  status: Partial<BackupStatus>,
-) => Promise<void>;
-
-// ---------------------------------------------------------------------------
-// File record index (storagePath → docId)
-// ---------------------------------------------------------------------------
-
-type StoragePathIndex = Map<string, string>;
 
 // ---------------------------------------------------------------------------
 // StorageBackupService
@@ -73,13 +75,15 @@ export class StorageBackupService {
   }
 
   /**
-   * Build an index of storagePath → Firestore doc ID from the FILES collection.
-   * Used to cross-reference Storage files with their FileRecord documents.
+   * Build index: storagePath → Firestore doc ID from FILES collection.
+   * Projection query — fetches only storagePath field per doc.
    */
-  private async buildStoragePathIndex(): Promise<StoragePathIndex> {
-    const index: StoragePathIndex = new Map();
-    const filesRef = this.db.collection(COLLECTIONS.FILES);
-    const snapshot = await filesRef.select('storagePath').get();
+  private async buildStoragePathIndex(): Promise<Map<string, string>> {
+    const index = new Map<string, string>();
+    const snapshot = await this.db
+      .collection(COLLECTIONS.FILES)
+      .select('storagePath')
+      .get();
 
     for (const doc of snapshot.docs) {
       const storagePath = doc.data().storagePath as string | undefined;
@@ -93,40 +97,47 @@ export class StorageBackupService {
   }
 
   /**
-   * List all files in the Firebase Storage bucket recursively.
-   */
-  private async listAllFiles(): Promise<GcsFile[]> {
-    const [files] = await this.sourceBucket.getFiles();
-    logger.info(`Found ${files.length} files in Storage bucket`);
-    return files;
-  }
-
-  /**
-   * Process a single file: download, compute SHA-256, write to backup bucket.
+   * Stream a single file: source → SHA-256 transform → backup destination.
+   * Memory usage: O(chunk_size), not O(file_size).
    */
   private async processFile(
     file: GcsFile,
     backupId: string,
     gcsService: BackupGcsService,
-    storagePathIndex: StoragePathIndex,
-  ): Promise<StorageManifestEntry> {
+    storagePathIndex: Map<string, string>,
+  ): Promise<StorageManifestEntry | null> {
     const storagePath = file.name;
     const [metadata] = await file.getMetadata();
-
     const sizeBytes = Number(metadata.size ?? 0);
-    const contentType = metadata.contentType ?? 'application/octet-stream';
+    const contentType = (metadata.contentType as string) ?? 'application/octet-stream';
 
-    // Download file content
-    const [content] = await file.download();
+    // Size guard — skip files that would timeout or crash
+    if (sizeBytes > MAX_FILE_SIZE_BYTES) {
+      logger.warn(`Skipping oversized file: ${storagePath} (${(sizeBytes / 1024 / 1024).toFixed(0)} MB)`);
+      return null;
+    }
 
-    // Compute SHA-256
-    const sha256 = createHash('sha256').update(content).digest('hex');
+    if (sizeBytes > LARGE_FILE_WARN_BYTES) {
+      logger.warn(`Large file: ${storagePath} (${(sizeBytes / 1024 / 1024).toFixed(0)} MB)`);
+    }
 
-    // Write to backup bucket
     const backupFilePath = `storage/${storagePath}`;
-    await gcsService.writeRawFile(backupId, backupFilePath, content, contentType);
 
-    // Cross-reference with FILES collection
+    // Stream: source → SHA-256 transform → destination
+    const hash = createHash('sha256');
+    const hashTransform = new Transform({
+      transform(chunk, _encoding, callback) {
+        hash.update(chunk);
+        callback(null, chunk);
+      },
+    });
+
+    const readStream = file.createReadStream();
+    const writeStream = gcsService.createWriteStream(backupId, backupFilePath, contentType);
+
+    await pipeline(readStream, hashTransform, writeStream);
+
+    const sha256 = hash.digest('hex');
     const firestoreDocId = storagePathIndex.get(storagePath);
 
     return {
@@ -145,15 +156,14 @@ export class StorageBackupService {
    * Steps:
    * 1. Build storagePath → docId index from FILES collection
    * 2. List all files in Storage bucket
-   * 3. Download files in parallel (concurrency limited)
-   * 4. Compute SHA-256 per file
-   * 5. Write to backup bucket under {backupId}/storage/...
-   * 6. Return StorageManifestEntry[] for the manifest
+   * 3. Stream files in parallel batches (concurrency limited)
+   * 4. Compute SHA-256 per file via streaming transform
+   * 5. Return StorageManifestEntry[] for the manifest
    */
   async exportAllFiles(
     backupId: string,
     gcsService: BackupGcsService,
-    onProgress?: StorageProgressCallback,
+    onProgress?: StatusCallback,
   ): Promise<StorageExportResult> {
     const warnings: string[] = [];
 
@@ -163,7 +173,8 @@ export class StorageBackupService {
     const storagePathIndex = await this.buildStoragePathIndex();
 
     // Step 2: List all files
-    const allFiles = await this.listAllFiles();
+    const [allFiles] = await this.sourceBucket.getFiles();
+    logger.info(`Found ${allFiles.length} files in Storage bucket`);
 
     if (allFiles.length === 0) {
       logger.info('No files in Storage bucket — skipping');
@@ -171,35 +182,30 @@ export class StorageBackupService {
     }
 
     if (onProgress) {
-      await onProgress({
-        phase: 'exporting_storage',
-        storageFilesExported: 0,
-      });
+      await onProgress({ phase: 'exporting_storage', storageFilesExported: 0 });
     }
 
-    // Step 3-5: Process files with concurrency limit
+    // Step 3-4: Stream files in concurrency-limited batches
     const entries: StorageManifestEntry[] = [];
     let totalBytes = 0;
     let processed = 0;
+    let skippedOversize = 0;
+    let failedCount = 0;
 
-    // Process in batches for concurrency control + progress reporting
-    const batchSize = this.concurrency;
-    for (let i = 0; i < allFiles.length; i += batchSize) {
-      const batch = allFiles.slice(i, i + batchSize);
+    for (let i = 0; i < allFiles.length; i += this.concurrency) {
+      const batch = allFiles.slice(i, i + this.concurrency);
 
       const batchResults = await Promise.all(
         batch.map(async (file) => {
           try {
-            return await this.processFile(
-              file,
-              backupId,
-              gcsService,
-              storagePathIndex,
-            );
+            const result = await this.processFile(file, backupId, gcsService, storagePathIndex);
+            if (!result) skippedOversize++;
+            return result;
           } catch (error) {
-            const msg = `Failed to export storage file ${file.name}: ${getErrorMessage(error)}`;
+            const msg = `Failed to export ${file.name}: ${getErrorMessage(error)}`;
             logger.warn(msg);
             warnings.push(msg);
+            failedCount++;
             return null;
           }
         }),
@@ -219,14 +225,11 @@ export class StorageBackupService {
       }
 
       if (onProgress) {
-        await onProgress({
-          phase: 'exporting_storage',
-          storageFilesExported: processed,
-        });
+        await onProgress({ phase: 'exporting_storage', storageFilesExported: processed });
       }
     }
 
-    // Log orphan stats
+    // Orphan detection
     const orphanCount = entries.filter(e => !e.firestoreDocId).length;
     if (orphanCount > 0) {
       const msg = `${orphanCount} storage files have no matching FileRecord in Firestore`;
@@ -234,10 +237,18 @@ export class StorageBackupService {
       warnings.push(msg);
     }
 
+    if (skippedOversize > 0) {
+      warnings.push(`${skippedOversize} files skipped (exceeded ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB limit)`);
+    }
+
+    if (failedCount > 0) {
+      warnings.push(`${failedCount} files failed to export`);
+    }
+
     logger.info(
-      `Storage export completed: ${entries.length} files, ` +
+      `Storage export completed: ${entries.length} exported, ` +
       `${(totalBytes / 1024 / 1024).toFixed(2)} MB, ` +
-      `${orphanCount} orphans`,
+      `${orphanCount} orphans, ${skippedOversize} oversize skipped, ${failedCount} failed`,
     );
 
     return { entries, totalBytes, warnings };

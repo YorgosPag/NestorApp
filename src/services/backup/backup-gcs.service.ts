@@ -231,25 +231,19 @@ export class BackupGcsService {
   }
 
   /**
-   * Write a raw binary file to GCS (for Storage backup files).
-   * Used by StorageBackupService to copy files from Firebase Storage.
+   * Create a writable stream to a GCS file (streaming — no buffering).
+   * Used by StorageBackupService for memory-efficient file copy.
    */
-  async writeRawFile(
+  createWriteStream(
     backupId: string,
     relativePath: string,
-    content: Buffer,
     contentType: string,
-  ): Promise<void> {
+  ) {
     const gcsPath = `${backupId}/${relativePath}`;
-    const file = this.bucket.file(gcsPath);
-    await file.save(content, {
+    return this.bucket.file(gcsPath).createWriteStream({
       contentType,
-      metadata: {
-        sizeBytes: String(content.length),
-      },
+      resumable: false,
     });
-
-    logger.info(`Written raw file: ${gcsPath} (${content.length} bytes)`);
   }
 
   /**

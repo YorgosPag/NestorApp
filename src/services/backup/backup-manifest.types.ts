@@ -395,3 +395,9 @@ export interface PreRestoreCollectionSnapshot {
   /** Count of existing docs */
   existingCount: number;
 }
+
+// ---------------------------------------------------------------------------
+// Shared callback type (SSoT — used by BackupService, StorageBackupService)
+// ---------------------------------------------------------------------------
+
+export type StatusCallback = (status: Partial<BackupStatus>) => Promise<void>;
