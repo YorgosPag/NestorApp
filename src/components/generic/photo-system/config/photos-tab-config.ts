@@ -21,7 +21,7 @@ import type {
   PhotoWithMetadata,
 } from './photos-tab-types';
 import { getStatusColor } from '@/lib/design-system';
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 
 // =============================================================================
 // SHARED CONSTANTS
@@ -194,6 +194,8 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
     showCategories: false,
     categories: undefined,
     uploadPurpose: 'photo',
+    domain: FILE_DOMAINS.SALES,
+    category: FILE_CATEGORIES.PHOTOS,
     storageFolder: 'projects',
     gridCols: DEFAULT_GRID_COLS,
     showEntityInfo: false,
@@ -213,6 +215,8 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
     showCategories: false,
     categories: BUILDING_PHOTO_CATEGORIES,
     uploadPurpose: 'photo',
+    domain: FILE_DOMAINS.SALES,
+    category: FILE_CATEGORIES.PHOTOS,
     storageFolder: 'buildings',
     gridCols: DEFAULT_GRID_COLS,
     showEntityInfo: false,
@@ -232,6 +236,8 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
     showCategories: false,
     categories: undefined,
     uploadPurpose: 'photo',
+    domain: FILE_DOMAINS.ADMIN,
+    category: FILE_CATEGORIES.PHOTOS,
     storageFolder: 'contacts',
     gridCols: {
       mobile: 2,
@@ -255,6 +261,8 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
     showCategories: true,
     categories: STORAGE_PHOTO_CATEGORIES,
     uploadPurpose: 'photo',
+    domain: FILE_DOMAINS.SALES,
+    category: FILE_CATEGORIES.PHOTOS,
     storageFolder: 'storages',
     gridCols: DEFAULT_GRID_COLS,
     showEntityInfo: true,
@@ -274,6 +282,8 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
     showCategories: false,
     categories: undefined,
     uploadPurpose: 'photo',
+    domain: FILE_DOMAINS.SALES,
+    category: FILE_CATEGORIES.PHOTOS,
     storageFolder: 'properties',
     gridCols: DEFAULT_GRID_COLS,
     showEntityInfo: true,
@@ -293,6 +303,8 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
     showCategories: false,
     categories: undefined,
     uploadPurpose: 'photo',
+    domain: FILE_DOMAINS.SALES,
+    category: FILE_CATEGORIES.PHOTOS,
     storageFolder: 'parkings',
     gridCols: {
       mobile: 2,
@@ -316,6 +328,8 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
     showCategories: false,
     categories: undefined,
     uploadPurpose: 'photo',
+    domain: FILE_DOMAINS.CONSTRUCTION,
+    category: FILE_CATEGORIES.PHOTOS,
     storageFolder: 'floors',
     gridCols: DEFAULT_GRID_COLS,
     showEntityInfo: true,

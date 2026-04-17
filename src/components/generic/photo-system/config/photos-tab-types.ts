@@ -15,6 +15,7 @@
 // ============================================================================
 
 import type { ComponentType } from 'react';
+import type { FileDomain, FileCategory } from '@/config/domain-constants';
 
 // =============================================================================
 // CORE TYPES - IMPORT FROM EXISTING SOURCES
@@ -156,6 +157,13 @@ export interface PhotosTabConfig {
   categories?: PhotoCategory[];
   /** Upload purpose for file naming */
   uploadPurpose: PhotoUploadPurpose;
+  /**
+   * File domain for canonical FileRecord tagging (ADR-293 Phase 5 Batch 29).
+   * Drives entityType/domain/category write side + usePhotosTabFetch read side.
+   */
+  domain: FileDomain;
+  /** File category for canonical FileRecord tagging (ADR-293 Phase 5 Batch 29). */
+  category: FileCategory;
   /** Firebase storage folder name */
   storageFolder: string;
   /** Grid columns per breakpoint */
