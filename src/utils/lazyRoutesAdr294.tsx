@@ -262,6 +262,11 @@ export const lazyRoutesAdr294 = {
     { loadingType: 'form', ssr: false }
   ),
 
+  AdminBackup: createLazyRoute(
+    () => import('@/components/admin/pages/BackupPageContent').then(mod => ({ default: mod.BackupPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
   // =========================================================================
   // ⚡ BATCH 6: CRM Dynamic Routes (detail pages)
   // =========================================================================

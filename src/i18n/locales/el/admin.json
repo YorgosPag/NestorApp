@@ -654,5 +654,131 @@
     "activity": {
       "never": "Ποτέ"
     }
+  },
+  "backup": {
+    "title": "Αντίγραφα Ασφαλείας & Αποκατάσταση",
+    "description": "Διαχείριση αντιγράφων ασφαλείας και λειτουργιών αποκατάστασης",
+    "tabs": {
+      "backups": "Αντίγραφα",
+      "restore": "Αποκατάσταση",
+      "status": "Κατάσταση",
+      "config": "Ρυθμίσεις"
+    },
+    "actions": {
+      "triggerFull": "Πλήρες Αντίγραφο",
+      "triggerIncremental": "Σταδιακό Αντίγραφο",
+      "selectParentBackup": "Επιλέξτε γονικό αντίγραφο",
+      "delete": "Διαγραφή",
+      "confirmDelete": "Σίγουρα θέλετε να διαγράψετε αυτό το αντίγραφο;",
+      "refresh": "Ανανέωση"
+    },
+    "list": {
+      "title": "Υπάρχοντα Αντίγραφα",
+      "empty": "Δεν βρέθηκαν αντίγραφα",
+      "type": {
+        "full": "Πλήρες",
+        "incremental": "Σταδιακό"
+      },
+      "createdAt": "Δημιουργία",
+      "documents": "Έγγραφα",
+      "collections": "Συλλογές",
+      "subcollections": "Υπο-συλλογές",
+      "storageFiles": "Αρχεία Αποθήκευσης",
+      "storageSize": "Μέγεθος Αποθήκευσης",
+      "duration": "Διάρκεια",
+      "parent": "Γονικό",
+      "warnings": "Προειδοποιήσεις",
+      "selectForRestore": "Αποκατάσταση αυτού"
+    },
+    "status": {
+      "title": "Κατάσταση Λειτουργίας",
+      "phase": {
+        "initializing": "Αρχικοποίηση",
+        "exporting_collections": "Εξαγωγή Συλλογών",
+        "exporting_subcollections": "Εξαγωγή Υπο-συλλογών",
+        "exporting_storage": "Εξαγωγή Αποθήκευσης",
+        "finalizing_manifest": "Ολοκλήρωση Manifest",
+        "completed": "Ολοκληρώθηκε",
+        "failed": "Απέτυχε",
+        "validating": "Επικύρωση",
+        "creating_snapshot": "Δημιουργία Στιγμιοτύπου",
+        "reconciling_schema": "Συμφιλίωση Σχήματος",
+        "restoring_collections": "Αποκατάσταση Συλλογών",
+        "restoring_subcollections": "Αποκατάσταση Υπο-συλλογών",
+        "restoring_storage": "Αποκατάσταση Αποθήκευσης"
+      },
+      "currentCollection": "Τρέχουσα Συλλογή",
+      "documentsExported": "Εξαγμένα Έγγραφα",
+      "storageFilesExported": "Εξαγμένα Αρχεία",
+      "documentsRestored": "Αποκατεστημένα Έγγραφα",
+      "documentsSkipped": "Παραλειφθέντα Έγγραφα",
+      "storageFilesRestored": "Αποκατεστημένα Αρχεία",
+      "processedCollections": "Επεξεργασμένες Συλλογές",
+      "noActiveOperation": "Καμία ενεργή λειτουργία",
+      "backupInProgress": "Αντιγραφή σε εξέλιξη",
+      "restoreInProgress": "Αποκατάσταση σε εξέλιξη",
+      "startedAt": "Έναρξη",
+      "completedAt": "Ολοκλήρωση",
+      "error": "Σφάλμα"
+    },
+    "restore": {
+      "title": "Αποκατάσταση από Αντίγραφο",
+      "selectBackup": "Επιλέξτε αντίγραφο για αποκατάσταση",
+      "preview": "Προεπισκόπηση Αλλαγών",
+      "execute": "Εκτέλεση Αποκατάστασης",
+      "confirmExecute": "Αυτό θα αποκαταστήσει δεδομένα από αυτό το αντίγραφο. Η ενέργεια δεν μπορεί να αναιρεθεί.",
+      "confirmTitle": "Επιβεβαίωση Αποκατάστασης",
+      "options": {
+        "title": "Επιλογές Αποκατάστασης",
+        "skipImmutable": "Παράλειψη αμετάβλητων συλλογών",
+        "skipImmutableDesc": "Να μην αντικατασταθούν συλλογές σημειωμένες ως αμετάβλητες",
+        "mergeMode": "Λειτουργία συγχώνευσης",
+        "mergeModeDesc": "Διατήρηση πεδίων που δεν υπάρχουν στο αντίγραφο",
+        "collections": "Φιλτράρισμα συλλογών",
+        "collectionsDesc": "Αποκατάσταση μόνο επιλεγμένων συλλογών (κενό = όλες)"
+      },
+      "preview": {
+        "title": "Προεπισκόπηση Αποκατάστασης",
+        "collection": "Συλλογή",
+        "immutable": "Αμετάβλητη",
+        "backupDocs": "Έγγραφα Αντιγράφου",
+        "existingDocs": "Υπάρχοντα Έγγραφα",
+        "new": "Νέα",
+        "update": "Ενημέρωση",
+        "skip": "Παράλειψη",
+        "summary": "Σύνοψη",
+        "totalDocuments": "Σύνολο Εγγράφων",
+        "totalNew": "Νέα Έγγραφα",
+        "totalUpdate": "Ενημερωμένα Έγγραφα",
+        "totalSkip": "Παραλειφθέντα Έγγραφα"
+      }
+    },
+    "config": {
+      "title": "Ρυθμίσεις Αντιγράφων",
+      "description": "Ρύθμιση αυτόματου προγράμματος αντιγράφων και διατήρησης",
+      "scheduleEnabled": "Αυτόματα αντίγραφα ενεργά",
+      "scheduleEnabledDesc": "Ενεργοποίηση καθημερινών αυτόματων αντιγράφων",
+      "scheduleCron": "Πρόγραμμα cron",
+      "retentionCount": "Αριθμός διατήρησης",
+      "retentionCountDesc": "Πλήθος αντιγράφων πριν την αυτόματη διαγραφή",
+      "incrementalEnabled": "Σταδιακά αντίγραφα ενεργά",
+      "incrementalEnabledDesc": "Ενεργοποίηση σταδιακών αντιγράφων μεταξύ πλήρων",
+      "fullBackupIntervalDays": "Διάστημα πλήρους αντιγράφου (ημέρες)",
+      "fullBackupIntervalDaysDesc": "Ημέρες μεταξύ πλήρων αντιγράφων",
+      "lastBackupId": "Τελευταίο ID Αντιγράφου",
+      "lastBackupAt": "Τελευταίο Αντίγραφο",
+      "save": "Αποθήκευση Ρυθμίσεων",
+      "saved": "Οι ρυθμίσεις αποθηκεύτηκαν",
+      "never": "Ποτέ"
+    },
+    "errors": {
+      "listFailed": "Αποτυχία φόρτωσης λίστας αντιγράφων",
+      "backupFailed": "Το αντίγραφο απέτυχε",
+      "restoreFailed": "Η αποκατάσταση απέτυχε",
+      "previewFailed": "Αποτυχία φόρτωσης προεπισκόπησης",
+      "configLoadFailed": "Αποτυχία φόρτωσης ρυθμίσεων",
+      "configSaveFailed": "Αποτυχία αποθήκευσης ρυθμίσεων",
+      "deleteBackupFailed": "Αποτυχία διαγραφής αντιγράφου"
+    }
   }
 }

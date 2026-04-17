@@ -654,5 +654,131 @@
     "activity": {
       "never": "Never"
     }
+  },
+  "backup": {
+    "title": "Backup & Restore",
+    "description": "Manage enterprise backups and restore operations",
+    "tabs": {
+      "backups": "Backups",
+      "restore": "Restore",
+      "status": "Status",
+      "config": "Configuration"
+    },
+    "actions": {
+      "triggerFull": "Full Backup",
+      "triggerIncremental": "Incremental Backup",
+      "selectParentBackup": "Select parent backup",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete this backup?",
+      "refresh": "Refresh"
+    },
+    "list": {
+      "title": "Existing Backups",
+      "empty": "No backups found",
+      "type": {
+        "full": "Full",
+        "incremental": "Incremental"
+      },
+      "createdAt": "Created",
+      "documents": "Documents",
+      "collections": "Collections",
+      "subcollections": "Subcollections",
+      "storageFiles": "Storage Files",
+      "storageSize": "Storage Size",
+      "duration": "Duration",
+      "parent": "Parent",
+      "warnings": "Warnings",
+      "selectForRestore": "Restore this backup"
+    },
+    "status": {
+      "title": "Operation Status",
+      "phase": {
+        "initializing": "Initializing",
+        "exporting_collections": "Exporting Collections",
+        "exporting_subcollections": "Exporting Subcollections",
+        "exporting_storage": "Exporting Storage",
+        "finalizing_manifest": "Finalizing Manifest",
+        "completed": "Completed",
+        "failed": "Failed",
+        "validating": "Validating",
+        "creating_snapshot": "Creating Snapshot",
+        "reconciling_schema": "Reconciling Schema",
+        "restoring_collections": "Restoring Collections",
+        "restoring_subcollections": "Restoring Subcollections",
+        "restoring_storage": "Restoring Storage"
+      },
+      "currentCollection": "Current Collection",
+      "documentsExported": "Documents Exported",
+      "storageFilesExported": "Storage Files Exported",
+      "documentsRestored": "Documents Restored",
+      "documentsSkipped": "Documents Skipped",
+      "storageFilesRestored": "Storage Files Restored",
+      "processedCollections": "Collections Processed",
+      "noActiveOperation": "No active operation",
+      "backupInProgress": "Backup in progress",
+      "restoreInProgress": "Restore in progress",
+      "startedAt": "Started",
+      "completedAt": "Completed",
+      "error": "Error"
+    },
+    "restore": {
+      "title": "Restore from Backup",
+      "selectBackup": "Select a backup to restore",
+      "preview": "Preview Changes",
+      "execute": "Execute Restore",
+      "confirmExecute": "This will restore data from this backup. This action cannot be undone.",
+      "confirmTitle": "Confirm Restore",
+      "options": {
+        "title": "Restore Options",
+        "skipImmutable": "Skip immutable collections",
+        "skipImmutableDesc": "Do not overwrite collections marked as immutable",
+        "mergeMode": "Merge mode",
+        "mergeModeDesc": "Preserve fields not present in backup (use set with merge)",
+        "collections": "Filter collections",
+        "collectionsDesc": "Restore only selected collections (empty = all)"
+      },
+      "preview": {
+        "title": "Restore Preview",
+        "collection": "Collection",
+        "immutable": "Immutable",
+        "backupDocs": "Backup Docs",
+        "existingDocs": "Existing Docs",
+        "new": "New",
+        "update": "Update",
+        "skip": "Skip",
+        "summary": "Summary",
+        "totalDocuments": "Total Documents",
+        "totalNew": "New Documents",
+        "totalUpdate": "Updated Documents",
+        "totalSkip": "Skipped Documents"
+      }
+    },
+    "config": {
+      "title": "Backup Configuration",
+      "description": "Configure automatic backup schedule and retention",
+      "scheduleEnabled": "Automatic backups enabled",
+      "scheduleEnabledDesc": "Enable daily automatic backups via cron",
+      "scheduleCron": "Cron schedule",
+      "retentionCount": "Retention count",
+      "retentionCountDesc": "Number of backups to keep before auto-delete",
+      "incrementalEnabled": "Incremental backups enabled",
+      "incrementalEnabledDesc": "Enable incremental backups between full backups",
+      "fullBackupIntervalDays": "Full backup interval (days)",
+      "fullBackupIntervalDaysDesc": "Days between full backups (incremental in between)",
+      "lastBackupId": "Last Backup ID",
+      "lastBackupAt": "Last Backup",
+      "save": "Save Configuration",
+      "saved": "Configuration saved",
+      "never": "Never"
+    },
+    "errors": {
+      "listFailed": "Failed to load backup list",
+      "backupFailed": "Backup failed",
+      "restoreFailed": "Restore failed",
+      "previewFailed": "Failed to load restore preview",
+      "configLoadFailed": "Failed to load configuration",
+      "configSaveFailed": "Failed to save configuration",
+      "deleteBackupFailed": "Failed to delete backup"
+    }
   }
 }

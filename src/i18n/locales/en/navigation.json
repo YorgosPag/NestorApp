@@ -288,7 +288,8 @@
     "operatorInbox": "Operator Inbox",
     "setup": "Admin Setup",
     "roleManagement": "Role Management",
-    "auditLog": "Audit Log"
+    "auditLog": "Audit Log",
+    "backup": "Backup & Restore"
   },
   "legal": {
     "privacyPolicy": "Privacy Policy",

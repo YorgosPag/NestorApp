@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Phase 1-6 COMPLETE |
+| **Status** | Phase 1-7 COMPLETE |
 | **Date** | 2026-04-17 |
 | **Category** | Infrastructure / Data Protection / Disaster Recovery |
 | **Canonical Location** | `src/services/backup/` |
@@ -319,6 +319,36 @@ Delta da `entity_audit_trail` (CDC pattern). Re-fetch documenti modificati. Mani
 
 Cron scheduling. Retention policy (keep last N). Config in `system/backup_config`.
 
+### Fase 7: Admin UI — COMPLETE
+
+Admin page at `/admin/backup` with tabbed interface (Backups, Restore, Status, Config).
+
+**New API endpoints:**
+- `GET /api/admin/backup/list` — lists all backup manifests from GCS
+- `GET/POST /api/admin/backup/config` — read/write backup scheduler configuration
+- `GET /api/admin/restore/status` — poll restore operation progress
+
+**UI components (shadcn/Radix):**
+- `src/components/admin/pages/BackupPageContent.tsx` — tab orchestrator
+- `src/components/admin/backup/BackupActionsCard.tsx` — trigger full/incremental
+- `src/components/admin/backup/BackupListSection.tsx` — backup history with metadata
+- `src/components/admin/backup/BackupStatusCard.tsx` — live progress (polling 3s)
+- `src/components/admin/backup/RestoreSection.tsx` — backup selector + options + AlertDialog confirmation
+- `src/components/admin/backup/RestorePreviewTable.tsx` — collection reconciliation table
+- `src/components/admin/backup/BackupConfigSection.tsx` — scheduler config form
+
+**State hooks:**
+- `useBackupState.ts` — backup list, trigger, status polling
+- `useRestoreState.ts` — preview, execute, restore status polling
+- `useBackupConfigState.ts` — config CRUD
+
+**Config/Registry:**
+- `lazyRoutesAdr294.tsx` — `AdminBackup` lazy route
+- `domain-constants.ts` — `API_ROUTES.ADMIN.BACKUP.*` + `API_ROUTES.ADMIN.RESTORE.*`
+- `smart-navigation-factory.ts` — nav item with `DatabaseBackup` icon
+- `i18n/locales/{en,el}/admin.json` — `backup.*` keys (~60)
+- `i18n/locales/{en,el}/navigation.json` — `admin.backup` label
+
 ---
 
 ## 7. Security
@@ -363,3 +393,4 @@ gs://{projectId}-backups/
 | 2026-04-17 | 2 | BackupSchedulerService, cron endpoint /api/cron/backup (01:00 UTC), retention policy, SSoT cron-auth.ts (4 copie → 1) |
 | 2026-04-17 | 5 | IncrementalBackupService (CDC via entity_audit_trail), POST /api/admin/backup/incremental, scheduler full/incremental decision, types: deletedDocumentIds, incrementalEnabled, fullBackupIntervalDays |
 | 2026-04-17 | 4+ | RestoreChainService (incremental chain merge), StorageRestoreService (GCS → Firebase Storage streaming), BackupGcsService.createReadStream(), restore route includes storage counts. ADR status → Phase 1-6 COMPLETE |
+| 2026-04-17 | 7 | Admin UI page: /admin/backup with 4 tabs (Backups, Restore, Status, Config). 3 new API endpoints (list, config, restore/status). 7 UI components + 3 hooks. i18n en+el. Navigation entry. ADR status → Phase 1-7 COMPLETE |

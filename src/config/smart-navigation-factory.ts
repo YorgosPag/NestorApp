@@ -69,6 +69,7 @@ import {
   ShoppingCart,
   Banknote,
   History,
+  DatabaseBackup,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -118,6 +119,9 @@ const NAVIGATION_LABELS = {
 
   // 🏢 ENTERPRISE: Global Audit Log (ADR-195 Phase 7)
   audit_log: 'admin.auditLog',
+
+  // 🏢 ENTERPRISE: Backup & Restore (ADR-313)
+  backup: 'admin.backup',
 
   // Badges
   badge_new: 'badges.new',
@@ -670,6 +674,15 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 }
               },
               {
+                icon: DatabaseBackup,
+                href: '/admin/backup',
+                smartConfig: {
+                  priority: 'medium',
+                  analyticsKey: 'nav_admin_backup',
+                  permissions: ['admin_access']
+                }
+              },
+              {
                 icon: Archive,
                 href: "/debug",
                 badge: "DEBUG",
@@ -793,6 +806,7 @@ function getLabelKeyForPath(path: string): string {
     'admin/setup': 'admin_setup',
     'admin/role-management': 'role_management',
     'admin/audit-log': 'audit_log',
+    'admin/backup': 'backup',
 
     // Tools paths
     'files': 'file_manager',

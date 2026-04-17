@@ -500,6 +500,18 @@ export const API_ROUTES = {
       AUDIT_LOG: '/api/admin/role-management/audit-log',
       AUDIT_LOG_EXPORT: '/api/admin/role-management/audit-log/export',
     },
+    BACKUP: {
+      FULL: '/api/admin/backup/full',
+      INCREMENTAL: '/api/admin/backup/incremental',
+      STATUS: '/api/admin/backup/status',
+      LIST: '/api/admin/backup/list',
+      CONFIG: '/api/admin/backup/config',
+    },
+    RESTORE: {
+      EXECUTE: '/api/admin/restore',
+      PREVIEW: '/api/admin/restore/preview',
+      STATUS: '/api/admin/restore/status',
+    },
   },
 
   // ── Companies ─────────────────────────────────────────────────────────
