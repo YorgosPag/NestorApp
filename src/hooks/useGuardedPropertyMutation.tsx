@@ -12,6 +12,7 @@ interface PropertyMutationCurrentState {
   readonly commercialStatus?: string | null;
   readonly buildingId?: string | null;
   readonly floorId?: string | null;
+  readonly name?: string | null;
 }
 
 export function useGuardedPropertyMutation(

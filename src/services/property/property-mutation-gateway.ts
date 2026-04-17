@@ -2,6 +2,7 @@ import type { CommercialStatus, LinkedSpace } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 import { normalizePropertyType } from '@/constants/property-types';
 import { normalizeCommercialStatus as normalizeCommercialStatusSSoT } from '@/constants/commercial-statuses';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
   createProperty as createPropertyRecord,
   deleteProperty as deletePropertyRecord,
@@ -9,6 +10,8 @@ import {
   updatePropertyCoverage as updatePropertyCoverageRecord,
   updateMultiplePropertiesOwner as updateMultiplePropertiesOwnerRecord,
 } from '@/services/properties.service';
+import { propagateEntityLabelRenameWithPolicy } from '@/services/filesystem/file-mutation-gateway';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 const SOLD_LOCKED_FIELDS: ReadonlySet<string> = new Set([
   'code', 'type', 'name', 'areas', 'layout', 'floor', 'floorId',
@@ -32,6 +35,7 @@ type PropertyMutationCurrentState = {
   readonly commercialStatus?: string | null;
   readonly buildingId?: string | null;
   readonly floorId?: string | null;
+  readonly name?: string | null;
 };
 
 interface PropertyMutationContext {
@@ -265,7 +269,25 @@ export async function updatePropertyWithPolicy({
 
   normalizeEnumFieldsForWrite(updates);
 
-  return updatePropertyRecord(propertyId, updates as Partial<Property>);
+  const result = await updatePropertyRecord(propertyId, updates as Partial<Property>);
+
+  if (result.success) {
+    const nextName = typeof updates.name === 'string' ? updates.name.trim() : null;
+    const previousName = typeof currentProperty.name === 'string' ? currentProperty.name.trim() : null;
+    if (nextName && nextName.length > 0 && nextName !== previousName) {
+      safeFireAndForget(
+        propagateEntityLabelRenameWithPolicy({
+          entityType: ENTITY_TYPES.PROPERTY,
+          entityId: propertyId,
+          newEntityLabel: nextName,
+        }),
+        'PropertyMutationGateway.propagateEntityLabelRename',
+        { propertyId, nextName },
+      );
+    }
+  }
+
+  return result;
 }
 
 export async function updatePropertyBuildingLinkWithPolicy({

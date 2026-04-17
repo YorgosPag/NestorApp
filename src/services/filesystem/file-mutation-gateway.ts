@@ -8,6 +8,7 @@ import { FileRecordService } from '@/services/file-record.service';
 import { FileShareService, type CreateShareInput } from '@/services/file-share.service';
 import { API_ROUTES, type EntityType } from '@/config/domain-constants';
 import type { FileClassification } from '@/config/domain-constants';
+import type { AuditEntityType } from '@/types/audit-trail';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { auth } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -323,4 +324,31 @@ export async function updateFileClassificationWithPolicy(
   const { doc, updateDoc } = await import('firebase/firestore');
   const { db } = await import('@/lib/firebase');
   await updateDoc(doc(db, 'files', fileId), { classification });
+}
+
+// ============================================================================
+// 🏢 ADR-293 Phase 8: ENTITY DISPLAY NAME CASCADE
+// ============================================================================
+
+export interface PropagateEntityRenameInput {
+  readonly entityType: AuditEntityType;
+  readonly entityId: string;
+  readonly newEntityLabel: string;
+}
+
+export interface PropagateEntityRenameResponse {
+  readonly success: boolean;
+  readonly updatedCount?: number;
+  readonly skippedCount?: number;
+  readonly error?: string;
+}
+
+export async function propagateEntityLabelRenameWithPolicy(
+  input: PropagateEntityRenameInput,
+): Promise<PropagateEntityRenameResponse> {
+  return mutateJson<PropagateEntityRenameResponse>(API_ROUTES.FILES.PROPAGATE_ENTITY_RENAME, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
 }

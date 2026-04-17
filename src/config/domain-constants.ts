@@ -651,6 +651,7 @@ export const API_ROUTES = {
     CLASSIFY: '/api/files/classify',
     BATCH_DOWNLOAD: '/api/files/batch-download',
     ARCHIVE: '/api/files/archive',
+    PROPAGATE_ENTITY_RENAME: '/api/files/propagate-entity-rename',
   },
   DOWNLOAD: '/api/download',
   FLOORPLANS: {

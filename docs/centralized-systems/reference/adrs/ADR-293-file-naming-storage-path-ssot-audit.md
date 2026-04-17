@@ -282,6 +282,57 @@ persisted photos from Firestore — every mount started with an empty array.
   makes property/building/floor/parking/storage/project photos persist,
   reappear on refresh, and be correctly tagged in FileRecord.
 
+### Phase 8: Entity Display Name Cascade on Rename (Batch 30) -- COMPLETED 2026-04-17
+
+**Problem**: At upload time `buildFileDisplayName` snapshots the entity's
+display label into `FileRecord.displayName` (e.g. `"Θέα - Studio 35 m²"`).
+If the parent entity is renamed (property/building/floor/...), the
+snapshot stays stale — UI shows the old label until the file is deleted
+and re-uploaded. Export filenames (Content-Disposition) carry the old
+name too.
+
+- [x] New server-only propagator `EntityFileDisplayPropagator.propagate()`
+  at `src/services/filesystem/entity-file-display-propagator.service.ts`.
+  Takes `{ entityType, entityId, newEntityLabel, companyId, performedBy,
+  performedByName }`, queries `files` where
+  `companyId+entityType+entityId+status=ready+lifecycleState=active+
+  isDeleted=false`, and rewrites every matched `displayName` + `entityLabel`.
+- [x] Algorithm: string-replacement on the persisted `displayName` using
+  the stored `entityLabel` as anchor (`displayName.split(oldLabel)
+  .join(newLabel)`). Avoids server-side i18n (unavailable in API routes
+  per `file-display-name.ts` `isServerContext()`) and preserves the exact
+  format captured at upload (category/purpose label, descriptors, date,
+  revision suffix).
+- [x] Writes are chunked at 500 docs per `writeBatch` (Firestore hard
+  limit). Skipped buckets: empty/matching `entityLabel`, or `displayName`
+  that no longer contains `entityLabel`.
+- [x] Single `EntityAuditService.recordChange()` entry per cascade run
+  (ADR-195): `action='updated'`, `field='files_cascade_rename'`,
+  `label='N file(s) renamed'`, `oldValue=<dominant old label>`,
+  `newValue=<new label>`. Fire-and-forget — audit failure never blocks
+  the cascade.
+- [x] API route `POST /api/files/propagate-entity-rename` with
+  `withAuth + withStandardRateLimit + maxDuration=60`. Validates
+  `entityType` against the `AuditEntityType` union, checks entity
+  `companyId` against caller's claim (403 on mismatch), then delegates
+  to the propagator.
+- [x] Client gateway wrapper `propagateEntityLabelRenameWithPolicy`
+  exported from `file-mutation-gateway.ts` (ADR-292 file-mutation gateway
+  is the sole client-side entry point for file mutations).
+- [x] Wired into `updatePropertyWithPolicy` — after a successful
+  `updatePropertyRecord`, detects `updates.name !== currentProperty.name`
+  and fires the cascade via `safeFireAndForget`. `PropertyMutationCurrent
+  State` (+ `useGuardedPropertyMutation` interface) gains an optional
+  `name` field; existing 14 callers remain compatible.
+- [x] Unit tests `src/services/filesystem/__tests__/entity-file-display-
+  propagator.test.ts` — 6 scenarios: 3-file rename, already-renamed skip,
+  600-doc chunking (2 batches), empty result no-op, displayName-missing-
+  label skip, empty-new-label throw.
+- [x] Generalized by entity type: the propagator accepts any
+  `AuditEntityType`. Property is the first entry point wired in Batch 30;
+  follow-up batches (31+) will hook the rename cascade into building,
+  project, floor, parking, storage, contact mutation gateways.
+
 ---
 
 ## Decision
@@ -304,6 +355,7 @@ persisted photos from Firestore — every mount started with an empty array.
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-17 | Phase 8 COMPLETED (Batch 30) — entity rename → FileRecord displayName cascade. New server-only `EntityFileDisplayPropagator.propagate()` (~180 LOC): string-replacement algorithm using persisted `entityLabel` as anchor (no server-side i18n needed), chunked `writeBatch` (500 docs), single `EntityAuditService.recordChange()` summary entry per run. API route `POST /api/files/propagate-entity-rename` (`withAuth` + `withStandardRateLimit` + ownership check via `companyId`). Client gateway `propagateEntityLabelRenameWithPolicy` exported from `file-mutation-gateway.ts`. Wired into `updatePropertyWithPolicy` via `safeFireAndForget` — fires only when `updates.name !== currentProperty.name`. `PropertyMutationCurrentState` + `useGuardedPropertyMutation` extended with optional `name` field, backward compatible with 14 callers. 6 unit tests green. Follow-up batches 31+ will wire cascade into building/project/floor/parking/storage/contact mutation gateways. | Claude Code |
 | 2026-04-17 | Phase 7 follow-up (Batch 29 cleanup SSoT) — removed `usePhotosTabFetch` duplicate. `PhotosTabBase` now fetches through `useEntityFiles` (single SSoT hook shared with `EntityFilesManager`). Inline `fileRecordToPhoto` mapper (FileRecord→Photo) keeps `PhotoItem` UI contract clean. Removed the 2 Batch 29 composite indexes (category+companyId+domain+entityId+entityType+lifecycleState+status default + super_admin variant) — pre-existing FILES indexes cover `useEntityFiles` realtime constraints. Google SSoT restored: one fetch hook for every Photos tab. | Claude Code |
 | 2026-04-17 | Phase 7 follow-up (Batch 29 amendment) — `useEntityFiles.filterByPurpose` META_PHOTO_PURPOSES passthrough. Property/Building Photos tabs use meta `purpose='photo'`/`'building-photo'` at the view layer; upload entry-point selector writes sub-purposes (interior/exterior/maintenance/facade). Strict equality rejected valid photos → count=0 UI despite correct FileRecord write. Fix adds meta-purpose set; `*-floorplan` strict semantics preserved. | Claude Code |
 | 2026-04-17 | Phase 7 COMPLETED (Batch 29) — entity-polymorphic photo upload: `uploadContactPhotoCanonical` → `uploadEntityPhotoCanonical`, `getContactPhotos` → `getEntityPhotos`, `PhotosTabConfig` gains `canonicalEntityType` + `domain` + `category`, new `usePhotosTabFetch` live subscription + 2 composite indexes, contract tests lock write+read per tab. Unblocks Batch 28 completion meter photos count and fixes "uploaded photo doesn't appear" for property/building/floor/parking/storage/project tabs. | Claude Code |
