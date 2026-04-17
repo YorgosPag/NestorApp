@@ -336,19 +336,50 @@ export interface PropagateEntityRenameInput {
   readonly newEntityLabel: string;
 }
 
+export interface PropagatedFileUpdate {
+  readonly fileId: string;
+  readonly newDisplayName: string;
+}
+
 export interface PropagateEntityRenameResponse {
   readonly success: boolean;
   readonly updatedCount?: number;
   readonly skippedCount?: number;
+  readonly updatedFiles?: readonly PropagatedFileUpdate[];
   readonly error?: string;
 }
 
+/**
+ * Propagates an entity rename to every related FileRecord.displayName.
+ *
+ * On success, dispatches a `FILE_UPDATED` event per renamed file through the
+ * centralized RealtimeService (ADR-228) so listeners such as `useEntityFiles`
+ * update their state instantly — no manual refetch, no Firestore round-trip
+ * required for the optimistic UI refresh.
+ */
 export async function propagateEntityLabelRenameWithPolicy(
   input: PropagateEntityRenameInput,
 ): Promise<PropagateEntityRenameResponse> {
-  return mutateJson<PropagateEntityRenameResponse>(API_ROUTES.FILES.PROPAGATE_ENTITY_RENAME, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  const response = await mutateJson<PropagateEntityRenameResponse>(
+    API_ROUTES.FILES.PROPAGATE_ENTITY_RENAME,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  );
+
+  if (response.success && response.updatedFiles && response.updatedFiles.length > 0) {
+    const { RealtimeService } = await import('@/services/realtime');
+    const now = Date.now();
+    for (const update of response.updatedFiles) {
+      RealtimeService.dispatch('FILE_UPDATED', {
+        fileId: update.fileId,
+        updates: { displayName: update.newDisplayName },
+        timestamp: now,
+      });
+    }
+  }
+
+  return response;
 }

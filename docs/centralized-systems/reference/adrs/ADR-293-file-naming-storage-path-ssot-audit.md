@@ -318,7 +318,13 @@ name too.
   to the propagator.
 - [x] Client gateway wrapper `propagateEntityLabelRenameWithPolicy`
   exported from `file-mutation-gateway.ts` (ADR-292 file-mutation gateway
-  is the sole client-side entry point for file mutations).
+  is the sole client-side entry point for file mutations). On successful
+  cascade response, the wrapper dispatches one `FILE_UPDATED` event per
+  renamed file via `RealtimeService` (ADR-228 Tier 2) with
+  `{ fileId, updates: { displayName }, timestamp }`. `useEntityFiles` is
+  already subscribed (`FILE_UPDATED` handler) so the photo list refreshes
+  instantly — no `refetch()`, no reliance on the Firestore `onSnapshot`
+  round-trip for the optimistic UI refresh.
 - [x] Wired into `updatePropertyWithPolicy` — after a successful
   `updatePropertyRecord`, detects `updates.name !== currentProperty.name`
   and fires the cascade via `safeFireAndForget`. `PropertyMutationCurrent

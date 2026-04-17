@@ -45,10 +45,16 @@ export interface PropagateEntityRenameParams {
   readonly performedByName: string | null;
 }
 
+export interface PropagatedFileUpdate {
+  readonly fileId: string;
+  readonly newDisplayName: string;
+}
+
 export interface PropagateEntityRenameResult {
   readonly updatedCount: number;
   readonly skippedCount: number;
   readonly oldEntityLabel: string | null;
+  readonly updatedFiles: readonly PropagatedFileUpdate[];
 }
 
 interface FileCandidate {
@@ -104,9 +110,10 @@ function collectCandidates(
 async function commitCandidatesInChunks(
   candidates: readonly FileCandidate[],
   newEntityLabel: string,
-): Promise<void> {
+): Promise<PropagatedFileUpdate[]> {
   const db = getAdminFirestore();
   const filesRef = db.collection(COLLECTIONS.FILES);
+  const updates: PropagatedFileUpdate[] = [];
 
   for (let i = 0; i < candidates.length; i += FIRESTORE_BATCH_LIMIT) {
     const chunk = candidates.slice(i, i + FIRESTORE_BATCH_LIMIT);
@@ -119,6 +126,7 @@ async function commitCandidatesInChunks(
         entityLabel: newEntityLabel,
         updatedAt: FieldValue.serverTimestamp(),
       });
+      updates.push({ fileId: candidate.id, newDisplayName });
     }
 
     await batch.commit();
@@ -127,6 +135,8 @@ async function commitCandidatesInChunks(
       batchSize: chunk.length,
     });
   }
+
+  return updates;
 }
 
 export class EntityFileDisplayPropagator {
@@ -163,7 +173,7 @@ export class EntityFileDisplayPropagator {
 
     if (snapshot.empty) {
       logger.info('No FileRecord to propagate', { entityType, entityId });
-      return { updatedCount: 0, skippedCount: 0, oldEntityLabel: null };
+      return { updatedCount: 0, skippedCount: 0, oldEntityLabel: null, updatedFiles: [] };
     }
 
     const { candidates, skipped, dominantOldLabel } = collectCandidates(
@@ -177,11 +187,12 @@ export class EntityFileDisplayPropagator {
         entityId,
         skippedCount: skipped,
       });
-      return { updatedCount: 0, skippedCount: skipped, oldEntityLabel: dominantOldLabel };
+      return { updatedCount: 0, skippedCount: skipped, oldEntityLabel: dominantOldLabel, updatedFiles: [] };
     }
 
+    let updatedFiles: PropagatedFileUpdate[];
     try {
-      await commitCandidatesInChunks(candidates, trimmedLabel);
+      updatedFiles = await commitCandidatesInChunks(candidates, trimmedLabel);
     } catch (err) {
       logger.error('Propagator batch commit failed', {
         entityType,
@@ -220,6 +231,7 @@ export class EntityFileDisplayPropagator {
       updatedCount: candidates.length,
       skippedCount: skipped,
       oldEntityLabel: dominantOldLabel,
+      updatedFiles,
     };
   }
 }

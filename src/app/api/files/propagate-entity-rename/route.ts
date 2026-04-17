@@ -47,10 +47,16 @@ interface PropagateRenameRequest {
   readonly newEntityLabel: string;
 }
 
+interface PropagatedFilePayload {
+  readonly fileId: string;
+  readonly newDisplayName: string;
+}
+
 interface PropagateRenameResponse {
   readonly success: boolean;
   readonly updatedCount?: number;
   readonly skippedCount?: number;
+  readonly updatedFiles?: readonly PropagatedFilePayload[];
   readonly error?: string;
 }
 
@@ -124,6 +130,7 @@ async function handlePost(
       success: true,
       updatedCount: result.updatedCount,
       skippedCount: result.skippedCount,
+      updatedFiles: result.updatedFiles,
     });
   } catch (err) {
     const message = getErrorMessage(err, 'Propagation failed');

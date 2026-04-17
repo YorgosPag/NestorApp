@@ -126,6 +126,11 @@ describe('EntityFileDisplayPropagator.propagate', () => {
     expect(result.updatedCount).toBe(3);
     expect(result.skippedCount).toBe(0);
     expect(result.oldEntityLabel).toBe('Studio 35 m²');
+    expect(result.updatedFiles).toEqual([
+      { fileId: 'f1', newDisplayName: 'Θέα - Appartamento deluxe' },
+      { fileId: 'f2', newDisplayName: 'Κάτοψη - Appartamento deluxe' },
+      { fileId: 'f3', newDisplayName: 'Συμβόλαιο - Appartamento deluxe - 01-01-2026' },
+    ]);
     expect(firebaseAdminMock.__testControls.batchUpdateSpy).toHaveBeenCalledTimes(3);
     expect(firebaseAdminMock.__testControls.batchCommitSpy).toHaveBeenCalledTimes(1);
 
@@ -181,6 +186,8 @@ describe('EntityFileDisplayPropagator.propagate', () => {
 
     expect(result.updatedCount).toBe(600);
     expect(result.skippedCount).toBe(0);
+    expect(result.updatedFiles).toHaveLength(600);
+    expect(result.updatedFiles[0]).toEqual({ fileId: 'f_0', newDisplayName: 'Θέα - New - 0' });
     expect(firebaseAdminMock.__testControls.batchCommitSpy).toHaveBeenCalledTimes(2);
     expect(firebaseAdminMock.__testControls.batchUpdateSpy).toHaveBeenCalledTimes(600);
   });
@@ -196,6 +203,7 @@ describe('EntityFileDisplayPropagator.propagate', () => {
     expect(result.updatedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
     expect(result.oldEntityLabel).toBeNull();
+    expect(result.updatedFiles).toEqual([]);
     expect(firebaseAdminMock.__testControls.batchCommitSpy).not.toHaveBeenCalled();
     expect(EntityAuditService.recordChange).not.toHaveBeenCalled();
   });
