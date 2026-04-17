@@ -131,6 +131,7 @@
 
 ### 🏗️ **INFRASTRUCTURE**
 - **[📋 Overview](infrastructure/index.md)** - Performance, logging, auth systems
+- **[💾 Enterprise Backup & Restore](../../adrs/ADR-313-enterprise-backup-restore.md)** - ADR-313: Manifest-driven backup/restore with schema evolution
 
 ### 🔐 **SECURITY**
 - **[📋 Overview](security/index.md)** - Authentication, authorization, environment security

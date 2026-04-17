@@ -409,6 +409,85 @@ export const SYSTEM_DOCS = {
 } as const;
 
 // ============================================================================
+// SUBCOLLECTION → PARENT MAPPING (ADR-313: Enterprise Backup & Restore)
+// ============================================================================
+
+/**
+ * Maps each SUBCOLLECTIONS key to its parent COLLECTIONS key.
+ * Used by BackupService to traverse subcollections during export.
+ *
+ * @see adrs/ADR-313-enterprise-backup-restore.md
+ */
+export const SUBCOLLECTION_PARENTS: Record<string, string> = {
+  // Contact subcollections → CONTACTS
+  CONTACT_ACTIVITIES: 'CONTACTS',
+  CONTACT_COMMUNICATIONS: 'CONTACTS',
+  CONTACT_NOTES: 'CONTACTS',
+  BANK_ACCOUNTS: 'CONTACTS',
+
+  // Project subcollections → PROJECTS
+  PROJECT_TASKS: 'PROJECTS',
+  PROJECT_DOCUMENTS: 'PROJECTS',
+  PROJECT_TIMELINE: 'PROJECTS',
+  PROJECT_MEMBERS: 'PROJECTS',
+
+  // Building subcollections → BUILDINGS
+  BUILDING_FLOORS: 'BUILDINGS',
+  BUILDING_PROPERTIES: 'BUILDINGS',
+  BUILDING_MAINTENANCE: 'BUILDINGS',
+
+  // Property subcollections → PROPERTIES
+  PROPERTY_PHOTOS: 'PROPERTIES',
+  PROPERTY_DOCUMENTS: 'PROPERTIES',
+  PROPERTY_HISTORY: 'PROPERTIES',
+  PROPERTY_PAYMENT_PLANS: 'PROPERTIES',
+  PROPERTY_PAYMENTS: 'PROPERTIES',
+  PROPERTY_GRANTS: 'PROPERTIES',
+
+  // User subcollections → USERS
+  USER_PREFERENCES: 'USERS',
+  USER_SESSIONS: 'USERS',
+  USER_NOTIFICATIONS: 'USERS',
+
+  // Company subcollections → COMPANIES
+  COMPANY_PROJECTS: 'COMPANIES',
+  COMPANY_PROPERTIES: 'COMPANIES',
+  COMPANY_MEMBERS: 'COMPANIES',
+  COMPANY_AUDIT_LOGS: 'COMPANIES',
+
+  // File subcollections → FILES
+  FILE_VERSIONS: 'FILES',
+
+  // Ownership table subcollections → OWNERSHIP_TABLES
+  OWNERSHIP_REVISIONS: 'OWNERSHIP_TABLES',
+} as const;
+
+// ============================================================================
+// IMMUTABLE COLLECTIONS (ADR-313: Enterprise Backup & Restore)
+// ============================================================================
+
+/**
+ * Collections that are append-only / immutable by design.
+ * During restore: existing documents are SKIPPED (no overwrite).
+ * Only missing documents are inserted.
+ *
+ * @see adrs/ADR-313-enterprise-backup-restore.md §5.4
+ */
+export const IMMUTABLE_COLLECTIONS: readonly string[] = [
+  'ENTITY_AUDIT_TRAIL',
+  'AUDIT',
+  'SYSTEM_AUDIT_LOGS',
+  'CLOUD_FUNCTION_AUDIT_LOG',
+  'ACCOUNTING_AUDIT_LOG',
+  'FILE_AUDIT_LOG',
+  'COMMUNICATIONS',
+  'MESSAGES',
+  'ATTENDANCE_EVENTS',
+  'ATTENDANCE_QR_TOKENS',
+  'EMAIL_INGESTION_QUEUE',
+] as const;
+
+// ============================================================================
 // FIRESTORE QUERY LIMITS
 // ============================================================================
 

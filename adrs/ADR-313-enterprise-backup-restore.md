@@ -1,0 +1,280 @@
+# ADR-313 — Enterprise Backup & Restore System
+
+| Field | Value |
+|-------|-------|
+| **Status** | Phase 1 IN PROGRESS |
+| **Date** | 2026-04-17 |
+| **Category** | Infrastructure / Data Protection / Disaster Recovery |
+| **Canonical Location** | `src/services/backup/` |
+| **API Routes** | `src/app/api/admin/backup/` + `src/app/api/admin/restore/` |
+
+---
+
+## 1. Problem
+
+L'applicazione Nestor gestisce 95+ collezioni Firestore, 27 subcollections e un bucket Firebase Storage con file aziendali (DXF, foto, documenti). L'unico backup esistente (`enterprise-backup.ps1`) salva solo codice/config come ZIP locale — **zero backup dei dati**.
+
+**Rischi attuali:**
+- Nessun modo di ripristinare dati persi o corrotti
+- Nessun modo di migrare dati tra ambienti (dev → staging → prod)
+- Nessun audit di integrità dei dati
+- L'applicazione evolve continuamente — campi aggiunti/rimossi possono rompere un eventuale restore manuale
+
+---
+
+## 2. Decision
+
+Implementare un sistema **manifest-driven** di backup e restore. Ogni backup produce un manifest JSON che descrive esattamente il contenuto (collezioni, conteggio documenti, inventario campi, hash integrità). Il restore legge il manifest e **riconcilia** lo schema automaticamente.
+
+**Perch manifest-driven, non `schemaVersion` nei documenti?**
+- Zero impatto sui documenti esistenti (95+ collezioni, migliaia di documenti)
+- Il manifest cattura lo schema point-in-time senza richiedere migrazioni
+- Schema reconciliation al momento del restore, non al momento della scrittura
+- Google Takeout usa lo stesso pattern: export manifest + data bundle
+
+**Perch non `gcloud firestore export`?**
+- `gcloud firestore export` esporta l'intero database in formato protobuf su GCS — utile per disaster recovery totale
+- Non supporta: export parziale per collezione, schema reconciliation, cross-reference Storage ↔ Firestore, audit integrità, restore selettivo
+- Il nostro sistema lo complementa per restore granulare e schema evolution
+
+---
+
+## 3. Architecture
+
+### 3.1 Principi
+
+1. **SSoT-Driven**: `COLLECTIONS` e `SUBCOLLECTIONS` da `firestore-collections.ts` guidano cosa backuppare — zero lista hardcoded
+2. **Manifest = Schema Record**: ogni backup include l'inventario completo dei campi per collezione
+3. **Schema Reconciliation**: restore tollerante — campi nuovi → default, campi rimossi → skip
+4. **Append-Only Awareness**: collezioni immutabili (audit_log, entity_audit_trail, communications) → skip se documento già esiste
+5. **Batch Safety**: processAdminBatch() da admin-batch-utils.ts per paginazione sicura (500 read, 200 write)
+
+### 3.2 Componenti
+
+```
+src/services/backup/
+├── backup-manifest.types.ts     # Tipi: BackupManifest, CollectionEntry, etc.
+├── backup-serializer.ts         # Firestore → JSON-safe (Timestamp, GeoPoint, Ref)
+├── backup.service.ts            # BackupService: export collections + subcollections
+├── backup-gcs.service.ts        # Scrittura/lettura backup su GCS bucket
+├── restore.service.ts           # RestoreService: validate, preview, execute (Fase 4)
+├── schema-reconciler.ts         # Schema diff + reconciliation logic (Fase 4)
+└── incremental-backup.service.ts # Delta backup via entity_audit_trail (Fase 5)
+
+src/app/api/admin/backup/
+├── full/route.ts                # POST — trigger full backup
+└── status/route.ts              # GET — stato backup in corso
+
+src/app/api/admin/restore/       # (Fase 4)
+├── route.ts                     # POST — trigger restore
+└── preview/route.ts             # GET — dry-run preview
+```
+
+### 3.3 Infrastruttura SSoT riutilizzata
+
+| Componente | File | Ruolo |
+|-----------|------|-------|
+| Collection registry | `src/config/firestore-collections.ts` | SSoT nomi collezioni + subcollections |
+| Admin SDK | `src/lib/firebaseAdmin.ts` | getAdminFirestore(), getAdminStorage() |
+| Batch processor | `src/lib/admin-batch-utils.ts` | processAdminBatch() paginazione |
+| Entity audit | `src/services/entity-audit.service.ts` | CDC per backup incrementale |
+| Auth middleware | `src/lib/auth/` | withAuth + permissions |
+| Rate limiting | `src/lib/middleware/with-rate-limit.ts` | withSensitiveRateLimit |
+| Enterprise IDs | `src/services/enterprise-id.service.ts` | ID generazione per backup records |
+
+### 3.4 Dependency Graph (Collezioni)
+
+Import ordinato per il restore — rispetta le dipendenze padre → figlio:
+
+```
+Tier 0 (System):     system, settings, config, counters
+Tier 1 (Tenants):    companies, users, teams, roles, permissions
+Tier 2 (Core):       projects, contacts, workspaces
+Tier 3 (Structures): buildings, floors, properties, parking_spaces
+Tier 4 (Relations):  contact_links, contact_relationships, file_links
+Tier 5 (Content):    files, communications, messages, tasks, leads
+Tier 6 (Domain):     construction_*, boq_*, accounting_*, legal_*, ownership_*
+Tier 7 (AI/System):  ai_*, bot_*, search_*, attendance_*, audit trails
+```
+
+Subcollections importate dopo tutti i documenti padre del loro tier.
+
+---
+
+## 4. Backup Manifest Schema
+
+```typescript
+interface BackupManifest {
+  // Identità
+  id: string;                          // bkp_{uuid} da enterprise-id.service
+  version: '1.0.0';                    // Schema version del manifest stesso
+  type: 'full' | 'incremental';
+  
+  // Metadata
+  createdAt: string;                   // ISO 8601
+  createdBy: string;                   // userId del super-admin
+  projectId: string;                   // Firebase project ID
+  environment: 'development' | 'staging' | 'production';
+  
+  // Contenuto
+  collections: CollectionManifestEntry[];
+  subcollections: SubcollectionManifestEntry[];
+  storageFiles: StorageManifestEntry[];  // Fase 3
+  
+  // Schema snapshot
+  firestoreCollectionsVersion: string;  // Git hash o timestamp
+  
+  // Integrità
+  totalDocuments: number;
+  totalStorageFiles: number;
+  totalStorageBytes: number;
+  checksum: string;                     // SHA-256 del manifest stesso
+  
+  // Incrementale (Fase 5)
+  parentBackupId?: string;             // Per backup incrementali
+  deltaFrom?: string;                  // ISO 8601 — timestamp da cui partono i delta
+}
+
+interface CollectionManifestEntry {
+  collectionKey: string;               // COLLECTIONS key (es. 'CONTACTS')
+  collectionName: string;              // Nome Firestore (es. 'contacts')
+  documentCount: number;
+  fieldInventory: string[];            // Unione di tutti i campi trovati
+  isImmutable: boolean;               // audit_log, entity_audit_trail, etc.
+  backupFile: string;                  // Path relativo: 'collections/contacts.ndjson.gz'
+  checksum: string;                    // SHA-256 del file NDJSON
+}
+
+interface SubcollectionManifestEntry {
+  subcollectionKey: string;            // SUBCOLLECTIONS key
+  subcollectionName: string;           // Nome (es. 'activities')
+  parentCollectionKey: string;         // COLLECTIONS key padre
+  parentDocumentIds: string[];         // Lista documenti padre che hanno questa sub
+  totalDocuments: number;
+  fieldInventory: string[];
+  backupFile: string;
+  checksum: string;
+}
+
+interface StorageManifestEntry {
+  storagePath: string;                 // Path nel bucket
+  firestoreDocId?: string;            // FileRecord collegato (se esiste)
+  sizeBytes: number;
+  contentType: string;
+  sha256: string;
+  backupFile: string;                  // Path nel backup
+}
+```
+
+---
+
+## 5. Schema Evolution Strategy
+
+### 5.1 Problema
+
+L'applicazione aggiunge ~5-10 campi/mese a collezioni esistenti. Un backup di oggi potrebbe mancare di campi che esisteranno tra 3 mesi. Un restore deve funzionare in entrambe le direzioni.
+
+### 5.2 Soluzione: Schema Reconciliation al Restore
+
+```
+Backup Schema (manifest.fieldInventory) vs Current Schema (scansione documenti attuali)
+                                        ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Campo presente in ENTRAMBI     → Copia diretta                  │
+│ Campo solo nel BACKUP          → Skip (campo rimosso)           │
+│ Campo solo nel CURRENT         → Default value (null/0/''/ [])  │
+│ Campo tipo cambiato            → Best-effort coercion + warning │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 5.3 Nessun `schemaVersion` richiesto
+
+Il manifest cattura il field inventory al momento del backup. Il restore compara con lo stato attuale. Non serve nessun campo extra nei documenti Firestore.
+
+### 5.4 Collezioni immutabili
+
+Collezioni marcate `isImmutable: true` nel manifest:
+- `entity_audit_trail`, `audit_log`, `system_audit_logs`, `accounting_audit_log`
+- `communications`, `messages`, `attendance_events`, `attendance_qr_tokens`
+- `file_audit_log`, `email_ingestion_queue`
+
+**Restore behavior**: se il documento esiste già → skip (no overwrite). Solo documenti mancanti vengono inseriti.
+
+---
+
+## 6. Implementation Phases
+
+### Fase 1: Fondamenta (3-5 giorni) — IN PROGRESS
+
+**Deliverable**: Export singola collezione + manifest + serializer + API endpoint
+
+File nuovi:
+- `src/services/backup/backup-manifest.types.ts`
+- `src/services/backup/backup-serializer.ts`
+- `src/services/backup/backup.service.ts`
+- `src/services/backup/backup-gcs.service.ts`
+- `src/app/api/admin/backup/full/route.ts`
+- `src/app/api/admin/backup/status/route.ts`
+
+Modifica:
+- `src/config/firestore-collections.ts` — `SUBCOLLECTION_PARENTS` + `IMMUTABLE_COLLECTIONS`
+
+### Fase 2: Export completo Firestore (3-4 giorni)
+
+Estensione BackupService: `exportAllCollections()` + `exportAllSubcollections()`. Progress tracking in `system/backup_status`.
+
+### Fase 3: Export Firebase Storage (4-5 giorni)
+
+`StorageBackupService`: lista file, download parallelo (concurrency=10), SHA-256, cross-ref con FILES collection.
+
+### Fase 4: Restore completo (5-7 giorni)
+
+`RestoreService` + `SchemaReconciler`. Import ordinato per tier. Dry-run preview. Pre-restore snapshot per rollback.
+
+### Fase 5: Backup incrementale (3-4 giorni)
+
+Delta da `entity_audit_trail`. Re-fetch documenti modificati. Manifest incrementale con puntatore al full backup padre.
+
+### Fase 6: Automazione + Retention (2-3 giorni)
+
+Cron scheduling. Retention policy (keep last N). Config in `system/backup_config`.
+
+---
+
+## 7. Security
+
+- **Auth**: `withAuth({ permissions: 'admin:backup:execute' })` — super_admin only
+- **Rate limit**: `withSensitiveRateLimit` (20 req/min)
+- **GCS bucket**: non-public, accesso solo via Admin SDK
+- **Env vars**: esclusi dal backup dati (gestiti separatamente)
+- **Secrets**: mai inclusi nel manifest o nei log
+
+---
+
+## 8. GCS Bucket Structure
+
+```
+gs://{projectId}-backups/
+├── {backupId}/
+│   ├── manifest.json
+│   ├── collections/
+│   │   ├── contacts.ndjson.gz
+│   │   ├── projects.ndjson.gz
+│   │   └── ...
+│   ├── subcollections/
+│   │   ├── contacts__activities.ndjson.gz
+│   │   ├── projects__tasks.ndjson.gz
+│   │   └── ...
+│   └── storage/                      # Fase 3
+│       └── companies/
+│           └── {companyId}/
+│               └── ...
+```
+
+---
+
+## 9. Changelog
+
+| Data | Fase | Descrizione |
+|------|------|------------|
+| 2026-04-17 | 1 | ADR creato. Tipi manifest, serializer, BackupService, GCS service, API endpoints |
