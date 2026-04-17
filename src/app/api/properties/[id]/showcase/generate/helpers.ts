@@ -7,7 +7,7 @@
  * exposure.
  */
 
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -178,7 +178,7 @@ export async function uploadPdfToStorage(
   pdfBytes: Uint8Array,
   storagePath: string
 ): Promise<void> {
-  const bucket = getAdminStorage().bucket();
+  const bucket = getAdminBucket();
   const fileRef = bucket.file(storagePath);
 
   if (pdfBytes.byteLength === 0) {

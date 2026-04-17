@@ -20,7 +20,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -110,7 +110,7 @@ async function incrementDownloadCount(shareId: string): Promise<void> {
 async function streamPdfFromStorage(
   storagePath: string
 ): Promise<{ stream: ReadableStream<Uint8Array>; size?: number }> {
-  const bucket = getAdminStorage().bucket();
+  const bucket = getAdminBucket();
   const fileRef = bucket.file(storagePath);
   const [exists] = await fileRef.exists();
   if (!exists) {

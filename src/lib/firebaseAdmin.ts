@@ -20,6 +20,7 @@ import { FieldValue, Timestamp, FieldPath, type Firestore } from 'firebase-admin
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getStorage, type Storage } from 'firebase-admin/storage';
+import type { Bucket } from '@google-cloud/storage';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -132,6 +133,27 @@ export function getAdminStorage(): Storage {
     _storage = getStorage();
   }
   return _storage;
+}
+
+/**
+ * Get the canonical Admin Storage bucket (SSoT).
+ *
+ * Forces `FIREBASE_STORAGE_BUCKET` env var resolution instead of relying on the
+ * Admin SDK's implicit default, which can resolve to the legacy
+ * `{projectId}.appspot.com` alias in some init paths and causes
+ * cross-request `exists()` inconsistencies against `.firebasestorage.app`
+ * buckets. Every server-side Storage read/write must go through this helper.
+ *
+ * @throws Error if `FIREBASE_STORAGE_BUCKET` is not configured.
+ */
+export function getAdminBucket(): Bucket {
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+  if (!bucketName || bucketName.trim().length === 0) {
+    throw new Error(
+      'FIREBASE_STORAGE_BUCKET is not configured. Set the env var to the canonical bucket (e.g. "{projectId}.firebasestorage.app").'
+    );
+  }
+  return getAdminStorage().bucket(bucketName.trim());
 }
 
 /**
