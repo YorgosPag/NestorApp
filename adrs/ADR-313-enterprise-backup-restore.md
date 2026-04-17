@@ -60,10 +60,11 @@ src/services/backup/
 ├── restore.service.ts           # RestoreService: validate, preview, execute ✅
 ├── restore-helpers.ts           # Tier ordering, ref resolution (SRP split) ✅
 ├── schema-reconciler.ts         # Schema reconciliation — Approach B (Google) ✅
-└── incremental-backup.service.ts # Delta backup via entity_audit_trail (Fase 5)
+└── incremental-backup.service.ts # Delta backup via entity_audit_trail (Fase 5) ✅
 
 src/app/api/admin/backup/
 ├── full/route.ts                # POST — trigger full backup
+├── incremental/route.ts         # POST — trigger incremental backup (Fase 5) ✅
 └── status/route.ts              # GET — stato backup in corso
 
 src/app/api/admin/restore/       # ✅ Phase 4
@@ -280,11 +281,37 @@ Modifica:
 - DocumentReference resolution during restore (path strings → actual refs)
 - Progress tracking in `system/restore_status`
 
-### Fase 5: Backup incrementale (3-4 giorni)
+### Fase 5: Backup incrementale ✅
 
-Delta da `entity_audit_trail`. Re-fetch documenti modificati. Manifest incrementale con puntatore al full backup padre.
+Delta da `entity_audit_trail` (CDC pattern). Re-fetch documenti modificati. Manifest incrementale con puntatore al full backup padre.
 
-### Fase 6: Automazione + Retention (2-3 giorni)
+**Implemented files:**
+- `src/services/backup/incremental-backup.service.ts` — IncrementalBackupService: queries audit trail, maps entity types to collections, fetches changed docs, builds incremental manifest
+- `src/app/api/admin/backup/incremental/route.ts` — POST endpoint with same auth/rate-limit as full backup
+
+**Architecture:**
+- CDC source: `entity_audit_trail` collection (EntityAuditService records all entity changes)
+- AuditEntityType → COLLECTIONS key mapping: contact, building, property, floor, project, company, parking, storage, purchase_order (9 entity types)
+- Changed documents re-fetched from Firestore (current state) — not from audit diff
+- Deleted documents tracked as tombstones (`deletedDocumentIds` on CollectionManifestEntry)
+- Last-action-wins deduplication (chronological query, last audit entry per entity prevails)
+- Batch pagination on audit trail (500 entries per batch)
+- Document fetch via `getAll()` (batch of 500 refs)
+- Collections NOT covered by audit trail → warnings in manifest
+- Subcollections and Storage files NOT included (full backup only)
+
+**Scheduler integration:**
+- `BackupSchedulerService.shouldUseIncremental()` decides full vs incremental
+- Config-driven: `incrementalEnabled` + `fullBackupIntervalDays` (default 7)
+- Strategy: full every N days, incremental on other days
+- Fallback to full if no previous full backup exists or on error
+
+**Types added:**
+- `BackupConfig.incrementalEnabled?: boolean`
+- `BackupConfig.fullBackupIntervalDays?: number`
+- `CollectionManifestEntry.deletedDocumentIds?: string[]`
+
+### Fase 6: Automazione + Retention ✅
 
 Cron scheduling. Retention policy (keep last N). Config in `system/backup_config`.
 
@@ -330,3 +357,4 @@ gs://{projectId}-backups/
 | 2026-04-17 | 4 | RestoreService, SchemaReconciler (Approach B), API routes, pre-restore snapshot, generateRestoreId, restore types |
 | 2026-04-17 | 3 | StorageBackupService: streaming pipeline, SHA-256 transform, cross-ref FILES, size guard, backupId upfront |
 | 2026-04-17 | 2 | BackupSchedulerService, cron endpoint /api/cron/backup (01:00 UTC), retention policy, SSoT cron-auth.ts (4 copie → 1) |
+| 2026-04-17 | 5 | IncrementalBackupService (CDC via entity_audit_trail), POST /api/admin/backup/incremental, scheduler full/incremental decision, types: deletedDocumentIds, incrementalEnabled, fullBackupIntervalDays |

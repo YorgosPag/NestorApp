@@ -223,5 +223,79 @@ export class EntityAuditService {
 
     return resolved;
   }
+
+  /**
+   * Query audit entries created after a given timestamp.
+   * Used by IncrementalBackupService (CDC pattern) to detect changed entities.
+   *
+   * Returns raw audit entries ordered by timestamp ascending.
+   * Paginated via cursor-based startAfter.
+   *
+   * @param afterTimestamp - ISO 8601 timestamp (exclusive lower bound)
+   * @param batchSize - Max entries per batch (default 500)
+   * @param startAfterDoc - Firestore document snapshot for cursor pagination
+   */
+  static async queryChangesAfter(
+    afterTimestamp: string,
+    batchSize: number = 500,
+    startAfterDoc?: FirebaseFirestore.DocumentSnapshot,
+  ): Promise<{
+    entries: AuditCdcEntry[];
+    lastDoc: FirebaseFirestore.DocumentSnapshot | null;
+    hasMore: boolean;
+  }> {
+    try {
+      const db = getAdminFirestore();
+      if (!db) {
+        return { entries: [], lastDoc: null, hasMore: false };
+      }
+
+      const deltaDate = new Date(afterTimestamp);
+
+      let query = db
+        .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
+        .where('timestamp', '>', deltaDate)
+        .orderBy('timestamp', 'asc')
+        .limit(batchSize);
+
+      if (startAfterDoc) {
+        query = query.startAfter(startAfterDoc);
+      }
+
+      const snapshot = await query.get();
+
+      const entries: AuditCdcEntry[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          entityType: data.entityType as AuditEntityType,
+          entityId: data.entityId as string,
+          action: data.action as AuditAction,
+        };
+      });
+
+      const lastDoc = snapshot.docs.length > 0
+        ? snapshot.docs[snapshot.docs.length - 1]
+        : null;
+
+      return {
+        entries,
+        lastDoc,
+        hasMore: snapshot.size >= batchSize,
+      };
+    } catch (err) {
+      logger.error('Failed to query audit changes', {
+        afterTimestamp,
+        error: getErrorMessage(err),
+      });
+      return { entries: [], lastDoc: null, hasMore: false };
+    }
+  }
+}
+
+/** Minimal CDC entry for incremental backup */
+export interface AuditCdcEntry {
+  entityType: AuditEntityType;
+  entityId: string;
+  action: AuditAction;
 }
 

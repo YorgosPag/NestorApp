@@ -26,6 +26,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { BackupService } from './backup.service';
 import { BackupGcsService } from './backup-gcs.service';
+import { IncrementalBackupService } from './incremental-backup.service';
 
 import type { Firestore } from 'firebase-admin/firestore';
 import type { BackupConfig, StatusCallback } from './backup-manifest.types';
@@ -47,6 +48,9 @@ const MIN_BACKUP_INTERVAL_HOURS = 20;
 
 /** Default retention count if not configured */
 const DEFAULT_RETENTION_COUNT = 7;
+
+/** Default days between full backups (incremental on other days) */
+const DEFAULT_FULL_BACKUP_INTERVAL_DAYS = 7;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -144,6 +148,57 @@ export class BackupSchedulerService {
   }
 
   /**
+   * Determine if an incremental backup should be used instead of full.
+   *
+   * Strategy:
+   * - If incrementalEnabled is false → full
+   * - If no lastBackupId → full (first backup ever)
+   * - If last full backup was > fullBackupIntervalDays ago → full
+   * - Otherwise → incremental
+   */
+  private async shouldUseIncremental(
+    config: BackupConfig,
+    gcsService: BackupGcsService,
+  ): Promise<boolean> {
+    if (!config.incrementalEnabled) return false;
+    if (!config.lastBackupId) return false;
+
+    try {
+      // Find the most recent full backup to check interval
+      const backupIds = await gcsService.listBackups();
+      const intervalDays = config.fullBackupIntervalDays ?? DEFAULT_FULL_BACKUP_INTERVAL_DAYS;
+
+      for (const bid of backupIds) {
+        const manifest = await gcsService.readManifest(bid);
+        if (manifest.type === 'full') {
+          const fullBackupAge = Date.now() - new Date(manifest.createdAt).getTime();
+          const fullBackupDays = fullBackupAge / (1000 * 60 * 60 * 24);
+
+          if (fullBackupDays >= intervalDays) {
+            logger.info(
+              `Last full backup ${fullBackupDays.toFixed(1)} days ago ` +
+              `(interval: ${intervalDays}) — forcing full backup`,
+            );
+            return false;
+          }
+
+          logger.info(
+            `Last full backup ${fullBackupDays.toFixed(1)} days ago ` +
+            `(interval: ${intervalDays}) — using incremental`,
+          );
+          return true;
+        }
+      }
+
+      // No full backup found — force full
+      return false;
+    } catch (error) {
+      logger.warn(`Failed to check incremental eligibility: ${getErrorMessage(error)} — falling back to full`);
+      return false;
+    }
+  }
+
+  /**
    * Update backup config in Firestore after successful backup.
    */
   private async updateConfigAfterBackup(
@@ -183,7 +238,6 @@ export class BackupSchedulerService {
     logger.info('Scheduled backup starting...');
 
     const gcsService = new BackupGcsService(config.bucketName);
-    const backupService = new BackupService();
 
     // Progress callback → Firestore status
     const updateStatus: StatusCallback = async (status) => {
@@ -197,15 +251,35 @@ export class BackupSchedulerService {
       }
     };
 
-    // Execute full backup (collections + subcollections + storage)
-    const { manifest, files } = await backupService.executeFullBackup(
-      'scheduled-cron',
-      updateStatus,
-      gcsService,
-    );
+    // Decide: full or incremental
+    const useIncremental = await this.shouldUseIncremental(config, gcsService);
 
-    // Write to GCS
-    const finalManifest = await gcsService.writeFullBackup(manifest, files);
+    let finalManifest;
+
+    if (useIncremental && config.lastBackupId) {
+      logger.info(`Running incremental backup (parent: ${config.lastBackupId})`);
+      const incrementalService = new IncrementalBackupService();
+
+      const { manifest, files } = await incrementalService.executeIncrementalBackup(
+        config.lastBackupId,
+        'scheduled-cron',
+        gcsService,
+        updateStatus,
+      );
+
+      finalManifest = await gcsService.writeFullBackup(manifest, files);
+    } else {
+      logger.info('Running full backup');
+      const backupService = new BackupService();
+
+      const { manifest, files } = await backupService.executeFullBackup(
+        'scheduled-cron',
+        updateStatus,
+        gcsService,
+      );
+
+      finalManifest = await gcsService.writeFullBackup(manifest, files);
+    }
 
     // Update config
     await this.updateConfigAfterBackup(finalManifest.id);
@@ -217,14 +291,14 @@ export class BackupSchedulerService {
     );
 
     logger.info(
-      `Scheduled backup completed: ${finalManifest.id} — ` +
+      `Scheduled backup completed: ${finalManifest.id} (${finalManifest.type}) — ` +
       `${finalManifest.totalDocuments} docs, ${finalManifest.totalStorageFiles} files, ` +
       `${retentionDeleted} old backups deleted`,
     );
 
     return {
       executed: true,
-      reason: 'Scheduled backup completed successfully',
+      reason: `Scheduled ${finalManifest.type} backup completed successfully`,
       backupId: finalManifest.id,
       totalDocuments: finalManifest.totalDocuments,
       totalStorageFiles: finalManifest.totalStorageFiles,

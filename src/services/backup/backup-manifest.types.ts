@@ -96,6 +96,9 @@ export interface CollectionManifestEntry {
 
   /** SHA-256 of the NDJSON file */
   checksum: string;
+
+  /** Document IDs deleted since parent backup (incremental only) */
+  deletedDocumentIds?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -247,6 +250,12 @@ export interface BackupConfig {
 
   /** GCS bucket name for backups */
   bucketName: string;
+
+  /** Enable incremental backups between full backups */
+  incrementalEnabled?: boolean;
+
+  /** Days between full backups (default 7). Other days run incremental. */
+  fullBackupIntervalDays?: number;
 }
 
 // ---------------------------------------------------------------------------

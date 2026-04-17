@@ -15,10 +15,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { buildDownloadTokenUrl } from '@/app/api/properties/[id]/showcase/generate/helpers';
 
 const logger = createModuleLogger('ShowcasePublicApi');
 
@@ -108,22 +107,16 @@ async function loadFilesByCategory(
   return items;
 }
 
-function buildPdfUrl(
-  storagePath: string | undefined,
-  downloadToken: string | undefined
-): string | undefined {
-  if (!storagePath || !downloadToken) return undefined;
-  try {
-    const bucketName = getAdminStorage().bucket().name;
-    return buildDownloadTokenUrl(bucketName, storagePath, downloadToken);
-  } catch (err) {
-    logger.warn('buildPdfUrl failed', { storagePath, error: err instanceof Error ? err.message : String(err) });
-    return undefined;
-  }
+function buildBaseUrl(req: NextRequest): string {
+  const envBase = process.env.NEXT_PUBLIC_APP_URL;
+  if (envBase && envBase.trim().length > 0) return envBase.replace(/\/$/, '');
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+  const proto = req.headers.get('x-forwarded-proto') || 'https';
+  return `${proto}://${host}`;
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   segmentData: { params: Promise<{ token: string }> }
 ) {
   const { token } = await segmentData.params;
@@ -207,10 +200,7 @@ export async function GET(
     photos,
     floorplans,
     videoUrl: (share.note as string | undefined) || undefined,
-    pdfUrl: buildPdfUrl(
-      share.pdfStoragePath as string | undefined,
-      share.pdfDownloadToken as string | undefined
-    ),
+    pdfUrl: share.pdfStoragePath ? `${buildBaseUrl(request)}/api/showcase/${token}/pdf` : undefined,
     expiresAt,
   };
 
