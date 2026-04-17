@@ -56,11 +56,18 @@ const PhotosTabContent = ({ building, selectedProperty }: PhotosTabContentProps)
   // Support both building and unit contexts
   const defaultName = t('header.title');
   const entity = building || selectedProperty || { id: 'placeholder', name: defaultName };
+  // ADR-287 Batch 28: use PROPERTY entityType when the tab renders in unit
+  // context — previous hardcoded BUILDING mis-tagged uploaded photos and
+  // hid them from the property-level queries (including the completion
+  // meter media counts).
+  const entityType = selectedProperty
+    ? ENTITY_TYPES.PROPERTY
+    : ENTITY_TYPES.BUILDING;
 
   return (
     <PhotosTabBase
       entity={entity}
-      entityType={ENTITY_TYPES.BUILDING}
+      entityType={entityType}
       entityName={entity.name}
     />
   );
