@@ -12,6 +12,9 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import {
   PHOTO_PURPOSES,
   type PhotoPurpose,
+  type EntityType,
+  type FileDomain,
+  type FileCategory,
 } from '@/config/domain-constants';
 import { generateFileId } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -51,14 +54,26 @@ export interface PhotoUploadOptions {
   photoIndex?: number;
 
   // 🏢 CANONICAL PIPELINE FIELDS (ADR-031)
-  /** 🏢 CANONICAL: Contact ID for FileRecord linkage */
+  /** 🏢 CANONICAL: Contact ID for FileRecord linkage (legacy alias for entityId) */
   contactId?: string;
   /** 🏢 CANONICAL: Company ID for multi-tenant isolation (REQUIRED for canonical) */
   companyId?: string;
   /** 🏢 CANONICAL: User ID who is uploading */
   createdBy?: string;
-  /** 🏢 CANONICAL: Contact name for display name generation */
+  /** 🏢 CANONICAL: Contact name for display name generation (legacy alias for entityLabel) */
   contactName?: string;
+
+  // 🏢 ADR-293 Phase 5 — ENTITY-POLYMORPHIC PIPELINE (Batch 29)
+  /** Target entity type (property, building, contact, floor, parking, storage, project). Defaults to CONTACT when absent (backward compat). */
+  entityType?: EntityType;
+  /** Target entity ID (propertyId, buildingId, etc.). Supersedes contactId when provided. */
+  entityId?: string;
+  /** File domain (sales, construction, admin, etc.). Defaults to ADMIN when absent. */
+  domain?: FileDomain;
+  /** File category (photos, floorplans, etc.). Defaults to PHOTOS. */
+  category?: FileCategory;
+  /** Human-readable entity label for display name (propertyName, buildingName). Supersedes contactName when provided. */
+  entityLabel?: string;
 }
 
 export interface PhotoUploadResult extends FileUploadResult {

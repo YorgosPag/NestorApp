@@ -25,6 +25,9 @@ import {
   ENTITY_TYPES,
   FILE_DOMAINS,
   FILE_CATEGORIES,
+  type EntityType,
+  type FileDomain,
+  type FileCategory,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -79,28 +82,36 @@ export class PhotoUploadService {
 
     legacyLogger.info('File validation passed');
 
-    // 🏢 CANONICAL PIPELINE ROUTING (ADR-031)
-    const hasCanonicalFields = !!(options.companyId && options.contactId && options.createdBy);
+    // 🏢 CANONICAL PIPELINE ROUTING (ADR-031 + ADR-293 Phase 5 Batch 29)
+    // entityId supersedes contactId (legacy alias); defaults CONTACT/ADMIN/PHOTOS preserve BC.
+    const resolvedEntityId = options.entityId ?? options.contactId;
+    const hasCanonicalFields = !!(options.companyId && resolvedEntityId && options.createdBy);
 
     if (hasCanonicalFields) {
+      const resolvedEntityType = options.entityType ?? ENTITY_TYPES.CONTACT;
+      const resolvedDomain = options.domain ?? FILE_DOMAINS.ADMIN;
+      const resolvedCategory = options.category ?? FILE_CATEGORIES.PHOTOS;
+      const resolvedEntityLabel = options.entityLabel
+        ?? resolveContactName(options.contactName, options.contactData);
+      const resolvedPurpose = resolvePhotoPurpose(options.purpose);
+
       canonicalLogger.info('Routing to canonical pipeline', {
-        contactId: options.contactId,
+        entityType: resolvedEntityType,
+        entityId: resolvedEntityId,
+        domain: resolvedDomain,
+        category: resolvedCategory,
         companyId: options.companyId,
         createdBy: options.createdBy,
       });
 
-      const resolvedContactName = resolveContactName(options.contactName, options.contactData);
-      const resolvedPurpose = resolvePhotoPurpose(options.purpose);
-
-      const contactId = options.contactId!;
-      const companyId = options.companyId!;
-      const createdBy = options.createdBy!;
-
-      const canonicalResult = await PhotoUploadService.uploadContactPhotoCanonical(file, {
-        contactId,
-        companyId,
-        createdBy,
-        contactName: resolvedContactName,
+      const canonicalResult = await PhotoUploadService.uploadEntityPhotoCanonical(file, {
+        entityType: resolvedEntityType,
+        entityId: resolvedEntityId!,
+        domain: resolvedDomain,
+        category: resolvedCategory,
+        companyId: options.companyId!,
+        createdBy: options.createdBy!,
+        entityLabel: resolvedEntityLabel,
         purpose: resolvedPurpose,
         onProgress: options.onProgress,
         enableCompression: options.enableCompression,
@@ -119,12 +130,12 @@ export class PhotoUploadService {
     }
 
     // 🚨 ADR-293: Legacy pipeline eliminated — canonical fields REQUIRED
-    legacyLogger.error('Upload rejected: canonical fields (companyId, contactId, createdBy) are REQUIRED. Legacy pipeline has been removed.', {
+    legacyLogger.error('Upload rejected: canonical fields (companyId, entityId|contactId, createdBy) are REQUIRED. Legacy pipeline has been removed.', {
       hasCompanyId: !!options.companyId,
-      hasContactId: !!options.contactId,
+      hasEntityId: !!resolvedEntityId,
       hasCreatedBy: !!options.createdBy,
     });
-    throw new Error('Upload requires canonical fields (companyId, contactId, createdBy). Legacy upload pipeline has been removed (ADR-293).');
+    throw new Error('Upload requires canonical fields (companyId, entityId, createdBy). Legacy upload pipeline has been removed (ADR-293).');
   }
 
   /**
@@ -251,25 +262,32 @@ export class PhotoUploadService {
   // ==========================================================================
 
   /**
-   * 🏢 ENTERPRISE: Canonical contact photo upload
+   * 🏢 ENTERPRISE: Canonical entity-polymorphic photo upload (ADR-293 Phase 5 Batch 29).
    * Creates pending FileRecord → uploads binary → finalizes FileRecord.
+   * Works for any EntityType (contact, property, building, floor, parking, storage, project).
    */
-  static async uploadContactPhotoCanonical(
+  static async uploadEntityPhotoCanonical(
     file: File,
     options: {
-      contactId: string;
+      entityType: EntityType;
+      entityId: string;
+      domain: FileDomain;
+      category: FileCategory;
       createdBy: string;
       companyId: string;
-      contactName?: string;
-      purpose?: 'profile' | 'id' | 'other';
+      entityLabel?: string;
+      purpose?: string;
       onProgress?: (progress: FileUploadProgress) => void;
       enableCompression?: boolean;
       compressionUsage?: UsageContext;
     }
   ): Promise<PhotoUploadResult & { fileRecord: FileRecord }> {
-    canonicalLogger.info('Starting contact photo upload with centralized naming', {
-      contactId: options.contactId,
-      contactName: options.contactName,
+    canonicalLogger.info('Starting entity photo upload with centralized naming', {
+      entityType: options.entityType,
+      entityId: options.entityId,
+      domain: options.domain,
+      category: options.category,
+      entityLabel: options.entityLabel,
       purpose: options.purpose,
       fileSize: file.size,
     });
@@ -286,11 +304,11 @@ export class PhotoUploadService {
     // Step A: Create pending FileRecord (via gateway — ADR-292)
     const { fileId, storagePath, fileRecord } = await createPendingFileRecordWithPolicy({
       companyId: options.companyId,
-      entityType: ENTITY_TYPES.CONTACT,
-      entityId: options.contactId,
-      domain: FILE_DOMAINS.ADMIN,
-      category: FILE_CATEGORIES.PHOTOS,
-      entityLabel: options.contactName,
+      entityType: options.entityType,
+      entityId: options.entityId,
+      domain: options.domain,
+      category: options.category,
+      entityLabel: options.entityLabel,
       purpose: options.purpose,
       originalFilename: file.name,
       ext: file.name.split('.').pop()?.toLowerCase() || 'jpg',
@@ -402,24 +420,39 @@ export class PhotoUploadService {
   }
 
   /**
-   * 🏢 ENTERPRISE: Get contact photos from canonical storage
+   * 🏢 ENTERPRISE: Get entity photos from canonical storage (ADR-293 Phase 5 Batch 29).
+   * Polymorphic replacement for legacy getContactPhotos.
    */
-  static async getContactPhotos(
-    contactId: string,
-    options?: { companyId?: string; includeLegacy?: boolean }
+  static async getEntityPhotos(
+    entityType: EntityType,
+    entityId: string,
+    options?: {
+      companyId?: string;
+      domain?: FileDomain;
+      category?: FileCategory;
+    }
   ): Promise<FileRecord[]> {
-    canonicalLogger.info('Getting contact photos', { contactId });
+    const resolvedDomain = options?.domain ?? FILE_DOMAINS.ADMIN;
+    const resolvedCategory = options?.category ?? FILE_CATEGORIES.PHOTOS;
+
+    canonicalLogger.info('Getting entity photos', {
+      entityType,
+      entityId,
+      domain: resolvedDomain,
+      category: resolvedCategory,
+    });
 
     const files = await FileRecordService.getFilesByEntity(
-      ENTITY_TYPES.CONTACT,
-      contactId,
+      entityType,
+      entityId,
       {
-        domain: FILE_DOMAINS.ADMIN,
-        category: FILE_CATEGORIES.PHOTOS,
+        companyId: options?.companyId,
+        domain: resolvedDomain,
+        category: resolvedCategory,
       }
     );
 
-    canonicalLogger.info('Contact photos retrieved', { count: files.length });
+    canonicalLogger.info('Entity photos retrieved', { count: files.length });
     return files;
   }
 
