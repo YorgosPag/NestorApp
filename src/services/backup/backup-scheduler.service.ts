@@ -24,6 +24,7 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { GCS_BACKUP_BUCKET } from '@/config/gcs-buckets';
 import { BackupService } from './backup.service';
 import { BackupGcsService } from './backup-gcs.service';
 import { IncrementalBackupService } from './incremental-backup.service';
@@ -89,7 +90,7 @@ export class BackupSchedulerService {
         scheduleEnabled: false,
         scheduleCron: '0 1 * * *',
         retentionCount: DEFAULT_RETENTION_COUNT,
-        bucketName: `${process.env.FIREBASE_PROJECT_ID ?? 'pagonis-87766'}-backups`,
+        bucketName: GCS_BACKUP_BUCKET,
       };
     }
 

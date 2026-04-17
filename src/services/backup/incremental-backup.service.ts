@@ -24,6 +24,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, IMMUTABLE_COLLECTIONS } from '@/config/firestore-collections';
+import { GCP_PROJECT_ID } from '@/config/gcs-buckets';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditCdcEntry } from '@/services/entity-audit.service';
@@ -413,7 +414,7 @@ export class IncrementalBackupService {
       type: 'incremental',
       createdAt: new Date().toISOString(),
       createdBy: triggeredBy,
-      projectId: process.env.FIREBASE_PROJECT_ID ?? 'pagonis-87766',
+      projectId: GCP_PROJECT_ID,
       environment: (process.env.NODE_ENV as 'development' | 'staging' | 'production') ?? 'development',
       collections,
       subcollections: [],

@@ -24,6 +24,8 @@ import { createHash } from 'crypto';
 import { gzip, gunzip } from 'zlib';
 import { promisify } from 'util';
 
+import { GCS_BACKUP_BUCKET, GCS_BACKUP_BUCKET_CONFIG } from '@/config/gcs-buckets';
+
 import type { Bucket } from '@google-cloud/storage';
 import type { BackupManifest, SerializedDocument } from './backup-manifest.types';
 
@@ -31,12 +33,6 @@ const logger = createModuleLogger('BackupGcsService');
 
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const DEFAULT_BUCKET_SUFFIX = '-backups';
 
 // ---------------------------------------------------------------------------
 // BackupGcsService
@@ -48,8 +44,7 @@ export class BackupGcsService {
   private bucketVerified = false;
 
   constructor(bucketName?: string) {
-    const projectId = process.env.FIREBASE_PROJECT_ID ?? 'pagonis-87766';
-    this.bucketName = bucketName ?? `${projectId}${DEFAULT_BUCKET_SUFFIX}`;
+    this.bucketName = bucketName ?? GCS_BACKUP_BUCKET;
     this.bucket = getAdminStorage().bucket(this.bucketName);
   }
 
@@ -64,8 +59,8 @@ export class BackupGcsService {
     if (!exists) {
       logger.info(`Bucket ${this.bucketName} not found — creating...`);
       await this.bucket.create({
-        location: 'EUROPE-WEST1',
-        storageClass: 'STANDARD',
+        location: GCS_BACKUP_BUCKET_CONFIG.location,
+        storageClass: GCS_BACKUP_BUCKET_CONFIG.storageClass,
       });
       logger.info(`Bucket ${this.bucketName} created successfully`);
     }

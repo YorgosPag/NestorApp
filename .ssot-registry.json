@@ -19,6 +19,18 @@
         "src/config/firestore-schema-map.ts"
       ]
     },
+    "gcs-buckets": {
+      "ssotFile": "src/config/gcs-buckets.ts",
+      "description": "GCS bucket names and GCP project ID must use gcs-buckets.ts constants",
+      "forbiddenPatterns": [
+        "pagonis-87766(?!\\.)(?!-backups)",
+        "\\$\\{.*PROJECT_ID.*\\}.*-backups"
+      ],
+      "allowlist": [
+        "src/config/gcs-buckets.ts"
+      ],
+      "tier": 1
+    },
     "enterprise-id": {
       "ssotFile": "src/services/enterprise-id.service.ts",
       "description": "All document IDs must use EnterpriseIdService — no crypto.randomUUID()",

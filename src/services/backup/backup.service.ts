@@ -20,6 +20,7 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { GCP_PROJECT_ID } from '@/config/gcs-buckets';
 import {
   SUBCOLLECTION_PARENTS,
   IMMUTABLE_COLLECTIONS,
@@ -275,7 +276,7 @@ export class BackupService {
       type: 'full',
       createdAt: new Date().toISOString(),
       createdBy: triggeredBy,
-      projectId: process.env.FIREBASE_PROJECT_ID ?? 'pagonis-87766',
+      projectId: GCP_PROJECT_ID,
       environment: (process.env.NODE_ENV as 'development' | 'staging' | 'production') ?? 'development',
       collections: collectionResults.map(r => r.entry),
       subcollections: subcollectionResults.map(r => r.entry),
