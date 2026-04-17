@@ -11,7 +11,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { Property } from '@/types/property-viewer';
-import type { CommercialStatus, OperationalStatus, LevelData, PropertyLevel } from '@/types/property';
+import type { CommercialStatus, LevelData, PropertyLevel } from '@/types/property';
 import { aggregateLevelData } from '@/services/multi-level.service';
 import { useAutoLevelCreation } from '../hooks/useAutoLevelCreation';
 import { AutoLevelDialogs } from './AutoLevelDialogs';
@@ -24,6 +24,8 @@ import { buildCreationPayload } from './property-fields-save-handler';
 import type { PropertyType } from '@/types/property';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { usePropertyFieldHandlers } from './usePropertyFieldHandlers';
+import { usePropertyFormSync } from '@/hooks/properties/usePropertyFormSync';
+import { buildFormDataFromProperty } from '@/services/property/property-form-sync';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
@@ -99,43 +101,13 @@ export function PropertyFieldsBlock({
   // Track property ID to distinguish card-switch vs in-place field edit
   const prevPropertyIdRef = useRef(property.id);
 
-  const prevServerCodeRef = useRef(property.code);
-  const prevServerNameRef = useRef(property.name);
-  const prevServerTypeRef = useRef(property.type);
   const codeRegenerationPending = useRef(false);
   const currentCommercialStatus = (property.commercialStatus ?? 'unavailable') as CommercialStatus;
   const isReservedOrSold = (['reserved', 'sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
-  const [formData, setFormData] = useState<PropertyFieldsFormData>({
-    name: property.name ?? '', code: property.code ?? '', type: property.type ?? '',
-    projectId: (property as unknown as Record<string, unknown>).projectId as string ?? '',
-    buildingId: property.buildingId ?? '', floorId: property.floorId ?? '',
-    operationalStatus: ((property as unknown as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
-    commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
-    description: property.description ?? '',
-    floor: property.floor ?? 0,
-    bedrooms: property.layout?.bedrooms ?? 0,
-    bathrooms: property.layout?.bathrooms ?? 0,
-    wc: property.layout?.wc ?? 0,
-    areaGross: property.areas?.gross ?? 0,
-    areaNet: property.areas?.net ?? 0,
-    areaBalcony: property.areas?.balcony ?? 0,
-    areaTerrace: property.areas?.terrace ?? 0,
-    areaGarden: property.areas?.garden ?? 0,
-    orientations: property.orientations ?? [],
-    condition: property.condition ?? '',
-    energyClass: property.energy?.class ?? '',
-    heatingType: property.systemsOverride?.heatingType ?? '',
-    coolingType: property.systemsOverride?.coolingType ?? '',
-    flooring: property.finishes?.flooring ?? [],
-    windowFrames: property.finishes?.windowFrames ?? '',
-    glazing: property.finishes?.glazing ?? '',
-    interiorFeatures: property.interiorFeatures ?? [],
-    securityFeatures: property.securityFeatures ?? [],
-    levelData: property.levelData ?? {} as Record<string, LevelData>,
-    levels: property.levels ?? [],
-    askingPrice: property.commercial?.askingPrice?.toString() ?? '',
-  });
+  const [formData, setFormData] = useState<PropertyFieldsFormData>(() => buildFormDataFromProperty(property));
+  // ADR-287 Batch 23: per-field server↔form reconciliation (preserves unsaved user edits)
+  usePropertyFormSync(property, setFormData);
 
   // ADR-233 + ADR-284 Batch 7: Code suggestion inputs
   // Create mode: live inputs from formData (user editing via NewUnitHierarchySection)
@@ -251,40 +223,6 @@ export function PropertyFieldsBlock({
       },
     }));
   }, [activeLevelId]);
-
-  useEffect(() => {
-    const serverCodeChanged = property.code !== prevServerCodeRef.current;
-    const serverNameChanged = property.name !== prevServerNameRef.current;
-    const serverTypeChanged = property.type !== prevServerTypeRef.current;
-    prevServerCodeRef.current = property.code;
-    prevServerNameRef.current = property.name;
-    prevServerTypeRef.current = property.type;
-
-    setFormData(prev => ({
-      ...prev,
-      ...(serverNameChanged ? { name: property.name ?? '' } : {}),
-      ...(serverCodeChanged ? { code: property.code ?? '' } : {}),
-      ...(serverTypeChanged ? { type: property.type ?? '' } : {}),
-      projectId: (property as unknown as Record<string, unknown>).projectId as string ?? '',
-      buildingId: property.buildingId ?? '',
-      floorId: property.floorId ?? '',
-      operationalStatus: ((property as unknown as Record<string, unknown>).operationalStatus as OperationalStatus) ?? 'draft',
-      commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
-      description: property.description ?? '',
-      floor: property.floor ?? 0,
-      bedrooms: property.layout?.bedrooms ?? 0, bathrooms: property.layout?.bathrooms ?? 0, wc: property.layout?.wc ?? 0,
-      areaGross: property.areas?.gross ?? 0, areaNet: property.areas?.net ?? 0,
-      areaBalcony: property.areas?.balcony ?? 0, areaTerrace: property.areas?.terrace ?? 0, areaGarden: property.areas?.garden ?? 0,
-      orientations: property.orientations ?? [], condition: property.condition ?? '',
-      energyClass: property.energy?.class ?? '',
-      heatingType: property.systemsOverride?.heatingType ?? '', coolingType: property.systemsOverride?.coolingType ?? '',
-      flooring: property.finishes?.flooring ?? [], windowFrames: property.finishes?.windowFrames ?? '', glazing: property.finishes?.glazing ?? '',
-      interiorFeatures: property.interiorFeatures ?? [], securityFeatures: property.securityFeatures ?? [],
-      levelData: property.levelData ?? {} as Record<string, LevelData>,
-      levels: property.levels ?? [],
-      askingPrice: property.commercial?.askingPrice?.toString() ?? '',
-    }));
-  }, [property]);
 
   const buildUpdatesFromForm = useCallback(
     (): Partial<Property> =>
