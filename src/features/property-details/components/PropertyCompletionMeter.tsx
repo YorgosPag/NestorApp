@@ -91,10 +91,12 @@ export function PropertyCompletionMeter({
 
   const [expanded, setExpanded] = useState(false);
 
-  // Draft → hide entirely (progressive disclosure, Material Design pattern)
-  if (assessment.shouldHide) {
-    return null;
-  }
+  // Note: `assessment.shouldHide` (draft) intentionally NOT used as render
+  // gate — `buildFormDataFromProperty` defaults missing operationalStatus to
+  // 'draft', which would hide the meter for most legacy records. Progressive-
+  // disclosure theory conflicts here with practical UX: draft is exactly when
+  // completion guidance matters most. The flag remains in the public API for
+  // future consumers that can distinguish default vs explicit draft.
 
   // Dismissed + collapsed → render 1-line undismiss link (Google pattern)
   if (isDismissed && !expanded) {
