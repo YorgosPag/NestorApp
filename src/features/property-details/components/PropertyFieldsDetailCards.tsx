@@ -245,6 +245,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
               </fieldset>
             </div>
             <ConditionPlausibilityWarning
+              propertyType={formData.type}
               condition={formData.condition}
               operationalStatus={formData.operationalStatus}
               heatingType={formData.heatingType}

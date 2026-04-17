@@ -7,7 +7,7 @@ import {
 } from '../finishes-plausibility';
 
 describe('assessFinishesPlausibility', () => {
-  it('returns insufficientData when all fields empty', () => {
+  it('returns insufficientData when all fields empty on non-residential/unknown', () => {
     const r = assessFinishesPlausibility({
       propertyType: undefined,
       flooring: [],
@@ -18,6 +18,20 @@ describe('assessFinishesPlausibility', () => {
       interiorFeatures: [],
     });
     expect(r.verdict).toBe('insufficientData');
+  });
+
+  it('creation scenario — fires missing warning on fresh residential with all fields empty', () => {
+    const r = assessFinishesPlausibility({
+      propertyType: 'apartment',
+      flooring: [],
+      windowFrames: '',
+      glazing: '',
+      energyClass: '',
+      condition: '',
+      interiorFeatures: [],
+    });
+    expect(r.verdict).toBe('unusual');
+    expect(r.reason).toBe('glazingMissingResidential');
   });
 
   it('returns ok for double glazing + class A on residential', () => {

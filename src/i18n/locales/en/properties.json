@@ -949,7 +949,9 @@
         "newWithoutHeating": "Condition “new” requires a heating system per the Greek KENAK code. No heating type selected. Verify or add heating.",
         "needsRenovationButReady": "Condition “needs renovation” contradicts operational status “ready to use”. Verify which value is correct.",
         "newButLowEnergy": "Condition “new” usually implies energy class B or higher. Entered: “{energyClass}”. Please verify.",
-        "needsRenovationHighEnergy": "Condition “needs renovation” usually does not match high energy class “{energyClass}”. Please verify."
+        "needsRenovationHighEnergy": "Condition “needs renovation” usually does not match high energy class “{energyClass}”. Please verify.",
+        "conditionMissingResidential": "No condition selected for a “{type}”. Add the condition (new, excellent, good or needs renovation) so coherence checks can run.",
+        "energyClassMissingResidential": "No energy class selected for a “{type}”. Every Greek dwelling requires an Energy Performance Certificate — add the class or confirm issuance is pending."
       }
     },
     "systemsPlausibility": {

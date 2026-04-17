@@ -14,7 +14,7 @@
  * **Pure render**.
  *
  * @module components/properties/shared/ConditionPlausibilityWarning
- * @enterprise ADR-287 — Enum SSoT Centralization (Batch 24)
+ * @enterprise ADR-287 — Enum SSoT Centralization (Batch 25)
  */
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,6 +28,10 @@ import {
   type AssessConditionPlausibilityArgs,
   type ConditionReason,
 } from '@/constants/condition-plausibility';
+import {
+  PROPERTY_TYPE_I18N_KEYS,
+  type PropertyTypeCanonical,
+} from '@/constants/property-types';
 
 interface ConditionPlausibilityWarningProps
   extends AssessConditionPlausibilityArgs {
@@ -44,12 +48,17 @@ function reasonKey(reason: ConditionReason): string {
       return 'alerts.conditionPlausibility.reasons.newButLowEnergy';
     case 'needsRenovationHighEnergy':
       return 'alerts.conditionPlausibility.reasons.needsRenovationHighEnergy';
+    case 'conditionMissingResidential':
+      return 'alerts.conditionPlausibility.reasons.conditionMissingResidential';
+    case 'energyClassMissingResidential':
+      return 'alerts.conditionPlausibility.reasons.energyClassMissingResidential';
     default:
       return '';
   }
 }
 
 export function ConditionPlausibilityWarning({
+  propertyType,
   condition,
   operationalStatus,
   heatingType,
@@ -60,6 +69,7 @@ export function ConditionPlausibilityWarning({
   const iconSizes = useIconSizes();
 
   const assessment = assessConditionPlausibility({
+    propertyType,
     condition,
     operationalStatus,
     heatingType,
@@ -69,9 +79,16 @@ export function ConditionPlausibilityWarning({
   if (!isActionableConditionVerdict(assessment.verdict)) return null;
 
   const titleKey = `alerts.conditionPlausibility.${assessment.verdict}.title`;
+  const typeKey =
+    assessment.propertyType !== null &&
+    assessment.propertyType in PROPERTY_TYPE_I18N_KEYS
+      ? PROPERTY_TYPE_I18N_KEYS[assessment.propertyType as PropertyTypeCanonical]
+      : '';
+  const typeLabel = typeKey ? t(typeKey) : '';
   const reasonTemplate = reasonKey(assessment.reason);
   const reasonText = reasonTemplate
     ? t(reasonTemplate, {
+        type: typeLabel,
         condition: assessment.condition ?? '',
         operationalStatus: assessment.operationalStatus ?? '',
         heatingType: assessment.heatingType ?? '',

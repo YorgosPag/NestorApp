@@ -130,6 +130,9 @@ export function assessFinishesPlausibility(
     ? args.interiorFeatures.filter(Boolean)
     : [];
 
+  const isResidential =
+    propertyType !== null && RESIDENTIAL_TYPES.has(propertyType as PropertyTypeCanonical);
+
   const allEmpty =
     flooring.length === 0 &&
     windowFrames === null &&
@@ -137,7 +140,11 @@ export function assessFinishesPlausibility(
     energyClass === null &&
     condition === null;
 
-  if (allEmpty) {
+  // Residential types ΠΑΝΤΑ αξιολογούνται — ακόμα και στο creation (όλα τα
+  // fields κενά) οι missing rules πρέπει να σκάσουν. Μόνο για
+  // non-residential ή άγνωστο type γυρνάμε insufficientData όταν δεν έχουμε
+  // κανένα signal.
+  if (allEmpty && !isResidential) {
     return {
       verdict: 'insufficientData',
       reason: null,
@@ -149,9 +156,6 @@ export function assessFinishesPlausibility(
       condition,
     };
   }
-
-  const isResidential =
-    propertyType !== null && RESIDENTIAL_TYPES.has(propertyType as PropertyTypeCanonical);
 
   // Step 1: glazing=single + high energy class → physically incompatible
   if (
