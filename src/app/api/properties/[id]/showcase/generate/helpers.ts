@@ -201,6 +201,12 @@ export async function uploadPdfToStorage(
     throw new Error(`Upload reported success but object is missing: ${bucket.name}/${storagePath}`);
   }
 
+  logger.info('Post-save diagnostics', {
+    bucketName: bucket.name,
+    cloudStorageURI: fileRef.cloudStorageURI.href,
+    publicUrl: fileRef.publicUrl(),
+  });
+
   // Signed URL: buckets with Uniform Bucket-Level Access ignore per-object
   // ACLs so makePublic() returns success without actually making the blob
   // readable. Signed URL works regardless. TTL matches share TTL.
