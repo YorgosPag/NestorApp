@@ -148,7 +148,26 @@
     "text": "Text note",
     "textDesc": "Write a quick note",
     "textPlaceholder": "Write your note here...",
-    "saveNote": "Save note"
+    "saveNote": "Save note",
+    "cameraDialog": {
+      "titlePhoto": "Take photo",
+      "titleVideo": "Record video",
+      "description": "Use your computer camera",
+      "requestingAccess": "Requesting camera access…",
+      "capture": "Capture",
+      "startRecording": "Start recording",
+      "stopRecording": "Stop",
+      "cancel": "Cancel",
+      "retake": "Retake",
+      "use": "Use",
+      "switchCamera": "Switch camera",
+      "selectDevice": "Select camera",
+      "errorPermissionDenied": "Camera access denied. Allow it from your browser settings.",
+      "errorNoDevice": "No camera found connected to this computer.",
+      "errorNotSupported": "Your browser does not support camera access.",
+      "errorDeviceBusy": "Camera is in use by another application.",
+      "errorGeneric": "Error accessing the camera."
+    }
   },
   "share": {
     "loading": "Loading...",

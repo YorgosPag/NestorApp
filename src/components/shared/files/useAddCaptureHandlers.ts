@@ -12,12 +12,17 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useIsMobile } from '@/hooks/useMobile';
 import {
   type CaptureSource,
   type CaptureMode,
   type CaptureMetadata,
   createCaptureMetadata,
 } from '@/config/upload-entry-points';
+
+function supportsGetUserMedia(): boolean {
+  return typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+}
 
 // ============================================================================
 // MODULE LOGGER
@@ -44,6 +49,11 @@ export interface UseAddCaptureHandlersReturn {
   setTextNote: (value: string) => void;
   isRecording: boolean;
   recordingTime: number;
+  // Desktop camera dialog state (ADR-311)
+  isCameraDialogOpen: boolean;
+  setIsCameraDialogOpen: (value: boolean) => void;
+  isVideoDialogOpen: boolean;
+  setIsVideoDialogOpen: (value: boolean) => void;
   // Refs
   cameraInputRef: React.RefObject<HTMLInputElement>;
   videoInputRef: React.RefObject<HTMLInputElement>;
@@ -57,6 +67,7 @@ export interface UseAddCaptureHandlersReturn {
   handleCameraCapture: () => void;
   handleVideoCapture: () => void;
   handleAudioCapture: () => Promise<void>;
+  handleDialogCapture: (file: File, metadata: CaptureMetadata) => Promise<void>;
   handleTextNoteSubmit: () => Promise<void>;
   handleUploadClick: () => void;
   formatRecordingTime: (seconds: number) => string;
@@ -79,6 +90,9 @@ export function useAddCaptureHandlers({
   const [textNote, setTextNote] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
+  const [isVideoDialogOpen, setIsVideoDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // --------------------------------------------------------------------------
   // Refs
@@ -123,18 +137,42 @@ export function useAddCaptureHandlers({
   );
 
   /**
-   * Handle camera photo capture
+   * Handle camera photo capture (ADR-311).
+   * Desktop → WebRTC dialog. Mobile → native `capture` input.
    */
   const handleCameraCapture = useCallback(() => {
+    if (!isMobile && supportsGetUserMedia()) {
+      setIsOpen(false);
+      setIsCameraDialogOpen(true);
+      return;
+    }
     cameraInputRef.current?.click();
-  }, []);
+  }, [isMobile]);
 
   /**
-   * Handle video capture
+   * Handle video capture (ADR-311).
+   * Desktop → WebRTC dialog. Mobile → native `capture` input.
    */
   const handleVideoCapture = useCallback(() => {
+    if (!isMobile && supportsGetUserMedia()) {
+      setIsOpen(false);
+      setIsVideoDialogOpen(true);
+      return;
+    }
     videoInputRef.current?.click();
-  }, []);
+  }, [isMobile]);
+
+  /**
+   * Handle file coming from WebRTC camera dialog (photo or video).
+   */
+  const handleDialogCapture = useCallback(
+    async (file: File, metadata: CaptureMetadata) => {
+      await onCapture(file, metadata);
+      setIsCameraDialogOpen(false);
+      setIsVideoDialogOpen(false);
+    },
+    [onCapture]
+  );
 
   /**
    * Handle audio recording start/stop
@@ -256,6 +294,10 @@ export function useAddCaptureHandlers({
     setTextNote,
     isRecording,
     recordingTime,
+    isCameraDialogOpen,
+    setIsCameraDialogOpen,
+    isVideoDialogOpen,
+    setIsVideoDialogOpen,
     cameraInputRef,
     videoInputRef,
     audioInputRef,
@@ -263,6 +305,7 @@ export function useAddCaptureHandlers({
     handleCameraCapture,
     handleVideoCapture,
     handleAudioCapture,
+    handleDialogCapture,
     handleTextNoteSubmit,
     handleUploadClick,
     formatRecordingTime,

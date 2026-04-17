@@ -60,6 +60,7 @@ import {
   getCaptureSourcesForCategory,
 } from '@/config/upload-entry-points';
 import { useAddCaptureHandlers } from './useAddCaptureHandlers';
+import { CameraCaptureDialog } from './CameraCaptureDialog';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -158,6 +159,10 @@ export function AddCaptureMenu({
     setTextNote,
     isRecording,
     recordingTime,
+    isCameraDialogOpen,
+    setIsCameraDialogOpen,
+    isVideoDialogOpen,
+    setIsVideoDialogOpen,
     cameraInputRef,
     videoInputRef,
     audioInputRef,
@@ -165,6 +170,7 @@ export function AddCaptureMenu({
     handleCameraCapture,
     handleVideoCapture,
     handleAudioCapture,
+    handleDialogCapture,
     handleTextNoteSubmit,
     handleUploadClick,
     formatRecordingTime,
@@ -280,7 +286,7 @@ export function AddCaptureMenu({
     </Button>
   );
 
-  // Hidden inputs for native capture
+  // Hidden inputs for native capture (mobile fallback — ADR-311)
   const hiddenInputs = (
     <>
       <input
@@ -305,6 +311,24 @@ export function AddCaptureMenu({
         accept="audio/*"
         className="hidden"
         onChange={(e) => handleFileCapture(e, 'microphone', 'audio')}
+      />
+    </>
+  );
+
+  // Desktop WebRTC camera dialogs (ADR-311)
+  const captureDialogs = (
+    <>
+      <CameraCaptureDialog
+        open={isCameraDialogOpen}
+        mode="photo"
+        onClose={() => setIsCameraDialogOpen(false)}
+        onCapture={handleDialogCapture}
+      />
+      <CameraCaptureDialog
+        open={isVideoDialogOpen}
+        mode="video"
+        onClose={() => setIsVideoDialogOpen(false)}
+        onCapture={handleDialogCapture}
       />
     </>
   );
@@ -346,6 +370,7 @@ export function AddCaptureMenu({
     return (
       <>
         {hiddenInputs}
+        {captureDialogs}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>{triggerButton}</SheetTrigger>
           <SheetContent side="bottom" className="pb-8">
@@ -366,6 +391,7 @@ export function AddCaptureMenu({
   return (
     <>
       {hiddenInputs}
+      {captureDialogs}
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
