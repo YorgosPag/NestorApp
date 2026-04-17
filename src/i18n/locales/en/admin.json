@@ -724,7 +724,7 @@
     "restore": {
       "title": "Restore from Backup",
       "selectBackup": "Select a backup to restore",
-      "preview": "Preview Changes",
+      "previewAction": "Preview Changes",
       "execute": "Execute Restore",
       "confirmExecute": "This will restore data from this backup. This action cannot be undone.",
       "confirmTitle": "Confirm Restore",

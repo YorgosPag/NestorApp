@@ -166,7 +166,7 @@ export function RestoreSection({
             >
               {isPreviewLoading
                 ? t('common.loading', { defaultValue: '' })
-                : t('backup.restore.preview')
+                : t('backup.restore.previewAction')
               }
             </Button>
 
