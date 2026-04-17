@@ -69,6 +69,25 @@ function resolveBucketTextClass(
   }
 }
 
+/**
+ * Radix Progress renders the fill as a `<span>` child of the root. We use
+ * Tailwind's arbitrary child selector to recolor that indicator based on
+ * the bucket. All three colors are semantic design-system variables
+ * (`--bg-success`, `--bg-warning`, `--bg-error`) — same SSoT pipe as
+ * `colors.bg.*`, just wrapped in the child selector prefix.
+ */
+function resolveProgressIndicatorClass(bucket: CompletionBucket): string {
+  switch (bucket) {
+    case 'green':
+      return '[&>span]:bg-[hsl(var(--bg-success))]';
+    case 'amber':
+      return '[&>span]:bg-[hsl(var(--bg-warning))]';
+    case 'red':
+    default:
+      return '[&>span]:bg-[hsl(var(--bg-error))]';
+  }
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -141,6 +160,7 @@ export function PropertyCompletionMeter({
 
   const { percentage, bucketColor, missingCritical } = assessment;
   const textClass = resolveBucketTextClass(bucketColor, colors);
+  const indicatorClass = resolveProgressIndicatorClass(bucketColor);
   const bucketLabelKey = `completion.bucket.${bucketColor}` as const;
 
   return (
@@ -208,7 +228,7 @@ export function PropertyCompletionMeter({
         </div>
       </header>
 
-      <Progress value={percentage} className="h-3" />
+      <Progress value={percentage} className={cn('h-3', indicatorClass)} />
 
       <p className={cn(typography.label.sm, textClass)}>
         {t(bucketLabelKey, { count: missingCritical.length })}
