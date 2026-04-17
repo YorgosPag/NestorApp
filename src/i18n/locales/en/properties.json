@@ -598,31 +598,48 @@
       "type": "Type",
       "status": "Status",
       "floor": "Floor",
+      "floorId": "Floor",
       "building": "Building",
+      "buildingId": "Building",
       "area": "Area",
-      "price": "Price"
+      "areas": "Areas",
+      "price": "Price",
+      "commercial": "Commercial status",
+      "commercialStatus": "Commercial status",
+      "linkedSpaces": "Linked spaces",
+      "layout": "Layout",
+      "orientations": "Orientations",
+      "condition": "Construction condition",
+      "energy": "Energy",
+      "systemsOverride": "Systems",
+      "finishes": "Finishes",
+      "interiorFeatures": "Interior features",
+      "securityFeatures": "Security features"
     },
     "kinds": {
       "identity": "Identifier",
-      "status": "Status",
-      "hierarchy": "Hierarchy",
-      "data": "Data"
+      "commercial": "Commercial",
+      "structure": "Structure",
+      "features": "Features"
     },
     "dependencies": {
       "files": {
         "label": "Files"
       },
-      "contacts": {
-        "label": "Contacts"
+      "paymentPlans": {
+        "label": "Payment plans"
       },
-      "contracts": {
-        "label": "Contracts"
+      "payments": {
+        "label": "Payments"
       },
-      "invoices": {
-        "label": "Invoices"
+      "cheques": {
+        "label": "Cheques"
       },
-      "tasks": {
-        "label": "Tasks"
+      "legalContracts": {
+        "label": "Legal contracts"
+      },
+      "accountingInvoices": {
+        "label": "Accounting invoices"
       }
     },
     "severity": {

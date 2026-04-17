@@ -15,6 +15,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import type { PropertyMutationImpactPreview } from '@/types/property-mutation-impact';
+import { formatImpactValue } from '@/features/property-details/utils/impact-value-formatter';
 
 interface PropertyMutationImpactDialogProps {
   open: boolean;
@@ -77,7 +78,7 @@ export function PropertyMutationImpactDialog({
                           <span className="text-xs text-muted-foreground">{getKindLabel(change.kind)}</span>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {(change.previousValue ?? t('impactGuard.emptyValue'))} {'->'} {(change.nextValue ?? t('impactGuard.emptyValue'))}
+                          {formatImpactValue(t, change.field, change.previousValue)} {'->'} {formatImpactValue(t, change.field, change.nextValue)}
                         </p>
                       </li>
                     ))}

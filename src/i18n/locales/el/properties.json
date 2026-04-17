@@ -598,31 +598,48 @@
       "type": "Τύπος",
       "status": "Κατάσταση",
       "floor": "Όροφος",
+      "floorId": "Όροφος",
       "building": "Κτίριο",
+      "buildingId": "Κτίριο",
       "area": "Εμβαδόν",
-      "price": "Τιμή"
+      "areas": "Εμβαδά",
+      "price": "Τιμή",
+      "commercial": "Εμπορική κατάσταση",
+      "commercialStatus": "Εμπορική κατάσταση",
+      "linkedSpaces": "Συνδεδεμένοι χώροι",
+      "layout": "Διαρρύθμιση",
+      "orientations": "Προσανατολισμοί",
+      "condition": "Κατάσταση κατασκευής",
+      "energy": "Ενεργειακά",
+      "systemsOverride": "Συστήματα",
+      "finishes": "Τελειώματα",
+      "interiorFeatures": "Εσωτερικά χαρακτηριστικά",
+      "securityFeatures": "Χαρακτηριστικά ασφαλείας"
     },
     "kinds": {
       "identity": "Αναγνωριστικό",
-      "status": "Κατάσταση",
-      "hierarchy": "Ιεραρχία",
-      "data": "Δεδομένα"
+      "commercial": "Εμπορική",
+      "structure": "Δομή",
+      "features": "Χαρακτηριστικά"
     },
     "dependencies": {
       "files": {
         "label": "Αρχεία"
       },
-      "contacts": {
-        "label": "Επαφές"
+      "paymentPlans": {
+        "label": "Πλάνα πληρωμών"
       },
-      "contracts": {
-        "label": "Συμβόλαια"
+      "payments": {
+        "label": "Πληρωμές"
       },
-      "invoices": {
-        "label": "Τιμολόγια"
+      "cheques": {
+        "label": "Επιταγές"
       },
-      "tasks": {
-        "label": "Εργασίες"
+      "legalContracts": {
+        "label": "Νομικά συμβόλαια"
+      },
+      "accountingInvoices": {
+        "label": "Λογιστικά τιμολόγια"
       }
     },
     "severity": {
