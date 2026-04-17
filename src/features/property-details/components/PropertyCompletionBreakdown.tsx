@@ -21,6 +21,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -110,6 +111,7 @@ export function PropertyCompletionBreakdown({
 }: PropertyCompletionBreakdownProps) {
   const { t } = useTranslation(['properties']);
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
 
   // Track active highlight so consecutive clicks clear the previous target
   // before applying the new one (no orphan rings if user clicks quickly).
@@ -192,11 +194,16 @@ export function PropertyCompletionBreakdown({
   };
 
   return (
-    <div className="w-full space-y-2">
+    <div className={cn('w-full', spacing.spaceBetween.sm)}>
       <p className={cn('text-sm font-semibold', colors.text.secondary)}>
         {t('completion.breakdown.heading')}
       </p>
-      <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5 w-full">
+      <ul
+        className={cn(
+          'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 w-full',
+          spacing.gap.sm,
+        )}
+      >
         {missingEntries.map(({ fieldKey, weight, critical, status }) => {
           const target = FIELD_TO_JUMP_TARGET[fieldKey];
           const weightLabelKey = resolveWeightLabelKey(weight);
@@ -208,9 +215,12 @@ export function PropertyCompletionBreakdown({
                 size="sm"
                 disabled={!target}
                 onClick={() => handleJump(fieldKey)}
-                className="w-full justify-between h-9 px-2 text-sm"
+                className={cn(
+                  'w-full justify-between h-9 text-sm',
+                  spacing.padding.x.sm,
+                )}
               >
-                <span className="flex items-center gap-2 min-w-0">
+                <span className={cn('flex items-center min-w-0', spacing.gap.sm)}>
                   <span
                     className={cn(
                       'inline-block h-2 w-2 rounded-full shrink-0',
@@ -224,7 +234,13 @@ export function PropertyCompletionBreakdown({
                   />
                   <span className="truncate">{t(`completion.fields.${fieldKey}`)}</span>
                 </span>
-                <span className={cn('flex items-center gap-1 shrink-0', colors.text.muted)}>
+                <span
+                  className={cn(
+                    'flex items-center shrink-0',
+                    spacing.gap.xs,
+                    colors.text.muted,
+                  )}
+                >
                   <span className="text-[10px] uppercase tracking-wide">
                     {t(`completion.breakdown.${weightLabelKey}`)}
                   </span>

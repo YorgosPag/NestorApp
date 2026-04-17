@@ -28,6 +28,7 @@ import { ChevronDown, ChevronUp, X, Gauge } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyLevel } from '@/types/property';
@@ -78,6 +79,7 @@ export function PropertyCompletionMeter({
   const { t } = useTranslation(['properties']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
 
   const levelCount = effectiveLevels?.length && effectiveLevels.length >= 1
     ? effectiveLevels.length
@@ -111,10 +113,10 @@ export function PropertyCompletionMeter({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-6 px-2 text-xs"
+          className={cn('h-6 text-xs', spacing.padding.x.sm)}
           onClick={() => setDismissed(false)}
         >
-          <Gauge className={cn(iconSizes.xs, 'mr-1')} />
+          <Gauge className={cn(iconSizes.xs, spacing.margin.right.xs)} />
           {t('completion.reshow')}
         </Button>
       </section>
@@ -134,13 +136,15 @@ export function PropertyCompletionMeter({
         // squeezes all children to share bounded height — meter would collapse
         // and scroll internally. `shrink-0` preserves natural height; overflow
         // is handled by the outer ScrollArea (Radix viewport).
-        'w-full shrink-0 rounded-md border p-4 space-y-3',
+        'w-full shrink-0 rounded-md border',
+        spacing.padding.md,       // 16px outer card padding (Google card spec)
+        spacing.spaceBetween.sm,  // 8px between header / progress / label / breakdown
         colors.border.default,
         colors.bg.secondary,
       )}
     >
-      <header className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <header className={cn('flex items-center justify-between', spacing.gap.sm)}>
+        <div className={cn('flex items-center', spacing.gap.sm)}>
           <Gauge className={cn(iconSizes.md, textClass)} aria-hidden="true" />
           <h3 className="text-base font-semibold">
             {t('completion.title')}
@@ -152,23 +156,23 @@ export function PropertyCompletionMeter({
             {percentage}%
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className={cn('flex items-center', spacing.gap.xs)}>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs"
+            className={cn('h-7 text-xs', spacing.padding.x.sm)}
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
           >
             {expanded ? (
               <>
-                <ChevronUp className={cn(iconSizes.xs, 'mr-1')} />
+                <ChevronUp className={cn(iconSizes.xs, spacing.margin.right.xs)} />
                 {t('completion.hideDetails')}
               </>
             ) : (
               <>
-                <ChevronDown className={cn(iconSizes.xs, 'mr-1')} />
+                <ChevronDown className={cn(iconSizes.xs, spacing.margin.right.xs)} />
                 {t('completion.showDetails')}
               </>
             )}
@@ -177,7 +181,7 @@ export function PropertyCompletionMeter({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 w-7 p-0"
+            className={cn('h-7 w-7', spacing.padding.none)}
             onClick={() => setDismissed(true)}
             aria-label={t('completion.dismiss')}
             title={t('completion.dismiss')}
@@ -194,7 +198,7 @@ export function PropertyCompletionMeter({
       </p>
 
       {expanded && (
-        <div className="pt-2 border-t border-[hsl(var(--border))]">
+        <div className={cn(spacing.padding.top.sm, 'border-t border-[hsl(var(--border))]')}>
           <PropertyCompletionBreakdown assessment={assessment} />
         </div>
       )}
