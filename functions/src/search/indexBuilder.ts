@@ -13,6 +13,8 @@
 
 import * as admin from 'firebase-admin';
 
+import { COLLECTIONS } from '../config/firestore-collections';
+
 // =============================================================================
 // TYPES (Mirrored from src/types/search.ts - Functions can't import from main app)
 // =============================================================================
