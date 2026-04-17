@@ -364,6 +364,16 @@
   - **Scope**: Batch 30 wires only property rename. Follow-up batches 31+ will hook the cascade into building/project/floor/parking/storage/contact mutation gateways. The propagator is already polymorphic — only the entry points are staged.
   - **Cross-reference**: Full details in ADR-293 Phase 8.
 
+- **2026-04-17 (Batch 30.2)**: Test coverage follow-up per Google Presubmit pattern.
+  - **Audit finding**: Batch 30 shipped with only the core propagator unit-tested (`entity-file-display-propagator.test.ts`, 6 scenarios). The API route, gateway wrapper, property-mutation cascade hook and `useEntityFiles` `FILE_UPDATED` subscriber had zero coverage. Pre-commit CHECK 5B had no area trigger for `src/services/filesystem/`, `src/services/property/`, `src/app/api/files/` or the hook path — the existing test never auto-ran on edit.
+  - **Fix**: 4 new test suites (+24 scenarios, 30 total including the pre-existing 6) covering the full cascade stack:
+    - `src/app/api/files/__tests__/propagate-entity-rename.route.test.ts` — auth, ownership, validation, error paths (9 scenarios).
+    - `src/services/filesystem/__tests__/file-mutation-gateway-propagate.test.ts` — `RealtimeService.dispatch` contract (5 scenarios).
+    - `src/services/property/__tests__/property-mutation-gateway.test.ts` — name-change detection + `safeFireAndForget` isolation (6 scenarios).
+    - `src/components/shared/files/hooks/__tests__/useEntityFiles-realtime.test.tsx` — `FILE_UPDATED` subscriber contract + unsubscribe (4 scenarios).
+  - **Pre-commit**: new `run_area_tests "File Display Cascade"` call in `scripts/git-hooks/pre-commit` runs the 5 suites when any cascade file is staged (~3-5s). SSoT-reused patterns from `src/app/api/contacts/__tests__/contact-impact-preview-routes.test.ts` (route pattern) and `entity-file-display-propagator.test.ts` (Firestore admin mock). New reusable pattern: `jest.mock('@/services/realtime')` with `dispatch` spy + `subscribe` callback capture.
+  - **Cross-reference**: Full test scenario breakdown in ADR-293 Changelog 2026-04-17 (Phase 8 test coverage).
+
 - **2026-04-17 (Batch 29)**: Property photo pipeline bugfix — entity-polymorphic photo upload + live fetch subscription.
   - **Problem**: User report «ανέβασα μια νέα φωτό αλλά πάλι δεν εμφανίζεται». Root cause twofold — (1) `PhotoUploadService.uploadContactPhotoCanonical()` hardcoded `entityType=CONTACT, domain=ADMIN, category=PHOTOS`, so every property/building/floor/parking/storage/project upload was tagged as contact admin photo, (2) `PhotosTabBase` never fetched persisted photos from Firestore — every mount started empty. Side effect: `usePropertyMediaCounts` (Batch 28 meter) always returned `photos=0`.
   - **Fix**: Renamed `uploadContactPhotoCanonical → uploadEntityPhotoCanonical` polymorphic; extended `PhotoUploadOptions` with `entityType/entityId/domain/category/entityLabel`; extended `PhotosTabConfig` with `canonicalEntityType` (separates UI tab key `parking` from canonical `ENTITY_TYPES.PARKING_SPOT`) + `domain` + `category`. Mapping: property/building/parking/storage/project → SALES/PHOTOS, floor → CONSTRUCTION/PHOTOS, contact → ADMIN/PHOTOS. Wired full chain PhotosTabConfig → usePhotosTabUpload → useEnterpriseFileUpload → PhotoUploadService.uploadPhoto.

@@ -788,6 +788,12 @@ run_area_tests "Contact Mutations" \
     "contact-mutation" \
     "npx jest --testPathPatterns=contact-mutation --verbose"
 
+# File Display Cascade (Batch 30 — entity rename → FileRecord.displayName) — ~5s
+run_area_tests "File Display Cascade" \
+    "^src/(services/filesystem|services/property|app/api/files/propagate|components/shared/files/hooks/useEntityFiles)" \
+    "file-mutation-gateway-propagate|property-mutation-gateway|entity-file-display-propagator|propagate-entity-rename|useEntityFiles-realtime" \
+    "npx jest --testPathPatterns='file-mutation-gateway-propagate|property-mutation-gateway|entity-file-display-propagator|propagate-entity-rename|useEntityFiles-realtime' --verbose"
+
 # =============================================================================
 # CHECK 6: ADR Documentation Reminder (Google Presubmit Pattern)
 # =============================================================================
