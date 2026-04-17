@@ -7,10 +7,17 @@ import { cn } from "@/lib/utils"
 import { getDynamicTransformClass } from '@/components/ui/utils/dynamic-styles';
 import '@/lib/design-system';
 
+type ProgressProps = React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
+  /** Optional className applied to the inner fill (Radix Indicator). Use to
+   * override the default `bg-primary` with semantic colors (success/warning/
+   * error) without fighting Tailwind specificity via child-selectors. */
+  indicatorClassName?: string;
+};
+
 const Progress = React.forwardRef<
   React.ComponentRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
->(({ className, value, ...props }, ref) => {
+  ProgressProps
+>(({ className, indicatorClassName, value, ...props }, ref) => {
   // Enterprise Progress Transform - Single Source of Truth
   const progressValue = value || 0;
   const clampedValue = Math.max(0, Math.min(100, progressValue));
@@ -27,7 +34,11 @@ const Progress = React.forwardRef<
       {...props}
     >
       <ProgressPrimitive.Indicator
-        className={cn("h-full w-full flex-1 transition-all rounded-full bg-primary", progressTransformClass)}
+        className={cn(
+          "h-full w-full flex-1 transition-all rounded-full bg-primary",
+          progressTransformClass,
+          indicatorClassName,
+        )}
       />
     </ProgressPrimitive.Root>
   );

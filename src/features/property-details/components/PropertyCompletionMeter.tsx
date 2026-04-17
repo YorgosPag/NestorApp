@@ -70,21 +70,21 @@ function resolveBucketTextClass(
 }
 
 /**
- * Radix Progress renders the fill as a `<span>` child of the root. We use
- * Tailwind's arbitrary child selector to recolor that indicator based on
- * the bucket. All three colors are semantic design-system variables
- * (`--bg-success`, `--bg-warning`, `--bg-error`) — same SSoT pipe as
- * `colors.bg.*`, just wrapped in the child selector prefix.
+ * Bucket → indicator background class. Semantic design-system CSS vars
+ * (`--bg-success/warning/error`) passed via the new `indicatorClassName`
+ * prop on `<Progress>` (shadcn/progress extension). We also append
+ * `bg-transparent` to the track to hide the default `bg-primary` under
+ * the bucket-colored fill — no child-selector specificity fight.
  */
 function resolveProgressIndicatorClass(bucket: CompletionBucket): string {
   switch (bucket) {
     case 'green':
-      return '[&>span]:bg-[hsl(var(--bg-success))]';
+      return 'bg-[hsl(var(--bg-success))]';
     case 'amber':
-      return '[&>span]:bg-[hsl(var(--bg-warning))]';
+      return 'bg-[hsl(var(--bg-warning))]';
     case 'red':
     default:
-      return '[&>span]:bg-[hsl(var(--bg-error))]';
+      return 'bg-[hsl(var(--bg-error))]';
   }
 }
 
@@ -228,7 +228,7 @@ export function PropertyCompletionMeter({
         </div>
       </header>
 
-      <Progress value={percentage} className={cn('h-3', indicatorClass)} />
+      <Progress value={percentage} className="h-3" indicatorClassName={indicatorClass} />
 
       <p className={cn(typography.label.sm, textClass)}>
         {t(bucketLabelKey, { count: missingCritical.length })}
