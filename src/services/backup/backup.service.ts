@@ -28,16 +28,20 @@ import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { serializeDocument, collectFieldInventory } from './backup-serializer';
+import { StorageBackupService } from './storage-backup.service';
+import type { BackupGcsService } from './backup-gcs.service';
 
 import type { DocumentData, Firestore } from 'firebase-admin/firestore';
 import type {
   BackupManifest,
   CollectionManifestEntry,
   SubcollectionManifestEntry,
+  StorageManifestEntry,
   BackupStatus,
   BackupPhase,
   SerializedDocument,
 } from './backup-manifest.types';
+import type { StorageExportResult } from './storage-backup.service';
 
 const logger = createModuleLogger('BackupService');
 
@@ -260,12 +264,13 @@ export class BackupService {
    * Build the full BackupManifest from export results.
    */
   buildManifest(
+    backupId: string,
     collectionResults: CollectionExportResult[],
     subcollectionResults: SubcollectionExportResult[],
+    storageResult: StorageExportResult | null,
     triggeredBy: string,
     startTime: number,
   ): BackupManifest {
-    const backupId = enterpriseIdService.generateBackupId();
     const totalDocuments =
       collectionResults.reduce((sum, r) => sum + r.entry.documentCount, 0) +
       subcollectionResults.reduce((sum, r) => sum + r.entry.totalDocuments, 0);
@@ -280,14 +285,14 @@ export class BackupService {
       environment: (process.env.NODE_ENV as 'development' | 'staging' | 'production') ?? 'development',
       collections: collectionResults.map(r => r.entry),
       subcollections: subcollectionResults.map(r => r.entry),
-      storageFiles: [], // Phase 3
+      storageFiles: storageResult?.entries ?? [],
       firestoreCollectionsVersion: new Date().toISOString(),
       totalDocuments,
-      totalStorageFiles: 0, // Phase 3
-      totalStorageBytes: 0, // Phase 3
+      totalStorageFiles: storageResult?.entries.length ?? 0,
+      totalStorageBytes: storageResult?.totalBytes ?? 0,
       checksum: '', // Computed after manifest is finalized
       durationMs: Date.now() - startTime,
-      warnings: [],
+      warnings: storageResult?.warnings ?? [],
     };
   }
 
@@ -300,18 +305,20 @@ export class BackupService {
   async executeFullBackup(
     triggeredBy: string,
     onProgress?: StatusCallback,
+    gcsService?: BackupGcsService,
   ): Promise<{
     manifest: BackupManifest;
     files: Map<string, SerializedDocument[]>;
   }> {
     const startTime = Date.now();
+    const backupId = enterpriseIdService.generateBackupId();
     const files = new Map<string, SerializedDocument[]>();
 
-    logger.info('Starting full backup...');
+    logger.info(`Starting full backup ${backupId}...`);
 
     if (onProgress) {
       await onProgress({
-        backupId: 'pending',
+        backupId,
         phase: 'initializing',
         processedCollections: 0,
         totalCollections: Object.keys(COLLECTIONS).length,
@@ -336,10 +343,31 @@ export class BackupService {
       files.set(result.entry.backupFile, result.documents);
     }
 
+    // Export Storage files (Phase 3)
+    // Requires gcsService because files are written directly to backup bucket
+    let storageResult: StorageExportResult | null = null;
+
+    if (gcsService) {
+      if (onProgress) {
+        await onProgress({ phase: 'exporting_storage', storageFilesExported: 0 });
+      }
+
+      const storageService = new StorageBackupService();
+      storageResult = await storageService.exportAllFiles(
+        backupId,
+        gcsService,
+        onProgress,
+      );
+    } else {
+      logger.warn('No GCS service provided — skipping Storage export');
+    }
+
     // Build manifest
     const manifest = this.buildManifest(
+      backupId,
       collectionResults,
       subcollectionResults,
+      storageResult,
       triggeredBy,
       startTime,
     );
@@ -351,11 +379,16 @@ export class BackupService {
         processedCollections: Object.keys(COLLECTIONS).length,
         totalCollections: Object.keys(COLLECTIONS).length,
         documentsExported: manifest.totalDocuments,
+        storageFilesExported: manifest.totalStorageFiles,
         completedAt: new Date().toISOString(),
       });
     }
 
-    logger.info(`Full backup completed: ${manifest.id} — ${manifest.totalDocuments} documents in ${manifest.durationMs}ms`);
+    logger.info(
+      `Full backup completed: ${manifest.id} — ` +
+      `${manifest.totalDocuments} documents, ${manifest.totalStorageFiles} storage files ` +
+      `in ${manifest.durationMs}ms`,
+    );
 
     return { manifest, files };
   }

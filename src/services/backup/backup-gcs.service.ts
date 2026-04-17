@@ -10,7 +10,8 @@
  *   gs://{projectId}-backups/{backupId}/
  *     ├── manifest.json
  *     ├── collections/{name}.ndjson.gz
- *     └── subcollections/{parent}__{name}.ndjson.gz
+ *     ├── subcollections/{parent}__{name}.ndjson.gz
+ *     └── storage/{storagePath}  (Phase 3 — raw binary files)
  *
  * @module services/backup/backup-gcs.service
  * @see adrs/ADR-313-enterprise-backup-restore.md §8
@@ -227,6 +228,28 @@ export class BackupGcsService {
     await this.writeManifest(manifest);
 
     return manifest;
+  }
+
+  /**
+   * Write a raw binary file to GCS (for Storage backup files).
+   * Used by StorageBackupService to copy files from Firebase Storage.
+   */
+  async writeRawFile(
+    backupId: string,
+    relativePath: string,
+    content: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    const gcsPath = `${backupId}/${relativePath}`;
+    const file = this.bucket.file(gcsPath);
+    await file.save(content, {
+      contentType,
+      metadata: {
+        sizeBytes: String(content.length),
+      },
+    });
+
+    logger.info(`Written raw file: ${gcsPath} (${content.length} bytes)`);
   }
 
   /**

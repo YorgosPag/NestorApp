@@ -79,10 +79,11 @@ async function handleFullBackup(ctx: AuthContext): Promise<NextResponse> {
       }
     };
 
-    // Execute full backup
+    // Execute full backup (gcsService passed for Storage export — Phase 3)
     const { manifest, files } = await backupService.executeFullBackup(
       ctx.userId,
       updateStatus,
+      gcsService,
     );
 
     // Write to GCS
@@ -106,6 +107,8 @@ async function handleFullBackup(ctx: AuthContext): Promise<NextResponse> {
       totalDocuments: finalManifest.totalDocuments,
       totalCollections: finalManifest.collections.length,
       totalSubcollections: finalManifest.subcollections.length,
+      totalStorageFiles: finalManifest.totalStorageFiles,
+      totalStorageBytes: finalManifest.totalStorageBytes,
       durationMs: Date.now() - startTime,
       bucket: gcsService.getBucketName(),
     });

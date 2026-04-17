@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Phase 4 COMPLETE |
+| **Status** | Phase 4 COMPLETE, Phase 3 COMPLETE |
 | **Date** | 2026-04-17 |
 | **Category** | Infrastructure / Data Protection / Disaster Recovery |
 | **Canonical Location** | `src/services/backup/` |
@@ -224,9 +224,17 @@ Modifica:
 
 Estensione BackupService: `exportAllCollections()` + `exportAllSubcollections()`. Progress tracking in `system/backup_status`.
 
-### Fase 3: Export Firebase Storage (4-5 giorni)
+### Fase 3: Export Firebase Storage — COMPLETE
 
 `StorageBackupService`: lista file, download parallelo (concurrency=10), SHA-256, cross-ref con FILES collection.
+
+File nuovo:
+- `src/services/backup/storage-backup.service.ts` — StorageBackupService: lista ricorsiva, download parallelo, SHA-256, cross-ref FILES, orphan detection
+
+Modifica:
+- `src/services/backup/backup-gcs.service.ts` — `writeRawFile()` per file binari raw
+- `src/services/backup/backup.service.ts` — `executeFullBackup()` chiama StorageBackupService, `buildManifest()` accetta `backupId` + `storageResult`, `backupId` generato all'inizio del backup
+- `src/app/api/admin/backup/full/route.ts` — Passa `gcsService` a `executeFullBackup()`, response include `totalStorageFiles`/`totalStorageBytes`
 
 ### Fase 4: Restore completo (5-7 giorni) — COMPLETE
 
@@ -302,3 +310,4 @@ gs://{projectId}-backups/
 |------|------|------------|
 | 2026-04-17 | 1 | ADR creato. Tipi manifest, serializer, BackupService, GCS service, API endpoints |
 | 2026-04-17 | 4 | RestoreService, SchemaReconciler (Approach B), API routes, pre-restore snapshot, generateRestoreId, restore types |
+| 2026-04-17 | 3 | StorageBackupService: lista file, download parallelo (concurrency=10), SHA-256, cross-ref FILES, writeRawFile() in GCS, backupId generato all'inizio |
