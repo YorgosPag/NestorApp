@@ -14,7 +14,7 @@
  * **Pure render**.
  *
  * @module components/properties/shared/FinishesPlausibilityWarning
- * @enterprise ADR-287 — Enum SSoT Centralization (Batch 24)
+ * @enterprise ADR-287 — Enum SSoT Centralization (Batch 25)
  */
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,6 +28,10 @@ import {
   type AssessFinishesPlausibilityArgs,
   type FinishesReason,
 } from '@/constants/finishes-plausibility';
+import {
+  PROPERTY_TYPE_I18N_KEYS,
+  type PropertyTypeCanonical,
+} from '@/constants/property-types';
 
 interface FinishesPlausibilityWarningProps
   extends AssessFinishesPlausibilityArgs {
@@ -42,10 +46,12 @@ function reasonKey(reason: FinishesReason): string {
       return 'alerts.finishesPlausibility.reasons.glazingTripleLowEnergy';
     case 'carpetWithUnderfloor':
       return 'alerts.finishesPlausibility.reasons.carpetWithUnderfloor';
-    case 'flooringEmptyFinished':
-      return 'alerts.finishesPlausibility.reasons.flooringEmptyFinished';
-    case 'glazingMissingFinished':
-      return 'alerts.finishesPlausibility.reasons.glazingMissingFinished';
+    case 'glazingMissingResidential':
+      return 'alerts.finishesPlausibility.reasons.glazingMissingResidential';
+    case 'flooringMissingResidential':
+      return 'alerts.finishesPlausibility.reasons.flooringMissingResidential';
+    case 'framesMissingResidential':
+      return 'alerts.finishesPlausibility.reasons.framesMissingResidential';
     default:
       return '';
   }
@@ -57,6 +63,7 @@ function conditionLabelKey(condition: string | null): string {
 }
 
 export function FinishesPlausibilityWarning({
+  propertyType,
   flooring,
   windowFrames,
   glazing,
@@ -69,6 +76,7 @@ export function FinishesPlausibilityWarning({
   const iconSizes = useIconSizes();
 
   const assessment = assessFinishesPlausibility({
+    propertyType,
     flooring,
     windowFrames,
     glazing,
@@ -83,12 +91,19 @@ export function FinishesPlausibilityWarning({
   const conditionLabel = assessment.condition
     ? t(conditionLabelKey(assessment.condition))
     : '';
+  const typeKey =
+    assessment.propertyType !== null &&
+    assessment.propertyType in PROPERTY_TYPE_I18N_KEYS
+      ? PROPERTY_TYPE_I18N_KEYS[assessment.propertyType as PropertyTypeCanonical]
+      : '';
+  const typeLabel = typeKey ? t(typeKey) : '';
 
   const reasonTemplate = reasonKey(assessment.reason);
   const reasonText = reasonTemplate
     ? t(reasonTemplate, {
         energyClass: assessment.energyClass ?? '',
         condition: conditionLabel,
+        type: typeLabel,
       })
     : '';
 

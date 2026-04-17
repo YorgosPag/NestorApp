@@ -16,13 +16,15 @@
  * **Layering**: Leaf module — εξαρτάται μόνο από `property-types.ts`.
  *
  * **Priority order** (most severe first, single-reason surfacing):
- *   1. `heatingNoneNewBuild`       — condition=new + heating=none (implausible)
- *   2. `heatingNoneResidential`    — residential με heating=none (implausible)
- *   3. `coolingOversizedTinyUnit`  — central-air σε <40 τ.μ. (unusual)
- *   4. `coolingNoneLargeUnit`      — residential >120 τ.μ. χωρίς ψύξη (unusual)
+ *   1. `heatingNoneNewBuild`           — condition=new + heating=none (implausible)
+ *   2. `heatingNoneResidential`        — residential με heating=none (implausible)
+ *   3. `heatingMissingResidential`     — residential χωρίς καταχωρημένη θέρμανση (unusual)
+ *   4. `coolingMissingResidential`     — residential χωρίς καταχωρημένη ψύξη (unusual)
+ *   5. `coolingOversizedTinyUnit`      — central-air σε <40 τ.μ. (unusual)
+ *   6. `coolingNoneLargeUnit`          — residential >120 τ.μ. χωρίς ψύξη (unusual)
  *
  * @module constants/systems-plausibility
- * @enterprise ADR-287 — Enum SSoT Centralization (Batch 24)
+ * @enterprise ADR-287 — Enum SSoT Centralization (Batch 25)
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
@@ -102,6 +104,8 @@ export type SystemsVerdict =
 export type SystemsReason =
   | 'heatingNoneResidential'
   | 'heatingNoneNewBuild'
+  | 'heatingMissingResidential'
+  | 'coolingMissingResidential'
   | 'coolingOversizedTinyUnit'
   | 'coolingNoneLargeUnit'
   | null;
@@ -131,9 +135,16 @@ export interface AssessSystemsPlausibilityArgs {
  *   1. `propertyType` known → otherwise `insufficientData`.
  *   2. `heatingNoneNewBuild` (implausible).
  *   3. `heatingNoneResidential` (implausible).
- *   4. `coolingOversizedTinyUnit` (unusual).
- *   5. `coolingNoneLargeUnit` (unusual).
- *   6. Otherwise → `ok`.
+ *   4. `heatingMissingResidential` (unusual) — residential με κενό heatingType.
+ *   5. `coolingMissingResidential` (unusual) — residential με κενό coolingType.
+ *   6. `coolingOversizedTinyUnit` (unusual).
+ *   7. `coolingNoneLargeUnit` (unusual).
+ *   8. Otherwise → `ok`.
+ *
+ * Διάκριση `''` (κενό — "δεν απαντήθηκε") vs `'none'` (ρητή απουσία):
+ * τα missing rules πυροδοτούνται μόνο όταν η τιμή είναι κενή (null μετά το
+ * normalize). Το `'none'` συνεχίζει να πυροδοτεί τα αντίστοιχα implausible/
+ * unusual rules (heatingNoneResidential, coolingNoneLargeUnit).
  */
 export function assessSystemsPlausibility(
   args: AssessSystemsPlausibilityArgs,
@@ -188,7 +199,39 @@ export function assessSystemsPlausibility(
     );
   }
 
-  // Step 4: central-air σε πολύ μικρή μονάδα
+  // Step 4: residential χωρίς καταχωρημένη θέρμανση (missing, not explicit none)
+  if (
+    heatingType === null &&
+    RESIDENTIAL_TYPES.has(propertyType)
+  ) {
+    return buildAssessment(
+      'unusual',
+      'heatingMissingResidential',
+      propertyType,
+      heatingType,
+      coolingType,
+      condition,
+      areaGross,
+    );
+  }
+
+  // Step 5: residential χωρίς καταχωρημένη ψύξη (missing, not explicit none)
+  if (
+    coolingType === null &&
+    RESIDENTIAL_TYPES.has(propertyType)
+  ) {
+    return buildAssessment(
+      'unusual',
+      'coolingMissingResidential',
+      propertyType,
+      heatingType,
+      coolingType,
+      condition,
+      areaGross,
+    );
+  }
+
+  // Step 6: central-air σε πολύ μικρή μονάδα
   if (
     coolingType === COOLING_CENTRAL_AIR &&
     areaGross !== null &&
@@ -207,7 +250,7 @@ export function assessSystemsPlausibility(
     );
   }
 
-  // Step 5: residential μεγάλη μονάδα χωρίς ψύξη
+  // Step 7: residential μεγάλη μονάδα χωρίς ψύξη
   if (
     coolingType === COOLING_NONE &&
     areaGross !== null &&

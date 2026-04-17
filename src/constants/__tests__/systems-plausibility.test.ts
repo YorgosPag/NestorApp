@@ -1,5 +1,5 @@
 /**
- * Unit tests — systems-plausibility (ADR-287 Batch 24)
+ * Unit tests — systems-plausibility (ADR-287 Batch 25)
  */
 import {
   assessSystemsPlausibility,
@@ -64,6 +64,41 @@ describe('assessSystemsPlausibility', () => {
     expect(r.verdict).toBe('ok');
   });
 
+  it('returns unusual heatingMissingResidential when heatingType empty on residential', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'apartment',
+      heatingType: '',
+      coolingType: 'split-units',
+      condition: 'good',
+      areaGross: 80,
+    });
+    expect(r.verdict).toBe('unusual');
+    expect(r.reason).toBe('heatingMissingResidential');
+  });
+
+  it('returns unusual coolingMissingResidential when coolingType empty on residential', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'apartment',
+      heatingType: 'central',
+      coolingType: '',
+      condition: 'good',
+      areaGross: 80,
+    });
+    expect(r.verdict).toBe('unusual');
+    expect(r.reason).toBe('coolingMissingResidential');
+  });
+
+  it('does not flag missing heating/cooling for commercial (shop)', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'shop',
+      heatingType: '',
+      coolingType: '',
+      condition: 'good',
+      areaGross: 50,
+    });
+    expect(r.verdict).toBe('ok');
+  });
+
   it('returns unusual coolingOversizedTinyUnit', () => {
     const r = assessSystemsPlausibility({
       propertyType: 'studio',
@@ -86,6 +121,18 @@ describe('assessSystemsPlausibility', () => {
     });
     expect(r.verdict).toBe('unusual');
     expect(r.reason).toBe('coolingNoneLargeUnit');
+  });
+
+  it('prefers heatingNoneResidential (implausible) over heatingMissingResidential (unusual)', () => {
+    const r = assessSystemsPlausibility({
+      propertyType: 'apartment',
+      heatingType: 'none',
+      coolingType: '',
+      condition: 'good',
+      areaGross: 80,
+    });
+    expect(r.verdict).toBe('implausible');
+    expect(r.reason).toBe('heatingNoneResidential');
   });
 
   it('isActionableSystemsVerdict narrows correctly', () => {

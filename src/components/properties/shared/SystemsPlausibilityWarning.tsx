@@ -15,7 +15,7 @@
  * **Pure render**.
  *
  * @module components/properties/shared/SystemsPlausibilityWarning
- * @enterprise ADR-287 — Enum SSoT Centralization (Batch 24)
+ * @enterprise ADR-287 — Enum SSoT Centralization (Batch 25)
  */
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -42,6 +42,10 @@ function reasonKey(reason: SystemsReason): string {
       return 'alerts.systemsPlausibility.reasons.heatingNoneResidential';
     case 'heatingNoneNewBuild':
       return 'alerts.systemsPlausibility.reasons.heatingNoneNewBuild';
+    case 'heatingMissingResidential':
+      return 'alerts.systemsPlausibility.reasons.heatingMissingResidential';
+    case 'coolingMissingResidential':
+      return 'alerts.systemsPlausibility.reasons.coolingMissingResidential';
     case 'coolingOversizedTinyUnit':
       return 'alerts.systemsPlausibility.reasons.coolingOversizedTinyUnit';
     case 'coolingNoneLargeUnit':

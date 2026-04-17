@@ -217,6 +217,7 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
             );
           })()}
           <FinishesPlausibilityWarning
+            propertyType={formData.type}
             flooring={
               isMultiLevel && activeLevelId
                 ? (currentLevelData?.finishes?.flooring ?? [])

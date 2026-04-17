@@ -961,6 +961,8 @@
       },
       "reasons": {
         "heatingNoneResidential": "A “{type}” without heating does not comply with the Greek KENAK code. Add heating or confirm the unit is unfinished.",
+        "heatingMissingResidential": "A “{type}” without a declared heating system. Every dwelling has heating — add the system or confirm the unit is unfinished.",
+        "coolingMissingResidential": "A “{type}” without a declared cooling system. In the Greek climate most properties have cooling — add the system or confirm the unit is unfinished.",
         "coolingOversizedTinyUnit": "“{cooling}” is oversized for a {area} m² unit. Small flats typically use split units.",
         "heatingNoneNewBuild": "Heating “none” combined with condition “new” is incompatible. New builds always include heating.",
         "coolingNoneLargeUnit": "A “{type}” of {area} m² without cooling is unusual for the Greek climate. Please verify."
@@ -977,8 +979,9 @@
         "glazingSingleHighEnergy": "“Single glazing” is incompatible with energy class “{energyClass}”. Energy-rated buildings require double or triple glazing.",
         "glazingTripleLowEnergy": "“Triple glazing” on a unit with energy class “{energyClass}” is an unusual investment. Please verify.",
         "carpetWithUnderfloor": "“Carpet” flooring significantly reduces underfloor heating efficiency. Choose hard flooring (tile, wood, marble).",
-        "flooringEmptyFinished": "No flooring type selected even though condition is “{condition}”. Add flooring or confirm the unit is unfinished.",
-        "glazingMissingFinished": "No glazing type selected even though condition is “{condition}”. Add glazing or verify."
+        "glazingMissingResidential": "No glazing type selected for a “{type}”. Every dwelling has glazing — add the type or confirm the unit is unfinished.",
+        "flooringMissingResidential": "No flooring type selected for a “{type}”. Every dwelling has flooring — add the type or confirm the unit is unfinished.",
+        "framesMissingResidential": "No window-frame type selected for a “{type}”. Every dwelling has window frames — add the type or confirm the unit is unfinished."
       }
     },
     "interiorFeaturesPlausibility": {
