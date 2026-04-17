@@ -923,6 +923,79 @@
         "noOutdoorResidential": "A “{type}” typically has at least a balcony, terrace or garden. All entered as 0. Please verify.",
         "gardenOnNonGround": "A garden ({garden} m²) is unusual for a “{type}” — typically found in ground-floor units or houses. Please verify."
       }
+    },
+    "orientationPlausibility": {
+      "unusual": {
+        "title": "Unusual orientation"
+      },
+      "implausible": {
+        "title": "Orientation does not match property type"
+      },
+      "reasons": {
+        "missingResidential": "A “{type}” without any orientation is unusual. Please pick at least one orientation or confirm the unit is unfinished.",
+        "tooMany": "{count} orientations selected for a “{type}”. A typical unit has 1–4. Please verify.",
+        "allEightNonStandalone": "All 8 orientations selected. Only meaningful for villas or detached houses. Verify the type “{type}” is correct.",
+        "commercialAllDirections": "A “{type}” has {count} orientations selected. Shops/offices typically have 1–2 (façade). Please verify."
+      }
+    },
+    "conditionPlausibility": {
+      "unusual": {
+        "title": "Unusual condition combination"
+      },
+      "implausible": {
+        "title": "Condition does not match other fields"
+      },
+      "reasons": {
+        "newWithoutHeating": "Condition “new” requires a heating system per the Greek KENAK code. No heating type selected. Verify or add heating.",
+        "needsRenovationButReady": "Condition “needs renovation” contradicts operational status “ready to use”. Verify which value is correct.",
+        "newButLowEnergy": "Condition “new” usually implies energy class B or higher. Entered: “{energyClass}”. Please verify.",
+        "needsRenovationHighEnergy": "Condition “needs renovation” usually does not match high energy class “{energyClass}”. Please verify."
+      }
+    },
+    "systemsPlausibility": {
+      "unusual": {
+        "title": "Unusual systems combination"
+      },
+      "implausible": {
+        "title": "Systems do not match property type"
+      },
+      "reasons": {
+        "heatingNoneResidential": "A “{type}” without heating does not comply with the Greek KENAK code. Add heating or confirm the unit is unfinished.",
+        "coolingOversizedTinyUnit": "“{cooling}” is oversized for a {area} m² unit. Small flats typically use split units.",
+        "heatingNoneNewBuild": "Heating “none” combined with condition “new” is incompatible. New builds always include heating.",
+        "coolingNoneLargeUnit": "A “{type}” of {area} m² without cooling is unusual for the Greek climate. Please verify."
+      }
+    },
+    "finishesPlausibility": {
+      "unusual": {
+        "title": "Unusual finishes combination"
+      },
+      "implausible": {
+        "title": "Finishes do not match other fields"
+      },
+      "reasons": {
+        "glazingSingleHighEnergy": "“Single glazing” is incompatible with energy class “{energyClass}”. Energy-rated buildings require double or triple glazing.",
+        "glazingTripleLowEnergy": "“Triple glazing” on a unit with energy class “{energyClass}” is an unusual investment. Please verify.",
+        "carpetWithUnderfloor": "“Carpet” flooring significantly reduces underfloor heating efficiency. Choose hard flooring (tile, wood, marble).",
+        "flooringEmptyFinished": "No flooring type selected even though condition is “{condition}”. Add flooring or confirm the unit is unfinished.",
+        "glazingMissingFinished": "No glazing type selected even though condition is “{condition}”. Add glazing or verify."
+      }
+    },
+    "interiorFeaturesPlausibility": {
+      "unusual": {
+        "title": "Unusual features combination"
+      },
+      "implausible": {
+        "title": "Features do not match other fields"
+      },
+      "reasons": {
+        "solarPanelsLowEnergy": "Solar panels usually imply energy class B or higher. Entered: “{energyClass}”. Please verify.",
+        "fireplaceTinyStudio": "A fireplace in a {area} m² “{type}” is unusual — requires space and a flue. Please verify.",
+        "airConditioningRedundant": "“Air conditioning” feature selected together with cooling type “{cooling}”. Duplicate entry — please verify.",
+        "luxuryFeaturesStudio": "Luxury features ({features}) in a “{type}” are unusual. Verify the type or selections.",
+        "alarmSystemRedundant": "“Alarm system” selected in interior features and “alarm” in security features. Duplicate — pick one.",
+        "underfloorHeatingNoCentral": "Underfloor heating typically requires a central system or heat pump. Entered: “{heating}”. Please verify."
+      }
     }
   },
   "details": {

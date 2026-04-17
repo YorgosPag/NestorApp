@@ -25,17 +25,15 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import {
-  Bed, Bath, Compass, Wrench, Zap,
-  Thermometer, Snowflake, Home, Shield, Flame,
-} from 'lucide-react';
-import type { FlooringType, FrameType, GlazingType, OrientationType } from '@/constants/property-features-enterprise';
+import { Bed, Bath, Compass, Wrench, Zap } from 'lucide-react';
+import type { OrientationType } from '@/constants/property-features-enterprise';
 import {
   ORIENTATION_OPTIONS, CONDITION_OPTIONS, ENERGY_CLASS_OPTIONS,
-  HEATING_OPTIONS, COOLING_OPTIONS, FLOORING_OPTIONS, FRAME_OPTIONS,
-  GLAZING_OPTIONS, INTERIOR_FEATURE_OPTIONS, SECURITY_FEATURE_OPTIONS,
   PROPERTY_CARD_COLORS, PROPERTY_MICRO_TEXT,
 } from './property-fields-constants';
+import { OrientationPlausibilityWarning } from '@/components/properties/shared/OrientationPlausibilityWarning';
+import { ConditionPlausibilityWarning } from '@/components/properties/shared/ConditionPlausibilityWarning';
+import { PropertyFieldsDetailCardsRow2 } from './PropertyFieldsDetailCardsRow2';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 
 type DetailCardsProps = Pick<PropertyFieldsEditFormProps,
@@ -185,6 +183,17 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                 </div>
               </fieldset>
             )}
+            <OrientationPlausibilityWarning
+              propertyType={formData.type}
+              orientations={
+                isMultiLevel && activeLevelId
+                  ? (currentLevelData?.orientations ?? [])
+                  : isMultiLevel && aggregatedTotals
+                    ? aggregatedTotals.orientations
+                    : formData.orientations
+              }
+              className="py-2 px-3 mt-1"
+            />
           </CardContent>
         </Card>
 
@@ -235,226 +244,33 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                 </Select>
               </fieldset>
             </div>
+            <ConditionPlausibilityWarning
+              condition={formData.condition}
+              operationalStatus={formData.operationalStatus}
+              heatingType={formData.heatingType}
+              energyClass={formData.energyClass}
+              className="py-2 px-3 mt-1"
+            />
           </CardContent>
         </Card>
 
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          ROW 2: Συστήματα, Φινιρίσματα, Χαρακτηριστικά
-      ═══════════════════════════════════════════════════════════════ */}
-      <section className="grid grid-cols-3 gap-3">
-        {/* ─── Systems Card ─── */}
-        <Card>
-          <CardHeader className="p-2 pb-1">
-            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Thermometer className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.systems)} />
-              {t('systems.sectionTitle')}
-              {isMultiLevel && (
-                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.muted)}>
-                  {t('multiLevel.perLevel.sharedHint')}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2 pt-0">
-            <div className="space-y-2">
-              <fieldset className="space-y-1">
-                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
-                  <Flame className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.heating)} />
-                  {t('systems.heating.label')}
-                </Label>
-                <Select value={formData.heatingType} disabled={!isEditing || isSoldOrRented}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}>
-                  <SelectTrigger size="sm"><SelectValue placeholder={t('systems.heating.label')} /></SelectTrigger>
-                  <SelectContent>
-                    {HEATING_OPTIONS.map((h) => (
-                      <SelectItem key={h} value={h} className="text-xs">{t(`systems.heating.${h}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </fieldset>
-              <fieldset className="space-y-1">
-                <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
-                  <Snowflake className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.cooling)} />
-                  {t('systems.cooling.label')}
-                </Label>
-                <Select value={formData.coolingType} disabled={!isEditing || isSoldOrRented}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}>
-                  <SelectTrigger size="sm"><SelectValue placeholder={t('systems.cooling.label')} /></SelectTrigger>
-                  <SelectContent>
-                    {COOLING_OPTIONS.map((c) => (
-                      <SelectItem key={c} value={c} className="text-xs">{t(`systems.cooling.${c}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </fieldset>
-            </div>
-          </CardContent>
-        </Card>
-        {/* ─── Finishes Card (level-aware) ─── */}
-        <Card>
-          <CardHeader className="p-2 pb-1">
-            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Home className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.finishes)} />
-              {t('finishes.sectionTitle')}
-              {isMultiLevel && (
-                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.success)}>
-                  {t('multiLevel.perLevel.perFloorHint')}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2 pt-0 space-y-2">
-            {(() => {
-              const levelFlooring = isMultiLevel && activeLevelId
-                ? (currentLevelData?.finishes?.flooring ?? [])
-                : formData.flooring;
-              const levelFrames = isMultiLevel && activeLevelId
-                ? (currentLevelData?.finishes?.windowFrames ?? '')
-                : formData.windowFrames;
-              const levelGlazing = isMultiLevel && activeLevelId
-                ? (currentLevelData?.finishes?.glazing ?? '')
-                : formData.glazing;
-
-              return (
-                <>
-                  {/* Flooring */}
-                  <fieldset className="space-y-1">
-                    <Label className={cn("text-xs", colors.text.muted)}>{t('finishes.flooring.label')}</Label>
-                    <div className="flex flex-wrap gap-1">
-                      {FLOORING_OPTIONS.map((floor) => {
-                        const isSelected = levelFlooring.includes(floor);
-                        return (
-                          <Button key={floor} type="button"
-                            variant={isSelected ? 'default' : 'outline'} size="sm"
-                            className="h-6 px-1.5 text-xs"
-                            disabled={!isEditing || isSoldOrRented}
-                            onClick={() => {
-                              if (isMultiLevel && activeLevelId) {
-                                const updated = isSelected
-                                  ? levelFlooring.filter(f => f !== floor)
-                                  : [...levelFlooring, floor];
-                                updateLevelField('finishes', {
-                                  ...(currentLevelData?.finishes ?? {}),
-                                  flooring: updated as FlooringType[],
-                                });
-                              } else {
-                                toggleArrayItem('flooring', floor);
-                              }
-                            }}>
-                            {t(`finishes.flooring.${floor}`)}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </fieldset>
-
-                  {/* Frames & Glazing */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <fieldset className="space-y-1">
-                      <Label className={cn("text-xs", colors.text.muted)}>{t('finishes.frames.label')}</Label>
-                      <Select value={levelFrames} disabled={!isEditing || isSoldOrRented}
-                        onValueChange={(value) => {
-                          if (isMultiLevel && activeLevelId) {
-                            updateLevelField('finishes', {
-                              ...(currentLevelData?.finishes ?? {}),
-                              windowFrames: value as FrameType,
-                            });
-                          } else {
-                            setFormData(prev => ({ ...prev, windowFrames: value }));
-                          }
-                        }}>
-                        <SelectTrigger size="sm"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
-                        <SelectContent>
-                          {FRAME_OPTIONS.map((f) => (
-                            <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </fieldset>
-                    <fieldset className="space-y-1">
-                      <Label className={cn("text-xs", colors.text.muted)}>{t('finishes.glazing.label')}</Label>
-                      <Select value={levelGlazing} disabled={!isEditing || isSoldOrRented}
-                        onValueChange={(value) => {
-                          if (isMultiLevel && activeLevelId) {
-                            updateLevelField('finishes', {
-                              ...(currentLevelData?.finishes ?? {}),
-                              glazing: value as GlazingType,
-                            });
-                          } else {
-                            setFormData(prev => ({ ...prev, glazing: value }));
-                          }
-                        }}>
-                        <SelectTrigger size="sm"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
-                        <SelectContent>
-                          {GLAZING_OPTIONS.map((g) => (
-                            <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </fieldset>
-                  </div>
-                </>
-              );
-            })()}
-          </CardContent>
-        </Card>
-
-        {/* ─── Features Card ─── */}
-        <Card>
-          <CardHeader className="p-2 pb-1">
-            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Shield className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.features)} />
-              {t('features.sectionTitle')}
-              {isMultiLevel && (
-                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.muted)}>
-                  {t('multiLevel.perLevel.sharedHint')}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2 pt-0 space-y-2">
-            {/* Interior Features */}
-            <fieldset className="space-y-1">
-              <Label className={cn("text-xs", colors.text.muted)}>{t('features.interior.label')}</Label>
-              <div className="flex flex-wrap gap-1">
-                {INTERIOR_FEATURE_OPTIONS.map((feature) => {
-                  const isSelected = formData.interiorFeatures.includes(feature);
-                  return (
-                    <Button key={feature} type="button"
-                      variant={isSelected ? 'default' : 'outline'} size="sm"
-                      className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing || isSoldOrRented}
-                      onClick={() => toggleArrayItem('interiorFeatures', feature)}>
-                      {t(`features.interior.${feature}`)}
-                    </Button>
-                  );
-                })}
-              </div>
-            </fieldset>
-
-            {/* Security Features */}
-            <fieldset className="space-y-1">
-              <Label className={cn("text-xs", colors.text.muted)}>{t('features.security.label')}</Label>
-              <div className="flex flex-wrap gap-1">
-                {SECURITY_FEATURE_OPTIONS.map((feature) => {
-                  const isSelected = formData.securityFeatures.includes(feature);
-                  return (
-                    <Button key={feature} type="button"
-                      variant={isSelected ? 'default' : 'outline'} size="sm"
-                      className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing || isSoldOrRented}
-                      onClick={() => toggleArrayItem('securityFeatures', feature)}>
-                      {t(`features.security.${feature}`)}
-                    </Button>
-                  );
-                })}
-              </div>
-            </fieldset>
-          </CardContent>
-        </Card>
-      </section>
+      <PropertyFieldsDetailCardsRow2
+        formData={formData}
+        setFormData={setFormData}
+        isEditing={isEditing}
+        isSoldOrRented={isSoldOrRented}
+        isMultiLevel={isMultiLevel}
+        activeLevelId={activeLevelId}
+        currentLevelData={currentLevelData}
+        aggregatedTotals={aggregatedTotals}
+        toggleArrayItem={toggleArrayItem}
+        updateLevelField={updateLevelField}
+        t={t}
+        typography={typography}
+        iconSizes={iconSizes}
+      />
     </>
   );
 }
