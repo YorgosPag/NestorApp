@@ -39,11 +39,12 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // Existing centralized components - NO DUPLICATION
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoItem } from '../../utils/PhotoItem';
+import type { Photo } from '../../utils/PhotoItem';
 
 // Local hooks and config
 import { usePhotosTabState } from '../hooks/usePhotosTabState';
 import { usePhotosTabUpload } from '../hooks/usePhotosTabUpload';
-import { usePhotosTabFetch } from '../hooks/usePhotosTabFetch';
+import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 import { usePhotosCategories } from '../hooks/usePhotosCategories';
 import { getPhotosTabConfig, getGridClasses } from '../config/photos-tab-config';
 
@@ -54,8 +55,30 @@ import type {
   PhotoCategory,
   CategoryStats,
 } from '../config/photos-tab-types';
+import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
+
+// =============================================================================
+// FILE RECORD → PHOTO MAPPER (ADR-293 Phase 5 Batch 29 cleanup)
+// SSoT read-path: useEntityFiles returns FileRecord[]; PhotosTabBase needs
+// the simpler Photo shape used by PhotoItem. Keep the mapping local to avoid
+// pulling FileRecord into PhotoItem's UI contract.
+// =============================================================================
+
+function fileRecordToPhoto(
+  file: FileRecord,
+  fallbackLabel: string,
+): Photo | null {
+  if (!file.id || !file.downloadUrl) return null;
+  const displayName = file.displayName || file.originalFilename || file.id;
+  return {
+    id: file.id,
+    src: file.downloadUrl,
+    alt: `${fallbackLabel} — ${displayName}`,
+    name: displayName,
+  };
+}
 
 // =============================================================================
 // SUB-COMPONENTS
@@ -254,20 +277,34 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
   const resolvedEntityName = entityName || entity.name || entity.id;
 
   // ---------------------------------------------------------------------------
-  // 🏢 ADR-293 Phase 5 Batch 29: Live Firestore subscription for uncontrolled
-  // mode — gives the tab an authoritative persisted view instead of a
-  // session-only local array. Skipped when parent controls the photos array.
+  // 🏢 ADR-293 Phase 5 Batch 29 cleanup: single fetch hook for every Photos
+  // tab. PhotosTabBase now delegates to useEntityFiles (SSoT) instead of the
+  // former usePhotosTabFetch duplicate. Read-side matches EntityFilesManager
+  // and the canonical write-side of uploadEntityPhotoCanonical.
   // ---------------------------------------------------------------------------
   const isControlledMode =
     externalPhotos !== undefined && externalOnPhotosChange !== undefined;
 
-  const { photos: fetchedPhotos } = usePhotosTabFetch({
+  const { files: fetchedFiles } = useEntityFiles({
     entityType: config.canonicalEntityType,
     entityId: entity.id,
+    companyId: resolvedCompanyId,
     domain: config.domain,
     category: config.category,
-    enabled: !isControlledMode,
+    purpose: config.uploadPurpose === 'logo' ? 'logo' : 'photo',
+    realtime: !isControlledMode,
+    autoFetch: !isControlledMode,
   });
+
+  const fetchedPhotos = useMemo<Photo[]>(() => {
+    if (isControlledMode) return [];
+    const mapped: Photo[] = [];
+    for (const file of fetchedFiles) {
+      const photo = fileRecordToPhoto(file, resolvedEntityName);
+      if (photo) mapped.push(photo);
+    }
+    return mapped;
+  }, [isControlledMode, fetchedFiles, resolvedEntityName]);
 
   // ---------------------------------------------------------------------------
   // State management (internal or external)

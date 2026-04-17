@@ -265,13 +265,17 @@ persisted photos from Firestore — every mount started with an empty array.
   ADMIN/PHOTOS.
 - [x] Wired full chain PhotosTabConfig → usePhotosTabUpload →
   useEnterpriseFileUpload → PhotoUploadService.uploadPhoto.
-- [x] New hook `usePhotosTabFetch` — live Firestore subscription filtered
-  by entityType/entityId/domain/category/status=ready/lifecycleState=
-  active. Query contract mirrors `usePropertyMediaCounts` (Batch 28).
-- [x] `PhotosTabBase` invokes fetch in uncontrolled mode and feeds
-  results into `usePhotosTabState` — photos now survive refresh/remount.
-- [x] Two new Firestore composite indexes on files (default + super_admin)
-  for CHECK 3.15 coverage.
+- [x] ~~New hook `usePhotosTabFetch`~~ **Superseded 2026-04-17 cleanup**:
+  `PhotosTabBase` now reads through `useEntityFiles` (SSoT shared with
+  `EntityFilesManager`) — single fetch hook for every Photos tab.
+- [x] `PhotosTabBase` invokes `useEntityFiles` in uncontrolled mode with
+  `realtime: true` + `purpose: 'photo'` (META_PHOTO_PURPOSES passthrough)
+  and maps `FileRecord[]` → `Photo[]` inline. Photos survive refresh/
+  remount; no fetch duplication.
+- [x] ~~Two new Firestore composite indexes~~ **Removed 2026-04-17 cleanup**:
+  `useEntityFiles` reuses the pre-existing FILES composite indexes — the
+  two Batch 29 indexes (category+companyId+domain+entityId+entityType+
+  lifecycleState+status and super_admin variant) are no longer required.
 - [x] Contract tests `photos-tab-config.test.ts` lock the canonical
   write+read contract per tab.
 - [x] Unblocks usePropertyMediaCounts photos count (Batch 28 meter) and
@@ -300,6 +304,7 @@ persisted photos from Firestore — every mount started with an empty array.
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-17 | Phase 7 follow-up (Batch 29 cleanup SSoT) — removed `usePhotosTabFetch` duplicate. `PhotosTabBase` now fetches through `useEntityFiles` (single SSoT hook shared with `EntityFilesManager`). Inline `fileRecordToPhoto` mapper (FileRecord→Photo) keeps `PhotoItem` UI contract clean. Removed the 2 Batch 29 composite indexes (category+companyId+domain+entityId+entityType+lifecycleState+status default + super_admin variant) — pre-existing FILES indexes cover `useEntityFiles` realtime constraints. Google SSoT restored: one fetch hook for every Photos tab. | Claude Code |
 | 2026-04-17 | Phase 7 follow-up (Batch 29 amendment) — `useEntityFiles.filterByPurpose` META_PHOTO_PURPOSES passthrough. Property/Building Photos tabs use meta `purpose='photo'`/`'building-photo'` at the view layer; upload entry-point selector writes sub-purposes (interior/exterior/maintenance/facade). Strict equality rejected valid photos → count=0 UI despite correct FileRecord write. Fix adds meta-purpose set; `*-floorplan` strict semantics preserved. | Claude Code |
 | 2026-04-17 | Phase 7 COMPLETED (Batch 29) — entity-polymorphic photo upload: `uploadContactPhotoCanonical` → `uploadEntityPhotoCanonical`, `getContactPhotos` → `getEntityPhotos`, `PhotosTabConfig` gains `canonicalEntityType` + `domain` + `category`, new `usePhotosTabFetch` live subscription + 2 composite indexes, contract tests lock write+read per tab. Unblocks Batch 28 completion meter photos count and fixes "uploaded photo doesn't appear" for property/building/floor/parking/storage/project tabs. | Claude Code |
 | 2026-04-08 | SSoT storage deletion: `deleteObject()` now called in exactly ONE place (`PhotoUploadService.deletePhoto()`). PDFProcessor.deletePDF() delegates to SSoT instead of inline `deleteObject()`. Fixed false-alarm logging: error level now checked AFTER `object-not-found` guard, not before. Removed hardcoded Greek error string (ratchet down: `photo-upload.service.ts` 1→0). | Claude Code |

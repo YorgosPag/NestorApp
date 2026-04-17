@@ -3,7 +3,7 @@
  *
  * Validates that every entity tab exposes a canonical write+read contract
  * (canonicalEntityType, domain, category) that matches the FileRecord
- * pipeline and usePropertyMediaCounts / usePhotosTabFetch queries.
+ * pipeline and usePropertyMediaCounts / useEntityFiles queries.
  */
 
 import { PHOTOS_TAB_CONFIGS } from '../photos-tab-config';
