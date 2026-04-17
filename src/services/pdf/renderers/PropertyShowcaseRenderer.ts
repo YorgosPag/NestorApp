@@ -1,0 +1,373 @@
+/**
+ * 🏢 ENTERPRISE: Property Showcase PDF Renderer (ADR-312)
+ *
+ * Renders a branded single-page PDF for a property showcase. Draws:
+ * - Branded header (company name, generation date)
+ * - Title (property name + code)
+ * - Specs table (type, location, areas, layout, energy, condition)
+ * - Features list (comma-separated)
+ * - Short description
+ * - Showcase URL (rich web page with photos/floorplans/video)
+ * - Footer (contact + share token note)
+ *
+ * Delegates primitives to TextRenderer. No image embedding — the rich page
+ * shows photos/floorplans/video. PDF is the printable summary.
+ */
+
+import type { IPDFDoc, Margins } from '../contracts';
+import { TextRenderer } from './TextRenderer';
+import { COLORS, FONT_SIZES, LINE_SPACING } from '../layout';
+
+export interface PropertyShowcasePDFData {
+  property: {
+    id: string;
+    code?: string;
+    name: string;
+    type?: string;
+    typeLabel?: string;
+    building?: string;
+    floor?: number;
+    description?: string;
+    layout?: {
+      bedrooms?: number;
+      bathrooms?: number;
+      wc?: number;
+    };
+    areas?: {
+      gross?: number;
+      net?: number;
+      balcony?: number;
+      terrace?: number;
+    };
+    orientations?: string[];
+    energyClass?: string;
+    condition?: string;
+    features?: string[];
+  };
+  company: {
+    name: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+  };
+  showcaseUrl: string;
+  videoUrl?: string;
+  photoCount?: number;
+  floorplanCount?: number;
+  generatedAt: Date;
+  labels: PropertyShowcasePDFLabels;
+}
+
+export interface PropertyShowcasePDFLabels {
+  headerTitle: string;
+  generatedOn: string;
+  specsSection: string;
+  featuresSection: string;
+  descriptionSection: string;
+  mediaSection: string;
+  fieldType: string;
+  fieldBuilding: string;
+  fieldFloor: string;
+  fieldCode: string;
+  fieldGrossArea: string;
+  fieldNetArea: string;
+  fieldBalcony: string;
+  fieldTerrace: string;
+  fieldBedrooms: string;
+  fieldBathrooms: string;
+  fieldWc: string;
+  fieldOrientation: string;
+  fieldEnergyClass: string;
+  fieldCondition: string;
+  fieldPhotos: string;
+  fieldFloorplans: string;
+  fieldVideo: string;
+  fieldShowcaseUrl: string;
+  areaUnit: string;
+  footerNote: string;
+}
+
+const VIOLET: [number, number, number] = [124, 58, 237];
+
+const safe = (value: string | number | undefined | null): string => {
+  if (value === undefined || value === null) return '-';
+  const normalized = String(value).trim();
+  return normalized.length > 0 ? normalized : '-';
+};
+
+const formatDate = (date: Date, locale: 'el' | 'en' = 'el'): string => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return locale === 'el' ? `${day}/${month}/${year}` : `${year}-${month}-${day}`;
+};
+
+export class PropertyShowcaseRenderer {
+  private textRenderer = new TextRenderer();
+
+  render(
+    doc: IPDFDoc,
+    margins: Margins,
+    data: PropertyShowcasePDFData
+  ): void {
+    const pageWidth = doc.pageSize.width;
+    const contentWidth = pageWidth - margins.left - margins.right;
+    let y = margins.top;
+
+    y = this.drawBrandHeader(doc, y, margins, pageWidth, contentWidth, data);
+    y += 8;
+    y = this.drawTitle(doc, y, margins, pageWidth, data);
+    y += 6;
+    y = this.drawSpecs(doc, y, margins, pageWidth, contentWidth, data);
+    y += 4;
+    y = this.drawFeatures(doc, y, margins, pageWidth, contentWidth, data);
+    y += 4;
+    y = this.drawDescription(doc, y, margins, pageWidth, contentWidth, data);
+    y += 4;
+    y = this.drawMediaSection(doc, y, margins, pageWidth, contentWidth, data);
+    this.drawFooter(doc, margins, pageWidth, data);
+  }
+
+  private drawBrandHeader(
+    doc: IPDFDoc,
+    y: number,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData
+  ): number {
+    doc.setFillColor(...VIOLET);
+    doc.rect(margins.left, y - 5, contentWidth, 18, 'F');
+
+    let current = this.textRenderer.addText({
+      doc,
+      text: safe(data.company.name),
+      y: y + 1,
+      align: 'center',
+      fontSize: FONT_SIZES.H3,
+      bold: true,
+      color: COLORS.WHITE,
+      margins,
+      pageWidth,
+    });
+
+    current = this.textRenderer.addText({
+      doc,
+      text: data.labels.headerTitle,
+      y: current + 1,
+      align: 'center',
+      fontSize: FONT_SIZES.SMALL,
+      color: COLORS.WHITE,
+      margins,
+      pageWidth,
+    });
+
+    return current + 4;
+  }
+
+  private drawTitle(
+    doc: IPDFDoc,
+    y: number,
+    margins: Margins,
+    pageWidth: number,
+    data: PropertyShowcasePDFData
+  ): number {
+    let current = this.textRenderer.addText({
+      doc,
+      text: safe(data.property.name),
+      y,
+      align: 'center',
+      fontSize: FONT_SIZES.H2,
+      bold: true,
+      margins,
+      pageWidth,
+    });
+
+    if (data.property.code) {
+      current = this.textRenderer.addText({
+        doc,
+        text: `${data.labels.fieldCode}: ${data.property.code}`,
+        y: current + 1,
+        align: 'center',
+        fontSize: FONT_SIZES.BODY,
+        margins,
+        pageWidth,
+      });
+    }
+    return current;
+  }
+
+  private drawSpecs(
+    doc: IPDFDoc,
+    yStart: number,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData
+  ): number {
+    let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.specsSection);
+    const p = data.property;
+    const unit = data.labels.areaUnit;
+
+    const rows: Array<[string, string]> = [
+      [data.labels.fieldType, safe(p.typeLabel || p.type)],
+      [data.labels.fieldBuilding, safe(p.building)],
+      [data.labels.fieldFloor, p.floor !== undefined ? String(p.floor) : '-'],
+      [data.labels.fieldGrossArea, p.areas?.gross ? `${p.areas.gross} ${unit}` : '-'],
+      [data.labels.fieldNetArea, p.areas?.net ? `${p.areas.net} ${unit}` : '-'],
+      [data.labels.fieldBalcony, p.areas?.balcony ? `${p.areas.balcony} ${unit}` : '-'],
+      [data.labels.fieldTerrace, p.areas?.terrace ? `${p.areas.terrace} ${unit}` : '-'],
+      [data.labels.fieldBedrooms, p.layout?.bedrooms !== undefined ? String(p.layout.bedrooms) : '-'],
+      [data.labels.fieldBathrooms, p.layout?.bathrooms !== undefined ? String(p.layout.bathrooms) : '-'],
+      [data.labels.fieldWc, p.layout?.wc !== undefined ? String(p.layout.wc) : '-'],
+      [data.labels.fieldOrientation, p.orientations?.length ? p.orientations.join(', ') : '-'],
+      [data.labels.fieldEnergyClass, safe(p.energyClass)],
+      [data.labels.fieldCondition, safe(p.condition)],
+    ];
+
+    for (const [label, value] of rows) {
+      y = this.drawField(doc, y, margins, pageWidth, contentWidth, label, value);
+    }
+    return y;
+  }
+
+  private drawFeatures(
+    doc: IPDFDoc,
+    yStart: number,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData
+  ): number {
+    if (!data.property.features || data.property.features.length === 0) {
+      return yStart;
+    }
+    let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.featuresSection);
+    y = this.textRenderer.addWrappedText({
+      doc,
+      text: data.property.features.join(' • '),
+      y,
+      fontSize: FONT_SIZES.BODY,
+      maxWidth: contentWidth,
+      margins,
+      onPageBreak: () => margins.top,
+    });
+    return y;
+  }
+
+  private drawDescription(
+    doc: IPDFDoc,
+    yStart: number,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData
+  ): number {
+    if (!data.property.description) return yStart;
+    let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.descriptionSection);
+    y = this.textRenderer.addWrappedText({
+      doc,
+      text: data.property.description,
+      y,
+      fontSize: FONT_SIZES.BODY,
+      maxWidth: contentWidth,
+      margins,
+      onPageBreak: () => margins.top,
+    });
+    return y;
+  }
+
+  private drawMediaSection(
+    doc: IPDFDoc,
+    yStart: number,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData
+  ): number {
+    let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.mediaSection);
+    y = this.drawField(doc, y, margins, pageWidth, contentWidth, data.labels.fieldPhotos, String(data.photoCount ?? 0));
+    y = this.drawField(doc, y, margins, pageWidth, contentWidth, data.labels.fieldFloorplans, String(data.floorplanCount ?? 0));
+    if (data.videoUrl) {
+      y = this.drawField(doc, y, margins, pageWidth, contentWidth, data.labels.fieldVideo, data.videoUrl);
+    }
+    y = this.drawField(doc, y, margins, pageWidth, contentWidth, data.labels.fieldShowcaseUrl, data.showcaseUrl);
+    return y;
+  }
+
+  private drawFooter(
+    doc: IPDFDoc,
+    margins: Margins,
+    pageWidth: number,
+    data: PropertyShowcasePDFData
+  ): void {
+    const pageHeight = doc.pageSize.height;
+    const footerY = pageHeight - margins.bottom;
+    const contact = [data.company.phone, data.company.email, data.company.website]
+      .filter((value): value is string => Boolean(value))
+      .join(' · ');
+    if (contact) {
+      this.textRenderer.addText({
+        doc,
+        text: contact,
+        y: footerY - 8,
+        align: 'center',
+        fontSize: FONT_SIZES.SMALL,
+        margins,
+        pageWidth,
+      });
+    }
+    this.textRenderer.addText({
+      doc,
+      text: `${data.labels.footerNote} · ${data.labels.generatedOn} ${formatDate(data.generatedAt)}`,
+      y: footerY - 3,
+      align: 'center',
+      fontSize: FONT_SIZES.SMALL,
+      margins,
+      pageWidth,
+    });
+  }
+
+  private drawSectionTitle(
+    doc: IPDFDoc,
+    y: number,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    text: string
+  ): number {
+    doc.setFillColor(...COLORS.GRAY);
+    doc.rect(margins.left, y - 4, contentWidth, 7, 'F');
+    return this.textRenderer.addText({
+      doc,
+      text,
+      y,
+      align: 'left',
+      fontSize: FONT_SIZES.SMALL,
+      bold: true,
+      margins,
+      pageWidth,
+    }) + 1;
+  }
+
+  private drawField(
+    doc: IPDFDoc,
+    y: number,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    label: string,
+    value: string
+  ): number {
+    return this.textRenderer.addWrappedText({
+      doc,
+      text: `${label}: ${value || '-'}`,
+      y,
+      fontSize: FONT_SIZES.BODY,
+      maxWidth: contentWidth,
+      margins,
+      onPageBreak: () => margins.top,
+      lineStep: LINE_SPACING.BODY - 1,
+    });
+  }
+}

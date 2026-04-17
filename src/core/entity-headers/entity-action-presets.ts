@@ -14,16 +14,17 @@
  * | new     | Green   | GREEN            |
  * | view    | Primary | PRIMARY_BUTTON   |
  * | print   | Gray    | GRAY             |
+ * | showcase| Violet  | VIOLET           | ADR-312 Property Showcase
  */
 
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
-import { Pencil, Save, X, Trash2, Plus, Eye, Printer } from 'lucide-react';
+import { Pencil, Save, X, Trash2, Plus, Eye, Printer, Share2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { EntityHeaderAction } from './UnifiedEntityHeaderSystem';
 
 // ===== TYPES =====
 
-type ActionType = 'edit' | 'save' | 'cancel' | 'delete' | 'trash' | 'new' | 'view' | 'print';
+type ActionType = 'edit' | 'save' | 'cancel' | 'delete' | 'trash' | 'new' | 'view' | 'print' | 'showcase';
 
 interface EntityActionPreset {
   icon: LucideIcon;
@@ -33,14 +34,16 @@ interface EntityActionPreset {
 // ===== PRESETS =====
 
 const ENTITY_ACTION_PRESETS: Record<ActionType, EntityActionPreset> = {
-  edit:   { icon: Pencil,  className: `${GRADIENT_HOVER_EFFECTS.BLUE} text-white` },
-  save:   { icon: Save,    className: `${GRADIENT_HOVER_EFFECTS.GREEN} text-white` },
-  cancel: { icon: X,       className: `${GRADIENT_HOVER_EFFECTS.GRAY} text-white` },
-  delete: { icon: Trash2,  className: `${GRADIENT_HOVER_EFFECTS.RED} text-white` },
-  trash:  { icon: Trash2,  className: `${GRADIENT_HOVER_EFFECTS.RED} text-white` },
-  new:    { icon: Plus,    className: `${GRADIENT_HOVER_EFFECTS.GREEN} text-white` },
-  view:   { icon: Eye,     className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON },
-  print:  { icon: Printer, className: `${GRADIENT_HOVER_EFFECTS.GRAY} text-white` },
+  edit:     { icon: Pencil,  className: `${GRADIENT_HOVER_EFFECTS.BLUE} text-white` },
+  save:     { icon: Save,    className: `${GRADIENT_HOVER_EFFECTS.GREEN} text-white` },
+  cancel:   { icon: X,       className: `${GRADIENT_HOVER_EFFECTS.GRAY} text-white` },
+  delete:   { icon: Trash2,  className: `${GRADIENT_HOVER_EFFECTS.RED} text-white` },
+  trash:    { icon: Trash2,  className: `${GRADIENT_HOVER_EFFECTS.RED} text-white` },
+  new:      { icon: Plus,    className: `${GRADIENT_HOVER_EFFECTS.GREEN} text-white` },
+  view:     { icon: Eye,     className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON },
+  print:    { icon: Printer, className: `${GRADIENT_HOVER_EFFECTS.GRAY} text-white` },
+  // ADR-312: Violet gradient literal (kept inline to avoid growing hover-effects.ts past its size budget).
+  showcase: { icon: Share2,  className: 'bg-gradient-to-r from-violet-500 to-fuchsia-600 hover:from-violet-600 hover:to-fuchsia-700 text-white' },
 };
 
 // ===== FACTORY =====

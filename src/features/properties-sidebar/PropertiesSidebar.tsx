@@ -24,6 +24,7 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 
 import { usePropertiesSidebar } from './hooks/usePropertiesSidebar';
 import { PropertyDetailsHeader } from './components/PropertyDetailsHeader';
+import { PropertyShowcaseDialog } from './components/PropertyShowcaseDialog';
 import type { PropertiesSidebarProps } from './types';
 import '@/lib/design-system';
 
@@ -61,6 +62,7 @@ export function PropertiesSidebar({
   } = usePropertiesSidebar(floors, viewerProps, selectedProperty);
 
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
   const properties = units;
   const effectiveEditMode = isEditMode || isCreatingNewUnit;
   const handleToggleEditMode = useCallback(() => setIsEditMode((prev) => !prev), []);
@@ -113,6 +115,7 @@ export function PropertiesSidebar({
           onExitEditMode={handleExitEditMode}
           onNewProperty={onNewProperty}
           onDeleteProperty={handleDeleteProperty}
+          onShowcaseProperty={() => setShowcaseDialogOpen(true)}
         />
       )}
       tabsRenderer={(
@@ -191,6 +194,15 @@ export function PropertiesSidebar({
       </MobileDetailsSlideIn>
 
       {ImpactDialog}
+
+      {selectedProperty && (
+        <PropertyShowcaseDialog
+          open={showcaseDialogOpen}
+          onOpenChange={setShowcaseDialogOpen}
+          propertyId={selectedProperty.id}
+          propertyName={selectedProperty.name ?? ''}
+        />
+      )}
     </>
   );
 }

@@ -93,6 +93,8 @@ export const COLLECTIONS = {
   // 📐 FLOORPLANS (Enterprise Unified)
   FLOORPLANS: process.env.NEXT_PUBLIC_FLOORPLANS_COLLECTION || 'floorplans',
   PROJECT_FLOORPLANS: process.env.NEXT_PUBLIC_PROJECT_FLOORPLANS_COLLECTION || 'project_floorplans',
+  /** ADR-292 Phase 4 legacy — reads/writes go through `files`; counts only for showcase MVP (ADR-312). */
+  UNIT_FLOORPLANS: process.env.NEXT_PUBLIC_UNIT_FLOORPLANS_COLLECTION || 'unit_floorplans',
 
   // 🅿️ PARKING & SPACES
   // 📍 Collection name: parking_spots (με underscore - όπως στη Firestore)

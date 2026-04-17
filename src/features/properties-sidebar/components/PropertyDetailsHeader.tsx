@@ -26,6 +26,8 @@ interface PropertyDetailsHeaderProps {
   onNewProperty?: () => void;
   /** Callback for deleting the current property */
   onDeleteProperty?: () => void;
+  /** ADR-312: Callback for opening Property Showcase dialog */
+  onShowcaseProperty?: () => void;
 }
 
 export function PropertyDetailsHeader({
@@ -36,6 +38,7 @@ export function PropertyDetailsHeader({
   onExitEditMode,
   onNewProperty,
   onDeleteProperty,
+  onShowcaseProperty,
 }: PropertyDetailsHeaderProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
@@ -81,6 +84,7 @@ export function PropertyDetailsHeader({
     : [
         createEntityAction('edit', t('navigation.actions.edit.label'), () => onToggleEditMode?.()),
         createEntityAction('new', t('navigation.actions.newUnit.label'), () => onNewProperty?.()),
+        createEntityAction('showcase', t('navigation.actions.showcase.label'), () => onShowcaseProperty?.()),
         createEntityAction('delete', t('navigation.actions.delete.label'), () => onDeleteProperty?.()),
       ];
 

@@ -1,0 +1,48 @@
+{
+  "header": {
+    "subtitle": "[!! Pŕöpéŕtý shówćásé !!]"
+  },
+  "property": {
+    "code": "[!! Ĉödé !!]"
+  },
+  "specs": {
+    "title": "[!! Spéćífíćátíóńs !!]",
+    "areaUnit": "sq.m.",
+    "type": "[!! Týpé !!]",
+    "code": "[!! Ĉödé !!]",
+    "building": "[!! Búíĺdíńg !!]",
+    "floor": "[!! Fĺóóŕ !!]",
+    "grossArea": "[!! Gŕóss áŕéá !!]",
+    "netArea": "[!! Ńét áŕéá !!]",
+    "balcony": "[!! Báĺćóńý !!]",
+    "terrace": "[!! Téŕŕáćé !!]",
+    "bedrooms": "[!! Bédŕóóms !!]",
+    "bathrooms": "[!! Báthŕóóms !!]",
+    "wc": "[!! ŴĈ !!]",
+    "orientation": "[!! Óŕíéńtátíóń !!]",
+    "energyClass": "[!! Éńéŕgý ćĺáss !!]",
+    "condition": "[!! Ĉóńdítíóń !!]"
+  },
+  "photos": {
+    "title": "[!! Phótós !!]",
+    "defaultAlt": "[!! Pŕöpéŕtý phótó !!]"
+  },
+  "floorplans": {
+    "title": "[!! Fĺóóŕpĺáńs !!]",
+    "defaultName": "[!! Fĺóóŕpĺáń !!]"
+  },
+  "video": {
+    "title": "[!! Vídéó !!]",
+    "openLink": "[!! Ópéń ĺíńk !!]"
+  },
+  "actions": {
+    "downloadPdf": "[!! Dóŵńĺóád PDF !!]"
+  },
+  "states": {
+    "expiredTitle": "[!! Ĺíńk éxpíŕéd !!]",
+    "expiredDescription": "[!! Thís shóŵćásé ís ńó ĺóńgéŕ áváíĺábĺé !!]",
+    "notFoundTitle": "[!! Ĺíńk ńót fóúńd !!]",
+    "notFoundDescription": "[!! Thé shóŵćásé ís úńáváíĺábĺé !!]",
+    "errorTitle": "[!! Fáíĺéd tó ĺóád !!]"
+  }
+}

@@ -211,6 +211,22 @@
     "defaultMessage": "Check out these interesting properties from Nestor Construct!",
     "title": "Nestor Construct - Properties"
   },
+  "showcase": {
+    "title": "Property Showcase",
+    "subtitle": "Generate a shareable showcase link",
+    "introText": "Generates a unique link and branded PDF you can share with interested parties. The link remains valid for 30 days.",
+    "generate": "Generate Link",
+    "generating": "Generating...",
+    "revoking": "Revoking link...",
+    "richLinkLabel": "Public showcase page",
+    "expiresOn": "Expires",
+    "copyLink": "Copy Link",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "downloadPdf": "Download PDF",
+    "revoke": "Revoke Link",
+    "revoked": "Link revoked"
+  },
   "navigation": {
     "actions": {
       "edit": {
@@ -223,6 +239,9 @@
       },
       "delete": {
         "label": "Move to trash"
+      },
+      "showcase": {
+        "label": "Property Showcase"
       }
     }
   },

@@ -100,6 +100,7 @@ export const SUPPORTED_NAMESPACES = [
   'navigation-entities',    // 🏢 Navigation entities/filters (split from navigation — ADR-280)
   'reports-extended',       // 🏢 Reports CRM/spaces (split from reports — ADR-280)
   'trash',                  // 🗑️ Centralized trash/soft-delete strings (ADR-281)
+  'showcase',               // 🏢 Property showcase public page (ADR-312)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 

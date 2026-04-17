@@ -60,6 +60,12 @@ export interface FileShareRecord {
   note?: string;
   /** Company ID for tenant isolation */
   companyId?: string;
+  /** Property ID when share represents a Property Showcase (ADR-312) */
+  showcasePropertyId?: string;
+  /** True if share is a Property Showcase link (ADR-312) */
+  showcaseMode?: boolean;
+  /** Storage path of the generated showcase PDF (ADR-312) */
+  pdfStoragePath?: string;
 }
 
 /** Input for creating a share link */
@@ -75,6 +81,12 @@ export interface CreateShareInput {
   /** Optional note */
   note?: string;
   companyId?: string;
+  /** Property ID when creating a Property Showcase share (ADR-312) */
+  showcasePropertyId?: string;
+  /** Set true to mark share as Property Showcase (ADR-312) */
+  showcaseMode?: boolean;
+  /** Storage path of the generated showcase PDF (ADR-312) */
+  pdfStoragePath?: string;
 }
 
 /** Result of share validation */
@@ -133,6 +145,9 @@ export class FileShareService {
       maxDownloads: input.maxDownloads ?? 0,
       note: input.note ?? undefined,
       companyId: input.companyId ?? undefined,
+      showcasePropertyId: input.showcasePropertyId ?? undefined,
+      showcaseMode: input.showcaseMode ?? undefined,
+      pdfStoragePath: input.pdfStoragePath ?? undefined,
     };
 
     // Hash password if provided
@@ -206,6 +221,9 @@ export class FileShareService {
       maxDownloads: data.maxDownloads ?? 0,
       note: data.note,
       companyId: data.companyId,
+      showcasePropertyId: data.showcasePropertyId,
+      showcaseMode: data.showcaseMode,
+      pdfStoragePath: data.pdfStoragePath,
     };
 
     // Check expiration

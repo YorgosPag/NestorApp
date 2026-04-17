@@ -1,0 +1,48 @@
+{
+  "header": {
+    "subtitle": "Παρουσίαση ακινήτου"
+  },
+  "property": {
+    "code": "Κωδικός"
+  },
+  "specs": {
+    "title": "Χαρακτηριστικά",
+    "areaUnit": "τ.μ.",
+    "type": "Τύπος",
+    "code": "Κωδικός",
+    "building": "Κτίριο",
+    "floor": "Όροφος",
+    "grossArea": "Μικτή επιφάνεια",
+    "netArea": "Καθαρή επιφάνεια",
+    "balcony": "Μπαλκόνι",
+    "terrace": "Βεράντα",
+    "bedrooms": "Υπνοδωμάτια",
+    "bathrooms": "Μπάνια",
+    "wc": "Τουαλέτες",
+    "orientation": "Προσανατολισμός",
+    "energyClass": "Ενεργειακή κλάση",
+    "condition": "Κατάσταση"
+  },
+  "photos": {
+    "title": "Φωτογραφίες",
+    "defaultAlt": "Φωτογραφία ακινήτου"
+  },
+  "floorplans": {
+    "title": "Κατόψεις",
+    "defaultName": "Κάτοψη"
+  },
+  "video": {
+    "title": "Βίντεο",
+    "openLink": "Άνοιγμα συνδέσμου"
+  },
+  "actions": {
+    "downloadPdf": "Λήψη PDF"
+  },
+  "states": {
+    "expiredTitle": "Ο σύνδεσμος έληξε",
+    "expiredDescription": "Η παρουσίαση δεν είναι πλέον διαθέσιμη. Παρακαλούμε επικοινωνήστε με τον αποστολέα.",
+    "notFoundTitle": "Ο σύνδεσμος δεν βρέθηκε",
+    "notFoundDescription": "Η παρουσίαση δεν είναι διαθέσιμη ή έχει ανακληθεί.",
+    "errorTitle": "Πρόβλημα φόρτωσης"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "header": {
+    "subtitle": "Property showcase"
+  },
+  "property": {
+    "code": "Code"
+  },
+  "specs": {
+    "title": "Specifications",
+    "areaUnit": "sq.m.",
+    "type": "Type",
+    "code": "Code",
+    "building": "Building",
+    "floor": "Floor",
+    "grossArea": "Gross area",
+    "netArea": "Net area",
+    "balcony": "Balcony",
+    "terrace": "Terrace",
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "wc": "WC",
+    "orientation": "Orientation",
+    "energyClass": "Energy class",
+    "condition": "Condition"
+  },
+  "photos": {
+    "title": "Photos",
+    "defaultAlt": "Property photo"
+  },
+  "floorplans": {
+    "title": "Floorplans",
+    "defaultName": "Floorplan"
+  },
+  "video": {
+    "title": "Video",
+    "openLink": "Open link"
+  },
+  "actions": {
+    "downloadPdf": "Download PDF"
+  },
+  "states": {
+    "expiredTitle": "Link expired",
+    "expiredDescription": "This showcase is no longer available. Please contact the sender.",
+    "notFoundTitle": "Link not found",
+    "notFoundDescription": "The showcase is unavailable or has been revoked.",
+    "errorTitle": "Failed to load"
+  }
+}

@@ -1380,6 +1380,22 @@
       "status": "governed",
       "splitRequired": false,
       "targetNamespaces": []
+    },
+    {
+      "namespace": "showcase",
+      "owner": "properties-module",
+      "primarySurface": "property-showcase-public-page",
+      "stringClasses": [
+        "ui-chrome",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 200,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     }
   ]
 }
