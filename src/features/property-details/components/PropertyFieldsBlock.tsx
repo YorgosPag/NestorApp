@@ -34,6 +34,8 @@ import { translatePolicyError, isKnownPolicyErrorCode } from '@/lib/policy';
 import { NewUnitHierarchySection } from '@/components/properties/shared/NewUnitHierarchySection';
 import { validatePropertyCreationFields, isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 import { isMultiLevelCapableType, ENTITY_TYPES } from '@/config/domain-constants';
+// ADR-287 Batch 28: completion meter
+import { PropertyCompletionMeter } from './PropertyCompletionMeter';
 const logger = createModuleLogger('PropertyFieldsBlock');
 
 interface PropertyFieldsBlockProps {
@@ -349,6 +351,15 @@ export function PropertyFieldsBlock({
             floor: formData.floor,
           }}
           onChange={handleHierarchyChange}
+        />
+      )}
+      {/* ADR-287 Batch 28: completion meter — Google profile-strength pattern. */}
+      {/* Hidden during creation (nothing to measure) + read-only branch unreachable here. */}
+      {!isCreatingNewUnit && !isReadOnly && (
+        <PropertyCompletionMeter
+          property={property}
+          formData={formData}
+          effectiveLevels={effectiveLevels}
         />
       )}
       <PropertyFieldsEditForm

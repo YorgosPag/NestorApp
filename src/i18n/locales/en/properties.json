@@ -1014,5 +1014,44 @@
   },
   "details": {
     "goToCustomer": "Go to customer"
+  },
+  "completion": {
+    "title": "Listing completeness",
+    "aria": "Property completion indicator",
+    "showDetails": "Show details",
+    "hideDetails": "Hide",
+    "dismiss": "Dismiss indicator",
+    "reshow": "Show completeness",
+    "bucket": {
+      "red": "{count} critical fields missing",
+      "amber": "Almost complete — {count} improvements available",
+      "green": "Excellent completeness"
+    },
+    "breakdown": {
+      "heading": "What's missing",
+      "allComplete": "All fields are complete",
+      "weightCritical": "Critical",
+      "weightNormal": "Standard",
+      "weightOptional": "Optional"
+    },
+    "fields": {
+      "type": "Property type",
+      "areaGross": "Gross area",
+      "areaNet": "Net area",
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "orientations": "Orientation",
+      "condition": "Condition",
+      "energyClass": "Energy class",
+      "heatingType": "Heating",
+      "coolingType": "Cooling",
+      "windowFrames": "Window frames",
+      "glazing": "Glazing",
+      "flooring": "Flooring",
+      "interiorFeatures": "Interior features",
+      "securityFeatures": "Security features",
+      "floorplan": "Floorplan",
+      "photos": "Photos"
+    }
   }
 }

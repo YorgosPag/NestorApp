@@ -50,7 +50,8 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
   return (
     <section className="grid grid-cols-3 gap-3">
       {/* ─── Systems Card ─── */}
-      <Card>
+      {/* ADR-287 Batch 28: id anchor for completion-meter click-to-jump. */}
+      <Card id="field-systems" tabIndex={-1}>
         <CardHeader className="p-2 pb-1">
           <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
             <Thermometer className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.systems)} />
@@ -115,7 +116,7 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
         </CardContent>
       </Card>
       {/* ─── Finishes Card (level-aware) ─── */}
-      <Card>
+      <Card id="field-finishes" tabIndex={-1}>
         <CardHeader className="p-2 pb-1">
           <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
             <Home className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.finishes)} />
@@ -247,7 +248,7 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
       </Card>
 
       {/* ─── Features Card ─── */}
-      <Card>
+      <Card id="field-features" tabIndex={-1}>
         <CardHeader className="p-2 pb-1">
           <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
             <Shield className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.features)} />

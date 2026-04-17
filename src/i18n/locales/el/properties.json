@@ -1014,5 +1014,44 @@
   },
   "details": {
     "goToCustomer": "Μετάβαση στον πελάτη"
+  },
+  "completion": {
+    "title": "Πληρότητα καταχώρησης",
+    "aria": "Δείκτης πληρότητας ακινήτου",
+    "showDetails": "Εμφάνιση λεπτομερειών",
+    "hideDetails": "Απόκρυψη",
+    "dismiss": "Απόκρυψη δείκτη",
+    "reshow": "Εμφάνιση πληρότητας",
+    "bucket": {
+      "red": "{count} κρίσιμα πεδία λείπουν",
+      "amber": "Σχεδόν πλήρες — {count} βελτιώσεις διαθέσιμες",
+      "green": "Εξαιρετική πληρότητα"
+    },
+    "breakdown": {
+      "heading": "Τι λείπει",
+      "allComplete": "Όλα τα πεδία έχουν συμπληρωθεί",
+      "weightCritical": "Κρίσιμο",
+      "weightNormal": "Βασικό",
+      "weightOptional": "Προαιρετικό"
+    },
+    "fields": {
+      "type": "Τύπος ακινήτου",
+      "areaGross": "Μικτή επιφάνεια",
+      "areaNet": "Καθαρή επιφάνεια",
+      "bedrooms": "Υπνοδωμάτια",
+      "bathrooms": "Μπάνια",
+      "orientations": "Προσανατολισμός",
+      "condition": "Κατάσταση",
+      "energyClass": "Ενεργειακή κλάση",
+      "heatingType": "Θέρμανση",
+      "coolingType": "Ψύξη",
+      "windowFrames": "Κουφώματα",
+      "glazing": "Υαλοπίνακες",
+      "flooring": "Δάπεδα",
+      "interiorFeatures": "Εσωτερικά χαρακτηριστικά",
+      "securityFeatures": "Χαρακτηριστικά ασφαλείας",
+      "floorplan": "Κάτοψη",
+      "photos": "Φωτογραφίες"
+    }
   }
 }

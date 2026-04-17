@@ -49,7 +49,8 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
     <>
       <section className="grid grid-cols-3 gap-3">
         {/* ─── Layout Card (level-aware) ─── */}
-        <Card>
+        {/* ADR-287 Batch 28: id anchor for completion-meter click-to-jump. */}
+        <Card id="field-layout" tabIndex={-1}>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Bed className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.layout)} />
@@ -122,7 +123,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         </Card>
 
         {/* ─── Orientation Card (level-aware) ─── */}
-        <Card>
+        <Card id="field-orientation" tabIndex={-1}>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Compass className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.orientation)} />
@@ -193,7 +194,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         </Card>
 
         {/* ─── Condition & Energy Card ─── */}
-        <Card>
+        <Card id="field-condition-energy" tabIndex={-1}>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
               <Wrench className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.condition)} />
