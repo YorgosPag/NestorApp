@@ -34,6 +34,16 @@ export interface IPDFDoc {
   text(text: string, x: number, y: number, opts?: { align?: 'left' | 'center' | 'right' }): void;
   splitTextToSize(text: string, width: number): string[];
   getTextWidth(text: string): number;
+  addImage(
+    imageData: string | Uint8Array,
+    format: 'JPEG' | 'PNG',
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    alias?: string,
+    compression?: 'NONE' | 'FAST' | 'MEDIUM' | 'SLOW'
+  ): void;
   output(type: 'arraybuffer'): ArrayBuffer;
   readonly pageSize: { width: number; height: number };
 }

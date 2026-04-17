@@ -64,6 +64,19 @@ export class JSPDFAdapter implements IPDFDoc {
     return this.doc.getTextWidth(text);
   }
 
+  addImage(
+    imageData: string | Uint8Array,
+    format: 'JPEG' | 'PNG',
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    alias?: string,
+    compression?: 'NONE' | 'FAST' | 'MEDIUM' | 'SLOW'
+  ): void {
+    this.doc.addImage(imageData, format, x, y, width, height, alias, compression);
+  }
+
   output(type: 'arraybuffer'): ArrayBuffer {
     return this.doc.output(type);
   }

@@ -144,12 +144,12 @@ async function handleUpdateConfig(
       {
         ...sanitized,
         updatedAt: new Date().toISOString(),
-        updatedBy: ctx.userId,
+        updatedBy: ctx.uid,
       },
       { merge: true },
     );
 
-    logger.info(`Backup config updated by ${ctx.userId}: ${JSON.stringify(sanitized)}`);
+    logger.info(`Backup config updated by ${ctx.uid}: ${JSON.stringify(sanitized)}`);
 
     // Read back full config
     const scheduler = new BackupSchedulerService();

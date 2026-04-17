@@ -50,7 +50,7 @@ async function handleIncrementalBackup(
   request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse> {
-  logger.info(`Incremental backup triggered by user: ${ctx.userId}`);
+  logger.info(`Incremental backup triggered by user: ${ctx.uid}`);
 
   let body: { parentBackupId?: string };
   try {
@@ -87,9 +87,12 @@ async function handleIncrementalBackup(
       }
     };
 
+    // Ensure GCS bucket exists before writing
+    await gcsService.ensureBucketExists();
+
     const { manifest, files } = await incrementalService.executeIncrementalBackup(
       parentBackupId,
-      ctx.userId,
+      ctx.uid,
       gcsService,
       updateStatus,
     );

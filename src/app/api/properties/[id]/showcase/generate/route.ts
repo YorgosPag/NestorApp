@@ -35,6 +35,7 @@ import {
   buildPdfData,
   deactivateShowcaseShares,
   deleteShowcaseShareRecord,
+  loadShowcasePhotos,
   loadShowcaseSources,
   uploadPdfToStorage,
 } from './helpers';
@@ -141,7 +142,10 @@ async function handleGenerate(
 
   logger.info('Generating property showcase', { propertyId, uid: ctx.uid, companyId: ctx.companyId });
 
-  const sources = await loadShowcaseSources(propertyId, ctx.companyId);
+  const [sources, photos] = await Promise.all([
+    loadShowcaseSources(propertyId, ctx.companyId),
+    loadShowcasePhotos(propertyId, ctx.companyId),
+  ]);
 
   const token = generateUrlSafeToken();
   const shareId = generateShareId();
@@ -157,7 +161,7 @@ async function handleGenerate(
   const baseUrl = buildBaseUrl(req);
   const showcaseUrl = `${baseUrl}/showcase/${token}`;
 
-  const pdfData = buildPdfData(propertyId, sources, showcaseUrl, body.videoUrl, locale);
+  const pdfData = buildPdfData(propertyId, sources, showcaseUrl, body.videoUrl, locale, photos);
   const pdfBytes = await generatePdfOrThrow(propertyId, pdfData);
 
   const expiresAt = new Date();

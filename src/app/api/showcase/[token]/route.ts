@@ -17,6 +17,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FILE_CATEGORIES, type FileCategory } from '@/config/domain-constants';
+import { listPropertyMedia } from '@/services/property-media/property-media.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('ShowcasePublicApi');
@@ -80,28 +82,16 @@ async function loadShareByToken(token: string) {
 async function loadFilesByCategory(
   companyId: string,
   propertyId: string,
-  category: 'photos' | 'floorplans'
+  category: FileCategory
 ): Promise<ShowcaseMedia[]> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return [];
-  const snap = await adminDb
-    .collection(COLLECTIONS.FILES)
-    .where('companyId', '==', companyId)
-    .where('entityType', '==', 'property')
-    .where('entityId', '==', propertyId)
-    .where('category', '==', category)
-    .limit(30)
-    .get();
-
+  const metas = await listPropertyMedia({ companyId, propertyId, category, limit: 30 });
   const items: ShowcaseMedia[] = [];
-  for (const d of snap.docs) {
-    const data = d.data() as Record<string, unknown>;
-    const url = (data.downloadUrl as string) || '';
-    if (!url) continue;
+  for (const m of metas) {
+    if (!m.downloadUrl) continue;
     items.push({
-      id: d.id,
-      url,
-      displayName: (data.displayName as string) || (data.originalFilename as string) || undefined,
+      id: m.id,
+      url: m.downloadUrl,
+      displayName: m.displayName || m.originalFilename || undefined,
     });
   }
   return items;
@@ -154,8 +144,8 @@ export async function GET(
   const c = companySnap.exists ? companySnap.data() ?? {} : {};
 
   const [photos, floorplans] = await Promise.all([
-    loadFilesByCategory(companyId, showcasePropertyId, 'photos'),
-    loadFilesByCategory(companyId, showcasePropertyId, 'floorplans'),
+    loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.PHOTOS),
+    loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.FLOORPLANS),
   ]);
 
   const layout = (p as { layout?: Record<string, unknown> }).layout || {};

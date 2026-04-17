@@ -57,12 +57,15 @@ export async function POST(request: NextRequest) {
 async function handleFullBackup(ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
 
-  logger.info(`Full backup triggered by user: ${ctx.userId}`);
+  logger.info(`Full backup triggered by user: ${ctx.uid}`);
 
   try {
     const db = getAdminFirestore();
     const backupService = new BackupService();
     const gcsService = new BackupGcsService();
+
+    // Ensure GCS bucket exists before writing
+    await gcsService.ensureBucketExists();
 
     // Progress callback — writes to Firestore for status endpoint polling
     const updateStatus = async (status: Partial<BackupStatus>): Promise<void> => {
@@ -81,7 +84,7 @@ async function handleFullBackup(ctx: AuthContext): Promise<NextResponse> {
 
     // Execute full backup (gcsService passed for Storage export — Phase 3)
     const { manifest, files } = await backupService.executeFullBackup(
-      ctx.userId,
+      ctx.uid,
       updateStatus,
       gcsService,
     );

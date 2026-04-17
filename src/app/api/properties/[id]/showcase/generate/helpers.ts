@@ -9,11 +9,18 @@
 
 import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { FILE_CATEGORIES } from '@/config/domain-constants';
+import {
+  countPropertyMedia,
+  downloadPropertyMedia,
+  type PropertyMediaBuffer,
+} from '@/services/property-media/property-media.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import type {
   PropertyShowcasePDFData,
   PropertyShowcasePDFLabels,
+  ShowcasePhotoAsset,
 } from '@/services/pdf/renderers/PropertyShowcaseRenderer';
 
 const logger = createModuleLogger('PropertyShowcaseHelpers');
@@ -27,6 +34,7 @@ export function buildShowcaseLabels(locale: 'el' | 'en'): PropertyShowcasePDFLab
       featuresSection: 'Features',
       descriptionSection: 'Description',
       mediaSection: 'Media & Online Showcase',
+      photosSection: 'Photos',
       fieldType: 'Type',
       fieldBuilding: 'Building',
       fieldFloor: 'Floor',
@@ -56,6 +64,7 @@ export function buildShowcaseLabels(locale: 'el' | 'en'): PropertyShowcasePDFLab
     featuresSection: 'Παροχές',
     descriptionSection: 'Περιγραφή',
     mediaSection: 'Πολυμέσα & Διαδικτυακή Παρουσίαση',
+    photosSection: 'Φωτογραφίες',
     fieldType: 'Τύπος',
     fieldBuilding: 'Κτίριο',
     fieldFloor: 'Όροφος',
@@ -93,22 +102,33 @@ export async function loadShowcaseSources(propertyId: string, companyId: string)
   const companyDoc = await adminDb.collection(COLLECTIONS.COMPANIES).doc(companyId).get();
   const company = companyDoc.exists ? companyDoc.data() ?? {} : {};
 
-  const photoCount = await safeCount(() =>
-    adminDb
-      .collection(COLLECTIONS.PROPERTIES)
-      .doc(propertyId)
-      .collection(SUBCOLLECTIONS.PROPERTY_PHOTOS)
-      .count()
-      .get()
-  );
-  const floorplanCount = await safeCount(() =>
-    adminDb
-      .collection(COLLECTIONS.UNIT_FLOORPLANS)
-      .where('companyId', '==', companyId)
-      .where('propertyId', '==', propertyId)
-      .count()
-      .get()
-  );
+  // Canonical source of photos = `files` coll (ADR-031). Subcoll
+  // `properties/{id}/photos` was never populated — the previous count
+  // always returned 0. `PropertyMediaService` reads the SSoT used by the
+  // public showcase surface so PDF counts match what the browser sees.
+  const [photoCount, floorplanCountFromFiles, floorplanCountLegacy] = await Promise.all([
+    countPropertyMedia({
+      companyId, propertyId, category: FILE_CATEGORIES.PHOTOS, limit: 100,
+    }).catch((err) => {
+      logger.warn('Showcase photo count failed; defaulting to 0', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return 0;
+    }),
+    countPropertyMedia({
+      companyId, propertyId, category: FILE_CATEGORIES.FLOORPLANS, limit: 100,
+    }).catch(() => 0),
+    safeCount(() =>
+      adminDb
+        .collection(COLLECTIONS.UNIT_FLOORPLANS)
+        .where('companyId', '==', companyId)
+        .where('propertyId', '==', propertyId)
+        .count()
+        .get()
+    ),
+  ]);
+
+  const floorplanCount = floorplanCountFromFiles + floorplanCountLegacy;
 
   return { property, company, photoCount, floorplanCount };
 }
@@ -129,12 +149,52 @@ async function safeCount(
   }
 }
 
+/**
+ * Fetch up to `limit` property photos as embeddable PDF assets.
+ *
+ * Delegates filtering (mime allowlist, active-only) + Storage download to
+ * `PropertyMediaService` so the PDF generator uses the same SSoT as the
+ * public showcase surface. Never throws — a failure here degrades gracefully
+ * to a text-only PDF (ADR-312 Phase 1 behaviour).
+ */
+export async function loadShowcasePhotos(
+  propertyId: string,
+  companyId: string,
+  limit = 6
+): Promise<ShowcasePhotoAsset[]> {
+  try {
+    const buffers = await downloadPropertyMedia({
+      companyId,
+      propertyId,
+      category: FILE_CATEGORIES.PHOTOS,
+      limit,
+    });
+    return buffers.map(toShowcasePhotoAsset);
+  } catch (err) {
+    logger.warn('Showcase photo embedding failed; PDF will render text-only', {
+      propertyId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
+function toShowcasePhotoAsset(m: PropertyMediaBuffer): ShowcasePhotoAsset {
+  return {
+    id: m.id,
+    base64: m.base64,
+    format: m.jsPdfFormat,
+    displayName: m.displayName,
+  };
+}
+
 export function buildPdfData(
   propertyId: string,
   sources: ShowcaseSources,
   showcaseUrl: string,
   videoUrl: string | undefined,
-  locale: 'el' | 'en'
+  locale: 'el' | 'en',
+  photos: ShowcasePhotoAsset[] = []
 ): PropertyShowcasePDFData {
   const p = sources.property as Record<string, unknown>;
   const c = sources.company as Record<string, unknown>;
@@ -169,6 +229,7 @@ export function buildPdfData(
     videoUrl,
     photoCount: sources.photoCount,
     floorplanCount: sources.floorplanCount,
+    photos,
     generatedAt: new Date(),
     labels: buildShowcaseLabels(locale),
   };

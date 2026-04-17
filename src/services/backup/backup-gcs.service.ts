@@ -45,11 +45,32 @@ const DEFAULT_BUCKET_SUFFIX = '-backups';
 export class BackupGcsService {
   private bucket: Bucket;
   private bucketName: string;
+  private bucketVerified = false;
 
   constructor(bucketName?: string) {
     const projectId = process.env.FIREBASE_PROJECT_ID ?? 'pagonis-87766';
     this.bucketName = bucketName ?? `${projectId}${DEFAULT_BUCKET_SUFFIX}`;
     this.bucket = getAdminStorage().bucket(this.bucketName);
+  }
+
+  /**
+   * Ensure the GCS bucket exists, creating it if necessary.
+   * Idempotent — skips after first successful check within this instance.
+   */
+  async ensureBucketExists(): Promise<void> {
+    if (this.bucketVerified) return;
+
+    const [exists] = await this.bucket.exists();
+    if (!exists) {
+      logger.info(`Bucket ${this.bucketName} not found — creating...`);
+      await this.bucket.create({
+        location: 'EUROPE-WEST1',
+        storageClass: 'STANDARD',
+      });
+      logger.info(`Bucket ${this.bucketName} created successfully`);
+    }
+
+    this.bucketVerified = true;
   }
 
   /**

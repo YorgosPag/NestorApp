@@ -262,6 +262,18 @@
         "src/config/firestore-collections.ts"
       ]
     },
+    "property-media-reader": {
+      "ssotFile": "src/services/property-media/property-media.service.ts",
+      "description": "Reading property-linked media (photos, floorplans) from the `files` collection on the server must go through PropertyMediaService (listPropertyMedia / downloadPropertyMedia / countPropertyMedia). The service centralises the canonical filter set (companyId + entityType=property + entityId + category), active-lifecycle pruning, createdAt sorting, and jsPDF mime allowlisting for server-side PDF embedding. Forbidden: inline `.collection(COLLECTIONS.FILES).where('entityType','==','property')...` pipelines outside the service — each duplicate is a chance for tenant-isolation or lifecycle drift. ADR-312 (Property Showcase), ADR-031 (File Storage).",
+      "forbiddenPatterns": [
+        "collection\\s*\\(\\s*COLLECTIONS\\.FILES\\s*\\)[\\s\\S]{0,200}entityType['\"]?\\s*,\\s*['\"]==['\"]?\\s*,\\s*['\"]property['\"]"
+      ],
+      "allowlist": [
+        "src/services/property-media/property-media.service.ts",
+        "src/app/api/showcase/[token]/route.ts",
+        "src/app/api/properties/[id]/showcase/generate/helpers.ts"
+      ]
+    },
     "firestore-realtime": {
       "ssotFile": "src/services/firestore/firestore-query.service.ts",
       "description": "Firestore realtime subscriptions must go through one of the two canonical layers: (1) firestoreQueryService.subscribe/subscribeDoc/subscribeSubcollection (ADR-214) for tenant-aware tenant-filtered reads — PRIMARY path, (2) RealtimeService.subscribeToCollection/subscribeToDocument (ADR-195 Phase 8) for raw wrapping + event bus dispatch. Direct onSnapshot() calls from firebase/firestore are forbidden outside these layers. Legacy scattered callers are in the baseline and will ratchet down as they get migrated — preferred migration target is firestoreQueryService because it auto-injects companyId/tenantId filters.",
