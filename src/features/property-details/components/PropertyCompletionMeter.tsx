@@ -106,21 +106,33 @@ export function PropertyCompletionMeter({
   // completion guidance matters most. The flag remains in the public API for
   // future consumers that can distinguish default vs explicit draft.
 
-  // Dismissed + collapsed → render 1-line undismiss link (Google pattern)
-  if (isDismissed && !expanded) {
+  // Dismissed → render a prominent reshow banner (full-width, bordered).
+  // Using a thin banner not a floating link — Giorgio feedback: meter
+  // «scompare completamente» when dismissed. Banner keeps the control
+  // visible so no page reload needed to reopen.
+  if (isDismissed) {
     return (
       <section
         aria-label={t('completion.aria')}
-        className="flex items-center justify-end"
+        className={cn(
+          'w-full shrink-0 border flex items-center justify-between',
+          radiusClass.md,
+          spacing.padding.sm,
+          colors.border.default,
+          colors.bg.secondary,
+        )}
       >
+        <span className={cn('flex items-center', colors.text.muted, spacing.gap.sm)}>
+          <Gauge className={iconSizes.sm} aria-hidden="true" />
+          <span className={typography.label.sm}>{t('completion.title')}</span>
+        </span>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className={cn('h-6', typography.label.simple, spacing.padding.x.sm, spacing.gap.sm)}
+          className={cn('h-7', typography.label.simple, spacing.padding.x.sm, spacing.gap.sm)}
           onClick={() => setDismissed(false)}
         >
-          <Gauge className={iconSizes.xs} />
           {t('completion.reshow')}
         </Button>
       </section>
