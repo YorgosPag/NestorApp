@@ -45,12 +45,13 @@ Four layers, each respecting the relevant SSoT:
 ## 4. Prompt Design
 
 **System prompt** (`PROPERTY_DESCRIPTION_SYSTEM`) enforces:
-- 2-4 sentences, 60-140 words
+- 3-5 sentences, 100-180 words
 - Professional tone, no clichés ("μοναδική ευκαιρία", "όνειρο" banned)
 - **No fabrication**: AI uses only data that was provided
 - No price / commercial details in marketing copy (admin decides separately)
 - Greek-only output (no English words)
 - No opening with "Αυτή η μονάδα..." / "Το ακίνητο..." — start with type + key attribute
+- **Finishes mandatory when data is present** — section (3) of the organisation rule requires that floors / frames / glazing be mentioned explicitly whenever finishes data exists in the payload. Prevents the 60-140 word budget from squeezing finishes out.
 
 **User prompt** (`buildPropertyUserPrompt`) serializes the property into a labelled list. Enum values resolve through the i18n locale JSON (`properties-enums.json`) — the exact same source used by the read-only UI labels. Changing a label there automatically propagates to AI prompts.
 
@@ -116,3 +117,4 @@ New module registered in `.ssot-registry.json` (Tier 2 Security):
 | Date | Change |
 |------|--------|
 | 2026-04-17 | Initial — feature implemented end-to-end. Prompt SSoT, OpenAI provider SSoT, tenant-isolated API, preview-dialog UX, audit trail via existing mutation pipeline. |
+| 2026-04-17 | Prompt tuning (Option C) — budget widened from 2-4 sentences / 60-140 words → 3-5 sentences / 100-180 words, and section (3) of the organisation rule now mandates finishes (floors / frames / glazing) whenever data is present. Root cause: finishes were being dropped because the compressed budget forced the model to prioritise other features. |
