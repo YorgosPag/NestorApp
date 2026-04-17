@@ -22,6 +22,10 @@ export const COLLECTIONS = {
   // 📄 FILES
   FILES: 'files',
 
+  // 🔗 FILE SHARES — showcase PDFs, external shares (ADR-312)
+  // Mirrors src/config/firestore-collections.ts FILE_SHARES constant.
+  FILE_SHARES: 'file_shares',
+
   // 📋 AUDIT (Cloud Function system events)
   CLOUD_FUNCTION_AUDIT_LOG: 'audit_log',
 

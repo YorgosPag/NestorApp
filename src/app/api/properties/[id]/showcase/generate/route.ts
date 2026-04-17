@@ -34,6 +34,7 @@ import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFSe
 import {
   buildPdfData,
   deactivateShowcaseShares,
+  deleteShowcaseShareRecord,
   loadShowcaseSources,
   uploadPdfToStorage,
 } from './helpers';
@@ -159,18 +160,14 @@ async function handleGenerate(
   const pdfData = buildPdfData(propertyId, sources, showcaseUrl, body.videoUrl, locale);
   const pdfBytes = await generatePdfOrThrow(propertyId, pdfData);
 
-  try {
-    await uploadPdfToStorage(pdfBytes, storagePath);
-  } catch (err) {
-    logger.error('PDF upload failed', {
-      propertyId, storagePath, error: err instanceof Error ? err.message : String(err),
-    });
-    throw new ApiError(500, 'PDF upload failed');
-  }
-
   const expiresAt = new Date();
   expiresAt.setHours(expiresAt.getHours() + SHOWCASE_TTL_HOURS);
 
+  // Write the ownership claim BEFORE the Storage upload so the
+  // `onStorageFinalize` orphan-cleanup trigger (functions/src/storage) finds
+  // a FILE_SHARES record via `findFileOwner()` and skips deletion. Doing it
+  // after upload races the trigger and legitimate PDFs get mis-classified
+  // as orphans (incident 2026-04-17). ADR-312 §Race.
   await writeShowcaseShareRecord({
     shareId, token, propertyId,
     companyId: ctx.companyId,
@@ -178,6 +175,23 @@ async function handleGenerate(
     storagePath,
     expiresAt,
   });
+
+  try {
+    await uploadPdfToStorage(pdfBytes, storagePath);
+  } catch (err) {
+    // Compensation: remove the orphaned ownership claim so no stale
+    // FILE_SHARES record pointing to a missing PDF remains visible.
+    await deleteShowcaseShareRecord(shareId).catch((cleanupErr) => {
+      logger.error('Failed to compensate orphan showcase share record', {
+        shareId, propertyId,
+        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+      });
+    });
+    logger.error('PDF upload failed', {
+      propertyId, storagePath, error: err instanceof Error ? err.message : String(err),
+    });
+    throw new ApiError(500, 'PDF upload failed');
+  }
 
   const pdfUrl = `${baseUrl}/api/showcase/${token}/pdf`;
 

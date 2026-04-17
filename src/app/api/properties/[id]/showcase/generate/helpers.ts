@@ -201,6 +201,21 @@ export async function uploadPdfToStorage(
   }
 }
 
+/**
+ * Compensation delete for a FILE_SHARES record created pre-upload.
+ *
+ * The showcase generator writes the ownership claim BEFORE the actual
+ * Storage upload (so the `onStorageFinalize` orphan-cleanup trigger finds
+ * the claim and skips deletion — see ADR-312 §Race). If the upload then
+ * fails, the claim becomes orphaned metadata — this helper removes it.
+ * Idempotent: deleting a non-existent doc is a no-op in Admin SDK.
+ */
+export async function deleteShowcaseShareRecord(shareId: string): Promise<void> {
+  const adminDb = getAdminFirestore();
+  if (!adminDb) return;
+  await adminDb.collection(COLLECTIONS.FILE_SHARES).doc(shareId).delete();
+}
+
 export async function deactivateShowcaseShares(
   propertyId: string,
   companyId: string
