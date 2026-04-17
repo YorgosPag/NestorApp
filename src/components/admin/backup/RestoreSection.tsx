@@ -14,6 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -92,20 +99,26 @@ export function RestoreSection({
           )}
 
           {/* Backup selector */}
-          <select
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            value={selectedBackupId ?? ''}
-            onChange={e => onSelectBackup(e.target.value)}
-            disabled={isRestoring}
-            aria-label={t('backup.restore.selectBackup')}
-          >
-            <option value="">{t('backup.restore.selectBackup')}</option>
-            {backups.map(b => (
-              <option key={b.id} value={b.id}>
-                {b.id} — {b.type} — {new Date(b.createdAt).toLocaleDateString()} ({b.totalDocuments.toLocaleString()} docs)
-              </option>
-            ))}
-          </select>
+          {backups.length > 0 ? (
+            <Select
+              value={selectedBackupId ?? undefined}
+              onValueChange={onSelectBackup}
+              disabled={isRestoring}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t('backup.restore.selectBackup')} />
+              </SelectTrigger>
+              <SelectContent>
+                {backups.map(b => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.id} — {t(`backup.list.type.${b.type}`)} — {new Date(b.createdAt).toLocaleDateString()} ({b.totalDocuments.toLocaleString()} docs)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className={cn('text-sm', colors.text.muted)}>{t('backup.list.empty')}</p>
+          )}
 
           {/* Restore options */}
           <fieldset className="space-y-3">
