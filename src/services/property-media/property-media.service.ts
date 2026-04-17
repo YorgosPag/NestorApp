@@ -186,12 +186,14 @@ export async function downloadPropertyMedia(
         const [buffer] = await bucket.file(meta.storagePath).download();
         const format = JS_PDF_FORMAT_BY_MIME[(meta.contentType ?? '').toLowerCase()];
         if (!format) return;
-        // Hand jsPDF raw bytes (Uint8Array) — on Node the base64/string path
-        // tries to resolve a browser `Image` constructor and silently
-        // produces an empty image. Raw bytes skip that codepath entirely.
-        // Slice the backing ArrayBuffer to the Buffer's logical range so we
-        // never expose the underlying pooled allocator to the PDF engine.
-        const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        // Copy into a dedicated ArrayBuffer. Node `Buffer` instances (returned
+        // by GCS `download()`) share a pooled backing store; a mere view
+        // (`new Uint8Array(buf.buffer, offset, len)`) exposes the whole pool
+        // to any jsPDF code that reads `.buffer` without honouring byteOffset,
+        // which produced blank images in Phase 2 despite valid buffers on the
+        // wire (incident 2026-04-17). One-shot copy is cheap for ≤6 images.
+        const bytes = new Uint8Array(buffer.byteLength);
+        bytes.set(buffer);
         buffers.push({
           ...meta,
           bytes,
@@ -209,6 +211,17 @@ export async function downloadPropertyMedia(
   );
 
   buffers.sort((a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0));
+
+  const totalBytes = buffers.reduce((sum, b) => sum + b.bytes.byteLength, 0);
+  logger.info('Property media buffers loaded', {
+    propertyId: opts.propertyId,
+    category: opts.category,
+    requested: candidates.length,
+    loaded: buffers.length,
+    totalBytes,
+    formats: buffers.map((b) => b.jsPdfFormat),
+  });
+
   return buffers;
 }
 

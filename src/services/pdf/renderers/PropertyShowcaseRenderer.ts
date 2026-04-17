@@ -323,7 +323,16 @@ export class PropertyShowcaseRenderer {
     data: PropertyShowcasePDFData
   ): void {
     const photos = data.photos ?? [];
-    if (photos.length === 0) return;
+    if (photos.length === 0) {
+      console.info('[PropertyShowcaseRenderer] drawPhotoGrid skipped — no photos');
+      return;
+    }
+
+    console.info('[PropertyShowcaseRenderer] drawPhotoGrid', {
+      count: photos.length,
+      totalBytes: photos.reduce((sum, p) => sum + p.bytes.byteLength, 0),
+      formats: photos.map((p) => p.format),
+    });
 
     doc.addPage();
     let y = margins.top;
@@ -345,7 +354,19 @@ export class PropertyShowcaseRenderer {
       if (rowY + cellHeight > maxBottom) break;
       try {
         doc.addImage(photo.bytes, photo.format, x, rowY, cellWidth, cellHeight, photo.id, 'FAST');
-      } catch {
+      } catch (err) {
+        // Surface the real jsPDF error in dev stdout (Phase 2.1 diagnostic).
+        // Keep the grey-rect fallback so a single broken image never aborts
+        // the whole PDF — but no more silent failures.
+        console.error('[PropertyShowcaseRenderer] addImage failed', {
+          photoId: photo.id,
+          format: photo.format,
+          bytesLen: photo.bytes.byteLength,
+          magic: Array.from(photo.bytes.slice(0, 8))
+            .map((b) => b.toString(16).padStart(2, '0')).join(' '),
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
         doc.setDrawColor(...COLORS.GRAY);
         doc.rect(x, rowY, cellWidth, cellHeight, 'S');
       }

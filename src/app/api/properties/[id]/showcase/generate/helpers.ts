@@ -169,7 +169,14 @@ export async function loadShowcasePhotos(
       category: FILE_CATEGORIES.PHOTOS,
       limit,
     });
-    return buffers.map(toShowcasePhotoAsset);
+    const assets = buffers.map(toShowcasePhotoAsset);
+    logger.info('Showcase photos ready for PDF embedding', {
+      propertyId,
+      count: assets.length,
+      totalBytes: assets.reduce((sum, a) => sum + a.bytes.byteLength, 0),
+      formats: assets.map((a) => a.format),
+    });
+    return assets;
   } catch (err) {
     logger.warn('Showcase photo embedding failed; PDF will render text-only', {
       propertyId,
