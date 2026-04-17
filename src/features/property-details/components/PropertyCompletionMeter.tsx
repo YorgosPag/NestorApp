@@ -129,7 +129,12 @@ export function PropertyCompletionMeter({
     <section
       aria-label={t('completion.aria')}
       className={cn(
-        'w-full rounded-md border p-4 space-y-3',
+        // `shrink-0` critical: parent PropertyDetailsContent outer div is
+        // `h-full flex flex-col` (inside ScrollArea). Default flex-shrink: 1
+        // squeezes all children to share bounded height — meter would collapse
+        // and scroll internally. `shrink-0` preserves natural height; overflow
+        // is handled by the outer ScrollArea (Radix viewport).
+        'w-full shrink-0 rounded-md border p-4 space-y-3',
         colors.border.default,
         colors.bg.secondary,
       )}
