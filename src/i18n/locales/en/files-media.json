@@ -162,11 +162,21 @@
       "use": "Use",
       "switchCamera": "Switch camera",
       "selectDevice": "Select camera",
-      "errorPermissionDenied": "Camera access denied. Allow it from your browser settings.",
+      "errorPermissionDenied": "Camera access denied.",
       "errorNoDevice": "No camera found connected to this computer.",
       "errorNotSupported": "Your browser does not support camera access.",
       "errorDeviceBusy": "Camera is in use by another application.",
-      "errorGeneric": "Error accessing the camera."
+      "errorGeneric": "Error accessing the camera.",
+      "retry": "Retry",
+      "permissionHelp": {
+        "title": "How to fix",
+        "step1": "Click the lock icon 🔒 to the left of the address in your browser bar.",
+        "step2": "Find the «Camera» option and choose «Allow».",
+        "step3": "Press «Retry» below or reload the page (F5).",
+        "copyUrl": "Copy settings URL",
+        "copyUrlHint": "Alternatively, paste this URL into a new tab:",
+        "copied": "Copied"
+      }
     }
   },
   "share": {

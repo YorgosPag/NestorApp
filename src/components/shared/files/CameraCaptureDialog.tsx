@@ -18,7 +18,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, Video as VideoIcon, RefreshCw, AlertCircle } from 'lucide-react';
+import { Camera, Video as VideoIcon, RefreshCw, AlertCircle, Copy, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -87,6 +87,15 @@ function errorKeyFor(code: CameraCaptureErrorCode | null): string {
   }
 }
 
+function getBrowserSettingsUrl(): string {
+  if (typeof navigator === 'undefined') return 'chrome://settings/content/camera';
+  const ua = navigator.userAgent;
+  if (/Edg\//.test(ua)) return 'edge://settings/content/camera';
+  if (/Firefox\//.test(ua)) return 'about:preferences#privacy';
+  if (/OPR\/|Opera/.test(ua)) return 'opera://settings/content/camera';
+  return 'chrome://settings/content/camera';
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -107,8 +116,10 @@ export function CameraCaptureDialog({
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   const previewUrlRef = useRef<string | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeStatus = mode === 'photo' ? photo.status : video.status;
   const activeErrorCode = mode === 'photo' ? photo.errorCode : video.errorCode;
@@ -204,6 +215,32 @@ export function CameraCaptureDialog({
     await photo.switchDevice(deviceId);
   };
 
+  const handleRetry = async () => {
+    if (mode === 'photo') {
+      await photo.startCamera();
+    } else {
+      await video.startCamera();
+    }
+  };
+
+  const handleCopyUrl = async () => {
+    const url = getBrowserSettingsUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      setUrlCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setUrlCopied(false), 2000);
+    } catch {
+      setUrlCopied(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
   const title = mode === 'photo'
     ? t('capture.cameraDialog.titlePhoto')
     : t('capture.cameraDialog.titleVideo');
@@ -234,10 +271,43 @@ export function CameraCaptureDialog({
           {isError && (
             <output
               role="alert"
-              className={cn('flex flex-col items-center gap-2 p-6 text-center', colors.text.primary)}
+              className={cn('flex flex-col items-center gap-3 p-6 text-center', colors.text.primary)}
             >
               <AlertCircle className={cn(iconSizes.lg, 'text-red-500')} aria-hidden="true" />
-              <p>{t(errorKeyFor(activeErrorCode))}</p>
+              <p className="font-medium">{t(errorKeyFor(activeErrorCode))}</p>
+
+              {activeErrorCode === 'PERMISSION_DENIED' && (
+                <aside className={cn('w-full max-w-md rounded-md border p-4 text-left text-sm', colors.bg.primary)}>
+                  <h3 className="mb-2 font-semibold">
+                    {t('capture.cameraDialog.permissionHelp.title')}
+                  </h3>
+                  <ol className="mb-3 list-decimal space-y-1 pl-5">
+                    <li>{t('capture.cameraDialog.permissionHelp.step1')}</li>
+                    <li>{t('capture.cameraDialog.permissionHelp.step2')}</li>
+                    <li>{t('capture.cameraDialog.permissionHelp.step3')}</li>
+                  </ol>
+                  <p className={cn('mb-2 text-xs', colors.text.muted)}>
+                    {t('capture.cameraDialog.permissionHelp.copyUrlHint')}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className={cn('flex-1 truncate rounded px-2 py-1 text-xs', colors.bg.secondary)}>
+                      {getBrowserSettingsUrl()}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyUrl}
+                      aria-label={t('capture.cameraDialog.permissionHelp.copyUrl')}
+                    >
+                      {urlCopied
+                        ? <><Check className={cn(iconSizes.sm, 'mr-1')} aria-hidden="true" />{t('capture.cameraDialog.permissionHelp.copied')}</>
+                        : <><Copy className={cn(iconSizes.sm, 'mr-1')} aria-hidden="true" />{t('capture.cameraDialog.permissionHelp.copyUrl')}</>
+                      }
+                    </Button>
+                  </div>
+                </aside>
+              )}
             </output>
           )}
 
@@ -303,7 +373,12 @@ export function CameraCaptureDialog({
             {t('capture.cameraDialog.cancel')}
           </Button>
 
-          {showPreview ? (
+          {isError ? (
+            <Button onClick={handleRetry}>
+              <RefreshCw className={cn(iconSizes.sm, 'mr-2')} aria-hidden="true" />
+              {t('capture.cameraDialog.retry')}
+            </Button>
+          ) : showPreview ? (
             <>
               <Button variant="outline" onClick={handleRetake} disabled={busy}>
                 <RefreshCw className={cn(iconSizes.sm, 'mr-2')} aria-hidden="true" />
