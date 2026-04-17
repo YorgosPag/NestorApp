@@ -71,6 +71,13 @@ async function handleListBackups(): Promise<NextResponse> {
     });
   } catch (error) {
     const errorMessage = getErrorMessage(error);
+
+    // Bucket not yet created = no backups (normal in fresh environments)
+    if (errorMessage.includes('does not exist') || errorMessage.includes('Not Found')) {
+      logger.info('Backup bucket does not exist yet — returning empty list');
+      return NextResponse.json({ success: true, backups: [], total: 0, skipped: 0 });
+    }
+
     logger.error(`Failed to list backups: ${errorMessage}`);
 
     return NextResponse.json(
