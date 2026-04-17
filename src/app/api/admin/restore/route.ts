@@ -109,6 +109,8 @@ async function handleRestore(
       backupId,
       documentsRestored: result.documentsRestored,
       documentsSkipped: result.documentsSkipped,
+      storageRestored: result.storageRestored,
+      storageSkipped: result.storageSkipped,
       snapshotId: result.snapshotId,
       durationMs: result.durationMs,
     });

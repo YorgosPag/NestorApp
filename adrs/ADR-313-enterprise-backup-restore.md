@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Phase 1-4 COMPLETE |
+| **Status** | Phase 1-6 COMPLETE |
 | **Date** | 2026-04-17 |
 | **Category** | Infrastructure / Data Protection / Disaster Recovery |
 | **Canonical Location** | `src/services/backup/` |
@@ -59,6 +59,8 @@ src/services/backup/
 ├── backup-gcs.service.ts        # Scrittura/lettura backup su GCS bucket
 ├── restore.service.ts           # RestoreService: validate, preview, execute ✅
 ├── restore-helpers.ts           # Tier ordering, ref resolution (SRP split) ✅
+├── restore-chain.service.ts     # Incremental chain resolution + merge ✅
+├── storage-restore.service.ts   # Storage file restore (GCS → Firebase Storage) ✅
 ├── schema-reconciler.ts         # Schema reconciliation — Approach B (Google) ✅
 └── incremental-backup.service.ts # Delta backup via entity_audit_trail (Fase 5) ✅
 
@@ -206,7 +208,7 @@ Collezioni marcate `isImmutable: true` nel manifest:
 
 ## 6. Implementation Phases
 
-### Fase 1: Fondamenta (3-5 giorni) — IN PROGRESS
+### Fase 1: Fondamenta — COMPLETE
 
 **Deliverable**: Export singola collezione + manifest + serializer + API endpoint
 
@@ -280,6 +282,8 @@ Modifica:
 - Batch writes with BATCH_SIZE_WRITE=200
 - DocumentReference resolution during restore (path strings → actual refs)
 - Progress tracking in `system/restore_status`
+- **Incremental chain resolution**: `RestoreChainService` walks parentBackupId chain, merges documents (latest wins), applies tombstones
+- **Storage file restore**: `StorageRestoreService` streams files from backup GCS → Firebase Storage, SHA-256 verification, skip existing with matching hash
 
 ### Fase 5: Backup incrementale ✅
 
@@ -358,3 +362,4 @@ gs://{projectId}-backups/
 | 2026-04-17 | 3 | StorageBackupService: streaming pipeline, SHA-256 transform, cross-ref FILES, size guard, backupId upfront |
 | 2026-04-17 | 2 | BackupSchedulerService, cron endpoint /api/cron/backup (01:00 UTC), retention policy, SSoT cron-auth.ts (4 copie → 1) |
 | 2026-04-17 | 5 | IncrementalBackupService (CDC via entity_audit_trail), POST /api/admin/backup/incremental, scheduler full/incremental decision, types: deletedDocumentIds, incrementalEnabled, fullBackupIntervalDays |
+| 2026-04-17 | 4+ | RestoreChainService (incremental chain merge), StorageRestoreService (GCS → Firebase Storage streaming), BackupGcsService.createReadStream(), restore route includes storage counts. ADR status → Phase 1-6 COMPLETE |

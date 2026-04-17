@@ -17,6 +17,8 @@ import { deserializeDocument } from './backup-serializer';
 import { BackupGcsService } from './backup-gcs.service';
 import { reconcileBackup } from './schema-reconciler';
 import { orderByTier, resolveReferences } from './restore-helpers';
+import { RestoreChainService } from './restore-chain.service';
+import { StorageRestoreService } from './storage-restore.service';
 
 import type { Firestore, WriteBatch } from 'firebase-admin/firestore';
 import type {
@@ -33,9 +35,7 @@ import type { ReconciliationResult } from './schema-reconciler';
 
 const logger = createModuleLogger('RestoreService');
 
-
 type RestoreStatusCallback = (status: Partial<RestoreStatus>) => Promise<void>;
-
 
 export class RestoreService {
   private db: Firestore;
@@ -45,8 +45,6 @@ export class RestoreService {
     this.db = getAdminFirestore();
     this.gcsService = gcsService ?? new BackupGcsService();
   }
-
-  // Validate manifest
 
   /**
    * Read and validate a backup manifest from GCS.
@@ -85,8 +83,6 @@ export class RestoreService {
     }
   }
 
-  // Preview (dry-run)
-
   /**
    * Preview what a restore would do without writing anything.
    * Reads all backup files, runs schema reconciliation, returns summary.
@@ -100,11 +96,16 @@ export class RestoreService {
       throw new Error(`Invalid manifest: ${errors.join(', ')}`);
     }
 
-    // Read all backup files
-    const collectionDocs = await this.readAllBackupFiles(manifest);
+    // Resolve chain (handles incremental → full chain merge)
+    const chainService = new RestoreChainService(this.gcsService);
+    const chain = await chainService.resolveChain(backupId);
+    const effectiveManifest = {
+      ...chain.fullManifest,
+      collections: chain.mergedCollections,
+    };
 
     // Run reconciliation
-    const reconciliation = await reconcileBackup(manifest, collectionDocs, {
+    const reconciliation = await reconcileBackup(effectiveManifest, chain.mergedFiles, {
       collections: options?.collections,
       skipImmutable: options?.skipImmutable,
     });
@@ -119,11 +120,9 @@ export class RestoreService {
       totalNew: reconciliation.totalNew,
       totalUpdate: reconciliation.totalUpdate,
       totalSkip: reconciliation.totalSkip,
-      warnings: reconciliation.warnings,
+      warnings: [...reconciliation.warnings, ...chain.warnings],
     };
   }
-
-  // Execute restore
 
   /**
    * Execute a full restore from backup.
@@ -171,8 +170,16 @@ export class RestoreService {
       throw new Error(`Invalid manifest: ${errors.join(', ')}`);
     }
 
-    // Phase 2: Read backup files
-    const collectionDocs = await this.readAllBackupFiles(manifest);
+    // Phase 2: Resolve chain (handles incremental → full chain merge)
+    const chainService = new RestoreChainService(this.gcsService);
+    const chain = await chainService.resolveChain(backupId);
+    const collectionDocs = chain.mergedFiles;
+    const effectiveManifest = {
+      ...chain.fullManifest,
+      collections: chain.mergedCollections,
+      subcollections: chain.fullManifest.subcollections,
+      storageFiles: chain.fullManifest.storageFiles,
+    };
 
     // Phase 3: Reconcile schema
     await this.updateProgress(onProgress, {
@@ -180,7 +187,7 @@ export class RestoreService {
       phase: 'reconciling_schema',
     });
 
-    const reconciliation = await reconcileBackup(manifest, collectionDocs, {
+    const reconciliation = await reconcileBackup(effectiveManifest, collectionDocs, {
       collections: options?.collections,
       skipImmutable: options?.skipImmutable,
     });
@@ -214,7 +221,7 @@ export class RestoreService {
       totalCollections,
     });
 
-    const orderedCollections = orderByTier(manifest.collections, options?.collections);
+    const orderedCollections = orderByTier(effectiveManifest.collections, options?.collections);
 
     for (const entry of orderedCollections) {
       const documents = collectionDocs.get(entry.backupFile) ?? [];
@@ -251,7 +258,7 @@ export class RestoreService {
       phase: 'restoring_subcollections',
     });
 
-    for (const entry of manifest.subcollections) {
+    for (const entry of effectiveManifest.subcollections) {
       if (options?.collections?.length && !options.collections.includes(entry.subcollectionKey)) {
         continue;
       }
@@ -259,7 +266,7 @@ export class RestoreService {
       const documents = collectionDocs.get(entry.backupFile) ?? [];
       if (documents.length === 0) continue;
 
-      const parentColName = this.getParentCollectionName(entry, manifest);
+      const parentColName = this.getParentCollectionName(entry, effectiveManifest);
       if (!parentColName) continue;
 
       const result = await this.restoreSubcollectionDocs(
@@ -281,6 +288,22 @@ export class RestoreService {
       });
     }
 
+    // Phase 7: Restore Storage files
+    let storageRestored = 0;
+    let storageSkipped = 0;
+
+    if (effectiveManifest.storageFiles.length > 0) {
+      logger.info(`Restoring ${effectiveManifest.storageFiles.length} storage files...`);
+      const storageService = new StorageRestoreService();
+      const storageResult = await storageService.restoreAllFiles(
+        chain.fullManifest.id,
+        effectiveManifest.storageFiles,
+        this.gcsService,
+      );
+      storageRestored = storageResult.restored;
+      storageSkipped = storageResult.skipped;
+    }
+
     // Complete
     const durationMs = Date.now() - startTime;
 
@@ -293,18 +316,21 @@ export class RestoreService {
       completedAt: new Date().toISOString(),
     });
 
-    logger.info(`Restore ${restoreId} completed: ${documentsRestored} restored, ${documentsSkipped} skipped in ${durationMs}ms`);
+    logger.info(
+      `Restore ${restoreId} completed: ${documentsRestored} docs restored, ` +
+      `${documentsSkipped} skipped, ${storageRestored} storage files in ${durationMs}ms`,
+    );
 
     return {
       restoreId,
       documentsRestored,
       documentsSkipped,
+      storageRestored,
+      storageSkipped,
       snapshotId: snapshot.id,
       durationMs,
     };
   }
-
-  // Restore documents for a top-level collection
 
   private async restoreCollectionDocs(
     collectionName: string,
@@ -351,8 +377,6 @@ export class RestoreService {
     logger.info(`Restored ${collectionName}: ${restored} written, ${skipped} skipped`);
     return { restored, skipped };
   }
-
-  // Restore documents for a subcollection
 
   private async restoreSubcollectionDocs(
     parentCollectionName: string,
@@ -405,8 +429,6 @@ export class RestoreService {
     return { restored, skipped };
   }
 
-  // Pre-restore snapshot
-
   /**
    * Save a snapshot of existing doc IDs that will be overwritten.
    * Stored in GCS alongside the backup for future rollback capability.
@@ -448,32 +470,6 @@ export class RestoreService {
 
     return snapshot;
   }
-
-  // Read all backup files from GCS
-
-  private async readAllBackupFiles(
-    manifest: BackupManifest,
-  ): Promise<Map<string, SerializedDocument[]>> {
-    const files = new Map<string, SerializedDocument[]>();
-
-    for (const entry of manifest.collections) {
-      if (entry.documentCount > 0) {
-        const docs = await this.gcsService.readBackupFile(manifest.id, entry.backupFile);
-        files.set(entry.backupFile, docs);
-      }
-    }
-
-    for (const entry of manifest.subcollections) {
-      if (entry.totalDocuments > 0) {
-        const docs = await this.gcsService.readBackupFile(manifest.id, entry.backupFile);
-        files.set(entry.backupFile, docs);
-      }
-    }
-
-    return files;
-  }
-
-  // Helpers
 
   private getParentCollectionName(
     subEntry: SubcollectionManifestEntry,

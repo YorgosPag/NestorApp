@@ -247,6 +247,14 @@ export class BackupGcsService {
   }
 
   /**
+   * Create a readable stream from a GCS file (streaming — no buffering).
+   * Used by StorageRestoreService for memory-efficient file restore.
+   */
+  createReadStream(gcsPath: string) {
+    return this.bucket.file(gcsPath).createReadStream();
+  }
+
+  /**
    * Write a raw JSON file to GCS (for snapshots, metadata).
    */
   async writeJsonFile(
