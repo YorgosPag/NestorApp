@@ -102,28 +102,28 @@ export function PropertyCompletionBreakdown({
   };
 
   return (
-    <div className="space-y-1.5">
-      <p className={cn('text-xs font-medium', colors.text.secondary)}>
+    <div className="w-full space-y-2">
+      <p className={cn('text-sm font-semibold', colors.text.secondary)}>
         {t('completion.breakdown.heading')}
       </p>
-      <ul className="space-y-1">
+      <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5 w-full">
         {missingEntries.map(({ fieldKey, weight, critical, status }) => {
           const anchor = FIELD_TO_CARD_ANCHOR[fieldKey];
           const weightLabelKey = resolveWeightLabelKey(weight);
           return (
-            <li key={fieldKey}>
+            <li key={fieldKey} className="w-full">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 disabled={!anchor}
                 onClick={() => handleJump(fieldKey)}
-                className="w-full justify-between h-7 px-2 text-xs"
+                className="w-full justify-between h-9 px-2 text-sm"
               >
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-2 min-w-0">
                   <span
                     className={cn(
-                      'inline-block h-1.5 w-1.5 rounded-full',
+                      'inline-block h-2 w-2 rounded-full shrink-0',
                       status === 'partial'
                         ? colors.bg.warning
                         : critical
@@ -132,9 +132,9 @@ export function PropertyCompletionBreakdown({
                     )}
                     aria-hidden="true"
                   />
-                  <span>{t(`completion.fields.${fieldKey}`)}</span>
+                  <span className="truncate">{t(`completion.fields.${fieldKey}`)}</span>
                 </span>
-                <span className={cn('flex items-center gap-1', colors.text.muted)}>
+                <span className={cn('flex items-center gap-1 shrink-0', colors.text.muted)}>
                   <span className="text-[10px] uppercase tracking-wide">
                     {t(`completion.breakdown.${weightLabelKey}`)}
                   </span>

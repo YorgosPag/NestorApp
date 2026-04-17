@@ -129,7 +129,7 @@ export function PropertyCompletionMeter({
     <section
       aria-label={t('completion.aria')}
       className={cn(
-        'rounded-md border p-4 space-y-3',
+        'w-full rounded-md border p-4 space-y-3',
         colors.border.default,
         colors.bg.secondary,
       )}
