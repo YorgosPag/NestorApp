@@ -21,6 +21,7 @@
 
 import React, { useCallback, useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClearableSelect } from '@/components/ui/clearable-select';
 import { FormField, FormGrid, FormInput } from '@/components/ui/form/FormComponents';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -125,7 +126,7 @@ export function NewUnitHierarchySection({
   }, [buildings, onChange]);
 
   const handleFloorChange = useCallback((value: string) => {
-    if (value === '__clear__') {
+    if (value === '') {
       onChange({ floorId: '', floor: 0 });
       return;
     }
@@ -238,23 +239,20 @@ export function NewUnitHierarchySection({
                   <Plus className="h-4 w-4" />
                 </Button>
               ) : (
-                <Select
-                  value={selection.floorId || '__clear__'}
+                <ClearableSelect
+                  value={selection.floorId}
                   onValueChange={handleFloorChange}
                   disabled={!selection.buildingId || floorsLoading}
+                  id="new-unit-floor"
+                  placeholder={t('dialog.addUnit.placeholders.floor')}
+                  clearLabel={t('fields.clearSelection.floor')}
                 >
-                  <SelectTrigger size="sm" id="new-unit-floor">
-                    <SelectValue placeholder={t('dialog.addUnit.placeholders.floor')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__clear__">—</SelectItem>
-                    {floorOptions.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.name} ({t('dialog.addUnit.floorLevel')} {f.number})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {floorOptions.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name} ({t('dialog.addUnit.floorLevel')} {f.number})
+                    </SelectItem>
+                  ))}
+                </ClearableSelect>
               )}
             </FormInput>
           </FormField>

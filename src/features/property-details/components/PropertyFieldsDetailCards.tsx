@@ -16,13 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SelectItem } from '@/components/ui/select';
+import { ClearableSelect } from '@/components/ui/clearable-select';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Bed, Bath, Compass, Wrench, Zap } from 'lucide-react';
@@ -218,30 +213,34 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                   <Wrench className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.conditionIcon)} />
                   {t('condition.sectionTitle')}
                 </Label>
-                <Select value={formData.condition} disabled={!isEditing || isSoldOrRented}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}>
-                  <SelectTrigger size="sm"><SelectValue placeholder={t('condition.sectionTitle')} /></SelectTrigger>
-                  <SelectContent>
-                    {CONDITION_OPTIONS.map((c) => (
-                      <SelectItem key={c} value={c} className="text-xs">{t(`condition.${c}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ClearableSelect
+                  value={formData.condition}
+                  disabled={!isEditing || isSoldOrRented}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}
+                  placeholder={t('fields.clearSelection.condition')}
+                  clearLabel={t('fields.clearSelection.condition')}
+                >
+                  {CONDITION_OPTIONS.map((c) => (
+                    <SelectItem key={c} value={c} className="text-xs">{t(`condition.${c}`)}</SelectItem>
+                  ))}
+                </ClearableSelect>
               </fieldset>
               <fieldset className="space-y-1">
                 <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                   <Zap className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.energyIcon)} />
                   {t('energy.class')}
                 </Label>
-                <Select value={formData.energyClass} disabled={!isEditing || isSoldOrRented}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}>
-                  <SelectTrigger size="sm"><SelectValue placeholder={t('energy.class')} /></SelectTrigger>
-                  <SelectContent>
-                    {ENERGY_CLASS_OPTIONS.map((e) => (
-                      <SelectItem key={e} value={e} className="text-xs">{e}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ClearableSelect
+                  value={formData.energyClass}
+                  disabled={!isEditing || isSoldOrRented}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}
+                  placeholder={t('fields.clearSelection.energyClass')}
+                  clearLabel={t('fields.clearSelection.energyClass')}
+                >
+                  {ENERGY_CLASS_OPTIONS.map((e) => (
+                    <SelectItem key={e} value={e} className="text-xs">{e}</SelectItem>
+                  ))}
+                </ClearableSelect>
               </fieldset>
             </div>
             <ConditionPlausibilityWarning

@@ -17,13 +17,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SelectItem } from '@/components/ui/select';
+import { ClearableSelect } from '@/components/ui/clearable-select';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Thermometer, Snowflake, Home, Shield, Flame } from 'lucide-react';
@@ -74,30 +69,34 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                 <Flame className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.heating)} />
                 {t('systems.heating.label')}
               </Label>
-              <Select value={formData.heatingType} disabled={!isEditing || isSoldOrRented}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}>
-                <SelectTrigger size="sm"><SelectValue placeholder={t('systems.heating.label')} /></SelectTrigger>
-                <SelectContent>
-                  {HEATING_OPTIONS.map((h) => (
-                    <SelectItem key={h} value={h} className="text-xs">{t(`systems.heating.${h}`)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ClearableSelect
+                value={formData.heatingType}
+                disabled={!isEditing || isSoldOrRented}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}
+                placeholder={t('fields.clearSelection.heating')}
+                clearLabel={t('fields.clearSelection.heating')}
+              >
+                {HEATING_OPTIONS.map((h) => (
+                  <SelectItem key={h} value={h} className="text-xs">{t(`systems.heating.${h}`)}</SelectItem>
+                ))}
+              </ClearableSelect>
             </fieldset>
             <fieldset className="space-y-1">
               <Label className={cn("text-xs flex items-center gap-1", colors.text.muted)}>
                 <Snowflake className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.cooling)} />
                 {t('systems.cooling.label')}
               </Label>
-              <Select value={formData.coolingType} disabled={!isEditing || isSoldOrRented}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}>
-                <SelectTrigger size="sm"><SelectValue placeholder={t('systems.cooling.label')} /></SelectTrigger>
-                <SelectContent>
-                  {COOLING_OPTIONS.map((c) => (
-                    <SelectItem key={c} value={c} className="text-xs">{t(`systems.cooling.${c}`)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ClearableSelect
+                value={formData.coolingType}
+                disabled={!isEditing || isSoldOrRented}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}
+                placeholder={t('fields.clearSelection.cooling')}
+                clearLabel={t('fields.clearSelection.cooling')}
+              >
+                {COOLING_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c} className="text-xs">{t(`systems.cooling.${c}`)}</SelectItem>
+                ))}
+              </ClearableSelect>
             </fieldset>
           </div>
           <SystemsPlausibilityWarning
@@ -172,45 +171,49 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                 <div className="grid grid-cols-2 gap-2">
                   <fieldset className="space-y-1">
                     <Label className={cn("text-xs", colors.text.muted)}>{t('finishes.frames.label')}</Label>
-                    <Select value={levelFrames} disabled={!isEditing || isSoldOrRented}
+                    <ClearableSelect
+                      value={levelFrames}
+                      disabled={!isEditing || isSoldOrRented}
                       onValueChange={(value) => {
                         if (isMultiLevel && activeLevelId) {
                           updateLevelField('finishes', {
                             ...(currentLevelData?.finishes ?? {}),
-                            windowFrames: value as FrameType,
+                            windowFrames: value ? (value as FrameType) : undefined,
                           });
                         } else {
                           setFormData(prev => ({ ...prev, windowFrames: value }));
                         }
-                      }}>
-                      <SelectTrigger size="sm"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
-                      <SelectContent>
-                        {FRAME_OPTIONS.map((f) => (
-                          <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      }}
+                      placeholder={t('fields.clearSelection.frames')}
+                      clearLabel={t('fields.clearSelection.frames')}
+                    >
+                      {FRAME_OPTIONS.map((f) => (
+                        <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
+                      ))}
+                    </ClearableSelect>
                   </fieldset>
                   <fieldset className="space-y-1">
                     <Label className={cn("text-xs", colors.text.muted)}>{t('finishes.glazing.label')}</Label>
-                    <Select value={levelGlazing} disabled={!isEditing || isSoldOrRented}
+                    <ClearableSelect
+                      value={levelGlazing}
+                      disabled={!isEditing || isSoldOrRented}
                       onValueChange={(value) => {
                         if (isMultiLevel && activeLevelId) {
                           updateLevelField('finishes', {
                             ...(currentLevelData?.finishes ?? {}),
-                            glazing: value as GlazingType,
+                            glazing: value ? (value as GlazingType) : undefined,
                           });
                         } else {
                           setFormData(prev => ({ ...prev, glazing: value }));
                         }
-                      }}>
-                      <SelectTrigger size="sm"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
-                      <SelectContent>
-                        {GLAZING_OPTIONS.map((g) => (
-                          <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      }}
+                      placeholder={t('fields.clearSelection.glazing')}
+                      clearLabel={t('fields.clearSelection.glazing')}
+                    >
+                      {GLAZING_OPTIONS.map((g) => (
+                        <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>
+                      ))}
+                    </ClearableSelect>
                   </fieldset>
                 </div>
               </>
