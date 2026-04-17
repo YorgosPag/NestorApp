@@ -268,6 +268,7 @@ export type RestorePhase =
   | 'reconciling_schema'
   | 'restoring_collections'
   | 'restoring_subcollections'
+  | 'restoring_storage'
   | 'completed'
   | 'failed';
 
@@ -295,6 +296,9 @@ export interface RestoreStatus {
 
   /** Documents skipped (immutable existing) */
   documentsSkipped: number;
+
+  /** Storage files restored */
+  storageFilesRestored?: number;
 
   /** ISO 8601 — when restore started */
   startedAt: string;

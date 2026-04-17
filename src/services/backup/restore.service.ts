@@ -293,6 +293,7 @@ export class RestoreService {
     let storageSkipped = 0;
 
     if (effectiveManifest.storageFiles.length > 0) {
+      await this.updateProgress(onProgress, { restoreId, phase: 'restoring_storage' });
       logger.info(`Restoring ${effectiveManifest.storageFiles.length} storage files...`);
       const storageService = new StorageRestoreService();
       const storageResult = await storageService.restoreAllFiles(
