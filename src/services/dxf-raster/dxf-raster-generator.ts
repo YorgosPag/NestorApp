@@ -20,7 +20,14 @@
  * @enterprise ADR-033 (Floorplan Processing), ADR-312 Phase 3 (Property Showcase)
  */
 
-import { Resvg, type ResvgRenderOptions } from '@resvg/resvg-js';
+// Type-only import keeps tsc happy without triggering the resvg WASM blob at
+// module-load time. Firebase's deploy-time analyzer imports every exported
+// symbol with a 10s budget; pulling `@resvg/resvg-js` here (≈6MB native/WASM
+// bundle + bindings) exceeds that budget cold and produces
+// "User code failed to load. Cannot determine backend specification" during
+// `firebase deploy`. Lazy-require inside the function call site avoids the
+// cold-start tax until an object actually triggers the handler.
+import type { Resvg as ResvgType, ResvgRenderOptions } from '@resvg/resvg-js';
 
 import {
   serializeDxfSceneToSvg,
@@ -28,6 +35,13 @@ import {
   type SvgRenderOptions,
   type SvgRenderResult,
 } from './svg-from-dxf-scene';
+
+type ResvgCtor = new (svg: string, options?: ResvgRenderOptions) => ResvgType;
+
+function loadResvg(): ResvgCtor {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return (require('@resvg/resvg-js') as { Resvg: ResvgCtor }).Resvg;
+}
 
 export interface RasterizeDxfOptions extends SvgRenderOptions {
   /** PNG pixel width (defaults to the SVG width). */
@@ -63,6 +77,7 @@ export function rasterizeDxfScene(
     font: { loadSystemFonts: false },
   };
 
+  const Resvg = loadResvg();
   const resvg = new Resvg(svg, resvgOpts);
   const rendered = resvg.render();
   const png = rendered.asPng();
