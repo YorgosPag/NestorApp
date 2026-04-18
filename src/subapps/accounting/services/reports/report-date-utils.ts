@@ -127,8 +127,8 @@ function shiftMonths(fromDate: Date, months: number): DateRange {
   newTo.setMonth(newTo.getMonth() + Math.abs(months));
   newTo.setDate(newTo.getDate() - 1);
   return {
-    from: formatDate(newFrom),
-    to: formatDate(newTo),
+    from: formatDateLocalISO(newFrom),
+    to: formatDateLocalISO(newTo),
   };
 }
 
@@ -154,7 +154,7 @@ function toISO(year: number, month: number, day: number): string {
   return `${year}-${m}-${d}`;
 }
 
-function formatDate(date: Date): string {
+function formatDateLocalISO(date: Date): string {
   return toISO(date.getFullYear(), date.getMonth(), date.getDate());
 }
 

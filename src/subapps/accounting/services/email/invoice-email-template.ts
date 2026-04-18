@@ -43,7 +43,7 @@ function formatEuro(amount: number): string {
 }
 
 /** Date formatter — DD/MM/YYYY */
-function formatDateGreek(date: Date): string {
+function formatInvoiceDateGreek(date: Date): string {
   return new Intl.DateTimeFormat('el-GR', {
     day: '2-digit',
     month: '2-digit',
@@ -161,7 +161,7 @@ export function buildInvoiceEmailPlainText(
   const invoiceRef = `${invoice.series}-${invoice.number}`;
   const typeLabel = INVOICE_TYPE_LABELS[invoice.type][language];
   const dueDateText = invoice.dueDate
-    ? formatDateGreek(new Date(invoice.dueDate))
+    ? formatInvoiceDateGreek(new Date(invoice.dueDate))
     : L.noDueDate;
 
   return [
@@ -171,7 +171,7 @@ export function buildInvoiceEmailPlainText(
     '',
     `${L.number}: ${invoiceRef}`,
     `${L.type}: ${typeLabel}`,
-    `${L.issueDate}: ${formatDateGreek(new Date(invoice.issueDate))}`,
+    `${L.issueDate}: ${formatInvoiceDateGreek(new Date(invoice.issueDate))}`,
     `${L.dueDate}: ${dueDateText}`,
     `${L.amount}: ${formatEuro(invoice.totalGrossAmount)}`,
     '',
@@ -201,9 +201,9 @@ export function buildInvoiceEmailContent(
   const invoiceRef = `${invoice.series}-${invoice.number}`;
   const typeLabel = INVOICE_TYPE_LABELS[invoice.type][language];
   const dueDateText = invoice.dueDate
-    ? formatDateGreek(new Date(invoice.dueDate))
+    ? formatInvoiceDateGreek(new Date(invoice.dueDate))
     : L.noDueDate;
-  const issueDateText = formatDateGreek(new Date(invoice.issueDate));
+  const issueDateText = formatInvoiceDateGreek(new Date(invoice.issueDate));
   const amountText = formatEuro(invoice.totalGrossAmount);
 
   const rowStyle = `font-size:14px;color:${BRAND.gray};line-height:1.8;`;
