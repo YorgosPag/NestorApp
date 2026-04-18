@@ -15,6 +15,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { Storage } from '@/types/storage/contracts';
 
 const logger = createModuleLogger('useStoragesTrashState');
@@ -32,6 +33,7 @@ interface TrashApiResponse {
 export function useStoragesTrashState({
   forceDataRefresh,
 }: UseStoragesTrashStateParams) {
+  const { user, loading: authLoading } = useAuth();
   const [showTrash, setShowTrash] = useState(false);
   const [trashedStorages, setTrashedStorages] = useState<Storage[]>([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -104,8 +106,9 @@ export function useStoragesTrashState({
   }, []);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     void fetchTrashedStorages();
-  }, [fetchTrashedStorages]);
+  }, [fetchTrashedStorages, authLoading, user]);
 
   return {
     showTrash,

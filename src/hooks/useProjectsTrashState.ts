@@ -15,6 +15,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { Project } from '@/types/project';
 
 const logger = createModuleLogger('useProjectsTrashState');
@@ -32,6 +33,7 @@ interface TrashApiResponse {
 export function useProjectsTrashState({
   forceDataRefresh,
 }: UseProjectsTrashStateParams) {
+  const { user, loading: authLoading } = useAuth();
   const [showTrash, setShowTrash] = useState(false);
   const [trashedProjects, setTrashedProjects] = useState<Project[]>([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -105,8 +107,9 @@ export function useProjectsTrashState({
   }, []);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     void fetchTrashedProjects();
-  }, [fetchTrashedProjects]);
+  }, [fetchTrashedProjects, authLoading, user]);
 
   return {
     showTrash,

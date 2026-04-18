@@ -15,6 +15,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { Building } from '@/types/building/contracts';
 
 const logger = createModuleLogger('useBuildingsTrashState');
@@ -32,6 +33,7 @@ interface TrashApiResponse {
 export function useBuildingsTrashState({
   forceDataRefresh,
 }: UseBuildingsTrashStateParams) {
+  const { user, loading: authLoading } = useAuth();
   const [showTrash, setShowTrash] = useState(false);
   const [trashedBuildings, setTrashedBuildings] = useState<Building[]>([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -104,8 +106,9 @@ export function useBuildingsTrashState({
   }, []);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     void fetchTrashedBuildings();
-  }, [fetchTrashedBuildings]);
+  }, [fetchTrashedBuildings, authLoading, user]);
 
   return {
     showTrash,

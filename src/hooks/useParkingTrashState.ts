@@ -15,6 +15,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { ParkingSpot } from '@/types/parking';
 
 const logger = createModuleLogger('useParkingTrashState');
@@ -32,6 +33,7 @@ interface TrashApiResponse {
 export function useParkingTrashState({
   forceDataRefresh,
 }: UseParkingTrashStateParams) {
+  const { user, loading: authLoading } = useAuth();
   const [showTrash, setShowTrash] = useState(false);
   const [trashedParkingSpots, setTrashedParkingSpots] = useState<ParkingSpot[]>([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -104,8 +106,9 @@ export function useParkingTrashState({
   }, []);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     void fetchTrashedParkingSpots();
-  }, [fetchTrashedParkingSpots]);
+  }, [fetchTrashedParkingSpots, authLoading, user]);
 
   return {
     showTrash,
