@@ -232,13 +232,13 @@ export function CommentsPanel({
   // Real-time subscription (companyId required for Firestore rules)
   useEffect(() => {
     if (!fileCommentsCache.hasLoaded(fileId)) setLoading(true);
-    const unsub = FileCommentService.subscribeToComments(fileId, companyId, (data) => {
+    const unsub = FileCommentService.subscribeToComments(fileId, (data) => {
       fileCommentsCache.set(data, fileId);
       setComments(data);
       setLoading(false);
     });
     return unsub;
-  }, [fileId, companyId]);
+  }, [fileId]);
 
   // Build thread structure: top-level comments + their replies
   const threads = useMemo(() => {

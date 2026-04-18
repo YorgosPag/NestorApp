@@ -21,13 +21,16 @@ import {
   deleteDoc,
   updateDoc,
   serverTimestamp,
-  onSnapshot,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { createModuleLogger } from '@/lib/telemetry';
 import { FileAuditService } from './file-audit.service';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+
+const log = createModuleLogger('file-comment.service');
 
 // ============================================================================
 // TYPES
@@ -120,27 +123,25 @@ export const FileCommentService = {
   },
 
   /**
-   * Subscribe to real-time comment updates for a file
+   * Subscribe to real-time comment updates for a file.
+   * Tenant isolation (companyId filter) auto-injected by firestoreQueryService
+   * from the authenticated user's context (ADR-214).
    */
   subscribeToComments(
     fileId: string,
-    companyId: string,
     callback: (comments: FileComment[]) => void
   ): Unsubscribe {
-    const q = query(
-      collection(db, COLLECTIONS.FILE_COMMENTS),
-      where('companyId', '==', companyId),
-      where('fileId', '==', fileId),
-      orderBy('createdAt', 'asc')
+    return firestoreQueryService.subscribe<FileComment>(
+      'FILE_COMMENTS',
+      (result) => callback(result.documents),
+      (err) => log.error('subscribeToComments failed', { fileId, err }),
+      {
+        constraints: [
+          where('fileId', '==', fileId),
+          orderBy('createdAt', 'asc'),
+        ],
+      }
     );
-
-    return onSnapshot(q, (snapshot) => {
-      const comments = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      })) as FileComment[];
-      callback(comments);
-    });
   },
 
   /**
