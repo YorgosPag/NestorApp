@@ -55,5 +55,34 @@
 - `src/i18n/locales/el/parking.json`
 - `src/i18n/locales/en/parking.json`
 
+## Canonical Component — SSoT (Phase 2, 2026-04-19)
+
+**Card 3 (Description & Notes) is rendered via a shared, presentational component**:
+
+- **File**: `src/components/shared/space-info/DescriptionNotesCard.tsx`
+- **Props**: `description`, `notes`, `isEditing`, `onDescriptionChange`, `onNotesChange`, `labels: { title, description, notes }`
+- **Styling**: `Card` + `CardHeader` + `CardTitle` with `StickyNote` icon (violet) and typography/icon/colors tokens resolved via design-system hooks (`useIconSizes`, `useTypography`, `useSemanticColors`).
+- **i18n**: translated labels are passed in by the caller (pattern ADR-280 — per-entity namespace).
+- **Registry**: `.ssot-registry.json` → `description-notes-card` (tier 3). New inline re-implementations are blocked by the SSoT ratchet pre-commit hook.
+
+### Consumers
+
+| Entity | File | Labels source |
+|---|---|---|
+| Storage | `src/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab.tsx` | `storage.general.descriptionNotes` + `storage.general.fields.description` + `storage.general.fields.notes` |
+| Parking | `src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab.tsx` | `parking.general.descriptionNotes` + `parking.general.fields.description` + `parking.general.fields.notes` |
+
+### Parking — description field added
+- `ParkingSpot` interface (`src/types/parking.ts`) gained an optional `description?: string` so Parking has the SAME UI as Storage (Card 3 with two textareas).
+- `ParkingFormState.description` initialised from `parking.description || ''`, saved via diff in both create and edit paths of `handleSave`.
+- Resolves the "pending decision" comment originally present at the bottom of `ParkingGeneralTab.tsx` (removed in this phase).
+
+## Changelog
+
+- **2026-03-10** — Initial implementation: unified section order across Storage/Parking/Units (Phase 1).
+- **2026-04-19** — Phase 2 (SSoT): extracted Card 3 to `DescriptionNotesCard` (shared, presentational). Storage refactored to consume it. Parking re-introduced Card 3 via the shared component and gained `description` field on its type/form/save path. Registry entry `description-notes-card` added to `.ssot-registry.json`. Locale keys `general.descriptionNotes` + `general.fields.description` + `general.fields.notes` added to `parking.json` (el + en).
+
 ## Related ADRs
 - ADR-193: Field Display Domain Separation (predecessor — caused metadata card removal)
+- ADR-280: i18n Namespace per-domain (Phase 2 keeps labels per-entity, not centralized)
+- ADR-294: SSoT Ratchet Enforcement (guarantees no future inline duplication)

@@ -43,6 +43,7 @@
     "location": "Location",
     "financial": "Financial Information",
     "notes": "Notes",
+    "descriptionNotes": "Description & Notes",
     "updateInfo": "Update Information",
     "unknown": "Unknown",
     "notSet": "Not set",
@@ -64,7 +65,9 @@
       "createdAt": "Created",
       "lastUpdated": "Last Updated",
       "createdBy": "Created by",
-      "locationZone": "Location Zone"
+      "locationZone": "Location Zone",
+      "description": "Description",
+      "notes": "Notes"
     },
     "types": {
       "standard": "Standard",

@@ -43,6 +43,7 @@
     "location": "Τοποθεσία",
     "financial": "Οικονομικά Στοιχεία",
     "notes": "Σημειώσεις",
+    "descriptionNotes": "Περιγραφή & Σημειώσεις",
     "updateInfo": "Στοιχεία Ενημέρωσης",
     "unknown": "Άγνωστο",
     "notSet": "Δεν έχει οριστεί",
@@ -64,7 +65,9 @@
       "createdAt": "Δημιουργήθηκε",
       "lastUpdated": "Τελευταία Ενημέρωση",
       "createdBy": "Δημιουργήθηκε από",
-      "locationZone": "Ζώνη Τοποθεσίας"
+      "locationZone": "Ζώνη Τοποθεσίας",
+      "description": "Περιγραφή",
+      "notes": "Σημειώσεις"
     },
     "types": {
       "standard": "Κανονική",

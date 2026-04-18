@@ -41,6 +41,7 @@ import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
+import { DescriptionNotesCard } from '@/components/shared/space-info/DescriptionNotesCard';
 
 const logger = createModuleLogger('ParkingGeneralTab');
 
@@ -72,6 +73,7 @@ interface ParkingFormState {
   floorId: string;
   location: string;
   area: string;
+  description: string;
   notes: string;
 }
 
@@ -113,6 +115,7 @@ function buildFormState(parking: ParkingSpot): ParkingFormState {
     floorId: parking.floorId || '',
     location: parking.location || '',
     area: parking.area !== undefined ? String(parking.area) : '',
+    description: parking.description || '',
     notes: parking.notes || '',
   };
 }
@@ -232,6 +235,7 @@ export function ParkingGeneralTab({
         if (form.floorId) payload.floorId = form.floorId;
         if (form.location.trim()) payload.location = form.location.trim();
         if (form.area) payload.area = parseFloat(form.area);
+        if (form.description.trim()) payload.description = form.description.trim();
         if (form.notes.trim()) payload.notes = form.notes.trim();
 
         const result = await createParkingWithPolicy<{ parkingSpotId: string }>({ payload });
@@ -262,6 +266,7 @@ export function ParkingGeneralTab({
       const newArea = form.area ? parseFloat(form.area) : undefined;
       if (newArea !== parking.area) payload.area = newArea ?? null;
 
+      if (form.description.trim() !== (parking.description || '')) payload.description = form.description.trim();
       if (form.notes.trim() !== (parking.notes || '')) payload.notes = form.notes.trim();
 
       // ADR-200: Include building link change from centralized hook
@@ -455,7 +460,19 @@ export function ParkingGeneralTab({
 
       {/* ADR-193: Financial Card (price, price/m²) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
-      {/* ADR-194: Notes + Update Info cards αφαιρέθηκαν — audit trail θα γίνει κεντρικά (pending decision) */}
+      {/* ADR-194: Description & Notes — SSoT shared card (DescriptionNotesCard) */}
+      <DescriptionNotesCard
+        description={form.description}
+        notes={form.notes}
+        isEditing={isEditing}
+        onDescriptionChange={(v) => updateField('description', v)}
+        onNotesChange={(v) => updateField('notes', v)}
+        labels={{
+          title: t('general.descriptionNotes'),
+          description: t('general.fields.description'),
+          notes: t('general.fields.notes'),
+        }}
+      />
     </div>
   );
 }

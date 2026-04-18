@@ -13,7 +13,7 @@ import {
   STORAGE_STATUSES,
   buildFormState,
 } from './storage-general-tab-config';
-import { MapPin, StickyNote, Lock } from 'lucide-react';
+import { MapPin, Lock } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -24,7 +24,6 @@ import { createStorageWithPolicy, updateStorageWithPolicy } from '@/services/sto
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -43,6 +42,7 @@ import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
+import { DescriptionNotesCard } from '@/components/shared/space-info/DescriptionNotesCard';
 
 const logger = createModuleLogger('StorageGeneralTab');
 
@@ -433,35 +433,19 @@ export function StorageGeneralTab({
 
       {/* ADR-193: Financial Card (price, price/m², project) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
-      {/* Description & Notes Card */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <StickyNote className={cn(iconSizes.md, 'text-violet-500')} />
-            {t('general.descriptionNotes')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <fieldset className="space-y-1.5">
-            <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.description')}</Label>
-            <Textarea
-              value={form.description}
-              onChange={(e) => updateField('description', e.target.value)}
-              className="h-20 text-sm resize-none"
-              disabled={!isEditing}
-            />
-          </fieldset>
-          <fieldset className="space-y-1.5">
-            <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.notes')}</Label>
-            <Textarea
-              value={form.notes}
-              onChange={(e) => updateField('notes', e.target.value)}
-              className="h-20 text-sm resize-none"
-              disabled={!isEditing}
-            />
-          </fieldset>
-        </CardContent>
-      </Card>
+      {/* ADR-194: Description & Notes — SSoT shared card */}
+      <DescriptionNotesCard
+        description={form.description}
+        notes={form.notes}
+        isEditing={isEditing}
+        onDescriptionChange={(v) => updateField('description', v)}
+        onNotesChange={(v) => updateField('notes', v)}
+        labels={{
+          title: t('general.descriptionNotes'),
+          description: t('general.fields.description'),
+          notes: t('general.fields.notes'),
+        }}
+      />
 
       {/* ADR-195: Update Information Card αφαιρέθηκε — audit trail θα γίνει κεντρικά (EntityAuditService + ActivityTab) */}
     </div>

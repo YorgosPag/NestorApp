@@ -75,6 +75,8 @@ export interface ParkingSpot {
   area?: number;
   /** Price in euros */
   price?: number;
+  /** Freeform description (separate from notes). ADR-194 */
+  description?: string;
   /** Freeform notes */
   notes?: string;
   /** Tenant company ID (server-injected) */

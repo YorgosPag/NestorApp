@@ -988,6 +988,20 @@
         "src/types/sharing/"
       ],
       "tier": 2
+    },
+
+    "_comment_tier3_adr194": "=== TIER 3 — ADR-194 (2026-04-19): description+notes card SSoT ===",
+
+    "description-notes-card": {
+      "ssotFile": "src/components/shared/space-info/DescriptionNotesCard.tsx",
+      "description": "Paired description+notes textareas on entity info tabs (storage, parking, future units/offices) MUST render via DescriptionNotesCard. Inline re-implementation of the pattern (Card wrapper with two Textarea fields bound to description+notes fields of a form state) is forbidden. Keeps the Card/Textarea layout and the StickyNote/violet styling consistent across entities. ADR-194.",
+      "forbiddenPatterns": [
+        "descriptionNotes['\"]\\s*\\)[\\s\\S]{0,400}<Textarea[\\s\\S]{0,800}<Textarea"
+      ],
+      "allowlist": [
+        "src/components/shared/space-info/DescriptionNotesCard.tsx"
+      ],
+      "tier": 3
     }
   }
 }
