@@ -80,6 +80,12 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
 
 ## Changelog
 
+- **2026-04-19**: UX discoverability fix — floorplan upload now has explicit action button
+  - MODIFIED: `FloorsTabContent.tsx` — added dedicated Map icon Button in actions column (tooltip: `uploadFloorplan` / `collapseFloor`) that toggles `FloorFloorplanInline` expansion
+  - MODIFIED: floor name cell is now a `<button>` — clicking the name (next to the Map icon) also toggles expansion
+  - Actions column widened `w-24` → `w-32` to fit 3 buttons (floorplan + edit + delete)
+  - Root cause: chevron-only expansion left users thinking only level metadata (number/name/elevation) was editable; upload UI was invisible until discovered
+  - Zero backend changes; `FloorFloorplanInline` contract unchanged
 - **2026-02-19**: Initial implementation — expandable floor rows with inline EntityFilesManager
 - **2026-02-19**: Extended expand pattern to Storage, Parking, Units tabs via centralized shared components
   - NEW: `SpaceFloorplanInline` — generic inline floorplan for storage_unit, parking_spot, unit

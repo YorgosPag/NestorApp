@@ -115,7 +115,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                 <th className="px-2 py-2">{t('tabs.floors.name')}</th>
                 <th className="w-32 px-2 py-2">{t('tabs.floors.elevation')}</th>
                 <th className="w-20 px-2 py-2 text-center">{t('tabs.floors.units')}</th>
-                <th className="w-24 px-2 py-2 text-right">{t('tabs.floors.actions')}</th>
+                <th className="w-32 px-2 py-2 text-right">{t('tabs.floors.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -170,12 +170,36 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                         <>
                           <td className="px-2 py-2 font-mono text-sm font-medium">{floor.number}</td>
                           <td className="px-2 py-2">
-                            <span className="flex items-center gap-2">{floor.name}<Map className={`h-3.5 w-3.5 ${colors.text.muted} opacity-50`} aria-hidden="true" /></span>
+                            <button
+                              type="button"
+                              onClick={() => toggleFloorExpand(floor.id)}
+                              className="flex items-center gap-2 text-left hover:text-primary transition-colors"
+                            >
+                              {floor.name}
+                              <Map className={cn("h-3.5 w-3.5", isExpanded ? "text-primary" : `${colors.text.muted} opacity-70`)} aria-hidden="true" />
+                            </button>
                           </td>
                           <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{formatElevation(floor.elevation)}</td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">
+                              <TooltipProvider delayDuration={300}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant={isExpanded ? "default" : "ghost"}
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => toggleFloorExpand(floor.id)}
+                                    >
+                                      <Map className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {isExpanded ? t('tabs.floors.collapseFloor') : t('tabs.floors.uploadFloorplan')}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(floor)}><Pencil className="h-3.5 w-3.5" /></Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(floor)} disabled={deletingId === floor.id}>
                                 {deletingId === floor.id ? <Spinner size="small" color="inherit" /> : <Trash2 className="h-3.5 w-3.5" />}
