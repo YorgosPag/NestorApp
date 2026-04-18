@@ -108,13 +108,13 @@ export function ApprovalPanel({
   // Real-time subscription
   useEffect(() => {
     if (!fileApprovalCache.hasLoaded(fileId)) setLoading(true);
-    const unsub = FileApprovalService.subscribeToApprovals(fileId, companyId, (data) => {
+    const unsub = FileApprovalService.subscribeToApprovals(fileId, (data) => {
       fileApprovalCache.set(data, fileId);
       setApprovals(data);
       setLoading(false);
     });
     return unsub;
-  }, [fileId, companyId]);
+  }, [fileId]);
 
   const handleCreateApproval = useCallback(async () => {
     if (newApprovers.length === 0) return;

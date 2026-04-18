@@ -21,7 +21,6 @@ import {
   getDocs,
   updateDoc,
   serverTimestamp,
-  onSnapshot,
   type DocumentData,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -30,7 +29,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { FileAuditService } from './file-audit.service';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { createModuleLogger } from '@/lib/telemetry';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+
+const log = createModuleLogger('file-approval.service');
 
 // ============================================================================
 // TYPES
@@ -160,22 +162,25 @@ export const FileApprovalService = {
   },
 
   /**
-   * Subscribe to approval updates for a file
+   * Subscribe to approval updates for a file.
+   * Tenant isolation (companyId filter) auto-injected by firestoreQueryService
+   * from the authenticated user's context (ADR-214).
    */
   subscribeToApprovals(
     fileId: string,
-    companyId: string,
     callback: (approvals: FileApproval[]) => void
   ): Unsubscribe {
-    const q = query(
-      collection(db, COLLECTIONS.FILE_APPROVALS),
-      where('companyId', '==', companyId),
-      where('fileId', '==', fileId),
-      orderBy('createdAt', 'desc')
+    return firestoreQueryService.subscribe<FileApproval>(
+      'FILE_APPROVALS',
+      (result) => callback(result.documents),
+      (err) => log.error('subscribeToApprovals failed', { fileId, err }),
+      {
+        constraints: [
+          where('fileId', '==', fileId),
+          orderBy('createdAt', 'desc'),
+        ],
+      }
     );
-    return onSnapshot(q, (snapshot) => {
-      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as FileApproval[]);
-    });
   },
 
   /**
