@@ -285,6 +285,17 @@
         "functions/src/shared/dxf-raster-generator.ts"
       ]
     },
+    "decode-processed-dxf-json": {
+      "ssotFile": "src/app/api/admin/migrate-dxf-thumbnails/decode-processed-json.ts",
+      "description": "gzip-aware decoder for `.dxf.processed.json` payloads (ADR-033 writer uses pako.gzip). Any server-side consumer of the processed JSON must go through this helper so the gzip magic-byte handling stays in one place. Regression pin: 2026-04-18 — the initial ADR-312 Phase 3 back-fill assumed plain UTF-8 and failed on every existing processed file. The functions/shared mirror is kept byte-for-byte in sync.",
+      "forbiddenPatterns": [
+        "gunzipSync\\s*\\([^)]*processed"
+      ],
+      "allowlist": [
+        "src/app/api/admin/migrate-dxf-thumbnails/decode-processed-json.ts",
+        "functions/src/shared/decode-processed-json.ts"
+      ]
+    },
     "property-media-reader": {
       "ssotFile": "src/services/property-media/property-media.service.ts",
       "description": "Reading property-linked media (photos, floorplans) from the `files` collection on the server must go through PropertyMediaService (listPropertyMedia / downloadPropertyMedia / countPropertyMedia). The service centralises the canonical filter set (companyId + entityType=property + entityId + category), active-lifecycle pruning, createdAt sorting, and jsPDF mime allowlisting for server-side PDF embedding. Forbidden: inline `.collection(COLLECTIONS.FILES).where('entityType','==','property')...` pipelines outside the service — each duplicate is a chance for tenant-isolation or lifecycle drift. ADR-312 (Property Showcase), ADR-031 (File Storage).",
@@ -847,6 +858,75 @@
       "allowlist": [
         "src/lib/cron-auth.ts"
       ]
+    },
+
+    "_comment_tier8": "=== TIER 8: ADR-314 PHASE A — CORE SSoT MODULES (2026-04-18) ===",
+
+    "enterprise-id-convenience": {
+      "ssotFile": "src/services/enterprise-id-convenience.ts",
+      "description": "All generate*Id() named functions must be declared ONLY in enterprise-id.service.ts (core) or enterprise-id-convenience.ts (barrel). No local wrappers/duplicates. Allowlist covers the sealed SSoT set + the React hook barrel (useEnterpriseIds) + the server-side composite-key ID generators (id-generation.ts — different purpose). ADR-314 Phase A.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+generate[A-Z][a-zA-Z]*Id\\b"
+      ],
+      "allowlist": [
+        "src/services/enterprise-id.service.ts",
+        "src/services/enterprise-id-convenience.ts",
+        "src/services/enterprise-id-prefixes.ts",
+        "src/services/enterprise-id-migration.service.ts",
+        "src/hooks/useEnterpriseIds.ts",
+        "src/server/lib/id-generation.ts"
+      ],
+      "tier": 0
+    },
+    "intl-formatting": {
+      "ssotFile": "src/lib/intl-formatting.ts",
+      "description": "Intl API wrappers (formatDate/formatDateTime/formatRelativeTime/formatCurrency/formatNumber/formatPercentage/formatPriceWithUnit/formatList/sortByLocale/compareByLocale/isRTLLocale/getTextDirection) must be declared ONLY in intl-formatting.ts. Phase A baseline freezes scattered local formatters; Phase B/C migrate callers. ADR-314 Phase A.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+(formatDate|formatDateTime|formatRelativeTime|formatCurrency|formatNumber|formatPercentage|formatPriceWithUnit|formatList|sortByLocale|compareByLocale|isRTLLocale|getTextDirection)\\b"
+      ],
+      "allowlist": [
+        "src/lib/intl-formatting.ts",
+        "src/lib/intl-utils.ts",
+        "src/lib/intl-domain.ts"
+      ],
+      "tier": 3
+    },
+    "intl-domain": {
+      "ssotFile": "src/lib/intl-domain.ts",
+      "description": "Domain-specific Intl wrappers (formatFloorLabel/formatFloorString/getCategoryLabel/getStatusLabel/getPricePerSqmUnit/formatDateShort/formatDateLong/formatDateForDisplay/formatDateGreek/formatCurrencyWhole/formatCurrencyCompact/getDaysUntilCompletion/formatFlexibleDateTime/formatFlexibleDate/formatFlexibleTimeOnly) must be declared ONLY in intl-domain.ts. ADR-314 Phase A.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+(formatFloorLabel|formatFloorString|getCategoryLabel|getPricePerSqmUnit|formatDateShort|formatDateLong|formatDateForDisplay|formatDateGreek|formatCurrencyWhole|formatCurrencyCompact|getDaysUntilCompletion|formatFlexibleDateTime|formatFlexibleDate|formatFlexibleTimeOnly)\\b"
+      ],
+      "allowlist": [
+        "src/lib/intl-domain.ts",
+        "src/lib/intl-utils.ts"
+      ],
+      "tier": 3
+    },
+    "date-local": {
+      "ssotFile": "src/lib/date-local.ts",
+      "description": "Date normalization + ISO/millis conversion canonical module. Blocks: (a) re-declaration of normalizeToDate/normalizeToISO/fieldToISO/normalizeToMillis/getNestedTimestampISO/toLocalDateInputValue/combineLocalDateTime; (b) scattered new Date().toISOString() — migrated to nowISO() in Phase C.1; (c) scattered Timestamp.fromDate(new Date()) — migrated to nowTimestamp() in Phase C.2. Baseline freezes current 309 + 19 legacy occurrences. ADR-314 Phase A + C.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+(normalizeToDate|normalizeToISO|fieldToISO|normalizeToMillis|getNestedTimestampISO|toLocalDateInputValue|combineLocalDateTime)\\b",
+        "new\\s+Date\\s*\\(\\s*\\)\\.toISOString\\s*\\(\\s*\\)",
+        "Timestamp\\.fromDate\\s*\\(\\s*new\\s+Date\\s*\\("
+      ],
+      "allowlist": [
+        "src/lib/date-local.ts"
+      ],
+      "tier": 3
+    },
+    "design-system": {
+      "ssotFile": "src/lib/design-system.ts",
+      "description": "Design system helpers (getStatusColor/getTypographyClass/getSpacingClass/getComponentSizeClass/getInteractiveStateClass/getGridClass/getShadowClass/getBorderRadiusClass/getResponsiveClass/getStatusBadgeClass/getFormFieldClass) must be declared ONLY in design-system.ts. Phase B will resolve getStatusColor/getStatusLabel SSoT conflicts (3 declaring files — design-system vs obligations-utils vs project-utils). Allowlist covers the canonical re-alias site in property-status-core. ADR-314 Phase A.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+(getStatusColor|getTypographyClass|getSpacingClass|getComponentSizeClass|getInteractiveStateClass|getGridClass|getShadowClass|getBorderRadiusClass|getResponsiveClass|getStatusBadgeClass|getFormFieldClass)\\b"
+      ],
+      "allowlist": [
+        "src/lib/design-system.ts",
+        "src/constants/domains/property-status-core.ts"
+      ],
+      "tier": 3
     }
   }
 }

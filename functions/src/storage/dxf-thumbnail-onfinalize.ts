@@ -39,6 +39,7 @@ import {
   DXF_THUMBNAIL_WIDTH,
   DXF_THUMBNAIL_HEIGHT,
 } from '../shared/dxf-raster-generator';
+import { decodeProcessedJsonBytes } from '../shared/decode-processed-json';
 
 const PROCESSED_SUFFIX = '.dxf.processed.json';
 const THUMBNAIL_SUFFIX = '.thumbnail.png';
@@ -62,7 +63,7 @@ export async function regenerateDxfThumbnail(
   const thumbnailPath = `${args.dxfStoragePath}${THUMBNAIL_SUFFIX}`;
 
   const [processedBuffer] = await bucket.file(processedPath).download();
-  const processedText = processedBuffer.toString('utf8');
+  const processedText = decodeProcessedJsonBytes(processedBuffer);
   let sceneJson: unknown;
   try {
     sceneJson = JSON.parse(processedText);

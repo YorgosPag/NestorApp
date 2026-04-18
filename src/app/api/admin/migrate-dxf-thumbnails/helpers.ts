@@ -17,6 +17,7 @@ import { rasterizeDxfScene } from '@/services/dxf-raster/dxf-raster-generator';
 import type { DxfSceneInput } from '@/services/dxf-raster/svg-from-dxf-scene';
 import { generateOpaqueToken } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { decodeProcessedJsonBytes } from './decode-processed-json';
 
 const logger = createModuleLogger('MigrateDxfThumbnails');
 
@@ -133,7 +134,7 @@ async function rasterizeAndPersist(args: {
   if (!adminDb) throw new Error('Admin Firestore unavailable');
 
   const [processedBuffer] = await bucket.file(args.processedPath).download();
-  const raw = JSON.parse(processedBuffer.toString('utf8')) as unknown;
+  const raw = JSON.parse(decodeProcessedJsonBytes(processedBuffer)) as unknown;
   const scene = extractScene(raw);
   if (!scene) throw new Error('processed JSON has no entities');
 
