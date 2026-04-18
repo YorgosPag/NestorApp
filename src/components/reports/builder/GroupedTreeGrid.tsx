@@ -54,7 +54,7 @@ function getNestedVal(obj: Record<string, unknown>, dotPath: string): unknown {
   return current;
 }
 
-function formatNumber(value: number): string {
+function formatOneDecimal(value: number): string {
   return new Intl.NumberFormat('el-GR', { maximumFractionDigits: 1 }).format(value);
 }
 
@@ -165,7 +165,7 @@ export function GroupedTreeGrid({
             )}
             {aggKeys.map(key => (
               <td key={key} className="px-3 py-2 text-right">
-                {formatNumber(grandTotals[key] ?? 0)}
+                {formatOneDecimal(grandTotals[key] ?? 0)}
               </td>
             ))}
           </tr>
@@ -234,7 +234,7 @@ function GroupRow({
         )}
         {aggKeys.map(key => (
           <td key={key} className="px-3 py-2 text-right">
-            {formatNumber(group.aggregates[key] ?? 0)}
+            {formatOneDecimal(group.aggregates[key] ?? 0)}
           </td>
         ))}
       </tr>

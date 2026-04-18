@@ -26,6 +26,7 @@ import type {
 import { getErrorMessage } from '@/lib/error-utils';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
+import { formatCurrencyWhole as formatCurrency } from '@/lib/intl-domain';
 
 // ADR-300: Module-level cache survives React unmount/remount (navigation)
 // Keyed by filterKey (projectFilter_buildingFilter) so different filters don't collide
@@ -210,10 +211,3 @@ function buildKPIs(
   ];
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}

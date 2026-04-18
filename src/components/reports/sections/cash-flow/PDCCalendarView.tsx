@@ -28,6 +28,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import type { PDCCalendarDay } from '@/services/cash-flow/cash-flow.types';
+import { formatCurrencyWhole as formatCurrency } from '@/lib/intl-domain';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -35,18 +36,6 @@ import type { PDCCalendarDay } from '@/services/cash-flow/cash-flow.types';
 
 interface PDCCalendarViewProps {
   days: PDCCalendarDay[];
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 // ---------------------------------------------------------------------------

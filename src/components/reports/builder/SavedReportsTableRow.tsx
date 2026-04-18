@@ -41,7 +41,7 @@ interface SavedReportsTableRowProps {
 // Helpers
 // ============================================================================
 
-function formatRelativeTime(isoDate: string | null, neverLabel: string, recentLabel: string): string {
+function formatCompactRelativeTime(isoDate: string | null, neverLabel: string, recentLabel: string): string {
   if (!isoDate) return neverLabel;
 
   const date = new Date(isoDate);
@@ -151,7 +151,7 @@ export function SavedReportsTableRow({
 
       {/* Last Run */}
       <td className="hidden px-3 py-3 text-sm text-muted-foreground md:table-cell">
-        {formatRelativeTime(report.lastRunAt, t('messages.neverRun'), t('messages.recentRun'))}
+        {formatCompactRelativeTime(report.lastRunAt, t('messages.neverRun'), t('messages.recentRun'))}
       </td>
 
       {/* Actions */}

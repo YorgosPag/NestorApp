@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import type { CashFlowMonthRow } from '@/services/cash-flow/cash-flow.types';
+import { formatCurrencyWhole as formatCurrency } from '@/lib/intl-domain';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -33,14 +34,6 @@ interface CashFlowTableProps {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function cellClass(value: number): string {
   if (value < 0) return 'text-destructive font-medium';
