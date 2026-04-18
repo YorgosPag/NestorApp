@@ -20,8 +20,8 @@ function makeLabels(): PropertyShowcasePDFLabels {
     specsSection: 'Specs',
     featuresSection: 'Features',
     descriptionSection: 'Description',
-    mediaSection: 'Media',
     photosSection: 'Photos',
+    floorplansSection: 'Floorplans',
     fieldType: 'Type',
     fieldBuilding: 'Building',
     fieldFloor: 'Floor',
@@ -36,10 +36,6 @@ function makeLabels(): PropertyShowcasePDFLabels {
     fieldOrientation: 'Orientation',
     fieldEnergyClass: 'Energy',
     fieldCondition: 'Condition',
-    fieldPhotos: 'Photos',
-    fieldFloorplans: 'Floorplans',
-    fieldVideo: 'Video',
-    fieldShowcaseUrl: 'URL',
     areaUnit: 'm2',
     footerNote: 'Footer',
   };
@@ -94,14 +90,17 @@ function makeData(photos: PropertyShowcasePDFData['photos']): PropertyShowcasePD
 const MARGINS: Margins = { top: 20, right: 18, bottom: 20, left: 18 };
 
 describe('PropertyShowcaseRenderer photo embedding', () => {
-  it('adds no extra page when no photos are supplied', () => {
+  // Layout (ADR-312 Phase 3.3): cover + specs page always, photo page when
+  // photos present, floorplan page when floorplans present. Mirrors
+  // ShowcaseClient.tsx section order on the public web page.
+  it('adds only the specs page when no photos are supplied', () => {
     const { doc, addImageCalls, getPageCount } = makeDoc();
     new PropertyShowcaseRenderer().render(doc, MARGINS, makeData([]));
     expect(addImageCalls).toHaveLength(0);
-    expect(getPageCount()).toBe(1);
+    expect(getPageCount()).toBe(2);
   });
 
-  it('adds exactly one page and one addImage call per photo', () => {
+  it('produces cover + photos + specs pages and one addImage call per photo', () => {
     const { doc, addImageCalls, getPageCount } = makeDoc();
     const photos = [
       { id: 'p1', bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), format: 'JPEG' as const },
@@ -109,7 +108,7 @@ describe('PropertyShowcaseRenderer photo embedding', () => {
       { id: 'p3', bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), format: 'JPEG' as const },
     ];
     new PropertyShowcaseRenderer().render(doc, MARGINS, makeData(photos));
-    expect(getPageCount()).toBe(2);
+    expect(getPageCount()).toBe(3);
     expect(addImageCalls).toHaveLength(3);
   });
 

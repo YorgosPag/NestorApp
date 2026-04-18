@@ -78,7 +78,6 @@ export interface PropertyShowcasePDFLabels {
   specsSection: string;
   featuresSection: string;
   descriptionSection: string;
-  mediaSection: string;
   photosSection: string;
   floorplansSection: string;
   fieldType: string;
@@ -95,10 +94,6 @@ export interface PropertyShowcasePDFLabels {
   fieldOrientation: string;
   fieldEnergyClass: string;
   fieldCondition: string;
-  fieldPhotos: string;
-  fieldFloorplans: string;
-  fieldVideo: string;
-  fieldShowcaseUrl: string;
   areaUnit: string;
   footerNote: string;
 }
@@ -135,18 +130,16 @@ export class PropertyShowcaseRenderer {
     const contentWidth = pageWidth - margins.left - margins.right;
     let y = margins.top;
 
+    // Section order mirrors the public showcase web page
+    // (src/components/property-showcase/ShowcaseClient.tsx): brand header →
+    // name + description → photos → specs → floorplans. Phase 3.3 (ADR-312).
     y = this.drawBrandHeader(doc, y, margins, pageWidth, contentWidth, data);
     y += 8;
     y = this.drawTitle(doc, y, margins, pageWidth, data);
     y += 6;
-    y = this.drawSpecs(doc, y, margins, pageWidth, contentWidth, data);
-    y += 4;
-    y = this.drawFeatures(doc, y, margins, pageWidth, contentWidth, data);
-    y += 4;
-    y = this.drawDescription(doc, y, margins, pageWidth, contentWidth, data);
-    y += 4;
-    y = this.drawMediaSection(doc, y, margins, pageWidth, contentWidth, data);
+    this.drawDescription(doc, y, margins, pageWidth, contentWidth, data);
     this.drawPhotoGrid(doc, margins, pageWidth, contentWidth, data);
+    this.drawSpecsPage(doc, margins, pageWidth, contentWidth, data);
     this.drawFloorplanGrid(doc, margins, pageWidth, contentWidth, data);
     this.drawFooter(doc, margins, pageWidth, data);
   }
@@ -300,22 +293,18 @@ export class PropertyShowcaseRenderer {
     return y;
   }
 
-  private drawMediaSection(
+  private drawSpecsPage(
     doc: IPDFDoc,
-    yStart: number,
     margins: Margins,
     pageWidth: number,
     contentWidth: number,
     data: PropertyShowcasePDFData
-  ): number {
-    let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.mediaSection);
-    y = this.drawField(doc, y, margins, pageWidth, contentWidth, data.labels.fieldPhotos, String(data.photoCount ?? 0));
-    y = this.drawField(doc, y, margins, pageWidth, contentWidth, data.labels.fieldFloorplans, String(data.floorplanCount ?? 0));
-    if (data.videoUrl) {
-      y = this.drawField(doc, y, margins, pageWidth, contentWidth, data.labels.fieldVideo, data.videoUrl);
-    }
-    y = this.drawField(doc, y, margins, pageWidth, contentWidth, data.labels.fieldShowcaseUrl, data.showcaseUrl);
-    return y;
+  ): void {
+    doc.addPage();
+    let y = margins.top;
+    y = this.drawSpecs(doc, y, margins, pageWidth, contentWidth, data);
+    y += 4;
+    this.drawFeatures(doc, y, margins, pageWidth, contentWidth, data);
   }
 
   private drawPhotoGrid(
