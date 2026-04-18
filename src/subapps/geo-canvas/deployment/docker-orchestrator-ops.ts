@@ -6,7 +6,10 @@
  * Extracted from DockerOrchestrator.ts per ADR-065 (SRP compliance).
  */
 
-import { generateDeploymentId as generateEnterpriseDeploymentId, generateContainerId } from '@/services/enterprise-id.service';
+import { generateContainerId } from '@/services/enterprise-id.service';
+
+// ADR-314 C.5.29: trivial wrapper collapsed to pure re-export (enterprise-id-convenience rule).
+export { generateDeploymentId } from '@/services/enterprise-id.service';
 
 import type {
   ContainerConfig,
@@ -215,10 +218,6 @@ export function simulateContainerDeployment(container: ContainerConfig): Promise
     const deploymentTime = 1000 + (container.replicas * 500);
     setTimeout(resolve, deploymentTime);
   });
-}
-
-export function generateDeploymentId(): string {
-  return generateEnterpriseDeploymentId();
 }
 
 export function generateHash(): string {
