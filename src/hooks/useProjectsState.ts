@@ -61,7 +61,7 @@ export function useProjectsState(initialProjects: Project[]) {
     projects,
     setProjects,
     selectedProject,
-    setSelectedProject: setSelectedProject as (project: Project | null) => void,
+    setSelectedProject,
     viewMode,
     setViewMode,
     searchTerm,

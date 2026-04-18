@@ -145,6 +145,8 @@ export class RestoreService {
     restoreId: string;
     documentsRestored: number;
     documentsSkipped: number;
+    storageRestored: number;
+    storageSkipped: number;
     snapshotId: string;
     durationMs: number;
   }> {

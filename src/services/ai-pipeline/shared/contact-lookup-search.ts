@@ -18,6 +18,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { fuzzyGreekMatch } from './greek-text-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 
 import type {
   ContactMatch,

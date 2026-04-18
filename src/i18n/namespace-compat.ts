@@ -372,7 +372,8 @@ function remapNamespaceKey<TNamespace extends LegacyNamespace>(legacyNamespace: 
 
   // Fall back to root-level mapping
   const legacyRoot = getLegacyRoot(explicit.bareKey) as NamespaceRootMap<TNamespace>;
-  const targetNamespace: string | undefined = LEGACY_NAMESPACE_ROOT_MAP[legacyNamespace][legacyRoot];
+  const rootMap = LEGACY_NAMESPACE_ROOT_MAP[legacyNamespace] as Record<string, string>;
+  const targetNamespace: string | undefined = rootMap[legacyRoot as string];
   if (!targetNamespace) {
     return { key, options };
   }

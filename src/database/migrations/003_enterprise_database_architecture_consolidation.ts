@@ -130,8 +130,8 @@ class EnterpriseArchitectureConsolidationSteps {
         logger.info('🏗️ Migrating fragmented floorplans to unified enterprise collection...');
 
         const floorplanCollections = [
-          { source: 'building_floorplans', entityType: ENTITY_TYPES.BUILDING as const },
-          { source: 'project_floorplans', entityType: ENTITY_TYPES.PROJECT as const },
+          { source: 'building_floorplans', entityType: ENTITY_TYPES.BUILDING },
+          { source: 'project_floorplans', entityType: ENTITY_TYPES.PROJECT },
           { source: 'unit_floorplans', entityType: 'unit' as const }
         ];
 

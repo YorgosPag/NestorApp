@@ -59,7 +59,6 @@ const TYPE_LABELS: Record<string, string> = {
   business: "Επιχειρηματικό",
   official: "Επίσημο",
   informational: "Ενημερωτικό",
-  corporate: "Εταιρικό",
   marketing: "Marketing",
 };
 
@@ -197,7 +196,7 @@ function formatAreaScalar(value: string | number | boolean | null): string | und
  * Output: "Μικτό: 120 τ.μ., Καθαρό: 100 τ.μ., Μπαλκόνι: 15 τ.μ."
  */
 function formatAreasObject(raw: string): string | undefined {
-  const parsed = safeJsonParse<Record<string, unknown>>(raw, undefined);
+  const parsed = safeJsonParse<Record<string, unknown> | null>(raw, null);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
   const parts = Object.entries(parsed)
     .filter(([, v]) => v !== null && v !== undefined && v !== '')

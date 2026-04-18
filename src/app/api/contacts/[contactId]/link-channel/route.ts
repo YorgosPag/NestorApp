@@ -15,7 +15,7 @@
 
 import 'server-only';
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -111,7 +111,7 @@ function validateUnlinkRequest(body: unknown): UnlinkChannelRequest {
 async function handlePost(
   request: NextRequest,
   segmentData?: { params: Promise<{ contactId: string }> }
-): Promise<ReturnType<typeof apiSuccess>> {
+): Promise<NextResponse> {
   const { contactId } = await segmentData!.params;
 
   const handler = withAuth<ApiSuccessResponse<LinkChannelResponse>>(
@@ -191,7 +191,7 @@ async function handlePost(
 async function handleDelete(
   request: NextRequest,
   segmentData?: { params: Promise<{ contactId: string }> }
-): Promise<ReturnType<typeof apiSuccess>> {
+): Promise<NextResponse> {
   const { contactId } = await segmentData!.params;
 
   const handler = withAuth<ApiSuccessResponse<{ success: boolean }>>(
