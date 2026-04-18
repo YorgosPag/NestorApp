@@ -16,7 +16,7 @@ import { isFirebaseAvailable } from './firebase/availability';
 import { getFirestoreHelpers } from './firebase/helpers-lazy';
 import {
   getTemplateResolver,
-  formatCurrency,
+  formatTelegramCurrency,
   type TelegramLocale
 } from './templates/template-resolver';
 import { getPropertyTypeLabel } from './search/format';
@@ -180,7 +180,7 @@ export function formatSearchResults(
       responseText += `📐 ${t.getText('property.area')}: ${property.area} ${t.getText('formatting.areaUnit')}\n`;
     }
     if (property.price) {
-      responseText += `💰 ${t.getText('property.price')}: ${formatCurrency(property.price, locale)}\n`;
+      responseText += `💰 ${t.getText('property.price')}: ${formatTelegramCurrency(property.price, locale)}\n`;
     }
     if (property.building) {
       responseText += `🏢 ${property.building}\n`;

@@ -11,7 +11,7 @@
 import type { SearchCriteria, TelegramProperty } from '../shared/types';
 import { getCanonicalType } from '../catalogs/type-catalog';
 // Server-safe currency formatter (avoids @/lib/intl-utils → react-i18next → createContext)
-const formatCurrency = (amount: number): string =>
+const formatTelegramMaxPrice = (amount: number): string =>
   new Intl.NumberFormat('el', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
 
 // ============================================================================
@@ -126,7 +126,7 @@ export function formatCriteriaDisplay(criteria: SearchCriteria): string {
     parts.push(`Τύπος: ${criteria.type}`);
   }
   if (criteria.maxPrice) {
-    parts.push(`Μέχρι: ${formatCurrency(criteria.maxPrice)}`);
+    parts.push(`Μέχρι: ${formatTelegramMaxPrice(criteria.maxPrice)}`);
   }
   if (criteria.rooms) {
     parts.push(`Δωμάτια: ${criteria.rooms}`);

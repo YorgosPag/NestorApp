@@ -222,7 +222,7 @@ const LOCALE_MAP: Record<TelegramLocale, string> = {
  * Format currency for display
  * Uses Intl.NumberFormat with proper locale mapping
  */
-export function formatCurrency(amount: number, locale: TelegramLocale = DEFAULT_LOCALE): string {
+export function formatTelegramCurrency(amount: number, locale: TelegramLocale = DEFAULT_LOCALE): string {
   const resolver = getTemplateResolver(locale);
   const currencySymbol = resolver.getText('formatting.currency');
   const intlLocale = LOCALE_MAP[locale] || LOCALE_MAP.el;

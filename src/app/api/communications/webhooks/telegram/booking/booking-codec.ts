@@ -102,7 +102,10 @@ export async function resolveUnit(unitIdOrSuffix: string): Promise<PropertyInfo 
 
 const DAY_NAMES_FULL = ['Κυριακή', 'Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο'];
 
-export function formatDateGreek(dateStr: string): string {
+export function formatTelegramBookingDate(dateStr: string): string {
   const d = new Date(dateStr);
   return `${DAY_NAMES_FULL[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
 }
+
+// Back-compat alias — consumer migration pending (out of scope Boy Scout batch C.5.12)
+export { formatTelegramBookingDate as formatDateGreek };

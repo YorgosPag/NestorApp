@@ -12,7 +12,7 @@ import type { SearchResult, TelegramProperty } from '../shared/types';
 import { getTypeEntry } from '../catalogs/type-catalog';
 import {
   getTemplateResolver,
-  formatCurrency,
+  formatTelegramCurrency,
   formatArea,
   type TelegramLocale
 } from '../templates/template-resolver';
@@ -92,7 +92,7 @@ export function formatSearchResultsForTelegram(
       text += `🚪 ${t.getText('property.rooms')}: ${property.rooms}\n`;
     }
     if (property.price) {
-      text += `💰 ${t.getText('property.price')}: ${formatCurrency(property.price, locale)}\n`;
+      text += `💰 ${t.getText('property.price')}: ${formatTelegramCurrency(property.price, locale)}\n`;
     }
     if (property.building) {
       text += `🏢 ${property.building}\n`;
@@ -135,7 +135,7 @@ export function formatPropertyForTelegram(
     text += `${t.getText('property.floor')}: ${property.floor}\n`;
   }
   if (property.price) {
-    text += `${t.getText('property.price')}: ${formatCurrency(property.price, locale)}\n`;
+    text += `${t.getText('property.price')}: ${formatTelegramCurrency(property.price, locale)}\n`;
   }
   if (property.status) {
     text += `${t.getText('property.status')}: ${property.status}\n`;

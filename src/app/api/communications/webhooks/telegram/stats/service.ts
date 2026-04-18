@@ -14,7 +14,7 @@ import { getPropertySummary } from "./repo";
 import type { TelegramSendPayload } from "../telegram/types";
 import {
   getTemplateResolver,
-  formatCurrency,
+  formatTelegramCurrency,
   type TelegramLocale
 } from '../templates/template-resolver';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -46,7 +46,7 @@ export async function createStatsResponse(
     statsText += `🔒 <b>${t.getText('stats.sold', { count: stats.soldCount })}</b>\n\n`;
 
     if (stats.averagePrice > 0) {
-      statsText += `💰 <b>${t.getText('stats.averagePrice', { price: formatCurrency(Math.round(stats.averagePrice), locale) })}</b>\n\n`;
+      statsText += `💰 <b>${t.getText('stats.averagePrice', { price: formatTelegramCurrency(Math.round(stats.averagePrice), locale) })}</b>\n\n`;
     }
 
     // Format date based on locale
