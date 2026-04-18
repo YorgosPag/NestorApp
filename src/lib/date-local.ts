@@ -1,5 +1,16 @@
 
 
+/**
+ * Current timestamp as ISO 8601 string.
+ * Single source of truth for `new Date().toISOString()` — replaces every
+ * scattered occurrence so we have ONE place to change if we ever need to
+ * (a) inject a clock for tests, (b) switch to a monotonic source, or
+ * (c) normalise timezone handling.
+ *
+ * @see ADR-314 Phase C.1
+ */
+export const nowISO = (): string => new Date().toISOString();
+
 export function toLocalDateInputValue(d: Date): string { // 'YYYY-MM-DD'
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

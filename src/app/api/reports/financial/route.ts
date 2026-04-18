@@ -17,6 +17,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FinancialReportRoute');
 
@@ -59,7 +60,7 @@ export const GET = withStandardRateLimit(async function GET(
       } catch (err) {
         logger.error('Financial report failed', { error: getErrorMessage(err) });
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }

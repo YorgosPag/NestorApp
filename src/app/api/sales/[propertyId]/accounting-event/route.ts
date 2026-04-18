@@ -21,6 +21,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { SalesAccountingBridge } from '@/services/sales-accounting';
 import type { SalesAccountingEvent } from '@/services/sales-accounting';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // VALIDATION
@@ -139,7 +140,7 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({
       route: 'sales-accounting-event',
       status: 'deployed',
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       accountingConfigured: profile !== null,
       profileName: profile?.businessName ?? null,
     });

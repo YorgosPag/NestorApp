@@ -22,6 +22,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FloorsEnterpriseAuditRoute');
 
@@ -70,7 +71,7 @@ const getHandler = async (request: NextRequest) => {
         logger.info('Auth context', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         const audit: EnterpriseDatabaseAudit = {
-          auditTimestamp: new Date().toISOString(),
+          auditTimestamp: nowISO(),
           compliance: { level: 'UNACCEPTABLE', score: 0, blockers: [] },
           collections: {
             normalizedFloors: {

@@ -22,6 +22,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FloorsDiagnosticRoute');
 
@@ -78,7 +79,7 @@ const getHandler = async (request: NextRequest) => {
       logger.info('Auth context', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
       const result: FirestoreDiagnosticResult = {
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         summary: {
           overallHealth: 'FAILED',  // 🏢 ENTERPRISE: Default to worst case, updated after checks
           criticalIssues: [],

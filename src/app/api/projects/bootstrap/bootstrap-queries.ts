@@ -18,6 +18,7 @@ import { chunkArray } from "@/lib/array-utils";
 import { createModuleLogger } from "@/lib/telemetry";
 import type { BootstrapProject } from "./bootstrap-helpers";
 import { mapProjectDocument } from "./bootstrap-helpers";
+import { resolveCompanyDisplayName } from "@/services/company/company-name-resolver";
 
 const logger = createModuleLogger("ProjectsBootstrapQueries");
 
@@ -106,7 +107,13 @@ async function fetchCompaniesAdmin(
         const data = doc.data() as Partial<CompanyContact>;
         companyMap.set(doc.id, {
           id: doc.id,
-          name: data.companyName || data.displayName || "Unknown Company",
+          name: resolveCompanyDisplayName({
+            id: doc.id,
+            companyName: data.companyName,
+            tradeName: data.tradeName,
+            legalName: data.legalName,
+            displayName: data.displayName,
+          }),
         });
         companyIds.push(doc.id);
       });
@@ -151,7 +158,13 @@ async function fetchCompaniesTenant(
   const data = companyDoc.data() as Partial<CompanyContact>;
   companyMap.set(companyDoc.id, {
     id: companyDoc.id,
-    name: data?.companyName || data?.displayName || "Unknown Company",
+    name: resolveCompanyDisplayName({
+      id: companyDoc.id,
+      companyName: data?.companyName,
+      tradeName: data?.tradeName,
+      legalName: data?.legalName,
+      displayName: data?.displayName,
+    }),
   });
   companyIds.push(ctx.companyId);
 

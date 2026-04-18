@@ -29,6 +29,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
 import type { RestoreOptions, RestoreStatus } from '@/services/backup/backup-manifest.types';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('RestoreRoute');
 
@@ -78,7 +79,7 @@ async function handleRestore(
     const updateStatus = async (status: Partial<RestoreStatus>): Promise<void> => {
       try {
         await db.doc(RESTORE_STATUS_PATH).set(
-          { ...status, updatedAt: new Date().toISOString() },
+          { ...status, updatedAt: nowISO() },
           { merge: true },
         );
       } catch (error) {
@@ -98,7 +99,7 @@ async function handleRestore(
       phase: 'completed',
       documentsRestored: result.documentsRestored,
       documentsSkipped: result.documentsSkipped,
-      completedAt: new Date().toISOString(),
+      completedAt: nowISO(),
     });
 
     logger.info(`Restore completed: ${result.restoreId} — ${result.documentsRestored} docs in ${result.durationMs}ms`);
@@ -124,7 +125,7 @@ async function handleRestore(
         {
           phase: 'failed',
           error: errorMessage,
-          completedAt: new Date().toISOString(),
+          completedAt: nowISO(),
         },
         { merge: true },
       );

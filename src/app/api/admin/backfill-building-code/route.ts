@@ -30,7 +30,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { normalizeToMillis } from '@/lib/date-local';
+import { normalizeToMillis, nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -190,7 +190,7 @@ async function handleMigration(
 
     const report: BackfillReport = {
       dryRun,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       durationMs: Date.now() - startTime,
       projectsScanned: projects.length,
       totalBuildings,

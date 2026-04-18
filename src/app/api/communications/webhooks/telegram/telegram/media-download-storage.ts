@@ -4,6 +4,7 @@ import type { FileCategory } from '@/config/domain-constants';
 import { buildIngestionFileRecordData, type FileSourceMetadata } from '@/services/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ServerFileRecordResult, TenantResolutionResult } from './media-download-types';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('TelegramMediaStorage');
 
@@ -76,7 +77,7 @@ export async function createIngestionFileRecord(params: {
       messageId: String(params.messageId),
       fromUserId: params.fromUserId,
       senderName: params.senderName,
-      receivedAt: new Date().toISOString(),
+      receivedAt: nowISO(),
       ...(params.fileUniqueId ? { fileUniqueId: params.fileUniqueId } : {}),
     };
 
@@ -127,7 +128,7 @@ export async function uploadToFirebaseStorage(
     const file = bucket.file(storagePath);
     const metadata = {
       source: 'telegram',
-      uploadedAt: new Date().toISOString(),
+      uploadedAt: nowISO(),
       ...(customMetadata || {}),
     };
 

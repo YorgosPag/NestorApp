@@ -24,6 +24,7 @@ import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('NotificationsPreferencesRoute');
 
@@ -102,7 +103,7 @@ const basePUT = async (request: NextRequest) => {
       await docRef.set(
         {
           notificationPreferences: body,
-          updatedAt: new Date().toISOString()
+          updatedAt: nowISO()
         },
         { merge: true }
       );

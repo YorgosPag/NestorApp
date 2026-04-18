@@ -15,6 +15,7 @@ import { translateNaturalLanguageQuery } from '@/services/report-engine/ai-query
 import type { AITranslatedQuery } from '@/config/report-builder/report-builder-types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BuilderAIRoute');
 
@@ -41,14 +42,14 @@ export const POST = withStandardRateLimit(async function POST(
 
         if (!body.query || typeof body.query !== 'string' || body.query.trim().length === 0) {
           return NextResponse.json(
-            { success: false as const, error: 'query is required', timestamp: new Date().toISOString() },
+            { success: false as const, error: 'query is required', timestamp: nowISO() },
             { status: 400 },
           );
         }
 
         if (body.query.length > 500) {
           return NextResponse.json(
-            { success: false as const, error: 'query too long (max 500 chars)', timestamp: new Date().toISOString() },
+            { success: false as const, error: 'query too long (max 500 chars)', timestamp: nowISO() },
             { status: 400 },
           );
         }
@@ -60,7 +61,7 @@ export const POST = withStandardRateLimit(async function POST(
       } catch (err) {
         logger.error('AI translation failed', { error: getErrorMessage(err) });
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }

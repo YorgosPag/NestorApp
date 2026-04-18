@@ -23,6 +23,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('MigrateUnitsToProperties');
 
@@ -137,7 +138,7 @@ export const POST = withSensitiveRateLimit(withAuth(
         writeBatch.set(targetRef, {
           ...data,
           _migratedFrom: doc.id,
-          _migratedAt: new Date().toISOString(),
+          _migratedAt: nowISO(),
         });
 
         migrated.push({

@@ -19,6 +19,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('GdprDeleteRoute');
 
@@ -95,7 +96,7 @@ async function handler(
         downloadUrl: null,
         storagePath: null,
         isDeleted: true,
-        purgedAt: new Date().toISOString(),
+        purgedAt: nowISO(),
         purgedBy: 'gdpr-erasure',
       });
       results.filesDeleted++;

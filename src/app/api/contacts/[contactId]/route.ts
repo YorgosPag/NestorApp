@@ -10,6 +10,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { mapFirestoreContactToResponse } from './contact-data-mapper';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ContactRoute');
 
@@ -75,7 +76,7 @@ export async function GET(
       success: true,
       contact,
       contactId,
-      timestamp: new Date().toISOString()
+      timestamp: nowISO()
     });
 
       } catch (error) {
@@ -93,7 +94,7 @@ export async function GET(
             success: false,
             error: getErrorMessage(error, 'Άγνωστο σφάλμα φόρτωσης επαφής'),
             contactId: contactId || null,
-            timestamp: new Date().toISOString()
+            timestamp: nowISO()
           },
           { status: statusCode }
         );

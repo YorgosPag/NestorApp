@@ -34,6 +34,7 @@ import { migration as projectCodesMigration, executeDryRun as projectCodesDryRun
 import { migration as storageBuildingMigration, dryRun as storageBuildingDryRun, execute as storageBuildingExecute } from '@/database/migrations/006_normalize_storage_building_references';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('MigrationExecuteRoute');
 
@@ -85,7 +86,7 @@ async function handleMigrationExecution(
   try {
     const { migrationId, dryRun = false } = await request.json();
 
-    logger.info('ENTERPRISE MIGRATION SYSTEM', { migrationId, dryRun, startedAt: new Date().toISOString() });
+    logger.info('ENTERPRISE MIGRATION SYSTEM', { migrationId, dryRun, startedAt: nowISO() });
 
     // Initialize enterprise migration engine
     const migrationEngine = new MigrationEngine({
@@ -128,13 +129,13 @@ async function handleMigrationExecution(
           execution: {
             mode: dryRun ? 'DRY_RUN' : 'PRODUCTION',
             startedAt: new Date(startTime).toISOString(),
-            completedAt: new Date().toISOString(),
+            completedAt: nowISO(),
             totalTimeMs: Date.now() - startTime,
             result: projectCodesResult
           },
           environment: {
             nodeEnv: process.env.NODE_ENV,
-            timestamp: new Date().toISOString(),
+            timestamp: nowISO(),
             system: 'Nestor Pagonis Enterprise Platform'
           }
         };
@@ -178,13 +179,13 @@ async function handleMigrationExecution(
           execution: {
             mode: dryRun ? 'DRY_RUN' : 'PRODUCTION',
             startedAt: new Date(startTime).toISOString(),
-            completedAt: new Date().toISOString(),
+            completedAt: nowISO(),
             totalTimeMs: Date.now() - startTime,
             result: storageBuildingResult
           },
           environment: {
             nodeEnv: process.env.NODE_ENV,
-            timestamp: new Date().toISOString(),
+            timestamp: nowISO(),
             system: 'Nestor Pagonis Enterprise Platform'
           }
         };
@@ -249,7 +250,7 @@ async function handleMigrationExecution(
       execution: {
         mode: dryRun ? 'DRY_RUN' : 'PRODUCTION',
         startedAt: new Date(startTime).toISOString(),
-        completedAt: new Date().toISOString(),
+        completedAt: nowISO(),
         executionTimeMs: result.executionTimeMs,
         totalTimeMs: totalExecutionTime,
         affectedRecords: result.affectedRecords
@@ -261,7 +262,7 @@ async function handleMigrationExecution(
       },
       environment: {
         nodeEnv: process.env.NODE_ENV,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         system: 'Nestor Pagonis Enterprise Platform'
       }
     };
@@ -310,12 +311,12 @@ async function handleMigrationExecution(
         error: errorMessage,
         execution: {
           startedAt: new Date(startTime).toISOString(),
-          failedAt: new Date().toISOString(),
+          failedAt: nowISO(),
           totalTimeMs: totalExecutionTime
         },
         environment: {
           nodeEnv: process.env.NODE_ENV,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
           system: 'Nestor Pagonis Enterprise Platform'
         }
       },
@@ -375,7 +376,7 @@ export async function GET(request: NextRequest) {
         version: '2.0.0',
         security: 'AUTHZ Phase 2 - RBAC Protected (super_admin ONLY)',
         environment: process.env.NODE_ENV,
-        timestamp: new Date().toISOString()
+        timestamp: nowISO()
       },
       availableMigrations,
       capabilities: {
@@ -402,7 +403,7 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: errorMessage,
-        timestamp: new Date().toISOString()
+        timestamp: nowISO()
       },
       { status: 500 }
     );

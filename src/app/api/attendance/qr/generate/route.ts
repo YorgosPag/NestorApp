@@ -21,6 +21,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateDailyQrToken } from '@/services/attendance/qr-token-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('api/attendance/qr/generate');
 
@@ -64,7 +65,7 @@ const basePOST = async (request: NextRequest) => {
         }
 
         // Default to today in YYYY-MM-DD format
-        const date = body.date ?? new Date().toISOString().slice(0, 10);
+        const date = body.date ?? nowISO().slice(0, 10);
 
         // Validate date format
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {

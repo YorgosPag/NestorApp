@@ -27,6 +27,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { nowISO } from '@/lib/date-local';
 
 const EfkaDeclarationSchema = z.object({
   employerVatNumber: z.string().max(20).nullable().optional(),
@@ -85,7 +86,7 @@ async function handlePatch(
         const mergedDeclaration = {
           ...currentDeclaration,
           ...body,
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowISO(),
         };
 
         await projectRef.update({

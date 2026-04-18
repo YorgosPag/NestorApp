@@ -31,6 +31,7 @@ import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ProjectsByCompanyRoute');
 
@@ -207,7 +208,7 @@ export const GET = withStandardRateLimit(async function GET(
             message: error.message,
             stack: error.stack
           } : { message: getErrorMessage(error) },
-          timestamp: new Date().toISOString()
+          timestamp: nowISO()
         });
 
         return NextResponse.json(

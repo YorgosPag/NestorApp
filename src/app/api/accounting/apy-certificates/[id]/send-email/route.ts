@@ -35,6 +35,7 @@ import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sende
 import type { APYEmailSendRecord } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('APY_SEND_EMAIL');
 
@@ -172,7 +173,7 @@ async function handlePost(
 
         // ── 7. Record audit trail ─────────────────────────────────────────
         const emailRecord: APYEmailSendRecord = {
-          sentAt: new Date().toISOString(),
+          sentAt: nowISO(),
           recipientEmail: recipientEmail.trim(),
           subject,
           mailgunMessageId: mailgunResult.messageId ?? null,

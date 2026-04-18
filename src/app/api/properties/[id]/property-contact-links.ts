@@ -18,6 +18,7 @@ import type { PersonaData, ClientPersona } from '@/types/contacts/personas';
 import type { PropertyOwnerRole } from '@/types/ownership-table';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('PropertyContactLinks');
 
@@ -183,7 +184,7 @@ export async function activateClientPersona(
 
   // Create new client persona with clientSince = today
   const newPersona = createDefaultPersonaData('client') as ClientPersona;
-  newPersona.clientSince = new Date().toISOString();
+  newPersona.clientSince = nowISO();
 
   await contactRef.update({
     personas: [...personas, newPersona],

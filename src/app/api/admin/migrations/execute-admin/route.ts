@@ -35,6 +35,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ExecuteAdminMigrationRoute');
 
@@ -156,10 +157,10 @@ async function handleAdminSdkMigration(
 
       batch.update(projectRef, {
         companyId: mapping.newCompanyId,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
         migrationInfo: {
           migrationId: '001_fix_project_company_relationships_admin',
-          migratedAt: new Date().toISOString(),
+          migratedAt: nowISO(),
           oldCompanyId: mapping.oldCompanyId,
           newCompanyId: mapping.newCompanyId,
           migrationMethod: 'admin_sdk_batch'
@@ -250,7 +251,7 @@ async function handleAdminSdkMigration(
       execution: {
         executionTimeMs: executionTime,
         affectedRecords: updateCount,
-        completedAt: new Date().toISOString()
+        completedAt: nowISO()
       },
       results: {
         mappings: mappings.map(m => ({
@@ -268,7 +269,7 @@ async function handleAdminSdkMigration(
       },
       environment: {
         nodeEnv: process.env.NODE_ENV,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         system: 'Nestor Pagonis Enterprise Platform - Admin SDK'
       }
     });
@@ -285,11 +286,11 @@ async function handleAdminSdkMigration(
         error: errorMessage,
         execution: {
           executionTimeMs: executionTime,
-          failedAt: new Date().toISOString()
+          failedAt: nowISO()
         },
         environment: {
           nodeEnv: process.env.NODE_ENV,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
           system: 'Nestor Pagonis Enterprise Platform - Admin SDK'
         }
       },

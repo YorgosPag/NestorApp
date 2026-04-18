@@ -17,6 +17,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 /**
  * ENTERPRISE POPULATE ROUTE: Create Buildings from Templates
@@ -211,7 +212,7 @@ export const GET = withStandardRateLimit(
         projectGroups,
         company: company.companyName,
         companyId,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
       });
     } catch (error) {
       audit(operationId, 'VERIFY_BUILDINGS_ERROR', {

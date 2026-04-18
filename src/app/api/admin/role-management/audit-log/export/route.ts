@@ -28,6 +28,8 @@ const logger = createModuleLogger('RoleManagement:AuditExport');
 
 // SSoT: Subcollection name from centralized config
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { nowISO } from '@/lib/date-local';
+
 const AUDIT_COLLECTION = SUBCOLLECTIONS.COMPANY_AUDIT_LOGS;
 const MAX_EXPORT_ROWS = 1000;
 
@@ -129,7 +131,7 @@ export const GET = withHeavyRateLimit(
         const rows = snapshot.docs.map((doc) => doc.data() as RawAuditDoc);
         const docIds = snapshot.docs.map((doc) => doc.id);
 
-        const now = new Date().toISOString().slice(0, 10);
+        const now = nowISO().slice(0, 10);
         const filename = `audit-log-${now}`;
 
         if (format === 'csv') {
@@ -156,7 +158,7 @@ export const GET = withHeavyRateLimit(
           metadata: row.metadata ?? {},
         }));
 
-        const jsonContent = JSON.stringify({ exportDate: new Date().toISOString(), entries: jsonEntries }, null, 2);
+        const jsonContent = JSON.stringify({ exportDate: nowISO(), entries: jsonEntries }, null, 2);
         return new NextResponse(jsonContent, {
           status: 200,
           headers: {

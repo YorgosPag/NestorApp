@@ -18,6 +18,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { NextRequest } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('CALENDAR_REMINDERS_CRON');
 
@@ -50,7 +51,7 @@ async function handleGET(request: NextRequest) {
 
   try {
     const adminDb = getAdminFirestore();
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     // Query tasks where reminderDate <= now AND reminderSent != true
     const tasksRef = adminDb.collection(COLLECTIONS.TASKS);
@@ -89,7 +90,7 @@ async function handleGET(request: NextRequest) {
         userId: task.assignedTo,
         companyId: task.companyId ?? null,
         read: false,
-        createdAt: new Date().toISOString(),
+        createdAt: nowISO(),
         metadata: {
           taskId: task.id,
           dueDate: task.dueDate,

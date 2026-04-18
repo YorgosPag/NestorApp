@@ -6,11 +6,15 @@ import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
-import type { CompanyContact, ContactStatus } from '@/types/contacts';
+import type { CompanyContact } from '@/types/contacts';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import { normalizeToDate } from '@/lib/date-local';
+import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  mapFirestoreToCompanyContact,
+  type FirestoreCompanyData,
+} from './mapper';
 
 const logger = createModuleLogger('CompaniesRoute');
 
@@ -18,129 +22,12 @@ const logger = createModuleLogger('CompaniesRoute');
 // 🏢 ENTERPRISE: Admin SDK Companies Endpoint
 // ============================================================================
 //
-// ARCHITECTURE DECISION:
-// Χρησιμοποιεί Admin SDK (server-side) αντί για Client SDK
+// Uses Admin SDK (server-side) instead of Client SDK: Firestore security
+// rules require `request.auth`, which the Client SDK cannot provide from
+// a server context. The Admin SDK bypasses the rules by design.
 //
-// ΑΙΤΙΟΛΟΓΗΣΗ:
-// 1. Τα Firestore Security Rules απαιτούν authentication (request.auth != null)
-// 2. Το Client SDK στον server ΔΕΝ έχει authentication context
-// 3. Μόνο το Admin SDK μπορεί να παρακάμψει τα security rules
-//
-// PATTERN: Data Mapper Pattern (Enterprise)
-// - Separates domain model from persistence model
-// - Type-safe transformation from Firestore to TypeScript
-// - Validation at the boundary
-//
+// Data Mapper pattern lives in `./mapper.ts`.
 // ============================================================================
-
-// ============================================================================
-// FIRESTORE RAW DATA INTERFACE
-// ============================================================================
-
-/**
- * 🏢 Enterprise: Raw Firestore document data interface
- * Represents the actual data structure stored in Firestore
- */
-interface FirestoreCompanyData {
-  companyName?: string;
-  legalName?: string;
-  tradeName?: string;
-  vatNumber?: string;
-  companyVatNumber?: string; // Legacy field
-  status?: string;
-  type?: string;
-  industry?: string;
-  sector?: string;
-  notes?: string;
-  tags?: string[];
-  isFavorite?: boolean;
-  logoURL?: string;
-  emails?: unknown[];
-  phones?: unknown[];
-  addresses?: unknown[];
-  websites?: unknown[];
-  socialMedia?: unknown[];
-  contactPersons?: unknown[];
-  createdAt?: unknown;
-  updatedAt?: unknown;
-  createdBy?: string;
-  lastModifiedBy?: string;
-  [key: string]: unknown; // Allow additional fields
-}
-
-// ============================================================================
-// DATA MAPPER - ENTERPRISE PATTERN
-// ============================================================================
-
-/**
- * 🏢 Enterprise Data Mapper: Firestore → CompanyContact
- *
- * Transforms raw Firestore data to type-safe CompanyContact.
- * Follows the Data Mapper pattern used in SAP, Salesforce, Microsoft Dynamics.
- *
- * @param docId - Firestore document ID
- * @param data - Raw Firestore document data
- * @returns Type-safe CompanyContact object
- */
-function mapFirestoreToCompanyContact(
-  docId: string,
-  data: FirestoreCompanyData
-): CompanyContact {
-  // Extract company name with fallback chain
-  const companyName = data.companyName || data.tradeName || data.legalName || 'Unknown Company';
-
-  // Extract VAT number (handle legacy field)
-  const vatNumber = data.vatNumber || data.companyVatNumber || '';
-
-  // Validate and cast status
-  const rawStatus = data.status || 'active';
-  const status: ContactStatus = isValidContactStatus(rawStatus) ? rawStatus : 'active';
-
-  // Convert timestamp to Date if needed
-  const now = new Date();
-  const createdAt = normalizeToDate(data.createdAt) || now;
-  const updatedAt = normalizeToDate(data.updatedAt) || now;
-
-  return {
-    // Required fields from BaseContact
-    id: docId,
-    type: 'company',
-    status,
-    isFavorite: data.isFavorite ?? false,
-    createdAt,
-    updatedAt,
-
-    // Required field from CompanyContact
-    companyName,
-    vatNumber,
-
-    // Optional fields
-    legalName: data.legalName,
-    tradeName: data.tradeName,
-    industry: data.industry,
-    sector: data.sector,
-    notes: data.notes,
-    tags: Array.isArray(data.tags) ? data.tags : undefined,
-    logoURL: data.logoURL,
-    createdBy: data.createdBy,
-    lastModifiedBy: data.lastModifiedBy,
-
-    // Arrays - only include if they are valid arrays
-    emails: Array.isArray(data.emails) ? data.emails as CompanyContact['emails'] : undefined,
-    phones: Array.isArray(data.phones) ? data.phones as CompanyContact['phones'] : undefined,
-    addresses: Array.isArray(data.addresses) ? data.addresses as CompanyContact['addresses'] : undefined,
-    websites: Array.isArray(data.websites) ? data.websites as CompanyContact['websites'] : undefined,
-    socialMedia: Array.isArray(data.socialMedia) ? data.socialMedia as CompanyContact['socialMedia'] : undefined,
-    contactPersons: Array.isArray(data.contactPersons) ? data.contactPersons as CompanyContact['contactPersons'] : undefined,
-  };
-}
-
-/**
- * 🔧 Helper: Validate ContactStatus
- */
-function isValidContactStatus(status: string): status is ContactStatus {
-  return ['active', 'inactive', 'archived'].includes(status);
-}
 
 // ============================================================================
 // RESPONSE TYPES (Type-safe withAuth)
@@ -292,7 +179,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       message: getErrorMessage(error),
       stack: error instanceof Error ? error.stack : 'No stack trace',
       type: typeof error,
-      timestamp: new Date().toISOString()
+      timestamp: nowISO()
     };
 
     logger.error('API: Detailed error info', { errorDetails });

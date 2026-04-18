@@ -25,6 +25,7 @@ import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BackfillFileCompanyId');
 
@@ -316,7 +317,7 @@ async function handleMigration(
         message: 'No files with companyId found — nothing to backfill',
         report: {
           dryRun,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
           durationMs: Date.now() - startTime,
           filesCacheSize: 0,
           collections: [],
@@ -358,7 +359,7 @@ async function handleMigration(
 
     const report: BackfillReport = {
       dryRun,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       durationMs: Date.now() - startTime,
       filesCacheSize: fileCompanyCache.size,
       collections,

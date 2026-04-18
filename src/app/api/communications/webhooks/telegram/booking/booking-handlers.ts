@@ -23,6 +23,7 @@ import {
 } from './booking-codec';
 import { saveSession } from './booking-session';
 import { handleAdminAppointmentAction } from './booking-admin-actions';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('TelegramBookingHandlers');
 
@@ -166,7 +167,7 @@ async function confirmAndSave(
     date,
     time,
     step: 'awaiting_contact',
-    createdAt: new Date().toISOString(),
+    createdAt: nowISO(),
   });
 
   return {
@@ -231,8 +232,8 @@ export async function saveAppointment(
       },
       propertyId,
       propertyName,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
     });
 
     logger.info('Appointment booked via Telegram', {

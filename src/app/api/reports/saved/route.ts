@@ -21,6 +21,7 @@ import type {
   SavedReportVisibility,
 } from '@/types/reports/saved-report';
 import { SAVED_REPORT_CATEGORIES } from '@/types/reports/saved-report';
+import { nowISO } from '@/lib/date-local';
 
 // eslint-disable-next-line custom/no-hardcoded-strings -- error messages
 const ERR_NAME_REQUIRED = 'Report name is required';
@@ -66,7 +67,7 @@ export const GET = withStandardRateLimit(async function GET(
         return apiSuccess<SavedReport[]>(reports, 'Saved reports listed');
       } catch (err) {
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }
@@ -97,19 +98,19 @@ export const POST = withStandardRateLimit(async function POST(
         // Validation
         if (!body.name?.trim()) {
           return NextResponse.json(
-            { success: false as const, error: ERR_NAME_REQUIRED, timestamp: new Date().toISOString() },
+            { success: false as const, error: ERR_NAME_REQUIRED, timestamp: nowISO() },
             { status: 400 },
           );
         }
         if (!body.config) {
           return NextResponse.json(
-            { success: false as const, error: ERR_CONFIG_REQUIRED, timestamp: new Date().toISOString() },
+            { success: false as const, error: ERR_CONFIG_REQUIRED, timestamp: nowISO() },
             { status: 400 },
           );
         }
         if (!body.config.domain) {
           return NextResponse.json(
-            { success: false as const, error: ERR_DOMAIN_REQUIRED, timestamp: new Date().toISOString() },
+            { success: false as const, error: ERR_DOMAIN_REQUIRED, timestamp: nowISO() },
             { status: 400 },
           );
         }
@@ -128,7 +129,7 @@ export const POST = withStandardRateLimit(async function POST(
         return apiSuccess<SavedReport>(report, 'Report saved');
       } catch (err) {
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }

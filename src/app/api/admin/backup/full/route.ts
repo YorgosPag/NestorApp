@@ -30,6 +30,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 import type { BackupStatus } from '@/services/backup/backup-manifest.types';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BackupFullRoute');
 
@@ -73,7 +74,7 @@ async function handleFullBackup(ctx: AuthContext): Promise<NextResponse> {
         await db.doc(BACKUP_STATUS_PATH).set(
           {
             ...status,
-            updatedAt: new Date().toISOString(),
+            updatedAt: nowISO(),
           },
           { merge: true },
         );
@@ -99,7 +100,7 @@ async function handleFullBackup(ctx: AuthContext): Promise<NextResponse> {
       processedCollections: Object.keys(COLLECTIONS).length,
       totalCollections: Object.keys(COLLECTIONS).length,
       documentsExported: finalManifest.totalDocuments,
-      completedAt: new Date().toISOString(),
+      completedAt: nowISO(),
     });
 
     logger.info(`Full backup completed: ${finalManifest.id} — ${finalManifest.totalDocuments} docs in ${finalManifest.durationMs}ms`);
@@ -126,7 +127,7 @@ async function handleFullBackup(ctx: AuthContext): Promise<NextResponse> {
         {
           phase: 'failed',
           error: errorMessage,
-          completedAt: new Date().toISOString(),
+          completedAt: nowISO(),
         },
         { merge: true },
       );

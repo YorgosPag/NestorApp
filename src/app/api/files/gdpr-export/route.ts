@@ -18,6 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { nowISO } from '@/lib/date-local';
 
 export const maxDuration = 60;
 
@@ -112,7 +113,7 @@ async function handler(
     });
 
     const exportData = {
-      exportDate: new Date().toISOString(),
+      exportDate: nowISO(),
       userId,
       gdprArticle: 'Article 20 — Right to Data Portability',
       data: {
@@ -138,7 +139,7 @@ async function handler(
     return new NextResponse(JSON.stringify(exportData, null, 2), {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="gdpr-export-${userId}-${new Date().toISOString().slice(0, 10)}.json"`,
+        'Content-Disposition': `attachment; filename="gdpr-export-${userId}-${nowISO().slice(0, 10)}.json"`,
       },
     });
   } catch (error) {

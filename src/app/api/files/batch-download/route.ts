@@ -20,6 +20,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { deflateRawSync } from 'zlib';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BatchDownloadRoute');
 
@@ -244,7 +245,7 @@ async function handleBatchDownload(request: NextRequest, ctx: AuthContext) {
     });
 
     // Return ZIP
-    const timestamp = new Date().toISOString().slice(0, 10);
+    const timestamp = nowISO().slice(0, 10);
     const zipFilename = `files_${timestamp}.zip`;
 
     return new NextResponse(new Uint8Array(zipData), {

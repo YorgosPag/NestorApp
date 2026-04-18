@@ -18,6 +18,7 @@ import {
   checkRateLimit,
   validateEmailRequest,
 } from './property-share-validation';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('PropertyShareRoute');
 
@@ -45,7 +46,7 @@ function logEmailAttempt(
   duration?: number,
 ) {
   const logEntry = {
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     ip,
     success,
     recipientCount: data.recipients?.length || 1,
@@ -209,7 +210,7 @@ export async function GET() {
   return NextResponse.json({
     status: 'healthy',
     service: 'email-api',
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     environment: NODE_ENV,
     features: {
       rate_limiting: true,

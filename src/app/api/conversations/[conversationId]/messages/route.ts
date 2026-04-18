@@ -23,7 +23,7 @@ type MessagesCanonicalResponse = ApiSuccessResponse<MessagesListResponse>;
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { generateRequestId } from '@/services/enterprise-id.service';
-import { fieldToISO } from '@/lib/date-local';
+import { fieldToISO, nowISO } from '@/lib/date-local';
 import { getString, getObject } from '@/lib/firestore/field-extractors';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { type MessageDirection, type DeliveryStatus } from '@/types/conversations';
@@ -243,7 +243,7 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
     page,
     pageSize,
     conversationId,
-    loadedAt: new Date().toISOString(),
+    loadedAt: nowISO(),
     source: 'firestore',
   };
 

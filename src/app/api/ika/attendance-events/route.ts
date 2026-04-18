@@ -26,6 +26,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateEventId } from '@/services/enterprise-id.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // TYPES
@@ -54,7 +55,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
-        const now = new Date().toISOString();
+        const now = nowISO();
         const eventId = generateEventId();
 
         const eventData = {

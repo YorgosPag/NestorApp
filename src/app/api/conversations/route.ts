@@ -22,7 +22,7 @@ import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { fieldToISO, getNestedTimestampISO } from '@/lib/date-local';
+import { fieldToISO, getNestedTimestampISO, nowISO } from '@/lib/date-local';
 import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors';
 
 // Type alias for canonical response
@@ -225,7 +225,7 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
     hasMore: offset + conversations.length < totalCount,
     page,
     pageSize,
-    loadedAt: new Date().toISOString(),
+    loadedAt: nowISO(),
     source: 'firestore',
   };
 

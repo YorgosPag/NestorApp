@@ -22,6 +22,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('NotificationsAckRoute');
 
@@ -89,7 +90,7 @@ const basePOST = async (request: NextRequest) => {
             const docRef = notificationsRef.doc(id);
             batch.update(docRef, {
               seen: true,
-              seenAt: new Date().toISOString()
+              seenAt: nowISO()
             });
           });
           await batch.commit();

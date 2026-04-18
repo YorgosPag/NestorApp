@@ -27,6 +27,7 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // TYPES
@@ -125,7 +126,7 @@ async function handlePost(
           }
 
           const batch = db.batch();
-          const now = new Date().toISOString();
+          const now = nowISO();
 
           for (const space of spaces) {
             const collection = getCollectionName(space.spaceType);

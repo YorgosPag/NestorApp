@@ -21,6 +21,7 @@ import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { BudgetVarianceEntry, BudgetVarianceAnalysis, VarianceTrend } from '@/types/interest-calculator';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BudgetVarianceRoute');
 
@@ -151,7 +152,7 @@ export const POST = withHighRateLimit(
       };
 
       const docRef = db.collection(COLLECTIONS.SETTINGS).doc(getDocId(payload.projectId));
-      await docRef.set({ ...analysis, updatedAt: new Date().toISOString() });
+      await docRef.set({ ...analysis, updatedAt: nowISO() });
 
       logger.info(`[BudgetVariance] Saved ${entries.length} categories for project ${payload.projectId}`);
       return apiSuccess({ analysis }, 'Budget variance saved');

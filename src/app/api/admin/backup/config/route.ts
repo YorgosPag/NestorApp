@@ -20,6 +20,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { BackupSchedulerService } from '@/services/backup/backup-scheduler.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BackupConfigRoute');
 
@@ -143,7 +144,7 @@ async function handleUpdateConfig(
     await db.doc(BACKUP_CONFIG_PATH).set(
       {
         ...sanitized,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
         updatedBy: ctx.uid,
       },
       { merge: true },

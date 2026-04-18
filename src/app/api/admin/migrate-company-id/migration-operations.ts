@@ -25,6 +25,7 @@ import {
   COLLECTIONS_WITH_COMPANY_ID,
   NAVIGATION_COLLECTION,
 } from './migration-config';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('MigrateCompanyId');
 
@@ -207,7 +208,7 @@ export async function executeMigration(
     oldCompanyId: oldId,
     newCompanyId: newId,
     dryRun,
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     steps: {
       companyDocument: { status: 'pending', details: '' },
       customClaims: { status: 'pending', usersUpdated: 0, details: '' },

@@ -14,6 +14,7 @@ import {
   type TelegramLocale
 } from './templates/template-resolver';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('TelegramBotSecurity');
 
@@ -95,7 +96,7 @@ export const SECURITY_MESSAGES = getSecurityMessages('el');
 
 export function logSecurityEvent(event: { type: string; query: string; reason: string; userId: string; }): void {
   logger.warn('Security Event', {
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     ...event
   });
 }

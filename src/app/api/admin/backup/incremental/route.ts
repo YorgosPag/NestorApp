@@ -30,6 +30,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
 import type { BackupStatus } from '@/services/backup/backup-manifest.types';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BackupIncrementalRoute');
 
@@ -79,7 +80,7 @@ async function handleIncrementalBackup(
     const updateStatus = async (status: Partial<BackupStatus>): Promise<void> => {
       try {
         await db.doc(BACKUP_STATUS_PATH).set(
-          { ...status, updatedAt: new Date().toISOString() },
+          { ...status, updatedAt: nowISO() },
           { merge: true },
         );
       } catch (error) {
@@ -106,7 +107,7 @@ async function handleIncrementalBackup(
       processedCollections: finalManifest.collections.length,
       totalCollections: finalManifest.collections.length,
       documentsExported: finalManifest.totalDocuments,
-      completedAt: new Date().toISOString(),
+      completedAt: nowISO(),
     });
 
     logger.info(
@@ -136,7 +137,7 @@ async function handleIncrementalBackup(
         {
           phase: 'failed',
           error: errorMessage,
-          completedAt: new Date().toISOString(),
+          completedAt: nowISO(),
         },
         { merge: true },
       );

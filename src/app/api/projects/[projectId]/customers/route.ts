@@ -29,6 +29,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ProjectCustomersRoute');
 
@@ -251,7 +252,7 @@ export const GET = withStandardRateLimit(async function GET(
           customers: [],
           projectId,
           summary: { customersCount: 0, soldPropertiesCount: 0 },
-          timestamp: new Date().toISOString()
+          timestamp: nowISO()
         }, { status: 500 });
       }
     },

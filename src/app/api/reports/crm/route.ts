@@ -12,6 +12,7 @@ import { ReportDataAggregator } from '@/services/report-engine';
 import type { CrmReportData } from '@/services/report-engine';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('CrmReportRoute');
 
@@ -36,7 +37,7 @@ export const GET = withStandardRateLimit(async function GET(
       } catch (err) {
         logger.error('CRM report failed', { error: getErrorMessage(err) });
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }

@@ -31,6 +31,7 @@ import {
   createBankMatchError,
   type BankMatchProblem,
 } from '@/subapps/accounting/services/bank/bank-match-errors';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // HELPERS
@@ -119,7 +120,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
       // ── Update to reconciled ─────────────────────────────────────
       const newVersion = (txn.version ?? 0) + 1;
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       await repository.updateBankTransaction(transactionId, {
         matchStatus: 'reconciled',

@@ -15,7 +15,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, nowISO } from '@/lib/date-local';
 import { generateConstructionBaselineId } from '@/services/enterprise-id.service';
 import type {
   ConstructionPhase,
@@ -74,7 +74,7 @@ export async function GET(
           id: doc.id,
           name: d.name ?? '',
           version: d.version ?? 1,
-          createdAt: normalizeToISO(d.createdAt) ?? new Date().toISOString(),
+          createdAt: normalizeToISO(d.createdAt) ?? nowISO(),
           phaseCount: Array.isArray(d.phases) ? d.phases.length : 0,
           taskCount: Array.isArray(d.tasks) ? d.tasks.length : 0,
         };

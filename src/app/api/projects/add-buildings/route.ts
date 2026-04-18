@@ -23,6 +23,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('AddBuildingsRoute');
 
@@ -86,7 +87,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
               totalArea: building.totalArea,
               units: building.units
             })),
-            updatedAt: new Date().toISOString()
+            updatedAt: nowISO()
           });
 
         logger.info('[Projects/AddBuildings] Complete', { buildingsAdded: buildings.length, projectId: BUILDING_IDS.PROJECT_ID });

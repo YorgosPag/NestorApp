@@ -21,6 +21,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('api/attendance/qr/validate');
 
@@ -78,7 +79,7 @@ const baseGET = async (request: NextRequest): Promise<NextResponse<ValidateQrRes
     return NextResponse.json({
       valid: true,
       projectName,
-      validDate: result.validDate ?? new Date().toISOString().slice(0, 10),
+      validDate: result.validDate ?? nowISO().slice(0, 10),
     });
   } catch (error) {
     logger.error('QR validation error', {

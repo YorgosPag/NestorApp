@@ -21,6 +21,7 @@ import {
   trackReportRun,
 } from '@/services/saved-reports/saved-reports-service';
 import type { SavedReport, UpdateSavedReportInput } from '@/types/reports/saved-report';
+import { nowISO } from '@/lib/date-local';
 
 // eslint-disable-next-line custom/no-hardcoded-strings -- error messages
 const ERR_NOT_FOUND = 'Report not found';
@@ -58,7 +59,7 @@ export const GET = withStandardRateLimit(async function GET(
         const report = await getSavedReport(ctx.companyId, reportId);
         if (!report) {
           return NextResponse.json(
-            { success: false as const, error: ERR_NOT_FOUND, timestamp: new Date().toISOString() },
+            { success: false as const, error: ERR_NOT_FOUND, timestamp: nowISO() },
             { status: 404 },
           );
         }
@@ -66,7 +67,7 @@ export const GET = withStandardRateLimit(async function GET(
         return apiSuccess<SavedReport>(report, 'Report loaded');
       } catch (err) {
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }
@@ -104,7 +105,7 @@ export const PUT = withStandardRateLimit(async function PUT(
 
         if (!updated) {
           return NextResponse.json(
-            { success: false as const, error: ERR_NOT_FOUND, timestamp: new Date().toISOString() },
+            { success: false as const, error: ERR_NOT_FOUND, timestamp: nowISO() },
             { status: 404 },
           );
         }
@@ -112,7 +113,7 @@ export const PUT = withStandardRateLimit(async function PUT(
         return apiSuccess<SavedReport>(updated, 'Report updated');
       } catch (err) {
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }
@@ -149,7 +150,7 @@ export const DELETE = withStandardRateLimit(async function DELETE(
 
         if (!success) {
           return NextResponse.json(
-            { success: false as const, error: ERR_DELETE_FAILED, timestamp: new Date().toISOString() },
+            { success: false as const, error: ERR_DELETE_FAILED, timestamp: nowISO() },
             { status: 403 },
           );
         }
@@ -157,7 +158,7 @@ export const DELETE = withStandardRateLimit(async function DELETE(
         return apiSuccess<{ deleted: boolean }>({ deleted: true }, 'Report deleted');
       } catch (err) {
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }
@@ -209,12 +210,12 @@ export const POST = withStandardRateLimit(async function POST(
         }
 
         return NextResponse.json(
-          { success: false as const, error: 'Unknown action', timestamp: new Date().toISOString() },
+          { success: false as const, error: 'Unknown action', timestamp: nowISO() },
           { status: 400 },
         );
       } catch (err) {
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }

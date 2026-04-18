@@ -36,6 +36,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { VoiceCommandDoc, SubmitCommandResult } from '@/types/voice-command';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generateVoiceCommandId } from '@/services/enterprise-id.service';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // LOGGER
@@ -98,7 +99,7 @@ export const POST = withStandardRateLimit(
 
       // 3. Create voice_commands document (status: pending)
       const adminDb = getAdminFirestore();
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       const commandDoc: Omit<VoiceCommandDoc, 'pipelineRequestId' | 'pipelineQueueId'> & {
         pipelineRequestId: string | null;

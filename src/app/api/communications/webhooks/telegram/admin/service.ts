@@ -6,6 +6,7 @@ import { getAdminKeyboard } from './keyboard';
 import { sendMessageToTelegram } from './client';
 import type { AdminNotification, UserMessage, Priority } from './types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('TelegramAdminService');
 
@@ -48,7 +49,7 @@ export async function notifyNewMessage(userMessage: UserMessage): Promise<boolea
         priority: userMessage.queryType === 'contact' ? 'high' : 'medium',
         message: 'Νέο μήνυμα από πελάτη',
         userInfo: userMessage,
-        timestamp: new Date().toISOString()
+        timestamp: nowISO()
     };
     return sendAdminNotification(notification);
 }
@@ -59,7 +60,7 @@ export async function notifySecurityAlert(userMessage: UserMessage, reason: stri
         priority: 'urgent',
         message: `Security Alert: ${reason}`,
         userInfo: userMessage,
-        timestamp: new Date().toISOString()
+        timestamp: nowISO()
     };
     return sendAdminNotification(notification);
 }
@@ -69,7 +70,7 @@ export async function notifySystemEvent(event: string, priority: Priority = 'med
         type: 'system_event',
         priority,
         message: event,
-        timestamp: new Date().toISOString()
+        timestamp: nowISO()
     };
     return sendAdminNotification(notification);
 }
@@ -99,7 +100,7 @@ export async function sendDailySummary(stats: {
         type: 'system_event',
         priority: 'low',
         message: message,
-        timestamp: new Date().toISOString()
+        timestamp: nowISO()
     });
 }
 
@@ -114,7 +115,7 @@ export async function testAdminNotifications(): Promise<boolean> {
         firstName: process.env.NEXT_PUBLIC_TELEGRAM_TEST_FIRST_NAME || 'Test',
         lastName: process.env.NEXT_PUBLIC_TELEGRAM_TEST_LAST_NAME || 'User',
         messageText: 'Αυτό είναι ένα test message! <b>Hello</b>',
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         queryType: 'general',
     };
     return notifyNewMessage(testMessage);

@@ -42,6 +42,7 @@ import type { TelegramSendPayload } from '@/app/api/communications/webhooks/tele
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ConversationSendRoute');
 
@@ -404,7 +405,7 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
     messageId: storedMessageId,
     providerMessageId,
     conversationId,
-    sentAt: new Date().toISOString(),
+    sentAt: nowISO(),
   };
 
   // 🏢 ENTERPRISE: Canonical response format { success: true, data: T }

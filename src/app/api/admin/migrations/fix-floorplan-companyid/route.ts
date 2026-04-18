@@ -28,6 +28,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FixFloorplanCompanyId');
 
@@ -326,7 +327,7 @@ async function handleMigration(
           batch.update(docRef, {
             companyId: mismatch.newCompanyId,
             updatedAt: new Date(),
-            migrationNote: `companyId fixed from ${mismatch.oldCompanyId} → ${mismatch.newCompanyId} (${mismatch.resolvedVia}) [fix-floorplan-companyid migration ${new Date().toISOString()}]`,
+            migrationNote: `companyId fixed from ${mismatch.oldCompanyId} → ${mismatch.newCompanyId} (${mismatch.resolvedVia}) [fix-floorplan-companyid migration ${nowISO()}]`,
           });
         }
 

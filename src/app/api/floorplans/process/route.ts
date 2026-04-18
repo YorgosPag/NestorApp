@@ -25,6 +25,7 @@ import type {
   FirebaseAdminError,
 } from './floorplan-process.types';
 import { getFileType, downloadFile, processDxf, processPdf } from './floorplan-process.service';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FloorplanProcessRoute');
 
@@ -154,7 +155,7 @@ async function handleProcessFloorplan(
     // 8. SAVE METADATA TO FIRESTORE
     await adminDb.collection(COLLECTIONS.FILES).doc(fileId).update({
       processedData: result.processedData,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowISO(),
     });
 
     // 9. AUDIT LOG

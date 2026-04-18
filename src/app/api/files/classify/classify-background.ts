@@ -11,6 +11,7 @@ import { createAIAnalysisProvider } from '@/services/ai-analysis/providers/ai-pr
 import { isDocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FileClassifyBackground');
 
@@ -61,12 +62,12 @@ export async function classifyInBackground(
         confidence: result.confidence,
         signals: result.signals ?? [],
         aiModel: result.aiModel ?? null,
-        analysisTimestamp: result.analysisTimestamp ?? new Date().toISOString(),
+        analysisTimestamp: result.analysisTimestamp ?? nowISO(),
         description: aiDescription,
       },
       'ingestion.state': 'classified',
-      'ingestion.stateChangedAt': new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      'ingestion.stateChangedAt': nowISO(),
+      updatedAt: nowISO(),
     };
 
     const fileSnap = await fileRef.get();
@@ -84,7 +85,7 @@ export async function classifyInBackground(
         fileId,
         action: 'ai_classify',
         performedBy: userId,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         metadata: {
           documentType: result.documentType,
           confidence: result.confidence,
@@ -103,8 +104,8 @@ export async function classifyInBackground(
     try {
       await fileRef.update({
         'ingestion.state': 'classification_failed',
-        'ingestion.stateChangedAt': new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        'ingestion.stateChangedAt': nowISO(),
+        updatedAt: nowISO(),
       });
     } catch (updateErr) {
       logger.error('[after] Failed to update error state', { error: updateErr });

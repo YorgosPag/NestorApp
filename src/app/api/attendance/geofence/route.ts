@@ -26,6 +26,7 @@ import type { GeofenceConfig } from '@/components/projects/ika/contracts';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('api/attendance/geofence');
 
@@ -162,7 +163,7 @@ const basePOST = async (request: NextRequest) => {
           longitude: body.longitude,
           radiusMeters,
           enabled,
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowISO(),
           updatedBy: ctx.uid,
         };
 

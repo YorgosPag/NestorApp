@@ -28,7 +28,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { fieldToISO } from '@/lib/date-local';
+import { fieldToISO, nowISO } from '@/lib/date-local';
 import { getString, getNumber, getArray } from '@/lib/firestore/field-extractors';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import type { ProjectSummary, ProjectStatus } from '@/types/project';
@@ -210,7 +210,7 @@ export const GET = withHighRateLimit(
   const response: ProjectListResponse = {
     projects,
     count: projects.length,
-    loadedAt: new Date().toISOString(),
+    loadedAt: nowISO(),
     source: 'firestore'
   };
 

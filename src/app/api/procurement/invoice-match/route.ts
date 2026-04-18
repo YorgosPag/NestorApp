@@ -21,6 +21,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { matchInvoiceToPO } from '@/services/procurement/po-invoice-matcher';
 import type { ReceivedExpenseDocument } from '@/subapps/accounting/types/documents';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('PO_INVOICE_MATCH');
 
@@ -72,7 +73,7 @@ async function handlePost(
       await docRef.update({
         suggestedPOId: result.bestMatch.poId,
         poMatchConfidence: result.bestMatch.confidence,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
       });
 
       logger.info('Auto-matched expense doc to PO', {

@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { HOLD_TYPES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FilePurgeRoute');
 
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
 
   try {
     const db = getAdminFirestore();
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     // Query trashed files with expired purgeAt
     const snapshot = await db
@@ -120,8 +121,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
         // Mark as purged in Firestore
         await doc.ref.update({
           lifecycleState: 'purged',
-          purgedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          purgedAt: nowISO(),
+          updatedAt: nowISO(),
         });
 
         // Audit log
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
           fileId: doc.id,
           action: 'delete',
           performedBy: 'system:purge',
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
           metadata: {
             purgeType: 'auto',
             originalPurgeAt: data.purgeAt ?? null,

@@ -21,6 +21,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FileArchiveRoute');
 
@@ -92,11 +93,11 @@ async function handlePost(
 
         const updateData: Record<string, string> = {
           lifecycleState: action === 'archive' ? 'archived' : 'active',
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowISO(),
         };
 
         if (action === 'archive') {
-          updateData.archivedAt = new Date().toISOString();
+          updateData.archivedAt = nowISO();
           updateData.archivedBy = ctx.uid;
         }
 
@@ -108,7 +109,7 @@ async function handlePost(
           fileId,
           action: 'archive',
           performedBy: ctx.uid,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
           metadata: {
             archiveAction: action,
           },

@@ -12,6 +12,7 @@ import type { TelegramSendPayload, TelegramSendResult } from '../telegram/types'
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { formatDateGreek } from './booking-codec';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // CALLBACK PARSER
@@ -86,8 +87,8 @@ async function handleApprove(
     status: 'approved',
     'appointment.confirmedDate': requestedDate,
     'appointment.confirmedTime': requestedTime,
-    approvedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    approvedAt: nowISO(),
+    updatedAt: nowISO(),
   });
 
   await sendTelegramMessage({
@@ -122,7 +123,7 @@ async function handleReject(
 ): Promise<TelegramSendPayload> {
   await appointmentRef.update({
     status: 'rejected',
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowISO(),
   });
 
   await sendTelegramMessage({
@@ -164,7 +165,7 @@ async function handleReschedule(
 ): Promise<TelegramSendPayload> {
   await appointmentRef.update({
     status: 'rescheduled',
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowISO(),
   });
 
   await sendTelegramMessage({

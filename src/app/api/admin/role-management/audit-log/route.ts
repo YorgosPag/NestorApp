@@ -28,6 +28,8 @@ const logger = createModuleLogger('RoleManagement:AuditLog');
 
 // SSoT: Subcollection name from centralized config
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { nowISO } from '@/lib/date-local';
+
 const AUDIT_COLLECTION = SUBCOLLECTIONS.COMPANY_AUDIT_LOGS;
 const PAGE_SIZE = 50;
 
@@ -167,7 +169,7 @@ export const GET = withSensitiveRateLimit(
             targetType: data.targetType,
             previousValue: data.previousValue ?? null,
             newValue: data.newValue ?? null,
-            timestamp: data.timestamp?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+            timestamp: data.timestamp?.toDate?.()?.toISOString() ?? nowISO(),
             metadata: data.metadata ?? {},
           };
         });

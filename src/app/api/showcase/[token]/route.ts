@@ -25,6 +25,7 @@ import {
   translatePropertyCondition,
   type EnumLocale,
 } from '@/services/property-enum-labels/property-enum-labels.service';
+import { resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('ShowcasePublicApi');
@@ -205,7 +206,16 @@ export async function GET(
         : undefined,
     },
     company: {
-      name: ((c as Record<string, unknown>).name as string) || 'Nestor',
+      name: resolveCompanyDisplayName(
+        {
+          id: companyId,
+          name: (c as Record<string, unknown>).name as string | undefined,
+          companyName: (c as Record<string, unknown>).companyName as string | undefined,
+          tradeName: (c as Record<string, unknown>).tradeName as string | undefined,
+          legalName: (c as Record<string, unknown>).legalName as string | undefined,
+          displayName: (c as Record<string, unknown>).displayName as string | undefined,
+        },
+      ),
       phone: (c as Record<string, unknown>).phone as string | undefined,
       email: (c as Record<string, unknown>).email as string | undefined,
       website: (c as Record<string, unknown>).website as string | undefined,

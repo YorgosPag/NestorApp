@@ -23,6 +23,7 @@ import {
 } from '@/config/report-builder/report-builder-types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BuilderReportRoute');
 
@@ -50,7 +51,7 @@ export const POST = withStandardRateLimit(async function POST(
         const validation = validateBuilderRequest(body);
         if (validation) {
           return NextResponse.json(
-            { success: false as const, error: validation, timestamp: new Date().toISOString() },
+            { success: false as const, error: validation, timestamp: nowISO() },
             { status: 400 },
           );
         }
@@ -70,7 +71,7 @@ export const POST = withStandardRateLimit(async function POST(
       } catch (err) {
         logger.error('Builder query failed', { error: getErrorMessage(err) });
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }

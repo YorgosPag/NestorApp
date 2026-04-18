@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('DownloadRoute');
 
@@ -98,7 +99,7 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
       companyId: ctx.companyId,
       url: fileUrl,
       filename: filename,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       userAgent: request.headers.get('user-agent')
     });
 

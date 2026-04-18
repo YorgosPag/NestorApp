@@ -10,6 +10,7 @@ import { type EntityType, type FileDomain, type FileCategory } from '@/config/do
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeStoragePath } from '@/lib/security/path-sanitizer';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('UploadPhotoRoute');
 
@@ -240,7 +241,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
       mimeType: file.type,
       storagePath: storagePath,
       uploadedBy: ctx.email,
-      uploadedAt: new Date().toISOString()
+      uploadedAt: nowISO()
     });
 
   } catch (error) {

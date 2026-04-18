@@ -22,6 +22,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { captureException as sentryCaptureException } from '@/lib/telemetry/sentry';
 import { validateSecretToken } from './telegram-security';
 import { processTelegramUpdate } from './telegram-processing';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('TelegramHandler');
 
@@ -250,7 +251,7 @@ export async function handleGET(): Promise<NextResponse> {
 
     return NextResponse.json({
         status: 'Telegram webhook endpoint is working',
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         firebase_available: isFirebaseAvailable(),
         uc011_diagnostic: diagnostic,
         features: [

@@ -23,6 +23,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateDebtMaturityId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DebtMaturityEntry, LoanType, HealthStatus } from '@/types/interest-calculator';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('DebtMaturityRoute');
 
@@ -140,7 +141,7 @@ export const POST = withHighRateLimit(
         : [];
 
       existing.push(entry);
-      await docRef.set({ entries: existing, updatedAt: new Date().toISOString() }, { merge: true });
+      await docRef.set({ entries: existing, updatedAt: nowISO() }, { merge: true });
 
       logger.info(`[DebtMaturity] Added entry ${entry.loanId} for ${ctx.companyId}`);
       return apiSuccess({ entry }, 'Entry added');
@@ -176,7 +177,7 @@ export const DELETE = withHighRateLimit(
         return apiSuccess({ removed: false }, 'Entry not found');
       }
 
-      await docRef.set({ entries: filtered, updatedAt: new Date().toISOString() }, { merge: true });
+      await docRef.set({ entries: filtered, updatedAt: nowISO() }, { merge: true });
       logger.info(`[DebtMaturity] Removed entry ${loanId} for ${ctx.companyId}`);
       return apiSuccess({ removed: true }, 'Entry removed');
     }

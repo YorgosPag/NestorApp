@@ -25,6 +25,7 @@ import type {
 } from '@/services/cash-flow/cash-flow.types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('CashFlowRoute');
 
@@ -76,14 +77,14 @@ export const GET = withStandardRateLimit(async function GET(
           pdcCalendar,
           alerts,
           filter: { projectId, buildingId },
-          generatedAt: new Date().toISOString(),
+          generatedAt: nowISO(),
         };
 
         return apiSuccess<CashFlowAPIResponse>(response, 'Cash flow forecast generated');
       } catch (err) {
         logger.error('Cash flow forecast failed', { error: getErrorMessage(err) });
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }
@@ -112,14 +113,14 @@ export const PUT = withStandardRateLimit(async function PUT(
         const validation = validateConfigUpdate(body);
         if (validation) {
           return NextResponse.json(
-            { success: false as const, error: validation, timestamp: new Date().toISOString() },
+            { success: false as const, error: validation, timestamp: nowISO() },
             { status: 400 },
           );
         }
 
         const config: CashFlowConfig = {
           initialBalance: Number(body.initialBalance) || 0,
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowISO(),
           recurringPayments: (body.recurringPayments as RecurringPayment[]) ?? [],
         };
 
@@ -130,7 +131,7 @@ export const PUT = withStandardRateLimit(async function PUT(
       } catch (err) {
         logger.error('Cash flow config update failed', { error: getErrorMessage(err) });
         return NextResponse.json(
-          { success: false as const, error: getErrorMessage(err), timestamp: new Date().toISOString() },
+          { success: false as const, error: getErrorMessage(err), timestamp: nowISO() },
           { status: 500 },
         );
       }

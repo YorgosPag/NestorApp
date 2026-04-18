@@ -42,6 +42,7 @@ import {
   fetchProjects,
   fetchBuildingCounts,
 } from "./bootstrap-queries";
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger("ProjectsBootstrapRoute");
 
@@ -126,7 +127,7 @@ async function handleProjectsBootstrap(
       {
         companies: [],
         projects: [],
-        loadedAt: new Date().toISOString(),
+        loadedAt: nowISO(),
         source: "firestore",
         cached: false,
       },
@@ -169,7 +170,7 @@ async function handleProjectsBootstrap(
   const response: BootstrapResponse = {
     companies,
     projects: allProjects,
-    loadedAt: new Date().toISOString(),
+    loadedAt: nowISO(),
     source: "firestore",
     cached: false,
   };

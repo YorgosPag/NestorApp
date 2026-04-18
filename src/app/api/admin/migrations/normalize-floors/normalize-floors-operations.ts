@@ -8,6 +8,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('NormalizeFloorsRoute');
 
@@ -104,10 +105,10 @@ export async function handleFloorsNormalization(
             projectId: building.projectId,
             projectName: building.projectName || building.project,
             units: embeddedFloor.units || 0,
-            createdAt: new Date().toISOString(),
+            createdAt: nowISO(),
             migrationInfo: {
               migrationId: '002_normalize_floors_collection_admin',
-              migratedAt: new Date().toISOString(),
+              migratedAt: nowISO(),
               sourceType: 'buildingFloors_embedded_array',
               originalBuildingId: building.id
             }
@@ -216,13 +217,13 @@ export async function handleFloorsNormalization(
     return NextResponse.json({
       success: true,
       migration: { id: '002_normalize_floors_collection_admin', name: 'Floors Collection Normalization (Enterprise 3NF)', method: 'firebase_admin_batch_normalization' },
-      execution: { executionTimeMs: executionTime, affectedRecords: successfulInserts, completedAt: new Date().toISOString() },
+      execution: { executionTimeMs: executionTime, affectedRecords: successfulInserts, completedAt: nowISO() },
       results: {
         stats,
         floorsCreated: floorsToCreate.map(f => ({ id: f.id, name: f.name, buildingName: f.buildingName, projectName: f.projectName })),
         integrity: { totalFloors: integrityResults.totalFloors, floorsFromMigration: integrityResults.floorsFromThisMigration, integrityScore: parseFloat(integrityScore.toFixed(1)), orphanFloors: integrityResults.orphanFloors }
       },
-      environment: { nodeEnv: process.env.NODE_ENV, timestamp: new Date().toISOString(), system: 'Nestor Pagonis Enterprise Platform - Database Normalization' }
+      environment: { nodeEnv: process.env.NODE_ENV, timestamp: nowISO(), system: 'Nestor Pagonis Enterprise Platform - Database Normalization' }
     });
 
   } catch (error) {
@@ -234,8 +235,8 @@ export async function handleFloorsNormalization(
       {
         success: false,
         error: errorMessage,
-        execution: { executionTimeMs: executionTime, failedAt: new Date().toISOString() },
-        environment: { nodeEnv: process.env.NODE_ENV, timestamp: new Date().toISOString(), system: 'Nestor Pagonis Enterprise Platform - Database Normalization' }
+        execution: { executionTimeMs: executionTime, failedAt: nowISO() },
+        environment: { nodeEnv: process.env.NODE_ENV, timestamp: nowISO(), system: 'Nestor Pagonis Enterprise Platform - Database Normalization' }
       },
       { status: 500 }
     );

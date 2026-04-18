@@ -6,6 +6,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ContactPropertiesRoute');
 
@@ -289,7 +290,7 @@ export async function GET(
       },
 
       // Metadata
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       dataSource: 'firestore'
     };
 
@@ -326,7 +327,7 @@ export async function GET(
         error: getErrorMessage(error, 'Άγνωστο σφάλμα φόρτωσης ιδιοκτησιών επαφής'),
         errorCategory,
         contactId: contactId || null,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
 
         // Empty data structure for consistency
         properties: [],

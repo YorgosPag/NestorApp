@@ -22,6 +22,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('NotificationsActionRoute');
 
@@ -83,7 +84,7 @@ const basePOST = async (request: NextRequest) => {
         // Record the action
         await notificationRef.update({
           actionTaken: actionId,
-          actionTakenAt: new Date().toISOString()
+          actionTakenAt: nowISO()
         });
 
         logger.info('[Notifications/Action] Action recorded successfully');

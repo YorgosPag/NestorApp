@@ -21,6 +21,7 @@ import {
   type MigrationPreview,
   type MigrationResultEntry,
 } from './migration-config';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('MigrateBuildingFeaturesRoute');
 
@@ -229,7 +230,7 @@ export const executeBuildingFeaturesMigration = async (
     }
 
     try {
-      const timestamp = new Date().toISOString();
+      const timestamp = nowISO();
       await db.collection(COLLECTIONS.BUILDINGS).doc(preview.id).update({
         features: preview.migratedFeatures,
         updatedAt: timestamp,

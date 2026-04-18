@@ -21,6 +21,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { nowISO } from '@/lib/date-local';
 
 type SegmentData = { params: Promise<{ id: string }> };
 
@@ -57,7 +58,7 @@ async function handlePatch(
           );
         }
 
-        const now = new Date().toISOString();
+        const now = nowISO();
         const updateData: Record<string, unknown> = {
           apdStatus: body.status,
           updatedAt: now,

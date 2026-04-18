@@ -30,6 +30,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { SEARCH_INDEX_CONFIG } from './search-index-config';
 import { clearUserCompanyCache } from './tenant-resolver';
 import { backfillAllTypesParallel, type BackfillStats } from './backfill-engine';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('SearchBackfillRoute');
 
@@ -120,7 +121,7 @@ export const POST = withSensitiveRateLimit(withAuth<BackfillApiResponse>(
         stats: statsByType as Record<SearchEntityType, BackfillStats>,
         totalStats,
         duration,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
       }, dryRun
         ? `Dry run complete. Would index ${totalStats.indexed} documents.`
         : `Backfill complete. Indexed ${totalStats.indexed} documents.`
@@ -301,7 +302,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
         mode: dryRun ? 'DRY_RUN' : 'EXECUTE',
         stats,
         duration,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
       }, dryRun
         ? `Dry run complete. Would migrate ${stats.migrated} contacts.`
         : `Migration complete. Migrated ${stats.migrated} contacts.`

@@ -23,6 +23,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
 import { classifyInBackground } from './classify-background';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FileClassifyRoute');
 
@@ -171,8 +172,8 @@ async function handlePost(
     // 4. Set state to 'classifying' immediately
     await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).update({
       'ingestion.state': 'classifying',
-      'ingestion.stateChangedAt': new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      'ingestion.stateChangedAt': nowISO(),
+      updatedAt: nowISO(),
     });
 
     // 5. Return 200 immediately — classification happens in background

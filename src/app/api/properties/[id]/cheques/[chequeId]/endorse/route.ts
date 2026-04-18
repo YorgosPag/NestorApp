@@ -18,6 +18,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { logFinancialTransition } from '@/lib/auth/audit';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { nowISO } from '@/lib/date-local';
 
 const EndorseSchema = z.object({
   endorserName: z.string().min(1).max(200),
@@ -46,7 +47,7 @@ async function handlePost(
 
         const endorseInput = {
           ...body,
-          endorsementDate: body.endorsementDate ?? new Date().toISOString().split('T')[0],
+          endorsementDate: body.endorsementDate ?? nowISO().split('T')[0],
         };
 
         const result = await ChequeRegistryService.endorseCheque(chequeId, endorseInput, ctx.uid);

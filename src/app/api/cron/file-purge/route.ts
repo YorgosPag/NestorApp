@@ -26,6 +26,7 @@ import {
   isFileHeld,
   PENDING_FILE_TTL_MS,
 } from '@/services/file-record/file-purge-helpers';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('CronFilePurge');
 
@@ -122,7 +123,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   try {
     const db = getAdminFirestore();
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     const [trash, orphans] = await Promise.all([
       purgeExpiredTrash(db, now),
