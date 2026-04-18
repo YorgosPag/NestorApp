@@ -25,21 +25,22 @@ import {
 } from '@/components/ui/table';
 import { PO_STATUS_META } from '@/types/procurement';
 import type { PurchaseOrder } from '@/types/procurement';
+import {
+  formatCurrency as formatEUR,
+  formatDate as formatLocaleDate,
+} from '@/lib/intl-utils';
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(n);
+function formatPrice(n: number): string {
+  return formatEUR(n, 'EUR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatDate(iso: string | null): string {
+function formatDateOrDash(iso: string | null): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('el-GR');
+  return formatLocaleDate(iso);
 }
 
 // ============================================================================
@@ -141,12 +142,12 @@ export function PublicPOPageContent() {
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-muted-foreground">{t('detail.dateCreated')}</dt>
-                <dd className="font-medium">{formatDate(po.dateCreated)}</dd>
+                <dd className="font-medium">{formatDateOrDash(po.dateCreated)}</dd>
               </div>
               {po.dateNeeded && (
                 <div>
                   <dt className="text-muted-foreground">{t('detail.dateNeeded')}</dt>
-                  <dd className="font-medium">{formatDate(po.dateNeeded)}</dd>
+                  <dd className="font-medium">{formatDateOrDash(po.dateNeeded)}</dd>
                 </div>
               )}
               {po.deliveryAddress && (
@@ -180,8 +181,8 @@ export function PublicPOPageContent() {
                     <TableCell className="font-medium">{item.description}</TableCell>
                     <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
                     <TableCell>{item.unit}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice)}</TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(item.total)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatPrice(item.unitPrice)}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatPrice(item.total)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -191,15 +192,15 @@ export function PublicPOPageContent() {
               <div className="w-full max-w-xs space-y-1 text-right">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('detail.subtotal')}</span>
-                  <span className="tabular-nums">{formatCurrency(po.subtotal)}</span>
+                  <span className="tabular-nums">{formatPrice(po.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('detail.vat')} {po.taxRate}%</span>
-                  <span className="tabular-nums">{formatCurrency(po.taxAmount)}</span>
+                  <span className="tabular-nums">{formatPrice(po.taxAmount)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-1 font-semibold text-base">
                   <span>{t('detail.total')}</span>
-                  <span className="tabular-nums">{formatCurrency(po.total)}</span>
+                  <span className="tabular-nums">{formatPrice(po.total)}</span>
                 </div>
               </div>
             </div>

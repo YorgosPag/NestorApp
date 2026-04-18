@@ -25,6 +25,10 @@ import type { LegalContract, ContractStatus } from '@/types/legal-contracts';
 import { CONTRACT_STATUS_TRANSITIONS } from '@/types/legal-contracts';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import {
+  formatCurrency as formatEUR,
+  formatDate as formatLocaleDate,
+} from '@/lib/intl-utils';
 
 // ============================================================================
 // TYPES
@@ -66,14 +70,14 @@ const NEXT_STATUS_KEYS: Record<ContractStatus, string> = {
   completed: '',
 };
 
-function formatDate(iso: string | null): string {
+function formatDateOrDash(iso: string | null): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('el-GR');
+  return formatLocaleDate(iso);
 }
 
-function formatCurrency(amount: number | null): string {
+function formatPriceOrDash(amount: number | null): string {
   if (amount === null || amount === undefined) return '—';
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+  return formatEUR(amount, 'EUR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ============================================================================
@@ -133,14 +137,14 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
               <Euro className="h-3 w-3" />
               {t('sales.legal.amount')}
             </dt>
-            <dd className="font-medium">{formatCurrency(contract.contractAmount)}</dd>
+            <dd className="font-medium">{formatPriceOrDash(contract.contractAmount)}</dd>
 
             {contract.depositAmount !== null && (
               <>
                 <dt className={colors.text.muted}>
                   {t('sales.legal.deposit')}
                 </dt>
-                <dd className="font-medium">{formatCurrency(contract.depositAmount)}</dd>
+                <dd className="font-medium">{formatPriceOrDash(contract.depositAmount)}</dd>
               </>
             )}
 
@@ -148,14 +152,14 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
               <CalendarDays className="h-3 w-3" />
               {t('sales.legal.createdAt')}
             </dt>
-            <dd>{formatDate(contract.createdAt)}</dd>
+            <dd>{formatDateOrDash(contract.createdAt)}</dd>
 
             {contract.signedAt && (
               <>
                 <dt className={colors.text.muted}>
                   {t('sales.legal.signedAt')}
                 </dt>
-                <dd>{formatDate(contract.signedAt)}</dd>
+                <dd>{formatDateOrDash(contract.signedAt)}</dd>
               </>
             )}
           </dl>

@@ -17,26 +17,26 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ChequeStatusBadge } from './ChequeStatusBadge';
 import type { ChequeRecord } from '@/types/cheque-registry';
 import '@/lib/design-system';
+import {
+  formatCurrency as formatEUR,
+  formatDate as formatLocaleDate,
+} from '@/lib/intl-utils';
 
 interface ChequeTableProps {
   cheques: ChequeRecord[];
   onSelectCheque: (cheque: ChequeRecord) => void;
 }
 
-function formatDate(iso: string): string {
+function formatChequeDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('el-GR');
+    return formatLocaleDate(iso);
   } catch {
     return iso;
   }
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount);
+function formatAmount(amount: number): string {
+  return formatEUR(amount, 'EUR', { minimumFractionDigits: 2 });
 }
 
 export function ChequeTable({ cheques, onSelectCheque }: ChequeTableProps) {
@@ -81,11 +81,11 @@ export function ChequeTable({ cheques, onSelectCheque }: ChequeTableProps) {
               {t(`paymentMethod.${cheque.chequeType}`)}
             </TableCell>
             <TableCell className="text-xs text-right font-medium">
-              {formatCurrency(cheque.amount)}
+              {formatAmount(cheque.amount)}
             </TableCell>
             <TableCell className="text-xs">{cheque.drawerName}</TableCell>
             <TableCell className="text-xs">{cheque.bankName}</TableCell>
-            <TableCell className="text-xs">{formatDate(cheque.maturityDate)}</TableCell>
+            <TableCell className="text-xs">{formatChequeDate(cheque.maturityDate)}</TableCell>
             <TableCell>
               <ChequeStatusBadge status={cheque.status} />
             </TableCell>
