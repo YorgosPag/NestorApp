@@ -17,7 +17,7 @@ declare module '@google-cloud/storage' {
   export interface File {
     name: string;
     metadata: FileMetadata;
-    createReadStream(options?: Record<string, unknown>): NodeJS.ReadableStream;
+    createReadStream(options?: Record<string, unknown>): NodeJS.ReadableStream & { destroy(error?: Error): void };
     createWriteStream(options?: Record<string, unknown>): NodeJS.WritableStream;
     exists(): Promise<[boolean]>;
     delete(options?: Record<string, unknown>): Promise<unknown>;

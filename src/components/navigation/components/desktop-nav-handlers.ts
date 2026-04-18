@@ -11,7 +11,7 @@ import {
   unlinkEntityWithPolicy,
 } from '@/services/entity-linking/entity-linking-mutation-gateway';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { EntityType } from '@/config/domain-constants';
+import type { EntityType } from '@/services/entity-linking/types';
 import type { NavigationBuilding } from '@/components/navigation/core/types';
 
 const logger = createModuleLogger('desktop-nav-handlers');

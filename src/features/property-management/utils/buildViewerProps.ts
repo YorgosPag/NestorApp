@@ -14,7 +14,7 @@ export function buildViewerProps(h: PublicViewerHookShape): ViewerProps {
     selectedPropertyIds: h.selectedPropertyIds,
     hoveredPropertyId: h.hoveredPropertyId,
     selectedFloorId: h.selectedFloorId,
-    onHoverProperty: h.onHoverProperty,
+    onHoverProperty: (id) => h.onHoverProperty(id ?? null),
     onSelectFloor: h.onSelectFloor,
     canUndo: false,
     canRedo: false,

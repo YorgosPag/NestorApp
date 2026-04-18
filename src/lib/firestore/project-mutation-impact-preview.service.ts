@@ -218,6 +218,8 @@ async function collectDependencyCounts(projectId: string): Promise<Record<Projec
     boqItems,
     soldProperties,
     calendarEvents,
+    employmentRecordsGlobal: 0,
+    commissionRecords: 0,
   };
 }
 

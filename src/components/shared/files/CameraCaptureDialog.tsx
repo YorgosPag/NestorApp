@@ -123,7 +123,7 @@ export function CameraCaptureDialog({
 
   const activeStatus = mode === 'photo' ? photo.status : video.status;
   const activeErrorCode = mode === 'photo' ? photo.errorCode : video.errorCode;
-  const activeVideoRef = mode === 'photo' ? photo.videoRef : video.videoRef;
+  const activeVideoRef = (mode === 'photo' ? photo.videoRef : video.videoRef) as React.RefObject<HTMLVideoElement>;
   const activeDevices = mode === 'photo' ? photo.devices : [];
   const activeDeviceId = mode === 'photo' ? photo.activeDeviceId : null;
 

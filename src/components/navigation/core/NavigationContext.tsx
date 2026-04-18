@@ -204,7 +204,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     const building: NavigationBuilding = {
       id: realtimeBuildingRef.id,
       name: realtimeBuildingRef.name,
-      code: realtimeBuildingRef.code,
+      code: (realtimeBuildingRef as { code?: string }).code,
       floors: [],
       properties: []
     };

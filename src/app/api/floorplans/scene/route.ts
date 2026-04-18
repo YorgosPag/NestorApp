@@ -243,7 +243,8 @@ async function handleGetScene(
     }
 
     // Decompress if gzip compressed (new processing uses compression)
-    const isCompressed = metadata.metadata?.compressed === 'gzip';
+    const customMeta = (metadata.metadata ?? {}) as Record<string, unknown>;
+    const isCompressed = customMeta.compressed === 'gzip';
     const rawBuffer = isCompressed ? gunzipSync(fileBuffer) : fileBuffer;
 
     logger.info('[FloorplanScene] Downloaded', {

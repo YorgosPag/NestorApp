@@ -19,11 +19,7 @@
 import type { LevelData } from '@/types/property';
 
 interface AreaTotalsShape {
-  readonly gross: number;
-  readonly net: number;
-  readonly balcony: number;
-  readonly terrace: number;
-  readonly garden: number;
+  readonly [key: string]: number;
 }
 
 interface AggregatedTotalsShape {
@@ -60,7 +56,14 @@ export function resolveAreaValues(
   const { formData, currentLevelData, aggregatedTotals, isMultiLevel, activeLevelId } = args;
 
   if (isMultiLevel && activeLevelId === null && aggregatedTotals) {
-    return aggregatedTotals.areas;
+    const a = aggregatedTotals.areas;
+    return {
+      gross: a.gross ?? 0,
+      net: a.net ?? 0,
+      balcony: a.balcony ?? 0,
+      terrace: a.terrace ?? 0,
+      garden: a.garden ?? 0,
+    };
   }
 
   if (isMultiLevel && activeLevelId) {

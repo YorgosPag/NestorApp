@@ -11,7 +11,7 @@
  * @enterprise Phase 2 — Multi-Channel Sharing
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -72,7 +72,7 @@ function isValidChannelProvider(provider: string): provider is ChannelProvider {
 async function handleGet(
   request: NextRequest,
   segmentData?: { params: Promise<{ contactId: string }> }
-): Promise<ReturnType<typeof apiSuccess>> {
+): Promise<NextResponse> {
   const { contactId } = await segmentData!.params;
 
   const handler = withAuth<ApiSuccessResponse<ContactChannelsResponse>>(

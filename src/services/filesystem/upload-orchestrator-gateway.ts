@@ -126,7 +126,7 @@ export async function uploadFileWithPolicy(
     purpose: config.purpose,
     descriptors: config.descriptors,
     revision: config.revision,
-    linkedTo: config.linkedTo,
+    linkedTo: config.linkedTo?.map((l) => `${l.entityType}:${l.entityId}`),
     originalFilename: config.originalFilename,
     ext: config.ext,
     contentType: config.contentType,

@@ -49,7 +49,8 @@ export async function downloadFile(
   const [fileBuffer] = await fileRef.download();
 
   const [fileMeta] = await fileRef.getMetadata();
-  const isCompressed = fileMeta.metadata?.compressed === 'gzip';
+  const customMeta = (fileMeta.metadata ?? {}) as Record<string, unknown>;
+  const isCompressed = customMeta.compressed === 'gzip';
   const rawBuffer = isCompressed ? gunzipSync(fileBuffer) : fileBuffer;
 
   logger.info('Downloaded', {

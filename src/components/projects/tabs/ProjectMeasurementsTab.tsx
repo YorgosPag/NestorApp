@@ -119,7 +119,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
     try {
       // 1. Fetch buildings for this project
       interface BuildingsResponse {
-        buildings: Array<{ id: string; name: string }>;
+        buildings: Array<{ id: string; name: string; code?: string }>;
         count: number;
       }
       const buildingsData = await apiClient.get<BuildingsResponse>(

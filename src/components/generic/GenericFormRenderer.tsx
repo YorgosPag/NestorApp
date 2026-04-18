@@ -156,7 +156,7 @@ function renderSelectField(
   return (
     <Select
       name={field.id}
-      value={toStringValue(formData[field.id] || field.defaultValue)}
+      value={toStringValue(formData[field.id] || field.initialValue)}
       onValueChange={(value) => onSelectChange(field.id, value)}
       disabled={disabled}
     >

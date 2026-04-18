@@ -165,7 +165,13 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
         companyId, projectId, entityType, entityId, domain, category,
         entityLabel, purpose, originalFilename: file.name, ext,
         contentType: file.type, createdBy: userId,
-        ...(linkedTo && linkedTo.length > 0 ? { linkedTo } : {}),
+        ...(linkedTo && linkedTo.length > 0 ? {
+          linkedTo: linkedTo.flatMap((s) => {
+            const [et, ...rest] = s.split(':');
+            const id = rest.join(':');
+            return et && id ? [{ entityType: et as EntityType, entityId: id }] : [];
+          }),
+        } : {}),
         firestoreDelayMs: 2000,
         onProgress: (p) => setProgress(p.percent),
       });

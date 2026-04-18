@@ -145,6 +145,7 @@ export class NavigationApiService {
         buildings: Array<{
           id: string;
           name?: string;
+          code?: string;
         }>;
       }
 

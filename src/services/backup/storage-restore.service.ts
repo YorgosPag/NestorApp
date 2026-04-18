@@ -159,7 +159,8 @@ export class StorageRestoreService {
     const [exists] = await targetFile.exists();
     if (exists) {
       const [metadata] = await targetFile.getMetadata();
-      const existingHash = metadata.metadata?.sha256 as string | undefined;
+      const customMeta = (metadata.metadata ?? {}) as Record<string, unknown>;
+      const existingHash = customMeta.sha256 as string | undefined;
 
       if (existingHash === entry.sha256) {
         return { status: 'skipped', bytes: 0 };

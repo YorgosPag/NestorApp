@@ -10,6 +10,6 @@ import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
  * @param filename The desired filename for the downloaded file.
  */
 export const downloadPDF = (pdfData: Uint8Array, filename: string) => {
-  const blob = new Blob([pdfData], { type: 'application/pdf' });
+  const blob = new Blob([pdfData as BlobPart], { type: 'application/pdf' });
   triggerExportDownload({ blob, filename });
 };

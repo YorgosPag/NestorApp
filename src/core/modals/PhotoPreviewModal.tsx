@@ -135,7 +135,7 @@ export function PhotoPreviewModal({
         >
           <figure className="relative w-full h-full flex items-center justify-center select-none">
             <img
-              src={state.currentPhoto}
+              src={state.currentPhoto ?? undefined}
               alt={state.isGalleryMode
                 ? t('photoPreview.alt.gallery', { title: state.title, current: state.currentIndex + 1, total: state.totalPhotos })
                 : t('photoPreview.alt.single', { title: state.title })

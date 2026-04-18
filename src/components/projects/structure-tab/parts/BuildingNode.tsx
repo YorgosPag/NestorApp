@@ -107,7 +107,8 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   // RENDER
   // ==========================================================================
 
-  const buildingName = formatBuildingLabel(building.code, typeof building.name === 'string' ? building.name : String(building.name ?? ''));
+  const buildingCode = typeof building.code === 'string' ? building.code : undefined;
+  const buildingName = formatBuildingLabel(buildingCode, typeof building.name === 'string' ? building.name : String(building.name ?? ''));
 
   return (
     <article>

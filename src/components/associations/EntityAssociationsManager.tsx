@@ -217,7 +217,7 @@ export function EntityAssociationsManager({
                         onRemoveIntercept(
                           link.contactId,
                           link.role ?? '',
-                          () => removeLink(link.linkId),
+                          async () => { await removeLink(link.linkId); },
                         );
                       } else {
                         setRemoveLinkId(link.linkId);

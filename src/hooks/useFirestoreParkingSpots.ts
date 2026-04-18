@@ -89,7 +89,7 @@ export function useFirestoreParkingSpots(
     },
     deps: [buildingId, projectId, user?.uid],
     enabled: autoFetch && !authLoading && !!user,
-    initialData: parkingCache.get(cacheKey),
+    initialData: parkingCache.get(cacheKey) ?? undefined,
     silentInitialFetch: parkingCache.hasLoaded(cacheKey),
   });
 

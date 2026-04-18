@@ -155,6 +155,8 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           journalEntryId: null,
           notes: body.notes ?? null,
           fiscalYear,
+          suggestedPOId: null,
+          poMatchConfidence: null,
         };
 
         const { id } = await repository.createExpenseDocument(docData);

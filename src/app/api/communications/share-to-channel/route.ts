@@ -135,7 +135,7 @@ export const POST = withSensitiveRateLimit(
       const recipientParams = buildRecipientParams(data.channel, data.externalUserId);
 
       // Send each photo — caption only on the first
-      let lastResult = { success: false, error: 'No photos sent' };
+      let lastResult: { success: boolean; error?: string } = { success: false, error: 'No photos sent' };
       let sentCount = 0;
 
       for (let i = 0; i < data.photoUrls.length; i++) {

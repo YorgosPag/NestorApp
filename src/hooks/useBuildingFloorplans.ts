@@ -47,7 +47,7 @@ export function useBuildingFloorplans(buildingId: string | number): UseBuildingF
     },
     deps: [buildingIdStr],
     enabled: !!buildingIdStr,
-    initialData: buildingFloorplansCache.get(buildingIdStr),
+    initialData: buildingFloorplansCache.get(buildingIdStr) ?? undefined,
     silentInitialFetch: buildingFloorplansCache.hasLoaded(buildingIdStr),
   });
 

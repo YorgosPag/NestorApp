@@ -36,6 +36,7 @@ import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import { subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
 import { useLayerHitTest, useLayerCanvasRenderer } from './layer-canvas-hooks';
 import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
+import type { SnapResult } from './layer-types';
 import type { DxfScene } from '../dxf-canvas/dxf-types';
 import type {
   ColorLayer,
@@ -171,7 +172,11 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     onDrawingHover
   });
 
-  const { snapResults } = mouseHandlers;
+  const { snapResults: rawSnapResults } = mouseHandlers;
+  const snapResults: SnapResult[] = rawSnapResults
+    .filter((s): s is typeof s & { type: 'endpoint' | 'midpoint' | 'center' | 'intersection' } =>
+      s.type === 'endpoint' || s.type === 'midpoint' || s.type === 'center' || s.type === 'intersection')
+    .map((s) => ({ point: s.point, type: s.type, entityId: s.entityId ?? undefined }));
 
   // ── Unified canvas system state ────────────────────────────────────
   const [_canvasManager, setCanvasManager] = useState<CanvasManager | null>(null);

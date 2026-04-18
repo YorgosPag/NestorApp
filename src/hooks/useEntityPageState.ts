@@ -79,7 +79,7 @@ export interface EntityPageStateConfig<T extends IdentifiableEntity, F> {
 /** The return type of useEntityPageState */
 export interface EntityPageStateReturn<T extends IdentifiableEntity, F> {
   selectedItem: T | null;
-  setSelectedItem: (item: T | null) => void;
+  setSelectedItem: (item: (T | null) | ((prev: T | null) => T | null)) => void;
   viewMode: ViewMode;
   setViewMode: Dispatch<SetStateAction<ViewMode>>;
   showDashboard: boolean;
@@ -132,7 +132,7 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
   // INP optimization: defer heavy detail-panel re-render (from buildings pattern)
   const [, startTransition] = useTransition();
   const setSelectedItem = useCallback(
-    (item: T | null) => {
+    (item: (T | null) | ((prev: T | null) => T | null)) => {
       startTransition(() => {
         setSelectedItemRaw(item);
       });

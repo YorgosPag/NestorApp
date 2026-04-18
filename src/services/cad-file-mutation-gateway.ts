@@ -21,7 +21,7 @@ export interface CadFileContextPayload {
   projectId?: string;
   buildingId?: string;
   floorId?: string;
-  entityType?: 'building' | 'floor' | 'property';
+  entityType?: 'project' | 'building' | 'floor' | 'property';
   filesCategory?: 'drawings' | 'floorplans';
   purpose?: string;
   entityLabel?: string;
