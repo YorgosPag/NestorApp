@@ -24,14 +24,20 @@ export interface ShowcasePropertySnapshot {
   code?: string;
   name: string;
   type?: string;
+  /** Locale-resolved label for `type` (e.g. `apartment` → `Διαμέρισμα`). */
+  typeLabel?: string;
   building?: string;
   floor?: number;
   description?: string;
   layout?: { bedrooms?: number; bathrooms?: number; wc?: number };
   areas?: { gross?: number; net?: number; balcony?: number; terrace?: number };
   orientations?: string[];
+  /** Locale-resolved labels parallel to `orientations`. */
+  orientationLabels?: string[];
   energyClass?: string;
   condition?: string;
+  /** Locale-resolved label for `condition` (e.g. `new` → `Νέο`). */
+  conditionLabel?: string;
   features?: string[];
 }
 

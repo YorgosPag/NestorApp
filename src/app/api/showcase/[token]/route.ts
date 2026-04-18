@@ -19,6 +19,12 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_CATEGORIES, type FileCategory } from '@/config/domain-constants';
 import { listPropertyMedia } from '@/services/property-media/property-media.service';
+import {
+  translatePropertyType,
+  translateOrientations,
+  translatePropertyCondition,
+  type EnumLocale,
+} from '@/services/property-enum-labels/property-enum-labels.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('ShowcasePublicApi');
@@ -40,14 +46,17 @@ interface ShowcasePublicResponse {
     code?: string;
     name: string;
     type?: string;
+    typeLabel?: string;
     building?: string;
     floor?: number;
     description?: string;
     layout?: { bedrooms?: number; bathrooms?: number; wc?: number };
     areas?: { gross?: number; net?: number; balcony?: number; terrace?: number };
     orientations?: string[];
+    orientationLabels?: string[];
     energyClass?: string;
     condition?: string;
+    conditionLabel?: string;
     features?: string[];
   };
   company: {
@@ -156,12 +165,22 @@ export async function GET(
   const areas = (p as { areas?: Record<string, unknown> }).areas || {};
   const energy = (p as { energy?: Record<string, unknown> }).energy || {};
 
+  const localeParam = request.nextUrl.searchParams.get('locale');
+  const locale: EnumLocale = localeParam === 'en' ? 'en' : 'el';
+
+  const rawType = (p as Record<string, unknown>).type as string | undefined;
+  const rawOrientations = Array.isArray((p as Record<string, unknown>).orientations)
+    ? ((p as Record<string, unknown>).orientations as string[])
+    : undefined;
+  const rawCondition = (p as Record<string, unknown>).condition as string | undefined;
+
   const response: ShowcasePublicResponse = {
     property: {
       id: showcasePropertyId,
       code: (p as Record<string, unknown>).code as string | undefined,
       name: ((p as Record<string, unknown>).name as string) || showcasePropertyId,
-      type: (p as Record<string, unknown>).type as string | undefined,
+      type: rawType,
+      typeLabel: translatePropertyType(rawType, locale),
       building: (p as Record<string, unknown>).building as string | undefined,
       floor: typeof (p as Record<string, unknown>).floor === 'number' ? ((p as Record<string, unknown>).floor as number) : undefined,
       description: (p as Record<string, unknown>).description as string | undefined,
@@ -176,11 +195,11 @@ export async function GET(
         balcony: areas.balcony as number | undefined,
         terrace: areas.terrace as number | undefined,
       },
-      orientations: Array.isArray((p as Record<string, unknown>).orientations)
-        ? ((p as Record<string, unknown>).orientations as string[])
-        : undefined,
+      orientations: rawOrientations,
+      orientationLabels: translateOrientations(rawOrientations, locale),
       energyClass: energy.class as string | undefined,
-      condition: (p as Record<string, unknown>).condition as string | undefined,
+      condition: rawCondition,
+      conditionLabel: translatePropertyCondition(rawCondition, locale),
       features: Array.isArray((p as Record<string, unknown>).features)
         ? ((p as Record<string, unknown>).features as string[])
         : undefined,

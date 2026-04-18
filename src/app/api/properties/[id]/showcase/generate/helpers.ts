@@ -17,6 +17,11 @@ import {
   type PropertyMediaBuffer,
 } from '@/services/property-media/property-media.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import {
+  translatePropertyType,
+  translateOrientations,
+  translatePropertyCondition,
+} from '@/services/property-enum-labels/property-enum-labels.service';
 import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
 import type {
   PropertyShowcasePDFData,
@@ -239,21 +244,28 @@ export function buildPdfData(
   const areas = (p.areas as { gross?: number; net?: number; balcony?: number; terrace?: number }) || {};
   const energy = (p.energy as { class?: string }) || {};
 
+  // Enum keys stored in Firestore (`apartment`, `north`, `new`, ...) are
+  // translated here via the server-side SSoT so the PDF renderer receives
+  // human-readable labels identical to what the showcase web page shows.
+  const rawType = (p.type as string) || undefined;
+  const rawOrientations = Array.isArray(p.orientations) ? (p.orientations as string[]) : undefined;
+  const rawCondition = (p.condition as string) || undefined;
+
   return {
     property: {
       id: propertyId,
       code: (p.code as string) || undefined,
       name: (p.name as string) || propertyId,
-      type: (p.type as string) || undefined,
-      typeLabel: (p.typeLabel as string) || (p.type as string) || undefined,
+      type: rawType,
+      typeLabel: (p.typeLabel as string) || translatePropertyType(rawType, locale) || rawType,
       building: (p.building as string) || undefined,
       floor: typeof p.floor === 'number' ? (p.floor as number) : undefined,
       description: (p.description as string) || undefined,
       layout: { bedrooms: layout.bedrooms, bathrooms: layout.bathrooms, wc: layout.wc },
       areas: { gross: areas.gross, net: areas.net, balcony: areas.balcony, terrace: areas.terrace },
-      orientations: Array.isArray(p.orientations) ? (p.orientations as string[]) : undefined,
+      orientations: translateOrientations(rawOrientations, locale) ?? rawOrientations,
       energyClass: energy.class,
-      condition: (p.condition as string) || undefined,
+      condition: translatePropertyCondition(rawCondition, locale) ?? rawCondition,
       features: Array.isArray(p.features) ? (p.features as string[]) : undefined,
     },
     company: {

@@ -32,8 +32,13 @@ function buildRows(
 ): Array<[string, string]> {
   const unit = t('specs.areaUnit');
   const dash = '—';
+  const orientationDisplay = p.orientationLabels?.length
+    ? p.orientationLabels.join(', ')
+    : p.orientations?.length
+      ? p.orientations.join(', ')
+      : dash;
   return [
-    [t('specs.type'), p.type || dash],
+    [t('specs.type'), p.typeLabel || p.type || dash],
     [t('specs.code'), p.code || dash],
     [t('specs.building'), p.building || dash],
     [t('specs.floor'), p.floor !== undefined ? String(p.floor) : dash],
@@ -44,8 +49,8 @@ function buildRows(
     [t('specs.bedrooms'), p.layout?.bedrooms !== undefined ? String(p.layout.bedrooms) : dash],
     [t('specs.bathrooms'), p.layout?.bathrooms !== undefined ? String(p.layout.bathrooms) : dash],
     [t('specs.wc'), p.layout?.wc !== undefined ? String(p.layout.wc) : dash],
-    [t('specs.orientation'), p.orientations?.length ? p.orientations.join(', ') : dash],
+    [t('specs.orientation'), orientationDisplay],
     [t('specs.energyClass'), p.energyClass || dash],
-    [t('specs.condition'), p.condition || dash],
+    [t('specs.condition'), p.conditionLabel || p.condition || dash],
   ];
 }
